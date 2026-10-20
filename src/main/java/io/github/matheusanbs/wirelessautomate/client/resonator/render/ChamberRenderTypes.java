@@ -30,6 +30,15 @@ final class ChamberRenderTypes extends RenderType {
                     .setWriteMaskState(COLOR_WRITE)
                     .createCompositeState(false));
 
+    private static final RenderType RIBBON = create(WirelessAutomate.MODID + "_chamber_ribbon",
+            DefaultVertexFormat.POSITION_COLOR_TEX_LIGHTMAP, VertexFormat.Mode.QUADS, 256, false, true,
+            CompositeState.builder()
+                    .setShaderState(new ShaderStateShard(RibbonShader::get))
+                    .setTransparencyState(LIGHTNING_TRANSPARENCY)
+                    .setCullState(NO_CULL)
+                    .setWriteMaskState(COLOR_WRITE)
+                    .createCompositeState(false));
+
     private ChamberRenderTypes(String name, VertexFormat format, VertexFormat.Mode mode, int bufferSize,
             boolean crumbling, boolean sort, Runnable setup, Runnable clear) {
         super(name, format, mode, bufferSize, crumbling, sort, setup, clear);
@@ -43,5 +52,10 @@ final class ChamberRenderTypes extends RenderType {
     /** O billboard do Núcleo de plasma: aditivo, sem gravar profundidade, nas duas faces. */
     static RenderType plasma() {
         return PLASMA;
+    }
+
+    /** As fitas e os brilhos (conduto, espiral, aura e anel): aditivo, sem gravar profundidade, nas duas faces. */
+    static RenderType ribbon() {
+        return RIBBON;
     }
 }

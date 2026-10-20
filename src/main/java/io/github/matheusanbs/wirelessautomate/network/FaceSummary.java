@@ -6,7 +6,10 @@ import io.github.matheusanbs.wirelessautomate.range.MachineGroup;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
+import java.util.Arrays;
 import java.util.BitSet;
+import java.util.List;
+import java.util.UUID;
 import net.minecraft.core.Direction;
 
 /**
@@ -24,6 +27,11 @@ import net.minecraft.core.Direction;
  * o perfil de um grupo só conta se alguma máquina dele segue o perfil (sem exceção). Pôr ou tirar o upgrade avisa o
  * índice; o {@code machineRadius} mudado na config com o jogo rodando, não: o resumo fica velho até o próximo aviso
  * do roteador.
+ *
+ * <p>Por máquina, para a visão por máquinas do Tablet: os papéis e a máscara de redes ({@link NetworkOrder}) da presa,
+ * de cada grupo (o perfil, na ordem de {@link RemoteMachines#groupAt}) e de cada exceção das máquinas guardadas no
+ * índice (as de índice abaixo de {@link IndexRemotes#CAP}, na ordem das máquinas). Sem o Upgrade de Alcance, os papéis
+ * de grupos e exceções ficam zero (as remotas não movem) e as redes continuam, como no {@link NodeIndex.Entry#networks}.
  */
 final class FaceSummary {
     private static final ResourceType[] TYPES = ResourceType.values();
@@ -41,40 +49,95 @@ final class FaceSummary {
 
     int roles;
     long modes;
+    int attachedRoles;
+    long attachedNets;
+    /** Por grupo, na ordem de {@link RemoteMachines#groupAt}; valem as {@code groupCount()} primeiras posições. */
+    int[] groupRoles = new int[0];
+    long[] groupNets = new long[0];
+    /** Por exceção das máquinas guardadas, na ordem das máquinas; valem as {@link #exceptionCount} primeiras. */
+    int[] exceptionRoles = new int[0];
+    long[] exceptionNets = new long[0];
+    int exceptionCount;
     /** Os ids dos grupos com alguma máquina sem exceção. */
     private final BitSet followed = new BitSet();
 
-    void scan(RouterBlockEntity router) {
+    /** {@code order}: as redes distintas do nó, na ordem dos bits ({@link NetworkOrder}). */
+    void scan(RouterBlockEntity router, List<UUID> order) {
         roles = 0;
         modes = 0;
+        attachedNets = 0;
         int front = router.attachedFront();
         for (ResourceType type : TYPES) {
             for (RemoteSide side : SIDES) {
-                add(type, side, router.face(type, DIRECTIONS[side.toAbsolute(front)]).mode());
+                FaceConfig face = router.face(type, DIRECTIONS[side.toAbsolute(front)]);
+                add(type, side, face.mode());
+                attachedNets |= NetworkOrder.bit(order, face.network());
             }
         }
-        if (!router.rangeActive()) {
-            return;
-        }
+        attachedRoles = roles;
+        boolean active = router.rangeActive();
         RemoteMachines remotes = router.remoteMachines();
-        followed.clear();
+        int groups = remotes.groupCount();
         int machines = remotes.size();
+        grow(groups, Math.min(machines, IndexRemotes.CAP));
+        exceptionCount = 0;
+        followed.clear();
         for (int i = 0; i < machines; i++) {
             RemoteMachine machine = remotes.machine(i);
             MachineConfig exception = machine.exception();
             if (exception != null) {
-                add(exception);
+                if (active) {
+                    add(exception);
+                }
+                if (i < IndexRemotes.CAP) {
+                    exceptionRoles[exceptionCount] = active ? rolesOf(exception) : 0;
+                    exceptionNets[exceptionCount] = netsOf(exception, order);
+                    exceptionCount++;
+                }
             } else if (machine.group() >= 0) {
                 followed.set(machine.group());
             }
         }
-        int groups = remotes.groupCount();
         for (int g = 0; g < groups; g++) {
             MachineGroup group = remotes.groupAt(g);
-            if (group.id() >= 0 && followed.get(group.id())) {
+            if (active && group.id() >= 0 && followed.get(group.id())) {
                 add(group.profile());
             }
+            groupRoles[g] = active ? rolesOf(group.profile()) : 0;
+            groupNets[g] = netsOf(group.profile(), order);
         }
+    }
+
+    /** Os arrays só crescem (o resumo é um por índice). */
+    private void grow(int groups, int exceptions) {
+        if (groupRoles.length < groups) {
+            groupRoles = Arrays.copyOf(groupRoles, groups);
+            groupNets = Arrays.copyOf(groupNets, groups);
+        }
+        if (exceptionRoles.length < exceptions) {
+            exceptionRoles = Arrays.copyOf(exceptionRoles, exceptions);
+            exceptionNets = Arrays.copyOf(exceptionNets, exceptions);
+        }
+    }
+
+    private static int rolesOf(MachineConfig config) {
+        int found = 0;
+        for (ResourceType type : TYPES) {
+            for (RemoteSide side : SIDES) {
+                found |= NodeIndex.roleOf(type, config.face(type, side).mode());
+            }
+        }
+        return found;
+    }
+
+    private static long netsOf(MachineConfig config, List<UUID> order) {
+        long found = 0;
+        for (ResourceType type : TYPES) {
+            for (RemoteSide side : SIDES) {
+                found |= NetworkOrder.bit(order, config.face(type, side).network());
+            }
+        }
+        return found;
     }
 
     private void add(MachineConfig config) {

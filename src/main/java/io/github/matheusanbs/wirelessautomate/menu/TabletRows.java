@@ -106,7 +106,11 @@ public record TabletRows(List<Row> rows, List<MachineLive> lives) {
         /** Algum destino da máquina dorme depois de recusas seguidas. */
         FULL,
         /** Carregada e no alcance, sem mover nada. */
-        SLEEPING
+        SLEEPING,
+        /** A presa de um nó sem nenhuma face numa rede que exista (só na visão por máquinas). */
+        NO_NETWORK,
+        /** A presa de um nó com todas as redes em grupos pausados (só na visão por máquinas). */
+        PAUSED
     }
 
     /**

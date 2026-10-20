@@ -50,9 +50,14 @@ final class TabletMenuActions {
     }
 
     /** Ver {@link TabletMenu#moveNodes}. */
-    int moveNodes(List<NodeKey> keys, Optional<ResourceType> type, Optional<UUID> network) {
-        if (keys.isEmpty() || keys.size() > TabletMenu.MAX_MOVE
+    int moveNodes(List<NodeKey> keys, TabletMarks marks, Optional<ResourceType> type, Optional<UUID> network,
+            @Nullable TabletMachines view) {
+        if (keys.isEmpty() && marks.isEmpty() || keys.size() > TabletMenu.MAX_MOVE
                 || type.filter(t -> !LoadedTypes.contains(t)).isPresent()) {
+            return -1;
+        }
+        if (!marks.isEmpty() && !TabletPlayers.takeBulk(viewer.getUUID(), viewer.server.getTickCount())) {
+            notice("busy");
             return -1;
         }
         MinecraftServer server = viewer.server;
@@ -71,6 +76,21 @@ final class TabletMenuActions {
             WaNetwork current = data.network(from);
             return current == null || current.canManage(viewer);
         };
+        Component name = target == null ? Component.translatable("gui.wirelessautomate.tablet.network.none")
+                : target.displayName();
+        if (!marks.isEmpty()) {
+            MarkedMove.Result result = MarkedMove.move(server, MarkedTargets.collect(viewer, keys, marks, view),
+                    type.map(List::of).orElseGet(() -> LoadedTypes.LIST), target == null ? null : target.id(), canLeave);
+            Component parts = MarkedNotice.parts(result.routers(), result.groups(), result.machines());
+            Component what = parts == null ? Component.literal("0") : parts;
+            String suffix = result.kept() > 0 ? ".kept" : "";
+            if (result.unloaded() > 0) {
+                notice("moved.unloaded" + suffix, what, name, result.unloaded(), result.kept());
+            } else {
+                notice("moved" + suffix, what, name, result.kept());
+            }
+            return result.routers() + result.groups() + result.machines();
+        }
         for (NodeKey key : new HashSet<>(keys)) {
             NodeIndex.Entry entry = index.entry(key);
             if (entry == null || !TabletNodes.visible(entry, data, operator, viewer.getUUID())) {
@@ -85,8 +105,6 @@ final class TabletMenuActions {
             kept += router.setNetworkAllFaces(type.map(List::of).orElseGet(() -> LoadedTypes.LIST), id, canLeave);
             moved++;
         }
-        Component name = target == null ? Component.translatable("gui.wirelessautomate.tablet.network.none")
-                : target.displayName();
         String suffix = kept > 0 ? ".kept" : "";
         if (unloaded > 0) {
             notice("moved.unloaded" + suffix, moved, name, unloaded, kept);

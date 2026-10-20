@@ -41,6 +41,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.energy.IEnergyStorage;
 
 /**
  * A projeção do Ressonador no e2e: uma Vitrine pela metade (o Núcleo virado para o leste, as duas camadas de baixo
@@ -247,6 +249,51 @@ final class E2eResonatorSteps {
                 return null;
             });
         }, () -> true, () -> "dial"));
+        flowSteps(list, origin);
+    }
+
+    /**
+     * A energia saindo pela Porta de Energia: o teste tira da Porta a cada tick (a capability de energia do
+     * mundo, como um consumidor) até a faixa chegar ao cliente e o conduto acender, e fotografa.
+     */
+    private static void flowSteps(List<Step> list, BlockPos[] origin) {
+        long[] seen = new long[1];
+        list.add(new Step("Ressonador: energia saindo pela Porta", STEP_TIMEOUT_MS, () -> {
+            Minecraft.getInstance().options.hideGui = true;
+            seen[0] = 0;
+        }, () -> {
+            onServer(server -> {
+                BlockPos port = energyPort(origin[0]);
+                IEnergyStorage energy = server.overworld().getCapability(Capabilities.EnergyStorage.BLOCK, port, null);
+                if (energy != null) {
+                    energy.extractEnergy(Integer.MAX_VALUE, false);
+                }
+                return null;
+            });
+            var view = ((ResonanceCoreBlockEntity) Minecraft.getInstance().level.getBlockEntity(core(origin[0])))
+                    .clientView();
+            if (seen[0] == 0 && view.flows().length > 0 && view.flows()[0] > 0) {
+                seen[0] = stepTicks;
+            }
+            return seen[0] != 0 && stepTicks >= seen[0] + 30;
+        }, () -> "faixa de vazão no cliente"));
+        list.add(capture("ressonador-camara-fluxo"));
+        list.add(new Step("Ressonador: a mão de volta", STEP_TIMEOUT_MS, () -> Minecraft.getInstance().options.hideGui = false,
+                () -> true, () -> "mão"));
+    }
+
+    /** A única Porta de Energia da Vitrine. */
+    private static BlockPos energyPort(BlockPos origin) {
+        for (int x = 0; x < 5; x++) {
+            for (int y = 0; y < 5; y++) {
+                for (int z = 0; z < 5; z++) {
+                    if (VITRINE[x][y][z] == Part.ENERGY_PORT) {
+                        return origin.offset(x, y, z);
+                    }
+                }
+            }
+        }
+        throw new IllegalStateException("a Vitrine não tem Porta de Energia");
     }
 
     /**

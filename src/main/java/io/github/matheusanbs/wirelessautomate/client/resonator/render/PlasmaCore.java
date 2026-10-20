@@ -8,9 +8,11 @@ import net.minecraft.client.renderer.MultiBufferSource;
 /**
  * O Núcleo de plasma: um quad virado para a câmera no centro da câmara, desenhado pelo core shader do mod. Cada
  * vértice leva a cor do tier no RGB e a sintonia no alfa, o canto do quad no UV0 e, no UV2 (inteiros, os mesmos nos
- * quatro), os cristais carregados e o nível de detalhe, que cai com a distância.
+ * quatro), os cristais carregados e o nível de detalhe, que cai com a distância (os dois bits de baixo), mais o bit 4 com o buffer cheio.
  */
 final class PlasmaCore {
+    /** O bit do UV2.y que diz ao shader que o buffer está cheio; os dois de baixo são o detalhe. */
+    private static final int FULL_BIT = 4;
     private static final float HALF = 1.3f;
     private static final double NEAR_SQ = 12 * 12;
     private static final double FAR_SQ = 32 * 32;
@@ -32,7 +34,7 @@ final class PlasmaCore {
         int g = (tierColor >> 8) & 0xFF;
         int b = tierColor & 0xFF;
         int charged = scene.charged();
-        int detail = detail(distanceSq);
+        int detail = detail(distanceSq) | (scene.full() ? FULL_BIT : 0);
         poseStack.pushPose();
         poseStack.mulPose(Minecraft.getInstance().gameRenderer.getMainCamera().rotation());
         PoseStack.Pose pose = poseStack.last();

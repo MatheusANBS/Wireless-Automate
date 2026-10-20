@@ -23,6 +23,8 @@ final class ChamberScene {
     private static final double Q_RATE = 1.6;
     /** O quanto a sintonia do plasma anda por tick em direção ao alvo. */
     private static final float TUNE_RATE = 0.25f;
+    /** O quanto a faixa de vazão de uma Porta anda por tick em direção ao alvo: acende e apaga em cerca de 1 s. */
+    private static final float FLOW_RATE = 0.12f;
     private static final double TICK_SECONDS = 0.05;
     private static final int PORT_REFRESH_TICKS = 200;
     private static final double FADE_SECONDS = 0.9;
@@ -49,6 +51,11 @@ final class ChamberScene {
     private List<Vec3> energyInner = List.of();
     private List<Vec3> crystalInner = List.of();
     private final ChamberParticles particles = new ChamberParticles();
+    private byte[] flowTarget = new byte[0];
+    private float[] flowPrev = new float[0];
+    private float[] flowNow = new float[0];
+    private boolean full;
+    private boolean conduit;
     private float tunePrev;
     private float tuneNow;
     private int charged;
@@ -68,6 +75,12 @@ final class ChamberScene {
         if (view != this.view) {
             this.view = view;
             chambers = view.chambers();
+            flowTarget = view.flows();
+            full = view.full();
+            if (flowNow.length != flowTarget.length) {
+                flowPrev = new float[flowTarget.length];
+                flowNow = new float[flowTarget.length];
+            }
             charged = 0;
             for (byte chamber : chambers) {
                 if (chamber == 1 || chamber == 2) {
@@ -106,7 +119,11 @@ final class ChamberScene {
             readPorts(level);
             portsReadAt = gameTime;
         }
-        particles.tick(this, view, level, gameTime);
+        for (int i = 0; i < flowNow.length; i++) {
+            flowPrev[i] = flowNow[i];
+            flowNow[i] += (flowTarget[i] - flowNow[i]) * FLOW_RATE;
+        }
+        particles.tick(this, view, level, gameTime, !conduit);
         lastUsed = gameTime;
     }
 
@@ -138,6 +155,26 @@ final class ChamberScene {
         }
         energyInner = List.copyOf(energy);
         crystalInner = List.copyOf(crystal);
+    }
+
+    /** Liga o conduto de luz no lugar das faíscas; o renderer diz a cada quadro, antes do {@code update}. */
+    void useConduit(boolean on) {
+        conduit = on;
+    }
+
+    /** A faixa de vazão (0 a 7) que o servidor mandou para a Porta de Energia {@code port}; 0 sem faixa. */
+    int flowBand(int port) {
+        return port < flowTarget.length ? flowTarget[port] : 0;
+    }
+
+    /** A faixa suavizada da Porta de Energia {@code port}, de 0 a 7, interpolada entre o tick anterior e o de agora. */
+    float flow(int port, float partialTick) {
+        return port < flowNow.length ? Mth.lerp(partialTick, flowPrev[port], flowNow[port]) : 0f;
+    }
+
+    /** O buffer terminou o último lote cheio: o plasma fica sob pressão. */
+    boolean full() {
+        return full;
     }
 
     /** As faíscas da câmara, para o desenho. */

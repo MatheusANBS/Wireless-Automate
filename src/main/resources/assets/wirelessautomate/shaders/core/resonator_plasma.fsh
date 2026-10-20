@@ -36,18 +36,19 @@ void main() {
     float tune = params.a;
     float mis = 1.0 - tune;
     float crystals = float(extra.x);
-    int detail = extra.y;
+    int detail = extra.y & 3;
+    float press = extra.y >= 4 ? 0.5 + 0.5 * sin(t * 7.0) : 0.0;
     int octaves = detail >= 2 ? 4 : (detail == 1 ? 3 : 2);
     int samples = detail >= 2 ? 48 : (detail == 1 ? 32 : 16);
 
     vec3 col = tier * 0.05 * (1.0 - r * 0.6);
     vec2 q = p * 3.0;
     float w = fbm(q + vec2(t * 0.4, -t * 0.3) + fbm(q * 1.5 - t * 0.2, octaves) * 1.6, octaves);
-    float radius = 0.26 + 0.03 * sin(t * 2.0) + mis * 0.08 * (w - 0.5);
+    float radius = 0.26 + 0.03 * sin(t * 2.0) + mis * 0.08 * (w - 0.5) - press * 0.05;
     float body = smoothstep(radius, radius - 0.12, r) * (0.55 + 0.9 * w);
     col += mix(CORAL * 0.8, CORAL, smoothstep(0.0, radius, radius - r + 0.1)) * vec3(1.5, 0.75, 0.55) * body;
     float ring = (r - radius) / 0.07;
-    col += tier * 1.3 * exp(-ring * ring);
+    col += tier * 1.3 * exp(-ring * ring) * (1.0 + press * 0.9);
     col += WHITE * exp(-r * r * 160.0) * (0.35 + 0.1 * sin(t * 3.0));
     col += tier * 0.4 * exp(-r * 4.5);
 

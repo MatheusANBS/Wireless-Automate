@@ -62,5 +62,5 @@ void main() {
     col *= power;
     float peak = max(col.r, max(col.g, col.b));
     if (peak < 0.003) discard;
-    fragColor = vec4(col, 1.0 - exp(-peak * 1.5));
+    fragColor = vec4(1.0 - exp(-col * 1.2), 1.0);
 }

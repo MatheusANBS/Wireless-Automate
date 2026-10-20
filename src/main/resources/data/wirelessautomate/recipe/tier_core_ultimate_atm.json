@@ -16,19 +16,19 @@
   "category": "misc",
   "tier": "ultimate",
   "pattern": [
-    "XDX",
+    "SDS",
     "B B",
-    "XBX"
+    "SBS"
   ],
   "key": {
-    "X": {
-      "item": "minecraft:echo_shard"
+    "S": {
+      "item": "minecraft:nether_star"
     },
     "D": {
       "item": "minecraft:dragon_egg"
     },
     "B": {
-      "item": "minecraft:netherite_block"
+      "tag": "c:storage_blocks/unobtainium_vibranium_alloy"
     }
   }
 }

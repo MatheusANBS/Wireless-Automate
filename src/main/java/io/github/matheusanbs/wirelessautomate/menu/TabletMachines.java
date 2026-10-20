@@ -306,7 +306,7 @@ public final class TabletMachines {
             boolean attached = m == MachineOrder.ATTACHED;
             int roles = attached ? entry.attachedRoles() : remotes.machineRoles(m);
             long nets = attached ? entry.attachedNets() : remotes.machineNets(m);
-            if (!query.matchesMachine(entry, block, roles, nets, attached ? "" : remotes.label(m))) {
+            if (!query.matchesMachine(entry, block, roles, nets, attached ? entry.attachedLabel() : remotes.label(m))) {
                 continue;
             }
             pass.set(k);
@@ -413,7 +413,7 @@ public final class TabletMachines {
         if (m == MachineOrder.ATTACHED) {
             RouterBlockEntity router = entry.router();
             long pos = router != null ? router.machinePos().asLong() : key.pos().asLong();
-            return new Machine(ref, true, -1, 0, pos, "", false);
+            return new Machine(ref, true, -1, 0, pos, clip(entry.attachedLabel()), false);
         }
         IndexRemotes remotes = entry.remotes();
         return new Machine(ref, false, m, numberInGroup(remotes, m), remotes.pos(m), clip(remotes.label(m)),

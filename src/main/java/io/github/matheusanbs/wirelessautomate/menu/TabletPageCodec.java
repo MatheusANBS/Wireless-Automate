@@ -75,6 +75,7 @@ final class TabletPageCodec {
             buf.writeVarInt(dimensions.getInt(n.key().dimension().location()));
             buf.writeLong(n.key().pos().asLong());
             buf.writeUtf(n.name(), 64);
+            buf.writeUtf(n.attachedLabel(), 64);
             buf.writeVarInt(machines.getInt(n.machine()));
             buf.writeEnum(n.tier());
             for (List<UUID> networks : n.networks()) {
@@ -172,6 +173,7 @@ final class TabletPageCodec {
             NodeKey key = new NodeKey(ResourceKey.create(Registries.DIMENSION, at(dimensions, buf.readVarInt())),
                     BlockPos.of(buf.readLong()));
             String name = buf.readUtf(64);
+            String attachedLabel = buf.readUtf(64);
             ResourceLocation machine = at(machines, buf.readVarInt());
             RouterTier tier = buf.readEnum(RouterTier.class);
             List<List<UUID>> typeNetworks = new ArrayList<>(TYPES.length);
@@ -191,7 +193,7 @@ final class TabletPageCodec {
                     : ProfileMatch.differs(b.readEnum(ResourceType.class), b.readEnum(RemoteSide.class),
                             b.readEnum(What.class)));
             int linked = buf.readVarInt();
-            nodes.add(new NodeView(key, name, machine, tier, List.copyOf(typeNetworks), roles, live.status(), removed,
+            nodes.add(new NodeView(key, name, attachedLabel, machine, tier, List.copyOf(typeNetworks), roles, live.status(), removed,
                     faceModes, live.rates(), profile, linked));
         }
         TabletRows rows = TabletRows.decode(buf, machines, nodeCount);

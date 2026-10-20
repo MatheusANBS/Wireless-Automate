@@ -287,7 +287,7 @@ final class ScreenshotTablet {
             rates.add(type == ResourceType.ITEM ? itemRate : 0L);
         }
         return new TabletSnapshot.NodeView(new NodeIndex.NodeKey(net.minecraft.world.level.Level.OVERWORLD,
-                new BlockPos(x, y, z)), name, ResourceLocation.withDefaultNamespace(machine), tier, networks, roles, status,
+                new BlockPos(x, y, z)), name, "", ResourceLocation.withDefaultNamespace(machine), tier, networks, roles, status,
                 false, faceModes, List.copyOf(rates), Optional.ofNullable(match), 0);
     }
 }

@@ -226,10 +226,18 @@ public final class TabletMachinesGameTests {
                     eq(helper, rows.totalRows(), 14, "linhas sem o teto");
                     eq(helper, rows.machines(), 15, "máquinas que casam");
                     eq(helper, rows.blocks(), 2, "blocos");
-                    eq(helper, menuA.snapshot().machines(), NodeIndex.get(helper.getLevel().getServer()).machines(),
-                            "a soma das máquinas no cabeçalho");
                     roundTrip(helper, page);
                     eq(helper, fresh(menuB), TabletMachineRows.EMPTY, "a página do outro jogador mudou de visão");
+                    // no mesmo tique, os dois veem o mesmo resto; só A vê os dois roteadores dele (2 presas e 13
+                    // vinculadas)
+                    eq(helper, menuA.snapshot().machines() - menuB.snapshot().machines(), 15,
+                            "o cabeçalho contou máquinas de nós que o jogador não vê");
+                    // no Mapa, a página volta aos nós (a visão continua em Máquinas); na Lista, às máquinas
+                    helper.assertTrue(menuA.setTab(2), "não abriu o Mapa");
+                    eq(helper, fresh(menuA), TabletMachineRows.LIST_CLOSED, "as linhas por máquina no Mapa");
+                    helper.assertFalse(menuA.snapshot().page().nodes().isEmpty(), "o Mapa sem os nós");
+                    helper.assertTrue(menuA.setTab(0), "não voltou à Lista");
+                    eq(helper, fresh(menuA).rows().size(), 14, "as linhas por máquina na volta à Lista");
 
                     helper.assertTrue(act(a, menuA, Action.CLOSE_BLOCK, CHEST_ID), "não recolheu");
                     list = fresh(menuA).rows();

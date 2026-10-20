@@ -17,7 +17,6 @@ import io.github.matheusanbs.wirelessautomate.packet.TabletProfilePayload;
 import io.github.matheusanbs.wirelessautomate.preset.ConfiguratorArea;
 import io.github.matheusanbs.wirelessautomate.preset.PresetApplier;
 import io.github.matheusanbs.wirelessautomate.preset.PresetPaste;
-import io.github.matheusanbs.wirelessautomate.preset.ProfileSides;
 import io.github.matheusanbs.wirelessautomate.preset.ProfileSource;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import java.util.ArrayList;
@@ -145,15 +144,9 @@ final class TabletProfile {
         return 1;
     }
 
-    /**
-     * A frente da presa e o cima do mundo nos lados do roteador ({@link ProfileSides#frame}); sem frente, a presa vale
-     * Norte.
-     */
+    /** O quadro da presa do roteador ({@link ProfileSource#frameOf}). */
     private static int frameOf(RouterBlockEntity router) {
-        int front = router.attachedFront();
-        Direction absolute = front < 0 ? Direction.NORTH : Direction.values()[front];
-        return ProfileSides.frame(RelativeSide.fromAbsolute(router.facing(), router.spin(), absolute).ordinal(),
-                RelativeSide.fromAbsolute(router.facing(), router.spin(), Direction.UP).ordinal());
+        return ProfileSource.frameOf(router.facing(), router.spin(), router.attachedFront());
     }
 
     /**
@@ -226,9 +219,9 @@ final class TabletProfile {
                 skipped++;
                 continue;
             }
-            PasteUndo.State was = PasteUndo.State.of(router, false);
+            PasteUndo.State was = PasteUndo.State.of(router, true, false);
             rule = PresetPaste.paste(viewer, router, profile, null);
-            before.put(key, PasteUndo.between(was, PasteUndo.State.of(router, false), true));
+            before.put(key, PasteUndo.between(was, PasteUndo.State.of(router, true, false), true));
             lastName = nodeName(entry);
         }
         if (!before.isEmpty()) {
@@ -254,12 +247,14 @@ final class TabletProfile {
         Map<NodeKey, PasteUndo> changes = new LinkedHashMap<>();
         MarkedPaste.Result result = MarkedPaste.paste(viewer, MarkedTargets.collect(viewer, keys, marks, machines), rule,
                 source, changes);
-        if (!changes.isEmpty()) {
+        // um colar que atingiu algo troca o Desfazer, mesmo sem mudança: o Desfazer vale só para o colar do
+        // aviso à vista
+        if (result.pastedAny()) {
             undo.clear();
             undo.putAll(changes);
         }
         announce(new PanelNoticePayload(MarkedNotice.paste(result, result.pastedAny() ? keptFaces(profile, rule) : 0),
-                result.pastedAny() ? PanelNoticePayload.Undo.UNDO_PASTE : PanelNoticePayload.Undo.NONE, containerId,
+                changes.isEmpty() ? PanelNoticePayload.Undo.NONE : PanelNoticePayload.Undo.UNDO_PASTE, containerId,
                 ResourceType.ITEM, Direction.UP));
         return result.routers() + result.groups() + result.machines();
     }

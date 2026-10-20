@@ -62,57 +62,70 @@ final class MarkedMove {
                 continue;
             }
             MarkedTargets.Resolved targets = MarkedTargets.resolve(router, marks);
+            // só conta o que mudou: uma face já na rede, ou sem modo, não é movida
+            int[] moved = new int[2];
             router.batchChanges(() -> {
-                if (targets.attached()) {
-                    moveAttached(router, types, network, canLeave, kept);
+                if (targets.attached() && moveAttached(router, types, network, canLeave, kept)) {
+                    moved[1]++;
                 }
                 RemoteMachines remotes = router.remoteMachines();
                 for (int id : targets.groups()) {
                     MachineGroup group = remotes.group(id);
                     if (group != null) {
                         MachineConfig config = group.profile().copy();
-                        moveFaces(config, types, network, canLeave, kept);
-                        router.setGroupProfile(id, config);
+                        if (moveFaces(config, types, network, canLeave, kept)) {
+                            router.setGroupProfile(id, config);
+                            moved[0]++;
+                        }
                     }
                 }
                 for (int i : targets.machines()) {
                     RemoteMachine machine = remotes.machine(i);
                     if (machine != null) {
                         MachineConfig config = remotes.effective(machine).copy();
-                        moveFaces(config, types, network, canLeave, kept);
-                        router.setMachineException(i, config);
+                        if (moveFaces(config, types, network, canLeave, kept)) {
+                            router.setMachineException(i, config);
+                            moved[1]++;
+                        }
                     }
                 }
             });
-            groups += targets.groups().size();
-            machines += targets.machines().size() + (targets.attached() ? 1 : 0);
+            groups += moved[0];
+            machines += moved[1];
         }
         return new Result(routers, groups, machines, unloaded, kept[0]);
     }
 
-    /** As faces com modo da presa na rede; uma face sem modo não ganha rede. */
-    private static void moveAttached(RouterBlockEntity router, Collection<ResourceType> types, @Nullable UUID network,
-            Predicate<UUID> canLeave, int[] kept) {
+    /** As faces com modo da presa na rede; uma face sem modo não ganha rede. Devolve se alguma mudou. */
+    private static boolean moveAttached(RouterBlockEntity router, Collection<ResourceType> types,
+            @Nullable UUID network, Predicate<UUID> canLeave, int[] kept) {
+        boolean changed = false;
         for (ResourceType type : types) {
             for (RelativeSide side : SIDES) {
                 FaceConfig face = router.face(type, side);
                 if (face.mode() != PortMode.NONE && leaves(face.network(), network, canLeave, kept)) {
                     router.setFaceNetwork(type, side, network);
+                    changed = true;
                 }
             }
         }
+        return changed;
     }
 
-    private static void moveFaces(MachineConfig config, Collection<ResourceType> types, @Nullable UUID network,
+    /** Como {@link #moveAttached}, nas faces de um perfil ou exceção. Devolve se alguma mudou. */
+    private static boolean moveFaces(MachineConfig config, Collection<ResourceType> types, @Nullable UUID network,
             Predicate<UUID> canLeave, int[] kept) {
+        boolean changed = false;
         for (ResourceType type : types) {
             for (RemoteSide side : REMOTE_SIDES) {
                 FaceConfig face = config.face(type, side);
                 if (face.mode() != PortMode.NONE && leaves(face.network(), network, canLeave, kept)) {
                     face.setNetwork(network);
+                    changed = true;
                 }
             }
         }
+        return changed;
     }
 
     /** A face sai da rede {@code from} para {@code to}: já está nela, não; de uma rede que o jogador não gerencia, conta e não. */

@@ -40,12 +40,14 @@ import net.minecraft.resources.ResourceLocation;
  * @param machineFacets as máquinas dos nós visíveis, com quantos nós cada uma tem (sem olhar a consulta)
  * @param networkFacets as redes visíveis das faces dos nós visíveis, com quantos nós cada uma tem
  * @param quickCounts   quantos nós visíveis cada filtro rápido pega
- * @param machines      quantas máquinas a base tem ({@link NodeIndex#machines()}), para o cabeçalho
+ * @param machines      quantas máquinas os nós que o jogador vê têm (a presa de cada nó mais as remotas), para o
+ *                      cabeçalho
  * @param profile       o perfil guardado no Tablet do jogador, vazio sem perfil
  * @param rows          as linhas da árvore abaixo dos nós abertos ({@link TabletRows}); elas e os nós dividem o
  *                      teto de {@link #MAX_NODES}
  * @param machineRows   as linhas da visão por máquinas ({@link TabletMachineRows}); na visão por máquinas, a página
- *                      não leva nós nem linhas da árvore
+ *                      não leva nós nem linhas da árvore com a Lista aberta, e leva só os nós (para o Mapa) com
+ *                      outra aba ({@link TabletMachineRows#LIST_CLOSED})
  * @param groupCounts   quantos nós de cada máquina passam na consulta (não só os enviados), na ordem da lista
  * @param originGroup   a máquina atual do nó de origem do perfil, se ele passa na consulta
  * @param notice        aviso da última ação (vazio se não houver)

@@ -167,6 +167,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         this.flows = new TabletFlows(viewer, containerId);
         restore(TabletPlayers.saved(viewer.getUUID()));
         flows.tab(tab);
+        builder.listOpen(tab == LIST_TAB);
         this.snapshot = builder.build(true, actions.notice(), actions.noticeId());
         this.sent = snapshot;
     }
@@ -257,9 +258,17 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         if (tab < 0 || tab >= TAB_COUNT) {
             return false;
         }
+        boolean wasList = this.tab == LIST_TAB;
         this.tab = tab;
         if (flows != null) {
             flows.tab(tab);
+        }
+        if (builder != null) {
+            builder.listOpen(tab == LIST_TAB);
+            // a visão por máquinas monta a página por bloco só na Lista: entrar ou sair dela refaz a página
+            if (wasList != (tab == LIST_TAB) && machines != null && machines.active()) {
+                forced = true;
+            }
         }
         return true;
     }

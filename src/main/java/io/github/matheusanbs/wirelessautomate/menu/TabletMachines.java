@@ -73,6 +73,8 @@ public final class TabletMachines {
     private @Nullable MachineOrder builtOrder;
     private int builtIndexVersion;
     private @Nullable Query builtQuery;
+    /** A consulta do Tablet da última página, para refazer a passada no bloco marcado. */
+    private @Nullable TabletQuery builtFrom;
     private int builtSets = -1;
     private final BitSet builtMarks = new BitSet();
     private List<Row> builtRows = List.of();
@@ -199,15 +201,10 @@ public final class TabletMachines {
      */
     TabletMachineRows page(TabletSample shared, NodeIndex index, TabletQuery query, long now) {
         MachineOrder order = shared.machineOrder(index);
+        builtFrom = query;
         if (order != builtOrder || index.version() != builtIndexVersion || !query.query().equals(builtQuery)
                 || setsVersion != builtSets || !marks.equals(builtMarks)) {
-            rebuild(order, query);
-            builtOrder = order;
-            builtIndexVersion = index.version();
-            builtQuery = query.query();
-            builtSets = setsVersion;
-            builtMarks.clear();
-            builtMarks.or(marks);
+            remake(order, index, query);
         }
         List<MachineLive> lives = new ArrayList<>(builtKeys.length);
         NetworkSavedData data = NetworkSavedData.get(server);
@@ -216,6 +213,16 @@ public final class TabletMachines {
         }
         return new TabletMachineRows(true, builtRows, builtRouters, List.copyOf(lives), builtTotalRows, builtMachines,
                 builtBlocks);
+    }
+
+    private void remake(MachineOrder order, NodeIndex index, TabletQuery query) {
+        rebuild(order, query);
+        builtOrder = order;
+        builtIndexVersion = index.version();
+        builtQuery = query.query();
+        builtSets = setsVersion;
+        builtMarks.clear();
+        builtMarks.or(marks);
     }
 
     private void rebuild(MachineOrder order, TabletQuery query) {
@@ -326,25 +333,46 @@ public final class TabletMachines {
     /**
      * As máquinas do bloco que passaram na consulta da última página montada, até {@code max}: o bloco marcado no
      * Selecionar, que o cliente não conhece inteiro (um bloco recolhido não manda as linhas). Nenhuma fora da visão
-     * por máquinas. Devolve quantas.
+     * por máquinas. Se o índice mudou desde a página (vincular ou desvincular troca as remotas no lugar), refaz a
+     * passada antes, com a mesma consulta; e pula a máquina cujo índice saiu das remotas ou cujo grupo não é do
+     * bloco, para nunca colar noutra nem estourar com um pacote velho. Devolve quantas.
      */
     int forEachInBlock(ResourceLocation block, int max, MachineSink sink) {
-        MachineOrder order = builtOrder;
-        if (!active || order == null) {
+        if (!active || builtOrder == null || builtFrom == null) {
             return 0;
         }
+        NodeIndex index = NodeIndex.get(server);
+        MachineOrder fresh = TabletSample.get(server).machineOrder(index);
+        if (fresh != builtOrder || index.version() != builtIndexVersion) {
+            remake(fresh, index, builtFrom);
+        }
+        MachineOrder order = builtOrder;
         for (int b = 0, n = Math.min(order.blockCount(), count.length); b < n; b++) {
             if (count[b] == 0 || !order.block(b).equals(block)) {
                 continue;
             }
             int sent = 0;
             for (int k = pass.nextSetBit(first[b]); k >= 0 && k <= last[b] && sent < max; k = pass.nextSetBit(k + 1)) {
-                sink.accept(order.router(k), order.machine(k));
+                NodeIndex.Entry router = order.router(k);
+                int m = order.machine(k);
+                if (m != MachineOrder.ATTACHED && !inBlock(router.remotes(), m, block)) {
+                    continue;
+                }
+                sink.accept(router, m);
                 sent++;
             }
             return sent;
         }
         return 0;
+    }
+
+    /** A máquina {@code m} ainda está nas remotas guardadas e o grupo dela é do bloco. */
+    private static boolean inBlock(IndexRemotes remotes, int m, ResourceLocation block) {
+        if (m < 0 || m >= remotes.size()) {
+            return false;
+        }
+        int g = remotes.groupIndex(remotes.group(m));
+        return g >= 0 && remotes.groupBlock(g).equals(block);
     }
 
     private int limit(ResourceLocation block, int machines) {

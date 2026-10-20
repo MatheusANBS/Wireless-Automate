@@ -23,11 +23,12 @@ import org.jetbrains.annotations.Nullable;
  */
 final class PasteUndo {
     /**
-     * Um roteador num instante: a presa e, com {@code remotes}, os perfis por id do grupo e as exceções por posição
-     * (só as máquinas que têm).
+     * Um roteador num instante: com {@code attached}, a presa (senão {@code null}); com {@code remotes}, os perfis por
+     * id do grupo e as exceções por posição (só as máquinas que têm).
      */
-    record State(RouterPreset attached, Int2ObjectMap<MachineConfig> profiles, Long2ObjectMap<MachineConfig> exceptions) {
-        static State of(RouterBlockEntity router, boolean remotes) {
+    record State(@Nullable RouterPreset attached, Int2ObjectMap<MachineConfig> profiles,
+            Long2ObjectMap<MachineConfig> exceptions) {
+        static State of(RouterBlockEntity router, boolean attached, boolean remotes) {
             Int2ObjectMap<MachineConfig> profiles = new Int2ObjectLinkedOpenHashMap<>();
             Long2ObjectMap<MachineConfig> exceptions = new Long2ObjectLinkedOpenHashMap<>();
             if (remotes) {
@@ -41,7 +42,7 @@ final class PasteUndo {
                     }
                 }
             }
-            return new State(RouterPreset.copyOf(router), profiles, exceptions);
+            return new State(attached ? RouterPreset.copyOf(router) : null, profiles, exceptions);
         }
     }
 
@@ -66,8 +67,8 @@ final class PasteUndo {
     }
 
     /**
-     * O que mudou de {@code before} para {@code after}; a presa vai sempre que o colar a atingiu ({@code attached}),
-     * mesmo igual. {@code null} se não há o que desfazer.
+     * O que mudou de {@code before} para {@code after}; a presa vai sempre que o colar a atingiu ({@code attached},
+     * e os dois estados a leram), mesmo igual. {@code null} se não há o que desfazer.
      */
     static @Nullable PasteUndo between(State before, State after, boolean attached) {
         List<ProfileChange> profiles = new ArrayList<>();

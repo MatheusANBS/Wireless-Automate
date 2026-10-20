@@ -12,7 +12,8 @@ import net.minecraft.resources.ResourceLocation;
 /**
  * As linhas da Lista do Tablet na visão por máquinas (etapa 3b): um cabeçalho por bloco, as máquinas dele na ordem
  * roteador e #N (a presa antes das vinculadas do mesmo roteador) e o "mais N" de um bloco cortado. Sem nó pai: a
- * página nessa visão não leva nós. As linhas dividem o teto de {@link TabletSnapshot#MAX_NODES} da página.
+ * página nessa visão, com a aba Lista aberta, não leva nós. As linhas dividem o teto de
+ * {@link TabletSnapshot#MAX_NODES} da página.
  *
  * <p>Os roteadores das linhas vão numa paleta da página ({@link RouterRef}), e cada máquina leva o índice dele; os
  * blocos entram na paleta de máquinas da página. O estado e a vazão das máquinas ({@link MachineLive}) vão à parte,
@@ -29,6 +30,12 @@ import net.minecraft.resources.ResourceLocation;
 public record TabletMachineRows(boolean active, List<Row> rows, List<RouterRef> routers, List<MachineLive> lives,
         int totalRows, int machines, int blocks) {
     public static final TabletMachineRows EMPTY = new TabletMachineRows(false, List.of(), List.of(), List.of(), 0, 0, 0);
+    /**
+     * A visão por máquinas com outra aba aberta: só a visão, sem linhas. A página leva os nós de sempre, para o Mapa,
+     * e a tela continua em Máquinas (as marcas ficam).
+     */
+    public static final TabletMachineRows LIST_CLOSED = new TabletMachineRows(true, List.of(), List.of(), List.of(), 0,
+            0, 0);
 
     private static final int KIND_BLOCK = 0;
     private static final int KIND_MACHINE = 1;

@@ -3,8 +3,10 @@ package io.github.matheusanbs.wirelessautomate.preset;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
+import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -44,6 +46,17 @@ public record ProfileSource(String nodeName, ResourceLocation machine, NodeKey o
     /** {@code name} cortado a {@link #MAX_NAME} caracteres. */
     public static String clip(String name) {
         return name.length() > MAX_NAME ? name.substring(0, MAX_NAME) : name;
+    }
+
+    /**
+     * O quadro de um roteador em {@code facing} girado {@code spin} vezes, preso numa máquina virada para
+     * {@code front} (o índice de um {@link Direction}; sem frente, −1, a presa vale Norte): a frente da presa e o cima
+     * do mundo nos lados do roteador.
+     */
+    public static int frameOf(Direction facing, int spin, int front) {
+        Direction absolute = front < 0 ? Direction.NORTH : Direction.values()[front];
+        return ProfileSides.frame(RelativeSide.fromAbsolute(facing, spin, absolute).ordinal(),
+                RelativeSide.fromAbsolute(facing, spin, Direction.UP).ordinal());
     }
 
     /** O perfil cola em máquinas e grupos do alcance (tem o quadro da presa de origem). */

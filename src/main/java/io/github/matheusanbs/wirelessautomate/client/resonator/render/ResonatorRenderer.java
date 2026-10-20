@@ -37,6 +37,8 @@ public final class ResonatorRenderer implements BlockEntityRenderer<ResonanceCor
     /** A cena já achada de cada Núcleo; a chave é fraca e some com o block entity. */
     private static final Map<ResonanceCoreBlockEntity, ChamberScene> BY_CORE = new WeakHashMap<>();
     private static long lastSweep;
+    /** Só do e2e: força o desenho sem o shader (a figura de Lissajous e a lente), para medir o custo dos dois na mesma rodada. */
+    public static boolean forceLegacyForTests;
 
     private record SceneKey(ResourceKey<Level> dimension, BlockPos pos) {
     }
@@ -74,7 +76,7 @@ public final class ResonatorRenderer implements BlockEntityRenderer<ResonanceCor
         ChladniPlate.render(poseStack, buffer, scene, partialTick);
         ChamberCrystals.render(poseStack, buffer, scene, gameTime, partialTick, level);
         ChamberSparks.render(poseStack, buffer, scene, partialTick);
-        if (PlasmaShader.get() != null && !ShaderPackCheck.active()) {
+        if (!forceLegacyForTests && PlasmaShader.get() != null && !ShaderPackCheck.active()) {
             Vec3 eye = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
             Vec3 world = scene.worldCenter();
             double dx = eye.x - world.x;

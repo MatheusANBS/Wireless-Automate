@@ -5,6 +5,8 @@ import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletText.tr
 
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
+import io.github.matheusanbs.wirelessautomate.client.GuiText;
+import io.github.matheusanbs.wirelessautomate.client.GuiThemes;
 import io.github.matheusanbs.wirelessautomate.client.ResourceStyle;
 import io.github.matheusanbs.wirelessautomate.client.tablet.TabletSearch.Group;
 import io.github.matheusanbs.wirelessautomate.client.tablet.TabletSearch.Suggestion;
@@ -20,6 +22,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import net.minecraft.client.gui.Font;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -33,8 +36,16 @@ import org.jetbrains.annotations.Nullable;
  * linha de cada nó, o resumo do perfil copiado e a contagem embaixo da lista.
  */
 final class ListTexts {
+    /** O nome e a segunda linha de um nó, medidos na mesma largura. */
+    record NodeLine(GuiText.Fitted name, GuiText.Fitted state) {
+    }
+
     private final TabletList list;
     private final Map<ResourceLocation, String> machineNames = new HashMap<>();
+    /** As linhas dos nós, por índice do nó na página. */
+    private final LineCache<NodeLine> nodeLines = new LineCache<>();
+    /** Os cabeçalhos de grupo, por índice da linha na árvore. */
+    private final LineCache<GuiText.Fitted> headers = new LineCache<>();
 
     ListTexts(TabletList list) {
         this.list = list;
@@ -53,6 +64,57 @@ final class ListTexts {
 
     Component nodeName(NodeView node) {
         return node.name().isEmpty() ? Component.literal(machineName(node.machine())) : Component.literal(node.name());
+    }
+
+    /** O nome e a segunda linha do nó {@code index}, montados só quando a página, o tipo, o tema ou a largura mudam. */
+    NodeLine nodeLine(Font font, int index, NodeView node, @Nullable ProfileSummary profile, int width) {
+        TabletSnapshot s = snapshot();
+        nodeLines.key(s, null, list.chipType, GuiThemes.version(), s.nodes().size());
+        NodeLine line = nodeLines.get(index, width);
+        if (line == null) {
+            line = new NodeLine(GuiText.fit(font, nodeName(node), width),
+                    GuiText.fit(font, stateLine(node, profile), width));
+            nodeLines.put(index, width, line);
+        }
+        return line;
+    }
+
+    /**
+     * O cabeçalho do grupo na linha {@code index} da árvore (máquina, contagem e quantos diferem do perfil),
+     * montado só quando a página, a árvore, o tema ou a largura mudam.
+     */
+    GuiText.Fitted header(Font font, ListTree<ResourceLocation> tree, int lines, int index,
+            ListTree.Line<ResourceLocation> row, @Nullable ProfileSummary profile, int width) {
+        headers.key(snapshot(), tree, null, GuiThemes.version(), lines);
+        GuiText.Fitted text = headers.get(index, width);
+        if (text == null) {
+            text = GuiText.fit(font, headerText(row, profile), width);
+            headers.put(index, width, text);
+        }
+        return text;
+    }
+
+    private Component headerText(ListTree.Line<ResourceLocation> row, @Nullable ProfileSummary profile) {
+        int count = Math.max(row.count(), snapshot().groupCount(row.group()));
+        MutableComponent text = Component.literal(machineName(row.group())).copy()
+                .append(Component.literal(" · " + count).withColor(GuiPaint.MUTED));
+        int differ = profile == null ? 0 : differing(row.group());
+        if (differ > 0) {
+            text.append(Component.literal(" · ").withColor(GuiPaint.MUTED)).append(
+                    plural("list.group.differ", differ).copy().withColor(GuiPaint.WARN));
+        }
+        return text;
+    }
+
+    /** Quantos nós recebidos do grupo diferem do perfil (os carregados que compararam). */
+    private int differing(ResourceLocation machine) {
+        int count = 0;
+        for (NodeView node : snapshot().nodes()) {
+            if (node.machine().equals(machine) && node.profile().map(m -> !m.equal()).orElse(false)) {
+                count++;
+            }
+        }
+        return count;
     }
 
     private String networkName(UUID id) {
@@ -87,7 +149,7 @@ final class ListTexts {
      * rede e a vazão), "10 máquinas" vem antes, como no mockup; num problema ou numa diferença do perfil, que pedem
      * atenção, vem depois.
      */
-    Component stateLine(NodeView node, @Nullable ProfileSummary profile) {
+    private Component stateLine(NodeView node, @Nullable ProfileSummary profile) {
         Component state = stateText(node, profile);
         if (node.linked() <= 0) {
             return state;

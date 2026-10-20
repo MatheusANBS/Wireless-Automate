@@ -60,11 +60,13 @@ O Cristal de Sinal e o Lapidado das receitas 1 e 6 são só cheios e sem rachadu
 | Básico | 1 Matriz + 4 blocos de redstone |
 | Avançado | 2 Matrizes + 4 blocos de ouro |
 | Elite | 3 Matrizes + 4 lingotes de netherite |
-| Esmeralda | 1 Estabilizador + 8 blocos de esmeralda + 1 Nether Star |
+| Esmeralda | 1 Estabilizador + 7 blocos de esmeralda + 1 Nether Star |
 | Allthemodium | 2 Estabilizadores + 4 blocos de Allthemodium + 2 Nether Stars |
 | Vibranium | 1 Núcleo Condensado + 4 blocos de Vibranium + 2 Nether Stars |
-| Unobtainium | 2 Núcleos Condensados + 4 blocos de Unobtainium + 4 Nether Stars |
-| Ultimate | 3 Núcleos Condensados + 8 blocos de liga Unobtainium-Vibranium + 8 Nether Stars (sem o Allthemodium: 8 blocos de netherite no lugar dos de liga) |
+| Unobtainium | 2 Núcleos Condensados + 4 blocos de Unobtainium + 3 Nether Stars |
+| Ultimate | 3 Núcleos Condensados + 1 Moldura de Liga + 5 Nether Stars (os dois arquivos, com e sem o Allthemodium, usam a mesma Moldura) |
+
+A receita sem forma aceita no máximo 9 itens, por isso o Esmeralda ficou com 7 blocos e o Unobtainium com 3 Nether Stars. O Ultimate (19 itens no desenho original) guarda o custo na **Moldura de Liga** (`alloy_frame`, item intermediário, registrado e na aba criativa sempre): `crafting_shaped` em anel, 8 blocos de liga Unobtainium-Vibranium (`c:storage_blocks/unobtainium_vibranium_alloy`) em volta de 1 Nether Star, com a condição do Allthemodium; sem o mod (`neoforge:not`), 8 blocos de netherite em volta de 1 Nether Star.
 
 Allthemodium, Vibranium e Unobtainium só existem com o mod (condições `neoforge:mod_loaded`, tags `c:storage_blocks/...`), como o resto desses tiers.
 

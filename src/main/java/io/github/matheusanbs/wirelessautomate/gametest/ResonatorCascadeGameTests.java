@@ -117,7 +117,7 @@ public final class ResonatorCascadeGameTests {
         helper.succeed();
     }
 
-    /** Os Corações do Básico ao Esmeralda e o Ultimate sem o Allthemodium; os do Allthemodium só com o mod. */
+    /** Os Corações do Básico ao Esmeralda, a Moldura e o Ultimate sem o Allthemodium; os do Allthemodium só com o mod. */
     @GameTest(template = "empty")
     public static void coracoesDoRessonador(GameTestHelper helper) {
         Item matrix = ModItems.PHASE_MATRIX.get();
@@ -137,8 +137,13 @@ public final class ResonatorCascadeGameTests {
                 heart(RouterTier.ELITE), 1, "Coração Elite");
         assertYields(helper, craft(helper, emerald, emerald, emerald, emerald, stab, emerald, emerald, emerald, star),
                 heart(RouterTier.EMERALD), 1, "Coração Esmeralda");
-        assertYields(helper, craft(helper, condensed, block, condensed, block, star, block, condensed, block, star),
+        assertYields(helper, craft(helper, block, block, block, block, star, block, block, block, block),
+                ModItems.ALLOY_FRAME.get(), 1, "Moldura de Liga sem o Allthemodium");
+        Item frame = ModItems.ALLOY_FRAME.get();
+        assertYields(helper, craft(helper, condensed, star, condensed, star, frame, star, condensed, star, star),
                 heart(RouterTier.ULTIMATE), 1, "Coração Ultimate sem o Allthemodium");
+        helper.assertTrue(craft(helper, condensed, block, condensed, block, star, block, condensed, block, star)
+                .isEmpty(), "o Coração Ultimate saiu com a receita antiga, sem a Moldura");
         helper.assertTrue(craft(helper, redstone, matrix, redstone, null, redstone).isEmpty(),
                 "o Coração Básico saiu com 3 blocos de redstone");
         var recipes = helper.getLevel().getRecipeManager();
@@ -146,6 +151,8 @@ public final class ResonatorCascadeGameTests {
             helper.assertTrue(recipes.byKey(WirelessAutomate.id("resonator_heart_" + tier)).isEmpty(),
                     "a receita do Coração " + tier + " carregou sem o Allthemodium");
         }
+        helper.assertTrue(recipes.byKey(WirelessAutomate.id("alloy_frame")).isEmpty(),
+                "a receita da Moldura de Liga do Allthemodium carregou sem ele");
         helper.succeed();
     }
 

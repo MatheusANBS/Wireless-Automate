@@ -450,7 +450,8 @@ public final class ModPayloads {
         RouterBlockEntity router = host.editedRouter();
         boolean attached = payload.kind() == EditTarget.Kind.ATTACHED;
         if (!attached && (!router.rangeActive() || payload.kind() == EditTarget.Kind.MACHINE
-                && (payload.machinePos().isEmpty() || !sameMachine(router, payload.id(), payload.machinePos().get())))) {
+                && (payload.machinePos().isEmpty()
+                || !sameMachine(router, payload.id(), payload.machinePos().get())))) {
             return false;
         }
         boolean renamed = router.renameTarget(new EditTarget(payload.kind(), payload.id()), payload.name());

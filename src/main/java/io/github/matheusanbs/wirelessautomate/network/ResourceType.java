@@ -17,9 +17,9 @@ import org.jetbrains.annotations.Nullable;
 public enum ResourceType {
     ITEM("item", true, true, "itemsPerSecond", false, null, 32L, 256L, 2_048L, 16_384L, 131_072L, 1_048_576L, 8_388_608L, 0L),
     FLUID("fluid", true, true, "fluidPerSecond", false, null, 2_000L, 16_000L, 128_000L, 1_024_000L, 8_192_000L, 65_536_000L, 524_288_000L, 0L),
-    /** O Unobtainium sobe ×64 sobre o Vibranium (não ×8) para dar conta da geração cheia do Ressonador do tier. */
-    ENERGY("energy", false, false, "energyPerTick", true, null, 1_000L, 8_000L, 64_000L, 512_000L, 4_096_000L,
-            32_768_000L, 2_097_152_000L, 0L),
+    /** A energia de cada tier escoa a geração cheia do Ressonador do mesmo tier por uma face. */
+    ENERGY("energy", false, false, "energyPerTick", true, null, 1_000L, 32_768L, 64_000L, 2_097_152L, 67_108_864L,
+            134_217_728L, 4_294_967_296L, 0L),
     /** Só existe com o Mekanism instalado. Divide a vazão com os fluidos e não tem cartões. */
     CHEMICAL("chemical", true, false, "fluidPerSecond", false, "mekanism", 2_000L, 16_000L, 128_000L, 1_024_000L, 8_192_000L, 65_536_000L, 524_288_000L, 0L),
     /** Só existe com o Ars Nouveau instalado. Um valor só, como a energia: sem filtro e sem cartões. */

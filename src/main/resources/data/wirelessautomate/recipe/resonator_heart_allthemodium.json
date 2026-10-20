@@ -1,0 +1,40 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "allthemodium"
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "wirelessautomate:field_stabilizer"
+    },
+    {
+      "item": "wirelessautomate:field_stabilizer"
+    },
+    {
+      "tag": "c:storage_blocks/allthemodium"
+    },
+    {
+      "tag": "c:storage_blocks/allthemodium"
+    },
+    {
+      "tag": "c:storage_blocks/allthemodium"
+    },
+    {
+      "tag": "c:storage_blocks/allthemodium"
+    },
+    {
+      "item": "minecraft:nether_star"
+    },
+    {
+      "item": "minecraft:nether_star"
+    }
+  ],
+  "result": {
+    "id": "wirelessautomate:resonator_heart_allthemodium",
+    "count": 1
+  }
+}

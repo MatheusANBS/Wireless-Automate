@@ -6,6 +6,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
 import io.github.matheusanbs.wirelessautomate.menu.ResonatorMenu;
 import java.util.function.Consumer;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -156,14 +157,29 @@ public class ResonanceCoreBlock extends BaseEntityBlock {
 
     /**
      * Sobe o Núcleo em {@code pos} para {@code target} no lugar, se o tier dele aceita o cartão
-     * {@code origin → target} ({@link RouterTier#acceptsCard}). Só o {@code TIER} do estado muda: o block entity
-     * fica, com cristais, redstone e energia, e a revalidação na hora põe a capacidade e as câmaras novas.
+     * {@code origin → target} ({@link RouterTier#acceptsCard}) e o jogador tem o Coração do Ressonador de
+     * {@code target} no inventário. O Coração só é gasto depois de todas as outras recusas, e o criativo não gasta;
+     * sem jogador, não há de onde tirar o Coração e o Núcleo não sobe. Só o {@code TIER} do estado muda: o block
+     * entity fica, com cristais, redstone e energia, e a revalidação na hora põe a capacidade e as câmaras novas.
      */
-    public static boolean tryUpgrade(Level level, BlockPos pos, RouterTier target, @Nullable RouterTier origin) {
+    public static boolean tryUpgrade(Level level, BlockPos pos, RouterTier target, @Nullable RouterTier origin,
+            @Nullable Player player) {
         BlockState state = level.getBlockState(pos);
         if (!(state.getBlock() instanceof ResonanceCoreBlock)
-                || !state.getValue(RouterBlock.TIER).acceptsCard(origin, target)) {
+                || !state.getValue(RouterBlock.TIER).acceptsCard(origin, target) || player == null) {
             return false;
+        }
+        if (!player.getAbilities().instabuild) {
+            ItemStack heart = ResonatorHeartItem.find(player, target);
+            if (heart == null) {
+                if (!level.isClientSide) {
+                    player.displayClientMessage(Component.translatable(
+                            "block.wirelessautomate.resonance_core.needs_heart",
+                            Component.translatable(target.translationKey())).withStyle(ChatFormatting.RED), true);
+                }
+                return false;
+            }
+            heart.shrink(1);
         }
         if (level instanceof ServerLevel server) {
             server.setBlockAndUpdate(pos, state.setValue(RouterBlock.TIER, target));

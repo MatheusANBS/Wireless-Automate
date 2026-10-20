@@ -101,7 +101,8 @@ public final class ResonatorMenuGameTests {
                 ResonatorMenu before = (ResonatorMenu) player.containerMenu;
                 before.setCarried(new ItemStack(Items.REDSTONE, 5));
                 helper.assertTrue(ResonanceCoreBlock.tryUpgrade(helper.getLevel(), core.getBlockPos(),
-                        RouterTier.ADVANCED, RouterTier.BASIC), "o upgrade foi recusado");
+                        RouterTier.ADVANCED, RouterTier.BASIC,
+                        ResonatorTestSupport.withHeart(player, RouterTier.ADVANCED)), "o upgrade foi recusado");
                 before.broadcastChanges();
                 helper.assertTrue(player.containerMenu instanceof ResonatorMenu after && after != before
                         && after.chambers() == 2 && after.slots.size() == 2 + 1 + 36 && after.stillValid(player),
@@ -130,7 +131,8 @@ public final class ResonatorMenuGameTests {
                 ResonatorMenu before = (ResonatorMenu) player.containerMenu;
                 player.moveTo(Vec3.atBottomCenterOf(core.getBlockPos().east(20)));
                 helper.assertTrue(ResonanceCoreBlock.tryUpgrade(helper.getLevel(), core.getBlockPos(),
-                        RouterTier.ADVANCED, RouterTier.BASIC), "o upgrade foi recusado");
+                        RouterTier.ADVANCED, RouterTier.BASIC,
+                        ResonatorTestSupport.withHeart(player, RouterTier.ADVANCED)), "o upgrade foi recusado");
                 before.broadcastChanges();
                 helper.assertTrue(player.containerMenu == before && !before.stillValid(player),
                         "longe do Núcleo a tela reabriu ou continuou valendo");

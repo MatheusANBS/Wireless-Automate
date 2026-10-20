@@ -19,7 +19,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -52,7 +51,8 @@ import org.jetbrains.annotations.Nullable;
  * tipo (presa, perfis e exceções, chave {@code face_networks}; a {@code networks} antiga, uma rede por
  * tipo, só é lida, para migrar), os papéis (um
  * resumo dos modos das faces por tipo, ver {@link #role}), os modos de cada face (chave {@code face_modes},
- * ver {@link #faceModes}; sem a chave, tudo Nenhum), o bloco da máquina e quem colocou.
+ * formato no {@link FaceSummary}; sem a chave, tudo Nenhum), o bloco da máquina, quem colocou e as máquinas
+ * vinculadas ({@link IndexRemotes}, só com máquinas).
  * Uma entrada pode ficar velha se o bloco sumir sem passar pelo {@code onRemove} (região apagada):
  * quando o chunk dela carrega, a entrada sem roteador ali sai ({@link #chunkLoaded}, pelo bloco do chunk que
  * acabou de carregar, sem carregar nenhum outro), e o Tablet também a apaga quando acha o chunk carregado sem
@@ -71,16 +71,6 @@ public final class NodeIndex extends SavedData {
     public static final int STORAGE = 2;
     private static final int ROLES_PER_TYPE = 3;
     private static final ResourceType[] TYPES = ResourceType.values();
-    private static final Direction[] DIRECTIONS = Direction.values();
-    private static final RemoteSide[] SIDES = RemoteSide.values();
-    private static final PortMode[] MODES = PortMode.values();
-    /** Os 2 bits por face de {@link #faceModes(RouterBlockEntity)} cabem num {@code long}: um tipo ou um modo a mais falha aqui, não em silêncio. */
-    static {
-        if (MODES.length > 4 || TYPES.length * SIDES.length * 2 > Long.SIZE) {
-            throw new IllegalStateException("Os modos das faces não cabem num long: " + TYPES.length + " tipos × "
-                    + SIDES.length + " lados × " + MODES.length + " modos");
-        }
-    }
 
     /** Dimensão e posição de um roteador. */
     public record NodeKey(ResourceKey<Level> dimension, BlockPos pos) {
@@ -112,6 +102,7 @@ public final class NodeIndex extends SavedData {
         private long faceModes;
         private ResourceLocation machine = BuiltInRegistries.BLOCK.getKey(net.minecraft.world.level.block.Blocks.AIR);
         private @Nullable UUID placedBy;
+        private IndexRemotes remotes = IndexRemotes.EMPTY;
         /** O roteador carregado; não é salvo. */
         private @Nullable RouterBlockEntity router;
         /** Texto da busca do Tablet, feito na primeira busca e refeito só quando o nó muda; não é salvo. */
@@ -177,7 +168,7 @@ public final class NodeIndex extends SavedData {
             return roles;
         }
 
-        /** O modo de cada face da máquina presa, em bits ({@link NodeIndex#faceModes}). */
+        /** O modo de cada lado, juntando presa, perfis e exceções, em bits (o formato está no {@link FaceSummary}). */
         public long faceModes() {
             return faceModes;
         }
@@ -194,6 +185,11 @@ public final class NodeIndex extends SavedData {
 
         public @Nullable UUID placedBy() {
             return placedBy;
+        }
+
+        /** As máquinas vinculadas e os grupos, na ordem do roteador. Só leitura, sem cópia. */
+        public IndexRemotes remotes() {
+            return remotes;
         }
 
         /** O roteador, se o chunk está carregado. */
@@ -218,7 +214,7 @@ public final class NodeIndex extends SavedData {
         }
 
         /** Copia o que o índice guarda do roteador. Devolve se algum dado salvo mudou. */
-        private boolean read(RouterBlockEntity from) {
+        private boolean read(RouterBlockEntity from, FaceSummary summary) {
             boolean changed = false;
             if (!name.equals(from.name())) {
                 name = from.name();
@@ -235,14 +231,17 @@ public final class NodeIndex extends SavedData {
                     changed = true;
                 }
             }
-            int newRoles = NodeIndex.roles(from);
-            if (newRoles != roles) {
-                roles = newRoles;
+            summary.scan(from);
+            if (summary.roles != roles) {
+                roles = summary.roles;
                 changed = true;
             }
-            long newModes = NodeIndex.faceModes(from);
-            if (newModes != faceModes) {
-                faceModes = newModes;
+            if (summary.modes != faceModes) {
+                faceModes = summary.modes;
+                changed = true;
+            }
+            if (!remotes.matches(from.remoteMachines())) {
+                remotes = IndexRemotes.of(from.remoteMachines());
                 changed = true;
             }
             Level level = from.getLevel();
@@ -303,6 +302,7 @@ public final class NodeIndex extends SavedData {
             if (placedBy != null) {
                 tag.putUUID("placedBy", placedBy);
             }
+            remotes.save(tag);
             return tag;
         }
 
@@ -347,11 +347,14 @@ public final class NodeIndex extends SavedData {
                 entry.machine = machine;
             }
             entry.placedBy = tag.hasUUID("placedBy") ? tag.getUUID("placedBy") : null;
+            entry.remotes = IndexRemotes.load(tag);
             return entry;
         }
     }
 
     private final Map<NodeKey, Entry> entries = new LinkedHashMap<>();
+    /** O resumo das faces, reaproveitado a cada leitura de roteador (só a thread do servidor lê). Não é salvo. */
+    private final FaceSummary summary = new FaceSummary();
     /** As entradas de cada chunk ({@code ChunkPos.toLong()}), por dimensão, para o {@link #chunkLoaded}. Não é salvo. */
     private final Map<ResourceKey<Level>, Long2ObjectOpenHashMap<List<Entry>>> byChunk = new HashMap<>();
     /** Muda a cada alteração, salva ou não (inclusive carregar e descarregar). Não é salvo. */
@@ -371,50 +374,19 @@ public final class NodeIndex extends SavedData {
         return 1 << (type.ordinal() * ROLES_PER_TYPE + role);
     }
 
-    /**
-     * Os modos das faces da máquina presa em bits, pelos lados dela ({@link RemoteSide}, relativos à frente da
-     * máquina, como o painel do nó mostra): para cada tipo na ordem do {@link ResourceType} e cada lado na ordem
-     * do enum, 2 bits com o ordinal do {@link PortMode}, a partir do menos significativo (o lado {@code s} do tipo
-     * {@code t} começa no bit {@code (t * 6 + s) * 2}). Sem a frente da máquina (chunk dela descarregado), vale a
-     * de Norte, como no painel.
-     */
-    public static long faceModes(RouterBlockEntity router) {
-        int front = router.attachedFront();
-        long bits = 0;
-        for (ResourceType type : TYPES) {
-            for (RemoteSide side : SIDES) {
-                Direction face = DIRECTIONS[side.toAbsolute(front)];
-                bits |= (long) router.face(type, face).mode().ordinal() << faceShift(type, side);
-            }
-        }
-        return bits;
-    }
-
-    /** O modo da face do lado {@code side} da máquina, do tipo {@code type}, em {@code faceModes}. */
+    /** O modo da face do lado {@code side} da máquina, do tipo {@code type}, em {@code faceModes} ({@link FaceSummary}). */
     public static PortMode faceMode(long faceModes, ResourceType type, RemoteSide side) {
-        return MODES[(int) (faceModes >>> faceShift(type, side)) & 3];
+        return FaceSummary.mode(faceModes, FaceSummary.shift(type, side));
     }
 
-    private static int faceShift(ResourceType type, RemoteSide side) {
-        return (type.ordinal() * SIDES.length + side.ordinal()) * 2;
-    }
-
-    /** Papéis do roteador pelas faces configuradas (modo, sem olhar redstone): Armazém conta só como armazém. */
-    public static int roles(RouterBlockEntity router) {
-        int roles = 0;
-        for (ResourceType type : TYPES) {
-            for (Direction face : DIRECTIONS) {
-                PortMode mode = router.face(type, face).mode();
-                switch (mode) {
-                    case EXTRACT -> roles |= role(type, EXTRACT);
-                    case INSERT -> roles |= role(type, INSERT);
-                    case BOTH -> roles |= role(type, STORAGE);
-                    case NONE -> {
-                    }
-                }
-            }
-        }
-        return roles;
+    /** O bit do papel de uma face do tipo {@code type} no modo {@code mode}; 0 em Nenhum. */
+    static int roleOf(ResourceType type, PortMode mode) {
+        return switch (mode) {
+            case EXTRACT -> role(type, EXTRACT);
+            case INSERT -> role(type, INSERT);
+            case BOTH -> role(type, STORAGE);
+            case NONE -> 0;
+        };
     }
 
     // ------------------------------------------------------------------ avisos do roteador
@@ -489,7 +461,7 @@ public final class NodeIndex extends SavedData {
             entry = new Entry(key);
             add(entry);
         }
-        boolean changed = entry.read(router);
+        boolean changed = entry.read(router, summary);
         boolean loadedChanged = entry.router != router;
         entry.router = router;
         if (created || changed) {
@@ -546,7 +518,7 @@ public final class NodeIndex extends SavedData {
 
     /**
      * Muda só quando um dado salvo do índice muda (nó novo ou removido, nome, tier, redes, papéis, modos das faces,
-     * máquina, quem colocou); carregar e descarregar chunks não mexe nela.
+     * máquina, quem colocou, máquinas vinculadas); carregar e descarregar chunks não mexe nela.
      */
     public int dataVersion() {
         return dataVersion;

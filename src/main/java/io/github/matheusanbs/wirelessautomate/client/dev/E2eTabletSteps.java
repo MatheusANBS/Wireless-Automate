@@ -50,8 +50,9 @@ import org.lwjgl.glfw.GLFW;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
 
 /**
- * O Tablet de rede no e2e: busca e etiquetas, filtro rápido, painel do nó, perfil (copiar, colar, desfazer),
- * Fluxos ({@link E2eFlowsSteps}), grupos com pausa e o roteador aberto à distância.
+ * O Tablet de rede no e2e: busca e etiquetas, filtro rápido, painel do nó, perfil (copiar, colar, desfazer), a
+ * árvore com as máquinas ({@link E2eTabletTreeSteps}), Fluxos ({@link E2eFlowsSteps}), grupos com pausa e o
+ * roteador aberto à distância.
  */
 final class E2eTabletSteps {
     private E2eTabletSteps() {
@@ -79,6 +80,7 @@ final class E2eTabletSteps {
         tabletSearchSteps(list, playerId);
         tabletPanelSteps(list);
         tabletProfileSteps(list);
+        E2eTabletTreeSteps.treeSteps(list);
         E2eFlowsSteps.flowsSteps(list);
         tabletGroupSteps(list);
         tabletRemoteSteps(list, playerId);

@@ -6,9 +6,9 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import net.minecraft.client.renderer.RenderType;
 
 /**
- * O tipo de desenho dos sprites aditivos da câmara (o halo e a placa de Chladni). As texturas guardam a intensidade
+ * Os tipos de desenho da câmara: os sprites aditivos (o halo e a placa de Chladni) e o billboard do Núcleo de plasma. As texturas guardam a intensidade
  * no alfa, com cor nos pixels transparentes; o {@code eyes} soma ONE, ONE e acenderia o quadrado inteiro. Aqui a
- * soma é SRC_ALPHA, ONE (a do {@code lightning}), sem gravar profundidade e nas duas faces.
+ * soma é SRC_ALPHA, ONE (a do {@code lightning}), sem gravar profundidade e nas duas faces; o plasma usa a mesma soma.
  */
 final class ChamberRenderTypes extends RenderType {
     private static final RenderType GLOW = create(WirelessAutomate.MODID + "_chamber_glow",
@@ -16,6 +16,15 @@ final class ChamberRenderTypes extends RenderType {
             CompositeState.builder()
                     .setShaderState(RENDERTYPE_EYES_SHADER)
                     .setTextureState(new TextureStateShard(ChamberLens.ATLAS, false, false))
+                    .setTransparencyState(LIGHTNING_TRANSPARENCY)
+                    .setCullState(NO_CULL)
+                    .setWriteMaskState(COLOR_WRITE)
+                    .createCompositeState(false));
+
+    private static final RenderType PLASMA = create(WirelessAutomate.MODID + "_chamber_plasma",
+            DefaultVertexFormat.POSITION_COLOR_TEX_LIGHTMAP, VertexFormat.Mode.QUADS, 256, false, true,
+            CompositeState.builder()
+                    .setShaderState(new ShaderStateShard(PlasmaShader::get))
                     .setTransparencyState(LIGHTNING_TRANSPARENCY)
                     .setCullState(NO_CULL)
                     .setWriteMaskState(COLOR_WRITE)
@@ -29,5 +38,10 @@ final class ChamberRenderTypes extends RenderType {
     /** Os sprites do atlas de blocos, somados pelo alfa (o alfa do vértice multiplica o da textura). */
     static RenderType glow() {
         return GLOW;
+    }
+
+    /** O billboard do Núcleo de plasma: aditivo, sem gravar profundidade, nas duas faces. */
+    static RenderType plasma() {
+        return PLASMA;
     }
 }

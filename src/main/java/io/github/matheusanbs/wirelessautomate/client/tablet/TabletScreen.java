@@ -106,7 +106,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         NodeText nodes = new NodeText(menu::snapshot);
         this.list = new TabletList(menu, actions, nodes, () -> layout.h);
         this.selectBar = new SelectBar(layout, menu::snapshot, nodes, actions, list);
-        this.map = new MapTab(layout, menu::snapshot, nodes, actions);
+        this.map = new MapTab(layout, menu::snapshot, nodes, actions, list);
         this.flows = new FlowsTab(layout, menu, (type, network) -> {
             switchTab(Tab.LIST);
             list.filterFlow(type, network);
@@ -498,6 +498,11 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     public void previewMapSelect(int index) {
         map.previewSelect(index);
+    }
+
+    /** Centro da máquina {@code machine} do roteador escolhido no Mapa, ou {@code null} (gancho do e2e). */
+    public int @Nullable [] mapMachineCenter(int machine) {
+        return map.machineCenter(machine);
     }
 
     public void previewNetwork(int index) {

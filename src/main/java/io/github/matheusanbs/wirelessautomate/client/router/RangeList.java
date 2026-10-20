@@ -30,7 +30,7 @@ import org.jetbrains.annotations.Nullable;
  * já escolhido) abre e fecha; dois cliques no nome abrem a edição dele. A linha escolhida ganha os botões do
  * {@link RangeRowButtons}. Rola com a roda. Só cliente; todo texto passa por {@link GuiText}.
  */
-final class RangeList {
+public final class RangeList {
     static final int ATTACHED_H = 14;
     static final int GROUP_H = 20;
     static final int MACHINE_H = GROUP_H;
@@ -312,7 +312,7 @@ final class RangeList {
      * O nome de uma máquina fora da lista (a pílula, as dicas e a lista do alvo): o rótulo dado pelo jogador, ou
      * "Fornalha #3". A única regra do nome, com o {@link MachineRow#rowName} da linha embaixo do grupo.
      */
-    static Component machineName(RangeView view, int index) {
+    public static Component machineName(RangeView view, int index) {
         MachineView machine = view.machine(index);
         if (machine != null && !machine.label().isEmpty()) {
             return Component.literal(machine.label());
@@ -336,7 +336,7 @@ final class RangeList {
         return group.exceptions() == 1 ? tr("range.group.exceptions.one") : tr("range.group.exceptions", group.exceptions());
     }
 
-    static int stateColor(MachineState state) {
+    public static int stateColor(MachineState state) {
         return switch (state) {
             case LOADED -> GuiPaint.OK;
             case UNLOADED -> GuiPaint.WARN;
@@ -346,7 +346,7 @@ final class RangeList {
         };
     }
 
-    static Component stateText(MachineState state) {
+    public static Component stateText(MachineState state) {
         return tr("range.machine.state." + state.name().toLowerCase(Locale.ROOT));
     }
 

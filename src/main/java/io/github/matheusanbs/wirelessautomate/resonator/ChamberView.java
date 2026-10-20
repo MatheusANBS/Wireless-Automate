@@ -9,7 +9,8 @@ import net.minecraft.world.item.ItemStack;
 
 /**
  * O que a câmara do Núcleo desenha no cliente, mandado pelo update tag só quando muda: o que há em cada câmara, a
- * faixa da eficiência, a lâmpada, a recarga em curso, o tempo da montagem e o canto da caixa. A estação não vai.
+ * faixa da eficiência, a lâmpada, a recarga em curso, o tempo da montagem, o canto da caixa, a faixa de vazão de
+ * cada Porta de Energia e o buffer cheio. A estação não vai.
  *
  * @param chambers uma posição por câmara do tier: {@code 0} vazia, {@code 1} Cristal de Sinal, {@code 2} Lapidado,
  *     {@code 3} Cristal Opaco, {@code 4} Lapidado Opaco
@@ -17,14 +18,16 @@ import net.minecraft.world.item.ItemStack;
  * @param rechargeTicks a duração da recarga, pelo menos 1
  * @param formedAt o {@link ResonanceCoreBlockEntity#formedAt()}: -1 nunca montou, 0 já montado de antes
  * @param origin o canto mínimo da caixa (x, y, z)
+ * @param flows a faixa de vazão (0 a 7) de cada Porta de Energia no último lote, na ordem do {@link PortOrder}
+ * @param full o buffer terminou o último lote cheio
  */
 public record ChamberView(byte[] chambers, int band, boolean tuned, long rechargeStart, int rechargeTicks,
-        long formedAt, int[] origin) {
+        long formedAt, int[] origin, byte[] flows, boolean full) {
     /** A duração padrão da recarga, para quem dividir por ela nunca ver 0. */
     private static final int DEFAULT_RECHARGE_TICKS = (int) Math.min(Config.RECHARGE_TICKS.getDefault(),
             Integer.MAX_VALUE);
     public static final ChamberView EMPTY = new ChamberView(new byte[0], 0, false, -1, DEFAULT_RECHARGE_TICKS, -1,
-            new int[3]);
+            new int[3], new byte[0], false);
 
     private static final byte EMPTY_CHAMBER = 0;
     private static final byte SIGNAL = 1;
@@ -35,6 +38,7 @@ public record ChamberView(byte[] chambers, int band, boolean tuned, long recharg
     public ChamberView {
         chambers = chambers.clone();
         origin = origin.clone();
+        flows = flows.clone();
         rechargeTicks = Math.max(1, rechargeTicks);
     }
 
@@ -46,6 +50,11 @@ public record ChamberView(byte[] chambers, int band, boolean tuned, long recharg
     @Override
     public int[] origin() {
         return origin.clone();
+    }
+
+    @Override
+    public byte[] flows() {
+        return flows.clone();
     }
 
     /**
@@ -60,7 +69,8 @@ public record ChamberView(byte[] chambers, int band, boolean tuned, long recharg
         }
         return new ChamberView(chambers, TuneSignal.band(core.efficiency()),
                 TuneSignal.tuned(core.station(), core.dial()), rechargeStart,
-                (int) Math.min(Config.rechargeTicks(), Integer.MAX_VALUE), core.formedAt(), core.origin());
+                (int) Math.min(Config.rechargeTicks(), Integer.MAX_VALUE), core.formedAt(), core.origin(),
+                core.flow().bands(), core.flow().full());
     }
 
     /**
@@ -72,7 +82,8 @@ public record ChamberView(byte[] chambers, int band, boolean tuned, long recharg
         if (chambers.length != count || this.rechargeStart != rechargeStart || formedAt != core.formedAt()
                 || band != TuneSignal.band(core.efficiency()) || tuned != TuneSignal.tuned(core.station(), core.dial())
                 || rechargeTicks != Math.max(1, (int) Math.min(Config.rechargeTicks(), Integer.MAX_VALUE))
-                || !Arrays.equals(origin, core.origin())) {
+                || !Arrays.equals(origin, core.origin()) || full != core.flow().full()
+                || !Arrays.equals(flows, core.flow().bands())) {
             return false;
         }
         for (int i = 0; i < count; i++) {
@@ -129,6 +140,8 @@ public record ChamberView(byte[] chambers, int band, boolean tuned, long recharg
         tag.putInt("recharge_ticks", rechargeTicks);
         tag.putLong("formed_at", formedAt);
         tag.putIntArray("origin", origin);
+        tag.putByteArray("flows", flows);
+        tag.putBoolean("full", full);
     }
 
     /** Sem a chave {@code chambers} (o tag completo do disco, por exemplo), {@link #EMPTY}. */
@@ -139,14 +152,15 @@ public record ChamberView(byte[] chambers, int band, boolean tuned, long recharg
         int[] origin = tag.getIntArray("origin");
         return new ChamberView(tag.getByteArray("chambers"), tag.getByte("band"), tag.getBoolean("tuned"),
                 tag.getLong("recharge_start"), tag.getInt("recharge_ticks"), tag.getLong("formed_at"),
-                origin.length == 3 ? origin : new int[3]);
+                origin.length == 3 ? origin : new int[3], tag.getByteArray("flows"), tag.getBoolean("full"));
     }
 
     @Override
     public boolean equals(Object other) {
         return other instanceof ChamberView view && Arrays.equals(chambers, view.chambers) && band == view.band
                 && tuned == view.tuned && rechargeStart == view.rechargeStart && rechargeTicks == view.rechargeTicks
-                && formedAt == view.formedAt && Arrays.equals(origin, view.origin);
+                && formedAt == view.formedAt && Arrays.equals(origin, view.origin) && full == view.full
+                && Arrays.equals(flows, view.flows);
     }
 
     @Override
@@ -157,13 +171,15 @@ public record ChamberView(byte[] chambers, int band, boolean tuned, long recharg
         hash = 31 * hash + Long.hashCode(rechargeStart);
         hash = 31 * hash + rechargeTicks;
         hash = 31 * hash + Long.hashCode(formedAt);
-        return 31 * hash + Arrays.hashCode(origin);
+        hash = 31 * hash + Arrays.hashCode(origin);
+        hash = 31 * hash + Arrays.hashCode(flows);
+        return 31 * hash + Boolean.hashCode(full);
     }
 
     @Override
     public String toString() {
         return "ChamberView[chambers=" + Arrays.toString(chambers) + ", band=" + band + ", tuned=" + tuned
                 + ", rechargeStart=" + rechargeStart + ", rechargeTicks=" + rechargeTicks + ", formedAt=" + formedAt
-                + ", origin=" + Arrays.toString(origin) + "]";
+                + ", origin=" + Arrays.toString(origin) + ", flows=" + Arrays.toString(flows) + ", full=" + full + "]";
     }
 }

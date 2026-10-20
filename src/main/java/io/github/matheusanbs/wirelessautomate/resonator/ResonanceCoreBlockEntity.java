@@ -38,6 +38,8 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
     private int[] origin = ChamberView.origin(List.of(), worldPosition);
     /** As Portas que este Núcleo pôs no índice; não vai para o NBT (a revalidação do {@code onLoad} refaz). */
     private List<BlockPos> ports = List.of();
+    /** A vazão por Porta de Energia e o "cheio" do último lote, que vão à câmara; fora do NBT. */
+    private final CoreFlow flow = new CoreFlow();
     private @Nullable ResonatorLayout.Broken lastProblem;
     private boolean hasStation;
     private double station;
@@ -426,6 +428,10 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
                 level.updateNeighbourForOutputSignal(port, state.getBlock());
             }
         }
+    }
+
+    CoreFlow flow() {
+        return flow;
     }
 
     List<BlockPos> ports() {

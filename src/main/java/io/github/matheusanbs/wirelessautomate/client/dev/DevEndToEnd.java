@@ -308,6 +308,7 @@ public final class DevEndToEnd {
     /** Escreve o resultado (falha se {@code failedStep} não for nulo), sai do mundo e fecha o jogo. */
     private static void finish(Minecraft minecraft, @Nullable String failedStep, @Nullable String reason) {
         phase = Phase.DONE;
+        E2eResonatorSteps.restoreFrameSettings();
         // um e2e que falhou no escuro não deixa o cliente de dev escuro
         if (GuiThemes.current() != GuiTheme.LIGHT) {
             GuiThemes.set(GuiTheme.LIGHT);

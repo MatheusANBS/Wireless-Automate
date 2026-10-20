@@ -119,8 +119,8 @@ public final class RouterGameTests {
             Config.BALANCE_VERSION.set(1);
             helper.assertValueEqual(Config.migrateBalance(), 3, "valores migrados");
             helper.assertValueEqual(unobtainium.get(), 2_097_152_000L, "energia do Unobtainium");
-            helper.assertValueEqual(basicCrystal.get(), 128L, "FE por cristal, Básico");
-            helper.assertValueEqual(ultimateCrystal.get(), 1_073_741_824L, "FE por cristal, Ultimate");
+            helper.assertValueEqual(basicCrystal.get(), 216L, "FE por cristal, Básico");
+            helper.assertValueEqual(ultimateCrystal.get(), 268_435_456L, "FE por cristal, Ultimate");
             helper.assertValueEqual(eliteCrystal.get(), 5_000L, "FE por cristal do dono");
             helper.assertValueEqual(vibranium.get(), 1_234L, "energia do Vibranium do dono");
             helper.assertValueEqual(elite.get(), 131_072L, "o balanceamento 1 rodou de novo");

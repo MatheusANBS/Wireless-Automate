@@ -79,7 +79,7 @@ public final class ResonatorRenderer implements BlockEntityRenderer<ResonanceCor
         poseStack.translate(center.x, center.y, center.z);
         ChladniPlate.render(poseStack, buffer, scene, partialTick);
         ChamberCrystals.render(poseStack, buffer, scene, gameTime, partialTick, level,
-                shader && CrystalShader.get() != null, tierColor);
+                shader && CrystalShader.get() != null, shader, tierColor);
         if (shader) {
             Vec3 eye = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
             Vec3 world = scene.worldCenter();

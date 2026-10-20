@@ -31,11 +31,11 @@ void main() {
         float flow = clamp(arg / 7.0, 0.0, 1.0);
         float d = abs(quad.y - 0.5) * 2.0;
         float core = 0.3 + 0.55 * flow;
-        float tube = smoothstep(1.0, core, d);
+        float tube = (1.0 - smoothstep(core, 1.0, d));
         float packets = pow(0.5 + 0.5 * sin(quad.x * 28.0 - t * (6.0 + 2.0 * arg)), 6.0);
         col += mix(CORAL, tier, quad.x) * tube * (0.7 + 2.0 * packets);
-        col += WHITE * smoothstep(core * 0.6, 0.0, d) * (0.2 + 0.8 * packets) * flow;
-        col *= smoothstep(0.0, 0.04, quad.x) * smoothstep(1.0, 0.96, quad.x);
+        col += WHITE * (1.0 - smoothstep(0.0, core * 0.6, d)) * (0.2 + 0.8 * packets) * flow;
+        col *= smoothstep(0.0, 0.04, quad.x) * (1.0 - smoothstep(0.96, 1.0, quad.x));
     } else if (mode == 1) {
         // espiral de catalisador: dez grãos sobem de u = 0 a u = 1, girando em v
         for (int k = 0; k < 10; k++) {
@@ -44,7 +44,7 @@ void main() {
             vec2 dp = vec2((quad.x - s) * 0.4, (quad.y - vc) * 0.5);
             col += mix(RED, CORAL, s) * (0.0016 / (dot(dp, dp) + 0.0012)) * 0.6;
         }
-        col *= smoothstep(0.0, 0.03, quad.x) * smoothstep(1.0, 0.97, quad.x);
+        col *= smoothstep(0.0, 0.03, quad.x) * (1.0 - smoothstep(0.97, 1.0, quad.x));
     } else if (mode == 2) {
         // aura do cristal: o parâmetro leva a sintonia (7 bits) e a semente do cristal (4 bits)
         float seed = floor(arg / 128.0);
@@ -53,12 +53,12 @@ void main() {
         float r = length(quad * 2.0 - 1.0);
         float aura = exp(-r * r * 6.0) * (0.6 + 0.4 * sin(t * 4.0 + seed * 2.4));
         col += base * aura * 0.55 * (1.0 + mis * 0.6 * (n2(vec2(t * 9.0, seed * 3.7)) - 0.5));
-        col *= smoothstep(1.0, 0.8, r);
+        col *= (1.0 - smoothstep(0.8, 1.0, r));
     } else {
         // anel: abre e some com o progresso
         float prog = clamp(arg / 100.0, 0.0, 1.0);
         float r = length(quad * 2.0 - 1.0);
-        col += CORAL * smoothstep(0.08, 0.0, abs(r - (0.28 + prog * 0.7))) * prog * (1.0 - prog) * 4.0;
+        col += CORAL * (1.0 - smoothstep(0.0, 0.08, abs(r - (0.28 + prog * 0.7)))) * prog * (1.0 - prog) * 4.0;
     }
 
     col *= power;

@@ -20,6 +20,7 @@ import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.IdleNetworkFace;
 import io.github.matheusanbs.wirelessautomate.range.MachineCaches;
+import io.github.matheusanbs.wirelessautomate.range.MachineConfig;
 import io.github.matheusanbs.wirelessautomate.range.RemoteIndex;
 import io.github.matheusanbs.wirelessautomate.range.RangeRules;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
@@ -583,6 +584,22 @@ public class RouterBlockEntity extends BlockEntity {
     /** Tira a exceção da máquina do índice {@code index}: ela volta a seguir o perfil do grupo. */
     public boolean revertToProfile(int index) {
         return range.revertToProfile(index);
+    }
+
+    /**
+     * Troca o perfil do grupo {@code groupId} por uma cópia de {@code config} (com as redes); as exceções que ficam
+     * iguais ao perfil somem, as outras ficam. Devolve se mudou (o Tablet, ao colar e mover num grupo inteiro).
+     */
+    public boolean setGroupProfile(int groupId, MachineConfig config) {
+        return range.setGroupProfile(groupId, config);
+    }
+
+    /**
+     * Troca a exceção da máquina do índice {@code index} por uma cópia de {@code config}; {@code null}, ou igual ao
+     * perfil do grupo, tira a exceção. Devolve se mudou (o Tablet, ao colar e mover numa máquina).
+     */
+    public boolean setMachineException(int index, @Nullable MachineConfig config) {
+        return range.setMachineException(index, config);
     }
 
     /** O bloco no lugar da trocada ({@code reach} do {@link #machineReach}; carregada, outro bloco com capability). */

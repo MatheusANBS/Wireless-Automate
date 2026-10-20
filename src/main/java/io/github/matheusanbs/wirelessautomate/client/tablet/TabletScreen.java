@@ -406,6 +406,16 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         list.previewMulti(on, count);
     }
 
+    /** O que o Selecionar marcou, {@code {roteadores, máquinas}} (gancho do e2e). */
+    public int[] markCounts() {
+        return new int[] {list.marks.routers(), list.marks.machineCount()};
+    }
+
+    /** Centro do "Colar nos marcados", ou {@code null} fora da vista (gancho do e2e). */
+    public int @Nullable [] pasteMarkedCenter() {
+        return selectBar.pasteCenter();
+    }
+
     public void previewMapSelect(int index) {
         map.previewSelect(index);
     }

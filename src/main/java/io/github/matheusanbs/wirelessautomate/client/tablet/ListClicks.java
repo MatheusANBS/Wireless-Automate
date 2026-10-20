@@ -84,7 +84,7 @@ final class ListClicks {
             case PASTE_GROUP -> profile.pasteGroup(list.model.tree().lines().get(hot.arg()).group());
             case ROW -> clickRow(nodeViews.get(hot.arg()).key());
             case TREE, TREE_TOGGLE, TREE_EYE, TREE_FEW -> list.treeClicks.click(hot);
-            case MACHINE, MACHINE_EYE, MACHINE_FEW -> list.machineNav.click(hot);
+            case MACHINE, MACHINE_EYE, MACHINE_FEW, MACHINE_OPEN -> list.machineNav.click(hot);
             case FULL_SCREEN -> {
                 if (list.chosen != null) {
                     list.actions.openNode(list.chosen);
@@ -116,9 +116,7 @@ final class ListClicks {
         lastClicked = key;
         lastClickAt = now;
         if (list.multi) {
-            if (!list.selected.remove(key)) {
-                list.selected.add(key);
-            }
+            list.marks.toggleNode(key);
             return;
         }
         if (twice) {

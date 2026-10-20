@@ -167,7 +167,7 @@ final class ListRows {
         g.fill(x + 2, y + hot.h() - 1, x + hot.w() - 2, y + hot.h(), GuiPaint.LINE);
         int cx = x + 5;
         if (list.multi) {
-            GuiPaint.checkbox(g, cx, y + 5, picked, GuiPaint.ACCENT);
+            MarkRows.paint(g, cx, y + 5, list.markRows.node(node.key()));
             cx += 12;
         }
         int chevron = list.treeRows.chevronWidth();

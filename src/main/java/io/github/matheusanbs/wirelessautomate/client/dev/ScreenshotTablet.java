@@ -83,7 +83,7 @@ final class ScreenshotTablet {
                 new Step(() -> {
                     tabletScreen.previewMulti(false, 0);
                     choosePanel(PanelAccess.READ_OUT_OF_REACH);
-                    int[] center = tabletScreen.nodePanel().modeCenter(PortMode.INSERT);
+                    int[] center = tabletScreen.nodePanel().faceCenter(tabletScreen.nodePanel().face());
                     mouseX = center == null ? -1 : center[0];
                     mouseY = center == null ? -1 : center[1];
                 }, "t3b-tablet-so-leitura"),

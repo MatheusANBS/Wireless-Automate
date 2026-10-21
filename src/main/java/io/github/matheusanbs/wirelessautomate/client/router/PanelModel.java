@@ -34,6 +34,14 @@ final class PanelModel {
     private @Nullable Component readOnly;
     private boolean targetFromList;
     private final ArmedClick unlinkArm = new ArmedClick();
+    /** O Limpar do quadro das faces, que pede dois cliques. */
+    private final ArmedClick clearArm = new ArmedClick();
+    /** A face copiada pelo Copiar (tipo e face, no quadro da tela), ou {@code null}. */
+    private @Nullable Copied copied;
+
+    /** O que o Copiar guardou: a face e o tipo; o Colar copia dela para a face escolhida depois, no mesmo alvo. */
+    record Copied(ResourceType type, Direction face) {
+    }
 
     PanelModel(RouterSnapshot snapshot, Direction face) {
         this.snapshot = snapshot;
@@ -55,6 +63,8 @@ final class PanelModel {
         if (!snapshot.target().equals(shownTarget)) {
             shownTarget = snapshot.target();
             unlinkArm.disarm();
+            clearArm.disarm();
+            copied = null;
             face = snapshot.range().present() ? snapshot.range().face() : snapshot.facing();
             return true;
         }
@@ -109,6 +119,32 @@ final class PanelModel {
         return unlinkArm.armed(System.currentTimeMillis());
     }
 
+    ArmedClick clearArm() {
+        return clearArm;
+    }
+
+    boolean clearArmed() {
+        return clearArm.armed(System.currentTimeMillis());
+    }
+
+    @Nullable Copied copied() {
+        return copied;
+    }
+
+    void setCopied(@Nullable Copied copied) {
+        this.copied = copied;
+    }
+
+    /** O Copiar vale: painel editável e a face escolhida configurável. */
+    boolean canCopy() {
+        return editable(view());
+    }
+
+    /** O Colar vale: algo copiado neste tipo, para outra face, e a face escolhida configurável. */
+    boolean canPaste() {
+        return copied != null && copied.type() == type && copied.face() != face && editable(view());
+    }
+
     // ------------------------------------------------------------------ leituras
 
     FaceView view() {
@@ -125,6 +161,11 @@ final class PanelModel {
 
     boolean rangeShown() {
         return range().present();
+    }
+
+    /** A máquina escolhida tem esta face diferente da do perfil do grupo (a exceção dela). */
+    boolean differsFromGroup(Direction direction) {
+        return remote() && targetMachine() != null && range().differs(type, sideOf(direction));
     }
 
     /** O alvo é um grupo ou uma máquina do alcance (faces no quadro canônico). */
@@ -293,7 +334,7 @@ final class PanelModel {
         int cards = Math.max(0, cardCount);
         Component entries = view.filterSize() == 1 ? tr("filter.count.one") : tr("filter.count", view.filterSize());
         if (cards == 0) {
-            return view.filterSize() == 0 ? tr("filter.none") : entries;
+            return view.filterSize() == 0 ? panelTr("filter.none") : entries;
         }
         Component cardText = cards == 1 ? tr("filter.cards.one") : tr("filter.cards", cards);
         return view.filterSize() == 0 ? cardText : tr("filter.summary", entries, cardText);

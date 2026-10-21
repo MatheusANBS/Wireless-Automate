@@ -6,10 +6,10 @@ import java.util.function.BooleanSupplier;
 
 /**
  * A disposição da tela do roteador ({@link RouterScreen}) pelo tamanho dela, em coordenadas relativas ao
- * canto da tela. Larga (a de abertura): à esquerda o visor, os cartões e o inventário; à direita o painel
- * inteiro. Estreita: as abas na largura toda, o visor com o cubo e os cartões embaixo à esquerda e, à
- * direita, o resto do painel em cima do inventário. Com o Upgrade de Alcance, o botão Máquinas acima do
- * visor e, se a coluna couber, a lista ao lado dele.
+ * canto da tela. Larga (a de abertura): à esquerda o visor e o inventário; à direita o painel inteiro, com
+ * os slots de cartão na linha do Filtro. Estreita: as abas na largura toda, o visor com o quadro das faces embaixo
+ * à esquerda e, à direita, o resto do painel em cima do inventário. Com o Upgrade de Alcance, o visor encolhe e a
+ * lista das máquinas fica embaixo dele, com a faixa "Máquinas · 10/16" no meio.
  */
 final class RouterLayout {
     // O mínimo é largo e baixo o bastante para caber na menor escala automática (320×240).
@@ -32,18 +32,17 @@ final class RouterLayout {
     private static final int PANEL_MAX = 240;
     /** A partir desta largura, a disposição larga. */
     private static final int WIDE_MIN = 2 * X0 + COLUMN_GAP + INV_W + PANEL_MIN;
-    /** Altura do cubo embaixo do visor, na estreita: 3 linhas de 13 px. */
-    static final int NARROW_NET_H = 3 * 13 + 2 * 2;
+    /** Altura do quadro das faces embaixo do visor, na estreita (com Limpar, Copiar e Colar embaixo do cubo). */
+    static final int NARROW_NET_H = PanelLayout.NARROW_FRAME_H;
     /** Slot do upgrade (o fundo), no canto direito do cabeçalho; o tier e a vazão ficam à esquerda dele. */
     static final int UPGRADE_BG_Y = RouterMenu.UPGRADE_Y - 1;
-    /** Faixa do botão "Máquinas" acima do visor (tirada da altura dele), com o upgrade de alcance. */
-    static final int RANGE_STRIP = 14;
-    /** Largura da lista quando ela fica ao lado do visor ({@link #sideBySide}). */
-    private static final int SIDE_LIST_W = 150;
-    /** Espaço entre a lista e o visor lado a lado. */
-    private static final int SIDE_GAP = 4;
-    /** Largura mínima do visor ao lado da lista: abaixo disso, os dois alternam no mesmo lugar. */
-    private static final int SIDE_MIN_VIEW = 140;
+    /** Faixa do título "Máquinas · 10/16" entre o visor e a lista, com o upgrade de alcance. */
+    static final int STRIP_H = 12;
+    /** Vão entre o visor e a faixa. */
+    private static final int STRIP_GAP = 3;
+    /** Altura mínima e máxima do visor quando a lista fica embaixo dele. */
+    private static final int MIN_VIEW_H = 44;
+    private static final int MAX_VIEW_H = 100;
 
     private final BooleanSupplier rangeShown;
     private int w = MIN_W;
@@ -98,20 +97,44 @@ final class RouterLayout {
         return (wide() ? X0 : rx()) + 1;
     }
 
-    /** Fundo dos slots de cartão: embaixo do visor (larga) ou do cubo (estreita). */
-    int cardsBgY() {
-        return wide() ? inventoryY() - 1 - 4 - 18 : h - 8 - 18;
+    /** Topo do quadro das faces embaixo do visor, na estreita. */
+    int narrowNetY() {
+        return h - 8 - NARROW_NET_H;
     }
 
-    /** Topo do visor (ou da lista): abaixo do botão Máquinas, com o upgrade de alcance. */
+    /** Topo do visor, o da coluna. */
     int boxY() {
-        return columnsY() + (rangeShown.getAsBoolean() ? RANGE_STRIP : 0);
+        return columnsY();
     }
 
-    /** Altura do visor (ou da lista): até o cubo (estreita) ou os cartões (larga). */
+    /** Altura da coluna do visor (e, com o upgrade de alcance, da lista embaixo dele): até o quadro das faces ou o inventário. */
     int boxH() {
-        int bottom = wide() ? cardsBgY() - 4 : cardsBgY() - 4 - NARROW_NET_H - 4;
+        int bottom = wide() ? inventoryY() - 1 - 4 : narrowNetY() - 4;
         return bottom - boxY();
+    }
+
+    /** Altura do visor: a coluna inteira, ou, com a lista das máquinas embaixo, uma parte dela. */
+    int viewH() {
+        int total = boxH();
+        if (!rangeShown.getAsBoolean()) {
+            return total;
+        }
+        return Math.max(MIN_VIEW_H, Math.min(MAX_VIEW_H, total * 38 / 100));
+    }
+
+    /** Topo da faixa "Máquinas · 10/16", embaixo do visor. */
+    int stripY() {
+        return boxY() + viewH() + STRIP_GAP;
+    }
+
+    /** Topo da lista das máquinas, embaixo da faixa. */
+    int listY() {
+        return stripY() + STRIP_H;
+    }
+
+    /** Altura da lista, até o fim da coluna. */
+    int listH() {
+        return boxY() + boxH() - listY();
     }
 
     /** Fundo do slot do upgrade, no canto direito do cabeçalho. */
@@ -127,28 +150,5 @@ final class RouterLayout {
     /** Onde termina a pílula do tier: antes dos dois slots de upgrade, com folga. */
     int headEnd() {
         return rangeBgX() - 4;
-    }
-
-    /**
-     * A coluna da esquerda é larga o bastante para a lista e o visor lado a lado; senão, o botão
-     * Máquinas alterna os dois no mesmo lugar.
-     */
-    boolean sideBySide() {
-        return rangeShown.getAsBoolean() && lw() >= SIDE_LIST_W + SIDE_GAP + SIDE_MIN_VIEW;
-    }
-
-    /** Começo do visor na coluna da esquerda (depois da lista, lado a lado). */
-    int viewX() {
-        return X0 + (sideBySide() ? SIDE_LIST_W + SIDE_GAP : 0);
-    }
-
-    /** Largura do visor (sem a lista, lado a lado). */
-    int viewBoxW() {
-        return sideBySide() ? lw() - SIDE_LIST_W - SIDE_GAP : lw();
-    }
-
-    /** Largura da lista. */
-    int listW() {
-        return sideBySide() ? SIDE_LIST_W : lw();
     }
 }

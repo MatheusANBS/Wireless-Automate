@@ -15,9 +15,9 @@ import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * O desenho do cubo das faces do painel do nó, desdobrado pelo {@link FaceNet}: uma célula por lado da
- * máquina, com o modo, o nome do lado, a rede e o roteador preso. As células e o clique ficam no
- * {@link PanelLayout}.
+ * O quadro das faces do painel do nó: o cubo desdobrado pelo {@link FaceNet} num quadro afundado, um botão por lado
+ * da máquina (o botão é o modo, como na configuração de lados do Mekanism), com a bolinha da rede e o Olho do
+ * roteador, mais Limpar, Copiar e Colar. As áreas e o clique ficam no {@link PanelLayout}.
  */
 final class FaceCube {
     private final PanelModel model;
@@ -28,76 +28,93 @@ final class FaceCube {
         this.layout = layout;
     }
 
-    /** As seis células; {@code pointed} é a face sob o mouse no visor da tela, realçada como a sob o mouse. */
-    void render(GuiGraphics g, Font font, int mx, int my, @Nullable Direction pointed) {
+    /**
+     * O quadro, os seis botões e os três botões de ação; {@code pointed} é a face sob o mouse no visor da tela,
+     * realçada como a sob o mouse; {@code clearArmed} é o Limpar esperando o segundo clique.
+     */
+    void render(GuiGraphics g, Font font, int mx, int my, @Nullable Direction pointed, boolean clearArmed) {
         if (layout.netW <= 0) {
             return;
         }
+        GuiPaint.inset(g, layout.netX, layout.netY, layout.netW, layout.netH);
         for (Hot hot : layout.hots) {
             if (hot.kind() == Kind.FACE) {
-                RemoteSide side = RemoteSide.values()[hot.arg()];
+                RemoteSide side = FaceNet.SIDES[hot.arg()];
                 Direction direction = model.faceOf(side);
                 renderCell(g, font, hot, side, direction, hot.contains(mx, my) || direction == pointed);
             }
         }
+        boolean editable = model.readOnly() == null;
+        action(g, font, layout.hot(Kind.CLEAR), clearArmed ? PanelModel.panelTr("clear.armed")
+                : PanelModel.panelTr("clear"), mx, my, editable, clearArmed);
+        action(g, font, layout.hot(Kind.COPY), PanelModel.panelTr("copy"), mx, my, model.canCopy(), false);
+        action(g, font, layout.hot(Kind.PASTE), PanelModel.panelTr("paste"), mx, my, model.canPaste(), false);
+    }
+
+    private static void action(GuiGraphics g, Font font, @Nullable Hot hot, Component label, int mx, int my,
+            boolean enabled, boolean armed) {
+        if (hot != null) {
+            PanelPainter.textButton(g, font, hot, label, hot.contains(mx, my), enabled, armed);
+        }
     }
 
     /**
-     * Uma face do cubo: tarja no topo na cor do modo, o nome do lado (curto quando aperta), a bolinha na cor
-     * da rede e, na face onde o roteador está preso, o Olho na cor do tier, com o fundo apagado. Sem modo, a
-     * borda é tracejada; a escolhida tem a borda de seleção.
+     * Uma face do cubo. Com modo: fundo na cor do modo, borda de grafite, o sprite da porta e a letra do lado. Sem
+     * modo: afundada, só a letra. A bolinha da rede fica embaixo à direita e, na face onde o roteador está preso, o
+     * Olho na cor do tier em cima. Com modo e sem rede, a borda é tracejada em coral; a escolhida tem a borda dupla.
      */
     private void renderCell(GuiGraphics g, Font font, Hot hot, RemoteSide side, Direction direction, boolean hovered) {
         FaceView v = model.view(direction);
         boolean lit = v.available() || model.remote();
         boolean selected = direction == model.face();
         boolean routerHere = model.attached(direction);
+        PortMode mode = lit ? v.mode() : PortMode.NONE;
         int x = hot.x();
         int y = hot.y();
         int w = hot.w();
         int h = hot.h();
-        int fill = !lit ? GuiPaint.INSET : routerHere ? GuiPaint.mix(GuiPaint.BUTTON, GuiPaint.INSET, 0.6f) : GuiPaint.BUTTON;
-        g.fill(x + 1, y + 1, x + w - 1, y + h - 1, fill);
-        PortMode mode = lit ? v.mode() : PortMode.NONE;
+        boolean withMode = mode != PortMode.NONE;
+        int fill = withMode ? GuiPaint.mix(GuiPaint.BUTTON, GuiPaint.modeColor(mode), 0.28f) : GuiPaint.INSET;
+        int border = withMode ? GuiPaint.FG : hovered && lit ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BEVEL_DARK;
+        if (hovered && withMode) {
+            border = GuiPaint.BUTTON_HOVER_BORDER;
+        }
+        GuiPaint.box(g, x, y, w, h, fill, border);
+        boolean ask = model.needsNetwork(v);
+        if (ask) {
+            dashed(g, x, y, w, h, GuiPaint.ACCENT);
+        }
         if (selected) {
             GuiPaint.box(g, x, y, w, h, fill, GuiPaint.ACCENT);
             GuiPaint.outline(g, x + 1, y + 1, w - 2, h - 2, GuiPaint.ACCENT);
-        } else if (mode == PortMode.NONE) {
-            dashed(g, x, y, w, h, hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
-        } else {
-            GuiPaint.box(g, x, y, w, h, fill, hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
         }
-        if (mode != PortMode.NONE) {
-            int inset = selected ? 2 : 1;
-            g.fill(x + inset, y + inset, x + w - inset, y + inset + 2, GuiPaint.modeColor(mode));
+        Component letter = PanelModel.tr("side.letter." + side.key());
+        int textY = y + (h - 8) / 2 + 1;
+        if (withMode) {
+            // o sprite de 16 px a 3/4 (12 px): ao lado da letra, ou sozinho no botão estreito (o lado vai na dica)
+            boolean withLetter = w >= 28;
+            g.pose().pushPose();
+            g.pose().translate(withLetter ? x + 2 : x + (w - 12) / 2, y + (h - 12) / 2f, 0);
+            g.pose().scale(0.75f, 0.75f, 1f);
+            GuiPaint.port(g, mode, 0, 0, 1f);
+            g.pose().popPose();
+            if (withLetter) {
+                int letterX = x + 2 + 12 + 2;
+                GuiText.draw(g, font, letter, letterX, textY, x + w - 1 - letterX, GuiPaint.FG);
+            }
+        } else {
+            GuiPaint.textCentered(g, font, letter, x + w / 2 + 1, textY, lit ? GuiPaint.MUTED : GuiPaint.DISABLED);
         }
         NetworkEntry entry = model.network(direction);
-        int marks = (entry != null ? 6 : 0) + (routerHere ? 7 : 0);
-        int room = w - 6 - marks;
-        // na face onde o roteador está preso, "roteador" no lugar do lado (o lado vai na dica)
-        Component full = routerHere ? PanelModel.panelTr("face.router") : PanelModel.sideName(side);
-        Component shortName = routerHere ? PanelModel.panelTr("face.router.short")
-                : PanelModel.tr("side.short." + side.key());
-        Component label = switch (FaceNet.label(font.width(full), font.width(shortName), room)) {
-            case FULL -> full;
-            case SHORT -> shortName;
-            case LETTER -> routerHere ? PanelModel.panelTr("face.router.letter") : PanelModel.tr("side.letter." + side.key());
-        };
-        int textY = y + Math.max(3, (h - 8) / 2 + 1);
-        GuiText.draw(g, font, label, x + 3, textY, room, !lit ? GuiPaint.DISABLED : selected ? GuiPaint.FG : GuiPaint.MUTED);
-        int markX = x + w - 3;
-        int markY = y + Math.max(3, (h - 5) / 2 + 1);
-        if (routerHere) {
-            markX -= 6;
-            GuiPaint.eye(g, markX, markY, GuiPaint.tierColor(model.snapshot().tier()));
-        }
         if (entry != null) {
-            markX -= 6;
-            GuiPaint.dot(g, markX, markY, 0xFF000000 | entry.color());
+            GuiPaint.dot(g, x + w - 7, y + h - 7, 0xFF000000 | entry.color());
+        }
+        if (routerHere) {
+            GuiPaint.eye(g, x + w - 7, y + 2, GuiPaint.tierColor(model.snapshot().tier()));
         }
     }
 
-    /** Contorno tracejado de 1 px (face sem modo). */
+    /** Contorno tracejado de 1 px. */
     private static void dashed(GuiGraphics g, int x, int y, int w, int h, int color) {
         for (int i = 1; i < w - 1; i += 3) {
             int end = Math.min(i + 2, w - 1);

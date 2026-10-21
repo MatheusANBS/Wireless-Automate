@@ -11,6 +11,7 @@ import io.github.matheusanbs.wirelessautomate.client.router.RouterScreen;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry.ItemEntry;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
+import io.github.matheusanbs.wirelessautomate.menu.RangeView;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.FaceView;
@@ -18,6 +19,7 @@ import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.NetworkEntry;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -28,6 +30,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -77,10 +80,10 @@ final class ScreenshotRouter {
                 mouseY = center[1];
             }, "4c-aba-dica"),
             new Step(() -> {
-                int[] center = screen.previewModeCenter(PortMode.BOTH);
+                int[] center = screen.previewFaceCenter(screen.getMenu().selectedFace());
                 mouseX = center[0];
                 mouseY = center[1];
-            }, "4d-armazem-dica"),
+            }, "4d-face-dica"),
             new Step(() -> {
                 // nome de rede comprido: a pílula da linha Rede encolhe o nome para caber
                 RouterSnapshot s = screen.getMenu().snapshot();
@@ -222,6 +225,49 @@ final class ScreenshotRouter {
                     screen.previewType(ResourceType.ENERGY);
                     upgradeState(ChunkLoadState.DISABLED);
                 }, "u4-upgrade-desligado-energia"));
+    }
+
+    /**
+     * Com o Upgrade de Alcance: o visor no alto, a lista das máquinas embaixo e a barra Editando, no grupo
+     * (Alto-forno, com a dica de uma linha) e numa máquina com exceção.
+     */
+    static List<Step> rangeSteps() {
+        return List.of(
+                new Step(() -> {
+                    screen = rangeScreen(EditTarget.group(0));
+                    mouseX = mouseY = -1;
+                }, "r1-alcance"),
+                new Step(() -> {
+                    screen = rangeScreen(EditTarget.machine(2));
+                    mouseX = mouseY = -1;
+                }, "r2-alcance-maquina"));
+    }
+
+    /** Tela do roteador com três grupos, uma exceção, uma máquina trocada e o alvo dado. */
+    private static RouterScreen rangeScreen(EditTarget target) {
+        RouterSnapshot s = sample();
+        RangeView.GroupView blast = new RangeView.GroupView(0, ResourceLocation.withDefaultNamespace("blast_furnace"), "", 3, 1);
+        RangeView.GroupView smoker = new RangeView.GroupView(1, ResourceLocation.withDefaultNamespace("smoker"), "", 2, 0);
+        RangeView.GroupView furnace = new RangeView.GroupView(2, ResourceLocation.withDefaultNamespace("furnace"), "", 2, 0);
+        List<RangeView.MachineView> machines = List.of(
+                new RangeView.MachineView(new BlockPos(3, 64, 0), 0, 3, false, RangeView.MachineState.LOADED, null, ""),
+                new RangeView.MachineView(new BlockPos(-3, 64, 1), 0, 3, false, RangeView.MachineState.LOADED, null, ""),
+                new RangeView.MachineView(new BlockPos(0, 64, 4), 0, 4, true, RangeView.MachineState.LOADED, null, ""),
+                new RangeView.MachineView(new BlockPos(5, 64, 5), 1, 5, false, RangeView.MachineState.LOADED, null, ""),
+                new RangeView.MachineView(new BlockPos(6, 64, 5), 1, 6, false, RangeView.MachineState.UNLOADED, null, ""),
+                new RangeView.MachineView(new BlockPos(7, 64, 5), 2, 7, false, RangeView.MachineState.REPLACED,
+                        ResourceLocation.withDefaultNamespace("smoker"), ""),
+                new RangeView.MachineView(new BlockPos(8, 64, 5), 2, 8, false, RangeView.MachineState.LOADED, null, ""));
+        int differs = target.kind() == EditTarget.Kind.MACHINE
+                ? 1 << RangeView.differsBit(ResourceType.ITEM, io.github.matheusanbs.wirelessautomate.range.RemoteSide.TOP) : 0;
+        RangeView range = new RangeView(16, 32, List.of(blast, smoker, furnace), machines, target, Direction.UP, differs);
+        RouterSnapshot snapshot = s.withRange(range);
+        Inventory inventory = new Inventory(null);
+        RouterMenu menu = new RouterMenu(0, inventory, snapshot);
+        RouterScreen created = new RouterScreen(menu, inventory, Component.literal("Cozinha e Forja"), true);
+        Minecraft minecraft = Minecraft.getInstance();
+        created.init(minecraft, minecraft.getWindow().getGuiScaledWidth(), minecraft.getWindow().getGuiScaledHeight());
+        return created;
     }
 
     /** Põe (ou tira) o upgrade no slot e o estado no snapshot, como o servidor mandaria. */

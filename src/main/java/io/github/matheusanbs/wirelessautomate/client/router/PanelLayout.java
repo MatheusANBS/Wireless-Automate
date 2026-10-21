@@ -29,14 +29,33 @@ final class PanelLayout {
     /** Da linha das abas ao que vem embaixo dela: a linha separadora fica no meio. */
     static final int TAB_BELOW = 5;
     static final int NET_GAP = 2;
-    /** Altura da célula do cubo empilhado. */
-    private static final int CELL_H = 16;
+    /** Altura do quadro das faces empilhado (o cubo de três linhas de 22 px com a folga em volta). */
+    static final int FRAME_H = 82;
+    private static final int MIN_FRAME_H = 58;
+    /** O botão de uma face e o vão entre eles. */
+    static final int CELL_W = 30;
+    static final int CELL_H = 22;
+    static final int CELL_GAP = 2;
+    /** Limpar, Copiar e Colar. */
+    static final int ACTION_W = 46;
+    static final int ACTION_H = 14;
+    private static final int ACTION_GAP = 3;
+    /** Largura do quadro a partir da qual os três botões ficam ao lado do cubo; abaixo, embaixo dele. */
+    private static final int ASIDE_MIN_W = 152;
+    /** Altura do quadro das faces na disposição estreita, com os botões embaixo do cubo. */
+    static final int NARROW_FRAME_H = 3 + 3 * 16 + 2 * CELL_GAP + 3 + ACTION_H + 3;
     static final int ROW_H = 12;
     static final int BUTTON_H = 14;
+    /** A linha do Filtro, alta para os dois slots de cartão. */
+    static final int FILTER_H = 18;
     private static final int GAP = 2;
-    private static final int MODE_GAP = 2;
-    /** O ícone do modo (a 3/4) e a folga até o nome. */
-    static final int MODE_TEXT_X = 16;
+    private static final int ROW_GAP = 3;
+    /** Rótulo das linhas de ajuste e o corpo mínimo que o comporta. */
+    static final int LABEL_W = 58;
+    private static final int LABEL_MIN_BODY = 190;
+    /** Os dois slots de cartão. */
+    static final int CARDS_W = 36;
+    private static final int ARROW_W = 8;
     private static final int PRIO_BUTTON_W = 12;
     static final int PRIO_VALUE_W = 22;
     private static final int EDIT_PAD = 5;
@@ -45,16 +64,15 @@ final class PanelLayout {
     static final int HIGHLIGHT_EYE = 8;
     /** O que a pílula com lista ({@link PanelPainter#dropButton}) gasta além do texto: margem e seta. */
     private static final int DROP_TEXT_PAD = 15;
-    /** A linha da face, com o espaço depois. */
-    private static final int FACE_H = 10 + GAP;
-    /** Rede, Filtro e a linha da prioridade, com os espaços entre elas. */
-    private static final int CONTROLS_H = ROW_H + GAP + BUTTON_H + GAP + BUTTON_H;
-    private static final PortMode[] MODES = {PortMode.EXTRACT, PortMode.INSERT, PortMode.BOTH, PortMode.NONE};
+    /** A linha da face e o espaço depois dela. */
+    private static final int FACE_LINE_H = 10 + 5;
+    /** As quatro linhas de ajuste, com os espaços entre elas. */
+    private static final int ROWS_H = BUTTON_H + ROW_GAP + FILTER_H + ROW_GAP + BUTTON_H + ROW_GAP + BUTTON_H;
     /** Os botões da linha da máquina, da esquerda para a direita. */
     private static final Kind[] TARGET_BUTTONS = {Kind.HIGHLIGHT, Kind.REVERT, Kind.UPDATE, Kind.UNLINK};
 
-    enum Kind { TAB, SUMMARY, FACE, TARGET, RENAME, IDLE_NETWORKS, HIGHLIGHT, REVERT, UPDATE, UNLINK, MODE, NETWORK,
-        FILTER, EDIT, PRIO_MINUS, PRIO_PLUS, REDSTONE, UNDO }
+    enum Kind { TAB, SUMMARY, FACE, CLEAR, COPY, PASTE, TARGET, RENAME, IDLE_NETWORKS, HIGHLIGHT, REVERT, UPDATE,
+        UNLINK, NETWORK, FILTER, CARDS, EDIT, PRIO_MINUS, PRIO_PLUS, REDSTONE_PREV, REDSTONE_NEXT, REDSTONE, UNDO }
 
     /** Uma área que responde ao mouse. */
     record Hot(Kind kind, int x, int y, int w, int h, int arg) {
@@ -87,6 +105,11 @@ final class PanelLayout {
     TabLayout.Mode tabMode = TabLayout.Mode.FULL;
     int cellW;
     int cellH;
+    /** Os slots de cartão existem (a tela do roteador; o Tablet não os tem). */
+    boolean cardSlots;
+    /** O canto do primeiro slot de cartão na tela, ou {@code -1} sem a linha do Filtro à vista. */
+    int cardX = -1;
+    int cardY = -1;
     int reasonY;
     int reasonLines;
     int targetY = -1;
@@ -97,14 +120,15 @@ final class PanelLayout {
     boolean compactTarget;
     /** -1: a linha da face não cabe. */
     int faceY;
-    boolean modeNames;
-    int phraseY = -1;
-    int phraseLines;
     /** -1: a linha não cabe (o corpo, sem nada mais a encolher, perde as linhas de baixo em vez de sobrepor). */
     int networkY;
     int filterY;
+    int redstoneY;
     int prioY;
-    boolean prioLabel;
+    /** Largura do rótulo das linhas de ajuste: 0 num corpo estreito, que as deixa sem rótulo. */
+    int labelW;
+    /** Largura do rótulo da prioridade, que fica mesmo sem o das outras linhas. */
+    int prioLabelW;
     Component revertLabel = Component.empty();
     /** O "Tirar redes" da linha Editando só com o ícone (o rótulo não cabe). */
     boolean idleIcon;
@@ -112,7 +136,6 @@ final class PanelLayout {
     boolean highlightIcon;
     /** O Voltar a igual só com o ↺ (nem o rótulo mais curto cabe). */
     boolean revertIcon;
-    Component redstoneLabel = Component.empty();
 
     // ------------------------------------------------------------------ retângulos
 
@@ -124,7 +147,8 @@ final class PanelLayout {
         netX = x;
         netY = y + TAB_H + TAB_BELOW;
         netW = w;
-        netH = 3 * CELL_H + 2 * NET_GAP;
+        // o quadro encolhe, até um mínimo, quando o resto das linhas não cabe (o Tablet baixo); senão tem a altura cheia
+        netH = Math.max(MIN_FRAME_H, Math.min(FRAME_H, h - TAB_H - TAB_BELOW - 5 - FACE_LINE_H - ROWS_H));
         bodyX = x;
         bodyY = netY + netH + 5;
         bodyW = w;
@@ -147,9 +171,9 @@ final class PanelLayout {
         this.bodyH = bodyH;
     }
 
-    /** Altura do cubo empilhado ({@link #layout(int, int, int, int)}). */
+    /** Altura do quadro das faces empilhado e sem aperto ({@link #layout(int, int, int, int)}). */
     static int stackedNetHeight() {
-        return 3 * CELL_H + 2 * NET_GAP;
+        return FRAME_H;
     }
 
     // ------------------------------------------------------------------ áreas do quadro
@@ -195,16 +219,46 @@ final class PanelLayout {
         }
     }
 
+    /**
+     * O quadro das faces: o cubo desdobrado em botões e, ao lado dele (ou, no quadro estreito, embaixo), Limpar, Copiar
+     * e Colar.
+     */
     private void arrangeNet() {
         if (netW <= 0) {
             return;
         }
-        cellW = (netW - (FaceNet.COLS - 1) * NET_GAP) / FaceNet.COLS;
-        cellH = (netH - (FaceNet.ROWS - 1) * NET_GAP) / FaceNet.ROWS;
-        for (RemoteSide side : RemoteSide.values()) {
+        boolean aside = netW >= ASIDE_MIN_W;
+        int padX = aside ? 7 : 3;
+        int padY = aside ? (netH >= 70 ? 6 : 4) : 3;
+        int roomW = aside ? netW - padX - 6 - ACTION_W - ACTION_GAP - padX : netW - 2 * padX;
+        int roomH = aside ? netH - 2 * padY : netH - 2 * padY - ACTION_H - ACTION_GAP;
+        cellW = Math.max(14, Math.min(CELL_W, (roomW - (FaceNet.COLS - 1) * CELL_GAP) / FaceNet.COLS));
+        cellH = Math.max(12, Math.min(CELL_H, (roomH - (FaceNet.ROWS - 1) * CELL_GAP) / FaceNet.ROWS));
+        int cubeW = FaceNet.COLS * cellW + (FaceNet.COLS - 1) * CELL_GAP;
+        int cubeH = FaceNet.ROWS * cellH + (FaceNet.ROWS - 1) * CELL_GAP;
+        int cubeX = netX + padX + Math.max(0, (roomW - cubeW) / 2);
+        int cubeY = netY + padY + Math.max(0, (roomH - cubeH) / 2);
+        for (RemoteSide side : FaceNet.SIDES) {
             int[] cell = FaceNet.cell(side);
-            hots.add(new Hot(Kind.FACE, netX + cell[0] * (cellW + NET_GAP), netY + cell[1] * (cellH + NET_GAP), cellW,
-                    cellH, side.ordinal()));
+            hots.add(new Hot(Kind.FACE, cubeX + cell[0] * (cellW + CELL_GAP), cubeY + cell[1] * (cellH + CELL_GAP),
+                    cellW, cellH, side.ordinal()));
+        }
+        Kind[] actions = {Kind.CLEAR, Kind.COPY, Kind.PASTE};
+        if (aside) {
+            int ax = netX + netW - 6 - ACTION_W;
+            int total = actions.length * ACTION_H + (actions.length - 1) * ACTION_GAP;
+            int ay = netY + (netH - total) / 2;
+            for (Kind kind : actions) {
+                hots.add(new Hot(kind, ax, ay, ACTION_W, ACTION_H, 0));
+                ay += ACTION_H + ACTION_GAP;
+            }
+        } else {
+            int each = (netW - 2 * padX - (actions.length - 1) * CELL_GAP) / actions.length;
+            int ax = netX + padX;
+            for (Kind kind : actions) {
+                hots.add(new Hot(kind, ax, netY + netH - padY - ACTION_H, each, ACTION_H, 0));
+                ax += each + CELL_GAP;
+            }
         }
     }
 
@@ -225,33 +279,16 @@ final class PanelLayout {
         // sem espaço para tudo: primeiro sai a linha da face, depois os botões da máquina vão para a linha
         // Editando, só com o ícone (e a linha da face volta se couber); o que ainda faltar sai de baixo
         int room = bottom - y;
-        boolean targetShown = model.rangeShown() && !model.targetFromList();
-        boolean buttonsRow = targetShown && model.targetMachine() != null;
+        boolean targetShown = model.rangeShown();
+        boolean buttonsRow = targetShown && !model.targetFromList() && model.targetMachine() != null;
         int targetH = targetShown ? ROW_H + GAP : 0;
-        int least = BUTTON_H + GAP + CONTROLS_H;
-        compactTarget = buttonsRow && targetH + ROW_H + GAP + least > room;
-        boolean face = targetH + (buttonsRow && !compactTarget ? ROW_H + GAP : 0) + FACE_H + least <= room;
+        compactTarget = buttonsRow && targetH + ROW_H + GAP + ROWS_H > room;
+        boolean face = targetH + (buttonsRow && !compactTarget ? ROW_H + GAP : 0) + FACE_LINE_H + ROWS_H <= room;
         y = arrangeTarget(font, model, x, y, w);
         faceY = -1;
         if (face) {
             faceY = y;
-            y += FACE_H;
-        }
-
-        // o que fica sempre: Rede, Filtro e a linha da prioridade com o redstone
-        int free = bottom - y - CONTROLS_H;
-        int modesH = arrangeModes(font, x, y, w, free);
-        y += modesH + GAP;
-        free -= modesH + GAP;
-
-        // a frase do modo, inteira, só se couber
-        List<?> lines = font.split(model.phrase(), w);
-        phraseY = -1;
-        phraseLines = 0;
-        if (lines.size() <= 2 && free >= lines.size() * 10 + 1) {
-            phraseY = y;
-            phraseLines = lines.size();
-            y += phraseLines * 10 + 1;
+            y += FACE_LINE_H;
         }
         arrangeControls(font, model, x, y, w, bottom);
     }
@@ -263,7 +300,10 @@ final class PanelLayout {
      */
     private int arrangeTarget(Font font, PanelModel model, int x, int y, int w) {
         targetY = -1;
-        if (model.rangeShown() && !model.targetFromList()) {
+        if (model.rangeShown() && model.targetFromList()) {
+            return arrangeTargetBar(font, model, x, y, w);
+        }
+        if (model.rangeShown()) {
             targetY = y;
             int labelW = compactTarget ? 0 : font.width(PanelModel.panelTr("target")) + 5;
             int pillW = w - labelW;
@@ -318,6 +358,28 @@ final class PanelLayout {
     }
 
     /**
+     * A barra Editando com a lista das máquinas à vista: a pílula do alvo e, numa máquina com exceção, o Igualar
+     * ("Voltar a igual às outras") na ponta; o resto (nome, Tirar redes, Atualizar, Desvincular, o Olho) fica nos
+     * botões da linha escolhida da lista.
+     */
+    private int arrangeTargetBar(Font font, PanelModel model, int x, int y, int w) {
+        targetY = y;
+        int labelW = font.width(PanelModel.panelTr("target")) + 5;
+        int pillW = w - labelW;
+        RangeView.MachineView machine = model.targetMachine();
+        compactTarget = false;
+        revertIcon = false;
+        if (machine != null && machine.exception()) {
+            revertLabel = PanelModel.panelTr("target.equalize");
+            int equalizeW = font.width(revertLabel) + 2 * TARGET_PAD;
+            hots.add(new Hot(Kind.REVERT, x + w - equalizeW, y, equalizeW, ROW_H, 0));
+            pillW -= equalizeW + GAP;
+        }
+        hots.add(new Hot(Kind.TARGET, x + labelW, y, pillW, ROW_H, 0));
+        return y + ROW_H + ROW_GAP + 2;
+    }
+
+    /**
      * Os botões da máquina só com o ícone, na ponta direita ({@code right}) da linha Editando apertada, na ordem da
      * linha deles; devolve o que eles tiram da pílula.
      */
@@ -353,72 +415,55 @@ final class PanelLayout {
         return bw + GAP;
     }
 
-    /** Os quatro modos em uma ou duas linhas, com ou sem o nome; devolve a altura deles. */
-    private int arrangeModes(Font font, int x, int y, int w, int free) {
-        int maxName = 0;
-        for (PortMode mode : MODES) {
-            maxName = Math.max(maxName, font.width(PanelModel.modeName(mode)));
-        }
-        int oneRow = (w - 3 * MODE_GAP) / 4;
-        int twoRows = (w - MODE_GAP) / 2;
-        int modeRows;
-        if (oneRow >= MODE_TEXT_X + maxName + 2) {
-            modeRows = 1;
-            modeNames = true;
-        } else if (twoRows >= MODE_TEXT_X + maxName + 2 && free >= 2 * BUTTON_H + MODE_GAP + GAP) {
-            modeRows = 2;
-            modeNames = true;
-        } else {
-            modeRows = 1;
-            modeNames = false;
-        }
-        int cell = modeRows == 1 ? oneRow : twoRows;
-        int perRow = modeRows == 1 ? 4 : 2;
-        for (int i = 0; i < MODES.length; i++) {
-            hots.add(new Hot(Kind.MODE, x + (i % perRow) * (cell + MODE_GAP), y + (i / perRow) * (BUTTON_H + MODE_GAP),
-                    cell, BUTTON_H, MODES[i].ordinal()));
-        }
-        return modeRows * BUTTON_H + (modeRows - 1) * MODE_GAP;
-    }
-
-    /** A Rede, o Filtro com Editar, a prioridade com o redstone e o Desfazer do aviso. */
+    /** Rede, Filtro (com os slots de cartão e o Editar), Redstone e Prioridade, e o Desfazer do aviso. */
     private void arrangeControls(Font font, PanelModel model, int x, int y, int w, int bottom) {
         networkY = -1;
         filterY = -1;
+        redstoneY = -1;
         prioY = -1;
-        if (y + ROW_H <= bottom) {
-            networkY = y;
-            int netLabelW = font.width(PanelModel.tr("network.face")) + 5;
-            hots.add(new Hot(Kind.NETWORK, x + netLabelW, y, w - netLabelW, ROW_H, 0));
-        }
-        y += ROW_H + GAP;
-
+        cardX = -1;
+        cardY = -1;
+        labelW = w >= LABEL_MIN_BODY ? LABEL_W : 0;
+        prioLabelW = labelW > 0 ? labelW : font.width(PanelModel.panelTr("priority")) + 4;
+        int fieldX = x + labelW;
+        int fieldW = w - labelW;
         if (y + BUTTON_H <= bottom) {
+            networkY = y;
+            hots.add(new Hot(Kind.NETWORK, fieldX, y, fieldW, BUTTON_H, 0));
+        }
+        y += BUTTON_H + ROW_GAP;
+
+        if (y + FILTER_H <= bottom) {
             filterY = y;
             if (model.hasFilter()) {
                 Component edit = PanelModel.tr("filter.edit");
                 int editW = font.width(edit) + 2 * EDIT_PAD;
-                hots.add(new Hot(Kind.EDIT, x + w - editW, y, editW, BUTTON_H, 0));
-                int labelW = font.width(PanelModel.tr("filter.label")) + 5;
-                hots.add(new Hot(Kind.FILTER, x + labelW, y, w - labelW - editW - 3, BUTTON_H, 0));
+                hots.add(new Hot(Kind.EDIT, x + w - editW, y + 2, editW, BUTTON_H, 0));
+                int right = x + w - editW - 3;
+                if (cardSlots) {
+                    cardX = right - CARDS_W;
+                    cardY = y;
+                    hots.add(new Hot(Kind.CARDS, cardX, y, CARDS_W, FILTER_H, 0));
+                    right = cardX - 3;
+                }
+                hots.add(new Hot(Kind.FILTER, fieldX, y + 2, Math.max(0, right - fieldX), BUTTON_H, 0));
             }
         }
-        y += BUTTON_H + GAP;
+        y += FILTER_H + ROW_GAP;
+
+        if (y + BUTTON_H <= bottom) {
+            redstoneY = y;
+            hots.add(new Hot(Kind.REDSTONE_NEXT, x + w - ARROW_W - 1, y, ARROW_W + 1, BUTTON_H, 0));
+            hots.add(new Hot(Kind.REDSTONE_PREV, x + w - 2 * ARROW_W - 2, y, ARROW_W + 1, BUTTON_H, 0));
+            hots.add(new Hot(Kind.REDSTONE, fieldX, y, fieldW - 2 * ARROW_W - 2, BUTTON_H, 0));
+        }
+        y += BUTTON_H + ROW_GAP;
 
         if (y + BUTTON_H <= bottom) {
             prioY = y;
-            int labelW = font.width(PanelModel.panelTr("priority")) + 4;
-            int controlsW = 2 * PRIO_BUTTON_W + PRIO_VALUE_W + 2;
-            int minRedstone = font.width(PanelModel.redstoneName(RedstoneMode.HIGH)) + 16;
-            prioLabel = w - labelW - controlsW - 4 >= minRedstone;
-            int px = x + (prioLabel ? labelW : 0);
+            int px = x + prioLabelW;
             hots.add(new Hot(Kind.PRIO_MINUS, px, y, PRIO_BUTTON_W, BUTTON_H, 0));
-            hots.add(new Hot(Kind.PRIO_PLUS, px + PRIO_BUTTON_W + PRIO_VALUE_W + 2, y, PRIO_BUTTON_W, BUTTON_H, 0));
-            int rx = px + controlsW + 4;
-            int rw = x + w - rx;
-            hots.add(new Hot(Kind.REDSTONE, rx, y, rw, BUTTON_H, 0));
-            Component full = PanelModel.tr("redstone.narration", PanelModel.redstoneName(model.view().redstone()));
-            redstoneLabel = font.width(full) <= rw - 16 ? full : PanelModel.redstoneName(model.view().redstone());
+            hots.add(new Hot(Kind.PRIO_PLUS, px + PRIO_BUTTON_W + PRIO_VALUE_W, y, PRIO_BUTTON_W, BUTTON_H, 0));
         }
 
         PanelNoticePayload notice = PanelNotices.current();
@@ -526,15 +571,8 @@ final class PanelLayout {
         if (undo != null && undo.contains(mx, my)) {
             return undo;
         }
-        if (netW > 0) {
-            RemoteSide side = FaceNet.sideAt((int) Math.floor(mx) - netX, (int) Math.floor(my) - netY, cellW, cellH,
-                    NET_GAP);
-            if (side != null) {
-                return hot(Kind.FACE, side.ordinal());
-            }
-        }
         for (Hot hot : hots) {
-            if (hot.kind() != Kind.FACE && hot.contains(mx, my)) {
+            if (hot.contains(mx, my)) {
                 return hot;
             }
         }

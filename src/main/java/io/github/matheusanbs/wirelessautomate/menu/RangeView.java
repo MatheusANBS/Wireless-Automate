@@ -1,6 +1,8 @@
 package io.github.matheusanbs.wirelessautomate.menu;
 
+import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
+import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -26,11 +28,15 @@ import org.jetbrains.annotations.Nullable;
  * @param face     a face selecionada no menu do servidor (absoluta na presa, canônica num alvo remoto).
  *                 Trocar de alvo a põe numa face padrão do quadro novo (Frente = NORTH num remoto, a face
  *                 de antes na presa); o cliente a adota quando o alvo do snapshot muda
+ * @param differs  numa máquina com exceção, as faces dela que diferem do perfil do grupo (um bit por tipo e lado,
+ *                 {@link #differs(ResourceType, RemoteSide)}); zero nos outros alvos
  */
 public record RangeView(int radius, int max, List<GroupView> groups, List<MachineView> machines, EditTarget target,
-        Direction face) {
+        Direction face, int differs) {
+    /** Os lados de uma máquina (os bits de {@link #differs} andam de seis em seis). */
+    private static final int SIDE_COUNT = 6;
     public static final RangeView EMPTY = new RangeView(0, 0, List.of(), List.of(), EditTarget.ATTACHED_TARGET,
-            Direction.NORTH);
+            Direction.NORTH, 0);
 
     /** Estado de uma máquina remota na tela. */
     public enum MachineState {
@@ -81,6 +87,16 @@ public record RangeView(int radius, int max, List<GroupView> groups, List<Machin
             @Nullable ResourceLocation replacedBy, String label) {
     }
 
+    /** A face do lado {@code side} da máquina escolhida difere da do perfil do grupo dela. */
+    public boolean differs(ResourceType type, RemoteSide side) {
+        return (differs >> differsBit(type, side) & 1) != 0;
+    }
+
+    /** O bit de {@link #differs} de uma face. */
+    public static int differsBit(ResourceType type, RemoteSide side) {
+        return type.ordinal() * SIDE_COUNT + side.ordinal();
+    }
+
     /** Há upgrade valendo (a tela mostra a lista). */
     public boolean present() {
         return radius > 0;
@@ -120,6 +136,7 @@ public record RangeView(int radius, int max, List<GroupView> groups, List<Machin
         buf.writeEnum(view.target.kind());
         buf.writeVarInt(view.target.id());
         buf.writeEnum(view.face);
+        buf.writeVarInt(view.differs);
         buf.writeVarInt(view.groups.size());
         for (GroupView group : view.groups) {
             buf.writeVarInt(group.id);
@@ -148,6 +165,7 @@ public record RangeView(int radius, int max, List<GroupView> groups, List<Machin
         int max = buf.readVarInt();
         EditTarget target = new EditTarget(buf.readEnum(EditTarget.Kind.class), buf.readVarInt());
         Direction face = buf.readEnum(Direction.class);
+        int differs = buf.readVarInt();
         int groupCount = buf.readVarInt();
         List<GroupView> groups = new ArrayList<>(groupCount);
         for (int i = 0; i < groupCount; i++) {
@@ -161,6 +179,6 @@ public record RangeView(int radius, int max, List<GroupView> groups, List<Machin
                     buf.readEnum(MachineState.class), buf.readOptional(FriendlyByteBuf::readResourceLocation).orElse(null),
                     buf.readUtf(RouterSnapshot.NAME_LENGTH)));
         }
-        return new RangeView(radius, max, List.copyOf(groups), List.copyOf(machines), target, face);
+        return new RangeView(radius, max, List.copyOf(groups), List.copyOf(machines), target, face, differs);
     }
 }

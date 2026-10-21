@@ -3,7 +3,10 @@ package io.github.matheusanbs.wirelessautomate.client.router;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.FaceView;
+import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
+import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.packet.FaceActionPayload;
 import io.github.matheusanbs.wirelessautomate.packet.ClearIdleNetworksPayload;
 import io.github.matheusanbs.wirelessautomate.packet.RenameTargetPayload;
 import io.github.matheusanbs.wirelessautomate.packet.SetFacePayload;
@@ -11,6 +14,7 @@ import io.github.matheusanbs.wirelessautomate.packet.SetNetworkPayload;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import net.minecraft.core.Direction;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -77,6 +81,22 @@ final class RouterPanelActions implements NodePanel.Actions {
             FaceView current = faces.get(index);
             faces.set(index, new FaceView(p.mode(), p.priority(), p.redstone(), current.slots(), current.filterSize(),
                     current.blacklist(), current.network()));
+        } else if (payload instanceof FaceActionPayload p) {
+            if (p.action() == FaceActionPayload.Action.CLEAR) {
+                for (ResourceType type : p.allTypes() ? LoadedTypes.LIST : List.of(p.resource())) {
+                    for (Direction side : Direction.values()) {
+                        int index = RouterSnapshot.index(type, side);
+                        FaceView current = faces.get(index);
+                        faces.set(index, new FaceView(PortMode.NONE, current.priority(), current.redstone(),
+                                current.slots(), current.filterSize(), current.blacklist(), current.network()));
+                    }
+                }
+            } else {
+                FaceView from = faces.get(RouterSnapshot.index(p.resource(), p.from()));
+                int index = RouterSnapshot.index(p.resource(), p.to());
+                faces.set(index, new FaceView(from.mode(), from.priority(), from.redstone(), faces.get(index).slots(),
+                        from.filterSize(), from.blacklist(), from.network()));
+            }
         } else if (payload instanceof SetNetworkPayload p) {
             int index = RouterSnapshot.index(p.resource(), p.face());
             faces.set(index, faces.get(index).withNetwork(p.network()));

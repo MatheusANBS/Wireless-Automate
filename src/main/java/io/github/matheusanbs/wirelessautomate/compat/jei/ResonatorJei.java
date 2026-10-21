@@ -1,24 +1,23 @@
 package io.github.matheusanbs.wirelessautomate.compat.jei;
 
-import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
-import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
-import io.github.matheusanbs.wirelessautomate.resonator.CoreMath;
+import io.github.matheusanbs.wirelessautomate.resonator.CoreCatalyst;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreItem;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBlueprint;
-import io.github.matheusanbs.wirelessautomate.resonator.Tuning;
 import java.util.ArrayList;
 import java.util.List;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
-import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 /**
- * O Ressonador de Sinal no JEI: as categorias, as receitas, os catalisadores e a página de informação dos Núcleos.
- * O plugin só delega para cá, uma etapa de registro por método.
+ * O Ressonador de Sinal no JEI: as categorias, as receitas, os catalisadores e a página de informação de cada Núcleo
+ * ({@link ResonatorInfo}). O plugin só delega para cá, uma etapa de registro por método. Só entram os tiers carregados:
+ * os cristais, os Pós Carregados e os Núcleos dos tiers do Allthemodium só com o mod.
  */
 final class ResonatorJei {
     private ResonatorJei() {
@@ -26,17 +25,29 @@ final class ResonatorJei {
 
     static void registerCategories(IRecipeCategoryRegistration registration) {
         var helper = registration.getJeiHelpers().getGuiHelper();
-        registration.addRecipeCategories(new ResonatorStructureCategory(helper), new ResonatorRechargeCategory(helper));
+        registration.addRecipeCategories(new ResonatorStructureCategory(helper), new ResonatorRechargeCategory(helper),
+                new ResonatorRecastCategory(helper));
     }
 
     static void registerRecipes(IRecipeRegistration registration) {
-        registration.addRecipes(ResonatorRechargeCategory.TYPE, List.of(
-                ResonatorRechargeCategory.Recharge.of(ModItems.SIGNAL_CRYSTAL.get()),
-                ResonatorRechargeCategory.Recharge.of(ModItems.CUT_SIGNAL_CRYSTAL.get())));
+        List<ItemStack> cores = new ArrayList<>();
+        List<ItemStack> catalysts = new ArrayList<>();
+        catalystPairs(cores, catalysts);
+        List<ResonatorRechargeCategory.Recharge> recharges = new ArrayList<>();
+        List<ResonatorRecastCategory.Recast> recasts = new ArrayList<>();
+        for (Item crystal : crystals()) {
+            recharges.add(ResonatorRechargeCategory.Recharge.of(crystal, List.copyOf(cores), List.copyOf(catalysts)));
+            recasts.add(ResonatorRecastCategory.Recast.of(crystal));
+        }
+        registration.addRecipes(ResonatorRechargeCategory.TYPE, recharges);
+        registration.addRecipes(ResonatorRecastCategory.TYPE, recasts);
         registration.addRecipes(ResonatorStructureCategory.TYPE, List.of(
                 ResonatorStructureCategory.Structure.of(ResonatorBlueprint.Layout.VITRINE),
                 ResonatorStructureCategory.Structure.of(ResonatorBlueprint.Layout.FAIXA)));
-        registration.addItemStackInfo(cores(), info());
+        for (RouterTier tier : loadedTiers()) {
+            registration.addItemStackInfo(ResonanceCoreItem.withTier(ModItems.RESONANCE_CORE.get(), tier),
+                    ResonatorInfo.lines(tier));
+        }
     }
 
     static void registerCatalysts(IRecipeCatalystRegistration registration) {
@@ -44,10 +55,11 @@ final class ResonatorJei {
             registration.addRecipeCatalysts(ResonatorRechargeCategory.TYPE, core);
             registration.addRecipeCatalysts(ResonatorStructureCategory.TYPE, core);
         }
+        registration.addRecipeCatalysts(ResonatorRecastCategory.TYPE, new ItemStack(Items.CRAFTING_TABLE));
     }
 
     /** Os tiers carregados, em ordem. */
-    private static List<RouterTier> loadedTiers() {
+    static List<RouterTier> loadedTiers() {
         return java.util.Arrays.stream(RouterTier.values()).filter(RouterTier::loaded).toList();
     }
 
@@ -60,18 +72,37 @@ final class ResonatorJei {
         return cores;
     }
 
-    /** O que o Ressonador faz e uma linha por tier carregado: câmaras, FE por tick de um cristal e teto do Sintonizador. */
-    private static Component[] info() {
-        List<Component> lines = new ArrayList<>();
-        lines.add(Component.translatable("jei.wirelessautomate.resonator.info"));
-        for (RouterTier tier : loadedTiers()) {
-            int chambers = CoreMath.chambers(tier.ordinal());
-            lines.add(Component.translatable(
-                    "jei.wirelessautomate.resonator.info.tier." + (chambers == 1 ? "one" : "many"),
-                    Component.translatable(tier.translationKey()), TierCoreItem.grouped(chambers),
-                    TierCoreItem.grouped(Config.resonatorFePerCrystal(tier)),
-                    Math.round(Tuning.ceiling(tier.ordinal()) * 100)));
+    /** Os cristais do Núcleo: o de Sinal, o Lapidado e os Afinados dos tiers carregados. */
+    private static List<Item> crystals() {
+        List<Item> crystals = new ArrayList<>(List.of(ModItems.SIGNAL_CRYSTAL.get(), ModItems.CUT_SIGNAL_CRYSTAL.get()));
+        for (var tuned : ModItems.TUNED_CRYSTALS.entrySet()) {
+            if (tuned.getKey().loaded()) {
+                crystals.add(tuned.getValue().get());
+            }
         }
-        return lines.toArray(Component[]::new);
+        return crystals;
+    }
+
+    /**
+     * Os pares Núcleo × catalisador que a regra do {@link CoreCatalyst} aceita, por tier carregado: listas paralelas,
+     * do mesmo tamanho, para o JEI girá-las juntas.
+     */
+    private static void catalystPairs(List<ItemStack> cores, List<ItemStack> catalysts) {
+        List<ItemStack> candidates = new ArrayList<>(List.of(new ItemStack(Items.REDSTONE),
+                new ItemStack(ModItems.RESONANCE_DUST.get())));
+        for (var dust : ModItems.CHARGED_DUSTS.entrySet()) {
+            if (dust.getKey().loaded()) {
+                candidates.add(new ItemStack(dust.getValue().get()));
+            }
+        }
+        for (RouterTier tier : loadedTiers()) {
+            ItemStack core = ResonanceCoreItem.withTier(ModItems.RESONANCE_CORE.get(), tier);
+            for (ItemStack candidate : candidates) {
+                if (CoreCatalyst.accepts(tier, candidate)) {
+                    cores.add(core);
+                    catalysts.add(candidate);
+                }
+            }
+        }
     }
 }

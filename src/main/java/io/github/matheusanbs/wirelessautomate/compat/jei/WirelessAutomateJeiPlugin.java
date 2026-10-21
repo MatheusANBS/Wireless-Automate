@@ -28,6 +28,7 @@ import mezz.jei.api.registration.ISubtypeRegistration;
 import mezz.jei.api.gui.builder.IClickableIngredientFactory;
 import mezz.jei.api.runtime.IClickableIngredient;
 import mezz.jei.api.runtime.IIngredientManager;
+import mezz.jei.api.runtime.IJeiRuntime;
 import java.util.Optional;
 import net.minecraft.core.NonNullList;
 import net.minecraft.client.renderer.Rect2i;
@@ -52,7 +53,8 @@ import io.github.matheusanbs.wirelessautomate.recipe.TierUpgradeRecipe;
  * acrescentam a entrada ({@link FilterGhostHandler}); as áreas extras do painel afastam o JEI. Na
  * bancada, mostra as três receitas de cada anel (cartão de um degrau, cartão que pula e receita direta) e o
  * upgrade bloco + cartão com a origem do cartão. O tier é subtipo do roteador e dos armazenamentos, e a origem
- * é subtipo do cartão, para o JEI listar cada um separado, como a aba criativa.
+ * é subtipo do cartão, para o JEI listar cada um separado, como a aba criativa. Os itens dos tiers que não carregaram
+ * somem do JEI ({@link UnloadedTiers}).
  */
 @JeiPlugin
 public final class WirelessAutomateJeiPlugin implements IModPlugin {
@@ -230,6 +232,11 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
         ingredients.set(TierUpgradeRecipe.CENTER, Ingredient.of(center));
         return new RecipeHolder<>(WirelessAutomate.id(path), new ShapedRecipe("tier_upgrade", ring.category(),
                 new ShapedRecipePattern(3, 3, ingredients, Optional.empty()), result));
+    }
+
+    @Override
+    public void onRuntimeAvailable(IJeiRuntime runtime) {
+        UnloadedTiers.hide(runtime.getIngredientManager());
     }
 
     @Override

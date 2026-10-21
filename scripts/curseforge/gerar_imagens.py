@@ -227,9 +227,11 @@ TIERS = [
 ]
 # Os oito roteadores no salão dos tiers (s15-tiers.png), da esquerda para a direita: centro de cada um em
 # coordenadas de 1280x800 e o recorte em volta (o cartão flutuando em cima e o bloco do material embaixo).
-TIER_HALL_X = [309, 403, 497, 592, 687, 782, 877, 972]
-TIER_HALL_Y = (338, 430)
-TIER_HALL_MEIA_LARGURA = 37
+# Medidos na captura: a câmera é a mesma, mas o campo de visão efetivo muda com o ambiente que fotografa,
+# então confira a folha dos recortes (folha.py) sempre que refizer a vitrine.
+TIER_HALL_X = [147, 287, 428, 569, 710, 851, 992, 1132]
+TIER_HALL_Y = (276, 442)
+TIER_HALL_MEIA_LARGURA = 66
 VAZOES = [
     ("Items/s", [32, 256, 2_048, 16_384, 131_072, 1_048_576, 8_388_608, 0]),
     ("Fluids (mB/s)", [2_000, 16_000, 128_000, 1_024_000, 8_192_000, 65_536_000, 524_288_000, 0]),

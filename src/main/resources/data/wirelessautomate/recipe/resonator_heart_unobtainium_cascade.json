@@ -1,0 +1,51 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "allthemodium"
+    },
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "megacells"
+    },
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "draconicevolution"
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "wirelessautomate:condensed_core"
+    },
+    {
+      "tag": "c:storage_blocks/unobtainium"
+    },
+    {
+      "tag": "c:storage_blocks/unobtainium"
+    },
+    {
+      "tag": "c:storage_blocks/unobtainium"
+    },
+    {
+      "tag": "c:storage_blocks/unobtainium"
+    },
+    {
+      "item": "minecraft:nether_star"
+    },
+    {
+      "item": "minecraft:nether_star"
+    },
+    {
+      "item": "megacells:cell_component_16m"
+    },
+    {
+      "item": "draconicevolution:chaotic_core"
+    }
+  ],
+  "result": {
+    "id": "wirelessautomate:resonator_heart_unobtainium",
+    "count": 1
+  }
+}

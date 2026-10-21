@@ -2427,7 +2427,7 @@ SCENE_RESONATOR = '''<GameScene zoom="3" interactive={true}>
 # Tiers do Ressonador na ordem do RouterTier: câmaras (tier + 1), FE por cristal (padrões do CoreMath), minutos que a
 # carga do Lapidado ou do Afinado dura a 100% (CoreMath.DEFAULT_LIFE_MINUTES; o Cristal de Sinal dura a metade) e teto
 # do Sintonizador em % (constantes do Tuning.ceiling). A geração máxima é câmaras × FE por cristal × 2.
-RESONATOR_FE = [216, 6_912, 10_000, 160_000, 6_400_000, 6_700_000, 184_000_000, 268_435_456]
+RESONATOR_FE = [216, 6_912, 10_000, 160_000, 6_400_000, 6_700_000, 10_700_000, 268_435_456]
 RESONATOR_LIFE = [20, 20, 15, 10, 5, 5, 4, 3]
 RESONATOR_CEILING = [85, 88, 90, 92, 94, 95, 96, 98]
 
@@ -2657,11 +2657,11 @@ bancada, sem forma:
 | ''' + item('resonator_heart_basic') + ''' **Básico** | 1 Matriz de Fase + 4 blocos de redstone |
 | ''' + item('resonator_heart_advanced') + ''' **Avançado** | 2 Matrizes de Fase + 4 blocos de ouro |
 | ''' + item('resonator_heart_elite') + ''' **Elite** | 3 Matrizes de Fase + 4 lingotes de netherite |
-| ''' + item('resonator_heart_emerald') + ''' **Esmeralda** | 1 Estabilizador de Campo + 7 blocos de esmeralda + 1 Nether Star |
-| ''' + item('resonator_heart_allthemodium') + ''' **Allthemodium¹** | 2 Estabilizadores de Campo + 4 blocos de Allthemodium + 2 Nether Stars |
-| ''' + item('resonator_heart_vibranium') + ''' **Vibranium¹** | 1 Núcleo Condensado + 4 blocos de Vibranium + 2 Nether Stars |
-| ''' + item('resonator_heart_unobtainium') + ''' **Unobtainium¹** | 2 Núcleos Condensados + 4 blocos de Unobtainium + 3 Nether Stars |
-| ''' + item('resonator_heart_ultimate') + ''' **Ultimate** | 3 Núcleos Condensados + 1 Moldura de Liga + 5 Nether Stars |
+| ''' + item('resonator_heart_emerald') + ''' **Esmeralda** | 1 Estabilizador de Campo + 7 blocos de esmeralda + 1 Nether Star; com o Modern Industrialization: 1 Estabilizador de Campo + 6 blocos de esmeralda + 1 Nether Star + 1 Processing Unit |
+| ''' + item('resonator_heart_allthemodium') + ''' **Allthemodium¹** | 2 Estabilizadores de Campo + 4 blocos de Allthemodium + 2 Nether Stars; com o MEGA Cells: 1 Estabilizador de Campo + 4 blocos de Allthemodium + 2 Nether Stars + 2 Cell Components 16M |
+| ''' + item('resonator_heart_vibranium') + ''' **Vibranium¹** | 1 Núcleo Condensado + 4 blocos de Vibranium + 2 Nether Stars; com o Modern Industrialization e o Draconic Evolution: 1 Núcleo Condensado + 4 blocos de Vibranium + 1 Nether Star + 1 Processing Unit + 2 Chaotic Cores |
+| ''' + item('resonator_heart_unobtainium') + ''' **Unobtainium¹** | 2 Núcleos Condensados + 4 blocos de Unobtainium + 3 Nether Stars; com o MEGA Cells e o Draconic Evolution: 1 Núcleo Condensado + 4 blocos de Unobtainium + 2 Nether Stars + 1 Cell Component 16M + 1 Chaotic Core |
+| ''' + item('resonator_heart_ultimate') + ''' **Ultimate** | 3 Núcleos Condensados + 1 Moldura de Liga + 5 Nether Stars; com o MEGA Cells, o Draconic Evolution e o Modern Industrialization: 3 Cell Components 256M + 1 Cell Component 64M + 1 Quantum Circuit + 1 Chaotic Core + 1 Awakened Core + 1 Moldura de Liga + 1 Nether Star |
 
 ''' + ATM_NOTE['pt'] + '''
 
@@ -2842,11 +2842,11 @@ made on a crafting table, shapeless:
 | ''' + item('resonator_heart_basic') + ''' **Basic** | 1 Phase Matrix + 4 redstone blocks |
 | ''' + item('resonator_heart_advanced') + ''' **Advanced** | 2 Phase Matrices + 4 gold blocks |
 | ''' + item('resonator_heart_elite') + ''' **Elite** | 3 Phase Matrices + 4 netherite ingots |
-| ''' + item('resonator_heart_emerald') + ''' **Emerald** | 1 Field Stabilizer + 7 emerald blocks + 1 Nether Star |
-| ''' + item('resonator_heart_allthemodium') + ''' **Allthemodium¹** | 2 Field Stabilizers + 4 Allthemodium blocks + 2 Nether Stars |
-| ''' + item('resonator_heart_vibranium') + ''' **Vibranium¹** | 1 Condensed Core + 4 Vibranium blocks + 2 Nether Stars |
-| ''' + item('resonator_heart_unobtainium') + ''' **Unobtainium¹** | 2 Condensed Cores + 4 Unobtainium blocks + 3 Nether Stars |
-| ''' + item('resonator_heart_ultimate') + ''' **Ultimate** | 3 Condensed Cores + 1 Alloy Frame + 5 Nether Stars |
+| ''' + item('resonator_heart_emerald') + ''' **Emerald** | 1 Field Stabilizer + 7 emerald blocks + 1 Nether Star; with Modern Industrialization: 1 Field Stabilizer + 6 emerald blocks + 1 Nether Star + 1 Processing Unit |
+| ''' + item('resonator_heart_allthemodium') + ''' **Allthemodium¹** | 2 Field Stabilizers + 4 Allthemodium blocks + 2 Nether Stars; with MEGA Cells: 1 Field Stabilizer + 4 Allthemodium blocks + 2 Nether Stars + 2 Cell Components 16M |
+| ''' + item('resonator_heart_vibranium') + ''' **Vibranium¹** | 1 Condensed Core + 4 Vibranium blocks + 2 Nether Stars; with Modern Industrialization and Draconic Evolution: 1 Condensed Core + 4 Vibranium blocks + 1 Nether Star + 1 Processing Unit + 2 Chaotic Cores |
+| ''' + item('resonator_heart_unobtainium') + ''' **Unobtainium¹** | 2 Condensed Cores + 4 Unobtainium blocks + 3 Nether Stars; with MEGA Cells and Draconic Evolution: 1 Condensed Core + 4 Unobtainium blocks + 2 Nether Stars + 1 Cell Component 16M + 1 Chaotic Core |
+| ''' + item('resonator_heart_ultimate') + ''' **Ultimate** | 3 Condensed Cores + 1 Alloy Frame + 5 Nether Stars; with MEGA Cells, Draconic Evolution and Modern Industrialization: 3 Cell Components 256M + 1 Cell Component 64M + 1 Quantum Circuit + 1 Chaotic Core + 1 Awakened Core + 1 Alloy Frame + 1 Nether Star |
 
 ''' + ATM_NOTE['en'] + '''
 

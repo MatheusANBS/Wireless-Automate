@@ -223,11 +223,11 @@ made on a crafting table, shapeless:
 | <ItemImage id="wirelessautomate:resonator_heart_basic" /> **Basic** | 1 Phase Matrix + 4 redstone blocks |
 | <ItemImage id="wirelessautomate:resonator_heart_advanced" /> **Advanced** | 2 Phase Matrices + 4 gold blocks |
 | <ItemImage id="wirelessautomate:resonator_heart_elite" /> **Elite** | 3 Phase Matrices + 4 netherite ingots |
-| <ItemImage id="wirelessautomate:resonator_heart_emerald" /> **Emerald** | 1 Field Stabilizer + 7 emerald blocks + 1 Nether Star |
-| <ItemImage id="wirelessautomate:resonator_heart_allthemodium" /> **Allthemodium¹** | 2 Field Stabilizers + 4 Allthemodium blocks + 2 Nether Stars |
-| <ItemImage id="wirelessautomate:resonator_heart_vibranium" /> **Vibranium¹** | 1 Condensed Core + 4 Vibranium blocks + 2 Nether Stars |
-| <ItemImage id="wirelessautomate:resonator_heart_unobtainium" /> **Unobtainium¹** | 2 Condensed Cores + 4 Unobtainium blocks + 3 Nether Stars |
-| <ItemImage id="wirelessautomate:resonator_heart_ultimate" /> **Ultimate** | 3 Condensed Cores + 1 Alloy Frame + 5 Nether Stars |
+| <ItemImage id="wirelessautomate:resonator_heart_emerald" /> **Emerald** | 1 Field Stabilizer + 7 emerald blocks + 1 Nether Star; with Modern Industrialization: 1 Field Stabilizer + 6 emerald blocks + 1 Nether Star + 1 Processing Unit |
+| <ItemImage id="wirelessautomate:resonator_heart_allthemodium" /> **Allthemodium¹** | 2 Field Stabilizers + 4 Allthemodium blocks + 2 Nether Stars; with MEGA Cells: 1 Field Stabilizer + 4 Allthemodium blocks + 2 Nether Stars + 2 Cell Components 16M |
+| <ItemImage id="wirelessautomate:resonator_heart_vibranium" /> **Vibranium¹** | 1 Condensed Core + 4 Vibranium blocks + 2 Nether Stars; with Modern Industrialization and Draconic Evolution: 1 Condensed Core + 4 Vibranium blocks + 1 Nether Star + 1 Processing Unit + 2 Chaotic Cores |
+| <ItemImage id="wirelessautomate:resonator_heart_unobtainium" /> **Unobtainium¹** | 2 Condensed Cores + 4 Unobtainium blocks + 3 Nether Stars; with MEGA Cells and Draconic Evolution: 1 Condensed Core + 4 Unobtainium blocks + 2 Nether Stars + 1 Cell Component 16M + 1 Chaotic Core |
+| <ItemImage id="wirelessautomate:resonator_heart_ultimate" /> **Ultimate** | 3 Condensed Cores + 1 Alloy Frame + 5 Nether Stars; with MEGA Cells, Draconic Evolution and Modern Industrialization: 3 Cell Components 256M + 1 Cell Component 64M + 1 Quantum Circuit + 1 Chaotic Core + 1 Awakened Core + 1 Alloy Frame + 1 Nether Star |
 
 ¹ Only with the Allthemodium mod.
 

@@ -593,7 +593,15 @@ public class RouterBlockEntity extends BlockEntity {
      * {@code network} ({@code null} = sem rede); um grupo que já existe não muda.
      */
     public boolean linkMachine(BlockPos pos, @Nullable UUID network) {
-        return range.link(pos, network);
+        return range.link(pos, network, false);
+    }
+
+    /**
+     * Como {@link #linkMachine(BlockPos, UUID)} sem rede, para o Vinculador: a máquina que entra num grupo que
+     * já existe vem com uma exceção vazia e não herda o perfil, até ser configurada.
+     */
+    public boolean linkMachineIsolated(BlockPos pos) {
+        return range.link(pos, null, true);
     }
 
     /** Desvincula a máquina do índice {@code index}; um grupo que esvazia sai e os cartões caem no roteador. */

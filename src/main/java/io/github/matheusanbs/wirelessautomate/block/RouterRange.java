@@ -48,7 +48,7 @@ final class RouterRange {
     }
 
     /** Ver {@link RouterBlockEntity#linkMachine(BlockPos, UUID)}. */
-    boolean link(BlockPos pos, @Nullable UUID network) {
+    boolean link(BlockPos pos, @Nullable UUID network, boolean isolated) {
         Level level = router.getLevel();
         if (level == null || level.isClientSide || !level.isLoaded(pos) || pos.equals(router.getBlockPos())) {
             return false;
@@ -56,7 +56,7 @@ final class RouterRange {
         BlockState state = level.getBlockState(pos);
         if (state.isAir()
                 || !remotes.link(pos, BuiltInRegistries.BLOCK.getKey(state.getBlock()), RemoteMachines.frontOf(state),
-                        network)) {
+                        network, isolated)) {
             return false;
         }
         remotesChanged();

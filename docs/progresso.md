@@ -6,7 +6,7 @@ Legenda: ✅ pronto e testado · 🟡 parcial · ⬜ não começado
 
 ## Resumo
 
-**Pacote local 2.4.1 pronto (21/10/2026):** fix da rede explícita versionado em `gradle.properties`; JAR `build/libs/wirelessautomate-2.4.1.jar`, changelog separado `docs/curseforge/changelog-2.4.1.md` e unificado `changelog-curseforge-2.4.1.md`. Build da versão aprovado, metadados e integridade do JAR conferidos; protocolo 27 preservado. READMEs e descrição atualizados. Fix em commit local; sem push, tag ou publicação.
+**Pacote local 2.4.1 pronto (21/10/2026), com mais duas mudanças no mesmo pacote (ainda sem publicar):** a máquina nova vinculada a um grupo existente do Upgrade de Alcance entra com exceção vazia (`RemoteMachines.link(..., isolated)`, `RouterBlockEntity.linkMachineIsolated`, só no Vinculador) e a tela do roteador lembra a aba e a face (`NodePanel.Choice`). 646 GameTests passaram; e2e e as outras runs não repetidos. Fix da rede explícita versionado em `gradle.properties`; JAR `build/libs/wirelessautomate-2.4.1.jar`, changelog separado `docs/curseforge/changelog-2.4.1.md` e unificado `changelog-curseforge-2.4.1.md`. Build da versão aprovado, metadados e integridade do JAR conferidos; protocolo 27 preservado. READMEs e descrição atualizados. Fix em commit local; sem push, tag ou publicação.
 
 **Correção validada (21/10/2026, ramo `codex/rede-explicita-ux`):** configurar uma ação na face não atribui mais a rede ativa do Tablet/Vinculador; redes escolhidas explicitamente são preservadas. Build, 463 JUnit e GameTests 646 + 9 + 17 + 6 passaram; e2e completo OK (2.337 passos). Abertura com rede já ativa também coberta; build e 646 GameTests repetidos após reforçar essa fixture. Fix em commit local; sem push, tag ou publicação.
 

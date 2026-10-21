@@ -1,4 +1,4 @@
-**2.4.1 fix:** choosing a face action no longer assigns the active network from the Tablet or Linker. Choose the network explicitly; existing face networks are preserved.
+**2.4.1 fix:** choosing a face action no longer assigns the active network from the Tablet or Linker. Choose the network explicitly; existing face networks are preserved. Machines newly linked to an existing Range Upgrade group no longer inherit its profile (they start as an empty exception), and the router screen remembers the last tab and face.
 
 ![Wireless Automate](https://media.forgecdn.net/attachments/2034/633/banner-png.png)
 

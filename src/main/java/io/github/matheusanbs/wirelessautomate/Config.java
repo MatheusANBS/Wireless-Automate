@@ -53,6 +53,8 @@ public final class Config {
     public static final ModConfigSpec.IntValue INTERFERENCE_RADIUS;
     public static final ModConfigSpec.DoubleValue INTERFERENCE_PENALTY;
     public static final ModConfigSpec.DoubleValue INTERFERENCE_MAX;
+    public static final ModConfigSpec.DoubleValue ECO_BONUS;
+    public static final ModConfigSpec.LongValue ECO_MAX;
     /** FE por tick que um cristal de rendimento 1 dá ao Núcleo de Ressonância, por tier. */
     public static final Map<RouterTier, ModConfigSpec.LongValue> RESONATOR_FE_PER_CRYSTAL = new EnumMap<>(RouterTier.class);
 
@@ -202,6 +204,12 @@ public final class Config {
         INTERFERENCE_MAX = builder
                 .comment("Perda máxima da eficiência pela interferência, somados todos os vizinhos (0,60 = 60%).")
                 .defineInRange("interferenceMax", 0.60, 0.0, 1.0);
+        ECO_BONUS = builder
+                .comment("Geração base que cada Eco Ressonante soma ao Núcleo Ultimate (0,05 = +5%).")
+                .defineInRange("ecoBonus", 0.05, 0.0, 1.0);
+        ECO_MAX = builder
+                .comment("Eco Ressonante máximo de um Núcleo Ultimate (0 = sem teto).")
+                .defineInRange("ecoMax", 0L, 0L, Long.MAX_VALUE);
         for (RouterTier tier : RouterTier.values()) {
             builder.push(tier.getSerializedName());
             RESONATOR_FE_PER_CRYSTAL.put(tier, builder
@@ -389,6 +397,16 @@ public final class Config {
     /** Perda máxima da eficiência pela interferência. */
     public static double interferenceMax() {
         return read(INTERFERENCE_MAX);
+    }
+
+    /** Geração base que cada Eco soma (0,05 = +5%). */
+    public static double ecoBonus() {
+        return read(ECO_BONUS);
+    }
+
+    /** Eco máximo de um Núcleo (0 = sem teto). */
+    public static long ecoMax() {
+        return read(ECO_MAX);
     }
 
     /** Ticks que o Núcleo leva para recarregar um cristal Opaco. */

@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.resonator;
 
+import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.Container;
 import net.minecraft.world.Containers;
@@ -9,15 +10,16 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
 /**
- * O Núcleo visto como {@link Container} pelo menu: as câmaras do tier e, por último, o slot do catalisador. Tudo
+ * O Núcleo visto como {@link Container} pelo menu: as câmaras do tier, o slot do catalisador e, só no Ultimate, o do
+ * Eco ({@link #ecoSlot}), sempre vazio: o Afinado Ultimate rachado posto nele vira Eco na hora. Tudo
  * passa pelos mutadores do Núcleo ({@code setCrystalAt}, {@code setCatalyst}), que gravam e mandam a câmara aos
  * clientes.
  *
  * <p>{@link #getItem} devolve sempre uma pilha nova: nenhuma pilha do Núcleo sai daqui, e uma mudança feita no lugar
  * na pilha devolvida não vale nada (o slot do catalisador do menu leva a inserção ao {@link #setItem}). O
  * {@link #setItem} não tem como recusar: o que não cabe (mais de um cristal numa câmara, item que não é cristal,
- * cristal rachado, catalisador que o tier não aceita ou acima de {@link ResonanceCoreBlockEntity#MAX_REDSTONE}) cai
- * no mundo à frente do Núcleo, em vez de sumir.
+ * cristal rachado, catalisador que o tier não aceita ou acima de {@link ResonanceCoreBlockEntity#MAX_REDSTONE}, o que
+ * o Eco não queima) cai no mundo à frente do Núcleo, em vez de sumir.
  */
 public final class CoreInventory implements Container {
     private final ResonanceCoreBlockEntity core;
@@ -30,13 +32,22 @@ public final class CoreInventory implements Container {
         return slot == core.chambers();
     }
 
+    /** O índice do slot do Eco, ou -1 fora do Ultimate. */
+    public static int ecoSlot(RouterTier tier) {
+        return tier == RouterTier.ULTIMATE ? CoreMath.chambers(tier.ordinal()) + 1 : -1;
+    }
+
+    private boolean isEco(int slot) {
+        return slot >= 0 && slot == ecoSlot(core.tier());
+    }
+
     private boolean inRange(int slot) {
-        return slot >= 0 && slot <= core.chambers();
+        return slot >= 0 && slot < getContainerSize();
     }
 
     @Override
     public int getContainerSize() {
-        return core.chambers() + 1;
+        return core.chambers() + (ecoSlot(core.tier()) < 0 ? 1 : 2);
     }
 
     @Override
@@ -54,7 +65,7 @@ public final class CoreInventory implements Container {
 
     @Override
     public ItemStack getItem(int slot) {
-        if (!inRange(slot)) {
+        if (!inRange(slot) || isEco(slot)) {
             return ItemStack.EMPTY;
         }
         if (isCatalyst(slot)) {
@@ -65,7 +76,7 @@ public final class CoreInventory implements Container {
 
     @Override
     public ItemStack removeItem(int slot, int count) {
-        if (count <= 0 || !inRange(slot)) {
+        if (count <= 0 || !inRange(slot) || isEco(slot)) {
             return ItemStack.EMPTY;
         }
         if (isCatalyst(slot)) {
@@ -82,7 +93,7 @@ public final class CoreInventory implements Container {
 
     @Override
     public ItemStack removeItemNoUpdate(int slot) {
-        if (!inRange(slot)) {
+        if (!inRange(slot) || isEco(slot)) {
             return ItemStack.EMPTY;
         }
         if (isCatalyst(slot)) {
@@ -103,6 +114,10 @@ public final class CoreInventory implements Container {
     public void setItem(int slot, ItemStack stack) {
         if (!inRange(slot)) {
             drop(stack);
+            return;
+        }
+        if (isEco(slot)) {
+            drop(stack.copyWithCount(stack.getCount() - core.eco().burn(stack, false)));
             return;
         }
         if (isCatalyst(slot)) {
@@ -135,6 +150,9 @@ public final class CoreInventory implements Container {
 
     @Override
     public boolean canPlaceItem(int slot, ItemStack stack) {
+        if (isEco(slot)) {
+            return core.eco().room(stack) > 0;
+        }
         if (isCatalyst(slot)) {
             return core.catalyst().canAdd(core.tier(), stack);
         }

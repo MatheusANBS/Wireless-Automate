@@ -309,15 +309,18 @@ final class E2eRouterSteps {
 
     /** Escolhe a face {@code direction} (absoluta na presa, canônica num alvo do alcance), sem mudar o modo. */
     static void clickFace(Direction direction) throws StepFailure {
+        routerScreen().syncNow();
         panel().selectFace(direction);
     }
 
     /** Escolhe a face do lado {@code side} (relativo à frente da máquina), sem mudar o modo. */
     static void clickSide(RemoteSide side) throws StepFailure {
+        routerScreen().syncNow();
         panel().selectSide(side);
     }
 
     static void clickMode(PortMode mode) throws StepFailure {
+        routerScreen().syncNow();
         panel().chooseMode(mode);
     }
 

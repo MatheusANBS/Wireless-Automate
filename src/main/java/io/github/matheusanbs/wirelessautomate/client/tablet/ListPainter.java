@@ -208,8 +208,8 @@ final class ListPainter {
         }
         int lit = HighlightRenderer.count() > 0 ? SelectBar.clearLitWidth(font) + 4 : 0;
         int room = layout.x0 + layout.listW - lit - 2 - x;
-        if (room > 20) {
-            GuiText.draw(g, font, tr("grid.legend"), x, y + 3, room, GuiPaint.MUTED);
+        if (font.width(tr("grid.legend")) <= room) {
+            GuiPaint.text(g, font, tr("grid.legend"), x, y + 3, GuiPaint.MUTED);
         }
     }
 

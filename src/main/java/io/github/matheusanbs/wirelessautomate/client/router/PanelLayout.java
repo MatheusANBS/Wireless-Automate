@@ -390,15 +390,32 @@ final class PanelLayout {
     private int arrangeTargetBar(Font font, PanelModel model, int x, int y, int w) {
         targetY = y;
         int labelW = font.width(PanelModel.panelTr("target")) + 5;
-        int pillW = w - labelW;
         RangeView.MachineView machine = model.targetMachine();
         compactTarget = false;
         revertIcon = false;
+        // a pílula precisa do ícone do bloco, do nome inteiro e da seta; se não cabe, o Igualar vira só o ↺ e, por fim,
+        // o rótulo Editando sai
+        int need = font.width(model.targetName(model.snapshot().target())) + DROP_TEXT_PAD + 12;
+        int equalizeW = 0;
         if (machine != null && machine.exception()) {
             revertLabel = PanelModel.panelTr("target.equalize");
-            int equalizeW = font.width(revertLabel) + 2 * TARGET_PAD;
+            equalizeW = font.width(revertLabel) + 2 * TARGET_PAD;
+            if (w - labelW - equalizeW - GAP < need) {
+                revertIcon = true;
+                equalizeW = ROW_H;
+            }
+            if (w - labelW - equalizeW - GAP < need) {
+                compactTarget = true;
+                labelW = 0;
+            }
             hots.add(new Hot(Kind.REVERT, x + w - equalizeW, y, equalizeW, ROW_H, 0));
-            pillW -= equalizeW + GAP;
+        }
+        int pillW = w - labelW - (equalizeW > 0 ? equalizeW + GAP : 0);
+        if (pillW < need && labelW > 0) {
+            // nem o nome do alvo cabe ao lado do rótulo: o rótulo sai
+            compactTarget = true;
+            pillW += labelW;
+            labelW = 0;
         }
         hots.add(new Hot(Kind.TARGET, x + labelW, y, pillW, ROW_H, 0));
         return y + ROW_H + ROW_GAP + 2;

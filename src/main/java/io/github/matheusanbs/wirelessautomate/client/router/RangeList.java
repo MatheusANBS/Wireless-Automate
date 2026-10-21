@@ -412,6 +412,7 @@ final class RangeList {
             g.pose().popPose();
         }
         int textX = x + GROUP_TEXT_X;
+        Component name = tr("range.group.count", groupName(group), group.count());
         int replaced = RangeRowButtons.replaced(view, group.id());
         Component detail = replaced > 0 ? replaced == 1 ? tr("range.group.replaced.one") : tr("range.group.replaced", replaced)
                 : group.exceptions() > 0 ? exceptions(group) : null;
@@ -419,13 +420,13 @@ final class RangeList {
         int detailW = detail == null ? 0 : font.width(detail) + 4;
         // com os botões da linha escolhida, o aviso sai (ele vai na dica); sem eles, vai à direita
         boolean buttonsOnRow = nameRight < right;
-        if (detail != null && !buttonsOnRow) {
+        // o aviso só entra se o nome continua inteiro (senão ele vai só na dica)
+        if (detail != null && !buttonsOnRow && textX + font.width(name) + detailW + 2 <= right) {
             GuiText.draw(g, font, detail, right - detailW + 2, ry + 2, detailW - 4, color);
         } else {
             detailW = 0;
         }
-        GuiText.draw(g, font, tr("range.group.count", groupName(group), group.count()), textX, ry + 2,
-                nameRight - detailW - textX - 2, GuiPaint.FG);
+        GuiText.draw(g, font, name, textX, ry + 2, nameRight - detailW - textX - 2, GuiPaint.FG);
     }
 
     // ------------------------------------------------------------------ captura de desenvolvimento

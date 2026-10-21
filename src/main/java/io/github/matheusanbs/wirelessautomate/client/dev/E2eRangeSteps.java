@@ -242,7 +242,7 @@ final class E2eRangeSteps {
         list.add(new Step(label + "de volta à lista", STEP_TIMEOUT_MS,
                 () -> routerScreen().previewToggleList(),
                 () -> routerScreen().rangeListShown(), () -> "lista " + routerScreen().rangeListShown()));
-        // tela larga: a lista embaixo do visor, sempre à vista
+        // tela larga: a lista embaixo do visor; no mínimo só a lista
         list.add(new Step(label + "tela larga, lista e visor lado a lado", STEP_TIMEOUT_MS,
                 () -> routerScreen().previewResize(Math.min(560, routerScreen().width - 8), 280),
                 () -> routerScreen().rangeListShown() && routerScreen().rangeViewShown() && stepTicks >= 4,
@@ -253,7 +253,7 @@ final class E2eRangeSteps {
         list.add(new Step(label + "de volta ao mínimo", STEP_TIMEOUT_MS,
                 () -> routerScreen().previewResize(300, 240),
                 () -> routerScreen().size()[0] == 300 && routerScreen().rangeListShown()
-                        && routerScreen().rangeViewShown(),
+                        && !routerScreen().rangeViewShown(),
                 () -> "tamanho " + java.util.Arrays.toString(routerScreen().size()) + ", visor "
                         + routerScreen().rangeViewShown()));
     }

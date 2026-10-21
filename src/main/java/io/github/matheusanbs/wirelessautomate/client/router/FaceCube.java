@@ -45,15 +45,17 @@ final class FaceCube {
             }
         }
         boolean editable = model.readOnly() == null;
-        action(g, font, layout.hot(Kind.CLEAR), clearArmed ? PanelModel.panelTr("clear.armed")
-                : PanelModel.panelTr("clear"), mx, my, editable, clearArmed);
-        action(g, font, layout.hot(Kind.COPY), PanelModel.panelTr("copy"), mx, my, model.canCopy(), false);
-        action(g, font, layout.hot(Kind.PASTE), PanelModel.panelTr("paste"), mx, my, model.canPaste(), false);
+        action(g, font, layout.hot(Kind.CLEAR), clearArmed ? "clear.armed" : "clear", mx, my, editable, clearArmed);
+        action(g, font, layout.hot(Kind.COPY), "copy", mx, my, model.canCopy(), false);
+        action(g, font, layout.hot(Kind.PASTE), "paste", mx, my, model.canPaste(), false);
     }
 
-    private static void action(GuiGraphics g, Font font, @Nullable Hot hot, Component label, int mx, int my,
+    /** Um botão de ação, com o texto inteiro ou, num botão estreito, o abreviado ({@code key}.short). */
+    private static void action(GuiGraphics g, Font font, @Nullable Hot hot, String key, int mx, int my,
             boolean enabled, boolean armed) {
         if (hot != null) {
+            Component full = PanelModel.panelTr(key);
+            Component label = font.width(full) + 4 <= hot.w() ? full : PanelModel.panelTr(key + ".short");
             PanelPainter.textButton(g, font, hot, label, hot.contains(mx, my), enabled, armed);
         }
     }

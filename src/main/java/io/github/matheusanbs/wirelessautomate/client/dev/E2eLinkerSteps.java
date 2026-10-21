@@ -127,12 +127,12 @@ final class E2eLinkerSteps {
         list.add(capture("8b-vinculador-chips"));
         list.add(new Step("Vinculador maior", STEP_TIMEOUT_MS,
                 () -> linkerScreen().previewResize(460, 300),
-                () -> linkerScreen().size()[0] > 300 && linkerScreen().size()[1] > 204,
+                () -> linkerScreen().size()[0] > 300 && linkerScreen().size()[1] > 232,
                 () -> "tamanho " + java.util.Arrays.toString(linkerScreen().size())));
         list.add(capture("8d-vinculador-grande"));
         list.add(new Step("Vinculador de volta ao mínimo", STEP_TIMEOUT_MS,
-                () -> linkerScreen().previewResize(300, 204),
-                () -> linkerScreen().size()[0] == 300 && linkerScreen().size()[1] == 204,
+                () -> linkerScreen().previewResize(300, 232),
+                () -> linkerScreen().size()[0] == 300 && linkerScreen().size()[1] == 232,
                 () -> "tamanho " + java.util.Arrays.toString(linkerScreen().size())));
         list.add(new Step("só a aba Fluidos", STEP_TIMEOUT_MS,
                 () -> {
@@ -213,7 +213,8 @@ final class E2eLinkerSteps {
         list.add(capture("9c-vinculador-faces-desvinculadas"));
         list.add(new Step("de volta à rede " + AREA_NETWORK, STEP_TIMEOUT_MS,
                 () -> click(widget(byMessage(Component.literal(AREA_NETWORK)), "linha da rede " + AREA_NETWORK)),
-                () -> serverLinker(stack -> !LinkerItem.unlink(stack)) && !linkerScreen().getMenu().snapshot().unlink(),
+                () -> serverLinker(stack -> !LinkerItem.unlink(stack)) && !linkerScreen().getMenu().snapshot().unlink()
+                        && find(byMessageKey("gui.wirelessautomate.linker.link.count.faces")) != null,
                 () -> "desvincular na tela " + linkerScreen().getMenu().snapshot().unlink()));
         list.add(new Step("Vincular Trás e Baixo", STEP_TIMEOUT_MS,
                 () -> click(widget(byMessageKey("gui.wirelessautomate.linker.link.count.faces"), "Vincular")),

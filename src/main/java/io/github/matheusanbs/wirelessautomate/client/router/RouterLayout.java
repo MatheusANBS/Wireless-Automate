@@ -42,6 +42,8 @@ final class RouterLayout {
     private static final int STRIP_GAP = 3;
     /** Altura mínima e máxima do visor quando a lista fica embaixo dele. */
     private static final int MIN_VIEW_H = 44;
+    /** Com o Upgrade de Alcance, abaixo desta altura da coluna só a lista aparece. */
+    private static final int NO_VIEW_BELOW = 116;
     private static final int MAX_VIEW_H = 100;
 
     private final BooleanSupplier rangeShown;
@@ -113,18 +115,24 @@ final class RouterLayout {
         return bottom - boxY();
     }
 
-    /** Altura do visor: a coluna inteira, ou, com a lista das máquinas embaixo, uma parte dela. */
+    /**
+     * Altura do visor: a coluna inteira, ou, com a lista das máquinas embaixo, uma parte dela; numa coluna baixa
+     * (a janela mínima) o visor sai e a lista toma a coluna (as faces se escolhem no quadro do painel).
+     */
     int viewH() {
         int total = boxH();
         if (!rangeShown.getAsBoolean()) {
             return total;
+        }
+        if (total < NO_VIEW_BELOW) {
+            return 0;
         }
         return Math.max(MIN_VIEW_H, Math.min(MAX_VIEW_H, total * 38 / 100));
     }
 
     /** Topo da faixa "Máquinas · 10/16", embaixo do visor. */
     int stripY() {
-        return boxY() + viewH() + STRIP_GAP;
+        return boxY() + viewH() + (viewH() > 0 ? STRIP_GAP : 0);
     }
 
     /** Topo da lista das máquinas, embaixo da faixa. */

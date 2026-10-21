@@ -117,9 +117,9 @@ final class MachineColumn {
         listHidden = !listHidden;
     }
 
-    /** O visor está na tela, sempre (com o upgrade, menor, no alto). */
+    /** O visor está na tela: sempre, menor no alto com o upgrade, e fora só na coluna baixa da janela mínima. */
     boolean viewShown() {
-        return true;
+        return layout.viewH() > 0;
     }
 
     /** Há uma máquina carregada no alvo remoto (a escolhida, ou alguma do grupo). */
@@ -162,7 +162,7 @@ final class MachineColumn {
         machinesButton.setY(top + layout.stripY());
         machinesButton.setMessage(tr("range.machines", range().used(), range().max()));
         machineView.setBounds(left + RouterLayout.X0 + 1, top + layout.boxY() + 1, layout.lw() - 2,
-                layout.viewH() - 2);
+                Math.max(0, layout.viewH() - 2));
         int listH = layout.listH() - (LitFooter.shown(listShown()) ? LitFooter.H : 0);
         rangeList.setBounds(left + RouterLayout.X0, top + layout.listY(), layout.lw(), listH);
         litFooter.place(Minecraft.getInstance().font, left + RouterLayout.X0, top + layout.listY() + listH,

@@ -501,6 +501,14 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         rebuild();
     }
 
+    /**
+     * e2e: põe o painel em dia com o snapshot do menu agora; um snapshot com o alvo novo devolve a face escolhida à do
+     * alvo, e o gancho que escolhe uma face não pode ser desfeito por ele no quadro seguinte.
+     */
+    public void syncNow() {
+        refresh();
+    }
+
     /** e2e: esconde ou mostra a lista das máquinas (o jogador não esconde). */
     public void previewToggleList() {
         column.toggleListForTests();

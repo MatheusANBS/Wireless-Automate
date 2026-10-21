@@ -132,13 +132,6 @@ final class PanelPainter {
         Component side = model.sideName(face);
         GuiText.draw(g, font, side, x, y, right - x, GuiPaint.FG);
         int cx = x + font.width(side);
-        Component rest = Component.literal(" · ").append(model.access(v));
-        if (model.attached(face)) {
-            rest = rest.copy().append(" · ").append(tr("face.attached"));
-        }
-        if (model.differsFromGroup(face)) {
-            rest = rest.copy().append(" · ").append(panelTr("face.differs"));
-        }
         if (v.available() || model.remote()) {
             int color = GuiPaint.modeColor(v.mode());
             cx += 4;
@@ -148,9 +141,24 @@ final class PanelPainter {
             GuiText.draw(g, font, mode, cx, y, right - cx, color);
             cx += font.width(mode);
         }
-        if (right - cx > 0) {
-            GuiText.draw(g, font, rest, cx, y, right - cx, GuiPaint.MUTED);
+        // o que a face acessa e o resto só entram se couberem inteiros; senão ficam na dica da face
+        Component rest = Component.literal(" · ").append(model.access(v));
+        if (cx + font.width(rest) > right) {
+            return;
         }
+        if (model.differsFromGroup(face)) {
+            rest = fits(font, cx, right, rest, panelTr("face.differs"));
+        }
+        if (model.attached(face)) {
+            rest = fits(font, cx, right, rest, tr("face.attached"));
+        }
+        GuiText.draw(g, font, rest, cx, y, right - cx, GuiPaint.MUTED);
+    }
+
+    /** {@code rest} com {@code " · " + more} no fim, se o resultado cabe entre {@code from} e {@code right}. */
+    private static Component fits(Font font, int from, int right, Component rest, Component more) {
+        Component joined = rest.copy().append(" · ").append(more);
+        return from + font.width(joined) <= right ? joined : rest;
     }
 
     /** A linha do Filtro: o resumo, os slots de cartão (a tela os desenha) e o Editar, ou "sem filtro". */
@@ -270,7 +278,8 @@ final class PanelPainter {
         GuiPaint.box(g, b.x(), b.y(), b.w(), b.h(), active ? GuiPaint.BUTTON : GuiPaint.INSET,
                 !active ? GuiPaint.LINE : hovered ? GuiPaint.BUTTON_HOVER_BORDER : border);
         int inset = 4;
-        if (!icon.isEmpty()) {
+        // o ícone só entra se o texto continua inteiro com ele
+        if (!icon.isEmpty() && font.width(text) + 17 + 11 <= b.w()) {
             g.pose().pushPose();
             g.pose().translate(b.x() + 3, b.y() + (b.h() - 12) / 2f, 0);
             g.pose().scale(0.75f, 0.75f, 1f);

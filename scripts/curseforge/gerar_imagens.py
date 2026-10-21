@@ -301,7 +301,7 @@ DESTAQUES = [
     # em coordenadas de 1280x800, qualquer que seja o tamanho da captura.
     ("feature-0-overview", "Everything wireless",
      "An ore line, a range router, five storage blocks, a hall of tiers and an Ars lab, no pipes.",
-     VITRINE / "s0-casa.png", (90, 150, 1190, 770)),
+     VITRINE / "s0-casa.png", (90, 150, 1190, 722)),
     ("feature-1-network", "Connect machines without pipes",
      "Attach a router to any machine. Routers on the same network trade with each other.",
      VITRINE / "s1-fabrica.png", (0, 120, 1280, 800)),
@@ -340,7 +340,10 @@ DESTAQUES = [
      VITRINE / "s12-tanques.png", (200, 170, 1080, 720), (VITRINE / "s12b-tanque-tela.png", (398, 260, 882, 540), 430)),
     ("feature-21-resonator", "Signal Resonator",
      "A 5x5x5 crystal generator. Tune the dial to the station and watch the chamber lock in.",
-     VITRINE / "s19-ressonador.png", (120, 60, 1160, 740), (VITRINE / "s20-ressonador-tela.png", (285, 155, 997, 648), 470)),
+     VITRINE / "s19-ressonador.png", (300, 60, 1160, 740), (VITRINE / "s20-ressonador-tela.png", (285, 155, 997, 648), 470)),
+    ("feature-23-cascade", "The Resonator cascade",
+     "Eleven components, a Resonator Heart per tier, the recharge dusts and the Tuned crystals.",
+     VITRINE / "s21-cascata.png", (200, 200, 1100, 650)),
     ("feature-14-toolkit", "The toolkit",
      "Linker, Configurator, Tablet, Filter Card, Upgrade Cards and the guide book.",
      VITRINE / "s14-vitrine.png", (100, 120, 1180, 660)),
@@ -356,6 +359,9 @@ DESTAQUES = [
     ("feature-6-tablet", "Network Tablet",
      "Every router, from anywhere: live stats per resource type, a map and groups.",
      VITRINE / "s6b-tablet-fluxos.png", (60, 80, 1222, 720)),
+    ("feature-22-tablet-list", "One row per router",
+     "Tier, name and the machine it sits on. Pick one to edit its faces right there, or rename it.",
+     VITRINE / "s6-tablet-lista.png", (60, 80, 1222, 720)),
     ("feature-7-guide", "Built-in guide book",
      "Every item explained in game, with 3D scenes and recipes. English and Portuguese.",
      VITRINE / "s8-guia.png", (296, 52, 1266, 658)),
@@ -395,7 +401,12 @@ def salva(img: Image.Image, nome: str) -> str:
 
 def main() -> None:
     SAIDA.mkdir(parents=True, exist_ok=True)
-    feitos = [salva(banner(), "banner"), salva(tiers(), "feature-4-tiers")]
+    feitos = [salva(tiers(), "feature-4-tiers")]
+    # O banner precisa dos renders da capa (WA_SCREENSHOT_ONLY=capa) e não muda a cada vitrine.
+    if capa.RENDERS.exists():
+        feitos.append(salva(banner(), "banner"))
+    else:
+        print(f"pulando banner: falta {capa.RENDERS.relative_to(RAIZ)} (o publicado continua valendo)")
     for nome, titulo, sub, origem, recorte, *detalhe in DESTAQUES:
         faltam = [p for p in [origem] + [d[0] for d in detalhe] if not p.exists()]
         if faltam:

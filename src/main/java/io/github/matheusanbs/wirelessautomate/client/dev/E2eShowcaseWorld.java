@@ -103,6 +103,7 @@ final class E2eShowcaseWorld {
             }
             showcaseRange(server, level, smelting.id());
             showcaseDisplay(server);
+            showcaseCascade(server, level);
             showcaseTiers(server, level, data.create(player.getUUID(), "Tier Hall").id());
             if (StorageKind.SOURCE_TANK.loaded()) {
                 showcaseArcane(server, level, arcane.id());
@@ -478,6 +479,83 @@ final class E2eShowcaseWorld {
                         pos.getX() + 0.5, pos.getY() + 0.45, pos.getZ() + 0.5, rows[r][i]));
             }
         }
+    }
+
+    /**
+     * O centro, em x, do estande da cascata no jardim, e a fileira da frente em z (a câmera olha de dentro da casa,
+     * por cima da mureta sul, para o estande ficar contra a grama e o céu; as outras duas fileiras sobem para o sul).
+     */
+    static final int CASCADE_X = -9;
+    static final int CASCADE_Z = 2;
+    /** Meia largura do estande: 11 blocos, uma peça da cascata por bloco. */
+    private static final int CASCADE_HALF = 5;
+
+    /**
+     * Jardim, a oeste do caminho (o Ressonador fica a leste): a cascata do Ressonador num estande de quartzo em
+     * três degraus. Atrás, no alto, as onze peças na ordem da fabricação (da Liga de Sinal crua à Moldura de Liga);
+     * no meio os Corações do Ressonador, um por tier; na frente o Pó de Ressonância, os Pós Carregados e os Cristais
+     * Afinados. Sem o Allthemodium, os itens dos tiers dele ficam de fora e cada fileira se centra sozinha.
+     */
+    private static void showcaseCascade(MinecraftServer server, ServerLevel level) {
+        int x0 = CASCADE_X - CASCADE_HALF - 1, x1 = CASCADE_X + CASCADE_HALF + 1;
+        for (int x = x0; x <= x1; x++) {
+            for (int z = CASCADE_Z - 1; z <= CASCADE_Z + 3; z++) {
+                boolean border = x == x0 || x == x1 || z == CASCADE_Z - 1 || z == CASCADE_Z + 3;
+                put(level, x, -1, z, (border ? Blocks.POLISHED_DEEPSLATE : Blocks.SMOOTH_QUARTZ).defaultBlockState());
+            }
+        }
+        // Três degraus: a fileira de trás (ao sul) com 3 blocos de altura, a do meio com 2 e a da frente com 1.
+        for (int step = 0; step < 3; step++) {
+            for (int x = CASCADE_X - CASCADE_HALF; x <= CASCADE_X + CASCADE_HALF; x++) {
+                for (int y = 0; y < 3 - step; y++) {
+                    put(level, x, y, CASCADE_Z + 2 - step, Blocks.SMOOTH_QUARTZ.defaultBlockState());
+                }
+            }
+        }
+        for (int[] light : new int[][] {{x0, CASCADE_Z - 1}, {x1, CASCADE_Z - 1}, {x0, CASCADE_Z + 3}, {x1, CASCADE_Z + 3}}) {
+            put(level, light[0], -1, light[1], Blocks.SEA_LANTERN.defaultBlockState());
+        }
+        List<String> cascade = new ArrayList<>();
+        for (var item : ModItems.CASCADE) {
+            cascade.add(itemSnbt(item.getId()));
+        }
+        List<String> hearts = new ArrayList<>();
+        for (RouterTier tier : RouterTier.values()) {
+            if (tier.loaded()) {
+                hearts.add(itemSnbt(ModItems.RESONATOR_HEARTS.get(tier).getId()));
+            }
+        }
+        List<String> front = new ArrayList<>();
+        front.add(itemSnbt(ModItems.RESONANCE_DUST.getId()));
+        for (RouterTier tier : RouterTier.values()) {
+            if (tier.loaded() && ModItems.CHARGED_DUSTS.containsKey(tier)) {
+                front.add(itemSnbt(ModItems.CHARGED_DUSTS.get(tier).getId()));
+            }
+        }
+        for (RouterTier tier : RouterTier.values()) {
+            if (tier.loaded() && ModItems.TUNED_CRYSTALS.containsKey(tier)) {
+                front.add(itemSnbt(ModItems.TUNED_CRYSTALS.get(tier).getId()));
+            }
+        }
+        List<List<String>> rows = List.of(cascade, hearts, front);
+        for (int step = 0; step < rows.size(); step++) {
+            List<String> row = rows.get(step);
+            double y = showBase.getY() + (3 - step) + 0.45;
+            double z = showBase.getZ() + CASCADE_Z + 2 - step + 0.5;
+            for (int i = 0; i < row.size(); i++) {
+                // Vista de dentro da casa (olhando para o sul), a primeira peça fica à esquerda, no leste.
+                double x = showBase.getX() + CASCADE_X + 0.5 + (row.size() - 1) / 2.0 - i;
+                command(server, String.format(java.util.Locale.ROOT,
+                        "summon minecraft:item_display %.2f %.2f %.2f {item:%s,billboard:\"center\","
+                                + "brightness:{sky:15,block:15},transformation:{left_rotation:[0f,0f,0f,1f],"
+                                + "right_rotation:[0f,0f,0f,1f],translation:[0f,0f,0f],scale:[0.8f,0.8f,0.8f]}}",
+                        x, y, z, row.get(i)));
+            }
+        }
+    }
+
+    private static String itemSnbt(ResourceLocation id) {
+        return "{id:\"" + id + "\",count:1}";
     }
 
     /** O Cartão de Upgrade de um degrau para {@code tier} (origem no degrau anterior), em SNBT para o summon. */

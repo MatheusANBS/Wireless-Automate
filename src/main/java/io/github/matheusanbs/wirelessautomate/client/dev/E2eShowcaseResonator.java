@@ -24,6 +24,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.energy.IEnergyStorage;
 
 /**
  * O Ressonador na vitrine do CurseForge: o GIF "chiado → sintonia" e duas fotos paradas. O GIF: uma Vitrine
@@ -31,16 +33,18 @@ import net.minecraft.world.level.block.state.BlockState;
  * congelado ({@code tickRateManager}), cada quadro põe o dial do roteiro, avança um tick e salva
  * {@code gif/ressonador-NNN.png}; o {@code scripts/curseforge/gerar_gif.py} monta o GIF.
  *
- * <p>Roteiro (120 quadros, 20 fps): 25 quadros com o dial a {@value #START_MHZ} MHz da estação (chiado), 45 com o
+ * <p>Roteiro (170 quadros, 20 fps): 25 quadros com o dial a {@value #START_MHZ} MHz da estação (chiado), 45 com o
  * desvio caindo pela curva {@code 1 - u²} (parte devagar e chega à lâmpada perto do fim da varredura, o clarão por
- * volta de 3,4 s) e o resto na estação. A estação é lida no servidor e fica presa nela a cada quadro: com o tempo
+ * volta de 3,4 s) e o resto na estação, com Cristais Afinados Esmeralda e um consumidor tirando da Porta de Energia
+ * a cada quadro: a vazão vira faixa no fim de um lote de 20 ticks, então o conduto acende uns dois lotes depois da
+ * sintonia, e os 5 s finais o mostram aceso. A estação é lida no servidor e fica presa nela a cada quadro: com o tempo
  * congelado o relógio do overworld não anda e o lote do Núcleo pode rodar várias vezes no mesmo tick, derivando.
  *
  * <p>Roda no fim da vitrine inteira ou sozinho, com {@code WA_SHOWCASE_ONLY=ressonador} (só a casa, os quadros e as
  * duas fotos paradas).
  */
 final class E2eShowcaseResonator {
-    private static final int FRAMES = 120;
+    private static final int FRAMES = 170;
     private static final int NOISE_FRAMES = 25;
     private static final int SWEEP_FRAMES = 45;
     private static final double START_MHZ = 1.9;
@@ -71,10 +75,10 @@ final class E2eShowcaseResonator {
             BlockState state = Minecraft.getInstance().level.getBlockState(core());
             return state.getBlock() instanceof ResonanceCoreBlock && state.getValue(ResonatorPartBlock.FORMED);
         }, () -> "Núcleo " + Minecraft.getInstance().level.getBlockState(core())));
-        list.add(new Step("Ressonador (GIF): quatro cristais e o dial no chiado", STEP_TIMEOUT_MS, () -> onServer(server -> {
+        list.add(new Step("Ressonador (GIF): quatro Cristais Afinados e o dial no chiado", STEP_TIMEOUT_MS, () -> onServer(server -> {
             ResonanceCoreBlockEntity core = core(server);
             for (int i = 0; i < core.chambers(); i++) {
-                core.insertCrystal(new ItemStack(ModItems.SIGNAL_CRYSTAL.get()));
+                core.insertCrystal(new ItemStack(ModItems.TUNED_CRYSTALS.get(RouterTier.EMERALD).get()));
             }
             station[0] = core.station();
             core.setStationForTest(station[0]);
@@ -166,6 +170,12 @@ final class E2eShowcaseResonator {
                 ResonanceCoreBlockEntity core = core(server);
                 core.setStationForTest(station[0]);
                 core.setDial(station[0] + deviation(index));
+                // um consumidor na Porta de Energia: em sintonia, o conduto acende até ela
+                IEnergyStorage energy = server.overworld().getCapability(Capabilities.EnergyStorage.BLOCK,
+                        E2eResonatorSteps.energyPort(origin()), null);
+                if (energy != null) {
+                    energy.extractEnergy(Integer.MAX_VALUE, false);
+                }
                 return null;
             });
         }, () -> {

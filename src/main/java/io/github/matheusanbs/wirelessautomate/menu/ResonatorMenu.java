@@ -200,7 +200,13 @@ public class ResonatorMenu extends AbstractContainerMenu {
                 core.auto(), core.hasTuner(), TuneSignal.steps(core.station(), core.dial()),
                 TuneSignal.tuned(core.station(), core.dial()), recharge,
                 (int) Math.min(Integer.MAX_VALUE, Config.rechargeTicks()), core.energyPorts(), core.crystalPorts(),
-                layout);
+                layout, core.interference().lossPermille(), core.interference().nearest(), core.eco().value(),
+                bonusPermille(core.eco().factor()));
+    }
+
+    /** O bônus do fator do Eco em milésimos ({@code 1,5} é 500); o {@code Math.round} satura em {@code Long.MAX_VALUE}. */
+    static long bonusPermille(double factor) {
+        return Math.max(0, Math.round((factor - 1) * 1000));
     }
 
     /**

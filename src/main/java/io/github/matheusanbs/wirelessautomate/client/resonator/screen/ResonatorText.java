@@ -44,6 +44,14 @@ final class ResonatorText {
         return Math.round(permille / 10.0) + "%";
     }
 
+    /** Milésimos em porcentagem com no máximo uma casa, sem a casa quando é zero: 150 é "15", 125 é "12,5". */
+    static String loss(int permille) {
+        if (permille % 10 == 0) {
+            return Integer.toString(permille / 10);
+        }
+        return String.format(Locale.ROOT, "%.1f", permille / 10.0).replace('.', separator());
+    }
+
     static String fe(long value) {
         return RateFormat.abbreviate(value);
     }

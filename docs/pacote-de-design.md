@@ -65,6 +65,24 @@ a cor da lente do tier; o Guia, uma lente de porcelana; o chunk loading, a chama
 | `tier_core_<tier>` (7) | válvula: bulbo de vidro, filamento em zigue-zague na cor da lente do tier, colar de porcelana com as `MARCAS` (1 a 4 traços), base de grafite e pinos de latão (nos tiers do Allthemodium, pinos na cor do tier) | o filamento pulsa (e esquenta o vidro em volta) e um brilho sobe pela parede do bulbo | 8 × 4 |
 | `chunk_loader_upgrade` | Lanterna de Vigia: alça de grafite (com o furo aberto depois do contorno), tampa de porcelana com o anel coral, gaiola de grafite (dois montantes e uma barra fina no meio) em volta do vidro, base de grafite; dentro, a chama verde (`chunk`: borda `.1`, corpo `.2`, miolo `.3`) com um halo esverdeado no vidro em volta, "acesa enquanto você está longe" | a chama tremula: muda de altura e inclina para os lados (`CHAMA`, uma grade por quadro) | 6 × 5 |
 | `guide` | caderno de campo: capa coral com o Olho em porcelana e uma etiqueta, espiral de grafite na lombada, páginas aparecendo à direita e embaixo | o Olho da capa pulsa | 4 × 8 |
+| `signal_crystal`, `cut_signal_crystal` | Cristal de Sinal bruto; o Lapidado com a cinta de latão | no bruto um brilho diagonal passa pelo corpo e um ponto cintila no topo; no Lapidado o brilho corre pela cinta, o miolo pulsa e uma onda sai da pedra | 10 × 4; 12 × 3 |
+| `tuned_signal_crystal_<tier>` (6, Elite ao Ultimate) | Cristal Afinado: a forma do Lapidado com a cinta na cor da lente do tier (`_cinta_tier`) e duas gemas do material | o brilho corre pelo filete da cinta, o miolo pulsa, as gemas cintilam uma de cada vez e a onda sai da pedra | 12 × 3 |
+| `*_dull` (Opaco, 8: Sinal, Lapidado e os 6 Afinados) | o cristal sem carga: pedra cinza com uma brasa fraca; no Afinado, a cinta e as gemas apagadas | a brasa respira | 8 × 6 |
+| `*_cracked` (Rachado, 8) | o cristal sem integridade: a paleta do Opaco, lascado na borda e cortado por uma rachadura escura | um brilho fraco vaza da rachadura e vai e vem | 8 × 6 |
+| `resonance_dust` | Pó de Ressonância: monte de pó coral e vermelho | as centelhas douradas cintilam | 8 × 5 |
+| `charged_dust_<tier>` (4, Allthemodium ao Ultimate) | Pó Carregado: o mesmo monte na cor da lente do tier | as centelhas, no brilho da lente, mais vivas | 8 × 5 |
+| `signal_alloy_raw` | Liga de Sinal crua: torrão de ferro com veios coral | um dos veios cintila de cada vez | 6 × 5 |
+| `signal_alloy_ingot` | Lingote de Liga de Sinal | um brilho corre pela face de cima, da esquerda para a direita | 8 × 4 |
+| `resonance_plate` | Placa de Ressonância com uma onda gravada | a onda acende da esquerda para a direita | 8 × 4 |
+| `resonance_wire` | Fio de Ressonância em anel | um brilho de cobre dá a volta no anel, no sentido horário | 8 × 4 |
+| `resonance_coil` | Bobina de Ressonância | um brilho desce pelo enrolamento, volta a volta | 8 × 4 |
+| `harmonic_lens` | Lente Harmônica: arco de vidro com um cristal no centro | o cristal cintila e o reflexo desliza pelo arco | 8 × 4 |
+| `phase_circuit` | Circuito de Fase: placa com chip e trilha | o ponto do chip pulsa e um sinal corre pela trilha até ele | 8 × 4 |
+| `phase_matrix` | Matriz de Fase: grade de células | as células acendem em diagonal | 8 × 3 |
+| `field_stabilizer` | Estabilizador de Campo: diamante num aro de latão com centelhas | as centelhas pulsam, o diamante cintila e, no auge, o aro reluz nas pontas | 10 × 3 |
+| `condensed_core` | Núcleo Condensado: plasma com janelas e estrelas | o plasma respira do miolo para fora e as estrelas cintilam uma por vez, no sentido horário | 12 × 2 |
+| `alloy_frame` | Moldura de Liga: anel de blocos de liga com a Nether Star no vão | um brilho dá a volta no anel e a estrela cintila | 12 × 2 |
+| `resonator_heart_<tier>` (8) | Coração do Ressonador: núcleo numa moldura do material do tier (`MOLDURA_CORACAO`), mais enfeitada a cada degrau (`ESCADA_CORACAO`) | o núcleo respira; do Avançado um brilho dá a volta na moldura, do Elite o aro pulsa, da Esmeralda a estrela do miolo cintila, do Allthemodium as centelhas dos cantos pulsam e no Ultimate as pontas da coroa acendem uma a uma | 12 × 2 |
 
 Todos os modelos de item são `minecraft:item/generated` com `layer0` na textura; os
 `tier_core_<tier>.json` são gravados pelo script (um por tier de `TIERS_CARTAO`).

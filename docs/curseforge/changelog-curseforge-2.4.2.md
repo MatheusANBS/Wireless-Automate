@@ -1,12 +1,6 @@
-## 2.4.1
+## 2.4.2
 
-Wireless Automate 2.4.1 fixes unwanted automatic network assignment when configuring a machine face, and stops new Range Upgrade machines from silently inheriting their group's profile.
-
-**Explicit face networks**
-
-- Choosing Extract, Insert or Storage on a face without a network no longer assigns the active network selected in the Network Tablet or Linker.
-- Opening the router or its panel in the Tablet does not assign a network. Choose the face's network explicitly in the Network row or use the Linker.
-- Changing an action keeps any network already assigned to the face. Explicit Linker operations and copied configurations continue to work as before.
+Wireless Automate 2.4.2 stops new Range Upgrade machines from silently inheriting their group's profile, and makes the router screen remember your last tab and face.
 
 **Range Upgrade: new machines no longer inherit the group profile**
 
@@ -16,6 +10,18 @@ Wireless Automate 2.4.1 fixes unwanted automatic network assignment when configu
 **Screens remember your choice**
 
 - The router screen (and the node panel in the Tablet) now remembers the last resource tab and face you picked, so coming back from the filter screen no longer resets to Items and Front. The tab applies to any router; the face only to the same router. It is kept until you close the game.
+
+**Compatibility note:** the network protocol remains 27, unchanged from 2.4.1. No world or configuration migration is required; existing groups and exceptions are preserved. NeoForge 21.1.248 or newer is still required, and all optional integrations remain optional.
+
+## 2.4.1
+
+Wireless Automate 2.4.1 fixes unwanted automatic network assignment when configuring a machine face.
+
+**Explicit face networks**
+
+- Choosing Extract, Insert or Storage on a face without a network no longer assigns the active network selected in the Network Tablet or Linker.
+- Opening the router or its panel in the Tablet does not assign a network. Choose the face's network explicitly in the Network row or use the Linker.
+- Changing an action keeps any network already assigned to the face. Explicit Linker operations and copied configurations continue to work as before.
 
 **Other changes**
 

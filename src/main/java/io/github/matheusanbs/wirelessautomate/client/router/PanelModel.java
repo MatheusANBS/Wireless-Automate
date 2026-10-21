@@ -204,7 +204,7 @@ final class PanelModel {
         return snapshot.network(type, direction).isPresent() ? tr("network.unknown") : tr("network.none");
     }
 
-    /** A face tem modo e está sem rede: a linha Rede pede a escolha (a regra D1 não achou rede ativa). */
+    /** A face tem modo e está sem rede: a linha Rede pede a escolha explícita. */
     boolean needsNetwork(FaceView view) {
         return view.mode() != PortMode.NONE && view.network().isEmpty() && (view.available() || remote());
     }

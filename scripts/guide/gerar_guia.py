@@ -1147,7 +1147,7 @@ Também tira roteadores da rede.
 
 | | |
 | --- | --- |
-| **Modos** | Único, Área e Máquinas. No modo **Máquinas**, escolha um roteador com o Upgrade de Alcance e clique nas máquinas (um clique numa vinculada a desvincula); a mensagem diz a máquina e o grupo ou marque uma área. Uma máquina de um tipo novo entra sem rede; a face entra na sua rede ativa quando você escolhe um modo nela. Com **Nenhuma (desvincular)** na tela, o botão da área desvincula do roteador as máquinas dentro dela. |
+| **Modos** | Único, Área e Máquinas. No modo **Máquinas**, escolha um roteador com o Upgrade de Alcance e clique nas máquinas (um clique numa vinculada a desvincula); a mensagem diz a máquina e o grupo ou marque uma área. Uma máquina de um tipo novo entra sem rede; escolher um modo não atribui rede. Escolha a rede de cada face na linha Rede do painel. Com **Nenhuma (desvincular)** na tela, o botão da área desvincula do roteador as máquinas dentro dela. |
 | **Abas** | Itens, Fluidos, Energia e, com o Mekanism, Químicos; com o Ars Nouveau, Source. Marque quantas quiser. |
 | **Faces** | As seis (padrão) ou só algumas: Frente, Trás, Esquerda, Direita, Cima e Baixo, lados da máquina de cada roteador. |
 | **Rede** | Uma das suas redes, ou **Nenhuma (desvincular)**. |
@@ -1215,7 +1215,7 @@ also takes routers out of their network.
 
 | | |
 | --- | --- |
-| **Modes** | Single, Area and Machines. In **Machines** mode, pick a router with the Range Upgrade and click the machines (clicking a linked one unlinks it); the message names the machine and the group or mark an area. A machine of a new kind joins with no network; a face joins your active network when you pick a mode on it. With **None (unlink)** chosen on the screen, the area button unlinks the machines inside it from the router. |
+| **Modes** | Single, Area and Machines. In **Machines** mode, pick a router with the Range Upgrade and click the machines (clicking a linked one unlinks it); the message names the machine and the group or mark an area. A machine of a new kind joins with no network; picking a mode does not assign a network. Choose each face's network in the panel's Network row. With **None (unlink)** chosen on the screen, the area button unlinks the machines inside it from the router. |
 | **Tabs** | Items, Fluids, Energy and, with Mekanism, Chemicals; with Ars Nouveau, Source. Check as many as you like. |
 | **Faces** | All six (default) or just some: Front, Back, Left, Right, Top and Bottom, the sides of each router's machine. |
 | **Network** | One of your networks, or **None (unlink)**. |

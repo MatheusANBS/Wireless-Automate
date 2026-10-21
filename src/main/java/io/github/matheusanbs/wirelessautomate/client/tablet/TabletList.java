@@ -227,8 +227,8 @@ public final class TabletList {
     }
 
     /**
-     * Escolhe o nó do painel (no servidor também). O aviso da regra D1 e o do tirar a rede das faces sem modo
-     * saem: o Desfazer deles age no nó escolhido, e ele passaria a ser outro.
+     * Escolhe o nó do painel (no servidor também). O aviso de tirar a rede das faces sem modo
+     * sai: o Desfazer age no nó escolhido, e ele passaria a ser outro.
      */
     void choose(@Nullable NodeKey key) {
         if (key != null && key.equals(chosen)) {

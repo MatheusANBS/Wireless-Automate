@@ -9,10 +9,10 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.chunk.ChunkLoadState;
 import io.github.matheusanbs.wirelessautomate.chunk.RouterChunkLoader;
 import io.github.matheusanbs.wirelessautomate.client.router.RouterScreen;
+import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
-import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.FaceView;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
@@ -20,7 +20,6 @@ import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
-import io.github.matheusanbs.wirelessautomate.packet.PanelNoticePayload;
 import io.github.matheusanbs.wirelessautomate.packet.PanelNotices;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.util.List;
@@ -37,7 +36,7 @@ import net.minecraft.world.level.ChunkPos;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * O painel do nó na tela do roteador B: prioridade, redstone, visor sincronizado com o cubo, a regra D1, o quadro
+ * O painel do nó na tela do roteador B: prioridade, redstone, visor sincronizado com o cubo, a rede explícita, o quadro
  * da presa, o Cartão de Filtro num slot de face e o Upgrade de chunk loading.
  */
 final class E2ePanelSteps {
@@ -46,8 +45,8 @@ final class E2ePanelSteps {
 
     /**
      * O painel do nó na tela do roteador B, na largura de abertura: a prioridade e o redstone sempre à
-     * vista (sem "Mais"), o visor e o cubo andando juntos e a regra D1 (Extrai numa face sem rede, com rede
-     * ativa, põe a face nela e mostra o aviso; Desfazer tira a rede só dela). Termina no mínimo.
+     * vista (sem "Mais"), o visor e o cubo andando juntos e Extrai mantendo a face sem rede mesmo com
+     * uma rede ativa. Termina no mínimo.
      */
     static void panelSteps(List<Step> list) {
         UUID playerId = Minecraft.getInstance().player.getUUID();
@@ -111,11 +110,11 @@ final class E2ePanelSteps {
                 () -> "face no painel " + panel().face() + ", esperada " + viewFace[0]));
         list.add(capture("1i-painel-visor-sincronizado"));
 
-        // D1: a face Oeste do baú B, sem modo e sem rede, com a rede principal ativa
+        // A face Oeste do baú B continua sem rede ao escolher uma ação, mesmo com rede ativa.
         Direction d1 = Direction.WEST;
         PortMode[] modeBefore = new PortMode[1];
         UUID[] networkBefore = new UUID[1];
-        list.add(new Step("painel D1: face sem modo e sem rede", STEP_TIMEOUT_MS, () -> onServer(server -> {
+        list.add(new Step("painel rede explícita: face sem modo e sem rede", STEP_TIMEOUT_MS, () -> onServer(server -> {
             RouterBlockEntity router = router(server, routerB);
             modeBefore[0] = router.face(ResourceType.ITEM, d1).mode();
             networkBefore[0] = router.faceNetwork(ResourceType.ITEM, d1);
@@ -127,33 +126,18 @@ final class E2ePanelSteps {
             FaceView v = routerScreen().getMenu().snapshot().face(ResourceType.ITEM, d1);
             return v.mode() == PortMode.NONE && v.network().isEmpty();
         }, () -> "face na tela " + routerScreen().getMenu().snapshot().face(ResourceType.ITEM, d1)));
-        list.add(new Step("painel D1: Extrai põe a face na rede ativa, com aviso", STEP_TIMEOUT_MS, () -> {
+        list.add(new Step("painel rede explícita: Extrai mantém a face sem rede", STEP_TIMEOUT_MS, () -> {
             clickFace(d1);
             clickMode(PortMode.EXTRACT);
-        }, () -> {
-            PanelNoticePayload notice = PanelNotices.current();
-            return onServer(server -> router(server, routerB).face(ResourceType.ITEM, d1).mode() == PortMode.EXTRACT
-                    && mainNetwork.equals(router(server, routerB).faceNetwork(ResourceType.ITEM, d1)))
-                    && routerScreen().getMenu().snapshot().network(ResourceType.ITEM, d1).equals(Optional.of(mainNetwork))
-                    && notice != null && notice.undo() == PanelNoticePayload.Undo.CLEAR_FACE_NETWORK
-                    && notice.message().getString().contains(Component.translatable("gui.wirelessautomate.router.side."
-                            + RemoteSide.fromAbsolute(routerScreen().getMenu().snapshot().attachedFront(), d1.ordinal()).key())
-                            .getString())
-                    && panel().undoCenter() != null;
-        }, () -> "rede no servidor " + onServer(server -> router(server, routerB).faceNetwork(ResourceType.ITEM, d1))
-                + ", aviso " + PanelNotices.current()));
-        list.add(capture("1j-painel-d1-aviso"));
-        list.add(new Step("painel D1: Desfazer tira a rede só desta face", STEP_TIMEOUT_MS,
-                () -> clickPanel(panel().undoCenter(), "o Desfazer do aviso"),
-                () -> onServer(server -> router(server, routerB).faceNetwork(ResourceType.ITEM, d1) == null
-                        && router(server, routerB).face(ResourceType.ITEM, d1).mode() == PortMode.EXTRACT
-                        && router(server, routerB).faceNetwork(ResourceType.ITEM, Direction.UP) != null)
-                        && routerScreen().getMenu().snapshot().network(ResourceType.ITEM, d1).isEmpty()
-                        && PanelNotices.current() == null,
+        }, () -> onServer(server -> router(server, routerB).face(ResourceType.ITEM, d1).mode() == PortMode.EXTRACT
+                    && router(server, routerB).faceNetwork(ResourceType.ITEM, d1) == null
+                    && router(server, routerB).faceNetwork(ResourceType.ITEM, Direction.UP) != null)
+                    && routerScreen().getMenu().snapshot().network(ResourceType.ITEM, d1).isEmpty()
+                    && PanelNotices.current() == null,
                 () -> "rede no servidor " + onServer(server -> router(server, routerB).faceNetwork(ResourceType.ITEM, d1))));
-        list.add(clipCheck("painel D1: face sem rede"));
+        list.add(clipCheck("painel rede explícita: face sem rede"));
         list.add(capture("1k-painel-escolha-a-rede"));
-        list.add(new Step("painel D1: a face volta ao que era", STEP_TIMEOUT_MS, () -> onServer(server -> {
+        list.add(new Step("painel rede explícita: a face volta ao que era", STEP_TIMEOUT_MS, () -> onServer(server -> {
             RouterBlockEntity router = router(server, routerB);
             router.configureFace(ResourceType.ITEM, d1, modeBefore[0], 0, RedstoneMode.IGNORE);
             router.setFaceNetwork(ResourceType.ITEM, d1, networkBefore[0]);

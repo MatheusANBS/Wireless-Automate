@@ -6,7 +6,6 @@ import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.energy.IEnergyStorage;
 import net.neoforged.neoforge.items.IItemHandler;
@@ -69,8 +68,11 @@ public final class ResonatorPorts {
         return !core.isRemoved() && core.formed();
     }
 
-    /** A Porta de Energia para o roteador do mod, em {@code long}: só tira. */
-    public record CoreEnergy(ResonanceCoreBlockEntity core) implements BulkEnergy {
+    /**
+     * A Porta de Energia para o roteador do mod, em {@code long}: só tira. {@code port} é o índice dela entre as
+     * Portas de Energia do Núcleo ({@link PortOrder}), ou -1 sem registro; o que sai de verdade soma na vazão.
+     */
+    public record CoreEnergy(ResonanceCoreBlockEntity core, int port) implements BulkEnergy {
         @Override
         public long insert(long amount, boolean simulate) {
             return 0;
@@ -78,7 +80,14 @@ public final class ResonatorPorts {
 
         @Override
         public long extract(long amount, boolean simulate) {
-            return amount <= 0 || !alive(core) ? 0 : core.extractEnergy(amount, simulate);
+            if (amount <= 0 || !alive(core)) {
+                return 0;
+            }
+            long taken = core.extractEnergy(amount, simulate);
+            if (!simulate && taken > 0) {
+                core.flow().add(port, taken);
+            }
+            return taken;
         }
     }
 
@@ -86,7 +95,7 @@ public final class ResonatorPorts {
      * A Porta de Energia como {@link IEnergyStorage} comum: só tira. Como o {@code EnergyStoreHandler}, cada
      * chamada passa até {@link Integer#MAX_VALUE} FE, e o guardado e a capacidade aparecem cortados nesse teto.
      */
-    public record CoreEnergyHandler(ResonanceCoreBlockEntity core) implements IEnergyStorage {
+    public record CoreEnergyHandler(ResonanceCoreBlockEntity core, int port) implements IEnergyStorage {
         @Override
         public int receiveEnergy(int toReceive, boolean simulate) {
             return 0;
@@ -94,7 +103,14 @@ public final class ResonatorPorts {
 
         @Override
         public int extractEnergy(int toExtract, boolean simulate) {
-            return toExtract <= 0 || !alive(core) ? 0 : (int) core.extractEnergy(toExtract, simulate);
+            if (toExtract <= 0 || !alive(core)) {
+                return 0;
+            }
+            int taken = (int) core.extractEnergy(toExtract, simulate);
+            if (!simulate && taken > 0) {
+                core.flow().add(port, taken);
+            }
+            return taken;
         }
 
         @Override
@@ -119,15 +135,22 @@ public final class ResonatorPorts {
     }
 
     /**
-     * A Porta de Cristais: um slot por câmara do tier e o último para a redstone. Cristal de Sinal (cheio, gasto
-     * ou Opaco) entra uma unidade por câmara vazia; redstone, até {@link ResonanceCoreBlockEntity#MAX_REDSTONE}.
-     * Só sai o Opaco, e só com o Núcleo sem redstone (com redstone ele ainda vai recarregar); a redstone nunca
-     * sai. Tudo passa pelos métodos do Núcleo, que marcam a mudança.
+     * A Porta de Cristais: um slot por câmara do tier e o último para o catalisador. Cristal não rachado (cheio,
+     * gasto ou Opaco) entra uma unidade por câmara vazia; o catalisador, pela regra do {@link CoreCatalyst#canAdd},
+     * até {@link ResonanceCoreBlockEntity#MAX_REDSTONE}. Sai o rachado, sempre (o Núcleo nunca o recarrega), e o
+     * Opaco só com o Núcleo sem catalisador (com ele, o Opaco ainda vai recarregar); o catalisador nunca sai. Tudo
+     * passa pelos métodos do Núcleo, que marcam a mudança. No Ultimate há mais um slot, o do Eco
+     * ({@link CoreInventory#ecoSlot}), sempre vazio: o Afinado Ultimate rachado que chega pelo funil, recusado pelas
+     * câmaras, é queimado nele.
      */
     public record CoreItems(ResonanceCoreBlockEntity core) implements IItemHandler {
+        private boolean isEco(int slot) {
+            return slot >= 0 && slot == CoreInventory.ecoSlot(core.tier());
+        }
+
         @Override
         public int getSlots() {
-            return alive(core) ? core.chambers() + 1 : 0;
+            return alive(core) ? core.inventory().getContainerSize() : 0;
         }
 
         @Override
@@ -136,24 +159,24 @@ public final class ResonatorPorts {
                 return ItemStack.EMPTY;
             }
             if (slot == core.chambers()) {
-                return core.redstone() > 0 ? new ItemStack(Items.REDSTONE, core.redstone()) : ItemStack.EMPTY;
+                return core.catalyst().stack();
             }
             return core.crystals().get(slot).copy();
         }
 
         @Override
         public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
-            if (stack.isEmpty() || !alive(core) || slot < 0 || slot > core.chambers() || !isItemValid(slot, stack)) {
+            if (stack.isEmpty() || !alive(core) || !isItemValid(slot, stack)) {
                 return stack;
+            }
+            if (isEco(slot)) {
+                return stack.copyWithCount(stack.getCount() - core.eco().burn(stack, simulate));
             }
             if (slot == core.chambers()) {
                 int room = ResonanceCoreBlockEntity.MAX_REDSTONE - core.redstone();
-                int moved = Math.max(0, Math.min(stack.getCount(), room));
+                int moved = simulate ? Math.max(0, Math.min(stack.getCount(), room)) : core.addCatalyst(stack);
                 if (moved == 0) {
                     return stack;
-                }
-                if (!simulate) {
-                    core.addRedstone(moved);
                 }
                 return stack.copyWithCount(stack.getCount() - moved);
             }
@@ -168,11 +191,11 @@ public final class ResonatorPorts {
 
         @Override
         public ItemStack extractItem(int slot, int amount, boolean simulate) {
-            if (amount <= 0 || !alive(core) || slot < 0 || slot >= core.chambers() || core.redstone() > 0) {
+            if (amount <= 0 || !alive(core) || slot < 0 || slot >= core.chambers()) {
                 return ItemStack.EMPTY;
             }
             ItemStack stack = core.crystals().get(slot);
-            if (!SignalCrystalItem.isDull(stack)) {
+            if (!SignalCrystalItem.isCracked(stack) && (!SignalCrystalItem.isDull(stack) || core.redstone() > 0)) {
                 return ItemStack.EMPTY;
             }
             return simulate ? stack.copy() : core.takeCrystalAt(slot);
@@ -180,15 +203,24 @@ public final class ResonatorPorts {
 
         @Override
         public int getSlotLimit(int slot) {
-            return alive(core) && slot == core.chambers() ? ResonanceCoreBlockEntity.MAX_REDSTONE : 1;
+            return alive(core) && (slot == core.chambers() || isEco(slot)) ? ResonanceCoreBlockEntity.MAX_REDSTONE : 1;
         }
 
         @Override
         public boolean isItemValid(int slot, ItemStack stack) {
-            if (!alive(core) || slot < 0 || slot > core.chambers()) {
+            if (!alive(core) || slot < 0) {
                 return false;
             }
-            return slot == core.chambers() ? stack.is(Items.REDSTONE) : stack.getItem() instanceof SignalCrystalItem;
+            if (isEco(slot)) {
+                return core.eco().room(stack) > 0;
+            }
+            if (slot > core.chambers()) {
+                return false;
+            }
+            if (slot == core.chambers()) {
+                return core.catalyst().canAdd(core.tier(), stack);
+            }
+            return stack.getItem() instanceof SignalCrystalItem && !SignalCrystalItem.isCracked(stack);
         }
     }
 }

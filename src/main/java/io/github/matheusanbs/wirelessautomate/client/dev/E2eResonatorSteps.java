@@ -5,7 +5,9 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eUi.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
+import io.github.matheusanbs.wirelessautomate.client.FrameClock;
 import io.github.matheusanbs.wirelessautomate.client.resonator.ResonatorProjection;
+import io.github.matheusanbs.wirelessautomate.client.resonator.render.ResonatorRenderer;
 import io.github.matheusanbs.wirelessautomate.GuiTheme;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
@@ -50,13 +52,22 @@ final class E2eResonatorSteps {
     private static final Part[][][] VITRINE = ResonatorBlueprint.expected(Face.EAST, ResonatorBlueprint.Layout.VITRINE);
     /** A terra fica na aresta vertical entre as faces leste e sul, de frente para a câmera. */
     private static final int[] DIRT = {4, 1, 4};
+    /** O vsync e o limite de FPS de antes da medida do tempo de quadro. */
+    private static boolean measuring;
+    private static boolean savedVsync;
+    private static int savedLimit;
     private static final String HINT = "block.wirelessautomate.resonance_core.projection.hint";
     /** Os dois vidros da janela que ficam faltando. */
     private static final int[][] MISSING_GLASS = {{2, 3, 4}, {3, 2, 4}};
     /** Os pés do jogador nas fotos de fora: a leste e ao sul da caixa, a uns 7 blocos do Núcleo. */
-    private static final double[] SIDE_VIEW = {8.5, 3.2, 7.5};
+    static final double[] SIDE_VIEW = {8.5, 3.2, 7.5};
     /** Os pés do jogador nas fotos da câmara: a 2,5 blocos da janela, de frente para ela (yaw 180°). */
     private static final double[] WINDOW_VIEW = {2.5, 2.3, 7.5};
+    /**
+     * Os pés do jogador na foto de perto dos cristais: dentro da câmara, junto da janela e com a cabeça perto do teto,
+     * olhando o anel de cima. A Vitrine montada não tem vão no vidro, e de fora o vidro lavaria a foto.
+     */
+    static final double[] CLOSE_VIEW = {2.5, 2.18, 3.65};
 
     private E2eResonatorSteps() {
     }
@@ -118,6 +129,7 @@ final class E2eResonatorSteps {
         list.add(DevEndToEnd.wait("Ressonador montado", 10));
         list.add(capture("ressonador-montado"));
         screenSteps(list, origin);
+        E2eResonatorScreenSteps.screenSteps(list, playerId, origin);
         chamberSteps(list, playerId, origin);
         list.add(new Step("Ressonador: limpar", STEP_TIMEOUT_MS, () -> onServer(server -> {
             ServerPlayer player = server.getPlayerList().getPlayer(playerId);
@@ -223,6 +235,10 @@ final class E2eResonatorSteps {
         list.add(camera("Ressonador: câmera na janela", playerId, () -> origin[0], WINDOW_VIEW));
         list.add(DevEndToEnd.wait("a câmara acender", 30));
         list.add(capture("ressonador-camara"));
+        list.add(frameTime(true, "", null));
+        list.add(frameTime(false, "", null));
+        list.add(frameTime(true, "", null));
+        list.add(frameTime(false, "", null));
         list.add(new Step("Ressonador: dial a 96,7", STEP_TIMEOUT_MS, () -> onServer(server -> {
             ((ResonanceCoreBlockEntity) server.overworld().getBlockEntity(core(origin[0]))).setDial(96.7);
             return null;
@@ -237,6 +253,84 @@ final class E2eResonatorSteps {
                 return null;
             });
         }, () -> true, () -> "dial"));
+        E2eResonatorFlowSteps.flowSteps(list, playerId, origin);
+    }
+
+    /** O que a medida repete a cada tick de espera (a extração que mantém o conduto aceso). */
+    @FunctionalInterface
+    interface Tick {
+        void run() throws Exception;
+    }
+
+    /** A única Porta de Energia da Vitrine. */
+    static BlockPos energyPort(BlockPos origin) {
+        for (int x = 0; x < 5; x++) {
+            for (int y = 0; y < 5; y++) {
+                for (int z = 0; z < 5; z++) {
+                    if (VITRINE[x][y][z] == Part.ENERGY_PORT) {
+                        return origin.offset(x, y, z);
+                    }
+                }
+            }
+        }
+        throw new IllegalStateException("a Vitrine não tem Porta de Energia");
+    }
+
+    /**
+     * O tempo médio de quadro em 120 quadros com a câmara ocupando a tela, sem o limite de FPS e sem o vsync (o
+     * que valia volta ao fim), com o desenho antigo forçado ou com o plasma; a linha vai para o result.txt.
+     */
+    static Step frameTime(boolean legacy, String situation, Tick perTick) {
+        long[] start = new long[2];
+        String label = (legacy ? "camara antiga" : "camara plasma") + situation;
+        double[] result = new double[1];
+        return new Step("Ressonador: " + label + " (tempo de quadro)", 60_000, () -> {
+            var options = Minecraft.getInstance().options;
+            if (!measuring) {
+                measuring = true;
+                savedVsync = options.enableVsync().get();
+                savedLimit = options.framerateLimit().get();
+            }
+            options.enableVsync().set(false);
+            options.framerateLimit().set(260);
+            ResonatorRenderer.forceLegacyForTests = legacy;
+            start[0] = FrameClock.frame() + 30;
+        }, () -> {
+            if (perTick != null) {
+                perTick.run();
+            }
+            long frame = FrameClock.frame();
+            if (frame < start[0]) {
+                return false;
+            }
+            if (start[1] == 0) {
+                // o check roda por tick: o primeiro depois do aquecimento marca o quadro e a hora de partida
+                start[0] = frame;
+                start[1] = System.nanoTime();
+                return false;
+            }
+            if (frame < start[0] + 120) {
+                return false;
+            }
+            result[0] = (System.nanoTime() - start[1]) / (double) (frame - start[0]) / 1_000_000.0;
+            restoreFrameSettings();
+            return true;
+        }, () -> String.format(java.util.Locale.ROOT, "%s: %.3f ms/quadro", label, result[0]));
+    }
+
+    /**
+     * Devolve o vsync, o limite de FPS e o desenho da câmara. Idempotente; o motor chama em qualquer saída
+     * (sucesso, falha ou tempo esgotado), sem gravar o options.txt.
+     */
+    static void restoreFrameSettings() {
+        ResonatorRenderer.forceLegacyForTests = false;
+        if (!measuring) {
+            return;
+        }
+        measuring = false;
+        var options = Minecraft.getInstance().options;
+        options.enableVsync().set(savedVsync);
+        options.framerateLimit().set(savedLimit);
     }
 
     /** Põe as peças da primeira foto ({@code half}) ou as que faltam para completar a Vitrine (a terra vira Carcaça). */
@@ -334,7 +428,7 @@ final class E2eResonatorSteps {
     }
 
     /** Ar na caixa e numa volta de dois blocos em torno dela (o chão fica). */
-    private static void clear(ServerLevel level, BlockPos origin) {
+    static void clear(ServerLevel level, BlockPos origin) {
         for (BlockPos pos : BlockPos.betweenClosed(origin.offset(-2, 0, -2), origin.offset(6, 6, 6))) {
             if (!level.getBlockState(pos).isAir()) {
                 level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
@@ -343,7 +437,7 @@ final class E2eResonatorSteps {
     }
 
     /** O jogador voando com os pés em {@code origin + feet}, olhando o centro da caixa. */
-    private static Step camera(String name, UUID playerId, java.util.function.Supplier<BlockPos> origin,
+    static Step camera(String name, UUID playerId, java.util.function.Supplier<BlockPos> origin,
             double[] feet) {
         double[] cam = new double[3];
         float[] ang = new float[2];

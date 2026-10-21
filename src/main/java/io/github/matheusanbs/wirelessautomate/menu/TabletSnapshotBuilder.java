@@ -16,8 +16,6 @@ import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
 import io.github.matheusanbs.wirelessautomate.network.WaGroup;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.preset.ProfileDiff;
-import io.github.matheusanbs.wirelessautomate.preset.ProfileSource;
-import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMaps;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -124,23 +122,12 @@ final class TabletSnapshotBuilder {
         Scan scan = scan(shared.sorted(index), shared, data, totals, operator, me, networkNames);
         List<Match> matches = scan.matches;
         RouterPreset profile = TabletProfile.storedProfile(viewer);
-        ProfileSource source = profile == null ? null
-                : TabletMenu.tabletStack(viewer).get(ModDataComponents.PROFILE_SOURCE.get());
-        Optional<ResourceLocation> originGroup = Optional.empty();
-        Map<ResourceLocation, Integer> groupSizes = new HashMap<>();
-        for (Match match : matches) {
-            groupSizes.merge(match.entry.machine(), 1, Integer::sum);
-            if (source != null && match.entry.key().equals(source.origin())) {
-                originGroup = Optional.of(match.entry.machine());
-            }
-        }
-        List<Facet<ResourceLocation>> groupCounts = new ArrayList<>();
         tree.prune(index, data, operator, me);
         List<TabletRows.Row> rows = new ArrayList<>();
         List<TabletRows.MachineLive> lives = new ArrayList<>();
         boolean byMachine = byMachine();
         List<NodeView> nodes = byMachine ? List.of()
-                : pageNodes(matches, shared, data, profile, groupSizes, groupCounts, rows, lives, now);
+                : pageNodes(matches, shared, data, profile, rows, lives, now);
         TabletMachineRows machineRows = byMachine ? machines.page(shared, index, query, now)
                 : machines.active() ? TabletMachineRows.LIST_CLOSED : TabletMachineRows.EMPTY;
 
@@ -167,7 +154,7 @@ final class TabletSnapshotBuilder {
                 new QuickCounts(scan.problemCount, scan.noNetworkCount, scan.unloadedCount), scan.machineTotal,
                 TabletProfile.profileSummary(viewer, profile), List.copyOf(nodes),
                 rows.isEmpty() ? TabletRows.EMPTY : new TabletRows(List.copyOf(rows), List.copyOf(lives)), machineRows,
-                List.copyOf(groupCounts), byMachine ? Optional.empty() : originGroup, notice, noticeId);
+                notice, noticeId);
     }
 
     /** Uma passada pelo índice, na ordem da Lista: conta as facetas e os filtros rápidos e filtra pela consulta. */
@@ -222,12 +209,10 @@ final class TabletSnapshotBuilder {
 
     /**
      * Os nós da página e, abaixo dos abertos na árvore, as linhas deles em {@code rows} (com o estado e a vazão das
-     * máquinas em {@code lives}), juntos até {@link TabletSnapshot#MAX_NODES}; e a contagem de cada grupo de máquina
-     * que aparece nela.
+     * máquinas em {@code lives}), juntos até {@link TabletSnapshot#MAX_NODES}.
      */
     private List<NodeView> pageNodes(List<Match> matches, TabletSample shared, NetworkSavedData data,
-            RouterPreset profile, Map<ResourceLocation, Integer> groupSizes, List<Facet<ResourceLocation>> groupCounts,
-            List<TabletRows.Row> rows, List<TabletRows.MachineLive> lives, long now) {
+            RouterPreset profile, List<TabletRows.Row> rows, List<TabletRows.MachineLive> lives, long now) {
         List<NodeView> nodes = new ArrayList<>();
         for (int i = 0; i < matches.size() && nodes.size() + rows.size() < TabletSnapshot.MAX_NODES; i++) {
             Match match = matches.get(i);
@@ -256,12 +241,10 @@ final class TabletSnapshotBuilder {
             for (ResourceType type : ResourceType.values()) {
                 rateList.add(rates == null ? 0L : rates[type.ordinal()]);
             }
-            nodes.add(new NodeView(entry.key(), entry.name(), entry.machine(), entry.tier(), List.copyOf(networks),
+            nodes.add(new NodeView(entry.key(), entry.name(), entry.attachedLabel(), entry.machine(), entry.tier(),
+                    List.copyOf(networks),
                     entry.roles(), match.status, removed, entry.faceModes(), List.copyOf(rateList), comparison,
                     entry.remotes().total()));
-            if (groupCounts.isEmpty() || !groupCounts.getLast().id().equals(entry.machine())) {
-                groupCounts.add(new Facet<>(entry.machine(), groupSizes.get(entry.machine())));
-            }
             // a árvore só na visão por roteadores: em Máquinas, com outra aba aberta, a página vai só com os nós
             if (!machines.active() && tree.isOpen(entry.key())) {
                 tree.appendRows(entry, nodes.size() - 1, TabletSnapshot.MAX_NODES - nodes.size() - rows.size(), rows,

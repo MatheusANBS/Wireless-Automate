@@ -19,7 +19,7 @@ item_ids:
 <ItemImage id="wirelessautomate:resonance_core" scale="2" float="left" />
 
 A multiblock power generator: quartz crystals vibrate inside a box, and you **tune** the Core to the right
-frequency to pull the most FE out of them. The crystals come from
+frequency to pull the most FE out of them. The crystals, the catalysts and the Hearts come from
 [Signal Quartz](signal-quartz.md).
 
 <br clear="all" />
@@ -130,7 +130,7 @@ frequency to pull the most FE out of them. The crystals come from
     Resonator Energy Port: a router pulls the energy here
   </BlockAnnotation>
   <BlockAnnotation x="4" y="2" z="2" color="#e2b347">
-    Resonator Crystal Port: crystals and redstone in, Dull ones out
+    Resonator Crystal Port: crystals and catalyst in, Dull and cracked ones out
   </BlockAnnotation>
   <BlockAnnotation x="2" y="4" z="2" color="#a06bff">
     Resonator Tuner (optional)
@@ -142,9 +142,10 @@ The scene shows the **Showcase** build, with the glass window on one face and th
 
 ## Building it
 
-1. Place the **Resonance Core** and click it with an empty hand: the structure shows up **projected** in the world
-   (the missing parts and what is wrong). Click again to turn it off. **Shift + mouse wheel** switches between the
-   **Showcase** and **Band** builds.
+1. Craft the **Resonance Core**: its recipe takes a **Basic Resonator Heart** (see
+   [Signal Quartz](signal-quartz.md)). Place the Core and click it with an empty hand: the structure shows up
+   **projected** in the world (the missing parts and what is wrong). Click again to turn it off. **Shift + mouse
+   wheel** switches between the **Showcase** and **Band** builds.
 2. The structure is a **hollow 5×5×5 box**: **Porcelain Casing** on the edges and corners; **Resonance Glass**, the
    ports and the Tuner on the face positions in between. The 3×3×3 inside stays empty.
 3. It needs **one Core**, **at least one Energy Port** and **at least one Crystal Port**; the **Tuner** is optional
@@ -162,22 +163,24 @@ doesn't build, click the loose Core: the action bar says what's in the way and t
 | <ItemImage id="wirelessautomate:resonator_glass" /> **Resonance Glass** | The window onto the chamber. |
 | <ItemImage id="wirelessautomate:resonance_core" /> **Resonance Core** | The brain: screen, crystals and the generated power. |
 | <ItemImage id="wirelessautomate:resonator_energy_port" /> **Resonator Energy Port** | Only pulls energy out: attach a router to it. |
-| <ItemImage id="wirelessautomate:resonator_crystal_port" /> **Resonator Crystal Port** | Accepts crystals and redstone and hands Dull ones back. |
+| <ItemImage id="wirelessautomate:resonator_crystal_port" /> **Resonator Crystal Port** | Accepts crystals and catalyst and hands Dull and cracked ones back. |
 | <ItemImage id="wirelessautomate:resonator_tuner" /> **Resonator Tuner** | Optional: tunes by itself. |
 
-## Crystals and redstone
+## Crystals and catalyst
 
-Each Core has chambers for crystals (1 on Basic, up to 8 on Ultimate). Put a **Signal Crystal** or a
-**Cut Crystal** in one of these ways:
+Each Core has chambers for crystals (1 on Basic, up to 8 on Ultimate). Put crystals in one of these ways:
 
 | How | What to do |
 | --- | --- |
-| **By clicking** | Click the Core with the crystal in hand: it goes to the first empty chamber. With redstone in hand, the dust goes into the Core. |
-| **Through the screen** | Open the Core's screen and use the crystal slots and the redstone slot. |
-| **Through the Crystal Port** | A router (or another item transport) puts crystals and redstone into the port and takes the Dull ones out. |
+| **By clicking** | Click the Core with the crystal in hand: it goes to the first empty chamber. With the catalyst in hand, it goes into the Core. |
+| **Through the screen** | Open the Core's screen and use the crystal slots and the catalyst slot. |
+| **Through the Crystal Port** | A router (or another item transport) puts crystals and catalyst into the port and takes the Dull and cracked ones out. |
 
-To take the last crystal out, click the Core with **Shift and both hands empty**. The **redstone** is only for
-recharging Dull crystals, as on the [Signal Quartz](signal-quartz.md) page.
+To take the last crystal out, click the Core with **Shift and both hands empty**. From Elite up, use the tier's
+**Tuned Signal Crystal**: other crystals yield much less. The **catalyst** is only for recharging Dull crystals, and
+each tier takes its own (the upkeep table, further down); the screen says which one it takes. Recharging also uses
+up the crystal's **integrity**, and it cracks after 8 charges; the details are on
+[Signal Quartz](signal-quartz.md).
 
 ## Tuning
 
@@ -198,6 +201,25 @@ With a **Tuner** in the structure, the screen's **Tuner** button turns on **auto
 station by itself, with no need to come back. In exchange, efficiency is capped by a **ceiling** that depends on the
 Core's tier (in the table below). In automatic mode the dial ignores the buttons: switch back to **Manual** to turn it.
 
+## Interference
+
+Resonators close to each other get in each other's way. Every other **formed** Core within **32 blocks** (counting
+the largest of the x, y and z distances), in the same dimension and with its chunk loaded, takes **15%** of this
+one's efficiency, up to **60%** in all. Cores of any tier count.
+
+The Core's screen shows the loss and how far the nearest neighbor is, like **−15% · Core 24 blocks away**, or
+**Interference: none**. To generate at full, keep each Resonator more than 32 blocks from the others.
+
+## Resonant Echo
+
+Only on the **Ultimate** Core. Its screen has an **Echo** slot: put a **cracked Tuned Ultimate crystal** there and it
+burns right away, adding **1 Echo**. Each Echo raises generation by **5%**, with no ceiling: the more crystals you burn,
+the more the Core generates.
+
+A cracked Tuned Ultimate crystal that arrives through the Crystal Port goes to the Echo too. To recast the crystal
+instead of burning it, take it out through the Port or the screen and recast it on a crafting table. The Core
+**keeps its Echo** when broken and brings it back when you place it again.
+
 ## The chamber
 
 Through the glass you can read the tuning without opening the screen:
@@ -207,31 +229,53 @@ Through the glass you can read the tuning without opening the screen:
 - **Out of tune**: the figure turns into a **scribble**, each crystal moves on its own and the floor hisses. With
   generation at zero, the figure disappears.
 - The Core's lens lights up on its wall, sparks run to the Energy Port and a thread of redstone reaches the Dull
-  crystal that is recharging.
+  crystal that is recharging. A cracked crystal goes dark.
 
 ## Power
 
 Power leaves through the **Energy Port**: attach a [Router](router.md) to it and set the face to **Extract** on the
-**Energy** tab. The Core keeps a small reserve (about 10 seconds of full generation); when it's full, the Core
-**stops generating and doesn't wear the crystals**. The Core only works while its chunk is loaded: to run it while
-you're away, use the [Chunk Loading Upgrade](chunk-loading.md) on the router attached to the Port.
+**Energy** tab. A router of the Core's tier keeps up with full generation. The Core keeps a small reserve (about
+10 seconds of full generation); when it's full, the Core **stops generating and doesn't wear the crystals**. The
+Core only works while its chunk is loaded: to run it while you're away, use the
+[Chunk Loading Upgrade](chunk-loading.md) on the router attached to the Port.
 
 ## Tiers
 
 The Core goes up in tier with the same [Upgrade Cards](upgrade-cards.md) as the router (Shift + click the Core with
-the card), without taking it apart: the contents stay and the new chambers show up. Each tier has more chambers and
-more FE per crystal. The Cut Crystal yields twice what the table shows for the Signal Crystal.
+the card), without taking it apart: the contents stay and the new chambers show up. To go up, you also need the
+**Resonator Heart of the target tier** in your inventory: the click uses up the card and the Heart. Without it,
+nothing changes and the action bar says **Missing Resonator Heart** with the tier. A card goes up one step at a
+time, so each step takes its own Heart. The Heart recipes are on [Signal Quartz](signal-quartz.md).
 
-| Core tier | Chambers | FE/t per Signal Crystal | Tuner ceiling |
+Each tier has more chambers and generates more. Max generation is with a full-yield crystal in every chamber and
+the **IN TUNE** lamp lit, with no interference:
+
+| Core tier | Chambers | Max generation (FE/t) | Tuner ceiling |
 | --- | --- | --- | --- |
-| **Basic** | 1 | 128 | 85% |
-| **Advanced** | 2 | 1,024 | 88% |
-| **Elite** | 3 | 8,192 | 90% |
-| **Emerald** | 4 | 32,768 | 92% |
-| **Allthemodium¹** | 5 | 262,144 | 94% |
-| **Vibranium¹** | 6 | 2,097,152 | 95% |
-| **Unobtainium¹** | 7 | 134,217,728 | 96% |
-| **Ultimate** | 8 | 1,073,741,824 | 98% |
+| **Basic** | 1 | 432 | 85% |
+| **Advanced** | 2 | 27,648 | 88% |
+| **Elite** | 3 | 60,000 | 90% |
+| **Emerald** | 4 | 1,280,000 | 92% |
+| **Allthemodium¹** | 5 | 64,000,000 | 94% |
+| **Vibranium¹** | 6 | 80,400,000 | 95% |
+| **Unobtainium¹** | 7 | 2,576,000,000 | 96% |
+| **Ultimate** | 8 | 4,294,967,296 | 98% |
+
+¹ Only with the Allthemodium mod.
+
+Upkeep goes up with the tier too: the right crystal, how long a charge lasts (generating at 100%) and the catalyst
+that recharges Dull crystals. A Signal Crystal lasts half the time in the table.
+
+| Core tier | Crystal at full yield | A charge lasts | Recharge catalyst |
+| --- | --- | --- | --- |
+| **Basic** | Cut or Tuned | 20 min | Redstone or Resonance Dust |
+| **Advanced** | Cut or Tuned | 20 min | Redstone or Resonance Dust |
+| **Elite** | Tuned Elite or higher | 15 min | Resonance Dust |
+| **Emerald** | Tuned Emerald or higher | 10 min | Resonance Dust |
+| **Allthemodium¹** | Tuned Allthemodium or higher | 5 min | Charged Allthemodium Dust |
+| **Vibranium¹** | Tuned Vibranium or higher | 5 min | Charged Vibranium Dust |
+| **Unobtainium¹** | Tuned Unobtainium or higher | 4 min | Charged Unobtainium Dust |
+| **Ultimate** | Tuned Ultimate | 3 min | Charged Ultimate Dust |
 
 ¹ Only with the Allthemodium mod.
 

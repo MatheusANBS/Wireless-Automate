@@ -5,8 +5,10 @@ import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.range.RangeTiers;
 import io.github.matheusanbs.wirelessautomate.resonator.CoreMath;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import net.neoforged.neoforge.common.ModConfigSpec;
@@ -30,9 +32,10 @@ public final class Config {
     public static final ModConfigSpec.IntValue BALANCE_VERSION;
     /**
      * 1 = a escada ×8 da Esmeralda e do Allthemodium (8/10/2026); 2 = a energia do roteador Unobtainium ×8 e o FE
-     * por cristal do Ressonador (15/10/2026).
+     * por cristal do Ressonador (15/10/2026); 3 = a escada nova do Ressonador e a energia do roteador por tier
+     * (21/10/2026).
      */
-    public static final int CURRENT_BALANCE = 2;
+    public static final int CURRENT_BALANCE = 3;
     /** Capacidade dos armazenamentos do mod por tipo e tier (todos os tipos somados; 0 = sem limite). */
     public static final Map<StorageKind, Map<RouterTier, ModConfigSpec.LongValue>> STORAGE_CAPACITY =
             new EnumMap<>(StorageKind.class);
@@ -41,7 +44,17 @@ public final class Config {
 
     public static final ModConfigSpec.LongValue CRYSTAL_LIFE_TICKS;
     public static final ModConfigSpec.LongValue CUT_CRYSTAL_LIFE_TICKS;
+    /** Minutos que a carga dura a 100% de geração, um por tier do Núcleo (ver {@link #crystalLifeTicks(int)}). */
+    public static final ModConfigSpec.ConfigValue<List<? extends Integer>> CRYSTAL_LIFE_MINUTES;
+    private static final int MAX_LIFE_MINUTES = 240;
     public static final ModConfigSpec.LongValue RECHARGE_TICKS;
+    public static final ModConfigSpec.IntValue CRYSTAL_INTEGRITY;
+    public static final ModConfigSpec.IntValue RECAST_CRYSTALS;
+    public static final ModConfigSpec.IntValue INTERFERENCE_RADIUS;
+    public static final ModConfigSpec.DoubleValue INTERFERENCE_PENALTY;
+    public static final ModConfigSpec.DoubleValue INTERFERENCE_MAX;
+    public static final ModConfigSpec.DoubleValue ECO_BONUS;
+    public static final ModConfigSpec.LongValue ECO_MAX;
     /** FE por tick que um cristal de rendimento 1 dá ao Núcleo de Ressonância, por tier. */
     public static final Map<RouterTier, ModConfigSpec.LongValue> RESONATOR_FE_PER_CRYSTAL = new EnumMap<>(RouterTier.class);
 
@@ -161,13 +174,46 @@ public final class Config {
         CUT_CRYSTAL_LIFE_TICKS = builder
                 .comment("Ticks de geração de um Cristal Lapidado cheio, até ficar Opaco.")
                 .defineInRange("cutCrystalLifeTicks", 24_000L, 1L, Long.MAX_VALUE);
+        List<Integer> lifeMinutes = new ArrayList<>();
+        for (RouterTier tier : RouterTier.values()) {
+            lifeMinutes.add(CoreMath.defaultLifeMinutes(tier.ordinal()));
+        }
+        CRYSTAL_LIFE_MINUTES = builder
+                .comment("Minutos que a carga de um cristal dura no Núcleo de cada tier a 100% de geração, na ordem",
+                        "Básico, Avançado, Elite, Esmeralda, Allthemodium, Vibranium, Unobtainium e Ultimate (1 a 240).",
+                        "Em 20, o cristal dura o crystalLifeTicks (ou o cutCrystalLifeTicks) como está; em 10, metade.")
+                .defineList("crystalLifeMinutes", List.copyOf(lifeMinutes),
+                        () -> CoreMath.defaultLifeMinutes(0),
+                        value -> value instanceof Integer minutes && minutes >= 1 && minutes <= MAX_LIFE_MINUTES);
         RECHARGE_TICKS = builder
                 .comment("Ticks que o Núcleo leva para recarregar um cristal Opaco (gasta redstone).")
                 .defineInRange("rechargeTicks", 600L, 1L, Long.MAX_VALUE);
+        CRYSTAL_INTEGRITY = builder
+                .comment("Cargas de um cristal até rachar: cada recarga gasta 1; com 0 ele racha e precisa ser refeito.")
+                .defineInRange("crystalIntegrity", 8, 1, 64);
+        RECAST_CRYSTALS = builder
+                .comment("Cristais de Sinal cheios que refazem um cristal rachado na bancada.")
+                .defineInRange("recastCrystals", 4, 1, 9);
+        INTERFERENCE_RADIUS = builder
+                .comment("Raio, em blocos (distância de Chebyshev entre os Núcleos), em que outro Núcleo montado e carregado",
+                        "da mesma dimensão tira eficiência deste (0 desliga a interferência).")
+                .defineInRange("interferenceRadius", 32, 0, 256);
+        INTERFERENCE_PENALTY = builder
+                .comment("Eficiência que cada Núcleo vizinho no raio tira (0,15 = 15%).")
+                .defineInRange("interferencePenalty", 0.15, 0.0, 1.0);
+        INTERFERENCE_MAX = builder
+                .comment("Perda máxima da eficiência pela interferência, somados todos os vizinhos (0,60 = 60%).")
+                .defineInRange("interferenceMax", 0.60, 0.0, 1.0);
+        ECO_BONUS = builder
+                .comment("Geração base que cada Eco Ressonante soma ao Núcleo Ultimate (0,05 = +5%).")
+                .defineInRange("ecoBonus", 0.05, 0.0, 1.0);
+        ECO_MAX = builder
+                .comment("Eco Ressonante máximo de um Núcleo Ultimate (0 = sem teto).")
+                .defineInRange("ecoMax", 0L, 0L, Long.MAX_VALUE);
         for (RouterTier tier : RouterTier.values()) {
             builder.push(tier.getSerializedName());
             RESONATOR_FE_PER_CRYSTAL.put(tier, builder
-                    .comment("FE por tick de um cristal de rendimento 1 (o Lapidado rende 2) a 100% de sintonia.")
+                    .comment("FE por tick de um cristal de rendimento 1 a 100% de sintonia (Lapidado e Afinado rendem 2; do Elite para cima, o cristal comum rende 1/4).")
                     .defineInRange("fePerCrystal", CoreMath.defaultFePerCrystal(tier.ordinal()), 0L, Long.MAX_VALUE));
             builder.pop();
         }
@@ -210,6 +256,16 @@ public final class Config {
     private static final long[] OLD_FE_PER_CRYSTAL = {
         64, 512, 4_096, 32_768, 262_144, 2_097_152, 16_777_216L, 134_217_728L
     };
+    /** O FE por cristal do Ressonador no balanceamento 2 (o destino do passo 2 e a origem do 3), pela posição do tier. */
+    private static final long[] BALANCE2_FE_PER_CRYSTAL = {
+        128, 1_024, 8_192, 32_768, 262_144, 2_097_152, 134_217_728L, 1_073_741_824L
+    };
+    /** A energia do roteador Unobtainium no balanceamento 2 (FE/t). */
+    private static final long BALANCE2_UNOBTAINIUM_ENERGY = 2_097_152_000L;
+    /** A energia do roteador por tier no balanceamento 2 (FE/t), pela posição do tier. */
+    private static final long[] BALANCE2_ENERGY = {
+        1_000, 8_000, 64_000, 512_000, 4_096_000, 32_768_000, 2_097_152_000L, 0
+    };
 
     /**
      * Na primeira carga depois de um balanceamento novo, troca os valores que ainda estão no padrão antigo pelo
@@ -223,7 +279,8 @@ public final class Config {
             return 0;
         }
         int changed = version < 1 ? migrateBalance1() : 0;
-        changed += migrateBalance2();
+        changed += version < 2 ? migrateBalance2() : 0;
+        changed += migrateBalance3();
         BALANCE_VERSION.set(CURRENT_BALANCE);
         SPEC.save();
         return changed;
@@ -233,15 +290,34 @@ public final class Config {
         int changed = 0;
         ModConfigSpec.LongValue energy = TIERS.get(RouterTier.UNOBTAINIUM).rates().get(ResourceType.ENERGY.rateKey());
         if (energy.get() == OLD_UNOBTAINIUM_ENERGY) {
-            energy.set(ResourceType.ENERGY.defaultRate(RouterTier.UNOBTAINIUM.ordinal()));
+            energy.set(BALANCE2_UNOBTAINIUM_ENERGY);
             changed++;
         }
         for (RouterTier tier : RouterTier.values()) {
             ModConfigSpec.LongValue fe = RESONATOR_FE_PER_CRYSTAL.get(tier);
-            long target = CoreMath.defaultFePerCrystal(tier.ordinal());
-            if (tier.ordinal() < OLD_FE_PER_CRYSTAL.length && fe.get() == OLD_FE_PER_CRYSTAL[tier.ordinal()]
-                    && fe.get() != target) {
+            long target = BALANCE2_FE_PER_CRYSTAL[tier.ordinal()];
+            if (fe.get() == OLD_FE_PER_CRYSTAL[tier.ordinal()] && fe.get() != target) {
                 fe.set(target);
+                changed++;
+            }
+        }
+        return changed;
+    }
+
+    private static int migrateBalance3() {
+        int changed = 0;
+        for (RouterTier tier : RouterTier.values()) {
+            int i = tier.ordinal();
+            ModConfigSpec.LongValue fe = RESONATOR_FE_PER_CRYSTAL.get(tier);
+            long feTarget = CoreMath.defaultFePerCrystal(i);
+            if (fe.get() == BALANCE2_FE_PER_CRYSTAL[i] && fe.get() != feTarget) {
+                fe.set(feTarget);
+                changed++;
+            }
+            ModConfigSpec.LongValue energy = TIERS.get(tier).rates().get(ResourceType.ENERGY.rateKey());
+            long energyTarget = ResourceType.ENERGY.defaultRate(i);
+            if (energy.get() == BALANCE2_ENERGY[i] && energy.get() != energyTarget) {
+                energy.set(energyTarget);
                 changed++;
             }
         }
@@ -285,6 +361,52 @@ public final class Config {
     /** Ticks de geração de um cristal cheio, até ficar Opaco (o Lapidado, {@code cut}, dura o dobro por padrão). */
     public static long crystalLifeTicks(boolean cut) {
         return read(cut ? CUT_CRYSTAL_LIFE_TICKS : CRYSTAL_LIFE_TICKS);
+    }
+
+    /**
+     * Ticks que a carga dura a 100% de geração no Núcleo do tier de posição {@code tierOrdinal}, pela lista
+     * {@code crystalLifeMinutes}; a posição que falta na lista usa o padrão.
+     */
+    public static long crystalLifeTicks(int tierOrdinal) {
+        List<? extends Integer> minutes = read(CRYSTAL_LIFE_MINUTES);
+        int value = tierOrdinal >= 0 && tierOrdinal < minutes.size()
+                ? minutes.get(tierOrdinal) : CoreMath.defaultLifeMinutes(tierOrdinal);
+        return (long) Math.max(1, Math.min(value, MAX_LIFE_MINUTES)) * CoreMath.TICKS_PER_MINUTE;
+    }
+
+    /** Cargas de um cristal até rachar (cada recarga gasta uma). */
+    public static int crystalIntegrity() {
+        return read(CRYSTAL_INTEGRITY);
+    }
+
+    /** Cristais de Sinal cheios que refazem um cristal rachado na bancada. */
+    public static int recastCrystals() {
+        return read(RECAST_CRYSTALS);
+    }
+
+    /** Raio da interferência entre Núcleos (0 = desligada). */
+    public static int interferenceRadius() {
+        return read(INTERFERENCE_RADIUS);
+    }
+
+    /** Eficiência que cada vizinho no raio tira. */
+    public static double interferencePenalty() {
+        return read(INTERFERENCE_PENALTY);
+    }
+
+    /** Perda máxima da eficiência pela interferência. */
+    public static double interferenceMax() {
+        return read(INTERFERENCE_MAX);
+    }
+
+    /** Geração base que cada Eco soma (0,05 = +5%). */
+    public static double ecoBonus() {
+        return read(ECO_BONUS);
+    }
+
+    /** Eco máximo de um Núcleo (0 = sem teto). */
+    public static long ecoMax() {
+        return read(ECO_MAX);
     }
 
     /** Ticks que o Núcleo leva para recarregar um cristal Opaco. */

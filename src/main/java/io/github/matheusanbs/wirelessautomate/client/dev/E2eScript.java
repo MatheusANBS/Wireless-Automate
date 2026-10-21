@@ -28,12 +28,37 @@ import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
  * passos e das capturas são o contrato do {@code result.txt}.
  */
 final class E2eScript {
+    /**
+     * Opcional: {@code WA_E2E_ONLY=tablet} roda só a abertura, o nome e as redes de B, a transferência entre redes e os
+     * passos do Tablet; {@code WA_E2E_ONLY=ressonador}, só a abertura e os passos do Ressonador,
+     * com os do JEI dele; {@code WA_E2E_ONLY=guia}, só a abertura e as páginas do guia (com o GuideME).
+     */
+    private static final String ONLY = System.getenv("WA_E2E_ONLY");
+
     private E2eScript() {
     }
 
     static List<Step> script() {
         List<Step> list = new ArrayList<>();
         openingSteps(list);
+        if ("tablet".equals(ONLY)) {
+            networkSteps(list);
+            list.add(close("fechar B"));
+            typeNetworkTransferSteps(list);
+            tabletSteps(list);
+            return list;
+        }
+        if ("ressonador".equals(ONLY)) {
+            resonatorSteps(list);
+            jeiResonatorSteps(list);
+            return list;
+        }
+        if ("guia".equals(ONLY)) {
+            if (ModList.get().isLoaded("guideme")) {
+                guideSteps(list);
+            }
+            return list;
+        }
         filterSteps(list);
         networkSteps(list);
         layoutSteps(list);

@@ -15,7 +15,6 @@ import java.util.List;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -37,8 +36,6 @@ final class ListLayout {
     private static final int PANEL_MAX = 260;
     private static final int LABEL_H = 10;
     private static final int SUGGEST_MAX_W = 230;
-    /** Espaço que o nome do grupo guarda ao lado do "Colar nas N" (o botão encurta antes). */
-    private static final int GROUP_NAME_MIN = 60;
     /** Altura do cubo do painel: menor nas telas baixas. */
     private static final int NET_SMALL = 3 * 12 + 2 * 2;
     private static final int TALL = 300;
@@ -49,12 +46,12 @@ final class ListLayout {
      * visão por máquinas ({@link MachineRows}), a linha da página: a linha inteira ({@code MACHINE}), o Olho e o
      * "Mostrar menos" do bloco.
      */
-    enum Kind { LABEL, VIEW, QUICK, TYPE_CHIP, CLEAR, FORGET, HEADER, PASTE_GROUP, ROW, FULL_SCREEN, COPY,
+    enum Kind { LABEL, VIEW, QUICK, TYPE_CHIP, CLEAR, FORGET, ROW, FULL_SCREEN, COPY,
         PASTE, UNDO, TREE, TREE_TOGGLE, TREE_EYE, TREE_FEW, MACHINE, MACHINE_EYE, MACHINE_FEW, MACHINE_OPEN;
 
         /** Fica por cima da linha onde está. */
         boolean onTop() {
-            return this == PASTE_GROUP || this == TREE_TOGGLE || this == TREE_EYE || this == TREE_FEW
+            return this == TREE_TOGGLE || this == TREE_EYE || this == TREE_FEW
                     || this == MACHINE_EYE || this == MACHINE_FEW || this == MACHINE_OPEN;
         }
     }
@@ -223,7 +220,7 @@ final class ListLayout {
     }
 
     /** Altura de uma linha da lista. */
-    private int rowHeight(ListTree.Line<ResourceLocation> line) {
+    private int rowHeight(ListTree.Line line) {
         return TreeRows.height(line, line.kind().tree() ? list.model.row(line) : null);
     }
 
@@ -240,7 +237,7 @@ final class ListLayout {
         if (list.machineView()) {
             return list.machineRows.height(row);
         }
-        List<ListTree.Line<ResourceLocation>> lines = list.model.tree().lines();
+        List<ListTree.Line> lines = list.model.tree().lines();
         return row < lines.size() ? rowHeight(lines.get(row)) : LIMIT_ROW;
     }
 
@@ -261,26 +258,17 @@ final class ListLayout {
             list.machineRows.arrange(font, this);
             return;
         }
-        List<ListTree.Line<ResourceLocation>> rows = list.model.tree().lines();
+        List<ListTree.Line> rows = list.model.tree().lines();
         int y = rowsTop;
         drawnUntil = list.scroll;
         for (int r = list.scroll; r < rows.size(); r++) {
-            ListTree.Line<ResourceLocation> row = rows.get(r);
+            ListTree.Line row = rows.get(r);
             int h = rowHeight(row);
             if (y + h > rowsBottom) {
                 break;
             }
             drawnUntil = r + 1;
             switch (row.kind()) {
-                case HEADER -> {
-                    hots.add(new Hot(Kind.HEADER, x0, y, listW, h, r));
-                    int n = list.profileActions.pasteCount(row.group());
-                    if (n > 0) {
-                        Component label = pasteGroupLabel(font, row, n);
-                        int bw = font.width(label) + 8;
-                        hots.add(new Hot(Kind.PASTE_GROUP, x0 + listW - bw - 2, y + 1, bw, h - 2, r));
-                    }
-                }
                 case NODE -> {
                     hots.add(new Hot(Kind.ROW, x0, y, listW, h, row.node()));
                     list.treeRows.arrangeNode(hots, list.snapshot().nodes().get(row.node()), r, x0, y, h);
@@ -347,23 +335,6 @@ final class ListLayout {
     Component forgetLabel(Font font) {
         Component full = tr("list.profile.forget");
         return font.width(full) + 6 <= listW / 3 ? full : Component.literal("✕");
-    }
-
-    /**
-     * O texto do "Colar nas N" do cabeçalho: inteiro, "Colar N" ou só o número, o primeiro que deixa o nome do
-     * grupo legível ao lado (a dica do botão diz tudo).
-     */
-    Component pasteGroupLabel(Font font, ListTree.Line<ResourceLocation> row, int n) {
-        int name = font.width(list.texts.machineName(row.group()) + " · "
-                + Math.max(row.count(), list.snapshot().groupCount(row.group())));
-        int want = Math.min(name, GROUP_NAME_MIN);
-        for (Component label : List.of(tr("list.paste_group", n), tr("list.paste_group.short", n),
-                Component.literal(Integer.toString(n)))) {
-            if (listW - 11 - 5 - (font.width(label) + 8) - 2 >= want) {
-                return label;
-            }
-        }
-        return Component.literal(Integer.toString(n));
     }
 
     // ------------------------------------------------------------------ áreas

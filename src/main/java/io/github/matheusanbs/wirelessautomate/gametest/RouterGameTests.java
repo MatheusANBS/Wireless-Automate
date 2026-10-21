@@ -31,7 +31,7 @@ public final class RouterGameTests {
      * de ticks por segundo quando está à toa. O teste espera até {@link #RELOAD_WAIT_NANOS}; o limite em
      * ticks só cobre esse prazo com folga.
      */
-    private static final int RELOAD_TIMEOUT = 1_000_000;
+    static final int RELOAD_TIMEOUT = 1_000_000;
     private static final long RELOAD_WAIT_NANOS = 10_000_000_000L;
     private static final BlockPos MACHINE = new BlockPos(1, 1, 1);
     private static final BlockPos ROUTER = MACHINE.above();
@@ -117,10 +117,10 @@ public final class RouterGameTests {
             ultimateCrystal.set(134_217_728L);
             eliteCrystal.set(5_000L);
             Config.BALANCE_VERSION.set(1);
-            helper.assertValueEqual(Config.migrateBalance(), 3, "valores migrados");
-            helper.assertValueEqual(unobtainium.get(), 2_097_152_000L, "energia do Unobtainium");
-            helper.assertValueEqual(basicCrystal.get(), 128L, "FE por cristal, Básico");
-            helper.assertValueEqual(ultimateCrystal.get(), 1_073_741_824L, "FE por cristal, Ultimate");
+            helper.assertValueEqual(Config.migrateBalance(), 6, "valores migrados");
+            helper.assertValueEqual(unobtainium.get(), 4_294_967_296L, "energia do Unobtainium");
+            helper.assertValueEqual(basicCrystal.get(), 216L, "FE por cristal, Básico");
+            helper.assertValueEqual(ultimateCrystal.get(), 268_435_456L, "FE por cristal, Ultimate");
             helper.assertValueEqual(eliteCrystal.get(), 5_000L, "FE por cristal do dono");
             helper.assertValueEqual(vibranium.get(), 1_234L, "energia do Vibranium do dono");
             helper.assertValueEqual(elite.get(), 131_072L, "o balanceamento 1 rodou de novo");
@@ -181,7 +181,7 @@ public final class RouterGameTests {
      * lote. {@code reloadsBefore} é o contador lido antes da primeira gravação: lido depois, uma recarga rápida
      * já contada faria o teste esperar outra que não vem.
      */
-    private static void succeedAfterReload(GameTestHelper helper, int reloadsBefore) {
+    static void succeedAfterReload(GameTestHelper helper, int reloadsBefore) {
         long deadline = System.nanoTime() + RELOAD_WAIT_NANOS;
         helper.startSequence()
                 .thenWaitUntil(() -> helper.assertTrue(ConfigReloadListener.fileReloads() > reloadsBefore

@@ -1,0 +1,39 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "allthemodium"
+    }
+  ],
+  "type": "wirelessautomate:tune_crystal",
+  "category": "misc",
+  "ingredients": [
+    [
+      {
+        "item": "wirelessautomate:cut_signal_crystal"
+      },
+      {
+        "item": "wirelessautomate:tuned_signal_crystal_elite"
+      },
+      {
+        "item": "wirelessautomate:tuned_signal_crystal_emerald"
+      },
+      {
+        "item": "wirelessautomate:tuned_signal_crystal_allthemodium"
+      }
+    ],
+    {
+      "tag": "c:ingots/vibranium"
+    },
+    {
+      "tag": "c:ingots/vibranium"
+    },
+    {
+      "tag": "c:ingots/vibranium_allthemodium_alloy"
+    }
+  ],
+  "result": {
+    "id": "wirelessautomate:tuned_signal_crystal_vibranium",
+    "count": 1
+  }
+}

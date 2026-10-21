@@ -4,8 +4,11 @@ import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.packet.ResonatorStatePayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
+import io.github.matheusanbs.wirelessautomate.resonator.CoreCatalyst;
+import io.github.matheusanbs.wirelessautomate.resonator.CoreEcoState;
 import io.github.matheusanbs.wirelessautomate.resonator.CoreInventory;
 import io.github.matheusanbs.wirelessautomate.resonator.CoreMath;
+import io.github.matheusanbs.wirelessautomate.resonator.CoreYield;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
 import io.github.matheusanbs.wirelessautomate.resonator.TuneSignal;
@@ -27,13 +30,14 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Menu da tela do Núcleo de Ressonância: um slot por câmara do tier (um cristal cada), o da redstone e o inventário
+ * Menu da tela do Núcleo de Ressonância: um slot por câmara do tier (um cristal cada), o do catalisador, no Ultimate o
+ * do Eco ({@link CoreInventory#ecoSlot}, sempre vazio: o Afinado Ultimate rachado posto nele vira Eco) e o inventário
  * do jogador. Os slots viajam pelo próprio menu; o resto vai pelo {@link ResonatorStatePayload}, montado no servidor
  * e mandado só com a tela aberta, quando muda, no máximo a cada {@link StorageListMenu#SYNC_INTERVAL} ticks (o
  * primeiro na hora). A estação nunca sai do servidor.
  *
  * <p>As câmaras ficam fixas na abertura: se o tier muda com a tela aberta (Cartão de Upgrade de outro jogador), o
- * {@link #stillValid} deixa de valer, porque o slot da redstone do {@code CoreInventory} muda de índice. Com o jogador
+ * {@link #stillValid} deixa de valer, porque o slot do catalisador do {@code CoreInventory} muda de índice. Com o jogador
  * ainda ao alcance e o Núcleo montado, o {@link #broadcastChanges} reabre a tela com as câmaras novas; senão o vanilla
  * a fecha.
  */
@@ -42,6 +46,8 @@ public class ResonatorMenu extends AbstractContainerMenu {
     public static final int CHAMBER_Y = 39;
     public static final int REDSTONE_X = 191;
     public static final int REDSTONE_Y = 61;
+    public static final int ECO_X = 191;
+    public static final int ECO_Y = 219;
     public static final int INVENTORY_X = 11;
     public static final int INVENTORY_Y = 159;
     public static final int HOTBAR_Y = 217;
@@ -69,7 +75,8 @@ public class ResonatorMenu extends AbstractContainerMenu {
 
     /** Cliente (e a captura de tela de desenvolvimento). */
     public ResonatorMenu(int containerId, Inventory inventory, BlockPos pos, RouterTier tier, int chambers) {
-        this(containerId, inventory, pos, tier, chambers, new SimpleContainer(chambers + 1), null);
+        this(containerId, inventory, pos, tier, chambers,
+                new SimpleContainer(chambers + (CoreInventory.ecoSlot(tier) < 0 ? 1 : 2)), null);
     }
 
     private ResonatorMenu(int containerId, Inventory inventory, BlockPos pos, RouterTier tier, int chambers,
@@ -84,7 +91,10 @@ public class ResonatorMenu extends AbstractContainerMenu {
         for (int i = 0; i < this.chambers; i++) {
             addSlot(new ChamberSlot(container, i, CHAMBER_X + 18 * i, CHAMBER_Y));
         }
-        addSlot(new RedstoneSlot(container, this.chambers, REDSTONE_X, REDSTONE_Y));
+        addSlot(new RedstoneSlot(container, this.chambers, REDSTONE_X, REDSTONE_Y, this.tier));
+        if (ecoSlot() >= 0) {
+            addSlot(new EcoSlot(container, ecoSlot(), ECO_X, ECO_Y));
+        }
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
                 addSlot(new Slot(inventory, col + row * 9 + 9, INVENTORY_X + 18 * col, INVENTORY_Y + 18 * row));
@@ -127,8 +137,14 @@ public class ResonatorMenu extends AbstractContainerMenu {
         return chambers;
     }
 
+    /** O índice do slot do Eco, ou -1 fora do Ultimate (ou com as câmaras que não são as do tier). */
+    public int ecoSlot() {
+        int eco = CoreInventory.ecoSlot(tier);
+        return eco == chambers + 1 ? eco : -1;
+    }
+
     public int inventoryStart() {
-        return chambers + 1;
+        return chambers + (ecoSlot() < 0 ? 1 : 2);
     }
 
     /** Servidor: o Núcleo da tela; nulo no cliente. */
@@ -171,31 +187,34 @@ public class ResonatorMenu extends AbstractContainerMenu {
     private ResonatorStatePayload capture(ResonanceCoreBlockEntity core) {
         long fePerCrystal = Config.resonatorFePerCrystal(core.tier());
         List<ItemStack> crystals = core.crystals();
-        int yieldSum = 0;
-        boolean dull = false;
+        int quarters = CoreYield.quarters(crystals, core.chambers(), core.tier(), false);
+        boolean rechargeable = false;
         for (int i = 0; i < core.chambers(); i++) {
-            ItemStack stack = crystals.get(i);
-            if (stack.getItem() instanceof SignalCrystalItem item) {
-                yieldSum += item.yield();
-                dull |= SignalCrystalItem.isDull(stack);
-            }
+            rechargeable |= SignalCrystalItem.isRechargeable(crystals.get(i));
         }
-        int recharge = dull && core.redstone() > 0 ? core.rechargeProgress() : 0;
+        int recharge = rechargeable && core.redstone() > 0 ? core.rechargeProgress() : 0;
         int layout = core.layout() == null ? 0 : core.layout().ordinal() + 1;
         return new ResonatorStatePayload(containerId, core.energy(), core.capacity(), core.generationPerTick(),
-                CoreMath.perTick(fePerCrystal, yieldSum, 1.0), core.dial(),
+                CoreMath.perTick(fePerCrystal, quarters, 1.0), core.dial(),
                 (int) Math.round(core.efficiency() * 1000), (int) Math.round(Tuning.ceiling(core.tier().ordinal()) * 1000),
                 core.auto(), core.hasTuner(), TuneSignal.steps(core.station(), core.dial()),
                 TuneSignal.tuned(core.station(), core.dial()), recharge,
                 (int) Math.min(Integer.MAX_VALUE, Config.rechargeTicks()), core.energyPorts(), core.crystalPorts(),
-                layout);
+                layout, core.interference().lossPermille(), core.interference().nearest(), core.eco().value(),
+                bonusPermille(core.eco().factor()));
+    }
+
+    /** O bônus do fator do Eco em milésimos ({@code 1,5} é 500); o {@code Math.round} satura em {@code Long.MAX_VALUE}. */
+    static long bonusPermille(double factor) {
+        return Math.max(0, Math.round((factor - 1) * 1000));
     }
 
     /**
      * Shift + clique: de um slot do Núcleo para o inventário (barra primeiro); do inventário, cristal para as
-     * câmaras livres e redstone para o slot dela; o resto troca entre mochila e barra. Os slots do Núcleo dão uma
-     * cópia (o {@code CoreInventory} não deixa sair pilha dele): a sobra volta pelo {@code setByPlayer}, e a redstone
-     * entra pelo {@code safeInsert}, nunca pela soma no lugar do {@code moveItemStackTo}.
+     * câmaras livres, o catalisador para o slot dele e, no Ultimate, o Afinado Ultimate rachado para o Eco (que o
+     * queima um a um); o resto troca entre mochila e barra. Os slots do Núcleo dão
+     * uma cópia (o {@code CoreInventory} não deixa sair pilha dele): a sobra volta pelo {@code setByPlayer}, e o
+     * catalisador entra pelo {@code safeInsert}, nunca pela soma no lugar do {@code moveItemStackTo}.
      */
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
@@ -219,8 +238,8 @@ public class ResonatorMenu extends AbstractContainerMenu {
             slot.onTake(player, original.copyWithCount(original.getCount() - stack.getCount()));
             return original;
         }
-        if (stack.getItem() instanceof SignalCrystalItem && fillChambers(stack)
-                || CoreInventory.isPlainRedstone(stack) && slots.get(chambers).safeInsert(stack).getCount()
+        if (stack.getItem() instanceof SignalCrystalItem && (fillChambers(stack) || burnEco(stack))
+                || slots.get(chambers).mayPlace(stack) && slots.get(chambers).safeInsert(stack).getCount()
                         < original.getCount()) {
             // O que sobrou com o Núcleo cheio fica onde está: o vanilla repete o Shift + clique enquanto devolvemos
             // algo, e a repetição levaria a sobra para a barra.
@@ -250,6 +269,24 @@ public class ResonatorMenu extends AbstractContainerMenu {
     private boolean fillChambers(ItemStack stack) {
         boolean moved = false;
         while (!stack.isEmpty() && moveItemStackTo(stack, 0, chambers, false)) {
+            moved = true;
+        }
+        return moved;
+    }
+
+    /** Um cristal por vez no slot do Eco, enquanto ele aceitar (o teto do {@code ecoMax} para no meio). */
+    private boolean burnEco(ItemStack stack) {
+        if (ecoSlot() < 0) {
+            return false;
+        }
+        Slot eco = slots.get(ecoSlot());
+        boolean moved = false;
+        while (!stack.isEmpty() && eco.mayPlace(stack)) {
+            int before = stack.getCount();
+            eco.safeInsert(stack, 1);
+            if (stack.getCount() == before) {
+                break;
+            }
             moved = true;
         }
         return moved;
@@ -295,7 +332,7 @@ public class ResonatorMenu extends AbstractContainerMenu {
         }
     }
 
-    /** Uma câmara: só Cristal de Sinal ou Lapidado, um por vez. */
+    /** Uma câmara: só cristal não rachado, um por vez (o rachado só sai). */
     private static final class ChamberSlot extends Slot {
         ChamberSlot(Container container, int index, int x, int y) {
             super(container, index, x, y);
@@ -303,7 +340,7 @@ public class ResonatorMenu extends AbstractContainerMenu {
 
         @Override
         public boolean mayPlace(ItemStack stack) {
-            return stack.getItem() instanceof SignalCrystalItem;
+            return stack.getItem() instanceof SignalCrystalItem && !SignalCrystalItem.isCracked(stack);
         }
 
         @Override
@@ -312,15 +349,43 @@ public class ResonatorMenu extends AbstractContainerMenu {
         }
     }
 
-    /** A redstone da recarga: só pó de redstone comum (sem componentes), até {@link ResonanceCoreBlockEntity#MAX_REDSTONE}. */
-    private static final class RedstoneSlot extends Slot {
-        RedstoneSlot(Container container, int index, int x, int y) {
+    /**
+     * O Eco do Ultimate: só o Afinado Ultimate rachado ({@link CoreEcoState#isFuel}) e, no servidor, só abaixo do teto;
+     * um por vez, que o {@code CoreInventory} queima na hora.
+     */
+    private static final class EcoSlot extends Slot {
+        EcoSlot(Container container, int index, int x, int y) {
             super(container, index, x, y);
         }
 
         @Override
         public boolean mayPlace(ItemStack stack) {
-            return CoreInventory.isPlainRedstone(stack);
+            return CoreEcoState.isFuel(stack) && container.canPlaceItem(getContainerSlot(), stack);
+        }
+
+        @Override
+        public int getMaxStackSize() {
+            return 1;
+        }
+    }
+
+    /**
+     * O catalisador da recarga, até {@link ResonanceCoreBlockEntity#MAX_REDSTONE}: a regra do tier
+     * ({@link CoreCatalyst#accepts}) e, com o slot ocupado, só o mesmo item. Vale nos dois lados, pelo tier da tela e
+     * pelo conteúdo do slot.
+     */
+    private static final class RedstoneSlot extends Slot {
+        private final RouterTier tier;
+
+        RedstoneSlot(Container container, int index, int x, int y, RouterTier tier) {
+            super(container, index, x, y);
+            this.tier = tier;
+        }
+
+        @Override
+        public boolean mayPlace(ItemStack stack) {
+            ItemStack held = getItem();
+            return CoreCatalyst.accepts(tier, stack) && (held.isEmpty() || held.is(stack.getItem()));
         }
 
         @Override

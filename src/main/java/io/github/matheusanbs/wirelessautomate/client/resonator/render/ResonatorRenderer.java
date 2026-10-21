@@ -9,6 +9,7 @@ import io.github.matheusanbs.wirelessautomate.resonator.ResonatorPartBlock;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.WeakHashMap;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
@@ -21,9 +22,11 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * A câmara animada do Núcleo montado, desenhada a partir do centro da estrutura: a placa de Chladni, os cristais e
- * os feixes, as faíscas, a figura de Lissajous e a lente (os cristais são opacos e vão antes dos aditivos). O
- * estado de cada câmara fica numa {@link ChamberScene} por dimensão e posição, atualizada uma vez por tick novo; as
+ * A câmara animada do Núcleo montado, desenhada a partir do centro da estrutura: a placa de Chladni, os cristais
+ * (facetados pelo shader do cristal, ou o modelo do item sem ele) e os feixes, a aura dos cristais, o Núcleo de
+ * plasma, o conduto de energia e a recarga em espiral, ou as faíscas, a figura de Lissajous e a lente sem o shader
+ * (os cristais são opacos e vão antes dos aditivos). Com um shaderpack do Iris em uso, o desenho é o sem o shader.
+ * O estado de cada câmara fica numa {@link ChamberScene} por dimensão e posição, atualizada uma vez por tick novo; as
  * que não são desenhadas há mais de 200 ticks saem numa varredura a cada 200 ticks. Cada block entity guarda a cena
  * que achou na primeira vez, para o quadro não criar uma chave nova; a cena por posição sobrevive à recarga do
  * chunk.
@@ -35,6 +38,8 @@ public final class ResonatorRenderer implements BlockEntityRenderer<ResonanceCor
     /** A cena já achada de cada Núcleo; a chave é fraca e some com o block entity. */
     private static final Map<ResonanceCoreBlockEntity, ChamberScene> BY_CORE = new WeakHashMap<>();
     private static long lastSweep;
+    /** Só do e2e: força o desenho sem o shader (a figura de Lissajous e a lente), para medir o custo dos dois na mesma rodada. */
+    public static boolean forceLegacyForTests;
 
     private record SceneKey(ResourceKey<Level> dimension, BlockPos pos) {
     }
@@ -59,6 +64,9 @@ public final class ResonatorRenderer implements BlockEntityRenderer<ResonanceCor
                     key -> new ChamberScene(key.pos()));
             BY_CORE.put(core, scene);
         }
+        boolean shader = !forceLegacyForTests && PlasmaShader.get() != null && RibbonShader.get() != null
+                && !ShaderPackCheck.active();
+        scene.useConduit(shader);
         if (scene.lastUsed != gameTime) {
             scene.update(view, core.tunedAt(), gameTime, level);
         }
@@ -70,11 +78,29 @@ public final class ResonatorRenderer implements BlockEntityRenderer<ResonanceCor
         poseStack.pushPose();
         poseStack.translate(center.x, center.y, center.z);
         ChladniPlate.render(poseStack, buffer, scene, partialTick);
-        ChamberCrystals.render(poseStack, buffer, scene, gameTime, partialTick, level);
-        ChamberSparks.render(poseStack, buffer, scene, partialTick);
-        LissajousTrace.render(poseStack, buffer, scene, partialTick, tierColor);
-        ChamberLens.render(poseStack, buffer, scene, gameTime, partialTick, tierColor,
-                state.getValue(ResonatorPartBlock.FACING));
+        ChamberCrystals.render(poseStack, buffer, scene, gameTime, partialTick, level,
+                shader && CrystalShader.get() != null, shader, tierColor);
+        if (shader) {
+            Vec3 eye = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+            Vec3 world = scene.worldCenter();
+            double dx = eye.x - world.x;
+            double dy = eye.y - world.y;
+            double dz = eye.z - world.z;
+            double distanceSq = dx * dx + dy * dy + dz * dz;
+            if (distanceSq < FlowConduit.RANGE_SQ) {
+                CrystalAura.render(poseStack, buffer, scene, gameTime, partialTick, tierColor);
+            }
+            PlasmaCore.render(poseStack, buffer, scene, partialTick, tierColor, distanceSq);
+            if (distanceSq < FlowConduit.RANGE_SQ) {
+                FlowConduit.render(poseStack, buffer, scene, partialTick, tierColor);
+                RechargeSpiral.render(poseStack, buffer, scene, gameTime, partialTick, tierColor);
+            }
+        } else {
+            ChamberSparks.render(poseStack, buffer, scene, partialTick);
+            LissajousTrace.render(poseStack, buffer, scene, partialTick, tierColor);
+            ChamberLens.render(poseStack, buffer, scene, gameTime, partialTick, tierColor,
+                    state.getValue(ResonatorPartBlock.FACING));
+        }
         poseStack.popPose();
     }
 

@@ -50,10 +50,16 @@ final class NodeText {
     }
 
 
-    /** Nome do nó; sem nome, o da máquina; sem máquina conhecida, "Roteador". */
+    /** Nome do nó; sem nome, "Roteador &lt;tier&gt;". */
     Component nodeName(NodeView node) {
-        if (!node.name().isEmpty()) {
-            return Component.literal(node.name());
+        return node.name().isEmpty() ? tr("router.default", Component.translatable(node.tier().translationKey()))
+                : Component.literal(node.name());
+    }
+
+    /** O nome da máquina presa: o dado pelo jogador; sem ele, o do bloco ("Roteador" se o bloco não é conhecido). */
+    Component attachedName(NodeView node) {
+        if (!node.attachedLabel().isEmpty()) {
+            return Component.literal(node.attachedLabel());
         }
         Block block = machineBlock(node);
         return block == Blocks.AIR ? Component.translatable("block.wirelessautomate.router") : RouterBlock.machineName(block);
@@ -131,7 +137,7 @@ final class NodeText {
         text.append("\n").append(coords(node).copy().withColor(GuiPaint.TOOLTIP_MUTED));
         text.append("\n").append(Component.translatable(node.tier().translationKey()).copy().withColor(GuiPaint.TOOLTIP_MUTED))
                 .append(Component.literal(" · ").withColor(GuiPaint.TOOLTIP_MUTED))
-                .append(RouterBlock.machineName(machineBlock(node)).copy().withColor(GuiPaint.TOOLTIP_MUTED));
+                .append(attachedName(node).copy().withColor(GuiPaint.TOOLTIP_MUTED));
         for (ResourceType type : TYPES) {
             text.append("\n").append(typeName(type).copy().withColor(GuiPaint.TOOLTIP_MUTED))
                     .append(Component.literal(": ").withColor(GuiPaint.TOOLTIP_MUTED)).append(networkNames(node.networks(type)));

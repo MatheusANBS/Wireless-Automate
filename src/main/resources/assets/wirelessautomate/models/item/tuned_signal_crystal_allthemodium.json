@@ -1,0 +1,20 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "wirelessautomate:item/tuned_signal_crystal_allthemodium"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "wirelessautomate:dull": 1
+      },
+      "model": "wirelessautomate:item/tuned_signal_crystal_allthemodium_dull"
+    },
+    {
+      "predicate": {
+        "wirelessautomate:cracked": 1
+      },
+      "model": "wirelessautomate:item/tuned_signal_crystal_allthemodium_cracked"
+    }
+  ]
+}

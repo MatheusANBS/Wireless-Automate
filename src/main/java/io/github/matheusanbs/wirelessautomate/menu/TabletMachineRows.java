@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.menu;
 
+import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.menu.TabletRows.MachineLive;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.netty.handler.codec.DecoderException;
@@ -68,7 +69,7 @@ public record TabletMachineRows(boolean active, List<Row> rows, List<RouterRef> 
      * @param number   o "#N" da vinculada: a posição dela no grupo do roteador, a partir de 1, como na árvore e na tela
      *                 do roteador; 0 na presa
      * @param pos      a posição ({@code BlockPos.asLong}); a do roteador numa presa de roteador descarregado
-     * @param label    rótulo dado pelo jogador; vazio = a tela usa "#N" (ou o nome do roteador na presa)
+     * @param label    rótulo dado pelo jogador; vazio = a tela usa "#N" (ou o nome do bloco na presa)
      */
     public record Machine(int router, boolean attached, int index, int number, long pos, String label,
             boolean exception)
@@ -79,8 +80,8 @@ public record TabletMachineRows(boolean active, List<Row> rows, List<RouterRef> 
     public record More(ResourceLocation block, int hidden) implements Row {
     }
 
-    /** Um roteador das linhas: a chave e o nome dado pelo jogador (vazio = a tela usa o nome padrão). */
-    public record RouterRef(NodeKey key, String name) {
+    /** Um roteador das linhas: a chave, o nome dado pelo jogador (vazio = "Roteador &lt;tier&gt;") e o tier. */
+    public record RouterRef(NodeKey key, String name, RouterTier tier) {
     }
 
     /** Igual a {@code other} fora o estado e a vazão das máquinas. */
@@ -123,6 +124,7 @@ public record TabletMachineRows(boolean active, List<Row> rows, List<RouterRef> 
         for (RouterRef router : rows.routers) {
             NodeKey.STREAM_CODEC.encode(buf, router.key);
             buf.writeUtf(router.name, RouterSnapshot.NAME_LENGTH);
+            buf.writeEnum(router.tier);
         }
         buf.writeVarInt(rows.rows.size());
         for (Row row : rows.rows) {
@@ -168,7 +170,9 @@ public record TabletMachineRows(boolean active, List<Row> rows, List<RouterRef> 
         int routerCount = TabletPageCodec.readCount(buf, TabletSnapshot.MAX_NODES);
         List<RouterRef> routers = new ArrayList<>(routerCount);
         for (int i = 0; i < routerCount; i++) {
-            routers.add(new RouterRef(NodeKey.STREAM_CODEC.decode(buf), buf.readUtf(RouterSnapshot.NAME_LENGTH)));
+            NodeKey key = NodeKey.STREAM_CODEC.decode(buf);
+            String name = buf.readUtf(RouterSnapshot.NAME_LENGTH);
+            routers.add(new RouterRef(key, name, buf.readEnum(RouterTier.class)));
         }
         int count = TabletPageCodec.readCount(buf, TabletSnapshot.MAX_NODES);
         List<Row> rows = new ArrayList<>(count);

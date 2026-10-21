@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.registry;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
@@ -145,6 +146,15 @@ public final class ModDataComponents {
                     .persistent(ExtraCodecs.intRange(0, CrystalCharge.FULL))
                     .networkSynchronized(ByteBufCodecs.VAR_INT));
 
+    /**
+     * Integridade de um cristal do Ressonador (de 0 até {@code resonator.crystalIntegrity}); sem o componente, cheia.
+     * Cada recarga gasta 1, e com 0 o cristal está rachado.
+     */
+    public static final Supplier<DataComponentType<Integer>> CRYSTAL_INTEGRITY =
+            DATA_COMPONENTS.registerComponentType("crystal_integrity", builder -> builder
+                    .persistent(ExtraCodecs.intRange(0, 64))
+                    .networkSynchronized(ByteBufCodecs.VAR_INT));
+
     /** Tipo (aba) que o Configurador cola; sem o componente, todos. */
     public static final Supplier<DataComponentType<ResourceType>> CONFIGURATOR_TYPE =
             DATA_COMPONENTS.registerComponentType("configurator_type", builder -> builder
@@ -159,6 +169,13 @@ public final class ModDataComponents {
             DATA_COMPONENTS.registerComponentType("upgrade_from", builder -> builder
                     .persistent(RouterTier.CODEC)
                     .networkSynchronized(RouterTier.STREAM_CODEC));
+
+    /** O Eco Ressonante do Núcleo Ultimate quebrado, que volta ao colocar; sem o componente, 0. */
+    public static final Supplier<DataComponentType<Long>> RESONATOR_ECO =
+            DATA_COMPONENTS.registerComponentType("resonator_eco", builder -> builder
+                    .persistent(Codec.LONG.validate(value -> value >= 0
+                            ? DataResult.success(value) : DataResult.error(() -> "Eco negativo: " + value)))
+                    .networkSynchronized(ByteBufCodecs.VAR_LONG));
 
     private ModDataComponents() {
     }

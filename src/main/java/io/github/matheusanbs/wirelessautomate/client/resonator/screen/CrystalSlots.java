@@ -1,7 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client.resonator.screen;
 
 import static io.github.matheusanbs.wirelessautomate.client.resonator.screen.CoreScreenLayout.CRYSTALS_LABEL;
-import static io.github.matheusanbs.wirelessautomate.client.resonator.screen.CoreScreenLayout.REDSTONE_SLOT;
 
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
@@ -11,7 +10,6 @@ import io.github.matheusanbs.wirelessautomate.resonator.CrystalCharge;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -20,23 +18,31 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Os slots do Núcleo: o rótulo das câmaras, o fundo de cada câmara e da redstone (o tracejado na vazia), a barra da
- * recarga em latão sobre o Opaco que recarrega (o primeiro, como no servidor) e o rótulo da redstone. Os itens e a barra de carga dos cristais são do vanilla.
+ * Os slots do Núcleo: o rótulo das câmaras, o fundo de cada câmara e do catalisador (o tracejado na vazia), a barra
+ * da recarga em latão sobre o Opaco que recarrega (o primeiro, como no servidor), a integridade
+ * ({@link IntegrityBars}) e o rótulo do catalisador ({@link CatalystText}). Os itens e a barra de carga dos cristais
+ * são do vanilla.
  */
 final class CrystalSlots {
     private static final int BAR_W = 13;
 
     private final ResonatorMenu menu;
+    private final IntegrityBars integrity;
+    private final CatalystText catalyst;
     private int left;
     private int top;
 
     CrystalSlots(ResonatorMenu menu) {
         this.menu = menu;
+        this.integrity = new IntegrityBars(menu);
+        this.catalyst = new CatalystText(menu);
     }
 
     void layout(int x, int y) {
         left = x;
         top = y;
+        integrity.layout(x, y);
+        catalyst.layout(x, y);
     }
 
     void render(GuiGraphics g, Font font, int mouseX, int mouseY, float partialTick) {
@@ -54,11 +60,8 @@ final class CrystalSlots {
                 dashed(g, x + 4, y + 4, 10, GuiPaint.alpha(GuiPaint.LINE, 160));
             }
         }
-        int textX = left + REDSTONE_SLOT.x() + REDSTONE_SLOT.w() + 4;
-        int textW = CRYSTALS_LABEL.x() + CRYSTALS_LABEL.w() - (REDSTONE_SLOT.x() + REDSTONE_SLOT.w() + 4);
-        int textY = top + REDSTONE_SLOT.y();
-        GuiText.draw(g, font, ResonatorText.key("redstone"), textX, textY, textW, GuiPaint.MUTED);
-        GuiText.draw(g, font, ResonatorText.key("redstone.hint"), textX, textY + 10, textW, GuiPaint.MUTED);
+        integrity.render(g);
+        catalyst.render(g, font);
     }
 
     /**
@@ -91,19 +94,10 @@ final class CrystalSlots {
             int x = left + slot.x - 1;
             int y = top + slot.y - 1;
             if (mouseX >= x && mouseX < x + 18 && mouseY >= y && mouseY < y + 18) {
-                return i == menu.redstoneSlot() ? redstoneTip() : chamberTip(i, slot.getItem());
+                return i == menu.redstoneSlot() ? catalyst.tooltip() : chamberTip(i, slot.getItem());
             }
         }
         return null;
-    }
-
-    private @Nullable List<Component> redstoneTip() {
-        ResonatorStatePayload state = menu.state();
-        if (state == null) {
-            return null;
-        }
-        return ResonatorText.tip(ResonatorText.key("redstone.tooltip"),
-                ResonatorText.key("redstone.tooltip.time", seconds(state.rechargeTicks())));
     }
 
     private @Nullable List<Component> chamberTip(int index, ItemStack stack) {
@@ -116,6 +110,9 @@ final class CrystalSlots {
         }
         List<Component> lines = new ArrayList<>();
         lines.add(stack.getHoverName());
+        if (integrity.addLines(lines, stack)) {
+            return lines;
+        }
         if (SignalCrystalItem.isDull(stack)) {
             if (index != recharging()) {
                 lines.add(ResonatorText.muted(ResonatorText.key("chamber.waiting")));
@@ -131,40 +128,46 @@ final class CrystalSlots {
         }
         lines.add(ResonatorText.muted(ResonatorText.key("chamber.charge",
                 CrystalCharge.percent(SignalCrystalItem.charge(stack)))));
-        lines.add(ResonatorText.muted(ResonatorText.key("chamber.yield", crystal.yield(),
-                ResonatorText.fe(share(state.generation(), crystal.yield())))));
+        int quarters = crystal.yieldQuarters(menu.tier());
+        lines.add(ResonatorText.muted(ResonatorText.key("chamber.yield", multiplier(quarters),
+                ResonatorText.fe(share(state.generation(), quarters)))));
         return lines;
     }
 
-    /** A câmara do Opaco que recarrega: o primeiro, a mesma regra do servidor e da câmara; -1 sem Opaco. */
+    /** A câmara do Opaco que recarrega: o primeiro não rachado, a mesma regra do servidor e da câmara; -1 sem ele. */
     private int recharging() {
         for (int i = 0; i < menu.chambers(); i++) {
             ItemStack stack = menu.getSlot(i).getItem();
-            if (stack.getItem() instanceof SignalCrystalItem && SignalCrystalItem.isDull(stack)) {
+            if (SignalCrystalItem.isRechargeable(stack)) {
                 return i;
             }
         }
         return -1;
     }
 
-    /** A parte da geração de um cristal: {@code fePerCrystal} não chega ao cliente, então pela soma dos rendimentos. */
-    private long share(long generation, int yield) {
+    /**
+     * A parte da geração de um cristal: {@code fePerCrystal} não chega ao cliente, então pela soma dos rendimentos em
+     * quartos, pela mesma regra do servidor.
+     */
+    private long share(long generation, int quarters) {
         int sum = 0;
         for (int i = 0; i < menu.chambers(); i++) {
             ItemStack stack = menu.getSlot(i).getItem();
-            if (stack.getItem() instanceof SignalCrystalItem crystal && !SignalCrystalItem.isDull(stack)) {
-                sum += crystal.yield();
+            if (stack.getItem() instanceof SignalCrystalItem crystal && !SignalCrystalItem.isDull(stack)
+                    && !SignalCrystalItem.isCracked(stack)) {
+                sum += crystal.yieldQuarters(menu.tier());
             }
         }
-        return sum <= 0 ? 0 : Math.round((double) generation * yield / sum);
+        return sum <= 0 ? 0 : Math.round((double) generation * quarters / sum);
     }
 
-    private static String seconds(int ticks) {
-        return ticks % 20 == 0 ? Integer.toString(ticks / 20) : String.format(Locale.ROOT, "%.1f", ticks / 20.0);
+    /** O rendimento em quartos como multiplicador: 4 é "1", 2 é "0.5" e 1 é "0.25". */
+    private static String multiplier(int quarters) {
+        return quarters % 4 == 0 ? Integer.toString(quarters / 4) : Double.toString(quarters / 4.0);
     }
 
     /** Um quadrado tracejado de 1 px (um pixel sim, um não) de {@code size} de lado. */
-    private static void dashed(GuiGraphics g, int x, int y, int size, int color) {
+    static void dashed(GuiGraphics g, int x, int y, int size, int color) {
         for (int i = 0; i < size; i += 2) {
             g.fill(x + i, y, x + i + 1, y + 1, color);
             g.fill(x + i + 1, y + size - 1, x + i + 2, y + size, color);

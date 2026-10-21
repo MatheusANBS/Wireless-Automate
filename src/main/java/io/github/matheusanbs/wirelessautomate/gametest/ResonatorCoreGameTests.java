@@ -68,7 +68,8 @@ public final class ResonatorCoreGameTests {
                 assertInserted(helper, core, crystal(false, CrystalCharge.FULL));
             }
             ResonatorBatch.run(helper.getLevel(), core, 20);
-            helper.assertValueEqual(core.energy(), 3L * 8_192 * 20, "energia de um lote");
+            // No Elite o Cristal de Sinal comum rende 1/4: três deles dão 3/4 do FE por cristal.
+            helper.assertValueEqual(core.energy(), 3L * 10_000 / 4 * 20, "energia de um lote");
         });
     }
 
@@ -92,7 +93,7 @@ public final class ResonatorCoreGameTests {
             tuned(core);
             assertInserted(helper, core, crystal(true, CrystalCharge.FULL));
             ResonatorBatch.run(helper.getLevel(), core, 20);
-            helper.assertValueEqual(core.energy(), 128L * 2 * 20, "energia do lapidado");
+            helper.assertValueEqual(core.energy(), 216L * 2 * 20, "energia do lapidado");
         });
     }
 
@@ -246,8 +247,8 @@ public final class ResonatorCoreGameTests {
             assertInserted(helper, core, crystal(false, CrystalCharge.FULL));
             ResonatorBatch.run(helper.getLevel(), core, 20);
             helper.assertValueEqual(core.extractEnergy(1_000L, true), 1_000L, "simulado");
-            helper.assertValueEqual(core.energy(), 2_560L, "a simulação não tira");
-            helper.assertValueEqual(core.extractEnergy(5_000L, false), 2_560L, "só o que tem");
+            helper.assertValueEqual(core.energy(), 4_320L, "a simulação não tira");
+            helper.assertValueEqual(core.extractEnergy(5_000L, false), 4_320L, "só o que tem");
             helper.assertValueEqual(core.energy(), 0L, "vazio");
         });
     }
@@ -339,7 +340,7 @@ public final class ResonatorCoreGameTests {
     @GameTest(template = "empty7")
     public static void cartaoSobeOTierEAumentaAsCamaras(GameTestHelper helper) {
         formed(helper, RouterTier.BASIC, core -> {
-            ServerPlayer player = survivor(helper);
+            ServerPlayer player = ResonatorTestSupport.withHeart(survivor(helper), RouterTier.ADVANCED);
             ItemStack card = TierCoreItem.card(RouterTier.ADVANCED, RouterTier.BASIC);
             BlockPos pos = core.getBlockPos();
             InteractionResult result = useCard(player, card, pos);
@@ -352,19 +353,71 @@ public final class ResonatorCoreGameTests {
             helper.assertValueEqual(core.capacity(),
                     CoreMath.buffer(2, Config.resonatorFePerCrystal(RouterTier.ADVANCED)), "capacidade do Avançado");
             helper.assertTrue(card.isEmpty(), "o cartão não foi gasto");
+            helper.assertValueEqual(hearts(player, RouterTier.ADVANCED), 0, "o Coração não foi gasto");
         });
     }
 
     @GameTest(template = "empty7")
     public static void cartaoErradoRecusa(GameTestHelper helper) {
         formed(helper, RouterTier.BASIC, core -> {
-            ServerPlayer player = survivor(helper);
+            ServerPlayer player = ResonatorTestSupport.withHeart(survivor(helper), RouterTier.ELITE);
             ItemStack card = TierCoreItem.card(RouterTier.ELITE, RouterTier.ADVANCED);
             InteractionResult result = useCard(player, card, core.getBlockPos());
             helper.assertTrue(result == InteractionResult.FAIL, "resultado: " + result);
             helper.assertTrue(core.tier() == RouterTier.BASIC, "o tier mudou");
             helper.assertValueEqual(card.getCount(), 1, "o cartão recusado foi gasto");
+            helper.assertValueEqual(hearts(player, RouterTier.ELITE), 1, "o Coração foi gasto no cartão recusado");
         });
+    }
+
+    @GameTest(template = "empty7")
+    public static void semCoracaoNaoSobe(GameTestHelper helper) {
+        formed(helper, RouterTier.BASIC, core -> {
+            ServerPlayer player = survivor(helper);
+            ItemStack card = TierCoreItem.card(RouterTier.ADVANCED, RouterTier.BASIC);
+            long capacity = core.capacity();
+            InteractionResult result = useCard(player, card, core.getBlockPos());
+            helper.assertTrue(result == InteractionResult.FAIL, "resultado: " + result);
+            helper.assertTrue(core.tier() == RouterTier.BASIC, "o tier mudou sem o Coração");
+            helper.assertValueEqual(core.chambers(), 1, "câmaras sem o Coração");
+            helper.assertValueEqual(core.capacity(), capacity, "capacidade sem o Coração");
+            helper.assertValueEqual(card.getCount(), 1, "o cartão foi gasto sem o Coração");
+        });
+    }
+
+    @GameTest(template = "empty7")
+    public static void coracaoDeOutroTierNaoVale(GameTestHelper helper) {
+        formed(helper, RouterTier.BASIC, core -> {
+            ServerPlayer player = ResonatorTestSupport.withHeart(survivor(helper), RouterTier.ELITE);
+            ResonatorTestSupport.withHeart(player, RouterTier.BASIC);
+            ItemStack card = TierCoreItem.card(RouterTier.ADVANCED, RouterTier.BASIC);
+            InteractionResult result = useCard(player, card, core.getBlockPos());
+            helper.assertTrue(result == InteractionResult.FAIL, "resultado: " + result);
+            helper.assertTrue(core.tier() == RouterTier.BASIC, "subiu com o Coração de outro tier");
+            helper.assertValueEqual(hearts(player, RouterTier.ELITE), 1, "o Coração Elite foi gasto");
+            helper.assertValueEqual(hearts(player, RouterTier.BASIC), 1, "o Coração Básico foi gasto");
+            helper.assertValueEqual(card.getCount(), 1, "o cartão foi gasto");
+        });
+    }
+
+    @GameTest(template = "empty7")
+    public static void criativoNaoGastaOCoracao(GameTestHelper helper) {
+        formed(helper, RouterTier.BASIC, core -> {
+            ServerPlayer player = ResonatorTestSupport.withHeart(TestPlayers.inLevel(helper), RouterTier.ADVANCED);
+            player.setGameMode(GameType.CREATIVE);
+            InteractionResult up = useCard(player, TierCoreItem.card(RouterTier.ADVANCED, RouterTier.BASIC),
+                    core.getBlockPos());
+            helper.assertTrue(up.consumesAction() && core.tier() == RouterTier.ADVANCED, "não subiu: " + up);
+            helper.assertValueEqual(hearts(player, RouterTier.ADVANCED), 1, "o criativo gastou o Coração");
+            InteractionResult again = useCard(player, TierCoreItem.card(RouterTier.ELITE, RouterTier.ADVANCED),
+                    core.getBlockPos());
+            helper.assertTrue(again.consumesAction() && core.tier() == RouterTier.ELITE,
+                    "o criativo sem o Coração Elite não subiu: " + again);
+        });
+    }
+
+    private static int hearts(ServerPlayer player, RouterTier tier) {
+        return player.getInventory().countItem(ModItems.RESONATOR_HEARTS.get(tier).get());
     }
 
     @GameTest(template = "empty")

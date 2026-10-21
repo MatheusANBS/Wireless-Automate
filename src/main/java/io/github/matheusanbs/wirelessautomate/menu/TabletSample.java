@@ -19,8 +19,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * A amostra do Tablet, uma por servidor e a mesma para todos os jogadores: a vazão de cada nó carregado, os que
  * moveram algo e os que têm destino cheio, medidos no máximo uma vez a cada {@link TabletMenu#SAMPLE_TICKS} ticks
- * por quem pedir primeiro ({@link #sampleIfDue}); e os nós do índice na ordem da Lista (máquina, nome, dimensão,
- * posição), refeita só quando o índice muda ({@link #sorted}). Com vários Tablets abertos, cada montagem só lê
+ * por quem pedir primeiro ({@link #sampleIfDue}); e os nós do índice na ordem da Lista (os com nome primeiro, pelo nome; depois
+ * os sem nome, por tier e máquina presa; por fim dimensão e posição), refeita só quando o índice muda ({@link #sorted}). Com vários Tablets abertos, cada montagem só lê
  * daqui, sem medir nem ordenar de novo. Só enquanto algum Tablet está na visão por máquinas, também a ordem das
  * máquinas por bloco ({@link MachineOrder}), solta duas amostras depois de o último sair dela (na hora, se ele
  * fechou o Tablet).
@@ -30,8 +30,10 @@ import org.jetbrains.annotations.Nullable;
 final class TabletSample {
     private static final ResourceType[] TYPES = ResourceType.values();
     private static final Comparator<NodeIndex.Entry> LIST_ORDER = Comparator
-            .comparing(NodeIndex.Entry::machine)
+            .comparing((NodeIndex.Entry entry) -> entry.name().isEmpty())
             .thenComparing(NodeIndex.Entry::name, String.CASE_INSENSITIVE_ORDER)
+            .thenComparing(NodeIndex.Entry::tier)
+            .thenComparing(NodeIndex.Entry::machine)
             .thenComparing(entry -> entry.key().dimension().location())
             .thenComparingLong(entry -> entry.key().pos().asLong());
     private static @Nullable TabletSample instance;

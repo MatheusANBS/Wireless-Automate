@@ -4,33 +4,35 @@ import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
-import java.util.ArrayList;
+import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import java.util.Collections;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
+import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * O estado do Núcleo de Ressonância (sem ticker: o gerenciador trabalha em lote). Guarda se a estrutura está
- * montada, as 98 posições da casca, a sintonia, os cristais, a redstone e a energia; quem monta e desmonta é a
- * {@link ResonatorFormation} e quem gera, gasta e recarrega é o {@link ResonatorBatch}.
+ * montada, as 98 posições da casca, a sintonia, os cristais, o catalisador da recarga ({@link CoreCatalyst}) e a
+ * energia; quem monta e desmonta é a {@link ResonatorFormation} e quem gera, gasta e recarrega é o
+ * {@link ResonatorBatch}.
  */
 public class ResonanceCoreBlockEntity extends BlockEntity {
     /** O dial começa no meio da faixa até o jogador mexer. */
     static final double DEFAULT_DIAL = 98.0;
     /** As câmaras do último tier; as do tier do Núcleo são as primeiras. */
     public static final int MAX_CHAMBERS = CoreMath.chambers(RouterTier.values().length - 1);
-    public static final int MAX_REDSTONE = 64;
+    public static final int MAX_REDSTONE = CoreCatalyst.MAX;
 
     private boolean formed;
     private List<BlockPos> members = List.of();
@@ -38,13 +40,17 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
     private int[] origin = ChamberView.origin(List.of(), worldPosition);
     /** As Portas que este Núcleo pôs no índice; não vai para o NBT (a revalidação do {@code onLoad} refaz). */
     private List<BlockPos> ports = List.of();
+    /** A vazão por Porta de Energia e o "cheio" do último lote, que vão à câmara; fora do NBT. */
+    private final CoreFlow flow = new CoreFlow();
+    private final CoreInterference interference = new CoreInterference();
+    private final CoreEcoState eco = new CoreEcoState(this);
     private @Nullable ResonatorLayout.Broken lastProblem;
     private boolean hasStation;
     private double station;
     private double velocity;
     private double dial = DEFAULT_DIAL;
     private final NonNullList<ItemStack> crystals = NonNullList.withSize(MAX_CHAMBERS, ItemStack.EMPTY);
-    private int redstone;
+    private final CoreCatalyst catalyst = new CoreCatalyst();
     /** Ticks já andados da recarga do próximo Opaco. */
     private int recharge;
     private long energy;
@@ -52,16 +58,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
     private int batches;
     /** Modo automático: o Sintonizador anda o dial até a estação, com a eficiência no teto do tier. */
     private boolean auto;
-    /** O que a última montagem achou na casca; a ligação do Sintonizador fica fixa até a próxima. */
-    private boolean hasTuner;
-    private int energyPorts;
-    private int crystalPorts;
-    private ResonatorBlueprint.@Nullable Layout layout;
-    /**
-     * O tempo de jogo da última montagem, ou -1 se nunca montou; 0 num Núcleo que já estava montado antes de o tempo
-     * ser gravado (a sequência de acender fica no passado).
-     */
-    private long formedAt = -1;
+    private final CoreShell shell = new CoreShell();
     /** A câmara no cliente e, no servidor, a última view mandada com o início fixado da recarga. */
     private final CoreSync sync = new CoreSync();
     private final CoreInventory inventory = new CoreInventory(this);
@@ -78,12 +75,12 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         return formed;
     }
 
-    /** As posições da casca montada (vazia sem estrutura). */
     /** O canto mínimo da caixa (x, y, z), guardado; quem lê não muda o array. */
     int[] origin() {
         return origin;
     }
 
+    /** As posições da casca montada (vazia sem estrutura). */
     public List<BlockPos> members() {
         return members;
     }
@@ -123,7 +120,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
 
     /** Liga ou desliga o modo automático e devolve se valeu: sem Sintonizador na estrutura, ligar é recusado. */
     public boolean setAuto(boolean auto) {
-        if (auto && !hasTuner) {
+        if (auto && !shell.hasTuner()) {
             return false;
         }
         if (this.auto != auto) {
@@ -135,24 +132,25 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
     }
 
     public boolean hasTuner() {
-        return hasTuner;
+        return shell.hasTuner();
     }
 
     public int energyPorts() {
-        return energyPorts;
+        return shell.energyPorts();
     }
 
     public int crystalPorts() {
-        return crystalPorts;
+        return shell.crystalPorts();
     }
 
     /** A montagem reconhecida (Vitrine ou Faixa), ou {@code null} se é própria ou nunca montou. */
     public ResonatorBlueprint.@Nullable Layout layout() {
-        return layout;
+        return shell.layout();
     }
 
+    /** O tempo de jogo da última montagem, -1 se nunca montou, 0 se montou antes de o tempo ser gravado. */
     public long formedAt() {
-        return formedAt;
+        return shell.formedAt();
     }
 
     /**
@@ -163,21 +161,9 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
      */
     void setStructure(boolean hasTuner, int energyPorts, int crystalPorts, ResonatorBlueprint.@Nullable Layout layout,
             long gameTime) {
-        boolean changed = this.hasTuner != hasTuner || this.energyPorts != energyPorts
-                || this.crystalPorts != crystalPorts || this.layout != layout;
-        this.hasTuner = hasTuner;
-        this.energyPorts = energyPorts;
-        this.crystalPorts = crystalPorts;
-        this.layout = layout;
+        boolean changed = shell.set(hasTuner, energyPorts, crystalPorts, layout, formed, gameTime);
         if (!hasTuner && auto) {
             auto = false;
-            changed = true;
-        }
-        if (!formed) {
-            formedAt = gameTime;
-            changed = true;
-        } else if (formedAt < 0) {
-            formedAt = 0;
             changed = true;
         }
         if (changed) {
@@ -197,7 +183,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         return CoreMath.chambers(tier().ordinal());
     }
 
-    /** As câmaras do tier e a redstone como {@link net.minecraft.world.Container}, para o menu. */
+    /** As câmaras do tier e o catalisador como {@link net.minecraft.world.Container}, para o menu. */
     public CoreInventory inventory() {
         return inventory;
     }
@@ -228,9 +214,9 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         syncIfChanged();
     }
 
-    /** Põe um cristal na primeira câmara vazia e devolve o que sobrou da pilha (sem mexer nela). */
+    /** Põe um cristal não rachado na primeira câmara vazia e devolve o que sobrou da pilha (sem mexer nela). */
     public ItemStack insertCrystal(ItemStack stack) {
-        if (stack.isEmpty() || !(stack.getItem() instanceof SignalCrystalItem)) {
+        if (stack.isEmpty() || !(stack.getItem() instanceof SignalCrystalItem) || SignalCrystalItem.isCracked(stack)) {
             return stack.copy();
         }
         for (int i = 0; i < chambers(); i++) {
@@ -245,12 +231,13 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
     }
 
     /**
-     * Põe uma unidade do cristal na câmara {@code chamber}, se ela é do tier e está vazia; devolve se pôs. A Porta
+     * Põe uma unidade do cristal na câmara {@code chamber}, se ela é do tier e está vazia e o cristal não está rachado;
+     * devolve se pôs. A Porta
      * de Cristais entra por aqui, slot a slot.
      */
     public boolean insertCrystalAt(int chamber, ItemStack stack) {
         if (chamber < 0 || chamber >= chambers() || !crystals.get(chamber).isEmpty()
-                || !(stack.getItem() instanceof SignalCrystalItem)) {
+                || !(stack.getItem() instanceof SignalCrystalItem) || SignalCrystalItem.isCracked(stack)) {
             return false;
         }
         crystals.set(chamber, stack.copyWithCount(1));
@@ -287,26 +274,44 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         return ItemStack.EMPTY;
     }
 
+    /** A contagem do catalisador da recarga (redstone ou Pó de Ressonância; o nome vem de antes do Pó). */
     public int redstone() {
-        return redstone;
+        return catalyst.count();
     }
 
-    /** Soma até {@code count} de redstone sem passar de {@link #MAX_REDSTONE} e devolve quanto entrou. */
+    /** O catalisador guardado e a regra do slot; os mutadores dele são do pacote. */
+    public CoreCatalyst catalyst() {
+        return catalyst;
+    }
+
+    /** Soma o que cabe da pilha, se o slot a aceita ({@link CoreCatalyst#canAdd}); devolve quanto entrou, sem mexer nela. */
+    public int addCatalyst(ItemStack stack) {
+        return catalyst.canAdd(tier(), stack) ? catalystAdded(catalyst.add(stack.getItem(), stack.getCount())) : 0;
+    }
+
+    /** Soma até {@code count} de redstone, sem a regra do tier (testes, bench e e2e), e devolve quanto entrou. */
     public int addRedstone(int count) {
-        int added = Math.max(0, Math.min(count, MAX_REDSTONE - redstone));
+        return catalystAdded(catalyst.add(Items.REDSTONE, count));
+    }
+
+    private int catalystAdded(int added) {
         if (added > 0) {
-            redstone += added;
             setChanged();
             syncIfChanged();
         }
         return added;
     }
 
-    /** Põe a redstone em {@code count}, entre 0 e {@link #MAX_REDSTONE}; o slot do menu entra por aqui. */
-    public void setRedstone(int count) {
-        redstone = Math.max(0, Math.min(MAX_REDSTONE, count));
+    /** Põe o catalisador em {@code count} de {@code item}, entre 0 e {@link #MAX_REDSTONE}; o slot do menu entra por aqui. */
+    public void setCatalyst(Item item, int count) {
+        catalyst.set(item, count);
         setChanged();
         syncIfChanged();
+    }
+
+    /** Põe a redstone em {@code count}, sem a regra do tier (testes e e2e). */
+    public void setRedstone(int count) {
+        setCatalyst(Items.REDSTONE, count);
     }
 
     /** Só para os GameTests: põe a redstone num valor conhecido. */
@@ -318,8 +323,13 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         return energy;
     }
 
+    /** A geração máxima por tick com o Eco; o buffer guarda {@link CoreMath#BUFFER_TICKS} dela. */
+    public long maxOutput() {
+        return eco.apply(CoreMath.maxOutput(chambers(), Config.resonatorFePerCrystal(tier())));
+    }
+
     public long capacity() {
-        return CoreMath.buffer(chambers(), Config.resonatorFePerCrystal(tier()));
+        return CoreMath.mulSat(maxOutput(), CoreMath.BUFFER_TICKS);
     }
 
     public long extractEnergy(long max, boolean simulate) {
@@ -342,19 +352,19 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         }
     }
 
-    /** FE por tick agora: os cristais não Opacos das câmaras do tier, na sintonia atual; 0 desmontado. */
+    /** FE por tick agora: os quartos dos cristais ({@link CoreYield}) na sintonia, na interferência e no Eco. */
     public long generationPerTick() {
-        if (!formed) {
-            return 0;
-        }
-        int yieldSum = 0;
-        for (int i = 0; i < chambers(); i++) {
-            ItemStack stack = crystals.get(i);
-            if (stack.getItem() instanceof SignalCrystalItem item && !SignalCrystalItem.isDull(stack)) {
-                yieldSum += item.yield();
-            }
-        }
-        return CoreMath.perTick(Config.resonatorFePerCrystal(tier()), yieldSum, efficiency());
+        int quarters = formed ? CoreYield.quarters(crystals, chambers(), tier(), true) : 0;
+        long fePerCrystal = Config.resonatorFePerCrystal(tier());
+        return eco.apply(CoreMath.perTick(fePerCrystal, quarters, efficiency() * interference.factor()));
+    }
+
+    public CoreInterference interference() {
+        return interference;
+    }
+
+    public CoreEcoState eco() {
+        return eco;
     }
 
     double velocity() {
@@ -381,7 +391,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         energy += Math.max(0, Math.min(amount, capacity() - energy));
     }
 
-    /** Ticks já andados da recarga do próximo Opaco (parado sem Opaco ou sem redstone). */
+    /** Ticks já andados da recarga do próximo Opaco (parado sem Opaco recarregável ou sem catalisador). */
     public int rechargeProgress() {
         return recharge;
     }
@@ -390,8 +400,8 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         recharge = ticks;
     }
 
-    void spendRedstone() {
-        redstone = Math.max(0, redstone - 1);
+    void spendCatalyst() {
+        catalyst.spend();
     }
 
     boolean hasStation() {
@@ -408,24 +418,17 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
 
     /**
      * Avisa os vizinhos das Portas do tipo dado, para acordar quem dorme nelas: o {@code setChanged} do Núcleo
-     * só avisa os vizinhos dele. Só nas transições (energia que aparece, câmara que esvazia, redstone que baixa,
-     * Opaco novo), nunca a cada lote.
+     * só avisa os vizinhos dele. Só nas transições (energia que aparece, câmara que esvazia, catalisador que baixa,
+     * Opaco ou rachado novo), nunca a cada lote.
      */
     void notifyPorts(boolean energyPorts, boolean crystalPorts) {
-        if (level == null || level.isClientSide) {
-            return;
+        if (level != null && !level.isClientSide) {
+            CorePresence.notifyPorts(level, ports, energyPorts, crystalPorts);
         }
-        for (BlockPos port : ports) {
-            if (!level.isLoaded(port)) {
-                continue;
-            }
-            BlockState state = level.getBlockState(port);
-            if (state.getBlock() instanceof ResonatorPartBlock part
-                    && (energyPorts && part.kind() == ResonatorPartBlock.Kind.ENERGY_PORT
-                            || crystalPorts && part.kind() == ResonatorPartBlock.Kind.CRYSTAL_PORT)) {
-                level.updateNeighbourForOutputSignal(port, state.getBlock());
-            }
-        }
+    }
+
+    CoreFlow flow() {
+        return flow;
     }
 
     List<BlockPos> ports() {
@@ -505,12 +508,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
     public void onLoad() {
         super.onLoad();
         if (level != null && !level.isClientSide) {
-            ResonatorManager.add(this);
-            if (formed) {
-                for (BlockPos member : members) {
-                    ResonatorMembers.claimIfFree(level.dimension(), member, worldPosition);
-                }
-            }
+            CorePresence.enter(this, level);
             // A estrutura pode ter mudado com o chunk descarregado: confere no tick seguinte, fora da carga do chunk.
             // O tick agendado só roda com os chunks vizinhos carregados, então as posições a até 4 blocos estão
             // todas lá e nenhuma vira OTHER por estar descarregada (o que desmontaria à toa).
@@ -530,20 +528,10 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         super.onChunkUnloaded();
     }
 
-    /**
-     * Sai do gerenciador e tira as Portas e os membros dos índices, sem mexer nos blocos nem acordar ninguém: na
-     * carga, o {@code onLoad} devolve os membros antes de qualquer revalidação.
-     */
+    /** Sai dos índices sem acordar ninguém: na carga, o {@code onLoad} devolve os membros antes da revalidação. */
     private void forget() {
         if (level != null && !level.isClientSide) {
-            ResonatorManager.remove(this);
-            for (BlockPos port : ports) {
-                ResonatorPorts.unregister(level.dimension(), port, worldPosition);
-            }
-            ports = List.of();
-            for (BlockPos member : members) {
-                ResonatorMembers.release(level.dimension(), member, worldPosition);
-            }
+            CorePresence.leave(this, level);
         }
     }
 
@@ -551,81 +539,56 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         tag.putBoolean("formed", formed);
-        long[] packed = new long[members.size()];
-        for (int i = 0; i < packed.length; i++) {
-            packed[i] = members.get(i).asLong();
-        }
-        tag.putLongArray("members", packed);
+        CoreNbt.saveMembers(tag, members);
         tag.putBoolean("has_station", hasStation);
         tag.putDouble("station", station);
         tag.putDouble("velocity", velocity);
         tag.putDouble("dial", dial);
-        ListTag list = new ListTag();
-        for (int i = 0; i < MAX_CHAMBERS; i++) {
-            ItemStack stack = crystals.get(i);
-            if (!stack.isEmpty()) {
-                CompoundTag entry = new CompoundTag();
-                entry.putByte("slot", (byte) i);
-                list.add(stack.save(registries, entry));
-            }
-        }
-        tag.put("crystals", list);
-        tag.putInt("redstone", redstone);
+        CoreNbt.saveCrystals(tag, crystals, registries);
+        catalyst.save(tag);
         tag.putInt("recharge", recharge);
         tag.putLong("energy", energy);
         tag.putInt("batches", batches);
         tag.putBoolean("auto", auto);
-        tag.putBoolean("has_tuner", hasTuner);
-        tag.putInt("energy_ports", energyPorts);
-        tag.putInt("crystal_ports", crystalPorts);
-        tag.putByte("layout", layoutByte(layout));
-        tag.putLong("formed_at", formedAt);
+        shell.save(tag);
+        eco.save(tag);
     }
 
-    /** 0 montagem própria (ou nenhuma), 1 Vitrine, 2 Faixa. */
-    private static byte layoutByte(ResonatorBlueprint.@Nullable Layout layout) {
-        return layout == null ? 0 : (byte) (layout.ordinal() + 1);
+    @Override
+    protected void collectImplicitComponents(DataComponentMap.Builder components) {
+        super.collectImplicitComponents(components);
+        eco.collectComponents(components);
     }
 
-    private static ResonatorBlueprint.@Nullable Layout layoutOf(byte value) {
-        ResonatorBlueprint.Layout[] all = ResonatorBlueprint.Layout.values();
-        return value >= 1 && value <= all.length ? all[value - 1] : null;
+    @Override
+    protected void applyImplicitComponents(DataComponentInput input) {
+        super.applyImplicitComponents(input);
+        eco.restore(input.get(ModDataComponents.RESONATOR_ECO.get()));
+    }
+
+    @Override
+    public void removeComponentsFromTag(CompoundTag tag) {
+        super.removeComponentsFromTag(tag);
+        CoreEcoState.removeFrom(tag);
     }
 
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         formed = tag.getBoolean("formed");
-        List<BlockPos> loaded = new ArrayList<>();
-        for (long packed : tag.getLongArray("members")) {
-            loaded.add(BlockPos.of(packed));
-        }
-        members = List.copyOf(loaded);
+        members = CoreNbt.loadMembers(tag);
         origin = ChamberView.origin(members, worldPosition);
         hasStation = tag.getBoolean("has_station");
         station = tag.getDouble("station");
         velocity = tag.getDouble("velocity");
         dial = tag.contains("dial") ? Tuning.clampDial(tag.getDouble("dial")) : DEFAULT_DIAL;
-        for (int i = 0; i < MAX_CHAMBERS; i++) {
-            crystals.set(i, ItemStack.EMPTY);
-        }
-        ListTag list = tag.getList("crystals", Tag.TAG_COMPOUND);
-        for (int i = 0; i < list.size(); i++) {
-            CompoundTag entry = list.getCompound(i);
-            int slot = entry.getByte("slot") & 0xFF;
-            if (slot < MAX_CHAMBERS) {
-                crystals.set(slot, ItemStack.parse(registries, entry).orElse(ItemStack.EMPTY));
-            }
-        }
-        redstone = Math.max(0, Math.min(MAX_REDSTONE, tag.getInt("redstone")));
+        CoreNbt.loadCrystals(tag, crystals, registries);
+        catalyst.load(tag);
         recharge = Math.max(0, tag.getInt("recharge"));
         energy = Math.max(0, tag.getLong("energy"));
         batches = Math.max(0, tag.getInt("batches"));
-        hasTuner = tag.getBoolean("has_tuner");
-        auto = tag.getBoolean("auto") && hasTuner;
-        energyPorts = Math.max(0, tag.getInt("energy_ports"));
-        crystalPorts = Math.max(0, tag.getInt("crystal_ports"));
-        layout = layoutOf(tag.getByte("layout"));
-        formedAt = tag.contains("formed_at") ? tag.getLong("formed_at") : -1;
+        shell.load(tag);
+        auto = tag.getBoolean("auto") && shell.hasTuner();
+        eco.load(tag);
     }
 }

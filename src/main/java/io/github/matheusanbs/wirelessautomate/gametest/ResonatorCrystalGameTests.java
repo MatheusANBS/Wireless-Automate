@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.gametest;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
@@ -104,8 +105,10 @@ public final class ResonatorCrystalGameTests {
 
     @GameTest(template = "empty")
     public static void lapidadoRendeODobro(GameTestHelper helper) {
-        helper.assertValueEqual(ModItems.SIGNAL_CRYSTAL.get().yield(), 1, "rendimento do Cristal de Sinal");
-        helper.assertValueEqual(ModItems.CUT_SIGNAL_CRYSTAL.get().yield(), 2, "rendimento do Lapidado");
+        helper.assertValueEqual(ModItems.SIGNAL_CRYSTAL.get().yieldQuarters(RouterTier.BASIC), 4,
+                "rendimento do Cristal de Sinal, em quartos");
+        helper.assertValueEqual(ModItems.CUT_SIGNAL_CRYSTAL.get().yieldQuarters(RouterTier.BASIC), 8,
+                "rendimento do Lapidado, em quartos");
         helper.assertTrue(ModItems.CUT_SIGNAL_CRYSTAL.get().isCut(), "o Lapidado é lapidado");
         helper.succeed();
     }

@@ -6,6 +6,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
 import io.github.matheusanbs.wirelessautomate.menu.ResonatorMenu;
 import java.util.function.Consumer;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -18,7 +19,6 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
@@ -79,8 +79,9 @@ public class ResonanceCoreBlock extends BaseEntityBlock {
     }
 
     /**
-     * Cristal de Sinal ou Lapidado: vai para a primeira câmara vazia. Pó de redstone: entra o que cabe. Sem lugar, a
-     * action bar avisa. O Cartão de Upgrade pula o clique do bloco e age pelo {@code useOn} dele, como no roteador.
+     * Cristal: vai para a primeira câmara vazia (o rachado não entra). Catalisador (redstone, Pó de Ressonância ou
+     * Pó Carregado): entra o que cabe, pela regra do tier e sem misturar com o que já está lá. Recusado ou sem lugar,
+     * a action bar diz por quê. O Cartão de Upgrade pula o clique do bloco e age pelo {@code useOn} dele, como no roteador.
      */
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
@@ -89,22 +90,36 @@ public class ResonanceCoreBlock extends BaseEntityBlock {
             return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
         }
         boolean crystal = stack.getItem() instanceof SignalCrystalItem;
-        if (!crystal && !stack.is(Items.REDSTONE)) {
+        if (!crystal && !CoreCatalyst.isCatalyst(stack.getItem())) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
         if (!level.isClientSide && level.getBlockEntity(pos) instanceof ResonanceCoreBlockEntity core) {
-            int used = crystal ? stack.getCount() - core.insertCrystal(stack).getCount()
-                    : core.addRedstone(stack.getCount());
+            int used = crystal ? stack.getCount() - core.insertCrystal(stack).getCount() : core.addCatalyst(stack);
             if (used == 0) {
-                player.displayClientMessage(crystal
-                        ? Component.translatable("block.wirelessautomate.resonance_core.chambers_full")
-                        : Component.translatable("block.wirelessautomate.resonance_core.redstone_full",
-                                ResonanceCoreBlockEntity.MAX_REDSTONE), true);
+                player.displayClientMessage(refusal(core, stack, crystal), true);
             } else if (!player.hasInfiniteMaterials()) {
                 stack.shrink(used);
             }
         }
         return ItemInteractionResult.sidedSuccess(level.isClientSide);
+    }
+
+    /** Por que o clique com o item não pôs nada no Núcleo. */
+    private static Component refusal(ResonanceCoreBlockEntity core, ItemStack stack, boolean crystal) {
+        if (crystal) {
+            return Component.translatable(SignalCrystalItem.isCracked(stack)
+                    ? "block.wirelessautomate.resonance_core.cracked_crystal"
+                    : "block.wirelessautomate.resonance_core.chambers_full");
+        }
+        if (!CoreCatalyst.accepts(core.tier(), stack.getItem())) {
+            return CoreCatalyst.refusal(core.tier());
+        }
+        if (core.redstone() > 0 && !stack.is(core.catalyst().item())) {
+            return Component.translatable("block.wirelessautomate.resonance_core.catalyst_mixed",
+                    core.catalyst().stack().getHoverName());
+        }
+        return Component.translatable("block.wirelessautomate.resonance_core.redstone_full",
+                ResonanceCoreBlockEntity.MAX_REDSTONE);
     }
 
     /**
@@ -142,14 +157,29 @@ public class ResonanceCoreBlock extends BaseEntityBlock {
 
     /**
      * Sobe o Núcleo em {@code pos} para {@code target} no lugar, se o tier dele aceita o cartão
-     * {@code origin → target} ({@link RouterTier#acceptsCard}). Só o {@code TIER} do estado muda: o block entity
-     * fica, com cristais, redstone e energia, e a revalidação na hora põe a capacidade e as câmaras novas.
+     * {@code origin → target} ({@link RouterTier#acceptsCard}) e o jogador tem o Coração do Ressonador de
+     * {@code target} no inventário. O Coração só é gasto depois de todas as outras recusas, e o criativo não gasta;
+     * sem jogador, não há de onde tirar o Coração e o Núcleo não sobe. Só o {@code TIER} do estado muda: o block
+     * entity fica, com cristais, redstone e energia, e a revalidação na hora põe a capacidade e as câmaras novas.
      */
-    public static boolean tryUpgrade(Level level, BlockPos pos, RouterTier target, @Nullable RouterTier origin) {
+    public static boolean tryUpgrade(Level level, BlockPos pos, RouterTier target, @Nullable RouterTier origin,
+            @Nullable Player player) {
         BlockState state = level.getBlockState(pos);
         if (!(state.getBlock() instanceof ResonanceCoreBlock)
-                || !state.getValue(RouterBlock.TIER).acceptsCard(origin, target)) {
+                || !state.getValue(RouterBlock.TIER).acceptsCard(origin, target) || player == null) {
             return false;
+        }
+        if (!player.getAbilities().instabuild) {
+            ItemStack heart = ResonatorHeartItem.find(player, target);
+            if (heart == null) {
+                if (!level.isClientSide) {
+                    player.displayClientMessage(Component.translatable(
+                            "block.wirelessautomate.resonance_core.needs_heart",
+                            Component.translatable(target.translationKey())).withStyle(ChatFormatting.RED), true);
+                }
+                return false;
+            }
+            heart.shrink(1);
         }
         if (level instanceof ServerLevel server) {
             server.setBlockAndUpdate(pos, state.setValue(RouterBlock.TIER, target));
@@ -176,7 +206,7 @@ public class ResonanceCoreBlock extends BaseEntityBlock {
 
     /**
      * Quebrar o Núcleo desmonta na hora (o block entity, que sabe quais são os membros, vai embora junto) e derruba
-     * os cristais e a redstone; a energia se perde.
+     * os cristais e o catalisador; a energia se perde.
      */
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
@@ -192,7 +222,7 @@ public class ResonanceCoreBlock extends BaseEntityBlock {
                 }
             }
             if (core.redstone() > 0) {
-                Block.popResource(server, pos, new ItemStack(Items.REDSTONE, core.redstone()));
+                Block.popResource(server, pos, core.catalyst().stack());
             }
         }
         ResonatorManager.blockChanged(level, pos, state, newState);

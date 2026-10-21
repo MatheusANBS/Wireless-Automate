@@ -93,6 +93,8 @@ public final class NodeIndex extends SavedData {
     public static final class Entry {
         private final NodeKey key;
         private String name = "";
+        /** Nome dado à máquina presa; vazio sem nome. */
+        private String attachedLabel = "";
         private RouterTier tier = RouterTier.BASIC;
         /**
          * Por tipo, as redes distintas das faces ({@link RouterBlockEntity#networks}), em listas imutáveis que
@@ -129,6 +131,11 @@ public final class NodeIndex extends SavedData {
 
         public String name() {
             return name;
+        }
+
+        /** Nome dado à máquina presa ({@link RouterBlockEntity#attachedLabel}); vazio sem nome. */
+        public String attachedLabel() {
+            return attachedLabel;
         }
 
         public RouterTier tier() {
@@ -236,13 +243,13 @@ public final class NodeIndex extends SavedData {
         }
 
         /**
-         * Nome, máquina e coordenadas em minúsculas, separados por espaço, para a busca do Tablet.
+         * Nome, nome da presa, máquina e coordenadas em minúsculas, separados por espaço, para a busca do Tablet.
          * Montado uma vez e guardado até um desses dados mudar.
          */
         public String searchText() {
             if (searchText == null) {
-                searchText = (name + ' ' + machine + ' ' + key.pos.getX() + ' ' + key.pos.getY() + ' '
-                        + key.pos.getZ()).toLowerCase(Locale.ROOT);
+                searchText = (name + ' ' + attachedLabel + ' ' + machine + ' ' + key.pos.getX() + ' '
+                        + key.pos.getY() + ' ' + key.pos.getZ()).toLowerCase(Locale.ROOT);
             }
             return searchText;
         }
@@ -252,6 +259,10 @@ public final class NodeIndex extends SavedData {
             boolean changed = false;
             if (!name.equals(from.name())) {
                 name = from.name();
+                changed = true;
+            }
+            if (!attachedLabel.equals(from.attachedLabel())) {
+                attachedLabel = from.attachedLabel();
                 changed = true;
             }
             if (tier != from.tier()) {
@@ -319,6 +330,9 @@ public final class NodeIndex extends SavedData {
             if (!name.isEmpty()) {
                 tag.putString("name", name);
             }
+            if (!attachedLabel.isEmpty()) {
+                tag.putString("attached_label", attachedLabel);
+            }
             tag.putString("tier", tier.getSerializedName());
             CompoundTag networksTag = new CompoundTag();
             for (ResourceType type : TYPES) {
@@ -361,6 +375,7 @@ public final class NodeIndex extends SavedData {
             Entry entry = new Entry(new NodeKey(ResourceKey.create(Registries.DIMENSION, dimension),
                     BlockPos.of(tag.getLong("pos"))));
             entry.name = tag.getString("name");
+            entry.attachedLabel = tag.getString("attached_label");
             String tierName = tag.getString("tier");
             entry.tier = Arrays.stream(RouterTier.values()).filter(t -> t.getSerializedName().equals(tierName))
                     .findFirst().orElse(RouterTier.BASIC);

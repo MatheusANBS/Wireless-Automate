@@ -249,7 +249,7 @@ public final class RangeRowButtons {
     }
 
     /** O lápis do ✎, em 6 × 6 px (também o da linha Editando). */
-    static void pencil(GuiGraphics g, int x, int y, int color) {
+    public static void pencil(GuiGraphics g, int x, int y, int color) {
         pixels(g, PENCIL, x, y, false, color);
     }
 

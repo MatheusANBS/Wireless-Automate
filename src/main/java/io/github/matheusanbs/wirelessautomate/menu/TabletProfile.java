@@ -73,10 +73,8 @@ final class TabletProfile {
     }
 
     /** A ação já validada quanto ao menu; ver {@link TabletMenu#profile}. Devolve quantos nós ela atingiu, ou -1. */
-    int run(TabletProfilePayload.Action action, @Nullable NodeKey key, @Nullable ResourceLocation machine,
-            List<NodeKey> keys, TabletMarks marks) {
+    int run(TabletProfilePayload.Action action, @Nullable NodeKey key, List<NodeKey> keys, TabletMarks marks) {
         boolean bulk = switch (action) {
-            case PASTE_GROUP -> machine != null;
             case PASTE_SELECTED -> !keys.isEmpty() || !marks.isEmpty();
             case UNDO -> !undo.isEmpty();
             default -> false;
@@ -94,7 +92,6 @@ final class TabletProfile {
                 yield 1;
             }
             case PASTE_ONE -> key == null ? -1 : pasteProfile(tablet, List.of(key), true);
-            case PASTE_GROUP -> machine == null ? -1 : pasteProfile(tablet, groupKeys(machine), false);
             case PASTE_SELECTED -> !marks.isEmpty() ? pasteMarked(tablet, keys, marks)
                     : keys.isEmpty() ? -1 : pasteProfile(tablet, keys, false);
             case UNDO -> undoPaste();
@@ -160,28 +157,6 @@ final class TabletProfile {
         NodeIndex.Entry entry = NodeIndex.get(viewer.server).entry(key);
         return entry == null ? BuiltInRegistries.BLOCK.getKey(net.minecraft.world.level.block.Blocks.AIR)
                 : entry.machine();
-    }
-
-    /**
-     * Os nós da máquina que casam com a consulta atual do jogador (a mesma da Lista, reavaliada agora),
-     * visíveis, no máximo {@link TabletMenu#MAX_MOVE}. A origem do perfil sai no colar.
-     */
-    private List<NodeKey> groupKeys(ResourceLocation machine) {
-        MinecraftServer server = viewer.server;
-        NetworkSavedData data = NetworkSavedData.get(server);
-        boolean operator = viewer.hasPermissions(2);
-        Map<UUID, String> networkNames = query.networkNames(data);
-        List<NodeKey> result = new ArrayList<>();
-        for (NodeIndex.Entry entry : NodeIndex.get(server).entries()) {
-            if (result.size() >= TabletMenu.MAX_MOVE) {
-                break;
-            }
-            if (entry.machine().equals(machine) && TabletNodes.visible(entry, data, operator, viewer.getUUID())
-                    && builder.matchesQuery(entry, data, networkNames)) {
-                result.add(entry.key());
-            }
-        }
-        return result;
     }
 
     /**

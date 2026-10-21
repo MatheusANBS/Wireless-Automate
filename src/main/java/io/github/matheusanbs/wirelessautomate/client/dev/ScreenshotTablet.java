@@ -74,11 +74,7 @@ final class ScreenshotTablet {
                 new Step(() -> {
                     tabletScreen.list().previewText("");
                     tabletScreen.getMenu().applySnapshot(sampleTablet(true));
-                    tabletScreen.list().previewCollapse(ResourceLocation.withDefaultNamespace("chest"));
-                    tabletScreen.list().previewScrollTo(ResourceLocation.withDefaultNamespace("chest"));
-                    int[] center = tabletScreen.list().pasteGroupCenter(ResourceLocation.withDefaultNamespace("furnace"));
-                    mouseX = center == null ? -1 : center[0];
-                    mouseY = center == null ? -1 : center[1];
+                    mouseX = mouseY = -1;
                 }, "t2c-tablet-perfil"),
                 new Step(() -> {
                     mouseX = mouseY = -1;
@@ -265,7 +261,7 @@ final class ScreenshotTablet {
         return new TabletSnapshot(false, ResourceLocation.withDefaultNamespace("overworld"),
                 Optional.of(base), TabletSnapshot.Query.DEFAULT, nodes.size(), nodes.size(), networks,
                 groups, machineFacets, networkFacets, new TabletSnapshot.QuickCounts(5, 2, 1), 63, summary, nodes,
-                TabletRows.EMPTY, TabletMachineRows.EMPTY, List.copyOf(machineFacets), profile ? Optional.of(elite.machine()) : Optional.empty(), Component.empty(), 0);
+                TabletRows.EMPTY, TabletMachineRows.EMPTY, Component.empty(), 0);
     }
 
     private static TabletSnapshot.NodeView tabletNode(int x, int y, int z, String name, String machine, RouterTier tier,
@@ -287,7 +283,8 @@ final class ScreenshotTablet {
             rates.add(type == ResourceType.ITEM ? itemRate : 0L);
         }
         return new TabletSnapshot.NodeView(new NodeIndex.NodeKey(net.minecraft.world.level.Level.OVERWORLD,
-                new BlockPos(x, y, z)), name, ResourceLocation.withDefaultNamespace(machine), tier, networks, roles, status,
+                new BlockPos(x, y, z)), name, "",
+                ResourceLocation.withDefaultNamespace(machine), tier, networks, roles, status,
                 false, faceModes, List.copyOf(rates), Optional.ofNullable(match), 0);
     }
 }

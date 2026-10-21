@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.resonator;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
+import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;
@@ -38,5 +39,10 @@ public class ResonanceCoreItem extends BlockItem {
         tooltip.add(Component.translatable("block.wirelessautomate.resonance_core.tooltip",
                 Component.translatable(tier.translationKey()),
                 TierCoreItem.grouped(CoreMath.chambers(tier.ordinal()))).withStyle(ChatFormatting.GRAY));
+        Long eco = stack.get(ModDataComponents.RESONATOR_ECO.get());
+        if (eco != null && eco > 0) {
+            tooltip.add(Component.translatable("block.wirelessautomate.resonance_core.tooltip.eco",
+                    TierCoreItem.grouped(eco)).withStyle(ChatFormatting.LIGHT_PURPLE));
+        }
     }
 }

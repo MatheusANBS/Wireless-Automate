@@ -48,8 +48,6 @@ import net.minecraft.resources.ResourceLocation;
  * @param machineRows   as linhas da visão por máquinas ({@link TabletMachineRows}); na visão por máquinas, a página
  *                      não leva nós nem linhas da árvore com a Lista aberta, e leva só os nós (para o Mapa) com
  *                      outra aba ({@link TabletMachineRows#LIST_CLOSED})
- * @param groupCounts   quantos nós de cada máquina passam na consulta (não só os enviados), na ordem da lista
- * @param originGroup   a máquina atual do nó de origem do perfil, se ele passa na consulta
  * @param notice        aviso da última ação (vazio se não houver)
  * @param noticeId      muda a cada aviso novo, para a tela mostrá-lo de novo
  */
@@ -70,8 +68,6 @@ public record TabletSnapshot(
         List<NodeView> nodes,
         TabletRows rows,
         TabletMachineRows machineRows,
-        List<Facet<ResourceLocation>> groupCounts,
-        Optional<ResourceLocation> originGroup,
         Component notice,
         int noticeId) {
 
@@ -288,7 +284,7 @@ public record TabletSnapshot(
      * @param linked         quantas máquinas o roteador tem vinculadas (o índice as guarda mesmo sem o Upgrade de
      *                       Alcance); com alguma, a Lista abre o nó em árvore
      */
-    public record NodeView(NodeKey key, String name, ResourceLocation machine, RouterTier tier,
+    public record NodeView(NodeKey key, String name, String attachedLabel, ResourceLocation machine, RouterTier tier,
             List<List<UUID>> networks, int roles, NodeStatus status, boolean removedNetwork, long faceModes,
             List<Long> rates, Optional<ProfileMatch> profile, int linked) {
         /** As redes das faces do tipo {@code type}. */
@@ -308,13 +304,15 @@ public record TabletSnapshot(
 
         /** O mesmo nó com outro estado e outra vazão. */
         public NodeView withLive(Live live) {
-            return new NodeView(key, name, machine, tier, networks, roles, live.status(), removedNetwork, faceModes,
+            return new NodeView(key, name, attachedLabel, machine, tier, networks, roles, live.status(), removedNetwork,
+                    faceModes,
                     live.rates(), profile, linked);
         }
 
         /** Igual a {@code other} fora o estado e a vazão. */
         boolean sameExceptLive(NodeView other) {
-            return key.equals(other.key) && name.equals(other.name) && machine.equals(other.machine)
+            return key.equals(other.key) && name.equals(other.name)
+                    && attachedLabel.equals(other.attachedLabel) && machine.equals(other.machine)
                     && tier == other.tier && networks.equals(other.networks) && roles == other.roles
                     && removedNetwork == other.removedNetwork && faceModes == other.faceModes
                     && profile.equals(other.profile) && linked == other.linked;
@@ -332,16 +330,13 @@ public record TabletSnapshot(
      *
      * @param totalNodes    nós visíveis ao jogador, sem filtro
      * @param matchingNodes nós que passam na consulta
-     * @param groupCounts   quantos nós de cada máquina passam na consulta
-     * @param originGroup   a máquina atual do nó de origem do perfil, se ele passa na consulta
      * @param machineRows   as linhas da visão por máquinas
      */
     public record Page(Query query, int totalNodes, int matchingNodes, List<NodeView> nodes, TabletRows rows,
-            List<Facet<ResourceLocation>> groupCounts, Optional<ResourceLocation> originGroup,
             TabletMachineRows machineRows) {
         /** Lugar da página num cabeçalho recebido sozinho (o cliente põe a página que já tinha). */
-        public static final Page EMPTY = new Page(Query.DEFAULT, 0, 0, List.of(), TabletRows.EMPTY, List.of(),
-                Optional.empty(), TabletMachineRows.EMPTY);
+        public static final Page EMPTY = new Page(Query.DEFAULT, 0, 0, List.of(), TabletRows.EMPTY,
+                TabletMachineRows.EMPTY);
         public static final StreamCodec<RegistryFriendlyByteBuf, Page> STREAM_CODEC =
                 StreamCodec.of(TabletPageCodec::encodePage, TabletPageCodec::decodePage);
 
@@ -351,8 +346,7 @@ public record TabletSnapshot(
          */
         public boolean sameExceptLive(Page other) {
             if (totalNodes != other.totalNodes || matchingNodes != other.matchingNodes || nodes.size() != other.nodes.size()
-                    || !query.equals(other.query) || !groupCounts.equals(other.groupCounts)
-                    || !originGroup.equals(other.originGroup) || !rows.sameExceptLive(other.rows)
+                    || !query.equals(other.query) || !rows.sameExceptLive(other.rows)
                     || !machineRows.sameExceptLive(other.machineRows)) {
                 return false;
             }
@@ -397,36 +391,26 @@ public record TabletSnapshot(
             }
             boolean byMachine = machineRows.active();
             return new Page(query, totalNodes, matchingNodes, List.copyOf(updated),
-                    byMachine ? rows : rows.withLives(machines), groupCounts, originGroup,
+                    byMachine ? rows : rows.withLives(machines),
                     byMachine ? machineRows.withLives(machines) : machineRows);
         }
     }
 
     public Page page() {
-        return new Page(query, totalNodes, matchingNodes, nodes, rows, groupCounts, originGroup, machineRows);
+        return new Page(query, totalNodes, matchingNodes, nodes, rows, machineRows);
     }
 
     /** O mesmo cabeçalho com outra página. */
     public TabletSnapshot withPage(Page page) {
         return new TabletSnapshot(operator, dimension, activeNetwork, page.query(),
                 page.totalNodes(), page.matchingNodes(), networks, groups, machineFacets, networkFacets, quickCounts, machines,
-                profile, page.nodes(), page.rows(), page.machineRows(), page.groupCounts(), page.originGroup(), notice,
+                profile, page.nodes(), page.rows(), page.machineRows(), notice,
                 noticeId);
     }
 
     /** O cabeçalho igual ao de {@code other} (tudo menos a página). */
     public boolean sameHeader(TabletSnapshot other) {
         return withPage(Page.EMPTY).equals(other.withPage(Page.EMPTY));
-    }
-
-    /** Quantos nós da máquina passam na consulta (0 se nenhum). */
-    public int groupCount(ResourceLocation machine) {
-        for (Facet<ResourceLocation> facet : groupCounts) {
-            if (facet.id().equals(machine)) {
-                return facet.count();
-            }
-        }
-        return 0;
     }
 
     public Optional<NetworkView> network(UUID id) {
@@ -567,7 +551,7 @@ public record TabletSnapshot(
         return new TabletSnapshot(operator, dimension, active, Page.EMPTY.query(),
                 0, 0, List.copyOf(networks), List.copyOf(groups), List.copyOf(machineFacets),
                 List.copyOf(networkFacets), quickCounts, machines, profile, List.of(), TabletRows.EMPTY,
-                TabletMachineRows.EMPTY, List.of(), Optional.empty(), notice, noticeId);
+                TabletMachineRows.EMPTY, notice, noticeId);
     }
 
     /**

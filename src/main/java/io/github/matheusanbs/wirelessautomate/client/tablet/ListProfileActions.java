@@ -1,19 +1,14 @@
 package io.github.matheusanbs.wirelessautomate.client.tablet;
 
-import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
-import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
-import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.ProfileSummary;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.packet.TabletProfilePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletProfilePayload.Action;
 import java.util.List;
-import java.util.Optional;
-import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * As ações do perfil na Lista do Tablet: copiar do nó escolhido, colar nele, nos marcados ou num grupo, desfazer
- * e esquecer, mandadas pelo {@link TabletActions}, e quantos nós o "Colar nas N" atinge.
+ * As ações do perfil na Lista do Tablet: copiar do nó escolhido, colar nele ou nos marcados, desfazer
+ * e esquecer, mandadas pelo {@link TabletActions}.
  */
 final class ListProfileActions {
     private final TabletList list;
@@ -22,53 +17,35 @@ final class ListProfileActions {
         this.list = list;
     }
 
-    private void send(Action action, @Nullable NodeKey key, @Nullable ResourceLocation machine, List<NodeKey> keys) {
-        list.actions.profile(action, key, machine, keys);
+    private void send(Action action, @Nullable NodeKey key, List<NodeKey> keys) {
+        list.actions.profile(action, key, keys);
     }
 
     void copy() {
         if (list.chosen != null && list.chosenPanel.canEdit()) {
-            send(Action.COPY, list.chosen, null, List.of());
+            send(Action.COPY, list.chosen, List.of());
         }
     }
 
     void paste() {
         if (list.chosen != null && list.profile().isPresent() && list.chosenPanel.canEdit()) {
-            send(Action.PASTE_ONE, list.chosen, null, List.of());
+            send(Action.PASTE_ONE, list.chosen, List.of());
         }
     }
 
     void undo() {
-        send(Action.UNDO, null, null, List.of());
+        send(Action.UNDO, null, List.of());
     }
 
     void forget() {
-        send(Action.FORGET, null, null, List.of());
-    }
-
-    void pasteGroup(ResourceLocation machine) {
-        send(Action.PASTE_GROUP, null, machine, List.of());
+        send(Action.FORGET, null, List.of());
     }
 
     /** Cola nos marcados: os roteadores (na presa) e as máquinas, os grupos e os blocos. */
     void pasteSelected() {
         if (list.profile().isPresent() && !list.marks.isEmpty()) {
-            list.actions.profile(Action.PASTE_SELECTED, null, null, list.marks.nodeList(TabletProfilePayload.MAX_KEYS),
+            list.actions.profile(Action.PASTE_SELECTED, null, list.marks.nodeList(TabletProfilePayload.MAX_KEYS),
                     list.marks.payload());
         }
-    }
-
-    /** Quantos nós do grupo o "Colar nas N" atinge: os da consulta, menos a origem do perfil. */
-    int pasteCount(ResourceLocation machine) {
-        ProfileSummary summary = list.profile().orElse(null);
-        if (summary == null) {
-            return 0;
-        }
-        TabletSnapshot s = list.snapshot();
-        int count = s.groupCount(machine);
-        if (s.originGroup().equals(Optional.of(machine))) {
-            count--;
-        }
-        return Math.min(count, TabletMenu.MAX_MOVE);
     }
 }

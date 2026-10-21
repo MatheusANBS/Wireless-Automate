@@ -302,7 +302,8 @@ final class PanelModel {
     /** O nome do alvo de edição: a máquina presa, o grupo ("Fornalha (todas)") ou a máquina ("Fornalha #3"). */
     Component targetName(EditTarget target) {
         return switch (target.kind()) {
-            case ATTACHED -> panelTr("target.attached");
+            case ATTACHED -> snapshot.attachedLabel().isEmpty() ? panelTr("target.attached")
+                    : Component.literal(snapshot.attachedLabel());
             case GROUP -> {
                 RangeView.GroupView group = range().group(target.id());
                 yield panelTr("target.group", group == null ? Component.literal("?") : MachineTexts.groupName(group));

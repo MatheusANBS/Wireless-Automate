@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "BCB",
+    "PLP",
+    "BCB"
+  ],
+  "key": {
+    "B": {
+      "item": "wirelessautomate:resonance_coil"
+    },
+    "C": {
+      "item": "wirelessautomate:phase_circuit"
+    },
+    "P": {
+      "item": "wirelessautomate:resonance_plate"
+    },
+    "L": {
+      "item": "wirelessautomate:harmonic_lens"
+    }
+  },
+  "result": {
+    "id": "wirelessautomate:phase_matrix",
+    "count": 1
+  }
+}

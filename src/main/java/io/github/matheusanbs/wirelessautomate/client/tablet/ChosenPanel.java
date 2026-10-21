@@ -108,7 +108,7 @@ final class ChosenPanel {
 
         @Override
         public void undoPaste() {
-            list.actions.profile(Action.UNDO, null, null, List.of());
+            list.actions.profile(Action.UNDO, null, List.of());
         }
 
         @Override

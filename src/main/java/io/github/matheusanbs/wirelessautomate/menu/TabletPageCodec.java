@@ -3,7 +3,6 @@ package io.github.matheusanbs.wirelessautomate.menu;
 import static io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.MAX_NODES;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
-import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.Facet;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.Live;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeStatus;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeView;
@@ -58,10 +57,6 @@ final class TabletPageCodec {
                 }
             }
         }
-        for (Facet<ResourceLocation> facet : page.groupCounts()) {
-            machines.putIfAbsent(facet.id(), machines.size());
-        }
-        page.originGroup().ifPresent(id -> machines.putIfAbsent(id, machines.size()));
         TabletRows.addBlocks(page.rows(), machines);
         TabletMachineRows.addBlocks(page.machineRows(), machines);
         writeLocations(buf, dimensions);
@@ -75,6 +70,7 @@ final class TabletPageCodec {
             buf.writeVarInt(dimensions.getInt(n.key().dimension().location()));
             buf.writeLong(n.key().pos().asLong());
             buf.writeUtf(n.name(), 64);
+            buf.writeUtf(n.attachedLabel(), 64);
             buf.writeVarInt(machines.getInt(n.machine()));
             buf.writeEnum(n.tier());
             for (List<UUID> networks : n.networks()) {
@@ -99,12 +95,6 @@ final class TabletPageCodec {
         }
         TabletRows.encode(buf, page.rows(), machines);
         TabletMachineRows.encode(buf, page.machineRows(), machines);
-        buf.writeVarInt(page.groupCounts().size());
-        for (Facet<ResourceLocation> facet : page.groupCounts()) {
-            buf.writeVarInt(machines.getInt(facet.id()));
-            buf.writeVarInt(facet.count());
-        }
-        buf.writeOptional(page.originGroup(), (b, id) -> b.writeVarInt(machines.getInt(id)));
     }
 
     private static void writeLocations(RegistryFriendlyByteBuf buf, Object2IntLinkedOpenHashMap<ResourceLocation> palette) {
@@ -172,6 +162,7 @@ final class TabletPageCodec {
             NodeKey key = new NodeKey(ResourceKey.create(Registries.DIMENSION, at(dimensions, buf.readVarInt())),
                     BlockPos.of(buf.readLong()));
             String name = buf.readUtf(64);
+            String attachedLabel = buf.readUtf(64);
             ResourceLocation machine = at(machines, buf.readVarInt());
             RouterTier tier = buf.readEnum(RouterTier.class);
             List<List<UUID>> typeNetworks = new ArrayList<>(TYPES.length);
@@ -191,17 +182,12 @@ final class TabletPageCodec {
                     : ProfileMatch.differs(b.readEnum(ResourceType.class), b.readEnum(RemoteSide.class),
                             b.readEnum(What.class)));
             int linked = buf.readVarInt();
-            nodes.add(new NodeView(key, name, machine, tier, List.copyOf(typeNetworks), roles, live.status(), removed,
+            nodes.add(new NodeView(key, name, attachedLabel, machine, tier, List.copyOf(typeNetworks), roles,
+                    live.status(), removed,
                     faceModes, live.rates(), profile, linked));
         }
         TabletRows rows = TabletRows.decode(buf, machines, nodeCount);
         TabletMachineRows machineRows = TabletMachineRows.decode(buf, machines);
-        int groupCount = readCount(buf, MAX_NODES);
-        List<Facet<ResourceLocation>> groupCounts = new ArrayList<>(groupCount);
-        for (int i = 0; i < groupCount; i++) {
-            groupCounts.add(new Facet<>(at(machines, buf.readVarInt()), buf.readVarInt()));
-        }
-        return new Page(query, total, matching, List.copyOf(nodes), rows, List.copyOf(groupCounts),
-                buf.readOptional(b -> at(machines, b.readVarInt())), machineRows);
+        return new Page(query, total, matching, List.copyOf(nodes), rows, machineRows);
     }
 }

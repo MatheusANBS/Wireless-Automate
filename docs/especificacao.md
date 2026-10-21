@@ -35,17 +35,17 @@ Cinco tiers (oito com o Allthemodium), ×8 por degrau. Os tiers feitos com itens
 | Tier | Itens/s | Fluido e químico (mB/s) | Energia (FE/t) | Source/s | Alcance |
 | --- | --- | --- | --- | --- | --- |
 | Básico | 32 | 2.000 | 1.000 | 100 | 64 blocos |
-| Avançado | 256 | 16.000 | 8.000 | 800 | 512 blocos |
+| Avançado | 256 | 16.000 | 32.768² | 800 | 512 blocos |
 | Elite | 2.048 | 128.000 | 64.000 | 6.400 | Dimensão inteira |
-| Esmeralda | 16.384 | 1.024.000 | 512.000 | 51.200 | Entre dimensões |
-| Allthemodium¹ | 131.072 | 8.192.000 | 4.096.000 | 409.600 | Entre dimensões |
-| Vibranium¹ | 1.048.576 | 65.536.000 | 32.768.000 | 3.276.800 | Entre dimensões |
-| Unobtainium¹ | 8.388.608 | 524.288.000 | 2.097.152.000² | 26.214.400 | Entre dimensões |
+| Esmeralda | 16.384 | 1.024.000 | 2.097.152² | 51.200 | Entre dimensões |
+| Allthemodium¹ | 131.072 | 8.192.000 | 67.108.864² | 409.600 | Entre dimensões |
+| Vibranium¹ | 1.048.576 | 65.536.000 | 134.217.728² | 3.276.800 | Entre dimensões |
+| Unobtainium¹ | 8.388.608 | 524.288.000 | 4.294.967.296² | 26.214.400 | Entre dimensões |
 | Ultimate | Sem limite | Sem limite | Sem limite | Sem limite | Entre dimensões |
 
 ¹ Só com o mod Allthemodium; sem ele, a Esmeralda sobe direto para o Ultimate.
 
-² A energia do Unobtainium sobe ×64 sobre o Vibranium (não ×8), para o roteador dar conta da geração cheia do Ressonador de Sinal do mesmo tier (1.879.048.192 FE/t; decisão do dono, 15/10/2026).
+² A energia não segue o ×8: cada tier escoa por uma face a geração cheia do Ressonador de Sinal do mesmo tier (rebalanceamento de 21/10/2026, migração 3 da config; o Básico e o Elite já cobriam e ficaram).
 
 A Source (Ars Nouveau) é opcional: sem filtro e sem cartões, como a energia; a vazão é a chave `sourcePerSecond` da config.
 
@@ -272,6 +272,26 @@ Decididos pelo dono depois (8/10/2026):
 - **Cores dos tipos:** Químicos `#97C853` (o verde do Tanque Químico) e Source `#B36DE0` (o roxo do Ars). Na barra do Tanque de Source: corpo `#9749C2`, sombra `#6B2F8F`, brilho `#EA8EF3`.
 - **Baú pronto (8/10/2026):** tudo o que está acima para o Baú, mais o filtro de entrada indo junto no item quebrado e o upgrade na bancada (a mesma receita do roteador). Na tela: clique pega uma pilha, botão direito meia, Shift + clique manda para o inventário; com item no cursor, clicar na lista guarda (botão direito, um). A tela recebe só as diferenças por tipo, no máximo a cada 5 ticks, e só aberta.
 
+## Ressonador de Sinal
+
+Gerador multibloco (estrutura 5×5×5 de Carcaça e Vidro com o Núcleo de Ressonância, Portas de Energia e de Cristais e o Sintonizador). O Núcleo gera FE pelas câmaras de cristal, uma por tier (Básico 1 … Ultimate 8), pela sintonia do dial com a estação que deriva. Specs: `docs/superpowers/specs/2026-10-15-ressonador-de-sinal-design.md` (base), `2026-10-20-ressonador-rebalanceamento-design.md` e `2026-10-21-ressonador-cascata-design.md` (rebalanceamento; a de 21/10 vale onde divergem).
+
+**Escada.** FE/t = soma dos rendimentos das câmaras × FE por cristal × eficiência × fator da interferência × fator do Eco. FE por cristal padrão (config `resonator.<tier>.fePerCrystal`) e o máximo com o Afinado do tier em todas as câmaras: Básico 216 (432 FE/t), Avançado 6.912 (27.648), Elite 10.000 (60.000), Esmeralda 160.000 (1.280.000), Allthemodium 6.400.000 (64M), Vibranium 6.700.000 (80,4M), Unobtainium 184.000.000 (2,58B), Ultimate 268.435.456 (4,29B, mais o Eco).
+
+**Cristais e rendimento.** O rendimento conta em quartos. No Básico e no Avançado: Cristal de Sinal 1, Lapidado 2, Afinado 2. Do Elite para cima: só o Cristal Afinado de tier igual ou maior que o do Núcleo rende 2; o Lapidado e o Afinado de tier menor rendem 1/2, o Cristal de Sinal 1/4. Os Afinados (Elite ao Ultimate) saem de um Lapidado cheio, ou de um Afinado de tier menor, com o material do tier (receita `tune_crystal`). A vida da carga a 100% depende do tier do Núcleo (`crystalLifeMinutes`, padrão 20, 20, 15, 10, 5, 5, 4 e 3 minutos).
+
+**Fadiga.** Cada recarga gasta 1 de integridade (`crystalIntegrity`, padrão 8 cargas por cristal); com 0, o cristal racha: não gera, não recarrega e a Porta de Cristais o tira como o Opaco. Rachado + 4 Cristais de Sinal cheios (`recastCrystals`) refazem o mesmo cristal na bancada (`recast_crystal`).
+
+**Catalisador da recarga.** Básico e Avançado: redstone ou Pó de Ressonância. Elite e Esmeralda: só o Pó. Allthemodium ao Ultimate: só o Pó Carregado do tier (8 Pós + 1 lingote do tier, rende 8). O catalisador que o tier não aceita mais (gravado antes da regra, ou de um Núcleo que subiu) é gasto até acabar.
+
+**Coração do Ressonador.** Um por tier, feito pela cascata de itens próprios (Liga de Sinal, Placa, Fio, Bobina, Lente Harmônica, Circuito e Matriz de Fase, Estabilizador de Campo, Núcleo Condensado e, no Ultimate, a Moldura de Liga). O Básico vai na receita do Núcleo; subir o Núcleo pelo Cartão de Upgrade gasta o Coração do tier de destino do inventário (sem ele, nada muda).
+
+**Interferência.** Cada outro Núcleo montado e carregado da mesma dimensão a até 32 blocos (Chebyshev, `interferenceRadius`, 0 desliga) tira 15% da eficiência (`interferencePenalty`), até 60% (`interferenceMax`), depois do teto do Sintonizador. A conta só roda ao montar, desmontar, carregar e descarregar um Núcleo.
+
+**Eco Ressonante (só Ultimate).** Um Afinado Ultimate rachado posto no slot Eco (ou entregue pela Porta de Cristais) é queimado e soma 1 de Eco: +5% da geração base cada (`ecoBonus`), sem teto por padrão (`ecoMax`); o buffer acompanha. O Eco fica no Núcleo quebrado (componente `resonator_eco`).
+
+**Tela do Núcleo** (352 × 244): osciloscópio, dial e modo, câmaras com a barra de integridade, o catalisador pelo tier, eficiência, geração, buffer, a linha da interferência, a Estrutura e, no Ultimate, a caixa do Eco. Sem comparador, sem redstone de controle e sem Tablet (decisões do dono).
+
 ## Arquitetura de performance
 
 Regra de ouro: uma operação que não move nada não pode custar nada. O custo vem de verificar, filtrar e tentar inserir em destinos cheios, então a arquitetura evita cada um desses passos.
@@ -356,7 +376,7 @@ O v1 entrega o motor de transferência e a configuração essencial; o v2 comple
 
 **v2, escala e integrações**
 
-- [x] Ressonador de Sinal (gerador multibloco): etapas 1 (minério, cristais e a receita do Lapidado), 2 (estrutura, Núcleo, Portas, comando e projeção), 3 (tela do Núcleo, Sintonizador automático e câmara animada) e 4 (JEI, guia e GIF da vitrine; sem Tablet, por decisão do dono) prontas no ramo `ressonador`. Spec em `docs/superpowers/specs/2026-10-15-ressonador-de-sinal-design.md`
+- [x] Ressonador de Sinal (gerador multibloco): etapas 1 (minério, cristais e a receita do Lapidado), 2 (estrutura, Núcleo, Portas, comando e projeção), 3 (tela do Núcleo, Sintonizador automático e câmara animada) e 4 (JEI, guia e GIF da vitrine; sem Tablet, por decisão do dono) prontas no ramo `ressonador`. Spec em `docs/superpowers/specs/2026-10-15-ressonador-de-sinal-design.md`. Rebalanceamento (21/10): etapas 1 (escada, quartos, Afinados, fadiga, Pó, catalisador por tier), 1b (vida por tier, Pó Carregado, cascata e Coração) e 2 (interferência, Eco e tela) prontas; falta a etapa 3 (JEI e guia)
 - [x] Químicos do Mekanism (aba Químicos com modo, prioridade, redstone, rede e filtro exato ou por mod; sem cartões de filtro)
 - [x] Source do Ars Nouveau (aba Source, sem filtro e sem cartões, vazão por tier)
 - [x] Tablet: lista, mapa, estatísticas, redes e grupos

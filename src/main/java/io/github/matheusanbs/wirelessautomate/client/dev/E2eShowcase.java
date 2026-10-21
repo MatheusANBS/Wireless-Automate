@@ -278,7 +278,7 @@ final class E2eShowcase {
         list.add(new Step("alcance: tela larga com a lista", STEP_TIMEOUT_MS, () -> {
             routerScreen().previewResize(Math.min(600, routerScreen().width - 8), 300);
             if (!routerScreen().rangeListShown()) {
-                click(widget(byMessageKey("gui.wirelessautomate.router.range.machines"), "botão Máquinas"));
+                routerScreen().previewToggleList();
             }
         }, () -> routerScreen().rangeListShown() && routerScreen().rangeViewShown() && rangeView().groups().size() == 2
                 && stepTicks >= 4, () -> "lista " + routerScreen().rangeListShown() + ", visor " + routerScreen().rangeViewShown()));

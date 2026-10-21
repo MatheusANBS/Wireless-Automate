@@ -501,6 +501,12 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         rebuild();
     }
 
+    /** e2e: esconde ou mostra a lista das máquinas (o jogador não esconde). */
+    public void previewToggleList() {
+        column.toggleListForTests();
+        refresh();
+    }
+
     /** Tamanho atual do painel, {@code {largura, altura}} (gancho do e2e). */
     public int[] size() {
         return new int[] {w, h};

@@ -59,8 +59,8 @@ o roteador.
 | --- | --- |
 | **1. Escolha o tipo** | Clique na aba: Itens, Fluidos, Energia, Químicos ou Source. |
 | **2. Escolha a face** | Clique na face da máquina no modelo 3D (arraste para girar) ou no **cubo desdobrado** do painel: as duas escolhas andam juntas, e a face sob o mouse se acende nos dois. |
-| **3. Escolha o modo** | Extrai, Insere, Armazém ou Nenhum (tabela abaixo). Escolher um modo numa face sem rede, com uma [rede](networks.md) ativa, põe a face nela; o aviso na base do painel traz o botão **Desfazer**. |
-| **4. Ajustes (opcional)** | Prioridade e redstone ficam sempre à vista no painel. **Editar** abre o [filtro](filters.md) da face. |
+| **3. Escolha o modo** | Clique no botão da face no cubo: ele **avança** o modo (Extrai, Insere, Armazém, Nenhum e de volta). Clique direito **volta** o modo e Shift + clique põe em **Nenhum**. A tabela abaixo explica cada modo. |
+| **4. Ajustes (opcional)** | Prioridade (‹ ›, ou a roda do mouse) e redstone (‹ ›) ficam sempre à vista no painel. Os dois slots de **Cartão de Filtro** ficam na linha **Filtro**, ao lado do **Editar**, que abre o [filtro](filters.md) da face. |
 | **5. Rede** | Na linha **Rede**, escolha a [rede](networks.md) da face (ou **Sem rede**). |
 
 Arraste a borda direita, a de baixo ou o canto para aumentar a tela; o visor 3D cresce. Com pouco espaço, as abas mostram só o ícone (o nome aparece ao passar o mouse).
@@ -68,10 +68,10 @@ Arraste a borda direita, a de baixo ou o canto para aumentar a tela; o visor 3D 
 ## O painel e o cubo
 
 O painel à direita é o mesmo que o [Tablet de Rede](network-tablet.md) mostra para um nó. No alto,
-o **cubo desdobrado** mostra as seis faces da máquina de uma vez: cada uma com a cor do modo e uma
-bolinha na cor da rede. Uma face sem modo tem a borda tracejada, e uma com modo e sem rede ganha um
-contorno coral e o convite **Escolha a rede desta face**. O olho marca a face onde o roteador está
-preso.
+o **cubo desdobrado** mostra as seis faces da máquina de uma vez: o botão de cada face é o seu modo,
+com o ícone da porta na cor dele, a letra do lado e uma bolinha na cor da rede. Uma face sem modo fica
+afundada, só com a letra; uma com modo e sem rede ganha a borda tracejada em coral, e a escolhida tem
+a borda dupla. O olho marca a face onde o roteador está preso.
 
 Os nomes são os lados da **máquina**, vistos de frente para ela: Frente, Trás, Esquerda, Direita,
 Cima e Baixo. Máquina sem frente, ou com a frente para cima ou para baixo, como um barril:
@@ -80,13 +80,16 @@ Cima e Baixo. Máquina sem frente, ou com a frente para cima ou para baixo, como
 | No painel | O que mostra |
 | --- | --- |
 | **Bolinha na face** | A cor da rede daquela face (sem bolinha: sem rede). |
+| **Linha da face** | Embaixo do cubo, o lado, o modo (na cor dele) e o que a face acessa, como "Cima ▪ Extrai · 27 slots · roteador aqui". O texto de cada modo está na dica do botão. |
 | **Linha Rede** | A rede da face escolhida; clique para trocar. |
+| **Limpar** | Põe em Nenhum todas as faces do tipo aberto (dois cliques; com Shift no segundo, de todos os tipos). |
+| **Copiar e Colar** | Copiar guarda a face escolhida (modo, prioridade, redstone, filtro e rede); escolha outra face do mesmo tipo e **Colar** copia tudo para ela. |
 | **Resumo ao lado das abas** | Em quantas redes estão as faces da aba (**1 rede**, **2 redes**, **Sem rede**); passe o mouse para ver qual face está em qual. |
 | **Tirar redes** | Com o Upgrade de Alcance, editando um grupo de máquinas ou uma máquina com exceção: tira a rede das faces com modo Nenhum, em todas as abas (as que movem algo ficam como estão). Fica na linha **Editando**; com a lista das máquinas à vista, é o ícone ⊘ na linha escolhida. O aviso traz **Desfazer**. |
 
 ## Máquinas à distância
 
-Com o Upgrade de Alcance, o roteador atende várias máquinas ao redor, e a lista delas aparece ao lado do visor. Cada linha mostra o nome, as coordenadas e o estado da máquina.
+Com o Upgrade de Alcance, o roteador atende várias máquinas ao redor, e a lista delas aparece embaixo do visor, com a barra **Editando** no painel. Cada máquina é uma linha com o estado, o nome e a distância (as coordenadas ficam na dica).
 
 | Na lista | O que faz |
 | --- | --- |

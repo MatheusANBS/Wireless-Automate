@@ -19,8 +19,8 @@ item_ids:
 <ItemImage id="wirelessautomate:resonance_core" scale="2" float="left" />
 
 Um gerador de energia de vários blocos: cristais de quartzo vibram dentro de uma caixa, e você
-**sintoniza** o Núcleo na frequência certa para tirar o máximo de FE. Os cristais vêm do
-[Quartzo de Sinal](signal-quartz.md).
+**sintoniza** o Núcleo na frequência certa para tirar o máximo de FE. Os cristais, os catalisadores e os Corações vêm
+do [Quartzo de Sinal](signal-quartz.md).
 
 <br clear="all" />
 
@@ -130,7 +130,7 @@ Um gerador de energia de vários blocos: cristais de quartzo vibram dentro de um
     Porta de Energia: o roteador tira a energia daqui
   </BlockAnnotation>
   <BlockAnnotation x="4" y="2" z="2" color="#e2b347">
-    Porta de Cristais: entram cristais e redstone, saem Opacos
+    Porta de Cristais: entram cristais e catalisador, saem Opacos e rachados
   </BlockAnnotation>
   <BlockAnnotation x="2" y="4" z="2" color="#a06bff">
     Sintonizador (opcional)
@@ -142,9 +142,10 @@ A cena mostra a montagem **Vitrine**, com a janela de vidro numa face e o Núcle
 
 ## Montar
 
-1. Coloque o **Núcleo de Ressonância** e clique nele com a mão vazia: a estrutura aparece **projetada** no mundo
-   (as peças que faltam e o que está errado). Clique de novo para desligar. **Shift + roda do mouse** troca entre
-   as montagens **Vitrine** e **Faixa**.
+1. Faça o **Núcleo de Ressonância**: a receita pede um **Coração do Ressonador Básico** (veja o
+   [Quartzo de Sinal](signal-quartz.md)). Coloque o Núcleo e clique nele com a mão vazia: a estrutura aparece
+   **projetada** no mundo (as peças que faltam e o que está errado). Clique de novo para desligar. **Shift + roda
+   do mouse** troca entre as montagens **Vitrine** e **Faixa**.
 2. A estrutura é uma caixa **5×5×5 oca**: **Carcaça de Porcelana** nas arestas e nos cantos; **Vidro de
    Ressonância**, as portas e o Sintonizador nas posições do miolo das faces. O interior 3×3×3 fica vazio.
 3. Precisa de **um Núcleo**, **pelo menos uma Porta de Energia** e **pelo menos uma Porta de Cristais**; o
@@ -163,22 +164,24 @@ no Núcleo solto: a barra de ação diz o que impede e o bloco errado fica conto
 | <ItemImage id="wirelessautomate:resonator_glass" /> **Vidro de Ressonância** | A janela para ver a câmara. |
 | <ItemImage id="wirelessautomate:resonance_core" /> **Núcleo de Ressonância** | O cérebro: tela, cristais e a energia gerada. |
 | <ItemImage id="wirelessautomate:resonator_energy_port" /> **Porta de Energia** | Só tira energia: prenda um roteador nela. |
-| <ItemImage id="wirelessautomate:resonator_crystal_port" /> **Porta de Cristais** | Aceita cristais e redstone e devolve os Opacos. |
+| <ItemImage id="wirelessautomate:resonator_crystal_port" /> **Porta de Cristais** | Aceita cristais e catalisador e devolve os Opacos e os rachados. |
 | <ItemImage id="wirelessautomate:resonator_tuner" /> **Sintonizador** | Opcional: sintoniza sozinho. |
 
-## Cristais e redstone
+## Cristais e catalisador
 
-Cada Núcleo tem câmaras para os cristais (1 no Básico, até 8 no Ultimate). Ponha um **Cristal de Sinal** ou
-**Lapidado** de um destes jeitos:
+Cada Núcleo tem câmaras para os cristais (1 no Básico, até 8 no Ultimate). Ponha os cristais de um destes jeitos:
 
 | Como | O que fazer |
 | --- | --- |
-| **Pelo clique** | Clique no Núcleo com o cristal na mão: ele vai para a primeira câmara vazia. Com redstone na mão, o pó entra no Núcleo. |
-| **Pela tela** | Abra a tela do Núcleo e use os slots de cristais e o de redstone. |
-| **Pela Porta de Cristais** | Um roteador (ou outro transporte de itens) põe os cristais e a redstone na porta e tira os Opacos dela. |
+| **Pelo clique** | Clique no Núcleo com o cristal na mão: ele vai para a primeira câmara vazia. Com o catalisador na mão, ele entra no Núcleo. |
+| **Pela tela** | Abra a tela do Núcleo e use os slots de cristais e o do catalisador. |
+| **Pela Porta de Cristais** | Um roteador (ou outro transporte de itens) põe os cristais e o catalisador na porta e tira os Opacos e os rachados dela. |
 
-Para tirar o último cristal, clique no Núcleo com **Shift e as duas mãos vazias**. A **redstone** só serve
-para recarregar os Opacos, como na página do [Quartzo de Sinal](signal-quartz.md).
+Para tirar o último cristal, clique no Núcleo com **Shift e as duas mãos vazias**. Do Elite para cima, use o
+**Cristal Afinado** do tier: os outros cristais rendem bem menos. O **catalisador** só serve para recarregar os
+Opacos, e cada tier aceita o seu (a tabela de manutenção, mais abaixo); a tela diz qual ele aceita. A recarga
+também gasta a **integridade** do cristal, que racha depois de 8 cargas; os detalhes estão no
+[Quartzo de Sinal](signal-quartz.md).
 
 ## Sintonizar
 
@@ -199,6 +202,25 @@ Com um **Sintonizador** na estrutura, o botão **Sintonizador** da tela liga o *
 estação sozinho, sem você voltar. Em troca, a eficiência fica limitada por um **teto** que depende do tier do Núcleo
 (da tabela mais abaixo). No modo automático o dial não responde aos botões: volte para **Manual** para girá-lo.
 
+## Interferência
+
+Ressonadores perto uns dos outros se atrapalham. Cada outro Núcleo **montado** a até **32 blocos** (contando a maior
+das distâncias em x, y e z), na mesma dimensão e com o chunk carregado, tira **15%** da eficiência deste, até
+**60%** no total. Vale para Núcleos de qualquer tier.
+
+A tela do Núcleo mostra a perda e a distância do vizinho mais perto, como **−15% · Núcleo a 24 blocos**, ou
+**Interferência: nenhuma**. Para gerar no máximo, deixe cada Ressonador a mais de 32 blocos dos outros.
+
+## Eco Ressonante
+
+Só no Núcleo **Ultimate**. A tela dele tem um slot **Eco**: ponha ali um **Cristal Afinado Ultimate rachado** e ele é
+queimado na hora, somando **1 de Eco**. Cada Eco aumenta a geração em **5%**, sem teto: quanto mais cristais você
+queimar, mais o Núcleo gera.
+
+Um Afinado Ultimate rachado que chega pela Porta de Cristais também vai para o Eco. Para refazer o cristal em vez de
+queimá-lo, tire-o pela Porta ou pela tela e refaça-o na bancada. O Núcleo **guarda o Eco** quando é quebrado e o
+leva de volta quando você o coloca de novo.
+
 ## A câmara
 
 Pelo vidro dá para ler a sintonia, sem abrir a tela:
@@ -208,31 +230,53 @@ Pelo vidro dá para ler a sintonia, sem abrir a tela:
 - **Fora de sintonia**: a figura vira um **rabisco**, cada cristal vai no seu tempo e o chão chia. Com a geração em zero,
   a figura some.
 - A lente do Núcleo acende na parede dele, faíscas correm até a Porta de Energia e um fio de redstone chega ao cristal
-  Opaco que está recarregando.
+  Opaco que está recarregando. Um cristal rachado fica escuro.
 
 ## Energia
 
 A energia sai pela **Porta de Energia**: prenda um [Roteador](router.md) nela e ponha a face em **Extrai**
-na aba **Energia**. O Núcleo guarda uma reserva pequena (uns 10 segundos de geração cheia); com ela cheia, ele
-**para de gerar e não gasta cristal**. O Núcleo só trabalha com o chunk carregado: para ele rodar longe de você,
-use o [Upgrade de Chunk Loading](chunk-loading.md) no roteador preso à Porta.
+na aba **Energia**. Um roteador do mesmo tier do Núcleo dá conta da geração cheia. O Núcleo guarda uma reserva
+pequena (uns 10 segundos de geração cheia); com ela cheia, ele **para de gerar e não gasta cristal**. O Núcleo só
+trabalha com o chunk carregado: para ele rodar longe de você, use o [Upgrade de Chunk Loading](chunk-loading.md)
+no roteador preso à Porta.
 
 ## Tiers
 
 O Núcleo sobe de tier com os mesmos [Cartões de Upgrade](upgrade-cards.md) do roteador (Shift + clique com o
-cartão no Núcleo), sem desmontar: o conteúdo continua e as câmaras novas aparecem. Cada tier tem mais câmaras e
-mais FE por cristal. O Lapidado rende o dobro do que a tabela mostra para o Cristal de Sinal.
+cartão no Núcleo), sem desmontar: o conteúdo continua e as câmaras novas aparecem. Para subir, você precisa também
+do **Coração do Ressonador do tier de destino** no inventário: o clique gasta o cartão e o Coração. Sem ele, nada
+muda e a barra de ação diz **Falta o Coração do Ressonador** com o tier. O cartão sobe um degrau por vez, então cada
+degrau pede o seu Coração. As receitas dos Corações estão no [Quartzo de Sinal](signal-quartz.md).
 
-| Tier do Núcleo | Câmaras | FE/t por Cristal de Sinal | Teto do Sintonizador |
+Cada tier tem mais câmaras e gera mais. A geração máxima é com o cristal que rende cheio em todas as câmaras e a
+lâmpada **EM SINTONIA**, sem interferência:
+
+| Tier do Núcleo | Câmaras | Geração máxima (FE/t) | Teto do Sintonizador |
 | --- | --- | --- | --- |
-| **Básico** | 1 | 128 | 85% |
-| **Avançado** | 2 | 1.024 | 88% |
-| **Elite** | 3 | 8.192 | 90% |
-| **Esmeralda** | 4 | 32.768 | 92% |
-| **Allthemodium¹** | 5 | 262.144 | 94% |
-| **Vibranium¹** | 6 | 2.097.152 | 95% |
-| **Unobtainium¹** | 7 | 134.217.728 | 96% |
-| **Ultimate** | 8 | 1.073.741.824 | 98% |
+| **Básico** | 1 | 432 | 85% |
+| **Avançado** | 2 | 27.648 | 88% |
+| **Elite** | 3 | 60.000 | 90% |
+| **Esmeralda** | 4 | 1.280.000 | 92% |
+| **Allthemodium¹** | 5 | 64.000.000 | 94% |
+| **Vibranium¹** | 6 | 80.400.000 | 95% |
+| **Unobtainium¹** | 7 | 2.576.000.000 | 96% |
+| **Ultimate** | 8 | 4.294.967.296 | 98% |
+
+¹ Só com o mod Allthemodium.
+
+A manutenção também sobe com o tier: o cristal certo, quanto a carga dura (gerando a 100%) e o catalisador que
+recarrega os Opacos. O Cristal de Sinal dura a metade do tempo da tabela.
+
+| Tier do Núcleo | Cristal que rende cheio | A carga dura | Catalisador da recarga |
+| --- | --- | --- | --- |
+| **Básico** | Lapidado ou Afinado | 20 min | Redstone ou Pó de Ressonância |
+| **Avançado** | Lapidado ou Afinado | 20 min | Redstone ou Pó de Ressonância |
+| **Elite** | Afinado Elite ou acima | 15 min | Pó de Ressonância |
+| **Esmeralda** | Afinado Esmeralda ou acima | 10 min | Pó de Ressonância |
+| **Allthemodium¹** | Afinado Allthemodium ou acima | 5 min | Pó Carregado de Allthemodium |
+| **Vibranium¹** | Afinado Vibranium ou acima | 5 min | Pó Carregado de Vibranium |
+| **Unobtainium¹** | Afinado Unobtainium ou acima | 4 min | Pó Carregado de Unobtainium |
+| **Ultimate** | Afinado Ultimate | 3 min | Pó Carregado Ultimate |
 
 ¹ Só com o mod Allthemodium.
 

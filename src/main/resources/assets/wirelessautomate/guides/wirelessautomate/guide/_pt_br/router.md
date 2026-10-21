@@ -128,12 +128,12 @@ O servidor pode ter valores diferentes: o tooltip do cartão de upgrade mostra o
 | Tier | Itens/s | Fluido e químico (mB/s) | Energia (FE/t) | Source/s | Alcance |
 | --- | --- | --- | --- | --- | --- |
 | **Básico** | 32 | 2.000 | 1.000 | 100 | 64 blocos |
-| **Avançado** | 256 | 16.000 | 8.000 | 800 | 512 blocos |
+| **Avançado** | 256 | 16.000 | 32.768 | 800 | 512 blocos |
 | **Elite** | 2.048 | 128.000 | 64.000 | 6.400 | A dimensão inteira |
-| **Esmeralda** | 16.384 | 1.024.000 | 512.000 | 51.200 | Todas as dimensões |
-| **Allthemodium¹** | 131.072 | 8.192.000 | 4.096.000 | 409.600 | Todas as dimensões |
-| **Vibranium¹** | 1.048.576 | 65.536.000 | 32.768.000 | 3.276.800 | Todas as dimensões |
-| **Unobtainium¹** | 8.388.608 | 524.288.000 | 2.097.152.000 | 26.214.400 | Todas as dimensões |
+| **Esmeralda** | 16.384 | 1.024.000 | 2.097.152 | 51.200 | Todas as dimensões |
+| **Allthemodium¹** | 131.072 | 8.192.000 | 67.108.864 | 409.600 | Todas as dimensões |
+| **Vibranium¹** | 1.048.576 | 65.536.000 | 134.217.728 | 3.276.800 | Todas as dimensões |
+| **Unobtainium¹** | 8.388.608 | 524.288.000 | 4.294.967.296 | 26.214.400 | Todas as dimensões |
 | **Ultimate** | Sem limite | Sem limite | Sem limite | Sem limite | Todas as dimensões |
 
 ¹ Só com o mod Allthemodium. Source só com o Ars Nouveau.

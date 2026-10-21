@@ -184,7 +184,7 @@ TIERS = [
 RATES = {  # por tier: itens/s, fluido e químico mB/s, energia FE/t, Source/s
     'item': [32, 256, 2_048, 16_384, 131_072, 1_048_576, 8_388_608, 0],
     'fluid': [2_000, 16_000, 128_000, 1_024_000, 8_192_000, 65_536_000, 524_288_000, 0],
-    'energy': [1_000, 8_000, 64_000, 512_000, 4_096_000, 32_768_000, 2_097_152_000, 0],
+    'energy': [1_000, 32_768, 64_000, 2_097_152, 67_108_864, 134_217_728, 4_294_967_296, 0],
     'source': [100, 800, 6_400, 51_200, 409_600, 3_276_800, 26_214_400, 0],
 }
 RANGE = {
@@ -2418,35 +2418,73 @@ SCENE_RESONATOR = '''<GameScene zoom="3" interactive={true}>
   <IsometricCamera yaw="{YAW}" pitch="30" />
 </GameScene>'''
 
-# Tiers do Ressonador na ordem do RouterTier: câmaras (tier + 1), FE/t por Cristal de Sinal (padrões do CoreMath) e
-# teto do Sintonizador em % (constantes do Tuning.ceiling). O Cristal Lapidado rende o dobro.
-RESONATOR_FE = [128, 1_024, 8_192, 32_768, 262_144, 2_097_152, 134_217_728, 1_073_741_824]
+# Tiers do Ressonador na ordem do RouterTier: câmaras (tier + 1), FE por cristal (padrões do CoreMath), minutos que a
+# carga do Lapidado ou do Afinado dura a 100% (CoreMath.DEFAULT_LIFE_MINUTES; o Cristal de Sinal dura a metade) e teto
+# do Sintonizador em % (constantes do Tuning.ceiling). A geração máxima é câmaras × FE por cristal × 2.
+RESONATOR_FE = [216, 6_912, 10_000, 160_000, 6_400_000, 6_700_000, 184_000_000, 268_435_456]
+RESONATOR_LIFE = [20, 20, 15, 10, 5, 5, 4, 3]
 RESONATOR_CEILING = [85, 88, 90, 92, 94, 95, 96, 98]
+
+# O catalisador da recarga por tier do Núcleo (CatalystRule): redstone ou Pó até o Avançado, só Pó até a Esmeralda e
+# o Pó Carregado do próprio tier do Allthemodium para cima.
+CATALYST = {
+    'pt': ['Redstone ou Pó de Ressonância'] * 2 + ['Pó de Ressonância'] * 2
+    + ['Pó Carregado de Allthemodium', 'Pó Carregado de Vibranium', 'Pó Carregado de Unobtainium',
+       'Pó Carregado Ultimate'],
+    'en': ['Redstone or Resonance Dust'] * 2 + ['Resonance Dust'] * 2
+    + ['Charged Allthemodium Dust', 'Charged Vibranium Dust', 'Charged Unobtainium Dust', 'Charged Ultimate Dust'],
+}
 
 
 def resonator_table(lang):
-    head = {'pt': '| Tier do Núcleo | Câmaras | FE/t por Cristal de Sinal | Teto do Sintonizador |',
-            'en': '| Core tier | Chambers | FE/t per Signal Crystal | Tuner ceiling |'}[lang]
+    head = {'pt': '| Tier do Núcleo | Câmaras | Geração máxima (FE/t) | Teto do Sintonizador |',
+            'en': '| Core tier | Chambers | Max generation (FE/t) | Tuner ceiling |'}[lang]
     rows = [head, '| --- | --- | --- | --- |']
     for i in range(len(TIERS)):
-        rows.append(f'| **{tier_name(lang, i)}** | {i + 1} | {num(lang, RESONATOR_FE[i])} | {RESONATOR_CEILING[i]}% |')
+        top = (i + 1) * RESONATOR_FE[i] * 2
+        rows.append(f'| **{tier_name(lang, i)}** | {i + 1} | {num(lang, top)} | {RESONATOR_CEILING[i]}% |')
+    return '\n'.join(rows) + '\n\n' + ATM_NOTE[lang]
+
+
+def resonator_upkeep_table(lang):
+    head = {'pt': '| Tier do Núcleo | Cristal que rende cheio | A carga dura | Catalisador da recarga |',
+            'en': '| Core tier | Crystal at full yield | A charge lasts | Recharge catalyst |'}[lang]
+    rows = [head, '| --- | --- | --- | --- |']
+    for i in range(len(TIERS)):
+        if i < 2:
+            crystal = {'pt': 'Lapidado ou Afinado', 'en': 'Cut or Tuned'}[lang]
+        elif i == len(TIERS) - 1:
+            crystal = {'pt': 'Afinado Ultimate', 'en': 'Tuned Ultimate'}[lang]
+        else:
+            crystal = {'pt': f'Afinado {TIERS[i][1]} ou acima', 'en': f'Tuned {TIERS[i][2]} or higher'}[lang]
+        rows.append(f'| **{tier_name(lang, i)}** | {crystal} | {RESONATOR_LIFE[i]} min | {CATALYST[lang][i]} |')
     return '\n'.join(rows) + '\n\n' + ATM_NOTE[lang]
 
 
 RESONATOR_ANNOTATIONS = {
     'pt': dict(CORE='Núcleo de Ressonância: a tela e os cristais',
                ENERGY='Porta de Energia: o roteador tira a energia daqui',
-               CRYSTALS='Porta de Cristais: entram cristais e redstone, saem Opacos', TUNER='Sintonizador (opcional)',
-               YAW='35'),
+               CRYSTALS='Porta de Cristais: entram cristais e catalisador, saem Opacos e rachados',
+               TUNER='Sintonizador (opcional)', YAW='35'),
     'en': dict(CORE='Resonance Core: the screen and the crystals',
                ENERGY='Resonator Energy Port: a router pulls the energy here',
-               CRYSTALS='Resonator Crystal Port: crystals and redstone in, Dull ones out',
+               CRYSTALS='Resonator Crystal Port: crystals and catalyst in, Dull and cracked ones out',
                TUNER='Resonator Tuner (optional)', YAW='35'),
 }
 
+TUNED_TIERS = ['elite', 'emerald', 'allthemodium', 'vibranium', 'unobtainium', 'ultimate']
+CHARGED_TIERS = ['allthemodium', 'vibranium', 'unobtainium', 'ultimate']
+CASCADE = ['signal_alloy_raw', 'signal_alloy_ingot', 'resonance_plate', 'resonance_wire', 'resonance_coil',
+           'harmonic_lens', 'phase_circuit', 'phase_matrix', 'field_stabilizer', 'condensed_core']
+QUARTZ_ITEMS = (['signal_quartz_ore', 'deepslate_signal_quartz_ore', 'signal_crystal', 'cut_signal_crystal']
+                + ['tuned_signal_crystal_' + t for t in TUNED_TIERS] + ['resonance_dust']
+                + ['charged_dust_' + t for t in CHARGED_TIERS] + CASCADE + ['alloy_frame']
+                + ['resonator_heart_' + t[0] for t in TIERS])
+TUNED_ROW = '\n'.join('  ' + item('tuned_signal_crystal_' + t) for t in TUNED_TIERS)
+HEART_ROW = '\n'.join('  ' + item('resonator_heart_' + t[0]) for t in TIERS)
+
 page('signal-quartz.md', front('Quartzo de Sinal e cristais', 'wirelessautomate:signal_crystal', 18, item_ids=[
-    'wirelessautomate:signal_quartz_ore', 'wirelessautomate:deepslate_signal_quartz_ore',
-    'wirelessautomate:signal_crystal', 'wirelessautomate:cut_signal_crystal']) + '''
+    'wirelessautomate:' + i for i in QUARTZ_ITEMS]) + '''
 # Quartzo de Sinal e cristais
 
 <Row gap="8">
@@ -2454,9 +2492,12 @@ page('signal-quartz.md', front('Quartzo de Sinal e cristais', 'wirelessautomate:
   ''' + item('deepslate_signal_quartz_ore') + '''
   ''' + item('signal_crystal') + '''
   ''' + item('cut_signal_crystal') + '''
+  ''' + item('tuned_signal_crystal_elite') + '''
+  ''' + item('resonance_dust') + '''
 </Row>
 
 Os cristais de quartzo são o combustível do [Ressonador de Sinal](signal-resonator.md), o gerador de energia do mod.
+Esta página mostra de onde eles vêm, como cuidar deles e as peças que o Ressonador pede para subir de tier.
 
 ## O minério
 
@@ -2470,21 +2511,52 @@ O **Minério de Quartzo de Sinal** aparece no Overworld, em pedra e em ardósia 
 
 ## Os cristais
 
-| Cristal | Rende | Dura gerando |
+| Cristal | De onde vem |
+| --- | --- |
+| ''' + item('signal_crystal') + ''' **Cristal de Sinal** | Do minério. |
+| ''' + item('cut_signal_crystal') + ''' **Cristal Lapidado** | Bancada: quatro Cristais de Sinal em cruz em volta de um Fragmento de Ametista. |
+| ''' + item('tuned_signal_crystal_elite') + ''' **Cristal Afinado** | Bancada: um Lapidado com o material do tier (mais abaixo). Um por tier, do Elite ao Ultimate. |
+
+Quanto cada um rende numa câmara depende do tier do Núcleo:
+
+| Cristal | Núcleo Básico ou Avançado | Núcleo Elite ou acima |
 | --- | --- | --- |
-| ''' + item('signal_crystal') + ''' **Cristal de Sinal** | 1× | 10 minutos |
-| ''' + item('cut_signal_crystal') + ''' **Cristal Lapidado** | 2× | 20 minutos |
+| **Cristal de Sinal** | 1× | 1/4× |
+| **Lapidado** | 2× | 1/2× |
+| **Afinado** do tier do Núcleo ou acima | 2× | 2× |
+| **Afinado** de tier abaixo | 2× | 1/2× |
 
-A duração da tabela vale no Núcleo Básico e no Avançado. Quanto maior o tier do Núcleo, menos a carga dura: no
-Ultimate, o que duraria 20 minutos dura 3.
+O Lapidado e os Afinados duram o dobro do Cristal de Sinal. Quanto maior o tier do Núcleo, menos a carga dura: a
+tabela da página do [Ressonador de Sinal](signal-resonator.md) mostra o tempo de cada tier.
 
-O Cristal de Sinal só vem do minério. O **Cristal Lapidado** sai da bancada com quatro Cristais de Sinal em
-cruz em volta de um Fragmento de Ametista, e só aceita cristais **cheios**: cristais gastos não valem.
+As receitas dos cristais só aceitam cristais **cheios** e sem rachadura: cristais gastos não valem.
 
 <RecipeFor id="wirelessautomate:cut_signal_crystal" />
 
-O Cristal de Sinal também entra nas receitas da Carcaça de Porcelana e do Vidro de Ressonância, e o Lapidado
-na do Núcleo de Ressonância.
+## Afinar um cristal
+
+<Row gap="8">
+''' + TUNED_ROW + '''
+</Row>
+
+Do **Núcleo Elite** para cima, só o **Cristal Afinado** do tier do Núcleo (ou de um tier acima) rende cheio. Para
+afinar, junte na bancada, em qualquer posição, um **Lapidado** (ou um Afinado de tier abaixo, para reafinar) e o
+material do tier:
+
+| Afinado | Material, além do cristal |
+| --- | --- |
+| ''' + item('tuned_signal_crystal_elite') + ''' **Elite** | 2 lingotes de netherite |
+| ''' + item('tuned_signal_crystal_emerald') + ''' **Esmeralda** | 2 blocos de esmeralda + 1 Nether Star |
+| ''' + item('tuned_signal_crystal_allthemodium') + ''' **Allthemodium¹** | 2 lingotes de Allthemodium + 1 Nether Star |
+| ''' + item('tuned_signal_crystal_vibranium') + ''' **Vibranium¹** | 2 lingotes de Vibranium + 1 lingote de liga Vibranium-Allthemodium |
+| ''' + item('tuned_signal_crystal_unobtainium') + ''' **Unobtainium¹** | 2 lingotes de Unobtainium + 1 lingote de liga Unobtainium-Vibranium |
+| ''' + item('tuned_signal_crystal_ultimate') + ''' **Ultimate** | Com o Allthemodium: 2 lingotes de liga Unobtainium-Vibranium + 1 Nether Star. Sem ele: 1 bloco de netherite + 1 Nether Star + 1 Fragmento de Eco |
+
+''' + ATM_NOTE['pt'] + '''
+
+O cristal afinado sai cheio, mas com a **integridade** que o cristal de entrada tinha: afinar não renova o cristal.
+
+<RecipeFor id="wirelessautomate:tuned_signal_crystal_elite" />
 
 ## Carga e cristal Opaco
 
@@ -2495,18 +2567,109 @@ Sem carga, o cristal fica **Opaco**: é o mesmo item, só que apagado. Um Opaco 
 **recarregar**:
 
 1. Deixe o Opaco numa câmara do Núcleo.
-2. Ponha **Pó de Redstone** no Núcleo (clique com a redstone na mão, pela tela ou pela Porta de Cristais).
-3. O Núcleo recarrega **um Opaco por vez**: leva 30 segundos e gasta 1 pó de redstone, e o cristal volta cheio.
+2. Ponha o **catalisador** do tier no Núcleo (clique com ele na mão, pela tela ou pela Porta de Cristais):
+   **redstone** ou **Pó de Ressonância** no Básico e no Avançado, só **Pó de Ressonância** no Elite e na Esmeralda,
+   e o **Pó Carregado** do tier do Allthemodium para cima.
+3. O Núcleo recarrega **um Opaco por vez**: leva 30 segundos e gasta 1 catalisador, e o cristal volta cheio.
 
-A Porta de Cristais só devolve os Opacos quando o Núcleo está sem redstone; com redstone, o Opaco fica
-lá dentro esperando a vez de recarregar.
+O slot do catalisador guarda um tipo por vez: para trocar de catalisador, espere o que está lá acabar ou tire-o
+pela tela. A Porta de Cristais só devolve os Opacos quando o Núcleo está sem catalisador; com ele, o Opaco fica lá
+dentro esperando a vez de recarregar.
+
+## Integridade e cristal rachado
+
+Cada cristal aguenta **8 cargas**: a de fábrica e mais 7 recargas. Cada recarga gasta 1 de **integridade** (a dica
+do item mostra "Integridade 5 de 8", e a tela do Núcleo, uma barrinha sob cada câmara). Quando a integridade acaba,
+a recarga não enche o cristal: ele **racha**.
+
+Um **cristal rachado** não gera, não recarrega e não entra na câmara. A Porta de Cristais sempre o devolve. Para
+**refazer**, junte na bancada, em qualquer posição, o rachado e **4 Cristais de Sinal cheios**: sai o mesmo cristal,
+cheio e com a integridade inteira. Vale para os três tipos; num Afinado, o tier fica.
+
+No Núcleo Ultimate, um Afinado Ultimate rachado também pode ser queimado no **Eco**, como na página do
+[Ressonador de Sinal](signal-resonator.md).
+
+## Pó de Ressonância e Pó Carregado
+
+<Row gap="8">
+  ''' + item('resonance_dust') + '''
+''' + '\n'.join('  ' + item('charged_dust_' + t) for t in CHARGED_TIERS) + '''
+</Row>
+
+O **Pó de Ressonância** é o catalisador do Núcleo Elite e do Esmeralda (e vale também no Básico e no Avançado).
+Na bancada, sem forma: **1 redstone + 1 pó de glowstone + 1 Cristal de Sinal cheio** rendem 4.
+
+<RecipeFor id="wirelessautomate:resonance_dust" />
+
+Do Allthemodium para cima, cada Núcleo pede o **Pó Carregado** do tier dele. Na bancada, sem forma:
+**8 Pós de Ressonância + 1 lingote do tier** rendem 8.
+
+| Pó Carregado | Lingote |
+| --- | --- |
+| ''' + item('charged_dust_allthemodium') + ''' **Allthemodium¹** | 1 lingote de Allthemodium |
+| ''' + item('charged_dust_vibranium') + ''' **Vibranium¹** | 1 lingote de Vibranium |
+| ''' + item('charged_dust_unobtainium') + ''' **Unobtainium¹** | 1 lingote de Unobtainium |
+| ''' + item('charged_dust_ultimate') + ''' **Ultimate** | Com o Allthemodium: 1 lingote de liga Unobtainium-Vibranium. Sem ele: 1 lingote de netherite |
+
+''' + ATM_NOTE['pt'] + '''
+
+## As peças do Coração
+
+Para montar o Núcleo e para subir o tier dele, o Ressonador pede um **Coração do Ressonador** (mais abaixo). Os
+Corações saem desta cadeia de peças, feitas na ordem:
+
+| Peça | Receita | Rende |
+| --- | --- | --- |
+| ''' + item('signal_alloy_raw') + ''' **1. Liga de Sinal crua** | Bancada, sem forma: 2 Cristais de Sinal cheios + 2 lingotes de ferro + 1 redstone | 2 |
+| ''' + item('signal_alloy_ingot') + ''' **2. Lingote de Liga de Sinal** | **Alto-forno**: 1 Liga de Sinal crua | 1 |
+| ''' + item('resonance_plate') + ''' **3. Placa de Ressonância** | 3 Lingotes de Liga de Sinal em linha | 1 |
+| ''' + item('resonance_wire') + ''' **4. Fio de Ressonância** | 1 Lingote de Liga de Sinal entre 2 lingotes de cobre, com 1 lingote de ouro embaixo | 4 |
+| ''' + item('resonance_coil') + ''' **5. Bobina de Ressonância** | 8 Fios em volta de 1 bloco de ferro | 1 |
+| ''' + item('harmonic_lens') + ''' **6. Lente Harmônica** | Bancada, sem forma: 1 Cristal Lapidado cheio + 2 diamantes + 4 Vidros de Ressonância | 1 |
+| ''' + item('phase_circuit') + ''' **7. Circuito de Fase** | 1 Placa no centro, 2 blocos de redstone, 2 lingotes de ouro e 4 quartzos do Nether | 2 |
+| ''' + item('phase_matrix') + ''' **8. Matriz de Fase** | 1 Lente no centro, 4 Bobinas nos cantos, 2 Circuitos e 2 Placas | 1 |
+| ''' + item('field_stabilizer') + ''' **9. Estabilizador de Campo** | 4 Matrizes + 1 bloco de diamante + 2 obsidianas chorosas + 1 olho do ender | 1 |
+| ''' + item('condensed_core') + ''' **10. Núcleo Condensado** | 4 Estabilizadores + 4 blocos de netherite + 1 Nether Star no centro | 1 |
+
+O JEI mostra a posição de cada ingrediente.
+
+<RecipeFor id="wirelessautomate:signal_alloy_ingot" />
+<RecipeFor id="wirelessautomate:phase_matrix" />
+
+## O Coração do Ressonador
+
+<Row gap="8">
+''' + HEART_ROW + '''
+</Row>
+
+Há um **Coração do Ressonador** por tier. O Básico vai na receita do Núcleo de Ressonância; os outros são gastos
+ao subir o Núcleo com o Cartão de Upgrade (veja o [Ressonador de Sinal](signal-resonator.md)). Todos são feitos na
+bancada, sem forma:
+
+| Coração | Receita |
+| --- | --- |
+| ''' + item('resonator_heart_basic') + ''' **Básico** | 1 Matriz de Fase + 4 blocos de redstone |
+| ''' + item('resonator_heart_advanced') + ''' **Avançado** | 2 Matrizes de Fase + 4 blocos de ouro |
+| ''' + item('resonator_heart_elite') + ''' **Elite** | 3 Matrizes de Fase + 4 lingotes de netherite |
+| ''' + item('resonator_heart_emerald') + ''' **Esmeralda** | 1 Estabilizador de Campo + 7 blocos de esmeralda + 1 Nether Star |
+| ''' + item('resonator_heart_allthemodium') + ''' **Allthemodium¹** | 2 Estabilizadores de Campo + 4 blocos de Allthemodium + 2 Nether Stars |
+| ''' + item('resonator_heart_vibranium') + ''' **Vibranium¹** | 1 Núcleo Condensado + 4 blocos de Vibranium + 2 Nether Stars |
+| ''' + item('resonator_heart_unobtainium') + ''' **Unobtainium¹** | 2 Núcleos Condensados + 4 blocos de Unobtainium + 3 Nether Stars |
+| ''' + item('resonator_heart_ultimate') + ''' **Ultimate** | 3 Núcleos Condensados + 1 Moldura de Liga + 5 Nether Stars |
+
+''' + ATM_NOTE['pt'] + '''
+
+A ''' + item('alloy_frame') + ''' **Moldura de Liga** do Coração Ultimate é um anel de 8 blocos em volta de
+1 Nether Star: com o Allthemodium, blocos de liga Unobtainium-Vibranium; sem ele, blocos de netherite.
+
+<RecipeFor id="wirelessautomate:resonator_heart_basic" />
+<RecipeFor id="wirelessautomate:alloy_frame" />
 
 Os números são os padrões; o JEI mostra os do seu pack.
 
 Veja como montar o gerador em [Ressonador de Sinal](signal-resonator.md).
 ''', front('Signal Quartz and crystals', 'wirelessautomate:signal_crystal', 18, item_ids=[
-    'wirelessautomate:signal_quartz_ore', 'wirelessautomate:deepslate_signal_quartz_ore',
-    'wirelessautomate:signal_crystal', 'wirelessautomate:cut_signal_crystal']) + '''
+    'wirelessautomate:' + i for i in QUARTZ_ITEMS]) + '''
 # Signal Quartz and crystals
 
 <Row gap="8">
@@ -2514,9 +2677,12 @@ Veja como montar o gerador em [Ressonador de Sinal](signal-resonator.md).
   ''' + item('deepslate_signal_quartz_ore') + '''
   ''' + item('signal_crystal') + '''
   ''' + item('cut_signal_crystal') + '''
+  ''' + item('tuned_signal_crystal_elite') + '''
+  ''' + item('resonance_dust') + '''
 </Row>
 
-Quartz crystals are the fuel of the [Signal Resonator](signal-resonator.md), the mod's power generator.
+Quartz crystals are the fuel of the [Signal Resonator](signal-resonator.md), the mod's power generator. This page
+shows where they come from, how to look after them and the parts the Resonator needs to go up in tier.
 
 ## The ore
 
@@ -2530,21 +2696,52 @@ harder to mine). It sits in small veins, most common near **y = −16**. Mine it
 
 ## The crystals
 
-| Crystal | Yields | Lasts while generating |
+| Crystal | Where it comes from |
+| --- | --- |
+| ''' + item('signal_crystal') + ''' **Signal Crystal** | The ore. |
+| ''' + item('cut_signal_crystal') + ''' **Cut Signal Crystal** | Crafting table: four Signal Crystals in a cross around an Amethyst Shard. |
+| ''' + item('tuned_signal_crystal_elite') + ''' **Tuned Signal Crystal** | Crafting table: a Cut crystal with the tier's material (below). One per tier, from Elite to Ultimate. |
+
+How much each one yields in a chamber depends on the Core's tier:
+
+| Crystal | Basic or Advanced Core | Elite Core or higher |
 | --- | --- | --- |
-| ''' + item('signal_crystal') + ''' **Signal Crystal** | 1× | 10 minutes |
-| ''' + item('cut_signal_crystal') + ''' **Cut Crystal** | 2× | 20 minutes |
+| **Signal Crystal** | 1× | 1/4× |
+| **Cut** | 2× | 1/2× |
+| **Tuned** for the Core's tier or higher | 2× | 2× |
+| **Tuned** for a lower tier | 2× | 1/2× |
 
-These times are for a Basic or Advanced Core. The higher the Core's tier, the shorter the charge lasts: in an
-Ultimate Core, what would last 20 minutes lasts 3.
+Cut and Tuned crystals last twice as long as a Signal Crystal. The higher the Core's tier, the shorter a charge
+lasts: the table on the [Signal Resonator](signal-resonator.md) page shows the time for each tier.
 
-The Signal Crystal only comes from the ore. The **Cut Crystal** is crafted from four Signal Crystals in a
-cross around an Amethyst Shard, and only accepts **full** crystals: spent ones don't count.
+The crystal recipes only accept **full**, uncracked crystals: spent ones don't count.
 
 <RecipeFor id="wirelessautomate:cut_signal_crystal" />
 
-The Signal Crystal is also in the recipes for the Porcelain Casing and the Resonance Glass, and the Cut Crystal
-in the one for the Resonance Core.
+## Tuning a crystal
+
+<Row gap="8">
+''' + TUNED_ROW + '''
+</Row>
+
+From the **Elite Core** up, only the **Tuned Signal Crystal** for the Core's tier (or a tier above) yields in full.
+To tune one, put a **Cut** crystal (or a Tuned one of a lower tier, to retune it) and the tier's material anywhere on
+a crafting table:
+
+| Tuned | Material, besides the crystal |
+| --- | --- |
+| ''' + item('tuned_signal_crystal_elite') + ''' **Elite** | 2 netherite ingots |
+| ''' + item('tuned_signal_crystal_emerald') + ''' **Emerald** | 2 emerald blocks + 1 Nether Star |
+| ''' + item('tuned_signal_crystal_allthemodium') + ''' **Allthemodium¹** | 2 Allthemodium ingots + 1 Nether Star |
+| ''' + item('tuned_signal_crystal_vibranium') + ''' **Vibranium¹** | 2 Vibranium ingots + 1 Vibranium-Allthemodium alloy ingot |
+| ''' + item('tuned_signal_crystal_unobtainium') + ''' **Unobtainium¹** | 2 Unobtainium ingots + 1 Unobtainium-Vibranium alloy ingot |
+| ''' + item('tuned_signal_crystal_ultimate') + ''' **Ultimate** | With Allthemodium: 2 Unobtainium-Vibranium alloy ingots + 1 Nether Star. Without it: 1 netherite block + 1 Nether Star + 1 Echo Shard |
+
+''' + ATM_NOTE['en'] + '''
+
+The tuned crystal comes out full, but with the **integrity** the input crystal had: tuning doesn't renew the crystal.
+
+<RecipeFor id="wirelessautomate:tuned_signal_crystal_elite" />
 
 ## Charge and Dull crystals
 
@@ -2555,11 +2752,103 @@ With no charge left, the crystal turns **Dull**: it's the same item, just dimmed
 nothing, but you can **recharge** it:
 
 1. Leave the Dull crystal in a Core chamber.
-2. Put **Redstone Dust** in the Core (click with redstone in hand, through the screen or through the Crystal Port).
-3. The Core recharges **one Dull crystal at a time**: it takes 30 seconds and uses 1 redstone dust, and the crystal comes back full.
+2. Put the tier's **catalyst** in the Core (click with it in hand, through the screen or through the Crystal Port):
+   **redstone** or **Resonance Dust** on Basic and Advanced, only **Resonance Dust** on Elite and Emerald, and the
+   tier's **Charged Dust** from Allthemodium up.
+3. The Core recharges **one Dull crystal at a time**: it takes 30 seconds and uses 1 catalyst, and the crystal comes back full.
 
-The Crystal Port only hands the Dull crystals back when the Core has no redstone; with redstone in it, the Dull
-crystal stays inside, waiting its turn to recharge.
+The catalyst slot holds one kind at a time: to switch catalysts, wait for the current one to run out or take it out
+through the screen. The Crystal Port only hands the Dull crystals back when the Core has no catalyst; with catalyst
+in it, the Dull crystal stays inside, waiting its turn to recharge.
+
+## Integrity and cracked crystals
+
+Each crystal takes **8 charges**: the one it is made with and 7 recharges. Each recharge uses 1 **integrity** (the
+item's tooltip shows "Integrity 5 of 8", and the Core's screen a small bar under each chamber). When integrity runs
+out, the recharge doesn't fill the crystal: it **cracks**.
+
+A **cracked crystal** doesn't generate, doesn't recharge and doesn't go into a chamber. The Crystal Port always hands
+it back. To **recast** it, put the cracked crystal and **4 full Signal Crystals** anywhere on a crafting table: out
+comes the same crystal, full and with its integrity restored. It works for all three kinds; a Tuned one keeps its tier.
+
+In an Ultimate Core, a cracked Tuned Ultimate crystal can also be burned in the **Eco**, as on the
+[Signal Resonator](signal-resonator.md) page.
+
+## Resonance Dust and Charged Dust
+
+<Row gap="8">
+  ''' + item('resonance_dust') + '''
+''' + '\n'.join('  ' + item('charged_dust_' + t) for t in CHARGED_TIERS) + '''
+</Row>
+
+**Resonance Dust** is the catalyst of the Elite and Emerald Cores (and it works on Basic and Advanced too). On a
+crafting table, shapeless: **1 redstone + 1 glowstone dust + 1 full Signal Crystal** make 4.
+
+<RecipeFor id="wirelessautomate:resonance_dust" />
+
+From Allthemodium up, each Core takes the **Charged Dust** of its own tier. On a crafting table, shapeless:
+**8 Resonance Dust + 1 ingot of the tier** make 8.
+
+| Charged Dust | Ingot |
+| --- | --- |
+| ''' + item('charged_dust_allthemodium') + ''' **Allthemodium¹** | 1 Allthemodium ingot |
+| ''' + item('charged_dust_vibranium') + ''' **Vibranium¹** | 1 Vibranium ingot |
+| ''' + item('charged_dust_unobtainium') + ''' **Unobtainium¹** | 1 Unobtainium ingot |
+| ''' + item('charged_dust_ultimate') + ''' **Ultimate** | With Allthemodium: 1 Unobtainium-Vibranium alloy ingot. Without it: 1 netherite ingot |
+
+''' + ATM_NOTE['en'] + '''
+
+## The Heart's parts
+
+To build the Core and to raise its tier, the Resonator takes a **Resonator Heart** (below). The Hearts come from
+this chain of parts, made in order:
+
+| Part | Recipe | Makes |
+| --- | --- | --- |
+| ''' + item('signal_alloy_raw') + ''' **1. Raw Signal Alloy** | Crafting table, shapeless: 2 full Signal Crystals + 2 iron ingots + 1 redstone | 2 |
+| ''' + item('signal_alloy_ingot') + ''' **2. Signal Alloy Ingot** | **Blast furnace**: 1 Raw Signal Alloy | 1 |
+| ''' + item('resonance_plate') + ''' **3. Resonance Plate** | 3 Signal Alloy Ingots in a row | 1 |
+| ''' + item('resonance_wire') + ''' **4. Resonance Wire** | 1 Signal Alloy Ingot between 2 copper ingots, with 1 gold ingot below | 4 |
+| ''' + item('resonance_coil') + ''' **5. Resonance Coil** | 8 Wires around 1 iron block | 1 |
+| ''' + item('harmonic_lens') + ''' **6. Harmonic Lens** | Crafting table, shapeless: 1 full Cut Signal Crystal + 2 diamonds + 4 Resonance Glass | 1 |
+| ''' + item('phase_circuit') + ''' **7. Phase Circuit** | 1 Plate in the center, 2 redstone blocks, 2 gold ingots and 4 Nether quartz | 2 |
+| ''' + item('phase_matrix') + ''' **8. Phase Matrix** | 1 Lens in the center, 4 Coils in the corners, 2 Circuits and 2 Plates | 1 |
+| ''' + item('field_stabilizer') + ''' **9. Field Stabilizer** | 4 Matrices + 1 diamond block + 2 crying obsidian + 1 eye of ender | 1 |
+| ''' + item('condensed_core') + ''' **10. Condensed Core** | 4 Stabilizers + 4 netherite blocks + 1 Nether Star in the center | 1 |
+
+JEI shows where each ingredient goes.
+
+<RecipeFor id="wirelessautomate:signal_alloy_ingot" />
+<RecipeFor id="wirelessautomate:phase_matrix" />
+
+## The Resonator Heart
+
+<Row gap="8">
+''' + HEART_ROW + '''
+</Row>
+
+There is one **Resonator Heart** per tier. The Basic one goes into the Resonance Core's recipe; the others are used
+up when you raise the Core with an Upgrade Card (see the [Signal Resonator](signal-resonator.md)). All of them are
+made on a crafting table, shapeless:
+
+| Heart | Recipe |
+| --- | --- |
+| ''' + item('resonator_heart_basic') + ''' **Basic** | 1 Phase Matrix + 4 redstone blocks |
+| ''' + item('resonator_heart_advanced') + ''' **Advanced** | 2 Phase Matrices + 4 gold blocks |
+| ''' + item('resonator_heart_elite') + ''' **Elite** | 3 Phase Matrices + 4 netherite ingots |
+| ''' + item('resonator_heart_emerald') + ''' **Emerald** | 1 Field Stabilizer + 7 emerald blocks + 1 Nether Star |
+| ''' + item('resonator_heart_allthemodium') + ''' **Allthemodium¹** | 2 Field Stabilizers + 4 Allthemodium blocks + 2 Nether Stars |
+| ''' + item('resonator_heart_vibranium') + ''' **Vibranium¹** | 1 Condensed Core + 4 Vibranium blocks + 2 Nether Stars |
+| ''' + item('resonator_heart_unobtainium') + ''' **Unobtainium¹** | 2 Condensed Cores + 4 Unobtainium blocks + 3 Nether Stars |
+| ''' + item('resonator_heart_ultimate') + ''' **Ultimate** | 3 Condensed Cores + 1 Alloy Frame + 5 Nether Stars |
+
+''' + ATM_NOTE['en'] + '''
+
+The ''' + item('alloy_frame') + ''' **Alloy Frame** for the Ultimate Heart is a ring of 8 blocks around
+1 Nether Star: with Allthemodium, Unobtainium-Vibranium alloy blocks; without it, netherite blocks.
+
+<RecipeFor id="wirelessautomate:resonator_heart_basic" />
+<RecipeFor id="wirelessautomate:alloy_frame" />
 
 The numbers are the defaults; JEI shows your pack's.
 
@@ -2575,8 +2864,8 @@ page('signal-resonator.md', front('Ressonador de Sinal', 'wirelessautomate:reson
 <ItemImage id="wirelessautomate:resonance_core" scale="2" float="left" />
 
 Um gerador de energia de vários blocos: cristais de quartzo vibram dentro de uma caixa, e você
-**sintoniza** o Núcleo na frequência certa para tirar o máximo de FE. Os cristais vêm do
-[Quartzo de Sinal](signal-quartz.md).
+**sintoniza** o Núcleo na frequência certa para tirar o máximo de FE. Os cristais, os catalisadores e os Corações vêm
+do [Quartzo de Sinal](signal-quartz.md).
 
 <br clear="all" />
 
@@ -2586,9 +2875,10 @@ A cena mostra a montagem **Vitrine**, com a janela de vidro numa face e o Núcle
 
 ## Montar
 
-1. Coloque o **Núcleo de Ressonância** e clique nele com a mão vazia: a estrutura aparece **projetada** no mundo
-   (as peças que faltam e o que está errado). Clique de novo para desligar. **Shift + roda do mouse** troca entre
-   as montagens **Vitrine** e **Faixa**.
+1. Faça o **Núcleo de Ressonância**: a receita pede um **Coração do Ressonador Básico** (veja o
+   [Quartzo de Sinal](signal-quartz.md)). Coloque o Núcleo e clique nele com a mão vazia: a estrutura aparece
+   **projetada** no mundo (as peças que faltam e o que está errado). Clique de novo para desligar. **Shift + roda
+   do mouse** troca entre as montagens **Vitrine** e **Faixa**.
 2. A estrutura é uma caixa **5×5×5 oca**: **Carcaça de Porcelana** nas arestas e nos cantos; **Vidro de
    Ressonância**, as portas e o Sintonizador nas posições do miolo das faces. O interior 3×3×3 fica vazio.
 3. Precisa de **um Núcleo**, **pelo menos uma Porta de Energia** e **pelo menos uma Porta de Cristais**; o
@@ -2607,22 +2897,24 @@ no Núcleo solto: a barra de ação diz o que impede e o bloco errado fica conto
 | ''' + item('resonator_glass') + ''' **Vidro de Ressonância** | A janela para ver a câmara. |
 | ''' + item('resonance_core') + ''' **Núcleo de Ressonância** | O cérebro: tela, cristais e a energia gerada. |
 | ''' + item('resonator_energy_port') + ''' **Porta de Energia** | Só tira energia: prenda um roteador nela. |
-| ''' + item('resonator_crystal_port') + ''' **Porta de Cristais** | Aceita cristais e redstone e devolve os Opacos. |
+| ''' + item('resonator_crystal_port') + ''' **Porta de Cristais** | Aceita cristais e catalisador e devolve os Opacos e os rachados. |
 | ''' + item('resonator_tuner') + ''' **Sintonizador** | Opcional: sintoniza sozinho. |
 
-## Cristais e redstone
+## Cristais e catalisador
 
-Cada Núcleo tem câmaras para os cristais (1 no Básico, até 8 no Ultimate). Ponha um **Cristal de Sinal** ou
-**Lapidado** de um destes jeitos:
+Cada Núcleo tem câmaras para os cristais (1 no Básico, até 8 no Ultimate). Ponha os cristais de um destes jeitos:
 
 | Como | O que fazer |
 | --- | --- |
-| **Pelo clique** | Clique no Núcleo com o cristal na mão: ele vai para a primeira câmara vazia. Com redstone na mão, o pó entra no Núcleo. |
-| **Pela tela** | Abra a tela do Núcleo e use os slots de cristais e o de redstone. |
-| **Pela Porta de Cristais** | Um roteador (ou outro transporte de itens) põe os cristais e a redstone na porta e tira os Opacos dela. |
+| **Pelo clique** | Clique no Núcleo com o cristal na mão: ele vai para a primeira câmara vazia. Com o catalisador na mão, ele entra no Núcleo. |
+| **Pela tela** | Abra a tela do Núcleo e use os slots de cristais e o do catalisador. |
+| **Pela Porta de Cristais** | Um roteador (ou outro transporte de itens) põe os cristais e o catalisador na porta e tira os Opacos e os rachados dela. |
 
-Para tirar o último cristal, clique no Núcleo com **Shift e as duas mãos vazias**. A **redstone** só serve
-para recarregar os Opacos, como na página do [Quartzo de Sinal](signal-quartz.md).
+Para tirar o último cristal, clique no Núcleo com **Shift e as duas mãos vazias**. Do Elite para cima, use o
+**Cristal Afinado** do tier: os outros cristais rendem bem menos. O **catalisador** só serve para recarregar os
+Opacos, e cada tier aceita o seu (a tabela de manutenção, mais abaixo); a tela diz qual ele aceita. A recarga
+também gasta a **integridade** do cristal, que racha depois de 8 cargas; os detalhes estão no
+[Quartzo de Sinal](signal-quartz.md).
 
 ## Sintonizar
 
@@ -2643,6 +2935,25 @@ Com um **Sintonizador** na estrutura, o botão **Sintonizador** da tela liga o *
 estação sozinho, sem você voltar. Em troca, a eficiência fica limitada por um **teto** que depende do tier do Núcleo
 (da tabela mais abaixo). No modo automático o dial não responde aos botões: volte para **Manual** para girá-lo.
 
+## Interferência
+
+Ressonadores perto uns dos outros se atrapalham. Cada outro Núcleo **montado** a até **32 blocos** (contando a maior
+das distâncias em x, y e z), na mesma dimensão e com o chunk carregado, tira **15%** da eficiência deste, até
+**60%** no total. Vale para Núcleos de qualquer tier.
+
+A tela do Núcleo mostra a perda e a distância do vizinho mais perto, como **−15% · Núcleo a 24 blocos**, ou
+**Interferência: nenhuma**. Para gerar no máximo, deixe cada Ressonador a mais de 32 blocos dos outros.
+
+## Eco Ressonante
+
+Só no Núcleo **Ultimate**. A tela dele tem um slot **Eco**: ponha ali um **Cristal Afinado Ultimate rachado** e ele é
+queimado na hora, somando **1 de Eco**. Cada Eco aumenta a geração em **5%**, sem teto: quanto mais cristais você
+queimar, mais o Núcleo gera.
+
+Um Afinado Ultimate rachado que chega pela Porta de Cristais também vai para o Eco. Para refazer o cristal em vez de
+queimá-lo, tire-o pela Porta ou pela tela e refaça-o na bancada. O Núcleo **guarda o Eco** quando é quebrado e o
+leva de volta quando você o coloca de novo.
+
 ## A câmara
 
 Pelo vidro dá para ler a sintonia, sem abrir a tela:
@@ -2652,22 +2963,33 @@ Pelo vidro dá para ler a sintonia, sem abrir a tela:
 - **Fora de sintonia**: a figura vira um **rabisco**, cada cristal vai no seu tempo e o chão chia. Com a geração em zero,
   a figura some.
 - A lente do Núcleo acende na parede dele, faíscas correm até a Porta de Energia e um fio de redstone chega ao cristal
-  Opaco que está recarregando.
+  Opaco que está recarregando. Um cristal rachado fica escuro.
 
 ## Energia
 
 A energia sai pela **Porta de Energia**: prenda um [Roteador](router.md) nela e ponha a face em **Extrai**
-na aba **Energia**. O Núcleo guarda uma reserva pequena (uns 10 segundos de geração cheia); com ela cheia, ele
-**para de gerar e não gasta cristal**. O Núcleo só trabalha com o chunk carregado: para ele rodar longe de você,
-use o [Upgrade de Chunk Loading](chunk-loading.md) no roteador preso à Porta.
+na aba **Energia**. Um roteador do mesmo tier do Núcleo dá conta da geração cheia. O Núcleo guarda uma reserva
+pequena (uns 10 segundos de geração cheia); com ela cheia, ele **para de gerar e não gasta cristal**. O Núcleo só
+trabalha com o chunk carregado: para ele rodar longe de você, use o [Upgrade de Chunk Loading](chunk-loading.md)
+no roteador preso à Porta.
 
 ## Tiers
 
 O Núcleo sobe de tier com os mesmos [Cartões de Upgrade](upgrade-cards.md) do roteador (Shift + clique com o
-cartão no Núcleo), sem desmontar: o conteúdo continua e as câmaras novas aparecem. Cada tier tem mais câmaras e
-mais FE por cristal. O Lapidado rende o dobro do que a tabela mostra para o Cristal de Sinal.
+cartão no Núcleo), sem desmontar: o conteúdo continua e as câmaras novas aparecem. Para subir, você precisa também
+do **Coração do Ressonador do tier de destino** no inventário: o clique gasta o cartão e o Coração. Sem ele, nada
+muda e a barra de ação diz **Falta o Coração do Ressonador** com o tier. O cartão sobe um degrau por vez, então cada
+degrau pede o seu Coração. As receitas dos Corações estão no [Quartzo de Sinal](signal-quartz.md).
+
+Cada tier tem mais câmaras e gera mais. A geração máxima é com o cristal que rende cheio em todas as câmaras e a
+lâmpada **EM SINTONIA**, sem interferência:
 
 ''' + resonator_table('pt') + '''
+
+A manutenção também sobe com o tier: o cristal certo, quanto a carga dura (gerando a 100%) e o catalisador que
+recarrega os Opacos. O Cristal de Sinal dura a metade do tempo da tabela.
+
+''' + resonator_upkeep_table('pt') + '''
 
 Os números são os padrões; o JEI mostra os do seu pack.
 
@@ -2688,7 +3010,7 @@ Os números são os padrões; o JEI mostra os do seu pack.
 <ItemImage id="wirelessautomate:resonance_core" scale="2" float="left" />
 
 A multiblock power generator: quartz crystals vibrate inside a box, and you **tune** the Core to the right
-frequency to pull the most FE out of them. The crystals come from
+frequency to pull the most FE out of them. The crystals, the catalysts and the Hearts come from
 [Signal Quartz](signal-quartz.md).
 
 <br clear="all" />
@@ -2699,9 +3021,10 @@ The scene shows the **Showcase** build, with the glass window on one face and th
 
 ## Building it
 
-1. Place the **Resonance Core** and click it with an empty hand: the structure shows up **projected** in the world
-   (the missing parts and what is wrong). Click again to turn it off. **Shift + mouse wheel** switches between the
-   **Showcase** and **Band** builds.
+1. Craft the **Resonance Core**: its recipe takes a **Basic Resonator Heart** (see
+   [Signal Quartz](signal-quartz.md)). Place the Core and click it with an empty hand: the structure shows up
+   **projected** in the world (the missing parts and what is wrong). Click again to turn it off. **Shift + mouse
+   wheel** switches between the **Showcase** and **Band** builds.
 2. The structure is a **hollow 5×5×5 box**: **Porcelain Casing** on the edges and corners; **Resonance Glass**, the
    ports and the Tuner on the face positions in between. The 3×3×3 inside stays empty.
 3. It needs **one Core**, **at least one Energy Port** and **at least one Crystal Port**; the **Tuner** is optional
@@ -2719,22 +3042,24 @@ doesn't build, click the loose Core: the action bar says what's in the way and t
 | ''' + item('resonator_glass') + ''' **Resonance Glass** | The window onto the chamber. |
 | ''' + item('resonance_core') + ''' **Resonance Core** | The brain: screen, crystals and the generated power. |
 | ''' + item('resonator_energy_port') + ''' **Resonator Energy Port** | Only pulls energy out: attach a router to it. |
-| ''' + item('resonator_crystal_port') + ''' **Resonator Crystal Port** | Accepts crystals and redstone and hands Dull ones back. |
+| ''' + item('resonator_crystal_port') + ''' **Resonator Crystal Port** | Accepts crystals and catalyst and hands Dull and cracked ones back. |
 | ''' + item('resonator_tuner') + ''' **Resonator Tuner** | Optional: tunes by itself. |
 
-## Crystals and redstone
+## Crystals and catalyst
 
-Each Core has chambers for crystals (1 on Basic, up to 8 on Ultimate). Put a **Signal Crystal** or a
-**Cut Crystal** in one of these ways:
+Each Core has chambers for crystals (1 on Basic, up to 8 on Ultimate). Put crystals in one of these ways:
 
 | How | What to do |
 | --- | --- |
-| **By clicking** | Click the Core with the crystal in hand: it goes to the first empty chamber. With redstone in hand, the dust goes into the Core. |
-| **Through the screen** | Open the Core's screen and use the crystal slots and the redstone slot. |
-| **Through the Crystal Port** | A router (or another item transport) puts crystals and redstone into the port and takes the Dull ones out. |
+| **By clicking** | Click the Core with the crystal in hand: it goes to the first empty chamber. With the catalyst in hand, it goes into the Core. |
+| **Through the screen** | Open the Core's screen and use the crystal slots and the catalyst slot. |
+| **Through the Crystal Port** | A router (or another item transport) puts crystals and catalyst into the port and takes the Dull and cracked ones out. |
 
-To take the last crystal out, click the Core with **Shift and both hands empty**. The **redstone** is only for
-recharging Dull crystals, as on the [Signal Quartz](signal-quartz.md) page.
+To take the last crystal out, click the Core with **Shift and both hands empty**. From Elite up, use the tier's
+**Tuned Signal Crystal**: other crystals yield much less. The **catalyst** is only for recharging Dull crystals, and
+each tier takes its own (the upkeep table, further down); the screen says which one it takes. Recharging also uses
+up the crystal's **integrity**, and it cracks after 8 charges; the details are on
+[Signal Quartz](signal-quartz.md).
 
 ## Tuning
 
@@ -2755,6 +3080,25 @@ With a **Tuner** in the structure, the screen's **Tuner** button turns on **auto
 station by itself, with no need to come back. In exchange, efficiency is capped by a **ceiling** that depends on the
 Core's tier (in the table below). In automatic mode the dial ignores the buttons: switch back to **Manual** to turn it.
 
+## Interference
+
+Resonators close to each other get in each other's way. Every other **formed** Core within **32 blocks** (counting
+the largest of the x, y and z distances), in the same dimension and with its chunk loaded, takes **15%** of this
+one's efficiency, up to **60%** in all. Cores of any tier count.
+
+The Core's screen shows the loss and how far the nearest neighbor is, like **−15% · Core 24 blocks away**, or
+**Interference: none**. To generate at full, keep each Resonator more than 32 blocks from the others.
+
+## Resonant Eco
+
+Only on the **Ultimate** Core. Its screen has an **Eco** slot: put a **cracked Tuned Ultimate crystal** there and it
+burns right away, adding **1 Eco**. Each Eco raises generation by **5%**, with no ceiling: the more crystals you burn,
+the more the Core generates.
+
+A cracked Tuned Ultimate crystal that arrives through the Crystal Port goes to the Eco too. To recast the crystal
+instead of burning it, take it out through the Port or the screen and recast it on a crafting table. The Core
+**keeps its Eco** when broken and brings it back when you place it again.
+
 ## The chamber
 
 Through the glass you can read the tuning without opening the screen:
@@ -2764,22 +3108,33 @@ Through the glass you can read the tuning without opening the screen:
 - **Out of tune**: the figure turns into a **scribble**, each crystal moves on its own and the floor hisses. With
   generation at zero, the figure disappears.
 - The Core's lens lights up on its wall, sparks run to the Energy Port and a thread of redstone reaches the Dull
-  crystal that is recharging.
+  crystal that is recharging. A cracked crystal goes dark.
 
 ## Power
 
 Power leaves through the **Energy Port**: attach a [Router](router.md) to it and set the face to **Extract** on the
-**Energy** tab. The Core keeps a small reserve (about 10 seconds of full generation); when it's full, the Core
-**stops generating and doesn't wear the crystals**. The Core only works while its chunk is loaded: to run it while
-you're away, use the [Chunk Loading Upgrade](chunk-loading.md) on the router attached to the Port.
+**Energy** tab. A router of the Core's tier keeps up with full generation. The Core keeps a small reserve (about
+10 seconds of full generation); when it's full, the Core **stops generating and doesn't wear the crystals**. The
+Core only works while its chunk is loaded: to run it while you're away, use the
+[Chunk Loading Upgrade](chunk-loading.md) on the router attached to the Port.
 
 ## Tiers
 
 The Core goes up in tier with the same [Upgrade Cards](upgrade-cards.md) as the router (Shift + click the Core with
-the card), without taking it apart: the contents stay and the new chambers show up. Each tier has more chambers and
-more FE per crystal. The Cut Crystal yields twice what the table shows for the Signal Crystal.
+the card), without taking it apart: the contents stay and the new chambers show up. To go up, you also need the
+**Resonator Heart of the target tier** in your inventory: the click uses up the card and the Heart. Without it,
+nothing changes and the action bar says **Missing Resonator Heart** with the tier. A card goes up one step at a
+time, so each step takes its own Heart. The Heart recipes are on [Signal Quartz](signal-quartz.md).
+
+Each tier has more chambers and generates more. Max generation is with a full-yield crystal in every chamber and
+the **IN TUNE** lamp lit, with no interference:
 
 ''' + resonator_table('en') + '''
+
+Upkeep goes up with the tier too: the right crystal, how long a charge lasts (generating at 100%) and the catalyst
+that recharges Dull crystals. A Signal Crystal lasts half the time in the table.
+
+''' + resonator_upkeep_table('en') + '''
 
 The numbers are the defaults; JEI shows your pack's.
 

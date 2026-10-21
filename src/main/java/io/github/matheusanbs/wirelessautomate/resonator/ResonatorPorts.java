@@ -139,12 +139,18 @@ public final class ResonatorPorts {
      * gasto ou Opaco) entra uma unidade por câmara vazia; o catalisador, pela regra do {@link CoreCatalyst#canAdd},
      * até {@link ResonanceCoreBlockEntity#MAX_REDSTONE}. Sai o rachado, sempre (o Núcleo nunca o recarrega), e o
      * Opaco só com o Núcleo sem catalisador (com ele, o Opaco ainda vai recarregar); o catalisador nunca sai. Tudo
-     * passa pelos métodos do Núcleo, que marcam a mudança.
+     * passa pelos métodos do Núcleo, que marcam a mudança. No Ultimate há mais um slot, o do Eco
+     * ({@link CoreInventory#ecoSlot}), sempre vazio: o Afinado Ultimate rachado que chega pelo funil, recusado pelas
+     * câmaras, é queimado nele.
      */
     public record CoreItems(ResonanceCoreBlockEntity core) implements IItemHandler {
+        private boolean isEco(int slot) {
+            return slot >= 0 && slot == CoreInventory.ecoSlot(core.tier());
+        }
+
         @Override
         public int getSlots() {
-            return alive(core) ? core.chambers() + 1 : 0;
+            return alive(core) ? core.inventory().getContainerSize() : 0;
         }
 
         @Override
@@ -160,8 +166,11 @@ public final class ResonatorPorts {
 
         @Override
         public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
-            if (stack.isEmpty() || !alive(core) || slot < 0 || slot > core.chambers() || !isItemValid(slot, stack)) {
+            if (stack.isEmpty() || !alive(core) || !isItemValid(slot, stack)) {
                 return stack;
+            }
+            if (isEco(slot)) {
+                return stack.copyWithCount(stack.getCount() - core.eco().burn(stack, simulate));
             }
             if (slot == core.chambers()) {
                 int room = ResonanceCoreBlockEntity.MAX_REDSTONE - core.redstone();
@@ -194,12 +203,18 @@ public final class ResonatorPorts {
 
         @Override
         public int getSlotLimit(int slot) {
-            return alive(core) && slot == core.chambers() ? ResonanceCoreBlockEntity.MAX_REDSTONE : 1;
+            return alive(core) && (slot == core.chambers() || isEco(slot)) ? ResonanceCoreBlockEntity.MAX_REDSTONE : 1;
         }
 
         @Override
         public boolean isItemValid(int slot, ItemStack stack) {
-            if (!alive(core) || slot < 0 || slot > core.chambers()) {
+            if (!alive(core) || slot < 0) {
+                return false;
+            }
+            if (isEco(slot)) {
+                return core.eco().room(stack) > 0;
+            }
+            if (slot > core.chambers()) {
                 return false;
             }
             if (slot == core.chambers()) {

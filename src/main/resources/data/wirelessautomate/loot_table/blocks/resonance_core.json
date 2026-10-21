@@ -15,6 +15,13 @@
               "properties": [
                 "tier"
               ]
+            },
+            {
+              "function": "minecraft:copy_components",
+              "source": "block_entity",
+              "include": [
+                "wirelessautomate:resonator_eco"
+              ]
             }
           ]
         }

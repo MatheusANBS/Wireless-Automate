@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.registry;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
@@ -168,6 +169,13 @@ public final class ModDataComponents {
             DATA_COMPONENTS.registerComponentType("upgrade_from", builder -> builder
                     .persistent(RouterTier.CODEC)
                     .networkSynchronized(RouterTier.STREAM_CODEC));
+
+    /** O Eco Ressonante do Núcleo Ultimate quebrado, que volta ao colocar; sem o componente, 0. */
+    public static final Supplier<DataComponentType<Long>> RESONATOR_ECO =
+            DATA_COMPONENTS.registerComponentType("resonator_eco", builder -> builder
+                    .persistent(Codec.LONG.validate(value -> value >= 0
+                            ? DataResult.success(value) : DataResult.error(() -> "Eco negativo: " + value)))
+                    .networkSynchronized(ByteBufCodecs.VAR_LONG));
 
     private ModDataComponents() {
     }

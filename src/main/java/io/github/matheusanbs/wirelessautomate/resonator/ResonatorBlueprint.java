@@ -23,6 +23,16 @@ public final class ResonatorBlueprint {
         public Layout other() {
             return this == VITRINE ? FAIXA : VITRINE;
         }
+
+        /** O byte do NBT: 0 montagem própria (ou nenhuma), 1 Vitrine, 2 Faixa. */
+        static byte toByte(@Nullable Layout layout) {
+            return layout == null ? 0 : (byte) (layout.ordinal() + 1);
+        }
+
+        static @Nullable Layout fromByte(byte value) {
+            Layout[] all = values();
+            return value >= 1 && value <= all.length ? all[value - 1] : null;
+        }
     }
 
     private ResonatorBlueprint() {

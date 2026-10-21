@@ -7,8 +7,9 @@
 Lê os ressonador-NNN.png em ordem, recorta 16:9 no centro, reduz para 640 x 360 (LANCZOS) e salva com 50 ms
 por quadro (20 fps) e loop infinito. A paleta de 256 cores é uma só, tirada de um quadro a cada dez, sem
 pontilhado: com uma paleta por quadro o fundo parado cintila (o pontilhado muda a cada quadro) e o GIF fica
-várias vezes maior, porque o PIL só grava a parte que mudou quando as cores são as mesmas. Meta abaixo de 6 MB: se
-passar, tenta de novo com 192 cores. Avisa quando dois quadros seguidos saem iguais (o tick não andou).
+várias vezes maior, porque o PIL só grava a parte que mudou quando as cores são as mesmas. Meta abaixo dos 2 MB que o
+CurseForge aceita: se passar, tenta de novo com 192 e depois 128 cores. Avisa quando dois quadros seguidos saem
+iguais (o tick não andou).
 """
 from __future__ import annotations
 
@@ -20,7 +21,8 @@ from PIL import Image
 RAIZ = Path(__file__).resolve().parents[2]
 SAIDA_PADRAO = RAIZ / "docs" / "curseforge" / "ressonador.gif"
 LARGURA, ALTURA = 640, 360
-META = 6 * 1024 * 1024
+# o limite do CurseForge para um anexo (ver gerar_imagens.LIMITE)
+META = 2_000_000
 
 
 def quadros(pasta: Path) -> list[Image.Image]:
@@ -70,9 +72,13 @@ def main() -> None:
     destino = Path(sys.argv[2]) if len(sys.argv) > 2 else SAIDA_PADRAO
     imagens = quadros(pasta)
     tamanho = salvar(imagens, destino, 256)
+    for cores in (192, 128):
+        if tamanho <= META:
+            break
+        print(f"{tamanho / 1024 / 1024:.2f} MB; tentando com {cores} cores")
+        tamanho = salvar(imagens, destino, cores)
     if tamanho > META:
-        print(f"{tamanho / 1024 / 1024:.2f} MB com 256 cores; tentando com 192")
-        tamanho = salvar(imagens, destino, 192)
+        raise SystemExit(f"{destino} passa de {META} bytes mesmo com 128 cores")
     print(f"{destino}: {len(imagens)} quadros, {tamanho / 1024 / 1024:.2f} MB")
 
 

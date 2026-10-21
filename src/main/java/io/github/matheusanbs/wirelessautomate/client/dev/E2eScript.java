@@ -30,7 +30,8 @@ import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 final class E2eScript {
     /**
      * Opcional: {@code WA_E2E_ONLY=tablet} roda só a abertura, o nome e as redes de B, a transferência entre redes e os
-     * passos do Tablet; {@code WA_E2E_ONLY=ressonador}, só a abertura e os passos do Ressonador.
+     * passos do Tablet; {@code WA_E2E_ONLY=ressonador}, só a abertura e os passos do Ressonador,
+     * com os do JEI dele.
      */
     private static final String ONLY = System.getenv("WA_E2E_ONLY");
 
@@ -49,6 +50,7 @@ final class E2eScript {
         }
         if ("ressonador".equals(ONLY)) {
             resonatorSteps(list);
+            jeiResonatorSteps(list);
             return list;
         }
         filterSteps(list);

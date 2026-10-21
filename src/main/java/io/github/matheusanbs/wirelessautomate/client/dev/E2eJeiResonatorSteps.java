@@ -22,8 +22,9 @@ import net.neoforged.fml.ModList;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * As telas do JEI do Ressonador: a recarga no Núcleo (R no cristal Opaco), a informação dos Núcleos (U no Núcleo) e
- * a Estrutura do Ressonador (U na Carcaça), na Vitrine, na Faixa e só até a camada 2.
+ * As telas do JEI do Ressonador: a recarga no Núcleo (R no cristal Opaco), a informação dos Núcleos (U no Núcleo),
+ * a Estrutura do Ressonador (U na Carcaça), na Vitrine, na Faixa e só até a camada 2, e as receitas do
+ * rebalanceamento (Afinados, Refazer, cascata e Coração).
  * Só roda com o JEI; sem ele, nada. Roda no e2e.
  */
 final class E2eJeiResonatorSteps {
@@ -33,6 +34,9 @@ final class E2eJeiResonatorSteps {
     /** A aba da Estrutura do Ressonador na tela de usos da Carcaça (a terceira), na mesma captura. */
     private static final int STRUCTURE_TAB_X = 566;
     private static final int STRUCTURE_TAB_Y = 70;
+    /** A aba Refazer o cristal na tela de receitas do Cristal de Sinal (a segunda, depois da Recarga). */
+    private static final int RECAST_TAB_X = 517;
+    private static final int RECAST_TAB_Y = 70;
     /** A seta da receita seguinte na Estrutura do Ressonador, na mesma captura. */
     private static final int NEXT_RECIPE_X = 812;
     private static final int NEXT_RECIPE_Y = 140;
@@ -44,10 +48,14 @@ final class E2eJeiResonatorSteps {
     }
 
     /**
-     * Põe um cristal Opaco, um Núcleo Básico e uma Carcaça no inventário e abre as telas do JEI com o mouse em cima:
-     * {@code ressonador-jei-recarga}, {@code ressonador-jei-info}, {@code ressonador-jei-estrutura} (Vitrine),
-     * {@code ressonador-jei-faixa} (a receita seguinte) e {@code ressonador-jei-camada} (o botão da camada 2). Se a
-     * tela do JEI não abrir, o passo anota no log e segue sem as capturas.
+     * Põe os cristais, um Núcleo Básico, uma Carcaça e as peças da cascata no inventário e abre as telas do JEI com o
+     * mouse em cima: {@code ressonador-jei-recarga}, {@code ressonador-jei-info}, {@code ressonador-jei-estrutura}
+     * (Vitrine), {@code ressonador-jei-faixa} (a receita seguinte) e {@code ressonador-jei-camada} (o botão da camada
+     * 2); depois, com R, as receitas do Afinado Esmeralda ({@code ressonador-jei-afinados}), o Refazer de um Cristal de
+     * Sinal rachado ({@code ressonador-jei-refazer}), a Matriz de Fase ({@code ressonador-jei-cascata}), o Lingote de
+     * Liga no alto-forno ({@code ressonador-jei-liga}) e o Coração Esmeralda ({@code ressonador-jei-coracao}), e a
+     * Recarga e o Refazer em português ({@code -pt}). Se a tela do JEI não abrir, o passo anota no log e segue sem as
+     * capturas.
      */
     static void jeiResonatorSteps(List<Step> list) {
         if (!ModList.get().isLoaded("jei")) {
@@ -56,8 +64,14 @@ final class E2eJeiResonatorSteps {
         UUID playerId = Minecraft.getInstance().player.getUUID();
         ItemStack dull = new ItemStack(ModItems.SIGNAL_CRYSTAL.get());
         SignalCrystalItem.setCharge(dull, 0);
+        ItemStack cracked = new ItemStack(ModItems.SIGNAL_CRYSTAL.get());
+        SignalCrystalItem.setCharge(cracked, 0);
+        SignalCrystalItem.setIntegrity(cracked, 0);
         ItemStack[] shown = {dull, ResonanceCoreItem.withTier(ModItems.RESONANCE_CORE.get(), RouterTier.BASIC),
-                new ItemStack(ModItems.RESONATOR_CASING.get())};
+                new ItemStack(ModItems.RESONATOR_CASING.get()),
+                new ItemStack(ModItems.TUNED_CRYSTALS.get(RouterTier.EMERALD).get()), cracked,
+                new ItemStack(ModItems.PHASE_MATRIX.get()), new ItemStack(ModItems.SIGNAL_ALLOY_INGOT.get()),
+                new ItemStack(ModItems.RESONATOR_HEARTS.get(RouterTier.EMERALD).get())};
         list.add(new Step("jei ressonador: no inventário", STEP_TIMEOUT_MS, () -> onServer(server -> {
             ServerPlayer player = server.getPlayerList().getPlayer(playerId);
             player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
@@ -80,6 +94,17 @@ final class E2eJeiResonatorSteps {
                 new Shot("ressonador-jei-estrutura", STRUCTURE_TAB_X, STRUCTURE_TAB_Y),
                 new Shot("ressonador-jei-faixa", NEXT_RECIPE_X, NEXT_RECIPE_Y),
                 new Shot("ressonador-jei-camada", LAYER_2_X, LAYER_2_Y)));
+        list.add(jeiCapture("ressonador-jei-afinados", 3, GLFW.GLFW_KEY_R, Shot.plain("ressonador-jei-afinados")));
+        list.add(jeiCapture("ressonador-jei-refazer", 4, GLFW.GLFW_KEY_R,
+                new Shot("ressonador-jei-refazer", RECAST_TAB_X, RECAST_TAB_Y)));
+        list.add(jeiCapture("ressonador-jei-cascata", 5, GLFW.GLFW_KEY_R, Shot.plain("ressonador-jei-cascata")));
+        list.add(jeiCapture("ressonador-jei-liga", 6, GLFW.GLFW_KEY_R, Shot.plain("ressonador-jei-liga")));
+        list.add(jeiCapture("ressonador-jei-coracao", 7, GLFW.GLFW_KEY_R, Shot.plain("ressonador-jei-coracao")));
+        list.add(language("pt_br"));
+        list.add(jeiCapture("ressonador-jei-recarga-pt", 0, GLFW.GLFW_KEY_R, Shot.plain("ressonador-jei-recarga-pt")));
+        list.add(jeiCapture("ressonador-jei-refazer-pt", 4, GLFW.GLFW_KEY_R,
+                new Shot("ressonador-jei-refazer-pt", RECAST_TAB_X, RECAST_TAB_Y)));
+        list.add(language("en_us"));
         list.add(close("jei ressonador: fechar o inventário"));
         list.add(new Step("jei ressonador: limpar o inventário", STEP_TIMEOUT_MS, () -> onServer(server -> {
             ServerPlayer player = server.getPlayerList().getPlayer(playerId);

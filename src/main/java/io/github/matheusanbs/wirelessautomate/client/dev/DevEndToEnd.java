@@ -155,6 +155,9 @@ public final class DevEndToEnd {
     private static boolean stepStarted;
     static long stepStart;
     static int stepTicks;
+    /** O tamanho da janela da última escolha da escala da GUI. */
+    private static int scaledWidth = -1;
+    private static int scaledHeight = -1;
     /** Maior vazão de itens que a tela aberta já mostrou. */
     static long maxItemRate;
 
@@ -188,10 +191,14 @@ public final class DevEndToEnd {
                 WirelessAutomate.LOGGER.info("vitrine: framebuffer {}x{}, escala de GUI {}", window.getWidth(),
                         window.getHeight(), window.getGuiScale());
             }
-        } else if (ticks == 3) {
+        } else if (ticks >= 3 && (minecraft.getWindow().getWidth() != scaledWidth
+                || minecraft.getWindow().getHeight() != scaledHeight)) {
             // no Windows a janela de 1280x800 sai menor e a escala 3 não deixa espaço para as
-            // telas crescerem: escolhe a maior escala que caiba, sem salvar as opções do usuário
+            // telas crescerem: escolhe a maior escala que caiba, sem salvar as opções do usuário. Refeito
+            // quando a janela muda de tamanho: no Xvfb ela às vezes só chega a 1280x800 depois do tick 3
             var window = minecraft.getWindow();
+            scaledWidth = window.getWidth();
+            scaledHeight = window.getHeight();
             int scale = 1;
             for (int s = 3; s >= 1; s--) {
                 if (window.getHeight() / s >= 330 && window.getWidth() / s >= 480) {

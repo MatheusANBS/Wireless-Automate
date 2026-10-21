@@ -21,7 +21,9 @@ quando `blocos.py` gerou algo) o que não saiu desta rodada: tudo ali é gerado.
 from __future__ import annotations
 
 import math
+import os
 import sys
+import zipfile
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
@@ -938,45 +940,103 @@ def rachado(grade: list[str], rachadura: tuple[tuple[tuple[int, int], ...], tupl
 
 
 # ---------------------------------------------------------------------------
+# As bases do vanilla: o lingote, o minério bruto e o pó, recoloridos na paleta do mod
+# ---------------------------------------------------------------------------
+#
+# A liga crua, o lingote e os pós partem das texturas do próprio Minecraft (`raw_iron`, `iron_ingot` e
+# `redstone`), lidas do jar do cliente na hora de gerar: a silhueta e o sombreado ficam os do vanilla, pixel a
+# pixel, e só a cor muda, por luminância, para a rampa do material do mod (o contorno da base vira o
+# `grafite.0` dos itens). O jar não entra no repositório: vem do cache do NeoForm (o `./gradlew build` o
+# baixa) ou do caminho em `WA_MC_JAR`.
+
+VERSAO_MC = "1.21.1"
+
+
+def _jar_vanilla() -> Path:
+    env = os.environ.get("WA_MC_JAR")
+    candidatos = [Path(env)] if env else []
+    candidatos += sorted(Path.home().glob(f".gradle/caches/neoformruntime/artifacts/minecraft_{VERSAO_MC}_client.jar"))
+    for c in candidatos:
+        if c.is_file():
+            return c
+    raise SystemExit(f"jar do cliente do Minecraft {VERSAO_MC} não encontrado: rode ./gradlew build antes ou "
+                     "aponte WA_MC_JAR para ele")
+
+
+_BASES: dict[str, Image.Image] = {}
+
+
+def base_vanilla(nome: str) -> Image.Image:
+    """A textura `item/<nome>` do Minecraft, 16 × 16 RGBA (guardada depois da primeira leitura)."""
+    if nome not in _BASES:
+        with zipfile.ZipFile(_jar_vanilla()) as jar:
+            with jar.open(f"assets/minecraft/textures/item/{nome}.png") as arq:
+                img = Image.open(arq).convert("RGBA")
+                img.load()
+        assert img.size == (16, 16), f"{nome}: {img.size}"
+        _BASES[nome] = img
+    return _BASES[nome].copy()
+
+
+def _luminancia(c: Cor) -> float:
+    return .299 * c[0] + .587 * c[1] + .114 * c[2]
+
+
+def recolorir(base: Image.Image, rampa: list[Cor]) -> Image.Image:
+    """A base com os tons trocados pelos da `rampa` (da luz à sombra), por luminância: o tom mais escuro da
+    base (o contorno dela) vira o contorno dos itens, e os outros caem na rampa na mesma proporção em que
+    estavam entre o mais claro e o segundo mais escuro."""
+    tons = sorted({p for p in base.getdata() if p[3]}, key=_luminancia, reverse=True)
+    assert len(tons) >= 3, "base com menos de três tons"
+    claro, escuro = _luminancia(tons[0]), _luminancia(tons[-2])
+    troca: dict[Cor, Cor] = {tons[-1]: CONTORNO}
+    for c in tons[:-1]:
+        t = (claro - _luminancia(c)) / (claro - escuro) * (len(rampa) - 1)
+        i = min(int(t), len(rampa) - 2)
+        troca[c] = mistura(rampa[i], rampa[i + 1], t - i)
+    img = base.copy()
+    for y in range(16):
+        for x in range(16):
+            p = img.getpixel((x, y))
+            if p[3]:
+                img.putpixel((x, y), troca[p])
+    return img
+
+
+def _pixels_do_tom(base: Image.Image, posicao: int) -> list[tuple[int, int]]:
+    """Os pixels do `posicao`-ésimo tom mais claro da base, por ordem de leitura."""
+    tons = sorted({p for p in base.getdata() if p[3]}, key=_luminancia, reverse=True)
+    alvo = tons[posicao]
+    return [(x, y) for y in range(16) for x in range(16) if base.getpixel((x, y)) == alvo]
+
+
+def _espalhados(pontos: list[tuple[int, int]], n: int) -> tuple[tuple[int, int], ...]:
+    """`n` pontos da lista, espalhados por ela em intervalos iguais."""
+    return tuple(pontos[(i * len(pontos)) // n] for i in range(n))
+
+
+# ---------------------------------------------------------------------------
 # Pó de Ressonância e os Pós Carregados
 # ---------------------------------------------------------------------------
 #
-# O monte de pó, como o pó de redstone do vanilla: a cúpula baixa com a crista no meio, a encosta de luz à
-# esquerda, a sombra à direita, a fileira escura do chão e os grãos soltos que caíram em volta do pé.
-# `A B C D` do brilho à sombra, `Y` as faíscas (centelhas claras que cintilam).
-PO_RESSONANCIA = [
-    "................",
-    "................",
-    "................",
-    "................",
-    "................",
-    "................",
-    "................",
-    ".......AAA......",
-    ".....AAAAABB....",
-    "....AAAABABBBB..",
-    "...AAABAABBBBCC.",
-    "..AABBBBBBCBBCC.",
-    ".AABABBBCBBCCCCD",
-    ".ABBBBCBBCCCCCD.",
-    "BBBBBBCCCCDCDDDD",
-    ".D.CCCCDDDDDD.D.",
-]
-# As centelhas do monte: cada uma num quadro, cintilam em sequência (o centro branco, as pontas no brilho).
-CENTELHAS_PO = ((8, 8), (4, 12), (12, 11), (8, 13))
+# O monte do pó de redstone do vanilla, recolorido. As centelhas cintilam nos grãos mais claros do monte
+# (`CENTELHAS_PO`, quatro deles espalhados), cada uma num quadro.
 
 
-def _po(tons: dict[str, Cor], centelhas: tuple[tuple[int, int], ...], quadros: int, faisca: Cor) -> Sprite:
-    leg = {"A": tons["A"], "B": tons["B"], "C": tons["C"], "D": tons["D"]}
+def _po(rampa: list[Cor], quadros: int, faisca: Cor) -> Sprite:
+    base = base_vanilla("redstone")
+    monte = recolorir(base, rampa)
+    centelhas = _espalhados(_pixels_do_tom(base, 0) + _pixels_do_tom(base, 1), 4)
+    corpo = set(rampa) | {troca for troca in monte.getdata() if troca[3] and troca != CONTORNO}
     q = []
     for k in range(quadros):
-        img = contorno(pinta(PO_RESSONANCIA, leg), CONTORNO)
+        img = monte.copy()
         for n, (x, y) in enumerate(centelhas):
             fase = (k - n * (quadros // len(centelhas))) % quadros
             if fase == 0:
                 put(img, x, y, BRANCO)
                 for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                    if img.getpixel((x + dx, y + dy)) in leg.values():
+                    if 0 <= x + dx < 16 and 0 <= y + dy < 16 and img.getpixel((x + dx, y + dy)) in corpo:
                         put(img, x + dx, y + dy, faisca)
             elif fase == 1:
                 put(img, x, y, faisca)
@@ -986,8 +1046,8 @@ def _po(tons: dict[str, Cor], centelhas: tuple[tuple[int, int], ...], quadros: i
 
 def po() -> Sprite:
     """Pó de Ressonância: o monte de pó coral e vermelho, com as centelhas douradas cintilando (8 × 5 ticks)."""
-    tons = {"A": cor("#FF9A80"), "B": cor("#E5604A"), "C": cor("#B8392F"), "D": cor("#7E2420")}
-    return _po(tons, CENTELHAS_PO, 8, cor("#FFE68A"))
+    rampa = [cor("#FF9A80"), cor("#E5604A"), cor("#B8392F"), cor("#7E2420")]
+    return _po(rampa, 8, cor("#FFE68A"))
 
 
 TIERS_PO_CARREGADO = ["allthemodium", "vibranium", "unobtainium", "ultimate"]
@@ -997,8 +1057,8 @@ def po_carregado(tier: str) -> Sprite:
     """Pó Carregado do tier: o mesmo monte na cor do tier (a lente do Olho), com as centelhas no brilho
     da lente, mais vivas (8 × 5 ticks)."""
     hi, mid, lo = (cor(c) for c in LENTE[tier])
-    tons = {"A": mistura(hi, mid, .35), "B": mid, "C": lo, "D": mistura(lo, cor("#000000"), .35)}
-    return _po(tons, CENTELHAS_PO, 8, mistura(hi, BRANCO, .5))
+    rampa = [mistura(hi, mid, .35), mid, lo, mistura(lo, cor("#000000"), .35)]
+    return _po(rampa, 8, mistura(hi, BRANCO, .5))
 
 
 # ---------------------------------------------------------------------------
@@ -1069,69 +1129,39 @@ def _raio(x: int, y: int) -> float:
     return math.hypot(x - 7.5, y - 7.5)
 
 
-# A Liga crua: o torrão do minério bruto do vanilla, com as facetas de ferro (a luz no alto à esquerda, a
-# sombra no pé) e os veios da liga rosada aflorando em três nódulos.
-LIGA_CRUA = [
-    "................",
-    "................",
-    ".....EFFFy......",
-    "....EFFFyyyY....",
-    "...EFFyyAayyY...",
-    "..EFFyyAaBbyyY..",
-    "..FFyyyaBbyyYY..",
-    "..FyyAabyyyYYz..",
-    "..FyyaBbyyAaYz..",
-    "..yyyyBbyyaBbz..",
-    "..yyyyyyyAaBYz..",
-    "...YyyyYYYBYzz..",
-    "...YYYYYzzzzz...",
-    ".....zzzzz......",
-    "................",
-    "................",
-]
+# A Liga crua: o torrão do minério de ferro bruto do vanilla, recolorido na liga rosada; três dos pontos mais
+# claros, espalhados, são os veios que cintilam.
+RAMPA_LIGA = [cor(LIGA[t]) for t in ("4", "3", "2", "1", "0")]
 
 
 def liga_crua() -> Sprite:
-    """Liga de Sinal crua: o torrão de ferro com os veios coral; um dos veios cintila de cada vez (6 × 5 ticks)."""
-    veios = ((8, 4), (5, 7), (10, 8))
+    """Liga de Sinal crua: o torrão de ferro bruto na liga rosada; um dos veios cintila de cada vez (6 × 5 ticks)."""
+    base = base_vanilla("raw_iron")
+    torrao = recolorir(base, RAMPA_LIGA)
+    veios = _espalhados(_pixels_do_tom(base, 1), 3)
     q = []
     for k in range(6):
-        img = _peca(LIGA_CRUA)
-        n = k // 2
-        put(img, *veios[n], BRANCO if k % 2 == 0 else cor("coral.4"))
+        img = torrao.copy()
+        put(img, *veios[k // 2], BRANCO if k % 2 == 0 else cor("coral.4"))
         q.append(img)
     return animacao(q, 5)
 
 
-# O lingote: a barra do lingote de ferro do vanilla. A face de cima clara (o paralelogramo que se inclina
-# para a esquerda), a frente no tom cheio, a ponta da direita e o pé na sombra.
-LINGOTE = [
-    "................",
-    "................",
-    "................",
-    "......AAAAAAAA..",
-    ".....AaaaaaaaB..",
-    "....AaaaaaaaBB..",
-    "...AaaaaaaaBB0..",
-    "..AAAAAAAAAB00..",
-    "..bbbbbbbbbB0...",
-    "..bbbbbbbbbB0...",
-    "..bbbbbbbbbB0...",
-    "..00000000000...",
-    "................",
-    "................",
-    "................",
-    "................",
-]
-
-
 def lingote() -> Sprite:
-    """Lingote de Liga de Sinal: um brilho corre pela face de cima, da esquerda para a direita (8 × 4 ticks)."""
+    """Lingote de Liga de Sinal: a barra do lingote de ferro do vanilla na liga rosada; um brilho corre pela
+    face de cima, da esquerda para a direita (8 × 4 ticks)."""
+    base = base_vanilla("iron_ingot")
+    barra = recolorir(base, RAMPA_LIGA)
+    # A face de cima é o tom claro mais comum da base (o branco é só o reflexo dela).
+    face = _pixels_do_tom(base, 1)
+    x0, x1 = min(x for x, _ in face), max(x for x, _ in face)
     q = []
     for k in range(8):
-        img = _peca(LINGOTE)
-        _brilho_na_linha(img, 4, 4 + k * 9 // 7, LEG_CASCATA["a"], 3)
-        _brilho_na_linha(img, 5, 3 + k * 9 // 7, LEG_CASCATA["a"], 2)
+        img = barra.copy()
+        xb = x0 + (k * (x1 - x0 + 2)) // 8
+        for x, y in face:
+            if x - y // 2 in (xb, xb + 1):  # a faixa do brilho, inclinada como a face
+                put(img, x, y, mistura(img.getpixel((x, y)), BRANCO, .7 if x - y // 2 == xb + 1 else .4))
         q.append(img)
     return animacao(q, 4)
 

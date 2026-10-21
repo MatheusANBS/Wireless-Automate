@@ -32,7 +32,12 @@ python scripts/textures/gerar_texturas.py            # grava PNGs, .mcmeta, mode
 python scripts/textures/gerar_texturas.py --so-folha # só refaz docs/preview/folha-de-sprites.png
 ```
 
-Só Python 3 com Pillow. O `gerar_texturas.py` importa `identidade.py` e, se existir, `blocos.py`
+Só Python 3 com Pillow. A liga crua, o lingote e os pós são recolores de texturas do vanilla
+(`raw_iron`, `iron_ingot`, `redstone`), lidas do jar do cliente do Minecraft na hora de gerar: o jar fica
+fora do repositório e vem do cache do NeoForm (`~/.gradle/caches/neoformruntime/artifacts/`, que o
+`./gradlew build` preenche) ou do caminho em `WA_MC_JAR`. Dentro da geração, `recolorir(base, rampa)` troca
+os tons por luminância (o contorno da base vira o `grafite.0`). O `gerar_texturas.py` importa
+`identidade.py` e, se existir, `blocos.py`
 (`sprites()`, `modelos()`, `previas()`); sem ele, avisa e gera só os itens e os ícones (e não mexe
 em `textures/block`). No fim imprime quantos sprites gravou e quantos arquivos velhos apagou.
 
@@ -69,10 +74,10 @@ a cor da lente do tier; o Guia, uma lente de porcelana; o chunk loading, a chama
 | `tuned_signal_crystal_<tier>` (6, Elite ao Ultimate) | Cristal Afinado: a forma do Lapidado com a cinta na cor da lente do tier (`_cinta_tier`) e duas gemas do material | o brilho corre pelo filete da cinta, o miolo pulsa, as gemas cintilam uma de cada vez e a onda sai da pedra | 12 × 3 |
 | `*_dull` (Opaco, 8: Sinal, Lapidado e os 6 Afinados) | o cristal sem carga: pedra cinza com uma brasa fraca; no Afinado, a cinta e as gemas apagadas | a brasa respira | 8 × 6 |
 | `*_cracked` (Rachado, 8) | o cristal sem integridade: a paleta do Opaco, lascado na borda e cortado por uma rachadura escura | um brilho fraco vaza da rachadura e vai e vem | 8 × 6 |
-| `resonance_dust` | Pó de Ressonância: o monte baixo de pó coral e vermelho, como o pó de redstone do vanilla, com grãos soltos no pé | as centelhas douradas cintilam | 8 × 5 |
+| `resonance_dust` | Pó de Ressonância: o monte do pó de redstone do vanilla (`redstone`, lido do jar), recolorido na rampa coral e vermelha | as centelhas douradas cintilam nos grãos mais claros | 8 × 5 |
 | `charged_dust_<tier>` (4, Allthemodium ao Ultimate) | Pó Carregado: o mesmo monte na cor da lente do tier | as centelhas, no brilho da lente, mais vivas | 8 × 5 |
-| `signal_alloy_raw` | Liga de Sinal crua: o torrão do minério bruto do vanilla, facetas de ferro e três veios da liga rosada | um dos veios cintila de cada vez | 6 × 5 |
-| `signal_alloy_ingot` | Lingote de Liga de Sinal: a barra do lingote de ferro do vanilla (face de cima clara, frente cheia, ponta e pé na sombra) na liga rosada | um brilho corre pela face de cima, da esquerda para a direita | 8 × 4 |
+| `signal_alloy_raw` | Liga de Sinal crua: o torrão do ferro bruto do vanilla (`raw_iron`), recolorido na liga rosada | um dos três pontos mais claros cintila de cada vez | 6 × 5 |
+| `signal_alloy_ingot` | Lingote de Liga de Sinal: a barra do lingote de ferro do vanilla (`iron_ingot`), recolorida na liga rosada | um brilho corre pela face de cima, da esquerda para a direita | 8 × 4 |
 | `resonance_plate` | Placa de Ressonância: chapa de liga com chanfro, quatro rebites de ferro e a onda gravada (sulco escuro, relevo claro) | a onda acende da esquerda para a direita | 8 × 4 |
 | `resonance_wire` | Fio de Ressonância: meada de fio de cobre, anel grosso com furo largo e as voltas em faixas, presilha coral e duas pontas soltas | um brilho de cobre dá a volta na meada, no sentido horário | 8 × 4 |
 | `resonance_coil` | Bobina de Ressonância: carretel de pé com flanges largas de ferro, eixo de latão e o enrolamento de cobre com a fita coral na volta do meio | um brilho desce pelo enrolamento, volta a volta, e acende a fita ao passar | 8 × 4 |

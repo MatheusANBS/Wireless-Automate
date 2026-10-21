@@ -206,6 +206,15 @@ dependencies {
     // Allthemodium (tiers Allthemodium, Vibranium e Unobtainium) e All The Tweaks (fragmento de ATM Star).
     clientMods "curse.maven:allthemodium-364466:${allthemodium_file}"
     clientMods "curse.maven:all-the-tweaks-364120:${allthetweaks_file}"
+    // Os mods das receitas de cascata dos Corações do Ressonador (resonator_heart_<tier>_cascade): MEGA Cells
+    // (com o AE2), Draconic Evolution (com o Brandon's Core e o CodeChicken Lib) e Modern Industrialization.
+    // Só no cliente de dev: sem eles carregam as receitas de antes; os GameTests não os carregam.
+    clientMods "curse.maven:applied-energistics-2-223794:${ae2_file}"
+    clientMods "curse.maven:mega-cells-622112:${megacells_file}"
+    clientMods "curse.maven:draconic-evolution-223565:${draconicevolution_file}"
+    clientMods "curse.maven:brandons-core-231382:${brandonscore_file}"
+    clientMods "curse.maven:codechicken-lib-1-8-242818:${codechickenlib_file}"
+    clientMods "curse.maven:modern-industrialization-405388:${modernindustrialization_file}"
     atmTestMods "curse.maven:allthemodium-364466:${allthemodium_file}"
     atmTestMods "curse.maven:all-the-tweaks-364120:${allthetweaks_file}"
     atmTestMods "maven.modrinth:geckolib:${geckolib_version}" // o Allthemodium 3.2 exige

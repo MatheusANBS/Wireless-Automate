@@ -125,7 +125,7 @@ Through the glass you can read the tuning: the plasma Core with the ring of its 
 | Emerald | 4 | 160,000 | 92% |
 | Allthemodium¹ | 5 | 6,400,000 | 94% |
 | Vibranium¹ | 6 | 6,700,000 | 95% |
-| Unobtainium¹ | 7 | 184,000,000 | 96% |
+| Unobtainium¹ | 7 | 10,700,000 | 96% |
 | Ultimate | 8 | 268,435,456 | 98% |
 
 *¹ Only with Allthemodium. Server owners can change the FE per crystal in the config.*

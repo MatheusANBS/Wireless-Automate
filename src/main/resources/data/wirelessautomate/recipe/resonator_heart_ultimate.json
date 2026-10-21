@@ -3,6 +3,32 @@
     {
       "type": "neoforge:mod_loaded",
       "modid": "allthemodium"
+    },
+    {
+      "type": "neoforge:or",
+      "values": [
+        {
+          "type": "neoforge:not",
+          "value": {
+            "type": "neoforge:mod_loaded",
+            "modid": "megacells"
+          }
+        },
+        {
+          "type": "neoforge:not",
+          "value": {
+            "type": "neoforge:mod_loaded",
+            "modid": "modern_industrialization"
+          }
+        },
+        {
+          "type": "neoforge:not",
+          "value": {
+            "type": "neoforge:mod_loaded",
+            "modid": "draconicevolution"
+          }
+        }
+      ]
     }
   ],
   "type": "minecraft:crafting_shapeless",

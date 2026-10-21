@@ -33,9 +33,9 @@ public final class Config {
     /**
      * 1 = a escada ×8 da Esmeralda e do Allthemodium (8/10/2026); 2 = a energia do roteador Unobtainium ×8 e o FE
      * por cristal do Ressonador (15/10/2026); 3 = a escada nova do Ressonador e a energia do roteador por tier
-     * (21/10/2026).
+     * (21/10/2026); 4 = o FE por cristal do Unobtainium de 184 milhões para 10,7 milhões (22/10/2026).
      */
-    public static final int CURRENT_BALANCE = 3;
+    public static final int CURRENT_BALANCE = 4;
     /** Capacidade dos armazenamentos do mod por tipo e tier (todos os tipos somados; 0 = sem limite). */
     public static final Map<StorageKind, Map<RouterTier, ModConfigSpec.LongValue>> STORAGE_CAPACITY =
             new EnumMap<>(StorageKind.class);
@@ -281,6 +281,7 @@ public final class Config {
         int changed = version < 1 ? migrateBalance1() : 0;
         changed += version < 2 ? migrateBalance2() : 0;
         changed += migrateBalance3();
+        changed += version < 4 ? migrateBalance4() : 0;
         BALANCE_VERSION.set(CURRENT_BALANCE);
         SPEC.save();
         return changed;
@@ -322,6 +323,18 @@ public final class Config {
             }
         }
         return changed;
+    }
+
+    private static final long BALANCE3_UNOBTAINIUM_FE_PER_CRYSTAL = 184_000_000L;
+
+    private static int migrateBalance4() {
+        ModConfigSpec.LongValue fe = RESONATOR_FE_PER_CRYSTAL.get(RouterTier.UNOBTAINIUM);
+        long target = CoreMath.defaultFePerCrystal(RouterTier.UNOBTAINIUM.ordinal());
+        if (fe.get() == BALANCE3_UNOBTAINIUM_FE_PER_CRYSTAL && fe.get() != target) {
+            fe.set(target);
+            return 1;
+        }
+        return 0;
     }
 
     private static int migrateBalance1() {

@@ -14,9 +14,9 @@ public final class CoreMath {
     /** A partir deste tier o cristal comum rende 1/4 e o Afinado de tier menor rende como o Lapidado. */
     public static final int ELITE_ORDINAL = 2;
 
-    /** FE por cristal padrão, pela posição do tier: acima do melhor gerador de cada tier no pack; ver a spec de 20/10/2026. */
+    /** FE por cristal padrão, pela posição do tier: acima do melhor gerador de cada tier no pack; ver a spec de 20/10/2026 e a reavaliação de 22/10/2026 (o Unobtainium no meio entre o Vibranium e o megaprojeto do Ultimate). */
     private static final long[] DEFAULT_FE_PER_CRYSTAL = {
-        216, 6_912, 10_000, 160_000, 6_400_000, 6_700_000, 184_000_000L, 268_435_456L
+        216, 6_912, 10_000, 160_000, 6_400_000, 6_700_000, 10_700_000L, 268_435_456L
     };
 
     /** FE por cristal padrão no tier de posição {@code tierOrdinal}; um tier além da tabela repete o último. */

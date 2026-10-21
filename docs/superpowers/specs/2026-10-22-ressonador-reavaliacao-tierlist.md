@@ -104,6 +104,33 @@ O Ressonador tem duas alavancas: a **geração** (FE por cristal) e o **custo** 
 
 **3. Misto.** Unobtainium na opção 2 e o Ultimate como megaprojeto da opção 1 (o Eco já faz dele o gerador sem teto; é o item de fim de jogo).
 
+## Aplicado (opção 3, Misto, aprovada em 22/10/2026, e o balanceamento do meio pedido em seguida)
+
+**Régua dos tiers do meio.** Os rivais medidos têm uma relação direta entre geração e cascata: do Alternator (360 FE/t, 30 itens de base) ao painel Infinity (2,15 bi, ~360 mil), a reta `itens de base = 30 × (FE/t ÷ 360)^0,6`. Ela cai em cima do Unobtainium e do Ultimate depois da correção e diz o que falta no meio: Esmeralda 4,2 mil de itens (tinha 1,3 mil), Allthemodium 43 mil (2,1 mil) e Vibranium 50 mil (3,6 mil). Básico, Avançado e Elite ficam como estão: a reta pede 33, 411 e 657, e eles têm 356, 562 e 868 (a estrutura de 98 peças e o Núcleo já custam isso), e a manutenção deles é a mais leve do pack.
+
+| Tier | FE/t | itens de base (antes → agora) | crafts | matérias | intermediários | reta |
+| --- | --- | --- | --- | --- | --- | --- |
+| Básico | 432 | 356 (igual) | 105 | 17 | 24 | 33 |
+| Avançado | 27.648 | 562 (igual) | 211 | 18 | 26 | 411 |
+| Elite | 60.000 | 868 (igual) | 385 | 20 | 30 | 657 |
+| Esmeralda | 1.280.000 | 1.278 → **4.463** | 594 → 1.801 | 25 → 50 | 34 → 58 | 4.200 |
+| Allthemodium | 64.000.000 | 2.064 → **42.537** | 1.016 → 18.675 | 27 → 65 | 36 → 82 | 43.500 |
+| Vibranium | 80.400.000 | 3.618 → **49.447** | 1.857 → 20.993 | 31 → 73 | 39 → 91 | 50.000 |
+| Unobtainium | 149.800.000 (era 2,58 bi) | 6.708 → **70.922** | 3.535 → 30.299 | 34 → 76 | 41 → 93 | 72.600 |
+| Ultimate | 4.294.967.296 + Eco | 11.330 → **650.105** | 6.050 → 285.254 | 36 → 82 | 43 → 98 | 546.000 (o dobro do Infinity em FE) |
+
+Os Corações levam a cascata de outros mods; a receita de antes de cada um continua valendo quando um dos mods falta (os arquivos `resonator_heart_<tier>_cascade.json` só carregam com todos presentes). Os números são cumulativos, porque subir de tier gasta o Coração de cada degrau.
+
+| Coração | Com os mods | Mods |
+| --- | --- | --- |
+| Esmeralda | 1 Estabilizador de Campo + 6 blocos de esmeralda + 1 Nether Star + 1 MI Processing Unit | Modern Industrialization |
+| Allthemodium | 1 Estabilizador de Campo + 4 blocos de Allthemodium + 2 Nether Stars + 2 MEGA Cell Components 16M | MEGA Cells |
+| Vibranium | 1 Núcleo Condensado + 4 blocos de Vibranium + 1 Nether Star + 1 MI Processing Unit + 2 Chaotic Cores | Modern Industrialization, Draconic Evolution |
+| Unobtainium | 1 Núcleo Condensado + 4 blocos de Unobtainium + 2 Nether Stars + 1 MEGA Cell Component 16M + 1 Chaotic Core | MEGA Cells, Draconic Evolution |
+| Ultimate | 3 MEGA Cell Components 256M + 1 Cell Component 64M + 1 MI Quantum Circuit + 1 Chaotic Core + 1 Awakened Core + 1 Moldura de Liga + 1 Nether Star | MEGA Cells, Modern Industrialization, Draconic Evolution |
+
+**Geração.** Só o Unobtainium mudou: FE por cristal de 184.000.000 para 10.700.000 (149,8 milhões FE/t no máximo); migração 4 do balanceamento (`Config.migrateBalance4`), que só troca o que ainda está em 184 milhões. A energia do roteador de cada tier não mudou. Os GameTests rodam sem os mods de cascata, então cobrem a receita de antes; as novas foram conferidas contra os ids das receitas do ATM10 e pelo motor de custo.
+
 ## Arquivos de apoio
 
 Motor e dados na pasta de rascunhos da sessão (`load.py`, `eng2.py`, `riv2.py`, `res2.py`, `final_riv.py`, `riv_final.json`, `res2.json`, `cands.json`); não fazem parte do repositório. Rodar o `final_riv.py` refaz a tabela dos rivais; o `res2.py`, a do Ressonador.

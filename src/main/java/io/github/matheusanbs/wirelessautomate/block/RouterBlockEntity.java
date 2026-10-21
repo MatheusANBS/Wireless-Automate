@@ -85,6 +85,8 @@ public class RouterBlockEntity extends BlockEntity {
 
     /** Nome do nó dado pelo jogador; vazio = sem nome. */
     private String name = "";
+    /** Nome dado à máquina presa; vazio sem nome. Fica quando o bloco preso é trocado. */
+    private String attachedLabel = "";
     /** Configuração das faces da presa, por tipo e lado relativo. */
     private final RouterFaces faces = new RouterFaces();
     /** Muda a cada alteração do que a tela mostra. Não é salvo. */
@@ -260,6 +262,21 @@ public class RouterBlockEntity extends BlockEntity {
         nameChanged();
     }
 
+    /** Nome dado à máquina presa; vazio se o jogador não deu um. */
+    public String attachedLabel() {
+        return attachedLabel;
+    }
+
+    /** Dá nome à máquina presa (limpo por {@link RenameRouterPayload#clean}); vazio tira o nome. Não muda rotas. */
+    public void setAttachedLabel(String label) {
+        String clean = RenameRouterPayload.clean(label);
+        if (clean.equals(attachedLabel)) {
+            return;
+        }
+        attachedLabel = clean;
+        nameChanged();
+    }
+
     /** Um nome novo (do nó, de grupo ou de máquina) muda só a tela e o índice, nunca as rotas. */
     void nameChanged() {
         changeVersion++;
@@ -267,8 +284,16 @@ public class RouterBlockEntity extends BlockEntity {
         NodeIndex.track(this);
     }
 
-    /** Dá nome ao grupo ou rótulo à máquina remota do alvo ({@link RouterRange#rename}); não muda rotas. */
+    /**
+     * Dá nome ao grupo, rótulo à máquina remota ({@link RouterRange#rename}) ou nome à máquina presa
+     * ({@code ATTACHED}, que vale sem o Upgrade de Alcance); não muda rotas.
+     */
     public boolean renameTarget(EditTarget target, String name) {
+        if (target.kind() == EditTarget.Kind.ATTACHED) {
+            String before = attachedLabel;
+            setAttachedLabel(name);
+            return !before.equals(attachedLabel);
+        }
         return range.rename(target, name);
     }
 
@@ -893,6 +918,9 @@ public class RouterBlockEntity extends BlockEntity {
         if (!name.isEmpty()) {
             tag.putString("name", name);
         }
+        if (!attachedLabel.isEmpty()) {
+            tag.putString("attached_label", attachedLabel);
+        }
         neighbors.save(tag);
         RouterNbt.save(tag, registries, faces, cards, upgrades, remotes);
     }
@@ -902,6 +930,7 @@ public class RouterBlockEntity extends BlockEntity {
         super.loadAdditional(tag, registries);
         UUID[] legacy = RouterNbt.legacyNetworks(tag);
         name = RenameRouterPayload.clean(tag.getString("name"));
+        attachedLabel = RenameRouterPayload.clean(tag.getString("attached_label"));
         neighbors.load(tag);
         RouterNbt.load(tag, registries, faces, cards, upgrades, remotes, legacy);
         presence.nbtLoaded();

@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "MEM",
+    "ODO",
+    "M M"
+  ],
+  "key": {
+    "M": {
+      "item": "wirelessautomate:phase_matrix"
+    },
+    "E": {
+      "item": "minecraft:ender_eye"
+    },
+    "O": {
+      "item": "minecraft:crying_obsidian"
+    },
+    "D": {
+      "item": "minecraft:diamond_block"
+    }
+  },
+  "result": {
+    "id": "wirelessautomate:field_stabilizer",
+    "count": 1
+  }
+}

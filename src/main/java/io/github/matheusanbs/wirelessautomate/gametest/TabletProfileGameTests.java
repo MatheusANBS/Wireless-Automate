@@ -119,13 +119,13 @@ public final class TabletProfileGameTests {
     }
 
     private static int profile(ServerPlayer player, int containerId, Action action, @Nullable NodeKey key,
-            @Nullable ResourceLocation machine, List<NodeKey> keys) {
+            List<NodeKey> keys) {
         return TabletPayloads.handleProfile(player, new TabletProfilePayload(containerId, action,
-                Optional.ofNullable(key), Optional.ofNullable(machine), keys));
+                Optional.ofNullable(key), keys));
     }
 
     private static int profile(ServerPlayer player, int containerId, Action action, @Nullable NodeKey key) {
-        return profile(player, containerId, action, key, null, List.of());
+        return profile(player, containerId, action, key, List.of());
     }
 
     /** Dois roteadores iguais menos o que cada teste muda (o modo da frente, em Itens). */
@@ -245,7 +245,7 @@ public final class TabletProfileGameTests {
     }
 
     @GameTest(template = "empty")
-    public static void pasteGroupSkipsOriginUnloadedAndFollowsTheQuery(GameTestHelper helper) throws Exception {
+    public static void pasteSelectedSkipsOriginAndUnloaded(GameTestHelper helper) throws Exception {
         ServerPlayer player = playerWithTablet(helper);
         RouterBlockEntity source = owned(helper, player, M1, Blocks.CHEST, "Origem");
         RouterBlockEntity alvo1 = owned(helper, player, M2, Blocks.CHEST, "Alvo 1");
@@ -282,28 +282,17 @@ public final class TabletProfileGameTests {
                         // com a origem diferente: ela não pode ser recolada
                         source.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
 
-                        // a consulta atual manda: só os "alvo"
-                        menu.setQuery(Query.of("alvo"));
-                        eq(helper, profile(player, 94, Action.PASTE_GROUP, null, CHEST, List.of()), 2, "colados na consulta");
+                        // marcados: a origem e o nó descarregado ficam de fora, os alvos recebem
+                        List<NodeKey> picked = List.of(key(alvo1), key(alvo2), key(source), ghost);
+                        eq(helper, profile(player, 94, Action.PASTE_SELECTED, null, picked), 2, "colados nos marcados");
                         helper.assertTrue(same(alvo1, alvo2) && RouterPreset.copyOf(alvo1).configuredFaces() == 2,
                                 "os alvos não receberam o perfil");
-                        helper.assertTrue(RouterPreset.copyOf(other).configuredFaces() == 0, "colou noutra máquina");
+                        helper.assertTrue(RouterPreset.copyOf(other).configuredFaces() == 0, "colou fora dos marcados");
                         eq(helper, source.face(ResourceType.ITEM, Direction.UP).mode(), PortMode.INSERT,
                                 "colou na origem");
-
-                        // consulta limpa: todos da máquina, menos a origem; o descarregado fica de fora
-                        menu.setQuery(Query.DEFAULT);
-                        alvo1.setMode(ResourceType.ITEM, Direction.UP, PortMode.NONE);
-                        eq(helper, profile(player, 94, Action.PASTE_GROUP, null, CHEST, List.of()), 2, "colados sem consulta");
-                        eq(helper, alvo1.face(ResourceType.ITEM, Direction.UP).mode(), PortMode.EXTRACT, "alvo 1");
-                        eq(helper, source.face(ResourceType.ITEM, Direction.UP).mode(), PortMode.INSERT,
-                                "colou na origem de novo");
                         helper.assertTrue(text(menu).contains("pasted") && text(menu).contains("skipped"),
                                 "aviso sem os que ficaram de fora: " + text(menu));
                         helper.assertFalse(helper.getLevel().hasChunkAt(far), "colar carregou o chunk");
-
-                        // máquina que não está nos nós visíveis: nada
-                        eq(helper, profile(player, 94, Action.PASTE_GROUP, null, null, List.of()), -1, "grupo sem máquina");
                         helper.succeed();
                     } finally {
                         entries.remove(ghost);
@@ -330,13 +319,13 @@ public final class TabletProfileGameTests {
                         for (int i = 0; i < TabletProfilePayload.MAX_KEYS + 1; i++) {
                             many.add(new NodeKey(helper.getLevel().dimension(), new BlockPos(i, 70, 0)));
                         }
-                        eq(helper, profile(player, 95, Action.PASTE_SELECTED, null, null, many), -1, "257 chaves");
-                        eq(helper, profile(player, 95, Action.PASTE_SELECTED, null, null, List.of()), -1, "sem chaves");
+                        eq(helper, profile(player, 95, Action.PASTE_SELECTED, null, many), -1, "257 chaves");
+                        eq(helper, profile(player, 95, Action.PASTE_SELECTED, null, List.of()), -1, "sem chaves");
 
                         RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(),
                                 helper.getLevel().registryAccess());
                         TabletProfilePayload tooMany = new TabletProfilePayload(95, Action.PASTE_SELECTED,
-                                Optional.empty(), Optional.empty(), many);
+                                Optional.empty(), many);
                         boolean refused = false;
                         try {
                             TabletProfilePayload.STREAM_CODEC.encode(buf, tooMany);
@@ -347,14 +336,14 @@ public final class TabletProfileGameTests {
                         helper.assertTrue(refused, "o codec aceitou mais de 256 chaves");
 
                         TabletProfilePayload ok = new TabletProfilePayload(95, Action.PASTE_SELECTED, Optional.empty(),
-                                Optional.of(CHEST), List.of(key(mine), key(foreign), key(source)));
+                                List.of(key(mine), key(foreign), key(source)));
                         buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), helper.getLevel().registryAccess());
                         TabletProfilePayload.STREAM_CODEC.encode(buf, ok);
                         helper.assertTrue(TabletProfilePayload.STREAM_CODEC.decode(buf).equals(ok), "payload pelo codec");
 
                         // o alheio (invisível) e a origem ficam de fora; só o meu recebe
                         source.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
-                        eq(helper, profile(player, 95, Action.PASTE_SELECTED, null, null,
+                        eq(helper, profile(player, 95, Action.PASTE_SELECTED, null,
                                 List.of(key(mine), key(foreign), key(source))), 1, "colados nos marcados");
                         eq(helper, mine.face(ResourceType.ITEM, Direction.UP).mode(), PortMode.EXTRACT, "nó marcado");
                         helper.assertTrue(RouterPreset.copyOf(foreign).configuredFaces() == 0, "colou num nó que não vê");
@@ -419,7 +408,7 @@ public final class TabletProfileGameTests {
                         RouterPreset targetBefore = RouterPreset.copyOf(target);
                         RouterPreset thirdBefore = RouterPreset.copyOf(third);
                         profile(player, 97, Action.COPY, key(source));
-                        eq(helper, profile(player, 97, Action.PASTE_SELECTED, null, null,
+                        eq(helper, profile(player, 97, Action.PASTE_SELECTED, null,
                                 List.of(key(target), key(third))), 2, "colados");
                         eq(helper, target.faceNetwork(ResourceType.ITEM, Direction.UP), net.id(), "rede colada");
                         helper.assertTrue(!RouterPreset.copyOf(target).equals(targetBefore), "colar não mudou o alvo");
@@ -781,7 +770,7 @@ public final class TabletProfileGameTests {
                     try {
                         RouterPreset keptBefore = RouterPreset.copyOf(kept);
                         profile(player, 121, Action.COPY, key(source));
-                        eq(helper, profile(player, 121, Action.PASTE_SELECTED, null, null,
+                        eq(helper, profile(player, 121, Action.PASTE_SELECTED, null,
                                 List.of(key(changed), key(kept))), 2, "colados");
                         changed.setMode(ResourceType.ITEM, Direction.DOWN, PortMode.BOTH);
                         RouterPreset changedNow = RouterPreset.copyOf(changed);
@@ -811,7 +800,7 @@ public final class TabletProfileGameTests {
                         profile(player, 122, Action.COPY, key(source));
                         int refused = 0;
                         for (int i = 0; i < 12; i++) {
-                            if (profile(player, 122, Action.PASTE_SELECTED, null, null, List.of(key(target))) < 0) {
+                            if (profile(player, 122, Action.PASTE_SELECTED, null, List.of(key(target))) < 0) {
                                 refused++;
                             }
                         }

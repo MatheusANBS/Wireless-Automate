@@ -34,7 +34,7 @@ import org.jetbrains.annotations.Nullable;
  * componente {@code upgrade_from} ({@link ModDataComponents#UPGRADE_FROM}). Shift + clique (vale também sem o
  * Shift) num roteador, armazenamento ou Núcleo de Ressonância colocado o leva ao tier do cartão no lugar, sem perder
  * a configuração nem o conteúdo; ou junte os dois na bancada ({@code RouterUpgradeRecipe}, só roteador e
- * armazenamento).
+ * armazenamento). O Núcleo pede também 1 Coração do Ressonador do tier de destino no inventário.
  *
  * <p>Um cartão com origem k ("k → destino") só vale num bloco exatamente do tier k; num bloco de outro tier, o
  * cartão fica na mão e a action bar avisa. O cartão sem origem é o cartão antigo, de antes desta regra: sobe de
@@ -104,10 +104,11 @@ public class TierCoreItem extends Item {
         boolean upgraded = switch (target) {
             case ROUTER -> RouterBlock.tryUpgrade(level, context.getClickedPos(), tier, origin);
             case STORAGE -> StorageBlock.tryUpgrade(level, context.getClickedPos(), tier, origin);
-            case CORE -> ResonanceCoreBlock.tryUpgrade(level, context.getClickedPos(), tier, origin);
+            case CORE -> ResonanceCoreBlock.tryUpgrade(level, context.getClickedPos(), tier, origin, player);
         };
         if (!upgraded) {
-            return InteractionResult.PASS;
+            // No Núcleo, a única recusa que sobra é a falta do Coração do Ressonador, já avisada na action bar.
+            return target == Target.CORE ? InteractionResult.FAIL : InteractionResult.PASS;
         }
         if (player == null || !player.getAbilities().instabuild) {
             stack.shrink(1);
@@ -152,6 +153,8 @@ public class TierCoreItem extends Item {
         } else {
             tooltip.add(Component.translatable(KEY + "legacy", tierName(tier)).withStyle(ChatFormatting.GRAY));
         }
+        tooltip.add(Component.translatable(KEY + "heart", ModItems.RESONATOR_HEARTS.get(tier).get().getDescription())
+                .withStyle(ChatFormatting.GRAY));
         tooltip.add(line("items", origin, t -> rate(t, Stat.ITEMS)));
         tooltip.add(line("fluids", origin, t -> rate(t, Stat.FLUID)));
         tooltip.add(line("energy", origin, t -> rate(t, Stat.ENERGY)));

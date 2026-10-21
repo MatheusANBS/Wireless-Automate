@@ -316,7 +316,7 @@ public final class ResonatorFormationGameTests {
         assertCrafts(helper, "resonator_glass", grid(null, glass, null, glass, crystal, glass, null, glass, null),
                 ModItems.RESONATOR_GLASS.get(), 4);
         assertCrafts(helper, "resonance_core", grid(casing, casing, casing, casing, cut, casing, casing,
-                Items.DIAMOND, casing), ModItems.RESONANCE_CORE.get(), 1);
+                ModItems.RESONATOR_HEARTS.get(RouterTier.BASIC).get(), casing), ModItems.RESONANCE_CORE.get(), 1);
         assertCrafts(helper, "resonator_energy_port", grid(casing, Items.REDSTONE_BLOCK),
                 ModItems.RESONATOR_ENERGY_PORT.get(), 1);
         assertCrafts(helper, "resonator_crystal_port", grid(casing, Items.HOPPER),
@@ -328,12 +328,12 @@ public final class ResonatorFormationGameTests {
 
     @GameTest(template = "empty", batch = "wirelessautomate_config")
     public static void configDoRessonadorTemOsPadroes(GameTestHelper helper) {
-        helper.assertValueEqual(Config.resonatorFePerCrystal(RouterTier.BASIC), 128L, "FE por cristal, Básico");
-        helper.assertValueEqual(Config.resonatorFePerCrystal(RouterTier.ULTIMATE), 1_073_741_824L,
+        helper.assertValueEqual(Config.resonatorFePerCrystal(RouterTier.BASIC), 216L, "FE por cristal, Básico");
+        helper.assertValueEqual(Config.resonatorFePerCrystal(RouterTier.ULTIMATE), 268_435_456L,
                 "FE por cristal, Ultimate");
-        helper.assertValueEqual(Config.resonatorFePerCrystal(RouterTier.UNOBTAINIUM), 134_217_728L,
+        helper.assertValueEqual(Config.resonatorFePerCrystal(RouterTier.UNOBTAINIUM), 184_000_000L,
                 "FE por cristal, Unobtainium");
-        helper.assertValueEqual(Config.resonatorFePerCrystal(RouterTier.ELITE), 8_192L, "FE por cristal, Elite");
+        helper.assertValueEqual(Config.resonatorFePerCrystal(RouterTier.ELITE), 10_000L, "FE por cristal, Elite");
         helper.assertValueEqual(Config.crystalLifeTicks(false), 12_000L, "vida do Cristal de Sinal");
         helper.assertValueEqual(Config.crystalLifeTicks(true), 24_000L, "vida do Lapidado");
         helper.assertValueEqual(Config.rechargeTicks(), 600L, "recarga");

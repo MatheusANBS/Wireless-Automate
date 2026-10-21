@@ -1,0 +1,278 @@
+<title>Câmara do Ressonador · shader</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: o visor da câmara grande no topo (um "vidro" do Ressonador), os controles numa faixa embaixo, e a explicação do método por estilo. Visual escuro de propósito: é uma janela para dentro da máquina. */
+:root {
+  --bg: #0d0f12; --panel: #161a1f; --ink: #e9e6df; --muted: #8e98a3; --line: #262c33;
+  --glass: #5f8aa0; --casing: #d9d3c7; --accent: #f2917a;
+  --font-display: "Pixelify Sans", "Courier New", monospace;
+  --font-body: "IBM Plex Sans", system-ui, sans-serif;
+  --font-num: "JetBrains Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); }
+.wrap { max-width: 1040px; margin: 0 auto; padding-block: 28px 56px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 22px; }
+.eyebrow { font-family: var(--font-num); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--font-display); font-size: clamp(30px, 5vw, 46px); margin: 0; line-height: 1.05; text-wrap: balance; }
+p { margin: 0; line-height: 1.6; max-width: 70ch; color: var(--muted); }
+p b { color: var(--ink); font-weight: 600; }
+.viewer { display: grid; gap: 0; }
+.frame { background: var(--casing); padding: clamp(10px, 3vw, 26px); box-shadow: inset 0 0 0 4px #b9b2a4; }
+.glass { position: relative; border: 6px solid var(--glass); box-shadow: inset 0 0 0 2px #0008; background: #000; aspect-ratio: 16 / 10; max-width: 100%; }
+canvas { display: block; width: 100%; height: 100%; }
+.badge { position: absolute; left: 10px; top: 10px; font-family: var(--font-num); font-size: 11px; color: #cfd8e0; background: #000a; padding: 3px 7px; }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; }
+.wrap > * { min-width: 0; }
+.tab { all: unset; border: 2px solid var(--line); cursor: pointer; padding: 9px 14px; font-family: var(--font-display); font-size: 16px; color: var(--muted); background: var(--panel); }
+.tab[aria-selected="true"] { color: #10120f; background: var(--accent); }
+.tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; }
+.controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px 22px; background: var(--panel); border: 1px solid var(--line); padding: 16px; }
+.ctl { display: grid; gap: 6px; min-width: 0; font-size: 13px; }
+.ctl label { color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
+.ctl label span { font-family: var(--font-num); color: var(--ink); }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+.swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+.sw { all: unset; width: 22px; height: 22px; cursor: pointer; box-shadow: inset 0 0 0 2px #0006; }
+.sw[aria-pressed="true"] { outline: 2px solid var(--ink); outline-offset: 2px; }
+.check { display: flex; gap: 8px; align-items: center; cursor: pointer; color: var(--ink); }
+.check input { accent-color: var(--accent); }
+.styles { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.card { background: var(--panel); border: 1px solid var(--line); padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.card h2 { font-family: var(--font-display); font-size: 20px; margin: 0; }
+.card ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; color: var(--muted); font-size: 13.5px; line-height: 1.5; }
+.card.on { border-color: var(--accent); }
+.note { font-size: 13px; }
+.cost { font-family: var(--font-num); font-size: 12px; color: var(--muted); }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:10px">
+    <div class="eyebrow">Wireless Automate · protótipo do visual · roda o mesmo tipo de GLSL que iria para o jogo</div>
+    <h1>A câmara do Ressonador com shader próprio</h1>
+    <p>Três estilos para o miolo da câmara, desenhados pixel a pixel na placa de vídeo. Arraste a <b>sintonia</b> para ver a câmara sair do chiado e entrar no sinal, troque a <b>cor do tier</b> e ligue o <b>modo pixelado</b> para ver como ficaria com a grade de pixels do Minecraft.</p>
+  </header>
+
+  <div class="tabs" role="tablist" id="tabs">
+    <button class="tab" role="tab" id="tab0" aria-selected="true">Núcleo de plasma</button>
+    <button class="tab" role="tab" id="tab1" aria-selected="false">Placa de Chladni</button>
+    <button class="tab" role="tab" id="tab2" aria-selected="false">Anéis de ressonância</button>
+  </div>
+
+  <div class="viewer">
+    <div class="frame"><div class="glass"><canvas id="cv" aria-label="Animação da câmara do Ressonador"></canvas><span class="badge" id="badge">sintonia 100% · Ultimate · 8 cristais</span></div></div>
+  </div>
+
+  <div class="controls">
+    <div class="ctl"><label for="tune">Sintonia <span id="tuneV">100%</span></label><input type="range" id="tune" min="0" max="100" value="100"></div>
+    <div class="ctl"><label for="cr">Cristais <span id="crV">8</span></label><input type="range" id="cr" min="1" max="8" value="8"></div>
+    <div class="ctl"><label>Cor do tier <span id="tierV">Ultimate</span></label><div class="swatches" id="sws"></div></div>
+    <div class="ctl"><label>Visual</label>
+      <label class="check" for="px"><input type="checkbox" id="px"> Modo pixelado (grade do Minecraft)</label>
+      <label class="check" for="slow"><input type="checkbox" id="slow"> Câmera lenta</label>
+    </div>
+  </div>
+
+  <div class="styles">
+    <div class="card" id="c0"><h2>Núcleo de plasma</h2><ul>
+      <li>Uma esfera de plasma no centro, feita de ruído que se move (fbm), na cor do cristal com a borda do tier.</li>
+      <li>A curva de Lissajous vira um traço de luz com brilho suave, e cada cristal é uma faísca que orbita.</li>
+      <li>Fora de sintonia, o plasma treme e a curva se desfaz em chiado.</li></ul>
+      <span class="cost">GPU: 1 quad · ~64 amostras da curva por pixel</span></div>
+    <div class="card" id="c1"><h2>Placa de Chladni</h2><ul>
+      <li>Evolução do que já existe: a placa de areia vibrando, agora com a fórmula de Chladni calculada por pixel.</li>
+      <li>As linhas nodais brilham e mudam de figura conforme a sintonia; no sinal, a figura fica parada e nítida.</li>
+      <li>Uma lente de luz no centro pulsa com a geração.</li></ul>
+      <span class="cost">GPU: 1 quad · só contas de cosseno</span></div>
+    <div class="card" id="c2"><h2>Anéis de ressonância</h2><ul>
+      <li>Ondas de luz saem do centro como num sinal de rádio, e os cristais giram em volta deixando rastro.</li>
+      <li>Duas fontes de onda criam interferência: no sinal, os anéis se alinham; fora dele, viram ruído.</li>
+      <li>O mais leve dos três de entender à primeira vista.</li></ul>
+      <span class="cost">GPU: 1 quad · ~12 anéis e 8 rastros por pixel</span></div>
+  </div>
+
+  <p class="note">No jogo, o shader entra como um <b>core shader</b> registrado pelo NeoForge e é desenhado pelo renderer da câmara num quad dentro do vidro. A CPU só passa o tempo, a sintonia, a cor e os cristais; nada roda no servidor. Com um shaderpack do Iris ativo, o plano é testar e, se renderizar errado, cair na animação de hoje.</p>
+</div>
+
+<script>
+const VERT = `attribute vec2 a; varying vec2 v; void main(){ v = a*0.5+0.5; gl_Position = vec4(a,0.,1.); }`;
+const FRAG = `
+precision highp float;
+varying vec2 v;
+uniform float uT, uTune, uAspect, uPix, uStyle, uCr;
+uniform vec2 uRes;
+uniform vec3 uTier;
+const vec3 CORAL = vec3(0.949, 0.569, 0.478);
+const vec3 WHITE = vec3(1.0, 0.94, 0.92);
+
+float h21(vec2 p){ p = fract(p*vec2(123.34, 456.21)); p += dot(p, p+45.32); return fract(p.x*p.y); }
+float n2(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
+  return mix(mix(h21(i),h21(i+vec2(1,0)),f.x), mix(h21(i+vec2(0,1)),h21(i+vec2(1,1)),f.x), f.y); }
+float fbm(vec2 p){ float s=0., a=.5; for(int i=0;i<5;i++){ s+=a*n2(p); p=p*2.03+vec2(1.7,9.2); a*=.5; } return s; }
+float segD(vec2 p, vec2 a, vec2 b){ vec2 pa=p-a, ba=b-a; float h=clamp(dot(pa,ba)/dot(ba,ba),0.,1.); return length(pa-ba*h); }
+
+vec2 liss(float s, float t, float mis){
+  float a = 3., b = 2.;
+  return vec2(sin(a*s + t*.6), sin(b*s + t*.35 + 1.5708)) * vec2(.62, .42) + mis*vec2(sin(s*13.+t*7.), cos(s*11.-t*5.))*.06;
+}
+
+vec3 plasma(vec2 p, float t, float tune, float mis){
+  vec3 col = vec3(0.);
+  // nevoa de fundo da camara
+  col += uTier * .05 * (1.-length(p)*.6);
+  // esfera de plasma
+  float r = length(p);
+  vec2 q = p*3.;
+  float w = fbm(q + vec2(t*.4, -t*.3) + fbm(q*1.5 - t*.2)*1.6);
+  float radius = .26 + .03*sin(t*2.) + mis*.08*(w-.5);
+  float body = smoothstep(radius, radius-.12, r) * (.55 + .9*w);
+  col += mix(uTier, CORAL, smoothstep(.0, radius, radius - r + .1)) * body * 1.3;
+  col += WHITE * exp(-r*r*55.) * (1.2 + .4*sin(t*3.));
+  col += uTier * .35 * exp(-r*4.5);
+  // curva de Lissajous como traco de luz
+  float d = 1e3;
+  vec2 prev = liss(0., t, mis);
+  for (int i = 1; i <= 64; i++) {
+    float s = float(i) / 64. * 6.28318;
+    vec2 cur = liss(s, t, mis);
+    d = min(d, segD(p, prev, cur));
+    prev = cur;
+  }
+  col += mix(CORAL, WHITE, .5) * (.0022 / (d + .002)) * (.35 + .65*tune);
+  // cristais orbitando
+  for (int i = 0; i < 8; i++) {
+    if (float(i) >= uCr) break;
+    float ang = t*.7 + float(i)*6.28318/uCr;
+    vec2 c = vec2(cos(ang)*.78, sin(ang)*.5);
+    float dc = length(p - c);
+    col += mix(CORAL, uTier, .35) * (.0035/(dc*dc + .0009)) * .08;
+    // feixe ate o centro
+    col += uTier * (.0007/(segD(p, c, vec2(0.)) + .0015)) * tune * (.5+.5*sin(t*6.+float(i)));
+  }
+  return col;
+}
+
+vec3 chladni(vec2 p, float t, float tune, float mis){
+  vec3 col = uTier * .04;
+  float m = 3. + floor(tune*3.), n = 5. + floor(tune*2.);
+  vec2 q = p * 1.35 + mis*vec2(n2(p*9.+t*4.)-.5, n2(p*9.-t*4.)-.5)*.25;
+  float f = cos(n*3.14159*q.x)*cos(m*3.14159*q.y) - cos(m*3.14159*q.x)*cos(n*3.14159*q.y);
+  float wob = .5 + .5*sin(t*1.3);
+  f += (1.-tune) * (n2(q*6.+t*3.)-.5) * 1.2;
+  float line = .045 / (abs(f) + .045);
+  float mask = smoothstep(1.05, .9, max(abs(p.x)*.85, abs(p.y)*1.2));
+  col += mix(uTier, CORAL, .55 + .3*wob) * pow(line, 2.2) * mask * 1.4;
+  col += WHITE * pow(line, 8.) * mask * .6;
+  float r = length(p);
+  col += WHITE * exp(-r*r*60.) * (1. + .5*sin(t*4.));
+  col += CORAL * exp(-r*7.) * .5;
+  return col;
+}
+
+vec3 rings(vec2 p, float t, float tune, float mis){
+  vec3 col = uTier * .04;
+  vec2 s1 = vec2(-.22, 0.), s2 = vec2(.22, 0.);
+  float d1 = length(p - s1), d2 = length(p - s2);
+  float k = 26., sp = 2.2;
+  float w1 = sin(d1*k - t*sp), w2 = sin(d2*k - t*sp + (1.-tune)*3.);
+  float inter = (w1 + w2) * .5;
+  inter += (1.-tune) * (n2(p*20.+t*5.)-.5) * 1.5;
+  float band = pow(max(inter, 0.), 6.);
+  float fall = exp(-length(p)*1.8);
+  col += mix(uTier, CORAL, .4) * band * fall * 2.6;
+  col += WHITE * (exp(-d1*d1*300.) + exp(-d2*d2*300.)) * 1.3;
+  // rastros dos cristais
+  for (int i = 0; i < 8; i++) {
+    if (float(i) >= uCr) break;
+    float base = t*.9 + float(i)*6.28318/uCr;
+    for (int j = 0; j < 6; j++) {
+      float a = base - float(j)*.07;
+      vec2 c = vec2(cos(a)*.75, sin(a)*.48);
+      float dc = length(p - c);
+      col += mix(CORAL, uTier, .3) * (.0011/(dc*dc + .0006)) * (1. - float(j)/6.) * .55;
+    }
+  }
+  return col;
+}
+
+void main(){
+  vec2 frag = gl_FragCoord.xy;
+  if (uPix > .5) frag = (floor(frag / uPix) + .5) * uPix;
+  vec2 uv = frag / uRes;
+  vec2 p = (uv - .5) * vec2(uAspect, 1.) * 2.;
+  float t = uT;
+  float tune = uTune;
+  float mis = 1. - tune;
+  vec3 col;
+  if (uStyle < .5) col = plasma(p, t, tune, mis);
+  else if (uStyle < 1.5) col = chladni(p, t, tune, mis);
+  else col = rings(p, t, tune, mis);
+  // chiado fora de sintonia
+  float st = h21(floor(frag/2.) + floor(t*24.));
+  col += vec3(st) * mis * mis * .22;
+  col *= 1. - mis * .35 * step(.97, h21(vec2(floor(t*12.), 3.)));
+  // brilho suave (tone map) e vinheta das paredes
+  col = 1. - exp(-col * 1.25);
+  float vig = smoothstep(1.6, .4, length(p * vec2(.75, 1.)));
+  col *= .35 + .65*vig;
+  if (uPix > .5) col = floor(col * 18.) / 18.;
+  gl_FragColor = vec4(col, 1.);
+}`;
+
+const TIERS = [['Básico','#6E7480'],['Avançado','#D59A1E'],['Elite','#1FA9A0'],['Esmeralda','#22A84E'],['Allthemodium','#E8740A'],['Vibranium','#18B57A'],['Unobtainium','#B23FD0'],['Ultimate','#7B4FE0']];
+const cv = document.getElementById('cv');
+const gl = cv.getContext('webgl', { antialias: false, preserveDrawingBuffer: false });
+let style = 0, tier = 7;
+const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255);
+
+function compile(type, src) { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; }
+let prog, U = {};
+try {
+  prog = gl.createProgram();
+  gl.attachShader(prog, compile(gl.VERTEX_SHADER, VERT));
+  gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FRAG));
+  gl.linkProgram(prog); gl.useProgram(prog);
+  const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+  const a = gl.getAttribLocation(prog, 'a'); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
+  ['uT','uTune','uAspect','uPix','uStyle','uCr','uRes','uTier'].forEach(n => U[n] = gl.getUniformLocation(prog, n));
+} catch (e) {
+  document.getElementById('badge').textContent = 'WebGL indisponível neste navegador: ' + e.message;
+}
+
+const sws = document.getElementById('sws');
+sws.innerHTML = TIERS.map(([n, c], i) => `<button class="sw" id="sw${i}" style="background:${c}" aria-label="${n}" aria-pressed="${i === tier}"></button>`).join('');
+TIERS.forEach((_, i) => document.getElementById('sw' + i).onclick = () => { tier = i; sws.querySelectorAll('.sw').forEach((b, j) => b.setAttribute('aria-pressed', String(j === i))); label(); });
+[0, 1, 2].forEach(i => document.getElementById('tab' + i).onclick = () => { style = i; [0, 1, 2].forEach(j => { document.getElementById('tab' + j).setAttribute('aria-selected', String(j === i)); document.getElementById('c' + j).classList.toggle('on', j === i); }); });
+document.getElementById('c0').classList.add('on');
+const $ = id => document.getElementById(id);
+function label() {
+  $('tuneV').textContent = $('tune').value + '%'; $('crV').textContent = $('cr').value; $('tierV').textContent = TIERS[tier][0];
+  $('badge').textContent = `sintonia ${$('tune').value}% · ${TIERS[tier][0]} · ${$('cr').value} cristal${$('cr').value === '1' ? '' : 'is'}`;
+}
+['tune', 'cr'].forEach(id => $(id).addEventListener('input', label)); label();
+
+function resize() {
+  const r = cv.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width = Math.max(1, Math.round(r.width * dpr)); cv.height = Math.max(1, Math.round(r.height * dpr));
+}
+window.addEventListener('resize', resize); resize();
+const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+let t = 0, last = performance.now(), smoothTune = 1;
+function frame(now) {
+  const dt = Math.min(.05, (now - last) / 1000); last = now;
+  t += dt * ($('slow').checked ? .3 : 1) * (reduce ? .25 : 1);
+  smoothTune += ((+$('tune').value) / 100 - smoothTune) * Math.min(1, dt * 4);
+  if (prog) {
+    gl.viewport(0, 0, cv.width, cv.height);
+    gl.uniform1f(U.uT, t); gl.uniform1f(U.uTune, smoothTune); gl.uniform1f(U.uAspect, cv.width / cv.height);
+    gl.uniform1f(U.uPix, $('px').checked ? Math.max(4, Math.round(cv.height / 64)) : 0);
+    gl.uniform1f(U.uStyle, style); gl.uniform1f(U.uCr, +$('cr').value);
+    gl.uniform2f(U.uRes, cv.width, cv.height); gl.uniform3fv(U.uTier, hex(TIERS[tier][1]));
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>

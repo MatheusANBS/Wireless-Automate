@@ -58,6 +58,25 @@ public final class ModCreativeTabs {
                         output.accept(ModItems.DEEPSLATE_SIGNAL_QUARTZ_ORE.get());
                         output.accept(ModItems.SIGNAL_CRYSTAL.get());
                         output.accept(ModItems.CUT_SIGNAL_CRYSTAL.get());
+                        for (var tuned : ModItems.TUNED_CRYSTALS.entrySet()) {
+                            if (tuned.getKey().loaded()) {
+                                output.accept(tuned.getValue().get());
+                            }
+                        }
+                        output.accept(ModItems.RESONANCE_DUST.get());
+                        for (var dust : ModItems.CHARGED_DUSTS.entrySet()) {
+                            if (dust.getKey().loaded()) {
+                                output.accept(dust.getValue().get());
+                            }
+                        }
+                        for (var part : ModItems.CASCADE) {
+                            output.accept(part.get());
+                        }
+                        for (var heart : ModItems.RESONATOR_HEARTS.entrySet()) {
+                            if (heart.getKey().loaded()) {
+                                output.accept(heart.getValue().get());
+                            }
+                        }
                         output.accept(ModItems.RESONATOR_CASING.get());
                         output.accept(ModItems.RESONATOR_GLASS.get());
                         for (RouterTier tier : RouterTier.values()) {

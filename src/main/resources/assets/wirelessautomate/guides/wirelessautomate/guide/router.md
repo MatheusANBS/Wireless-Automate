@@ -127,12 +127,12 @@ Your server may use different values: the upgrade card's tooltip shows yours.
 | Tier | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Source/s | Range |
 | --- | --- | --- | --- | --- | --- |
 | **Basic** | 32 | 2,000 | 1,000 | 100 | 64 blocks |
-| **Advanced** | 256 | 16,000 | 8,000 | 800 | 512 blocks |
+| **Advanced** | 256 | 16,000 | 32,768 | 800 | 512 blocks |
 | **Elite** | 2,048 | 128,000 | 64,000 | 6,400 | The whole dimension |
-| **Emerald** | 16,384 | 1,024,000 | 512,000 | 51,200 | Every dimension |
-| **Allthemodium¹** | 131,072 | 8,192,000 | 4,096,000 | 409,600 | Every dimension |
-| **Vibranium¹** | 1,048,576 | 65,536,000 | 32,768,000 | 3,276,800 | Every dimension |
-| **Unobtainium¹** | 8,388,608 | 524,288,000 | 2,097,152,000 | 26,214,400 | Every dimension |
+| **Emerald** | 16,384 | 1,024,000 | 2,097,152 | 51,200 | Every dimension |
+| **Allthemodium¹** | 131,072 | 8,192,000 | 67,108,864 | 409,600 | Every dimension |
+| **Vibranium¹** | 1,048,576 | 65,536,000 | 134,217,728 | 3,276,800 | Every dimension |
+| **Unobtainium¹** | 8,388,608 | 524,288,000 | 4,294,967,296 | 26,214,400 | Every dimension |
 | **Ultimate** | Unlimited | Unlimited | Unlimited | Unlimited | Every dimension |
 
 ¹ Only with the Allthemodium mod. Source only with Ars Nouveau.

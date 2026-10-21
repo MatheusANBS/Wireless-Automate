@@ -28,10 +28,18 @@ final class CoreScreenLayout {
     static final Rect ENERGY = new Rect(190, 120, RIGHT_W, LINE_H);
     static final Rect ENERGY_BAR = new Rect(190, 130, RIGHT_W, 6);
     static final Rect ENERGY_HINT = new Rect(190, 140, RIGHT_W, LINE_H);
+    /** A interferência, no vão entre a legenda do buffer e a Estrutura. */
+    static final Rect INTERFERENCE = new Rect(190, 149, RIGHT_W, LINE_H);
+    /** A barra da integridade de cada câmara: 16 × 2 px, a 18 px do topo do item (1 px abaixo do fundo do slot). */
+    static final int INTEGRITY_DY = 18;
+    static final int INTEGRITY_W = 16;
+    static final int INTEGRITY_H = 2;
     static final Rect INVENTORY = new Rect(10, 158, 162, 54);
     static final Rect HOTBAR = new Rect(10, 216, 162, 18);
     static final Rect STRUCTURE = new Rect(190, 158, RIGHT_W, LINE_H);
     static final int[] STRUCTURE_LINES = {170, 182, 194, 206};
+    /** A caixa do Eco, só no Ultimate, abaixo da Estrutura, em volta do slot ({@code ResonatorMenu.ECO_X}/{@code ECO_Y}). */
+    static final Rect ECO_BOX = new Rect(187, 216, 156, 22);
 
     /** Os botões do dial: « e ‹ à esquerda do campo, › e » à direita. */
     static final int[] DIAL_BUTTONS = {10, 26, 152, 168};

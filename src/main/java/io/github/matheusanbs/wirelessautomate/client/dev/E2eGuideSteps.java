@@ -44,7 +44,7 @@ final class E2eGuideSteps {
     }
 
     /** Teto de capturas por página do guia (a primeira e as rolagens). */
-    private static final int GUIDE_MAX_PARTS = 10;
+    private static final int GUIDE_MAX_PARTS = 16;
     /** Se a última rolagem do guia andou; parada no fim, as capturas seguintes da página ficam de fora. */
     private static boolean guideScrolled;
 

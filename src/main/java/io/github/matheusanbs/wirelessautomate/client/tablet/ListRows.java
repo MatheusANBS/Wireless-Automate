@@ -17,18 +17,18 @@ import java.util.List;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * As linhas da Lista do Tablet: o cabeçalho de cada grupo de máquina (recolher, contagem, diferenças do perfil e
- * o "Colar nas N"), a linha de cada nó (status, nome, segunda linha e os quadradinhos das faces), a linha do
- * limite, a barra de rolagem e a lista vazia.
+ * As linhas da Lista do Tablet: a linha de cada roteador (ícone do tier com o estado, nome, pílula do tier, a presa
+ * na segunda linha e os quadradinhos das faces), a linha do limite, a barra de rolagem e a lista vazia.
  */
 final class ListRows {
     /** Abaixo desta largura da lista, os quadradinhos das faces somem. */
     private static final int CHIPS_MIN_LIST = 150;
     private static final int CHIP = 4;
+    /** O ícone do item, no tamanho natural dele. */
+    private static final int ICON_W = 16;
 
     private final TabletList list;
     private final ListLayout layout;
@@ -51,10 +51,9 @@ final class ListRows {
         }
         boolean chips = layout.listW >= CHIPS_MIN_LIST;
         ProfileSummary profile = s.profile().orElse(null);
-        List<ListTree.Line<ResourceLocation>> rows = list.model.tree().lines();
+        List<ListTree.Line> rows = list.model.tree().lines();
         for (Hot hot : layout.hots) {
             switch (hot.kind()) {
-                case HEADER -> renderHeader(g, font, hot, rows, profile, mx, my);
                 case ROW -> renderNode(g, font, hot, nodes.get(hot.arg()), profile, chips, mx, my);
                 case TREE -> list.treeRows.render(g, font, hot, rows.get(hot.arg()), mx, my);
                 default -> {
@@ -118,33 +117,6 @@ final class ListRows {
         }
     }
 
-    private void renderHeader(GuiGraphics g, Font font, Hot hot, List<ListTree.Line<ResourceLocation>> rows,
-            @Nullable ProfileSummary profile, int mx, int my) {
-        ListTree.Line<ResourceLocation> row = rows.get(hot.arg());
-        boolean hovered = hot.contains(mx, my);
-        g.fill(hot.x(), hot.y(), hot.x() + hot.w(), hot.y() + hot.h(), hovered ? GuiPaint.ROW_HOVER : GuiPaint.INSET);
-        g.fill(hot.x(), hot.y() + hot.h() - 1, hot.x() + hot.w(), hot.y() + hot.h(), GuiPaint.LINE);
-        int color = hovered ? GuiPaint.FG : GuiPaint.MUTED;
-        if (row.collapsed()) {
-            GuiPaint.arrowRight(g, hot.x() + 4, hot.y() + 3, color);
-        } else {
-            GuiPaint.arrowDown(g, hot.x() + 3, hot.y() + 4, color);
-        }
-        Hot paste = layout.hot(Kind.PASTE_GROUP, hot.arg());
-        int right = paste != null ? paste.x() - 3 : hot.x() + hot.w() - 3;
-        GuiText.draw(g, font, list.texts.header(font, list.model.tree(), rows.size(), hot.arg(), row, profile,
-                right - hot.x() - 11), hot.x() + 11, hot.y() + 2, GuiPaint.FG);
-        if (paste != null && profile != null) {
-            boolean same = profile.machine().equals(row.group());
-            boolean over = paste.contains(mx, my);
-            int fill = same ? (over ? GuiPaint.mix(GuiPaint.OK, GuiPaint.FG, 0.2f) : GuiPaint.OK)
-                    : over ? GuiPaint.BUTTON : GuiPaint.PANEL;
-            GuiPaint.box(g, paste.x(), paste.y(), paste.w(), paste.h(), fill, same ? fill : GuiPaint.BUTTON_BORDER);
-            GuiPaint.textCentered(g, font, layout.pasteGroupLabel(font, row, list.profileActions.pasteCount(row.group())),
-                    paste.x() + paste.w() / 2 + 1, paste.y() + 1, same ? GuiPaint.SELECTED_TEXT : GuiPaint.FG);
-        }
-    }
-
     /**
      * A linha do nó. Escolhido e aberto na árvore, o alvo do painel é uma das linhas de baixo, que leva a marca: o
      * nó fica só com o fundo.
@@ -176,16 +148,38 @@ final class ListRows {
             list.treeRows.renderNodeChevron(g, cx, y, node, line, toggle != null && toggle.contains(mx, my));
             cx += chevron;
         }
-        GuiPaint.dot(g, cx, y + 7, TabletText.statusColor(node.status()));
-        int textX = cx + 8;
-        int right = x + hot.w() - 3;
+        g.renderItem(RouterIcons.of(node.tier()), cx, y + 2);
+        // o estado vai na pontinha do ícone, para a linha não perder largura
+        GuiPaint.dot(g, cx + 11, y + 12, TabletText.statusColor(node.status()));
+        int textX = cx + ICON_W + 3;
+        int right = textRight(list, hot);
         if (chips) {
-            right -= 3 * CHIP + 2 + 4;
             renderChips(g, right + 4, y + 5, node);
         }
-        ListTexts.NodeLine texts = list.texts.nodeLine(font, hot.arg(), node, profile, right - textX);
-        GuiText.draw(g, font, texts.name(), textX, y + 2, GuiPaint.FG);
+        ListTexts.TierPill pill = list.texts.pill(font, node.tier());
+        ListTexts.NodeLine texts = list.texts.nodeLine(font, hot.arg(), node, profile, right - textX, pill.width());
+        if (texts.pill() && !list.rename.editing(ListRename.Kind.ROUTER, node.key())) {
+            GuiPaint.outline(g, right - pill.width(), y + 1, pill.width(), 10, pill.color());
+            GuiPaint.text(g, font, pill.name(), right - pill.width() + ListTexts.PILL_PAD + 1, y + 2, pill.color());
+        }
+        if (list.rename.editing(ListRename.Kind.ROUTER, node.key())) {
+            list.rename.place(textX, y + 1, right - textX);
+        } else {
+            GuiText.draw(g, font, texts.name(), textX, y + 2, GuiPaint.FG);
+            list.rename.paintPencil(g, ListRename.Kind.ROUTER, node.key(), hot, right, mx, my);
+        }
         GuiText.draw(g, font, texts.state(), textX, y + 11, GuiPaint.MUTED);
+    }
+
+    /** Onde o nome do nó começa: depois da caixa do Selecionar, do ▸/▾ e do ícone. */
+    static int nameX(TabletList list, Hot hot) {
+        return hot.x() + 5 + (list.multi ? 12 : 0) + list.treeRows.chevronWidth() + ICON_W + 3;
+    }
+
+    /** Até onde vai o texto da linha do nó: antes dos quadradinhos das faces, quando cabem. */
+    static int textRight(TabletList list, Hot hot) {
+        int right = hot.x() + hot.w() - 3;
+        return list.listWidth() >= CHIPS_MIN_LIST ? right - (3 * CHIP + 2 + 4) : right;
     }
 
     /** Os seis quadradinhos das faces na aba do painel: Cima, Frente, Esquerda / Baixo, Trás, Direita. */

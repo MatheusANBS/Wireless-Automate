@@ -9,7 +9,6 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eUi.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
-import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.client.highlight.HighlightRenderer;
 import io.github.matheusanbs.wirelessautomate.client.router.NodePanel;
 import io.github.matheusanbs.wirelessautomate.client.tablet.TabletScreen;
@@ -205,8 +204,8 @@ final class E2eHighlightSteps {
         }, () -> HighlightRenderer.isLit(Level.OVERWORLD, rangeFurnace)
                 && find(byMessageKey("gui.wirelessautomate.highlight.clear_all.count")) != null && stepTicks >= 4,
                 () -> "acesas " + HighlightRenderer.count()));
-        list.add(new Step(l + "Tablet: nenhum texto cortado", 1500, () -> moveMouse(0, 0),
-                () -> stepTicks >= 4 && GuiText.clipCount() == 0, () -> clippedTexts().toString()));
+        // a Lista corta a segunda linha dos roteadores com "…" e a dica da linha traz o texto inteiro
+        list.add(clipCheck(l + "Tablet"));
         list.add(capture("7k-tablet-no-mundo"));
         list.add(new Step(l + "Tablet: o Apagar todas apaga", STEP_TIMEOUT_MS,
                 () -> click(widget(byMessageKey("gui.wirelessautomate.highlight.clear_all.count"), "Apagar todas")),

@@ -75,12 +75,14 @@ final class E2ePanelSteps {
                 () -> "lista do redstone fechada"));
         list.add(capture("1h-painel-redstone"));
         for (RedstoneMode mode : new RedstoneMode[] {RedstoneMode.HIGH, RedstoneMode.IGNORE}) {
-            list.add(new Step("painel: redstone " + mode, STEP_TIMEOUT_MS, () -> {
+            // a lista aberta só vale depois de um quadro desenhado com ela: clicar na linha no mesmo tick erra
+            list.add(new Step("painel: lista do redstone para " + mode, STEP_TIMEOUT_MS, () -> {
                 if (panel().redstoneRowCenter(mode) == null) {
                     clickPanel(panel().redstoneCenter(), "o redstone");
                 }
-                clickPanel(panel().redstoneRowCenter(mode), "a linha " + mode + " do redstone");
-            }, () -> onServer(server -> router(server, routerB).face(ResourceType.ITEM, Direction.UP).redstone()) == mode
+            }, () -> panel().redstoneRowCenter(mode) != null && stepTicks >= 2, () -> "lista do redstone fechada"));
+            list.add(new Step("painel: redstone " + mode, STEP_TIMEOUT_MS,
+                    () -> clickPanel(panel().redstoneRowCenter(mode), "a linha " + mode + " do redstone"), () -> onServer(server -> router(server, routerB).face(ResourceType.ITEM, Direction.UP).redstone()) == mode
                     && routerScreen().getMenu().snapshot().face(ResourceType.ITEM, Direction.UP).redstone() == mode
                     && !panel().popupOpen(),
                     () -> "redstone na tela " + routerScreen().getMenu().snapshot().face(ResourceType.ITEM,

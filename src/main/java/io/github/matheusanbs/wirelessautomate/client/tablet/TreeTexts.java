@@ -12,12 +12,14 @@ import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeView;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import net.minecraft.client.gui.Font;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -46,6 +48,8 @@ final class TreeTexts {
     MachineLive[] lives = new MachineLive[0];
     /** O "#N" de cada máquina sem rótulo: a posição dela no grupo, como na tela do roteador. */
     int[] numbers = new int[0];
+    /** O ícone do bloco da presa em cada linha dela; vazio nas outras. */
+    ItemStack[] icons = new ItemStack[0];
     Component less = Component.empty();
     int lessW;
     Component badge = Component.empty();
@@ -73,6 +77,8 @@ final class TreeTexts {
         rates = new Component[n];
         rateW = new int[n];
         lives = new MachineLive[n];
+        icons = new ItemStack[n];
+        Arrays.fill(icons, ItemStack.EMPTY);
         numbers = new int[n];
         separatorW = font.width(SEPARATOR);
         less = tr("tree.show_few");
@@ -89,12 +95,14 @@ final class TreeTexts {
             rates[r] = Component.empty();
             switch (row) {
                 case TabletRows.Attached attached -> {
-                    names[r] = Component.translatable("gui.wirelessautomate.router.range.attached");
                     NodeView node = nodes.get(attached.parent());
+                    names[r] = node.attachedLabel().isEmpty() ? Component.literal(texts.machineName(node.machine()))
+                            : Component.literal(node.attachedLabel());
+                    icons[r] = texts.blockIcon(node.machine());
                     Component block = Component.literal(texts.machineName(node.machine()));
                     seconds[r] = attached.side().<Component>map(side -> tr("tree.attached.detail", block,
                             Component.translatable("gui.wirelessautomate.router.face." + side.getSerializedName())))
-                            .orElse(block);
+                            .orElse(tr("tree.attached.block", block));
                 }
                 case TabletRows.Group group -> {
                     number = 0;

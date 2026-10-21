@@ -293,7 +293,8 @@ public final class ResonatorSlotGameTests {
             try {
                 helper.assertTrue(menu.stillValid(player), "a tela não vale antes do upgrade");
                 helper.assertTrue(ResonanceCoreBlock.tryUpgrade(helper.getLevel(), core.getBlockPos(),
-                        RouterTier.ADVANCED, RouterTier.BASIC), "o upgrade foi recusado");
+                        RouterTier.ADVANCED, RouterTier.BASIC,
+                        ResonatorTestSupport.withHeart(player, RouterTier.ADVANCED)), "o upgrade foi recusado");
                 helper.assertTrue(!menu.stillValid(player), "a tela continua valendo com as câmaras novas");
             } finally {
                 close(player);

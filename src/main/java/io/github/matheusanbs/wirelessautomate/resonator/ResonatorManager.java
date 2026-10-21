@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.resonator;
 
+import io.github.matheusanbs.wirelessautomate.Config;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.IdentityHashMap;
@@ -26,6 +27,13 @@ public final class ResonatorManager {
      * têm lote nele, em vez de todos.
      */
     private static final List<Set<ResonanceCoreBlockEntity>> BUCKETS = buckets();
+    /**
+     * Na run de GameTest a grade põe os Ressonadores de testes diferentes a menos de 32 blocos uns dos outros, e a
+     * interferência mudaria a geração que eles conferem: lá ela nasce desligada, e os testes dela a ligam.
+     */
+    private static boolean interferenceOn = !Boolean.getBoolean("wirelessautomate.gameTests");
+    /** A config mudou (de qualquer thread): o próximo tick refaz a interferência de todos. */
+    private static volatile boolean interferenceConfigChanged;
 
     private ResonatorManager() {
     }
@@ -43,14 +51,80 @@ public final class ResonatorManager {
         return Math.floorMod(core.getBlockPos().hashCode(), BATCH_TICKS);
     }
 
+    /** O Núcleo carregou: entra no conjunto e refaz a interferência dele e dos vizinhos. */
     static void add(ResonanceCoreBlockEntity core) {
         CORES.add(core);
         BUCKETS.get(phase(core)).add(core);
+        interferenceChanged(core);
     }
 
+    /** O Núcleo descarregou ou saiu: os vizinhos deixam de contá-lo. */
     static void remove(ResonanceCoreBlockEntity core) {
         CORES.remove(core);
         BUCKETS.get(phase(core)).remove(core);
+        interferenceChanged(core);
+    }
+
+    /**
+     * O Núcleo montou, desmontou, carregou ou descarregou: refaz a interferência dos Núcleos da mesma dimensão no
+     * raio dele (e a dele, se ainda está no conjunto). Só nesses eventos, numa varredura linear dos Núcleos
+     * carregados; o lote só lê o fator guardado.
+     */
+    static void interferenceChanged(ResonanceCoreBlockEntity changed) {
+        int radius = interferenceRadius();
+        Level level = changed.getLevel();
+        if (radius <= 0 || level == null) {
+            return;
+        }
+        BlockPos at = changed.getBlockPos();
+        for (ResonanceCoreBlockEntity core : CORES) {
+            if (core.getLevel() == level && !core.isRemoved() && (core == changed || ResonatorInterference.counts(
+                    distance(core.getBlockPos(), at), radius))) {
+                refreshInterference(core, radius);
+            }
+        }
+    }
+
+    /** Refaz a interferência de todos os Núcleos carregados (a config mudou, ou um GameTest a ligou). */
+    public static void refreshAllInterference() {
+        int radius = interferenceRadius();
+        for (ResonanceCoreBlockEntity core : CORES) {
+            refreshInterference(core, radius);
+        }
+    }
+
+    /** Só para os GameTests: liga ou desliga a interferência e refaz a de todos. */
+    public static void setInterferenceForTests(boolean on) {
+        interferenceOn = on;
+        refreshAllInterference();
+    }
+
+    /** A config do servidor recarregou; seguro de qualquer thread. */
+    public static void configChanged() {
+        interferenceConfigChanged = true;
+    }
+
+    private static int interferenceRadius() {
+        return interferenceOn ? Config.interferenceRadius() : 0;
+    }
+
+    /** Conta os outros Núcleos montados da mesma dimensão no raio; com raio 0 a perda é zero. */
+    private static void refreshInterference(ResonanceCoreBlockEntity core, int radius) {
+        ResonatorInterference.Tally tally = new ResonatorInterference.Tally(radius);
+        if (radius > 0) {
+            BlockPos at = core.getBlockPos();
+            for (ResonanceCoreBlockEntity other : CORES) {
+                if (other != core && other.getLevel() == core.getLevel() && !other.isRemoved() && other.formed()) {
+                    tally.add(distance(other.getBlockPos(), at));
+                }
+            }
+        }
+        core.interference().set(ResonatorInterference.lossPermille(tally.count(), Config.interferencePenalty(),
+                Config.interferenceMax()), tally.nearest());
+    }
+
+    private static int distance(BlockPos a, BlockPos b) {
+        return ResonatorInterference.distance(a.getX(), a.getY(), a.getZ(), b.getX(), b.getY(), b.getZ());
     }
 
     /**
@@ -104,6 +178,10 @@ public final class ResonatorManager {
      */
     public static void tick(MinecraftServer server) {
         long started = System.nanoTime();
+        if (interferenceConfigChanged) {
+            interferenceConfigChanged = false;
+            refreshAllInterference();
+        }
         runDue(server);
         ResonatorProfile.tickEnded(System.nanoTime() - started);
     }
@@ -154,5 +232,6 @@ public final class ResonatorManager {
     public static void reset() {
         CORES.clear();
         BUCKETS.forEach(Set::clear);
+        interferenceConfigChanged = false;
     }
 }

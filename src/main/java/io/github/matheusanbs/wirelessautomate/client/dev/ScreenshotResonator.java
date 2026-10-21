@@ -103,7 +103,7 @@ final class ScreenshotResonator {
             ItemStack stack = new ItemStack(cut ? ModItems.CUT_SIGNAL_CRYSTAL.get() : ModItems.SIGNAL_CRYSTAL.get());
             boolean dull = spec[0].equals("o");
             SignalCrystalItem.setCharge(stack, dull ? 0 : (int) Math.round(fraction * CrystalCharge.FULL));
-            int yield = ((SignalCrystalItem) stack.getItem()).yield();
+            int yield = ((SignalCrystalItem) stack.getItem()).yieldQuarters(sample.tier());
             allYield += yield;
             if (dull) {
                 rechargePercent = (int) Math.round(fraction * 100);
@@ -125,7 +125,7 @@ final class ScreenshotResonator {
                 (int) Math.round(efficiency * 1000), (int) Math.round(Tuning.ceiling(tier) * 1000), sample.auto(),
                 sample.tuner(), TuneSignal.steps(dial + sample.deviation(), dial),
                 TuneSignal.tuned(dial + sample.deviation(), dial), rechargeTicks * rechargePercent / 100,
-                rechargeTicks, sample.energyPorts(), sample.crystalPorts(), sample.layout()));
+                rechargeTicks, sample.energyPorts(), sample.crystalPorts(), sample.layout(), 0, -1, 0, 0));
         resonatorScreen = new ResonatorScreen(menu, inventory,
                 Component.translatable("block.wirelessautomate.resonance_core"));
         // já no tamanho da janela: os ganchos dos centros dependem da posição da tela

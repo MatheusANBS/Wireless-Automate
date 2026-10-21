@@ -28,6 +28,10 @@ import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreItem;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
+import io.github.matheusanbs.wirelessautomate.client.resonator.render.CrystalShader;
+import io.github.matheusanbs.wirelessautomate.client.resonator.render.PlasmaShader;
+import io.github.matheusanbs.wirelessautomate.client.resonator.render.RibbonShader;
+import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.network.chat.Component;
@@ -38,6 +42,8 @@ import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
+import net.neoforged.neoforge.client.event.RegisterShadersEvent;
+import net.neoforged.neoforge.registries.DeferredItem;
 
 /** Registros só do cliente. As classes de tela nunca são carregadas no servidor dedicado. */
 // bus explícito: o FML já o deduz do evento e marcou o atributo para remoção, mas aqui ele deixa claro
@@ -50,7 +56,8 @@ public final class ClientSetup {
     /**
      * Propriedade {@code wirelessautomate:tier} dos itens do roteador, dos armazenamentos e do Núcleo de Ressonância (a
      * posição no {@code RouterTier}: 0 = Básico ... 7 = Ultimate): os overrides dos modelos de item trocam o ícone pelo modelo do tier.
-     * Os cristais ganham {@code wirelessautomate:dull} (1 quando Opacos), que troca o modelo. Liga também o clique no
+     * Os cristais (o de Sinal, o Lapidado e os Afinados) ganham {@code wirelessautomate:dull} (1 quando Opacos) e
+     * {@code wirelessautomate:cracked} (1 quando rachados), que trocam o modelo. Liga também o clique no
      * Núcleo de Ressonância à projeção da estrutura.
      */
     @SubscribeEvent
@@ -64,9 +71,14 @@ public final class ClientSetup {
             }
             ItemProperties.register(ModItems.RESONANCE_CORE.get(), WirelessAutomate.id("tier"),
                     (stack, level, entity, seed) -> ResonanceCoreItem.tierOf(stack).ordinal());
-            for (var crystal : List.of(ModItems.SIGNAL_CRYSTAL, ModItems.CUT_SIGNAL_CRYSTAL)) {
+            List<DeferredItem<SignalCrystalItem>> crystals = new ArrayList<>(ModItems.TUNED_CRYSTALS.values());
+            crystals.add(ModItems.SIGNAL_CRYSTAL);
+            crystals.add(ModItems.CUT_SIGNAL_CRYSTAL);
+            for (var crystal : crystals) {
                 ItemProperties.register(crystal.get(), WirelessAutomate.id("dull"),
                         (stack, level, entity, seed) -> SignalCrystalItem.isDull(stack) ? 1F : 0F);
+                ItemProperties.register(crystal.get(), WirelessAutomate.id("cracked"),
+                        (stack, level, entity, seed) -> SignalCrystalItem.isCracked(stack) ? 1F : 0F);
             }
             ResonanceCoreBlock.projectionHook = ResonatorProjection::toggle;
         });
@@ -96,5 +108,13 @@ public final class ClientSetup {
     @SubscribeEvent
     static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(ModBlockEntities.RESONANCE_CORE.get(), ResonatorRenderer::new);
+    }
+
+    /** Os core shaders da câmara: o Núcleo de plasma, as fitas e o cristal. */
+    @SubscribeEvent
+    static void registerShaders(RegisterShadersEvent event) {
+        PlasmaShader.register(event);
+        RibbonShader.register(event);
+        CrystalShader.register(event);
     }
 }

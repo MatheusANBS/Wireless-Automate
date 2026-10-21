@@ -12,7 +12,8 @@ import net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs;
 
 /**
  * Cliente → servidor: dá nome a um grupo ({@code GROUP}, {@code id} = id do grupo) ou rótulo a uma máquina
- * remota ({@code MACHINE}, {@code id} = índice) da tela aberta; vazio tira o nome. Numa máquina, a posição
+ * remota ({@code MACHINE}, {@code id} = índice) da tela aberta, ou nome à máquina presa ({@code ATTACHED}, sem
+ * {@code id} nem posição, e sem exigir o Upgrade de Alcance); vazio tira o nome. Numa máquina, a posição
  * vai junto para o servidor conferir que o índice ainda é dela. No máximo {@link RenameRouterPayload#MAX_LENGTH}.
  */
 public record RenameTargetPayload(int containerId, EditTarget.Kind kind, int id, Optional<BlockPos> machinePos,

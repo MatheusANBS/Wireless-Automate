@@ -510,4 +510,37 @@ public final class TabletMachinesGameTests {
                 })
                 .thenSucceed();
     }
+
+    /** A linha da presa na visão por máquinas leva o nome dado a ela, e a busca por máquina o acha. */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void attachedRowCarriesItsLabel(GameTestHelper helper) {
+        RouterBlockEntity router = chestWithRouter(helper, RouterTier.ADVANCED);
+        ServerPlayer player = playerWithTablet(helper);
+        String name = uniqueName(helper, "maqp");
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setName(name);
+                    router.setAttachedLabel("Cofre da frente");
+                    NodeIndex.placedBy(router, player.getUUID());
+                    TabletMenu menu = openTablet(player, 159);
+                    helper.assertTrue(act(player, menu, Action.MACHINES, null), "não entrou na visão por máquinas");
+                    Machine row = null;
+                    for (Row r : fresh(menu).rows()) {
+                        if (r instanceof Machine m && m.attached()) {
+                            row = m;
+                        }
+                    }
+                    helper.assertTrue(row != null, "sem a linha da presa");
+                    eq(helper, row.label(), "Cofre da frente", "rótulo da linha da presa");
+                    roundTrip(helper, menu.snapshot().page());
+                    TabletMachineRows found = query(menu, Query.of("frente"));
+                    helper.assertTrue(machines(found).contains("presa"), "a busca não achou a presa pelo nome");
+                    TabletMachineRows none = query(menu, Query.of("gaveta"));
+                    helper.assertFalse(machines(none).contains("presa"), "a busca achou um nome que não existe");
+                    menu.removed(player);
+                    player.containerMenu = player.inventoryMenu;
+                })
+                .thenSucceed();
+    }
 }

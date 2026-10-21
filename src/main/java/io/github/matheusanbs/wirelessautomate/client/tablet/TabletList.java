@@ -27,7 +27,6 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -69,6 +68,7 @@ public final class TabletList {
     final MachineRows machineRows;
     final MachineNav machineNav;
     final ListProfileActions profileActions;
+    final ListRename rename;
 
     // lista
     int scroll;
@@ -90,6 +90,7 @@ public final class TabletList {
         this.model = new ListModel(menu::snapshot);
         this.profileActions = new ListProfileActions(this);
         this.markRows = new MarkRows(this);
+        this.rename = new ListRename(this);
         Query query = menu.snapshot().query();
         this.search = new ListSearch(this, query);
         search.typeFilter.ifPresent(t -> chipType = t);
@@ -302,6 +303,7 @@ public final class TabletList {
 
     /** Fecha sem salvar a caixa do nome aberta no painel (a aba trocou). */
     void cancelLabel() {
+        rename.editor().finish(false);
         NodePanel p = chosenPanel.current();
         if (p != null) {
             p.cancelLabel();
@@ -310,6 +312,9 @@ public final class TabletList {
 
     /** Uma letra para a caixa do nome aberta no painel; {@code false} deixa a letra para a busca. */
     boolean charTyped(char codePoint, int modifiers) {
+        if (rename.editor().charTyped(codePoint, modifiers)) {
+            return true;
+        }
         NodePanel p = chosenPanel.current();
         return p != null && p.charTyped(codePoint, modifiers);
     }
@@ -318,7 +323,8 @@ public final class TabletList {
      * A dica do ponto, ou {@code null}. Um texto cortado sob o mouse vem inteiro primeiro e a dica da área depois.
      */
     public @Nullable Component tooltip(double mx, double my) {
-        return tooltips.tooltip(mx, my);
+        Component renaming = rename.tooltip(mx, my);
+        return renaming != null ? renaming : tooltips.tooltip(mx, my);
     }
 
     // ------------------------------------------------------------------ desenho
@@ -333,7 +339,9 @@ public final class TabletList {
         painter.renderSearch(g, font, mx, my);
         painter.renderQuick(g, font, mx, my);
         painter.renderBanner(g, font, mx, my);
+        rename.beginFrame();
         rows.render(g, font, mx, my);
+        rename.endFrame(g, mx, my);
         painter.renderBar(g, font, mx, my);
         g.fill(layout.x0 + layout.listW + 4, layout.y0, layout.x0 + layout.listW + 5, layout.bottom, GuiPaint.LINE);
         painter.renderPanel(g, font, mx, my);
@@ -367,6 +375,11 @@ public final class TabletList {
         revealKey = key;
     }
 
+    /** A caixa do nome da Lista está aberta (gancho do e2e). */
+    public boolean renaming() {
+        return rename.editor().editing();
+    }
+
     /** A visão por máquinas: o mouse, o teclado e os ganchos do e2e. */
     public MachineNav machines() {
         return machineNav;
@@ -376,22 +389,7 @@ public final class TabletList {
         search.previewText(value);
     }
 
-    public void previewCollapse(ResourceLocation machine) {
-        model.collapse(machine);
-    }
-
-    /** Abre o grupo da máquina na lista (gancho do e2e). */
-    public void previewExpand(ResourceLocation machine) {
-        model.expand(machine);
-    }
-
-    /** Rola a lista até o cabeçalho do grupo da máquina. */
-    public void previewScrollTo(ResourceLocation machine) {
-        layout.arrange();
-        scroll = Math.max(0, model.tree().headerLine(machine));
-    }
-
-    /** Centro da linha do nó, ou {@code null} se ela não está na vista (grupo recolhido ou rolado). */
+    /** Centro da linha do nó, ou {@code null} se ela não está na vista (rolada para fora). */
     int @Nullable [] nodeRowCenter(NodeKey key) {
         layout.arrange();
         Hot hot = layout.hot(Kind.ROW, model.indexOf(key));
@@ -434,21 +432,6 @@ public final class TabletList {
 
     public int @Nullable [] typeChipCenter() {
         return center(Kind.TYPE_CHIP, 0);
-    }
-
-    /** O "Colar nas N" do grupo da máquina. */
-    public int @Nullable [] pasteGroupCenter(ResourceLocation machine) {
-        layout.arrange();
-        int row = model.tree().headerLine(machine);
-        Hot hot = row < 0 ? null : layout.hot(Kind.PASTE_GROUP, row);
-        return hot == null ? null : hot.center();
-    }
-
-    int @Nullable [] groupHeaderCenter(ResourceLocation machine) {
-        layout.arrange();
-        int row = model.tree().headerLine(machine);
-        Hot hot = row < 0 ? null : layout.hot(Kind.HEADER, row);
-        return hot == null ? null : new int[] {hot.x() + 20, hot.y() + hot.h() / 2};
     }
 
     public int @Nullable [] copyCenter() {

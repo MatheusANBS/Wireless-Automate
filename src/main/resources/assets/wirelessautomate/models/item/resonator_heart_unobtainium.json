@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "wirelessautomate:item/resonator_heart_unobtainium"
+  }
+}

@@ -73,7 +73,7 @@ final class E2eTabletSteps {
      * lista (o painel aparece e muda o modo de uma face no servidor), copia o perfil de B (a faixa aparece), cola
      * no grupo dos baús (o aviso aparece e A fica "igual ao perfil"), desfaz, e repete com Ctrl+C, Ctrl+V e Ctrl+Z.
      * Depois cria um grupo de redes, pausa e retoma, edita o filtro de B a 20 blocos pelo painel e volta ao
-     * Tablet com B escolhido, e abre B à distância com duplo clique na linha.
+     * Tablet com B escolhido, e abre B à distância com duplo clique na segunda linha dela.
      */
     static void tabletSteps(List<Step> list) {
         UUID playerId = Minecraft.getInstance().player.getUUID();
@@ -172,7 +172,8 @@ final class E2eTabletSteps {
             int[] row = tabletScreen().nodeRowCenter(nodeB());
             click(tabletScreen(), row[0], row[1]);
         }, () -> tabletScreen().nodePanel() != null && tabletScreen().panel().node().equals(Optional.of(nodeB()))
-                && tabletScreen().panel().access() == PanelAccess.EDIT,
+                && tabletScreen().panel().access() == PanelAccess.EDIT
+                && tabletScreen().nodePanel().tabCenter(ResourceType.ITEM) != null,
                 () -> "painel " + (tabletScreen().panel() == null ? "nenhum" : tabletScreen().panel().node())));
         list.add(new Step("painel: aba Itens", STEP_TIMEOUT_MS, () -> {
             int[] c = tabletScreen().nodePanel().tabCenter(ResourceType.ITEM);
@@ -207,16 +208,19 @@ final class E2eTabletSteps {
             int[] c = tabletScreen().list().copyCenter();
             click(tabletScreen(), c[0], c[1]);
         }, () -> tabletScreen().getMenu().snapshot().profile().map(p -> p.origin().equals(nodeB())).orElse(false)
-                && tabletScreen().list().forgetCenter() != null && tabletScreen().list().pasteGroupCenter(CHEST_ID) != null,
+                && tabletScreen().list().forgetCenter() != null,
                 () -> "perfil " + tabletScreen().getMenu().snapshot().profile()));
         list.add(capture("7h-tablet-perfil"));
         list.add(clipCheck("Tablet: perfil copiado"));
         list.add(listClipTooltip("Tablet: perfil copiado"));
-        list.add(new Step("Colar nas N cola e mostra o aviso", STEP_TIMEOUT_MS, () -> {
+        list.add(new Step("escolher A para colar", STEP_TIMEOUT_MS, () -> {
             aBeforePaste = onServer(server -> RouterPreset.copyOf(router(server, routerA)));
-            int[] c = tabletScreen().list().pasteGroupCenter(CHEST_ID);
+            int[] c = tabletScreen().nodeRowCenter(nodeA());
             click(tabletScreen(), c[0], c[1]);
-        }, () -> {
+        }, () -> tabletScreen().panel() != null && tabletScreen().panel().node().equals(Optional.of(nodeA())),
+                () -> "painel " + (tabletScreen().panel() == null ? "nenhum" : tabletScreen().panel().node())));
+        list.add(new Step("Ctrl+V cola e mostra o aviso", STEP_TIMEOUT_MS,
+                () -> tabletScreen().keyPressed(GLFW.GLFW_KEY_V, 0, GLFW.GLFW_MOD_CONTROL), () -> {
             PanelNoticePayload notice = PanelNotices.current();
             TabletSnapshot.NodeView a = tabletScreen().getMenu().snapshot().nodes().stream()
                     .filter(n -> n.key().pos().equals(routerA)).findFirst().orElse(null);
@@ -237,6 +241,11 @@ final class E2eTabletSteps {
             click(tabletScreen(), c[0], c[1]);
         }, () -> tabletScreen().getMenu().snapshot().profile().isEmpty(),
                 () -> "perfil " + tabletScreen().getMenu().snapshot().profile()));
+        list.add(new Step("escolher B de novo", STEP_TIMEOUT_MS, () -> {
+            int[] c = tabletScreen().nodeRowCenter(nodeB());
+            click(tabletScreen(), c[0], c[1]);
+        }, () -> tabletScreen().panel() != null && tabletScreen().panel().node().equals(Optional.of(nodeB())),
+                () -> "painel " + (tabletScreen().panel() == null ? "nenhum" : tabletScreen().panel().node())));
         list.add(new Step("Ctrl+C na linha escolhida", STEP_TIMEOUT_MS,
                 () -> tabletScreen().keyPressed(GLFW.GLFW_KEY_C, 0, GLFW.GLFW_MOD_CONTROL),
                 () -> tabletScreen().getMenu().snapshot().profile().map(p -> p.origin().equals(nodeB())).orElse(false),
@@ -339,7 +348,8 @@ final class E2eTabletSteps {
             }
             click(tabletScreen(), row[0], row[1]);
         }, () -> tabletScreen().nodePanel() != null && tabletScreen().panel().node().equals(Optional.of(nodeB()))
-                && tabletScreen().panel().access() == PanelAccess.EDIT,
+                && tabletScreen().panel().access() == PanelAccess.EDIT
+                && tabletScreen().nodePanel().tabCenter(ResourceType.ITEM) != null,
                 () -> "painel " + (tabletScreen().panel() == null ? "nenhum" : tabletScreen().panel().access())));
         // o cartão de energia deixou o painel na aba Energia, que não tem filtro
         list.add(new Step("painel de B na aba Itens", STEP_TIMEOUT_MS, () -> {
@@ -363,8 +373,9 @@ final class E2eTabletSteps {
             if (row == null) {
                 throw new StepFailure("B não está na lista");
             }
-            click(screen, row[0], row[1]);
-            click(screen, row[0], row[1]);
+            // na segunda linha: na primeira, o duplo clique no nome renomeia
+            click(screen, row[0], row[1] + 5);
+            click(screen, row[0], row[1] + 5);
         }, () -> {
             // passa alguns ticks aberta: a tela comum fecharia a mais de 8 blocos
             return stepTicks >= 20 && Minecraft.getInstance().screen instanceof RouterScreen screen

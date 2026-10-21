@@ -4,6 +4,7 @@ import io.github.matheusanbs.wirelessautomate.menu.RangeView;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import net.minecraft.Util;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -32,7 +33,11 @@ final class RowRename {
 
     /** Onde o texto do nome da linha começa, a partir da borda da lista. */
     static int nameX(RangeList.Row row) {
-        return row.kind() == RangeList.Kind.GROUP ? RangeList.GROUP_TEXT_X : MachineRow.TEXT_X;
+        return switch (row.kind()) {
+            case GROUP -> RangeList.GROUP_TEXT_X;
+            case ATTACHED -> RangeList.ATTACHED_TEXT_X;
+            case MACHINE -> MachineRow.TEXT_X;
+        };
     }
 
     /** O nome da linha de {@code target} está em edição (a linha fica sem os botões, para a caixa caber). */
@@ -52,9 +57,14 @@ final class RowRename {
         return second;
     }
 
-    /** Abre a caixa no nome da linha {@code row}, com o nome dado agora e o nome padrão como dica. */
-    void start(RangeList.Row row, RangeView view) {
-        if (row.kind() == RangeList.Kind.GROUP) {
+    /**
+     * Abre a caixa no nome da linha {@code row}, com o nome dado agora e o nome padrão como dica; na presa, o nome
+     * e a dica são os dados em {@code attachedLabel} e {@code attachedDefault}.
+     */
+    void start(RangeList.Row row, RangeView view, String attachedLabel, Component attachedDefault) {
+        if (row.kind() == RangeList.Kind.ATTACHED) {
+            editor.start(row.target(), null, attachedLabel, attachedDefault);
+        } else if (row.kind() == RangeList.Kind.GROUP) {
             RangeView.GroupView group = view.group(row.group());
             if (group != null) {
                 editor.start(row.target(), null, group.name(), MachineTexts.groupName(group));
@@ -97,6 +107,9 @@ final class RowRename {
 
     /** O grupo sumiu, ou a máquina do índice não é mais a da edição. */
     private boolean gone(RangeView view, EditTarget target) {
+        if (target.kind() == EditTarget.Kind.ATTACHED) {
+            return false;
+        }
         if (target.kind() == EditTarget.Kind.GROUP) {
             return view.group(target.id()) == null;
         }

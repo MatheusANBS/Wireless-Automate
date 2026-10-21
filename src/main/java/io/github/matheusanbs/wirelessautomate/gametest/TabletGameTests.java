@@ -396,6 +396,65 @@ public final class TabletGameTests {
                 });
     }
 
+    /**
+     * O nome da presa entra no índice (aviso de mudança, arquivo e arquivo antigo sem a chave), na busca do Tablet e
+     * na página, também pelo codec.
+     */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void attachedLabelInIndexSearchAndPage(GameTestHelper helper) {
+        ServerPlayer player = playerWithTablet(helper, A);
+        RouterBlockEntity chest = owned(helper, player, A, Blocks.CHEST, null, "Cofre");
+        RouterBlockEntity furnace = owned(helper, player, B, Blocks.FURNACE, null, "Forja");
+        TabletMenu menu = openTablet(player, 100);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> loaded(helper, chest, furnace))
+                .thenExecute(() -> {
+                    try {
+                        NodeIndex.Entry entry = index(helper).entry(key(chest));
+                        eq(helper, entry.attachedLabel(), "", "índice nasceu com nome da presa");
+                        helper.assertFalse(listed(search(menu, "tesouro"), key(chest)), "achou sem o nome");
+                        chest.setAttachedLabel("Cofre do tesouro");
+                        eq(helper, entry.attachedLabel(), "Cofre do tesouro", "nome da presa no índice");
+                        TabletSnapshot s = search(menu, "tesouro");
+                        helper.assertTrue(listed(s, key(chest)) && !listed(s, key(furnace)),
+                                "busca pelo nome da presa");
+                        eq(helper, node(s, key(chest)).attachedLabel(), "Cofre do tesouro", "nome da presa na página");
+                        eq(helper, node(search(menu, ""), key(furnace)).attachedLabel(), "", "outro nó sem nome");
+                        chest.setAttachedLabel("");
+                        helper.assertFalse(listed(search(menu, "tesouro"), key(chest)),
+                                "achou depois de apagar o nome");
+                        chest.setAttachedLabel("Cofre do tesouro");
+
+                        var registries = helper.getLevel().registryAccess();
+                        CompoundTag saved = index(helper).save(new CompoundTag(), registries);
+                        eq(helper, NodeIndex.load(saved, registries).entry(key(chest)).attachedLabel(),
+                                "Cofre do tesouro", "nome da presa salvo");
+                        CompoundTag oldFile = saved.copy();
+                        ListTag nodes = oldFile.getList("nodes", Tag.TAG_COMPOUND);
+                        boolean had = false;
+                        for (int i = 0; i < nodes.size(); i++) {
+                            had |= nodes.getCompound(i).contains("attached_label");
+                            nodes.getCompound(i).remove("attached_label");
+                        }
+                        helper.assertTrue(had, "o arquivo não tinha a chave (o teste não prova nada)");
+                        eq(helper, NodeIndex.load(oldFile, registries).entry(key(chest)).attachedLabel(), "",
+                                "índice antigo sem a chave");
+
+                        TabletSnapshot.Page page = search(menu, "").page();
+                        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), registries);
+                        TabletSnapshot.Page.STREAM_CODEC.encode(buf, page);
+                        TabletSnapshot.Page decoded = TabletSnapshot.Page.STREAM_CODEC.decode(buf);
+                        helper.assertTrue(decoded.equals(page), "página com o nome da presa pelo codec");
+                        eq(helper, decoded.nodes().stream().filter(n -> n.key().equals(key(chest))).findFirst()
+                                .orElseThrow().attachedLabel(), "Cofre do tesouro", "nome da presa depois do codec");
+                        helper.succeed();
+                    } finally {
+                        close(player);
+                    }
+                });
+    }
+
     @GameTest(template = "empty")
     public static void tabletQueryAddsMachineAndNetworkLabels(GameTestHelper helper) {
         ServerPlayer player = playerWithTablet(helper, A);
@@ -485,7 +544,7 @@ public final class TabletGameTests {
     }
 
     @GameTest(template = "empty")
-    public static void tabletListIsOrderedByMachineThenName(GameTestHelper helper) {
+    public static void tabletListIsOrderedByRouterName(GameTestHelper helper) {
         ServerPlayer player = playerWithTablet(helper, A);
         WaNetwork net = data(helper).create(player.getUUID(), "teste-ordem");
         RouterBlockEntity beta = owned(helper, player, A, Blocks.CHEST, net.id(), "Beta");
@@ -498,8 +557,8 @@ public final class TabletGameTests {
                 .thenExecute(() -> {
                     try {
                         List<NodeKey> order = fresh(menu).nodes().stream().map(NodeView::key).toList();
-                        eq(helper, order, List.of(key(alfa), key(beta), key(forge)),
-                                "máquina, depois nome sem diferenciar maiúsculas");
+                        eq(helper, order, List.of(key(forge), key(alfa), key(beta)),
+                                "nome do roteador sem diferenciar maiúsculas, não o bloco preso");
                         helper.succeed();
                     } finally {
                         close(player);
@@ -1184,12 +1243,12 @@ public final class TabletGameTests {
                     rates.add(t == 0 ? rate + i : 0L);
                 }
                 nodes.add(new NodeView(new NodeKey(helper.getLevel().dimension(), new BlockPos(i, 64, -i)), "n" + i,
-                        i == 1 ? furnace : chest, RouterTier.BASIC, List.copyOf(networks), 1, status, false, 5L << i,
+                        i == 1 ? "Forno 1" : "", i == 1 ? furnace : chest, RouterTier.BASIC,
+                        List.copyOf(networks), 1, status, false, 5L << i,
                         List.copyOf(rates), Optional.empty(), i));
             }
             return new TabletSnapshot.Page(Query.DEFAULT, 3, 3, List.copyOf(nodes), TabletRows.EMPTY,
-                    List.of(new TabletSnapshot.Facet<>(chest, 2), new TabletSnapshot.Facet<>(furnace, 1)),
-                    Optional.of(furnace), TabletMachineRows.EMPTY);
+                    TabletMachineRows.EMPTY);
         };
         TabletSnapshot.Page before = page.apply(NodeStatus.IDLE, 0L);
         TabletSnapshot.Page after = page.apply(NodeStatus.ACTIVE, 40L);
@@ -1204,8 +1263,8 @@ public final class TabletGameTests {
         TabletSnapshot.LIVE_CODEC.encode(buf, after.lives());
         helper.assertTrue(before.withLives(TabletSnapshot.LIVE_CODEC.decode(buf)).equals(after), "estado e vazão aplicados");
         TabletSnapshot.Page fewer = new TabletSnapshot.Page(after.query(), after.totalNodes(), after.matchingNodes(),
-                List.of(after.nodes().get(0), after.nodes().get(1)), TabletRows.EMPTY, after.groupCounts(),
-                after.originGroup(), TabletMachineRows.EMPTY);
+                List.of(after.nodes().get(0), after.nodes().get(1)), TabletRows.EMPTY,
+                TabletMachineRows.EMPTY);
         helper.assertFalse(fewer.sameExceptLive(after), "um nó a menos passou por só vazão");
         helper.succeed();
     }

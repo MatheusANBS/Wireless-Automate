@@ -50,13 +50,13 @@ limite de fluido. Source só com o Ars Nouveau.
 
 | Cartão | Itens/s | Fluido e químico (mB/s) | Energia (FE/t) | Source/s | Alcance |
 | --- | --- | --- | --- | --- | --- |
-| <ItemImage id="wirelessautomate:tier_core_advanced" /> **Avançado** | 32 → **256** | 2.000 → **16.000** | 1.000 → **8.000** | 100 → **800** | 64 blocos → **512 blocos** |
-| <ItemImage id="wirelessautomate:tier_core_elite" /> **Elite** | 256 → **2.048** | 16.000 → **128.000** | 8.000 → **64.000** | 800 → **6.400** | 512 blocos → **a dimensão inteira** |
-| <ItemImage id="wirelessautomate:tier_core_emerald" /> **Esmeralda** | 2.048 → **16.384** | 128.000 → **1.024.000** | 64.000 → **512.000** | 6.400 → **51.200** | a dimensão inteira → **todas as dimensões** |
-| <ItemImage id="wirelessautomate:tier_core_allthemodium" /> **Allthemodium¹** | 16.384 → **131.072** | 1.024.000 → **8.192.000** | 512.000 → **4.096.000** | 51.200 → **409.600** | todas as dimensões |
-| <ItemImage id="wirelessautomate:tier_core_vibranium" /> **Vibranium¹** | 131.072 → **1.048.576** | 8.192.000 → **65.536.000** | 4.096.000 → **32.768.000** | 409.600 → **3.276.800** | todas as dimensões |
-| <ItemImage id="wirelessautomate:tier_core_unobtainium" /> **Unobtainium¹** | 1.048.576 → **8.388.608** | 65.536.000 → **524.288.000** | 32.768.000 → **2.097.152.000** | 3.276.800 → **26.214.400** | todas as dimensões |
-| <ItemImage id="wirelessautomate:tier_core_ultimate" /> **Ultimate** | 8.388.608 → **Sem limite** | 524.288.000 → **Sem limite** | 2.097.152.000 → **Sem limite** | 26.214.400 → **Sem limite** | todas as dimensões |
+| <ItemImage id="wirelessautomate:tier_core_advanced" /> **Avançado** | 32 → **256** | 2.000 → **16.000** | 1.000 → **32.768** | 100 → **800** | 64 blocos → **512 blocos** |
+| <ItemImage id="wirelessautomate:tier_core_elite" /> **Elite** | 256 → **2.048** | 16.000 → **128.000** | 32.768 → **64.000** | 800 → **6.400** | 512 blocos → **a dimensão inteira** |
+| <ItemImage id="wirelessautomate:tier_core_emerald" /> **Esmeralda** | 2.048 → **16.384** | 128.000 → **1.024.000** | 64.000 → **2.097.152** | 6.400 → **51.200** | a dimensão inteira → **todas as dimensões** |
+| <ItemImage id="wirelessautomate:tier_core_allthemodium" /> **Allthemodium¹** | 16.384 → **131.072** | 1.024.000 → **8.192.000** | 2.097.152 → **67.108.864** | 51.200 → **409.600** | todas as dimensões |
+| <ItemImage id="wirelessautomate:tier_core_vibranium" /> **Vibranium¹** | 131.072 → **1.048.576** | 8.192.000 → **65.536.000** | 67.108.864 → **134.217.728** | 409.600 → **3.276.800** | todas as dimensões |
+| <ItemImage id="wirelessautomate:tier_core_unobtainium" /> **Unobtainium¹** | 1.048.576 → **8.388.608** | 65.536.000 → **524.288.000** | 134.217.728 → **4.294.967.296** | 3.276.800 → **26.214.400** | todas as dimensões |
+| <ItemImage id="wirelessautomate:tier_core_ultimate" /> **Ultimate** | 8.388.608 → **Sem limite** | 524.288.000 → **Sem limite** | 4.294.967.296 → **Sem limite** | 26.214.400 → **Sem limite** | todas as dimensões |
 
 ¹ Só com o mod Allthemodium. Sem ele, o Cartão Ultimate vem depois do Cartão Esmeralda (16.384 itens/s → sem limite).
 

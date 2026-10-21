@@ -19,6 +19,9 @@ import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.resonator.CrystalCharge;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorFormation;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorInterference;
+import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
 import io.github.matheusanbs.wirelessautomate.resonator.TuneSignal;
 import io.netty.buffer.Unpooled;
 import net.minecraft.core.BlockPos;
@@ -101,7 +104,8 @@ public final class ResonatorMenuGameTests {
                 ResonatorMenu before = (ResonatorMenu) player.containerMenu;
                 before.setCarried(new ItemStack(Items.REDSTONE, 5));
                 helper.assertTrue(ResonanceCoreBlock.tryUpgrade(helper.getLevel(), core.getBlockPos(),
-                        RouterTier.ADVANCED, RouterTier.BASIC), "o upgrade foi recusado");
+                        RouterTier.ADVANCED, RouterTier.BASIC,
+                        ResonatorTestSupport.withHeart(player, RouterTier.ADVANCED)), "o upgrade foi recusado");
                 before.broadcastChanges();
                 helper.assertTrue(player.containerMenu instanceof ResonatorMenu after && after != before
                         && after.chambers() == 2 && after.slots.size() == 2 + 1 + 36 && after.stillValid(player),
@@ -130,7 +134,8 @@ public final class ResonatorMenuGameTests {
                 ResonatorMenu before = (ResonatorMenu) player.containerMenu;
                 player.moveTo(Vec3.atBottomCenterOf(core.getBlockPos().east(20)));
                 helper.assertTrue(ResonanceCoreBlock.tryUpgrade(helper.getLevel(), core.getBlockPos(),
-                        RouterTier.ADVANCED, RouterTier.BASIC), "o upgrade foi recusado");
+                        RouterTier.ADVANCED, RouterTier.BASIC,
+                        ResonatorTestSupport.withHeart(player, RouterTier.ADVANCED)), "o upgrade foi recusado");
                 before.broadcastChanges();
                 helper.assertTrue(player.containerMenu == before && !before.stillValid(player),
                         "longe do Núcleo a tela reabriu ou continuou valendo");
@@ -166,6 +171,7 @@ public final class ResonatorMenuGameTests {
                 helper.assertValueEqual(menu.inventoryStart(), 4, "início do inventário");
                 ItemStack crystal = crystal(true, CrystalCharge.FULL);
                 ItemStack redstone = new ItemStack(Items.REDSTONE);
+                ItemStack dust = new ItemStack(ModItems.RESONANCE_DUST.get());
                 for (int i = 0; i < 3; i++) {
                     Slot slot = menu.slots.get(i);
                     helper.assertTrue(slot.mayPlace(crystal), "a câmara " + i + " recusou o cristal");
@@ -173,7 +179,9 @@ public final class ResonatorMenuGameTests {
                     helper.assertValueEqual(slot.getMaxStackSize(), 1, "pilha da câmara " + i);
                 }
                 Slot slot = menu.slots.get(3);
-                helper.assertTrue(slot.mayPlace(redstone), "o slot da redstone recusou a redstone");
+                // No Elite o catalisador é só o Pó de Ressonância.
+                helper.assertTrue(slot.mayPlace(dust), "o slot do catalisador recusou o Pó");
+                helper.assertTrue(!slot.mayPlace(redstone), "o slot do catalisador do Elite aceitou redstone");
                 helper.assertTrue(!slot.mayPlace(crystal), "o slot da redstone aceitou cristal");
             } finally {
                 close(player);
@@ -193,14 +201,15 @@ public final class ResonatorMenuGameTests {
                         "o Lapidado não foi para a câmara 0");
                 helper.assertTrue(player.getInventory().getItem(9).isEmpty(), "o Lapidado ficou no inventário");
 
-                player.getInventory().setItem(0, new ItemStack(Items.REDSTONE, 10));
+                // No Elite o catalisador é o Pó de Ressonância.
+                player.getInventory().setItem(0, new ItemStack(ModItems.RESONANCE_DUST.get(), 10));
                 menu.quickMoveStack(player, menu.inventoryStart() + 27);
-                helper.assertValueEqual(core.redstone(), 10, "redstone no Núcleo");
-                helper.assertTrue(player.getInventory().getItem(0).isEmpty(), "a redstone ficou na barra");
+                helper.assertValueEqual(core.redstone(), 10, "Pó no Núcleo");
+                helper.assertTrue(player.getInventory().getItem(0).isEmpty(), "o Pó ficou na barra");
 
-                player.getInventory().setItem(0, new ItemStack(Items.REDSTONE, 5));
+                player.getInventory().setItem(0, new ItemStack(ModItems.RESONANCE_DUST.get(), 5));
                 menu.quickMoveStack(player, menu.inventoryStart() + 27);
-                helper.assertValueEqual(core.redstone(), 15, "redstone somada no Núcleo");
+                helper.assertValueEqual(core.redstone(), 15, "Pó somado no Núcleo");
 
                 menu.quickMoveStack(player, 0);
                 helper.assertTrue(core.crystals().get(0).isEmpty(), "a câmara 0 não esvaziou");
@@ -375,10 +384,99 @@ public final class ResonatorMenuGameTests {
         });
     }
 
+    /** A interferência vai no estado: a perda em milésimos e a distância do vizinho, e volta a nada sem ele. */
+    @GameTest(template = "empty11", timeoutTicks = 200, batch = ResonatorInterferenceGameTests.BATCH)
+    public static void estadoTrazAInterferencia(GameTestHelper helper) {
+        ResonatorInterferenceGameTests.pair(helper, (first, second) -> ResonatorInterferenceGameTests.withInterference(
+                ResonatorInterferenceGameTests.APART, 0.15, 0.6, () -> {
+                    ServerPlayer player = near(helper, first);
+                    ResonatorMenu menu = openMenu(player, first);
+                    try {
+                        ResonatorStatePayload state = menu.pollState(100);
+                        helper.assertTrue(state != null, "o primeiro estado não foi");
+                        helper.assertValueEqual(state.interferencePermille(), 150, "perda no estado");
+                        helper.assertValueEqual(state.nearest(), ResonatorInterferenceGameTests.APART, "vizinho");
+                        ResonatorFormation.disassemble(helper.getLevel(), second);
+                        state = menu.pollState(105);
+                        helper.assertTrue(state != null, "a mudança da interferência não foi");
+                        helper.assertValueEqual(state.interferencePermille(), 0, "perda sem o vizinho");
+                        helper.assertValueEqual(state.nearest(), ResonatorInterference.NONE, "vizinho depois");
+                    } finally {
+                        close(player);
+                    }
+                }));
+    }
+
+    /** O Eco e o bônus vão no estado do Ultimate só quando mudam; o slot do Eco vem depois do catalisador. */
+    @GameTest(template = "empty7", timeoutTicks = 200)
+    public static void estadoTrazOEco(GameTestHelper helper) {
+        formed(helper, RouterTier.ULTIMATE, core -> {
+            ServerPlayer player = near(helper, core);
+            ResonatorMenu menu = openMenu(player, core);
+            try {
+                helper.assertValueEqual(menu.ecoSlot(), core.chambers() + 1, "slot do Eco");
+                ResonatorStatePayload state = menu.pollState(100);
+                helper.assertTrue(state != null, "o primeiro estado não foi");
+                helper.assertValueEqual(state.eco(), 0L, "Eco antes");
+                helper.assertValueEqual(state.ecoBonusPermille(), 0L, "bônus antes");
+                ItemStack fuel = new ItemStack(ModItems.TUNED_CRYSTALS.get(RouterTier.ULTIMATE).get(), 10);
+                SignalCrystalItem.setCharge(fuel, 0);
+                SignalCrystalItem.setIntegrity(fuel, 0);
+                helper.assertValueEqual(core.eco().burn(fuel, false), 10, "cristais queimados");
+                state = menu.pollState(105);
+                helper.assertTrue(state != null, "o Eco novo não foi");
+                helper.assertValueEqual(state.eco(), 10L, "Eco no estado");
+                long expected = Math.round(Config.ecoBonus() * 10 * 1000);
+                helper.assertValueEqual(state.ecoBonusPermille(), expected, "bônus no estado");
+                helper.assertTrue(menu.pollState(110) == null, "foi sem mudar");
+            } finally {
+                close(player);
+            }
+        });
+    }
+
+    /** Fora do Ultimate não há slot do Eco e o bônus é zero. */
+    @GameTest(template = "empty7", timeoutTicks = 200)
+    public static void estadoSemEcoForaDoUltimate(GameTestHelper helper) {
+        formed(helper, RouterTier.ELITE, core -> {
+            ServerPlayer player = near(helper, core);
+            ResonatorMenu menu = openMenu(player, core);
+            try {
+                helper.assertValueEqual(menu.ecoSlot(), -1, "slot do Eco fora do Ultimate");
+                ResonatorStatePayload state = menu.pollState(100);
+                helper.assertValueEqual(state.ecoBonusPermille(), 0L, "bônus fora do Ultimate");
+            } finally {
+                close(player);
+            }
+        });
+    }
+
+    /** A integridade chega pelo próprio item do slot da câmara: a gasta e a rachada. */
+    @GameTest(template = "empty7", timeoutTicks = 200)
+    public static void integridadeVaiPeloItemDoSlot(GameTestHelper helper) {
+        formed(helper, RouterTier.ELITE, core -> {
+            ServerPlayer player = near(helper, core);
+            ResonatorMenu menu = openMenu(player, core);
+            try {
+                ItemStack worn = crystal(false, CrystalCharge.FULL);
+                SignalCrystalItem.setIntegrity(worn, 5);
+                core.setCrystalAt(0, worn);
+                ItemStack cracked = crystal(true, 0);
+                SignalCrystalItem.setIntegrity(cracked, 0);
+                core.setCrystalAt(1, cracked);
+                helper.assertValueEqual(SignalCrystalItem.integrity(menu.getSlot(0).getItem()), 5,
+                        "integridade no slot");
+                helper.assertTrue(SignalCrystalItem.isCracked(menu.getSlot(1).getItem()), "o rachado no slot");
+            } finally {
+                close(player);
+            }
+        });
+    }
+
     @GameTest(template = "empty")
     public static void estadoIdaEVoltaPeloCodec(GameTestHelper helper) {
         ResonatorStatePayload state = new ResonatorStatePayload(CONTAINER_ID, 1_234_567_890_123L, 9_000_000_000L, 77,
-                1L << 40, 97.45, 720, 980, true, false, -13, true, 300, 600, 2, 1, 2);
+                1L << 40, 97.45, 720, 980, true, false, -13, true, 300, 600, 2, 1, 2, 300, 24, 1L << 50, Long.MAX_VALUE);
         RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), helper.getLevel().registryAccess());
         ResonatorStatePayload.STREAM_CODEC.encode(buf, state);
         helper.assertValueEqual(ResonatorStatePayload.STREAM_CODEC.decode(buf), state, "estado depois do codec");

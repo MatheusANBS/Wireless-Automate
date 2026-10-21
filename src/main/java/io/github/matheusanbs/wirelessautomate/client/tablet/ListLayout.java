@@ -37,8 +37,6 @@ final class ListLayout {
     private static final int LABEL_H = 10;
     private static final int SUGGEST_MAX_W = 230;
     /** Altura do cubo do painel: menor nas telas baixas. */
-    private static final int NET_SMALL = 3 * 12 + 2 * 2;
-    private static final int TALL = 300;
 
     /**
      * As áreas. Nas da árvore ({@link TreeRows}), o argumento é a linha da {@link ListTree}: a linha inteira
@@ -47,12 +45,13 @@ final class ListLayout {
      * "Mostrar menos" do bloco.
      */
     enum Kind { LABEL, VIEW, QUICK, TYPE_CHIP, CLEAR, FORGET, ROW, FULL_SCREEN, COPY,
-        PASTE, UNDO, TREE, TREE_TOGGLE, TREE_EYE, TREE_FEW, MACHINE, MACHINE_EYE, MACHINE_FEW, MACHINE_OPEN;
+        PASTE, UNDO, TREE, TREE_TOGGLE, TREE_EYE, TREE_FEW, MACHINE, MACHINE_EYE, MACHINE_FEW, MACHINE_OPEN,
+        GRID_ROW, GRID_CELL;
 
         /** Fica por cima da linha onde está. */
         boolean onTop() {
             return this == TREE_TOGGLE || this == TREE_EYE || this == TREE_FEW
-                    || this == MACHINE_EYE || this == MACHINE_FEW || this == MACHINE_OPEN;
+                    || this == MACHINE_EYE || this == MACHINE_FEW || this == MACHINE_OPEN || this == GRID_CELL;
         }
     }
 
@@ -77,6 +76,10 @@ final class ListLayout {
     int listW;
     int panelX;
     int panelW;
+    /** A largura da aba inteira, de onde saem as duas colunas (a Grade usa ela toda). */
+    private int bodyW;
+    /** A largura da lista com o painel ao lado, a dos botões da barra de baixo (também com a Grade aberta). */
+    int splitListW;
     /** Altura do aviso sem painel no quadro atual: cresce com as linhas do texto ({@link NoticeBand}). */
     private int ownNoticeH = NoticeBand.LINE_H;
     int rowsTop;
@@ -107,10 +110,24 @@ final class ListLayout {
         x0 = x;
         y0 = y;
         bottom = bottomY;
-        // o painel fica com pouco mais da metade (até PANEL_MAX); a lista, com o resto, nunca menos que LIST_MIN
-        panelW = Math.min(PANEL_MAX, w * 55 / 100);
-        listW = Math.max(LIST_MIN, w - panelW - 9);
-        panelW = w - listW - 9;
+        bodyW = w;
+        columns();
+    }
+
+    /** As duas colunas: a Grade fica com a largura toda; senão o painel, com pouco mais da metade (até PANEL_MAX). */
+    private void columns() {
+        int panel = Math.min(PANEL_MAX, bodyW * 55 / 100);
+        splitListW = Math.max(LIST_MIN, bodyW - panel - 9);
+        if (list.gridView()) {
+            listW = bodyW;
+            panelW = 0;
+            panelX = x0 + bodyW;
+            return;
+        }
+        // a lista, com o resto, nunca menos que LIST_MIN
+        panelW = Math.min(PANEL_MAX, bodyW * 55 / 100);
+        listW = Math.max(LIST_MIN, bodyW - panelW - 9);
+        panelW = bodyW - listW - 9;
         panelX = x0 + listW + 9;
     }
 
@@ -157,6 +174,7 @@ final class ListLayout {
 
     private void compute() {
         Font font = TabletList.font();
+        columns();
         hots.clear();
         PanelNoticePayload notice = PanelNotices.current();
         ownNoticeH = notice == null ? NoticeBand.LINE_H
@@ -226,6 +244,9 @@ final class ListLayout {
 
     /** Linhas desenháveis: as da árvore (ou as das máquinas) e, se o servidor cortou o resultado, a do limite. */
     int rowCount() {
+        if (list.gridView()) {
+            return list.gridRows.rowCount();
+        }
         if (list.machineView()) {
             return list.machineRows.rowCount();
         }
@@ -234,6 +255,9 @@ final class ListLayout {
     }
 
     private int height(int row) {
+        if (list.gridView()) {
+            return GridRows.ROW_H;
+        }
         if (list.machineView()) {
             return list.machineRows.height(row);
         }
@@ -241,8 +265,13 @@ final class ListLayout {
         return row < lines.size() ? rowHeight(lines.get(row)) : LIMIT_ROW;
     }
 
+    /** O espaço das linhas: a Grade gasta o começo dele no cabeçalho das colunas. */
+    private int rowsRoom() {
+        return rowsBottom - rowsTop - (list.gridView() ? GridRows.HEADER_H : 0);
+    }
+
     int maxScroll() {
-        int room = rowsBottom - rowsTop;
+        int room = rowsRoom();
         int used = 0;
         int row = rowCount();
         while (row > 0 && used + height(row - 1) <= room) {
@@ -254,6 +283,10 @@ final class ListLayout {
 
     private void arrangeRows(Font font) {
         list.scroll = Math.max(0, Math.min(list.scroll, maxScroll()));
+        if (list.gridView()) {
+            list.gridRows.arrange(this);
+            return;
+        }
         if (list.machineView()) {
             list.machineRows.arrange(font, this);
             return;
@@ -292,12 +325,7 @@ final class ListLayout {
         NodePanel p = list.panel();
         if (p != null) {
             int top = panelBodyTop();
-            int netH = list.screenHeight.getAsInt() >= TALL ? NodePanel.stackedNetHeight() : NET_SMALL;
-            int netW = Math.min(panelW, 4 * 44 + 6);
-            int netY = top + 20;
-            int bodyY = netY + netH + 5;
-            p.layoutSplit(panelX, top, panelW, panelX, netY, netW, netH, panelX, bodyY, panelW,
-                    copyRowY() - 3 - bodyY);
+            p.layout(panelX, top, panelW, copyRowY() - 3 - top);
             boolean paste = list.profile().isPresent();
             copyShort = paste && font.width(tr("list.copy")) + font.width(tr("list.paste")) + 24 > panelW;
             int cw = font.width(copyLabel()) + 10;
@@ -369,6 +397,9 @@ final class ListLayout {
      * marcaram na árvore ({@link TreeNav#takeReveal}); -1 sem nenhuma.
      */
     private int revealLine() {
+        if (list.gridView()) {
+            return -1;
+        }
         if (list.machineView()) {
             return list.machineNav.takeReveal();
         }
@@ -389,7 +420,7 @@ final class ListLayout {
             list.scroll = row;
             return true;
         }
-        int room = rowsBottom - rowsTop;
+        int room = rowsRoom();
         while (list.scroll < row) {
             int used = 0;
             for (int r = list.scroll; r <= row; r++) {

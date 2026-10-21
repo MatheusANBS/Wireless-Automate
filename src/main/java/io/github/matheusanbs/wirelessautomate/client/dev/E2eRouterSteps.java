@@ -307,18 +307,21 @@ final class E2eRouterSteps {
         click(routerScreen(), point[0], point[1]);
     }
 
-    /** Clique na face {@code direction} (absoluta na presa, canônica num alvo do alcance) do cubo. */
+    /** Escolhe a face {@code direction} (absoluta na presa, canônica num alvo do alcance), sem mudar o modo. */
     static void clickFace(Direction direction) throws StepFailure {
-        clickPanel(panel().faceCenter(direction), "a face " + direction.getName());
+        routerScreen().syncNow();
+        panel().selectFace(direction);
     }
 
-    /** Clique na face do lado {@code side} (relativo à frente da máquina) do cubo. */
+    /** Escolhe a face do lado {@code side} (relativo à frente da máquina), sem mudar o modo. */
     static void clickSide(RemoteSide side) throws StepFailure {
-        clickPanel(panel().sideCenter(side), "a face " + side.key());
+        routerScreen().syncNow();
+        panel().selectSide(side);
     }
 
     static void clickMode(PortMode mode) throws StepFailure {
-        clickPanel(panel().modeCenter(mode), "o modo " + mode);
+        routerScreen().syncNow();
+        panel().chooseMode(mode);
     }
 
     static void clickTab(ResourceType type) throws StepFailure {

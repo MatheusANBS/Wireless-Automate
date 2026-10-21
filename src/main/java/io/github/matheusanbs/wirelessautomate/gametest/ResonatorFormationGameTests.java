@@ -331,7 +331,7 @@ public final class ResonatorFormationGameTests {
         helper.assertValueEqual(Config.resonatorFePerCrystal(RouterTier.BASIC), 216L, "FE por cristal, Básico");
         helper.assertValueEqual(Config.resonatorFePerCrystal(RouterTier.ULTIMATE), 268_435_456L,
                 "FE por cristal, Ultimate");
-        helper.assertValueEqual(Config.resonatorFePerCrystal(RouterTier.UNOBTAINIUM), 184_000_000L,
+        helper.assertValueEqual(Config.resonatorFePerCrystal(RouterTier.UNOBTAINIUM), 10_700_000L,
                 "FE por cristal, Unobtainium");
         helper.assertValueEqual(Config.resonatorFePerCrystal(RouterTier.ELITE), 10_000L, "FE por cristal, Elite");
         helper.assertValueEqual(Config.crystalLifeTicks(false), 12_000L, "vida do Cristal de Sinal");

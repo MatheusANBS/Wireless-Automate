@@ -30,24 +30,21 @@ final class MachineRow {
     static final int EYE_W = 10;
     /** A altura da área de clique do Olho, a da primeira linha com os botões da linha escolhida. */
     private static final int EYE_H = RangeRowButtons.SIZE + 1;
-    /** Topo da primeira e da segunda linha de texto, a partir do topo da linha. */
+    /** Topo do texto, a partir do topo da linha. */
     static final int LINE1_Y = 2;
-    static final int LINE2_Y = 11;
     /** Onde o texto começa, a partir da borda esquerda da lista (depois da bolinha). */
     static final int TEXT_X = 16;
-    private static final Component SEPARATOR = Component.literal(" · ");
 
     /** A máquina na posição dada está acesa no mundo. */
     private final LongPredicate lit;
     private @Nullable RangeView cached;
     private Component[] names = new Component[0];
-    private Component[] coords = new Component[0];
-    private int[] coordsW = new int[0];
+    private int[] namesW = new int[0];
     private Component[] suffixes = new Component[0];
     private int[] suffixW = new int[0];
-    private int separatorW;
     private Component badgeText = Component.empty();
     private int badgeW;
+
 
     /** @param lit se a máquina na posição dada está acesa no mundo (o Olho aceso) */
     MachineRow(LongPredicate lit) {
@@ -95,7 +92,7 @@ final class MachineRow {
     /** O fim da segunda linha: a distância, ou o estado em palavras quando ela não está carregada. */
     static Component suffix(MachineView machine) {
         return switch (machine.state()) {
-            case LOADED -> MachineTexts.distance(machine);
+            case LOADED -> tr("range.distance.short", machine.distance());
             case REPLACED -> tr("range.machine.replaced");
             case UNLOADED, MISSING, OUT_OF_RANGE, OVER_LIMIT ->
                     tr("range.machine.short." + machine.state().name().toLowerCase(Locale.ROOT));
@@ -119,27 +116,25 @@ final class MachineRow {
         cached = view;
         int n = view.machines().size();
         names = new Component[n];
-        coords = new Component[n];
-        coordsW = new int[n];
+        namesW = new int[n];
         suffixes = new Component[n];
         suffixW = new int[n];
-        separatorW = font.width(SEPARATOR);
         badgeText = tr("range.exception.badge");
         badgeW = font.width(badgeText);
         for (int i = 0; i < n; i++) {
             MachineView machine = view.machines().get(i);
             names[i] = rowName(view, i);
-            coords[i] = coordinates(machine.pos());
-            coordsW[i] = font.width(coords[i]);
+            namesW[i] = font.width(names[i]);
             suffixes[i] = suffix(machine);
             suffixW[i] = font.width(suffixes[i]);
         }
     }
 
     /**
-     * A máquina {@code index} na linha com o topo em {@code ry}, numa lista com a borda esquerda em {@code x}.
-     * {@code nameRight} é até onde vai a primeira linha (antes dos botões da linha escolhida, ou do lugar do Olho)
-     * e {@code right} até onde vai a segunda; {@code badge} é a marca "exc." (na linha escolhida, o ↺ mostra a
+     * A máquina {@code index} na linha com o topo em {@code ry}, numa lista com a borda esquerda em {@code x}: a bolinha
+     * do estado, o nome com "· exceção" quando a máquina difere do perfil e, à direita, a distância (ou o estado em
+     * palavras quando ela não está carregada) antes do Olho. {@code nameRight} é até onde vai o texto (antes dos botões
+     * da linha escolhida, ou do lugar do Olho); {@code badge} é a marca "· exceção" (na linha escolhida, o ↺ mostra a
      * exceção); {@code eye} é o Olho na linha (sai com o "Desvincular?" armado).
      */
     void render(GuiGraphics g, Font font, RangeView view, int index, int x, int ry, int nameRight, int right,
@@ -149,31 +144,26 @@ final class MachineRow {
             return;
         }
         prepare(font, view);
-        GuiPaint.dot(g, x + 8, ry + 7, MachineTexts.stateColor(machine.state()));
+        GuiPaint.dot(g, x + 8, ry + 3, MachineTexts.stateColor(machine.state()));
         if (eye) {
             int eyeColor = lit.test(machine.pos().asLong()) ? GuiPaint.HIGHLIGHT : GuiPaint.MUTED;
             GuiPaint.eye(g, right - EYE_W + 2, ry + LINE1_Y + 1, eyeColor);
         }
         int textX = x + TEXT_X;
         int end = nameRight - 2;
-        if (badge && machine.exception()) {
-            end -= badgeW + 3;
-            GuiPaint.text(g, font, badgeText, end + 3, ry + LINE1_Y, GuiPaint.ACCENT);
+        // a distância (ou o estado) à direita, só enquanto sobra lugar para o nome; com os botões da linha, sai
+        if (badge) {
+            int suffixRoom = end - textX - namesW[index] - 6;
+            if (suffixW[index] <= suffixRoom) {
+                end -= suffixW[index] + 3;
+                GuiPaint.text(g, font, suffixes[index], end + 3, ry + LINE1_Y, suffixColor(machine.state()));
+            }
         }
         boolean counts = machine.state() != MachineState.OUT_OF_RANGE && machine.state() != MachineState.OVER_LIMIT;
-        GuiText.draw(g, font, names[index], textX, ry + LINE1_Y, end - textX, counts ? GuiPaint.FG : GuiPaint.MUTED);
-
-        int room = right - 2 - textX;
-        if (coordsW[index] + separatorW + suffixW[index] <= room) {
-            GuiPaint.text(g, font, coords[index], textX, ry + LINE2_Y, GuiPaint.MUTED);
-            int sx = textX + coordsW[index];
-            GuiPaint.text(g, font, SEPARATOR, sx, ry + LINE2_Y, GuiPaint.MUTED);
-            GuiPaint.text(g, font, suffixes[index], sx + separatorW, ry + LINE2_Y, suffixColor(machine.state()));
-        } else if (machine.state() == MachineState.LOADED) {
-            GuiText.draw(g, font, coords[index], textX, ry + LINE2_Y, room, GuiPaint.MUTED);
-        } else {
-            // sem lugar para tudo, o estado diz mais que as coordenadas (que ficam na dica)
-            GuiText.draw(g, font, suffixes[index], textX, ry + LINE2_Y, room, suffixColor(machine.state()));
+        int nameRoom = end - textX;
+        GuiText.draw(g, font, names[index], textX, ry + LINE1_Y, nameRoom, counts ? GuiPaint.FG : GuiPaint.MUTED);
+        if (badge && machine.exception() && namesW[index] + 3 + badgeW <= nameRoom) {
+            GuiPaint.text(g, font, badgeText, textX + namesW[index] + 3, ry + LINE1_Y, GuiPaint.ACCENT);
         }
     }
 

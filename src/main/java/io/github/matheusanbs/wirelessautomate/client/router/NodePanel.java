@@ -14,6 +14,7 @@ import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.packet.FaceActionPayload;
 import io.github.matheusanbs.wirelessautomate.packet.OpenFilterPayload;
 import io.github.matheusanbs.wirelessautomate.packet.PanelNoticePayload;
 import io.github.matheusanbs.wirelessautomate.packet.PanelNotices;
@@ -217,15 +218,12 @@ public final class NodePanel {
     }
 
     /**
-     * A tela do roteador mostra a lista das máquinas ao lado: a linha Editando some, porque a lista marca o
-     * alvo e tem os botões da máquina. Sem ela (visor no lugar, ou o Tablet), a pílula abre a lista do alvo.
+     * A tela do roteador mostra a lista das máquinas: a barra Editando fica só com a pílula do alvo e o Igualar,
+     * porque a lista marca o alvo e tem os botões da máquina. Sem ela (o Tablet), a linha Editando os traz todos.
      */
     public void targetFromList(boolean fromList) {
         if (fromList != model.targetFromList()) {
             arranged.invalidate();
-        }
-        if (fromList && !model.targetFromList() && lists.popup() == Popup.TARGET) {
-            lists.close();
         }
         model.setTargetFromList(fromList);
     }
@@ -284,6 +282,7 @@ public final class NodePanel {
 
     private void computeArrangement() {
         Font font = font();
+        layout.cardSlots = actions.cardCount() >= 0;
         layout.arrange(font, model);
         lists.place(font);
     }
@@ -295,7 +294,7 @@ public final class NodePanel {
         }
         arrangeForFrame();
         Hot hot = layout.hotAt(mx, my);
-        return hot != null && hot.kind() == Kind.FACE ? model.faceOf(RemoteSide.values()[hot.arg()]) : null;
+        return hot != null && hot.kind() == Kind.FACE ? model.faceOf(FaceNet.SIDES[hot.arg()]) : null;
     }
 
     // ------------------------------------------------------------------ ações
@@ -305,6 +304,53 @@ public final class NodePanel {
             return;
         }
         actions.send(new SetFacePayload(actions.containerId(), model.type(), model.face(), mode, priority, redstone));
+    }
+
+    /**
+     * O clique num botão do cubo: escolhe a face e troca o modo (o esquerdo avança, o direito volta, Shift põe em
+     * Nenhum); um painel só de leitura, ou uma face sem acesso, só escolhe.
+     */
+    private void faceClick(Hot hot, int button) {
+        selectFace(model.faceOf(FaceNet.SIDES[hot.arg()]));
+        FaceView v = model.view();
+        if (!model.editable(v)) {
+            return;
+        }
+        PortMode next = Screen.hasShiftDown() ? PortMode.NONE
+                : button == GLFW.GLFW_MOUSE_BUTTON_RIGHT ? ModeCycle.previous(v.mode()) : ModeCycle.next(v.mode());
+        if (next != v.mode()) {
+            sendFace(next, v.priority(), v.redstone());
+        }
+    }
+
+    /** Limpar: dois cliques; com Shift no segundo, as faces de todos os tipos, senão só as do tipo aberto. */
+    private void clearFaces() {
+        if (model.readOnly() == null && model.clearArm().click(System.currentTimeMillis())) {
+            actions.send(FaceActionPayload.clear(actions.containerId(), model.type(), Screen.hasShiftDown()));
+        }
+    }
+
+    private void copyFace() {
+        if (model.canCopy()) {
+            model.setCopied(new PanelModel.Copied(model.type(), model.face()));
+        }
+    }
+
+    private void pasteFace() {
+        PanelModel.Copied copied = model.copied();
+        if (copied != null && model.canPaste()) {
+            actions.send(FaceActionPayload.paste(actions.containerId(), model.type(), copied.face(), model.face()));
+        }
+    }
+
+    private void stepRedstone(int direction) {
+        FaceView v = model.view();
+        if (!model.editable(v)) {
+            return;
+        }
+        RedstoneMode[] modes = RedstoneMode.values();
+        RedstoneMode next = modes[(v.redstone().ordinal() + direction + modes.length) % modes.length];
+        sendFace(v.mode(), v.priority(), next);
     }
 
     private void changePriority(int direction) {
@@ -376,12 +422,20 @@ public final class NodePanel {
             }
             return true;
         }
-        if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+        if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT && button != GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
             return false;
         }
         Hot hot = layout.hotAt(mx, my);
-        if (hot == null) {
+        // os slots de cartão são do menu: o clique segue até eles
+        if (hot == null || hot.kind() == Kind.CARDS) {
             return false;
+        }
+        if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
+            if (hot.kind() != Kind.FACE) {
+                return false;
+            }
+            faceClick(hot, button);
+            return true;
         }
         click(hot);
         return true;
@@ -394,8 +448,12 @@ public final class NodePanel {
         boolean edit = model.readOnly() == null;
         switch (hot.kind()) {
             case TAB -> select(ResourceType.values()[hot.arg()]);
-            case FACE -> selectFace(model.faceOf(RemoteSide.values()[hot.arg()]));
-            case MODE -> sendFace(PortMode.values()[hot.arg()], v.priority(), v.redstone());
+            case FACE -> faceClick(hot, GLFW.GLFW_MOUSE_BUTTON_LEFT);
+            case CLEAR -> clearFaces();
+            case COPY -> copyFace();
+            case PASTE -> pasteFace();
+            case REDSTONE_PREV -> stepRedstone(-1);
+            case REDSTONE_NEXT -> stepRedstone(1);
             case NETWORK -> {
                 if (edit) {
                     lists.open(Popup.NETWORK, 0);
@@ -453,14 +511,28 @@ public final class NodePanel {
                     undo(notice);
                 }
             }
-            case SUMMARY, FILTER -> {
+            case SUMMARY, FILTER, CARDS -> {
             }
         }
     }
 
     public boolean mouseScrolled(double mx, double my, double scrollY) {
         if (!lists.open()) {
-            return false;
+            // a roda sobre a prioridade a muda, como os botões ‹ ›
+            if (scrollY == 0 || layout.bodyW <= 0) {
+                return false;
+            }
+            arrangeForFrame();
+            Hot hot = layout.hotAt(mx, my);
+            Hot minus = layout.hot(Kind.PRIO_MINUS);
+            Hot plus = layout.hot(Kind.PRIO_PLUS);
+            boolean overPriority = minus != null && plus != null && mx >= minus.x() && mx < plus.x() + plus.w()
+                    && my >= minus.y() && my < minus.y() + minus.h() && (hot == null || hot.kind() != Kind.UNDO);
+            if (!overPriority) {
+                return false;
+            }
+            changePriority(scrollY > 0 ? 1 : -1);
+            return true;
         }
         arrange();
         lists.scroll(mx, my, scrollY);
@@ -524,10 +596,14 @@ public final class NodePanel {
             }
             model.unlinkArm().disarm();
         }
+        Hot clear = layout.hot(Kind.CLEAR);
+        if (clear == null || !clear.contains(mx, my)) {
+            model.clearArm().disarm();
+        }
         arrangeForFrame();
         Font font = font();
         painter.renderTabs(g, font, mx, my);
-        cube.render(g, font, mx, my, pointed);
+        cube.render(g, font, mx, my, pointed, model.clearArmed());
         painter.renderBody(g, font, mx, my, lists.popup(), actions.cardCount());
         targetLine.renderLabel(g, mx, my);
     }
@@ -557,10 +633,42 @@ public final class NodePanel {
         return hot == null ? null : hot.center();
     }
 
-    public int @Nullable [] modeCenter(PortMode mode) {
-        arrange();
-        Hot hot = layout.hot(Kind.MODE, mode.ordinal());
-        return hot == null ? null : hot.center();
+    /** Escolhe o lado {@code side} (relativo à frente da máquina) como se o visor 3D tivesse sido clicado (gancho do e2e). */
+    public void selectSide(RemoteSide side) {
+        selectFace(model.faceOf(side));
+    }
+
+    /** Põe a face escolhida no modo {@code mode}, pelo mesmo pacote do clique no cubo (gancho do e2e). */
+    public void chooseMode(PortMode mode) {
+        FaceView v = model.view();
+        sendFace(mode, v.priority(), v.redstone());
+    }
+
+    /** O Limpar do quadro das faces. */
+    public int @Nullable [] clearCenter() {
+        return center(Kind.CLEAR);
+    }
+
+    public int @Nullable [] copyCenter() {
+        return center(Kind.COPY);
+    }
+
+    public int @Nullable [] pasteCenter() {
+        return center(Kind.PASTE);
+    }
+
+    /** O Limpar está armado, esperando o segundo clique (gancho do e2e). */
+    public boolean clearArmed() {
+        return model.clearArmed();
+    }
+
+    /**
+     * O canto (na tela) do primeiro slot de cartão, na linha do Filtro, ou {@code null} sem a linha à vista (outro
+     * tipo, ou sem espaço); a tela do roteador põe os slots do menu aí.
+     */
+    public int @Nullable [] cardSlotsAt() {
+        arrangeForFrame();
+        return layout.cardX < 0 ? null : new int[] {layout.cardX, layout.cardY};
     }
 
     public int @Nullable [] tabCenter(ResourceType t) {
@@ -617,6 +725,11 @@ public final class NodePanel {
 
     public int @Nullable [] redstoneCenter() {
         return center(Kind.REDSTONE);
+    }
+
+    /** A seta ‹ ({@code direction < 0}) ou › do redstone. */
+    public int @Nullable [] redstoneStepCenter(int direction) {
+        return center(direction < 0 ? Kind.REDSTONE_PREV : Kind.REDSTONE_NEXT);
     }
 
     /** A lista da linha Editando (com o Upgrade de Alcance). */

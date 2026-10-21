@@ -1,7 +1,9 @@
 package io.github.matheusanbs.wirelessautomate.client.linker;
 
+import io.github.matheusanbs.wirelessautomate.GuiTheme;
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
+import io.github.matheusanbs.wirelessautomate.client.GuiThemes;
 import io.github.matheusanbs.wirelessautomate.client.ResourceStyle;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerFaces;
@@ -77,12 +79,25 @@ final class LinkerText {
         return entry == null ? tr("network.none") : Component.literal(entry.name());
     }
 
+    /** A cor da rede como tinta de texto: no tema claro, as claras (amarelo) escurecem para ler sobre o creme. */
+    static int readable(int rgb) {
+        int r = rgb >> 16 & 0xFF;
+        int g = rgb >> 8 & 0xFF;
+        int b = rgb & 0xFF;
+        if (GuiThemes.current() == GuiTheme.LIGHT && 0.299 * r + 0.587 * g + 0.114 * b > 140) {
+            r = r * 6 / 10;
+            g = g * 6 / 10;
+            b = b * 6 / 10;
+        }
+        return 0xFF000000 | r << 16 | g << 8 | b;
+    }
+
     static int activeColor(LinkerSnapshot s) {
         if (s.unlink()) {
             return GuiPaint.DANGER;
         }
         NetworkEntry entry = s.activeEntry();
-        return entry == null ? GuiPaint.MUTED : 0xFF000000 | entry.color();
+        return entry == null ? GuiPaint.MUTED : readable(entry.color());
     }
 
     /** Roteadores que o Vincular mudaria. */
@@ -126,7 +141,7 @@ final class LinkerText {
             return someFaces ? tr("outcome.unlinked_faces", o.linked(), LinkerItem.facesLetters(o.faces()), tabs)
                     : tr("outcome.unlinked", o.linked(), tabs);
         }
-        Component network = Component.literal(o.network()).withColor(0xFF000000 | o.color());
+        Component network = Component.literal(o.network()).withColor(readable(o.color()));
         return someFaces ? tr("outcome.faces", o.linked(), LinkerItem.facesLetters(o.faces()), network)
                 : tr("outcome", o.linked(), network);
     }

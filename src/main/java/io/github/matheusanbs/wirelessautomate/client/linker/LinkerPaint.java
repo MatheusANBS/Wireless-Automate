@@ -35,42 +35,39 @@ final class LinkerPaint {
                 selected ? GuiPaint.SELECTED_TEXT : GuiPaint.FG);
     }
 
-    /** Chip de um tipo: ícone e nome; marcado, borda e fundo na cor do tipo (ou do desvincular). */
-    static void paintCheck(GuiGraphics g, FlatButton b, boolean hovered, LinkerSnapshot s, ResourceType t) {
+    /** O botão de um tipo, só o ícone: marcado, borda e fundo na cor do tipo (ou do desvincular). */
+    static void paintType(GuiGraphics g, FlatButton b, boolean hovered, LinkerSnapshot s, ResourceType t) {
         boolean checked = s.tabs().contains(t);
         int color = s.unlink() ? GuiPaint.DANGER : ResourceStyle.color(t);
-        int border = checked ? color : hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
-        int fill = checked ? GuiPaint.mix(GuiPaint.INSET, color, 0.18f) : hovered ? GuiPaint.BUTTON : GuiPaint.INSET;
-        GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), fill, border);
-        int ix = b.getX() + 5;
-        ResourceStyle.drawIcon(g, t, ix, b.getY() + (b.getHeight() - ResourceStyle.ICON) / 2);
-        int tx = ix + ResourceStyle.ICON + 4;
-        GuiText.draw(g, font(), LinkerText.typeName(t), tx, b.getY() + (b.getHeight() - 8) / 2,
-                b.getX() + b.getWidth() - 3 - tx, checked ? GuiPaint.FG : GuiPaint.MUTED);
+        GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(),
+                checked ? GuiPaint.mix(GuiPaint.INSET, color, 0.18f) : hovered ? GuiPaint.BUTTON : GuiPaint.INSET,
+                checked ? color : hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
+        ResourceStyle.drawIcon(g, t, b.getX() + (b.getWidth() - ResourceStyle.ICON) / 2,
+                b.getY() + (b.getHeight() - ResourceStyle.ICON) / 2);
     }
 
-    /** Uma letra da linha Faces: marcada, fundo escuro; desmarcada, a letra apagada. */
+    /** Um botão do cubo das faces: marcada, coral claro com a letra; desmarcada, afundada com a letra apagada. */
     static void paintFace(GuiGraphics g, FlatButton b, boolean hovered, LinkerSnapshot s, RemoteSide side) {
-        boolean on = s.faces().contains(side);
-        paintToggle(g, b, hovered, LinkerItem.sideLetter(side), on);
+        paintMarked(g, b, hovered, LinkerItem.sideLetter(side), s.faces().contains(side));
     }
 
-    /** "Todas" da linha Faces: fundo escuro com as seis marcadas. */
+    /** "Todas" do cubo: coral claro com as seis marcadas. */
     static void paintAllFaces(GuiGraphics g, FlatButton b, boolean hovered, LinkerSnapshot s) {
-        paintToggle(g, b, hovered, tr("faces.all"), s.faces().isAll());
+        paintMarked(g, b, hovered, tr("faces.all"), s.faces().isAll());
     }
 
-    private static void paintToggle(GuiGraphics g, FlatButton b, boolean hovered, Component text, boolean on) {
+    private static void paintMarked(GuiGraphics g, FlatButton b, boolean hovered, Component text, boolean on) {
         Font font = font();
         if (on) {
-            GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), GuiPaint.SELECTED, GuiPaint.SELECTED);
+            GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(),
+                    GuiPaint.mix(GuiPaint.BUTTON, GuiPaint.ACCENT, 0.25f), GuiPaint.ACCENT);
         } else {
             GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), hovered ? GuiPaint.BUTTON : GuiPaint.INSET,
-                    hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
+                    hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BEVEL_DARK);
         }
         int textW = Math.min(font.width(text), b.getWidth() - 2);
         GuiText.draw(g, font, text, b.getX() + (b.getWidth() - textW) / 2 + 1, b.getY() + (b.getHeight() - 8) / 2,
-                textW, on ? GuiPaint.SELECTED_TEXT : hovered ? GuiPaint.FG : GuiPaint.MUTED);
+                textW, on ? GuiPaint.FG : hovered ? GuiPaint.FG : GuiPaint.MUTED);
     }
 
     /** Todos: botão de texto, na cor do Vinculador quando todas as abas estão marcadas. */

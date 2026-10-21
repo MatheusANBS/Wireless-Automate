@@ -19,6 +19,7 @@ import io.github.matheusanbs.wirelessautomate.range.RangeRules;
 import io.github.matheusanbs.wirelessautomate.range.RemoteCapabilities;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
+import io.github.matheusanbs.wirelessautomate.range.MachineConfig;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import java.util.ArrayList;
 import java.util.List;
@@ -436,9 +437,32 @@ public record RouterSnapshot(
             }
         }
         RouterTier tier = router.tier();
+        int differs = 0;
+        if (editing.kind() == EditTarget.Kind.MACHINE && group != null) {
+            RemoteMachine exceptional = remotes.machine(editing.id());
+            if (exceptional != null && exceptional.hasException()) {
+                differs = divergentFaces(exceptional.exception(), group.profile());
+            }
+        }
         RangeView view = new RangeView(Config.machineRadius(tier), Config.maxMachines(tier), List.copyOf(groups),
-                List.copyOf(machines), editing, face);
+                List.copyOf(machines), editing, face, differs);
         return new Captured(view, viewed, group);
+    }
+
+    /** As faces de {@code exception} que diferem das de {@code profile}, um bit por tipo e lado ({@link RangeView#differsBit}). */
+    private static final ResourceType[] TYPES = ResourceType.values();
+    private static final RemoteSide[] REMOTE_SIDES = RemoteSide.values();
+
+    private static int divergentFaces(MachineConfig exception, MachineConfig profile) {
+        int mask = 0;
+        for (ResourceType type : TYPES) {
+            for (RemoteSide side : REMOTE_SIDES) {
+                if (!exception.face(type, side).equals(profile.face(type, side))) {
+                    mask |= 1 << RangeView.differsBit(type, side);
+                }
+            }
+        }
+        return mask;
     }
 
     /**

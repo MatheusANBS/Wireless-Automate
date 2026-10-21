@@ -164,35 +164,17 @@ final class RouterSlots {
         }
     }
 
-    /**
-     * Os slots de cartão da face escolhida e, ao lado, de qual face são ({@code faceSide}, a chave do lado
-     * relativo); num tipo sem filtro, no lugar deles, a vazão do tier. O texto só aparece se couber inteiro
-     * em duas linhas.
-     */
-    void renderCards(GuiGraphics g, Font font, int x, int y, String faceSide) {
-        ResourceType type = this.type.get();
-        int cy = y + layout.cardsBgY();
-        int textX = x + RouterLayout.X0 + RouterMenu.CARD_SLOT_COUNT * 18 + 5;
-        int room = x + RouterLayout.X0 + layout.lw() - textX;
-        Component text;
-        if (RouterFaceFilterTarget.hasFilter(type)) {
-            for (int i = 0; i < RouterMenu.CARD_SLOT_COUNT; i++) {
-                int sx = x + RouterLayout.X0 + i * 18;
-                GuiPaint.slot(g, sx, cy);
-                if (!menu.getSlot(i).hasItem()) {
-                    ghostItem(g, GHOST_CARD, sx + 1, cy + 1);
-                }
-            }
-            text = tr("cards.label", tr("side." + faceSide));
-        } else {
-            textX = x + RouterLayout.X0;
-            room = layout.lw();
-            long tierRate = Config.TIERS.get(menu.snapshot().tier()).rate(type);
-            text = tr("rate.tier", tierRate == 0 ? tr("rate.unlimited") : ResourceStyle.rate(type, tierRate));
+    /** Os slots de cartão da face escolhida, na linha do Filtro do painel ({@code at}: o canto na tela). */
+    void renderCards(GuiGraphics g, int @Nullable [] at) {
+        if (at == null || !RouterFaceFilterTarget.hasFilter(type.get())) {
+            return;
         }
-        int lines = font.split(text, Math.max(1, room)).size();
-        if (room > 0 && lines <= 2) {
-            GuiText.wrap(g, font, text, textX, cy + (lines == 1 ? 5 : 0), room, 2, GuiPaint.MUTED);
+        for (int i = 0; i < RouterMenu.CARD_SLOT_COUNT; i++) {
+            int sx = at[0] + i * 18;
+            GuiPaint.slot(g, sx, at[1]);
+            if (!menu.getSlot(i).hasItem()) {
+                ghostItem(g, GHOST_CARD, sx + 1, at[1] + 1);
+            }
         }
     }
 

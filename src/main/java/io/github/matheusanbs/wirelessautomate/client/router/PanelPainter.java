@@ -14,7 +14,10 @@ import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.PanelNoticePayload;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -23,6 +26,8 @@ import org.jetbrains.annotations.Nullable;
  * prioridade e o redstone), mais a faixa do aviso com o Desfazer. As posições vêm do {@link PanelLayout}.
  */
 final class PanelPainter {
+    private static final ItemStack DUST = new ItemStack(Items.REDSTONE);
+
     private final PanelModel model;
     private final PanelLayout layout;
     private final TargetLine targetLine;
@@ -88,97 +93,148 @@ final class PanelPainter {
         if (layout.targetY >= 0) {
             targetLine.render(g, font, mx, my, popup == PanelLists.Popup.TARGET);
         }
-
         if (layout.faceY >= 0) {
-            Component detail = model.sideName(model.face()).copy().append(" · ").append(model.access(v));
-            if (model.attached(model.face())) {
-                detail = detail.copy().append(" · ").append(tr("face.attached"));
-            }
-            GuiText.draw(g, font, detail, x, layout.faceY, w, GuiPaint.FG);
+            renderFaceLine(g, font, x, w, v);
         }
-
-        for (Hot hot : layout.hots) {
-            if (hot.kind() == Kind.MODE) {
-                renderMode(g, font, hot, PortMode.values()[hot.arg()], hot.contains(mx, my), v);
-            }
-        }
-        if (layout.phraseY >= 0) {
-            GuiText.wrap(g, font, model.phrase(), x, layout.phraseY, w, 2, GuiPaint.MUTED);
-        }
-
         if (layout.networkY >= 0) {
-            GuiText.draw(g, font, tr("network.face"), x, layout.networkY + 2, w, GuiPaint.MUTED);
+            label(g, font, tr("network.face"), layout.networkY + 3);
         }
         Hot net = layout.hot(Kind.NETWORK);
         if (net != null) {
             renderNetworkPill(g, font, net, net.contains(mx, my) || popup == PanelLists.Popup.NETWORK, v);
         }
-
         if (layout.filterY >= 0) {
             renderFilter(g, font, mx, my, v, x, w, cardCount, readOnly);
         }
+        if (layout.redstoneY >= 0) {
+            renderRedstone(g, font, mx, my, popup, v);
+        }
         if (layout.prioY >= 0) {
-            renderPriority(g, font, mx, my, popup, v);
+            renderPriority(g, font, mx, my, v);
         }
     }
 
-    /** A linha do Filtro: o resumo com o Editar, ou "sem filtro". */
+    /** O rótulo de uma linha de ajuste, no começo dela; sem rótulo num corpo estreito. */
+    private void label(GuiGraphics g, Font font, Component text, int y) {
+        if (layout.labelW > 0) {
+            GuiText.draw(g, font, text, layout.bodyX, y, layout.labelW - 2, GuiPaint.MUTED);
+        }
+    }
+
+    /**
+     * A linha da face: "Cima ▪ Extrai · 27 slots · roteador aqui", o lado em grafite, a tarja e o modo na cor do
+     * modo e o resto apagado (o texto explicando o modo vai na dica do botão da face).
+     */
+    private void renderFaceLine(GuiGraphics g, Font font, int x, int w, FaceView v) {
+        int y = layout.faceY;
+        int right = x + w;
+        Direction face = model.face();
+        Component side = model.sideName(face);
+        GuiText.draw(g, font, side, x, y, right - x, GuiPaint.FG);
+        int cx = x + font.width(side);
+        if (v.available() || model.remote()) {
+            int color = GuiPaint.modeColor(v.mode());
+            cx += 4;
+            g.fill(cx, y + 1, cx + 3, y + 8, color);
+            cx += 6;
+            Component mode = PanelModel.modeName(v.mode());
+            GuiText.draw(g, font, mode, cx, y, right - cx, color);
+            cx += font.width(mode);
+        }
+        // o que a face acessa e o resto só entram se couberem inteiros; senão ficam na dica da face
+        Component rest = Component.literal(" · ").append(model.access(v));
+        if (cx + font.width(rest) > right) {
+            return;
+        }
+        if (model.differsFromGroup(face)) {
+            rest = fits(font, cx, right, rest, panelTr("face.differs"));
+        }
+        if (model.attached(face)) {
+            rest = fits(font, cx, right, rest, tr("face.attached"));
+        }
+        GuiText.draw(g, font, rest, cx, y, right - cx, GuiPaint.MUTED);
+    }
+
+    /** {@code rest} com {@code " · " + more} no fim, se o resultado cabe entre {@code from} e {@code right}. */
+    private static Component fits(Font font, int from, int right, Component rest, Component more) {
+        Component joined = rest.copy().append(" · ").append(more);
+        return from + font.width(joined) <= right ? joined : rest;
+    }
+
+    /** A linha do Filtro: o resumo, os slots de cartão (a tela os desenha) e o Editar, ou "sem filtro". */
     private void renderFilter(GuiGraphics g, Font font, int mx, int my, FaceView v, int x, int w, int cardCount,
             @Nullable Component readOnly) {
-        GuiText.draw(g, font, tr("filter.label"), x, layout.filterY + 3, w, GuiPaint.MUTED);
+        label(g, font, tr("filter.label"), layout.filterY + 5);
         Hot filter = layout.hot(Kind.FILTER);
         Hot edit = layout.hot(Kind.EDIT);
         if (filter != null && edit != null) {
-            GuiText.draw(g, font, model.filterSummary(v, cardCount), filter.x(), layout.filterY + 3, filter.w(),
+            GuiText.draw(g, font, model.filterSummary(v, cardCount), filter.x(), filter.y() + 3, filter.w(),
                     GuiPaint.FG);
-            textButton(g, font, edit, tr("filter.edit"), edit.contains(mx, my), readOnly == null);
+            textButton(g, font, edit, tr("filter.edit"), edit.contains(mx, my), readOnly == null, false);
         } else {
-            int labelW = font.width(tr("filter.label")) + 5;
-            GuiText.draw(g, font, panelTr("filter.none"), x + labelW, layout.filterY + 3, w - labelW, GuiPaint.MUTED);
+            GuiText.draw(g, font, panelTr("filter.none"), x + layout.labelW, layout.filterY + 5, w - layout.labelW,
+                    GuiPaint.MUTED);
         }
     }
 
-    /** A linha da prioridade (− valor +) com o botão do redstone. */
-    private void renderPriority(GuiGraphics g, Font font, int mx, int my, PanelLists.Popup popup, FaceView v) {
-        int prioY = layout.prioY;
-        if (layout.prioLabel) {
-            GuiText.draw(g, font, panelTr("priority"), layout.bodyX, prioY + 3, layout.bodyW, GuiPaint.MUTED);
+    /** A linha do Redstone: a caixa com o pó e o modo, e as setas ‹ › que trocam o modo. */
+    private void renderRedstone(GuiGraphics g, Font font, int mx, int my, PanelLists.Popup popup, FaceView v) {
+        int y = layout.redstoneY;
+        label(g, font, panelTr("redstone.label"), y + 3);
+        Hot box = layout.hot(Kind.REDSTONE);
+        Hot prev = layout.hot(Kind.REDSTONE_PREV);
+        Hot next = layout.hot(Kind.REDSTONE_NEXT);
+        if (box == null || prev == null || next == null) {
+            return;
         }
+        boolean editable = model.editable(v);
+        int x = box.x();
+        int right = next.x() + next.w();
+        boolean hovered = (box.contains(mx, my) || popup == PanelLists.Popup.REDSTONE) && editable;
+        GuiPaint.box(g, x, y, right - x, PanelLayout.BUTTON_H, editable ? GuiPaint.BUTTON : GuiPaint.INSET,
+                !editable ? GuiPaint.LINE : hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
+        g.pose().pushPose();
+        g.pose().translate(x + 2, y + 1, 0);
+        g.pose().scale(0.75f, 0.75f, 1f);
+        g.renderFakeItem(DUST, 0, 0);
+        g.pose().popPose();
+        GuiText.draw(g, font, PanelModel.redstoneName(v.redstone()), x + 16, y + 3, prev.x() - x - 16,
+                editable ? GuiPaint.FG : GuiPaint.DISABLED);
+        arrow(g, prev, true, prev.contains(mx, my) && editable, editable);
+        arrow(g, next, false, next.contains(mx, my) && editable, editable);
+    }
+
+    /** A linha da prioridade: ‹ valor ›, numa caixa só. */
+    private void renderPriority(GuiGraphics g, Font font, int mx, int my, FaceView v) {
+        int y = layout.prioY;
+        GuiText.draw(g, font, panelTr("priority"), layout.bodyX, y + 3, layout.prioLabelW - 2, GuiPaint.MUTED);
         boolean editable = model.editable(v);
         Hot minus = layout.hot(Kind.PRIO_MINUS);
         Hot plus = layout.hot(Kind.PRIO_PLUS);
-        if (minus != null && plus != null) {
-            textButton(g, font, minus, Component.literal("-"), minus.contains(mx, my), editable);
-            textButton(g, font, plus, Component.literal("+"), plus.contains(mx, my), editable);
-            int boxX = minus.x() + minus.w() + 1;
-            GuiPaint.box(g, boxX, prioY, PanelLayout.PRIO_VALUE_W, PanelLayout.BUTTON_H, GuiPaint.INSET, GuiPaint.LINE);
-            GuiPaint.textCentered(g, font, Component.literal(Integer.toString(v.priority())),
-                    boxX + PanelLayout.PRIO_VALUE_W / 2 + 1, prioY + 3, editable ? GuiPaint.FG : GuiPaint.DISABLED);
+        if (minus == null || plus == null) {
+            return;
         }
-        Hot redstone = layout.hot(Kind.REDSTONE);
-        if (redstone != null) {
-            dropButton(g, font, redstone, layout.redstoneLabel,
-                    redstone.contains(mx, my) || popup == PanelLists.Popup.REDSTONE, editable, GuiPaint.BUTTON_BORDER);
-        }
+        int x = minus.x();
+        int w = plus.x() + plus.w() - x;
+        GuiPaint.box(g, x, y, w, PanelLayout.BUTTON_H, editable ? GuiPaint.BUTTON : GuiPaint.INSET,
+                editable ? GuiPaint.BUTTON_BORDER : GuiPaint.LINE);
+        arrow(g, minus, true, minus.contains(mx, my) && editable, editable);
+        arrow(g, plus, false, plus.contains(mx, my) && editable, editable);
+        GuiPaint.textCentered(g, font, Component.literal(Integer.toString(v.priority())), x + w / 2 + 1, y + 3,
+                editable ? GuiPaint.FG : GuiPaint.DISABLED);
     }
 
-    private void renderMode(GuiGraphics g, Font font, Hot hot, PortMode mode, boolean hovered, FaceView v) {
-        boolean active = model.editable(v);
-        boolean selected = (v.available() || model.remote()) && v.mode() == mode;
-        int color = GuiPaint.modeColor(mode);
-        int fill = selected ? GuiPaint.mix(GuiPaint.BUTTON, color, 0.28f) : GuiPaint.BUTTON;
-        int border = selected ? color : hovered && active ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
-        GuiPaint.box(g, hot.x(), hot.y(), hot.w(), hot.h(), fill, border);
-        // o botão tem 14 px: o ícone do modo vai a 3/4 (12 px); sem o nome, centrado
-        int iconX = layout.modeNames ? hot.x() + 2 : hot.x() + (hot.w() - 12) / 2;
-        g.pose().pushPose();
-        g.pose().translate(iconX, hot.y() + 1, 0);
-        g.pose().scale(0.75f, 0.75f, 1f);
-        GuiPaint.port(g, mode, 0, 0, active ? 1f : 0.3f);
-        g.pose().popPose();
-        if (layout.modeNames) {
-            GuiText.draw(g, font, PanelModel.modeName(mode), hot.x() + PanelLayout.MODE_TEXT_X + 1, hot.y() + 3,
-                    hot.w() - PanelLayout.MODE_TEXT_X - 2, active ? GuiPaint.FG : GuiPaint.DISABLED);
+    /** A seta ‹ ou › de 3 × 5 px no meio da área. */
+    private static void arrow(GuiGraphics g, Hot area, boolean left, boolean hovered, boolean active) {
+        int color = !active ? GuiPaint.DISABLED : hovered ? GuiPaint.FG : GuiPaint.MUTED;
+        int x = area.x() + (area.w() - 3) / 2;
+        int y = area.y() + (area.h() - 5) / 2;
+        if (left) {
+            g.fill(x + 2, y, x + 3, y + 5, color);
+            g.fill(x + 1, y + 1, x + 2, y + 4, color);
+            g.fill(x, y + 2, x + 1, y + 3, color);
+        } else {
+            GuiPaint.arrowRight(g, x, y, color);
         }
     }
 
@@ -191,10 +247,11 @@ final class PanelPainter {
         int fill = hovered && !readOnly ? GuiPaint.BUTTON : GuiPaint.PANEL;
         int border = ask ? GuiPaint.ACCENT : entry != null ? color : GuiPaint.LINE;
         GuiPaint.pill(g, b.x(), b.y(), b.w(), b.h(), fill, border);
+        int dotY = b.y() + (b.h() - 5) / 2;
         if (entry != null) {
-            GuiPaint.eye(g, b.x() + 4, b.y() + 3, color);
+            GuiPaint.dot(g, b.x() + 4, dotY, color);
         } else {
-            GuiPaint.outline(g, b.x() + 4, b.y() + 3, 5, 5, ask ? GuiPaint.ACCENT : GuiPaint.MUTED);
+            GuiPaint.outline(g, b.x() + 4, dotY, 5, 5, ask ? GuiPaint.ACCENT : GuiPaint.MUTED);
         }
         int textX = b.x() + 13;
         int room = b.x() + b.w() - 12 - textX;
@@ -204,25 +261,50 @@ final class PanelPainter {
             label = font.width(panelTr("network.choose")) <= room ? panelTr("network.choose")
                     : panelTr("network.choose.short");
         }
-        GuiText.draw(g, font, label, textX, b.y() + 2, room,
+        GuiText.draw(g, font, label, textX, b.y() + (b.h() - 8) / 2, room,
                 readOnly ? GuiPaint.DISABLED : entry != null || ask ? GuiPaint.FG : GuiPaint.MUTED);
-        GuiPaint.arrowDown(g, b.x() + b.w() - 9, b.y() + 4, hovered ? GuiPaint.FG : GuiPaint.MUTED);
+        GuiPaint.arrowDown(g, b.x() + b.w() - 9, b.y() + b.h() / 2 - 1, hovered ? GuiPaint.FG : GuiPaint.MUTED);
     }
 
     /** Botão com uma lista: o texto e a seta. */
     static void dropButton(GuiGraphics g, Font font, Hot b, Component text, boolean hovered, boolean active,
             int border) {
+        dropButton(g, font, b, text, hovered, active, border, ItemStack.EMPTY);
+    }
+
+    /** Botão com uma lista, com o ícone de um item (a 3/4) antes do texto. */
+    static void dropButton(GuiGraphics g, Font font, Hot b, Component text, boolean hovered, boolean active,
+            int border, ItemStack icon) {
         GuiPaint.box(g, b.x(), b.y(), b.w(), b.h(), active ? GuiPaint.BUTTON : GuiPaint.INSET,
                 !active ? GuiPaint.LINE : hovered ? GuiPaint.BUTTON_HOVER_BORDER : border);
-        GuiText.draw(g, font, text, b.x() + 4, b.y() + (b.h() - 8) / 2, b.w() - 15, active ? GuiPaint.FG : GuiPaint.DISABLED);
+        int inset = 4;
+        // o ícone só entra se o texto continua inteiro com ele
+        if (!icon.isEmpty() && font.width(text) + 17 + 11 <= b.w()) {
+            g.pose().pushPose();
+            g.pose().translate(b.x() + 3, b.y() + (b.h() - 12) / 2f, 0);
+            g.pose().scale(0.75f, 0.75f, 1f);
+            g.renderItem(icon, 0, 0);
+            g.pose().popPose();
+            inset = 17;
+        }
+        GuiText.draw(g, font, text, b.x() + inset, b.y() + (b.h() - 8) / 2, b.w() - inset - 11,
+                active ? GuiPaint.FG : GuiPaint.DISABLED);
         GuiPaint.arrowDown(g, b.x() + b.w() - 9, b.y() + b.h() / 2 - 1, hovered && active ? GuiPaint.FG : GuiPaint.MUTED);
     }
 
-    private static void textButton(GuiGraphics g, Font font, Hot b, Component text, boolean hovered, boolean active) {
-        int border = hovered && active ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
+    static void textButton(GuiGraphics g, Font font, Hot b, Component text, boolean hovered, boolean active,
+            boolean armed) {
+        int border = armed ? GuiPaint.DANGER : hovered && active ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
         GuiPaint.box(g, b.x(), b.y(), b.w(), b.h(), active ? GuiPaint.BUTTON : GuiPaint.INSET, active ? border : GuiPaint.LINE);
-        GuiPaint.textCentered(g, font, text, b.x() + b.w() / 2 + 1, b.y() + (b.h() - 8) / 2,
-                active ? GuiPaint.FG : GuiPaint.DISABLED);
+        int room = b.w() - 4;
+        int textW = font.width(text);
+        if (textW <= room) {
+            GuiPaint.textCentered(g, font, text, b.x() + b.w() / 2 + 1, b.y() + (b.h() - 8) / 2,
+                    !active ? GuiPaint.DISABLED : armed ? GuiPaint.DANGER : GuiPaint.FG);
+        } else {
+            GuiText.draw(g, font, text, b.x() + 2, b.y() + (b.h() - 8) / 2, room,
+                    !active ? GuiPaint.DISABLED : armed ? GuiPaint.DANGER : GuiPaint.FG);
+        }
     }
 
     /** O aviso do painel, embaixo dele: o texto, que cresce para cima, e o Desfazer sublinhado de coral. */

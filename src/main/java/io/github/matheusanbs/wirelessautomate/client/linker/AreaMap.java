@@ -1,6 +1,5 @@
 package io.github.matheusanbs.wirelessautomate.client.linker;
 
-import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.FACES_H;
 import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerText.tr;
 
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
@@ -152,13 +151,12 @@ final class AreaMap {
     private void renderStatus(GuiGraphics g, LinkerSnapshot s, int x, int y, int mh) {
         Font font = Minecraft.getInstance().font;
         int rw = screen.rw();
-        // cantos (abaixo da linha Faces, que fica entre o mapa e eles)
-        int below = LinkerText.machines(s) ? 0 : FACES_H;
-        int cy = y + mh + below + 4;
+        // cantos, logo abaixo do mapa
+        int cy = y + mh + 4;
         cornerLine(g, font, x, cy, tr("corner1"), s.first());
         cornerLine(g, font, x, cy + 10, tr("corner2"), s.second());
 
-        int sy = y + mh + below + 25;
+        int sy = y + mh + 25;
         if (s.problem() != LinkerProblem.NONE) {
             GuiText.wrap(g, font, LinkerText.status(s), x, sy, rw, 2, LinkerText.statusColor(s));
             return;

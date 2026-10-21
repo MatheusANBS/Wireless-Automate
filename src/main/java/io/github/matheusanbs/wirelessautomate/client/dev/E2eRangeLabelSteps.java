@@ -103,7 +103,7 @@ final class E2eRangeLabelSteps {
         }, () -> stepTicks >= 2, () -> "tamanho"));
         list.add(new Step(l + "esconder a lista", STEP_TIMEOUT_MS, () -> {
             if (routerScreen().rangeListShown()) {
-                click(widget(byMessageKey("gui.wirelessautomate.router.range.machines"), "botão Máquinas"));
+                routerScreen().previewToggleList();
             }
         }, () -> !routerScreen().rangeListShown() && panel().renameCenter() != null && stepTicks >= 4,
                 () -> "lista " + routerScreen().rangeListShown() + ", ✎ " + (panel().renameCenter() != null)));
@@ -112,7 +112,7 @@ final class E2eRangeLabelSteps {
         list.add(new Step(l + "de volta ao mínimo com a lista", STEP_TIMEOUT_MS, () -> {
             routerScreen().previewResize(300, 240);
             if (!routerScreen().rangeListShown()) {
-                click(widget(byMessageKey("gui.wirelessautomate.router.range.machines"), "botão Máquinas"));
+                routerScreen().previewToggleList();
             }
         }, () -> routerScreen().size()[0] == 300 && routerScreen().rangeListShown() && stepTicks >= 4,
                 () -> "lista " + routerScreen().rangeListShown()));
@@ -177,7 +177,7 @@ final class E2eRangeLabelSteps {
         return new Step(l + "no mínimo, com a lista e a fornalha", STEP_TIMEOUT_MS, () -> {
             routerScreen().previewResize(300, 240);
             if (!routerScreen().rangeListShown()) {
-                click(widget(byMessageKey("gui.wirelessautomate.router.range.machines"), "botão Máquinas"));
+                routerScreen().previewToggleList();
             }
             onServer(server -> {
                 ServerPlayer player = server.getPlayerList().getPlayer(playerId);

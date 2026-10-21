@@ -119,6 +119,48 @@ final class RouterTargets {
         });
     }
 
+    /**
+     * Muda uma face do alvo: na presa, a configuração dela; num grupo ou numa máquina remota, o perfil ou a
+     * exceção ({@link #editRemote}). Um aviso ao motor, com o tipo, se algo mudou.
+     */
+    private boolean editFace(EditTarget target, ResourceType type, Direction side, Predicate<FaceConfig> edit) {
+        if (!target.attached()) {
+            return editRemote(target, type, side, edit);
+        }
+        if (!edit.test(router.face(type, side))) {
+            return false;
+        }
+        router.changed(NetworkManager.typeBit(type));
+        return true;
+    }
+
+    /** Ver {@link RouterBlockEntity#clearFaces(EditTarget, Collection)}. */
+    int clearFaces(EditTarget target, Collection<ResourceType> types) {
+        int[] count = new int[1];
+        router.batchChanges(() -> {
+            for (ResourceType type : types) {
+                for (Direction side : Direction.values()) {
+                    if (editFace(target, type, side, config -> config.setMode(PortMode.NONE))) {
+                        count[0]++;
+                    }
+                }
+            }
+        });
+        return count[0];
+    }
+
+    /** Ver {@link RouterBlockEntity#pasteFace(EditTarget, ResourceType, Direction, Direction)}. */
+    boolean pasteFace(EditTarget target, ResourceType type, Direction from, Direction to) {
+        if (from == to) {
+            return false;
+        }
+        FaceConfig source = new FaceConfig();
+        source.copyFrom(face(target, type, from));
+        boolean[] changed = new boolean[1];
+        router.batchChanges(() -> changed[0] = editFace(target, type, to, config -> config.copyFrom(source)));
+        return changed[0];
+    }
+
     /** Ver {@link RouterBlockEntity#clearIdleNetworks(EditTarget)}. */
     List<IdleNetworkFace> clearIdleNetworks(EditTarget target) {
         if (!hasOwnFaces(target)) {

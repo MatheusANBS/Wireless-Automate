@@ -20,12 +20,14 @@ import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeView;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.ProfileSummary;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.QuickFilter;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
+import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.PanelNoticePayload;
 import io.github.matheusanbs.wirelessautomate.packet.PanelNotices;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPanelPayload;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -102,6 +104,15 @@ final class ListPainter {
                 int textX = hot.x() + 3 + ResourceStyle.ICON;
                 GuiText.draw(g, font, tr("list.type", ResourceStyle.name(type)), textX, hot.y() + 2,
                         hot.x() + hot.w() - 2 - textX, hovered ? GuiPaint.FG : color);
+            } else if (hot.kind() == Kind.QUICK && QuickFilter.values()[hot.arg()] == QuickFilter.PROBLEM) {
+                // "! N": o botão do aviso, com o fundo de atenção claro; o texto inteiro vai na dica
+                boolean on = list.search.quick.contains(QuickFilter.PROBLEM);
+                GuiPaint.box(g, hot.x(), hot.y(), hot.w(), hot.h(),
+                        GuiPaint.mix(GuiPaint.BUTTON, GuiPaint.WARN, on ? 0.38f : 0.16f),
+                        on || hovered ? GuiPaint.WARN : GuiPaint.mix(GuiPaint.LINE, GuiPaint.WARN, 0.5f));
+                int index = quickIndex(hot);
+                Component text = index < layout.quickLabels.size() ? layout.quickLabels.get(index) : Component.empty();
+                GuiPaint.textCentered(g, font, text, hot.x() + hot.w() / 2 + 1, hot.y() + 2, GuiPaint.WARN);
             } else if (hot.kind() == Kind.QUICK) {
                 QuickFilter filter = QuickFilter.values()[hot.arg()];
                 boolean on = list.search.quick.contains(filter);
@@ -161,6 +172,10 @@ final class ListPainter {
 
     /** A linha de baixo da lista: a contagem com Limpar (com busca ou filtro); por máquinas, sempre a contagem. */
     void renderBar(GuiGraphics g, Font font, int mx, int my) {
+        if (list.gridView() && !list.listEmpty() && !list.multi) {
+            renderLegend(g, font);
+            return;
+        }
         boolean machines = list.machineView() && !list.listEmpty();
         if (list.multi || !list.search.filtering() && !machines) {
             return;
@@ -176,6 +191,25 @@ final class ListPainter {
             boolean over = clear.contains(mx, my);
             GuiPaint.text(g, font, tr("list.clear"), clear.x() + 1, barY + 3, over ? GuiPaint.ACCENT : GuiPaint.FG);
             g.fill(clear.x() + 1, barY + 12, clear.x() + clear.w() - 1, barY + 13, GuiPaint.ACCENT);
+        }
+    }
+
+    /** A legenda da Grade: as três cores dos modos e a dica de uma linha, na linha de baixo. */
+    private void renderLegend(GuiGraphics g, Font font) {
+        int x = layout.x0;
+        int y = layout.barY();
+        PortMode[] modes = {PortMode.EXTRACT, PortMode.INSERT, PortMode.BOTH};
+        for (PortMode mode : modes) {
+            GuiPaint.outline(g, x, y + 2, 4, 8, GuiPaint.FG);
+            g.fill(x + 1, y + 3, x + 3, y + 9, GuiPaint.modeColor(mode));
+            Component name = Component.translatable("gui.wirelessautomate.router.mode." + mode.name().toLowerCase(Locale.ROOT));
+            GuiPaint.text(g, font, name, x + 7, y + 3, GuiPaint.FG);
+            x += 7 + font.width(name) + 6;
+        }
+        int lit = HighlightRenderer.count() > 0 ? SelectBar.clearLitWidth(font) + 4 : 0;
+        int room = layout.x0 + layout.listW - lit - 2 - x;
+        if (font.width(tr("grid.legend")) <= room) {
+            GuiPaint.text(g, font, tr("grid.legend"), x, y + 3, GuiPaint.MUTED);
         }
     }
 

@@ -12,6 +12,8 @@ import org.jetbrains.annotations.Nullable;
  * célula.
  */
 public final class FaceNet {
+    /** Os seis lados, sem clonar o array a cada quadro. */
+    public static final RemoteSide[] SIDES = RemoteSide.values();
     public static final int COLS = 4;
     public static final int ROWS = 3;
     /** Os quadradinhos da Lista, numa grade 3 × 2: Cima, Frente, Esquerda / Baixo, Trás, Direita. */

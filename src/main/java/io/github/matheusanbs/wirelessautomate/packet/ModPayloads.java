@@ -24,10 +24,8 @@ import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageScalarMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
-import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
-import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
@@ -35,11 +33,9 @@ import io.github.matheusanbs.wirelessautomate.range.IdleNetworkFace;
 import io.github.matheusanbs.wirelessautomate.range.MachineGroup;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
-import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.core.Direction;
@@ -195,17 +191,8 @@ public final class ModPayloads {
             return false;
         }
         int priority = Mth.clamp(payload.priority(), RouterMenu.MIN_PRIORITY, RouterMenu.MAX_PRIORITY);
-        WaNetwork join = joinsActiveNetwork(router, target, payload) ? usableActiveNetwork(player) : null;
-        router.configureFace(target, payload.resource(), payload.face(), payload.mode(), priority, payload.redstone(),
-                join == null ? null : join.id());
+        router.configureFace(target, payload.resource(), payload.face(), payload.mode(), priority, payload.redstone());
         host.editApplied();
-        if (join != null && Objects.equals(router.faceNetwork(target, payload.resource(), payload.face()), join.id())) {
-            sendNotice(player, new PanelNoticePayload(
-                    Component.translatable("gui.wirelessautomate.panel.notice.joined",
-                            faceName(router, target, payload.face()), join.name()),
-                    PanelNoticePayload.Undo.CLEAR_FACE_NETWORK, host.containerId(), payload.resource(),
-                    payload.face()));
-        }
         return true;
     }
 
@@ -214,29 +201,6 @@ public final class ModPayloads {
         if (player.connection != null && player.connection.hasChannel(notice)) {
             PacketDistributor.sendToPlayer(player, notice);
         }
-    }
-
-    /** Regra D1: o modo sai de Nenhum e a face está sem rede (a face que já tem rede não muda de rede). */
-    private static boolean joinsActiveNetwork(RouterBlockEntity router, EditTarget target, SetFacePayload payload) {
-        FaceConfig current = router.face(target, payload.resource(), payload.face());
-        return current.mode() == PortMode.NONE && payload.mode() != PortMode.NONE && current.network() == null;
-    }
-
-    /** A rede ativa do jogador, se existe e ele pode usá-la; nunca cria uma. */
-    private static @Nullable WaNetwork usableActiveNetwork(ServerPlayer player) {
-        NetworkSavedData data = NetworkSavedData.get(player.server);
-        UUID active = data.activeNetwork(player.getUUID());
-        WaNetwork network = active == null ? null : data.network(active);
-        return network != null && canUse(player, network) ? network : null;
-    }
-
-    /** O nome do lado de {@code face} (no quadro do alvo) como o painel mostra: relativo à máquina. */
-    private static Component faceName(RouterBlockEntity router, EditTarget target, Direction face) {
-        // o mesmo lado que a tela mostra: relativo à frente da máquina
-        String key = target.attached()
-                ? RemoteSide.fromAbsolute(router.attachedFront(), face.ordinal()).key()
-                : RemoteSide.fromCanonical(face.ordinal()).key();
-        return Component.translatable("gui.wirelessautomate.router.side." + key);
     }
 
     /**

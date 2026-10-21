@@ -1,3 +1,5 @@
+**2.4.1 fix:** choosing a face action no longer assigns the active network from the Tablet or Linker. Choose the network explicitly; existing face networks are preserved.
+
 ![Wireless Automate](https://media.forgecdn.net/attachments/2034/633/banner-png.png)
 
 **Wireless Automate** moves items, fluids, energy, Mekanism chemicals and Ars Nouveau Source between machines **without pipes**. Attach a router to a machine, choose what each face of the machine does, and every router on the same network trades with the others, near or far. It also brings **storage blocks of its own** that move billions per operation, filters that pick tags in one click or match **any enchanted item**, and a crystal generator you tune like a radio, the **Signal Resonator**.
@@ -26,7 +28,7 @@ It was built for large modpacks: instead of every block ticking on its own, one 
 
 ### Range Upgrade
 
-One router moves to and from every machine you link in its radius (6 blocks and 8 machines on Advanced, up to 64 blocks and 128 machines on Ultimate). Linked machines of the same block form a group with one profile, with exceptions per machine, and their sides follow each machine's front. Machines wake the router as soon as they change, and nothing scans the world while it runs. Linked machines start without a network: a face joins yours when you pick a mode on it, and **Clear networks** removes it again from every face set to None, with Undo. Give machines and groups their own names, and light any machine up **in the world**, through blocks, with a line to its router; right-click a machine with the Network Tablet to jump straight to it.
+One router moves to and from every machine you link in its radius (6 blocks and 8 machines on Advanced, up to 64 blocks and 128 machines on Ultimate). Linked machines of the same block form a group with one profile, with exceptions per machine, and their sides follow each machine's front. Machines wake the router as soon as they change, and nothing scans the world while it runs. Linked machines start without a network: choose each face's network explicitly in the panel's Network row. Changing its action keeps its network. **Clear networks** removes the network from every face set to None, with Undo. Give machines and groups their own names, and light any machine up **in the world**, through blocks, with a line to its router; right-click a machine with the Network Tablet to jump straight to it.
 
 ![One router, many machines](https://media.forgecdn.net/attachments/2085/341/feature-17-range-png.png)
 

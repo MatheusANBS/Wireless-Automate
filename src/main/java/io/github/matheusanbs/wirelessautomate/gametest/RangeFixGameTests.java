@@ -215,11 +215,10 @@ public final class RangeFixGameTests {
     }
 
     /**
-     * Regra D1 no perfil de um grupo sem rede: escolher Insere numa face põe só aquela face (aquele tipo)
-     * na rede ativa, na mesma edição; as outras faces e os outros tipos continuam sem rede.
+     * Escolher Insere no perfil mantém todas as faces e tipos sem rede, mesmo com rede ativa.
      */
-    @GameTest(template = "empty")
-    public static void groupModeJoinsActiveNetworkOnlyThatFace(GameTestHelper helper) {
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void groupModeLeavesAllFacesWithoutNetwork(GameTestHelper helper) {
         RouterBlockEntity router = routerWithMachines(helper);
         helper.startSequence()
                 .thenWaitUntil(() -> waitLoaded(helper, router))
@@ -244,7 +243,7 @@ public final class RangeFixGameTests {
                                 "recusou a face do grupo");
                         for (ResourceType type : LoadedTypes.LIST) {
                             for (Direction face : Direction.values()) {
-                                UUID expected = type == ResourceType.ITEM && face == Direction.UP ? active : null;
+                                UUID expected = null;
                                 helper.assertTrue(Objects.equals(
                                         router.face(EditTarget.group(group), type, face).network(), expected),
                                         "rede de " + type + " em " + face + ": esperava " + expected);

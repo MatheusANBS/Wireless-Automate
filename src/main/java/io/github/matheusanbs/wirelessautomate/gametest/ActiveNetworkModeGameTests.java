@@ -5,6 +5,8 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
+import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
+import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
@@ -37,8 +39,8 @@ import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
- * Regra D1: escolher Extrai, Insere ou Armazém numa face sem rede põe a face na rede ativa do jogador,
- * na mesma edição; sem rede ativa utilizável, a face fica só com o modo. O aviso com Desfazer
+ * Escolher um modo mantém a rede da face, inclusive quando ela está sem rede.
+ * A rede ativa do jogador não interfere na configuração. O aviso com Desfazer
  * ({@link PanelNoticePayload}) tem o formato testado aqui.
  */
 @GameTestHolder(WirelessAutomate.MODID)
@@ -96,27 +98,32 @@ public final class ActiveNetworkModeGameTests {
         helper.assertTrue(router.linkMachine(helper.absolutePos(FURNACE_B)), "não vinculou a fornalha B");
     }
 
-    @GameTest(template = "empty")
-    public static void modeJoinsActiveNetworkInOneChange(GameTestHelper helper) {
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void modeLeavesFaceWithoutNetworkInOneChange(GameTestHelper helper) {
         RouterBlockEntity router = chestWithRouter(helper, RouterTier.BASIC);
         helper.startSequence()
                 .thenWaitUntil(() -> waitLoaded(helper, router))
                 .thenExecute(() -> {
-                    ServerPlayer[] holder = new ServerPlayer[1];
-                    RouterMenu menu = openMenu(helper, router, holder);
-                    ServerPlayer player = holder[0];
+                    ServerPlayer player = TestPlayers.inLevel(helper);
+                    player.moveTo(Vec3.atCenterOf(router.getBlockPos().above()));
                     try {
                         WaNetwork active = data(helper).create(player.getUUID(), "ativa-d1");
                         data(helper).setActiveNetwork(player.getUUID(), active.id());
+                        int before = router.changeVersion();
+                        RouterMenu menu = new RouterMenu(CONTAINER_ID, player.getInventory(), router,
+                                RouterSnapshot.capture(router, player));
+                        player.containerMenu = menu;
                         helper.assertTrue(router.faceNetwork(ResourceType.ITEM, Direction.UP) == null,
                                 "a face já começou numa rede");
 
-                        int before = router.changeVersion();
+                        menu.broadcastChanges();
+                        helper.assertTrue(router.faceNetwork(ResourceType.ITEM, Direction.UP) == null, "abrir associou rede");
+                        helper.assertValueEqual(router.changeVersion(), before, "abrir alterou o roteador");
                         helper.assertTrue(ModPayloads.handleSetFace(player, setFace(menu, Direction.UP, PortMode.INSERT)),
                                 "recusou o modo");
                         helper.assertValueEqual(router.face(ResourceType.ITEM, Direction.UP).mode(), PortMode.INSERT, "modo");
-                        helper.assertTrue(Objects.equals(router.faceNetwork(ResourceType.ITEM, Direction.UP), active.id()),
-                                "a face não entrou na rede ativa");
+                        helper.assertTrue(router.faceNetwork(ResourceType.ITEM, Direction.UP) == null,
+                                "escolher modo associou a rede ativa");
                         helper.assertValueEqual(router.changeVersion() - before, 1, "mudanças do roteador");
                     } finally {
                         removePlayer(helper, player);
@@ -125,7 +132,7 @@ public final class ActiveNetworkModeGameTests {
                 .thenSucceed();
     }
 
-    @GameTest(template = "empty")
+    @GameTest(template = "empty", timeoutTicks = 300)
     public static void modeWithoutActiveNetworkLeavesFaceWithoutNetwork(GameTestHelper helper) {
         RouterBlockEntity router = chestWithRouter(helper, RouterTier.BASIC);
         helper.startSequence()
@@ -150,7 +157,7 @@ public final class ActiveNetworkModeGameTests {
                 .thenSucceed();
     }
 
-    @GameTest(template = "empty")
+    @GameTest(template = "empty", timeoutTicks = 300)
     public static void modeIgnoresActiveNetworkThePlayerCannotUse(GameTestHelper helper) {
         RouterBlockEntity router = chestWithRouter(helper, RouterTier.BASIC);
         helper.startSequence()
@@ -175,7 +182,7 @@ public final class ActiveNetworkModeGameTests {
                 .thenSucceed();
     }
 
-    @GameTest(template = "empty")
+    @GameTest(template = "empty", timeoutTicks = 300)
     public static void modeKeepsTheNetworkOfAFaceThatHasOne(GameTestHelper helper) {
         RouterBlockEntity router = chestWithRouter(helper, RouterTier.BASIC);
         helper.startSequence()
@@ -205,7 +212,7 @@ public final class ActiveNetworkModeGameTests {
                 .thenSucceed();
     }
 
-    @GameTest(template = "empty")
+    @GameTest(template = "empty", timeoutTicks = 300)
     public static void backToNoneKeepsTheNetwork(GameTestHelper helper) {
         RouterBlockEntity router = chestWithRouter(helper, RouterTier.BASIC);
         helper.startSequence()
@@ -217,10 +224,11 @@ public final class ActiveNetworkModeGameTests {
                     try {
                         WaNetwork active = data(helper).create(player.getUUID(), "ativa-d1");
                         data(helper).setActiveNetwork(player.getUUID(), active.id());
+                        router.setFaceNetwork(ResourceType.ITEM, Direction.UP, active.id());
                         helper.assertTrue(ModPayloads.handleSetFace(player, setFace(menu, Direction.UP, PortMode.BOTH)),
                                 "recusou o Armazém");
                         helper.assertTrue(Objects.equals(router.faceNetwork(ResourceType.ITEM, Direction.UP), active.id()),
-                                "o Armazém não pôs a face na rede ativa");
+                                "o Armazém alterou a rede explícita");
 
                         helper.assertTrue(ModPayloads.handleSetFace(player, setFace(menu, Direction.UP, PortMode.NONE)),
                                 "recusou o Nenhum");
@@ -234,8 +242,8 @@ public final class ActiveNetworkModeGameTests {
                 .thenSucceed();
     }
 
-    @GameTest(template = "empty")
-    public static void rangeTargetsJoinInOneEdit(GameTestHelper helper) {
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void rangeTargetsKeepNoNetworkInOneEdit(GameTestHelper helper) {
         RouterBlockEntity router = routerWithFurnaces(helper);
         helper.startSequence()
                 .thenWaitUntil(() -> waitLoaded(helper, router))
@@ -254,7 +262,7 @@ public final class ActiveNetworkModeGameTests {
                         helper.assertTrue(router.face(EditTarget.group(group), ResourceType.ITEM, Direction.UP).network() == null,
                                 "o grupo já começou com rede");
 
-                        // Grupo: o perfil ganha modo e rede de uma vez; ninguém ganha exceção.
+                        // O perfil ganha só o modo; ninguém ganha exceção.
                         helper.assertTrue(ModPayloads.handleSelectTarget(player,
                                 SelectTargetPayload.group(menu.containerId, group,
                                         net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(Blocks.FURNACE))),
@@ -265,13 +273,12 @@ public final class ActiveNetworkModeGameTests {
                         helper.assertValueEqual(router.changeVersion() - before, 1, "mudanças pelo grupo");
                         helper.assertValueEqual(router.face(EditTarget.group(group), ResourceType.ITEM, Direction.UP).mode(),
                                 PortMode.INSERT, "modo do perfil");
-                        helper.assertTrue(Objects.equals(
-                                router.face(EditTarget.group(group), ResourceType.ITEM, Direction.UP).network(), active.id()),
-                                "o perfil não entrou na rede ativa");
+                        helper.assertTrue(router.face(EditTarget.group(group), ResourceType.ITEM, Direction.UP).network() == null,
+                                "editar o perfil associou a rede ativa");
                         helper.assertFalse(router.remoteMachines().machine(indexB).hasException(),
                                 "editar o perfil criou exceção");
 
-                        // Máquina: uma exceção só, com o modo e a rede (a face DOWN do perfil continua sem os dois).
+                        // A máquina ganha uma exceção com modo, sem atribuir rede.
                         helper.assertTrue(ModPayloads.handleSelectTarget(player,
                                 SelectTargetPayload.machine(menu.containerId, indexB, b)), "não escolheu a máquina");
                         before = router.changeVersion();
@@ -281,9 +288,8 @@ public final class ActiveNetworkModeGameTests {
                         helper.assertTrue(router.remoteMachines().machine(indexB).hasException(), "não criou a exceção");
                         helper.assertValueEqual(router.face(EditTarget.machine(indexB), ResourceType.ITEM, Direction.DOWN).mode(),
                                 PortMode.EXTRACT, "modo da exceção");
-                        helper.assertTrue(Objects.equals(
-                                router.face(EditTarget.machine(indexB), ResourceType.ITEM, Direction.DOWN).network(),
-                                active.id()), "a exceção não entrou na rede ativa");
+                        helper.assertTrue(router.face(EditTarget.machine(indexB), ResourceType.ITEM, Direction.DOWN).network() == null,
+                                "editar a exceção associou a rede ativa");
                         int exceptions = 0;
                         for (var machine : router.remoteMachines().machines()) {
                             exceptions += machine.hasException() ? 1 : 0;
@@ -298,7 +304,41 @@ public final class ActiveNetworkModeGameTests {
                 .thenSucceed();
     }
 
-    @GameTest(template = "empty")
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void tabletModeDoesNotUseActiveNetwork(GameTestHelper helper) {
+        RouterBlockEntity router = chestWithRouter(helper, RouterTier.BASIC);
+        helper.startSequence().thenWaitUntil(() -> waitLoaded(helper, router)).thenExecute(() -> {
+            ServerPlayer player = TestPlayers.inLevel(helper);
+            player.moveTo(Vec3.atCenterOf(router.getBlockPos().above()));
+            player.getInventory().setItem(0, new ItemStack(ModItems.NETWORK_TABLET.get()));
+            try {
+                WaNetwork active = data(helper).create(player.getUUID(), "ativa-tablet");
+                data(helper).setActiveNetwork(player.getUUID(), active.id());
+                NodeIndex.placedBy(router, player.getUUID());
+                TabletMenu tablet = new TabletMenu(CONTAINER_ID, player.getInventory(), player);
+                player.containerMenu = tablet;
+                int before = router.changeVersion();
+                helper.assertTrue(tablet.chooseNode(new NodeIndex.NodeKey(helper.getLevel().dimension(), router.getBlockPos())),
+                        "não abriu o painel do Tablet");
+                tablet.broadcastChanges();
+                helper.assertValueEqual(router.changeVersion(), before, "abrir painel alterou roteador");
+                for (PortMode mode : new PortMode[]{PortMode.INSERT, PortMode.EXTRACT, PortMode.BOTH}) {
+                    router.configureFace(ResourceType.ITEM, Direction.UP, PortMode.NONE, 0, RedstoneMode.IGNORE);
+                    helper.assertTrue(ModPayloads.handleSetFace(player, new SetFacePayload(CONTAINER_ID,
+                            ResourceType.ITEM, Direction.UP, mode, 7, RedstoneMode.HIGH)), "modo recusado");
+                    helper.assertTrue(router.faceNetwork(ResourceType.ITEM, Direction.UP) == null,
+                            "Tablet associou a rede ativa ao escolher " + mode);
+                    helper.assertValueEqual(router.face(ResourceType.ITEM, Direction.UP).mode(), mode, "modo");
+                    helper.assertValueEqual(router.face(ResourceType.ITEM, Direction.UP).priority(), 7, "prioridade");
+                    helper.assertValueEqual(router.face(ResourceType.ITEM, Direction.UP).redstone(), RedstoneMode.HIGH, "redstone");
+                }
+            } finally {
+                removePlayer(helper, player);
+            }
+        }).thenSucceed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 300)
     public static void noticePayloadRoundTrips(GameTestHelper helper) {
         PanelNoticePayload sent = new PanelNoticePayload(
                 Component.translatable("gui.wirelessautomate.panel.notice.joined", "Frente", "Rede"),

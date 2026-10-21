@@ -44,6 +44,8 @@ final class PanelLayout {
     private static final int ASIDE_MIN_W = 152;
     /** Altura do quadro das faces na disposição estreita, com os botões embaixo do cubo. */
     static final int NARROW_FRAME_H = 3 + 3 * 16 + 2 * CELL_GAP + 3 + ACTION_H + 3;
+    /** O mínimo do quadro estreito: o cubo a 12 px por linha e a fileira Limpar, Copiar e Colar embaixo, sem se tocarem. */
+    private static final int MIN_NARROW_FRAME_H = 3 + 3 * 12 + 2 * CELL_GAP + 3 + ACTION_H + 3;
     static final int ROW_H = 12;
     static final int BUTTON_H = 14;
     /** A linha do Filtro, alta para os dois slots de cartão. */
@@ -153,11 +155,15 @@ final class PanelLayout {
         netY = y + TAB_H + TAB_BELOW;
         netW = w;
         stackedH = h;
-        netH = Math.max(MIN_FRAME_H, Math.min(FRAME_H, h - TAB_H - TAB_BELOW - 5 - FACE_LINE_H - ROWS_H));
+        netH = Math.max(minFrameH(), Math.min(FRAME_H, h - TAB_H - TAB_BELOW - 5 - FACE_LINE_H - ROWS_H));
         bodyX = x;
         bodyY = netY + netH + 5;
         bodyW = w;
         bodyH = y + h - bodyY;
+    }
+
+    private int minFrameH() {
+        return netW < ASIDE_MIN_W ? MIN_NARROW_FRAME_H : MIN_FRAME_H;
     }
 
     /** Cada parte no seu retângulo: a linha das abas, o cubo e o resto. */
@@ -208,7 +214,7 @@ final class PanelLayout {
                 target += ROW_H + GAP;
             }
         }
-        netH = Math.max(MIN_FRAME_H, Math.min(FRAME_H,
+        netH = Math.max(minFrameH(), Math.min(FRAME_H,
                 stackedH - TAB_H - TAB_BELOW - 5 - target - FACE_LINE_H - ROWS_H));
         bodyY = netY + netH + 5;
         bodyH = tabsY + stackedH - bodyY;

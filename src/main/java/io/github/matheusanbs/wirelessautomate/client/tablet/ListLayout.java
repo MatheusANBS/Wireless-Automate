@@ -37,8 +37,6 @@ final class ListLayout {
     private static final int LABEL_H = 10;
     private static final int SUGGEST_MAX_W = 230;
     /** Altura do cubo do painel: menor nas telas baixas. */
-    private static final int NET_SMALL = 3 * 12 + 2 * 2;
-    private static final int TALL = 300;
 
     /**
      * As áreas. Nas da árvore ({@link TreeRows}), o argumento é a linha da {@link ListTree}: a linha inteira
@@ -292,12 +290,7 @@ final class ListLayout {
         NodePanel p = list.panel();
         if (p != null) {
             int top = panelBodyTop();
-            int netH = list.screenHeight.getAsInt() >= TALL ? NodePanel.stackedNetHeight() : NET_SMALL;
-            int netW = Math.min(panelW, 4 * 44 + 6);
-            int netY = top + 20;
-            int bodyY = netY + netH + 5;
-            p.layoutSplit(panelX, top, panelW, panelX, netY, netW, netH, panelX, bodyY, panelW,
-                    copyRowY() - 3 - bodyY);
+            p.layout(panelX, top, panelW, copyRowY() - 3 - top);
             boolean paste = list.profile().isPresent();
             copyShort = paste && font.width(tr("list.copy")) + font.width(tr("list.paste")) + 24 > panelW;
             int cw = font.width(copyLabel()) + 10;

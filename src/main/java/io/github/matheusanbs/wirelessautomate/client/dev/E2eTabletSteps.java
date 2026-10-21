@@ -188,8 +188,7 @@ final class E2eTabletSteps {
             panelModeBefore = now;
             panelNetworkBefore = onServer(server -> router(server, routerB).faceNetwork(ResourceType.ITEM, panelFace));
             panelModeAfter = next;
-            int[] c = panel.modeCenter(next);
-            click(tabletScreen(), c[0], c[1]);
+            panel.chooseMode(next);
         }, () -> onServer(server -> router(server, routerB).face(ResourceType.ITEM, panelFace).mode() == panelModeAfter)
                 && tabletScreen().nodePanel().snapshot().face(ResourceType.ITEM, panelFace).mode() == panelModeAfter,
                 () -> onServer(server -> "modo no servidor " + router(server, routerB).face(ResourceType.ITEM, panelFace).mode())));

@@ -181,6 +181,19 @@ public class RouterBlockEntity extends BlockEntity {
         targets.setFaceNetwork(target, type, side, network);
     }
 
+    /** Põe em Nenhum todas as faces dos tipos {@code types} do alvo, numa mudança só; quantas mudaram. */
+    public int clearFaces(EditTarget target, Collection<ResourceType> types) {
+        return targets.clearFaces(target, types);
+    }
+
+    /**
+     * Copia modo, prioridade, redstone, filtro e rede da face {@code from} do alvo para a {@code to}, no mesmo
+     * tipo e no quadro da tela; devolve se algo mudou.
+     */
+    public boolean pasteFace(EditTarget target, ResourceType type, Direction from, Direction to) {
+        return targets.pasteFace(target, type, from, to);
+    }
+
     /** Tira a rede das faces sem modo de um grupo ou de uma exceção, numa mudança só; devolve o que tirou. */
     public List<IdleNetworkFace> clearIdleNetworks(EditTarget target) {
         return targets.clearIdleNetworks(target);

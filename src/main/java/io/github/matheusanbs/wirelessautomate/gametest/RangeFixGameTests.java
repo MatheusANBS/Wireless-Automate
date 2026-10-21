@@ -719,4 +719,34 @@ public final class RangeFixGameTests {
                 })
                 .thenSucceed();
     }
+
+    /** Colar e Limpar num grupo mexem no perfil dele (a face de destino copia a de origem), numa mudança por ação. */
+    @GameTest(template = "empty")
+    public static void faceActionsEditTheGroupProfile(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    UUID network = router.networkId(ResourceType.ITEM);
+                    EditTarget group = EditTarget.group(oldGroup(helper, router, network));
+                    router.configureFace(group, ResourceType.ITEM, Direction.UP, PortMode.INSERT, 4, RedstoneMode.HIGH);
+                    helper.assertTrue(router.pasteFace(group, ResourceType.ITEM, Direction.UP, Direction.DOWN),
+                            "o Colar no grupo não mudou nada");
+                    helper.assertValueEqual(router.face(group, ResourceType.ITEM, Direction.DOWN).mode(),
+                            PortMode.INSERT, "modo colado");
+                    helper.assertValueEqual(router.face(group, ResourceType.ITEM, Direction.DOWN).priority(), 4,
+                            "prioridade colada");
+                    helper.assertValueEqual(router.face(group, ResourceType.ITEM, Direction.DOWN).redstone(),
+                            RedstoneMode.HIGH, "redstone colado");
+                    helper.assertValueEqual(router.face(EditTarget.ATTACHED_TARGET, ResourceType.ITEM, Direction.DOWN)
+                            .mode(), PortMode.NONE, "a presa não podia mudar");
+                    helper.assertTrue(router.clearFaces(group, java.util.List.of(ResourceType.ITEM)) >= 2,
+                            "o Limpar do grupo não mudou as duas faces");
+                    helper.assertValueEqual(router.face(group, ResourceType.ITEM, Direction.UP).mode(), PortMode.NONE,
+                            "face de origem limpa");
+                    helper.assertValueEqual(router.face(group, ResourceType.ITEM, Direction.DOWN).mode(),
+                            PortMode.NONE, "face colada limpa");
+                })
+                .thenSucceed();
+    }
 }

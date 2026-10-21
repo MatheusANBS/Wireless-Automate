@@ -64,7 +64,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ModPayloads {
     /** Versão do protocolo; mude quando um payload mudar de formato. */
-    public static final String VERSION = "27";
+    public static final String VERSION = "28";
 
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(VERSION);
@@ -76,6 +76,8 @@ public final class ModPayloads {
                 ModPayloads::onThroughput);
         registrar.playToServer(SetFacePayload.TYPE, SetFacePayload.STREAM_CODEC,
                 (payload, context) -> handleSetFace(serverPlayer(context), payload));
+        registrar.playToServer(FaceActionPayload.TYPE, FaceActionPayload.STREAM_CODEC,
+                (payload, context) -> handleFaceAction(serverPlayer(context), payload));
         registrar.playToServer(SetNetworkPayload.TYPE, SetNetworkPayload.STREAM_CODEC,
                 (payload, context) -> handleSetNetwork(serverPlayer(context), payload));
         registrar.playToServer(RenameRouterPayload.TYPE, RenameRouterPayload.STREAM_CODEC,
@@ -194,6 +196,29 @@ public final class ModPayloads {
         router.configureFace(target, payload.resource(), payload.face(), payload.mode(), priority, payload.redstone());
         host.editApplied();
         return true;
+    }
+
+    /**
+     * Limpar (as faces do tipo, ou de todos os carregados, em Nenhum) e Colar (uma face sobre outra do mesmo tipo)
+     * no alvo de edição, numa remontagem só. Devolve se algo mudou.
+     */
+    public static boolean handleFaceAction(@Nullable ServerPlayer player, FaceActionPayload payload) {
+        RouterEditHost host = host(player, payload.containerId());
+        if (host == null || !LoadedTypes.contains(payload.resource())) {
+            return false;
+        }
+        RouterBlockEntity router = host.editedRouter();
+        EditTarget target = host.actionTarget();
+        if (target == null) {
+            return false;
+        }
+        boolean changed = switch (payload.action()) {
+            case CLEAR -> router.clearFaces(target,
+                    payload.allTypes() ? LoadedTypes.LIST : List.of(payload.resource())) > 0;
+            case PASTE -> router.pasteFace(target, payload.resource(), payload.from(), payload.to());
+        };
+        host.editApplied();
+        return changed;
     }
 
     /** Manda o aviso do painel; jogadores falsos (GameTests, mods de automação) não negociam os canais do mod. */

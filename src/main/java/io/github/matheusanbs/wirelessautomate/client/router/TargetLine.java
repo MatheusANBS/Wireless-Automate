@@ -16,6 +16,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -66,8 +67,10 @@ final class TargetLine {
         if (pill != null) {
             RangeView.MachineView machine = model.targetMachine();
             int border = machine != null && machine.exception() ? GuiPaint.ACCENT : GuiPaint.BUTTON_BORDER;
+            RangeView.GroupView group = model.targetGroup();
             PanelPainter.dropButton(g, font, pill, model.targetName(model.snapshot().target()),
-                    pill.contains(mx, my) || open, model.readOnly() == null, border);
+                    pill.contains(mx, my) || open, model.readOnly() == null, border,
+                    group == null ? ItemStack.EMPTY : group.icon());
         }
         Hot rename = layout.hot(Kind.RENAME);
         if (rename != null) {

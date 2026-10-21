@@ -31,15 +31,15 @@ import org.jetbrains.annotations.Nullable;
  * {@link RangeRowButtons}. Rola com a roda. Só cliente; todo texto passa por {@link GuiText}.
  */
 final class RangeList {
-    static final int ATTACHED_H = 14;
-    static final int GROUP_H = 20;
-    static final int MACHINE_H = GROUP_H;
+    static final int ATTACHED_H = 13;
+    static final int GROUP_H = 13;
+    static final int MACHINE_H = 12;
     /** Rolagem de um passo da roda, em px. */
     private static final int SCROLL_STEP = 12;
     /** Largura da área da seta à esquerda de um grupo (clicar ali só abre e fecha). */
     private static final int ARROW_ZONE = 9;
     /** Onde o nome do grupo começa, depois da seta e do ícone. */
-    static final int GROUP_TEXT_X = ARROW_ZONE + 20;
+    static final int GROUP_TEXT_X = ARROW_ZONE + 15;
     /** Onde o nome da presa começa, a partir da borda da lista (depois do ícone). */
     static final int ATTACHED_TEXT_X = 19;
 
@@ -170,7 +170,7 @@ final class RangeList {
                 // no grupo e na máquina, na primeira linha: a segunda fica com a largura toda
                 boolean eye = row.kind() == Kind.MACHINE && !buttons.unlinkArmed(target);
                 int right = rowRight(rows(view)) - (eye ? MachineRow.EYE_W : 0);
-                int rowH = row.kind() == Kind.ATTACHED ? row.height() : RangeRowButtons.SIZE + 2;
+                int rowH = row.height();
                 return buttons.place(font, view, target, ry, rowH, right, x + RowRename.nameX(row));
             }
         }
@@ -376,48 +376,56 @@ final class RangeList {
     private void renderAttached(GuiGraphics g, Font font, ItemStack icon, String label, int ry, int right) {
         if (!icon.isEmpty()) {
             g.pose().pushPose();
-            g.pose().translate(x + 4, ry + 1, 0);
+            g.pose().translate(x + 4, ry + 0.5f, 0);
             g.pose().scale(0.75f, 0.75f, 1f);
             g.renderItem(icon, 0, 0);
             g.pose().popPose();
         }
         int textX = x + 19;
         if (!rename.editing(EditTarget.ATTACHED_TARGET)) {
-            GuiText.draw(g, font, label.isEmpty() ? tr("range.attached") : Component.literal(label), textX, ry + 3,
+            GuiText.draw(g, font, label.isEmpty() ? tr("range.attached") : Component.literal(label), textX, ry + 2,
                     right - textX - 2, GuiPaint.FG);
         }
     }
 
-    /** Um grupo; {@code nameRight} é até onde vai a primeira linha (antes dos botões) e {@code right} a segunda. */
+    /**
+     * Um grupo, numa linha: a seta, o ícone do bloco a 3/4, "Nome ×N" e, à direita, o que merece aviso: "1 trocada" ou
+     * as exceções (o perfil comum não diz nada). {@code nameRight} é até onde vai o texto (antes dos botões da linha
+     * escolhida) e {@code right} a borda direita da linha.
+     */
     private void renderGroup(GuiGraphics g, Font font, RangeView view, Row row, int ry, int nameRight, int right) {
         GroupView group = view.group(row.group());
         if (group == null) {
             return;
         }
         if (open.contains(group.id())) {
-            GuiPaint.arrowDown(g, x + 3, ry + 9, GuiPaint.MUTED);
+            GuiPaint.arrowDown(g, x + 3, ry + 5, GuiPaint.MUTED);
         } else {
-            GuiPaint.arrowRight(g, x + 4, ry + 8, GuiPaint.MUTED);
+            GuiPaint.arrowRight(g, x + 4, ry + 4, GuiPaint.MUTED);
         }
         ItemStack icon = group.icon();
         if (!icon.isEmpty()) {
-            g.renderItem(icon, x + ARROW_ZONE + 1, ry + 2);
+            g.pose().pushPose();
+            g.pose().translate(x + ARROW_ZONE + 1, ry + 0.5f, 0);
+            g.pose().scale(0.75f, 0.75f, 1f);
+            g.renderItem(icon, 0, 0);
+            g.pose().popPose();
         }
         int textX = x + GROUP_TEXT_X;
-        GuiText.draw(g, font, tr("range.group.count", groupName(group), group.count()), textX, ry + 2,
-                nameRight - textX - 2,
-                GuiPaint.FG);
         int replaced = RangeRowButtons.replaced(view, group.id());
-        Component detail;
-        int color;
-        if (replaced > 0) {
-            detail = replaced == 1 ? tr("range.group.replaced.one") : tr("range.group.replaced", replaced);
-            color = GuiPaint.BRASS;
+        Component detail = replaced > 0 ? replaced == 1 ? tr("range.group.replaced.one") : tr("range.group.replaced", replaced)
+                : group.exceptions() > 0 ? exceptions(group) : null;
+        int color = replaced > 0 ? GuiPaint.BRASS : GuiPaint.ACCENT;
+        int detailW = detail == null ? 0 : font.width(detail) + 4;
+        // com os botões da linha escolhida, o aviso sai (ele vai na dica); sem eles, vai à direita
+        boolean buttonsOnRow = nameRight < right;
+        if (detail != null && !buttonsOnRow) {
+            GuiText.draw(g, font, detail, right - detailW + 2, ry + 2, detailW - 4, color);
         } else {
-            detail = group.exceptions() > 0 ? exceptions(group) : tr("range.group.profile");
-            color = group.exceptions() > 0 ? GuiPaint.ACCENT : GuiPaint.MUTED;
+            detailW = 0;
         }
-        GuiText.draw(g, font, detail, textX, ry + 11, right - textX - 2, color);
+        GuiText.draw(g, font, tr("range.group.count", groupName(group), group.count()), textX, ry + 2,
+                nameRight - detailW - textX - 2, GuiPaint.FG);
     }
 
     // ------------------------------------------------------------------ captura de desenvolvimento

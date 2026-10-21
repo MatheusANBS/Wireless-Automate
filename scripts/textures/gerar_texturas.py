@@ -941,8 +941,8 @@ def rachado(grade: list[str], rachadura: tuple[tuple[tuple[int, int], ...], tupl
 # Pó de Ressonância e os Pós Carregados
 # ---------------------------------------------------------------------------
 #
-# O monte de pó: a cúpula com a crista no meio, a encosta de luz à esquerda, a sombra à direita e a
-# fileira escura do chão, recuada, com grãos dos tons vizinhos espalhados pelas encostas.
+# O monte de pó, como o pó de redstone do vanilla: a cúpula baixa com a crista no meio, a encosta de luz à
+# esquerda, a sombra à direita, a fileira escura do chão e os grãos soltos que caíram em volta do pé.
 # `A B C D` do brilho à sombra, `Y` as faíscas (centelhas claras que cintilam).
 PO_RESSONANCIA = [
     "................",
@@ -951,19 +951,19 @@ PO_RESSONANCIA = [
     "................",
     "................",
     "................",
+    "................",
     ".......AAA......",
     ".....AAAAABB....",
-    "....AAAABABBB...",
-    "...AAABAABBBBB..",
+    "....AAAABABBBB..",
+    "...AAABAABBBBCC.",
     "..AABBBBBBCBBCC.",
-    ".AABABBBCBBCCCC.",
+    ".AABABBBCBBCCCCD",
     ".ABBBBCBBCCCCCD.",
-    ".BBBBBCCCCDCDDD.",
-    "..CCCCCDDDDDDD..",
-    "................",
+    "BBBBBBCCCCDCDDDD",
+    ".D.CCCCDDDDDD.D.",
 ]
 # As centelhas do monte: cada uma num quadro, cintilam em sequência (o centro branco, as pontas no brilho).
-CENTELHAS_PO = ((8, 7), (4, 11), (12, 10), (8, 12))
+CENTELHAS_PO = ((8, 8), (4, 12), (12, 11), (8, 13))
 
 
 def _po(tons: dict[str, Cor], centelhas: tuple[tuple[int, int], ...], quadros: int, faisca: Cor) -> Sprite:
@@ -1005,30 +1005,41 @@ def po_carregado(tier: str) -> Sprite:
 # A cascata do Ressonador: da liga ao Núcleo Condensado, cada peça maior e mais acesa que a anterior
 # ---------------------------------------------------------------------------
 #
-# Uma família: a Liga de Sinal (ferro rosado pelo coral, `LIGA`), ferro, cobre, latão, o verde de placa e, no
-# fim, obsidiana, diamante e netherita. Cada peça é uma grade com a legenda `LEG_CASCATA`; a animação de
-# cada uma é um brilho que percorre, um pulsar ou uma cintilação, no ritmo dos outros itens do mod.
+# As matérias-primas (liga crua, lingote, placa, fio, bobina) seguem a silhueta e o sombreado dos itens do
+# vanilla (o minério bruto, o lingote de ferro, o pó de redstone), na liga rosada do mod (`LIGA`) e no cobre.
+# Os componentes (lente, circuito, matriz, estabilizador, núcleo) têm cada um uma silhueta própria, para se
+# reconhecerem de relance no inventário: o disco com aro, o cartão com pinos, a grade, o octógono com o
+# giroscópio e a esfera com janelas. Cada peça é uma grade com a legenda `LEG_CASCATA` (própria, sem a comum,
+# porque os materiais são outros) ou um desenho por geometria; a animação de cada uma é um brilho que
+# percorre, um pulsar ou uma cintilação, no ritmo dos outros itens do mod.
 
 FERRO = {"4": "#F2F1EC", "3": "#D3D1CA", "2": "#A9A69E", "1": "#7A776F", "0": "#4F4C46"}
-LIGA = {"4": "#FFE6DC", "3": "#F2B8A4", "2": "#D98A74", "1": "#A85C49", "0": "#6E3A2E"}
+LIGA = {"4": "#FFDCCF", "3": "#F2A58E", "2": "#D4785F", "1": "#A04D3B", "0": "#632C21"}
 COBRE = {"4": "#FFD3B0", "3": "#F2A26E", "2": "#D27542", "1": "#9F4E27", "0": "#6A3218"}
-VERDE_PLACA = {"4": "#A6E6A0", "3": "#58BC62", "2": "#2F8E45", "1": "#1E6431", "0": "#12401F"}
-OBSIDIANA = {"3": "#C08BF0", "2": "#7F43C6", "1": "#4C1F82", "0": "#271040"}
+VERDE_PLACA = {"4": "#9EDD93", "3": "#4FAE57", "2": "#2C843F", "1": "#1B5A2C", "0": "#10381B"}
+OBSIDIANA = {"3": "#B98AE6", "2": "#6F3DB5", "1": "#421C74", "0": "#221038"}
 DIAMANTE = {"3": "#E8FFFB", "2": "#93F1E3", "1": "#3FC8B9", "0": "#1F7E74"}
-NETHERITA = {"3": "#6E6468", "2": "#4D4549", "1": "#352F33", "0": "#211D20"}
+NETHERITA = {"3": "#75696F", "2": "#524850", "1": "#372F36", "0": "#221C22"}
 
+# Legenda da cascata: porcelana W w · grafite G g h i j · coral C c d e f · latão L l m n · vidro V v u t
+# · ferro E F y Y z · liga A a b B 0 · cobre S R r o O · placa P p Q q 9 · obsidiana N n M 7
+# · diamante D T U Z · netherita H 3 2 1 · cristal K k J j (todos da luz à sombra).
 LEG_CASCATA: dict[str, Cor] = {
-    **LEG,
-    # Ferro F f g G (luz → sombra); liga de sinal A a b c d; cobre R r o O; placa P p Q; vidro vem de LEG.
-    "F": cor(FERRO["3"]), "f": cor(FERRO["2"]), "g": cor(FERRO["1"]), "G": cor(FERRO["0"]), "E": cor(FERRO["4"]),
-    "A": cor(LIGA["4"]), "a": cor(LIGA["3"]), "b": cor(LIGA["2"]), "c": cor(LIGA["1"]), "d": cor(LIGA["0"]),
-    "R": cor(COBRE["3"]), "r": cor(COBRE["2"]), "o": cor(COBRE["1"]), "O": cor(COBRE["0"]), "S": cor(COBRE["4"]),
-    "P": cor(VERDE_PLACA["3"]), "p": cor(VERDE_PLACA["2"]), "Q": cor(VERDE_PLACA["1"]),
-    "N": cor(OBSIDIANA["2"]), "n": cor(OBSIDIANA["1"]), "M": cor(OBSIDIANA["0"]),
+    "W": cor("porcelana.4"), "w": cor("porcelana.2"),
+    "G": cor("grafite.4"), "g": cor("grafite.3"), "h": cor("grafite.2"), "i": cor("grafite.1"), "j": cor("grafite.0"),
+    "C": cor("coral.4"), "c": cor("coral.3"), "d": cor("coral.2"), "e": cor("coral.1"), "f": cor("coral.0"),
+    "L": cor("latao.3"), "l": cor("latao.2"), "m": cor("latao.1"), "n": cor("latao.0"),
+    "V": cor("vidro.3"), "v": cor("vidro.2"), "u": cor("vidro.1"), "t": cor("vidro.0"),
+    "E": cor(FERRO["4"]), "F": cor(FERRO["3"]), "y": cor(FERRO["2"]), "Y": cor(FERRO["1"]), "z": cor(FERRO["0"]),
+    "A": cor(LIGA["4"]), "a": cor(LIGA["3"]), "b": cor(LIGA["2"]), "B": cor(LIGA["1"]), "0": cor(LIGA["0"]),
+    "S": cor(COBRE["4"]), "R": cor(COBRE["3"]), "r": cor(COBRE["2"]), "o": cor(COBRE["1"]), "O": cor(COBRE["0"]),
+    "P": cor(VERDE_PLACA["4"]), "p": cor(VERDE_PLACA["3"]), "Q": cor(VERDE_PLACA["2"]), "q": cor(VERDE_PLACA["1"]),
+    "9": cor(VERDE_PLACA["0"]),
+    "N": cor(OBSIDIANA["3"]), "n": cor(OBSIDIANA["2"]), "M": cor(OBSIDIANA["1"]), "7": cor(OBSIDIANA["0"]),
     "D": cor(DIAMANTE["3"]), "T": cor(DIAMANTE["2"]), "U": cor(DIAMANTE["1"]), "Z": cor(DIAMANTE["0"]),
-    "H": cor(NETHERITA["3"]), "h": cor(NETHERITA["2"]), "i": cor(NETHERITA["1"]), "I": cor(NETHERITA["0"]),
+    "H": cor(NETHERITA["3"]), "3": cor(NETHERITA["2"]), "2": cor(NETHERITA["1"]), "1": cor(NETHERITA["0"]),
     "K": cor(CRISTAL_SINAL["4"]), "k": cor(CRISTAL_SINAL["3"]), "J": cor(CRISTAL_SINAL["2"]),
-    "j": cor(CRISTAL_SINAL["1"]), "X": cor(RACHADURA),
+    "j": cor(CRISTAL_SINAL["1"]),
 }
 CASCATA = ["signal_alloy_raw", "signal_alloy_ingot", "resonance_plate", "resonance_wire", "resonance_coil",
            "harmonic_lens", "phase_circuit", "phase_matrix", "field_stabilizer", "condensed_core"]
@@ -1046,23 +1057,35 @@ def _brilho_na_linha(img: Image.Image, y: int, x: int, de: Cor, largura: int = 2
             put(img, x + dx, y, mistura(de, BRANCO, .7 if dx == largura - 1 else .4))
 
 
-# A Liga crua: um torrão de ferro com as facetas marcadas e os veios da liga (coral) aflorando em
-# três nódulos; o brilho de ferro no alto à esquerda.
+
+def _luz(x: int, y: int) -> int:
+    """O tom (0 = luz, 3 = sombra) de um ponto da peça pela luz de cima à esquerda; o lado de dentro da
+    moldura (o chanfro) soma um."""
+    d = (x - 7.5) + (y - 7.5)
+    return 0 if d < -6 else 1 if d < 0 else 2 if d < 6 else 3
+
+
+def _raio(x: int, y: int) -> float:
+    return math.hypot(x - 7.5, y - 7.5)
+
+
+# A Liga crua: o torrão do minério bruto do vanilla, com as facetas de ferro (a luz no alto à esquerda, a
+# sombra no pé) e os veios da liga rosada aflorando em três nódulos.
 LIGA_CRUA = [
     "................",
     "................",
-    "......EFFF......",
-    "....EFFFFfff....",
-    "...EFFFFCcfffg..",
-    "..EFFFfCCcffffg.",
-    "..FFFfffcfffggg.",
-    ".FFffCCcffffgggg",
-    ".FfffCccfffgggg.",
-    ".fffffcffCcgggG.",
-    ".fffggggfCCcggG.",
-    "..fgggggggcgGG..",
-    "...ggGGGGGGGG...",
-    ".....GGGGGG.....",
+    ".....EFFFy......",
+    "....EFFFyyyY....",
+    "...EFFyyAayyY...",
+    "..EFFyyAaBbyyY..",
+    "..FFyyyaBbyyYY..",
+    "..FyyAabyyyYYz..",
+    "..FyyaBbyyAaYz..",
+    "..yyyyBbyyaBbz..",
+    "..yyyyyyyAaBYz..",
+    "...YyyyYYYBYzz..",
+    "...YYYYYzzzzz...",
+    ".....zzzzz......",
     "................",
     "................",
 ]
@@ -1070,34 +1093,31 @@ LIGA_CRUA = [
 
 def liga_crua() -> Sprite:
     """Liga de Sinal crua: o torrão de ferro com os veios coral; um dos veios cintila de cada vez (6 × 5 ticks)."""
-    veios = ((8, 4), (5, 7), (9, 9))
+    veios = ((8, 4), (5, 7), (10, 8))
     q = []
     for k in range(6):
         img = _peca(LIGA_CRUA)
         n = k // 2
-        if k % 2 == 0:
-            put(img, *veios[n], BRANCO)
-        else:
-            put(img, *veios[n], cor("coral.4"))
+        put(img, *veios[n], BRANCO if k % 2 == 0 else cor("coral.4"))
         q.append(img)
     return animacao(q, 5)
 
 
-# O lingote: o paralelogramo do vanilla, em liga rosada. A face de cima clara, a frente no tom cheio
-# com dois veios de ferro, a lateral direita e o pé na sombra.
+# O lingote: a barra do lingote de ferro do vanilla. A face de cima clara (o paralelogramo que se inclina
+# para a esquerda), a frente no tom cheio, a ponta da direita e o pé na sombra.
 LINGOTE = [
     "................",
     "................",
     "................",
-    "................",
-    ".....AAAAAAAAA..",
-    "....AaaaaaaaaAc.",
-    "...AaaaaaaaaaAc.",
-    "..AAAAAAAAAAAcc.",
-    "..bbbbbbbbbbbcd.",
-    "..bFfbbbbbFfbcd.",
-    "..bbbbbbbbbbbcd.",
-    "..ddddddddddddd.",
+    "......AAAAAAAA..",
+    ".....AaaaaaaaB..",
+    "....AaaaaaaaBB..",
+    "...AaaaaaaaBB0..",
+    "..AAAAAAAAAB00..",
+    "..bbbbbbbbbB0...",
+    "..bbbbbbbbbB0...",
+    "..bbbbbbbbbB0...",
+    "..00000000000...",
     "................",
     "................",
     "................",
@@ -1110,219 +1130,252 @@ def lingote() -> Sprite:
     q = []
     for k in range(8):
         img = _peca(LINGOTE)
-        _brilho_na_linha(img, 5, 3 + k * 10 // 7, LEG_CASCATA["a"], 3)
-        _brilho_na_linha(img, 6, 2 + k * 10 // 7, LEG_CASCATA["a"], 2)
+        _brilho_na_linha(img, 4, 4 + k * 9 // 7, LEG_CASCATA["a"], 3)
+        _brilho_na_linha(img, 5, 3 + k * 9 // 7, LEG_CASCATA["a"], 2)
         q.append(img)
     return animacao(q, 4)
 
 
 # A Placa: a chapa de liga com o chanfro (luz em cima e à esquerda, sombra embaixo e à direita), quatro
-# rebites de ferro e a onda de ressonância gravada no meio, com o relevo claro embaixo do traço.
+# rebites de ferro nos cantos e a onda de ressonância gravada no meio (o sulco escuro e o relevo claro logo
+# abaixo, como uma gravação).
 PLACA = [
     "................",
     "................",
     "..AAAAAAAAAAAA..",
-    "..AaaaaaaaaaaAc.",
-    "..AaEcaaaaaEcac.",
-    "..Aaaaaaaaaaaac.",
-    "..AaaddaaaaaaAc.",
-    "..AadAAdaaaaadc.",
-    "..AaAaaAdaaadAc.",
-    "..AaaaaaAddAaac.",
-    "..AaaaaaaaAAaac.",
-    "..AaEcaaaaaEcac.",
-    "..Aaaaaaaaaaaac.",
-    "..cccccccccccdd.",
+    "..AaaaaaaaaaaB0.",
+    "..AaFYbbbbbFYB0.",
+    "..AabbbbbbbbbB0.",
+    "..AabbBBbbbbbB0.",
+    "..AabBAABbbbbB0.",
+    "..AaBAbbABbbbB0.",
+    "..AaAbbbbABBbB0.",
+    "..AabbbbbbAABB0.",
+    "..AabbbbbbbbbB0.",
+    "..AaFYbbbbbFYB0.",
+    "..B00000000000..",
     "................",
     "................",
 ]
+ONDA_PLACA = ((4, 8), (5, 7), (6, 6), (7, 6), (8, 7), (9, 8), (10, 9), (11, 9))
+assert all(PLACA[y][x] == "B" for x, y in ONDA_PLACA), "a onda sai do sulco da placa"
 
 
 def placa() -> Sprite:
     """Placa de Ressonância: a onda gravada acende da esquerda para a direita, como um sinal passando (8 × 4 ticks)."""
-    onda = ((4, 7), (5, 6), (6, 6), (7, 7), (8, 8), (9, 9), (10, 9), (11, 8))
     q = []
     for k in range(8):
         img = _peca(PLACA)
-        for n, (x, y) in enumerate(onda):
+        for n, (x, y) in enumerate(ONDA_PLACA):
             fase = (k - n) % 8
             if fase == 0:
-                put(img, x, y, cor("coral.3"))
+                put(img, x, y, cor("coral.4"))
             elif fase == 1:
-                put(img, x, y, cor("coral.1"))
+                put(img, x, y, cor("coral.2"))
         q.append(img)
     return animacao(q, 4)
 
 
-# O Fio: duas voltas de fio de cobre enroladas num anel (a costura escura entre as duas), a presilha
-# coral que amarra em cima à esquerda e as duas pontas saindo embaixo à direita.
+# O Fio: uma meada de fio de cobre, o anel grosso com o furo largo no meio e as voltas do fio marcadas em
+# faixas que atravessam o anel (claro, cheio, sombra), a luz em cima à esquerda; a presilha coral que amarra
+# a meada em cima à esquerda e as duas pontas soltas saindo por baixo à direita.
 FIO = [
     "................",
-    ".....RRRRRr.....",
-    "...RRRrrrrrrr...",
-    "..RRcdrOOOrrro..",
-    "..RcdrOrrrrOrro.",
-    ".RRdrOrroooOroo.",
-    ".RRrOrr...rOroo.",
-    ".RrrOro...orOoo.",
-    ".RrrOro...orOoo.",
-    ".rrrOrro..rOooo.",
-    ".rrrrOrrrrOooo..",
-    "..rrroOOOOoooo..",
-    "..orrrooooooor..",
-    "...oooooooooRr..",
-    "..........Oorr..",
+    ".....SRRRRo.....",
+    "...SRRrRRrRRo...",
+    "..SdRrRRrRRroo..",
+    "..dRrRrrooRrroO.",
+    ".SRRrro...orRoO.",
+    ".RRrRo.....oroO.",
+    ".RrRo.......roO.",
+    ".RrRo.......roO.",
+    ".rRro.......OoO.",
+    ".rRRro.....orOO.",
+    "..rRrroo.oorOO..",
+    "..orRrRooRrOOo..",
+    "...oorRorOOoRr..",
+    ".....ooooo..Or..",
     "................",
 ]
+# O caminho do brilho pela volta de fora da meada, de cima à esquerda, no sentido horário.
+VOLTA_FIO = ((6, 1), (9, 1), (12, 2), (13, 4), (14, 6), (14, 9), (13, 11), (11, 13), (8, 13), (5, 13), (3, 11),
+             (1, 9), (1, 6), (2, 4))
 
 
 def fio() -> Sprite:
-    """Fio de Ressonância: um brilho de cobre dá a volta no anel, no sentido horário (8 × 4 ticks)."""
-    # O caminho do brilho pela volta de fora, de cima à esquerda, no sentido horário.
-    volta = ((6, 1), (9, 1), (12, 2), (13, 4), (14, 6), (14, 9), (12, 11), (9, 13), (6, 13), (3, 11), (1, 8), (2, 5))
+    """Fio de Ressonância: um brilho de cobre dá a volta na meada, no sentido horário (8 × 4 ticks)."""
     q = []
     for k in range(8):
         img = _peca(FIO)
-        n = (k * len(volta)) // 8
-        for i, (x, y) in enumerate(volta):
-            fase = (n - i) % len(volta)
-            if fase == 0:
-                put(img, x, y, mistura(img.getpixel((x, y)), BRANCO, .75))
-            elif fase == 1:
-                put(img, x, y, mistura(img.getpixel((x, y)), BRANCO, .4))
+        n = (k * len(VOLTA_FIO)) // 8
+        for i, (x, y) in enumerate(VOLTA_FIO):
+            fase = (n - i) % len(VOLTA_FIO)
+            if fase <= 1:
+                put(img, x, y, mistura(img.getpixel((x, y)), BRANCO, .75 if fase == 0 else .4))
         q.append(img)
     return animacao(q, 4)
 
 
-# A Bobina: o carretel de pé, flanges de ferro em cima e embaixo (a de cima com a luz, a de baixo na sombra),
-# o eixo de latão no topo e o enrolamento de cobre em voltas de 2 px, com a luz à esquerda e a sombra à direita.
+# A Bobina: o carretel de pé, como o carretel de fio dos mods de engenharia: as flanges largas de ferro em cima
+# e embaixo (a de cima com a luz, a de baixo na sombra), o eixo de latão saindo no topo, e o enrolamento de
+# cobre em voltas de 2 px, cada volta com a luz à esquerda e a sombra à direita; a volta do meio leva a fita
+# coral da ressonância.
 BOBINA = [
     "................",
-    "...EFFFLlFFFf...",
-    "..EFFFFFFFFfffg.",
-    "..gffffffffffgg.",
-    "...SRRRRrrroo...",
-    "...Rrrrrrooooo..",
-    "...SRRRRrrroo...",
-    "...Rrrrrrooooo..",
-    "...SRRRRrrroo...",
-    "...Rrrrrrooooo..",
-    "...SRRRRrrroo...",
-    "...Rrrrrrooooo..",
-    "..EFFFFFFFfffg..",
-    "..ffffffffffggg.",
-    "..gggggggggggGG.",
+    "......Llmm......",
+    "..EFFFFFFFFyyY..",
+    "..FyyyyyyyyyYz..",
+    "...SRRRrrrooO...",
+    "...RRrrrroooO...",
+    "...SRRRrrrooO...",
+    "...ddddddeeef...",
+    "...SRRRrrrooO...",
+    "...RRrrrroooO...",
+    "...SRRRrrrooO...",
+    "...RRrrrroooO...",
+    "..EFFFFFFyyyY...",
+    "..FyyyyyyyYYzz..",
+    "..Yzzzzzzzzzzz..",
     "................",
 ]
 
 
 def bobina() -> Sprite:
-    """Bobina de Ressonância: um brilho desce pelo enrolamento, volta a volta (8 × 4 ticks)."""
+    """Bobina de Ressonância: um brilho desce pelo enrolamento, volta a volta, e acende a fita coral ao passar
+    (8 × 4 ticks)."""
     q = []
     for k in range(8):
         img = _peca(BOBINA)
         y = 4 + k
-        if y <= 11:
+        if y == 7:
+            for x in range(4, 12):
+                put(img, x, y, mistura(img.getpixel((x, y)), BRANCO, .45))
+        elif y <= 11:
             _brilho_na_linha(img, y, 4, LEG_CASCATA["R"] if y % 2 == 0 else LEG_CASCATA["r"], 5)
         q.append(img)
     return animacao(q, 4)
 
 
-# A Lente: o aro de latão com dois diamantes engastados nas laterais, o vidro com o reflexo em arco no
-# alto à esquerda e, no centro, o Cristal Lapidado com a cinta.
-LENTE_HARMONICA = [
-    ".....LLLLLL.....",
-    "...LLLlllllll...",
-    "..LLvvvvvvvvll..",
-    ".LLvVVvvvvvvvll.",
-    ".LvVvvvvvvvvvvl.",
-    "LlvVvvvKKvvvvvm.",
-    "TlvvvvKKkJvvvvU.",
-    "UlvvvLLLLLlvvvZ.",
-    "LlvvvvkkJjvvvum.",
-    ".lvvvvvJjvvvuum.",
-    ".lvvvvvvvvvvuum.",
-    "..llvvvvvvvvmm..",
-    "...lllvvvvvmmm..",
-    ".....mmmmmm.....",
-    "................",
-    "................",
-]
+def _disco_aro(img: Image.Image, aro: list[Cor], r_fora: float, r_dentro: float, miolo) -> None:
+    """Um disco com aro: o anel entre `r_dentro` e `r_fora` no material `aro` (luz de cima à esquerda) e,
+    dentro, o que `miolo(x, y, r)` devolver (None deixa transparente)."""
+    for y in range(16):
+        for x in range(16):
+            r = _raio(x, y)
+            if r >= r_fora:
+                continue
+            if r >= r_dentro:
+                put(img, x, y, aro[min(len(aro) - 1, _luz(x, y))])
+            else:
+                c = miolo(x, y, r)
+                if c is not None:
+                    put(img, x, y, c)
+
+
+# A Lente: o disco de vidro num aro de latão (como as lentes de ótica dos mods de magia), quatro garras de
+# latão escuro que seguram o vidro, o reflexo em arco no alto à esquerda e, no centro, o Cristal Lapidado
+# engastado como um losango.
+GARRAS_LENTE = ((3, 3), (12, 3), (3, 12), (12, 12))
+
+
+def _lente_base() -> Image.Image:
+    img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+    latao = [cor("latao.3"), cor("latao.2"), cor("latao.1"), cor("latao.0")]
+    vidro = [cor("vidro.3"), cor("vidro.2"), cor("vidro.1"), cor("vidro.0")]
+    cristal = [cor(CRISTAL_SINAL[t]) for t in ("4", "3", "2", "1")]
+
+    def miolo(x: int, y: int, r: float) -> Cor:
+        d = abs(x - 7.5) + abs(y - 7.5)
+        if d <= 3:
+            return cristal[0 if d < 1.5 else 1 if (x < 8 and y < 8) else 2 if x < 8 or y < 8 else 3]
+        if 3.6 < r < 5.4 and x < 7 and y < 7:
+            return vidro[0]
+        # O vidro clareia para o centro e escurece na borda de baixo à direita, como uma lente convexa.
+        fundo = (x - 7.5) + (y - 7.5)
+        return vidro[1 if r < 3.8 or fundo < 0 else 2 if r < 5.0 or fundo < 5 else 3]
+
+    _disco_aro(img, latao, 7.6, 5.4, miolo)
+    for x, y in GARRAS_LENTE:
+        put(img, x, y, latao[3])
+    return contorno(img, CONTORNO)
 
 
 def lente_harmonica() -> Sprite:
     """Lente Harmônica: o cristal do centro cintila e o reflexo do vidro desliza pelo arco (8 × 4 ticks)."""
-    arco = ((4, 3), (5, 3), (3, 4), (3, 5))
+    arco = ((4, 4), (5, 3), (3, 5), (3, 6))
+    base = _lente_base()
     q = []
     for k in range(8):
-        img = _peca(LENTE_HARMONICA)
+        img = base.copy()
         for n, (x, y) in enumerate(arco):
             if (k // 2) % 4 == n:
                 put(img, x, y, BRANCO)
         if k in (5, 6):
-            put(img, 7, 5, BRANCO)
-            put(img, 8, 6, BRANCO if k == 5 else cor(CRISTAL_SINAL["4"]))
+            put(img, 7, 7, BRANCO)
+            put(img, 8, 8, BRANCO if k == 5 else cor(CRISTAL_SINAL["4"]))
         q.append(img)
     return animacao(q, 4)
 
 
-# O Circuito: um cartão de placa verde com o chip de grafite (o ponto coral aceso), as trilhas de ouro
-# saindo pelos quatro lados, um resistor de cobre, um capacitor de ferro e os contatos dourados na borda de baixo.
+# O Circuito: o cartão de placa verde com o chip de grafite no meio (o ponto coral aceso), as trilhas de ouro
+# que saem do chip para cima e para os lados, um resistor de cobre, um capacitor de ferro e os pinos dourados
+# saindo pela borda de baixo, como as placas e processadores dos mods de tecnologia.
 CIRCUITO = [
     "................",
-    "...PPPPPPPPPP...",
-    "...PpppLLpppQ...",
-    "...PRrplpppLQ...",
-    "...PppplppplQ...",
-    "...PppggggplQ...",
-    "...PpphCchllQ...",
-    "...PllhcdhppQ...",
-    "...PlphhhhppQ...",
-    "...PlppplpppQ...",
-    "...PlppplFfpQ...",
-    "...PlppplpppQ...",
-    "...QlQQQlQQQQ...",
-    "....lnlnlnln....",
+    "..PPPPPPPPPPPP..",
+    "..PpppLppLpppQ..",
+    "..PRrpLppLpppQ..",
+    "..PpppLppLpppQ..",
+    "..PLLLgghhpppQ..",
+    "..PpppgdhhpppQ..",
+    "..PppphhiiLLLQ..",
+    "..PppphiiipppQ..",
+    "..PpppppppFYpQ..",
+    "..PpLpppppppQQ..",
+    "..PpppppppppQQ..",
+    "..QQQQQQQQQQQQ..",
+    "...lnlnlnlnln...",
     "................",
     "................",
 ]
+TRILHA_CIRCUITO = ((6, 2), (6, 3), (6, 4), (6, 5))
 
 
 def circuito() -> Sprite:
     """Circuito de Fase: o ponto do chip pulsa e um sinal corre pela trilha de cima até o chip (8 × 4 ticks)."""
-    trilha = ((7, 2), (8, 2), (7, 3), (7, 4))
     q = []
     for k in range(8):
         img = _peca(CIRCUITO)
         t = (1 + math.cos(2 * math.pi * k / 8)) / 2
         put(img, 7, 6, mistura(cor("coral.3"), BRANCO, .6 * t))
-        if k < len(trilha):
-            put(img, *trilha[k], BRANCO)
+        if k < len(TRILHA_CIRCUITO):
+            put(img, *TRILHA_CIRCUITO[k], BRANCO)
         q.append(img)
     return animacao(q, 4)
 
 
-# A Matriz: a moldura de latão em volta da placa de grafite com nove células (lentes de vidro com o emissor
-# coral no meio), separadas pelas trilhas de ouro.
+# A Matriz: a moldura de latão com os rebites nos cantos em volta da placa de grafite com nove células
+# (lentes de vidro com o emissor coral no meio), separadas pelas trilhas escuras.
 MATRIZ = [
     "................",
     ".LLLLLLLLLLLLLm.",
-    ".LhhhhhhhhhhhGm.",
-    ".LhVvvnVvvnVvvm.",
-    ".Lhvdunvdunvdum.",
-    ".Lhuuunuuunuuum.",
-    ".Lhnnnnnnnnnnnm.",
-    ".LhVvvnVvvnVvvm.",
-    ".Lhvdunvdunvdum.",
-    ".Lhuuunuuunuuum.",
-    ".Lhnnnnnnnnnnnm.",
-    ".LhVvvnVvvnVvvm.",
-    ".Lhvdunvdunvdum.",
-    ".Lhuuunuuunuuum.",
-    ".mmmmmmmmmmmmmm.",
+    ".LnhhhhhhhhhhGm.",
+    ".LhVvdhVvdhVvdm.",
+    ".LhvdthvdthvdtM.",
+    ".Lhdtthdtthdttm.",
+    ".Lhhhhhhhhhhhhm.",
+    ".LhVvdhVvdhVvdm.",
+    ".LhvdthvdthvdtM.",
+    ".Lhdtthdtthdttm.",
+    ".Lhhhhhhhhhhhhm.",
+    ".LhVvdhVvdhVvdm.",
+    ".LhvdthvdthvdtM.",
+    ".Lhdtthdtthdttm.",
+    ".mnmmmmmmmmmmmn.",
     "................",
 ]
 CELULAS_MATRIZ = [(4 + 4 * i, 4 + 4 * j) for j in range(3) for i in range(3)]
+assert all(MATRIZ[y][x] == "d" for x, y in CELULAS_MATRIZ), "a célula da matriz fora do emissor"
 
 
 def matriz() -> Sprite:
@@ -1342,39 +1395,55 @@ def matriz() -> Sprite:
     return animacao(q, 3)
 
 
-# O Estabilizador: o octógono de latão, a câmara de obsidiana, os quatro braços de ferro que seguram o
-# diamante no centro e as quatro centelhas coral nos cantos da câmara.
-ESTABILIZADOR = [
-    "................",
-    ".....LLLLLl.....",
-    "....LNNNEfNNl...",
-    "...LNnnnEfnnnm..",
-    "..LNnnnnEfnnnMm.",
-    ".LNnnCnnDTnnCnMm",
-    ".LNnnnnDTTUnnnMm",
-    ".LEEEEDTTTUUffMm",
-    ".LfffffTTUUgggMm",
-    ".LNnnCnnTUnnCnMm",
-    ".LNnnnnnEfnnnnMm",
-    "..lNnnnnEfnnnMm.",
-    "...lnnnnEfnnMm..",
-    "....lMMMEfMMm...",
-    ".....mmmmmm.....",
-    "................",
-]
-CENTELHAS_ESTAB = ((5, 5), (12, 5), (5, 9), (12, 9))
+# O Estabilizador: o octógono de latão, a câmara de obsidiana, o anel do giroscópio em diamante em volta da
+# gema do centro, e as quatro centelhas coral nos cantos da câmara.
+CENTELHAS_ESTAB = ((4, 4), (11, 4), (4, 11), (11, 11))
+
+
+def _octo(x: int, y: int) -> float:
+    """A distância octogonal ao centro: a de Chebyshev, cortada nas diagonais."""
+    dx, dy = abs(x - 7.5), abs(y - 7.5)
+    return max(dx, dy, (dx + dy) / 1.35)
+
+
+def _estabilizador_base() -> Image.Image:
+    img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+    latao = [cor("latao.3"), cor("latao.2"), cor("latao.1"), cor("latao.0")]
+    obsidiana = [cor(OBSIDIANA[t]) for t in ("3", "2", "1", "0")]
+    diamante = [cor(DIAMANTE[t]) for t in ("3", "2", "1", "0")]
+    for y in range(16):
+        for x in range(16):
+            m = _octo(x, y)
+            if m > 7.3:
+                continue
+            if m > 5.6:
+                put(img, x, y, latao[min(3, _luz(x, y))])
+            else:
+                put(img, x, y, obsidiana[1 if _luz(x, y) < 1 else 2 if _luz(x, y) < 3 else 3])
+    # O anel do giroscópio em volta da gema, de 1 px, com a luz em cima à esquerda.
+    for y in range(16):
+        for x in range(16):
+            if 3.4 <= _raio(x, y) < 4.4:
+                put(img, x, y, diamante[1 if _luz(x, y) < 2 else 2])
+    # A gema do centro: o losango facetado, a luz em cima à esquerda.
+    for dx in range(-2, 3):
+        for dy in range(-2, 3):
+            if abs(dx) + abs(dy) <= 2:
+                put(img, 7 + dx, 7 + dy, diamante[0 if dx + dy < -1 else 1 if dx + dy <= 0 else 2])
+    return contorno(img, CONTORNO)
 
 
 def estabilizador() -> Sprite:
-    """Estabilizador de Campo: as centelhas pulsam, o diamante cintila e, no auge, o aro de latão reluz
-    nas pontas (10 × 3 ticks)."""
+    """Estabilizador de Campo: as centelhas pulsam, a gema cintila e, no auge, o aro de latão reluz nas pontas
+    (10 × 3 ticks)."""
+    base = _estabilizador_base()
     q = []
     for k in range(10):
-        img = _peca(ESTABILIZADOR)
+        img = base.copy()
         t = (1 + math.cos(2 * math.pi * k / 10)) / 2
         for p in CENTELHAS_ESTAB:
             put(img, *p, mistura(cor("coral.2"), cor("coral.4"), t))
-        put(img, 8, 5, mistura(cor(DIAMANTE["3"]), BRANCO, t))
+        put(img, 7, 7, mistura(cor(DIAMANTE["3"]), BRANCO, t))
         if k in (0, 1):
             for p in ((7, 1), (1, 7), (14, 8), (8, 14)):
                 put(img, *p, mistura(cor("latao.3"), BRANCO, .7))
@@ -1382,55 +1451,54 @@ def estabilizador() -> Sprite:
     return animacao(q, 3)
 
 
-# O Núcleo Condensado: a esfera de netherita com as quatro janelas de onde o plasma coral vaza, o parafuso de
-# latão no cruzamento das cintas e a estrela branca no miolo de cada janela.
-CONDENSADO = [
-    ".....HHHHHh.....",
-    "...HHhhhiihhh...",
-    "..HhhKKKiiJJhh..",
-    ".HhhKKKKiiJJJhi.",
-    ".HhKKKkkiiJJJJi.",
-    "HhhKKkkkiiJJJjii",
-    "HhhKkkkkiiJjjjii",
-    "hiiiiiiLliiiiiii",
-    "hiiiiiilmiiiiiii",
-    "hhhKkkkkiiJjjjii",
-    "hhhKkkkjiijjjjii",
-    ".hhKkkjjiijjjji.",
-    ".hhhkkjjiijjjii.",
-    "..hhhjjjiijjii..",
-    "...hhhiiiiiii...",
-    ".....iiiiii.....",
-]
-# As quatro janelas do plasma, do canto encostado no parafuso para fora: a estrela e os anéis que pulsam.
-ESTRELAS_CONDENSADO = ((5, 5), (11, 5), (5, 11), (11, 11))
+# O Núcleo Condensado: a esfera de netherita com as duas cintas que se cruzam (o parafuso de latão no
+# cruzamento) e, entre elas, as quatro janelas de onde o plasma coral vaza, com a estrela no miolo de cada
+# uma; a casca na sombra embaixo à direita.
+ESTRELAS_CONDENSADO = ((5, 5), (10, 5), (5, 10), (10, 10))
+
+
+def _condensado_base() -> tuple[Image.Image, set[tuple[int, int]]]:
+    img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+    casca = [cor(NETHERITA[t]) for t in ("3", "2", "1", "0")]
+    janelas: set[tuple[int, int]] = set()
+    for y in range(16):
+        for x in range(16):
+            r = _raio(x, y)
+            if r > 7.6:
+                continue
+            dx, dy = x - 7.5, y - 7.5
+            cinta = abs(dx) < 1.2 or abs(dy) < 1.2
+            if r > 5.6 or cinta:
+                put(img, x, y, casca[min(3, _luz(x, y) + (1 if cinta and r <= 5.6 else 0))])
+            else:
+                janelas.add((x, y))
+    for x, y in ((7, 7), (8, 7), (7, 8), (8, 8)):
+        put(img, x, y, cor("latao.3") if x + y < 15 else cor("latao.1"))
+    return img, janelas
 
 
 def condensado() -> Sprite:
     """Núcleo Condensado: o plasma respira (clareia do miolo para fora) e as estrelas das janelas cintilam em
     volta, uma por vez, no sentido horário (12 × 2 ticks)."""
-    plasma = {LEG_CASCATA[c] for c in "KkJj"}
+    base, janelas = _condensado_base()
     tons = [cor(CRISTAL_SINAL[t]) for t in ("4", "3", "2", "1")]
     q = []
     for k in range(12):
-        img = _peca(CONDENSADO)
+        img = base.copy()
         t = (1 + math.cos(2 * math.pi * k / 12)) / 2
-        for y in range(16):
-            for x in range(16):
-                if img.getpixel((x, y)) in plasma:
-                    # O plasma emite luz: o tom vem da distância ao parafuso do centro, e o miolo respira.
-                    d = max(abs(x - 7.5), abs(y - 7.5))
-                    c = tons[0 if d < 2.5 else 1 if d < 4.5 else 2 if d < 5.5 else 3]
-                    put(img, x, y, mistura(c, BRANCO, max(0.0, .5 * t * (1 - (d - 1.5) / 5))))
+        for x, y in janelas:
+            # O plasma emite luz: o tom vem da distância ao parafuso do centro, e o miolo respira.
+            d = max(abs(x - 7.5), abs(y - 7.5))
+            c = tons[0 if d < 2.5 else 1 if d < 3.5 else 2 if d < 4.5 else 3]
+            put(img, x, y, mistura(c, BRANCO, max(0.0, .5 * t * (1 - (d - 1.5) / 4))))
         ordem = (0, 1, 3, 2)
         n = ordem[(k // 3) % 4]
         x, y = ESTRELAS_CONDENSADO[n]
         put(img, x, y, BRANCO)
         for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-            if img.getpixel((x + dx, y + dy)) in plasma or img.getpixel((x + dx, y + dy))[3]:
-                if img.getpixel((x + dx, y + dy)) != CONTORNO:
-                    put(img, x + dx, y + dy, cor(CRISTAL_SINAL["4"]) if k % 3 != 2 else BRANCO)
-        q.append(img)
+            if (x + dx, y + dy) in janelas:
+                put(img, x + dx, y + dy, cor(CRISTAL_SINAL["4"]) if k % 3 != 2 else BRANCO)
+        q.append(contorno(img, CONTORNO))
     return animacao(q, 2)
 
 
@@ -1512,13 +1580,6 @@ NUCLEO_CORACAO: dict[str, list[Cor]] = {
 }
 PLASMA_CORACAO = [cor(CRISTAL_SINAL[t]) for t in ("3", "2", "1", "0")]
 ESCADA_CORACAO = {t: n for n, t in enumerate(TIERS)}
-
-
-def _luz(x: int, y: int) -> int:
-    """O tom (0 = luz, 3 = sombra) de um ponto da peça pela luz de cima à esquerda; o lado de dentro da
-    moldura (o chanfro) soma um."""
-    d = (x - 7.5) + (y - 7.5)
-    return 0 if d < -6 else 1 if d < 0 else 2 if d < 6 else 3
 
 
 def _sombreia(img: Image.Image, pontos: set[tuple[int, int]], tons: list[Cor], relevo: int = 0) -> None:
@@ -1615,14 +1676,16 @@ DIAGONAIS_ESTRELA = ((1, 1), (-1, 1), (1, -1), (-1, -1))
 
 def _bloco_liga(img: Image.Image, bx: int, by: int, tons: list[Cor]) -> None:
     """Um bloco de liga na posição (bx, by) da grade de 3 × 3: o miolo no tom cheio, a aresta de cima e a da
-    esquerda que dão para fora do anel na luz, as de baixo e da direita um tom abaixo (a junta com o bloco
-    seguinte), o canto de baixo à direita dois; os blocos de baixo à direita da grade começam um tom mais
-    fundos."""
+    esquerda que dão para fora do anel na luz, a junta com o bloco seguinte no tom mais fundo, as outras
+    arestas de baixo e da direita um tom abaixo e o canto de baixo à direita dois; os blocos de baixo à
+    direita da grade começam um tom mais fundos."""
     base = 0 if bx + by < 2 else 1
     (x0, x1), (y0, y1) = FAIXAS_MOLDURA[bx], FAIXAS_MOLDURA[by]
     for y in range(y0, y1 + 1):
         for x in range(x0, x1 + 1):
-            if x == x1 and y == y1:
+            if (x == x1 and bx < 2) or (y == y1 and by < 2):
+                tom = 4 - base  # a junta com o bloco seguinte, sempre no tom mais fundo
+            elif x == x1 and y == y1:
                 tom = 3
             elif x == x1 or y == y1:
                 tom = 2
@@ -1654,6 +1717,9 @@ def moldura_liga() -> Sprite:
             for y in range(4, 11):
                 if (x, y) not in camara:
                     put(img, x, y, vibranio[_luz(x, y) + 1])
+        # Os quatro parafusos de Vibranium nos cantos do anel.
+        for x, y in ((2, 2), (12, 2), (2, 12), (12, 12)):
+            put(img, x, y, vibranio[1 if _luz(x, y) < 2 else 3])
         # A câmara de grafite, com um halo violeta que respira em volta da estrela.
         for x, y in camara:
             d = max(abs(x - 7), abs(y - 7))

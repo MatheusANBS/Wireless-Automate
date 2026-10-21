@@ -197,6 +197,27 @@ final class ListTexts {
         };
     }
 
+    /**
+     * O estado do nó na Grade, numa palavra só: sem rede (coral), destino cheio, pausada ou descarregada; senão a
+     * vazão do primeiro tipo que move algo, ou "parado".
+     */
+    Component gridState(NodeView node) {
+        return switch (node.status()) {
+            case UNLOADED -> tr("list.state.unloaded").copy().withColor(GuiPaint.MUTED);
+            case NO_NETWORK -> tr("list.state.no_network").copy().withColor(GuiPaint.ACCENT);
+            case FULL -> tr("list.state.full").copy().withColor(GuiPaint.WARN);
+            case PAUSED -> tr("list.state.paused").copy().withColor(GuiPaint.PAUSED);
+            case ACTIVE, IDLE -> {
+                for (ResourceType type : LoadedTypes.LIST) {
+                    if (node.rate(type) > 0) {
+                        yield ResourceStyle.rate(type, node.rate(type)).copy().withColor(GuiPaint.MUTED);
+                    }
+                }
+                yield TabletText.statusName(node.status()).copy().withColor(GuiPaint.MUTED);
+            }
+        };
+    }
+
     private Component okLine(NodeView node) {
         ResourceType type = list.chipType;
         List<UUID> networks = node.networks(type);

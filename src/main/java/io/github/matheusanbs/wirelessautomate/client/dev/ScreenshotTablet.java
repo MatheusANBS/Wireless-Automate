@@ -62,7 +62,9 @@ final class ScreenshotTablet {
                     tabletScreen.previewResize(420, 280);
                     choosePanel(PanelAccess.EDIT);
                 }, "t1-tablet-lista"),
+                new Step(() -> tabletScreen.previewGrid(true), "t1b-tablet-grade"),
                 new Step(() -> {
+                    tabletScreen.previewGrid(false);
                     int[] center = tabletScreen.nodeRowCenter(tabletNodeKey("Fornalha 2"));
                     mouseX = center[0];
                     mouseY = center[1];
@@ -83,7 +85,7 @@ final class ScreenshotTablet {
                 new Step(() -> {
                     tabletScreen.previewMulti(false, 0);
                     choosePanel(PanelAccess.READ_OUT_OF_REACH);
-                    int[] center = tabletScreen.nodePanel().modeCenter(PortMode.INSERT);
+                    int[] center = tabletScreen.nodePanel().faceCenter(tabletScreen.nodePanel().face());
                     mouseX = center == null ? -1 : center[0];
                     mouseY = center == null ? -1 : center[1];
                 }, "t3b-tablet-so-leitura"),

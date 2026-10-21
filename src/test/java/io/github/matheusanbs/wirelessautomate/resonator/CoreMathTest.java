@@ -14,7 +14,7 @@ class CoreMathTest {
 
     @Test
     void escadaNova() {
-        long[] esperado = {216, 6_912, 10_000, 160_000, 6_400_000, 6_700_000, 184_000_000L, 268_435_456L};
+        long[] esperado = {216, 6_912, 10_000, 160_000, 6_400_000, 6_700_000, 10_700_000L, 268_435_456L};
         for (int i = 0; i < esperado.length; i++) {
             assertEquals(esperado[i], CoreMath.defaultFePerCrystal(i), "tier " + i);
         }
@@ -46,7 +46,7 @@ class CoreMathTest {
     void maximoEBufferDaSpec() {
         assertEquals(432, CoreMath.maxOutput(1, 216));
         assertEquals(60_000, CoreMath.maxOutput(3, 10_000));
-        assertEquals(2_576_000_000L, CoreMath.maxOutput(7, 184_000_000L));
+        assertEquals(149_800_000L, CoreMath.maxOutput(7, 10_700_000L));
         assertEquals(86_400, CoreMath.buffer(1, 216));
         assertEquals(12_000_000, CoreMath.buffer(3, 10_000));
     }

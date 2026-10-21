@@ -171,7 +171,7 @@ final class E2eRangeSteps {
         list.add(new Step(label + "tela no mínimo, com a lista", STEP_TIMEOUT_MS, () -> {
             routerScreen().previewResize(300, 240);
             if (!routerScreen().rangeListShown()) {
-                click(widget(byMessageKey("gui.wirelessautomate.router.range.machines"), "botão Máquinas"));
+                routerScreen().previewToggleList();
             }
         }, () -> routerScreen().size()[0] == 300 && routerScreen().size()[1] == 240
                 && routerScreen().rangeListShown() && rangeView().machines().size() == 3
@@ -233,16 +233,16 @@ final class E2eRangeSteps {
                         .network(ResourceType.ITEM, Direction.SOUTH)));
         // o visor com o alvo remoto: só o bloco do grupo, com a frente para quem olha
         list.add(new Step(label + "visor do grupo", STEP_TIMEOUT_MS, () -> {
-            click(widget(byMessageKey("gui.wirelessautomate.router.range.machines"), "botão Máquinas"));
+            routerScreen().previewToggleList();
             routerScreen().previewViewDefault();
         }, () -> !routerScreen().rangeListShown() && stepTicks >= 4,
                 () -> "lista " + routerScreen().rangeListShown()));
         list.add(rangeClipCheck(label + "visor"));
         list.add(capture("range-2b-visor"));
         list.add(new Step(label + "de volta à lista", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessageKey("gui.wirelessautomate.router.range.machines"), "botão Máquinas")),
+                () -> routerScreen().previewToggleList(),
                 () -> routerScreen().rangeListShown(), () -> "lista " + routerScreen().rangeListShown()));
-        // tela larga: a lista e o visor lado a lado, sem alternar
+        // tela larga: a lista embaixo do visor; no mínimo só a lista
         list.add(new Step(label + "tela larga, lista e visor lado a lado", STEP_TIMEOUT_MS,
                 () -> routerScreen().previewResize(Math.min(560, routerScreen().width - 8), 280),
                 () -> routerScreen().rangeListShown() && routerScreen().rangeViewShown() && stepTicks >= 4,
@@ -408,7 +408,7 @@ final class E2eRangeSteps {
     private static Step showListStep(String name, boolean shown) {
         return new Step(name, STEP_TIMEOUT_MS, () -> {
             if (routerScreen().rangeListShown() != shown) {
-                click(widget(byMessageKey("gui.wirelessautomate.router.range.machines"), "botão Máquinas"));
+                routerScreen().previewToggleList();
             }
         }, () -> routerScreen().rangeListShown() == shown && stepTicks >= 4,
                 () -> "lista " + routerScreen().rangeListShown());

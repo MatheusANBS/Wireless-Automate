@@ -8,6 +8,7 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.chunk.ChunkLoadState;
 import io.github.matheusanbs.wirelessautomate.chunk.RouterChunkLoader;
+import io.github.matheusanbs.wirelessautomate.client.router.ModeCycle;
 import io.github.matheusanbs.wirelessautomate.client.router.RouterScreen;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
@@ -34,6 +35,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
 import org.jetbrains.annotations.Nullable;
+import org.lwjgl.glfw.GLFW;
 
 /**
  * O painel do nó na tela do roteador B: prioridade, redstone, visor sincronizado com o cubo, a rede explícita, o quadro
@@ -60,7 +62,8 @@ final class E2ePanelSteps {
             priority[0] = onServer(server -> router(server, routerB).face(ResourceType.ITEM, Direction.UP).priority());
             clickPanel(panel().priorityCenter(1), "o + da prioridade");
         }, () -> onServer(server -> router(server, routerB).face(ResourceType.ITEM, Direction.UP).priority()) == priority[0] + 1
-                && routerScreen().getMenu().snapshot().face(ResourceType.ITEM, Direction.UP).priority() == priority[0] + 1,
+                && routerScreen().getMenu().snapshot().face(ResourceType.ITEM, Direction.UP).priority() == priority[0] + 1
+                && panel().snapshot().face(ResourceType.ITEM, Direction.UP).priority() == priority[0] + 1,
                 () -> "prioridade no servidor " + onServer(server -> router(server, routerB).face(ResourceType.ITEM,
                         Direction.UP).priority()) + ", antes " + priority[0]));
         list.add(new Step("painel: prioridade de volta pelo -", STEP_TIMEOUT_MS,
@@ -68,6 +71,54 @@ final class E2ePanelSteps {
                 () -> onServer(server -> router(server, routerB).face(ResourceType.ITEM, Direction.UP).priority()) == priority[0]
                         && routerScreen().getMenu().snapshot().face(ResourceType.ITEM, Direction.UP).priority() == priority[0],
                 () -> "prioridade " + routerScreen().getMenu().snapshot().face(ResourceType.ITEM, Direction.UP).priority()));
+        // o cubo: clique avança o modo, direito volta, Shift põe em Nenhum; Copiar e Colar levam a face inteira
+        PortMode[] cubeBefore = new PortMode[1];
+        list.add(new Step("cubo: clique avança o modo", STEP_TIMEOUT_MS, () -> {
+            cubeBefore[0] = onServer(server -> router(server, routerB).face(ResourceType.ITEM, Direction.UP).mode());
+            clickPanel(panel().faceCenter(Direction.UP), "a face de cima");
+        }, () -> onServer(server -> router(server, routerB).face(ResourceType.ITEM, Direction.UP).mode())
+                == ModeCycle.next(cubeBefore[0])
+                && panel().snapshot().face(ResourceType.ITEM, Direction.UP).mode()
+                == ModeCycle.next(cubeBefore[0]),
+                () -> "modo no servidor " + onServer(server -> router(server, routerB).face(ResourceType.ITEM,
+                        Direction.UP).mode()) + ", antes " + cubeBefore[0]));
+        list.add(new Step("cubo: clique direito volta o modo", STEP_TIMEOUT_MS, () -> {
+            int[] c = panel().faceCenter(Direction.UP);
+            routerScreen().mouseClicked(c[0], c[1], GLFW.GLFW_MOUSE_BUTTON_RIGHT);
+        }, () -> onServer(server -> router(server, routerB).face(ResourceType.ITEM, Direction.UP).mode()) == cubeBefore[0]
+                && panel().snapshot().face(ResourceType.ITEM, Direction.UP).mode() == cubeBefore[0],
+                () -> "modo no servidor " + onServer(server -> router(server, routerB).face(ResourceType.ITEM,
+                        Direction.UP).mode()) + ", esperava " + cubeBefore[0]));
+        list.add(new Step("cubo: Copiar e Colar levam a face inteira", STEP_TIMEOUT_MS, () -> {
+            onServer(server -> {
+                router(server, routerB).setMode(ResourceType.ITEM, Direction.EAST, PortMode.NONE);
+                return null;
+            });
+            clickPanel(panel().copyCenter(), "o Copiar");
+            panel().selectFace(Direction.EAST);
+        }, () -> routerScreen().panel().face() == Direction.EAST && stepTicks >= 2,
+                () -> "face " + routerScreen().panel().face()));
+        list.add(new Step("cubo: Colar", STEP_TIMEOUT_MS,
+                () -> clickPanel(panel().pasteCenter(), "o Colar"),
+                () -> onServer(server -> router(server, routerB).face(ResourceType.ITEM, Direction.EAST).mode())
+                        == cubeBefore[0],
+                () -> "modo colado " + onServer(server -> router(server, routerB).face(ResourceType.ITEM,
+                        Direction.EAST).mode()) + ", esperava " + cubeBefore[0]));
+        list.add(new Step("cubo: Limpar em dois cliques", STEP_TIMEOUT_MS, () -> {
+            clickPanel(panel().clearCenter(), "o Limpar");
+            clickPanel(panel().clearCenter(), "o Limpar de novo");
+        }, () -> onServer(server -> router(server, routerB).face(ResourceType.ITEM, Direction.EAST).mode())
+                == PortMode.NONE && onServer(server -> router(server, routerB).face(ResourceType.ITEM, Direction.UP)
+                .mode()) == PortMode.NONE,
+                () -> "Limpar não zerou as faces do tipo"));
+        list.add(new Step("cubo: o estado de antes", STEP_TIMEOUT_MS, () -> {
+            onServer(server -> {
+                router(server, routerB).setMode(ResourceType.ITEM, Direction.UP, cubeBefore[0]);
+                return null;
+            });
+            panel().selectFace(Direction.UP);
+        }, () -> panel().snapshot().face(ResourceType.ITEM, Direction.UP).mode() == cubeBefore[0],
+                () -> "modo de cima " + panel().snapshot().face(ResourceType.ITEM, Direction.UP).mode()));
         list.add(new Step("painel: abrir a lista do redstone", STEP_TIMEOUT_MS,
                 () -> clickPanel(panel().redstoneCenter(), "o redstone"),
                 () -> panel().redstoneRowCenter(RedstoneMode.HIGH) != null && stepTicks >= 2,

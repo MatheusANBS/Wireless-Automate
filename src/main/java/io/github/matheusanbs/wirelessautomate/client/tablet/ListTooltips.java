@@ -59,7 +59,8 @@ final class ListTooltips {
         }
         return switch (hot.kind()) {
             case LABEL -> tr("list.label.tooltip", list.texts.labelText(list.search.labels.get(hot.arg())));
-            case VIEW -> tr(hot.arg() == 1 ? "view.machines.tooltip" : "view.routers.tooltip");
+            case VIEW -> tr(hot.arg() == 2 ? "view.grid.tooltip"
+                    : hot.arg() == 1 ? "view.machines.tooltip" : "view.routers.tooltip");
             case QUICK -> tr("list.quick." + QuickFilter.values()[hot.arg()].name().toLowerCase(Locale.ROOT) + ".tooltip");
             case TYPE_CHIP -> tr("list.type.tooltip");
             case FORGET -> tr("list.profile.forget.tooltip");
@@ -70,6 +71,8 @@ final class ListTooltips {
                     : list.profile().map(s -> tr("list.paste.tooltip", s.sourceName())).orElse(null);
             case TREE, TREE_TOGGLE, TREE_EYE, TREE_FEW -> list.treeClicks.tooltip(hot);
             case MACHINE, MACHINE_EYE, MACHINE_FEW, MACHINE_OPEN -> list.machineNav.tooltip(hot);
+            case GRID_ROW -> list.nodes.nodeTooltip(list.snapshot().nodes().get(hot.arg()), !list.multi);
+            case GRID_CELL -> list.nodes.nodeTooltip(list.snapshot().nodes().get(hot.arg() / GridRows.CELLS), !list.multi);
             case CLEAR, UNDO -> null;
         };
     }

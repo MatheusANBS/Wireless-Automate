@@ -49,6 +49,11 @@ final class ListRows {
             renderMachines(g, font, mx, my);
             return;
         }
+        if (list.gridView()) {
+            list.gridRows.render(g, font, layout, mx, my);
+            renderScrollbar(g);
+            return;
+        }
         boolean chips = layout.listW >= CHIPS_MIN_LIST;
         ProfileSummary profile = s.profile().orElse(null);
         List<ListTree.Line> rows = list.model.tree().lines();

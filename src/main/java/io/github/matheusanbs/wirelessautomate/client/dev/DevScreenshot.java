@@ -83,7 +83,7 @@ public final class DevScreenshot {
      * Ressonador e as galerias (giro, blocos, capa, roda).
      */
     private static final List<Step> SEQUENCE = Stream.of(STEPS, viewSteps(), filterSteps(), cardSteps(),
-                    upgradeSteps(), tabletSteps(), linkerSteps(), resonatorSteps(), spinSteps(), blockSteps(), coverSteps(), wheelSteps())
+                    upgradeSteps(), rangeSteps(), tabletSteps(), linkerSteps(), resonatorSteps(), spinSteps(), blockSteps(), coverSteps(), wheelSteps())
             .flatMap(List::stream)
             .filter(step -> ONLY == null || step.file().startsWith(ONLY))
             .toList();

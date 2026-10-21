@@ -65,7 +65,10 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     private static final int GRIP = 7;
     private static final int EDGE = 3;
     private static int savedW = DEFAULT_W;
-    private static int savedH = RouterLayout.MIN_H;
+    /** Altura de abertura, com e sem o Upgrade de Alcance (a lista das máquinas pede mais), até o jogador mudar. */
+    private static final int DEFAULT_H = 264;
+    private static final int RANGE_DEFAULT_H = 300;
+    private static int savedH = -1;
 
     private final boolean preview;
     private final List<FlatButton> buttons = new ArrayList<>();
@@ -124,7 +127,8 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     @Override
     protected void init() {
         w = Math.max(RouterLayout.MIN_W, Math.min(savedW, maxW()));
-        h = Math.max(RouterLayout.MIN_H, Math.min(savedH, maxH()));
+        int wantedH = savedH > 0 ? savedH : menu.snapshot().range().present() ? RANGE_DEFAULT_H : DEFAULT_H;
+        h = Math.max(RouterLayout.MIN_H, Math.min(wantedH, maxH()));
         imageWidth = w;
         imageHeight = h;
         layout.setSize(w, h);
@@ -142,10 +146,8 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
         add(column.createMachinesButton(x, y));
 
-        // os slots do menu acompanham o tamanho da tela
-        menu.placeSlots(RouterLayout.X0 + 1, layout.cardsBgY() + 1, layout.inventoryX(), layout.inventoryY(),
-                w - 26 - RouterLayout.HEAD_SHIFT, w - 26 - 18 - RouterLayout.HEAD_SHIFT);
         layoutPanel();
+        placedCards = null;
         refresh();
     }
 
@@ -156,7 +158,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         if (layout.wide()) {
             panel.layout(x + layout.rx(), y + RouterLayout.TOP_Y, layout.rw(), h - 8 - RouterLayout.TOP_Y);
         } else {
-            int netY = layout.cardsBgY() - 4 - RouterLayout.NARROW_NET_H;
+            int netY = layout.narrowNetY();
             int bodyBottom = layout.inventoryY() - 1 - 4;
             panel.layoutSplit(x + RouterLayout.X0, y + RouterLayout.TOP_Y, layout.x1() - RouterLayout.X0,
                     x + RouterLayout.X0, y + netY, layout.lw(), RouterLayout.NARROW_NET_H, x + layout.rx(),
@@ -202,6 +204,27 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         header.refresh(leftPos);
         column.refresh(leftPos, topPos);
         syncSelection();
+        placeSlots();
+    }
+
+    /** Fora da tela, onde ficam os slots de cartão sem a linha do Filtro à vista. */
+    private static final int[] PARKED = {-1000, -1000};
+    /** Onde os slots do menu estão agora (canto do primeiro cartão); {@code null} = ainda não postos. */
+    private int @Nullable [] placedCards;
+
+    /**
+     * Os slots do menu acompanham o tamanho da tela e a linha do Filtro do painel, onde ficam os de cartão: só
+     * troca os slots quando o lugar muda.
+     */
+    private void placeSlots() {
+        int[] at = panel.cardSlotsAt();
+        int[] cards = at == null ? PARKED : new int[] {at[0] - leftPos + 1, at[1] - topPos + 1};
+        if (placedCards != null && placedCards[0] == cards[0] && placedCards[1] == cards[1]) {
+            return;
+        }
+        placedCards = cards;
+        menu.placeSlots(cards[0], cards[1], layout.inventoryX(), layout.inventoryY(),
+                w - 26 - RouterLayout.HEAD_SHIFT, w - 26 - 18 - RouterLayout.HEAD_SHIFT);
     }
 
     /**
@@ -445,10 +468,9 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         int pointerY = popup ? -1 : mouseY;
         column.render(g, font, x, y, pointerX, pointerY);
 
-        slots.renderCards(g, font, x, y, column.sideKey(face()));
-        slots.renderInventory(g, x, y);
-
         panel.render(g, pointerX, pointerY, column.viewShown() && !popup ? column.hoveredFace() : null);
+        slots.renderCards(g, panel.cardSlotsAt());
+        slots.renderInventory(g, x, y);
 
         // alça de redimensionar: três riscos na diagonal, acesos com o mouse em cima ou arrastando
         ResizeHandle.Edge hover = resizeHandle.dragging() || !popup
@@ -477,6 +499,20 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         savedW = width;
         savedH = height;
         rebuild();
+    }
+
+    /**
+     * e2e: põe o painel em dia com o snapshot do menu agora; um snapshot com o alvo novo devolve a face escolhida à do
+     * alvo, e o gancho que escolhe uma face não pode ser desfeito por ele no quadro seguinte.
+     */
+    public void syncNow() {
+        refresh();
+    }
+
+    /** e2e: esconde ou mostra a lista das máquinas (o jogador não esconde). */
+    public void previewToggleList() {
+        column.toggleListForTests();
+        refresh();
     }
 
     /** Tamanho atual do painel, {@code {largura, altura}} (gancho do e2e). */
@@ -587,10 +623,6 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
 
     public int[] previewEditFilterCenter() {
         return orNowhere(panel.editCenter());
-    }
-
-    public int[] previewModeCenter(PortMode mode) {
-        return orNowhere(panel.modeCenter(mode));
     }
 
     public int[] previewTabCenter(ResourceType t) {

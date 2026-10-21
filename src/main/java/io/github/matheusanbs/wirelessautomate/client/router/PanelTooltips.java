@@ -39,10 +39,13 @@ final class PanelTooltips {
         return switch (hot.kind()) {
             case TAB -> tr("tab.tooltip", ResourceStyle.name(ResourceType.values()[hot.arg()]));
             case SUMMARY -> model.networkSummaryTooltip();
-            case FACE -> faceTooltip(model.faceOf(RemoteSide.values()[hot.arg()]));
-            case MODE -> model.editable(v)
-                    ? tr("mode." + PortMode.values()[hot.arg()].name().toLowerCase(Locale.ROOT) + ".tooltip")
-                    : disabled;
+            case FACE -> faceTooltip(model.faceOf(FaceNet.SIDES[hot.arg()]));
+            case CLEAR -> readOnly != null ? readOnly : panelTr("clear.tooltip", ResourceStyle.name(model.type()));
+            case COPY -> readOnly != null ? readOnly : panelTr("copy.tooltip");
+            case PASTE -> readOnly != null ? readOnly : model.copied() == null ? panelTr("paste.empty")
+                    : panelTr("paste.tooltip");
+            case CARDS -> null;
+            case REDSTONE_PREV, REDSTONE_NEXT -> model.editable(v) ? panelTr("redstone.arrows") : disabled;
             case NETWORK -> readOnly != null ? readOnly : networkTooltip(v);
             case FILTER -> v.filterSize() == 0 ? null : tr(v.blacklist() ? "filter.black" : "filter.white");
             case EDIT -> readOnly != null ? readOnly : tr("filter.edit.tooltip");
@@ -82,6 +85,13 @@ final class PanelTooltips {
                 : v.network().isPresent() ? tr("network.unknown") : tr("network.none");
         Component text = head.copy().append("\n").append(line).append("\n")
                 .append(net.copy().withColor(GuiPaint.TOOLTIP_MUTED));
+        if (v.available() || model.remote()) {
+            text = text.copy().append("\n").append(tr("mode." + v.mode().name().toLowerCase(Locale.ROOT) + ".tooltip")
+                    .copy().withColor(GuiPaint.TOOLTIP_MUTED));
+            if (model.editable(v)) {
+                text = text.copy().append("\n").append(panelTr("face.click").copy().withColor(GuiPaint.TOOLTIP_MUTED));
+            }
+        }
         if (model.attached(direction)) {
             text = text.copy().append("\n").append(tr("face.attached.tooltip"));
         }

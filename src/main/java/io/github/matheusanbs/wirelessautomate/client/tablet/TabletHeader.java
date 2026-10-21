@@ -77,9 +77,10 @@ final class TabletHeader {
         if (System.currentTimeMillis() > noticeUntil || noticeText.getString().isEmpty()) {
             return;
         }
-        // sobre o cabeçalho: embaixo cobriria botões
-        int width = Math.min(layout.w - 20, font.width(noticeText) + 12);
-        int x = layout.left + layout.x1() - width;
+        // sobre o cabeçalho, até antes do botão do tema: embaixo cobriria botões
+        int right = themeX() - 3;
+        int width = Math.min(right - (layout.left + X0), font.width(noticeText) + 12);
+        int x = right - width;
         int y = layout.top + HEAD_Y - 2;
         g.pose().pushPose();
         g.pose().translate(0, 0, 300);

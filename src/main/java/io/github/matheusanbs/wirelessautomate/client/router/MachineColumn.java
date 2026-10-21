@@ -33,19 +33,17 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * A coluna do visor da tela do roteador: o visor 3D da máquina ({@link MachineView3D}) e, com o Upgrade de
- * Alcance, o botão "Máquinas · 3/8" e a lista das máquinas ({@link RangeList}), ao lado do visor ou no
- * lugar dele. Escolher um grupo ou uma máquina na lista pede ao servidor a troca do alvo de edição, e os
+ * Alcance, a faixa "Máquinas · 3/8" e a lista das máquinas ({@link RangeList}) embaixo do visor. Escolher um grupo ou uma máquina na lista pede ao servidor a troca do alvo de edição, e os
  * botões da linha escolhida ({@link RangeRowButtons}) pedem Atualizar, Voltar ao perfil e Desvincular. O ✎ e os dois
  * cliques no nome abrem a caixa do nome ({@link RowRename}) no lugar dele. O Olho das linhas e a linha das
  * acesas embaixo da lista são do {@link LitFooter}.
  */
 final class MachineColumn {
     /**
-     * Mostra a lista das máquinas no lugar do visor. Estático de propósito, como o tamanho da tela: a
-     * escolha vale para a sessão inteira, então a próxima tela de um roteador com o upgrade já abre na
-     * lista (ou no visor) como o jogador deixou.
+     * Esconde a lista das máquinas: só os ganchos do e2e usam, para cobrir a linha Editando completa (a mesma do
+     * Tablet) na tela do roteador. O jogador nunca esconde a lista.
      */
-    private static boolean showList;
+    private static boolean listHidden;
 
     private final Supplier<RouterSnapshot> snapshot;
     private final NodePanel panel;
@@ -109,14 +107,19 @@ final class MachineColumn {
         return rangeShown() && !snapshot.get().target().attached();
     }
 
-    /** A lista está na tela: ao lado do visor, ou no lugar dele. */
+    /** A lista está na tela: sempre, com o Upgrade de Alcance, embaixo do visor. */
     boolean listShown() {
-        return rangeShown() && (showList || layout.sideBySide());
+        return rangeShown() && !listHidden;
     }
 
-    /** O visor está na tela: sem o upgrade, ao lado da lista, ou com a lista fechada. */
+    /** e2e: esconde ou mostra a lista das máquinas. */
+    void toggleListForTests() {
+        listHidden = !listHidden;
+    }
+
+    /** O visor está na tela: sempre, menor no alto com o upgrade, e fora só na coluna baixa da janela mínima. */
     boolean viewShown() {
-        return !rangeShown() || layout.sideBySide() || !showList;
+        return layout.viewH() > 0;
     }
 
     /** Há uma máquina carregada no alvo remoto (a escolhida, ou alguma do grupo). */
@@ -145,14 +148,10 @@ final class MachineColumn {
 
     // ------------------------------------------------------------------ montagem
 
-    /** O botão Máquinas no topo da coluna (a tela o põe entre os widgets). */
+    /** A faixa "Máquinas · 3/8" entre o visor e a lista: só o título e a dica, sem ação (a tela a põe entre os widgets). */
     FlatButton createMachinesButton(int left, int top) {
-        machinesButton = new FlatButton(left + RouterLayout.X0, top + layout.columnsY(), layout.lw(),
-                RouterLayout.RANGE_STRIP - 2, tr("range.machines", 0, 0), this::paintMachines, () -> {
-                    // lado a lado não há o que alternar: o botão é só o título
-                    if (!layout.sideBySide()) {
-                        showList = !showList;
-                    }
+        machinesButton = new FlatButton(left + RouterLayout.X0, top + layout.stripY(), layout.lw(),
+                RouterLayout.STRIP_H, tr("range.machines", 0, 0), this::paintMachines, () -> {
                 }).tooltip(this::machinesTooltip);
         return machinesButton;
     }
@@ -160,13 +159,14 @@ final class MachineColumn {
     /** Visibilidade, texto e posições pelo snapshot e pelo tamanho atuais. */
     void refresh(int left, int top) {
         machinesButton.visible = rangeShown();
+        machinesButton.setY(top + layout.stripY());
         machinesButton.setMessage(tr("range.machines", range().used(), range().max()));
-        machineView.setBounds(left + layout.viewX() + 1, top + layout.boxY() + 1, layout.viewBoxW() - 2,
-                layout.boxH() - 2);
-        int listH = layout.boxH() - (LitFooter.shown(listShown()) ? LitFooter.H : 0);
-        rangeList.setBounds(left + RouterLayout.X0, top + layout.boxY(), layout.listW(), listH);
-        litFooter.place(Minecraft.getInstance().font, left + RouterLayout.X0, top + layout.boxY() + listH,
-                layout.listW());
+        machineView.setBounds(left + RouterLayout.X0 + 1, top + layout.boxY() + 1, layout.lw() - 2,
+                Math.max(0, layout.viewH() - 2));
+        int listH = layout.listH() - (LitFooter.shown(listShown()) ? LitFooter.H : 0);
+        rangeList.setBounds(left + RouterLayout.X0, top + layout.listY(), layout.lw(), listH);
+        litFooter.place(Minecraft.getInstance().font, left + RouterLayout.X0, top + layout.listY() + listH,
+                layout.lw());
         if (rangeShown()) {
             rangeList.sync(range(), snapshot.get().target(), IdleNetworks.shown(snapshot.get()));
         }
@@ -275,14 +275,9 @@ final class MachineColumn {
 
     // ------------------------------------------------------------------ dicas
 
-    /** Dica do botão Máquinas: o que ele alterna, e o raio e o limite do tier. */
+    /** Dica da faixa Máquinas: o raio e o limite do tier. */
     private Component machinesTooltip() {
-        Component detail = tr("range.machines.detail", range().radius(), range().max());
-        if (layout.sideBySide()) {
-            return detail;
-        }
-        return tr(showList ? "range.machines.tooltip.view" : "range.machines.tooltip.list").copy()
-                .append("\n").append(detail.copy().withColor(GuiPaint.TOOLTIP_MUTED));
+        return tr("range.machines.detail", range().radius(), range().max());
     }
 
     /**
@@ -363,10 +358,10 @@ final class MachineColumn {
     /** O visor: num alvo remoto só o bloco dele, com o anel da face escolhida na cor da rede dela. */
     private void renderView(GuiGraphics g, Font font, RouterSnapshot s, int left, int top, int pointerX,
             int pointerY) {
-        int vx = left + layout.viewX();
+        int vx = left + RouterLayout.X0;
         int vy = top + layout.boxY();
-        int viewW = layout.viewBoxW();
-        int viewH = layout.boxH();
+        int viewW = layout.lw();
+        int viewH = layout.viewH();
         GuiPaint.paper(g, vx + 1, vy + 1, viewW - 2, viewH - 2);
         GuiPaint.outline(g, vx, vy, viewW, viewH, GuiPaint.LINE);
         Optional<UUID> id = s.network(panel.type(), panel.face());
@@ -401,24 +396,14 @@ final class MachineColumn {
         }
     }
 
-    /** Botão Máquinas: seta (lista aberta ou fechada), o nome e as vagas usadas. */
+    /** A faixa Máquinas: o título à esquerda e as vagas usadas, "10/16", à direita. */
     private void paintMachines(GuiGraphics g, FlatButton b, boolean hovered) {
         Font font = Minecraft.getInstance().font;
-        if (layout.sideBySide()) {
-            // lado a lado: só o título da lista, sem alternar
-            GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), GuiPaint.BUTTON, GuiPaint.BUTTON_BORDER);
-            GuiText.draw(g, font, b.getMessage(), b.getX() + 4, b.getY() + 2, b.getWidth() - 7, GuiPaint.FG);
-            return;
-        }
-        int border = showList ? GuiPaint.SELECTED : hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
-        GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), GuiPaint.BUTTON, border);
-        int color = hovered || showList ? GuiPaint.FG : GuiPaint.MUTED;
-        if (showList) {
-            GuiPaint.arrowDown(g, b.getX() + 4, b.getY() + 5, color);
-        } else {
-            GuiPaint.arrowRight(g, b.getX() + 5, b.getY() + 4, color);
-        }
-        GuiText.draw(g, font, b.getMessage(), b.getX() + 12, b.getY() + 2, b.getWidth() - 15, GuiPaint.FG);
+        Component count = Component.literal(range().used() + "/" + range().max());
+        int countW = font.width(count);
+        GuiText.draw(g, font, tr("range.machines.title"), b.getX() + 1, b.getY() + 2, b.getWidth() - countW - 6,
+                GuiPaint.FG);
+        GuiPaint.text(g, font, count, b.getX() + b.getWidth() - countW - 2, b.getY() + 2, GuiPaint.MUTED);
     }
 
     // ------------------------------------------------------------------ ganchos do e2e e das capturas

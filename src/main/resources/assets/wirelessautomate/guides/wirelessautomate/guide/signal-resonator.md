@@ -258,7 +258,7 @@ the **IN TUNE** lamp lit, with no interference:
 | **Emerald** | 4 | 1,280,000 | 92% |
 | **Allthemodium¹** | 5 | 64,000,000 | 94% |
 | **Vibranium¹** | 6 | 80,400,000 | 95% |
-| **Unobtainium¹** | 7 | 2,576,000,000 | 96% |
+| **Unobtainium¹** | 7 | 149,800,000 | 96% |
 | **Ultimate** | 8 | 4,294,967,296 | 98% |
 
 ¹ Only with the Allthemodium mod.

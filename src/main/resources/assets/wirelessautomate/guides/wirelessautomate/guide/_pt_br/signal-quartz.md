@@ -223,11 +223,11 @@ bancada, sem forma:
 | <ItemImage id="wirelessautomate:resonator_heart_basic" /> **Básico** | 1 Matriz de Fase + 4 blocos de redstone |
 | <ItemImage id="wirelessautomate:resonator_heart_advanced" /> **Avançado** | 2 Matrizes de Fase + 4 blocos de ouro |
 | <ItemImage id="wirelessautomate:resonator_heart_elite" /> **Elite** | 3 Matrizes de Fase + 4 lingotes de netherite |
-| <ItemImage id="wirelessautomate:resonator_heart_emerald" /> **Esmeralda** | 1 Estabilizador de Campo + 7 blocos de esmeralda + 1 Nether Star |
-| <ItemImage id="wirelessautomate:resonator_heart_allthemodium" /> **Allthemodium¹** | 2 Estabilizadores de Campo + 4 blocos de Allthemodium + 2 Nether Stars |
-| <ItemImage id="wirelessautomate:resonator_heart_vibranium" /> **Vibranium¹** | 1 Núcleo Condensado + 4 blocos de Vibranium + 2 Nether Stars |
-| <ItemImage id="wirelessautomate:resonator_heart_unobtainium" /> **Unobtainium¹** | 2 Núcleos Condensados + 4 blocos de Unobtainium + 3 Nether Stars |
-| <ItemImage id="wirelessautomate:resonator_heart_ultimate" /> **Ultimate** | 3 Núcleos Condensados + 1 Moldura de Liga + 5 Nether Stars |
+| <ItemImage id="wirelessautomate:resonator_heart_emerald" /> **Esmeralda** | 1 Estabilizador de Campo + 7 blocos de esmeralda + 1 Nether Star; com o Modern Industrialization: 1 Estabilizador de Campo + 6 blocos de esmeralda + 1 Nether Star + 1 Processing Unit |
+| <ItemImage id="wirelessautomate:resonator_heart_allthemodium" /> **Allthemodium¹** | 2 Estabilizadores de Campo + 4 blocos de Allthemodium + 2 Nether Stars; com o MEGA Cells: 1 Estabilizador de Campo + 4 blocos de Allthemodium + 2 Nether Stars + 2 Cell Components 16M |
+| <ItemImage id="wirelessautomate:resonator_heart_vibranium" /> **Vibranium¹** | 1 Núcleo Condensado + 4 blocos de Vibranium + 2 Nether Stars; com o Modern Industrialization e o Draconic Evolution: 1 Núcleo Condensado + 4 blocos de Vibranium + 1 Nether Star + 1 Processing Unit + 2 Chaotic Cores |
+| <ItemImage id="wirelessautomate:resonator_heart_unobtainium" /> **Unobtainium¹** | 2 Núcleos Condensados + 4 blocos de Unobtainium + 3 Nether Stars; com o MEGA Cells e o Draconic Evolution: 1 Núcleo Condensado + 4 blocos de Unobtainium + 2 Nether Stars + 1 Cell Component 16M + 1 Chaotic Core |
+| <ItemImage id="wirelessautomate:resonator_heart_ultimate" /> **Ultimate** | 3 Núcleos Condensados + 1 Moldura de Liga + 5 Nether Stars; com o MEGA Cells, o Draconic Evolution e o Modern Industrialization: 3 Cell Components 256M + 1 Cell Component 64M + 1 Quantum Circuit + 1 Chaotic Core + 1 Awakened Core + 1 Moldura de Liga + 1 Nether Star |
 
 ¹ Só com o mod Allthemodium.
 

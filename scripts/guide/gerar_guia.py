@@ -2771,7 +2771,7 @@ A **cracked crystal** doesn't generate, doesn't recharge and doesn't go into a c
 it back. To **recast** it, put the cracked crystal and **4 full Signal Crystals** anywhere on a crafting table: out
 comes the same crystal, full and with its integrity restored. It works for all three kinds; a Tuned one keeps its tier.
 
-In an Ultimate Core, a cracked Tuned Ultimate crystal can also be burned in the **Eco**, as on the
+In an Ultimate Core, a cracked Tuned Ultimate crystal can also be burned in the **Echo**, as on the
 [Signal Resonator](signal-resonator.md) page.
 
 ## Resonance Dust and Charged Dust
@@ -3089,15 +3089,15 @@ one's efficiency, up to **60%** in all. Cores of any tier count.
 The Core's screen shows the loss and how far the nearest neighbor is, like **−15% · Core 24 blocks away**, or
 **Interference: none**. To generate at full, keep each Resonator more than 32 blocks from the others.
 
-## Resonant Eco
+## Resonant Echo
 
-Only on the **Ultimate** Core. Its screen has an **Eco** slot: put a **cracked Tuned Ultimate crystal** there and it
-burns right away, adding **1 Eco**. Each Eco raises generation by **5%**, with no ceiling: the more crystals you burn,
+Only on the **Ultimate** Core. Its screen has an **Echo** slot: put a **cracked Tuned Ultimate crystal** there and it
+burns right away, adding **1 Echo**. Each Echo raises generation by **5%**, with no ceiling: the more crystals you burn,
 the more the Core generates.
 
-A cracked Tuned Ultimate crystal that arrives through the Crystal Port goes to the Eco too. To recast the crystal
+A cracked Tuned Ultimate crystal that arrives through the Crystal Port goes to the Echo too. To recast the crystal
 instead of burning it, take it out through the Port or the screen and recast it on a crafting table. The Core
-**keeps its Eco** when broken and brings it back when you place it again.
+**keeps its Echo** when broken and brings it back when you place it again.
 
 ## The chamber
 

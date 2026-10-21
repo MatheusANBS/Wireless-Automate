@@ -2,404 +2,320 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;600;800&family=Chivo+Mono:wght@400;600&family=Pixelify+Sans:wght@400;600&display=swap">
 <style>
-/* Layout: uma coluna de leitura (~70ch), com mockups das telas no visual "Porcelana e Sinal" do mod. */
+/* Layout: uma coluna de leitura, com antes (captura real) e depois (mockup no visual "Porcelana e Sinal", com o visor e os ícones recortados do jogo). */
 :root{
   --bg:#FBF7EF; --paper:#FFFDF8; --ink:#2A2730; --muted:#6F6879; --line:#E3D9C6;
-  --coral:#E0583A; --coral-soft:#FBE3DA;
-  --mc-bg:#F2EBDD; --mc-panel:#FFFBF3; --mc-sunk:#E6DCC8; --mc-line:#BDB19A; --mc-ink:#2A2730; --mc-dim:#8A8273;
-  --m-ext:#3D6FD6; --m-ins:#D88A1A; --m-sto:#2F9D5C; --m-idle:#BDB19A;
-  --n1:#6B6FD0; --n2:#1FA9A0; --n3:#C2442A;
+  --coral:#E0583A; --keep:#2F9D5C;
+  --mc-bg:#F2EBDD; --mc-panel:#FFFBF3; --mc-sunk:#DDD3BF; --mc-line:#BDB19A; --mc-ink:#2A2730; --mc-dim:#7A7366; --mc-faint:#B5AC9D;
+  --mc-coral:#F0603E; --m-ext:#6B8FD8; --m-ins:#E08A2E; --m-sto:#2F9D5C;
+  --net:#6B6FD0;
   --f-body:"Chivo",system-ui,sans-serif; --f-mono:"Chivo Mono",ui-monospace,monospace; --f-px:"Pixelify Sans","Chivo Mono",monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#1C1A20; --paper:#26232B; --ink:#ECE5D6; --muted:#A79F90; --line:#3A3640;
-  --coral:#F26A48; --coral-soft:#3A2A27;
-  --mc-bg:#26232B; --mc-panel:#312D37; --mc-sunk:#1C1A20; --mc-line:#4A4550; --mc-ink:#ECE5D6; --mc-dim:#9A9284;
-  --m-ext:#6E9BF0; --m-ins:#E39A2E; --m-sto:#3DB56E; --m-idle:#4A4550;
-  --n1:#8A8EE8; --n2:#3CC4BA; --n3:#E55A4E; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#1C1A20; --paper:#26232B; --ink:#ECE5D6; --muted:#A79F90; --line:#3A3640;
-  --coral:#F26A48; --coral-soft:#3A2A27;
-  --mc-bg:#26232B; --mc-panel:#312D37; --mc-sunk:#1C1A20; --mc-line:#4A4550; --mc-ink:#ECE5D6; --mc-dim:#9A9284;
-  --m-ext:#6E9BF0; --m-ins:#E39A2E; --m-sto:#3DB56E; --m-idle:#4A4550;
-  --n1:#8A8EE8; --n2:#3CC4BA; --n3:#E55A4E; color-scheme:dark}
+  --bg:#1C1A20; --paper:#26232B; --ink:#ECE5D6; --muted:#A79F90; --line:#3A3640; --coral:#F26A48; --keep:#3DB56E; color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#1C1A20; --paper:#26232B; --ink:#ECE5D6; --muted:#A79F90; --line:#3A3640; --coral:#F26A48; --keep:#3DB56E; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font:16px/1.6 var(--f-body);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:32px 64px}
-main{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+main{max-width:900px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
 section{display:flex;flex-direction:column;gap:16px;min-width:0}
 h1,h2,h3{text-wrap:balance;line-height:1.15;margin:0}
-h1{font-size:clamp(2rem,6vw,3.1rem);font-weight:800;letter-spacing:-.01em}
-h2{font-size:1.6rem;font-weight:800}
-h3{font-size:1.1rem;font-weight:600}
+h1{font-size:clamp(2rem,6vw,3rem);font-weight:800;letter-spacing:-.01em}
+h2{font-size:1.55rem;font-weight:800}
+h3{font-size:1.05rem;font-weight:600}
 p{margin:0;max-width:68ch}
 .eyebrow{font:600 .75rem/1 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--coral)}
-.lede{font-size:1.15rem;color:var(--ink)}
+.lede{font-size:1.12rem}
 .muted{color:var(--muted)}
-code,.mono{font-family:var(--f-mono);font-size:.86em}
-code{background:var(--paper);border:1px solid var(--line);padding:0 .3em;border-radius:3px;overflow-wrap:anywhere}
+code{font-family:var(--f-mono);font-size:.84em;background:var(--paper);border:1px solid var(--line);padding:0 .3em;border-radius:3px;overflow-wrap:anywhere}
 .stripe{height:4px;background:var(--coral);width:72px}
-ul.tight{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px;max-width:68ch}
-.tldr{background:var(--paper);border:1px solid var(--line);border-left:4px solid var(--coral);padding:16px 20px;display:flex;flex-direction:column;gap:8px}
-.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:16px}
-.ref{background:var(--paper);border:1px solid var(--line);padding:18px;display:flex;flex-direction:column;gap:10px;min-width:0}
-.ref h3{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
-.ref .file{font:400 .78rem var(--f-mono);color:var(--muted);overflow-wrap:anywhere}
-.ref .lesson{border-top:1px dashed var(--line);padding-top:10px;font-weight:600}
-.rules{counter-reset:r;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px;padding:0;margin:0;list-style:none}
-.rules li{background:var(--paper);border:1px solid var(--line);padding:14px 16px;counter-increment:r;display:flex;flex-direction:column;gap:4px}
-.rules li::before{content:counter(r);font:600 .8rem var(--f-mono);color:var(--coral)}
-.rules b{font-weight:600}
-figure{margin:0;display:flex;flex-direction:column;gap:8px;min-width:0}
-figcaption{font-size:.85rem;color:var(--muted)}
-figure img{border:1px solid var(--line);display:block}
-.ba{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:20px;align-items:start}
+ul.tight,ol.tight{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px;max-width:70ch}
+.keep{display:flex;flex-wrap:wrap;gap:8px}
+.keep span{border:1px solid var(--keep);color:var(--keep);padding:3px 10px;font:600 .82rem var(--f-mono);background:var(--paper)}
+.weighs{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:12px}
+.weighs div{background:var(--paper);border:1px solid var(--line);padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.weighs b{font-weight:600}
+.ba{display:flex;flex-direction:column;gap:14px}
 .tag{font:600 .7rem var(--f-mono);letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border:1px solid currentColor;align-self:flex-start}
 .tag.before{color:var(--muted)} .tag.after{color:var(--coral)}
-table{border-collapse:collapse;width:100%;font-size:.92rem;font-variant-numeric:tabular-nums}
-.tablewrap{overflow-x:auto;border:1px solid var(--line);background:var(--paper)}
-th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
-th{font:600 .75rem var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.decide{display:flex;flex-direction:column;gap:12px}
-.decide div{background:var(--paper);border:1px solid var(--line);padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+figure{margin:0;display:flex;flex-direction:column;gap:8px;min-width:0}
+figcaption{font-size:.85rem;color:var(--muted);max-width:70ch}
+figure > img{border:1px solid var(--line);display:block;max-width:100%}
+.changes{counter-reset:c;list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;max-width:72ch}
+.changes li{counter-increment:c;display:grid;grid-template-columns:28px 1fr;gap:8px}
+.changes li::before{content:counter(c);font:600 .8rem/1.9 var(--f-mono);color:#fff;background:var(--coral);width:22px;height:22px;text-align:center;border-radius:50%}
+.changes .src{color:var(--muted);font-size:.85rem}
+.refs{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:12px}
+.refs div{background:var(--paper);border:1px solid var(--line);padding:14px;display:flex;flex-direction:column;gap:6px;font-size:.92rem}
+.refs .file{font:400 .74rem var(--f-mono);color:var(--muted);overflow-wrap:anywhere}
+.q{background:var(--paper);border:1px solid var(--line);padding:14px 16px;display:flex;flex-direction:column;gap:4px}
 
-/* ---------- Mockups no visual do mod ---------- */
-.mcwrap{overflow-x:auto;padding-bottom:4px}
-.mc{font:13px/1.25 var(--f-px);color:var(--mc-ink);background:var(--mc-bg);border:2px solid var(--mc-ink);
-  box-shadow:inset 0 3px 0 var(--coral);width:360px;max-width:none;display:flex;flex-direction:column}
-.mc-h{display:flex;align-items:center;gap:8px;padding:9px 10px 7px;border-bottom:1px solid var(--mc-line)}
-.mc-h .t{font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.lens{width:9px;height:9px;border-radius:50%;background:#D59A1E;box-shadow:0 0 0 2px var(--mc-ink) inset;display:inline-block}
-.gear{width:18px;height:18px;border:1px solid var(--mc-ink);display:grid;place-items:center;font-size:11px;background:var(--mc-panel)}
-.mc-b{display:flex;gap:8px;padding:8px}
-.side{display:flex;flex-direction:column;gap:4px;margin-left:-14px}
-.side span{width:22px;height:22px;border:1px solid var(--mc-ink);background:var(--mc-sunk);display:grid;place-items:center;font-size:11px}
-.side span.on{background:var(--mc-panel);border-right-color:var(--mc-panel)}
-.matrix{display:grid;grid-template-columns:38px repeat(5,18px);gap:2px;align-content:start}
-.matrix .hd{display:grid;place-items:center;height:16px}
-.dot{width:10px;height:10px;border-radius:50%;display:inline-block}
-.matrix .rl{font-size:11px;color:var(--mc-dim);display:flex;align-items:center}
-.cell{width:18px;height:18px;border:1px solid var(--mc-line);background:var(--mc-panel);position:relative;display:grid;place-items:center;font-size:11px;font-weight:600}
-.cell.e{background:color-mix(in srgb,var(--m-ext) 22%,var(--mc-panel));color:var(--m-ext);border-color:var(--m-ext)}
-.cell.i{background:color-mix(in srgb,var(--m-ins) 22%,var(--mc-panel));color:var(--m-ins);border-color:var(--m-ins)}
-.cell.s{background:color-mix(in srgb,var(--m-sto) 22%,var(--mc-panel));color:var(--m-sto);border-color:var(--m-sto)}
-.cell.warn{outline:1px dashed var(--coral);outline-offset:1px}
-.cell.sel{box-shadow:0 0 0 2px var(--mc-ink)}
-.cell i{position:absolute;right:1px;bottom:1px;width:4px;height:4px;border-radius:50%}
-.ed{flex:1;min-width:0;background:var(--mc-panel);border:1px solid var(--mc-line);display:flex;flex-direction:column}
-.ed .cap{display:flex;justify-content:space-between;padding:5px 7px;border-bottom:1px solid var(--mc-line);font-weight:600}
-.ed .cap small{font-weight:400;color:var(--mc-dim)}
-.row{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:4px 7px;border-bottom:1px solid var(--mc-sunk);white-space:nowrap}
-.row .k{color:var(--mc-dim)}
-.row .v{display:flex;align-items:center;gap:4px;min-width:0;overflow:hidden;text-overflow:ellipsis}
-.row .v.ext{color:var(--m-ext);font-weight:600}
-.row.adv{color:var(--mc-dim);font-size:11px;border-bottom:0}
-.btn{border:1px solid var(--mc-ink);padding:1px 6px;background:var(--mc-panel);font-size:11px}
-.btn.pri{background:var(--coral);color:#fff;border-color:var(--coral)}
-.mc-f{display:flex;justify-content:space-between;gap:8px;padding:5px 10px 7px;font-size:11px;color:var(--mc-dim);border-top:1px solid var(--mc-line)}
-.picker{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--mc-line);font-size:12px}
-.picker .sel{border:1px solid var(--mc-ink);background:var(--mc-panel);padding:1px 6px;flex:1;display:flex;justify-content:space-between}
-.list{display:flex;flex-direction:column;flex:1;min-width:0;border:1px solid var(--mc-line);background:var(--mc-panel)}
-.li{display:flex;align-items:center;gap:6px;padding:4px 6px;border-bottom:1px solid var(--mc-sunk);white-space:nowrap;font-size:12px}
-.li.on{background:var(--mc-sunk);box-shadow:inset 3px 0 0 var(--coral)}
-.li .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
-.li .r{color:var(--mc-dim);font-size:11px}
-.ico{width:12px;height:12px;border:2px solid var(--mc-ink);border-radius:50%;flex:none}
-.search{margin:6px 8px 0;border:1px solid var(--mc-line);background:var(--mc-panel);padding:2px 6px;color:var(--mc-dim);font-size:12px}
-.inv{display:grid;grid-template-columns:repeat(9,16px);gap:1px;padding:6px 10px 8px;justify-content:center}
-.inv span{width:16px;height:16px;background:var(--mc-sunk);border:1px solid var(--mc-line)}
-.inv.hot{padding-top:0}
-.cube{display:grid;grid-template-columns:repeat(4,9px);grid-template-rows:repeat(3,9px);gap:1px}
-.cube span{background:var(--mc-sunk);border:1px solid var(--mc-line)}
-.cube span.x{visibility:hidden}
-.cube span.on{background:var(--m-ext);border-color:var(--mc-ink)}
-@media (prefers-reduced-motion: no-preference){.cell{transition:box-shadow .15s}}
+/* ---------- Mockups: a tela do mod ---------- */
+.mcwrap{overflow-x:auto;padding:2px 0 6px}
+.mc{font:13px/1.3 var(--f-px);color:var(--mc-ink);background:var(--mc-bg);border:2px solid var(--mc-ink);
+  box-shadow:inset 0 4px 0 var(--mc-coral);display:flex;flex-direction:column;gap:6px;padding:10px 10px 8px;width:max-content}
+.mc img{image-rendering:pixelated;display:block}
+.mc-h{display:flex;align-items:center;gap:8px;white-space:nowrap}
+.mc-h .t{font-weight:600;flex:1;min-width:120px}
+.dim{color:var(--mc-dim)} .faint{color:var(--mc-faint)}
+.pill{border:1px solid currentColor;padding:0 6px;display:inline-flex;align-items:center;gap:4px;font-size:12px}
+.lens{width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 0 1.5px var(--mc-ink) inset;display:inline-block}
+.slot{width:18px;height:18px;background:var(--mc-sunk);border:1px solid var(--mc-line);display:inline-block}
+.moon{width:16px;height:16px;border:1.5px solid var(--mc-ink);display:grid;place-items:center;font-size:10px}
+.mc-body{display:flex;gap:10px;align-items:flex-start}
+.vcol{display:flex;flex-direction:column;gap:6px}
+.visor{border:1px solid var(--mc-line);position:relative;background:#FFFBF3}
+.visor .lbl{position:absolute;left:6px;top:5px;font-size:11px;color:var(--mc-dim)}
+.inv{display:grid;grid-template-columns:repeat(9,18px);gap:1px}
+.inv.hb{margin-top:3px}
+.inv span{width:18px;height:18px;background:var(--mc-sunk);border:1px solid var(--mc-line)}
+.panel{border-left:1px solid var(--mc-line);padding-left:10px;display:flex;flex-direction:column;gap:7px;width:290px}
+.tabs{display:flex;align-items:center;gap:7px;border-bottom:1px solid var(--mc-line);padding-bottom:5px}
+.tabs .on{display:flex;align-items:center;gap:4px;border:1px solid var(--mc-ink);padding:1px 4px;box-shadow:inset 0 -2px 0 var(--mc-coral)}
+.tabs img{width:14px;height:14px}
+.tabs .sum{margin-left:auto;font-size:12px;color:var(--mc-dim)}
+.fh{display:flex;align-items:baseline;gap:6px}
+.fh b{font-size:15px}
+.fh span{font-size:11px;color:var(--mc-dim)}
+.net{display:grid;grid-template-columns:repeat(4,1fr);gap:3px}
+.fc{border:1px solid var(--mc-line);background:var(--mc-panel);font-size:11px;padding:1px 4px;display:flex;justify-content:space-between;align-items:center;height:18px;position:relative}
+.fc.e{box-shadow:inset 3px 0 0 var(--m-ext)} .fc.i{box-shadow:inset 3px 0 0 var(--m-ins)}
+.fc.sel{border:2px solid var(--mc-coral);font-weight:600}
+.fc .nd{width:5px;height:5px;border-radius:50%;background:var(--net)}
+.fc.blank{visibility:hidden}
+.modes{display:grid;grid-template-columns:repeat(4,1fr);gap:3px}
+.modes span{border:1px solid var(--mc-ink);display:flex;align-items:center;gap:3px;padding:1px 3px;font-size:11px;background:var(--mc-panel);min-width:0;overflow:hidden;white-space:nowrap}
+.modes span.on{background:#DCE6FA;border-color:var(--m-ext)}
+.modes img{width:13px;height:14px}
+.kv{display:flex;align-items:center;gap:6px;font-size:12px;white-space:nowrap;min-width:0}
+.kv .k{color:var(--mc-dim);width:48px;flex:none}
+.box{border:1px solid var(--mc-ink);padding:0 5px;background:var(--mc-panel);display:inline-flex;align-items:center;gap:4px}
+.box.dd{flex:1;justify-content:space-between;min-width:0}
+.box.net{border-color:var(--net)}
+.btn{border:1px solid var(--mc-ink);padding:0 6px;background:var(--mc-panel);font-size:12px}
+.mini{font-size:11px;color:var(--mc-dim)}
+/* lista do alcance e do Tablet */
+.rl{width:230px;border:1px solid var(--mc-line);background:var(--mc-panel);display:flex;flex-direction:column}
+.rr{display:flex;align-items:center;gap:6px;padding:3px 6px;font-size:12px;white-space:nowrap;border-bottom:1px solid #EFE7D8}
+.rr .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.rr.grp{background:#F6EFE1;font-weight:600}
+.rr.on{box-shadow:inset 3px 0 0 var(--mc-coral);background:#FFF}
+.rr .st{width:6px;height:6px;border-radius:50%;background:var(--m-sto);flex:none}
+.rr .eye{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--mc-ink);flex:none}
+.rr.ind{padding-left:22px}
+.ico{width:14px;height:14px;background:#5A5660;border:1px solid var(--mc-ink);flex:none}
+.tl{width:330px;border:1px solid var(--mc-line);background:var(--mc-panel)}
+.tr{display:grid;grid-template-columns:18px 1fr auto;gap:2px 8px;padding:4px 6px;border-bottom:1px solid #EFE7D8;align-items:center}
+.tr .r{font-size:11px;color:var(--mc-dim);grid-column:2/4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tr .r b{color:var(--mc-coral);font-weight:400}
+.tr .rt{display:flex;align-items:center;gap:4px;font-size:11px}
+.tr img{width:16px;height:16px;grid-row:1/3}
+/* filtro */
+.fl{width:300px;border:1px solid var(--mc-line);background:#EDE4D3;display:flex;flex-direction:column}
+.fe{display:flex;align-items:center;gap:8px;padding:3px 6px;font-size:12px}
+.fe .sw{width:16px;height:16px;flex:none}
+.fe .n{flex:1}
+.fe .s{font-size:11px;color:var(--mc-dim)}
+.seg{display:inline-flex;border:1px solid var(--mc-ink)}
+.seg span{padding:0 7px;font-size:12px}
+.seg .on{background:var(--mc-ink);color:var(--mc-bg)}
 </style>
 
 <main>
 
 <header style="display:flex;flex-direction:column;gap:14px">
-  <span class="eyebrow">Estudo de interface · Wireless Automate</span>
+  <span class="eyebrow">Estudo de interface · versão 2</span>
   <h1>Telas mais limpas</h1>
   <div class="stripe"></div>
-  <p class="lede">Li o código de quatro mods de transporte (XNet, Logistics Network, Pipez e Flux Networks) e comparei com as nossas telas. A conclusão: os outros não têm menos funções, eles <b>mostram menos de cada vez</b>. A nossa tela do roteador mostra tudo ao mesmo tempo.</p>
+  <p class="lede">Esta versão fica com a cara que o mod já tem e tira só o que repete ou sobra. Cada tela continua reconhecível: as mudanças são de peso, de lugar e de texto, não de estrutura.</p>
+  <p class="muted">A primeira versão trocava o visor 3D e o cubo por uma grade. Saiu daqui.</p>
 </header>
 
-<section class="tldr">
-  <h3>Resumo em quatro linhas</h3>
-  <ul class="tight">
-    <li>Trocar as abas de tipo + o cubo das faces por <b>um mapa só de faces × tipos</b> (a ideia da grade do XNet): uma olhada mostra a configuração inteira.</li>
-    <li>Editar <b>uma célula por vez</b>, numa lista curta de "nome · valor" (o padrão do Logistics Network), com Prioridade e Redstone recolhidos em "Avançado".</li>
-    <li>Tirar da tela principal o que não é decisão: o <b>visor 3D</b>, o <b>inventário</b>, o texto explicativo (vai para a dica) e o botão de tema (vai para a engrenagem).</li>
-    <li>Usar <b>o mesmo editor</b> no roteador, no Tablet e no alcance, para o jogador aprender uma tela só.</li>
-  </ul>
+<section>
+  <span class="eyebrow">Fica como está</span>
+  <h2>A identidade não se mexe</h2>
+  <div class="keep">
+    <span>visor 3D da máquina</span><span>cubo das seis faces</span><span>o Olho e a cor do tier</span><span>abas com os ícones dos tipos</span><span>Extrai · Insere · Armazém · Nenhum com os ícones</span><span>bolinha da rede</span><span>porcelana, grafite e a listra coral</span><span>tema claro e escuro</span><span>telas redimensionáveis</span>
+  </div>
 </section>
 
 <section>
-  <span class="eyebrow">1 · O que está pesando</span>
-  <h2>Por que as nossas telas parecem confusas</h2>
-  <p>Contei nas capturas da página do CurseForge. Na tela do roteador, o jogador vê ao mesmo tempo <b>oito áreas</b>: cabeçalho (nome, vazão, tier, dois slots de upgrade, tema), cinco abas de tipo, o cubo de seis faces com o Olho, quatro botões de modo com uma frase explicando o modo, Rede, Filtro, Prioridade com − e +, Redstone, os cartões de filtro, o inventário inteiro e o visor 3D, que ocupa mais da metade da largura. São cerca de 30 controles e 38 slots antes de qualquer clique.</p>
+  <span class="eyebrow">O que pesa hoje</span>
+  <h2>Seis pontos de ruído</h2>
+  <div class="weighs">
+    <div><b>Duas formas de escolher a face, juntas.</b><span class="muted">O visor 3D já escolhe a face com um clique e pinta as faces pelo modo. O cubo ao lado faz o mesmo, em tamanho grande.</span></div>
+    <div><b>Frase fixa explicando o modo.</b><span class="muted">"Takes from the machine through this face…" ocupa duas linhas o tempo todo e é lida uma vez.</span></div>
+    <div><b>Tudo com o mesmo peso.</b><span class="muted">As seis faces têm contorno tracejado, todo controle tem borda preta. O olho não sabe onde começar.</span></div>
+    <div><b>Cartões de filtro longe do Filtro.</b><span class="muted">Os slots ficam embaixo do visor, com um rótulo próprio, e o "Filtro: Editar" fica do outro lado.</span></div>
+    <div><b>Linhas altas nas listas.</b><span class="muted">No alcance, cada máquina usa duas linhas (número e coordenadas). No Tablet, a segunda linha corta em "…".</span></div>
+    <div><b>Três linhas de controles antes da lista no Filtro.</b><span class="muted">Lista branca, lista negra, Componentes, a contagem e a busca vêm antes da primeira entrada.</span></div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">1 · Roteador</span>
+  <h2>A mesma tela, com hierarquia</h2>
   <div class="ba">
-    <figure><img src="curseforge/feature-2-router.png" alt="Tela atual do roteador: visor 3D grande à esquerda, painel de faces à direita, inventário embaixo"><figcaption>Hoje: o visor 3D é a maior área da tela e não decide nada.</figcaption></figure>
-    <figure><img src="curseforge/feature-18-range-screen.png" alt="Tela atual do roteador com Upgrade de Alcance: lista de máquinas, visor 3D e painel lado a lado"><figcaption>Com o Upgrade de Alcance: três colunas e uma quarta escolha (o alvo).</figcaption></figure>
+    <span class="tag before">Hoje</span>
+    <figure><img src="curseforge/feature-2-router.png" alt="Tela atual do roteador"></figure>
+    <span class="tag after">Refinada</span>
+    <figure>
+      <div class="mcwrap"><div class="mc" role="img" aria-label="Mockup da tela do roteador refinada">
+        <div class="mc-h"><span class="t">Ore Input</span><span class="dim" style="font-size:12px">30 items/s</span><span class="pill" style="color:#6E7480"><span class="lens"></span><span style="color:var(--mc-ink)">Basic</span></span><span class="slot"></span><span class="slot"></span><span class="moon">☾</span></div>
+        <div class="mc-body">
+          <div class="vcol">
+            <div class="visor"><img src="interfaces-limpas/visor-roteador.png" alt="" width="300" height="147"><span class="lbl">Top</span></div>
+            <div><div class="inv"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+            <div class="inv hb"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div></div>
+          </div>
+          <div class="panel">
+            <div class="tabs"><span class="on"><img src="interfaces-limpas/t-itens.png" alt="">Items</span><img src="interfaces-limpas/t-fluidos.png" alt=""><img src="interfaces-limpas/t-energia.png" alt=""><img src="interfaces-limpas/t-quimicos.png" alt=""><img src="interfaces-limpas/t-source.png" alt=""><span class="sum">1 network</span></div>
+            <div class="fh"><b>Top</b><span>27 slots · router here</span></div>
+            <div class="net">
+              <span class="fc blank"></span><span class="fc sel e">Top<i class="nd"></i></span><span class="fc blank"></span><span class="fc blank"></span>
+              <span class="fc">Left</span><span class="fc">Front</span><span class="fc">Right</span><span class="fc">Back</span>
+              <span class="fc blank"></span><span class="fc i">Bottom<i class="nd"></i></span><span class="fc blank"></span><span class="fc blank"></span>
+            </div>
+            <div class="modes"><span class="on"><img src="interfaces-limpas/m-extrai.png" alt="">Extract</span><span><img src="interfaces-limpas/m-insere.png" alt="">Insert</span><span><img src="interfaces-limpas/m-armazem.png" alt="">Storage</span><span><img src="interfaces-limpas/m-nenhum.png" alt="">None</span></div>
+            <div class="kv"><span class="k">Network</span><span class="box dd net"><span><span class="lens" style="color:var(--net);width:7px;height:7px"></span> Smelting Line</span><span>▾</span></span></div>
+            <div class="kv"><span class="k">Filter</span><span>Passes all</span><span class="slot" style="width:16px;height:16px;margin-left:auto"></span><span class="slot" style="width:16px;height:16px"></span><span class="btn">Edit</span></div>
+            <div class="kv"><span class="k">Prior.</span><span class="btn">−</span><span>0</span><span class="btn">+</span><span class="box dd" style="margin-left:4px"><span>Redstone: Ignore</span><span>▾</span></span></div>
+          </div>
+        </div>
+      </div></div>
+      <figcaption>Mesmo arranjo: visor à esquerda, painel à direita, inventário embaixo. O painel ficou com metade da altura e o visor com mais espaço.</figcaption>
+    </figure>
   </div>
-  <p>O problema maior não é a quantidade, é a <b>pilha de escolhas</b>. Para mudar uma única coisa, o jogador precisa acertar quatro seletores na ordem certa: o <b>alvo</b> (presa, grupo ou máquina), o <b>tipo</b> (aba), a <b>face</b> (cubo) e só então o <b>modo e a rede</b>. Nenhum dos outros mods pede mais de dois.</p>
-  <ul class="tight">
-    <li>Texto de ajuda dentro da tela ("Takes from the machine through this face…") empurra os controles e é lido uma vez só.</li>
-    <li>O mesmo editor aparece em três lugares (roteador, Tablet, alcance) com três arranjos diferentes.</li>
-    <li>O Tablet repete o padrão: linhas de duas linhas, pílula de tier, quadradinhos das faces, filtros e seletor de visão, tudo visível ao mesmo tempo.</li>
-  </ul>
-</section>
-
-<section>
-  <span class="eyebrow">2 · O que os outros fazem (no código)</span>
-  <h2>Quatro referências, lidas na fonte</h2>
-  <p>Clonei os repositórios nos ramos do 1.21 e li as telas. Cada cartão diz o arquivo e o que vale copiar.</p>
-  <div class="grid2">
-    <article class="ref">
-      <h3>XNet <span class="file">GuiController.java · controller.gui</span></h3>
-      <p>Tela de 256 × 236. À esquerda, a lista dos blocos conectados; cada linha é <b>bloco + letra da face + 8 botões de canal</b>, cada botão com um ícone indicador. É uma matriz: a rede inteira cabe numa olhada.</p>
-      <p>À direita, dois painéis que <b>ficam vazios até você escolher</b>: o do canal em cima e o do conector embaixo. Eles são montados só na seleção (<code>refreshChannelEditor</code>, <code>refreshConnectorEditor</code>).</p>
-      <p>Os campos aparecem conforme o caso: em <code>ItemConnectorSettings.createGui</code>, a quantidade só aparece se o modo é Extrair com contagem; o modo de extração, só ao extrair. O conector básico esconde lado e velocidades que o avançado mostra (<code>gui.isAdvanced()</code>).</p>
-      <p>Extras: Ctrl+C e Ctrl+V copiam a configuração como JSON; clique duplo numa linha acende o bloco no mundo por 5 s e fecha a tela.</p>
-      <p class="lesson">Copiar: a matriz como visão geral e o editor que só aparece depois da escolha.</p>
-    </article>
-    <article class="ref">
-      <h3>Logistics Network <span class="file">NodeEditorScreen.java · ComputerScreen.java</span></h3>
-      <p>A tela do nó tem duas páginas (<code>enum Page { NETWORK_SELECT, CHANNEL_CONFIG }</code>): primeiro escolher a rede, depois configurar. Nunca as duas juntas.</p>
-      <p>Cada canal é uma lista de 9 linhas iguais, <b>"nome · valor"</b>: Status, Modo, Tipo, Lado, Redstone, Distribuição, Prioridade, Lote, Atraso. Clicar troca o valor; números se editam com clique duplo. Só o valor ganha cor (verde ativo, laranja exportar, cinza neutro).</p>
-      <p>Explicação só na dica, e com <b>1 s de atraso</b> (<code>TOOLTIP_DELAY = 1000L</code>), para não piscar enquanto o mouse passa. O tema e outras opções ficam num botão "Tweaks"; o manual num botão "Docs". A confirmação só aparece quando algo se perde (<code>ConfirmationDialog</code> pula se o rótulo não tem nós).</p>
-      <p>A central (<code>ComputerScreen</code>, 320 × 240) usa linhas de uma linha só: caixa de marcar, ícone do bloco, nome, posição, engrenagem e lâmpada de realce, agrupadas por rótulo com [+]/[−].</p>
-      <p class="lesson">Copiar: a lista "nome · valor", a dica com atraso e o "Tweaks" para o que é raro.</p>
-    </article>
-    <article class="ref">
-      <h3>Pipez <span class="file">ExtractScreen.java</span></h3>
-      <p>Tela de tamanho vanilla, 176 × 196. <b>Não tem seletor de face</b>: a face vem do clique da chave no mundo. Os tipos (itens, fluidos, energia, gás) são abas na borda esquerda, fora do corpo da tela.</p>
-      <p>Os ajustes são três botões de ícone que trocam de estado ao clicar (<code>CycleIconButton</code>: redstone, distribuição, lista branca ou negra), cada um com dica. O filtro é uma lista com Adicionar, Editar e Remover; editar abre outra tela.</p>
-      <p class="lesson">Copiar: abas de tipo na borda e ajustes raros como um ícone que troca de estado.</p>
-    </article>
-    <article class="ref">
-      <h3>Flux Networks <span class="file">EnumNavigationTab.java · GuiTab*.java</span></h3>
-      <p>Uma barra de ícones no alto leva a páginas separadas: Início, Rede, Sem fio, Conexões, Estatísticas, Membros, Ajustes. O Início do aparelho mostra só nome, prioridade e limite.</p>
-      <p>A rede se escolhe numa página só para isso, uma vez, e o resto da tela supõe que ela já está escolhida.</p>
-      <p class="lesson">Copiar: uma página por assunto e o essencial na primeira.</p>
-    </article>
-  </div>
-  <p class="muted">O código do Logistics Network não é pequeno: a tela do nó tem 2.193 linhas e a de filtro 4.837. A limpeza deles está no que aparece de cada vez, não no tamanho do código.</p>
-</section>
-
-<section>
-  <span class="eyebrow">3 · Regras para o mod</span>
-  <h2>Oito regras para todas as telas</h2>
-  <ol class="rules">
-    <li><b>No máximo duas escolhas antes de editar.</b> Escolher o quê (uma célula) e mudar o valor. Alvo e tipo deixam de ser passos separados.</li>
-    <li><b>Visão geral primeiro, detalhe depois.</b> A tela abre mostrando o estado inteiro de forma compacta; o editor só existe depois do clique.</li>
-    <li><b>Uma área por decisão.</b> Se uma área não muda nada (o visor 3D), ela não fica na tela principal.</li>
-    <li><b>Explicação na dica, com atraso.</b> Nenhuma frase de ajuda fixa na tela; a dica aparece depois de ~0,6 s parado.</li>
-    <li><b>Padrão recolhido.</b> Prioridade 0 e Redstone "ignora" não aparecem como controles; aparecem como uma linha "Avançado" que mostra só o que mudou.</li>
-    <li><b>Cor só no valor.</b> Rótulos em cinza, valores com a cor do modo ou da rede, o coral só para o que pede ação.</li>
-    <li><b>Slots só quando servem.</b> O inventário aparece na gaveta de upgrades e na tela de filtro, onde se arrasta item.</li>
-    <li><b>Um editor, três lugares.</b> Roteador, Tablet e alcance usam o mesmo componente, com o mesmo arranjo.</li>
+  <ol class="changes">
+    <li><div><b>O visor 3D é quem escolhe a face.</b> Ele já faz isso hoje; ganha só o nome da face no canto. <span class="src">(sem mudança de código no visor)</span></div></li>
+    <li><div><b>O cubo encolhe e fica calmo.</b> Mesmo desenho desdobrado, em células de 18 px. Contorno tracejado sai; o modo aparece como uma tarja colorida na borda da célula, a rede como a bolinha, e só a face escolhida tem o contorno coral. Serve para ver as seis de uma vez e para clicar numa face que o visor esconde.</div></li>
+    <li><div><b>A face escolhida vira título.</b> "Top" maior, e "27 slots · router here" em cinza ao lado. É o que diz ao jogador o que ele está editando.</div></li>
+    <li><div><b>A frase do modo vai para a dica</b> dos botões Extract, Insert, Storage e None, com um pequeno atraso para não piscar. <span class="src">(Logistics Network: dica com 1 s de atraso)</span></div></li>
+    <li><div><b>Os cartões de filtro vão para a linha do Filtro</b>, entre "Passes all" e Edit. Sai o rótulo "Filter cards for the Top face" e a linha de baixo do visor.</div></li>
+    <li><div><b>Menos borda preta.</b> Rótulos sem caixa e em cinza (Network, Filter, Prior.), caixa só no que se clica. O coral fica só na face escolhida e na aba aberta.</div></li>
   </ol>
 </section>
 
 <section>
-  <span class="eyebrow">4 · Proposta</span>
-  <h2>O roteador numa tela só de 256 px</h2>
-  <p>O corpo vira duas partes. À esquerda, o <b>mapa</b>: seis linhas de face por cinco colunas de tipo. Cada célula mostra o modo pela cor e pela seta (↑ extrai, ↓ insere, ■ armazém), e a rede por um ponto no canto. Uma célula com modo e sem rede ganha o contorno tracejado coral que o mod já usa. À direita, o <b>editor da célula escolhida</b>, numa lista de três linhas e o Avançado recolhido.</p>
+  <span class="eyebrow">2 · Alcance</span>
+  <h2>Uma máquina por linha</h2>
   <div class="ba">
+    <span class="tag before">Hoje</span>
+    <figure><img src="curseforge/feature-18-range-screen.png" alt="Tela atual do roteador com o Upgrade de Alcance"></figure>
+    <span class="tag after">Refinada · a lista</span>
     <figure>
-      <span class="tag after">Proposta · roteador</span>
-      <div class="mcwrap"><div class="mc" role="img" aria-label="Mockup da tela nova do roteador">
-        <div class="mc-h"><span class="lens"></span><span class="t">Fornalha de minério</span><span style="color:var(--mc-dim);font-size:11px">Avançado</span><span class="gear">⚙</span></div>
-        <div class="mc-b" style="padding-left:18px">
-          <div class="side" title="Abas na borda"><span class="on">▦</span><span>⚡</span></div>
-          <div class="matrix">
-            <span></span>
-            <span class="hd"><span class="dot" style="background:#B07A3A"></span></span>
-            <span class="hd"><span class="dot" style="background:#3D6FD6"></span></span>
-            <span class="hd"><span class="dot" style="background:#D9931A"></span></span>
-            <span class="hd"><span class="dot" style="background:#5E9A2B"></span></span>
-            <span class="hd"><span class="dot" style="background:#9B4DC6"></span></span>
-            <span class="rl">Cima</span><span class="cell i">↓<i style="background:var(--n1)"></i></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span>
-            <span class="rl">Baixo</span><span class="cell e sel">↑<i style="background:var(--n1)"></i></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span>
-            <span class="rl">Frente</span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span>
-            <span class="rl">Trás</span><span class="cell"></span><span class="cell"></span><span class="cell i">↓<i style="background:var(--n2)"></i></span><span class="cell"></span><span class="cell"></span>
-            <span class="rl">Esq.</span><span class="cell i warn">↓</span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span>
-            <span class="rl">Dir.</span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span>
+      <div class="mcwrap"><div class="mc" role="img" aria-label="Mockup da lista de máquinas do alcance com uma linha por máquina">
+        <div class="mc-h"><span class="t">Kitchen &amp; Forge</span><span class="dim" style="font-size:12px">Machines 10/16</span></div>
+        <div class="mc-body">
+          <div class="rl">
+            <div class="rr"><span class="ico" style="background:#8E6A3A"></span><span class="n">Attached machine</span><span class="mini">chest</span></div>
+            <div class="rr grp on"><span>▾</span><span class="ico"></span><span class="n">Blast Furnace ×5</span><span class="mini" style="font-weight:400">profile</span></div>
+            <div class="rr ind"><span class="st"></span><span class="n">#1</span><span class="mini">3 bl.</span><span class="eye"></span></div>
+            <div class="rr ind"><span class="st"></span><span class="n">#2</span><span class="mini">3 bl.</span><span class="eye"></span></div>
+            <div class="rr ind"><span class="st"></span><span class="n">#3 · exception</span><span class="mini">3 bl.</span><span class="eye"></span></div>
+            <div class="rr ind"><span class="st"></span><span class="n">#4</span><span class="mini">3 bl.</span><span class="eye"></span></div>
+            <div class="rr ind"><span class="st"></span><span class="n">#5</span><span class="mini">3 bl.</span><span class="eye"></span></div>
+            <div class="rr grp"><span>▸</span><span class="ico"></span><span class="n">Smoker ×5</span><span class="mini" style="font-weight:400">profile</span></div>
+            <div class="rr grp" style="border-bottom:0"><span>▸</span><span class="ico"></span><span class="n">Furnace ×4</span><span class="mini" style="font-weight:400">profile</span></div>
           </div>
-          <div class="ed">
-            <div class="cap"><span>Baixo · Itens</span><div class="cube" aria-hidden="true"><span class="x"></span><span></span><span class="x"></span><span class="x"></span><span></span><span></span><span></span><span></span><span class="x"></span><span class="on"></span><span class="x"></span><span class="x"></span></div></div>
-            <div class="row"><span class="k">Modo</span><span class="v ext">↑ Extrai</span></div>
-            <div class="row"><span class="k">Rede</span><span class="v"><span class="dot" style="background:var(--n1);width:7px;height:7px"></span>Fundição ▾</span></div>
-            <div class="row"><span class="k">Filtro</span><span class="v">3 entradas ›</span></div>
-            <div class="row adv"><span>▸ Avançado</span><span>prioridade 2</span></div>
-          </div>
-        </div>
-        <div class="mc-f"><span>30 itens/s · 1 rede</span><span>Ctrl+C copia a face</span></div>
-      </div></div>
-      <figcaption>Duas áreas e uma linha de rodapé. O mini cubo no canto do editor mostra onde fica a face, sem ocupar espaço.</figcaption>
-    </figure>
-    <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
-      <h3>O que muda</h3>
-      <ul class="tight">
-        <li><b>Abas de tipo + cubo → mapa.</b> São 30 células que já mostram o que hoje exige clicar em cinco abas. É a grade de canais do XNet aplicada às nossas faces.</li>
-        <li><b>Quatro botões de modo + frase → uma linha "Modo".</b> Clique troca (Extrai → Insere → Armazém → Nenhum), roda do mouse também. A frase vai para a dica.</li>
-        <li><b>Prioridade e Redstone → "Avançado".</b> Recolhido, mostra só o que não é padrão ("prioridade 2"). Aberto, vira duas linhas iguais às outras.</li>
-        <li><b>Visor 3D → sai.</b> O realce no mundo (o Olho) e o mini cubo cumprem o papel de "onde fica esta face".</li>
-        <li><b>Inventário, cartões e upgrades → gaveta ⚡</b> na borda esquerda, como as abas do Pipez. Abrir a gaveta mostra os slots e o inventário; fechada, a tela não tem slot nenhum.</li>
-        <li><b>Tema, renomear e ajuda → ⚙.</b> A engrenagem é o "Tweaks" do Logistics Network.</li>
-        <li><b>Atalho:</b> clique direito numa célula alterna Nenhum ↔ último modo; Ctrl+C e Ctrl+V copiam a face, como no XNet.</li>
-      </ul>
-    </div>
-  </div>
-</section>
-
-<section>
-  <h2>Alcance: o alvo vira um seletor, não uma coluna</h2>
-  <p>Com o Upgrade de Alcance, hoje a tela abre três colunas. Na proposta, o alvo é uma linha de seleção no alto ("Editando: Presa ▾") e a lista de máquinas vai para uma aba própria na borda (▤). O mapa e o editor são os mesmos de cima, então o jogador não aprende nada novo.</p>
-  <div class="ba">
-    <figure>
-      <span class="tag after">Proposta · alvo</span>
-      <div class="mcwrap"><div class="mc" role="img" aria-label="Mockup do seletor de alvo com o Upgrade de Alcance">
-        <div class="mc-h"><span class="lens" style="background:#1FA9A0"></span><span class="t">Cozinha e Forja</span><span style="color:var(--mc-dim);font-size:11px">10/16 máquinas</span><span class="gear">⚙</span></div>
-        <div class="picker"><span style="color:var(--mc-dim)">Editando</span><span class="sel"><span>▣ Alto-forno ×5 · perfil</span><span>▾</span></span></div>
-        <div class="mc-b" style="padding-left:18px">
-          <div class="side"><span class="on">▦</span><span>▤</span><span>⚡</span></div>
-          <div class="list">
-            <div class="li"><span class="ico"></span><span class="n">Presa · Baú</span><span class="r">2 faces</span></div>
-            <div class="li on"><span class="ico" style="border-color:#3E3B44;background:#5A5660"></span><span class="n">Alto-forno ×5</span><span class="r">perfil</span></div>
-            <div class="li"><span class="ico" style="margin-left:12px"></span><span class="n">#3 · exceção</span><span class="r">3 bl.</span></div>
-            <div class="li"><span class="ico" style="border-color:#3E3B44;background:#5A5660"></span><span class="n">Defumador ×5</span><span class="r">perfil</span></div>
-            <div class="li" style="border-bottom:0;color:var(--mc-dim)"><span class="n">Aberto ao clicar em "Editando ▾"</span></div>
-          </div>
+          <div class="visor"><img src="interfaces-limpas/visor-alcance.png" alt="" width="200" height="166"><span class="lbl">Top · #1</span></div>
         </div>
       </div></div>
-      <figcaption>A lista suspensa do alvo, aberta. Fechada, ela ocupa uma linha e o mapa volta ao lugar.</figcaption>
-    </figure>
-    <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
-      <h3>Por que assim</h3>
-      <ul class="tight">
-        <li>O alvo muda pouco durante uma edição; não precisa estar aberto o tempo todo.</li>
-        <li>A aba ▤ "Máquinas" fica para quem gerencia: renomear, Olho, Atualizar, Desvincular, uma linha por máquina como na central do Logistics Network.</li>
-        <li>"Exceção" aparece como um recuo e uma palavra, sem cor própria.</li>
-      </ul>
-    </div>
-  </div>
-</section>
-
-<section>
-  <h2>Tablet: linhas de uma linha e o mesmo editor</h2>
-  <div class="ba">
-    <figure>
-      <span class="tag before">Hoje · Lista do Tablet</span>
-      <img src="curseforge/feature-22-tablet-list.png" alt="Lista atual do Tablet: linhas de duas linhas com pílula de tier e quadradinhos das faces">
-    </figure>
-    <figure>
-      <span class="tag after">Proposta · Lista</span>
-      <div class="mcwrap"><div class="mc" role="img" aria-label="Mockup da Lista do Tablet com linhas de uma linha">
-        <div class="mc-h"><span class="t">Tablet</span><span style="font-size:11px">Lista · Fluxos · Mapa · Redes</span><span class="gear">⚙</span></div>
-        <div class="search">Buscar máquina, rede ou nome</div>
-        <div class="mc-b">
-          <div class="list">
-            <div class="li"><span class="ico" style="border-color:#D59A1E"></span><span class="n">Fornalha 1</span><span class="r" style="color:var(--coral)">cheio</span></div>
-            <div class="li on"><span class="ico" style="border-color:#6E7480"></span><span class="n">Fornalha de minério</span><span class="r">30/s</span></div>
-            <div class="li"><span class="ico" style="border-color:#1FA9A0"></span><span class="n">Cozinha e Forja</span><span class="r">10 máq.</span></div>
-            <div class="li"><span class="ico" style="border-color:#D59A1E"></span><span class="n">Bateria da base</span><span class="r">parado</span></div>
-            <div class="li"><span class="ico" style="border-color:#22A84E"></span><span class="n">Esmeralda</span><span class="r">0/s</span></div>
-            <div class="li" style="border-bottom:0"><span class="ico" style="border-color:#E8740A"></span><span class="n">Allthemodium</span><span class="r">0/s</span></div>
-          </div>
-        </div>
-        <div class="mc-f"><span>29 nós · 39 máquinas</span><span>Shift + clique marca</span></div>
-      </div></div>
-      <figcaption>Tier pela cor do Olho, estado ou vazão numa palavra. O nó escolhido abre o mesmo mapa + editor do roteador à direita.</figcaption>
+      <figcaption>No espaço onde hoje cabem um grupo e cinco máquinas, cabem três grupos. O visor e o painel ficam iguais.</figcaption>
     </figure>
   </div>
-  <ul class="tight">
-    <li>A pílula do tier e a linha "presa: …" saem da linha; vão para a dica e para o cabeçalho do painel.</li>
-    <li>"Roteadores · Máquinas" vira um "Agrupar por ▾" junto da busca; o filtro "Com problemas" vira a palavra de estado colorida em cada linha.</li>
-    <li>A barra de Selecionar só aparece quando há algo marcado (Shift + clique), como as caixas da central do Logistics Network.</li>
-  </ul>
-</section>
-
-<section>
-  <h2>Filtro: uma lista, um botão de adicionar</h2>
-  <div class="ba">
-    <figure>
-      <span class="tag before">Hoje · Filtro</span>
-      <img src="curseforge/feature-3-filters.png" alt="Tela atual de filtro com quatro abas, inspetor e inventário">
-    </figure>
-    <figure>
-      <span class="tag after">Proposta · Filtro</span>
-      <div class="mcwrap"><div class="mc" role="img" aria-label="Mockup da tela de filtro com lista e botão Adicionar">
-        <div class="mc-h"><span class="t">Filtro · Baixo · Itens</span><span class="btn">Permitir ⇄</span><span class="gear">⚙</span></div>
-        <div class="mc-b">
-          <div class="list">
-            <div class="li"><span class="ico" style="border-radius:2px;border-color:#2F9D5C"></span><span class="n">#c:ores</span><span class="r">tag · 36</span></div>
-            <div class="li on"><span class="ico" style="border-radius:2px;border-color:#BDB19A"></span><span class="n">Ferro bruto</span><span class="r">item</span></div>
-            <div class="li" style="padding-left:24px;font-size:11px;color:var(--mc-dim)"><span class="n">Manter no máximo 16 · Ver tags · Remover</span></div>
-            <div class="li"><span class="ico" style="border-radius:2px;border-color:#5A36B0"></span><span class="n">Encantado com Eficiência ≥ 3</span><span class="r">regra</span></div>
-            <div class="li" style="border-bottom:0"><span class="btn pri">+ Adicionar ▾</span><span class="r" style="margin-left:auto">ou arraste um item</span></div>
-          </div>
-        </div>
-        <div class="inv"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
-        <div class="inv hot"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
-      </div></div>
-      <figcaption>As abas Entrada, Tags, Regra e Mais viram: as ações da entrada abaixo dela, e o menu "Adicionar" (item, tag, mod, regra) abrindo cada assistente por cima.</figcaption>
-    </figure>
-  </div>
-  <ul class="tight">
-    <li>Lista branca ou negra vira um botão que troca ("Permitir ⇄ Bloquear"), como o do Pipez. "Componentes" vai para ⚙.</li>
-    <li>O inspetor de tags continua, mas só aparece ao escolher "Adicionar › Tag" ou "Ver tags" numa entrada.</li>
-    <li>O inventário fica: aqui ele é usado para arrastar itens.</li>
-  </ul>
-</section>
-
-<section>
-  <h2>As outras telas</h2>
-  <div class="tablewrap"><table>
-    <thead><tr><th>Tela</th><th>Hoje</th><th>Proposta</th></tr></thead>
-    <tbody>
-      <tr><td>Vinculador</td><td>Rede, modo, prévia, chips de tipo e de face, cantos, Vincular e Limpar.</td><td>Já é a mais limpa. Juntar chips de tipo e de face numa linha "Vincula: Todos os tipos · Todas as faces ▾". As dicas de uso vão para a barra acima da hotbar, como o <code>WrenchHudOverlay</code> do Logistics Network.</td></tr>
-      <tr><td>Baú, Tanques, Bateria</td><td>Lista com busca e ordenação.</td><td>Sem mudança além do tema na ⚙.</td></tr>
-      <tr><td>Núcleo do Ressonador</td><td>Osciloscópio, dial, câmaras, saída, estrutura, integridade, catalisador, interferência, Eco.</td><td>Fora do escopo das reclamações. Se for mexer: Integridade, Interferência e Eco viram uma linha de estado só, com o detalhe na dica.</td></tr>
-      <tr><td>Editor de receitas</td><td>Só para operador.</td><td>Sem mudança.</td></tr>
-    </tbody>
-  </table></div>
-</section>
-
-<section>
-  <span class="eyebrow">5 · Custo</span>
-  <h2>Mais leve que hoje</h2>
-  <ul class="tight">
-    <li><b>Nenhum pacote novo.</b> O mapa lê o <code>RouterSnapshot</code> que a tela já recebe; são 30 células por quadro, sem alocar.</li>
-    <li><b>Menos desenho por quadro.</b> O visor 3D desenha o modelo da máquina a cada quadro; sem ele, a tela desenha só retângulos e texto.</li>
-    <li><b>Gavetas fechadas custam zero.</b> Slots e inventário só existem com a gaveta aberta. Cuidado: abrir e fechar a gaveta não pode recriar o menu no servidor; os slots ficam no menu e só mudam de posição, como já faz o <code>placeInventory</code> do filtro.</li>
-    <li>Vale medir antes e depois o tempo de quadro da tela aberta, pelo roteiro de <code>references/medir.md</code> da skill de performance.</li>
-  </ul>
-</section>
-
-<section>
-  <span class="eyebrow">6 · Próximos passos</span>
-  <h2>Ordem sugerida</h2>
-  <ol class="tight">
-    <li><b>Roteador</b> (onde vêm as reclamações): mapa, editor em lista, Avançado, gavetas. Um componente novo usado também pelo painel do Tablet.</li>
-    <li><b>Tablet</b>: linhas de uma linha e o mesmo editor no painel.</li>
-    <li><b>Filtro</b>: lista com "Adicionar ▾" e os assistentes por cima.</li>
-    <li><b>Vinculador</b>: a linha única de tipos e faces e as dicas na hotbar.</li>
+  <ol class="changes">
+    <li><div><b>Uma linha por máquina:</b> estado, número, distância e o Olho. As coordenadas vão para a dica da linha.</div></li>
+    <li><div><b>"all on profile" sai da linha do grupo.</b> Só aparece algo quando há exceção: a palavra "exception" na máquina.</div></li>
+    <li><div><b>O nome do grupo leva o ícone do bloco</b> e o recolher ▸/▾ fica à esquerda, como numa árvore. <span class="src">(Logistics Network: grupos com [+]/[−] na central)</span></div></li>
   </ol>
-  <p>Para saber se melhorou, um teste simples com dois ou três jogadores que nunca abriram o mod: "faça a fornalha de baixo mandar itens para a rede Fundição". Hoje, contar cliques e tempo; depois da mudança, repetir.</p>
 </section>
 
-<section class="decide">
-  <span class="eyebrow">Decisões suas</span>
-  <h2>Três perguntas antes do mockup final</h2>
-  <div><b>1. Tirar o visor 3D da tela do roteador?</b><span class="muted">Ele é bonito e aparece nas imagens do CurseForge. A proposta troca por mini cubo + realce no mundo. Alternativa: deixar o 3D só na aba ▤ do alcance.</span></div>
-  <div><b>2. Mapa com faces nas linhas e tipos nas colunas?</b><span class="muted">O contrário (tipos nas linhas) também cabe. Faces nas linhas deixa a ordem igual à do cubo atual.</span></div>
-  <div><b>3. Todo texto de ajuda vira dica com atraso?</b><span class="muted">Inclusive o convite "Escolha a rede desta face", que viraria só o contorno coral tracejado com a dica.</span></div>
+<section>
+  <span class="eyebrow">3 · Tablet</span>
+  <h2>A segunda linha diz uma coisa só</h2>
+  <div class="ba">
+    <span class="tag before">Hoje</span>
+    <figure><img src="curseforge/feature-22-tablet-list.png" alt="Lista atual do Tablet"></figure>
+    <span class="tag after">Refinada · as linhas</span>
+    <figure>
+      <div class="mcwrap"><div class="mc" role="img" aria-label="Mockup das linhas da Lista do Tablet">
+        <div class="tl">
+          <div class="tr"><span class="ico" style="grid-row:1/3;width:16px;height:16px;background:#D59A1E"></span><span>Advanced Router</span><span class="rt"><span class="pill" style="color:#D59A1E;font-size:11px">Advanced</span></span><span class="r">Block of Gold · Tier Hall</span></div>
+          <div class="tr"><span class="ico" style="grid-row:1/3;width:16px;height:16px;background:#6E7480"></span><span>Furnace 1</span><span class="rt"><span class="pill" style="color:#6E7480;font-size:11px">Basic</span></span><span class="r">Furnace · <b>destination full</b></span></div>
+          <div class="tr"><span class="ico" style="grid-row:1/3;width:16px;height:16px;background:#D59A1E"></span><span>Base Battery</span><span class="rt"><span class="pill" style="color:#D59A1E;font-size:11px">Advanced</span></span><span class="r">Wireless Battery · Storage · 1.2k FE/t</span></div>
+          <div class="tr" style="border-bottom:0"><span class="ico" style="grid-row:1/3;width:16px;height:16px;background:#1FA9A0"></span><span>Kitchen &amp; Forge</span><span class="rt"><span class="pill" style="color:#1FA9A0;font-size:11px">Elite</span></span><span class="r">Chest · 10 machines</span></div>
+        </div>
+      </div></div>
+      <figcaption>O ícone, o nome e a pílula do tier ficam. A grade de quadradinhos das faces sai da linha (ela repete o painel) e a segunda linha nunca corta.</figcaption>
+    </figure>
+  </div>
+  <ol class="changes">
+    <li><div><b>Segunda linha com até três partes, por prioridade:</b> a máquina presa, depois um problema (em coral) ou a vazão quando move, depois a rede. Sem "attached:" na frente; o que não cabe sai inteiro, não pela metade.</div></li>
+    <li><div><b>A grade das faces sai da linha.</b> O estado das faces já aparece no painel ao escolher o nó, e o problema já aparece em palavra.</div></li>
+    <li><div><b>"Select" vira Shift + clique</b> na linha, com a barra de Selecionar aparecendo só quando há algo marcado. O botão fixo sai.</div></li>
+  </ol>
+</section>
+
+<section>
+  <span class="eyebrow">4 · Filtro</span>
+  <h2>A lista começa mais cedo</h2>
+  <div class="ba">
+    <span class="tag before">Hoje</span>
+    <figure><img src="curseforge/feature-3-filters.png" alt="Tela atual de filtro"></figure>
+    <span class="tag after">Refinada · o topo e a lista</span>
+    <figure>
+      <div class="mcwrap"><div class="mc" role="img" aria-label="Mockup do topo e da lista da tela de filtro">
+        <div class="mc-h"><span class="t">Filter <span class="dim" style="font-weight:400;font-size:12px">· Up · Items</span></span><span class="seg"><span class="on">Whitelist</span><span>Blacklist</span></span><span class="btn">Back</span><span class="moon">☾</span></div>
+        <div class="search" style="border:1px solid var(--mc-line);background:var(--mc-panel);padding:1px 6px;font-size:12px;color:var(--mc-faint);width:300px">Search: name, #tag, @mod</div>
+        <div class="fl">
+          <div class="fe"><span class="sw" style="background:#2E5E3C"></span><span class="n">#c:ores</span><span class="s">tag · 36</span></div>
+          <div class="fe" style="background:#FFFBF3"><span class="sw" style="background:#C8A58A"></span><span class="n">Raw Iron</span></div>
+          <div class="fe"><span class="sw" style="background:#E6B62E"></span><span class="n">Raw Gold</span></div>
+          <div class="fe"><span class="sw" style="background:#B76A4A"></span><span class="n">Raw Copper</span></div>
+          <div class="fe"><span class="sw" style="background:#5A3A30"></span><span class="n">Ancient Debris</span><span class="s" style="color:var(--mc-coral)">≥ 16</span></div>
+        </div>
+      </div></div>
+      <figcaption>Whitelist e Blacklist num seletor só no cabeçalho; "Components" vai para a aba More; o título "Entries · 5" e a dica "Shift + click here…" saem. As abas Entry, Tags, Rule e More e o inventário ficam.</figcaption>
+    </figure>
+  </div>
+  <ol class="changes">
+    <li><div><b>Item exato numa linha só.</b> "Exact item" embaixo de cada item sai; só tag, mod e regra dizem o que são, porque são os diferentes.</div></li>
+    <li><div><b>Lista branca e negra viram um seletor de duas partes</b> no cabeçalho, ao lado do Back. <span class="src">(Pipez: um botão que troca)</span></div></li>
+    <li><div><b>A contagem vai para a busca</b> ("Search 5 entries…") e a dica de arrastar vai para a dica do inventário.</div></li>
+  </ol>
+</section>
+
+<section>
+  <span class="eyebrow">De onde veio cada ideia</span>
+  <h2>O que trouxe dos outros mods</h2>
+  <div class="refs">
+    <div><b>XNet</b><span class="file">GuiController.java · ItemConnectorSettings.createGui</span><span>Uma linha por conector, com o lado numa letra e o resto na dica. Aqui, uma linha por máquina no alcance.</span></div>
+    <div><b>Logistics Network</b><span class="file">NodeEditorScreen.java · ComputerScreen.java</span><span>Explicação na dica com atraso (<code>TOOLTIP_DELAY = 1000L</code>), rótulo em cinza e cor só no valor, grupos com [+]/[−] e linhas de uma linha.</span></div>
+    <div><b>Pipez</b><span class="file">ExtractScreen.java</span><span>Um controle que troca de estado no lugar de dois botões, como Whitelist/Blacklist.</span></div>
+    <div><b>Flux Networks</b><span class="file">GuiTab*.java</span><span>O que a tela edita como título, bem visível. Aqui, a face escolhida.</span></div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Custo</span>
+  <h2>Nada fica mais pesado</h2>
+  <ul class="tight">
+    <li>Nenhum pacote novo e nenhum dado novo: tudo já vem no snapshot da tela e no da página do Tablet.</li>
+    <li>O cubo menor e as linhas de uma linha desenham menos texto por quadro; o visor 3D continua igual.</li>
+    <li>Os cartões mudam só de posição no menu, sem slot novo.</li>
+    <li>O e2e já tira as capturas dessas telas; o antes e depois sai dele, como no roteiro da skill de telas.</li>
+  </ul>
+</section>
+
+<section>
+  <span class="eyebrow">Para você decidir</span>
+  <h2>Duas perguntas</h2>
+  <div class="q"><b>1. O cubo menor (células de 18 px) ainda está bom de clicar?</b><span class="muted">Se preferir, ele fica do tamanho de hoje e só perde o tracejado e a frase do modo.</span></div>
+  <div class="q"><b>2. Tirar a grade de quadradinhos das linhas do Tablet?</b><span class="muted">Ela mostra as faces de cada nó sem abrir o painel. A alternativa é deixá-la só nas linhas com problema.</span></div>
 </section>
 
 <footer class="muted" style="font-size:.85rem;border-top:1px solid var(--line);padding-top:16px">
-  Fontes lidas: McJtyMods/XNet (ramo 1.21_neo), Almana-mc/LogisticsNetworks (1.21.1), henkelmax/pipez (master), SonarSonic/Flux-Networks (1.20). Capturas atuais: <code>docs/curseforge/</code>. 21 de outubro de 2026.
+  Capturas atuais: <code>docs/curseforge/</code>. Visor e ícones dos mockups recortados delas. Código lido: XNet (1.21_neo), Logistics Network (1.21.1), Pipez (master), Flux Networks (1.20). 21 de outubro de 2026.
 </footer>
 </main>

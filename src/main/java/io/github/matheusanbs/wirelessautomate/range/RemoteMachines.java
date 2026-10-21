@@ -62,10 +62,20 @@ public final class RemoteMachines {
      * (ver a classe).
      */
     public boolean link(BlockPos pos, ResourceLocation block, int front, @Nullable UUID network) {
+        return link(pos, block, front, network, false);
+    }
+
+    /**
+     * Como {@link #link(BlockPos, ResourceLocation, int, UUID)}; com {@code isolated}, a máquina que entra
+     * num grupo que já existe leva uma exceção vazia (sem modo nem rede) em vez de seguir o perfil: a mesma
+     * máquina pode ter outro processamento, então ela só liga quando configurada.
+     */
+    public boolean link(BlockPos pos, ResourceLocation block, int front, @Nullable UUID network, boolean isolated) {
         if (contains(pos)) {
             return false;
         }
         MachineGroup group = firstGroupOf(block);
+        MachineConfig exception = group != null && isolated ? new MachineConfig() : null;
         if (group == null) {
             MachineConfig profile = new MachineConfig();
             if (network != null) {
@@ -78,7 +88,7 @@ public final class RemoteMachines {
             group = new MachineGroup(nextGroupId++, block, "", profile);
             groups.add(group);
         }
-        machines.add(new RemoteMachine(pos, group.id(), null, front));
+        machines.add(new RemoteMachine(pos, group.id(), exception, front));
         return true;
     }
 

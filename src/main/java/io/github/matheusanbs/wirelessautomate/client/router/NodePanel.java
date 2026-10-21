@@ -10,6 +10,7 @@ import io.github.matheusanbs.wirelessautomate.menu.RangeView;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.FaceView;
+import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
@@ -31,9 +32,12 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
@@ -118,6 +122,7 @@ public final class NodePanel {
     public NodePanel(Actions actions, RouterSnapshot snapshot, Direction face) {
         this.actions = actions;
         this.model = new PanelModel(snapshot, face);
+        recallChoice(snapshot);
         this.targetLine = new TargetLine(model, layout, actions);
         this.label = targetLine.label();
         this.lists = new PanelLists(model, layout, targetLine);
@@ -160,12 +165,39 @@ public final class NodePanel {
         arranged.invalidate();
         model.setType(type);
         lists.close();
+        rememberChoice();
     }
 
     public void selectFace(Direction face) {
         arranged.invalidate();
         model.setFace(face);
         lists.close();
+        rememberChoice();
+    }
+
+    /** A última aba e face escolhidas e o roteador delas: reabrir a tela (ao voltar do filtro) as devolve. */
+    private record Choice(ResourceKey<Level> dimension, BlockPos pos, ResourceType type, Direction face) {}
+
+    private static @Nullable Choice lastChoice;
+
+    private void rememberChoice() {
+        RouterSnapshot s = model.snapshot();
+        lastChoice = new Choice(s.dimension(), s.pos(), model.type(), model.face());
+    }
+
+    /** A aba vale para qualquer roteador; a face só no mesmo roteador e na presa (nas remotas o quadro é outro). */
+    private void recallChoice(RouterSnapshot snapshot) {
+        Choice c = lastChoice;
+        if (c == null) {
+            return;
+        }
+        if (LoadedTypes.LIST.contains(c.type())) {
+            model.setType(c.type());
+        }
+        if (snapshot.target().attached() && c.pos().equals(snapshot.pos())
+                && Objects.equals(c.dimension(), snapshot.dimension())) {
+            model.setFace(c.face());
+        }
     }
 
     /** Só leitura, com o motivo em cima (o Tablet longe do nó); {@code null} volta a editar. */

@@ -10,6 +10,7 @@ import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.MachineConfig;
+import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.github.matheusanbs.wirelessautomate.range.RangeLinks;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import java.util.Objects;
@@ -62,8 +63,10 @@ public final class RangeNetworkGameTests {
                         helper.assertTrue(Objects.equals(router.face(EditTarget.group(group), ResourceType.ITEM,
                                 Direction.SOUTH).network(), a), "a rede do perfil mudou (ativa " + b + ")");
                         RemoteMachines remotes = router.remoteMachines();
-                        helper.assertTrue(remotes.machine(remotes.index(helper.absolutePos(FURNACE_B))).exception() == null,
-                                "a fornalha B ganhou exceção");
+                        MachineConfig exception = remotes.machine(remotes.index(helper.absolutePos(FURNACE_B))).exception();
+                        helper.assertTrue(exception != null && exception.face(ResourceType.ITEM, RemoteSide.BACK).mode() == PortMode.NONE
+                                && exception.face(ResourceType.ITEM, RemoteSide.BACK).network() == null,
+                                "a fornalha B não entrou isolada, sem herdar o perfil");
                     } finally {
                         removePlayer(helper, player);
                     }

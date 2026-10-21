@@ -53,8 +53,10 @@ final class E2eRecipeSteps {
             }
             minecraft.player.connection.sendCommand("wa recipes");
         }, () -> Minecraft.getInstance().screen instanceof RecipeEditorScreen screen
-                && recipeRow(screen, FILTER_CARD_RECIPE) != null && GuiText.clipCount() == 0,
-                () -> "tela " + describe(Minecraft.getInstance().screen) + ", " + GuiText.clipCount() + " texto(s) cortado(s)"));
+                && recipeRow(screen, FILTER_CARD_RECIPE) != null,
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        // a primeira receita da lista (alloy_frame) tem uma tag longa no slot 1, abreviada com tooltip
+        list.add(clipCheck("Receitas: lista"));
         list.add(capture("recipes-1-lista"));
         list.add(new Step("Receitas: escolher o Cartão de Filtro", STEP_TIMEOUT_MS, () -> {
             RecipeEditorScreen screen = recipeScreen();

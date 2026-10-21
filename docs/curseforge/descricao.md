@@ -56,15 +56,15 @@ Tiers raise a router's throughput and range along the ladder Basic → Advanced 
 | Tier | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Source/s | Range | Range Upgrade |
 | --- | --- | --- | --- | --- | --- | --- |
 | Basic | 32 | 2,000 | 1,000 | 100 | 64 blocks | — |
-| Advanced | 256 | 16,000 | 8,000 | 800 | 512 blocks | 6 blocks, 8 machines |
+| Advanced | 256 | 16,000 | 32,768 | 800 | 512 blocks | 6 blocks, 8 machines |
 | Elite | 2,048 | 128,000 | 64,000 | 6,400 | Whole dimension | 12 blocks, 16 machines |
-| Emerald | 16,384 | 1,024,000 | 512,000 | 51,200 | Every dimension | 16 blocks, 32 machines |
-| Allthemodium¹ | 131,072 | 8,192,000 | 4,096,000 | 409,600 | Every dimension | 24 blocks, 48 machines |
-| Vibranium¹ | 1,048,576 | 65,536,000 | 32,768,000 | 3,276,800 | Every dimension | 32 blocks, 64 machines |
-| Unobtainium¹ | 8,388,608 | 524,288,000 | 2,097,152,000 | 26,214,400 | Every dimension | 48 blocks, 96 machines |
+| Emerald | 16,384 | 1,024,000 | 2,097,152 | 51,200 | Every dimension | 16 blocks, 32 machines |
+| Allthemodium¹ | 131,072 | 8,192,000 | 67,108,864 | 409,600 | Every dimension | 24 blocks, 48 machines |
+| Vibranium¹ | 1,048,576 | 65,536,000 | 134,217,728 | 3,276,800 | Every dimension | 32 blocks, 64 machines |
+| Unobtainium¹ | 8,388,608 | 524,288,000 | 4,294,967,296 | 26,214,400 | Every dimension | 48 blocks, 96 machines |
 | Ultimate | Unlimited | Unlimited | Unlimited | Unlimited | Every dimension | 64 blocks, 128 machines |
 
-*Per face and per resource type; every machine linked by the Range Upgrade gets the full rate. ¹ Only with Allthemodium. Server owners can change every value in the config.*
+*Per face and per resource type; every machine linked by the Range Upgrade gets the full rate, and each tier's energy carries the full output of the same tier's Signal Resonator. ¹ Only with Allthemodium. Server owners can change every value in the config.*
 
 ![From iron to Unobtainium](https://media.forgecdn.net/attachments/2063/206/feature-15-tier-hall-png.png)
 
@@ -111,24 +111,24 @@ A multiblock generator that turns vibrating quartz crystals into FE. Mine **Sign
 
 ![Signal Resonator](https://media.forgecdn.net/attachments/2063/230/ressonador-gif.gif)
 
-Through the glass you can read the tuning: in tune, the light figure closes, the crystals rise together and a Chladni pattern settles on the floor. Out of tune, it scribbles. Spent crystals turn **Dull** and recharge inside the Core with redstone. Energy leaves through the **Energy Port**, straight into a router.
+Through the glass you can read the tuning: the plasma Core with the ring of its tier, the light figure inside it that closes in tune and scribbles out of it, the crystals rising together, a Chladni pattern on the floor and an energy conduit to every port that is delivering. Spent crystals turn **Dull** and recharge inside the Core with a catalyst (redstone or Resonance Dust on the first tiers, the tier's Charged Dust from Allthemodium up). Energy leaves through the **Energy Port**, straight into a router.
 
 ![Signal Resonator](https://media.forgecdn.net/attachments/2063/229/feature-21-resonator-png.png)
 
 | Core tier | Chambers | FE/t per crystal | Tuner ceiling |
 | --- | --- | --- | --- |
-| Basic | 1 | 128 | 85% |
-| Advanced | 2 | 1,024 | 88% |
-| Elite | 3 | 8,192 | 90% |
-| Emerald | 4 | 32,768 | 92% |
-| Allthemodium¹ | 5 | 262,144 | 94% |
-| Vibranium¹ | 6 | 2,097,152 | 95% |
-| Unobtainium¹ | 7 | 134,217,728 | 96% |
-| Ultimate | 8 | 1,073,741,824 | 98% |
+| Basic | 1 | 216 | 85% |
+| Advanced | 2 | 6,912 | 88% |
+| Elite | 3 | 10,000 | 90% |
+| Emerald | 4 | 160,000 | 92% |
+| Allthemodium¹ | 5 | 6,400,000 | 94% |
+| Vibranium¹ | 6 | 6,700,000 | 95% |
+| Unobtainium¹ | 7 | 184,000,000 | 96% |
+| Ultimate | 8 | 268,435,456 | 98% |
 
 *¹ Only with Allthemodium. Server owners can change the FE per crystal in the config.*
 
-A Cut Signal Crystal yields twice as much and lasts twice as long. The Core is upgraded with the same Upgrade Cards as the router. JEI shows the structure in 3D and the guide book explains every step.
+A Cut Signal Crystal yields twice as much and lasts twice as long. From Elite up, each chamber wants the **Tuned Signal Crystal** of the Core's tier (a plain crystal yields 1/4 there, a Cut one 1/2): with the tier's Tuned crystals in every chamber, the Resonator beats the best generator of its tier, from 432 FE/t on Basic to 4.29 billion FE/t on Ultimate. It costs accordingly: every crystal has **8 charges of integrity** and then cracks, recast at the crafting table with 4 Signal Crystals; another formed Core within 32 blocks takes 15% of the efficiency (up to 60%); and the Ultimate Core burns cracked Ultimate Tuned crystals as **Resonant Echo**, a permanent +5% each, with no cap. The Core is built with the **Resonator Heart** of its tier, made from a cascade of 11 components (Signal Alloy, plates, coils, lenses, phase circuits and matrices, field stabilizers, condensed cores), and raising the Core a tier takes the next Heart along with the Upgrade Card. JEI shows the structure in 3D and every recipe, and the guide book explains every step.
 
 ### Tools for big builds
 
@@ -149,7 +149,7 @@ A Cut Signal Crystal yields twice as much and lasts twice as long. The Core is u
 
 ![Network Tablet](https://media.forgecdn.net/attachments/2063/197/feature-6-tablet-png.png)
 
-Every router of every network, from anywhere: one search box for machine, network and name, quick filters and the list grouped by machine, with the chosen node **editable right there** (the faces unfolded like a cube, the same panel as the router screen). Open a router in the list to see each of its linked machines with its state, or switch to **Machines** to see every machine of the base by block type. Copy a node's profile and paste it on routers, single machines or whole machine groups, with undo. Also a top-down map, a **Flows** tab with what comes in and goes out of each type and network, Storage balances and what needs attention (click a line to filter the list), routers whose faces sit in several networks, and network groups to pause and resume a whole system at once. The map shows the picked router's machines. Double-click a node to open its full screen remotely.
+Every router of every network, from anywhere: one search box for machine, network and name, quick filters and one row per router (tier, name and the machine it sits on), with the chosen node **editable right there** (the faces unfolded like a cube, the same panel as the router screen). Rename a router or its machine with ✎ right in the list. Open a router in the list to see each of its linked machines with its state, or switch to **Machines** to see every machine of the base by block type. Copy a node's profile and paste it on routers, single machines or whole machine groups, with undo. Also a top-down map, a **Flows** tab with what comes in and goes out of each type and network, Storage balances and what needs attention (click a line to filter the list), routers whose faces sit in several networks, and network groups to pause and resume a whole system at once. The map shows the picked router's machines. Double-click a node to open its full screen remotely.
 
 ### Built-in guide book
 

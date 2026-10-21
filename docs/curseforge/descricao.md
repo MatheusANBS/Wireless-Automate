@@ -109,11 +109,11 @@ The **Wireless Source Tank** holds from 10,000 Source (Basic) to unlimited (Ulti
 
 A multiblock generator that turns vibrating quartz crystals into FE. Mine **Signal Quartz** (Overworld, stone and deepslate), build a hollow 5×5×5 box around a **Resonance Core** and put **Signal Crystals** in its chambers. Every Resonator has its own **station**, a frequency that drifts slowly: turn the dial until the lamp says **IN TUNE** for 100%, or add a **Tuner** to follow the station on its own, a little below the top. Off the station, it generates nothing.
 
-![Signal Resonator](https://media.forgecdn.net/attachments/2063/230/ressonador-gif.gif)
+![Signal Resonator](ENVIAR:ressonador.gif)
 
 Through the glass you can read the tuning: the plasma Core with the ring of its tier, the light figure inside it that closes in tune and scribbles out of it, the crystals rising together, a Chladni pattern on the floor and an energy conduit to every port that is delivering. Spent crystals turn **Dull** and recharge inside the Core with a catalyst (redstone or Resonance Dust on the first tiers, the tier's Charged Dust from Allthemodium up). Energy leaves through the **Energy Port**, straight into a router.
 
-![Signal Resonator](https://media.forgecdn.net/attachments/2063/229/feature-21-resonator-png.png)
+![Signal Resonator](ENVIAR:feature-21-resonator.png)
 
 | Core tier | Chambers | FE/t per crystal | Tuner ceiling |
 | --- | --- | --- | --- |
@@ -129,6 +129,8 @@ Through the glass you can read the tuning: the plasma Core with the ring of its 
 *¹ Only with Allthemodium. Server owners can change the FE per crystal in the config.*
 
 A Cut Signal Crystal yields twice as much and lasts twice as long. From Elite up, each chamber wants the **Tuned Signal Crystal** of the Core's tier (a plain crystal yields 1/4 there, a Cut one 1/2): with the tier's Tuned crystals in every chamber, the Resonator beats the best generator of its tier, from 432 FE/t on Basic to 4.29 billion FE/t on Ultimate. It costs accordingly: every crystal has **8 charges of integrity** and then cracks, recast at the crafting table with 4 Signal Crystals; another formed Core within 32 blocks takes 15% of the efficiency (up to 60%); and the Ultimate Core burns cracked Ultimate Tuned crystals as **Resonant Echo**, a permanent +5% each, with no cap. The Core is built with the **Resonator Heart** of its tier, made from a cascade of 11 components (Signal Alloy, plates, coils, lenses, phase circuits and matrices, field stabilizers, condensed cores), and raising the Core a tier takes the next Heart along with the Upgrade Card. JEI shows the structure in 3D and every recipe, and the guide book explains every step.
+
+![The Resonator cascade](ENVIAR:feature-23-cascade.png)
 
 ### Tools for big builds
 
@@ -147,9 +149,11 @@ A Cut Signal Crystal yields twice as much and lasts twice as long. From Elite up
 
 ### Network Tablet
 
-![Network Tablet](https://media.forgecdn.net/attachments/2063/197/feature-6-tablet-png.png)
+![Network Tablet](ENVIAR:feature-6-tablet.png)
 
 Every router of every network, from anywhere: one search box for machine, network and name, quick filters and one row per router (tier, name and the machine it sits on), with the chosen node **editable right there** (the faces unfolded like a cube, the same panel as the router screen). Rename a router or its machine with ✎ right in the list. Open a router in the list to see each of its linked machines with its state, or switch to **Machines** to see every machine of the base by block type. Copy a node's profile and paste it on routers, single machines or whole machine groups, with undo. Also a top-down map, a **Flows** tab with what comes in and goes out of each type and network, Storage balances and what needs attention (click a line to filter the list), routers whose faces sit in several networks, and network groups to pause and resume a whole system at once. The map shows the picked router's machines. Double-click a node to open its full screen remotely.
+
+![One row per router](ENVIAR:feature-22-tablet-list.png)
 
 ### Built-in guide book
 

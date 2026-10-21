@@ -52,7 +52,10 @@ import io.github.matheusanbs.wirelessautomate.client.ConfiguratorWheelScreen;
  * fotografam a casa montada pelo {@link E2eShowcaseWorld}.
  */
 final class E2eShowcase {
-    /** Com {@code WA_SHOWCASE_ONLY=ressonador}, a vitrine monta a casa e grava só o Ressonador (GIF e fotos). */
+    /**
+     * Com {@code WA_SHOWCASE_ONLY=ressonador}, a vitrine monta a casa e grava só o Ressonador (GIF e fotos); com
+     * {@code cascata}, só a foto da cascata.
+     */
     private static final String ONLY = System.getenv("WA_SHOWCASE_ONLY");
 
     private E2eShowcase() {
@@ -62,7 +65,8 @@ final class E2eShowcase {
      * Fotos da página do CurseForge, numa casa de quartzo sem teto, de dia: a linha de fornalhas
      * (oeste), a galeria dos cinco armazenamentos com fluxo de verdade para um cofre sob o piso
      * (centro-norte), o salão dos oito tiers (fundo), a vitrine dos itens do mod em pedestais (centro)
-     * e o laboratório do Ars Nouveau com quatro tiers do Tanque de Source (leste). Fotografa a casa inteira, cada ala e as telas. As
+     * e o laboratório do Ars Nouveau com quatro tiers do Tanque de Source (leste); no jardim, a cascata do Ressonador
+     * (oeste) e a Vitrine do Ressonador (leste). Fotografa a casa inteira, cada ala e as telas. As
      * imagens finais saem de scripts/curseforge/gerar_imagens.py.
      */
     static List<Step> showcase() {
@@ -70,6 +74,11 @@ final class E2eShowcase {
         if ("ressonador".equals(ONLY)) {
             list.add(mountWorld());
             E2eShowcaseResonator.steps(list);
+            return list;
+        }
+        if ("cascata".equals(ONLY)) {
+            list.add(mountWorld());
+            showcaseCascadeShots(list);
             return list;
         }
         showcaseHouseShots(list);
@@ -299,6 +308,7 @@ final class E2eShowcase {
         list.add(showLook("câmera na vitrine", 0, 4.2, -5, 0, 0.8, -10.5, false));
         list.add(DevEndToEnd.wait("vitrine", 20));
         list.add(capture("s14-vitrine"));
+        showcaseCascadeShots(list);
         // A galeria dos armazenamentos.
         list.add(showLook("câmera nos armazenamentos", 0, 3.2, -11, 0, 0.5, -16.5, false));
         list.add(DevEndToEnd.wait("armazenamentos", 20));
@@ -340,6 +350,13 @@ final class E2eShowcase {
             list.add(capture("s12b-tanque-tela"));
             list.add(close("fechar o tanque"));
         }
+    }
+
+    /** Vitrine: a cascata do Ressonador no estande do jardim, vista de dentro da casa por cima da mureta sul. */
+    private static void showcaseCascadeShots(List<Step> list) {
+        list.add(showLook("câmera na cascata", CASCADE_X, 3.6, CASCADE_Z - 6, CASCADE_X, 2.0, CASCADE_Z + 0.5, false));
+        list.add(DevEndToEnd.wait("cascata", 20));
+        list.add(capture("s21-cascata"));
     }
 
     /** Vitrine: o Tablet (lista, estatísticas e mapa) e o guia. */

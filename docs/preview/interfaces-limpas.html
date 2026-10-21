@@ -45,7 +45,7 @@ tr:last-child td{border-bottom:0}
 <main>
 
 <header style="display:flex;flex-direction:column;gap:14px">
-  <span class="eyebrow">Estudo de interface · versão 4</span>
+  <span class="eyebrow">Estudo de interface · versão 5</span>
   <h1>Telas mais limpas</h1>
   <div class="stripe"></div>
   <p class="lede">As telas abaixo não são mais HTML imitando o jogo. Foram desenhadas pixel a pixel com as mesmas funções de desenho do mod (<code>box</code>, <code>pill</code>, <code>tab</code>, <code>eye</code>, <code>dot</code>, <code>inset</code> do <code>GuiPaint</code>), a fonte do Minecraft, os sprites das portas e dos tipos do mod e o visor 3D recortado da captura real.</p>
@@ -57,7 +57,7 @@ tr:last-child td{border-bottom:0}
   <h2>O cubo é o seletor de modo</h2>
   <div class="pair">
     <figure><span class="tag before">Hoje</span><img class="shot" src="curseforge/feature-2-router.png" alt="Tela atual do roteador"></figure>
-    <figure><span class="tag after">Versão 4</span><img class="px" src="interfaces-limpas/roteador.png" alt="Tela do roteador redesenhada: visor 3D à esquerda, cubo das faces num quadro afundado à direita, com Limpar, Copiar e Colar, e as linhas Rede, Filtro, Redstone e Prioridade"></figure>
+    <figure><span class="tag after">Versão 5</span><img class="px" src="interfaces-limpas/roteador.png" alt="Tela do roteador redesenhada: visor 3D à esquerda, cubo das faces num quadro afundado à direita, com Limpar, Copiar e Colar, e as linhas Rede, Filtro, Redstone e Prioridade"></figure>
   </div>
   <div class="tablewrap"><table>
     <thead><tr><th>Parte</th><th>Como fica</th></tr></thead>
@@ -78,10 +78,10 @@ tr:last-child td{border-bottom:0}
   <p>A coluna da esquerda junta o visor (menor, da máquina escolhida) e a lista, com uma linha por máquina. A da direita é a mesma do roteador, com a barra "Editando" no alto. Escolher o grupo edita as cinco máquinas; escolher uma máquina edita só ela e vira exceção.</p>
   <div class="pair">
     <figure><span class="tag before">Hoje</span><img class="shot" src="curseforge/feature-18-range-screen.png" alt="Tela atual do alcance"></figure>
-    <figure><span class="tag after">Versão 4 · editando o grupo</span><img class="px" src="interfaces-limpas/alcance.png" alt="Tela do alcance redesenhada, com o grupo Alto-forno escolhido"></figure>
+    <figure><span class="tag after">Versão 5 · editando o grupo</span><img class="px" src="interfaces-limpas/alcance.png" alt="Tela do alcance redesenhada, com o grupo Alto-forno escolhido"></figure>
   </div>
   <figure>
-    <span class="tag after">Versão 4 · editando uma máquina</span>
+    <span class="tag after">Versão 5 · editando uma máquina</span>
     <img class="px" src="interfaces-limpas/alcance-maquina.png" alt="Tela do alcance redesenhada, com a máquina 3 escolhida como exceção" style="max-width:600px">
     <figcaption>A máquina #3 escolhida: a barra diz "Alto-forno #3" e ganha o botão Igualar (o "Voltar a igual às outras" de hoje). A face de baixo dela manda para outra rede, e a linha da face diz "difere do grupo". O Olho da linha aceso destaca a máquina no mundo.</figcaption>
   </figure>
@@ -93,12 +93,76 @@ tr:last-child td{border-bottom:0}
 </section>
 
 <section>
-  <span class="eyebrow">Próximo</span>
-  <h2>Tablet e filtro</h2>
+  <span class="eyebrow">3 · Tablet</span>
+  <h2>A Lista com o mesmo editor, e a Grade do XNet</h2>
+  <div class="pair">
+    <figure><span class="tag before">Hoje</span><img class="shot" src="curseforge/feature-22-tablet-list.png" alt="Lista atual do Tablet"></figure>
+    <figure><span class="tag after">Versão 5 · Lista</span><img class="px" src="interfaces-limpas/tablet-lista.png" alt="Lista do Tablet redesenhada, com o painel do nó escolhido igual ao editor do roteador"></figure>
+  </div>
+  <figure>
+    <span class="tag after">Versão 5 · Grade</span>
+    <img class="px" src="interfaces-limpas/tablet-grade.png" alt="Visão em grade do Tablet: uma linha por roteador, uma coluna por tipo, tarjas coloridas por face" style="max-width:700px">
+    <figcaption>"Grade" entra como terceira opção ao lado de Roteadores e Máquinas. Uma tarja por face na cor do modo, como os indicadores do Controller do XNet; o estado e a rede no fim da linha.</figcaption>
+  </figure>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Função de hoje</th><th>Onde fica</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Busca com etiquetas e sugestões</td><td>Campo no alto, igual.</td></tr>
+      <tr><td class="k">Roteadores · Máquinas</td><td>Seletor embaixo da busca, agora com Grade.</td></tr>
+      <tr><td class="k">Filtro "Com problemas"</td><td>Botão "! 7" na ponta do seletor (o texto inteiro na dica).</td></tr>
+      <tr><td class="k">Árvore (presa, grupos, máquinas, Mostrar todas)</td><td>Igual, nas linhas abertas por ▸/▾.</td></tr>
+      <tr><td class="k">Renomear, Olho, estado, vazão</td><td>Na linha: nome, pílula do tier, segunda linha com a máquina e o estado em cor.</td></tr>
+      <tr><td class="k">Selecionar, marcar, Mover, Colar</td><td>Shift + clique marca; a barra aparece quando há algo marcado.</td></tr>
+      <tr><td class="k">Copiar, colar e desfazer o perfil</td><td>Ctrl+C, V e Z, como hoje; Copiar e Colar também no quadro do cubo.</td></tr>
+      <tr><td class="k">Painel do nó, No mundo, Abrir</td><td>À direita, com o mesmo editor do roteador.</td></tr>
+      <tr><td class="k">Fluxos, Mapa, Redes</td><td>Abas iguais; só o cabeçalho e as abas no desenho novo.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <span class="eyebrow">4 · Filtro</span>
+  <h2>Tudo que existe hoje, em quadros</h2>
+  <p>O filtro mantém as quatro abas e todas as funções. Mudou a ordem do alto: Lista branca, Lista negra e Componentes numa linha só; as abas descem para a coluna da direita, em cima do quadro do conteúdo.</p>
+  <div class="pair">
+    <figure><span class="tag before">Hoje · Regra</span><img class="shot" src="curseforge/feature-8-rules.png" alt="Aba Regra atual do filtro"></figure>
+    <figure><span class="tag after">Versão 5 · Regra</span><img class="px" src="interfaces-limpas/filtro-regra.png" alt="Aba Regra redesenhada"></figure>
+  </div>
+  <div class="pair">
+    <figure><span class="tag after">Versão 5 · Entrada</span><img class="px" src="interfaces-limpas/filtro-entrada.png" alt="Aba Entrada redesenhada"></figure>
+    <figure><span class="tag after">Versão 5 · Tags</span><img class="px" src="interfaces-limpas/filtro-tags.png" alt="Aba Tags redesenhada"></figure>
+  </div>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Aba</th><th>Tudo que continua</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Lista</td><td>Busca (nome, #tag, @mod), ícone e tipo de cada entrada, estoque à direita, Shift + clique e arrastar do JEI, inventário que acende, janela redimensionável.</td></tr>
+      <tr><td class="k">Entrada</td><td>O que a entrada pega, Componentes, Estoque com ‹ ›, Ver tags, Editar (na regra) e Remover.</td></tr>
+      <tr><td class="k">Tags</td><td>Inspetor (clique com um item), busca em todas as tags e mods, caixas de marcar com a contagem, a prévia do que a tag pega, Adicionar N.</td></tr>
+      <tr><td class="k">Regra</td><td>As seis propriedades com — · Sim · Não (o "—" agora apagado, para o Sim e o Não saltarem), Encantamento com nível, Durabilidade ≥ ou &lt; com a porcentagem, Só em, o resumo, as pilhas acesas, Limpar, Cancelar, Salvar e Adicionar.</td></tr>
+      <tr><td class="k">Mais</td><td>Cartão de Filtro (Importar e Exportar) e Limpar com confirmação, no mesmo quadro.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <span class="eyebrow">5 · Vinculador</span>
+  <h2>O mesmo cubo para escolher as faces</h2>
+  <div class="pair">
+    <figure><span class="tag before">Hoje</span><img class="shot" src="curseforge/feature-13-linker.png" alt="Tela atual do Vinculador"></figure>
+    <figure><span class="tag after">Versão 5</span><img class="px" src="interfaces-limpas/vinculador.png" alt="Vinculador redesenhado: rede ativa à esquerda, tipos e o cubo das faces num quadro, mapa da área à direita"></figure>
+  </div>
   <ul class="tight">
-    <li><b>Filtro:</b> fica como está, com todas as funções.</li>
-    <li><b>Tablet:</b> o painel do nó escolhido passa a ser o mesmo da versão 4. A visão "Grade" no estilo do XNet desenho no mesmo método, se você aprovar o roteador e o alcance.</li>
+    <li><b>Faces:</b> a fileira F, Bk, L, R, T, Bt vira o mesmo cubo desdobrado do roteador, com as letras do lado. Quem aprendeu o cubo no roteador já sabe usar aqui.</li>
+    <li><b>Tipos:</b> os cinco ícones num quadro "Vincula", com Todos ao lado; as faces logo abaixo, com Todas.</li>
+    <li><b>Modo:</b> Único, Área e Máquinas num seletor no cabeçalho.</li>
+    <li><b>Continua:</b> rede ativa com "Nenhuma (desvincula)", Nova rede, a prévia da área com os cantos, a contagem, Vincular na cor da rede e Limpar.</li>
   </ul>
+</section>
+
+<section>
+  <span class="eyebrow">6 · As outras</span>
+  <h2>Baú, tanques, bateria, Ressonador e receitas</h2>
+  <p>Essas telas já seguem o desenho do mod e não estão nas reclamações. Recebem só o que é comum: o cabeçalho, as abas e os quadros afundados iguais aos de cima. A tela do Núcleo do Ressonador fica como está.</p>
 </section>
 
 <section>

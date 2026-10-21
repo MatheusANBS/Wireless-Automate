@@ -284,6 +284,8 @@
   "command.wirelessautomate.resonator.info.output": "  %s FE/t · buffer %s / %s FE",
   "command.wirelessautomate.resonator.info.contents": "  Cristais %s/%s · redstone %s/%s",
   "command.wirelessautomate.resonator.info.mode": "  Modo: %s · Sintonizador na estrutura: %s",
+  "command.wirelessautomate.resonator.info.interference.none": "  Interferência: nenhuma",
+  "command.wirelessautomate.resonator.info.interference": "  Interferência: −%s%% · Núcleo a %s blocos",
   "command.wirelessautomate.resonator.yes": "sim",
   "command.wirelessautomate.resonator.no": "não",
   "command.wirelessautomate.resonator.dial": "Dial em %s MHz.",

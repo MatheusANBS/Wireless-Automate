@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.network;
 
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorManager;
 import io.github.matheusanbs.wirelessautomate.storage.SourceTankLevels;
 import java.util.concurrent.atomic.AtomicInteger;
 import net.minecraft.server.MinecraftServer;
@@ -45,6 +46,7 @@ public final class ConfigReloadListener {
             // Pode vir da thread que observa o arquivo: só marca, o tick remonta.
             NetworkManager.configChanged();
             SourceTankLevels.configChanged(); // os níveis dos Tanques de Source seguem a capacidade da config
+            ResonatorManager.configChanged(); // a interferência guardada segue o raio, a penalidade e o teto
             MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
             if (server == null || !server.isSameThread()) {
                 FILE_RELOADS.incrementAndGet();

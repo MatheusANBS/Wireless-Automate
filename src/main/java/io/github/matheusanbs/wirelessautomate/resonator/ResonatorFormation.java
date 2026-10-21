@@ -122,6 +122,7 @@ public final class ResonatorFormation {
      */
     public static void disassemble(ServerLevel level, ResonanceCoreBlockEntity core) {
         BlockPos at = core.getBlockPos();
+        boolean wasFormed = core.formed();
         boolean released = false;
         for (BlockPos pos : core.members()) {
             if (ResonatorMembers.ownedOrFree(level.dimension(), pos, at)) {
@@ -131,6 +132,9 @@ public final class ResonatorFormation {
         }
         updatePorts(level, core, List.of(), List.of());
         core.setFormed(false, List.of());
+        if (wasFormed) {
+            ResonatorManager.interferenceChanged(core);
+        }
         if (released) {
             ResonatorManager.wakeBlockedBy(level, at);
         }
@@ -215,6 +219,7 @@ public final class ResonatorFormation {
             ResonatorManager.wakeBlockedBy(level, at);
         }
         if (!wasFormed) {
+            ResonatorManager.interferenceChanged(core);
             announce(level, core);
         }
     }

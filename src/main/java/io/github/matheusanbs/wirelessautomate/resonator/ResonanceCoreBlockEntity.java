@@ -43,6 +43,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
     private List<BlockPos> ports = List.of();
     /** A vazão por Porta de Energia e o "cheio" do último lote, que vão à câmara; fora do NBT. */
     private final CoreFlow flow = new CoreFlow();
+    private final CoreInterference interference = new CoreInterference();
     private @Nullable ResonatorLayout.Broken lastProblem;
     private boolean hasStation;
     private double station;
@@ -366,10 +367,14 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         }
     }
 
-    /** FE por tick agora: os quartos dos cristais que geram ({@link CoreYield}), na sintonia atual; 0 desmontado. */
+    /** FE por tick agora: os quartos dos cristais ({@link CoreYield}) na sintonia e na interferência; 0 desmontado. */
     public long generationPerTick() {
         int quarters = formed ? CoreYield.quarters(crystals, chambers(), tier(), true) : 0;
-        return CoreMath.perTick(Config.resonatorFePerCrystal(tier()), quarters, efficiency());
+        return CoreMath.perTick(Config.resonatorFePerCrystal(tier()), quarters, efficiency() * interference.factor());
+    }
+
+    public CoreInterference interference() {
+        return interference;
     }
 
     double velocity() {

@@ -6,6 +6,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
+import io.github.matheusanbs.wirelessautomate.resonator.CoreInterference;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorStatus;
 import io.github.matheusanbs.wirelessautomate.resonator.Tuning;
@@ -18,8 +19,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 
 /**
- * {@code /wa resonator <pos>}: {@code info} mostra a sintonia, a geração, o buffer, os cristais, a redstone e o modo
- * de um Núcleo de Ressonância; {@code dial <mhz>} gira o dial dele (no passo de 0,05 MHz). Só para operadores.
+ * {@code /wa resonator <pos>}: {@code info} mostra a sintonia, a geração, o buffer, os cristais, a redstone, o modo e
+ * a interferência de um Núcleo de Ressonância; {@code dial <mhz>} gira o dial dele (no passo de 0,05 MHz). Só para
+ * operadores.
  */
 public final class ResonatorCommand {
     private static final String KEY = "command.wirelessautomate.resonator.";
@@ -59,6 +61,7 @@ public final class ResonatorCommand {
                 core.redstone(), ResonanceCoreBlockEntity.MAX_REDSTONE);
         Component mode = Component.translatable(KEY + "info.mode", ResonatorStatus.mode(core),
                 Component.translatable(KEY + (core.hasTuner() ? "yes" : "no")));
+        Component interference = interference(core.interference());
         source.sendSuccess(() -> Component.translatable(KEY + "info.header",
                 Component.translatable(core.tier().translationKey()), core.getBlockPos().toShortString(),
                 Component.translatable(core.formed() ? KEY + "formed" : KEY + "loose")), false);
@@ -66,7 +69,17 @@ public final class ResonatorCommand {
         source.sendSuccess(() -> output, false);
         source.sendSuccess(() -> contents, false);
         source.sendSuccess(() -> mode, false);
+        source.sendSuccess(() -> interference, false);
         return 1;
+    }
+
+    /** "nenhuma" sem vizinho no raio; senão a perda em % (com uma casa) e a distância do mais perto. */
+    private static Component interference(CoreInterference interference) {
+        if (interference.lossPermille() <= 0) {
+            return Component.translatable(KEY + "info.interference.none");
+        }
+        String loss = String.format(Locale.ROOT, "%.1f", interference.lossPermille() / 10.0).replace(".0", "");
+        return Component.translatable(KEY + "info.interference", loss, interference.nearest());
     }
 
     private static int dial(CommandSourceStack source, ResonanceCoreBlockEntity core, double mhz) {

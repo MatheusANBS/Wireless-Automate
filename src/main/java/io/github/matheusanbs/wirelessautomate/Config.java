@@ -50,6 +50,9 @@ public final class Config {
     public static final ModConfigSpec.LongValue RECHARGE_TICKS;
     public static final ModConfigSpec.IntValue CRYSTAL_INTEGRITY;
     public static final ModConfigSpec.IntValue RECAST_CRYSTALS;
+    public static final ModConfigSpec.IntValue INTERFERENCE_RADIUS;
+    public static final ModConfigSpec.DoubleValue INTERFERENCE_PENALTY;
+    public static final ModConfigSpec.DoubleValue INTERFERENCE_MAX;
     /** FE por tick que um cristal de rendimento 1 dá ao Núcleo de Ressonância, por tier. */
     public static final Map<RouterTier, ModConfigSpec.LongValue> RESONATOR_FE_PER_CRYSTAL = new EnumMap<>(RouterTier.class);
 
@@ -189,6 +192,16 @@ public final class Config {
         RECAST_CRYSTALS = builder
                 .comment("Cristais de Sinal cheios que refazem um cristal rachado na bancada.")
                 .defineInRange("recastCrystals", 4, 1, 9);
+        INTERFERENCE_RADIUS = builder
+                .comment("Raio, em blocos (distância de Chebyshev entre os Núcleos), em que outro Núcleo montado e carregado",
+                        "da mesma dimensão tira eficiência deste (0 desliga a interferência).")
+                .defineInRange("interferenceRadius", 32, 0, 256);
+        INTERFERENCE_PENALTY = builder
+                .comment("Eficiência que cada Núcleo vizinho no raio tira (0,15 = 15%).")
+                .defineInRange("interferencePenalty", 0.15, 0.0, 1.0);
+        INTERFERENCE_MAX = builder
+                .comment("Perda máxima da eficiência pela interferência, somados todos os vizinhos (0,60 = 60%).")
+                .defineInRange("interferenceMax", 0.60, 0.0, 1.0);
         for (RouterTier tier : RouterTier.values()) {
             builder.push(tier.getSerializedName());
             RESONATOR_FE_PER_CRYSTAL.put(tier, builder
@@ -361,6 +374,21 @@ public final class Config {
     /** Cristais de Sinal cheios que refazem um cristal rachado na bancada. */
     public static int recastCrystals() {
         return read(RECAST_CRYSTALS);
+    }
+
+    /** Raio da interferência entre Núcleos (0 = desligada). */
+    public static int interferenceRadius() {
+        return read(INTERFERENCE_RADIUS);
+    }
+
+    /** Eficiência que cada vizinho no raio tira. */
+    public static double interferencePenalty() {
+        return read(INTERFERENCE_PENALTY);
+    }
+
+    /** Perda máxima da eficiência pela interferência. */
+    public static double interferenceMax() {
+        return read(INTERFERENCE_MAX);
     }
 
     /** Ticks que o Núcleo leva para recarregar um cristal Opaco. */

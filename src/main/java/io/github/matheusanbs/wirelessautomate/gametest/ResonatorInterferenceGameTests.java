@@ -29,12 +29,12 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
 public final class ResonatorInterferenceGameTests {
-    private static final String BATCH = "wirelessautomate_config_interference";
+    static final String BATCH = "wirelessautomate_config_interference";
     private static final String KEY = "command.wirelessautomate.resonator.info.interference";
     private static final BlockPos FIRST_ORIGIN = new BlockPos(0, 1, 1);
     private static final BlockPos SECOND_ORIGIN = new BlockPos(6, 1, 1);
     /** A distância de Chebyshev entre os dois Núcleos. */
-    private static final int APART = 6;
+    static final int APART = 6;
 
     private ResonatorInterferenceGameTests() {
     }
@@ -111,12 +111,12 @@ public final class ResonatorInterferenceGameTests {
         }));
     }
 
-    private interface PairBody {
+    interface PairBody {
         void run(ResonanceCoreBlockEntity first, ResonanceCoreBlockEntity second);
     }
 
     /** Monta os dois Ressonadores, espera os dois montarem e roda {@code body} num só tick. */
-    private static void pair(GameTestHelper helper, PairBody body) {
+    static void pair(GameTestHelper helper, PairBody body) {
         BlockPos first = ResonatorTestSupport.build(helper, FIRST_ORIGIN, Layout.VITRINE, RouterTier.BASIC);
         BlockPos second = ResonatorTestSupport.build(helper, SECOND_ORIGIN, Layout.VITRINE, RouterTier.BASIC);
         helper.startSequence().thenWaitUntil(() -> {
@@ -127,7 +127,7 @@ public final class ResonatorInterferenceGameTests {
     }
 
     /** Liga a interferência com os valores dados, roda {@code body} e devolve a config e o desligado. */
-    private static void withInterference(int radius, double penalty, double max, Runnable body) {
+    static void withInterference(int radius, double penalty, double max, Runnable body) {
         int radiusBefore = Config.INTERFERENCE_RADIUS.get();
         double penaltyBefore = Config.INTERFERENCE_PENALTY.get();
         double maxBefore = Config.INTERFERENCE_MAX.get();

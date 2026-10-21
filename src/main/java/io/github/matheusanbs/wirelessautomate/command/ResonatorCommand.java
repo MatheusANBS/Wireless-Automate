@@ -5,6 +5,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
+import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
 import io.github.matheusanbs.wirelessautomate.resonator.CoreInterference;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
@@ -20,7 +21,7 @@ import net.minecraft.server.level.ServerLevel;
 
 /**
  * {@code /wa resonator <pos>}: {@code info} mostra a sintonia, a geração, o buffer, os cristais, a redstone, o modo e
- * a interferência de um Núcleo de Ressonância; {@code dial <mhz>} gira o dial dele (no passo de 0,05 MHz). Só para
+ * a interferência de um Núcleo de Ressonância e, no Ultimate, o Eco; {@code dial <mhz>} gira o dial dele (no passo de 0,05 MHz). Só para
  * operadores.
  */
 public final class ResonatorCommand {
@@ -70,6 +71,11 @@ public final class ResonatorCommand {
         source.sendSuccess(() -> contents, false);
         source.sendSuccess(() -> mode, false);
         source.sendSuccess(() -> interference, false);
+        if (core.tier() == RouterTier.ULTIMATE) {
+            String bonus = String.format(Locale.ROOT, "%.1f", (core.eco().factor() - 1) * 100).replace(".0", "");
+            source.sendSuccess(() -> Component.translatable(KEY + "info.eco", TierCoreItem.grouped(core.eco().value()),
+                    bonus), false);
+        }
         return 1;
     }
 

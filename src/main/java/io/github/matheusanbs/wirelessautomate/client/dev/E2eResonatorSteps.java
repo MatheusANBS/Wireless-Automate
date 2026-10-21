@@ -60,7 +60,7 @@ final class E2eResonatorSteps {
     /** Os dois vidros da janela que ficam faltando. */
     private static final int[][] MISSING_GLASS = {{2, 3, 4}, {3, 2, 4}};
     /** Os pés do jogador nas fotos de fora: a leste e ao sul da caixa, a uns 7 blocos do Núcleo. */
-    private static final double[] SIDE_VIEW = {8.5, 3.2, 7.5};
+    static final double[] SIDE_VIEW = {8.5, 3.2, 7.5};
     /** Os pés do jogador nas fotos da câmara: a 2,5 blocos da janela, de frente para ela (yaw 180°). */
     private static final double[] WINDOW_VIEW = {2.5, 2.3, 7.5};
     /**
@@ -129,6 +129,7 @@ final class E2eResonatorSteps {
         list.add(DevEndToEnd.wait("Ressonador montado", 10));
         list.add(capture("ressonador-montado"));
         screenSteps(list, origin);
+        E2eResonatorScreenSteps.screenSteps(list, playerId, origin);
         chamberSteps(list, playerId, origin);
         list.add(new Step("Ressonador: limpar", STEP_TIMEOUT_MS, () -> onServer(server -> {
             ServerPlayer player = server.getPlayerList().getPlayer(playerId);
@@ -427,7 +428,7 @@ final class E2eResonatorSteps {
     }
 
     /** Ar na caixa e numa volta de dois blocos em torno dela (o chão fica). */
-    private static void clear(ServerLevel level, BlockPos origin) {
+    static void clear(ServerLevel level, BlockPos origin) {
         for (BlockPos pos : BlockPos.betweenClosed(origin.offset(-2, 0, -2), origin.offset(6, 6, 6))) {
             if (!level.getBlockState(pos).isAir()) {
                 level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());

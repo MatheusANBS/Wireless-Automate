@@ -153,13 +153,26 @@ final class E2eResonatorFlowSteps {
         }), () -> view(origin).rechargeStart() < 0, () -> "recarga parada no cliente"));
         list.add(DevEndToEnd.wait("o Opaco cair", 40));
         list.add(capture("ressonador-camara-cristais"));
+        E2eResonatorScreenSteps.crackedChamberSteps(list, origin);
     }
 
-    /** Falha a medida se a recarga acabou antes dos quadros medidos: a espiral não estaria no desenho. */
-    private static void recharging(BlockPos[] origin) {
-        if (view(origin).rechargeStart() < 0) {
-            throw new IllegalStateException("a recarga acabou durante a medida com espiral");
+    /**
+     * Mantém a espiral durante a medida: com o cliente lento (quadros de ~50 ms) as quatro medidas passam da metade
+     * da recarga que sobra, então a recarga que acaba recomeça na hora com outro Opaco na última câmara. Os poucos
+     * quadros até o servidor avisar ficam na média.
+     */
+    private static void recharging(BlockPos[] origin) throws Exception {
+        if (view(origin).rechargeStart() >= 0) {
+            return;
         }
+        onServer(server -> {
+            ResonanceCoreBlockEntity core = (ResonanceCoreBlockEntity) server.overworld()
+                    .getBlockEntity(core(origin[0]));
+            if (!SignalCrystalItem.isRechargeable(core.crystals().get(core.chambers() - 1))) {
+                core.setCrystalAt(core.chambers() - 1, dull());
+            }
+            return null;
+        });
     }
 
     private static ItemStack dull() {

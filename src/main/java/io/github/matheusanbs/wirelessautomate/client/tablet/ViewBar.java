@@ -5,6 +5,7 @@ import static io.github.matheusanbs.wirelessautomate.client.tablet.ListLayout.QU
 import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletText.tr;
 
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
+import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.client.ResourceStyle;
 import io.github.matheusanbs.wirelessautomate.client.tablet.ListLayout.Hot;
 import io.github.matheusanbs.wirelessautomate.client.tablet.ListLayout.Kind;
@@ -110,10 +111,23 @@ final class ViewBar {
         int x = layout.x0;
         int bottom = y;
         if (selectorShown()) {
+            int[] widths = new int[3];
+            int sum = 0;
             for (int i = 0; i < 3; i++) {
-                int w = font.width(label(i)) + 8;
-                layout.hots.add(new Hot(Kind.VIEW, x, y, w, QUICK_H, i));
-                x += w;
+                widths[i] = font.width(label(i)) + 8;
+                sum += widths[i];
+            }
+            // numa lista estreita o seletor encolhe os segmentos mais largos em vez de vazar da lista
+            for (; sum > layout.listW; sum--) {
+                int widest = 0;
+                for (int i = 1; i < 3; i++) {
+                    widest = widths[i] > widths[widest] ? i : widest;
+                }
+                widths[widest]--;
+            }
+            for (int i = 0; i < 3; i++) {
+                layout.hots.add(new Hot(Kind.VIEW, x, y, widths[i], QUICK_H, i));
+                x += widths[i];
             }
             x += 6;
             bottom = y + QUICK_H;
@@ -210,8 +224,12 @@ final class ViewBar {
             boolean hovered = hot.contains(mx, my);
             GuiPaint.box(g, hot.x(), hot.y(), hot.w(), hot.h(), on == i ? GuiPaint.FG : GuiPaint.BUTTON,
                     on == i ? GuiPaint.FG : hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
-            GuiPaint.textCentered(g, font, label(i), hot.x() + hot.w() / 2 + 1, hot.y() + 2,
-                    on == i ? GuiPaint.BUTTON : hovered ? GuiPaint.FG : GuiPaint.MUTED);
+            int ink = on == i ? GuiPaint.BUTTON : hovered ? GuiPaint.FG : GuiPaint.MUTED;
+            if (font.width(label(i)) + 4 <= hot.w()) {
+                GuiPaint.textCentered(g, font, label(i), hot.x() + hot.w() / 2 + 1, hot.y() + 2, ink);
+            } else {
+                GuiText.draw(g, font, label(i), hot.x() + 2, hot.y() + 2, hot.w() - 4, ink);
+            }
         }
     }
 }

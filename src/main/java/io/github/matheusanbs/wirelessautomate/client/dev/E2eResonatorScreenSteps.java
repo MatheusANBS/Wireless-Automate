@@ -148,12 +148,19 @@ final class E2eResonatorScreenSteps {
     }
 
     /** Abre a tela do Núcleo e espera o estado que a foto precisa. */
+    /** Ticks sem tela até o clique no Núcleo ser repetido. */
+    private static final int OPEN_RETRY_TICKS = 40;
+
     private static Step open(String name, Supplier<BlockPos> pos,
             Predicate<ResonatorStatePayload> ready) {
-        return new Step(name, STEP_TIMEOUT_MS, () -> useOn(pos.get()),
-                () -> Minecraft.getInstance().screen instanceof ResonatorScreen screen && screen.getMenu().state() != null
-                        && screen.getMenu().pos().equals(pos.get()) && ready.test(screen.getMenu().state()),
-                () -> "tela " + describe(Minecraft.getInstance().screen));
+        return new Step(name, STEP_TIMEOUT_MS, () -> useOn(pos.get()), () -> {
+            if (Minecraft.getInstance().screen == null && stepTicks > 0 && stepTicks % OPEN_RETRY_TICKS == 0) {
+                // logo depois da câmera, o servidor pode recusar o clique pela posição velha do jogador
+                useOn(pos.get());
+            }
+            return Minecraft.getInstance().screen instanceof ResonatorScreen screen && screen.getMenu().state() != null
+                    && screen.getMenu().pos().equals(pos.get()) && ready.test(screen.getMenu().state());
+        }, () -> "tela " + describe(Minecraft.getInstance().screen));
     }
 
     /** A foto com o mouse em {@code at} (a dica aberta) e a conferência dos textos cortados. */

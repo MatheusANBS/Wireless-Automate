@@ -4,12 +4,14 @@ import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
+import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
+import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -44,6 +46,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
     /** A vazão por Porta de Energia e o "cheio" do último lote, que vão à câmara; fora do NBT. */
     private final CoreFlow flow = new CoreFlow();
     private final CoreInterference interference = new CoreInterference();
+    private final CoreEcoState eco = new CoreEcoState(this);
     private @Nullable ResonatorLayout.Broken lastProblem;
     private boolean hasStation;
     private double station;
@@ -343,8 +346,13 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         return energy;
     }
 
+    /** A geração máxima por tick com o Eco; o buffer guarda {@link CoreMath#BUFFER_TICKS} dela. */
+    public long maxOutput() {
+        return eco.apply(CoreMath.maxOutput(chambers(), Config.resonatorFePerCrystal(tier())));
+    }
+
     public long capacity() {
-        return CoreMath.buffer(chambers(), Config.resonatorFePerCrystal(tier()));
+        return CoreMath.mulSat(maxOutput(), CoreMath.BUFFER_TICKS);
     }
 
     public long extractEnergy(long max, boolean simulate) {
@@ -367,14 +375,19 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         }
     }
 
-    /** FE por tick agora: os quartos dos cristais ({@link CoreYield}) na sintonia e na interferência; 0 desmontado. */
+    /** FE por tick agora: os quartos dos cristais ({@link CoreYield}) na sintonia, na interferência e no Eco. */
     public long generationPerTick() {
         int quarters = formed ? CoreYield.quarters(crystals, chambers(), tier(), true) : 0;
-        return CoreMath.perTick(Config.resonatorFePerCrystal(tier()), quarters, efficiency() * interference.factor());
+        long fePerCrystal = Config.resonatorFePerCrystal(tier());
+        return eco.apply(CoreMath.perTick(fePerCrystal, quarters, efficiency() * interference.factor()));
     }
 
     public CoreInterference interference() {
         return interference;
+    }
+
+    public CoreEcoState eco() {
+        return eco;
     }
 
     double velocity() {
@@ -602,18 +615,27 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         tag.putBoolean("has_tuner", hasTuner);
         tag.putInt("energy_ports", energyPorts);
         tag.putInt("crystal_ports", crystalPorts);
-        tag.putByte("layout", layoutByte(layout));
+        tag.putByte("layout", ResonatorBlueprint.Layout.toByte(layout));
         tag.putLong("formed_at", formedAt);
+        eco.save(tag);
     }
 
-    /** 0 montagem própria (ou nenhuma), 1 Vitrine, 2 Faixa. */
-    private static byte layoutByte(ResonatorBlueprint.@Nullable Layout layout) {
-        return layout == null ? 0 : (byte) (layout.ordinal() + 1);
+    @Override
+    protected void collectImplicitComponents(DataComponentMap.Builder components) {
+        super.collectImplicitComponents(components);
+        eco.collectComponents(components);
     }
 
-    private static ResonatorBlueprint.@Nullable Layout layoutOf(byte value) {
-        ResonatorBlueprint.Layout[] all = ResonatorBlueprint.Layout.values();
-        return value >= 1 && value <= all.length ? all[value - 1] : null;
+    @Override
+    protected void applyImplicitComponents(DataComponentInput input) {
+        super.applyImplicitComponents(input);
+        eco.restore(input.get(ModDataComponents.RESONATOR_ECO.get()));
+    }
+
+    @Override
+    public void removeComponentsFromTag(CompoundTag tag) {
+        super.removeComponentsFromTag(tag);
+        CoreEcoState.removeFrom(tag);
     }
 
     @Override
@@ -649,7 +671,8 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         auto = tag.getBoolean("auto") && hasTuner;
         energyPorts = Math.max(0, tag.getInt("energy_ports"));
         crystalPorts = Math.max(0, tag.getInt("crystal_ports"));
-        layout = layoutOf(tag.getByte("layout"));
+        layout = ResonatorBlueprint.Layout.fromByte(tag.getByte("layout"));
         formedAt = tag.contains("formed_at") ? tag.getLong("formed_at") : -1;
+        eco.load(tag);
     }
 }

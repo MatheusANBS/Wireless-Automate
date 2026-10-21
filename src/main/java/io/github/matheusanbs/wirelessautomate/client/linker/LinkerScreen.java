@@ -1,12 +1,21 @@
 package io.github.matheusanbs.wirelessautomate.client.linker;
 
+import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.FACES_ALL_W;
+import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.FACES_TOP;
+import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.FACE_BTN_H;
+import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.FACE_BTN_W;
+import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.FACE_GAP;
+import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.FRAME_FULL_H;
+import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.FRAME_PAD;
+import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.FRAME_TYPES_H;
+import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.TYPES_ALL_W;
+import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.TYPE_BTN_H;
+import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.TYPE_BTN_W;
+import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.TYPE_GAP;
 import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.BASE_ROWS;
 import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.BODY_Y;
 import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.EDGE;
 import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.FACES_ALL_W;
-import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.FACES_H;
-import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.FACE_STEP;
-import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.FACE_W;
 import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.GRIP;
 import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.HEAD_SHIFT;
 import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.HEAD_Y;
@@ -20,7 +29,6 @@ import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.
 import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.SEP_Y;
 import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.SIDES;
 import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.TABS;
-import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.TYPE_H;
 import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.WINDOW_MARGIN;
 import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.X0;
 import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerText.tr;
@@ -32,6 +40,7 @@ import io.github.matheusanbs.wirelessautomate.client.GuiThemes;
 import io.github.matheusanbs.wirelessautomate.client.ResizeGrip;
 import io.github.matheusanbs.wirelessautomate.client.ResizeHandle;
 import io.github.matheusanbs.wirelessautomate.client.ThemeToggle;
+import io.github.matheusanbs.wirelessautomate.client.router.FaceNet;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerProblem;
@@ -129,14 +138,14 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         return h - MIN_H;
     }
 
-    /** O mapa: no modo Máquinas, a altura inteira; nos outros, {@link LinkerLayout#FACES_H} a menos para a linha Faces. */
+    /** O mapa: a altura do corpo (as faces moraram na coluna da esquerda, no quadro Vincula). */
     int mapH() {
-        return MAP_H + extraH() - (LinkerText.machines(snapshot()) ? 0 : FACES_H);
+        return MAP_H + extraH();
     }
 
-    /** Topo da linha Faces: abaixo do mapa em Área, no pé da coluna em Único. */
-    int facesY() {
-        return snapshot().mode() == LinkerMode.SINGLE ? actionY() + 2 : BODY_Y + mapH() + 2;
+    /** Onde o corpo do modo termina, em cima do botão Vincular: o limite das dicas do Único. */
+    int bodyBottomY() {
+        return actionY();
     }
 
     private int actionY() {
@@ -153,7 +162,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
 
     /** Botões de linha criados: o máximo de linhas que a maior altura comporta. */
     int maxRows() {
-        return BASE_ROWS + (maxH() - MIN_H) / ROW;
+        return Math.max(BASE_ROWS, listRowsFor(maxH(), FRAME_TYPES_H));
     }
 
     LinkerSnapshot snapshot() {
@@ -171,14 +180,19 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
 
     // layout da coluna da esquerda: a lista encolhe quando os tipos precisam de mais linhas
 
-    /** Linhas de tipo (dois chips por linha) dos tipos disponíveis. */
-    private int typeRows() {
-        return (snapshot().available().types().size() + 1) / 2;
+    /** Altura do quadro Vincula: com o cubo das faces, ou só com os tipos no modo Máquinas. */
+    int frameH() {
+        return LinkerText.machines(snapshot()) ? FRAME_TYPES_H : FRAME_FULL_H;
     }
 
-    /** Linhas da lista de redes: 6 com duas linhas de tipo, 5 com três, mais uma por ROW de altura extra. */
+    /** Linhas da lista de redes numa janela de altura {@code height} e um quadro Vincula de {@code frameH}. */
+    private static int listRowsFor(int height, int frameH) {
+        return Math.max(1, (height - 90 - frameH) / ROW);
+    }
+
+    /** Linhas da lista de redes: o que sobra acima do quadro Vincula; mais uma por ROW de altura extra. */
     int listRows() {
-        return Math.max(1, Math.min(BASE_ROWS, 8 - typeRows()) + extraH() / ROW);
+        return listRowsFor(h, frameH());
     }
 
     int listH() {
@@ -193,7 +207,8 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         return newY() + 20;
     }
 
-    private int typeY() {
+    /** Topo do quadro Vincula. */
+    int frameY() {
         return typeLabelY() + 11;
     }
 
@@ -225,24 +240,23 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
 
         column.addWidgets(x, y);
 
-        // a posição dos chips e do Todos vem de refresh(), pela ordem entre os tipos disponíveis
-        int typeW = (LW - 2) / 2;
+        // a posição dos botões dos tipos, do Todos e do cubo das faces vem de refresh()
         for (int i = 0; i < TABS.length; i++) {
             ResourceType t = TABS[i];
-            tabButtons.add(add(new FlatButton(x + X0, y + typeY(), typeW, TYPE_H, LinkerText.typeName(t),
-                    (g, b, hovered) -> LinkerPaint.paintCheck(g, b, hovered, snapshot(), t), () -> actions.toggleTab(t))
+            tabButtons.add(add(new FlatButton(x + X0, y + frameY(), TYPE_BTN_W, TYPE_BTN_H, LinkerText.typeName(t),
+                    (g, b, hovered) -> LinkerPaint.paintType(g, b, hovered, snapshot(), t), () -> actions.toggleTab(t))
                     .tooltip(() -> LinkerText.tabTooltip(snapshot(), t))));
         }
-        allButton = add(new FlatButton(x + X0 + LW - 50, y + typeLabelY() - 3, 50, 12, tr("type.all"),
+        allButton = add(new FlatButton(x + X0, y + frameY(), TYPES_ALL_W, TYPE_BTN_H, tr("type.all"),
                 (g, b, hovered) -> LinkerPaint.paintAll(g, b, hovered, snapshot()), actions::setAllTabs)
                 .tooltip(() -> LinkerText.allTooltip(snapshot())));
 
-        allFacesButton = add(new FlatButton(x + RX, y + facesY(), FACES_ALL_W, 12, tr("faces.all"),
+        allFacesButton = add(new FlatButton(x + X0, y + frameY(), FACES_ALL_W, FACE_BTN_H, tr("faces.all"),
                 (g, b, hovered) -> LinkerPaint.paintAllFaces(g, b, hovered, snapshot()), actions::setAllFaces)
                 .tooltip(() -> LinkerText.allFacesTooltip(snapshot())));
         for (int i = 0; i < SIDES.length; i++) {
             RemoteSide side = SIDES[i];
-            faceButtons.add(add(new FlatButton(x + RX + FACES_ALL_W + 3 + i * FACE_STEP, y + facesY(), FACE_W, 12,
+            faceButtons.add(add(new FlatButton(x + X0, y + frameY(), FACE_BTN_W, FACE_BTN_H,
                     LinkerItem.sideLetter(side), (g, b, hovered) -> LinkerPaint.paintFace(g, b, hovered, snapshot(), side),
                     () -> actions.toggleFace(side)).tooltip(() -> LinkerText.faceTooltip(snapshot(), side))));
         }
@@ -269,28 +283,35 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     void refresh() {
         LinkerSnapshot s = snapshot();
         column.refresh();
-        int typeW = (LW - 2) / 2;
         int shown = 0;
+        int rowY = topPos + frameY() + FRAME_PAD;
         for (int i = 0; i < TABS.length; i++) {
             FlatButton chip = tabButtons.get(i);
             chip.visible = s.available().contains(TABS[i]);
             if (chip.visible) {
-                chip.setX(leftPos + X0 + (shown % 2) * (typeW + 2));
-                chip.setY(topPos + typeY() + (shown / 2) * (TYPE_H + 2));
+                chip.setX(leftPos + X0 + FRAME_PAD + shown * (TYPE_BTN_W + TYPE_GAP));
+                chip.setY(rowY);
                 shown++;
             }
         }
-        allButton.setY(topPos + typeLabelY() - 3);
+        allButton.setX(leftPos + X0 + FRAME_PAD + shown * (TYPE_BTN_W + TYPE_GAP) + 2);
+        allButton.setY(rowY);
         column.refreshCreate(topPos);
         boolean area = s.mode() != LinkerMode.SINGLE;
         linkButton.visible = clearButton.visible = area;
-        // a linha Faces some no modo Máquinas; em Único fica no pé da coluna, em Área abaixo do mapa
+        // o cubo das faces some no modo Máquinas
         boolean showFaces = !LinkerText.machines(s);
+        int cubeX = leftPos + X0 + FRAME_PAD;
+        int cubeY = topPos + frameY() + FACES_TOP;
         allFacesButton.visible = showFaces;
-        allFacesButton.setY(topPos + facesY());
-        for (FlatButton face : faceButtons) {
+        allFacesButton.setX(cubeX + 4 * (FACE_BTN_W + FACE_GAP) + 4);
+        allFacesButton.setY(cubeY);
+        for (int i = 0; i < faceButtons.size(); i++) {
+            FlatButton face = faceButtons.get(i);
+            int[] cell = FaceNet.cell(SIDES[i]);
             face.visible = showFaces;
-            face.setY(topPos + facesY());
+            face.setX(cubeX + cell[0] * (FACE_BTN_W + FACE_GAP));
+            face.setY(cubeY + cell[1] * (FACE_BTN_H + FACE_GAP));
         }
         // em Máquinas a contagem é de roteadores; o servidor decide quais máquinas entram
         linkButton.active = s.problem() == LinkerProblem.NONE && (LinkerText.machines(s) || LinkerText.toLink(s) > 0);
@@ -479,6 +500,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         column.render(g, x, y);
 
         GuiPaint.text(g, font, tr("type.label"), x + X0, y + typeLabelY(), GuiPaint.MUTED);
+        GuiPaint.inset(g, x + X0, y + frameY(), LW, frameH());
 
         // corpo do modo
         g.fill(x + RX - 5, y + BODY_Y, x + RX - 4, y + h - 9, GuiPaint.LINE);

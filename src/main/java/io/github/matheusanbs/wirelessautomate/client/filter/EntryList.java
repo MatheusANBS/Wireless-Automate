@@ -12,6 +12,7 @@ import static io.github.matheusanbs.wirelessautomate.client.filter.FilterText.tr
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
+import io.github.matheusanbs.wirelessautomate.filter.FilterEntry.ItemEntry;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry.RuleEntry;
 import java.util.ArrayList;
 import java.util.List;
@@ -259,9 +260,10 @@ final class EntryList {
             int stockW = stock.isEmpty() ? 0 : font.width(stock) + 4;
             GuiPaint.text(g, font, GuiPaint.ellipsize(font, text.entryName(entry), textW - stockW), rx + 21, ry + 1,
                     entry instanceof RuleEntry ? GuiPaint.RULE_TEXT : GuiPaint.FG);
-            GuiPaint.text(g, font, GuiPaint.ellipsize(font, text.entryKind(entry), textW), rx + 21, ry + 10, GuiPaint.DISABLED);
+            GuiPaint.text(g, font, GuiPaint.ellipsize(font, text.entryKind(entry), textW), rx + 21, ry + 10,
+                    entry instanceof ItemEntry ? GuiPaint.DISABLED : GuiPaint.MUTED);
             if (!stock.isEmpty()) {
-                GuiPaint.textRight(g, font, Component.literal(stock), x + X0 + lw - 8, ry + 1, GuiPaint.ACCENT);
+                GuiPaint.textRight(g, font, Component.literal(stock), x + X0 + lw - 8, ry + 1, GuiPaint.ACCENT_DEEP);
             }
         }
     }

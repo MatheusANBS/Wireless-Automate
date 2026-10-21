@@ -66,6 +66,7 @@ public final class TabletList {
     final TreeNav treeNav;
     final TreeClicks treeClicks;
     final MachineRows machineRows;
+    final GridRows gridRows;
     final MachineNav machineNav;
     final ListProfileActions profileActions;
     final ListRename rename;
@@ -102,6 +103,7 @@ public final class TabletList {
         this.treeNav = new TreeNav(this);
         this.treeClicks = new TreeClicks(this);
         this.machineRows = new MachineRows(this);
+        this.gridRows = new GridRows(this);
         this.machineNav = new MachineNav(this);
         this.layout = new ListLayout(this);
         this.painter = new ListPainter(this, layout);
@@ -170,6 +172,21 @@ public final class TabletList {
     void tick() {
         search.tick();
         chosenPanel.followServerDrop();
+    }
+
+    /**
+     * A Grade está escolhida. Só do cliente (a página do servidor é a dos roteadores); estática de propósito, como o
+     * tamanho das telas: a escolha vale para a sessão e a próxima Lista já abre nela.
+     */
+    private static boolean grid;
+
+    /** A Lista mostra a Grade: escolhida e a página dos roteadores (a por máquinas pede outra). */
+    boolean gridView() {
+        return grid && !machineView();
+    }
+
+    void setGrid(boolean on) {
+        grid = on;
     }
 
     /** A Lista está na visão por máquinas (a página do servidor). */
@@ -277,6 +294,11 @@ public final class TabletList {
         return layout.listW;
     }
 
+    /** A largura da lista com o painel ao lado (a Grade fica com a aba toda): a dos botões da barra de baixo. */
+    int splitListWidth() {
+        return layout.splitListW;
+    }
+
     int barY() {
         return layout.barY();
     }
@@ -343,7 +365,9 @@ public final class TabletList {
         rows.render(g, font, mx, my);
         rename.endFrame(g, mx, my);
         painter.renderBar(g, font, mx, my);
-        g.fill(layout.x0 + layout.listW + 4, layout.y0, layout.x0 + layout.listW + 5, layout.bottom, GuiPaint.LINE);
+        if (!gridView()) {
+            g.fill(layout.x0 + layout.listW + 4, layout.y0, layout.x0 + layout.listW + 5, layout.bottom, GuiPaint.LINE);
+        }
         painter.renderPanel(g, font, mx, my);
     }
 
@@ -361,6 +385,10 @@ public final class TabletList {
     }
 
     // ------------------------------------------------------------------ ganchos do e2e e das capturas
+
+    void previewGrid(boolean on) {
+        grid = on;
+    }
 
     void previewMulti(boolean on, int count) {
         multi = on;

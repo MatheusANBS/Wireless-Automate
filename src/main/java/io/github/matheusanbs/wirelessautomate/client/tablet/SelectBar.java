@@ -52,6 +52,9 @@ final class SelectBar {
     private int pasteWidth = -1;
     /** A borda direita do Selecionar e as larguras dele fora e dentro da seleção. */
     private int selectRight;
+    /** A borda esquerda da lista, de onde a Grade recalcula a posição dos botões da direita. */
+    private int base;
+    private int clearLitWidth;
     private int selectWidth;
     private int doneWidth;
 
@@ -71,7 +74,8 @@ final class SelectBar {
     void addButtons(TabletScreen.Buttons adder, Font font) {
         buttons.clear();
         int x = layout.left;
-        int lw = list.listWidth();
+        int lw = list.splitListWidth();
+        base = x + X0;
         int selectW = Math.max(56, font.width(tr("select")) + 10);
         // selecionando, o botão encolhe ao "Concluir" e a sobra vai para o Colar nos marcados
         int doneW = Math.min(selectW, font.width(tr("select.done")) + 8);
@@ -104,6 +108,7 @@ final class SelectBar {
                 list.profileActions::pasteSelected).tooltip(() -> snapshot().profile()
                         .map(p -> tr("list.paste_marked.tooltip", p.sourceName(), list.markRows.what())).orElse(null)));
         int clearW = clearLitWidth(font);
+        clearLitWidth = clearW;
         add(adder, new FlatButton(x + X0 + lw - selectW - 2 - clearW, list.barY(), clearW, ROW_H, clearLitText(),
                 (g, b, hovered) -> TabletButtons.paintText(g, b, hovered, b.getMessage()), HighlightRenderer::clear)
                 .tooltip(() -> Component.translatable("gui.wirelessautomate.highlight.clear_all.tooltip")));
@@ -126,11 +131,16 @@ final class SelectBar {
 
     void refresh(boolean shown) {
         FlatButton select = buttons.get(0);
+        boolean grid = list.gridView();
         int selectW = list.multi() ? doneWidth : selectWidth;
         if (select.getWidth() != selectW) {
             select.setWidth(selectW);
             select.setX(selectRight - selectW);
         }
+        // a Grade não marca nem move: sem o Selecionar, e o Apagar todas passa para a ponta direita dela
+        select.visible = shown && !grid;
+        buttons.get(6).setX(grid ? base + list.listWidth() - clearLitWidth
+                : selectRight - selectWidth - 2 - clearLitWidth);
         for (int i = 1; i <= 4; i++) {
             buttons.get(i).visible = shown && list.multi();
         }

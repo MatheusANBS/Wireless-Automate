@@ -4,6 +4,7 @@ import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletText.tr
 
 import io.github.matheusanbs.wirelessautomate.client.router.NodePanel;
 import io.github.matheusanbs.wirelessautomate.client.tablet.ListLayout.Hot;
+import io.github.matheusanbs.wirelessautomate.client.tablet.ListLayout.Kind;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeView;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.QuickFilter;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
@@ -78,7 +79,8 @@ final class ListClicks {
         ListProfileActions profile = list.profileActions;
         switch (hot.kind()) {
             case LABEL -> list.search.removeLabel(hot.arg());
-            case VIEW -> layout.viewBar().choose(hot.arg() == 1);
+            case VIEW -> layout.viewBar().choose(hot.arg());
+            case GRID_ROW, GRID_CELL -> clickGrid(hot);
             case QUICK -> list.search.toggleQuick(QuickFilter.values()[hot.arg()]);
             case TYPE_CHIP -> list.search.clearType();
             case CLEAR -> list.clearAll();
@@ -109,6 +111,23 @@ final class ListClicks {
                 profile.undo();
             }
         }
+    }
+
+    /** Um clique na Grade: escolhe o nó e abre o painel dele, na aba do tipo da célula (ou na de antes, fora das células). */
+    private void clickGrid(Hot hot) {
+        boolean cell = hot.kind() == Kind.GRID_CELL;
+        int index = cell ? hot.arg() / GridRows.CELLS : hot.arg();
+        List<NodeView> nodes = list.snapshot().nodes();
+        if (index >= nodes.size()) {
+            return;
+        }
+        NodeKey key = nodes.get(index).key();
+        list.choose(key);
+        if (cell) {
+            list.chosenPanel.openOn(GridRows.typeOf(hot.arg()));
+        }
+        list.setGrid(false);
+        layout.viewBar().showRouters();
     }
 
     /** O "Limpar a busca" da lista vazia. */

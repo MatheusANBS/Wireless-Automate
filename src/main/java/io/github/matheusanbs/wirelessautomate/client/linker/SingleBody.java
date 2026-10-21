@@ -70,8 +70,8 @@ final class SingleBody {
         colors.add(GuiPaint.MUTED);
         hints.add(tr("single.open"));
         colors.add(GuiPaint.MUTED);
-        // as dicas param antes da linha Faces, no pé da coluna
-        int limit = screen.top() + screen.facesY() - 4;
+        // as dicas param antes do pé da coluna
+        int limit = screen.top() + screen.bodyBottomY() - 4;
         boolean[] shown = fit(font, hints, lineY, limit, rw);
         MutableComponent more = Component.empty();
         moreHints = null;

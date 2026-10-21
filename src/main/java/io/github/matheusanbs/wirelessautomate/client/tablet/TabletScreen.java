@@ -402,6 +402,11 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         switchTab(t);
     }
 
+    /** Liga ou desliga a Grade da Lista (captura sem mouse). */
+    public void previewGrid(boolean on) {
+        list.previewGrid(on);
+    }
+
     public void previewMulti(boolean on, int count) {
         list.previewMulti(on, count);
     }

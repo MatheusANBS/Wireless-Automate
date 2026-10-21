@@ -21,8 +21,8 @@ import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A linha embaixo da busca na Lista do Tablet: o seletor "Roteadores · Máquinas" ({@link Kind#VIEW}, argumento 0 ou
- * 1) e, à direita dele, o filtro de tipo e os filtros rápidos, que só aparecem quando pedem atenção e passam para a
+ * A linha embaixo da busca na Lista do Tablet: o seletor "Roteadores · Máquinas · Grade" ({@link Kind#VIEW}, argumento
+ * 0, 1 ou 2) e, à direita dele, o filtro de tipo e os filtros rápidos, que só aparecem quando pedem atenção e passam para a
  * linha de baixo quando não cabem ao lado. A geometria entra nas áreas do {@link ListLayout}; o desenho dos filtros
  * é do {@link ListPainter}, o do seletor é daqui.
  */
@@ -49,9 +49,38 @@ final class ViewBar {
         }
     }
 
-    /** O clique no seletor: pede a visão por máquinas ({@code true}) ou por roteadores. */
-    void choose(boolean machines) {
+    /** A parte do seletor acesa: 0 Roteadores, 1 Máquinas, 2 Grade. */
+    int selected() {
+        return list.gridView() ? 2 : shown() ? 1 : 0;
+    }
+
+    /** O clique no seletor: a parte {@code view} (0 Roteadores, 1 Máquinas, 2 Grade). */
+    void choose(int view) {
+        if (view == 2) {
+            // a Grade é só do cliente; vem sobre a página dos roteadores
+            if (list.gridView()) {
+                return;
+            }
+            if (list.multi()) {
+                list.toggleMulti();
+            }
+            list.setGrid(true);
+            list.scroll = 0;
+            list.treeNav.clear();
+            list.machineNav.clear();
+            if (shown()) {
+                pending = false;
+                list.actions.machines(TabletMachinesPayload.Action.ROUTERS, Optional.empty());
+            }
+            return;
+        }
+        boolean machines = view == 1;
+        boolean wasGrid = list.gridView();
+        list.setGrid(false);
         if (shown() == machines) {
+            if (wasGrid) {
+                list.scroll = 0;
+            }
             return;
         }
         pending = machines;
@@ -62,8 +91,13 @@ final class ViewBar {
                 Optional.empty());
     }
 
-    private static Component label(boolean machines) {
-        return tr(machines ? "view.machines" : "view.routers");
+    /** Saiu da Grade pelo clique numa linha: o seletor volta aos Roteadores, que é a página que já está. */
+    void showRouters() {
+        list.scroll = 0;
+    }
+
+    private static Component label(int view) {
+        return tr(view == 2 ? "view.grid" : view == 1 ? "view.machines" : "view.routers");
     }
 
     /** O seletor aparece com algum nó na base (sem nenhum, a Lista mostra o que fazer). */
@@ -76,8 +110,8 @@ final class ViewBar {
         int x = layout.x0;
         int bottom = y;
         if (selectorShown()) {
-            for (int i = 0; i < 2; i++) {
-                int w = font.width(label(i == 1)) + 8;
+            for (int i = 0; i < 3; i++) {
+                int w = font.width(label(i)) + 8;
                 layout.hots.add(new Hot(Kind.VIEW, x, y, w, QUICK_H, i));
                 x += w;
             }
@@ -119,16 +153,22 @@ final class ViewBar {
             x = layout.x0;
         }
         List<Component> shown = quickTexts(font, kinds, texts, shorts, x1 - x);
+        boolean sameRow = y == layout.y0 + ListLayout.SEARCH_H + GAP;
         for (int i = 0; i < kinds.size(); i++) {
-            int extra = kinds.get(i) < 0 ? ResourceStyle.ICON + 3 : 8;
-            int w = Math.min(font.width(shown.get(i)) + 4 + extra, x1 - x);
+            boolean problem = kinds.get(i) == QuickFilter.PROBLEM.ordinal();
+            int extra = kinds.get(i) < 0 ? ResourceStyle.ICON + 3 : problem ? 0 : 8;
+            int w = Math.min(font.width(shown.get(i)) + 4 + extra + (problem ? 6 : 0), x1 - x);
             if (w <= extra + 6) {
                 break;
             }
             layout.quickLabels.add(shown.get(i));
-            layout.hots.add(new Hot(kinds.get(i) < 0 ? Kind.TYPE_CHIP : Kind.QUICK, x, y, w, QUICK_H,
+            // o "! N" fica na ponta direita da linha do seletor
+            int hx = problem && sameRow ? x1 - w : x;
+            layout.hots.add(new Hot(kinds.get(i) < 0 ? Kind.TYPE_CHIP : Kind.QUICK, hx, y, w, QUICK_H,
                     kinds.get(i) < 0 ? 0 : kinds.get(i)));
-            x += w + 3;
+            if (!(problem && sameRow)) {
+                x += w + 3;
+            }
         }
         return y + QUICK_H;
     }
@@ -159,23 +199,19 @@ final class ViewBar {
         return counts;
     }
 
-    /** O seletor: dois segmentos colados, o da visão aberta em destaque. */
+    /** O seletor: três segmentos colados, o da visão aberta escuro. */
     void render(GuiGraphics g, Font font, int mx, int my) {
-        boolean machines = shown();
-        for (int i = 0; i < 2; i++) {
+        int on = selected();
+        for (int i = 0; i < 3; i++) {
             Hot hot = layout.hot(Kind.VIEW, i);
             if (hot == null) {
                 return;
             }
-            boolean on = machines == (i == 1);
             boolean hovered = hot.contains(mx, my);
-            GuiPaint.box(g, hot.x(), hot.y(), hot.w(), hot.h(), on ? GuiPaint.BUTTON : GuiPaint.PANEL,
-                    on ? GuiPaint.FG : hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.LINE);
-            if (on) {
-                g.fill(hot.x() + 1, hot.y() + hot.h() - 2, hot.x() + hot.w() - 1, hot.y() + hot.h() - 1, GuiPaint.ACCENT);
-            }
-            GuiPaint.textCentered(g, font, label(i == 1), hot.x() + hot.w() / 2 + 1, hot.y() + 2,
-                    on || hovered ? GuiPaint.FG : GuiPaint.MUTED);
+            GuiPaint.box(g, hot.x(), hot.y(), hot.w(), hot.h(), on == i ? GuiPaint.FG : GuiPaint.BUTTON,
+                    on == i ? GuiPaint.FG : hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
+            GuiPaint.textCentered(g, font, label(i), hot.x() + hot.w() / 2 + 1, hot.y() + 2,
+                    on == i ? GuiPaint.BUTTON : hovered ? GuiPaint.FG : GuiPaint.MUTED);
         }
     }
 }

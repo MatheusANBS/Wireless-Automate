@@ -28,6 +28,8 @@ final class ChosenPanel {
     /** O nó do último painel do servidor e a versão do painel já conferida por {@link #followServerDrop}. */
     private @Nullable NodeKey serverNode;
     private int dropCheckedVersion = -1;
+    /** A aba que o próximo painel abre (o clique numa célula da Grade); {@code null}: a de antes. */
+    private @Nullable ResourceType openOn;
 
     ChosenPanel(TabletList list, TabletMenu menu, @Nullable NodeKey restored) {
         this.list = list;
@@ -47,6 +49,16 @@ final class ChosenPanel {
         return panel;
     }
 
+    /** O painel do nó escolhido abre na aba de {@code type} (agora, se já existe; senão quando chegar). */
+    void openOn(ResourceType type) {
+        list.chipType = type;
+        if (panel != null && list.chosen != null && list.chosen.equals(panelNode)) {
+            panel.select(type);
+        } else {
+            openOn = type;
+        }
+    }
+
     /** O painel como ficou no último {@link #panel()}, sem conferir de novo. */
     @Nullable NodePanel current() {
         return panel;
@@ -63,7 +75,8 @@ final class ChosenPanel {
         }
         RouterSnapshot s = snap.get();
         if (panel == null || !list.chosen.equals(panelNode)) {
-            ResourceType type = panel != null ? panel.type() : list.chipType;
+            ResourceType type = openOn != null ? openOn : panel != null ? panel.type() : list.chipType;
+            openOn = null;
             panel = new NodePanel(new PanelActions(), s, s.range().present() ? s.range().face() : s.facing());
             panel.select(type);
             panelNode = list.chosen;

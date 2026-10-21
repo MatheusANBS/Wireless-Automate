@@ -88,10 +88,10 @@ final class RuleTab {
         for (Property property : properties) {
             for (int v = 0; v < 3; v++) {
                 Boolean value = v == 0 ? null : v == 1;
-                Component label = v == 0 ? Component.literal("-") : tr(v == 1 ? "rule.yes" : "rule.no");
+                Component label = v == 0 ? Component.literal("—") : tr(v == 1 ? "rule.yes" : "rule.no");
                 triButtons[property.ordinal()][v] = screen.add(new FlatButton(0, 0, TRI_W, COND_ROW - 1, label,
                         (g, b, hovered) -> paintTri(g, b, hovered, label, sameFlag(draft.flag(property), value),
-                                Boolean.FALSE.equals(value)),
+                                Boolean.FALSE.equals(value), value == null),
                         () -> setDraft(draft.withFlag(property, value)))
                         .tooltip(() -> tr("rule.prop." + property.getSerializedName() + ".tooltip")));
             }
@@ -104,7 +104,7 @@ final class RuleTab {
             int mode = v;
             Component label = Component.literal(v == 0 ? "-" : v == 1 ? "≥" : "<");
             durabilityButtons[v] = screen.add(new FlatButton(0, 0, 14, COND_ROW - 1, label,
-                    (g, b, hovered) -> paintTri(g, b, hovered, label, durabilityMode() == mode, false),
+                    (g, b, hovered) -> paintTri(g, b, hovered, label, durabilityMode() == mode, false, false),
                     () -> setDurabilityMode(mode)).tooltip(() -> tr("rule.durability.tooltip." + mode)));
         }
         durabilityPercent = screen.add(new FlatButton(0, 0, 28, COND_ROW - 1, tr("rule.percent"),

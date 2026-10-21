@@ -62,7 +62,9 @@ final class ScreenshotTablet {
                     tabletScreen.previewResize(420, 280);
                     choosePanel(PanelAccess.EDIT);
                 }, "t1-tablet-lista"),
+                new Step(() -> tabletScreen.previewGrid(true), "t1b-tablet-grade"),
                 new Step(() -> {
+                    tabletScreen.previewGrid(false);
                     int[] center = tabletScreen.nodeRowCenter(tabletNodeKey("Fornalha 2"));
                     mouseX = center[0];
                     mouseY = center[1];

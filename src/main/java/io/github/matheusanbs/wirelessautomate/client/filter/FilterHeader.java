@@ -8,6 +8,7 @@ import static io.github.matheusanbs.wirelessautomate.client.filter.FilterLayout.
 import static io.github.matheusanbs.wirelessautomate.client.filter.FilterLayout.TAB_H;
 import static io.github.matheusanbs.wirelessautomate.client.filter.FilterLayout.X0;
 import static io.github.matheusanbs.wirelessautomate.client.filter.FilterPaint.paintSegment;
+import static io.github.matheusanbs.wirelessautomate.client.filter.FilterPaint.paintTab;
 import static io.github.matheusanbs.wirelessautomate.client.filter.FilterPaint.paintTextButton;
 import static io.github.matheusanbs.wirelessautomate.client.filter.FilterText.tr;
 
@@ -76,7 +77,7 @@ final class FilterHeader {
         for (Tab t : Tab.values()) {
             Component label = tabLabel(t);
             tabButtons[t.ordinal()] = screen.add(new FlatButton(0, 0, 40, TAB_H, label,
-                    (g, b, hovered) -> paintSegment(g, b, hovered, tabLabel(t), screen.tab() == t), () -> screen.openTab(t))
+                    (g, b, hovered) -> paintTab(g, b, hovered, tabLabel(t), screen.tab() == t), () -> screen.openTab(t))
                     .tooltip(() -> tr("tab." + t.name().toLowerCase(Locale.ROOT) + ".tooltip")));
         }
     }

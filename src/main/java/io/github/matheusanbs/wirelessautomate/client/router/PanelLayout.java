@@ -99,6 +99,11 @@ final class PanelLayout {
     /** Altura da faixa do aviso no quadro atual: cresce com as linhas do texto ({@link NoticeBand}). */
     private int noticeH = NoticeBand.LINE_H;
     int bodyH;
+    /**
+     * A altura do retângulo empilhado, ou -1 com as partes soltas. O quadro das faces encolhe, até um mínimo, quando o
+     * resto das linhas (com a barra Editando, se há) não cabe: ele cede para a Prioridade não sair.
+     */
+    private int stackedH = -1;
 
     // o que arrange() calcula
     final List<Hot> hots = new ArrayList<>();
@@ -147,7 +152,7 @@ final class PanelLayout {
         netX = x;
         netY = y + TAB_H + TAB_BELOW;
         netW = w;
-        // o quadro encolhe, até um mínimo, quando o resto das linhas não cabe (o Tablet baixo); senão tem a altura cheia
+        stackedH = h;
         netH = Math.max(MIN_FRAME_H, Math.min(FRAME_H, h - TAB_H - TAB_BELOW - 5 - FACE_LINE_H - ROWS_H));
         bodyX = x;
         bodyY = netY + netH + 5;
@@ -158,6 +163,7 @@ final class PanelLayout {
     /** Cada parte no seu retângulo: a linha das abas, o cubo e o resto. */
     void layoutSplit(int tabsX, int tabsY, int tabsW, int netX, int netY, int netW, int netH, int bodyX,
             int bodyY, int bodyW, int bodyH) {
+        this.stackedH = -1;
         this.tabsX = tabsX;
         this.tabsY = tabsY;
         this.tabsW = tabsW;
@@ -184,9 +190,28 @@ final class PanelLayout {
         PanelNoticePayload notice = PanelNotices.current();
         noticeH = notice == null ? NoticeBand.LINE_H
                 : NoticeBand.height(font, notice, bodyW, notice.undo() != PanelNoticePayload.Undo.NONE);
+        restack(model);
         arrangeTabs(font, model);
         arrangeNet();
         arrangeBody(font, model);
+    }
+
+    /** Empilhado, refaz a altura do quadro das faces e o começo do corpo pelo que o corpo vai ter. */
+    private void restack(PanelModel model) {
+        if (stackedH < 0) {
+            return;
+        }
+        int target = 0;
+        if (model.rangeShown()) {
+            target = ROW_H + ROW_GAP + 2;
+            if (!model.targetFromList() && model.targetMachine() != null) {
+                target += ROW_H + GAP;
+            }
+        }
+        netH = Math.max(MIN_FRAME_H, Math.min(FRAME_H,
+                stackedH - TAB_H - TAB_BELOW - 5 - target - FACE_LINE_H - ROWS_H));
+        bodyY = netY + netH + 5;
+        bodyH = tabsY + stackedH - bodyY;
     }
 
     private void arrangeTabs(Font font, PanelModel model) {

@@ -69,8 +69,27 @@ final class FilterPaint {
                 selected ? GuiPaint.SELECTED_TEXT : GuiPaint.FG, false);
     }
 
-    /** Uma opção de — / Sim / Não: a escolhida cheia (Não em vermelho). */
-    static void paintTri(GuiGraphics g, FlatButton b, boolean hovered, Component text, boolean selected, boolean negative) {
+    /** Uma aba do filtro, como as abas do roteador: a aberta com moldura e sublinhado coral, as outras só o texto. */
+    static void paintTab(GuiGraphics g, FlatButton b, boolean hovered, Component text, boolean selected) {
+        Font font = font();
+        GuiPaint.tab(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), selected, hovered);
+        FormattedCharSequence label = GuiPaint.ellipsize(font, text, b.getWidth() - 4);
+        g.drawString(font, label, b.getX() + (b.getWidth() - font.width(label)) / 2, b.getY() + (b.getHeight() - 8) / 2,
+                GuiPaint.tabText(selected, hovered), false);
+    }
+
+    /**
+     * Uma opção de — / Sim / Não: Sim e Não escolhidos ficam escuros (Não em vermelho); o — escolhido só fica apagado,
+     * porque é "não importa" ({@code neutral}).
+     */
+    static void paintTri(GuiGraphics g, FlatButton b, boolean hovered, Component text, boolean selected, boolean negative,
+            boolean neutral) {
+        if (selected && neutral) {
+            GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), GuiPaint.INSET, GuiPaint.BEVEL_DARK);
+            GuiPaint.textCentered(g, font(), text, b.getX() + b.getWidth() / 2 + 1, b.getY() + (b.getHeight() - 8) / 2 + 1,
+                    GuiPaint.MUTED);
+            return;
+        }
         int color = negative ? GuiPaint.DANGER : GuiPaint.SELECTED;
         if (selected) {
             GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), color, color);

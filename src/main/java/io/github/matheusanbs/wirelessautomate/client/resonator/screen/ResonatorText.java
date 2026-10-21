@@ -49,7 +49,7 @@ final class ResonatorText {
         if (permille % 10 == 0) {
             return Integer.toString(permille / 10);
         }
-        return String.format(Locale.ROOT, "%.1f", permille / 10.0).replace('.', separator());
+        return (permille < 0 ? "-" : "") + Math.abs(permille / 10) + separator() + Math.abs(permille % 10);
     }
 
     static String fe(long value) {

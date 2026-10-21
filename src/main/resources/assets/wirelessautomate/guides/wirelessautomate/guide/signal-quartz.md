@@ -148,7 +148,7 @@ A **cracked crystal** doesn't generate, doesn't recharge and doesn't go into a c
 it back. To **recast** it, put the cracked crystal and **4 full Signal Crystals** anywhere on a crafting table: out
 comes the same crystal, full and with its integrity restored. It works for all three kinds; a Tuned one keeps its tier.
 
-In an Ultimate Core, a cracked Tuned Ultimate crystal can also be burned in the **Eco**, as on the
+In an Ultimate Core, a cracked Tuned Ultimate crystal can also be burned in the **Echo**, as on the
 [Signal Resonator](signal-resonator.md) page.
 
 ## Resonance Dust and Charged Dust

@@ -20,9 +20,9 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * A tela do Núcleo de Ressonância, 352 × 244 de tamanho fixo: à esquerda o sinal (osciloscópio, ponteiro, lâmpada,
- * dial e modo), à direita os cristais, a redstone, a saída e a estrutura, e embaixo o inventário. O cabeçalho é o da
- * Bateria. Esta classe só junta as partes: cada uma desenha, dá a dica e trata o clique da sua área, e o que vai ao
- * servidor sai pelo {@code ResonatorScreenActions}.
+ * dial e modo), à direita os cristais com a integridade, o catalisador, a saída, a interferência, a estrutura e, no
+ * Ultimate, o Eco, e embaixo o inventário. O cabeçalho é o da Bateria. Esta classe só junta as partes: cada uma
+ * desenha, dá a dica e trata o clique da sua área, e o que vai ao servidor sai pelo {@code ResonatorScreenActions}.
  */
 public class ResonatorScreen extends AbstractContainerScreen<ResonatorMenu> {
     private final ScopeView scope;
@@ -31,6 +31,8 @@ public class ResonatorScreen extends AbstractContainerScreen<ResonatorMenu> {
     private final CrystalSlots crystals;
     private final OutputPanel output;
     private final StructureLines structure;
+    private final InterferenceLine interference;
+    private final EcoBox eco;
 
     public ResonatorScreen(ResonatorMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
@@ -42,6 +44,8 @@ public class ResonatorScreen extends AbstractContainerScreen<ResonatorMenu> {
         this.crystals = new CrystalSlots(menu);
         this.output = new OutputPanel(menu);
         this.structure = new StructureLines(menu);
+        this.interference = new InterferenceLine(menu);
+        this.eco = new EcoBox(menu);
     }
 
     @Override
@@ -53,6 +57,8 @@ public class ResonatorScreen extends AbstractContainerScreen<ResonatorMenu> {
         crystals.layout(leftPos, topPos);
         output.layout(leftPos, topPos);
         structure.layout(leftPos, topPos);
+        interference.layout(leftPos, topPos);
+        eco.layout(leftPos, topPos);
     }
 
     public int themeX() {
@@ -94,6 +100,12 @@ public class ResonatorScreen extends AbstractContainerScreen<ResonatorMenu> {
         if (tip == null) {
             tip = output.tooltip(mouseX, mouseY);
         }
+        if (tip == null) {
+            tip = interference.tooltip(mouseX, mouseY);
+        }
+        if (tip == null) {
+            tip = eco.tooltip(mouseX, mouseY);
+        }
         return tip;
     }
 
@@ -127,6 +139,8 @@ public class ResonatorScreen extends AbstractContainerScreen<ResonatorMenu> {
         crystals.render(g, font, mouseX, mouseY, partialTick);
         output.render(g, font, mouseX, mouseY, partialTick);
         structure.render(g, font, mouseX, mouseY, partialTick);
+        interference.render(g, font);
+        eco.render(g, font);
         for (int i = menu.inventoryStart(); i < menu.slots.size(); i++) {
             Slot slot = menu.getSlot(i);
             GuiPaint.slot(g, x + slot.x - 1, y + slot.y - 1);
@@ -182,6 +196,17 @@ public class ResonatorScreen extends AbstractContainerScreen<ResonatorMenu> {
 
     public int[] themeCenter() {
         return new int[] {themeX() + ThemeToggle.SIZE / 2, themeY() + ThemeToggle.SIZE / 2};
+    }
+
+    /** O centro da linha da interferência; gancho do e2e. */
+    public int[] interferenceCenter() {
+        return new int[] {leftPos + CoreScreenLayout.INTERFERENCE.x() + 20,
+                topPos + CoreScreenLayout.INTERFERENCE.y() + CoreScreenLayout.INTERFERENCE.h() / 2};
+    }
+
+    /** O centro do slot do Eco (só no Ultimate); gancho do e2e. */
+    public int[] ecoSlotCenter() {
+        return eco.slotCenter();
     }
 
     /** O centro de um slot do Núcleo (câmara ou redstone); gancho do e2e. */

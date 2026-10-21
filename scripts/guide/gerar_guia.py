@@ -500,8 +500,8 @@ o roteador.
 | --- | --- |
 | **1. Escolha o tipo** | Clique na aba: Itens, Fluidos, Energia, Químicos ou Source. |
 | **2. Escolha a face** | Clique na face da máquina no modelo 3D (arraste para girar) ou no **cubo desdobrado** do painel: as duas escolhas andam juntas, e a face sob o mouse se acende nos dois. |
-| **3. Escolha o modo** | Extrai, Insere, Armazém ou Nenhum (tabela abaixo). Escolher um modo numa face sem rede, com uma [rede](networks.md) ativa, põe a face nela; o aviso na base do painel traz o botão **Desfazer**. |
-| **4. Ajustes (opcional)** | Prioridade e redstone ficam sempre à vista no painel. **Editar** abre o [filtro](filters.md) da face. |
+| **3. Escolha o modo** | Clique no botão da face no cubo: ele **avança** o modo (Extrai, Insere, Armazém, Nenhum e de volta). Clique direito **volta** o modo e Shift + clique põe em **Nenhum**. A tabela abaixo explica cada modo. |
+| **4. Ajustes (opcional)** | Prioridade (‹ ›, ou a roda do mouse) e redstone (‹ ›) ficam sempre à vista no painel. Os dois slots de **Cartão de Filtro** ficam na linha **Filtro**, ao lado do **Editar**, que abre o [filtro](filters.md) da face. |
 | **5. Rede** | Na linha **Rede**, escolha a [rede](networks.md) da face (ou **Sem rede**). |
 
 Arraste a borda direita, a de baixo ou o canto para aumentar a tela; o visor 3D cresce. Com pouco espaço, as abas mostram só o ícone (o nome aparece ao passar o mouse).
@@ -509,10 +509,10 @@ Arraste a borda direita, a de baixo ou o canto para aumentar a tela; o visor 3D 
 ## O painel e o cubo
 
 O painel à direita é o mesmo que o [Tablet de Rede](network-tablet.md) mostra para um nó. No alto,
-o **cubo desdobrado** mostra as seis faces da máquina de uma vez: cada uma com a cor do modo e uma
-bolinha na cor da rede. Uma face sem modo tem a borda tracejada, e uma com modo e sem rede ganha um
-contorno coral e o convite **Escolha a rede desta face**. O olho marca a face onde o roteador está
-preso.
+o **cubo desdobrado** mostra as seis faces da máquina de uma vez: o botão de cada face é o seu modo,
+com o ícone da porta na cor dele, a letra do lado e uma bolinha na cor da rede. Uma face sem modo fica
+afundada, só com a letra; uma com modo e sem rede ganha a borda tracejada em coral, e a escolhida tem
+a borda dupla. O olho marca a face onde o roteador está preso.
 
 Os nomes são os lados da **máquina**, vistos de frente para ela: Frente, Trás, Esquerda, Direita,
 Cima e Baixo. Máquina sem frente, ou com a frente para cima ou para baixo, como um barril:
@@ -521,13 +521,16 @@ Cima e Baixo. Máquina sem frente, ou com a frente para cima ou para baixo, como
 | No painel | O que mostra |
 | --- | --- |
 | **Bolinha na face** | A cor da rede daquela face (sem bolinha: sem rede). |
+| **Linha da face** | Embaixo do cubo, o lado, o modo (na cor dele) e o que a face acessa, como "Cima ▪ Extrai · 27 slots · roteador aqui". O texto de cada modo está na dica do botão. |
 | **Linha Rede** | A rede da face escolhida; clique para trocar. |
+| **Limpar** | Põe em Nenhum todas as faces do tipo aberto (dois cliques; com Shift no segundo, de todos os tipos). |
+| **Copiar e Colar** | Copiar guarda a face escolhida (modo, prioridade, redstone, filtro e rede); escolha outra face do mesmo tipo e **Colar** copia tudo para ela. |
 | **Resumo ao lado das abas** | Em quantas redes estão as faces da aba (**1 rede**, **2 redes**, **Sem rede**); passe o mouse para ver qual face está em qual. |
 | **Tirar redes** | Com o Upgrade de Alcance, editando um grupo de máquinas ou uma máquina com exceção: tira a rede das faces com modo Nenhum, em todas as abas (as que movem algo ficam como estão). Fica na linha **Editando**; com a lista das máquinas à vista, é o ícone ⊘ na linha escolhida. O aviso traz **Desfazer**. |
 
 ## Máquinas à distância
 
-Com o Upgrade de Alcance, o roteador atende várias máquinas ao redor, e a lista delas aparece ao lado do visor. Cada linha mostra o nome, as coordenadas e o estado da máquina.
+Com o Upgrade de Alcance, o roteador atende várias máquinas ao redor, e a lista delas aparece embaixo do visor, com a barra **Editando** no painel. Cada máquina é uma linha com o estado, o nome e a distância (as coordenadas ficam na dica).
 
 | Na lista | O que faz |
 | --- | --- |
@@ -611,8 +614,8 @@ behind it drops the router.
 | --- | --- |
 | **1. Pick the type** | Click the tab: Items, Fluids, Energy, Chemicals or Source. |
 | **2. Pick the face** | Click the machine face on the 3D model (drag to rotate) or on the panel's **unfolded cube**: both choices move together, and the face under the mouse lights up in both. |
-| **3. Pick the mode** | Extract, Insert, Storage or None (table below). Picking a mode on a face with no network, while you have an active [network](networks.md), puts the face on it; the notice at the bottom of the panel has an **Undo** button. |
-| **4. Settings (optional)** | Priority and redstone are always in view on the panel. **Edit** opens the face's [filter](filters.md). |
+| **3. Pick the mode** | Click the face's button on the cube: it **advances** the mode (Extract, Insert, Storage, None and back around). Right click goes **back** and Shift + click sets **None**. The table below explains each mode. |
+| **4. Settings (optional)** | Priority (‹ ›, or the mouse wheel) and redstone (‹ ›) are always in view on the panel. The two **Filter Card** slots sit on the **Filter** row, next to **Edit**, which opens the face's [filter](filters.md). |
 | **5. Network** | On the **Network** row, pick the face's [network](networks.md) (or **No network**). |
 
 Drag the right edge, the bottom edge or the corner to make the screen bigger; the 3D view grows. When space is short, the tabs show only their icon (hover for the name).
@@ -620,10 +623,10 @@ Drag the right edge, the bottom edge or the corner to make the screen bigger; th
 ## The panel and the cube
 
 The panel on the right is the same one the [Network Tablet](network-tablet.md) shows for a node. At
-the top, the **unfolded cube** shows the machine's six faces at once: each in its mode's color with
-a dot in its network's color. A face with no mode has a dashed border, and one with a mode but no
-network gets a coral outline and the prompt **Pick this face's network**. The eye marks the face the
-router is attached to.
+the top, the **unfolded cube** shows the machine's six faces at once: each face's button is its mode,
+with the port icon in its color, the side's letter and a dot in its network's color. A face with no
+mode is sunken, with only the letter; one with a mode but no network gets a dashed coral border, and
+the selected one has a double border. The eye marks the face the router is attached to.
 
 The names are the **machine's** sides, as seen facing it: Front, Back, Left, Right, Top and Bottom.
 A machine without a front, or facing up or down, like a barrel: **Front = North**.
@@ -631,13 +634,16 @@ A machine without a front, or facing up or down, like a barrel: **Front = North*
 | On the panel | What it shows |
 | --- | --- |
 | **Dot on a face** | The color of that face's network (no dot: no network). |
+| **Face line** | Under the cube, the side, the mode (in its color) and what the face reaches, like "Top ▪ Extract · 27 slots · router here". Each mode's description is in the button's tooltip. |
 | **Network row** | The selected face's network; click to change it. |
+| **Clear** | Sets every face of the open type to None (two clicks; with Shift on the second, every type). |
+| **Copy and Paste** | Copy keeps the selected face (mode, priority, redstone, filter and network); pick another face of the same type and **Paste** copies it all onto that one. |
 | **Summary next to the tabs** | How many networks the tab's faces are in (**1 network**, **2 networks**, **No network**); hover to see which face is in which. |
 | **Clear networks** | With the Range Upgrade, while editing a machine group or a machine with an exception: removes the network from the faces set to None, on every tab (faces that move something stay as they are). It sits on the **Editing** row; with the machine list in view, it's the ⊘ icon on the chosen row. The notice has an **Undo** button. |
 
 ## Remote machines
 
-With the Range Upgrade, the router serves several machines around it, and their list sits next to the viewer. Each row shows the machine's name, its coordinates and its state.
+With the Range Upgrade, the router serves several machines around it, and their list sits under the viewer, with the **Editing** bar on the panel. Each machine is one row with its state, its name and its distance (the coordinates are in the tooltip).
 
 | In the list | What it does |
 | --- | --- |
@@ -1426,7 +1432,7 @@ Uma visão de todas as suas redes, de qualquer lugar.
 
 | Aba | O que mostra e faz |
 | --- | --- |
-| **Lista** | Todos os nós, com busca, filtros rápidos e o painel do nó escolhido (veja abaixo). O seletor **Roteadores · Máquinas**, embaixo da busca, mostra a lista pelos roteadores (uma linha para cada um, com a máquina presa embaixo do nome, abrindo em árvore com as máquinas dele) ou por todas as máquinas, agrupadas pelo bloco. **Selecionar** marca roteadores, grupos e máquinas para colar um perfil ou mudar de rede de uma vez. Um nó com faces em várias redes mostra "faces em N redes"; passe o mouse para ver quais. Para dar nome a um roteador ou à máquina presa, clique no ✎ da linha (com o mouse em cima) ou dê dois cliques no nome; Enter salva e Esc desiste. |
+| **Lista** | Todos os nós, com busca, filtros rápidos e o painel do nó escolhido (veja abaixo). O seletor **Roteadores · Máquinas · Grade**, embaixo da busca, mostra a lista pelos roteadores (uma linha para cada um, com a máquina presa embaixo do nome, abrindo em árvore com as máquinas dele), por todas as máquinas, agrupadas pelo bloco, ou na **Grade**: uma linha por roteador e uma coluna por tipo, com uma tarja na cor do modo para cada face que faz algo, mais o estado e a rede; o clique numa célula abre o nó na aba daquele tipo. O botão **! N** na ponta filtra os nós com problema. **Selecionar** marca roteadores, grupos e máquinas para colar um perfil ou mudar de rede de uma vez. Um nó com faces em várias redes mostra "faces em N redes"; passe o mouse para ver quais. Para dar nome a um roteador ou à máquina presa, clique no ✎ da linha (com o mouse em cima) ou dê dois cliques no nome; Enter salva e Esc desiste. |
 | **Fluxos** | Quanto entra e sai de cada tipo e de cada rede, o saldo dos Armazéns e o que precisa de atenção (veja abaixo). |
 | **Mapa** | Vista de cima com cores por status. Clique num ponto para escolher o nó. O roteador escolhido mostra as máquinas vinculadas a ele, cada uma ligada a ele por uma linha (veja abaixo). |
 | **Redes** | Criar redes, cor, membros e privacidade, e os grupos de redes, que pausam e retomam um sistema inteiro de uma vez (veja abaixo). |
@@ -1569,7 +1575,7 @@ An overview of all your networks, from anywhere.
 
 | Tab | What it shows and does |
 | --- | --- |
-| **List** | Every node, with search, quick filters and the panel of the chosen node (see below). The **Routers · Machines** switch, below the search, shows the list by router (one row each, with the attached machine under the name, opening as a tree with its machines) or by every machine, grouped by block. **Select** marks routers, groups and machines to paste a profile or change networks at once. A node with faces on several networks shows "faces in N networks"; hover to see which. To name a router or its attached machine, click the ✎ on its row (with the mouse over it) or double-click the name; Enter saves and Esc cancels. |
+| **List** | Every node, with search, quick filters and the panel of the chosen node (see below). The **Routers · Machines · Grid** switch, below the search, shows the list by router (one row each, with the attached machine under the name, opening as a tree with its machines), by every machine, grouped by block, or as the **Grid**: one row per router and one column per type, with a stripe in the mode's color for every face that does something, plus the state and the network; clicking a cell opens the node on that type's tab. The **! N** button at the end filters the nodes with problems. **Select** marks routers, groups and machines to paste a profile or change networks at once. A node with faces on several networks shows "faces in N networks"; hover to see which. To name a router or its attached machine, click the ✎ on its row (with the mouse over it) or double-click the name; Enter saves and Esc cancels. |
 | **Flows** | How much of each type comes in and goes out, per type and per network, the balance of Storage faces and what needs attention (see below). |
 | **Map** | Top-down view colored by status. Click a point to choose the node. The chosen router shows the machines linked to it, each joined to it by a line (see below). |
 | **Networks** | Create networks, color, members and privacy, and the network groups, which pause and resume a whole system at once (see below). |

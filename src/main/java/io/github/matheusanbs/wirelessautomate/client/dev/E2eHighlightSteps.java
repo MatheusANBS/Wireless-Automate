@@ -73,7 +73,7 @@ final class E2eHighlightSteps {
         list.add(new Step(l + "a lista no mínimo, com a linha das acesas", STEP_TIMEOUT_MS, () -> {
             routerScreen().previewResize(300, 240);
             if (!routerScreen().rangeListShown()) {
-                click(widget(byMessageKey("gui.wirelessautomate.router.range.machines"), "botão Máquinas"));
+                routerScreen().previewToggleList();
             }
         }, () -> routerScreen().rangeListShown() && routerScreen().litClearCenter() != null && stepTicks >= 4,
                 () -> "lista " + routerScreen().rangeListShown() + ", acesas " + HighlightRenderer.count()));

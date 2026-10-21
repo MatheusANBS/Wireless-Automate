@@ -59,8 +59,8 @@ behind it drops the router.
 | --- | --- |
 | **1. Pick the type** | Click the tab: Items, Fluids, Energy, Chemicals or Source. |
 | **2. Pick the face** | Click the machine face on the 3D model (drag to rotate) or on the panel's **unfolded cube**: both choices move together, and the face under the mouse lights up in both. |
-| **3. Pick the mode** | Extract, Insert, Storage or None (table below). Picking a mode on a face with no network, while you have an active [network](networks.md), puts the face on it; the notice at the bottom of the panel has an **Undo** button. |
-| **4. Settings (optional)** | Priority and redstone are always in view on the panel. **Edit** opens the face's [filter](filters.md). |
+| **3. Pick the mode** | Click the face's button on the cube: it **advances** the mode (Extract, Insert, Storage, None and back around). Right click goes **back** and Shift + click sets **None**. The table below explains each mode. |
+| **4. Settings (optional)** | Priority (‹ ›, or the mouse wheel) and redstone (‹ ›) are always in view on the panel. The two **Filter Card** slots sit on the **Filter** row, next to **Edit**, which opens the face's [filter](filters.md). |
 | **5. Network** | On the **Network** row, pick the face's [network](networks.md) (or **No network**). |
 
 Drag the right edge, the bottom edge or the corner to make the screen bigger; the 3D view grows. When space is short, the tabs show only their icon (hover for the name).
@@ -68,10 +68,10 @@ Drag the right edge, the bottom edge or the corner to make the screen bigger; th
 ## The panel and the cube
 
 The panel on the right is the same one the [Network Tablet](network-tablet.md) shows for a node. At
-the top, the **unfolded cube** shows the machine's six faces at once: each in its mode's color with
-a dot in its network's color. A face with no mode has a dashed border, and one with a mode but no
-network gets a coral outline and the prompt **Pick this face's network**. The eye marks the face the
-router is attached to.
+the top, the **unfolded cube** shows the machine's six faces at once: each face's button is its mode,
+with the port icon in its color, the side's letter and a dot in its network's color. A face with no
+mode is sunken, with only the letter; one with a mode but no network gets a dashed coral border, and
+the selected one has a double border. The eye marks the face the router is attached to.
 
 The names are the **machine's** sides, as seen facing it: Front, Back, Left, Right, Top and Bottom.
 A machine without a front, or facing up or down, like a barrel: **Front = North**.
@@ -79,13 +79,16 @@ A machine without a front, or facing up or down, like a barrel: **Front = North*
 | On the panel | What it shows |
 | --- | --- |
 | **Dot on a face** | The color of that face's network (no dot: no network). |
+| **Face line** | Under the cube, the side, the mode (in its color) and what the face reaches, like "Top ▪ Extract · 27 slots · router here". Each mode's description is in the button's tooltip. |
 | **Network row** | The selected face's network; click to change it. |
+| **Clear** | Sets every face of the open type to None (two clicks; with Shift on the second, every type). |
+| **Copy and Paste** | Copy keeps the selected face (mode, priority, redstone, filter and network); pick another face of the same type and **Paste** copies it all onto that one. |
 | **Summary next to the tabs** | How many networks the tab's faces are in (**1 network**, **2 networks**, **No network**); hover to see which face is in which. |
 | **Clear networks** | With the Range Upgrade, while editing a machine group or a machine with an exception: removes the network from the faces set to None, on every tab (faces that move something stay as they are). It sits on the **Editing** row; with the machine list in view, it's the ⊘ icon on the chosen row. The notice has an **Undo** button. |
 
 ## Remote machines
 
-With the Range Upgrade, the router serves several machines around it, and their list sits next to the viewer. Each row shows the machine's name, its coordinates and its state.
+With the Range Upgrade, the router serves several machines around it, and their list sits under the viewer, with the **Editing** bar on the panel. Each machine is one row with its state, its name and its distance (the coordinates are in the tooltip).
 
 | In the list | What it does |
 | --- | --- |

@@ -39,6 +39,12 @@ import org.jetbrains.annotations.Nullable;
  * acesas embaixo da lista são do {@link LitFooter}.
  */
 final class MachineColumn {
+    /**
+     * Esconde a lista das máquinas: só os ganchos do e2e usam, para cobrir a linha Editando completa (a mesma do
+     * Tablet) na tela do roteador. O jogador nunca esconde a lista.
+     */
+    private static boolean listHidden;
+
     private final Supplier<RouterSnapshot> snapshot;
     private final NodePanel panel;
     private final RouterLayout layout;
@@ -103,7 +109,12 @@ final class MachineColumn {
 
     /** A lista está na tela: sempre, com o Upgrade de Alcance, embaixo do visor. */
     boolean listShown() {
-        return rangeShown();
+        return rangeShown() && !listHidden;
+    }
+
+    /** e2e: esconde ou mostra a lista das máquinas. */
+    void toggleListForTests() {
+        listHidden = !listHidden;
     }
 
     /** O visor está na tela, sempre (com o upgrade, menor, no alto). */

@@ -53,7 +53,7 @@ final class E2eRangeReplaceSteps {
 
         // sem a lista: a linha Editando com os três botões, e o Desvincular armado sozinho
         list.add(new Step(label + "trocada: o visor no lugar da lista", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessageKey("gui.wirelessautomate.router.range.machines"), "botão Máquinas")),
+                () -> routerScreen().previewToggleList(),
                 () -> !routerScreen().rangeListShown() && panel().revertCenter() != null
                         && panel().updateCenter() != null && panel().unlinkCenter() != null && stepTicks >= 4,
                 () -> "lista " + routerScreen().rangeListShown() + ", Voltar " + (panel().revertCenter() != null)
@@ -74,7 +74,7 @@ final class E2eRangeReplaceSteps {
 
         if (fromList) {
             list.add(new Step(label + "trocada: de volta à lista", STEP_TIMEOUT_MS,
-                    () -> click(widget(byMessageKey("gui.wirelessautomate.router.range.machines"), "botão Máquinas")),
+                    () -> routerScreen().previewToggleList(),
                     () -> routerScreen().rangeListShown() && stepTicks >= 2,
                     () -> "lista " + routerScreen().rangeListShown()));
         }
@@ -91,7 +91,7 @@ final class E2eRangeReplaceSteps {
                 () -> "fornalha " + furnace() + ", grupos " + rangeView().groups()));
         if (!fromList) {
             list.add(new Step(label + "atualizada: de volta à lista", STEP_TIMEOUT_MS,
-                    () -> click(widget(byMessageKey("gui.wirelessautomate.router.range.machines"), "botão Máquinas")),
+                    () -> routerScreen().previewToggleList(),
                     () -> routerScreen().rangeListShown() && stepTicks >= 2,
                     () -> "lista " + routerScreen().rangeListShown()));
         }

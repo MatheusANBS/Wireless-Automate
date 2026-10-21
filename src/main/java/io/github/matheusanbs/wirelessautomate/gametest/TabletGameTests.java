@@ -544,7 +544,7 @@ public final class TabletGameTests {
     }
 
     @GameTest(template = "empty")
-    public static void tabletListIsOrderedByMachineThenName(GameTestHelper helper) {
+    public static void tabletListIsOrderedByRouterName(GameTestHelper helper) {
         ServerPlayer player = playerWithTablet(helper, A);
         WaNetwork net = data(helper).create(player.getUUID(), "teste-ordem");
         RouterBlockEntity beta = owned(helper, player, A, Blocks.CHEST, net.id(), "Beta");
@@ -557,8 +557,8 @@ public final class TabletGameTests {
                 .thenExecute(() -> {
                     try {
                         List<NodeKey> order = fresh(menu).nodes().stream().map(NodeView::key).toList();
-                        eq(helper, order, List.of(key(alfa), key(beta), key(forge)),
-                                "máquina, depois nome sem diferenciar maiúsculas");
+                        eq(helper, order, List.of(key(forge), key(alfa), key(beta)),
+                                "nome do roteador sem diferenciar maiúsculas, não o bloco preso");
                         helper.succeed();
                     } finally {
                         close(player);

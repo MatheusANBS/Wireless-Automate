@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -96,8 +97,19 @@ public final class RouterPreset {
      * desse tipo; as outras abas do roteador ficam como estavam. {@code null} = todas.
      */
     public void applyTo(RouterBlockEntity router, @Nullable ResourceType only) {
+        applyTo(router, only, from -> true);
+    }
+
+    /**
+     * Como {@link #applyTo(RouterBlockEntity, ResourceType)}, mas a face que o preset levaria para outra rede fica
+     * na que tem se {@code canLeave} recusa tirá-la de lá (recebe a rede atual da face, nunca nula). As
+     * configurações da face valem do mesmo jeito. Devolve quantas faces ficaram na rede que tinham.
+     */
+    public int applyTo(RouterBlockEntity router, @Nullable ResourceType only, Predicate<UUID> canLeave) {
+        int[] held = new int[1];
         // Um aviso só ao motor, à tela e ao índice, em vez de um por face e por rede.
-        router.batchChanges(() -> apply(router, only));
+        router.batchChanges(() -> apply(router, only, canLeave, held));
+        return held[0];
     }
 
     /**
@@ -117,7 +129,7 @@ public final class RouterPreset {
         });
     }
 
-    private void apply(RouterBlockEntity router, @Nullable ResourceType only) {
+    private void apply(RouterBlockEntity router, @Nullable ResourceType only, Predicate<UUID> canLeave, int[] held) {
         for (ResourceType type : TYPES) {
             if (only != null && type != only) {
                 continue;
@@ -127,7 +139,12 @@ public final class RouterPreset {
                 // setFace copia só as configurações; a rede vai à parte, e só se a face do preset tem uma.
                 router.setFace(type, side, config != null ? config : DEFAULT);
                 if (config != null && config.network() != null) {
-                    router.setFaceNetwork(type, side, config.network());
+                    UUID from = router.face(type, side).network();
+                    if (from != null && !from.equals(config.network()) && !canLeave.test(from)) {
+                        held[0]++;
+                    } else {
+                        router.setFaceNetwork(type, side, config.network());
+                    }
                 }
             }
         }

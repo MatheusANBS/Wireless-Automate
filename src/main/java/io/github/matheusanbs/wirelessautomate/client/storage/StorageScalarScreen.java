@@ -90,6 +90,7 @@ public class StorageScalarScreen extends AbstractContainerScreen<StorageScalarMe
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        GuiText.beginFrame();
         super.render(g, mouseX, mouseY, partialTick);
         if (ThemeToggle.hovered(themeX(), themeY(), mouseX, mouseY)) {
             g.renderComponentTooltip(font, ThemeToggle.tooltip(), mouseX, mouseY);

@@ -49,14 +49,14 @@ final class TabletMenuActions {
         menu.requestRebuild();
     }
 
-    /** Ver {@link TabletMenu#moveNodes}. */
+    /** Ver {@link TabletMenu#moveNodes}. Mover a rede organiza a base: vale à distância, sem o {@code inReach} do colar. */
     int moveNodes(List<NodeKey> keys, TabletMarks marks, Optional<ResourceType> type, Optional<UUID> network,
             @Nullable TabletMachines view) {
         if (keys.isEmpty() && marks.isEmpty() || keys.size() > TabletMenu.MAX_MOVE
                 || type.filter(t -> !LoadedTypes.contains(t)).isPresent()) {
             return -1;
         }
-        if (!marks.isEmpty() && !TabletPlayers.takeBulk(viewer.getUUID(), viewer.server.getTickCount())) {
+        if (!TabletPlayers.takeBulk(viewer.getUUID(), viewer.server.getTickCount())) {
             notice("busy");
             return -1;
         }
@@ -156,6 +156,9 @@ final class TabletMenuActions {
                 if (name == null || data.byName(me, name) != null) {
                     yield refuse("name");
                 }
+                if (data.networkLimitReached(viewer)) {
+                    yield refuse("limit");
+                }
                 data.create(me, name);
                 notice("network.created", name);
                 yield true;
@@ -213,6 +216,9 @@ final class TabletMenuActions {
                 String name = cleanName(text);
                 if (name == null) {
                     yield refuse("name");
+                }
+                if (data.groupLimitReached(viewer)) {
+                    yield refuse("limit");
                 }
                 data.createGroup(me, name);
                 notice("group.created", name);

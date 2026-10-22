@@ -6,10 +6,10 @@ import java.util.List;
 /**
  * Move um recurso de "um valor só" (energia, Source) de uma origem para os destinos dela num único
  * passe: simula a extração, pergunta (simulando) quanto cada destino aceita, divide com
- * {@link EnergySplit}, extrai de verdade o total dividido e entrega. Extrair antes de entregar
- * garante que nunca se cria nada: se a extração real der menos, os primeiros da ordem recebem até
- * acabar; o que um destino recusar depois de aceitar na simulação volta para a origem, e o que nem
- * ela aceitar se perde.
+ * {@link EnergySplit} e, destino a destino, simula de novo o que cabe, extrai só isso e entrega.
+ * Extrair antes de entregar garante que nunca se cria nada: se a extração real der menos, os
+ * primeiros da ordem recebem até acabar; o que um destino recusar depois de aceitar na simulação
+ * volta para a origem, e o que nem ela aceitar se perde.
  *
  * <p>O recurso chega pelo {@link ScalarAccess}: {@link EnergyAccess} (a Bateria do mod em
  * {@code long}, as outras máquinas em {@code int}) e o da Source ({@code compat/arsnouveau}).
@@ -81,13 +81,25 @@ final class ScalarTransfer {
         long total = EnergySplit.split(offered, wants, priorities, count, shares);
         long delivered = 0;
         if (total > 0) {
-            long taken = access.extract(handler, total, false);
-            long left = taken;
+            // Extrai por destino, só o que ele ainda aceita agora: duas portas da mesma máquina simularam cada uma a
+            // capacidade inteira, e uma extração única tiraria da origem mais do que a máquina recebe.
+            long left = total;
             for (int i = 0; i < count && left > 0; i++) {
                 if (shares[i] <= 0) {
                     continue;
                 }
-                long received = access.insert(targets[i], Math.min(shares[i], left), false);
+                long fits = access.insert(targets[i], Math.min(shares[i], left), true);
+                if (fits <= 0) {
+                    continue;
+                }
+                long taken = access.extract(handler, fits, false);
+                if (taken <= 0) {
+                    break;
+                }
+                long received = access.insert(targets[i], taken, false);
+                if (taken > received) {
+                    access.insert(handler, taken - received, false);
+                }
                 if (received > 0) {
                     Port destination = pass.get(i);
                     destination.destinationBackoff.wake();
@@ -99,9 +111,6 @@ final class ScalarTransfer {
                     left -= received;
                     delivered += received;
                 }
-            }
-            if (left > 0) {
-                access.insert(handler, left, false);
             }
         }
         Arrays.fill(targets, 0, count, null);

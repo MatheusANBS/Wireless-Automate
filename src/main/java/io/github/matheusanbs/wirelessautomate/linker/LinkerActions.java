@@ -12,6 +12,7 @@ import io.github.matheusanbs.wirelessautomate.packet.LinkerActionPayload;
 import io.github.matheusanbs.wirelessautomate.range.RangeLinks;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Predicate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -201,10 +202,11 @@ public final class LinkerActions {
                         : Component.translatable(KEY + "already_unlinked_faces", letters, tabsName), true);
                 return false;
             }
-            apply(router, types, faces, null);
-            player.displayClientMessage(allFaces
+            int kept = applyChecked(player, router, types, faces, null);
+            MutableComponent text = allFaces
                     ? Component.translatable(KEY + "unlinked", tabsName)
-                    : Component.translatable(KEY + "unlinked_faces", letters, tabsName), true);
+                    : Component.translatable(KEY + "unlinked_faces", letters, tabsName);
+            player.displayClientMessage(withKept(text, kept), true);
             player.level().playSound(null, router.getBlockPos(), SoundEvents.EXPERIENCE_ORB_PICKUP,
                     SoundSource.BLOCKS, 0.5F, 0.8F);
             return true;
@@ -221,11 +223,12 @@ public final class LinkerActions {
                     : Component.translatable(KEY + "already_tabs", network.displayName(), tabsName), true);
             return false;
         }
-        apply(router, types, faces, network.id());
-        player.displayClientMessage(!allFaces
+        int kept = applyChecked(player, router, types, faces, network.id());
+        MutableComponent text = !allFaces
                 ? Component.translatable(KEY + "linked_faces", letters, network.displayName(), tabsName)
                 : all ? Component.translatable(KEY + "linked", network.displayName())
-                : Component.translatable(KEY + "linked_tabs", network.displayName(), tabsName), true);
+                : Component.translatable(KEY + "linked_tabs", network.displayName(), tabsName);
+        player.displayClientMessage(withKept(text, kept), true);
         player.level().playSound(null, router.getBlockPos(), SoundEvents.EXPERIENCE_ORB_PICKUP,
                 SoundSource.BLOCKS, 0.5F, 1.4F);
         return true;
@@ -259,7 +262,9 @@ public final class LinkerActions {
             } else if (inTarget(router, types, faces, target)) {
                 already++;
             } else {
-                apply(router, types, faces, target);
+                if (applyChecked(player, router, types, faces, target) > 0) {
+                    protectedCount++;
+                }
                 linked++;
             }
         }
@@ -310,6 +315,11 @@ public final class LinkerActions {
         return text;
     }
 
+    /** Acrescenta "N faces em rede de outro dono ficaram" ao resultado, se alguma ficou. */
+    private static MutableComponent withKept(MutableComponent text, int kept) {
+        return kept > 0 ? text.append(" · ").append(Component.translatable(KEY + "kept", kept)) : text;
+    }
+
     /**
      * Todas as faces {@code faces} (relativas à frente da máquina presa), nas abas {@code types}, já
      * estão em {@code target} ({@code null} = já sem rede). Sem abas ou sem faces, nada muda e conta
@@ -341,6 +351,23 @@ public final class LinkerActions {
             return;
         }
         router.setAttachedFacesNetwork(types, faces.absoluteMask(router.attachedFront()), target);
+    }
+
+    /**
+     * Como {@link #apply}, mas só tira uma face de uma rede que o jogador gerencia (dono ou operador), como o Tablet:
+     * a face numa rede alheia fica como está. Devolve quantas faces ficaram por isso.
+     */
+    private static int applyChecked(ServerPlayer player, RouterBlockEntity router, List<ResourceType> types,
+            LinkerFaces faces, @Nullable UUID target) {
+        NetworkSavedData data = NetworkSavedData.get(player.server);
+        Predicate<UUID> canLeave = from -> {
+            WaNetwork current = data.network(from);
+            return current == null || current.canManage(player);
+        };
+        if (target == null && faces.isAll()) {
+            return router.setNetworkAllFaces(types, null, canLeave);
+        }
+        return router.setAttachedFacesNetwork(types, faces.absoluteMask(router.attachedFront()), target, canLeave);
     }
 
     // ------------------------------------------------------------------ tela
@@ -420,13 +447,16 @@ public final class LinkerActions {
      * caracteres; se ele já tem uma rede com esse nome, só a ativa.
      */
     public static boolean createNetwork(ServerPlayer player, String rawName) {
-        String name = rawName.strip();
+        String name = net.minecraft.util.StringUtil.filterText(rawName).strip();
         if (name.isEmpty() || name.length() > LinkerActionPayload.MAX_NAME_LENGTH) {
             return false;
         }
         NetworkSavedData data = NetworkSavedData.get(player.server);
         WaNetwork network = data.byName(player.getUUID(), name);
         if (network == null) {
+            if (data.networkLimitReached(player)) {
+                return false;
+            }
             network = data.create(player.getUUID(), name);
         }
         data.setActiveNetwork(player.getUUID(), network.id());

@@ -4,7 +4,12 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
+import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import java.util.UUID;
+import java.util.function.Predicate;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
 
@@ -15,6 +20,11 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class PresetPaste {
     private PresetPaste() {
+    }
+
+    /** Id do bloco da máquina do roteador ({@code minecraft:air} sem máquina). */
+    public static ResourceLocation machine(ServerLevel level, RouterBlockEntity router) {
+        return BuiltInRegistries.BLOCK.getKey(level.getBlockState(router.machinePos()).getBlock());
     }
 
     /**
@@ -41,7 +51,19 @@ public final class PresetPaste {
     public static PresetApplier.Checked paste(ServerPlayer player, RouterBlockEntity router, RouterPreset preset,
             @Nullable ResourceType only) {
         PresetApplier.Checked checked = PresetApplier.check(player, preset, only);
-        checked.preset().applyTo(router, only);
+        checked.preset().applyTo(router, only, canLeave(player));
         return checked;
+    }
+
+    /**
+     * Quando o colar pode tirar uma face da rede em que está: só de uma rede que o jogador gerencia (dono ou
+     * operador nível 2), como o Tablet no Mover; uma rede que não existe mais não prende ninguém.
+     */
+    public static Predicate<UUID> canLeave(ServerPlayer player) {
+        NetworkSavedData data = NetworkSavedData.get(player.server);
+        return from -> {
+            WaNetwork current = data.network(from);
+            return current == null || current.canManage(player);
+        };
     }
 }

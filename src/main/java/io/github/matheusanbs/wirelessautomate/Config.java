@@ -27,6 +27,8 @@ public final class Config {
     public static final ModConfigSpec.IntValue CHUNK_LOADING_MAX_PER_PLAYER;
     public static final ModConfigSpec.IntValue LINKER_MAX_AREA_VOLUME;
     public static final ModConfigSpec.IntValue LINKER_MAX_DISTANCE;
+    public static final ModConfigSpec.IntValue MAX_NETWORKS_PER_PLAYER;
+    public static final ModConfigSpec.IntValue MAX_GROUPS_PER_PLAYER;
     public static final ModConfigSpec.BooleanValue GIVE_GUIDE_ON_FIRST_JOIN;
     /** Versão do balanceamento já aplicada a este arquivo (ver {@link #migrateBalance()}). */
     public static final ModConfigSpec.IntValue BALANCE_VERSION;
@@ -140,6 +142,15 @@ public final class Config {
         LINKER_MAX_DISTANCE = builder
                 .comment("Distância máxima, em blocos, do jogador até a área para vincular ou colar por área (0 = sem limite).")
                 .defineInRange("maxDistance", 64, 0, 4096);
+        builder.pop();
+
+        builder.push("networks");
+        MAX_NETWORKS_PER_PLAYER = builder
+                .comment("Redes que um jogador pode ter como dono (0 = sem limite). Operadores não têm limite.")
+                .defineInRange("maxNetworksPerPlayer", 64, 0, 100_000);
+        MAX_GROUPS_PER_PLAYER = builder
+                .comment("Grupos de redes que um jogador pode ter como dono (0 = sem limite). Operadores não têm limite.")
+                .defineInRange("maxGroupsPerPlayer", 64, 0, 100_000);
         builder.pop();
 
         builder.push("storage");
@@ -280,7 +291,7 @@ public final class Config {
         }
         int changed = version < 1 ? migrateBalance1() : 0;
         changed += version < 2 ? migrateBalance2() : 0;
-        changed += migrateBalance3();
+        changed += version < 3 ? migrateBalance3() : 0;
         changed += version < 4 ? migrateBalance4() : 0;
         BALANCE_VERSION.set(CURRENT_BALANCE);
         SPEC.save();

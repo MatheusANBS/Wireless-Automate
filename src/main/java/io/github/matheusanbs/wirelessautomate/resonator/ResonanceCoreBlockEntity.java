@@ -304,9 +304,14 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
 
     /** Põe o catalisador em {@code count} de {@code item}, entre 0 e {@link #MAX_REDSTONE}; o slot do menu entra por aqui. */
     public void setCatalyst(Item item, int count) {
+        boolean less = count < catalyst.count();
         catalyst.set(item, count);
         setChanged();
         syncIfChanged();
+        if (less) {
+            // A Porta de Cristais só solta o Opaco sem catalisador: quem esperava por ele acorda.
+            notifyPorts(false, true);
+        }
     }
 
     /** Põe a redstone em {@code count}, sem a regra do tier (testes e e2e). */

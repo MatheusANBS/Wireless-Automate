@@ -48,6 +48,15 @@ final class RouterTargets {
         return count[0];
     }
 
+    /** Ver {@link RouterBlockEntity#setAttachedFacesNetwork(Collection, int, UUID, Predicate)}. */
+    int setAttachedNetwork(Collection<ResourceType> types, int absoluteFaceMask, @Nullable UUID network,
+            Predicate<UUID> canLeave) {
+        int[] kept = new int[1];
+        router.batchChanges(() -> router.changed(faces.setAttachedNetwork(types, router.facing(), router.spin(),
+                absoluteFaceMask, network, canLeave, new int[1], kept)));
+        return kept[0];
+    }
+
     /** Ver {@link RouterBlockEntity#setNetworkAllFaces(Collection, UUID, Predicate)}. */
     int setNetworkAll(Collection<ResourceType> types, @Nullable UUID network, Predicate<UUID> canLeave) {
         int[] kept = new int[1];

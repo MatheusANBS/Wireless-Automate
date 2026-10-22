@@ -85,11 +85,17 @@ final class RouterFaces {
      */
     int setAttachedNetwork(Collection<ResourceType> types, Direction facing, int spin, int absoluteFaceMask,
             @Nullable UUID network, int[] count) {
+        return setAttachedNetwork(types, facing, spin, absoluteFaceMask, network, from -> true, count, new int[1]);
+    }
+
+    /** Como o outro, mas a face numa rede de onde o {@code canLeave} recusa tirar fica como está (contada em {@code kept}). */
+    int setAttachedNetwork(Collection<ResourceType> types, Direction facing, int spin, int absoluteFaceMask,
+            @Nullable UUID network, Predicate<UUID> canLeave, int[] count, int[] kept) {
         int changedTypes = 0;
         for (ResourceType type : types) {
             for (Direction face : Direction.values()) {
                 if ((absoluteFaceMask & (1 << face.ordinal())) != 0
-                        && get(type, RelativeSide.fromAbsolute(facing, spin, face)).setNetwork(network)) {
+                        && moveFace(get(type, RelativeSide.fromAbsolute(facing, spin, face)), network, canLeave, kept)) {
                     count[0]++;
                     changedTypes |= NetworkManager.typeBit(type);
                 }

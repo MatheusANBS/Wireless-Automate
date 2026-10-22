@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.resonator;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModRecipes;
 import java.util.List;
@@ -51,8 +52,9 @@ public class TuneCrystalRecipe extends ShapelessRecipe {
     }
 
     /**
-     * O resultado cheio; um cristal sai com a integridade do cristal da grade, para afinar não renovar a fadiga (só o
-     * refazer, {@link RecastCrystalRecipe}, devolve a integridade cheia). O Pó não é cristal e sai como está.
+     * O resultado cheio; um cristal sai com a pior integridade dos cristais da grade (a ordem dela não importa), para
+     * afinar não renovar a fadiga (só o refazer, {@link RecastCrystalRecipe}, devolve a integridade cheia). O Pó não é
+     * cristal e sai como está.
      */
     @Override
     public ItemStack assemble(CraftingInput input, HolderLookup.Provider registries) {
@@ -60,12 +62,15 @@ public class TuneCrystalRecipe extends ShapelessRecipe {
         if (!(out.getItem() instanceof SignalCrystalItem)) {
             return out;
         }
+        int worst = Integer.MAX_VALUE;
         for (int i = 0; i < input.size(); i++) {
-            Integer integrity = input.getItem(i).get(ModDataComponents.CRYSTAL_INTEGRITY.get());
-            if (integrity != null && input.getItem(i).getItem() instanceof SignalCrystalItem) {
-                out.set(ModDataComponents.CRYSTAL_INTEGRITY.get(), integrity);
-                break;
+            ItemStack stack = input.getItem(i);
+            if (stack.getItem() instanceof SignalCrystalItem) {
+                worst = Math.min(worst, SignalCrystalItem.integrity(stack));
             }
+        }
+        if (worst < Config.crystalIntegrity()) {
+            out.set(ModDataComponents.CRYSTAL_INTEGRITY.get(), worst);
         }
         return out;
     }

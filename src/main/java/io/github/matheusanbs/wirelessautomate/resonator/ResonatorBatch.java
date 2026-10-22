@@ -107,7 +107,14 @@ public final class ResonatorBatch {
      */
     private static boolean recharge(ResonanceCoreBlockEntity core, int ticks) {
         int dull = firstRechargeable(core);
-        if (dull < 0 || core.redstone() <= 0) {
+        if (dull < 0) {
+            // O Opaco saiu no meio: o progresso era dele, o próximo que entrar começa do zero.
+            if (core.rechargeProgress() != 0) {
+                core.setRechargeProgress(0);
+            }
+            return false;
+        }
+        if (core.redstone() <= 0) {
             return false;
         }
         long progress = (long) core.rechargeProgress() + ticks;

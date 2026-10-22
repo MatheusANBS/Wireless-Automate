@@ -558,7 +558,11 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         return node == null ? null : node.editedRouter();
     }
 
-    /** Nó escolhido, visível, carregado e ao alcance, e o jogador ainda com o Tablet. */
+    /**
+     * Nó escolhido, visível, carregado e ao alcance, e o jogador ainda com o Tablet. Visível é o que a rede pública
+     * libera ({@link TabletNodes#visible}): uma face numa rede pública dá o roteador inteiro a quem tem o Tablet,
+     * de propósito (roteador compartilhado).
+     */
     @Override
     public boolean canEdit(ServerPlayer player) {
         RouterBlockEntity router = editedRouter();

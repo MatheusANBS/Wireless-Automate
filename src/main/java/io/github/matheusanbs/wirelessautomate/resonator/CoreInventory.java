@@ -18,7 +18,7 @@ import net.minecraft.world.level.Level;
  * <p>{@link #getItem} devolve sempre uma pilha nova: nenhuma pilha do Núcleo sai daqui, e uma mudança feita no lugar
  * na pilha devolvida não vale nada (o slot do catalisador do menu leva a inserção ao {@link #setItem}). O
  * {@link #setItem} não tem como recusar: o que não cabe (mais de um cristal numa câmara, item que não é cristal,
- * cristal rachado, catalisador que o tier não aceita ou acima de {@link ResonanceCoreBlockEntity#MAX_REDSTONE}, o que
+ * cristal rachado, catalisador que o tier não aceita (salvo o antigo já guardado, que só diminui) ou acima de {@link ResonanceCoreBlockEntity#MAX_REDSTONE}, o que
  * o Eco não queima) cai no mundo à frente do Núcleo, em vez de sumir.
  */
 public final class CoreInventory implements Container {
@@ -124,7 +124,12 @@ public final class CoreInventory implements Container {
             if (stack.isEmpty()) {
                 core.setCatalyst(core.catalyst().item(), 0);
             } else if (!CoreCatalyst.accepts(core.tier(), stack)) {
-                drop(stack);
+                if (core.redstone() > 0 && stack.is(core.catalyst().item())) {
+                    // O catalisador antigo que o tier já não aceita: a pilha recebida é o que sobrou dele no slot.
+                    core.setCatalyst(stack.getItem(), Math.min(stack.getCount(), core.redstone()));
+                } else {
+                    drop(stack);
+                }
             } else {
                 int kept = Math.min(stack.getCount(), ResonanceCoreBlockEntity.MAX_REDSTONE);
                 core.setCatalyst(stack.getItem(), kept);

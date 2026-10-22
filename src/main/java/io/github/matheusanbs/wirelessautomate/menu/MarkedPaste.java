@@ -8,6 +8,7 @@ import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
 import io.github.matheusanbs.wirelessautomate.preset.PresetApplier;
+import io.github.matheusanbs.wirelessautomate.preset.PresetPaste;
 import io.github.matheusanbs.wirelessautomate.preset.ProfileSides;
 import io.github.matheusanbs.wirelessautomate.preset.ProfileSource;
 import io.github.matheusanbs.wirelessautomate.range.MachineConfig;
@@ -16,6 +17,8 @@ import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import java.util.Map;
+import java.util.UUID;
+import java.util.function.Predicate;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
@@ -56,6 +59,7 @@ final class MarkedPaste {
             ProfileSource source, Map<NodeKey, PasteUndo> undo) {
         NodeIndex index = NodeIndex.get(viewer.server);
         RouterPreset preset = rule.preset();
+        Predicate<UUID> canLeave = PresetPaste.canLeave(viewer);
         int routers = 0;
         int groups = 0;
         int machines = 0;
@@ -84,10 +88,10 @@ final class MarkedPaste {
             boolean onMachines = remote;
             router.batchChanges(() -> {
                 if (attached) {
-                    preset.applyTo(router, null);
+                    preset.applyTo(router, null, canLeave);
                 }
                 if (onMachines) {
-                    pasteRemote(router, targets, preset, source.frame());
+                    pasteRemote(router, targets, preset, source.frame(), canLeave);
                 }
             });
             if (attached) {
@@ -107,13 +111,13 @@ final class MarkedPaste {
     }
 
     private static void pasteRemote(RouterBlockEntity router, MarkedTargets.Resolved targets, RouterPreset preset,
-            int frame) {
+            int frame, Predicate<UUID> canLeave) {
         RemoteMachines remotes = router.remoteMachines();
         for (int id : targets.groups()) {
             MachineGroup group = remotes.group(id);
             if (group != null) {
                 MachineConfig config = group.profile().copy();
-                merge(config, preset, frame);
+                merge(config, preset, frame, canLeave);
                 router.setGroupProfile(id, config);
             }
         }
@@ -121,7 +125,7 @@ final class MarkedPaste {
             RemoteMachine machine = remotes.machine(i);
             if (machine != null) {
                 MachineConfig config = remotes.effective(machine).copy();
-                merge(config, preset, frame);
+                merge(config, preset, frame, canLeave);
                 router.setMachineException(i, config);
             }
         }
@@ -133,12 +137,19 @@ final class MarkedPaste {
      * tem), como o colar na presa.
      */
     static void merge(MachineConfig into, RouterPreset preset, int frame) {
+        merge(into, preset, frame, from -> true);
+    }
+
+    /** Como o outro, mas a face não sai de uma rede de onde o {@code canLeave} recusa tirá-la (a rede de antes fica). */
+    static void merge(MachineConfig into, RouterPreset preset, int frame, Predicate<UUID> canLeave) {
         for (ResourceType type : TYPES) {
             for (RelativeSide side : SIDES) {
                 FaceConfig from = preset.face(type, side);
                 FaceConfig to = into.face(type, REMOTE_SIDES[ProfileSides.toRemote(side.ordinal(), frame)]);
                 to.copySettingsFrom(from);
-                if (from.network() != null) {
+                UUID current = to.network();
+                if (from.network() != null
+                        && (current == null || current.equals(from.network()) || canLeave.test(current))) {
                     to.setNetwork(from.network());
                 }
             }

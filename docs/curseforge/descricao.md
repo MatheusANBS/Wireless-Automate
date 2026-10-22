@@ -57,13 +57,13 @@ Tiers raise a router's throughput and range along the ladder Basic → Advanced 
 
 | Tier | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Source/s | Range | Range Upgrade |
 | --- | --- | --- | --- | --- | --- | --- |
-| Basic | 32 | 2,000 | 1,000 | 100 | 64 blocks | — |
-| Advanced | 256 | 16,000 | 32,768 | 800 | 512 blocks | 6 blocks, 8 machines |
-| Elite | 2,048 | 128,000 | 64,000 | 6,400 | Whole dimension | 12 blocks, 16 machines |
-| Emerald | 16,384 | 1,024,000 | 2,097,152 | 51,200 | Every dimension | 16 blocks, 32 machines |
-| Allthemodium¹ | 131,072 | 8,192,000 | 67,108,864 | 409,600 | Every dimension | 24 blocks, 48 machines |
-| Vibranium¹ | 1,048,576 | 65,536,000 | 134,217,728 | 3,276,800 | Every dimension | 32 blocks, 64 machines |
-| Unobtainium¹ | 8,388,608 | 524,288,000 | 4,294,967,296 | 26,214,400 | Every dimension | 48 blocks, 96 machines |
+| Basic | 32 | 2,000 | 454 | 100 | 64 blocks | — |
+| Advanced | 256 | 16,000 | 29,100 | 800 | 512 blocks | 6 blocks, 8 machines |
+| Elite | 2,048 | 128,000 | 63,000 | 6,400 | Whole dimension | 12 blocks, 16 machines |
+| Emerald | 16,384 | 1,024,000 | 1,350,000 | 51,200 | Every dimension | 16 blocks, 32 machines |
+| Allthemodium¹ | 131,072 | 8,192,000 | 67,200,000 | 409,600 | Every dimension | 24 blocks, 48 machines |
+| Vibranium¹ | 1,048,576 | 65,536,000 | 84,500,000 | 3,276,800 | Every dimension | 32 blocks, 64 machines |
+| Unobtainium¹ | 8,388,608 | 524,288,000 | 158,000,000 | 26,214,400 | Every dimension | 48 blocks, 96 machines |
 | Ultimate | Unlimited | Unlimited | Unlimited | Unlimited | Every dimension | 64 blocks, 128 machines |
 
 *Per face and per resource type; every machine linked by the Range Upgrade gets the full rate, and each tier's energy carries the full output of the same tier's Signal Resonator. ¹ Only with Allthemodium. Server owners can change every value in the config.*
@@ -80,15 +80,16 @@ Five storage blocks made for the router: the **Wireless Chest** (unlimited item 
 
 | Tier | Chest (items) | Tank and Chemical Tank | Battery | Source Tank |
 | --- | --- | --- | --- | --- |
-| Basic | 32,768 | 256 B | 1M FE | 10,000 |
-| Advanced | 262,144 | 2,048 B | 8M FE | 80,000 |
-| Elite | 2,097,152 | 16,384 B | 64M FE | 640,000 |
-| Emerald | 16,777,216 | 131,072 B | 512M FE | 5,120,000 |
-| Allthemodium¹ | 134,217,728 | 1,048,576 B | 4.1G FE | 40,960,000 |
-| Vibranium¹ | 1,073,741,824 | 8,388,608 B | 32.8G FE | 327,680,000 |
-| Unobtainium¹ | 8,589,934,592 | 67,108,864 B | 262G FE | 2,621,440,000 |
+| Basic | 32,768 | 256 B | 31.1M FE | 10,000 |
+| Advanced | 262,144 | 2,048 B | 1.99G FE | 80,000 |
+| Elite | 2,097,152 | 16,384 B | 4.32G FE | 640,000 |
+| Emerald | 16,777,216 | 131,072 B | 92.2G FE | 5,120,000 |
+| Allthemodium¹ | 134,217,728 | 1,048,576 B | 4.61T FE | 40,960,000 |
+| Vibranium¹ | 1,073,741,824 | 8,388,608 B | 5.79T FE | 327,680,000 |
+| Unobtainium¹ | 8,589,934,592 | 67,108,864 B | 10.8T FE | 2,621,440,000 |
 | Ultimate | Unlimited | Unlimited | Unlimited | Unlimited |
 
+- A Battery holds **one hour of its tier's Signal Resonator** at full output, and a router's energy throughput is that same Resonator's output plus 5% (Ultimate: unlimited).
 - Upgrade with the same rings and Upgrade Cards as the router, without losing the contents.
 - **Break it and the contents go with the item**, like a shulker box, tier included.
 - Searchable, sortable and resizable screen; an input filter decides what may enter, by any path; comparator output.

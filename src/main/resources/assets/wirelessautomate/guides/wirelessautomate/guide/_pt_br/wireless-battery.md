@@ -14,7 +14,8 @@ item_ids:
 <ItemImage id="wirelessautomate:storage_battery" scale="2" float="left" />
 
 Guarda energia (FE) muito além de um `int`: no Ultimate, sem limite. Preso a um roteador na aba
-**Energia**, ela carrega e descarrega bilhões de FE por tick.
+**Energia**, ela carrega e descarrega bilhões de FE por tick. A capacidade de cada tier é **uma hora** da
+geração cheia do [Ressonador](signal-resonator.md) do mesmo tier, e o roteador do tier escoa essa geração com 5% de folga.
 
 <br clear="all" />
 
@@ -33,13 +34,13 @@ Guarda energia (FE) muito além de um `int`: no Ultimate, sem limite. Preso a um
 
 | Tier | FE |
 | --- | --- |
-| **Básico** | 1.000.000 |
-| **Avançado** | 8.000.000 |
-| **Elite** | 64.000.000 |
-| **Esmeralda** | 512.000.000 |
-| **Allthemodium¹** | 4.096.000.000 |
-| **Vibranium¹** | 32.768.000.000 |
-| **Unobtainium¹** | 262.144.000.000 |
+| **Básico** | 31.104.000 |
+| **Avançado** | 1.990.656.000 |
+| **Elite** | 4.320.000.000 |
+| **Esmeralda** | 92.160.000.000 |
+| **Allthemodium¹** | 4.608.000.000.000 |
+| **Vibranium¹** | 5.788.800.000.000 |
+| **Unobtainium¹** | 10.785.600.000.000 |
 | **Ultimate** | Sem limite |
 
 ¹ Só com o mod Allthemodium.

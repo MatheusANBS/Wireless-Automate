@@ -166,7 +166,7 @@ TIERS = [
 RATES = {  # por tier: itens/s, fluido e químico mB/s, energia FE/t, Source/s
     'item': [32, 256, 2_048, 16_384, 131_072, 1_048_576, 8_388_608, 0],
     'fluid': [2_000, 16_000, 128_000, 1_024_000, 8_192_000, 65_536_000, 524_288_000, 0],
-    'energy': [1_000, 32_768, 64_000, 2_097_152, 67_108_864, 134_217_728, 4_294_967_296, 0],
+    'energy': [454, 29_100, 63_000, 1_350_000, 67_200_000, 84_500_000, 158_000_000, 0],
     'source': [100, 800, 6_400, 51_200, 409_600, 3_276_800, 26_214_400, 0],
 }
 RANGE = {
@@ -176,8 +176,8 @@ RANGE = {
 CAPACITY = {
     'chest': [32_768, 262_144, 2_097_152, 16_777_216, 134_217_728, 1_073_741_824, 8_589_934_592, 0],
     'tank': [256_000, 2_048_000, 16_384_000, 131_072_000, 1_048_576_000, 8_388_608_000, 67_108_864_000, 0],
-    'battery': [1_000_000, 8_000_000, 64_000_000, 512_000_000, 4_096_000_000, 32_768_000_000,
-                262_144_000_000, 0],
+    'battery': [31_104_000, 1_990_656_000, 4_320_000_000, 92_160_000_000, 4_608_000_000_000,
+                5_788_800_000_000, 10_785_600_000_000, 0],
     'source_tank': [10_000, 80_000, 640_000, 5_120_000, 40_960_000, 327_680_000, 2_621_440_000, 0],
 }
 UNLIMITED = {'pt': 'Sem limite', 'en': 'Unlimited'}
@@ -1995,7 +1995,8 @@ page('wireless-battery.md', front('Bateria Wireless', 'wirelessautomate:storage_
 <ItemImage id="wirelessautomate:storage_battery" scale="2" float="left" />
 
 Guarda energia (FE) muito além de um `int`: no Ultimate, sem limite. Preso a um roteador na aba
-**Energia**, ela carrega e descarrega bilhões de FE por tick.
+**Energia**, ela carrega e descarrega bilhões de FE por tick. A capacidade de cada tier é **uma hora** da
+geração cheia do [Ressonador](signal-resonator.md) do mesmo tier, e o roteador do tier escoa essa geração com 5% de folga.
 
 <br clear="all" />
 
@@ -2021,7 +2022,8 @@ A Bateria não tem filtro: energia é uma só.
 <ItemImage id="wirelessautomate:storage_battery" scale="2" float="left" />
 
 Stores energy (FE) far beyond an `int`: on Ultimate, unlimited. Attached to a router on the
-**Energy** tab, it charges and discharges billions of FE per tick.
+**Energy** tab, it charges and discharges billions of FE per tick. Each tier's capacity is **one hour** of the
+same tier's [Resonator](signal-resonator.md) at full output, and the tier's router carries that output with 5% to spare.
 
 <br clear="all" />
 

@@ -118,7 +118,8 @@ public final class RouterGameTests {
             eliteCrystal.set(5_000L);
             Config.BALANCE_VERSION.set(1);
             helper.assertValueEqual(Config.migrateBalance(), 6, "valores migrados");
-            helper.assertValueEqual(unobtainium.get(), 4_294_967_296L, "energia do Unobtainium");
+            helper.assertValueEqual(unobtainium.get(), ResourceType.ENERGY.defaultRate(RouterTier.UNOBTAINIUM.ordinal()),
+                    "energia do Unobtainium");
             helper.assertValueEqual(basicCrystal.get(), 216L, "FE por cristal, Básico");
             helper.assertValueEqual(ultimateCrystal.get(), 268_435_456L, "FE por cristal, Ultimate");
             helper.assertValueEqual(eliteCrystal.get(), 5_000L, "FE por cristal do dono");

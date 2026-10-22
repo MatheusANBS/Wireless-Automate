@@ -228,17 +228,17 @@ Decisões do dono (8/10/2026):
 - **O roteador continua sendo colocado na face, como em qualquer máquina.** Ele reconhece o armazenamento do mod e usa o atalho; a configuração por face, as redes e os filtros não mudam.
 - **Versão 0.2**, depois do envio da 0.1.1.
 
-Capacidade proposta por tier (ajustável na config do servidor, seção `storage`):
+Capacidade proposta por tier (ajustável na config do servidor, seção `storage`). A da Bateria é **uma hora (72.000 ticks) da geração máxima do Ressonador do tier** (`EnergyBalance`, balanceamento 5 de 22/10/2026) e a energia do roteador de cada tier é essa geração mais 5%, arredondada para cima em três algarismos (454; 29.100; 63.000; 1.350.000; 67.200.000; 84.500.000; 158.000.000 FE/t; o Ultimate sem limite):
 
 | Tier | Baú (itens) | Tanque e Tanque Químico | Bateria | Tanque de Source |
 | --- | --- | --- | --- | --- |
-| Básico | 32.768 | 256.000 mB | 1.000.000 FE | 10.000 |
-| Avançado | 262.144 | 2.048.000 mB | 8.000.000 FE | 80.000 |
-| Elite | 2.097.152 | 16.384.000 mB | 64.000.000 FE | 640.000 |
-| Esmeralda | 16.777.216 | 131.072.000 mB | 512.000.000 FE | 5.120.000 |
-| Allthemodium¹ | 134.217.728 | 1.048.576.000 mB | 4.096.000.000 FE | 40.960.000 |
-| Vibranium¹ | 1.073.741.824 | 8.388.608.000 mB | 32.768.000.000 FE | 327.680.000 |
-| Unobtainium¹ | 8.589.934.592 | 67.108.864.000 mB | 262.144.000.000 FE | 2.621.440.000 |
+| Básico | 32.768 | 256.000 mB | 31.104.000 FE | 10.000 |
+| Avançado | 262.144 | 2.048.000 mB | 1.990.656.000 FE | 80.000 |
+| Elite | 2.097.152 | 16.384.000 mB | 4.320.000.000 FE | 640.000 |
+| Esmeralda | 16.777.216 | 131.072.000 mB | 92.160.000.000 FE | 5.120.000 |
+| Allthemodium¹ | 134.217.728 | 1.048.576.000 mB | 4.608.000.000.000 FE | 40.960.000 |
+| Vibranium¹ | 1.073.741.824 | 8.388.608.000 mB | 5.788.800.000.000 FE | 327.680.000 |
+| Unobtainium¹ | 8.589.934.592 | 67.108.864.000 mB | 10.785.600.000.000 FE | 2.621.440.000 |
 | Ultimate | Sem limite | Sem limite | Sem limite | Sem limite |
 
 Como a transferência usa o atalho:

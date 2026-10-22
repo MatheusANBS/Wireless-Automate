@@ -40,17 +40,20 @@ import org.jetbrains.annotations.Nullable;
  * @param enchantment encantamento com nível mínimo (no item ou guardado num livro)
  * @param durability  durabilidade restante, em porcentagem; só itens que gastam
  * @param scope       "só em": vazio, {@code #tag} ou {@code @mod}
+ * @param component   componente de dados de qualquer mod: vazio, {@code id} (tem o componente) ou
+ *                    {@code id=valor} (o valor serializado é igual; o valor pode vir sem o namespace)
  */
 public record ItemRule(Map<Property, Boolean> flags, Optional<Enchant> enchantment, Optional<Durability> durability,
-        String scope) {
+        String scope, String component) {
     public static final int MAX_SCOPE = 128;
-    public static final ItemRule EMPTY = new ItemRule(Map.of(), Optional.empty(), Optional.empty(), "");
+    public static final ItemRule EMPTY = new ItemRule(Map.of(), Optional.empty(), Optional.empty(), "", "");
 
     public ItemRule {
         EnumMap<Property, Boolean> copy = new EnumMap<>(Property.class);
         copy.putAll(flags);
         flags = Map.copyOf(copy);
         scope = scope.strip();
+        component = component.strip();
     }
 
     /** Propriedades de sim ou não, na ordem da tela. */
@@ -114,7 +117,8 @@ public record ItemRule(Map<Property, Boolean> flags, Optional<Enchant> enchantme
             Codec.unboundedMap(Property.CODEC, Codec.BOOL).optionalFieldOf("flags", Map.of()).forGetter(ItemRule::flags),
             Enchant.CODEC.optionalFieldOf("enchantment").forGetter(ItemRule::enchantment),
             Durability.CODEC.optionalFieldOf("durability").forGetter(ItemRule::durability),
-            Codec.STRING.optionalFieldOf("scope", "").forGetter(ItemRule::scope)).apply(i, ItemRule::new));
+            Codec.STRING.optionalFieldOf("scope", "").forGetter(ItemRule::scope),
+            Codec.STRING.optionalFieldOf("component", "").forGetter(ItemRule::component)).apply(i, ItemRule::new));
 
     public static final StreamCodec<ByteBuf, ItemRule> STREAM_CODEC = StreamCodec.of(ItemRule::encode, ItemRule::decode);
 
@@ -133,6 +137,7 @@ public record ItemRule(Map<Property, Boolean> flags, Optional<Enchant> enchantme
         ByteBufCodecs.optional(Enchant.STREAM_CODEC).encode(buf, rule.enchantment);
         ByteBufCodecs.optional(Durability.STREAM_CODEC).encode(buf, rule.durability);
         ByteBufCodecs.stringUtf8(MAX_SCOPE).encode(buf, rule.scope);
+        ByteBufCodecs.stringUtf8(MAX_SCOPE).encode(buf, rule.component);
     }
 
     private static ItemRule decode(ByteBuf buf) {
@@ -148,14 +153,16 @@ public record ItemRule(Map<Property, Boolean> flags, Optional<Enchant> enchantme
             }
         }
         return new ItemRule(flags, ByteBufCodecs.optional(Enchant.STREAM_CODEC).decode(buf),
-                ByteBufCodecs.optional(Durability.STREAM_CODEC).decode(buf), ByteBufCodecs.stringUtf8(MAX_SCOPE).decode(buf));
+                ByteBufCodecs.optional(Durability.STREAM_CODEC).decode(buf), ByteBufCodecs.stringUtf8(MAX_SCOPE).decode(buf),
+                ByteBufCodecs.stringUtf8(MAX_SCOPE).decode(buf));
     }
 
     // ------------------------------------------------------------------ edição
 
     /** Sem nenhuma condição: não é uma regra válida (pegaria tudo). */
     public boolean isEmpty() {
-        return flags.isEmpty() && enchantment.isEmpty() && durability.isEmpty() && scope.isEmpty();
+        return flags.isEmpty() && enchantment.isEmpty() && durability.isEmpty() && scope.isEmpty()
+                && component.isEmpty();
     }
 
     /** O "só em" é vazio, uma tag ({@code #c:armors}) ou um mod ({@code @mekanism}) bem escritos. */
@@ -165,7 +172,24 @@ public record ItemRule(Map<Property, Boolean> flags, Optional<Enchant> enchantme
 
     /** Regra que o servidor aceita: alguma condição e o "só em" bem escrito. */
     public boolean isValid() {
-        return !isEmpty() && validScope() && scope.length() <= MAX_SCOPE;
+        return !isEmpty() && validScope() && validComponent() && scope.length() <= MAX_SCOPE;
+    }
+
+    /** O componente é vazio ou {@code id} / {@code id=valor} bem escritos. */
+    public boolean validComponent() {
+        return component.isEmpty() || (componentId() != null && component.length() <= MAX_SCOPE);
+    }
+
+    /** O id do componente ({@code apotheosis:purity}), ou {@code null}. */
+    public @Nullable ResourceLocation componentId() {
+        int eq = component.indexOf('=');
+        return ResourceLocation.tryParse(eq < 0 ? component : component.substring(0, eq).strip());
+    }
+
+    /** O valor pedido do componente (o que vem depois do {@code =}), ou {@code null} se só exige o componente. */
+    public @Nullable String componentValue() {
+        int eq = component.indexOf('=');
+        return eq < 0 ? null : component.substring(eq + 1).strip();
     }
 
     public @Nullable Boolean flag(Property property) {
@@ -181,19 +205,23 @@ public record ItemRule(Map<Property, Boolean> flags, Optional<Enchant> enchantme
         } else {
             copy.put(property, value);
         }
-        return new ItemRule(copy, enchantment, durability, scope);
+        return new ItemRule(copy, enchantment, durability, scope, component);
     }
 
     public ItemRule withEnchantment(Optional<Enchant> enchantment) {
-        return new ItemRule(flags, enchantment, durability, scope);
+        return new ItemRule(flags, enchantment, durability, scope, component);
     }
 
     public ItemRule withDurability(Optional<Durability> durability) {
-        return new ItemRule(flags, enchantment, durability, scope);
+        return new ItemRule(flags, enchantment, durability, scope, component);
     }
 
     public ItemRule withScope(String scope) {
-        return new ItemRule(flags, enchantment, durability, scope);
+        return new ItemRule(flags, enchantment, durability, scope, component);
+    }
+
+    public ItemRule withComponent(String component) {
+        return new ItemRule(flags, enchantment, durability, scope, component);
     }
 
     /** A tag do "só em" ({@code #c:armors}), ou {@code null}. */
@@ -231,6 +259,9 @@ public record ItemRule(Map<Property, Boolean> flags, Optional<Enchant> enchantme
                 TEXT + (d.atLeast() ? "text.durability.at_least" : "text.durability.below"), d.percent())));
         if (text.getSiblings().isEmpty()) {
             text.append(Component.translatable(TEXT + "text.any"));
+        }
+        if (!component.isEmpty()) {
+            part(text, Component.translatable(TEXT + "text.component", component));
         }
         if (!scope.isEmpty()) {
             text.append(Component.translatable(TEXT + "text.scope", scope));
@@ -278,6 +309,7 @@ public record ItemRule(Map<Property, Boolean> flags, Optional<Enchant> enchantme
             wanted[i] = flags.get(properties[i]);
         }
         Durability wear = durability.orElse(null);
+        ComponentCondition custom = component.isEmpty() ? null : ComponentCondition.of(componentId(), componentValue());
         return stack -> {
             if (badScope || stack.isEmpty()) {
                 return false;
@@ -305,7 +337,7 @@ public record ItemRule(Map<Property, Boolean> flags, Optional<Enchant> enchantme
                     return false;
                 }
             }
-            return true;
+            return custom == null || custom.test(stack);
         };
     }
 

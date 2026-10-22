@@ -30,6 +30,7 @@ import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.network.chat.Component;
 import java.util.UUID;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -187,6 +188,21 @@ final class E2eTabletTreeSteps {
             click(tabletScreen(), c[0], c[1]);
         }, () -> stepTicks >= 2 && tabletScreen().list().chosen() == null && tabletScreen().mapMachinesDrawn() == 0,
                 () -> "escolhido " + tabletScreen().list().chosen() + ", desenha " + tabletScreen().mapMachinesDrawn()));
+        list.add(new Step("mapa: arrastar move o mapa e o Centralizar aparece", STEP_TIMEOUT_MS, () -> {
+            TabletScreen screen = tabletScreen();
+            int[] c = screen.mapEmptyPoint();
+            screen.mouseClicked(c[0], c[1], GLFW.GLFW_MOUSE_BUTTON_LEFT);
+            screen.mouseDragged(c[0] + 30, c[1] - 20, GLFW.GLFW_MOUSE_BUTTON_LEFT, 30, -20);
+            screen.mouseReleased(c[0] + 30, c[1] - 20, GLFW.GLFW_MOUSE_BUTTON_LEFT);
+        }, () -> stepTicks >= 2 && tabletScreen().mapPan()[0] != 0 && tabletScreen().list().chosen() == null
+                && find(byMessage(Component.translatable("gui.wirelessautomate.tablet.map.recenter"))) != null,
+                () -> "pan " + java.util.Arrays.toString(tabletScreen().mapPan())));
+        list.add(capture("7n-tablet-mapa-arrastado"));
+        list.add(clipCheck("Tablet: mapa arrastado"));
+        list.add(new Step("mapa: o Centralizar volta ao jogador", STEP_TIMEOUT_MS, () -> click(widget(
+                byMessage(Component.translatable("gui.wirelessautomate.tablet.map.recenter")), "Centralizar")),
+                () -> tabletScreen().mapPan()[0] == 0 && tabletScreen().mapPan()[1] == 0,
+                () -> "pan " + java.util.Arrays.toString(tabletScreen().mapPan())));
         list.add(new Step("mapa: tema de volta e a Lista", STEP_TIMEOUT_MS, () -> {
             GuiThemes.preview(themeBefore);
             tabletScreen().previewTab(TabletScreen.Tab.LIST);

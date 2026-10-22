@@ -37,6 +37,16 @@ final class TabletBody {
         };
     }
 
+    /** O arrasto do mouse: só o Mapa o usa (mover o mapa). */
+    boolean mouseDragged(Tab tab, double mouseX, double mouseY, double dragX, double dragY) {
+        return tab == Tab.MAP && map.mouseDragged(mouseX, mouseY, dragX, dragY);
+    }
+
+    /** Soltar o botão: só o Mapa o usa (o clique no mapa vale ao soltar). */
+    boolean mouseReleased(Tab tab, double mouseX, double mouseY) {
+        return tab == Tab.MAP && map.mouseReleased(mouseX, mouseY);
+    }
+
     void mouseScrolled(Tab tab, double mouseX, double mouseY, double scrollY) {
         int step = -(int) Math.signum(scrollY);
         switch (tab) {

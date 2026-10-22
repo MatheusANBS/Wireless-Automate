@@ -9,6 +9,7 @@ import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.packet.NetworkSuggestionsPayload;
+import io.github.matheusanbs.wirelessautomate.packet.TabletMapPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletFlowsPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletHeaderPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletLivePayload;
@@ -142,6 +143,8 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     private int panelVersion;
     /** Cliente: os últimos Fluxos recebidos, ou {@code null}. */
     private @Nullable TabletFlowsPayload flowsPayload;
+    /** Cliente: os últimos pontos do Mapa recebidos, ou {@code null}. */
+    private @Nullable TabletMapPayload mapPayload;
     /** Cliente: as últimas sugestões do campo de acesso recebidas, ou {@code null}. */
     private @Nullable NetworkSuggestionsPayload suggestions;
     private int suggestionsVersion;
@@ -157,6 +160,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     private final @Nullable TabletProfile profile;
     private final @Nullable TabletMenuActions actions;
     private final @Nullable TabletFlows flows;
+    private final @Nullable TabletMap mapWatch;
     private final @Nullable TabletTree tree;
     private final @Nullable TabletMachines machines;
     private int tab;
@@ -179,8 +183,10 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         this.profile = new TabletProfile(viewer, containerId, query, builder, machines);
         this.actions = new TabletMenuActions(this, viewer);
         this.flows = new TabletFlows(viewer, containerId);
+        this.mapWatch = new TabletMap(viewer, containerId);
         restore(TabletPlayers.saved(viewer.getUUID()));
         flows.tab(tab);
+        mapWatch.tab(tab);
         builder.listOpen(tab == LIST_TAB);
         this.snapshot = builder.build(true, actions.notice(), actions.noticeId());
         this.sent = snapshot;
@@ -206,6 +212,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         this.profile = null;
         this.actions = null;
         this.flows = null;
+        this.mapWatch = null;
         this.tree = null;
         this.machines = null;
         this.snapshot = snapshot;
@@ -251,6 +258,9 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         if (flows != null) {
             flows.stop();
         }
+        if (mapWatch != null) {
+            mapWatch.stop();
+        }
         if (machines != null) {
             machines.stop();
         }
@@ -264,6 +274,8 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     public static final int TAB_COUNT = 4;
     /** A posição da aba Fluxos ({@code TabletScreen.Tab.FLOWS}): só com ela aberta o jogador olha o amostrador. */
     public static final int FLOWS_TAB = 1;
+    /** A posição da aba Mapa ({@code TabletScreen.Tab.MAP}): só com ela aberta o jogador recebe os pontos do mapa. */
+    public static final int MAP_TAB = 2;
     /** A posição da aba Lista ({@code TabletScreen.Tab.LIST}), a que o clique numa máquina abre. */
     static final int LIST_TAB = 0;
 
@@ -276,6 +288,9 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         this.tab = tab;
         if (flows != null) {
             flows.tab(tab);
+        }
+        if (mapWatch != null) {
+            mapWatch.tab(tab);
         }
         if (builder != null) {
             builder.listOpen(tab == LIST_TAB);
@@ -454,6 +469,16 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         return flowsPayload;
     }
 
+    /** Cliente: os pontos novos do Mapa ({@code TabletMapPayload}). */
+    public void applyMap(TabletMapPayload map) {
+        this.mapPayload = map;
+    }
+
+    /** Cliente: os últimos pontos do Mapa recebidos, ou {@code null} (a tela usa a página da Lista até chegarem). */
+    public @Nullable TabletMapPayload mapPoints() {
+        return mapPayload;
+    }
+
     /** Cliente: as sugestões novas do campo de acesso ({@code NetworkSuggestionsPayload}). */
     public void applySuggestions(NetworkSuggestionsPayload payload) {
         this.suggestions = payload;
@@ -515,6 +540,10 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         TabletFlowsPayload flowsNow = pollFlows();
         if (flowsNow != null) {
             payloads.add(flowsNow);
+        }
+        TabletMapPayload mapNow = mapWatch == null ? null : mapWatch.poll();
+        if (mapNow != null) {
+            payloads.add(mapNow);
         }
         return payloads;
     }

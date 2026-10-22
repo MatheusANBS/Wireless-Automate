@@ -124,6 +124,7 @@ final class E2eShowcase {
                 ItemStack linker = new ItemStack(ModItems.LINKER.get());
                 LinkerItem.setArea(linker, new LinkerArea(player.level().dimension(), showBase.offset(-11, 0, -15),
                         java.util.Optional.of(showBase.offset(-8, 1, -7))));
+                LinkerItem.setRouter(linker, net.minecraft.core.GlobalPos.of(player.level().dimension(), showRange));
                 player.setItemInHand(InteractionHand.MAIN_HAND, linker);
                 return null;
             });
@@ -349,6 +350,55 @@ final class E2eShowcase {
         list.add(capture("s21-cascata"));
     }
 
+    /** Vitrine: a aba Redes com os convidados e o time do FTB Teams de uma rede privada. */
+    private static void showcaseAccessShots(List<Step> list) {
+        UUID playerId = Minecraft.getInstance().player.getUUID();
+        String[] names = {"Ana", "Bruno", "Carla"};
+        UUID[] guests = new UUID[names.length];
+        for (int i = 0; i < names.length; i++) {
+            guests[i] = UUID.nameUUIDFromBytes(names[i].getBytes());
+        }
+        UUID[] network = new UUID[1];
+        list.add(new Step("aba Redes", STEP_TIMEOUT_MS, () -> {
+            TabletScreen screen = tabletScreen();
+            screen.previewTab(TabletScreen.Tab.NETWORKS);
+            var networks = screen.getMenu().snapshot().networks();
+            for (int i = 0; i < networks.size(); i++) {
+                if (networks.get(i).manageable() && !networks.get(i).isPublic() && network[0] == null) {
+                    network[0] = networks.get(i).id();
+                    screen.previewNetwork(i);
+                }
+            }
+            if (network[0] == null) {
+                throw new StepFailure("nenhuma rede privada do jogador na vitrine");
+            }
+        }, () -> tabletScreen().access().shown(), () -> "sem a seção de acesso"));
+        list.add(new Step("convidados e time", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            for (int i = 0; i < names.length; i++) {
+                server.getProfileCache().add(new com.mojang.authlib.GameProfile(guests[i], names[i]));
+            }
+            var data = io.github.matheusanbs.wirelessautomate.network.NetworkSavedData.get(server);
+            var net = data.network(network[0]);
+            for (UUID guest : guests) {
+                net = net.withMember(guest);
+            }
+            if (io.github.matheusanbs.wirelessautomate.network.TeamAccess.LOADED) {
+                io.github.matheusanbs.wirelessautomate.compat.ftbteams.FtbTeamsDev.createParty(
+                        server.getPlayerList().getPlayer(playerId), "Smelting Crew");
+                for (var team : io.github.matheusanbs.wirelessautomate.network.TeamAccess.teams()) {
+                    if (team.name().equals("Smelting Crew")) {
+                        net = net.withTeam(team.id());
+                    }
+                }
+            }
+            data.update(net);
+            return null;
+        }), () -> tabletScreen().access().counts()[0] == names.length, () -> "convidados "
+                + java.util.Arrays.toString(tabletScreen().access().counts())));
+        list.add(DevEndToEnd.wait("acesso desenhado", 10));
+        list.add(capture("s7c-tablet-acesso"));
+    }
+
     /** Vitrine: o Tablet (lista, estatísticas e mapa) e o guia. */
     private static void showcaseTabletShots(List<Step> list) {
         // Tablet: lista, estatísticas (com o fluxo da galeria) e mapa.
@@ -382,6 +432,17 @@ final class E2eShowcase {
                 () -> true, () -> "mapa"));
         list.add(DevEndToEnd.wait("mapa desenhado", 10));
         list.add(capture("s7-tablet-mapa"));
+        // o mapa arrastado: o botão Centralizar aparece
+        list.add(new Step("arrastar o mapa", STEP_TIMEOUT_MS, () -> {
+            TabletScreen screen = tabletScreen();
+            int[] c = screen.mapEmptyPoint();
+            screen.mouseClicked(c[0], c[1], GLFW.GLFW_MOUSE_BUTTON_LEFT);
+            screen.mouseDragged(c[0] + 70, c[1] - 30, GLFW.GLFW_MOUSE_BUTTON_LEFT, 70, -30);
+            screen.mouseReleased(c[0] + 70, c[1] - 30, GLFW.GLFW_MOUSE_BUTTON_LEFT);
+        }, () -> tabletScreen().mapPan()[0] != 0, () -> "mapa não andou"));
+        list.add(DevEndToEnd.wait("mapa arrastado", 10));
+        list.add(capture("s7b-tablet-mapa-arrastado"));
+        showcaseAccessShots(list);
         list.add(close("fechar o Tablet"));
         if (ModList.get().isLoaded("guideme")) {
             list.add(new Step("guia", STEP_TIMEOUT_MS,

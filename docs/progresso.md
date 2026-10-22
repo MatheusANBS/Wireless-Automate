@@ -6,6 +6,8 @@ Legenda: ✅ pronto e testado · 🟡 parcial · ⬜ não começado
 
 ## Resumo
 
+**Versão 2.8.2 (22/10/2026), publicada:** os mineiros do Occultism (Djinni, peso 300, e Ancient Eldritch, peso 90) dão 2 Cristais de Sinal direto, pela tag `c:gems/signal_quartz`, no lugar do minério da 2.8.1; só dados; protocolo 32 inalterado. Changelog em `docs/curseforge/changelog-2.8.2.md` e `changelog-curseforge-2.8.2.md`. O dono sobe o jar e o changelog no CurseForge.
+
 **Versão 2.8.1 (22/10/2026), publicada:** o Quartzo de Sinal nos mineiros do Occultism (Djinni, peso 300, e Ancient Eldritch, peso 90), só dados em `data/occultism/recipe/miner/`; protocolo 32 inalterado. Changelog em `docs/curseforge/changelog-2.8.1.md` e `changelog-curseforge-2.8.1.md`. O dono sobe o jar e o changelog no CurseForge.
 
 **Versão 2.8.0 (22/10/2026), publicada:** energia do roteador e capacidade da Bateria ligadas ao Ressonador do mesmo tier (roteador = geração máxima + 5%, Bateria = uma hora; Ultimate sem limite), migração 5 da config, protocolo 32 inalterado. Changelog em `docs/curseforge/changelog-2.8.0.md` e `changelog-curseforge-2.8.0.md`. O dono sobe o jar e o changelog no CurseForge e a imagem `feature-4-tiers.png` (e as cinco da 2.7, ainda pendentes), e manda os links para trocar os `ENVIAR:` da `descricao.md`.
@@ -176,6 +178,7 @@ Respondidas e registradas também na especificação ("Decisões tomadas"):
 | Data | O que foi feito |
 | --- | --- |
 | 2026-10-22 | **Energia ligada ao Ressonador.** `EnergyBalance`: o roteador de cada tier escoa a geração máxima do Ressonador dele +5% (Ultimate sem limite) e a Bateria guarda uma hora dela; migração 5 da config; tabelas do guia, dos READMEs, da descrição e da especificação; 656 GameTests, JUnit novo. |
+| 2026-10-22 | **2.8.2 fechada e publicada.** Os mineiros do Occultism dão o Cristal de Sinal (tag `c:gems/signal_quartz`, 2 por resultado) em vez do minério; build e GameTests nas cinco runs, sem e2e (só dados). |
 | 2026-10-22 | **2.8.1 fechada e publicada.** Receitas `occultism:miner` do Quartzo de Sinal para o Djinni (peso 300) e o Ancient Eldritch (peso 90), JUnit `OccultismMinerRecipesTest`; build e GameTests nas cinco runs, sem e2e (só dados). |
 | 2026-10-22 | **2.8.0 fechada e publicada.** `mod_version` 2.8.0, changelogs separado e unificado, descrição e READMEs com a energia nova, build, GameTests nas cinco runs (656 + 8 + 17 + 6 + 5), e2e completo OK (2.340 passos), tag `v2.8.0` e release no GitHub com o jar. |
 | 2026-10-22 | **2.7.0 fechada e publicada.** `mod_version` 2.7.0, changelogs separado e unificado, descrição do CurseForge e os dois READMEs (Vinculador, Configurador, Mapa, acesso às redes e o FTB Teams opcional na tabela), dependência opcional `ftbteams` no `neoforge.mods.toml`, build, GameTests nas cinco runs (654 + 8 + 17 + 6 + 5), e2e completo OK (2.340 passos), tag `v2.7.0` e release no GitHub com o jar. |

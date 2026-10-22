@@ -53,7 +53,7 @@ Match items by what they **are**, not which item they are: **any enchanted item*
 
 Tiers raise a router's throughput and range along the ladder Basic → Advanced → Elite → **Emerald** → Ultimate. With the **Allthemodium** mod (ATM10), three more steps go between Emerald and Ultimate: **Allthemodium → Vibranium → Unobtainium**, crafted from the mod's own metals, and in ATM10 the Ultimate ring takes **ATM Star shards**. Each tier has one ring of ingredients, used two ways at the same cost: put a router (or storage block) in the middle of the next ring at the crafting table, or make an Upgrade Card ("Basic → Elite") and use it on the placed router, which keeps its whole configuration. A card can skip tiers: put it in the middle of the next ring to extend it.
 
-![Eight tiers](https://media.forgecdn.net/attachments/2085/358/feature-4-tiers-png.png)
+![Eight tiers](ENVIAR:feature-4-tiers.png)
 
 | Tier | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Source/s | Range | Range Upgrade |
 | --- | --- | --- | --- | --- | --- | --- |

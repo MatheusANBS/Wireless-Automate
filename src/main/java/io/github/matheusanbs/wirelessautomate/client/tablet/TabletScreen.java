@@ -100,7 +100,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         NodeText nodes = new NodeText(menu::snapshot);
         this.list = new TabletList(menu, actions, nodes, () -> layout.h);
         this.selectBar = new SelectBar(layout, menu::snapshot, nodes, actions, list);
-        this.map = new MapTab(layout, menu::snapshot, nodes, actions, list);
+        this.map = new MapTab(layout, menu::snapshot, menu::mapPoints, nodes, actions, list);
         this.flows = new FlowsTab(layout, menu, (type, network) -> {
             switchTab(Tab.LIST);
             list.filterFlow(type, network);
@@ -302,6 +302,9 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             }
             return true;
         }
+        if (body.mouseDragged(tab, mouseX, mouseY, dragX, dragY)) {
+            return true;
+        }
         return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
     }
 
@@ -309,6 +312,9 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         if (resize.dragging()) {
             resize.end();
+            return true;
+        }
+        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && body.mouseReleased(tab, mouseX, mouseY)) {
             return true;
         }
         return super.mouseReleased(mouseX, mouseY, button);
@@ -442,6 +448,11 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     /** Quantas máquinas e pixels de linha o Mapa desenha (gancho do e2e). */
     public int mapMachinesDrawn() {
         return map.machinesDrawn();
+    }
+
+    /** O quanto o Mapa foi movido do jogador, em blocos {@code {x, z}} (gancho do e2e). */
+    public double[] mapPan() {
+        return map.pan();
     }
 
     /** Um ponto vazio do Mapa, perto do canto de baixo à esquerda (gancho do e2e). */

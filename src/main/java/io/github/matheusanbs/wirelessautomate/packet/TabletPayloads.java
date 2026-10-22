@@ -50,10 +50,18 @@ public final class TabletPayloads {
                 (payload, context) -> handleAction(serverPlayer(context), payload));
         registrar.playToServer(OpenTabletPayload.TYPE, OpenTabletPayload.STREAM_CODEC,
                 (payload, context) -> handleOpenTablet(serverPlayer(context)));
+        registrar.playToClient(TabletMapPayload.TYPE, TabletMapPayload.STREAM_CODEC, TabletPayloads::onMap);
         registrar.playToServer(NetworkSuggestPayload.TYPE, NetworkSuggestPayload.STREAM_CODEC,
                 (payload, context) -> handleSuggest(serverPlayer(context), payload));
         registrar.playToClient(NetworkSuggestionsPayload.TYPE, NetworkSuggestionsPayload.STREAM_CODEC,
                 TabletPayloads::onSuggestions);
+    }
+
+    private static void onMap(TabletMapPayload payload, IPayloadContext context) {
+        Player player = context.player();
+        if (player != null && player.containerMenu instanceof TabletMenu menu && menu.containerId == payload.containerId()) {
+            menu.applyMap(payload);
+        }
     }
 
     private static void onSuggestions(NetworkSuggestionsPayload payload, IPayloadContext context) {

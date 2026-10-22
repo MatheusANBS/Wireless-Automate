@@ -107,12 +107,6 @@ final class MoreTab {
             wrapped(g, tr("card.hint"), x, ty + 11, IW, 2, GuiPaint.MUTED);
             ty = y + BOX_Y + 40 + BTN_H + 8;
         }
-        if (screen.isItem()) {
-            GuiPaint.text(g, font, tr("components"), x, ty, GuiPaint.FG);
-            ty += 11 + 10 * wrapped(g, screen.filter().matchComponents() ? tr("components.on.hint") : tr("components.off.hint"),
-                    x, ty + 11, IW, 4, GuiPaint.MUTED);
-            ty += 6;
-        }
         wrapped(g, tr("more.hint"), x, ty, IW, Math.max(0, (y + frame.innerBottom() - BTN_H - 4 - ty) / 10),
                 GuiPaint.DISABLED);
     }

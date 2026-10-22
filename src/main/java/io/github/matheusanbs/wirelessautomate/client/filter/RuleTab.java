@@ -29,6 +29,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
@@ -46,6 +47,9 @@ final class RuleTab {
     private final FilterFrame frame;
     private final FilterActions actions;
     private final EnchantPicker picker;
+    private final RuleSuggestions suggestions = new RuleSuggestions();
+    private final TextSuggest scopeSuggest;
+    private final TextSuggest componentSuggest;
 
     private ItemRule draft = ItemRule.EMPTY;
     private int editing = -1;
@@ -57,6 +61,7 @@ final class RuleTab {
     private final FlatButton[] durabilityButtons = new FlatButton[3];
     private FlatButton durabilityPercent;
     private EditBox scopeBox;
+    private EditBox componentBox;
     private FlatButton ruleResetButton;
     private FlatButton ruleAddButton;
 
@@ -65,6 +70,8 @@ final class RuleTab {
         this.frame = screen.frame();
         this.actions = actions;
         this.picker = new EnchantPicker(screen, this);
+        this.scopeSuggest = new TextSuggest(screen, () -> scopeBox, suggestions::scope);
+        this.componentSuggest = new TextSuggest(screen, () -> componentBox, suggestions::component);
     }
 
     private static Font font() {
@@ -81,6 +88,45 @@ final class RuleTab {
 
     EditBox scopeBox() {
         return scopeBox;
+    }
+
+    boolean suggestionsShown() {
+        return picker.suggestionsShown() || scopeSuggest.shown() || componentSuggest.shown();
+    }
+
+    void focusChanged(@Nullable GuiEventListener before, @Nullable GuiEventListener listener) {
+        scopeSuggest.focusChanged(before, listener);
+        componentSuggest.focusChanged(before, listener);
+    }
+
+    boolean suggestionClicked(double mx, double my, int button) {
+        return scopeSuggest.mouseClicked(mx, my, button) || componentSuggest.mouseClicked(mx, my, button);
+    }
+
+    void reopenOnClick(double mx, double my) {
+        scopeSuggest.reopenOnClick(mx, my);
+        componentSuggest.reopenOnClick(mx, my);
+    }
+
+    boolean suggestionKey(EditBox box, int keyCode, boolean enter) {
+        return scopeSuggest.keyPressed(box, keyCode, enter) || componentSuggest.keyPressed(box, keyCode, enter);
+    }
+
+    boolean scrollSuggestions(double mx, double my, int step) {
+        return scopeSuggest.scroll(mx, my, step) || componentSuggest.scroll(mx, my, step);
+    }
+
+    boolean suggestionTooltip(int mx, int my) {
+        return scopeSuggest.tooltip(mx, my) || componentSuggest.tooltip(mx, my);
+    }
+
+    void renderSuggestions(GuiGraphics g, int mx, int my) {
+        scopeSuggest.render(g, mx, my);
+        componentSuggest.render(g, mx, my);
+    }
+
+    EditBox componentBox() {
+        return componentBox;
     }
 
     void addWidgets() {
@@ -111,13 +157,23 @@ final class RuleTab {
                 (g, b, hovered) -> paintTextButton(g, b, hovered, Component.literal(
                         draft.durability().map(d -> d.percent() + "%").orElse("")), false), () -> stepPercent(10))
                 .tooltip(() -> tr("rule.percent.tooltip")));
-        scopeBox = screen.box(tr("rule.scope"), ItemRule.MAX_SCOPE, draft.scope(), value -> setDraft(draft.withScope(value)));
+        scopeBox = screen.box(tr("rule.scope"), ItemRule.MAX_SCOPE, draft.scope(), value -> {
+            setDraft(draft.withScope(value));
+            scopeSuggest.typed();
+        });
+        componentBox = screen.box(tr("rule.component"), ItemRule.MAX_SCOPE, draft.component(),
+                value -> {
+                    setDraft(draft.withComponent(value));
+                    componentSuggest.typed();
+                });
+        componentBox.setTooltip(net.minecraft.client.gui.components.Tooltip.create(tr("rule.component.tooltip")));
         ruleResetButton = screen.add(new FlatButton(0, 0, 40, BTN_H, Component.empty(),
                 (g, b, hovered) -> paintTextButton(g, b, hovered, editing >= 0 ? tr("rule.cancel") : tr("rule.reset"), false),
                 this::resetRule).tooltip(() -> editing >= 0 ? tr("rule.cancel.tooltip") : tr("rule.reset.tooltip")));
         ruleAddButton = screen.add(new FlatButton(0, 0, 40, BTN_H, tr("rule.add"),
                 (g, b, hovered) -> paintPrimary(g, b, hovered, editing >= 0 ? tr("rule.save") : tr("rule.add")),
                 this::submitRule).tooltip(() -> !draft.validScope() ? tr("rule.scope.invalid")
+                        : !draft.validComponent() ? tr("rule.component.invalid")
                         : !picker.enchantFieldValid() ? tr("rule.enchantment.invalid")
                         : !picker.levelFieldValid() ? tr("rule.level.invalid")
                         : draft.isEmpty() ? tr("rule.empty") : null));
@@ -150,6 +206,11 @@ final class RuleTab {
         int scopeLabel = font().width(tr("rule.scope")) + 5;
         scopeBox.setPosition(px + scopeLabel + 4, ry + 2);
         scopeBox.setWidth(IW - scopeLabel - 8);
+        ry += FIELD_H + 3;
+        componentBox.visible = rule;
+        int componentLabel = font().width(tr("rule.component")) + 5;
+        componentBox.setPosition(px + componentLabel + 4, ry + 2);
+        componentBox.setWidth(IW - componentLabel - 8);
         ruleResetButton.visible = ruleAddButton.visible = rule;
         ruleResetButton.setPosition(px, bottom - BTN_H);
         ruleResetButton.setWidth(half);
@@ -225,6 +286,7 @@ final class RuleTab {
         setDraft(ItemRule.EMPTY);
         picker.syncEnchantFields();
         scopeBox.setValue("");
+        componentBox.setValue("");
     }
 
     void submitRule() {
@@ -238,6 +300,7 @@ final class RuleTab {
         setDraft(ItemRule.EMPTY);
         picker.syncEnchantFields();
         scopeBox.setValue("");
+        componentBox.setValue("");
         screen.setTab(Tab.ENTRY);
         screen.unfocus();
     }
@@ -248,6 +311,7 @@ final class RuleTab {
         setDraft(rule);
         picker.syncEnchantFields();
         scopeBox.setValue(rule.scope());
+        componentBox.setValue(rule.component());
         screen.openTab(Tab.RULE);
     }
 
@@ -257,6 +321,7 @@ final class RuleTab {
         setDraft(rule);
         picker.syncEnchantFields();
         scopeBox.setValue(rule.scope());
+        componentBox.setValue(rule.component());
     }
 
     /** Botão direito na porcentagem volta 10. */
@@ -314,8 +379,14 @@ final class RuleTab {
         int scopeX = x + font.width(tr("rule.scope")) + 5;
         int border = !draft.validScope() ? GuiPaint.DANGER : scopeBox.isFocused() ? GuiPaint.ACCENT : GuiPaint.LINE;
         GuiPaint.box(g, scopeX, ry, x + IW - scopeX, FIELD_H, GuiPaint.PANEL, border);
+        ry += FIELD_H + 3;
+        GuiPaint.text(g, font, tr("rule.component"), x, ry + 3, draft.component().isEmpty() ? GuiPaint.MUTED : GuiPaint.FG);
+        int componentX = x + font.width(tr("rule.component")) + 5;
+        int componentBorder = !draft.validComponent() ? GuiPaint.DANGER
+                : componentBox.isFocused() ? GuiPaint.ACCENT : GuiPaint.LINE;
+        GuiPaint.box(g, componentX, ry, x + IW - componentX, FIELD_H, GuiPaint.PANEL, componentBorder);
         ry += FIELD_H + 5;
-        if (picker.suggestionsShown()) {
+        if (suggestionsShown()) {
             // a lista de sugestões cobre o resumo: sem pedaços de texto saindo por baixo dela
             return;
         }
@@ -329,6 +400,8 @@ final class RuleTab {
             GuiText.wrap(g, font, tr("rule.empty"), x, ry, IW, (limit - ry) / 10, GuiPaint.DISABLED);
         } else if (!draft.validScope()) {
             GuiText.wrap(g, font, tr("rule.scope.invalid"), x, ry, IW, (limit - ry) / 10, GuiPaint.DANGER);
+        } else if (!draft.validComponent()) {
+            GuiText.wrap(g, font, tr("rule.component.invalid"), x, ry, IW, (limit - ry) / 10, GuiPaint.DANGER);
         } else if (!picker.enchantFieldValid()) {
             GuiText.wrap(g, font, tr("rule.enchantment.invalid"), x, ry, IW, (limit - ry) / 10, GuiPaint.DANGER);
         } else if (!picker.levelFieldValid()) {

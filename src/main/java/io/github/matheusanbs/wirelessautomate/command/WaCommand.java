@@ -83,6 +83,7 @@ public final class WaCommand {
                     .stream().map(WaNetwork::name), builder);
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
+        var access = NetworkAccessCommand.nodes(NETWORK_NAMES);
         dispatcher.register(Commands.literal("wa")
                 .then(Commands.literal("profile")
                         .requires(source -> source.hasPermission(2))
@@ -100,7 +101,10 @@ public final class WaCommand {
                         .then(Commands.literal("remove")
                                 .then(Commands.argument("name", StringArgumentType.greedyString())
                                         .suggests(NETWORK_NAMES)
-                                        .executes(context -> remove(context.getSource(), name(context))))))
+                                        .executes(context -> remove(context.getSource(), name(context)))))
+                        .then(access[0])
+                        .then(access[1])
+                        .then(access[2]))
                 .then(Commands.literal("face")
                         .requires(source -> source.hasPermission(2))
                         .then(Commands.argument("pos", BlockPosArgument.blockPos())

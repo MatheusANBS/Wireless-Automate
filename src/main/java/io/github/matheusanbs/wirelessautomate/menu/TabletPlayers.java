@@ -16,6 +16,8 @@ final class TabletPlayers {
     private static final Map<UUID, RateLimiter> FORCED_LIMITS = new HashMap<>();
     /** Fichas das ações em massa do perfil por jogador. */
     private static final Map<UUID, RateLimiter> BULK_LIMITS = new HashMap<>();
+    /** Fichas das consultas de sugestão do campo de acesso por jogador. */
+    private static final Map<UUID, RateLimiter> SUGGEST_LIMITS = new HashMap<>();
     /** Onde cada jogador deixou o Tablet (ao fechar o menu, inclusive para abrir o filtro de um nó): o Tablet reabre igual. */
     private static final Map<UUID, TabletMenu.State> STATES = new HashMap<>();
 
@@ -26,12 +28,14 @@ final class TabletPlayers {
         STATES.clear();
         FORCED_LIMITS.clear();
         BULK_LIMITS.clear();
+        SUGGEST_LIMITS.clear();
     }
 
     static void forget(UUID player) {
         STATES.remove(player);
         FORCED_LIMITS.remove(player);
         BULK_LIMITS.remove(player);
+        SUGGEST_LIMITS.remove(player);
     }
 
     static @Nullable TabletMenu.State saved(UUID player) {
@@ -50,6 +54,11 @@ final class TabletPlayers {
     /** Gasta uma ação em massa do perfil do jogador, se houver. */
     static boolean takeBulk(UUID player, long now) {
         return take(BULK_LIMITS.computeIfAbsent(player, id -> new RateLimiter(TabletMenu.BULK_PER_SECOND)), now);
+    }
+
+    /** Gasta uma consulta de sugestão do jogador, se houver (no máximo {@link TabletMenu#SUGGEST_PER_SECOND} por segundo). */
+    static boolean takeSuggest(UUID player, long now) {
+        return take(SUGGEST_LIMITS.computeIfAbsent(player, id -> new RateLimiter(TabletMenu.SUGGEST_PER_SECOND)), now);
     }
 
     private static boolean take(RateLimiter limiter, long now) {

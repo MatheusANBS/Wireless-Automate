@@ -6,6 +6,7 @@ import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.network.TeamAccess;
 import io.github.matheusanbs.wirelessautomate.preset.ProfileDiff.ProfileMatch;
 import io.github.matheusanbs.wirelessautomate.preset.ProfileSource;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
@@ -260,9 +261,34 @@ public record TabletSnapshot(
      *
      * @param manageable o jogador pode renomear, mudar cor e privacidade e remover (dono ou op)
      * @param unloaded   nós da rede em chunks descarregados
+     * @param access     convidados e times da rede; só vai para quem gerencia ({@link AccessView#EMPTY} para os
+     *                   outros, que não recebem os nomes)
      */
     public record NetworkView(UUID id, String name, int color, String owner, boolean owned, boolean manageable,
-            boolean isPublic, boolean paused, int nodes, int unloaded) {
+            boolean isPublic, boolean paused, int nodes, int unloaded, AccessView access) {
+        /** Uma rede sem lista de acesso para mostrar. */
+        public NetworkView(UUID id, String name, int color, String owner, boolean owned, boolean manageable,
+                boolean isPublic, boolean paused, int nodes, int unloaded) {
+            this(id, name, color, owner, owned, manageable, isPublic, paused, nodes, unloaded, AccessView.EMPTY);
+        }
+    }
+
+    /** Quem tem acesso a uma rede privada, para o dono editar. */
+    public record AccessView(List<Guest> guests, List<TeamAccess.TeamInfo> teams) {
+        public static final AccessView EMPTY = new AccessView(List.of(), List.of());
+
+        public AccessView {
+            guests = List.copyOf(guests);
+            teams = List.copyOf(teams);
+        }
+
+        public boolean isEmpty() {
+            return guests.isEmpty() && teams.isEmpty();
+        }
+    }
+
+    /** Um convidado: o id, o nome que o servidor conhece e se está no jogo agora. */
+    public record Guest(UUID id, String name, boolean online) {
     }
 
     /** Um grupo de redes do jogador (ou de qualquer um, para operador). */
@@ -449,6 +475,19 @@ public record TabletSnapshot(
             buf.writeBoolean(n.paused);
             buf.writeVarInt(n.nodes);
             buf.writeVarInt(n.unloaded);
+            buf.writeVarInt(n.access.guests().size());
+            for (Guest guest : n.access.guests()) {
+                buf.writeUUID(guest.id());
+                buf.writeUtf(guest.name(), 64);
+                buf.writeBoolean(guest.online());
+            }
+            buf.writeVarInt(n.access.teams().size());
+            for (TeamAccess.TeamInfo team : n.access.teams()) {
+                buf.writeUUID(team.id());
+                buf.writeUtf(team.name(), 64);
+                buf.writeVarInt(team.members());
+                buf.writeBoolean(team.gone());
+            }
         }
         buf.writeVarInt(s.groups.size());
         for (GroupView g : s.groups) {
@@ -505,8 +544,19 @@ public record TabletSnapshot(
             boolean paused = buf.readBoolean();
             int nodes = buf.readVarInt();
             int unloaded = buf.readVarInt();
+            int guestCount = buf.readVarInt();
+            List<Guest> guests = new ArrayList<>(guestCount);
+            for (int j = 0; j < guestCount; j++) {
+                guests.add(new Guest(buf.readUUID(), buf.readUtf(64), buf.readBoolean()));
+            }
+            int teamCount = buf.readVarInt();
+            List<TeamAccess.TeamInfo> teams = new ArrayList<>(teamCount);
+            for (int j = 0; j < teamCount; j++) {
+                teams.add(new TeamAccess.TeamInfo(buf.readUUID(), buf.readUtf(64), buf.readVarInt(),
+                        buf.readBoolean()));
+            }
             networks.add(new NetworkView(id, name, color, owner, owned, manageable, isPublic, paused, nodes,
-                    unloaded));
+                    unloaded, new AccessView(guests, teams)));
         }
         int groupCount = buf.readVarInt();
         List<GroupView> groups = new ArrayList<>(groupCount);

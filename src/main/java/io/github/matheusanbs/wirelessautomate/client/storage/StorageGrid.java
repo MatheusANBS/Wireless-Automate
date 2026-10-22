@@ -223,7 +223,7 @@ final class StorageGrid {
      * célula vazia ou a barra, a rodinha rola a lista.
      */
     boolean mouseScrolled(double mouseX, double mouseY, double scrollY, @Nullable Slot hoveredSlot) {
-        if (screen.items() && scrollY != 0) {
+        if (screen.items() && scrollY != 0 && Screen.hasShiftDown()) {
             boolean push = scrollY < 0;
             if (inGrid(mouseX, mouseY) && keyAt(mouseX, mouseY) instanceof ItemStack key) {
                 screen.send(push ? StorageActionPayload.Action.TAKE_ONE_TO_INVENTORY

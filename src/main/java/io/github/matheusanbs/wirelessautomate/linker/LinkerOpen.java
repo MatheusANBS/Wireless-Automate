@@ -138,6 +138,17 @@ public final class LinkerOpen {
         return false;
     }
 
+    /** O jogador tem um Vinculador em modo Abrir em alguma das mãos. */
+    public static boolean holdsOpenLinker(ServerPlayer player) {
+        for (InteractionHand hand : InteractionHand.values()) {
+            ItemStack stack = player.getItemInHand(hand);
+            if (stack.getItem() instanceof LinkerItem && LinkerItem.mode(stack) == LinkerMode.OPEN) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static InteractionHand handOf(ServerPlayer player, ItemStack stack) {
         return player.getItemInHand(InteractionHand.MAIN_HAND) == stack ? InteractionHand.MAIN_HAND
                 : InteractionHand.OFF_HAND;

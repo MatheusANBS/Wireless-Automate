@@ -53,7 +53,7 @@ Match items by what they **are**, not which item they are: **any enchanted item*
 
 Tiers raise a router's throughput and range along the ladder Basic → Advanced → Elite → **Emerald** → Ultimate. With the **Allthemodium** mod (ATM10), three more steps go between Emerald and Ultimate: **Allthemodium → Vibranium → Unobtainium**, crafted from the mod's own metals, and in ATM10 the Ultimate ring takes **ATM Star shards**. Each tier has one ring of ingredients, used two ways at the same cost: put a router (or storage block) in the middle of the next ring at the crafting table, or make an Upgrade Card ("Basic → Elite") and use it on the placed router, which keeps its whole configuration. A card can skip tiers: put it in the middle of the next ring to extend it.
 
-![Eight tiers](ENVIAR:feature-4-tiers.png)
+![Eight tiers](https://media.forgecdn.net/attachments/2090/178/feature-4-tiers-png.png)
 
 | Tier | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Source/s | Range | Range Upgrade |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -139,16 +139,16 @@ A Cut Signal Crystal yields twice as much and lasts twice as long. From Elite up
 
 ![The toolkit](https://media.forgecdn.net/attachments/2085/338/feature-14-toolkit-png.png)
 
-![Link a whole area](ENVIAR:feature-5-area.png)
+![Link a whole area](https://media.forgecdn.net/attachments/2090/179/feature-5-area-png.png)
 
 - **Linker** (two modes): **Link** picks a router with the Range Upgrade (click it) and links the machines you click, or **a whole marked area** at once (Shift + click two blocks; nearest first, up to the tier's radius and limit); the **Unlink** switch takes them out instead. **Open** opens the screen of the router that reaches the machine you click, already editing that machine; with several routers, a short list lets you pick. It checks range, claims and protection mods on the router. The Linker no longer touches networks: choose each face's network on the router screen or in the Tablet.
 - **Configurator** (the Brush): Shift + click a router copies its setup (faces, filters, priorities, redstone and the network of each face), click pastes it on another, and Shift + click on a block without a router clears the copy. Paste every tab or just one type, leaving the other tabs alone. Hold **Left Alt** for a radial wheel that picks the pasted type. A face's network is only pasted if you can use it, and a face only leaves a network you can edit. To configure many routers at once, paste the profile on the Tablet's marked ones.
 - **Chunk Loading Upgrade:** keeps a router and its machine working while you're away.
 - **Recipe editor** (operators): `/wa recipes` opens a screen to change, disable or restore any of the mod's crafting recipes, with items from your inventory or JEI, tags and the result count. Saved as a datapack in `config/wirelessautomate/recipes/`, so it works in every world and survives updates. Handy for packs that want a different Ultimate recipe.
 
-![Configurator Brush](ENVIAR:feature-16-wheel.png)
+![Configurator Brush](https://media.forgecdn.net/attachments/2090/190/feature-16-wheel-png.png)
 
-![Link or open](ENVIAR:feature-13-linker.png)
+![Link or open](https://media.forgecdn.net/attachments/2090/187/feature-13-linker-png.png)
 
 ### Network Tablet
 
@@ -162,7 +162,7 @@ Every router of every network, from anywhere: one search box for machine, networ
 
 ![A map you can drag](ENVIAR:feature-25-map.png)
 
-![Share a network](ENVIAR:feature-24-network-access.png)
+![Share a network](https://media.forgecdn.net/attachments/2090/174/feature-24-network-access-png.png)
 
 ### Built-in guide book
 

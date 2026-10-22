@@ -4,6 +4,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.range.RangeTiers;
 import io.github.matheusanbs.wirelessautomate.resonator.CoreMath;
+import io.github.matheusanbs.wirelessautomate.resonator.EnergyBalance;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -37,9 +38,10 @@ public final class Config {
     /**
      * 1 = a escada ×8 da Esmeralda e do Allthemodium (8/10/2026); 2 = a energia do roteador Unobtainium ×8 e o FE
      * por cristal do Ressonador (15/10/2026); 3 = a escada nova do Ressonador e a energia do roteador por tier
-     * (21/10/2026); 4 = o FE por cristal do Unobtainium de 184 milhões para 10,7 milhões (22/10/2026).
+     * (21/10/2026); 4 = o FE por cristal do Unobtainium de 184 milhões para 10,7 milhões (22/10/2026); 5 = a energia
+     * do roteador e a capacidade da Bateria ligadas ao Ressonador do mesmo tier (22/10/2026, {@link EnergyBalance}).
      */
-    public static final int CURRENT_BALANCE = 4;
+    public static final int CURRENT_BALANCE = 5;
     /** Capacidade dos armazenamentos do mod por tipo e tier (todos os tipos somados; 0 = sem limite). */
     public static final Map<StorageKind, Map<RouterTier, ModConfigSpec.LongValue>> STORAGE_CAPACITY =
             new EnumMap<>(StorageKind.class);
@@ -301,6 +303,7 @@ public final class Config {
         changed += version < 2 ? migrateBalance2() : 0;
         changed += version < 3 ? migrateBalance3() : 0;
         changed += version < 4 ? migrateBalance4() : 0;
+        changed += version < 5 ? migrateBalance5() : 0;
         BALANCE_VERSION.set(CURRENT_BALANCE);
         SPEC.save();
         return changed;
@@ -354,6 +357,36 @@ public final class Config {
             return 1;
         }
         return 0;
+    }
+
+    /** A energia do roteador por tier antes do balanceamento 5 (FE/t), pela posição do tier. */
+    private static final long[] BALANCE4_ENERGY = {
+        1_000, 32_768, 64_000, 2_097_152, 67_108_864, 134_217_728L, 4_294_967_296L, 0
+    };
+    /** A capacidade da Bateria por tier antes do balanceamento 5 (FE), pela posição do tier. */
+    private static final long[] BALANCE4_BATTERY = {
+        1_000_000L, 8_000_000L, 64_000_000L, 512_000_000L, 4_096_000_000L, 32_768_000_000L, 262_144_000_000L, 0
+    };
+
+    /** Troca a energia do roteador e a capacidade da Bateria que ainda estão no padrão de antes pelos novos. */
+    private static int migrateBalance5() {
+        int changed = 0;
+        for (RouterTier tier : RouterTier.values()) {
+            int i = tier.ordinal();
+            ModConfigSpec.LongValue energy = TIERS.get(tier).rates().get(ResourceType.ENERGY.rateKey());
+            long energyTarget = ResourceType.ENERGY.defaultRate(i);
+            if (energy.get() == BALANCE4_ENERGY[i] && energy.get() != energyTarget) {
+                energy.set(energyTarget);
+                changed++;
+            }
+            ModConfigSpec.LongValue battery = STORAGE_CAPACITY.get(StorageKind.BATTERY).get(tier);
+            long batteryTarget = StorageKind.BATTERY.defaultCapacity(tier);
+            if (battery.get() == BALANCE4_BATTERY[i] && battery.get() != batteryTarget) {
+                battery.set(batteryTarget);
+                changed++;
+            }
+        }
+        return changed;
     }
 
     private static int migrateBalance1() {

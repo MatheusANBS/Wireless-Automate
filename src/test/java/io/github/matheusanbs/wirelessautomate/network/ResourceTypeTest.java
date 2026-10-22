@@ -50,13 +50,14 @@ class ResourceTypeTest {
         assertEquals(16_384L, ResourceType.ITEM.defaultRate(3));
         assertEquals(8_388_608L, ResourceType.ITEM.defaultRate(6));
         assertEquals(16_000L, ResourceType.FLUID.defaultRate(1));
-        assertEquals(1_000L, ResourceType.ENERGY.defaultRate(0));
-        assertEquals(32_768L, ResourceType.ENERGY.defaultRate(1));
-        assertEquals(64_000L, ResourceType.ENERGY.defaultRate(2));
-        assertEquals(2_097_152L, ResourceType.ENERGY.defaultRate(3));
-        assertEquals(67_108_864L, ResourceType.ENERGY.defaultRate(4));
-        assertEquals(134_217_728L, ResourceType.ENERGY.defaultRate(5));
-        assertEquals(4_294_967_296L, ResourceType.ENERGY.defaultRate(6));
+        // a energia do roteador é a geração máxima do Ressonador do tier mais 5% (EnergyBalance)
+        assertEquals(454L, ResourceType.ENERGY.defaultRate(0));
+        assertEquals(29_100L, ResourceType.ENERGY.defaultRate(1));
+        assertEquals(63_000L, ResourceType.ENERGY.defaultRate(2));
+        assertEquals(1_350_000L, ResourceType.ENERGY.defaultRate(3));
+        assertEquals(67_200_000L, ResourceType.ENERGY.defaultRate(4));
+        assertEquals(84_500_000L, ResourceType.ENERGY.defaultRate(5));
+        assertEquals(158_000_000L, ResourceType.ENERGY.defaultRate(6));
         assertEquals(0L, ResourceType.ENERGY.defaultRate(7));
         assertEquals(ResourceType.FLUID.defaultRate(1), ResourceType.CHEMICAL.defaultRate(1));
         assertEquals(100L, ResourceType.SOURCE.defaultRate(0));

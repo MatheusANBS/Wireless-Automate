@@ -14,7 +14,8 @@ item_ids:
 <ItemImage id="wirelessautomate:storage_battery" scale="2" float="left" />
 
 Stores energy (FE) far beyond an `int`: on Ultimate, unlimited. Attached to a router on the
-**Energy** tab, it charges and discharges billions of FE per tick.
+**Energy** tab, it charges and discharges billions of FE per tick. Each tier's capacity is **one hour** of the
+same tier's [Resonator](signal-resonator.md) at full output, and the tier's router carries that output with 5% to spare.
 
 <br clear="all" />
 
@@ -33,13 +34,13 @@ Stores energy (FE) far beyond an `int`: on Ultimate, unlimited. Attached to a ro
 
 | Tier | FE |
 | --- | --- |
-| **Basic** | 1,000,000 |
-| **Advanced** | 8,000,000 |
-| **Elite** | 64,000,000 |
-| **Emerald** | 512,000,000 |
-| **Allthemodium¹** | 4,096,000,000 |
-| **Vibranium¹** | 32,768,000,000 |
-| **Unobtainium¹** | 262,144,000,000 |
+| **Basic** | 31,104,000 |
+| **Advanced** | 1,990,656,000 |
+| **Elite** | 4,320,000,000 |
+| **Emerald** | 92,160,000,000 |
+| **Allthemodium¹** | 4,608,000,000,000 |
+| **Vibranium¹** | 5,788,800,000,000 |
+| **Unobtainium¹** | 10,785,600,000,000 |
 | **Ultimate** | Unlimited |
 
 ¹ Only with the Allthemodium mod.

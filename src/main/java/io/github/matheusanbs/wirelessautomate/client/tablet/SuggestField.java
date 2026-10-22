@@ -51,6 +51,8 @@ final class SuggestField {
     private int seenVersion;
     private boolean open;
     private boolean quiet;
+    private double hoverX = Double.NaN;
+    private double hoverY = Double.NaN;
     /** Onde a lista foi desenhada no último quadro: x, y, largura e altura (para o clique). */
     private final int[] rect = new int[4];
 
@@ -234,9 +236,19 @@ final class SuggestField {
         return true;
     }
 
-    /** Move a linha escolhida para a que está sob o mouse. */
+    /** Move a linha escolhida para a que está sob o mouse, só quando o mouse anda (as setas não perdem a escolha). */
     void hover(double mouseX, double mouseY) {
-        nav.select(rowAt(mouseX, mouseY));
+        if (mouseX == hoverX && mouseY == hoverY) {
+            return;
+        }
+        hoverX = mouseX;
+        hoverY = mouseY;
+        int row = rowAt(mouseX, mouseY);
+        if (row >= 0) {
+            nav.select(row);
+        } else {
+            nav.clearSelection();
+        }
     }
 
     private int rowAt(double mouseX, double mouseY) {

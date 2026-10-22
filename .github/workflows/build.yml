@@ -32,6 +32,9 @@ jobs:
       - name: GameTests dos tiers do ATM (Allthemodium e All The Tweaks)
         run: ./gradlew runGameTestServerAllthemodium
 
+      - name: GameTests de times (FTB Teams)
+        run: ./gradlew runGameTestServerTeams
+
       - uses: actions/upload-artifact@v4
         with:
           name: wirelessautomate

@@ -3,7 +3,6 @@ package io.github.matheusanbs.wirelessautomate.gametest;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
@@ -64,30 +63,6 @@ public final class NetworkGameTests {
     }
 
     @GameTest(template = "empty")
-    public static void activeOrCreateCreatesAndReuses(GameTestHelper helper) {
-        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
-        ServerPlayer player = TestPlayers.inLevel(helper);
-        UUID playerId = player.getUUID();
-        try {
-            helper.assertTrue(data.activeNetwork(playerId) == null, "jogador novo já tinha rede ativa");
-
-            WaNetwork first = data.activeOrCreate(player);
-            helper.assertTrue(first.owner().equals(playerId), "dono errado");
-            helper.assertTrue(first.name().equals(player.getGameProfile().getName()), "nome padrão errado");
-            helper.assertTrue(first.id().equals(data.activeNetwork(playerId)), "rede criada não ficou ativa");
-            helper.assertTrue(first.equals(data.activeOrCreate(player)), "não reutilizou a rede ativa");
-
-            data.remove(first.id());
-            WaNetwork second = data.activeOrCreate(player);
-            helper.assertTrue(!second.id().equals(first.id()), "não criou outra rede após remover a ativa");
-            data.remove(second.id());
-        } finally {
-            helper.getLevel().getServer().getPlayerList().remove(player);
-        }
-        helper.succeed();
-    }
-
-    @GameTest(template = "empty")
     public static void savedDataRoundTripsThroughNbt(GameTestHelper helper) {
         NetworkSavedData original = new NetworkSavedData();
         UUID alice = UUID.randomUUID();
@@ -106,39 +81,6 @@ public final class NetworkGameTests {
         helper.assertTrue(power.id().equals(loaded.activeNetwork(alice)), "rede ativa de alice perdida");
         helper.assertTrue(slurry.id().equals(loaded.activeNetwork(bob)), "rede ativa de bob perdida");
         helper.assertTrue(loaded.activeNetwork(UUID.randomUUID()) == null, "jogador desconhecido com rede ativa");
-        helper.succeed();
-    }
-
-    @GameTest(template = "empty")
-    public static void linkerPutsRouterInActiveNetwork(GameTestHelper helper) {
-        helper.setBlock(MACHINE, Blocks.CHEST);
-        helper.setBlock(ROUTER, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
-        RouterBlockEntity router = helper.getBlockEntity(ROUTER);
-        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
-        ServerPlayer player = TestPlayers.inLevel(helper);
-        try {
-            player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.LINKER.get()));
-            BlockPos pos = helper.absolutePos(ROUTER);
-            UseOnContext context = new UseOnContext(player, InteractionHand.MAIN_HAND,
-                    new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false));
-
-            helper.assertTrue(ModItems.LINKER.get().useOn(context).consumesAction(), "vinculador não agiu");
-            UUID active = data.activeNetwork(player.getUUID());
-            helper.assertTrue(active != null, "vinculador não criou a rede ativa");
-            // Todos: as abas que existem (Químicos só com o Mekanism; sem ele, a aba fica como estava)
-            for (ResourceType type : LoadedTypes.LIST) {
-                helper.assertTrue(Objects.equals(router.networkId(type), active), type + " fora da rede ativa");
-            }
-            if (!Chemicals.LOADED) {
-                helper.assertTrue(router.networkId(ResourceType.CHEMICAL) == null, "químicos entraram sem o Mekanism");
-            }
-            if (!Sources.LOADED) {
-                helper.assertTrue(router.networkId(ResourceType.SOURCE) == null, "Source entrou sem o Ars Nouveau");
-            }
-            data.remove(active);
-        } finally {
-            helper.getLevel().getServer().getPlayerList().remove(player);
-        }
         helper.succeed();
     }
 

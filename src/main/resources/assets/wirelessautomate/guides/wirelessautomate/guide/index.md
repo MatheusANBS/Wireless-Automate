@@ -31,8 +31,8 @@ resources with the others, with no pipes.
 | <ItemImage id="wirelessautomate:router" /> [Wireless Router](router.md) | Connects a machine to the network. |
 | <ItemImage id="wirelessautomate:tier_core_advanced" /> [Upgrade Cards](upgrade-cards.md) | Raise the router's tier: more throughput and range. |
 | <ItemImage id="wirelessautomate:filter_card" /> [Filter Card](filter-card.md) | A ready-made filter to use on many faces. |
-| <ItemImage id="wirelessautomate:linker" /> [Linker](linker.md) | Picks your network and puts routers in it, one by one or by area. |
-| <ItemImage id="wirelessautomate:configurator" /> [Configurator](configurator.md) | Copies a router's configuration and pastes it on others. |
+| <ItemImage id="wirelessautomate:linker" /> [Linker](linker.md) | Links machines to a range router and opens the router of a machine. |
+| <ItemImage id="wirelessautomate:configurator" /> [Configurator](configurator.md) | Copies a router's configuration and pastes it on another. |
 | <ItemImage id="wirelessautomate:network_tablet" /> [Network Tablet](network-tablet.md) | See and manage all your networks from anywhere. |
 | <ItemImage id="wirelessautomate:chunk_loader_upgrade" /> [Chunk Loading Upgrade](chunk-loading.md) | Keeps the router working while you're away. |
 | <ItemImage id="wirelessautomate:storage_chest" /> [Wireless Chest](wireless-chest.md) | Stores millions of items by type; between two of them, a whole type moves at once. |

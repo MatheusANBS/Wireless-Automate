@@ -18,7 +18,7 @@ o resto do mod funciona igual.
 | --- | --- |
 | Modo, prioridade e redstone por face | Sim, como nas outras abas. |
 | Rede por face | Sim. |
-| Vinculador e Configurador | Sim: o chip **Source** e o atalho na roda do mouse. |
+| Configurador | Sim: o tipo **Source** na roda e no atalho do mouse. |
 | Vazão | Por tier: Básico 100/s, Avançado 800/s, Elite 6.400/s, Esmeralda 51.200/s, Ultimate sem limite (tabela completa no [Roteador](router.md)). |
 | Filtro e Cartão de Filtro | Não: a Source não tem tipos, como a energia. |
 

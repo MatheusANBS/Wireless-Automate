@@ -1,48 +1,34 @@
 package io.github.matheusanbs.wirelessautomate.linker;
 
-import com.mojang.serialization.Codec;
 import java.util.Locale;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.util.StringRepresentable;
-import net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs;
 
 /**
- * Modo do Vinculador: um roteador por clique, todos de uma área, ou máquinas para o roteador
- * escolhido (Upgrade de Alcance). O Configurador usa o mesmo enum ({@code configurator_mode}), mas só
- * Único e Área: para ele, {@link #MACHINES} vale como Único.
+ * Modo do Vinculador: vincular máquinas a um roteador de alcance, ou abrir a tela do roteador que chega
+ * numa máquina. Shift + clique no ar alterna. Lógica pura, com JUnit; os codecs do componente ficam no
+ * {@link LinkerModeCodecs}, que carrega as classes do Minecraft.
  */
-public enum LinkerMode implements StringRepresentable {
-    SINGLE,
-    AREA,
-    /** Vinculador: clique numa máquina a vincula ao roteador escolhido; Shift + clique marca a área. */
-    MACHINES;
+public enum LinkerMode {
+    /** Clique num roteador o escolhe; num bloco vincula ou desvincula a máquina; Shift + clique marca a área. */
+    LINK,
+    /** Clique numa máquina abre a tela do roteador que chega nela. */
+    OPEN;
 
-    public static final Codec<LinkerMode> CODEC = StringRepresentable.fromEnum(LinkerMode::values);
-    public static final StreamCodec<RegistryFriendlyByteBuf, LinkerMode> STREAM_CODEC =
-            NeoForgeStreamCodecs.enumCodec(LinkerMode.class);
+    /** O modo pelo nome gravado; os nomes dos modos antigos (single, area e machines) viram {@link #LINK}. */
+    public static LinkerMode byName(String name) {
+        return "open".equals(name) ? OPEN : LINK;
+    }
 
-    @Override
     public String getSerializedName() {
         return name().toLowerCase(Locale.ROOT);
     }
 
-    /** Alternância do Configurador: Único ↔ Área ({@link #MACHINES} conta como Único). */
-    public LinkerMode toggled() {
-        return this == AREA ? SINGLE : AREA;
-    }
-
-    /** O ciclo do Vinculador: Único → Área → Máquinas → Único. */
+    /** O ciclo do Shift + clique no ar. */
     public LinkerMode next() {
-        return switch (this) {
-            case SINGLE -> AREA;
-            case AREA -> MACHINES;
-            case MACHINES -> SINGLE;
-        };
+        return this == LINK ? OPEN : LINK;
     }
 
-    /** Shift + clique num bloco marca um canto da área (Área e Máquinas). */
+    /** Shift + clique num bloco marca um canto da área (só ao vincular). */
     public boolean marksArea() {
-        return this != SINGLE;
+        return this == LINK;
     }
 }

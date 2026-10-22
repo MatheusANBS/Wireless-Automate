@@ -1,23 +1,15 @@
 package io.github.matheusanbs.wirelessautomate.menu;
 
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerBox;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerFaces;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerProblem;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
-import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
-import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.packet.LinkerSnapshotPayload;
+import io.github.matheusanbs.wirelessautomate.range.RangeLinks;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
 import java.util.Objects;
 import java.util.Optional;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.SimpleMenuProvider;
@@ -25,7 +17,6 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.Nullable;
@@ -35,14 +26,13 @@ import org.jetbrains.annotations.Nullable;
  * aberto; as ações chegam pelo {@code LinkerActionPayload} e mexem nos componentes do item.
  *
  * <p>Sincronização (servidor): como no {@link RouterMenu}, só o menu aberto recebe
- * {@link #broadcastChanges()}. O estado é remontado quando o item (modo, abas, desvincular, cantos) ou as redes
- * mudam e, com uma área marcada, quando a cada {@link #RESCAN_TICKS} ticks o contexto da varredura
- * ({@link ScanContext}: índice de nós, dimensão, problema da área, limites da config e chunks
- * carregados da caixa) ficou diferente; só vai ao cliente se ficou diferente do último enviado.
- * Assim uma área parada não é varrida de novo a cada segundo.
+ * {@link #broadcastChanges()}. O estado é remontado quando o item (desvincular, cantos, roteador
+ * escolhido) muda e, fora isso, a cada {@link #RESCAN_TICKS} ticks (as vagas do roteador, as máquinas
+ * dentro da área e os chunks carregados mudam sem o item mudar); só vai ao cliente se ficou diferente do
+ * último enviado.
  */
 public class LinkerMenu extends AbstractContainerMenu {
-    /** Intervalo da nova varredura da área com a tela aberta. */
+    /** Intervalo da nova leitura do estado com a tela aberta. */
     public static final int RESCAN_TICKS = 20;
 
     private final InteractionHand hand;
@@ -53,46 +43,14 @@ public class LinkerMenu extends AbstractContainerMenu {
     private final @Nullable ServerPlayer viewer;
     private LinkerSnapshot.@Nullable Outcome outcome;
     private @Nullable StackKey sentKey;
-    private int sentDataVersion;
     private long lastCapture;
-    private @Nullable ScanContext sentContext;
     private boolean dirty;
 
-    /**
-     * O que, além do item e das redes, muda o resultado da varredura da área: roteadores colocados,
-     * removidos ou com outra rede ({@link NodeIndex#dataVersion()}), a dimensão e a posição do jogador
-     * (pelo problema da área), os limites da config e os chunks descarregados da caixa (um roteador que
-     * carrega ou descarrega na área muda essa contagem; um em outro lugar não revarre nada).
-     */
-    private record ScanContext(int indexVersion, ResourceKey<Level> dimension, LinkerProblem problem,
-            long maxVolume, int maxDistance, int unloadedChunks) {
-        static ScanContext of(ServerPlayer player, ItemStack stack) {
-            LinkerProblem problem = LinkerActions.check(player, stack);
-            LinkerArea area = LinkerItem.area(stack);
-            int unloaded = 0;
-            if (area != null && area.complete() && problem != LinkerProblem.TOO_BIG
-                    && area.dimension().equals(player.level().dimension())) {
-                LinkerBox box = area.box();
-                ServerChunkCache chunks = player.serverLevel().getChunkSource();
-                for (int cx = box.minChunkX(); cx <= box.maxChunkX(); cx++) {
-                    for (int cz = box.minChunkZ(); cz <= box.maxChunkZ(); cz++) {
-                        if (chunks.getChunkNow(cx, cz) == null) {
-                            unloaded++;
-                        }
-                    }
-                }
-            }
-            return new ScanContext(NodeIndex.get(player.server).dataVersion(), player.level().dimension(), problem,
-                    LinkerActions.maxVolume(), LinkerActions.maxDistance(), unloaded);
-        }
-    }
-
     /** O que do item muda o estado da tela. */
-    private record StackKey(LinkerMode mode, LinkerTabs tabs, LinkerFaces faces, boolean unlink,
-            Optional<LinkerArea> area) {
+    private record StackKey(boolean unlink, Optional<LinkerArea> area, Optional<GlobalPos> router) {
         static StackKey of(ItemStack stack) {
-            return new StackKey(LinkerItem.mode(stack), LinkerItem.tabs(stack), LinkerItem.faces(stack),
-                    LinkerItem.unlink(stack), Optional.ofNullable(LinkerItem.area(stack)));
+            return new StackKey(LinkerItem.unlink(stack), Optional.ofNullable(LinkerItem.area(stack)),
+                    Optional.ofNullable(LinkerItem.router(stack)));
         }
     }
 
@@ -104,9 +62,7 @@ public class LinkerMenu extends AbstractContainerMenu {
         this.viewer = inventory.player instanceof ServerPlayer player ? player : null;
         if (viewer != null) {
             this.sentKey = StackKey.of(linker(viewer));
-            this.sentDataVersion = NetworkSavedData.get(viewer.server).version();
             this.lastCapture = viewer.server.getTickCount();
-            this.sentContext = ScanContext.of(viewer, linker(viewer));
         }
     }
 
@@ -171,16 +127,17 @@ public class LinkerMenu extends AbstractContainerMenu {
 
     // ------------------------------------------------------------------ servidor
 
-    /** Guarda o resultado do último Vincular (ou Desvincular) para a tela mostrar ({@code null} limpa). */
-    public void setOutcome(LinkerActions.@Nullable LinkResult result, @Nullable LinkerTabs tabs) {
-        if (result == null || tabs == null || (!result.unlink() && result.network() == null)) {
+    /**
+     * Guarda o resultado do último Vincular (ou Desvincular) para a tela mostrar; {@code null}, ou um pedido
+     * que não foi aplicado, limpa.
+     */
+    public void setOutcome(RangeLinks.@Nullable Result result, boolean unlink) {
+        if (result == null || result.status() != RangeLinks.Status.AREA_DONE) {
             outcome = null;
             return;
         }
-        outcome = new LinkerSnapshot.Outcome(result.linked(), result.already(), result.protectedCount(),
-                result.unloadedChunks(), tabs, result.unlink(),
-                result.network() == null ? "" : result.network().name(),
-                result.network() == null ? 0 : result.network().color(), result.faces());
+        outcome = new LinkerSnapshot.Outcome(unlink, result.linked(), result.already(), result.outOfRange(),
+                result.overLimit(), result.protectedCount(), result.unloadedChunks());
     }
 
     /** Pede um estado novo no próximo {@link #broadcastChanges()} (depois de uma ação). */
@@ -214,25 +171,13 @@ public class LinkerMenu extends AbstractContainerMenu {
             return null;
         }
         StackKey key = StackKey.of(stack);
-        int dataVersion = NetworkSavedData.get(viewer.server).version();
         long now = viewer.server.getTickCount();
-        boolean changed = dirty || !Objects.equals(key, sentKey) || dataVersion != sentDataVersion;
-        ScanContext context = null;
-        if (!changed) {
-            if (key.area().isEmpty() || now - lastCapture < RESCAN_TICKS) {
-                return null;
-            }
-            lastCapture = now;
-            context = ScanContext.of(viewer, stack);
-            if (context.equals(sentContext)) {
-                return null;
-            }
+        if (!dirty && Objects.equals(key, sentKey) && now - lastCapture < RESCAN_TICKS) {
+            return null;
         }
         dirty = false;
         sentKey = key;
-        sentDataVersion = dataVersion;
         lastCapture = now;
-        sentContext = context != null ? context : ScanContext.of(viewer, stack);
         LinkerSnapshot captured = LinkerSnapshot.capture(viewer, stack, outcome);
         if (captured.equals(snapshot)) {
             return null;

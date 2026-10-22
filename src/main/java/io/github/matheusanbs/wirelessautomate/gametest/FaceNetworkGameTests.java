@@ -307,32 +307,6 @@ public final class FaceNetworkGameTests {
                 .thenSucceed();
     }
 
-    /** Vinculador em desvincular com Todas as faces: a aba sai da rede inteira, inclusive perfis e exceções. */
-    @GameTest(template = "empty")
-    public static void linkerUnlinkAllFacesClearsRemotes(GameTestHelper helper) {
-        RouterBlockEntity router = routerWithFurnaces(helper);
-        UUID network = network(helper, "desvincular tudo");
-        helper.startSequence()
-                .thenWaitUntil(() -> loaded(helper, router))
-                .thenExecute(() -> {
-                    helper.assertTrue(router.linkMachine(helper.absolutePos(FURNACE_A)), "não vinculou a fornalha A");
-                    router.setNetworkId(ResourceType.ITEM, network);
-                    helper.assertTrue(router.networks(ResourceType.ITEM).length > 0, "nada na rede antes");
-                    helper.assertFalse(io.github.matheusanbs.wirelessautomate.linker.LinkerActions.inTarget(router,
-                            java.util.List.of(ResourceType.ITEM),
-                            io.github.matheusanbs.wirelessautomate.linker.LinkerFaces.ALL, null), "já contava como fora");
-                    io.github.matheusanbs.wirelessautomate.linker.LinkerActions.apply(router,
-                            java.util.List.of(ResourceType.ITEM),
-                            io.github.matheusanbs.wirelessautomate.linker.LinkerFaces.ALL, null);
-                    helper.assertTrue(router.networks(ResourceType.ITEM).length == 0,
-                            "sobrou rede numa face (presa, perfil ou exceção)");
-                    helper.assertTrue(io.github.matheusanbs.wirelessautomate.linker.LinkerActions.inTarget(router,
-                            java.util.List.of(ResourceType.ITEM),
-                            io.github.matheusanbs.wirelessautomate.linker.LinkerFaces.ALL, null), "não conta como fora");
-                })
-                .thenSucceed();
-    }
-
     @GameTest(template = "empty")
     public static void exceptionDiffersOnlyByNetwork(GameTestHelper helper) {
         RouterBlockEntity router = routerWithFurnaces(helper);

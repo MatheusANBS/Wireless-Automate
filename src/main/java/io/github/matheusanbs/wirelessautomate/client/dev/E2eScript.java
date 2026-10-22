@@ -71,7 +71,7 @@ final class E2eScript {
         typeNetworkTransferSteps(list);
         tabletSteps(list);
         configuratorSteps(list);
-        linkerAreaSteps(list);
+        linkerSteps(list);
         portugueseSteps(list);
         storageChestSteps(list);
         if (StorageKind.SOURCE_TANK.loaded()) {

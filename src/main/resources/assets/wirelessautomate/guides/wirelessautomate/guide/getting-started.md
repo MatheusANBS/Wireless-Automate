@@ -30,10 +30,10 @@ Let's move items from one chest to another, without pipes. It takes a minute.
 
 | Step | What to do |
 | --- | --- |
-| **1** | Craft two routers and a [Linker](linker.md) (recipes below). |
+| **1** | Craft two routers (recipe below). |
 | **2** | Use a router on any face of chest A. It **attaches** to the chest, with **no network** yet. Do the same on chest B. |
-| **3** | Holding the Linker, click router A and then router B: the faces of both join your active network (the first click creates one if you have none). |
-| **4** | Right-click router A. On the **Items** tab, pick the **Up** face and the **Extract** mode. |
+| **3** | On router A's screen, on the **Items** tab, pick the **Up** face and, in the **Network** row, create a network and pick it. Do the same on router B, picking the same network. |
+| **4** | On router A, **Up** face, **Extract** mode. |
 | **5** | On router B, same face, **Insert** mode. |
 | **6** | Put items in chest A: they show up in chest B. |
 
@@ -45,8 +45,6 @@ Every screen of the mod has a moon button in the top-right corner: it switches a
 ## Recipes
 
 <RecipeFor id="wirelessautomate:router" />
-
-<RecipeFor id="wirelessautomate:linker" />
 
 ## Next steps
 

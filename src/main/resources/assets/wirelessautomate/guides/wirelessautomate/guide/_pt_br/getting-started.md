@@ -30,10 +30,10 @@ Vamos levar itens de um baú para outro, sem canos. Leva um minuto.
 
 | Passo | O que fazer |
 | --- | --- |
-| **1** | Faça dois roteadores e um [Vinculador](linker.md) (receitas abaixo). |
+| **1** | Faça dois roteadores (receita abaixo). |
 | **2** | Clique com um roteador em qualquer face do baú A. Ele fica **preso** ao baú, ainda **sem rede**. Faça o mesmo no baú B. |
-| **3** | Com o Vinculador na mão, clique no roteador A e depois no B: as faces dos dois entram na sua rede ativa (o primeiro clique cria uma, se você não tiver). |
-| **4** | Clique no roteador A. Na aba **Itens**, escolha a face **Cima** e o modo **Extrai**. |
+| **3** | Na tela do roteador A, na aba **Itens**, escolha a face **Cima** e, na linha **Rede**, crie uma rede e escolha-a. Faça o mesmo no roteador B, escolhendo a mesma rede. |
+| **4** | No roteador A, na face **Cima**, modo **Extrai**. |
 | **5** | No roteador B, mesma face, modo **Insere**. |
 | **6** | Coloque itens no baú A: eles aparecem no baú B. |
 
@@ -45,8 +45,6 @@ As telas do mod têm um botão com uma lua no canto de cima, à direita: ele tro
 ## Receitas
 
 <RecipeFor id="wirelessautomate:router" />
-
-<RecipeFor id="wirelessautomate:linker" />
 
 ## Próximos passos
 

@@ -160,7 +160,7 @@ Every router of every network, from anywhere: one search box for machine, networ
 
 ![One row per router](https://media.forgecdn.net/attachments/2085/346/feature-22-tablet-list-png.png)
 
-![A map you can drag](ENVIAR:feature-25-map.png)
+![A map you can drag](https://media.forgecdn.net/attachments/2090/206/feature-25-map-png.png)
 
 ![Share a network](https://media.forgecdn.net/attachments/2090/174/feature-24-network-access-png.png)
 

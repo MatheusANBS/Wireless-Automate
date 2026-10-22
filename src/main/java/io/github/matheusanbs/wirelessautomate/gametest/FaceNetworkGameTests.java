@@ -821,4 +821,39 @@ public final class FaceNetworkGameTests {
                 })
                 .thenSucceed();
     }
+    /**
+     * Tirar a face de uma rede pela tela vale o que vale o Mover: só de uma rede que o jogador edita. Uma rede
+     * privada de outro dono segura a face; como convidado, ela sai.
+     */
+    @GameTest(template = "empty")
+    public static void leavingAForeignPrivateNetworkByTheScreenIsRefused(GameTestHelper helper) {
+        RouterBlockEntity router = router(helper);
+        UUID foreign = network(helper, "alheia-privada-tela");
+        router.setFaceNetwork(ResourceType.ITEM, Direction.DOWN, foreign);
+        helper.startSequence()
+                .thenWaitUntil(() -> loaded(helper, router))
+                .thenExecute(() -> {
+                    ServerPlayer player = TestPlayers.inLevel(helper);
+                    player.moveTo(Vec3.atCenterOf(router.getBlockPos().above()));
+                    RouterMenu menu = new RouterMenu(CONTAINER_ID, player.getInventory(), router,
+                            RouterSnapshot.capture(router, player));
+                    player.containerMenu = menu;
+                    NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
+                    try {
+                        helper.assertFalse(ModPayloads.handleSetNetwork(player, setNetwork(menu, Direction.DOWN, null)),
+                                "tirou a face de uma rede privada alheia");
+                        assertNetwork(helper, router.faceNetwork(ResourceType.ITEM, Direction.DOWN), foreign,
+                                "a face saiu da rede alheia");
+                        data.update(data.network(foreign).withMember(player.getUUID()));
+                        helper.assertTrue(ModPayloads.handleSetNetwork(player, setNetwork(menu, Direction.DOWN, null)),
+                                "o convidado não tirou a face da rede dele");
+                        assertNetwork(helper, router.faceNetwork(ResourceType.ITEM, Direction.DOWN), null,
+                                "o convidado não limpou a face");
+                    } finally {
+                        player.containerMenu = player.inventoryMenu;
+                        data.remove(foreign);
+                    }
+                })
+                .thenSucceed();
+    }
 }

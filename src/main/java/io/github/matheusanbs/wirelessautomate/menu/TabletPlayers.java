@@ -29,6 +29,7 @@ final class TabletPlayers {
         FORCED_LIMITS.clear();
         BULK_LIMITS.clear();
         SUGGEST_LIMITS.clear();
+        io.github.matheusanbs.wirelessautomate.network.KnownPlayers.clear();
     }
 
     static void forget(UUID player) {

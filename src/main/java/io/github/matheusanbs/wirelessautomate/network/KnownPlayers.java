@@ -40,6 +40,12 @@ public final class KnownPlayers {
     private KnownPlayers() {
     }
 
+    /** Esquece o arquivo lido e o servidor dono dele (ao parar o servidor). */
+    public static void clear() {
+        FILE.clear();
+        fileOwner = null;
+    }
+
     /** Os jogadores do arquivo do cache, relido se passou o prazo ou se o servidor é outro. */
     private static Map<UUID, String> file(MinecraftServer server) {
         long now = server.getTickCount();
@@ -67,7 +73,11 @@ public final class KnownPlayers {
                 if (element.isJsonObject()) {
                     JsonObject entry = element.getAsJsonObject();
                     if (entry.has("uuid") && entry.has("name")) {
-                        FILE.put(UUID.fromString(entry.get("uuid").getAsString()), entry.get("name").getAsString());
+                        try {
+                            FILE.put(UUID.fromString(entry.get("uuid").getAsString()), entry.get("name").getAsString());
+                        } catch (IllegalArgumentException | UnsupportedOperationException | IllegalStateException e) {
+                            // uma entrada com UUID ou nome ruim só fica de fora
+                        }
                     }
                 }
             }

@@ -1,24 +1,19 @@
 package io.github.matheusanbs.wirelessautomate.command;
 
-import com.mojang.authlib.GameProfile;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
-import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
+import io.github.matheusanbs.wirelessautomate.menu.TabletAccess;
+import io.github.matheusanbs.wirelessautomate.network.KnownPlayers;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
-import io.github.matheusanbs.wirelessautomate.network.TeamAccess;
-import io.github.matheusanbs.wirelessautomate.network.TeamAccess.TeamInfo;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
-import java.util.Collection;
-import java.util.Locale;
+import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.commands.SharedSuggestionProvider;
-import net.minecraft.commands.arguments.GameProfileArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -42,11 +37,8 @@ final class NetworkAccessCommand {
             name -> Component.translatable("command.wirelessautomate.network.access.limit", name));
     private static final DynamicCommandExceptionType NO_TEAM = new DynamicCommandExceptionType(
             name -> Component.translatable("command.wirelessautomate.network.access.team_not_found", name));
-    private static final SimpleCommandExceptionType ONE_PLAYER = new SimpleCommandExceptionType(
-            Component.translatable("command.wirelessautomate.network.access.one_player"));
-
-    private static final SuggestionProvider<CommandSourceStack> TEAM_NAMES = (context, builder) ->
-            SharedSuggestionProvider.suggest(TeamAccess.teams().stream().map(team -> '"' + team.name() + '"'), builder);
+    private static final DynamicCommandExceptionType UNKNOWN_PLAYER = new DynamicCommandExceptionType(
+            name -> Component.translatable("command.wirelessautomate.network.access.unknown_player", name));
 
     private NetworkAccessCommand() {
     }
@@ -56,25 +48,23 @@ final class NetworkAccessCommand {
         @SuppressWarnings("unchecked")
         LiteralArgumentBuilder<CommandSourceStack>[] nodes = new LiteralArgumentBuilder[3];
         nodes[0] = Commands.literal("invite")
-                .then(Commands.argument("player", GameProfileArgument.gameProfile())
+                .then(Commands.argument("player", StringArgumentType.word())
                         .then(Commands.argument("name", StringArgumentType.greedyString())
                                 .suggests(networkNames)
                                 .executes(context -> player(context, true))));
         nodes[1] = Commands.literal("uninvite")
-                .then(Commands.argument("player", GameProfileArgument.gameProfile())
+                .then(Commands.argument("player", StringArgumentType.word())
                         .then(Commands.argument("name", StringArgumentType.greedyString())
                                 .suggests(networkNames)
                                 .executes(context -> player(context, false))));
         nodes[2] = Commands.literal("team")
                 .then(Commands.literal("add")
                         .then(Commands.argument("team", StringArgumentType.string())
-                                .suggests(TEAM_NAMES)
                                 .then(Commands.argument("name", StringArgumentType.greedyString())
                                         .suggests(networkNames)
                                         .executes(context -> team(context, true)))))
                 .then(Commands.literal("remove")
                         .then(Commands.argument("team", StringArgumentType.string())
-                                .suggests(TEAM_NAMES)
                                 .then(Commands.argument("name", StringArgumentType.greedyString())
                                         .suggests(networkNames)
                                         .executes(context -> team(context, false)))));
@@ -99,21 +89,21 @@ final class NetworkAccessCommand {
     }
 
     private static int player(CommandContext<CommandSourceStack> context, boolean add) throws CommandSyntaxException {
-        Collection<GameProfile> profiles = GameProfileArgument.getGameProfiles(context, "player");
-        if (profiles.size() != 1) {
-            throw ONE_PLAYER.create();
-        }
-        GameProfile profile = profiles.iterator().next();
         WaNetwork network = managed(context);
         CommandSourceStack source = context.getSource();
         NetworkSavedData data = NetworkSavedData.get(source.getServer());
-        UUID id = profile.getId();
+        String typed = StringArgumentType.getString(context, "player").strip();
+        UUID id = KnownPlayers.byName(source.getServer(), typed);
+        if (id == null) {
+            throw UNKNOWN_PLAYER.create(typed);
+        }
+        String name = KnownPlayers.name(source.getServer(), id);
         if (add) {
             if (network.owner().equals(id)) {
-                throw OWNER_HAS_ACCESS.create(profile.getName());
+                throw OWNER_HAS_ACCESS.create(name);
             }
             if (network.members().contains(id)) {
-                throw ALREADY.create(profile.getName());
+                throw ALREADY.create(name);
             }
             ServerPlayer player = source.getPlayer();
             if (player != null && data.memberLimitReached(player, network)) {
@@ -122,13 +112,13 @@ final class NetworkAccessCommand {
             data.update(network.withMember(id));
         } else {
             if (!network.members().contains(id)) {
-                throw NOT_IN.create(profile.getName());
+                throw NOT_IN.create(name);
             }
             data.update(network.withoutMember(id));
         }
         source.sendSuccess(() -> Component.translatable(
                 "command.wirelessautomate.network.access.member." + (add ? "added" : "removed"),
-                profile.getName(), network.displayName()), true);
+                name, network.displayName()), true);
         return 1;
     }
 
@@ -137,28 +127,22 @@ final class NetworkAccessCommand {
         WaNetwork network = managed(context);
         CommandSourceStack source = context.getSource();
         NetworkSavedData data = NetworkSavedData.get(source.getServer());
-        TeamInfo team = null;
-        for (TeamInfo candidate : TeamAccess.teams()) {
-            if (candidate.name().toLowerCase(Locale.ROOT).equals(teamName.toLowerCase(Locale.ROOT))) {
-                team = candidate;
-                break;
-            }
-        }
+        // o mesmo critério da tela: nome exato e único; um nome repetido não escolhe um time ao acaso
+        UUID id = TabletAccess.resolveTeam(Optional.empty(), teamName);
         if (add) {
-            if (team == null) {
+            if (id == null) {
                 throw NO_TEAM.create(teamName);
             }
-            if (network.teams().contains(team.id())) {
-                throw ALREADY.create(team.name());
+            if (network.teams().contains(id)) {
+                throw ALREADY.create(teamName);
             }
             ServerPlayer player = source.getPlayer();
             if (player != null && data.teamLimitReached(player, network)) {
                 throw LIMIT.create(network.name());
             }
-            data.update(network.withTeam(team.id()));
+            data.update(network.withTeam(id));
         } else {
             // um time já desfeito não tem mais nome para casar: ele só sai pela tela, onde aparece como removido
-            UUID id = team != null ? team.id() : null;
             if (id == null || !network.teams().contains(id)) {
                 throw NOT_IN.create(teamName);
             }

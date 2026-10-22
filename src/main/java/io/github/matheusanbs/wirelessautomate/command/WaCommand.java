@@ -232,7 +232,7 @@ public final class WaCommand {
         ServerPlayer player = source.getPlayerOrException();
         NetworkSavedData data = NetworkSavedData.get(source.getServer());
         WaNetwork network = data.find(player.getUUID(), name);
-        if (network == null) {
+        if (network == null || !network.canUse(player)) {
             throw NOT_FOUND.create(name);
         }
         data.setActiveNetwork(player.getUUID(), network.id());

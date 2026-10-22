@@ -68,7 +68,7 @@ import org.jetbrains.annotations.Nullable;
  * {@link #SAMPLE_TICKS} ticks (alcance e vazão), e só se ficou diferente do último enviado
  * ({@link TabletChosenNode}).
  *
- * <p>Quem vê o quê: as redes do jogador e as públicas (todas para operador nível 2); os grupos do
+ * <p>Quem vê o quê: as redes do jogador, as públicas e as em que ele é convidado (todas para operador nível 2); os grupos do
  * jogador (todos para operador); os nós que o jogador colocou ou que têm alguma face numa rede dele
  * (todos para operador).
  *

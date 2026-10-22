@@ -6,6 +6,7 @@ import io.github.matheusanbs.wirelessautomate.network.TeamAccess.TeamInfo;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -23,6 +24,12 @@ public final class FtbTeams {
             return Optional.empty();
         }
         return api.getManager().getTeamByID(id).filter(team -> team.isPartyTeam() && team.isValid());
+    }
+
+    /** Os membros do time de grupo; vazio se ele não existe mais ou não é de grupo. */
+    public static Set<UUID> members(UUID team) {
+        Optional<Team> found = party(team);
+        return found.isPresent() ? found.get().getMembers() : Set.of();
     }
 
     public static boolean isMember(UUID team, UUID player) {
@@ -53,6 +60,9 @@ public final class FtbTeams {
     }
 
     private static TeamInfo describe(Team team) {
-        return new TeamInfo(team.getId(), team.getName().getString(), team.getMembers().size(), false);
+        // o pacote leva o nome em até 64 caracteres
+        String name = team.getName().getString();
+        return new TeamInfo(team.getId(), name.length() > 64 ? name.substring(0, 64) : name,
+                team.getMembers().size(), false);
     }
 }

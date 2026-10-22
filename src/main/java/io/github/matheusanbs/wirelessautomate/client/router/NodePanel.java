@@ -176,29 +176,50 @@ public final class NodePanel {
         rememberChoice();
     }
 
-    /** A última aba e face escolhidas e o roteador delas: reabrir a tela (ao voltar do filtro) as devolve. */
-    private record Choice(ResourceKey<Level> dimension, BlockPos pos, ResourceType type, Direction face) {}
+    /** O roteador de uma face lembrada. */
+    private record Spot(ResourceKey<Level> dimension, BlockPos pos) {}
 
-    private static @Nullable Choice lastChoice;
+    private static final int REMEMBERED_FACES = 64;
 
+    /** A última aba escolhida (vale para qualquer roteador). */
+    private static @Nullable ResourceType lastType;
+
+    /** A última face escolhida de cada roteador (os mais recentes), para reabrir a tela ou o nó na mesma face. */
+    private static final java.util.LinkedHashMap<Spot, Direction> lastFaces =
+            new java.util.LinkedHashMap<>(16, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(java.util.Map.Entry<Spot, Direction> eldest) {
+                    return size() > REMEMBERED_FACES;
+                }
+            };
+
+    /** Escolha do jogador: lembra a aba e, na presa, a face do roteador. Mostrar um painel sem escolha não passa por aqui. */
     private void rememberChoice() {
         RouterSnapshot s = model.snapshot();
-        lastChoice = new Choice(s.dimension(), s.pos(), model.type(), model.face());
+        lastType = model.type();
+        if (s.target().attached()) {
+            lastFaces.put(new Spot(s.dimension(), s.pos()), model.face());
+        }
     }
 
-    /** A aba vale para qualquer roteador; a face só no mesmo roteador e na presa (nas remotas o quadro é outro). */
+    /** A aba vale para qualquer roteador; a face só na presa do mesmo roteador (nas remotas o quadro é outro). */
     private void recallChoice(RouterSnapshot snapshot) {
-        Choice c = lastChoice;
-        if (c == null) {
-            return;
+        if (lastType != null && LoadedTypes.LIST.contains(lastType)) {
+            model.setType(lastType);
         }
-        if (LoadedTypes.LIST.contains(c.type())) {
-            model.setType(c.type());
+        if (snapshot.target().attached()) {
+            Direction face = lastFaces.get(new Spot(snapshot.dimension(), snapshot.pos()));
+            if (face != null) {
+                model.setFace(face);
+            }
         }
-        if (snapshot.target().attached() && c.pos().equals(snapshot.pos())
-                && Objects.equals(c.dimension(), snapshot.dimension())) {
-            model.setFace(c.face());
-        }
+    }
+
+    /** Põe o painel na aba, sem lembrar: quem abre o painel sozinho (o nó escolhido do Tablet) não é uma escolha do jogador. */
+    public void showType(ResourceType type) {
+        arranged.invalidate();
+        model.setType(type);
+        lists.close();
     }
 
     /** Só leitura, com o motivo em cima (o Tablet longe do nó); {@code null} volta a editar. */

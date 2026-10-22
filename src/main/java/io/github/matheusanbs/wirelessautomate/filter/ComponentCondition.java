@@ -18,7 +18,7 @@ import org.jetbrains.annotations.Nullable;
  * (mod fora do jogo) nunca casa. Lembra o último valor visto (por referência), então uma pilha igual à
  * anterior não serializa de novo.
  */
-final class ComponentCondition {
+public final class ComponentCondition {
     private final @Nullable DataComponentType<?> type;
     private final @Nullable String wanted;
 
@@ -55,17 +55,22 @@ final class ComponentCondition {
         }
     }
 
-    @SuppressWarnings("unchecked")
     private boolean matches(Object value) {
+        String text = valueText(type, value);
+        return text != null && (text.equals(wanted) || text.endsWith(":" + wanted));
+    }
+
+    /** A forma serializada (em minúsculas) do valor de um componente, a que a regra compara; {@code null} se não serializa. */
+    @SuppressWarnings("unchecked")
+    public static @Nullable String valueText(DataComponentType<?> type, Object value) {
         Codec<Object> codec = (Codec<Object>) type.codec();
         if (codec == null) {
-            return false;
+            return null;
         }
         JsonElement json = codec.encodeStart(JsonOps.INSTANCE, value).result().orElse(null);
         if (json == null) {
-            return false;
+            return null;
         }
-        String text = (json instanceof JsonPrimitive p ? p.getAsString() : json.toString()).toLowerCase(Locale.ROOT);
-        return text.equals(wanted) || text.endsWith(":" + wanted);
+        return (json instanceof JsonPrimitive p ? p.getAsString() : json.toString()).toLowerCase(Locale.ROOT);
     }
 }

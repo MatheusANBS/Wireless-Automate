@@ -189,7 +189,11 @@ public record ItemRule(Map<Property, Boolean> flags, Optional<Enchant> enchantme
     /** O valor pedido do componente (o que vem depois do {@code =}), ou {@code null} se só exige o componente. */
     public @Nullable String componentValue() {
         int eq = component.indexOf('=');
-        return eq < 0 ? null : component.substring(eq + 1).strip();
+        if (eq < 0) {
+            return null;
+        }
+        String value = component.substring(eq + 1).strip();
+        return value.isEmpty() ? null : value;
     }
 
     public @Nullable Boolean flag(Property property) {

@@ -537,6 +537,8 @@
   "gui.wirelessautomate.filter.rule.component.tooltip": "Any mod's data component, e.g. apotheosis:purity=perfect (gem tier). Without =value, just requires the component. The value may omit the namespace",
   "gui.wirelessautomate.filter.rule.component.invalid": "Component: use namespace:path or namespace:path=value, in lowercase",
   "gui.wirelessautomate.filter.rule.text.component": "Component %s",
+  "gui.wirelessautomate.filter.rule.suggest.tag": "tag",
+  "gui.wirelessautomate.filter.rule.suggest.inventory": "in your inventory",
   "gui.wirelessautomate.filter.rule.empty": "Set at least one condition. The rule matches items that meet all of them.",
   "gui.wirelessautomate.filter.rule.inventory": "Matches %s stacks in your inventory (lit)",
   "gui.wirelessautomate.filter.rule.reset": "Clear",

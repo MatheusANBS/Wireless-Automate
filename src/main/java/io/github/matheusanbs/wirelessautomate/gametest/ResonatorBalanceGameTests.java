@@ -6,14 +6,17 @@ import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.network.ConfigReloadListener;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.resonator.CoreMath;
+import io.github.matheusanbs.wirelessautomate.resonator.EnergyBalance;
+import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
- * As migrações 3 e 4 do balanceamento do Ressonador (a escada nova do FE por cristal e da energia do roteador, e o
- * Unobtainium de 184 para 10,7 milhões por cristal) e as chaves novas da config. Os dois testes de migração gravam a config e esperam a recarga do arquivo, como os de
+ * As migrações 3, 4 e 5 do balanceamento do Ressonador (a escada nova do FE por cristal e da energia do roteador, o
+ * Unobtainium de 184 para 10,7 milhões por cristal, e a energia do roteador e a Bateria ligadas ao Ressonador) e as
+ * chaves novas da config. Os dois testes de migração gravam a config e esperam a recarga do arquivo, como os de
  * {@link RouterGameTests}, por isso o prazo longo.
  */
 @GameTestHolder(WirelessAutomate.MODID)
@@ -32,7 +35,7 @@ public final class ResonatorBalanceGameTests {
                 Config.TIERS.get(tier).rates().get(ResourceType.ENERGY.rateKey()).set(BALANCE2_ENERGY[tier.ordinal()]);
             }
             Config.BALANCE_VERSION.set(2);
-            helper.assertValueEqual(Config.migrateBalance(), 13, "valores migrados");
+            helper.assertValueEqual(Config.migrateBalance(), 15, "valores migrados");
             for (RouterTier tier : RouterTier.values()) {
                 int i = tier.ordinal();
                 helper.assertValueEqual(Config.RESONATOR_FE_PER_CRYSTAL.get(tier).get(), CoreMath.defaultFePerCrystal(i),
@@ -103,6 +106,56 @@ public final class ResonatorBalanceGameTests {
         RouterGameTests.succeedAfterReload(helper, reloadsBefore);
     }
 
+    private static final long[] BALANCE4_ENERGY = {1_000, 32_768, 64_000, 2_097_152, 67_108_864, 134_217_728L, 4_294_967_296L, 0};
+    private static final long[] BALANCE4_BATTERY = {1_000_000L, 8_000_000L, 64_000_000L, 512_000_000L, 4_096_000_000L,
+            32_768_000_000L, 262_144_000_000L, 0};
+
+    @GameTest(template = "empty", timeoutTicks = RouterGameTests.RELOAD_TIMEOUT,
+            batch = "wirelessautomate_config_balance5")
+    public static void migracao5TrocaOPadraoAntigoDoRoteadorEDaBateria(GameTestHelper helper) {
+        int reloadsBefore = ConfigReloadListener.fileReloads();
+        try {
+            for (RouterTier tier : RouterTier.values()) {
+                Config.TIERS.get(tier).rates().get(ResourceType.ENERGY.rateKey()).set(BALANCE4_ENERGY[tier.ordinal()]);
+                Config.STORAGE_CAPACITY.get(StorageKind.BATTERY).get(tier).set(BALANCE4_BATTERY[tier.ordinal()]);
+            }
+            Config.BALANCE_VERSION.set(4);
+            // o Ultimate já é sem limite nos dois: 7 tiers x 2 valores
+            helper.assertValueEqual(Config.migrateBalance(), 14, "valores migrados");
+            for (RouterTier tier : RouterTier.values()) {
+                int i = tier.ordinal();
+                helper.assertValueEqual(Config.TIERS.get(tier).rates().get(ResourceType.ENERGY.rateKey()).get(),
+                        EnergyBalance.routerEnergy(i), "energia do roteador, " + tier);
+                helper.assertValueEqual(Config.STORAGE_CAPACITY.get(StorageKind.BATTERY).get(tier).get(),
+                        EnergyBalance.batteryCapacity(i), "capacidade da Bateria, " + tier);
+            }
+            helper.assertValueEqual(Config.BALANCE_VERSION.get(), Config.CURRENT_BALANCE, "versão");
+        } finally {
+            restore();
+        }
+        RouterGameTests.succeedAfterReload(helper, reloadsBefore);
+    }
+
+    @GameTest(template = "empty", timeoutTicks = RouterGameTests.RELOAD_TIMEOUT,
+            batch = "wirelessautomate_config_balance5_dono")
+    public static void migracao5MantemOQueODonoMudou(GameTestHelper helper) {
+        int reloadsBefore = ConfigReloadListener.fileReloads();
+        var basicEnergy = Config.TIERS.get(RouterTier.BASIC).rates().get(ResourceType.ENERGY.rateKey());
+        var eliteBattery = Config.STORAGE_CAPACITY.get(StorageKind.BATTERY).get(RouterTier.ELITE);
+        try {
+            basicEnergy.set(777L);
+            eliteBattery.set(123_456_789L);
+            Config.BALANCE_VERSION.set(4);
+            Config.migrateBalance();
+            helper.assertValueEqual(basicEnergy.get(), 777L, "energia do dono");
+            helper.assertValueEqual(eliteBattery.get(), 123_456_789L, "capacidade do dono");
+            helper.assertValueEqual(Config.BALANCE_VERSION.get(), Config.CURRENT_BALANCE, "versão");
+        } finally {
+            restore();
+        }
+        RouterGameTests.succeedAfterReload(helper, reloadsBefore);
+    }
+
     @GameTest(template = "empty", timeoutTicks = 300, batch = "wirelessautomate_config")
     public static void chavesNovasTemPadrao(GameTestHelper helper) {
         helper.assertValueEqual(Config.crystalIntegrity(), 8, "integridade");
@@ -115,6 +168,7 @@ public final class ResonatorBalanceGameTests {
             Config.RESONATOR_FE_PER_CRYSTAL.get(tier).set(CoreMath.defaultFePerCrystal(tier.ordinal()));
             Config.TIERS.get(tier).rates().get(ResourceType.ENERGY.rateKey())
                     .set(ResourceType.ENERGY.defaultRate(tier.ordinal()));
+            Config.STORAGE_CAPACITY.get(StorageKind.BATTERY).get(tier).set(StorageKind.BATTERY.defaultCapacity(tier));
         }
         Config.BALANCE_VERSION.set(Config.CURRENT_BALANCE);
         Config.SPEC.save();

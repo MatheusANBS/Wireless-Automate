@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.storage;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.resonator.EnergyBalance;
 import java.util.Locale;
 import net.minecraft.util.StringRepresentable;
 
@@ -19,10 +20,8 @@ public enum StorageKind implements StringRepresentable {
     TANK("storage_tank", "tankCapacity", ResourceType.FLUID, "mb",
             new long[] {256_000L, 2_048_000L, 16_384_000L, 131_072_000L, 1_048_576_000L,
                     8_388_608_000L, 67_108_864_000L, 0L}),
-    /** Energia, em FE. */
-    BATTERY("storage_battery", "batteryCapacity", ResourceType.ENERGY, "fe",
-            new long[] {1_000_000L, 8_000_000L, 64_000_000L, 512_000_000L, 4_096_000_000L,
-                    32_768_000_000L, 262_144_000_000L, 0L}),
+    /** Energia, em FE: uma hora da geração máxima do Ressonador do tier ({@link EnergyBalance}); o Ultimate não tem limite. */
+    BATTERY("storage_battery", "batteryCapacity", ResourceType.ENERGY, "fe", EnergyBalance.batteryTable()),
     /** Químicos do Mekanism por tipo, em mB. */
     CHEMICAL_TANK("storage_chemical_tank", "chemicalTankCapacity", ResourceType.CHEMICAL, "mb",
             new long[] {256_000L, 2_048_000L, 16_384_000L, 131_072_000L, 1_048_576_000L,

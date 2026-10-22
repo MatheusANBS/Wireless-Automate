@@ -50,13 +50,13 @@ limit. Source only with Ars Nouveau.
 
 | Card | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Source/s | Range |
 | --- | --- | --- | --- | --- | --- |
-| <ItemImage id="wirelessautomate:tier_core_advanced" /> **Advanced** | 32 → **256** | 2,000 → **16,000** | 1,000 → **32,768** | 100 → **800** | 64 blocks → **512 blocks** |
-| <ItemImage id="wirelessautomate:tier_core_elite" /> **Elite** | 256 → **2,048** | 16,000 → **128,000** | 32,768 → **64,000** | 800 → **6,400** | 512 blocks → **the whole dimension** |
-| <ItemImage id="wirelessautomate:tier_core_emerald" /> **Emerald** | 2,048 → **16,384** | 128,000 → **1,024,000** | 64,000 → **2,097,152** | 6,400 → **51,200** | the whole dimension → **every dimension** |
-| <ItemImage id="wirelessautomate:tier_core_allthemodium" /> **Allthemodium¹** | 16,384 → **131,072** | 1,024,000 → **8,192,000** | 2,097,152 → **67,108,864** | 51,200 → **409,600** | every dimension |
-| <ItemImage id="wirelessautomate:tier_core_vibranium" /> **Vibranium¹** | 131,072 → **1,048,576** | 8,192,000 → **65,536,000** | 67,108,864 → **134,217,728** | 409,600 → **3,276,800** | every dimension |
-| <ItemImage id="wirelessautomate:tier_core_unobtainium" /> **Unobtainium¹** | 1,048,576 → **8,388,608** | 65,536,000 → **524,288,000** | 134,217,728 → **4,294,967,296** | 3,276,800 → **26,214,400** | every dimension |
-| <ItemImage id="wirelessautomate:tier_core_ultimate" /> **Ultimate** | 8,388,608 → **Unlimited** | 524,288,000 → **Unlimited** | 4,294,967,296 → **Unlimited** | 26,214,400 → **Unlimited** | every dimension |
+| <ItemImage id="wirelessautomate:tier_core_advanced" /> **Advanced** | 32 → **256** | 2,000 → **16,000** | 454 → **29,100** | 100 → **800** | 64 blocks → **512 blocks** |
+| <ItemImage id="wirelessautomate:tier_core_elite" /> **Elite** | 256 → **2,048** | 16,000 → **128,000** | 29,100 → **63,000** | 800 → **6,400** | 512 blocks → **the whole dimension** |
+| <ItemImage id="wirelessautomate:tier_core_emerald" /> **Emerald** | 2,048 → **16,384** | 128,000 → **1,024,000** | 63,000 → **1,350,000** | 6,400 → **51,200** | the whole dimension → **every dimension** |
+| <ItemImage id="wirelessautomate:tier_core_allthemodium" /> **Allthemodium¹** | 16,384 → **131,072** | 1,024,000 → **8,192,000** | 1,350,000 → **67,200,000** | 51,200 → **409,600** | every dimension |
+| <ItemImage id="wirelessautomate:tier_core_vibranium" /> **Vibranium¹** | 131,072 → **1,048,576** | 8,192,000 → **65,536,000** | 67,200,000 → **84,500,000** | 409,600 → **3,276,800** | every dimension |
+| <ItemImage id="wirelessautomate:tier_core_unobtainium" /> **Unobtainium¹** | 1,048,576 → **8,388,608** | 65,536,000 → **524,288,000** | 84,500,000 → **158,000,000** | 3,276,800 → **26,214,400** | every dimension |
+| <ItemImage id="wirelessautomate:tier_core_ultimate" /> **Ultimate** | 8,388,608 → **Unlimited** | 524,288,000 → **Unlimited** | 158,000,000 → **Unlimited** | 26,214,400 → **Unlimited** | every dimension |
 
 ¹ Only with the Allthemodium mod. Without it, the Ultimate Card comes after Emerald (16,384 items/s → unlimited).
 

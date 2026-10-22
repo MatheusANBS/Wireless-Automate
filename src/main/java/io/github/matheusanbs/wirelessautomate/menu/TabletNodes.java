@@ -27,7 +27,7 @@ final class TabletNodes {
     private TabletNodes() {
     }
 
-    /** O jogador vê o nó: operador, quem o colocou, ou alguma face numa rede dele ou numa rede pública. */
+    /** O jogador vê o nó: operador, quem o colocou, ou alguma face numa rede que ele pode usar. */
     static boolean visible(NodeIndex.Entry entry, NetworkSavedData data, boolean operator, UUID me) {
         if (operator || me.equals(entry.placedBy())) {
             return true;
@@ -35,7 +35,7 @@ final class TabletNodes {
         for (ResourceType type : LoadedTypes.LIST) {
             for (UUID id : entry.networks(type)) {
                 WaNetwork network = data.network(id);
-                if (network != null && (network.isPublic() || network.owner().equals(me))) {
+                if (network != null && network.canUse(me, false)) {
                     return true;
                 }
             }
@@ -43,9 +43,9 @@ final class TabletNodes {
         return false;
     }
 
-    /** O jogador vê a rede: operador, dono, ou a rede é pública. */
+    /** O jogador vê a rede: operador, dono, convidado (ou membro de um time dela), ou a rede é pública. */
     static boolean visible(WaNetwork network, boolean operator, UUID me) {
-        return operator || network.owner().equals(me) || network.isPublic();
+        return network.canUse(me, operator);
     }
 
     static NodeStatus status(NodeIndex.Entry entry, boolean loaded, int full, boolean moved, NetworkSavedData data) {

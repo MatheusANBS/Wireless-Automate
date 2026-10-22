@@ -290,9 +290,9 @@ public record RouterSnapshot(
         for (WaNetwork network : data.networksOf(player.getUUID())) {
             networks.add(new NetworkEntry(network.id(), network.name(), network.color(), true));
         }
-        // Redes públicas de outros donos também podem ser escolhidas (privacidade no Tablet).
+        // As redes de outros donos que o jogador pode usar (públicas ou em que foi convidado) também são escolhíveis.
         for (WaNetwork network : data.networks()) {
-            if (network.isPublic() && !network.owner().equals(player.getUUID())) {
+            if (!network.owner().equals(player.getUUID()) && network.canUse(player)) {
                 networks.add(new NetworkEntry(network.id(), network.name(), network.color(), false));
             }
         }

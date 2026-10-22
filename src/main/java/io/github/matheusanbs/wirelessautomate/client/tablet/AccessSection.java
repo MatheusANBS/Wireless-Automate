@@ -1,13 +1,13 @@
 package io.github.matheusanbs.wirelessautomate.client.tablet;
 
 import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletLayout.BODY_Y;
+import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletLayout.MIN_H;
 import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletLayout.ROW_H;
 import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletLayout.RX;
 import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletText.plural;
 import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletText.tr;
 
 import io.github.matheusanbs.wirelessautomate.client.ArmedClick;
-import io.github.matheusanbs.wirelessautomate.client.FlatButton;
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
@@ -27,16 +27,17 @@ import net.minecraft.util.Mth;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * O acesso a uma rede privada na coluna da direita da aba Redes (o botão Acesso da rede escolhida): os convidados,
- * com o campo de convidar jogador, e os times do FTB Teams (só com ele instalado), com o campo de adicionar time. Os
- * dois campos têm a lista de sugestões ({@link SuggestField}). Tirar um convidado ou um time pede dois cliques. As
- * linhas são montadas quando o acesso da rede muda, não por quadro; a lista de sugestões é desenhada por cima,
- * depois dos widgets ({@link #renderOverlay}).
+ * O acesso a uma rede privada, na coluna da direita da aba Redes, logo abaixo do segmento Pública/Privada e da cor:
+ * os convidados, com o campo de convidar jogador, e os times do FTB Teams (só com ele instalado), com o campo de
+ * adicionar time. Os dois campos têm a lista de sugestões ({@link SuggestField}). Tirar um convidado ou um time pede
+ * dois cliques. As linhas são montadas quando o acesso da rede muda, não por quadro; a lista de sugestões é
+ * desenhada por cima, depois dos widgets ({@link #renderOverlay}). Cresce com a altura da tela: as linhas a mais vão
+ * para as listas.
  */
-public final class AccessDetail {
+public final class AccessSection {
     private static final int ROW = 13;
-    private static final int GUEST_ROWS_Y = BODY_Y + 29;
-    private static final int TEAM_ROWS = 3;
+    /** Onde a seção começa, em relação ao corpo da aba: abaixo do segmento e da cor. */
+    static final int LABEL_Y = BODY_Y + 62;
     private static final int PLUS_W = 14;
     private static final Component MORE = Component.literal("▼");
     private static final Component PLUS = Component.literal("+");
@@ -54,16 +55,16 @@ public final class AccessDetail {
     private final SuggestField teamField;
     private final ArmedClick removeArm = new ArmedClick();
     private @Nullable UUID armedId;
-    private boolean open;
+    /** A seção está à vista: aba Redes, rede privada que o jogador gerencia. */
+    private boolean active;
     private int guestScroll;
     private int teamScroll;
-    private FlatButton back;
     // montadas quando o acesso da rede muda
     private @Nullable AccessView built;
     private List<Row> guests = List.of();
     private List<Row> teams = List.of();
 
-    AccessDetail(TabletLayout layout, TabletMenu menu, TabletActions actions,
+    AccessSection(TabletLayout layout, TabletMenu menu, TabletActions actions,
             Supplier<@Nullable NetworkView> network) {
         this.layout = layout;
         this.network = network;
@@ -76,20 +77,8 @@ public final class AccessDetail {
         this.teamField = new SuggestField(NetworkSuggestPayload.Kind.TEAM, menu, actions, id, tr("access.team.add"));
     }
 
-    /** A coluna mostra o acesso (e não os detalhes da rede). */
-    public boolean open() {
-        return open;
-    }
-
-    void open(boolean value) {
-        if (open != value) {
-            open = value;
-            close();
-        }
-    }
-
-    /** Larga os campos, as rolagens e o que estava armado. */
-    void close() {
+    /** Larga os campos, as rolagens e o que estava armado (outra rede, outra aba, tela refeita). */
+    void reset() {
         guestField.clear();
         teamField.clear();
         guestScroll = 0;
@@ -102,34 +91,40 @@ public final class AccessDetail {
         return TeamAccess.LOADED;
     }
 
+    /** As linhas que a altura da tela dá a mais que o mínimo. */
+    private int extraRows() {
+        return Math.max(0, (layout.h - MIN_H) / ROW);
+    }
+
+    private int guestRowsY() {
+        return LABEL_Y + 11;
+    }
+
     private int guestRows() {
-        return withTeams() ? 4 : 7;
+        return withTeams() ? 2 + (extraRows() + 1) / 2 : 5 + extraRows();
     }
 
     private int guestBoxY() {
-        return GUEST_ROWS_Y + guestRows() * ROW + 2;
+        return guestRowsY() + guestRows() * ROW + 1;
     }
 
     private int teamLabelY() {
-        return guestBoxY() + ROW_H + 4;
+        return guestBoxY() + ROW_H + 3;
     }
 
     private int teamRowsY() {
         return teamLabelY() + 11;
     }
 
+    private int teamRows() {
+        return withTeams() ? 1 + extraRows() / 2 : 0;
+    }
+
     private int teamBoxY() {
-        return teamRowsY() + TEAM_ROWS * ROW + 2;
+        return teamRowsY() + teamRows() * ROW + 1;
     }
 
     // ------------------------------------------------------------------ widgets
-
-    FlatButton addBack(TabletScreen.Buttons buttons) {
-        back = buttons.add(TabletScreen.Tab.NETWORKS, new FlatButton(layout.left + RX, layout.top + BODY_Y, 48, ROW_H,
-                tr("access.back"), (g, b, hovered) -> TabletButtons.paintText(g, b, hovered, tr("access.back")),
-                () -> open(false)).tooltip(() -> tr("access.back.tooltip")));
-        return back;
-    }
 
     /** Os dois campos, refeitos a cada {@code init}; a tela os põe entre os widgets dela. */
     List<EditBox> createBoxes(Font font) {
@@ -148,14 +143,20 @@ public final class AccessDetail {
         }
     }
 
-    /** {@code shown}: a aba Redes aberta com uma rede que o jogador gerencia escolhida. */
+    /** {@code shown}: a aba Redes aberta com uma rede privada que o jogador gerencia escolhida. */
     void refresh(boolean shown) {
-        boolean on = shown && open;
-        back.visible = on;
-        if (guestField.box() != null) {
-            guestField.box().visible = on;
-            teamField.box().visible = on && withTeams();
+        if (active && !shown) {
+            reset();
         }
+        active = shown;
+        if (guestField.box() != null) {
+            guestField.box().visible = shown;
+            teamField.box().visible = shown && withTeams();
+        }
+    }
+
+    boolean active() {
+        return active;
     }
 
     // ------------------------------------------------------------------ linhas
@@ -173,8 +174,7 @@ public final class AccessDetail {
         guests = g;
         List<Row> t = new ArrayList<>(view.teams().size());
         for (TeamAccess.TeamInfo team : view.teams()) {
-            Component detail = team.gone() ? tr("access.gone")
-                    : tr("access.live").copy().append(" · ").append(plural("access.members", team.members()));
+            Component detail = team.gone() ? tr("access.gone") : plural("access.members", team.members());
             t.add(new Row(team.id(), Component.literal(team.name()), detail, font.width(detail), false, team.gone()));
         }
         teams = t;
@@ -208,9 +208,9 @@ public final class AccessDetail {
         return mouseX >= x && mouseX < x + layout.rw() - PLUS_W && mouseY >= y && mouseY < y + ROW_H;
     }
 
-    /** Cliques da coluna: a lista de sugestões aberta, o ✕ das linhas e o +. Devolve se tratou. */
+    /** Cliques da seção: a lista de sugestões aberta, o ✕ das linhas e o +. Devolve se tratou. */
     boolean mouseClicked(double mouseX, double mouseY) {
-        if (!open) {
+        if (!active) {
             return false;
         }
         if (guestField.mouseClicked(mouseX, mouseY) || teamField.mouseClicked(mouseX, mouseY)) {
@@ -221,8 +221,8 @@ public final class AccessDetail {
             return false;
         }
         UUID net = view.id();
-        int guest = rowAt(mouseX, mouseY, GUEST_ROWS_Y, guestRows(), guestScroll, guests.size());
-        int team = withTeams() ? rowAt(mouseX, mouseY, teamRowsY(), TEAM_ROWS, teamScroll, teams.size()) : -1;
+        int guest = rowAt(mouseX, mouseY, guestRowsY(), guestRows(), guestScroll, guests.size());
+        int team = withTeams() ? rowAt(mouseX, mouseY, teamRowsY(), teamRows(), teamScroll, teams.size()) : -1;
         if (!overRemove(mouseX) || guest < 0 && team < 0) {
             armedId = null;
             removeArm.disarm();
@@ -264,20 +264,20 @@ public final class AccessDetail {
         return true;
     }
 
-    void mouseScrolled(double mouseX, double mouseY, int step) {
-        if (!open) {
+    void mouseScrolled(double mouseY, int step) {
+        if (!active) {
             return;
         }
         if (mouseY < layout.top + teamLabelY() - 2 || !withTeams()) {
             guestScroll = Mth.clamp(guestScroll + step, 0, Math.max(0, guests.size() - guestRows()));
         } else {
-            teamScroll = Mth.clamp(teamScroll + step, 0, Math.max(0, teams.size() - TEAM_ROWS));
+            teamScroll = Mth.clamp(teamScroll + step, 0, Math.max(0, teams.size() - teamRows()));
         }
     }
 
     /** Teclas de um dos campos com o cursor: setas, Tab, Enter e Esc da lista de sugestões. */
     boolean keyPressed(@Nullable EditBox focused, int keyCode) {
-        if (!open || focused == null) {
+        if (!active || focused == null) {
             return false;
         }
         if (focused == guestField.box()) {
@@ -286,16 +286,12 @@ public final class AccessDetail {
         return focused == teamField.box() && teamField.keyPressed(keyCode);
     }
 
-    boolean ownsBox(@Nullable Object widget) {
-        return widget != null && (widget == guestField.box() || widget == teamField.box());
-    }
-
-    @Nullable Component tooltip(Font font, int mouseX, int mouseY) {
-        if (!open) {
+    @Nullable Component tooltip(int mouseX, int mouseY) {
+        if (!active) {
             return null;
         }
-        int guest = rowAt(mouseX, mouseY, GUEST_ROWS_Y, guestRows(), guestScroll, guests.size());
-        int team = withTeams() ? rowAt(mouseX, mouseY, teamRowsY(), TEAM_ROWS, teamScroll, teams.size()) : -1;
+        int guest = rowAt(mouseX, mouseY, guestRowsY(), guestRows(), guestScroll, guests.size());
+        int team = withTeams() ? rowAt(mouseX, mouseY, teamRowsY(), teamRows(), teamScroll, teams.size()) : -1;
         if ((guest >= 0 || team >= 0) && overRemove(mouseX)) {
             return tr("access.remove.tooltip");
         }
@@ -309,7 +305,7 @@ public final class AccessDetail {
 
     void render(GuiGraphics g, Font font, int mouseX, int mouseY) {
         NetworkView view = network.get();
-        if (view == null) {
+        if (!active || view == null) {
             return;
         }
         rebuild(view.access());
@@ -320,20 +316,18 @@ public final class AccessDetail {
         int x = layout.left + RX;
         int y = layout.top;
         int rw = layout.rw();
-        GuiPaint.eye(g, x + 52, y + BODY_Y + 4, 0xFF000000 | view.color());
-        GuiText.draw(g, font, tr("access.title", view.name()), x + 61, y + BODY_Y + 3, rw - 61, GuiPaint.FG);
-        GuiPaint.text(g, font, tr("access.guests"), x, y + GUEST_ROWS_Y - 11, GuiPaint.FG);
+        GuiPaint.text(g, font, tr("access.guests"), x, y + LABEL_Y, GuiPaint.FG);
         if (guests.isEmpty()) {
-            GuiText.draw(g, font, tr("access.guests.empty"), x, y + GUEST_ROWS_Y + 2, rw, GuiPaint.MUTED);
+            GuiText.draw(g, font, tr("access.guests.empty"), x, y + guestRowsY() + 2, rw, GuiPaint.MUTED);
         }
-        renderRows(g, font, mouseX, mouseY, guests, GUEST_ROWS_Y, guestRows(), guestScroll);
+        renderRows(g, font, mouseX, mouseY, guests, guestRowsY(), guestRows(), guestScroll);
         renderField(g, guestField, guestBoxY(), mouseX, mouseY);
         if (withTeams()) {
             GuiPaint.text(g, font, tr("access.teams"), x, y + teamLabelY(), GuiPaint.FG);
             if (teams.isEmpty()) {
                 GuiText.draw(g, font, tr("access.teams.empty"), x, y + teamRowsY() + 2, rw, GuiPaint.MUTED);
             }
-            renderRows(g, font, mouseX, mouseY, teams, teamRowsY(), TEAM_ROWS, teamScroll);
+            renderRows(g, font, mouseX, mouseY, teams, teamRowsY(), teamRows(), teamScroll);
             renderField(g, teamField, teamBoxY(), mouseX, mouseY);
         }
     }
@@ -363,19 +357,16 @@ public final class AccessDetail {
                     armed ? GuiPaint.DANGER : GuiPaint.MUTED);
         }
         if (scroll + visible < rows.size()) {
-            GuiPaint.text(g, font, MORE, x + rw - 24, ry(firstY, visible) - 8, GuiPaint.MUTED);
+            GuiPaint.text(g, font, MORE, x + rw - 24, layout.top + firstY + visible * ROW - 8, GuiPaint.MUTED);
         }
-    }
-
-    private int ry(int firstY, int visible) {
-        return layout.top + firstY + visible * ROW;
     }
 
     private void renderField(GuiGraphics g, SuggestField field, int boxY, int mouseX, int mouseY) {
         int x = layout.left + RX;
         int y = layout.top + boxY;
         int rw = layout.rw();
-        GuiPaint.box(g, x, y, rw - PLUS_W - 2, ROW_H, GuiPaint.INSET, field.box().isFocused() ? GuiPaint.ACCENT : GuiPaint.LINE);
+        GuiPaint.box(g, x, y, rw - PLUS_W - 2, ROW_H, GuiPaint.INSET,
+                field.box().isFocused() ? GuiPaint.ACCENT : GuiPaint.LINE);
         boolean hovered = overPlus(mouseX, mouseY, boxY);
         GuiPaint.box(g, x + rw - PLUS_W, y, PLUS_W, ROW_H, GuiPaint.BUTTON,
                 hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
@@ -384,7 +375,7 @@ public final class AccessDetail {
 
     /** As listas de sugestões, por cima de tudo (a tela chama depois de desenhar os widgets). */
     void renderOverlay(GuiGraphics g, Font font) {
-        if (!open) {
+        if (!active) {
             return;
         }
         int x = layout.left + RX;
@@ -404,21 +395,20 @@ public final class AccessDetail {
         return new int[] {layout.left + RX + (layout.rw() - PLUS_W) / 2, layout.top + boxY + ROW_H / 2};
     }
 
-    /** Centro do +. */
-    public int[] plusCenter(boolean team) {
-        int boxY = team ? teamBoxY() : guestBoxY();
-        return new int[] {layout.left + RX + layout.rw() - PLUS_W / 2, layout.top + boxY + ROW_H / 2};
-    }
-
     /** Centro do ✕ da linha {@code index} dos convidados ou dos times. */
     public int[] removeCenter(boolean team, int index) {
-        int firstY = team ? teamRowsY() : GUEST_ROWS_Y;
+        int firstY = team ? teamRowsY() : guestRowsY();
         return new int[] {layout.left + RX + layout.rw() - 7, layout.top + firstY + index * ROW + ROW / 2};
     }
 
     /** Quantas linhas de convidado e de time estão montadas. */
     public int[] counts() {
         return new int[] {guests.size(), teams.size()};
+    }
+
+    /** A seção está à vista. */
+    public boolean shown() {
+        return active;
     }
 
     /** Quantas sugestões a lista do campo de convidar, ou do de time, tem agora. */

@@ -830,7 +830,7 @@ recebe vem do modo das faces.
 | **Rede por face** | Numa fornalha, a face de **Cima** (entrada) pode estar na rede "Mina" e a de **Baixo** (saída) na rede "Armazém": o minério chega pela Mina e o lingote sai pelo Armazém. Cada aba tem as suas: a energia pode ir para a rede "Base". |
 | **Ordem de entrega** | Prioridade maior primeiro; empates se revezam (round-robin). |
 | **Armazém** | Recebe de quem extrai e entrega para quem insere, sem ficar trocando com outro Armazém. |
-| **Dono** | Só o dono da rede (ou um operador) pode pôr roteadores nela. |
+| **Quem usa** | Uma rede pública é de todos. Numa privada, o dono, os operadores e os **convidados** (e, com o FTB Teams, os membros dos times que você adicionar) podem pôr roteadores nela e tirá-los. Só o dono (ou um operador) gerencia: renomeia, convida e remove. |
 
 ## Como mudar a rede
 
@@ -868,7 +868,7 @@ from the face modes.
 | **Network per face** | On a furnace, the **Top** face (input) can be on the "Mine" network and the **Bottom** face (output) on the "Storage" network: ore comes in through Mine and ingots leave through Storage. Each tab has its own: the energy can go to the "Base" network. |
 | **Delivery order** | Higher priority first; ties take turns (round-robin). |
 | **Storage** | Receives from extractors and delivers to inserters, without bouncing between two Storage faces. |
-| **Owner** | Only the network's owner (or an operator) can put routers in it. |
+| **Who can use it** | A public network is open to everyone. On a private one, the owner, operators and **guests** (and, with FTB Teams, the members of the teams you add) can put routers in it and take them out. Only the owner (or an operator) manages it: rename, invite and remove. |
 
 ## Changing the network
 
@@ -1388,6 +1388,7 @@ Se uma rede for apagada, as faces que estavam nela ficam sem rede e o nó mostra
 A aba **Redes** é uma lista só. Cada grupo de redes é uma seção, com **▾** para recolher e **Pausar** no cabeçalho (**pausado** quando está); as redes fora de grupo vêm no fim, em **Sem grupo**. Uma rede em dois grupos aparece nas duas seções, e a dica diz **Também em …**.
 
 - Clique numa rede para ver à direita a cor, se é pública ou privada, usá-la e removê-la.
+- Numa rede privada que é sua, a coluna mostra os **convidados** e os **times do FTB Teams** (só com o mod). Digite um nome para ver sugestões, escolha com as setas e Enter (Tab completa) e use o ✕ duas vezes para tirar. Só aparecem jogadores que já entraram no servidor, e um time vale por inteiro: quem entra ou sai dele ganha ou perde o acesso sozinho.
 - Clique no cabeçalho de um grupo para ver o grupo à direita: o nome, pausar, as redes dele (marque ou desmarque cada uma; **em …** avisa a rede que já está noutro grupo) e remover.
 - **Nova rede** e **Novo grupo**, embaixo da lista, criam uma rede ou um grupo: digite o nome e confirme (ou Enter).
 
@@ -1531,6 +1532,7 @@ If a network is deleted, the faces that were on it are left without a network an
 The **Networks** tab is a single list. Each network group is a section, with **▾** to collapse it and **Pause** on its header (**paused** when it is); networks outside any group come last, under **No group**. A network in two groups shows up in both sections, and the tooltip says **Also in …**.
 
 - Click a network to see its color and whether it is public or private on the right, use it or remove it.
+- On a private network you own, the column shows the **guests** and the **FTB Teams teams** (only with that mod). Type a name to see suggestions, pick with the arrows and Enter (Tab completes) and click the ✕ twice to remove. Only players who already joined the server show up, and a team counts as a whole: whoever joins or leaves it gains or loses access on their own.
 - Click a group's header to see the group on the right: its name, pause, its networks (check or uncheck each one; **in …** flags a network that is already in another group) and remove.
 - **New network** and **New group**, below the list, create a network or a group: type the name and confirm (or Enter).
 

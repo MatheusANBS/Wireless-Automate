@@ -969,7 +969,7 @@
   "gui.wirelessautomate.linker.open.title": "Abrir um roteador",
   "gui.wirelessautomate.linker.open.attached": "preso",
   "gui.wirelessautomate.linker.open.remote": "alcance",
-  "gui.wirelessautomate.linker.open.distance": "%s blocos",
+  "gui.wirelessautomate.linker.open.distance": "%s m",
   "gui.wirelessautomate.linker.open.hint": "Clique numa linha para abrir o roteador nesta máquina",
   "item.wirelessautomate.linker.tooltip.mode": "Modo: %s",
   "item.wirelessautomate.linker.tooltip.corner1": "Canto 1: %s",

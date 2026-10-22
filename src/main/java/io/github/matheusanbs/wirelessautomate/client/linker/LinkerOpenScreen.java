@@ -123,8 +123,8 @@ public final class LinkerOpenScreen extends Screen {
             GuiPaint.text(g, font, kind, left + W - PAD - 4 - distanceW - 6 - kindW, y + 4, GuiPaint.MUTED);
             GuiPaint.text(g, font, distance, left + W - PAD - 4 - distanceW, y + 4, GuiPaint.MUTED);
         }
-        GuiPaint.text(g, font, Component.translatable("gui.wirelessautomate.linker.open.hint"), left + PAD,
-                top + HEAD + rows * ROW + 4, GuiPaint.DISABLED);
+        GuiText.draw(g, font, Component.translatable("gui.wirelessautomate.linker.open.hint"), left + PAD,
+                top + HEAD + rows * ROW + 4, W - 2 * PAD, GuiPaint.DISABLED);
         Component clipped = GuiText.clipAt(mouseX, mouseY);
         if (clipped != null) {
             setTooltipForNextRenderPass(clipped);

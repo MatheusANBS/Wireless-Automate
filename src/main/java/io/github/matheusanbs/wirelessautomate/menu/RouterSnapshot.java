@@ -127,7 +127,7 @@ public record RouterSnapshot(
 
     /**
      * Uma rede no seletor. {@code owned}: o jogador é o dono. {@code usable}: o jogador pode pôr uma face
-     * nela (dono, rede pública ou operador, a regra do servidor, {@link WaNetwork#canUse}); uma rede
+     * nela (dono, convidado, rede pública ou operador, a regra do servidor, {@link WaNetwork#canUse}); uma rede
      * privada de outro dono que está numa face vem só para mostrar o nome, apagada na lista.
      */
     public record NetworkEntry(UUID id, String name, int color, boolean owned, boolean usable) {
@@ -260,7 +260,7 @@ public record RouterSnapshot(
     /**
      * Monta o snapshot do roteador para o jogador (as redes do seletor dependem dele). Só no servidor.
      *
-     * <p>O seletor traz as redes do jogador, as públicas de outros donos e as de outro dono que estão em
+     * <p>O seletor traz as redes do jogador, as de outros donos que ele pode usar (públicas ou em que foi convidado) e as de outro dono que estão em
      * alguma face, de qualquer tipo, do alvo editado ({@code owned = false} nas de outro dono). Os slots de cada face vêm dos {@code BlockCapabilityCache} do
      * roteador, sem consulta direta de capability. O ícone da máquina é só o item do bloco, sem os
      * dados do block entity, para o pacote continuar pequeno.

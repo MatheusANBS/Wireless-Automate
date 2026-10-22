@@ -14,6 +14,7 @@ import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
 import io.github.matheusanbs.wirelessautomate.network.WaGroup;
+import io.github.matheusanbs.wirelessautomate.network.TeamAccess;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.preset.ProfileDiff;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -96,6 +97,12 @@ final class TabletSnapshotBuilder {
      * já tem a idade da janela). Percorre o índice uma vez, já na ordem da Lista, para contar e filtrar.
      */
     TabletSnapshot build(boolean sample, Component notice, int noticeId) {
+        try (TeamAccess.Scope ignored = TeamAccess.openScope()) {
+            return buildSnapshot(sample, notice, noticeId);
+        }
+    }
+
+    private TabletSnapshot buildSnapshot(boolean sample, Component notice, int noticeId) {
         MinecraftServer server = viewer.server;
         long now = server.getTickCount();
         buildTick = now;

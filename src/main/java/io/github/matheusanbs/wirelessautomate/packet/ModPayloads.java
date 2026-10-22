@@ -388,8 +388,9 @@ public final class ModPayloads {
 
     /**
      * Põe uma face do alvo de edição da tela (a presa, o perfil de um grupo ou uma máquina remota) numa
-     * rede. Só aceita tipo carregado, rede que existe e que o jogador pode usar (dono ou operador nível 2,
-     * a mesma regra do Configurador), ou vazio para tirar a face da rede. Ignora a ação se o alvo deixou
+     * rede. Só aceita tipo carregado, rede que existe e que o jogador pode usar (dono, operador nível 2, convidado
+     * ou rede pública, a mesma regra do Configurador), ou vazio para tirar a face da rede; e só tira a face de uma
+     * rede que o jogador edita ({@link WaNetwork#canEdit}). Ignora a ação se o alvo deixou
      * de existir ({@link RouterEditHost#actionTarget()}).
      */
     public static boolean handleSetNetwork(@Nullable ServerPlayer player, SetNetworkPayload payload) {
@@ -403,6 +404,14 @@ public final class ModPayloads {
             return false;
         }
         Optional<UUID> id = payload.network();
+        // sair de uma rede pede o mesmo que o Mover, o colar e o Configurador: editá-la (dono, operador ou convidado)
+        UUID leaving = router.face(target, payload.resource(), payload.face()).network();
+        if (leaving != null && !leaving.equals(id.orElse(null))) {
+            WaNetwork from = NetworkSavedData.get(player.server).network(leaving);
+            if (from != null && !from.canEdit(player)) {
+                return false;
+            }
+        }
         if (id.isEmpty()) {
             router.setFaceNetwork(target, payload.resource(), payload.face(), null);
             host.editApplied();
@@ -721,7 +730,7 @@ public final class ModPayloads {
         return index >= 0 && index < filter.entries().size();
     }
 
-    /** Dono, operador nível 2 ou rede pública ({@link WaNetwork#canUse}). */
+    /** Dono, operador nível 2, convidado (ou membro de um time da rede) ou rede pública ({@link WaNetwork#canUse}). */
     public static boolean canUse(ServerPlayer player, WaNetwork network) {
         return network.canUse(player);
     }

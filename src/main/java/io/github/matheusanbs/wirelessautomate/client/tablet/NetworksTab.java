@@ -402,8 +402,8 @@ final class NetworksTab {
         } else {
             GuiText.draw(g, font, owner, x, y + BODY_Y + 18, rw, GuiPaint.MUTED);
             GuiText.draw(g, font, nodes, x, y + BODY_Y + 29, rw, GuiPaint.MUTED);
-            Component members = n.isPublic() ? tr("members.public")
-                    : !n.owned() ? tr("members.guest", n.owner()) : tr("members.private", n.owner());
+            // quem não gerencia uma rede privada só a vê por ser convidado
+            Component members = n.isPublic() ? tr("members.public") : tr("members.guest", n.owner());
             GuiText.draw(g, font, members, x, y + BODY_Y + 40, rw, GuiPaint.MUTED);
         }
         if (n.manageable()) {
@@ -420,7 +420,7 @@ final class NetworksTab {
                 access.render(g, font, mouseX, mouseY);
             }
         } else {
-            GuiText.wrap(g, font, tr("network.foreign"), x, y + SWATCH_Y, rw, 3, GuiPaint.DISABLED);
+            GuiText.wrap(g, font, tr("network.foreign"), x, y + BODY_Y + 54, rw, 3, GuiPaint.DISABLED);
         }
     }
 }

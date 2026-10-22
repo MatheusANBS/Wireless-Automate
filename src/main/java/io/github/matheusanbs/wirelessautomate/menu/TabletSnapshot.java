@@ -25,7 +25,7 @@ import net.minecraft.resources.ResourceLocation;
 
 /**
  * Tudo que a tela do Tablet mostra, montado no servidor só com ela aberta e só com o que o jogador
- * pode ver (as redes dele e as públicas; todas para operador). Os nós são o resultado da consulta
+ * pode ver (as redes dele, as públicas e as em que é convidado; todas para operador). Os nós são o resultado da consulta
  * ({@link Query}): no máximo {@link #MAX_NODES}, ordenados pelo id da máquina e depois pelo nome, e
  * {@code matchingNodes} diz quantos casaram, para nenhum pacote levar milhares de nós.
  *

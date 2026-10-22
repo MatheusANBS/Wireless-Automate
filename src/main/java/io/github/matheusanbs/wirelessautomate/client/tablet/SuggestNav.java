@@ -30,6 +30,11 @@ final class SuggestNav {
         }
     }
 
+    /** Larga a linha escolhida (o Enter volta a usar o texto digitado). */
+    void clearSelection() {
+        selected = -1;
+    }
+
     void next() {
         if (size > 0) {
             selected = (selected + 1) % size;

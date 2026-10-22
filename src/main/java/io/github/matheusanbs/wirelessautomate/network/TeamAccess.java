@@ -1,7 +1,10 @@
 package io.github.matheusanbs.wirelessautomate.network;
 
 import io.github.matheusanbs.wirelessautomate.compat.ftbteams.FtbTeams;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import net.neoforged.fml.ModList;
 import org.jetbrains.annotations.Nullable;
@@ -24,9 +27,41 @@ public final class TeamAccess {
     public record TeamInfo(UUID id, String name, int members, boolean gone) {
     }
 
+    /** Os membros de cada time já consultados dentro de {@link #openScope}; {@code null} fora dela. */
+    private static @Nullable Map<UUID, Set<UUID>> scope;
+
+    /** O que {@link #openScope} devolve: fechar volta a consultar o FTB a cada pergunta. */
+    public static final class Scope implements AutoCloseable {
+        private Scope() {
+        }
+
+        @Override
+        public void close() {
+            scope = null;
+        }
+    }
+
+    private static final Scope SCOPE = new Scope();
+
+    /**
+     * Dentro do try-with-resources, {@link #isMember} consulta cada time do FTB uma vez (a montagem do snapshot do
+     * Tablet pergunta o acesso de cada nó, e o FTB monta um conjunto novo a cada consulta). Só a thread do servidor.
+     */
+    public static Scope openScope() {
+        if (LOADED) {
+            scope = new HashMap<>();
+        }
+        return SCOPE;
+    }
+
     /** O jogador é membro do time. Um time desfeito ou que não é de grupo não tem membros. */
     public static boolean isMember(UUID team, UUID player) {
-        return LOADED && FtbTeams.isMember(team, player);
+        if (!LOADED) {
+            return false;
+        }
+        Map<UUID, Set<UUID>> open = scope;
+        return open == null ? FtbTeams.isMember(team, player)
+                : open.computeIfAbsent(team, FtbTeams::members).contains(player);
     }
 
     /** O time para mostrar; {@code null} sem o FTB. Um time que sumiu volta com {@code gone}. */

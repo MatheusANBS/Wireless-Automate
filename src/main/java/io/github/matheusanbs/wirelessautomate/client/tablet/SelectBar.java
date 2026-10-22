@@ -196,7 +196,7 @@ final class SelectBar {
     }
 
     private void cycleMoveNetwork(int direction) {
-        // as redes em que o jogador pode pôr nós: as dele, as públicas e, para operador, todas
+        // as redes em que o jogador pode pôr nós: as dele, as públicas, as em que é convidado e, para operador, todas
         List<NetworkView> networks = snapshot().networks();
         // posições: 0..n-1 as redes, n = sem rede
         int current = networks.size();

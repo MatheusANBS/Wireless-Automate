@@ -702,8 +702,8 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
      * de todos os tipos carregados (as faces de um tipo cujo mod saiu ficam como estão); {@code network}
      * vazio tira da rede. Só nós visíveis ao jogador e carregados
      * (a rede é guardada no roteador); os descarregados ficam de fora e são contados no aviso. Uma face
-     * numa rede que o jogador não gerencia ({@link WaNetwork#canManage}: dono ou operador; uma rede
-     * pública de outro dono também não) fica como está e é contada no aviso; faces sem rede ou em rede
+     * numa rede que o jogador não edita ({@link WaNetwork#canEdit}: dono, operador ou convidado; uma rede
+     * pública de outro dono não basta) fica como está e é contada no aviso; faces sem rede ou em rede
      * apagada vão. Devolve quantos mudaram, ou -1 se o pedido foi recusado.
      */
     public int moveNodes(List<NodeKey> keys, Optional<ResourceType> type, Optional<UUID> network) {

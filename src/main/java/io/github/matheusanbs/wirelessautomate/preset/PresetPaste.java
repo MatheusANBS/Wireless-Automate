@@ -56,14 +56,15 @@ public final class PresetPaste {
     }
 
     /**
-     * Quando o colar pode tirar uma face da rede em que está: só de uma rede que o jogador gerencia (dono ou
-     * operador nível 2), como o Tablet no Mover; uma rede que não existe mais não prende ninguém.
+     * Quando o colar pode tirar uma face da rede em que está: só de uma rede que o jogador edita (dono, operador
+     * nível 2 ou convidado; ser pública não basta), como o Tablet no Mover; uma rede que não existe mais não
+     * prende ninguém.
      */
     public static Predicate<UUID> canLeave(ServerPlayer player) {
         NetworkSavedData data = NetworkSavedData.get(player.server);
         return from -> {
             WaNetwork current = data.network(from);
-            return current == null || current.canManage(player);
+            return current == null || current.canEdit(player);
         };
     }
 }

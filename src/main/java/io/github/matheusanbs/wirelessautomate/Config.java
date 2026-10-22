@@ -29,6 +29,8 @@ public final class Config {
     public static final ModConfigSpec.IntValue LINKER_MAX_DISTANCE;
     public static final ModConfigSpec.IntValue MAX_NETWORKS_PER_PLAYER;
     public static final ModConfigSpec.IntValue MAX_GROUPS_PER_PLAYER;
+    public static final ModConfigSpec.IntValue MAX_MEMBERS_PER_NETWORK;
+    public static final ModConfigSpec.IntValue MAX_TEAMS_PER_NETWORK;
     public static final ModConfigSpec.BooleanValue GIVE_GUIDE_ON_FIRST_JOIN;
     /** Versão do balanceamento já aplicada a este arquivo (ver {@link #migrateBalance()}). */
     public static final ModConfigSpec.IntValue BALANCE_VERSION;
@@ -151,6 +153,12 @@ public final class Config {
         MAX_GROUPS_PER_PLAYER = builder
                 .comment("Grupos de redes que um jogador pode ter como dono (0 = sem limite). Operadores não têm limite.")
                 .defineInRange("maxGroupsPerPlayer", 64, 0, 100_000);
+        MAX_MEMBERS_PER_NETWORK = builder
+                .comment("Jogadores convidados por rede privada (0 = sem limite). Operadores não têm limite.")
+                .defineInRange("maxMembersPerNetwork", 32, 0, 10_000);
+        MAX_TEAMS_PER_NETWORK = builder
+                .comment("Times do FTB Teams por rede privada (0 = sem limite). Operadores não têm limite.")
+                .defineInRange("maxTeamsPerNetwork", 8, 0, 1_000);
         builder.pop();
 
         builder.push("storage");

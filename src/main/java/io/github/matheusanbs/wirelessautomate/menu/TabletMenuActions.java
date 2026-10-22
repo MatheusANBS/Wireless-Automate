@@ -74,7 +74,7 @@ final class TabletMenuActions {
         int kept = 0;
         java.util.function.Predicate<UUID> canLeave = from -> {
             WaNetwork current = data.network(from);
-            return current == null || current.canManage(viewer);
+            return current == null || current.canEdit(viewer);
         };
         Component name = target == null ? Component.translatable("gui.wirelessautomate.tablet.network.none")
                 : target.displayName();

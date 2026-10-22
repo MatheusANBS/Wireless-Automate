@@ -104,6 +104,18 @@ public final class NetworkSavedData extends SavedData {
         return max > 0 && !player.hasPermissions(2) && ownedGroups(player.getUUID()) >= max;
     }
 
+    /** A rede já tem os convidados que a config permite (operador não tem teto; 0 = sem limite). */
+    public boolean memberLimitReached(ServerPlayer player, WaNetwork network) {
+        int max = Config.MAX_MEMBERS_PER_NETWORK.get();
+        return max > 0 && !player.hasPermissions(2) && network.members().size() >= max;
+    }
+
+    /** O mesmo para os times. */
+    public boolean teamLimitReached(ServerPlayer player, WaNetwork network) {
+        int max = Config.MAX_TEAMS_PER_NETWORK.get();
+        return max > 0 && !player.hasPermissions(2) && network.teams().size() >= max;
+    }
+
     private int ownedNetworks(UUID owner) {
         int count = 0;
         for (WaNetwork network : networks.values()) {

@@ -2,11 +2,13 @@ package io.github.matheusanbs.wirelessautomate.menu;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.command.WaCommand;
+import io.github.matheusanbs.wirelessautomate.network.KnownPlayers;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.network.TeamAccess;
 import io.github.matheusanbs.wirelessautomate.network.WaGroup;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import java.util.HashSet;
@@ -142,6 +144,8 @@ final class TabletMenuActions {
         return switch (action) {
             case NETWORK_CREATE, NETWORK_RENAME, NETWORK_COLOR, NETWORK_PUBLIC, NETWORK_REMOVE, NETWORK_USE ->
                     applyNetwork(action, data, target, text, value);
+            case NETWORK_MEMBER_ADD, NETWORK_MEMBER_REMOVE, NETWORK_TEAM_ADD, NETWORK_TEAM_REMOVE ->
+                    applyAccess(action, data, target, other, text);
             case GROUP_CREATE, GROUP_RENAME, GROUP_REMOVE, GROUP_ADD_NETWORK, GROUP_REMOVE_NETWORK, GROUP_PAUSE ->
                     applyGroup(action, data, target, other, text, value);
         };
@@ -203,6 +207,68 @@ final class TabletMenuActions {
                 data.setActiveNetwork(me, network.id());
                 notice("network.active", network.displayName());
                 yield true;
+            }
+            default -> throw new IllegalArgumentException(action.name());
+        };
+    }
+
+    /** Convidar e tirar jogadores e times de uma rede: só quem gerencia a rede. */
+    private boolean applyAccess(TabletMenu.Action action, NetworkSavedData data, Optional<UUID> target,
+            Optional<UUID> other, String text) {
+        WaNetwork network = managedNetwork(data, target);
+        if (network == null) {
+            return refuse("permission");
+        }
+        MinecraftServer server = viewer.server;
+        return switch (action) {
+            case NETWORK_MEMBER_ADD -> {
+                UUID player = TabletAccess.resolvePlayer(server, other, text);
+                if (player == null) {
+                    yield refuse("known");
+                }
+                if (player.equals(network.owner())) {
+                    yield refuse("owner");
+                }
+                if (network.members().contains(player)) {
+                    yield refuse("exists");
+                }
+                if (data.memberLimitReached(viewer, network)) {
+                    yield refuse("limit");
+                }
+                notice("access.member.added", KnownPlayers.name(server, player), network.displayName());
+                yield data.update(network.withMember(player));
+            }
+            case NETWORK_MEMBER_REMOVE -> {
+                UUID player = other.orElse(null);
+                if (player == null || !network.members().contains(player)) {
+                    yield refuse("known");
+                }
+                notice("access.member.removed", KnownPlayers.name(server, player), network.displayName());
+                yield data.update(network.withoutMember(player));
+            }
+            case NETWORK_TEAM_ADD -> {
+                UUID team = TabletAccess.resolveTeam(other, text);
+                if (team == null) {
+                    yield refuse("team");
+                }
+                if (network.teams().contains(team)) {
+                    yield refuse("exists");
+                }
+                if (data.teamLimitReached(viewer, network)) {
+                    yield refuse("limit");
+                }
+                TeamAccess.TeamInfo info = TeamAccess.info(team);
+                notice("access.team.added", info == null ? "" : info.name(), network.displayName());
+                yield data.update(network.withTeam(team));
+            }
+            case NETWORK_TEAM_REMOVE -> {
+                UUID team = other.orElse(null);
+                if (team == null || !network.teams().contains(team)) {
+                    yield refuse("team");
+                }
+                TeamAccess.TeamInfo info = TeamAccess.info(team);
+                notice("access.team.removed", info == null ? "" : info.name(), network.displayName());
+                yield data.update(network.withoutTeam(team));
             }
             default -> throw new IllegalArgumentException(action.name());
         };

@@ -8,6 +8,7 @@ import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
+import io.github.matheusanbs.wirelessautomate.packet.NetworkSuggestionsPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletFlowsPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletHeaderPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletLivePayload;
@@ -89,6 +90,8 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     public static final int FORCED_PER_SECOND = 10;
     /** Colares em vários nós e desfazeres por segundo e por jogador (cada um mexe em até {@link #MAX_MOVE} nós). */
     public static final int BULK_PER_SECOND = 4;
+    /** Consultas de sugestão do campo de acesso por segundo e por jogador (a tela espera 150 ms depois da última tecla). */
+    public static final int SUGGEST_PER_SECOND = 10;
 
     /**
      * O que o Tablet lembra: a aba (posição na ordem das abas da tela), a consulta, o nó escolhido e o alvo de edição
@@ -120,6 +123,14 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
         /** Alvo: grupo; outro: rede. */
         GROUP_ADD_NETWORK,
         GROUP_REMOVE_NETWORK,
+        /** Alvo: rede; outro: jogador (ou texto: o nome). Só quem gerencia. */
+        NETWORK_MEMBER_ADD,
+        /** Alvo: rede; outro: jogador. */
+        NETWORK_MEMBER_REMOVE,
+        /** Alvo: rede; outro: time do FTB Teams (ou texto: o nome exato). */
+        NETWORK_TEAM_ADD,
+        /** Alvo: rede; outro: time. Tira também um time que já foi desfeito. */
+        NETWORK_TEAM_REMOVE,
         /** Alvo: grupo; valor: 1 pausa, 0 retoma. */
         GROUP_PAUSE
     }
@@ -131,6 +142,9 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     private int panelVersion;
     /** Cliente: os últimos Fluxos recebidos, ou {@code null}. */
     private @Nullable TabletFlowsPayload flowsPayload;
+    /** Cliente: as últimas sugestões do campo de acesso recebidas, ou {@code null}. */
+    private @Nullable NetworkSuggestionsPayload suggestions;
+    private int suggestionsVersion;
     /** Cliente: a aba e o nó escolhido que o servidor restaurou ao abrir. */
     private int restoredTab;
     private @Nullable NodeKey restoredNode;
@@ -438,6 +452,22 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     /** Cliente: os últimos Fluxos recebidos, ou {@code null}. */
     public @Nullable TabletFlowsPayload flows() {
         return flowsPayload;
+    }
+
+    /** Cliente: as sugestões novas do campo de acesso ({@code NetworkSuggestionsPayload}). */
+    public void applySuggestions(NetworkSuggestionsPayload payload) {
+        this.suggestions = payload;
+        suggestionsVersion++;
+    }
+
+    /** Cliente: as últimas sugestões recebidas, ou {@code null}. */
+    public @Nullable NetworkSuggestionsPayload suggestions() {
+        return suggestions;
+    }
+
+    /** Cliente: muda a cada resposta de sugestões, para o campo saber que há uma nova. */
+    public int suggestionsVersion() {
+        return suggestionsVersion;
     }
 
     @Override

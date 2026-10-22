@@ -137,7 +137,8 @@ final class TabletSnapshotBuilder {
             WaNetwork network = data.network(id);
             networks.add(new NetworkView(id, network.name(), network.color(), ownerName(server, network.owner(), names),
                     network.owner().equals(me), network.canManage(viewer), network.isPublic(), data.isPaused(id),
-                    t.nodes, t.unloaded));
+                    t.nodes, t.unloaded, network.canManage(viewer) ? TabletAccess.view(server, network)
+                            : TabletSnapshot.AccessView.EMPTY));
         });
         List<GroupView> groups = new ArrayList<>();
         for (WaGroup group : data.groups()) {

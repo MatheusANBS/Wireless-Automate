@@ -206,6 +206,13 @@ dependencies {
     // Allthemodium (tiers Allthemodium, Vibranium e Unobtainium) e All The Tweaks (fragmento de ATM Star).
     clientMods "curse.maven:allthemodium-364466:${allthemodium_file}"
     clientMods "curse.maven:all-the-tweaks-364120:${allthetweaks_file}"
+    // Apotheosis (as gemas e os tiers delas, para testar o filtro de componentes) e as dependências obrigatórias dele.
+    clientMods "maven.modrinth:apotheosis:1.21.1-8.9.0"
+    clientMods "maven.modrinth:placebo:1.21.1-9.9.4"
+    clientMods "maven.modrinth:apothic-attributes:1.21.1-2.11.0"
+    clientMods "maven.modrinth:apothic-enchanting:1.21.1-1.6.4"
+    clientMods "maven.modrinth:apothic-spawners:1.21.1-1.4.0"
+    clientMods "maven.modrinth:patchouli:1.21.1-93-neoforge"
     // Os mods das receitas de cascata dos Corações do Ressonador (resonator_heart_<tier>_cascade): MEGA Cells
     // (com o AE2), Draconic Evolution (com o Brandon's Core e o CodeChicken Lib) e Modern Industrialization.
     // Só no cliente de dev: sem eles carregam as receitas de antes; os GameTests não os carregam.

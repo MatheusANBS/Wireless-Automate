@@ -99,7 +99,7 @@ Recursos em `src/main/resources/`:
 ./gradlew runGameTestServerChemicals # GameTests de químicos, num servidor com o Mekanism na pasta mods
 ./gradlew runGameTestServerSource # GameTests de Source, num servidor com o Ars Nouveau (e GeckoLib e Curios) na pasta mods
 ./gradlew runGameTestServerAllthemodium # GameTests dos tiers do ATM, com o Allthemodium, o All The Tweaks e o GeckoLib (cursemaven)
-./gradlew runClient         # cliente de dev com JEI, Sophisticated Storage, Observable, Mekanism, Ars Nouveau (com GeckoLib e Curios), Allthemodium, All The Tweaks, GuideME e Mouse Tweaks, para testar à mão
+./gradlew runClient         # cliente de dev com JEI, Sophisticated Storage, Observable, Mekanism, Ars Nouveau (com GeckoLib e Curios), Allthemodium, All The Tweaks, Apotheosis (com as dependências dele), GuideME e Mouse Tweaks, para testar à mão
 ./gradlew runData           # datagen para src/generated/resources/
 WA_SCREENSHOT=run/shots xvfb-run -a -s "-screen 0 1280x800x24" ./gradlew runClient  # capturas das telas (roteador, visor 3D, filtro), sem monitor
 ./scripts/e2e.sh            # teste de ponta a ponta num mundo real (precisa de Xvfb; alguns minutos, com as capturas do guia; força a escala 2 da interface quando a janela é pequena e faz uma volta em pt_br com rede de nome longo, conferindo o tooltip dos textos cortados)

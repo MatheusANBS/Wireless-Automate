@@ -3,7 +3,6 @@ package io.github.matheusanbs.wirelessautomate.client;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
-import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerBox;
@@ -27,17 +26,14 @@ import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Contorno da área do Vinculador ou do Configurador no mundo, enquanto um deles está na mão: a
- * caixa entre os dois cantos ou, só com o canto 1, o bloco dele e, em modo Área, uma prévia até o
- * bloco mirado. Cada item tem a sua cor. Uma caixa de linhas por quadro, só com o item na mão e na
- * dimensão da área; nada de busca no mundo.
+ * Contorno da área do Vinculador no mundo, enquanto ele está na mão: a caixa entre os dois cantos ou,
+ * só com o canto 1, o bloco dele e, no modo que marca área, uma prévia até o bloco mirado. Uma caixa
+ * de linhas por quadro, só com o item na mão e na dimensão da área; nada de busca no mundo.
  */
 @EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
 public final class AreaRenderer {
-    /** Cor do contorno do Configurador: coral. Contorno no mundo: não segue o tema das telas. */
-    private static final int CONFIGURATOR_COLOR = 0xF0603E;
     /** Cor do contorno do Vinculador: coral. Contorno no mundo: não segue o tema das telas. */
-    private static final int LINKER_COLOR = 0xFFF0603E;
+    private static final int COLOR = 0xFFF0603E;
 
     private AreaRenderer() {
     }
@@ -52,20 +48,18 @@ public final class AreaRenderer {
         if (player == null || minecraft.level == null) {
             return;
         }
-        ItemStack stack = areaItemInHand(player);
+        ItemStack stack = linkerInHand(player);
         if (stack == null) {
             return;
         }
-        boolean linker = stack.getItem() instanceof LinkerItem;
-        LinkerArea area = linker ? LinkerItem.area(stack) : ConfiguratorItem.area(stack);
+        LinkerArea area = LinkerItem.area(stack);
         if (area == null || !area.dimension().equals(minecraft.level.dimension())) {
             return;
         }
-        LinkerMode mode = linker ? LinkerItem.mode(stack) : ConfiguratorItem.mode(stack);
-        int color = linker ? LINKER_COLOR : CONFIGURATOR_COLOR;
-        float r = ((color >> 16) & 0xFF) / 255f;
-        float g = ((color >> 8) & 0xFF) / 255f;
-        float b = (color & 0xFF) / 255f;
+        LinkerMode mode = LinkerItem.mode(stack);
+        float r = ((COLOR >> 16) & 0xFF) / 255f;
+        float g = ((COLOR >> 8) & 0xFF) / 255f;
+        float b = (COLOR & 0xFF) / 255f;
 
         Vec3 camera = event.getCamera().getPosition();
         PoseStack pose = event.getPoseStack();
@@ -88,10 +82,10 @@ public final class AreaRenderer {
         pose.popPose();
     }
 
-    private static @Nullable ItemStack areaItemInHand(LocalPlayer player) {
+    private static @Nullable ItemStack linkerInHand(LocalPlayer player) {
         for (InteractionHand hand : InteractionHand.values()) {
             ItemStack stack = player.getItemInHand(hand);
-            if (stack.getItem() instanceof LinkerItem || stack.getItem() instanceof ConfiguratorItem) {
+            if (stack.getItem() instanceof LinkerItem) {
                 return stack;
             }
         }

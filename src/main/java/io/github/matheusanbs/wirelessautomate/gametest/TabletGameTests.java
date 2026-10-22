@@ -716,6 +716,15 @@ public final class TabletGameTests {
 
     // ------------------------------------------------------------------ mover nós
 
+    /**
+     * O Mover tem ficha de taxa por jogador ({@code TabletMenu.BULK_PER_SECOND}); o teste faz vários na mesma
+     * hora, então zera as fichas antes de cada um.
+     */
+    private static int move(ServerPlayer player, TabletMoveNodesPayload payload) {
+        TabletMenu.forget(player.getUUID());
+        return TabletPayloads.handleMoveNodes(player, payload);
+    }
+
     @GameTest(template = "empty", batch = PUBLIC_NODES_BATCH)
     public static void moveNodesByTabOrAll(GameTestHelper helper) {
         ServerPlayer player = playerWithTablet(helper, A);
@@ -728,7 +737,7 @@ public final class TabletGameTests {
         TabletMenu menu = openTablet(player, 72);
         try {
             List<NodeKey> both = List.of(key(a), key(b));
-            int moved = TabletPayloads.handleMoveNodes(player, new TabletMoveNodesPayload(72, both,
+            int moved = move(player, new TabletMoveNodesPayload(72, both,
                     Optional.of(ResourceType.ITEM), Optional.of(second.id())));
             eq(helper, moved, 2, "nós movidos");
             for (RouterBlockEntity router : List.of(a, b)) {
@@ -740,7 +749,7 @@ public final class TabletGameTests {
                     "índice depois de mover");
 
             // rede alheia privada: recusado e nada muda
-            eq(helper, TabletPayloads.handleMoveNodes(player, new TabletMoveNodesPayload(72, both,
+            eq(helper, move(player, new TabletMoveNodesPayload(72, both,
                     Optional.empty(), Optional.of(foreign.id()))), -1, "aceitou rede alheia privada");
             eq(helper, a.networkId(ResourceType.FLUID), first.id(), "mudou com recusa");
             // pública: aceito
@@ -749,12 +758,12 @@ public final class TabletGameTests {
                     .stream().anyMatch(e -> e.id().equals(foreign.id()) && !e.owned()), "rede pública fora do seletor da aba");
             helper.assertTrue(io.github.matheusanbs.wirelessautomate.packet.ModPayloads.canUse(player,
                     data.network(foreign.id())), "canUse recusou rede pública");
-            eq(helper, TabletPayloads.handleMoveNodes(player, new TabletMoveNodesPayload(72, List.of(key(a)),
+            eq(helper, move(player, new TabletMoveNodesPayload(72, List.of(key(a)),
                     Optional.of(ResourceType.ENERGY), Optional.of(foreign.id()))), 1, "rede pública alheia");
             eq(helper, a.networkId(ResourceType.ENERGY), foreign.id(), "energia na rede pública");
 
             // todas as abas, sem rede
-            eq(helper, TabletPayloads.handleMoveNodes(player, new TabletMoveNodesPayload(72, List.of(key(b)),
+            eq(helper, move(player, new TabletMoveNodesPayload(72, List.of(key(b)),
                     Optional.empty(), Optional.empty())), 1, "tirar da rede");
             // só os tipos carregados: a face de um tipo cujo mod não está aqui fica como está
             for (ResourceType type : io.github.matheusanbs.wirelessautomate.network.LoadedTypes.LIST) {
@@ -762,14 +771,14 @@ public final class TabletGameTests {
             }
 
             // químicos, outro containerId e nó invisível
-            eq(helper, TabletPayloads.handleMoveNodes(player, new TabletMoveNodesPayload(72, both,
+            eq(helper, move(player, new TabletMoveNodesPayload(72, both,
                     Optional.of(ResourceType.CHEMICAL), Optional.of(first.id()))), -1, "químicos");
-            eq(helper, TabletPayloads.handleMoveNodes(player, new TabletMoveNodesPayload(73, both,
+            eq(helper, move(player, new TabletMoveNodesPayload(73, both,
                     Optional.empty(), Optional.of(first.id()))), -1, "outro containerId");
             RouterBlockEntity hidden = chestWithRouter(helper, new BlockPos(2, 1, 0),
                     data.create(UUID.randomUUID(), "teste-mover-oculta").id());
             UUID before = hidden.networkId(ResourceType.ITEM);
-            eq(helper, TabletPayloads.handleMoveNodes(player, new TabletMoveNodesPayload(72,
+            eq(helper, move(player, new TabletMoveNodesPayload(72,
                     List.of(key(hidden)), Optional.empty(), Optional.of(first.id()))), 0, "moveu nó que não vê");
             eq(helper, hidden.networkId(ResourceType.ITEM), before, "nó invisível mudou");
             helper.succeed();

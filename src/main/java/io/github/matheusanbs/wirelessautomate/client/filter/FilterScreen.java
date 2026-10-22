@@ -446,7 +446,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
                 unfocus();
             } else if (enter && box == tags.searchBox()) {
                 tags.addTyped();
-            } else if (enter && box == rule.scopeBox()) {
+            } else if (enter && (box == rule.scopeBox() || box == rule.componentBox())) {
                 rule.submitRule();
             } else if (enter) {
                 unfocus();
@@ -483,6 +483,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         GuiPaint.ink(tags.searchBox(), tr(isChemical() ? "tags.search.chemical" : "tags.search.hint"));
         GuiPaint.ink(rule.picker().enchantBox(), tr("rule.enchantment.hint"));
         GuiPaint.ink(rule.scopeBox(), tr("rule.scope.hint"));
+        GuiPaint.ink(rule.componentBox(), tr("rule.component.hint"));
         GuiPaint.ink(rule.picker().levelBox());
     }
 

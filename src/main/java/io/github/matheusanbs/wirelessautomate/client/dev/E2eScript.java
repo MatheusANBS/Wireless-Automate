@@ -31,7 +31,7 @@ final class E2eScript {
     /**
      * Opcional: {@code WA_E2E_ONLY=tablet} roda só a abertura, o nome e as redes de B, a transferência entre redes e os
      * passos do Tablet; {@code WA_E2E_ONLY=vinculador}, só a abertura e os passos do Configurador e do Vinculador;
-     * {@code WA_E2E_ONLY=ressonador}, só a abertura e os passos do Ressonador,
+     * {@code WA_E2E_ONLY=alcance}, só a abertura, as redes de B e os passos do roteador de alcance; {@code WA_E2E_ONLY=ressonador}, só a abertura e os passos do Ressonador,
      * com os do JEI dele; {@code WA_E2E_ONLY=guia}, só a abertura e as páginas do guia (com o GuideME).
      */
     private static final String ONLY = System.getenv("WA_E2E_ONLY");
@@ -54,6 +54,12 @@ final class E2eScript {
             list.add(close("fechar B"));
             configuratorSteps(list);
             linkerSteps(list);
+            return list;
+        }
+        if ("alcance".equals(ONLY)) {
+            networkSteps(list);
+            list.add(close("fechar B"));
+            rangeSteps(list);
             return list;
         }
         if ("ressonador".equals(ONLY)) {

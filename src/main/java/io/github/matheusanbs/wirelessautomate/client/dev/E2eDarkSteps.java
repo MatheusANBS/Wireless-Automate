@@ -145,13 +145,18 @@ final class E2eDarkSteps {
     }
 
     /** Clique de mouse no botão do tema da tela aberta; termina com o tema e a config no valor esperado. */
+    /** O tema e o ponto do último clique no botão do tema, para a mensagem de falha. */
+    private static String themeBefore = "";
+
     static Step themeClick(String name, GuiTheme expected) {
         return new Step(name, STEP_TIMEOUT_MS, () -> {
             Screen screen = Minecraft.getInstance().screen;
             int[] at = themeButton(screen);
+            themeBefore = GuiThemes.current() + "/" + ClientConfig.THEME.get() + " em " + at[0] + "," + at[1];
             click(screen, at[0] + ThemeToggle.SIZE / 2, at[1] + ThemeToggle.SIZE / 2);
         }, () -> GuiThemes.current() == expected && ClientConfig.THEME.get() == expected,
-                () -> "tema " + GuiThemes.current() + ", config " + ClientConfig.THEME.get());
+                () -> "tema " + GuiThemes.current() + ", config " + ClientConfig.THEME.get() + ", antes do clique "
+                        + themeBefore + ", tela " + describe(Minecraft.getInstance().screen));
     }
 
     /** O primeiro campo de texto da tela aberta. */

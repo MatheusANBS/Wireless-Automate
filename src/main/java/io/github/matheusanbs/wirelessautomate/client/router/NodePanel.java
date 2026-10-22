@@ -311,9 +311,11 @@ public final class NodePanel {
      * Nenhum); um painel só de leitura, ou uma face sem acesso, só escolhe.
      */
     private void faceClick(Hot hot, int button) {
-        selectFace(model.faceOf(FaceNet.SIDES[hot.arg()]));
+        Direction clicked = model.faceOf(FaceNet.SIDES[hot.arg()]);
+        boolean alreadySelected = clicked == model.face();
+        selectFace(clicked);
         FaceView v = model.view();
-        if (!model.editable(v)) {
+        if (!alreadySelected || !model.editable(v)) {
             return;
         }
         PortMode next = Screen.hasShiftDown() ? PortMode.NONE

@@ -229,13 +229,14 @@ TIERS = [
 # coordenadas de 1280x800 e o recorte em volta (o cartão flutuando em cima e o bloco do material embaixo).
 # Medidos na captura: a câmera é a mesma, mas o campo de visão efetivo muda com o ambiente que fotografa,
 # então confira a folha dos recortes (folha.py) sempre que refizer a vitrine.
-TIER_HALL_X = [147, 287, 428, 569, 710, 851, 992, 1132]
-TIER_HALL_Y = (276, 442)
-TIER_HALL_MEIA_LARGURA = 66
+TIER_HALL_X = [307, 398, 491, 589, 678, 780, 877, 977]
+TIER_HALL_Y = (318, 478)
+TIER_HALL_MEIA_LARGURA = 60
 VAZOES = [
     ("Items/s", [32, 256, 2_048, 16_384, 131_072, 1_048_576, 8_388_608, 0]),
     ("Fluids (mB/s)", [2_000, 16_000, 128_000, 1_024_000, 8_192_000, 65_536_000, 524_288_000, 0]),
-    ("Energy (FE/t)", [1_000, 8_000, 64_000, 512_000, 4_096_000, 32_768_000, 2_097_152_000, 0]),
+    # a geração máxima do Ressonador do tier mais 5% (EnergyBalance); o Ultimate não tem limite
+    ("Energy (FE/t)", [454, 29_100, 63_000, 1_350_000, 67_200_000, 84_500_000, 158_000_000, 0]),
     ("Source/s", [100, 800, 6_400, 51_200, 409_600, 3_276_800, 26_214_400, 0]),
 ]
 ALCANCE = ["64 blocks", "512 blocks", "Dimension"] + ["All dims"] * 5

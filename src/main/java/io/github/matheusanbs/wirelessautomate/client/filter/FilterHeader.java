@@ -39,7 +39,6 @@ final class FilterHeader {
     private FlatButton backButton;
     private FlatButton whiteButton;
     private FlatButton blackButton;
-    private FlatButton componentsButton;
     private final FlatButton[] tabButtons = new FlatButton[Tab.values().length];
 
     FilterHeader(FilterScreen screen, FilterText text, FilterActions actions) {
@@ -70,10 +69,6 @@ final class FilterHeader {
         blackButton = screen.add(new FlatButton(0, 0, font.width(black) + 12, SEG_H, black,
                 (g, b, hovered) -> paintSegment(g, b, hovered, black, filter().listMode() == Filter.ListMode.BLACKLIST),
                 () -> setListMode(Filter.ListMode.BLACKLIST)).tooltip(() -> tr("list.black.tooltip")));
-        Component components = tr("components");
-        componentsButton = screen.add(new FlatButton(0, 0, 9 + 4 + font.width(components) + 6, SEG_H, components,
-                this::paintComponents, this::toggleComponents)
-                .tooltip(() -> filter().matchComponents() ? tr("components.on.tooltip") : tr("components.off.tooltip")));
         for (Tab t : Tab.values()) {
             Component label = tabLabel(t);
             tabButtons[t.ordinal()] = screen.add(new FlatButton(0, 0, 40, TAB_H, label,
@@ -98,8 +93,6 @@ final class FilterHeader {
         backButton.setMessage(back);
         whiteButton.setPosition(x + X0, y + ROW2_Y);
         blackButton.setPosition(x + X0 + whiteButton.getWidth() + 2, y + ROW2_Y);
-        componentsButton.setPosition(blackButton.getX() + blackButton.getWidth() + 8, y + ROW2_Y);
-        componentsButton.visible = screen.isItem();
 
         // abas, só as que valem para o tipo
         List<Tab> tabs = new ArrayList<>();
@@ -148,15 +141,4 @@ final class FilterHeader {
         }
     }
 
-    private void toggleComponents() {
-        actions.send(Op.SET_COMPONENTS, 0, filter().matchComponents() ? 0 : 1, "");
-    }
-
-    private void paintComponents(GuiGraphics g, FlatButton b, boolean hovered) {
-        boolean on = filter().matchComponents();
-        GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), GuiPaint.BUTTON,
-                hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
-        GuiPaint.checkbox(g, b.getX() + 3, b.getY() + 2, on, GuiPaint.ACCENT);
-        GuiPaint.text(g, font(), tr("components"), b.getX() + 16, b.getY() + 3, on ? GuiPaint.FG : GuiPaint.MUTED);
-    }
 }

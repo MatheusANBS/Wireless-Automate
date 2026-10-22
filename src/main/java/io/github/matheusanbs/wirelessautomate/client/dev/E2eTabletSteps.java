@@ -84,6 +84,7 @@ final class E2eTabletSteps {
         E2eFlowsSteps.flowsSteps(list);
         tabletGroupSteps(list);
         E2eNetworkSectionSteps.sectionSteps(list);
+        E2eAccessSteps.accessSteps(list);
         E2eTabletMachinesSteps.machineSteps(list);
         tabletRemoteSteps(list, playerId);
     }

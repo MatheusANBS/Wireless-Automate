@@ -11,22 +11,24 @@ import org.lwjgl.glfw.GLFW;
 
 /**
  * O teclado do Tablet: o que digitar na Lista procura, as teclas da Lista, e os campos de texto (renomear e
- * nova rede ou grupo) que seguram as teclas enquanto o cursor está neles. Devolve {@code true} quando tratou a
+ * nova rede ou grupo, e os do acesso à rede) que seguram as teclas enquanto o cursor está neles. Devolve {@code true} quando tratou a
  * tecla; {@code false} deixa o resto para a tela. Também dá aos campos a cor do tema (o {@link EditBox} guarda a cor).
  */
 final class TabletKeys {
     private final Screen screen;
     private final TabletList list;
     private final NameFields names;
+    private final AccessDetail access;
     private final Supplier<Tab> tab;
     private @Nullable EditBox searchBox;
     /** Versão do tema com que os campos foram pintados ({@link GuiThemes#version()}). */
     private int inkVersion = -1;
 
-    TabletKeys(Screen screen, TabletList list, NameFields names, Supplier<Tab> tab) {
+    TabletKeys(Screen screen, TabletList list, NameFields names, AccessDetail access, Supplier<Tab> tab) {
         this.screen = screen;
         this.list = list;
         this.names = names;
+        this.access = access;
         this.tab = tab;
     }
 
@@ -54,6 +56,7 @@ final class TabletKeys {
         GuiPaint.ink(searchBox);
         GuiPaint.ink(names.newBox());
         GuiPaint.ink(names.renameBox());
+        access.ink();
     }
 
     boolean keyPressed(int keyCode, int scanCode, int modifiers) {
@@ -75,6 +78,8 @@ final class TabletKeys {
                 names.finishRename(enter);
             } else if (box == names.newBox() && enter) {
                 names.create();
+            } else if (access.keyPressed(box, keyCode)) {
+                // tratada pela lista de sugestões do acesso
             } else if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
                 screen.setFocused(null);
             } else {

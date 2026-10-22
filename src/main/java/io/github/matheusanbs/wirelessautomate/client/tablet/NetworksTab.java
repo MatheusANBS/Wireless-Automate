@@ -9,6 +9,7 @@ import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletText.tr
 import io.github.matheusanbs.wirelessautomate.client.FlatButton;
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
+import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu.Action;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.GroupView;
@@ -41,6 +42,7 @@ final class NetworksTab {
     private final NameFields names;
     private final NetworkList list;
     private final GroupDetail groups;
+    private final AccessDetail access;
     private @Nullable UUID selectedNetwork;
     /** O que foi pedido e ainda não chegou: um grupo ({@code true}) ou uma rede; os ids que já existiam. */
     private @Nullable Boolean awaitingGroup;
@@ -50,15 +52,26 @@ final class NetworksTab {
     private FlatButton use;
     private FlatButton remove;
     private FlatButton create;
+    private FlatButton accessButton;
 
-    NetworksTab(TabletLayout layout, Supplier<TabletSnapshot> snapshot, TabletActions actions, SideList side,
-            NameFields names) {
+    NetworksTab(TabletLayout layout, TabletMenu menu, Supplier<TabletSnapshot> snapshot, TabletActions actions,
+            SideList side, NameFields names) {
         this.layout = layout;
         this.snapshot = snapshot;
         this.actions = actions;
         this.names = names;
         this.list = new NetworkList(snapshot, side, actions);
         this.groups = new GroupDetail(layout, snapshot, actions, names);
+        this.access = new AccessDetail(layout, menu, actions, this::selectedNetworkView);
+    }
+
+    AccessDetail access() {
+        return access;
+    }
+
+    /** Outra aba ou outra rede: o acesso volta a ficar fechado. */
+    void closeAccess() {
+        access.open(false);
     }
 
     private TabletSnapshot snapshot() {
@@ -107,6 +120,10 @@ final class NetworksTab {
                         names.removeArmed() ? tr("remove.confirm") : tr("network.remove"), names.removeArmed()),
                 () -> names.removeSelected(Action.NETWORK_REMOVE, selectedNetwork))
                 .tooltip(() -> tr("network.remove.tooltip")));
+        accessButton = buttons.add(TabletScreen.Tab.NETWORKS, new FlatButton(x + RX, y + BODY_Y + 150, rw, ROW_H,
+                tr("access.button"), (g, b, hovered) -> TabletButtons.paintText(g, b, hovered, accessLabel()),
+                () -> access.open(true)).tooltip(() -> tr("access.button.tooltip")));
+        access.addBack(buttons);
         groups.addButtons(buttons);
         buttons.add(TabletScreen.Tab.NETWORKS, names.newToggle(NameFields.Rename.NETWORK, tr("network.new"), font));
         buttons.add(TabletScreen.Tab.NETWORKS, names.newToggle(NameFields.Rename.GROUP, tr("group.new"), font));
@@ -116,12 +133,27 @@ final class NetworksTab {
     void refresh(boolean shown) {
         NetworkView network = selectedNetworkView();
         boolean manage = network != null && network.manageable();
-        makePrivate.visible = makePublic.visible = shown && manage;
-        use.visible = shown && network != null;
+        // o acesso é das redes privadas que o jogador gerencia; perdeu isso, a coluna volta aos detalhes
+        boolean accessible = manage && !network.isPublic() && groups.selected() == null;
+        if (!accessible) {
+            access.open(false);
+        }
+        boolean details = !access.open();
+        makePrivate.visible = makePublic.visible = shown && manage && details;
+        use.visible = shown && network != null && details;
         use.active = network != null && !isSelectedActive();
-        remove.visible = shown && manage;
+        remove.visible = shown && manage && details;
+        accessButton.visible = shown && accessible && details;
+        access.refresh(shown && accessible);
         groups.refresh(shown && groups.selected() != null);
         create.visible = shown && names.newOpen();
+    }
+
+    /** "Acesso" ou "Acesso (N)" com os convidados e times da rede. */
+    private Component accessLabel() {
+        NetworkView network = selectedNetworkView();
+        int count = network == null ? 0 : network.access().guests().size() + network.access().teams().size();
+        return count == 0 ? tr("access.button") : tr("access.button.count", count);
     }
 
     /** O Remover à vista: o da rede ou o do grupo. */
@@ -184,6 +216,7 @@ final class NetworksTab {
     }
 
     private void pickNetwork(UUID id) {
+        access.open(false);
         selectedNetwork = id;
         groups.select(null);
         names.clearRename();
@@ -191,6 +224,7 @@ final class NetworksTab {
     }
 
     private void pickGroup(UUID id) {
+        access.open(false);
         selectedNetwork = null;
         groups.select(id);
         names.clearRename();
@@ -253,6 +287,9 @@ final class NetworksTab {
         if (groups.selected() != null) {
             return groups.mouseClicked(font, mouseX, mouseY);
         }
+        if (access.open()) {
+            return access.mouseClicked(mouseX, mouseY);
+        }
         NetworkView network = selectedNetworkView();
         if (network != null && network.manageable()) {
             int swatch = swatchAt(mouseX, mouseY);
@@ -269,9 +306,11 @@ final class NetworksTab {
     }
 
     /** A roda na coluna da direita rola as redes do grupo; na esquerda, a lista. */
-    void mouseScrolled(Font font, double mouseX, int step) {
+    void mouseScrolled(Font font, double mouseX, double mouseY, int step) {
         if (mouseX >= layout.left + RX && groups.selected() != null) {
             groups.mouseScrolled(font, step);
+        } else if (mouseX >= layout.left + RX && access.open()) {
+            access.mouseScrolled(mouseX, mouseY, step);
         } else {
             list.mouseScrolled(font, step);
         }
@@ -285,6 +324,9 @@ final class NetworksTab {
         if (groups.selected() != null) {
             return groups.tooltip(font, mouseX, mouseY);
         }
+        if (access.open()) {
+            return access.tooltip(font, mouseX, mouseY);
+        }
         NetworkView network = selectedNetworkView();
         if (network != null && network.manageable() && swatchAt(mouseX, mouseY) >= 0) {
             return tr("color.tooltip");
@@ -293,6 +335,11 @@ final class NetworksTab {
             return tr("rename.tooltip");
         }
         return null;
+    }
+
+    /** A lista de sugestões do acesso, por cima dos widgets; a tela chama depois de desenhá-los. */
+    void renderOverlay(GuiGraphics g, Font font) {
+        access.renderOverlay(g, font);
     }
 
     // ------------------------------------------------------------------ ganchos do e2e e das capturas
@@ -329,6 +376,10 @@ final class NetworksTab {
         int y = layout.top;
         int rw = layout.rw();
         NetworkView n = selectedNetworkView();
+        if (access.open() && n != null) {
+            access.render(g, font, mouseX, mouseY);
+            return;
+        }
         if (n == null) {
             GuiText.draw(g, font, tr("network.pick"), x, y + BODY_Y + 3, rw, GuiPaint.MUTED);
             return;
@@ -341,7 +392,8 @@ final class NetworksTab {
             nodes.append(", ").append(plural("network.unloaded", n.unloaded()));
         }
         GuiText.draw(g, font, nodes, x, y + BODY_Y + 29, rw, GuiPaint.MUTED);
-        Component members = n.isPublic() ? tr("members.public") : tr("members.private", n.owner());
+        Component members = n.isPublic() ? tr("members.public")
+                : !n.owned() && !n.manageable() ? tr("members.guest", n.owner()) : tr("members.private", n.owner());
         GuiText.draw(g, font, members, x, y + BODY_Y + 40, rw, GuiPaint.MUTED);
         if (n.manageable()) {
             GuiPaint.text(g, font, tr("color"), x, y + SWATCH_Y - 11, GuiPaint.FG);

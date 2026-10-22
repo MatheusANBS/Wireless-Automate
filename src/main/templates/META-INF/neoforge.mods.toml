@@ -44,6 +44,14 @@ config="${mod_id}.mixins.json"
     ordering="NONE"
     side="BOTH"
 
+# FTB Teams: os times de grupo como acesso a uma rede privada (API 2101.x, a do 1.21.1).
+[[dependencies.${mod_id}]]
+    modId="ftbteams"
+    type="optional"
+    versionRange="[2101,2102)"
+    ordering="NONE"
+    side="BOTH"
+
 # Allthemodium: os tiers Allthemodium, Vibranium e Unobtainium (só ids e tags nas receitas, sem API).
 [[dependencies.${mod_id}]]
     modId="allthemodium"

@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.filter;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.ArrayList;
 import java.util.List;
@@ -293,8 +294,18 @@ public final class Filter {
         return listMode == ListMode.WHITELIST && !entries.isEmpty() && chemicals().usesStock;
     }
 
+    /** O modo pelo nome gravado; um nome desconhecido é erro do codec, não exceção. */
+    private static DataResult<ListMode> parseListMode(String name) {
+        for (ListMode mode : ListMode.values()) {
+            if (mode.name().equals(name)) {
+                return DataResult.success(mode);
+            }
+        }
+        return DataResult.error(() -> "modo de lista desconhecido: " + name);
+    }
+
     public static final Codec<Filter> CODEC = RecordCodecBuilder.create(i -> i.group(
-            Codec.STRING.xmap(ListMode::valueOf, ListMode::name).optionalFieldOf("list", ListMode.WHITELIST)
+            Codec.STRING.comapFlatMap(Filter::parseListMode, ListMode::name).optionalFieldOf("list", ListMode.WHITELIST)
                     .forGetter(Filter::listMode),
             Codec.BOOL.optionalFieldOf("components", false).forGetter(Filter::matchComponents),
             FilterEntry.CODEC.listOf().optionalFieldOf("entries", List.of()).forGetter(Filter::entries))

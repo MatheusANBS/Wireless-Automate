@@ -10,6 +10,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import io.github.matheusanbs.wirelessautomate.Config;
+import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -88,6 +90,38 @@ public final class NetworkSavedData extends SavedData {
         networks.put(id, network);
         setDirty();
         return network;
+    }
+
+    /** O jogador já tem as redes que a config permite (operador não tem teto; 0 = sem limite). */
+    public boolean networkLimitReached(ServerPlayer player) {
+        int max = Config.MAX_NETWORKS_PER_PLAYER.get();
+        return max > 0 && !player.hasPermissions(2) && ownedNetworks(player.getUUID()) >= max;
+    }
+
+    /** O mesmo para os grupos. */
+    public boolean groupLimitReached(ServerPlayer player) {
+        int max = Config.MAX_GROUPS_PER_PLAYER.get();
+        return max > 0 && !player.hasPermissions(2) && ownedGroups(player.getUUID()) >= max;
+    }
+
+    private int ownedNetworks(UUID owner) {
+        int count = 0;
+        for (WaNetwork network : networks.values()) {
+            if (network.owner().equals(owner)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private int ownedGroups(UUID owner) {
+        int count = 0;
+        for (WaGroup group : groups.values()) {
+            if (group.owner().equals(owner)) {
+                count++;
+            }
+        }
+        return count;
     }
 
     public @Nullable WaNetwork network(UUID id) {
@@ -282,27 +316,41 @@ public final class NetworkSavedData extends SavedData {
     public static NetworkSavedData load(CompoundTag tag, HolderLookup.Provider registries) {
         NetworkSavedData data = new NetworkSavedData();
         ListTag list = tag.getList("networks", Tag.TAG_COMPOUND);
+        // Uma entrada com UUID malformado só descarta a si mesma: se a exceção subisse, o armazenamento devolveria
+        // dados vazios e o próximo salvamento apagaria todas as redes e grupos.
         for (int i = 0; i < list.size(); i++) {
-            WaNetwork network = WaNetwork.load(list.getCompound(i));
-            data.networks.put(network.id(), network);
+            try {
+                WaNetwork network = WaNetwork.load(list.getCompound(i));
+                data.networks.put(network.id(), network);
+            } catch (IllegalArgumentException e) {
+                WirelessAutomate.LOGGER.warn("Rede com dados inválidos descartada: {}", list.getCompound(i));
+            }
         }
         ListTag active = tag.getList("active", Tag.TAG_COMPOUND);
         for (int i = 0; i < active.size(); i++) {
             CompoundTag entry = active.getCompound(i);
-            UUID network = entry.getUUID("network");
-            if (data.networks.containsKey(network)) {
-                data.activeByPlayer.put(entry.getUUID("player"), network);
+            try {
+                UUID network = entry.getUUID("network");
+                if (data.networks.containsKey(network)) {
+                    data.activeByPlayer.put(entry.getUUID("player"), network);
+                }
+            } catch (IllegalArgumentException e) {
+                WirelessAutomate.LOGGER.warn("Rede ativa com dados inválidos descartada: {}", entry);
             }
         }
         ListTag groupList = tag.getList("groups", Tag.TAG_COMPOUND);
         for (int i = 0; i < groupList.size(); i++) {
-            WaGroup group = WaGroup.load(groupList.getCompound(i));
-            for (UUID network : group.networks()) {
-                if (!data.networks.containsKey(network)) {
-                    group = group.withoutNetwork(network);
+            try {
+                WaGroup group = WaGroup.load(groupList.getCompound(i));
+                for (UUID network : group.networks()) {
+                    if (!data.networks.containsKey(network)) {
+                        group = group.withoutNetwork(network);
+                    }
                 }
+                data.groups.put(group.id(), group);
+            } catch (IllegalArgumentException e) {
+                WirelessAutomate.LOGGER.warn("Grupo com dados inválidos descartado: {}", groupList.getCompound(i));
             }
-            data.groups.put(group.id(), group);
         }
         data.refreshPaused();
         return data;

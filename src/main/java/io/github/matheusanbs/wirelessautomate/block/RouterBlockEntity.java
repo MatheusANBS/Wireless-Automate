@@ -213,6 +213,15 @@ public class RouterBlockEntity extends BlockEntity {
         return targets.setAttachedNetwork(types, absoluteFaceMask, network);
     }
 
+    /**
+     * Como {@link #setAttachedFacesNetwork(Collection, int, UUID)}, mas uma face numa rede de onde {@code canLeave}
+     * recusa tirar fica como está. Devolve quantas faces ficaram por causa disso.
+     */
+    public int setAttachedFacesNetwork(Collection<ResourceType> types, int absoluteFaceMask, @Nullable UUID network,
+            Predicate<UUID> canLeave) {
+        return targets.setAttachedNetwork(types, absoluteFaceMask, network, canLeave);
+    }
+
     /** As faces absolutas da presa em {@code absoluteFaceMask} e {@code types} já estão em {@code network} (Vinculador). */
     public boolean attachedFacesIn(Collection<ResourceType> types, int absoluteFaceMask, @Nullable UUID network) {
         return faces.attachedIn(types, facing(), spin(), absoluteFaceMask, network);

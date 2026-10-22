@@ -969,7 +969,7 @@
   "gui.wirelessautomate.linker.open.title": "Open a router",
   "gui.wirelessautomate.linker.open.attached": "attached",
   "gui.wirelessautomate.linker.open.remote": "range",
-  "gui.wirelessautomate.linker.open.distance": "%s blocks",
+  "gui.wirelessautomate.linker.open.distance": "%s m",
   "gui.wirelessautomate.linker.open.hint": "Click a row to open the router on this machine",
   "item.wirelessautomate.linker.tooltip.mode": "Mode: %s",
   "item.wirelessautomate.linker.tooltip.corner1": "Corner 1: %s",

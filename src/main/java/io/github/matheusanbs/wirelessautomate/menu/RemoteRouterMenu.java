@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.menu;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerOpen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -63,7 +64,16 @@ public class RemoteRouterMenu extends RouterMenu {
         if (router.isRemoved() || level == null || !level.isLoaded(pos) || level.getBlockEntity(pos) != router) {
             return false;
         }
-        return player instanceof ServerPlayer serverPlayer && TabletMenu.hasTablet(serverPlayer)
-                && TabletMenu.inReach(serverPlayer, router) && TabletMenu.canSee(serverPlayer, router);
+        return player instanceof ServerPlayer serverPlayer && mayStayOpen(serverPlayer, router);
+    }
+
+    /**
+     * O jogador pode manter aberta a tela à distância do roteador: ao alcance dele e, ou com o Tablet (vendo o nó), ou
+     * com o Vinculador em modo Abrir na mão (que abriu a tela e não pede que ele veja a rede, como o clique no
+     * bloco do roteador). Vale também para a tela de filtro aberta dali.
+     */
+    public static boolean mayStayOpen(ServerPlayer player, RouterBlockEntity router) {
+        return TabletMenu.inReach(player, router)
+                && (TabletMenu.hasTablet(player) && TabletMenu.canSee(player, router) || LinkerOpen.holdsOpenLinker(player));
     }
 }

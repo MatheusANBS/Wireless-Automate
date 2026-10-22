@@ -50,7 +50,7 @@ final class E2eLinkerSteps {
     private static BlockPos linkCornerB;
 
     /**
-     * Vincular: com o Vinculador na mão, clique no roteador o escolhe; Shift + clique em dois blocos marca a área em
+     * Vincular: com o Vinculador na mão, clique no roteador o escolhe; Shift + clique em dois blocos (o chão ao lado e o baú) marca a área em
      * volta do baú; a tela mostra o roteador e a área, Vincular junta o baú ao roteador, Desvincular o tira (com
      * a tela maior no meio). Abrir: Shift + clique no ar troca o modo, clique no baú (que tem o roteador preso e
      * o de alcance) abre a lista, e a escolha abre a tela do roteador.
@@ -65,7 +65,7 @@ final class E2eLinkerSteps {
             linkChest = chest.offset(2, 0, 0);
             linkAttached = linkChest.above();
             linkCornerA = linkChest.offset(-1, -1, -1);
-            linkCornerB = linkChest.offset(1, 1, 1);
+            linkCornerB = linkChest;
             for (BlockPos pos : List.of(chest, linkChest)) {
                 level.setBlockAndUpdate(pos, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.SOUTH));
             }
@@ -74,6 +74,8 @@ final class E2eLinkerSteps {
             level.setBlockAndUpdate(linkAttached, ModBlocks.ROUTER.get().defaultBlockState()
                     .setValue(RouterBlock.FACING, Direction.UP));
             router(server, linkRouter).setRangeUpgrade(new ItemStack(ModItems.RANGE_UPGRADE.get()));
+            // perto de tudo: os cliques precisam estar ao alcance do jogador
+            player.teleportTo(chest.getX() + 2.5, chest.getY() + 1, chest.getZ() + 2.5);
             player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.LINKER.get()));
             return null;
         }), () -> clientSees(linkRouter) && clientSees(linkAttached)

@@ -58,7 +58,7 @@ from the face modes.
 | **Network per face** | On a furnace, the **Top** face (input) can be on the "Mine" network and the **Bottom** face (output) on the "Storage" network: ore comes in through Mine and ingots leave through Storage. Each tab has its own: the energy can go to the "Base" network. |
 | **Delivery order** | Higher priority first; ties take turns (round-robin). |
 | **Storage** | Receives from extractors and delivers to inserters, without bouncing between two Storage faces. |
-| **Owner** | Only the network's owner (or an operator) can put routers in it. |
+| **Who can use it** | A public network is open to everyone. On a private one, the owner, operators and **guests** (and, with FTB Teams, the members of the teams you add) can put routers in it and take them out. Only the owner (or an operator) manages it: rename, invite and remove. |
 
 ## Changing the network
 

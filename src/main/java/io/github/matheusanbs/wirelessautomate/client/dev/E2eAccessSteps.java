@@ -24,7 +24,7 @@ import org.lwjgl.glfw.GLFW;
  * O acesso a uma rede privada no e2e, na aba Redes do Tablet: a rede dos itens ganha convidados escolhidos pela lista
  * de sugestões (setas e Enter) e pelo nome digitado, e um time do FTB Teams (com ele no jogo); depois a lista de
  * acesso (capturas {@code 7s-tablet-acesso*}, também no tema escuro) e o ✕ de dois cliques. No fim a rede volta ao
- * que era e a coluna aos detalhes. Três jogadores falsos entram no cache de perfis só para haver nomes a sugerir.
+ * que era. Três jogadores falsos entram no cache de perfis só para haver nomes a sugerir.
  */
 final class E2eAccessSteps {
     private E2eAccessSteps() {
@@ -61,9 +61,8 @@ final class E2eAccessSteps {
             }
             return null;
         }), () -> usercacheHas("Bruna"), () -> "o cache de jogadores não chegou ao disco"));
-        list.add(new Step("acesso: abrir o Acesso da rede", STEP_TIMEOUT_MS, () -> click(widget(
-                byMessage(Component.translatable("gui.wirelessautomate.tablet.access.button")), "Acesso")),
-                () -> tabletScreen().access().open(), () -> "o acesso não abriu"));
+        list.add(new Step("acesso: a seção aparece na rede privada", STEP_TIMEOUT_MS, () -> {
+        }, () -> tabletScreen().access().shown(), () -> "a seção de acesso não está à vista"));
         list.add(new Step("acesso: clicar no campo de convidar", STEP_TIMEOUT_MS, () -> {
             int[] c = tabletScreen().access().fieldCenter(false);
             click(tabletScreen(), c[0], c[1]);
@@ -119,9 +118,5 @@ final class E2eAccessSteps {
             data.update(network);
             return null;
         }), () -> counts()[0] == 0 && counts()[1] == 0, () -> "acesso " + counts()[0] + "/" + counts()[1]));
-        list.add(new Step("acesso: voltar aos detalhes", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.tablet.access.back")),
-                        "Voltar")),
-                () -> !tabletScreen().access().open(), () -> "o acesso continua aberto"));
     }
 }

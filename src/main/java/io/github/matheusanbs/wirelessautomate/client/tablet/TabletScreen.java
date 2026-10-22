@@ -206,7 +206,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
                 flows.shown();
             }
             names.reset();
-            networks.closeAccess();
+            networks.resetAccess();
             setFocused(null);
             if (t == Tab.LIST) {
                 keys.focusSearch();
@@ -225,7 +225,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     }
 
     /** O acesso à rede escolhida (convidados e times), para os ganchos do e2e e das capturas. */
-    public AccessDetail access() {
+    public AccessSection access() {
         return networks.access();
     }
 

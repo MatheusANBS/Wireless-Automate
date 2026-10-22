@@ -14,7 +14,6 @@ import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
 import io.github.matheusanbs.wirelessautomate.packet.ModPayloads;
 import io.github.matheusanbs.wirelessautomate.packet.PanelNoticePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletProfilePayload;
-import io.github.matheusanbs.wirelessautomate.preset.ConfiguratorArea;
 import io.github.matheusanbs.wirelessautomate.preset.PresetApplier;
 import io.github.matheusanbs.wirelessautomate.preset.PresetPaste;
 import io.github.matheusanbs.wirelessautomate.preset.ProfileSource;
@@ -152,7 +151,7 @@ final class TabletProfile {
      */
     private ResourceLocation machineOf(RouterBlockEntity router, NodeKey key) {
         if (router.getLevel() instanceof ServerLevel level && level.isLoaded(router.machinePos())) {
-            return ConfiguratorArea.machine(level, router);
+            return PresetPaste.machine(level, router);
         }
         NodeIndex.Entry entry = NodeIndex.get(viewer.server).entry(key);
         return entry == null ? BuiltInRegistries.BLOCK.getKey(net.minecraft.world.level.block.Blocks.AIR)

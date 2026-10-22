@@ -329,6 +329,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             return;
         }
         rule.picker().focusChanged(before, listener);
+        rule.focusChanged(before, listener);
     }
 
     // ------------------------------------------------------------------ entrada
@@ -359,7 +360,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             unfocus();
         }
         // lista de sugestões aberta: o clique nela escolhe e não vaza para os widgets de baixo
-        if (rule.picker().mouseClicked(mouseX, mouseY, button)) {
+        if (rule.picker().mouseClicked(mouseX, mouseY, button) || rule.suggestionClicked(mouseX, mouseY, button)) {
             return true;
         }
         if (button == 0 && resizeHandle.begin(mouseX, mouseY, leftPos, topPos, imageWidth, imageHeight)) {
@@ -381,6 +382,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             return true;
         }
         rule.picker().reopenOnClick(mouseX, mouseY);
+        rule.reopenOnClick(mouseX, mouseY);
         // a tela dá o foco ao botão clicado; os campos ficam com ele só quando clicados
         if (focusAfterClick != null) {
             setFocused(focusAfterClick);
@@ -420,7 +422,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         int step = (int) -Math.signum(scrollY);
-        if (rule.picker().scrollSuggestions(mouseX, mouseY, step)
+        if (rule.picker().scrollSuggestions(mouseX, mouseY, step) || rule.scrollSuggestions(mouseX, mouseY, step)
                 || list.mouseScrolled(mouseX, mouseY, step)
                 || tags.mouseScrolled(mouseX, mouseY, step)
                 || rule.mouseScrolled(mouseX, mouseY, scrollX, scrollY, step)) {
@@ -433,7 +435,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (getFocused() instanceof EditBox box && box.isFocused()) {
             boolean enter = keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER;
-            if (rule.picker().keyPressed(box, keyCode, enter)) {
+            if (rule.picker().keyPressed(box, keyCode, enter) || rule.suggestionKey(box, keyCode, enter)) {
                 return true;
             }
             if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
@@ -504,6 +506,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         tags.hover(mouseX, mouseY);
         super.render(g, mouseX, mouseY, partialTick);
         rule.picker().renderSuggestions(g, mouseX, mouseY);
+        rule.renderSuggestions(g, mouseX, mouseY);
         if (resizeHandle.dragging()) {
             return;
         }
@@ -516,7 +519,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
             g.renderComponentTooltip(font, ThemeToggle.tooltip(), mouseX, mouseY);
             return;
         }
-        if (rule.picker().tooltip(mouseX, mouseY)) {
+        if (rule.picker().tooltip(mouseX, mouseY) || rule.suggestionTooltip(mouseX, mouseY)) {
             return;
         }
         for (FlatButton button : buttons) {

@@ -41,6 +41,7 @@ If a network is deleted, the faces that were on it are left without a network an
 The **Networks** tab is a single list. Each network group is a section, with **▾** to collapse it and **Pause** on its header (**paused** when it is); networks outside any group come last, under **No group**. A network in two groups shows up in both sections, and the tooltip says **Also in …**.
 
 - Click a network to see its color and whether it is public or private on the right, use it or remove it.
+- On a private network you own, the column shows the **guests** and the **FTB Teams teams** (only with that mod). Type a name to see suggestions, pick with the arrows and Enter (Tab completes) and click the ✕ twice to remove. Only players who already joined the server show up, and a team counts as a whole: whoever joins or leaves it gains or loses access on their own.
 - Click a group's header to see the group on the right: its name, pause, its networks (check or uncheck each one; **in …** flags a network that is already in another group) and remove.
 - **New network** and **New group**, below the list, create a network or a group: type the name and confirm (or Enter).
 

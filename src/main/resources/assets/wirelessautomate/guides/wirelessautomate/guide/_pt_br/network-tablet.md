@@ -41,6 +41,7 @@ Se uma rede for apagada, as faces que estavam nela ficam sem rede e o nó mostra
 A aba **Redes** é uma lista só. Cada grupo de redes é uma seção, com **▾** para recolher e **Pausar** no cabeçalho (**pausado** quando está); as redes fora de grupo vêm no fim, em **Sem grupo**. Uma rede em dois grupos aparece nas duas seções, e a dica diz **Também em …**.
 
 - Clique numa rede para ver à direita a cor, se é pública ou privada, usá-la e removê-la.
+- Numa rede privada que é sua, a coluna mostra os **convidados** e os **times do FTB Teams** (só com o mod). Digite um nome para ver sugestões, escolha com as setas e Enter (Tab completa) e use o ✕ duas vezes para tirar. Só aparecem jogadores que já entraram no servidor, e um time vale por inteiro: quem entra ou sai dele ganha ou perde o acesso sozinho.
 - Clique no cabeçalho de um grupo para ver o grupo à direita: o nome, pausar, as redes dele (marque ou desmarque cada uma; **em …** avisa a rede que já está noutro grupo) e remover.
 - **Nova rede** e **Novo grupo**, embaixo da lista, criam uma rede ou um grupo: digite o nome e confirme (ou Enter).
 

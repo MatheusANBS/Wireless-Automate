@@ -34,7 +34,9 @@ import org.jetbrains.annotations.Nullable;
  */
 final class NetworksTab {
     private static final int SWATCH = 10;
-    private static final int SWATCH_Y = BODY_Y + 84;
+    /** A cor fica logo abaixo do segmento Pública/Privada; o acesso começa depois dela ({@link AccessSection}). */
+    private static final int SWATCH_Y = BODY_Y + 46;
+    private static final int SEGMENT_Y = BODY_Y + 28;
 
     private final TabletLayout layout;
     private final Supplier<TabletSnapshot> snapshot;
@@ -42,7 +44,7 @@ final class NetworksTab {
     private final NameFields names;
     private final NetworkList list;
     private final GroupDetail groups;
-    private final AccessDetail access;
+    private final AccessSection access;
     private @Nullable UUID selectedNetwork;
     /** O que foi pedido e ainda não chegou: um grupo ({@code true}) ou uma rede; os ids que já existiam. */
     private @Nullable Boolean awaitingGroup;
@@ -52,7 +54,6 @@ final class NetworksTab {
     private FlatButton use;
     private FlatButton remove;
     private FlatButton create;
-    private FlatButton accessButton;
 
     NetworksTab(TabletLayout layout, TabletMenu menu, Supplier<TabletSnapshot> snapshot, TabletActions actions,
             SideList side, NameFields names) {
@@ -62,16 +63,16 @@ final class NetworksTab {
         this.names = names;
         this.list = new NetworkList(snapshot, side, actions);
         this.groups = new GroupDetail(layout, snapshot, actions, names);
-        this.access = new AccessDetail(layout, menu, actions, this::selectedNetworkView);
+        this.access = new AccessSection(layout, menu, actions, this::selectedNetworkView);
     }
 
-    AccessDetail access() {
+    AccessSection access() {
         return access;
     }
 
-    /** Outra aba ou outra rede: o acesso volta a ficar fechado. */
-    void closeAccess() {
-        access.open(false);
+    /** Outra aba: larga o que estava digitado e armado no acesso. */
+    void resetAccess() {
+        access.reset();
     }
 
     private TabletSnapshot snapshot() {
@@ -95,6 +96,27 @@ final class NetworksTab {
         return network == null ? null : network.isPublic();
     }
 
+    /** Quem gerencia tem o Usar e o Remover lado a lado, então os rótulos são curtos. */
+    private boolean compactButtons() {
+        NetworkView network = selectedNetworkView();
+        return network != null && network.manageable();
+    }
+
+    private Component useLabel() {
+        boolean active = isSelectedActive();
+        if (compactButtons()) {
+            return active ? tr("use.short.active") : tr("use.short");
+        }
+        return active ? tr("use.active") : tr("use");
+    }
+
+    private Component removeLabel() {
+        if (names.removeArmed()) {
+            return compactButtons() ? tr("remove.confirm.short") : tr("remove.confirm");
+        }
+        return compactButtons() ? tr("network.remove.short") : tr("network.remove");
+    }
+
     private boolean isSelectedActive() {
         return selectedNetwork != null && snapshot().activeNetwork().equals(Optional.of(selectedNetwork));
     }
@@ -103,27 +125,23 @@ final class NetworksTab {
         int x = layout.left;
         int y = layout.top;
         int rw = layout.rw();
-        makePrivate = buttons.add(TabletScreen.Tab.NETWORKS, new FlatButton(x + RX, y + BODY_Y + 112, rw / 2 - 1, ROW_H,
+        makePrivate = buttons.add(TabletScreen.Tab.NETWORKS, new FlatButton(x + RX, y + SEGMENT_Y, rw / 2 - 1, ROW_H,
                 tr("private"),
                 (g, b, hovered) -> TabletButtons.paintSegment(g, b, hovered, tr("private"), isSelectedPublic() == Boolean.FALSE),
                 () -> setPublic(false)).tooltip(() -> tr("private.tooltip")));
-        makePublic = buttons.add(TabletScreen.Tab.NETWORKS, new FlatButton(x + RX + rw / 2 + 1, y + BODY_Y + 112,
+        makePublic = buttons.add(TabletScreen.Tab.NETWORKS, new FlatButton(x + RX + rw / 2 + 1, y + SEGMENT_Y,
                 rw - rw / 2 - 1, ROW_H, tr("public"),
                 (g, b, hovered) -> TabletButtons.paintSegment(g, b, hovered, tr("public"), isSelectedPublic() == Boolean.TRUE),
                 () -> setPublic(true)).tooltip(() -> tr("public.tooltip")));
         use = buttons.add(TabletScreen.Tab.NETWORKS, new FlatButton(x + RX, y + BODY_Y + 132, rw, ROW_H, tr("use"),
-                (g, b, hovered) -> TabletButtons.paintText(g, b, hovered, isSelectedActive() ? tr("use.active") : tr("use")),
+                (g, b, hovered) -> TabletButtons.paintText(g, b, hovered, useLabel()),
                 this::useNetwork).tooltip(() -> tr("use.tooltip")));
-        remove = buttons.add(TabletScreen.Tab.NETWORKS, new FlatButton(x + RX, y + layout.newBoxY(), rw, ROW_H,
+        remove = buttons.add(TabletScreen.Tab.NETWORKS, new FlatButton(x + RX + rw / 2 + 1, y + layout.newBoxY(),
+                rw - rw / 2 - 1, ROW_H,
                 tr("network.remove"),
-                (g, b, hovered) -> TabletButtons.paintDanger(g, b, hovered,
-                        names.removeArmed() ? tr("remove.confirm") : tr("network.remove"), names.removeArmed()),
+                (g, b, hovered) -> TabletButtons.paintDanger(g, b, hovered, removeLabel(), names.removeArmed()),
                 () -> names.removeSelected(Action.NETWORK_REMOVE, selectedNetwork))
                 .tooltip(() -> tr("network.remove.tooltip")));
-        accessButton = buttons.add(TabletScreen.Tab.NETWORKS, new FlatButton(x + RX, y + BODY_Y + 150, rw, ROW_H,
-                tr("access.button"), (g, b, hovered) -> TabletButtons.paintText(g, b, hovered, accessLabel()),
-                () -> access.open(true)).tooltip(() -> tr("access.button.tooltip")));
-        access.addBack(buttons);
         groups.addButtons(buttons);
         buttons.add(TabletScreen.Tab.NETWORKS, names.newToggle(NameFields.Rename.NETWORK, tr("network.new"), font));
         buttons.add(TabletScreen.Tab.NETWORKS, names.newToggle(NameFields.Rename.GROUP, tr("group.new"), font));
@@ -133,28 +151,19 @@ final class NetworksTab {
     void refresh(boolean shown) {
         NetworkView network = selectedNetworkView();
         boolean manage = network != null && network.manageable();
-        // o acesso é das redes privadas que o jogador gerencia; perdeu isso, a coluna volta aos detalhes
-        boolean accessible = manage && !network.isPublic() && groups.selected() == null;
-        if (!accessible) {
-            access.open(false);
-        }
-        boolean details = !access.open();
-        makePrivate.visible = makePublic.visible = shown && manage && details;
-        use.visible = shown && network != null && details;
+        makePrivate.visible = makePublic.visible = shown && manage;
+        use.visible = shown && network != null;
         use.active = network != null && !isSelectedActive();
-        remove.visible = shown && manage && details;
-        accessButton.visible = shown && accessible && details;
-        access.refresh(shown && accessible);
+        // quem gerencia tem o Usar e o Remover lado a lado embaixo; quem só usa, o Usar abaixo das linhas
+        use.setY(layout.top + (manage ? layout.newBoxY() : BODY_Y + 132));
+        use.setWidth(manage ? layout.rw() / 2 - 1 : layout.rw());
+        remove.visible = shown && manage;
+        // o acesso é das redes privadas que o jogador gerencia
+        access.refresh(shown && manage && !network.isPublic() && groups.selected() == null);
         groups.refresh(shown && groups.selected() != null);
         create.visible = shown && names.newOpen();
     }
 
-    /** "Acesso" ou "Acesso (N)" com os convidados e times da rede. */
-    private Component accessLabel() {
-        NetworkView network = selectedNetworkView();
-        int count = network == null ? 0 : network.access().guests().size() + network.access().teams().size();
-        return count == 0 ? tr("access.button") : tr("access.button.count", count);
-    }
 
     /** O Remover à vista: o da rede ou o do grupo. */
     FlatButton removeButton() {
@@ -216,7 +225,7 @@ final class NetworksTab {
     }
 
     private void pickNetwork(UUID id) {
-        access.open(false);
+        access.reset();
         selectedNetwork = id;
         groups.select(null);
         names.clearRename();
@@ -224,7 +233,7 @@ final class NetworksTab {
     }
 
     private void pickGroup(UUID id) {
-        access.open(false);
+        access.reset();
         selectedNetwork = null;
         groups.select(id);
         names.clearRename();
@@ -287,10 +296,10 @@ final class NetworksTab {
         if (groups.selected() != null) {
             return groups.mouseClicked(font, mouseX, mouseY);
         }
-        if (access.open()) {
-            return access.mouseClicked(mouseX, mouseY);
-        }
         NetworkView network = selectedNetworkView();
+        if (access.mouseClicked(mouseX, mouseY)) {
+            return true;
+        }
         if (network != null && network.manageable()) {
             int swatch = swatchAt(mouseX, mouseY);
             if (swatch >= 0) {
@@ -309,8 +318,8 @@ final class NetworksTab {
     void mouseScrolled(Font font, double mouseX, double mouseY, int step) {
         if (mouseX >= layout.left + RX && groups.selected() != null) {
             groups.mouseScrolled(font, step);
-        } else if (mouseX >= layout.left + RX && access.open()) {
-            access.mouseScrolled(mouseX, mouseY, step);
+        } else if (mouseX >= layout.left + RX && access.active()) {
+            access.mouseScrolled(mouseY, step);
         } else {
             list.mouseScrolled(font, step);
         }
@@ -324,8 +333,9 @@ final class NetworksTab {
         if (groups.selected() != null) {
             return groups.tooltip(font, mouseX, mouseY);
         }
-        if (access.open()) {
-            return access.tooltip(font, mouseX, mouseY);
+        Component accessTip = access.tooltip(mouseX, mouseY);
+        if (accessTip != null) {
+            return accessTip;
         }
         NetworkView network = selectedNetworkView();
         if (network != null && network.manageable() && swatchAt(mouseX, mouseY) >= 0) {
@@ -376,27 +386,27 @@ final class NetworksTab {
         int y = layout.top;
         int rw = layout.rw();
         NetworkView n = selectedNetworkView();
-        if (access.open() && n != null) {
-            access.render(g, font, mouseX, mouseY);
-            return;
-        }
         if (n == null) {
             GuiText.draw(g, font, tr("network.pick"), x, y + BODY_Y + 3, rw, GuiPaint.MUTED);
             return;
         }
         names.renderTitle(g, font, mouseX, mouseY, Component.literal(n.name()), 0xFF000000 | n.color(), n.manageable());
         Component owner = n.owned() ? tr("owner.you") : tr("owner", n.owner());
-        GuiText.draw(g, font, owner, x, y + BODY_Y + 18, rw, GuiPaint.MUTED);
         MutableComponent nodes = plural("meta.nodes", n.nodes()).copy();
         if (n.unloaded() > 0) {
             nodes.append(", ").append(plural("network.unloaded", n.unloaded()));
         }
-        GuiText.draw(g, font, nodes, x, y + BODY_Y + 29, rw, GuiPaint.MUTED);
-        Component members = n.isPublic() ? tr("members.public")
-                : !n.owned() && !n.manageable() ? tr("members.guest", n.owner()) : tr("members.private", n.owner());
-        GuiText.draw(g, font, members, x, y + BODY_Y + 40, rw, GuiPaint.MUTED);
         if (n.manageable()) {
-            GuiPaint.text(g, font, tr("color"), x, y + SWATCH_Y - 11, GuiPaint.FG);
+            // quem gerencia: uma linha só, e o segmento, a cor e o acesso logo abaixo
+            GuiText.draw(g, font, owner.copy().append(" · ").append(nodes), x, y + BODY_Y + 15, rw, GuiPaint.MUTED);
+        } else {
+            GuiText.draw(g, font, owner, x, y + BODY_Y + 18, rw, GuiPaint.MUTED);
+            GuiText.draw(g, font, nodes, x, y + BODY_Y + 29, rw, GuiPaint.MUTED);
+            Component members = n.isPublic() ? tr("members.public")
+                    : !n.owned() ? tr("members.guest", n.owner()) : tr("members.private", n.owner());
+            GuiText.draw(g, font, members, x, y + BODY_Y + 40, rw, GuiPaint.MUTED);
+        }
+        if (n.manageable()) {
             int[] palette = NetworkSavedData.palette();
             for (int i = 0; i < palette.length; i++) {
                 int sx = x + i * (SWATCH + 2);
@@ -404,7 +414,11 @@ final class NetworksTab {
                 boolean current = (palette[i] & 0xFFFFFF) == n.color();
                 GuiPaint.box(g, sx, sy, SWATCH, SWATCH, 0xFF000000 | palette[i], current ? GuiPaint.FG : GuiPaint.BEVEL_DARK);
             }
-            GuiPaint.text(g, font, tr("privacy"), x, y + BODY_Y + 101, GuiPaint.FG);
+            if (n.isPublic()) {
+                GuiText.wrap(g, font, tr("access.public.hint"), x, y + AccessSection.LABEL_Y, rw, 3, GuiPaint.MUTED);
+            } else {
+                access.render(g, font, mouseX, mouseY);
+            }
         } else {
             GuiText.wrap(g, font, tr("network.foreign"), x, y + SWATCH_Y, rw, 3, GuiPaint.DISABLED);
         }

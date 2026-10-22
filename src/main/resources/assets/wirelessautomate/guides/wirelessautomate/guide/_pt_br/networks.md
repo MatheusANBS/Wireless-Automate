@@ -58,7 +58,7 @@ recebe vem do modo das faces.
 | **Rede por face** | Numa fornalha, a face de **Cima** (entrada) pode estar na rede "Mina" e a de **Baixo** (saída) na rede "Armazém": o minério chega pela Mina e o lingote sai pelo Armazém. Cada aba tem as suas: a energia pode ir para a rede "Base". |
 | **Ordem de entrega** | Prioridade maior primeiro; empates se revezam (round-robin). |
 | **Armazém** | Recebe de quem extrai e entrega para quem insere, sem ficar trocando com outro Armazém. |
-| **Dono** | Só o dono da rede (ou um operador) pode pôr roteadores nela. |
+| **Quem usa** | Uma rede pública é de todos. Numa privada, o dono, os operadores e os **convidados** (e, com o FTB Teams, os membros dos times que você adicionar) podem pôr roteadores nela e tirá-los. Só o dono (ou um operador) gerencia: renomeia, convida e remove. |
 
 ## Como mudar a rede
 

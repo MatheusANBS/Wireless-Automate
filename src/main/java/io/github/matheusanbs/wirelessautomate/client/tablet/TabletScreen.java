@@ -107,10 +107,10 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         });
         this.names = new NameFields(layout, actions, () -> networks().selected(), () -> networks().selectedGroup(),
                 this::setFocused, this::refresh, group -> networks().created(group));
-        this.networks = new NetworksTab(layout, menu::snapshot, actions, new SideList(layout), names);
+        this.networks = new NetworksTab(layout, menu, menu::snapshot, actions, new SideList(layout), names);
         this.body = new TabletBody(list, map, flows, networks);
         this.tabs = new TabletTabs(selectBar, map, networks, names);
-        this.keys = new TabletKeys(this, list, names, () -> tab);
+        this.keys = new TabletKeys(this, list, names, networks.access(), () -> tab);
         this.tips = new TabletTips(resize, tabs.buttons(), body);
         // o aviso de outra tela agiria no alvo errado
         PanelNotices.clear();
@@ -165,6 +165,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         names.createBoxes(font);
         addRenderableWidget(names.newBox());
         addRenderableWidget(names.renameBox());
+        networks.access().createBoxes(font).forEach(this::addRenderableWidget);
         refresh();
         if (tab == Tab.LIST) {
             keys.focusSearch();
@@ -205,6 +206,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
                 flows.shown();
             }
             names.reset();
+            networks.closeAccess();
             setFocused(null);
             if (t == Tab.LIST) {
                 keys.focusSearch();
@@ -220,6 +222,11 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     /** Escolhe o nó do painel no servidor ({@code null}: nenhum); o painel volta num {@link TabletPanelPayload}. */
     public void chooseNode(@Nullable NodeKey key) {
         list.choose(key);
+    }
+
+    /** O acesso à rede escolhida (convidados e times), para os ganchos do e2e e das capturas. */
+    public AccessDetail access() {
+        return networks.access();
     }
 
     /** A aba Lista (busca, nós e o painel), para os ganchos do e2e e das capturas. */
@@ -353,6 +360,8 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         super.render(g, popup ? -1 : mouseX, popup ? -1 : mouseY, partialTick);
         if (tab == Tab.LIST) {
             list.renderOverlay(g, mouseX, mouseY);
+        } else if (tab == Tab.NETWORKS) {
+            networks.renderOverlay(g, font);
         }
         header.renderNotice(g, font);
         if (popup) {

@@ -43,7 +43,7 @@ final class TabletBody {
             case LIST -> list.mouseScrolled(mouseX, mouseY, scrollY);
             case MAP -> map.mouseScrolled(mouseX, mouseY, scrollY);
             case FLOWS -> flows.mouseScrolled(step);
-            case NETWORKS -> networks.mouseScrolled(font(), mouseX, step);
+            case NETWORKS -> networks.mouseScrolled(font(), mouseX, mouseY, step);
         }
     }
 

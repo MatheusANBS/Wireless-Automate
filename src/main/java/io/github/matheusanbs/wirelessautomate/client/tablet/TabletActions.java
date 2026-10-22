@@ -7,6 +7,7 @@ import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.Query;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.ClearIdleNetworksPayload;
+import io.github.matheusanbs.wirelessautomate.packet.NetworkSuggestPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletActionPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletMachinesPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletMoveNodesPayload;
@@ -111,6 +112,23 @@ final class TabletActions {
     void groupNetwork(UUID group, UUID network, boolean inGroup) {
         Action action = inGroup ? Action.GROUP_REMOVE_NETWORK : Action.GROUP_ADD_NETWORK;
         send(new TabletActionPayload(menu.containerId, action, Optional.of(group), Optional.of(network), "", 0));
+    }
+
+    /** Convida ({@code add}) ou tira um jogador da rede: pelo id da sugestão ou, sem id, pelo nome digitado. */
+    void member(UUID network, @Nullable UUID player, String text, boolean add) {
+        send(new TabletActionPayload(menu.containerId, add ? Action.NETWORK_MEMBER_ADD : Action.NETWORK_MEMBER_REMOVE,
+                Optional.of(network), Optional.ofNullable(player), text, 0));
+    }
+
+    /** Adiciona ou tira um time do FTB Teams da rede: pelo id da sugestão ou, sem id, pelo nome digitado. */
+    void team(UUID network, @Nullable UUID team, String text, boolean add) {
+        send(new TabletActionPayload(menu.containerId, add ? Action.NETWORK_TEAM_ADD : Action.NETWORK_TEAM_REMOVE,
+                Optional.of(network), Optional.ofNullable(team), text, 0));
+    }
+
+    /** Pede as sugestões do campo de convidado ou de time para o texto digitado. */
+    void suggest(NetworkSuggestPayload.Kind kind, String text, UUID network) {
+        send(new NetworkSuggestPayload(menu.containerId, kind, text, network));
     }
 
     /** Remover a rede ou o grupo (já confirmado). */

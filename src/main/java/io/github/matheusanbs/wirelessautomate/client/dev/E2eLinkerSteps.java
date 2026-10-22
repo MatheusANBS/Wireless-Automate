@@ -39,6 +39,10 @@ import net.minecraft.world.phys.Vec3;
  * Shift + clique, a tela com o Vincular e o Desvincular, e o modo Abrir com a lista de dois roteadores.
  */
 final class E2eLinkerSteps {
+    /** Onde o jogador estava antes de ir para perto do baú do Vinculador, e para onde olhava. */
+    private static Vec3 beforeLinker = Vec3.ZERO;
+    private static float[] beforeLinkerRot = new float[2];
+
     private E2eLinkerSteps() {
     }
 
@@ -75,6 +79,8 @@ final class E2eLinkerSteps {
                     .setValue(RouterBlock.FACING, Direction.UP));
             router(server, linkRouter).setRangeUpgrade(new ItemStack(ModItems.RANGE_UPGRADE.get()));
             // perto de tudo: os cliques precisam estar ao alcance do jogador
+            beforeLinker = player.position();
+            beforeLinkerRot = new float[] {player.getYRot(), player.getXRot()};
             player.teleportTo(chest.getX() + 2.5, chest.getY() + 1, chest.getZ() + 2.5);
             player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.LINKER.get()));
             return null;
@@ -194,11 +200,17 @@ final class E2eLinkerSteps {
             for (BlockPos pos : List.of(linkAttached, linkChest, linkRouter, linkRouter.below())) {
                 level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
             }
-            server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID())
-                    .setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            ServerPlayer player = server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID());
+            player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            // de volta para onde estava: os passos seguintes clicam em blocos ao alcance da mão
+            player.teleportTo(player.serverLevel(), beforeLinker.x, beforeLinker.y, beforeLinker.z,
+                    beforeLinkerRot[0], beforeLinkerRot[1]);
             return null;
         }), () -> Minecraft.getInstance().level.getBlockState(linkRouter).isAir()
-                && Minecraft.getInstance().player.getMainHandItem().isEmpty(), () -> "roteador ainda no cliente"));
+                && Minecraft.getInstance().player.getMainHandItem().isEmpty()
+                && Minecraft.getInstance().player.position().distanceTo(beforeLinker) < 0.5,
+                () -> "roteador ainda no cliente ou jogador longe: "
+                        + Minecraft.getInstance().player.position().distanceTo(beforeLinker)));
     }
 
     /** Lê o Vinculador da mão principal do jogador no servidor. */

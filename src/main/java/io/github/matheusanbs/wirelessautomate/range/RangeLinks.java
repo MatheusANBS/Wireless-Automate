@@ -41,7 +41,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Regras do servidor do modo Máquinas do Vinculador: escolher o roteador
+ * Regras do servidor do modo Vincular do Vinculador: escolher o roteador
  * ({@code linker_router}), vincular ou desvincular uma máquina com um clique e vincular as máquinas
  * de uma área. Tudo validado aqui, a cada pedido; o item e a tela só pedem.
  *
@@ -126,7 +126,7 @@ public final class RangeLinks {
     }
 
     /**
-     * Clique num roteador no modo Máquinas: ele passa a ser o escolhido. A action bar diz o nome e as
+     * Clique num roteador no modo Vincular: ele passa a ser o escolhido. A action bar diz o nome e as
      * vagas ({@code Linha de Minério · 7/32 máquinas}) ou por que ele ainda não vincula.
      */
     public static Result choose(ServerPlayer player, ItemStack stack, RouterBlockEntity router) {
@@ -145,7 +145,7 @@ public final class RangeLinks {
     // ------------------------------------------------------------------ uma máquina
 
     /**
-     * Clique numa máquina no modo Máquinas: vincula ao roteador escolhido ou, se já estava vinculada a
+     * Clique numa máquina no modo Vincular: vincula ao roteador escolhido ou, se já estava vinculada a
      * ele, desvincula. Mostra o resultado na action bar.
      */
     public static Result toggle(ServerPlayer player, ItemStack stack, BlockPos pos) {
@@ -187,8 +187,8 @@ public final class RangeLinks {
     // ------------------------------------------------------------------ área
 
     /**
-     * O Vincular da tela no modo Máquinas: vincula ao roteador escolhido as máquinas da área marcada
-     * (só block entities de chunks carregados) que têm capability de um tipo marcado nas abas. Pula as
+     * O Vincular da tela: vincula ao roteador escolhido as máquinas da área marcada
+     * (só block entities de chunks carregados) que têm capability de um tipo carregado. Pula as
      * já vinculadas, as protegidas ({@code mayInteract} e o evento de clique, ver {@link #clickAllowed}),
      * roteadores e a máquina presa; as de fora do raio e as que passam do
      * limite ficam de fora e são contadas. As mais perto do roteador entram primeiro. Mostra o
@@ -200,12 +200,9 @@ public final class RangeLinks {
         if (problem == LinkerProblem.NONE && LinkerItem.unlink(stack)) {
             return unlinkArea(player, stack, area);
         }
-        List<ResourceType> types = LinkerItem.effectiveTabs(stack);
-        if (problem == LinkerProblem.NONE && types.isEmpty()) {
-            problem = LinkerProblem.NO_TABS;
-        }
+        Collection<ResourceType> types = LoadedTypes.LIST;
         if (problem != LinkerProblem.NONE) {
-            // como no Vincular de roteadores: a tela já mostra o problema da área
+            // a tela já mostra o problema da área
             return new Result(Status.AREA_PROBLEM, LinkRefusal.NONE, problem, 0, 0, 0, 0, 0, 0);
         }
         RouterBlockEntity router = chosen(player, stack);
@@ -282,7 +279,7 @@ public final class RangeLinks {
     /**
      * Com "Nenhuma (desvincular)": tira do roteador escolhido as máquinas vinculadas dentro da área.
      * Percorre só a lista do roteador (nada de varrer o mundo, e vale com o chunk da máquina
-     * descarregado), não olha as abas (a máquina sai inteira) e não exige o upgrade valendo, para
+     * descarregado), tira a máquina inteira e não exige o upgrade valendo, para
      * dar para limpar a lista depois de tirá-lo. Basta poder mexer no roteador: desvincular não toca
      * na máquina.
      */
@@ -345,7 +342,7 @@ public final class RangeLinks {
      * fato seria vinculada (depois das recusas baratas, para não acordar listeners à toa). Cancelado,
      * ou com {@code useBlock} ou {@code useItem} negados, conta como protegida.
      */
-    private static boolean clickAllowed(ServerPlayer player, InteractionHand hand, BlockPos pos) {
+    public static boolean clickAllowed(ServerPlayer player, InteractionHand hand, BlockPos pos) {
         BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(pos).add(0, 0.5, 0), Direction.UP, pos, false);
         PlayerInteractEvent.RightClickBlock event = CommonHooks.onRightClickBlock(player, hand, pos, hit);
         return !event.isCanceled() && event.getUseBlock() != TriState.FALSE && event.getUseItem() != TriState.FALSE;
@@ -432,7 +429,7 @@ public final class RangeLinks {
     }
 
     /** Sem upgrade ({@code NO_UPGRADE}) ou com raio 0 ({@code NO_RANGE}); {@code NONE} se o roteador vincula. */
-    private static LinkRefusal upgradeRefusal(RouterBlockEntity router) {
+    public static LinkRefusal upgradeRefusal(RouterBlockEntity router) {
         return RangeRules.check(RouterBlockEntity.acceptsRangeUpgrade(router.rangeUpgrade()), radius(router), true,
                 0, 0, Integer.MAX_VALUE);
     }
@@ -458,7 +455,7 @@ public final class RangeLinks {
         return Config.machineRadius(router.tier());
     }
 
-    private static int max(RouterBlockEntity router) {
+    public static int max(RouterBlockEntity router) {
         return Config.maxMachines(router.tier());
     }
 

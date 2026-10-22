@@ -9,11 +9,9 @@ import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterCodecs;
 import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
-import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerFaces;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerModeCodecs;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
 import io.github.matheusanbs.wirelessautomate.preset.ProfileSource;
@@ -58,52 +56,26 @@ public final class ModDataComponents {
                     .networkSynchronized(FilterCardItem.Contents.STREAM_CODEC)
                     .cacheEncoding());
 
-    /**
-     * Formato antigo (até a 0.1.0): um tipo só que o Vinculador vinculava. Continua registrado para
-     * os itens antigos carregarem; {@link LinkerItem#tabs} o lê como aquela aba sozinha, e qualquer
-     * troca de abas grava {@link #LINKER_TABS} e apaga este.
-     */
-    public static final Supplier<DataComponentType<ResourceType>> LINKER_TYPE =
-            DATA_COMPONENTS.registerComponentType("linker_type", builder -> builder
-                    .persistent(LinkerItem.TYPE_CODEC)
-                    .networkSynchronized(LinkerItem.TYPE_STREAM_CODEC));
-
-    /** Abas que o Vinculador vincula ou desvincula; sem o componente (nem o antigo), Todos. */
-    public static final Supplier<DataComponentType<LinkerTabs>> LINKER_TABS =
-            DATA_COMPONENTS.registerComponentType("linker_tabs", builder -> builder
-                    .persistent(LinkerItem.TABS_CODEC)
-                    .networkSynchronized(LinkerItem.TABS_STREAM_CODEC));
-
-    /**
-     * Faces (lados relativos à máquina presa) que o Vinculador vincula ou desvincula: máscara de 6 bits
-     * pelo {@code ordinal} do {@code RemoteSide}; sem o componente, Todas (63).
-     */
-    public static final Supplier<DataComponentType<LinkerFaces>> LINKER_FACES =
-            DATA_COMPONENTS.registerComponentType("linker_faces", builder -> builder
-                    .persistent(LinkerItem.FACES_CODEC)
-                    .networkSynchronized(LinkerItem.FACES_STREAM_CODEC));
-
-    /** Vinculador no modo desvincular ("Nenhuma" na escolha da rede); sem o componente, vincula. */
+    /** Vinculador no modo desvincular; sem o componente, vincula. */
     public static final Supplier<DataComponentType<Boolean>> LINKER_UNLINK =
             DATA_COMPONENTS.registerComponentType("linker_unlink", builder -> builder
                     .persistent(Codec.BOOL)
                     .networkSynchronized(ByteBufCodecs.BOOL));
 
-    /** Modo do Vinculador; sem o componente, Único. */
+    /** Modo do Vinculador; sem o componente, Vincular. */
     public static final Supplier<DataComponentType<LinkerMode>> LINKER_MODE =
             DATA_COMPONENTS.registerComponentType("linker_mode", builder -> builder
-                    .persistent(LinkerMode.CODEC)
-                    .networkSynchronized(LinkerMode.STREAM_CODEC));
+                    .persistent(LinkerModeCodecs.CODEC)
+                    .networkSynchronized(LinkerModeCodecs.STREAM_CODEC));
 
-    /** Cantos da área marcados com o Vinculador em modo Área. */
+    /** Cantos da área marcados com o Vinculador ao vincular. */
     public static final Supplier<DataComponentType<LinkerArea>> LINKER_AREA =
             DATA_COMPONENTS.registerComponentType("linker_area", builder -> builder
                     .persistent(LinkerArea.CODEC)
                     .networkSynchronized(LinkerArea.STREAM_CODEC));
 
     /**
-     * Roteador escolhido no modo Máquinas do Vinculador (posição e dimensão): o alvo dos vínculos de
-     * máquinas. Não é limpo quando o roteador some; o servidor confere a cada clique.
+     * Roteador escolhido no Vinculador (posição e dimensão): o alvo dos vínculos de máquinas. Não é limpo quando o roteador some; o servidor confere a cada clique.
      */
     public static final Supplier<DataComponentType<GlobalPos>> LINKER_ROUTER =
             DATA_COMPONENTS.registerComponentType("linker_router", builder -> builder
@@ -121,6 +93,9 @@ public final class ModDataComponents {
      * carregarem: sem o registro, o item com o componente falharia ao ler e sumiria do inventário.
      */
     static {
+        legacy("linker_type");
+        legacy("linker_tabs");
+        legacy("linker_faces");
         legacy("configurator_mode");
         legacy("configurator_any_machine");
         legacy("configurator_area");

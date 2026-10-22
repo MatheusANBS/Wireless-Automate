@@ -276,18 +276,6 @@ public final class NetworkSavedData extends SavedData {
         }
     }
 
-    /** A rede ativa do jogador; se ele não tiver nenhuma, cria uma com nome padrão e a ativa. */
-    public WaNetwork activeOrCreate(ServerPlayer player) {
-        UUID playerId = player.getUUID();
-        UUID active = activeByPlayer.get(playerId);
-        WaNetwork network = active == null ? null : networks.get(active);
-        if (network == null) {
-            network = create(playerId, player.getGameProfile().getName());
-            setActiveNetwork(playerId, network.id());
-        }
-        return network;
-    }
-
     @Override
     public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         ListTag list = new ListTag();

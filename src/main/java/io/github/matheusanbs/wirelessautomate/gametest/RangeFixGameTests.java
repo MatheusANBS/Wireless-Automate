@@ -8,7 +8,6 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
 import io.github.matheusanbs.wirelessautomate.menu.IdleNetworkUndo;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
@@ -201,7 +200,6 @@ public final class RangeFixGameTests {
                         router.setRangeUpgrade(rangeUpgrade());
                         click(helper, player, ROUTER, false);
                         BlockPos barrel = helper.absolutePos(BARREL);
-                        LinkerItem.setTabs(linker, LinkerTabs.of(ResourceType.ITEM));
                         LinkerItem.setArea(linker, LinkerArea.firstCorner(helper.getLevel().dimension(), barrel)
                                 .withSecond(barrel));
                         RangeLinks.Result area = RangeLinks.linkArea(player, linker);

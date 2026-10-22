@@ -1,22 +1,22 @@
 package io.github.matheusanbs.wirelessautomate.client.dev;
 
 import static io.github.matheusanbs.wirelessautomate.client.dev.DevEndToEnd.*;
-import static io.github.matheusanbs.wirelessautomate.client.dev.E2eRangeSteps.*;
+import static io.github.matheusanbs.wirelessautomate.client.dev.E2eRouterSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eUi.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
+import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.client.linker.LinkerOpenScreen;
 import io.github.matheusanbs.wirelessautomate.client.linker.LinkerScreen;
+import io.github.matheusanbs.wirelessautomate.client.router.RouterScreen;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerFaces;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerProblem;
-import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
-import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
-import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
-import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.util.List;
 import java.util.Optional;
@@ -25,286 +25,178 @@ import java.util.function.Function;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import org.lwjgl.glfw.GLFW;
 
 /**
- * O Vinculador por área no e2e: cantos marcados com Shift + clique, a tela com a rede e as abas, Vincular, a
- * linha Faces (desvincular e vincular por face) e o rascunho do nome da rede nova.
+ * O Vinculador no e2e: um roteador Avançado com o Upgrade de Alcance escolhido com o clique, a área marcada com
+ * Shift + clique, a tela com o Vincular e o Desvincular, e o modo Abrir com a lista de dois roteadores.
  */
 final class E2eLinkerSteps {
     private E2eLinkerSteps() {
     }
 
-    private static final String AREA_NETWORK = "E2E Área";
-    private static UUID areaNetwork;
-    static BlockPos areaCorner1;
-    static BlockPos areaCorner2;
-    /** Rede de itens de A e de B antes do Vincular (só a de fluidos pode mudar). */
-    private static UUID itemsA;
-    private static UUID itemsB;
+    private static BlockPos linkRouter;
+    /** O baú que o Vincular junta ao roteador, com um roteador preso nele (os dois chegam na mesma máquina). */
+    static BlockPos linkChest;
+    private static BlockPos linkAttached;
+    private static BlockPos linkCornerA;
+    private static BlockPos linkCornerB;
 
     /**
-     * Vinculador em modo Área pela tela: com o Vinculador na mão e o Shift pressionado (o mesmo
-     * pacote do teclado), clique no ar passa para Área e dois cliques marcam os cantos (o chão
-     * diante do baú A e o roteador B), pegando os dois roteadores; solta o Shift, clique no ar abre a
-     * tela, que mostra os dois na área; escolhe a rede "E2E Área" na lista, o tipo Fluidos e clica em
-     * Vincular. Confere no servidor que só a aba de fluidos dos dois mudou e que a tela mostra o
-     * resultado.
+     * Vincular: com o Vinculador na mão, clique no roteador o escolhe; Shift + clique em dois blocos marca a área em
+     * volta do baú; a tela mostra o roteador e a área, Vincular junta o baú ao roteador, Desvincular o tira (com
+     * a tela maior no meio). Abrir: Shift + clique no ar troca o modo, clique no baú (que tem o roteador preso e
+     * o de alcance) abre a lista, e a escolha abre a tela do roteador.
      */
-    static void linkerAreaSteps(List<Step> list) {
-        list.add(new Step("Vinculador na mão", STEP_TIMEOUT_MS, () -> {
-            UUID playerId = Minecraft.getInstance().player.getUUID();
-            onServer(server -> {
-                ServerPlayer player = server.getPlayerList().getPlayer(playerId);
-                areaNetwork = NetworkSavedData.get(server).create(player.getUUID(), AREA_NETWORK).id();
-                itemsA = router(server, routerA).networkId(ResourceType.ITEM);
-                itemsB = router(server, routerB).networkId(ResourceType.ITEM);
-                player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.LINKER.get()));
-                return null;
-            });
-            areaCorner1 = chestA.offset(-1, -1, -1);
-            areaCorner2 = routerB;
-        }, () -> Minecraft.getInstance().player.getMainHandItem().is(ModItems.LINKER.get()),
-                () -> "na mão " + Minecraft.getInstance().player.getMainHandItem()));
+    static void linkerSteps(List<Step> list) {
+        UUID playerId = Minecraft.getInstance().player.getUUID();
+        list.add(new Step("Vinculador: preparar", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+            ServerLevel level = player.serverLevel();
+            BlockPos chest = chestB.offset(3, 0, 6);
+            linkRouter = chest.above();
+            linkChest = chest.offset(2, 0, 0);
+            linkAttached = linkChest.above();
+            linkCornerA = linkChest.offset(-1, -1, -1);
+            linkCornerB = linkChest.offset(1, 1, 1);
+            for (BlockPos pos : List.of(chest, linkChest)) {
+                level.setBlockAndUpdate(pos, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.SOUTH));
+            }
+            level.setBlockAndUpdate(linkRouter, ModBlocks.ROUTER.get().defaultBlockState()
+                    .setValue(RouterBlock.FACING, Direction.UP).setValue(RouterBlock.TIER, RouterTier.ADVANCED));
+            level.setBlockAndUpdate(linkAttached, ModBlocks.ROUTER.get().defaultBlockState()
+                    .setValue(RouterBlock.FACING, Direction.UP));
+            router(server, linkRouter).setRangeUpgrade(new ItemStack(ModItems.RANGE_UPGRADE.get()));
+            player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.LINKER.get()));
+            return null;
+        }), () -> clientSees(linkRouter) && clientSees(linkAttached)
+                && Minecraft.getInstance().player.getMainHandItem().is(ModItems.LINKER.get())
+                && onServer(server -> router(server, linkRouter).rangeActive()),
+                () -> "roteador em " + linkRouter));
+        list.add(new Step("Vinculador: clique no roteador o escolhe", STEP_TIMEOUT_MS, () -> {
+            Minecraft minecraft = Minecraft.getInstance();
+            minecraft.gameMode.useItemOn(minecraft.player, InteractionHand.MAIN_HAND,
+                    new BlockHitResult(Vec3.atCenterOf(linkRouter), Direction.UP, linkRouter, false));
+        }, () -> serverLinker(stack -> LinkerItem.router(stack) != null
+                && LinkerItem.router(stack).pos().equals(linkRouter)),
+                () -> "roteador no servidor " + serverLinker(stack -> String.valueOf(LinkerItem.router(stack)))));
         list.add(shift("Shift pressionado", true));
-        list.add(new Step("Shift + clique no ar: modo Área", STEP_TIMEOUT_MS, () -> {
+        list.add(new Step("Vinculador: Shift + clique nos dois cantos", STEP_TIMEOUT_MS, () -> {
             Minecraft minecraft = Minecraft.getInstance();
-            minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);
-        }, () -> serverLinker(stack -> LinkerItem.mode(stack) == LinkerMode.AREA)
-                && LinkerItem.mode(Minecraft.getInstance().player.getMainHandItem()) == LinkerMode.AREA,
-                () -> "modo no servidor " + serverLinker(stack -> LinkerItem.mode(stack).name())));
-        list.add(new Step("Shift + clique nos dois cantos", STEP_TIMEOUT_MS, () -> {
-            Minecraft minecraft = Minecraft.getInstance();
-            for (BlockPos corner : List.of(areaCorner1, areaCorner2)) {
+            for (BlockPos corner : List.of(linkCornerA, linkCornerB)) {
                 minecraft.gameMode.useItemOn(minecraft.player, InteractionHand.MAIN_HAND,
                         new BlockHitResult(Vec3.atCenterOf(corner), Direction.UP, corner, false));
             }
         }, () -> serverLinker(stack -> {
             LinkerArea area = LinkerItem.area(stack);
-            return area != null && area.first().equals(areaCorner1) && area.second().equals(Optional.of(areaCorner2));
+            return area != null && area.first().equals(linkCornerA) && area.second().equals(Optional.of(linkCornerB));
         }) && LinkerItem.area(Minecraft.getInstance().player.getMainHandItem()) != null
                 && LinkerItem.area(Minecraft.getInstance().player.getMainHandItem()).complete(),
                 () -> "área no servidor " + serverLinker(stack -> String.valueOf(LinkerItem.area(stack)))));
         list.add(shift("Shift solto", false));
         list.add(capture("7b-vinculador-contorno"));
-        list.add(new Step("abrir o Vinculador (clique no ar)", STEP_TIMEOUT_MS, () -> {
+        list.add(new Step("Vinculador: abrir a tela (clique no ar)", STEP_TIMEOUT_MS, () -> {
             Minecraft minecraft = Minecraft.getInstance();
             if (minecraft.screen != null) {
                 throw new StepFailure("ainda há uma tela aberta: " + describe(minecraft.screen));
             }
             minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);
         }, () -> Minecraft.getInstance().screen instanceof LinkerScreen screen
-                && screen.getMenu().snapshot().inside() == 2
+                && screen.getMenu().snapshot().router().links()
                 && screen.getMenu().snapshot().problem() == LinkerProblem.NONE,
                 () -> Minecraft.getInstance().screen instanceof LinkerScreen screen
-                        ? "na área " + screen.getMenu().snapshot().inside() + ", " + screen.getMenu().snapshot().problem()
+                        ? "roteador " + screen.getMenu().snapshot().router() + ", " + screen.getMenu().snapshot().problem()
                         : "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(clipCheck("Vinculador: tela"));
         list.add(capture("8-vinculador-area"));
-        list.add(new Step("escolher a rede " + AREA_NETWORK, STEP_TIMEOUT_MS,
-                () -> click(widget(byMessage(Component.literal(AREA_NETWORK)), "linha da rede " + AREA_NETWORK)),
-                () -> {
-                    UUID playerId = Minecraft.getInstance().player.getUUID();
-                    return areaNetwork.equals(onServer(server -> NetworkSavedData.get(server).activeNetwork(playerId)))
-                            && linkerScreen().getMenu().snapshot().active().equals(Optional.of(areaNetwork));
-                }, () -> "ativa na tela " + linkerScreen().getMenu().snapshot().active()));
-        // de Todos, o botão deixa só a primeira aba; apertado de novo, marca tudo outra vez
-        list.add(new Step("Todos com tudo marcado deixa uma aba", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessageKey("gui.wirelessautomate.linker.type.all"), "Todos")),
-                // espera a tela também: o próximo clique lê o estado dela, e um estado velho desmarcaria de novo
-                () -> serverLinker(stack -> LinkerItem.effectiveTabs(stack).size() == 1)
-                        && linkerScreen().getMenu().snapshot().tabs().effective(LoadedTypes.LIST).size() == 1,
-                () -> "abas " + linkerScreen().getMenu().snapshot().tabs()));
-        list.add(new Step("Todos marca tudo", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessageKey("gui.wirelessautomate.linker.type.all"), "Todos")),
-                () -> serverLinker(stack -> LinkerItem.tabs(stack).isAll(LoadedTypes.LIST)),
-                () -> "abas " + linkerScreen().getMenu().snapshot().tabs()));
-        list.add(capture("8b-vinculador-chips"));
+        list.add(new Step("Vinculador: Vincular", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessageKey("gui.wirelessautomate.linker.link.label"), "Vincular")),
+                () -> onServer(server -> router(server, linkRouter).remoteMachines().contains(linkChest))
+                        && linkerScreen().getMenu().snapshot().outcome().map(o -> !o.unlink() && o.linked() == 1)
+                                .orElse(false),
+                () -> "máquinas " + onServer(server -> router(server, linkRouter).remoteMachines().machines().size())
+                        + "; resultado na tela " + linkerScreen().getMenu().snapshot().outcome()));
+        list.add(capture("9-vinculador-vinculado"));
         list.add(new Step("Vinculador maior", STEP_TIMEOUT_MS,
                 () -> linkerScreen().previewResize(460, 300),
-                () -> linkerScreen().size()[0] > 300 && linkerScreen().size()[1] > 232,
+                () -> linkerScreen().size()[0] > 300 && linkerScreen().size()[1] > 204,
                 () -> "tamanho " + java.util.Arrays.toString(linkerScreen().size())));
         list.add(capture("8d-vinculador-grande"));
         list.add(new Step("Vinculador de volta ao mínimo", STEP_TIMEOUT_MS,
-                () -> linkerScreen().previewResize(300, 232),
-                () -> linkerScreen().size()[0] == 300 && linkerScreen().size()[1] == 232,
+                () -> linkerScreen().previewResize(300, 204),
+                () -> linkerScreen().size()[0] == 300 && linkerScreen().size()[1] == 204,
                 () -> "tamanho " + java.util.Arrays.toString(linkerScreen().size())));
-        list.add(new Step("só a aba Fluidos", STEP_TIMEOUT_MS,
-                () -> {
-                    // de Todos, desmarca as outras caixas (só aparecem os tipos disponíveis)
-                    for (ResourceType type : new ResourceType[] {ResourceType.ITEM, ResourceType.ENERGY,
-                            ResourceType.CHEMICAL, ResourceType.SOURCE}) {
-                        if (linkerScreen().getMenu().snapshot().available().contains(type)) {
-                            click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.type."
-                                    + type.key())), "aba " + type));
-                        }
-                    }
-                },
-                () -> serverLinker(stack -> LinkerItem.effectiveTabs(stack).equals(List.of(ResourceType.FLUID)))
-                        && linkerScreen().getMenu().snapshot().effectiveTabs().equals(List.of(ResourceType.FLUID))
-                        && linkerScreen().getMenu().snapshot().already() == 0,
-                () -> "abas na tela " + linkerScreen().getMenu().snapshot().tabs()));
-        list.add(new Step("Vincular", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessageKey("gui.wirelessautomate.linker.link.count"), "Vincular")),
-                () -> onServer(server -> {
-                    RouterBlockEntity a = router(server, routerA);
-                    RouterBlockEntity b = router(server, routerB);
-                    return areaNetwork.equals(a.networkId(ResourceType.FLUID))
-                            && areaNetwork.equals(b.networkId(ResourceType.FLUID))
-                            && java.util.Objects.equals(itemsA, a.networkId(ResourceType.ITEM))
-                            && java.util.Objects.equals(itemsB, b.networkId(ResourceType.ITEM));
-                }) && linkerScreen().getMenu().snapshot().outcome().map(o -> o.linked() == 2).orElse(false)
-                        && linkerScreen().getMenu().snapshot().already() == 2,
-                () -> "A: " + serverNetworks(routerA) + "; B: " + serverNetworks(routerB) + "; resultado na tela "
-                        + linkerScreen().getMenu().snapshot().outcome()));
-        list.add(capture("9-vinculador-vinculado"));
-        linkerFacesSteps(list);
-        list.add(close("fechar o Vinculador"));
-    }
-
-    /**
-     * Linha Faces (rede por face): desmarca Frente, Esquerda, Direita e Cima (sobram Trás e Baixo),
-     * escolhe "Nenhuma (desvincular)" e Desvincular tira da rede só as faces de fluidos Trás e Baixo de
-     * cada roteador (pela frente da máquina de cada um); de volta à rede, Vincular põe essas faces de
-     * novo, e Todas marca as seis.
-     */
-    private static void linkerFacesSteps(List<Step> list) {
-        LinkerFaces backAndBottom = LinkerFaces.NONE.toggle(RemoteSide.BACK).toggle(RemoteSide.BOTTOM);
-        LinkerFaces faces = LinkerFaces.ALL;
-        for (RemoteSide side : new RemoteSide[] {RemoteSide.FRONT, RemoteSide.LEFT, RemoteSide.RIGHT, RemoteSide.TOP}) {
-            faces = faces.toggle(side);
-            LinkerFaces expected = faces;
-            list.add(new Step("desmarcar a face " + side.key(), STEP_TIMEOUT_MS,
-                    () -> click(widget(byMessageKey("gui.wirelessautomate.router.side.letter." + side.key()),
-                            "face " + side.key())),
-                    // espera a tela também: o próximo clique parte do estado dela
-                    () -> serverLinker(stack -> LinkerItem.faces(stack).equals(expected))
-                            && linkerScreen().getMenu().snapshot().faces().equals(expected),
-                    () -> "faces " + linkerScreen().getMenu().snapshot().faces()));
-        }
-        list.add(new Step("Nenhuma (desvincular)", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessageKey("gui.wirelessautomate.linker.network.unlink"), "Nenhuma")),
+        list.add(new Step("Vinculador: seletor Desvincular", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessageKey("gui.wirelessautomate.linker.action.unlink"), "Desvincular")),
                 () -> serverLinker(LinkerItem::unlink) && linkerScreen().getMenu().snapshot().unlink(),
                 () -> "desvincular na tela " + linkerScreen().getMenu().snapshot().unlink()));
-        list.add(clipCheck("Vinculador com faces"));
-        list.add(capture("9b-vinculador-faces-desvincular"));
-        list.add(new Step("Desvincular Trás e Baixo", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessageKey("gui.wirelessautomate.linker.unlink.count.faces"), "Desvincular")),
-                () -> onServer(server -> {
-                    for (BlockPos pos : List.of(routerA, routerB)) {
-                        RouterBlockEntity router = router(server, pos);
-                        int marked = backAndBottom.absoluteMask(router.attachedFront());
-                        if (!router.attachedFacesIn(List.of(ResourceType.FLUID), marked, null)
-                                || !router.attachedFacesIn(List.of(ResourceType.FLUID), 63 & ~marked, areaNetwork)) {
-                            return false;
-                        }
-                    }
-                    return true;
-                }) && linkerScreen().getMenu().snapshot().outcome().map(o -> o.unlink() && o.linked() == 2)
-                        .orElse(false),
-                () -> "A: " + serverNetworks(routerA) + "; B: " + serverNetworks(routerB) + "; resultado na tela "
-                        + linkerScreen().getMenu().snapshot().outcome()));
-        list.add(rangeClipCheck("Vinculador desvinculado por faces"));
-        list.add(capture("9c-vinculador-faces-desvinculadas"));
-        list.add(new Step("de volta à rede " + AREA_NETWORK, STEP_TIMEOUT_MS,
-                () -> click(widget(byMessage(Component.literal(AREA_NETWORK)), "linha da rede " + AREA_NETWORK)),
-                () -> serverLinker(stack -> !LinkerItem.unlink(stack)) && !linkerScreen().getMenu().snapshot().unlink()
-                        && find(byMessageKey("gui.wirelessautomate.linker.link.count.faces")) != null,
-                () -> "desvincular na tela " + linkerScreen().getMenu().snapshot().unlink()));
-        list.add(new Step("Vincular Trás e Baixo", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessageKey("gui.wirelessautomate.linker.link.count.faces"), "Vincular")),
-                () -> onServer(server -> router(server, routerA).attachedFacesIn(List.of(ResourceType.FLUID), 63,
-                        areaNetwork) && router(server, routerB).attachedFacesIn(List.of(ResourceType.FLUID), 63,
-                        areaNetwork))
-                        && linkerScreen().getMenu().snapshot().outcome().map(o -> !o.unlink() && o.linked() == 2)
+        list.add(new Step("Vinculador: Desvincular a área", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessageKey("gui.wirelessautomate.linker.unlink.count"), "Desvincular N")),
+                () -> onServer(server -> !router(server, linkRouter).remoteMachines().contains(linkChest))
+                        && linkerScreen().getMenu().snapshot().outcome().map(o -> o.unlink() && o.linked() == 1)
                                 .orElse(false),
-                () -> "A: " + serverNetworks(routerA) + "; B: " + serverNetworks(routerB)));
-        list.add(rangeClipCheck("Vinculador vinculado por faces"));
-        list.add(capture("9d-vinculador-faces-vinculadas"));
-        // modo Único com Trás e Baixo marcados: a linha Faces no pé da coluna e as dicas acima dela
-        list.add(new Step("modo Único com faces", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessageKey("gui.wirelessautomate.linker.mode.single"), "Único")),
-                () -> serverLinker(stack -> LinkerItem.mode(stack) == LinkerMode.SINGLE)
-                        && linkerScreen().getMenu().snapshot().mode() == LinkerMode.SINGLE,
-                () -> "modo " + linkerScreen().getMenu().snapshot().mode()));
-        list.add(rangeClipCheck("Vinculador Único com faces"));
-        list.add(capture("9e-vinculador-unico-faces"));
-        list.add(new Step("de volta a Área", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessageKey("gui.wirelessautomate.linker.mode.area"), "Área")),
-                () -> serverLinker(stack -> LinkerItem.mode(stack) == LinkerMode.AREA)
-                        && linkerScreen().getMenu().snapshot().mode() == LinkerMode.AREA,
-                () -> "modo " + linkerScreen().getMenu().snapshot().mode()));
-        list.add(new Step("Todas as faces", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessageKey("gui.wirelessautomate.linker.faces.all"), "Todas")),
-                () -> serverLinker(stack -> LinkerItem.faces(stack).isAll())
-                        && linkerScreen().getMenu().snapshot().faces().isAll(),
-                () -> "faces " + linkerScreen().getMenu().snapshot().faces()));
-        draftSteps(list);
+                () -> "resultado na tela " + linkerScreen().getMenu().snapshot().outcome()));
+        list.add(clipCheck("Vinculador: desvinculado"));
+        list.add(capture("9b-vinculador-desvincular"));
+        list.add(close("Vinculador: fechar a tela"));
+        openSteps(list);
     }
 
-    private static final String DRAFT_NAME = "Rascunho e2e";
-
     /**
-     * O nome começado para uma rede nova volta ao reabrir o campo e a tela, e depois de criar a rede o
-     * campo volta vazio. Termina com a rede de área ativa de novo.
+     * Abrir: o baú tem o roteador preso e o de alcance (vinculado pela API do servidor), então o clique manda a lista
+     * de dois; a escolha da primeira linha abre a tela do roteador. Termina limpando o que montou.
      */
-    private static void draftSteps(List<Step> list) {
-        String newKey = "gui.wirelessautomate.linker.network.new";
-        list.add(new Step("rascunho: abrir o campo da rede nova", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessageKey(newKey), "+ Nova rede")),
-                () -> linkerScreen().creating() && linkerScreen().nameBox().getValue().isEmpty(),
-                () -> "criando " + linkerScreen().creating() + ", texto '" + linkerScreen().nameBox().getValue() + "'"));
-        list.add(new Step("rascunho: digitar o nome", STEP_TIMEOUT_MS, () -> type(DRAFT_NAME),
-                () -> linkerScreen().nameBox().getValue().equals(DRAFT_NAME),
-                () -> "texto '" + linkerScreen().nameBox().getValue() + "'"));
-        list.add(new Step("rascunho: fechar o campo com Esc", STEP_TIMEOUT_MS,
-                () -> linkerScreen().keyPressed(GLFW.GLFW_KEY_ESCAPE, 0, 0),
-                () -> !linkerScreen().creating(), () -> "criando " + linkerScreen().creating()));
-        list.add(new Step("rascunho: reabrir o campo, o texto volta", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessageKey(newKey), "+ Nova rede")),
-                () -> linkerScreen().creating() && linkerScreen().nameBox().getValue().equals(DRAFT_NAME),
-                () -> "criando " + linkerScreen().creating() + ", texto '" + linkerScreen().nameBox().getValue() + "'"));
-        list.add(new Step("rascunho: fechar o campo de novo", STEP_TIMEOUT_MS,
-                () -> linkerScreen().keyPressed(GLFW.GLFW_KEY_ESCAPE, 0, 0),
-                () -> !linkerScreen().creating(), () -> "criando " + linkerScreen().creating()));
-        list.add(close("rascunho: fechar a tela"));
-        list.add(new Step("rascunho: reabrir a tela", STEP_TIMEOUT_MS, () -> {
+    private static void openSteps(List<Step> list) {
+        list.add(shift("Shift pressionado", true));
+        list.add(new Step("Vinculador: Shift + clique no ar troca para Abrir", STEP_TIMEOUT_MS, () -> {
             Minecraft minecraft = Minecraft.getInstance();
-            if (minecraft.screen != null) {
-                throw new StepFailure("ainda há uma tela aberta: " + describe(minecraft.screen));
-            }
             minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);
-        }, () -> Minecraft.getInstance().screen instanceof LinkerScreen screen
-                && screen.getMenu().snapshot().active().isPresent(),
+        }, () -> serverLinker(stack -> LinkerItem.mode(stack) == LinkerMode.OPEN)
+                && LinkerItem.mode(Minecraft.getInstance().player.getMainHandItem()) == LinkerMode.OPEN,
+                () -> "modo no servidor " + serverLinker(stack -> LinkerItem.mode(stack).name())));
+        list.add(shift("Shift solto", false));
+        list.add(new Step("Vinculador: vincular o baú ao roteador de alcance", STEP_TIMEOUT_MS,
+                () -> onServer(server -> router(server, linkRouter).linkMachine(linkChest)),
+                () -> onServer(server -> router(server, linkRouter).remoteMachines().contains(linkChest)),
+                () -> "baú não vinculado"));
+        list.add(new Step("Vinculador: clique no baú abre a lista", STEP_TIMEOUT_MS, () -> {
+            Minecraft minecraft = Minecraft.getInstance();
+            minecraft.gameMode.useItemOn(minecraft.player, InteractionHand.MAIN_HAND,
+                    new BlockHitResult(Vec3.atCenterOf(linkChest), Direction.UP, linkChest, false));
+        }, () -> Minecraft.getInstance().screen instanceof LinkerOpenScreen,
                 () -> "tela " + describe(Minecraft.getInstance().screen)));
-        list.add(new Step("rascunho: abrir o campo na tela nova, o texto volta", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessageKey(newKey), "+ Nova rede")),
-                () -> linkerScreen().creating() && linkerScreen().nameBox().getValue().equals(DRAFT_NAME),
-                () -> "criando " + linkerScreen().creating() + ", texto '" + linkerScreen().nameBox().getValue() + "'"));
-        list.add(new Step("rascunho: Enter cria a rede", STEP_TIMEOUT_MS,
-                () -> linkerScreen().keyPressed(GLFW.GLFW_KEY_ENTER, 0, 0),
-                () -> {
-                    UUID playerId = Minecraft.getInstance().player.getUUID();
-                    return !linkerScreen().creating()
-                            && onServer(server -> NetworkSavedData.get(server).byName(playerId, DRAFT_NAME) != null);
-                },
-                () -> "criando " + linkerScreen().creating() + ", ativa " + linkerScreen().getMenu().snapshot().active()));
-        list.add(new Step("rascunho: depois de criar, o campo volta vazio", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessageKey(newKey), "+ Nova rede")),
-                () -> linkerScreen().creating() && linkerScreen().nameBox().getValue().isEmpty(),
-                () -> "criando " + linkerScreen().creating() + ", texto '" + linkerScreen().nameBox().getValue() + "'"));
-        list.add(new Step("rascunho: fechar o campo vazio", STEP_TIMEOUT_MS,
-                () -> linkerScreen().keyPressed(GLFW.GLFW_KEY_ESCAPE, 0, 0),
-                () -> !linkerScreen().creating(), () -> "criando " + linkerScreen().creating()));
-        list.add(new Step("rascunho: de volta à rede " + AREA_NETWORK, STEP_TIMEOUT_MS,
-                () -> click(widget(byMessage(Component.literal(AREA_NETWORK)), "linha da rede " + AREA_NETWORK)),
-                () -> linkerScreen().getMenu().snapshot().active().equals(Optional.of(areaNetwork)),
-                () -> "ativa na tela " + linkerScreen().getMenu().snapshot().active()));
+        list.add(clipCheck("Vinculador: lista do Abrir"));
+        list.add(capture("8e-vinculador-abrir-lista"));
+        list.add(new Step("Vinculador: escolher a primeira linha abre o roteador", STEP_TIMEOUT_MS, () -> {
+            LinkerOpenScreen screen = (LinkerOpenScreen) Minecraft.getInstance().screen;
+            int[] point = screen.rowCenter(0);
+            screen.mouseClicked(point[0], point[1], 0);
+        }, () -> Minecraft.getInstance().screen instanceof RouterScreen,
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(close("Vinculador: fechar o roteador"));
+        list.add(new Step("Vinculador: limpar", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            ServerLevel level = server.overworld();
+            RouterBlockEntity router = router(server, linkRouter);
+            // nada cai no chão: sem o upgrade e sem máquinas antes de tirar o bloco
+            router.removeRangeUpgrade();
+            while (!router.remoteMachines().machines().isEmpty()) {
+                router.unlinkMachine(0);
+            }
+            for (BlockPos pos : List.of(linkAttached, linkChest, linkRouter, linkRouter.below())) {
+                level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+            }
+            server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID())
+                    .setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            return null;
+        }), () -> Minecraft.getInstance().level.getBlockState(linkRouter).isAir()
+                && Minecraft.getInstance().player.getMainHandItem().isEmpty(), () -> "roteador ainda no cliente"));
     }
 
     /** Lê o Vinculador da mão principal do jogador no servidor. */

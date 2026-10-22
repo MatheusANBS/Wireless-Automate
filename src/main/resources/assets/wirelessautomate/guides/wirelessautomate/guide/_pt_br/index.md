@@ -31,8 +31,8 @@ recursos entre si, sem canos.
 | <ItemImage id="wirelessautomate:router" /> [Roteador Wireless](router.md) | Liga uma máquina à rede. |
 | <ItemImage id="wirelessautomate:tier_core_advanced" /> [Cartões de Upgrade](upgrade-cards.md) | Sobem o tier do roteador: mais vazão e alcance. |
 | <ItemImage id="wirelessautomate:filter_card" /> [Cartão de Filtro](filter-card.md) | Um filtro pronto para usar em várias faces. |
-| <ItemImage id="wirelessautomate:linker" /> [Vinculador](linker.md) | Escolhe a sua rede e põe roteadores nela, um a um ou por área. |
-| <ItemImage id="wirelessautomate:configurator" /> [Configurador](configurator.md) | Copia a configuração de um roteador e cola em outros. |
+| <ItemImage id="wirelessautomate:linker" /> [Vinculador](linker.md) | Liga máquinas a um roteador de alcance e abre o roteador de uma máquina. |
+| <ItemImage id="wirelessautomate:configurator" /> [Configurador](configurator.md) | Copia a configuração de um roteador e cola em outro. |
 | <ItemImage id="wirelessautomate:network_tablet" /> [Tablet de Rede](network-tablet.md) | Vê e gerencia todas as suas redes de qualquer lugar. |
 | <ItemImage id="wirelessautomate:chunk_loader_upgrade" /> [Upgrade de Chunk Loading](chunk-loading.md) | Mantém o roteador trabalhando com você longe. |
 | <ItemImage id="wirelessautomate:storage_chest" /> [Baú Wireless](wireless-chest.md) | Guarda milhões de itens por tipo; entre dois deles, um tipo inteiro passa de uma vez. |

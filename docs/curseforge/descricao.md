@@ -1,4 +1,4 @@
-**2.4.2:** machines newly linked to an existing Range Upgrade group no longer inherit its profile (they start as an empty exception), and the router screen remembers the last tab and face. 2.4.1: choosing a face action no longer assigns the active network from the Tablet or Linker.
+**2.7.0:** share a private network with friends and with FTB Teams teams (suggestions while you type), a Tablet Map you can drag that shows every router you can see, a Linker with Link and Open modes, and a Configurator that is just the Brush. 2.4.2: machines newly linked to an existing Range Upgrade group no longer inherit its profile (they start as an empty exception), and the router screen remembers the last tab and face. 2.4.1: choosing a face action no longer assigns the active network from the Tablet or Linker.
 
 ![Wireless Automate](https://media.forgecdn.net/attachments/2034/633/banner-png.png)
 
@@ -140,8 +140,8 @@ A Cut Signal Crystal yields twice as much and lasts twice as long. From Elite up
 
 ![Link whole areas at once](https://media.forgecdn.net/attachments/2085/329/feature-5-area-png.png)
 
-- **Linker:** picks your active network and puts routers in it, one by one or a **whole marked area** at once, only on the tabs and machine faces you check (Items, Fluids, Energy and, with the optional mods, Chemicals and Source). Pick **None (unlink)** to take them out of their network instead. In **Machines** mode it links machines to a router with the Range Upgrade, by click or by area.
-- **Configurator:** copies a router's setup (faces, filters, priorities, redstone and the network of each face) and pastes it on other routers, one by one or over an area. Area paste can touch only routers on the **same kind of machine**, so you can configure a whole production line in a few clicks, or every router in the area. Paste every tab or just one type, leaving the other tabs alone. Hold **Left Alt** for a radial wheel that picks the mode and the pasted type.
+- **Linker** (two modes): **Link** picks a router with the Range Upgrade (click it) and links the machines you click, or **a whole marked area** at once (Shift + click two blocks; nearest first, up to the tier's radius and limit); the **Unlink** switch takes them out instead. **Open** opens the screen of the router that reaches the machine you click, already editing that machine; with several routers, a short list lets you pick. It checks range, claims and protection mods on the router. The Linker no longer touches networks: choose each face's network on the router screen or in the Tablet.
+- **Configurator** (the Brush): Shift + click a router copies its setup (faces, filters, priorities, redstone and the network of each face), click pastes it on another, and Shift + click on a block without a router clears the copy. Paste every tab or just one type, leaving the other tabs alone. Hold **Left Alt** for a radial wheel that picks the pasted type. A face's network is only pasted if you can use it, and a face only leaves a network you can edit. To configure many routers at once, paste the profile on the Tablet's marked ones.
 - **Chunk Loading Upgrade:** keeps a router and its machine working while you're away.
 - **Recipe editor** (operators): `/wa recipes` opens a screen to change, disable or restore any of the mod's crafting recipes, with items from your inventory or JEI, tags and the result count. Saved as a datapack in `config/wirelessautomate/recipes/`, so it works in every world and survives updates. Handy for packs that want a different Ultimate recipe.
 
@@ -153,7 +153,9 @@ A Cut Signal Crystal yields twice as much and lasts twice as long. From Elite up
 
 ![Network Tablet](https://media.forgecdn.net/attachments/2085/330/feature-6-tablet-png.png)
 
-Every router of every network, from anywhere: one search box for machine, network and name, quick filters and one row per router (tier, name and the machine it sits on), with the chosen node **editable right there** (the faces unfolded like a cube, the same panel as the router screen). Rename a router or its machine with ✎ right in the list. Open a router in the list to see each of its linked machines with its state, or switch to **Machines** to see every machine of the base by block type. Copy a node's profile and paste it on routers, single machines or whole machine groups, with undo. Also a top-down map, a **Flows** tab with what comes in and goes out of each type and network, Storage balances and what needs attention (click a line to filter the list), routers whose faces sit in several networks, and network groups to pause and resume a whole system at once. The map shows the picked router's machines. Double-click a node to open its full screen remotely.
+Every router of every network, from anywhere: one search box for machine, network and name, quick filters and one row per router (tier, name and the machine it sits on), with the chosen node **editable right there** (the faces unfolded like a cube, the same panel as the router screen). Rename a router or its machine with ✎ right in the list. Open a router in the list to see each of its linked machines with its state, or switch to **Machines** to see every machine of the base by block type. Copy a node's profile and paste it on routers, single machines or whole machine groups, with undo. Also a top-down **map you can drag** that shows every router you can see (use **Center** to come back to yourself), a **Flows** tab with what comes in and goes out of each type and network, Storage balances and what needs attention (click a line to filter the list), routers whose faces sit in several networks, and network groups to pause and resume a whole system at once. The map shows the picked router's machines. Double-click a node to open its full screen remotely.
+
+**Share a network.** On a private network you own, the Networks tab lists your **guests** and, with FTB Teams, your **teams**: type a name and pick from the suggestions (players who already joined the server, and party teams), and click the ✕ twice to remove. Guests use the network and edit its nodes; only you and operators manage it. A team counts as a whole and is live: whoever joins or leaves it gains or loses access on their own. There are `/wa network invite`, `uninvite` and `team add|remove` commands too.
 
 ![One row per router](https://media.forgecdn.net/attachments/2085/346/feature-22-tablet-list-png.png)
 
@@ -167,13 +169,13 @@ Every player gets the guide book on their first join (it's also in the creative 
 
 ## Getting started
 
-1. Craft two routers (iron, redstone and an eye of ender) and a Linker.
+1. Craft two routers (iron, redstone and an eye of ender).
 2. Use one on a chest and one on another chest. New routers start with no network.
-3. Holding the Linker, click both routers: they join your active network (the first click creates one).
-4. Open the first router, pick the **Up** face on the **Items** tab and set it to **Extract**.
+3. Open the first router, pick the **Up** face on the **Items** tab and, in the **Network** row, create a network and choose it. Do the same on the second router, choosing the same network.
+4. On the first router, set the **Up** face to **Extract**.
 5. On the second router, set the same face to **Insert**. Items now flow from the first chest to the second.
 
-Once the first router of a line is set up, copy it with the Configurator and paste on the rest.
+Once the first router of a line is set up, copy it with the Configurator (Shift + click it) and paste (click) on the rest.
 
 Recipes use vanilla items, except the Allthemodium tiers (made from the Allthemodium mod's metals, only when it's installed).
 
@@ -188,6 +190,7 @@ Recipes use vanilla items, except the Allthemodium tiers (made from the Allthemo
 | **Ars Nouveau** (optional) | A **Source** tab (Source Jars, Relays and the Imbuement Chamber connect straight to a router) and the **Wireless Source Tank**, which Ars machines use like a Source Jar. Needs Ars Nouveau 5.2 or newer. |
 | **Allthemodium** (optional, as in ATM10) | Three extra tiers (Allthemodium, Vibranium and Unobtainium) between Emerald and Ultimate, for the router and every storage block. With **All The Tweaks**, the Ultimate ring takes ATM Star shards. |
 | **JEI** (optional) | Drag and drop (or Shift + click) ingredients into filters without having the item, or onto the tag inspector; the tier-up recipes (block in the ring, cards with an origin, block + card) show in JEI. |
+| **FTB Teams** (optional) | Add a party team to a private network and every member gets the access of a guest, live. Needs FTB Teams for 1.21.1 (with FTB Library and Architectury, which it asks for itself). |
 | **GuideME** (optional) | The in-game guide book. |
 
 ## Performance

@@ -1,8 +1,11 @@
 package io.github.matheusanbs.wirelessautomate.packet;
 
+import io.github.matheusanbs.wirelessautomate.menu.TabletAccess;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
+import java.util.List;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
+import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import org.jetbrains.annotations.Nullable;
@@ -47,6 +50,17 @@ public final class TabletPayloads {
                 (payload, context) -> handleAction(serverPlayer(context), payload));
         registrar.playToServer(OpenTabletPayload.TYPE, OpenTabletPayload.STREAM_CODEC,
                 (payload, context) -> handleOpenTablet(serverPlayer(context)));
+        registrar.playToServer(NetworkSuggestPayload.TYPE, NetworkSuggestPayload.STREAM_CODEC,
+                (payload, context) -> handleSuggest(serverPlayer(context), payload));
+        registrar.playToClient(NetworkSuggestionsPayload.TYPE, NetworkSuggestionsPayload.STREAM_CODEC,
+                TabletPayloads::onSuggestions);
+    }
+
+    private static void onSuggestions(NetworkSuggestionsPayload payload, IPayloadContext context) {
+        Player player = context.player();
+        if (player != null && player.containerMenu instanceof TabletMenu menu) {
+            menu.applySuggestions(payload);
+        }
     }
 
     private static @Nullable ServerPlayer serverPlayer(IPayloadContext context) {
@@ -154,6 +168,28 @@ public final class TabletPayloads {
         TabletMenu menu = menu(player, payload.containerId());
         return menu != null && menu.apply(payload.action(), payload.target(), payload.other(), payload.text(),
                 payload.value());
+    }
+
+    /**
+     * As sugestões do campo de convidado ou de time. Devolve a resposta mandada, ou {@code null} se o jogador não
+     * gerencia a rede, pediu rápido demais ou não tem o Tablet aberto com esse id.
+     */
+    public static @Nullable NetworkSuggestionsPayload handleSuggest(@Nullable ServerPlayer player,
+            NetworkSuggestPayload payload) {
+        if (menu(player, payload.containerId()) == null) {
+            return null;
+        }
+        List<NetworkSuggestionsPayload.Suggestion> found = TabletAccess.suggestions(player, payload.kind(),
+                payload.text(), payload.network());
+        if (found == null) {
+            return null;
+        }
+        NetworkSuggestionsPayload reply = new NetworkSuggestionsPayload(payload.kind(), payload.text(), found);
+        // jogadores falsos (GameTests) não negociam os canais do mod
+        if (player.connection != null && player.connection.hasChannel(reply)) {
+            PacketDistributor.sendToPlayer(player, reply);
+        }
+        return reply;
     }
 
     /** Tecla de atalho: abre o Tablet se o jogador tem um no inventário e não está com outra tela aberta. */

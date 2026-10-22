@@ -1,12 +1,27 @@
 package io.github.matheusanbs.wirelessautomate.gametest;
 
+import io.github.matheusanbs.wirelessautomate.menu.TabletAccess;
+import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
+import io.github.matheusanbs.wirelessautomate.menu.TabletMenu.Action;
+import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NetworkView;
+import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.TeamAccess;
 import io.github.matheusanbs.wirelessautomate.network.TeamAccess.TeamInfo;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
+import io.github.matheusanbs.wirelessautomate.packet.NetworkSuggestPayload;
+import io.github.matheusanbs.wirelessautomate.packet.NetworkSuggestionsPayload.Suggestion;
+import io.github.matheusanbs.wirelessautomate.packet.TabletActionPayload;
+import io.github.matheusanbs.wirelessautomate.packet.TabletPayloads;
+import io.github.matheusanbs.wirelessautomate.registry.ModItems;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
@@ -117,6 +132,69 @@ public final class TeamGameTests {
             helper.succeed();
         } finally {
             TeamTestSupport.disband(helper.getLevel().getServer(), team);
+        }
+    }
+    private static ServerPlayer playerWithTablet(GameTestHelper helper) {
+        ServerPlayer player = TestPlayers.menuOpener(helper);
+        player.moveTo(Vec3.atCenterOf(helper.absolutePos(new BlockPos(0, 1, 0)).above(2)));
+        player.getInventory().setItem(0, new ItemStack(ModItems.NETWORK_TABLET.get()));
+        player.containerMenu = new TabletMenu(321, player.getInventory(), player);
+        return player;
+    }
+
+    private static boolean act(ServerPlayer player, Action action, UUID network, UUID other, String text) {
+        return TabletPayloads.handleAction(player, new TabletActionPayload(321, action, Optional.of(network),
+                Optional.ofNullable(other), text, 0));
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void theOwnerAddsATeamByIdOrByNameAndSeesItInTheList(GameTestHelper helper) throws Exception {
+        if (!enabled()) {
+            helper.succeed();
+            return;
+        }
+        ServerPlayer manager = playerWithTablet(helper);
+        ServerPlayer leader = TestPlayers.menuOpener(helper);
+        UUID team = TeamTestSupport.createParty(leader, "acao-teste");
+        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
+        WaNetwork network = data.create(manager.getUUID(), "teste-times-acao");
+        try {
+            helper.assertTrue(TabletAccess.resolveTeam(Optional.empty(), "  ACAO-teste ").equals(team),
+                    "o nome do time não resolveu sem diferenciar maiúsculas");
+            helper.assertTrue(TabletAccess.resolveTeam(Optional.empty(), "acao") == null,
+                    "um pedaço do nome resolveu");
+            helper.assertTrue(act(manager, Action.NETWORK_TEAM_ADD, network.id(), null, "acao-teste"),
+                    "adicionar o time pelo nome");
+            helper.assertFalse(act(manager, Action.NETWORK_TEAM_ADD, network.id(), team, ""), "adicionou o time de novo");
+            helper.assertTrue(data.network(network.id()).teams().equals(List.of(team)), "o time não entrou");
+            helper.assertTrue(data.network(network.id()).canUse(leader.getUUID(), false),
+                    "o líder do time não ganhou acesso");
+
+            ((TabletMenu) manager.containerMenu).setQuery(((TabletMenu) manager.containerMenu).query());
+            ((TabletMenu) manager.containerMenu).pollSnapshot();
+            NetworkView view = ((TabletMenu) manager.containerMenu).snapshot().network(network.id()).orElseThrow();
+            helper.assertTrue(view.access().teams().size() == 1 && view.access().teams().get(0).id().equals(team)
+                    && !view.access().teams().get(0).gone() && view.access().teams().get(0).members() >= 1,
+                    "o time não aparece na lista de acesso do dono");
+
+            List<Suggestion> found = TabletAccess.suggestions(manager, NetworkSuggestPayload.Kind.TEAM, "acao",
+                    network.id());
+            helper.assertTrue(found != null && found.size() == 1 && found.get(0).id().equals(team)
+                    && found.get(0).taken() && found.get(0).detail() >= 1, "sugestão do time");
+
+            TeamTestSupport.disband(helper.getLevel().getServer(), team);
+            helper.assertFalse(data.network(network.id()).canUse(leader.getUUID(), false),
+                    "um time desfeito ainda dá acesso");
+            helper.assertTrue(act(manager, Action.NETWORK_TEAM_REMOVE, network.id(), team, ""),
+                    "não tirou o time que já foi desfeito");
+            helper.assertTrue(data.network(network.id()).teams().isEmpty(), "o time desfeito ficou na rede");
+            helper.succeed();
+        } finally {
+            manager.containerMenu = manager.inventoryMenu;
+            data.remove(network.id());
+            if (TeamAccess.info(team) != null && !TeamAccess.info(team).gone()) {
+                TeamTestSupport.disband(helper.getLevel().getServer(), team);
+            }
         }
     }
 }

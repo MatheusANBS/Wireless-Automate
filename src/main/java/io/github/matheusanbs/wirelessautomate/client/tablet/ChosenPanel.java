@@ -78,7 +78,7 @@ final class ChosenPanel {
             ResourceType type = openOn != null ? openOn : panel != null ? panel.type() : list.chipType;
             openOn = null;
             panel = new NodePanel(new PanelActions(), s, s.range().present() ? s.range().face() : s.facing());
-            panel.select(type);
+            panel.showType(type);
             panelNode = list.chosen;
         } else if (panelVersion != menu.panelVersion()) {
             panel.setSnapshot(s);

@@ -138,16 +138,16 @@ A Cut Signal Crystal yields twice as much and lasts twice as long. From Elite up
 
 ![The toolkit](https://media.forgecdn.net/attachments/2085/338/feature-14-toolkit-png.png)
 
-![Link whole areas at once](https://media.forgecdn.net/attachments/2085/329/feature-5-area-png.png)
+![Link a whole area](ENVIAR:feature-5-area.png)
 
 - **Linker** (two modes): **Link** picks a router with the Range Upgrade (click it) and links the machines you click, or **a whole marked area** at once (Shift + click two blocks; nearest first, up to the tier's radius and limit); the **Unlink** switch takes them out instead. **Open** opens the screen of the router that reaches the machine you click, already editing that machine; with several routers, a short list lets you pick. It checks range, claims and protection mods on the router. The Linker no longer touches networks: choose each face's network on the router screen or in the Tablet.
 - **Configurator** (the Brush): Shift + click a router copies its setup (faces, filters, priorities, redstone and the network of each face), click pastes it on another, and Shift + click on a block without a router clears the copy. Paste every tab or just one type, leaving the other tabs alone. Hold **Left Alt** for a radial wheel that picks the pasted type. A face's network is only pasted if you can use it, and a face only leaves a network you can edit. To configure many routers at once, paste the profile on the Tablet's marked ones.
 - **Chunk Loading Upgrade:** keeps a router and its machine working while you're away.
 - **Recipe editor** (operators): `/wa recipes` opens a screen to change, disable or restore any of the mod's crafting recipes, with items from your inventory or JEI, tags and the result count. Saved as a datapack in `config/wirelessautomate/recipes/`, so it works in every world and survives updates. Handy for packs that want a different Ultimate recipe.
 
-![Configurator wheel](https://media.forgecdn.net/attachments/2085/340/feature-16-wheel-png.png)
+![Configurator Brush](ENVIAR:feature-16-wheel.png)
 
-![Linker by type](https://media.forgecdn.net/attachments/2085/337/feature-13-linker-png.png)
+![Link or open](ENVIAR:feature-13-linker.png)
 
 ### Network Tablet
 
@@ -158,6 +158,10 @@ Every router of every network, from anywhere: one search box for machine, networ
 **Share a network.** On a private network you own, the Networks tab lists your **guests** and, with FTB Teams, your **teams**: type a name and pick from the suggestions (players who already joined the server, and party teams), and click the ✕ twice to remove. Guests use the network and edit its nodes; only you and operators manage it. A team counts as a whole and is live: whoever joins or leaves it gains or loses access on their own. There are `/wa network invite`, `uninvite` and `team add|remove` commands too.
 
 ![One row per router](https://media.forgecdn.net/attachments/2085/346/feature-22-tablet-list-png.png)
+
+![A map you can drag](ENVIAR:feature-25-map.png)
+
+![Share a network](ENVIAR:feature-24-network-access.png)
 
 ### Built-in guide book
 

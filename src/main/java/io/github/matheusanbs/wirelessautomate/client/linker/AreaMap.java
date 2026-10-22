@@ -7,7 +7,7 @@ import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerBox;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerProblem;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerSnapshot;
-import io.github.matheusanbs.wirelessautomate.menu.LinkerSnapshot.RouterDot;
+import io.github.matheusanbs.wirelessautomate.menu.LinkerSnapshot.Dot;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.client.Minecraft;
@@ -18,8 +18,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 
 /**
- * O corpo dos modos Área e Máquinas, na coluna da direita: a prévia de cima da caixa marcada com os
- * roteadores dentro dela, os cantos e a contagem (ou o que impede, ou o resultado do último Vincular).
+ * O corpo da tela do Vinculador, na coluna da direita: a prévia de cima da caixa marcada com as máquinas
+ * vinculadas dentro dela, os cantos e a contagem (ou o que impede, ou o resultado do último Vincular).
  */
 final class AreaMap {
     private final LinkerScreen screen;
@@ -99,7 +99,7 @@ final class AreaMap {
                 g.fill(x + 1, sz, x + mapW - 1, sz + 1, GuiPaint.VIEW_GRID);
             }
             LinkerBox box = s.box();
-            int color = LinkerText.activeColor(s);
+            int color = s.unlink() ? GuiPaint.DANGER : GuiPaint.ACCENT;
             if (box != null) {
                 int bx0 = view.sx(box.minX());
                 int bz0 = view.sz(box.minZ());
@@ -134,16 +134,11 @@ final class AreaMap {
 
     private static void renderDots(GuiGraphics g, LinkerSnapshot s, MapView view) {
         int size = view.scale() >= 3 ? 5 : 3;
-        for (RouterDot dot : s.routers()) {
+        for (Dot dot : s.machines()) {
             int dx = view.sx(dot.x() + 0.5) - size / 2;
             int dz = view.sz(dot.z() + 0.5) - size / 2;
-            int fill = dot.color() < 0 ? GuiPaint.INSET : 0xFF000000 | dot.color();
-            int ring = dot.linked() ? GuiPaint.RING : GuiPaint.BEVEL_LIGHT;
-            g.fill(dx - 1, dz - 1, dx + size + 1, dz + size + 1, ring);
-            g.fill(dx, dz, dx + size, dz + size, fill);
-            if (dot.color() < 0) {
-                GuiPaint.outline(g, dx, dz, size, size, GuiPaint.MUTED);
-            }
+            g.fill(dx - 1, dz - 1, dx + size + 1, dz + size + 1, GuiPaint.RING);
+            g.fill(dx, dz, dx + size, dz + size, GuiPaint.ACCENT);
         }
     }
 
@@ -161,8 +156,8 @@ final class AreaMap {
             GuiText.wrap(g, font, LinkerText.status(s), x, sy, rw, 2, LinkerText.statusColor(s));
             return;
         }
-        // depois do Vincular, o resultado toma o lugar da contagem (que viraria "N já na rede")
-        Component head = s.outcome().map(o -> LinkerText.outcomeText(s, o)).orElse(LinkerText.status(s));
+        // depois do Vincular, o resultado toma o lugar da contagem
+        Component head = s.outcome().map(LinkerText::outcomeText).orElse(LinkerText.status(s));
         Component detail = s.outcome().isPresent() ? LinkerText.outcomeDetail(s.outcome().get()) : LinkerText.detail(s);
         // sem detalhe, o resultado pode ocupar as duas linhas (até o botão)
         GuiText.wrap(g, font, head, x, sy, rw, detail == null ? 2 : 1, s.outcome().isPresent() ? GuiPaint.OK : GuiPaint.FG);

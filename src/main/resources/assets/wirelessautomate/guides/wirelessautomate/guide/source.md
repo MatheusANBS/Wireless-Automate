@@ -18,7 +18,7 @@ and the rest of the mod works the same.
 | --- | --- |
 | Mode, priority and redstone per face | Yes, like the other tabs. |
 | Network per face | Yes. |
-| Linker and Configurator | Yes: the **Source** chip and the mouse wheel shortcut. |
+| Configurator | Yes: the **Source** type on the wheel and the mouse wheel shortcut. |
 | Throughput | Per tier: Basic 100/s, Advanced 800/s, Elite 6,400/s, Emerald 51,200/s, Ultimate unlimited (full table on the [Router](router.md) page). |
 | Filter and Filter Card | No: Source has no types, like energy. |
 

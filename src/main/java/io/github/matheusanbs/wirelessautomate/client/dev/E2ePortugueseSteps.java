@@ -2,7 +2,6 @@ package io.github.matheusanbs.wirelessautomate.client.dev;
 
 import static io.github.matheusanbs.wirelessautomate.client.dev.DevEndToEnd.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eConfiguratorSteps.*;
-import static io.github.matheusanbs.wirelessautomate.client.dev.E2eLinkerSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eRouterSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eTabletSteps.*;
@@ -11,9 +10,6 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
 import io.github.matheusanbs.wirelessautomate.client.linker.LinkerScreen;
 import io.github.matheusanbs.wirelessautomate.client.tablet.TabletScreen;
-import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
@@ -100,7 +96,7 @@ final class E2ePortugueseSteps {
         list.add(close("pt: fechar B"));
     }
 
-    /** Português: a roda do Configurador e o Vinculador com três abas. */
+    /** Português: a roda do Configurador e o Vinculador. */
     private static void ptWheelAndLinkerSteps(List<Step> list) {
         // Roda do Configurador em português (rótulos e descrições mais longos)
         list.add(new Step("pt: Configurador na mão", STEP_TIMEOUT_MS, () -> onServer(server -> {
@@ -112,18 +108,12 @@ final class E2ePortugueseSteps {
         wheelSteps(list, "pt: ", "10c-configurador-roda-pt");
         list.add(close("pt: fechar a roda"));
 
-        // Vinculador em modo Área, com três abas marcadas
+        // Vinculador sem roteador escolhido: a ajuda dos gestos e o aviso são os textos mais longos
         list.add(new Step("pt: Vinculador na mão", STEP_TIMEOUT_MS, () -> onServer(server -> {
-            ItemStack wand = new ItemStack(ModItems.LINKER.get());
-            // modo Área com os dois roteadores dentro: o botão de vincular aparece
-            LinkerItem.setMode(wand, LinkerMode.AREA);
-            LinkerItem.setArea(wand, LinkerArea.firstCorner(net.minecraft.world.level.Level.OVERWORLD, areaCorner1)
-                    .withSecond(areaCorner2));
             server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID())
-                    .setItemInHand(InteractionHand.MAIN_HAND, wand);
+                    .setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.LINKER.get()));
             return null;
-        }), () -> Minecraft.getInstance().player.getMainHandItem().is(ModItems.LINKER.get())
-                && LinkerItem.mode(Minecraft.getInstance().player.getMainHandItem()) == LinkerMode.AREA,
+        }), () -> Minecraft.getInstance().player.getMainHandItem().is(ModItems.LINKER.get()),
                 () -> "na mão " + Minecraft.getInstance().player.getMainHandItem()));
         list.add(new Step("pt: abrir o Vinculador", STEP_TIMEOUT_MS, () -> {
             Minecraft minecraft = Minecraft.getInstance();
@@ -131,21 +121,8 @@ final class E2ePortugueseSteps {
                 throw new StepFailure("ainda há uma tela aberta: " + describe(minecraft.screen));
             }
             minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);
-        }, () -> Minecraft.getInstance().screen instanceof LinkerScreen screen
-                && screen.getMenu().snapshot().active().equals(Optional.of(longNetwork)),
+        }, () -> Minecraft.getInstance().screen instanceof LinkerScreen,
                 () -> "tela " + describe(Minecraft.getInstance().screen)));
-        // três abas (sem Químicos): o título "Abas: Itens + Fluidos + Energia" é o texto mais longo
-        list.add(new Step("pt: três abas", STEP_TIMEOUT_MS,
-                () -> {
-                    for (ResourceType type : new ResourceType[] {ResourceType.CHEMICAL, ResourceType.SOURCE}) {
-                        if (linkerScreen().getMenu().snapshot().available().contains(type)) {
-                            click(widget(byMessage(Component.translatable("gui.wirelessautomate.router.type."
-                                    + type.key())), "aba " + type));
-                        }
-                    }
-                },
-                () -> serverLinker(stack -> LinkerItem.effectiveTabs(stack).size() == 3),
-                () -> "abas " + linkerScreen().getMenu().snapshot().tabs()));
         list.add(clipCheck("pt: Vinculador"));
         list.add(capture("8c-vinculador-pt"));
         list.add(close("pt: fechar o Vinculador"));

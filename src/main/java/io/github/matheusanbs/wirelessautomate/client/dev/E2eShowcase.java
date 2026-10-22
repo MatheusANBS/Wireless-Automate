@@ -21,8 +21,6 @@ import io.github.matheusanbs.wirelessautomate.filter.ItemRule;
 import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerFaces;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
@@ -118,14 +116,12 @@ final class E2eShowcase {
 
     /** Vitrine: o Vinculador e o Configurador na mão, com a área, a tela do Vinculador e a roda. */
     private static void showcaseToolShots(List<Step> list) {
-        // Vinculador na mão, em modo Área, com a fileira de fornalhas marcada.
+        // Vinculador na mão, com a fileira de fornalhas marcada.
         list.add(new Step("área do Vinculador", STEP_TIMEOUT_MS, () -> {
             UUID playerId = Minecraft.getInstance().player.getUUID();
             onServer(server -> {
                 ServerPlayer player = server.getPlayerList().getPlayer(playerId);
                 ItemStack linker = new ItemStack(ModItems.LINKER.get());
-                LinkerItem.setMode(linker, LinkerMode.AREA);
-                LinkerItem.setFaces(linker, LinkerFaces.NONE.toggle(RemoteSide.TOP).toggle(RemoteSide.BOTTOM));
                 LinkerItem.setArea(linker, new LinkerArea(player.level().dimension(), showBase.offset(-11, 0, -15),
                         java.util.Optional.of(showBase.offset(-8, 1, -7))));
                 player.setItemInHand(InteractionHand.MAIN_HAND, linker);
@@ -134,12 +130,12 @@ final class E2eShowcase {
         }, () -> LinkerItem.area(Minecraft.getInstance().player.getMainHandItem()) != null, () -> "Vinculador na mão"));
         list.add(DevEndToEnd.wait("contorno", 10));
         list.add(capture("s2-vinculador-area"));
-        // Com o Vinculador ainda na mão: a tela dele, com os chips de tipo.
+        // Com o Vinculador ainda na mão: a tela dele.
         list.add(new Step("abrir o Vinculador", STEP_TIMEOUT_MS, () -> {
             Minecraft minecraft = Minecraft.getInstance();
             minecraft.options.hideGui = false;
             minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);
-        }, () -> Minecraft.getInstance().screen instanceof LinkerScreen screen && screen.getMenu().snapshot().inside() > 0,
+        }, () -> Minecraft.getInstance().screen instanceof LinkerScreen,
                 () -> "tela " + describe(Minecraft.getInstance().screen)));
         list.add(new Step("Vinculador maior", STEP_TIMEOUT_MS,
                 () -> linkerScreen().previewResize(460, 300),

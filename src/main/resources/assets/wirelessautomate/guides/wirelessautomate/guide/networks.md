@@ -54,7 +54,7 @@ from the face modes.
 | Rule | Explanation |
 | --- | --- |
 | **No network when placed** | A new router isn't in any network: put its faces in one (below) so it starts working. |
-| **Active network** | Every player has an active network (the first one is named after them). It's where the Linker puts routers. |
+| **Active network** | Every player has an active network, the one the [Tablet](network-tablet.md) uses as the target of **Move**. |
 | **Network per face** | On a furnace, the **Top** face (input) can be on the "Mine" network and the **Bottom** face (output) on the "Storage" network: ore comes in through Mine and ingots leave through Storage. Each tab has its own: the energy can go to the "Base" network. |
 | **Delivery order** | Higher priority first; ties take turns (round-robin). |
 | **Storage** | Receives from extractors and delivers to inserters, without bouncing between two Storage faces. |
@@ -65,9 +65,6 @@ from the face modes.
 | Way | How many at once |
 | --- | --- |
 | The face's **Network** row, on the router screen | One face of one router, on one tab |
-| <ItemLink id="wirelessautomate:linker" />, Single mode | One router: the checked faces and tabs |
-| <ItemLink id="wirelessautomate:linker" />, Area mode | Every loaded router in an area (the checked faces and tabs) |
-| <ItemLink id="wirelessautomate:linker" />, network **None (unlink)** | Takes the checked faces and tabs out of their network, on one router or an area |
 | <ItemLink id="wirelessautomate:network_tablet" />, Select | The nodes you check in the list: all their faces of the chosen type (or of every type) |
 | <ItemLink id="wirelessautomate:configurator" /> | Each face's network goes with the pasted configuration (every tab or one type) |
 

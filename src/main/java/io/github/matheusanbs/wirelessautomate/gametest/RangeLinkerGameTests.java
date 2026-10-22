@@ -10,10 +10,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerFaces;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerProblem;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerSnapshot;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
@@ -45,8 +42,7 @@ import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
- * Roteador de alcance, o Vinculador no modo Máquinas: vincular e desvincular pelo clique e pela área, as recusas
- * e o Configurador, que nunca usa esse modo.
+ * Roteador de alcance, o Vinculador no modo Vincular: vincular e desvincular pelo clique e pela área e as recusas.
  */
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
@@ -184,12 +180,12 @@ public final class RangeLinkerGameTests {
     }
 
     /**
-     * O Vincular da tela no modo Máquinas: só entram block entities com capability de uma aba marcada
-     * (a composteira, sem block entity, fica de fora; com a aba Itens, a bateria também), nunca a
-     * máquina presa nem o roteador; de novo, as vinculadas contam como já estavam.
+     * O Vincular da tela: só entram block entities com capability de um tipo carregado (a composteira, sem block
+     * entity, fica de fora; a bateria entra pela energia), nunca a máquina presa nem o roteador; de novo, as
+     * vinculadas contam como já estavam.
      */
     @GameTest(template = "empty")
-    public static void linkerAreaLinksBlockEntitiesOfMarkedTabs(GameTestHelper helper) {
+    public static void linkerAreaLinksBlockEntities(GameTestHelper helper) {
         RouterBlockEntity router = rangeRouter(helper);
         BlockPos barrel = new BlockPos(0, 3, 0);
         BlockPos furnace = new BlockPos(2, 3, 2);
@@ -200,9 +196,6 @@ public final class RangeLinkerGameTests {
         helper.setBlock(composter, Blocks.COMPOSTER);
         helper.setBlock(battery, ModBlocks.STORAGE.get(StorageKind.BATTERY).get().defaultBlockState());
         ItemStack linker = machinesLinker();
-        // o modo Máquinas ignora as faces: nenhuma marcada não muda o Vincular
-        LinkerItem.setFaces(linker, LinkerFaces.NONE);
-        LinkerItem.setTabs(linker, LinkerTabs.of(ResourceType.ITEM));
         ServerPlayer player = linkerPlayer(helper, linker);
         helper.startSequence()
                 .thenWaitUntil(() -> waitLoaded(helper, router))
@@ -222,18 +215,13 @@ public final class RangeLinkerGameTests {
                         helper.assertTrue(remotes.contains(helper.absolutePos(barrel)), "barril fora");
                         helper.assertTrue(remotes.contains(helper.absolutePos(furnace)), "fornalha fora");
                         helper.assertFalse(remotes.contains(helper.absolutePos(composter)), "composteira sem block entity entrou");
-                        helper.assertFalse(remotes.contains(helper.absolutePos(battery)), "bateria entrou com a aba Itens");
+                        helper.assertTrue(remotes.contains(helper.absolutePos(battery)), "bateria fora");
                         helper.assertFalse(remotes.contains(helper.absolutePos(CHEST)), "a máquina presa entrou");
                         helper.assertFalse(remotes.contains(router.getBlockPos()), "o roteador entrou");
 
                         RangeLinks.Result again = RangeLinks.linkArea(player, linker);
-                        helper.assertTrue(again.ok() && again.linked() == 0 && again.already() == 2,
+                        helper.assertTrue(again.ok() && again.linked() == 0 && again.already() == 3,
                                 "de novo: " + again);
-
-                        LinkerItem.setTabs(linker, LinkerTabs.of(ResourceType.ENERGY));
-                        RangeLinks.Result energy = RangeLinks.linkArea(player, linker);
-                        helper.assertTrue(energy.ok() && energy.linked() == 1, "aba Energia: " + energy);
-                        helper.assertTrue(remotes.contains(helper.absolutePos(battery)), "bateria fora com a aba Energia");
                     } finally {
                         removePlayer(helper, player);
                     }

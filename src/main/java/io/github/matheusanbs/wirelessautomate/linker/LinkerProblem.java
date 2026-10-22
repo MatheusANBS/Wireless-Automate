@@ -14,13 +14,7 @@ public enum LinkerProblem {
     /** Volume acima do {@code maxAreaVolume} da config. */
     TOO_BIG,
     /** Jogador longe da área (acima do {@code maxDistance} da config). */
-    TOO_FAR,
-    /** Nenhuma aba marcada que valha aqui (por exemplo só Químicos, sem o Mekanism). */
-    NO_TABS,
-    /** Nenhuma face marcada (Único e Área; o modo Máquinas não usa as faces). */
-    NO_FACES,
-    /** A rede ativa é de outro dono e o jogador não é operador. */
-    FOREIGN_NETWORK;
+    TOO_FAR;
 
     /** Sufixo da chave de tradução ({@code gui.wirelessautomate.linker.problem.<chave>}). */
     public String key() {

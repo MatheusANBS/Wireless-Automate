@@ -7,8 +7,6 @@ import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerFaces;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
@@ -212,49 +210,6 @@ public final class ChemicalGameTests {
         helper.assertValueEqual(filter.chemicalStock(HYDROGEN), 250L, "estoque");
         // Uma entrada de químico não casa com itens (vale só para o tipo dela).
         helper.assertTrue(!filter.testItem(Items.STONE.getDefaultInstance()), "casou com item");
-        helper.succeed();
-    }
-
-    /**
-     * Com o Mekanism, o Vinculador conta a aba Químicos: Todos e a combinação Itens + Químicos a
-     * incluem, a roda tem o atalho Químicos e vincular ou desvincular mexe na aba de químicos. Sem
-     * jogador falso (o Mekanism não aceita um nesta run).
-     */
-    @GameTest(template = "empty")
-    public static void linkerHandlesChemicalTab(GameTestHelper helper) {
-        if (!Chemicals.LOADED) {
-            helper.succeed();
-            return;
-        }
-        UUID before = newNetwork(helper, "teste-vinculador-quimicos-antes");
-        UUID target = newNetwork(helper, "teste-vinculador-quimicos");
-        helper.setBlock(A, Blocks.STONE);
-        helper.setBlock(A.above(), ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
-        RouterBlockEntity router = helper.getBlockEntity(A.above());
-        router.setNetworkId(before);
-
-        ItemStack linker = new ItemStack(ModItems.LINKER.get());
-        helper.assertValueEqual(LinkerItem.effectiveTabs(linker), LoadedTypes.LIST, "Todos");
-        LinkerItem.setTabs(linker, LinkerTabs.of(ResourceType.ITEM, ResourceType.CHEMICAL));
-        List<ResourceType> tabs = LinkerItem.effectiveTabs(linker);
-        helper.assertValueEqual(tabs, List.of(ResourceType.ITEM, ResourceType.CHEMICAL), "Itens + Químicos");
-
-        LinkerActions.apply(router, tabs, LinkerFaces.ALL, target);
-        assertNetwork(helper, router.networkId(ResourceType.CHEMICAL), target, "químicos vinculados");
-        assertNetwork(helper, router.networkId(ResourceType.ITEM), target, "itens vinculados");
-        assertNetwork(helper, router.networkId(ResourceType.FLUID), before, "fluidos mudaram");
-        helper.assertTrue(LinkerActions.inTarget(router, tabs, LinkerFaces.ALL, target), "não conta como vinculado");
-
-        LinkerActions.apply(router, List.of(ResourceType.CHEMICAL), LinkerFaces.ALL, null);
-        helper.assertTrue(router.networkId(ResourceType.CHEMICAL) == null, "químicos não desvinculados");
-        assertNetwork(helper, router.networkId(ResourceType.ITEM), target, "itens mudaram ao desvincular");
-
-        LinkerItem.setTabs(linker, LinkerTabs.of(ResourceType.ENERGY));
-        helper.assertValueEqual(LinkerItem.cycleTabs(linker, 1), LinkerTabs.of(ResourceType.CHEMICAL), "atalho Químicos");
-        helper.assertValueEqual(LinkerItem.cycleTabs(linker, 1), LinkerTabs.ALL, "depois de Químicos");
-        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
-        data.remove(before);
-        data.remove(target);
         helper.succeed();
     }
 

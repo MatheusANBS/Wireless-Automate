@@ -5,14 +5,14 @@ import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
 import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
-import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerOpen;
 import io.github.matheusanbs.wirelessautomate.menu.CardFilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.EditTargetRef;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.FilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.IdleNetworkUndo;
+import io.github.matheusanbs.wirelessautomate.client.linker.LinkerOpenClient;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RemoteRouterMenu;
@@ -64,7 +64,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ModPayloads {
     /** Versão do protocolo; mude quando um payload mudar de formato. */
-    public static final String VERSION = "29";
+    public static final String VERSION = "30";
 
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(VERSION);
@@ -107,8 +107,6 @@ public final class ModPayloads {
                 (payload, context) -> handleAddFilterEntry(serverPlayer(context), payload));
         registrar.playToServer(FilterEntriesPayload.TYPE, FilterEntriesPayload.STREAM_CODEC,
                 (payload, context) -> handleFilterEntries(serverPlayer(context), payload));
-        registrar.playToServer(CycleLinkerTypePayload.TYPE, CycleLinkerTypePayload.STREAM_CODEC,
-                (payload, context) -> handleCycleLinkerType(serverPlayer(context), payload));
         registrar.playToServer(CycleConfiguratorTypePayload.TYPE, CycleConfiguratorTypePayload.STREAM_CODEC,
                 (payload, context) -> handleCycleConfiguratorType(serverPlayer(context), payload));
         registrar.playToServer(ConfiguratorWheelPayload.TYPE, ConfiguratorWheelPayload.STREAM_CODEC,
@@ -117,6 +115,10 @@ public final class ModPayloads {
         registrar.playToClient(LinkerSnapshotPayload.TYPE, LinkerSnapshotPayload.STREAM_CODEC, LinkerMenu::onSnapshot);
         registrar.playToServer(LinkerActionPayload.TYPE, LinkerActionPayload.STREAM_CODEC,
                 (payload, context) -> LinkerActions.handle(serverPlayer(context), payload));
+        registrar.playToClient(LinkerOpenListPayload.TYPE, LinkerOpenListPayload.STREAM_CODEC,
+                (payload, context) -> LinkerOpenClient.show(payload));
+        registrar.playToServer(LinkerOpenPickPayload.TYPE, LinkerOpenPickPayload.STREAM_CODEC,
+                (payload, context) -> LinkerOpen.pick(serverPlayer(context), payload.machine(), payload.router()));
         // Telas dos armazenamentos (handlers no StorageListMenu e no StorageScalarMenu).
         registrar.playToClient(StorageEntriesPayload.TYPE, StorageEntriesPayload.STREAM_CODEC, StorageListMenu::onEntries);
         registrar.playToServer(StorageActionPayload.TYPE, StorageActionPayload.STREAM_CODEC,
@@ -460,25 +462,6 @@ public final class ModPayloads {
             return false;
         }
         menu.select(payload.resource(), payload.face());
-        return true;
-    }
-
-    /**
-     * Shift + roda do mouse com o Vinculador na mão principal: avança ou volta o atalho de abas dele
-     * (Todos e um por tipo carregado, inclusive Químicos e Source com os mods; uma combinação vai para Todos) e mostra
-     * as abas novas na action bar. Não depende de tela aberta; recusa direção 0 e outra coisa na mão.
-     */
-    public static boolean handleCycleLinkerType(@Nullable ServerPlayer player, CycleLinkerTypePayload payload) {
-        if (player == null || payload.direction() == 0) {
-            return false;
-        }
-        ItemStack stack = player.getMainHandItem();
-        if (!(stack.getItem() instanceof LinkerItem)) {
-            return false;
-        }
-        LinkerTabs tabs = LinkerItem.cycleTabs(stack, payload.direction());
-        player.displayClientMessage(Component.translatable("item.wirelessautomate.linker.type",
-                LinkerItem.tabsName(tabs)), true);
         return true;
     }
 

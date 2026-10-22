@@ -5,8 +5,6 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
-import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
@@ -167,9 +165,7 @@ final class RangeTestSupport {
     }
 
     static ItemStack machinesLinker() {
-        ItemStack linker = new ItemStack(ModItems.LINKER.get());
-        LinkerItem.setMode(linker, LinkerMode.MACHINES);
-        return linker;
+        return new ItemStack(ModItems.LINKER.get());
     }
 
     static ServerPlayer linkerPlayer(GameTestHelper helper, ItemStack linker) {

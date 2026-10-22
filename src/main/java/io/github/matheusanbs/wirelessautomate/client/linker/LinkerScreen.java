@@ -1,34 +1,15 @@
 package io.github.matheusanbs.wirelessautomate.client.linker;
 
-import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.FACES_ALL_W;
-import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.FACES_TOP;
-import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.FACE_BTN_H;
-import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.FACE_BTN_W;
-import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.FACE_GAP;
-import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.FRAME_FULL_H;
-import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.FRAME_PAD;
-import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.FRAME_TYPES_H;
-import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.TYPES_ALL_W;
-import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.TYPE_BTN_H;
-import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.TYPE_BTN_W;
-import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.TYPE_GAP;
-import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.BASE_ROWS;
 import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.BODY_Y;
 import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.EDGE;
-import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.FACES_ALL_W;
 import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.GRIP;
 import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.HEAD_SHIFT;
 import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.HEAD_Y;
-import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.LIST_Y;
-import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.LW;
 import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.MAP_H;
 import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.MIN_H;
 import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.MIN_W;
-import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.ROW;
 import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.RX;
 import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.SEP_Y;
-import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.SIDES;
-import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.TABS;
 import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.WINDOW_MARGIN;
 import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerLayout.X0;
 import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerText.tr;
@@ -36,43 +17,28 @@ import static io.github.matheusanbs.wirelessautomate.client.linker.LinkerText.tr
 import io.github.matheusanbs.wirelessautomate.client.FlatButton;
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
-import io.github.matheusanbs.wirelessautomate.client.GuiThemes;
 import io.github.matheusanbs.wirelessautomate.client.ResizeGrip;
 import io.github.matheusanbs.wirelessautomate.client.ResizeHandle;
 import io.github.matheusanbs.wirelessautomate.client.ThemeToggle;
-import io.github.matheusanbs.wirelessautomate.client.router.FaceNet;
-import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerProblem;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerSnapshot;
-import io.github.matheusanbs.wirelessautomate.network.ResourceType;
-import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * Tela do Vinculador (especificação, "Telas da interface › Vinculador"): à esquerda a rede ativa
- * (a linha "Nenhuma (desvincular)", a lista das redes do jogador e Nova rede, na {@link NetworkColumn}) e
- * as caixas das abas (uma caixa por tipo carregado: Itens, Fluidos, Energia e, com os mods, Químicos e
- * Source); no cabeçalho o modo (Único, Área ou Máquinas). Em Único, só a explicação do clique
- * ({@link SingleBody}); em Área, a prévia de cima da caixa marcada com os roteadores dentro dela, os
- * cantos e a contagem ({@link AreaMap}), e o botão Vincular (ou Desvincular).
+ * Tela do Vinculador (modo Vincular): à esquerda o roteador escolhido e a ajuda dos gestos ({@link RouterPanel});
+ * à direita a prévia de cima da área marcada com as máquinas vinculadas dentro dela, os cantos e a contagem
+ * ({@link AreaMap}), e o botão Vincular (ou Desvincular, pelo seletor do cabeçalho) e o Limpar. O modo
+ * Abrir não tem tela: só a lista curta ({@link LinkerOpenScreen}).
  *
- * <p>Linha Faces ({@code [Todas] [F] [T] [E] [D] [C] [B]}, lados relativos à máquina presa): em Área,
- * logo abaixo do mapa (que fica {@link LinkerLayout#FACES_H} px mais baixo); em Único, no pé da coluna da
- * direita; some no modo Máquinas. "Todas" só marca as seis; as letras marcam e desmarcam uma a uma.
- *
- * <p>Tudo vem de {@link LinkerMenu#snapshot()}; os botões leem o estado a cada quadro, então um
- * estado novo aparece sem recriar widgets. A tela não muda nada sozinha: manda a ação
- * ({@link LinkerScreenActions}) e espera o servidor (na captura de desenvolvimento, {@code preview}, muda só o
- * estado local).
+ * <p>Tudo vem de {@link LinkerMenu#snapshot()}; os botões leem o estado a cada quadro, então um estado novo
+ * aparece sem recriar widgets. A tela não muda nada sozinha: manda a ação ({@link LinkerScreenActions}) e
+ * espera o servidor (na captura de desenvolvimento, {@code preview}, muda só o estado local).
  */
 public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     /** Tamanho lembrado na sessão (as telas do jogo são recriadas a cada abertura). */
@@ -83,17 +49,12 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     private int w = MIN_W;
     private int h = MIN_H;
     private final List<FlatButton> buttons = new ArrayList<>();
-    private final List<FlatButton> tabButtons = new ArrayList<>();
-    private final List<FlatButton> faceButtons = new ArrayList<>();
     private final LinkerScreenActions actions;
-    private final NetworkColumn column;
-    private final SingleBody single = new SingleBody(this);
+    private final RouterPanel routerPanel = new RouterPanel();
     private final AreaMap area = new AreaMap(this);
 
     private FlatButton linkButton;
     private FlatButton clearButton;
-    private FlatButton allButton;
-    private FlatButton allFacesButton;
 
     public LinkerScreen(LinkerMenu menu, Inventory inventory, Component title) {
         this(menu, inventory, title, false);
@@ -103,12 +64,11 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
     public LinkerScreen(LinkerMenu menu, Inventory inventory, Component title, boolean preview) {
         super(menu, inventory, title);
         this.actions = new LinkerScreenActions(menu, preview, this::refresh);
-        this.column = new NetworkColumn(this, actions);
         this.imageWidth = MIN_W;
         this.imageHeight = MIN_H;
     }
 
-    // tamanho: a largura extra vai para a coluna da direita, a altura para o mapa e a lista de redes
+    // tamanho: a largura extra vai para a coluna da direita, a altura para o mapa
 
     public int themeX() {
         return leftPos + w - 4 - ThemeToggle.SIZE;
@@ -116,14 +76,6 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
 
     public int themeY() {
         return topPos + HEAD_Y + 1;
-    }
-
-    int left() {
-        return leftPos;
-    }
-
-    int top() {
-        return topPos;
     }
 
     private int x1() {
@@ -138,14 +90,9 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         return h - MIN_H;
     }
 
-    /** O mapa: a altura do corpo (as faces moraram na coluna da esquerda, no quadro Vincula). */
+    /** O mapa: a altura do corpo. */
     int mapH() {
         return MAP_H + extraH();
-    }
-
-    /** Onde o corpo do modo termina, em cima do botão Vincular: o limite das dicas do Único. */
-    int bodyBottomY() {
-        return actionY();
     }
 
     private int actionY() {
@@ -160,56 +107,13 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         return Math.max(MIN_H, height - WINDOW_MARGIN);
     }
 
-    /** Botões de linha criados: o máximo de linhas que a maior altura comporta. */
-    int maxRows() {
-        return Math.max(BASE_ROWS, listRowsFor(maxH(), FRAME_TYPES_H));
-    }
-
     LinkerSnapshot snapshot() {
         return menu.snapshot();
     }
 
-    /** Largura de cada botão de modo: 44 px, ou o nome mais largo com folga (todos iguais). */
-    private int modeW() {
-        int width = 44;
-        for (LinkerMode mode : LinkerMode.values()) {
-            width = Math.max(width, font.width(LinkerText.modeName(mode)) + 8);
-        }
-        return width;
-    }
-
-    // layout da coluna da esquerda: a lista encolhe quando os tipos precisam de mais linhas
-
-    /** Altura do quadro Vincula: com o cubo das faces, ou só com os tipos no modo Máquinas. */
-    int frameH() {
-        return LinkerText.machines(snapshot()) ? FRAME_TYPES_H : FRAME_FULL_H;
-    }
-
-    /** Linhas da lista de redes numa janela de altura {@code height} e um quadro Vincula de {@code frameH}. */
-    private static int listRowsFor(int height, int frameH) {
-        return Math.max(1, (height - 90 - frameH) / ROW);
-    }
-
-    /** Linhas da lista de redes: o que sobra acima do quadro Vincula; mais uma por ROW de altura extra. */
-    int listRows() {
-        return listRowsFor(h, frameH());
-    }
-
-    int listH() {
-        return listRows() * ROW + 4;
-    }
-
-    int newY() {
-        return LIST_Y + listH() + 4;
-    }
-
-    private int typeLabelY() {
-        return newY() + 20;
-    }
-
-    /** Topo do quadro Vincula. */
-    int frameY() {
-        return typeLabelY() + 11;
+    /** Largura de cada botão do seletor Vincular / Desvincular: 56 px, ou o nome mais largo com folga. */
+    private int choiceW() {
+        return Math.max(56, Math.max(font.width(tr("action.link")), font.width(tr("action.unlink"))) + 10);
     }
 
     // ------------------------------------------------------------------ montagem
@@ -222,46 +126,19 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         imageHeight = h;
         super.init();
         buttons.clear();
-        tabButtons.clear();
-        faceButtons.clear();
         int x = leftPos;
         int y = topPos;
 
-        int modeW = modeW();
-        LinkerMode[] modes = LinkerMode.values();
-        for (int i = 0; i < modes.length; i++) {
-            LinkerMode mode = modes[i];
-            add(new FlatButton(x + x1() - HEAD_SHIFT - (modes.length - i) * (modeW + 2) + 2, y + HEAD_Y - 1, modeW, 15,
-                    LinkerText.modeName(mode),
-                    (g, b, hovered) -> LinkerPaint.paintChoice(g, b, hovered, LinkerText.modeName(mode),
-                            snapshot().mode() == mode),
-                    () -> actions.setMode(mode)).tooltip(() -> tr("mode." + mode.getSerializedName() + ".tooltip")));
-        }
+        int choiceW = choiceW();
+        int right = x + x1() - HEAD_SHIFT;
+        add(new FlatButton(right - 2 * choiceW - 2 + 2, y + HEAD_Y - 1, choiceW, 15, tr("action.link"),
+                (g, b, hovered) -> LinkerPaint.paintChoice(g, b, hovered, tr("action.link"), !snapshot().unlink()),
+                () -> actions.setUnlink(false)).tooltip(() -> tr("action.link.tooltip")));
+        add(new FlatButton(right - choiceW + 2, y + HEAD_Y - 1, choiceW, 15, tr("action.unlink"),
+                (g, b, hovered) -> LinkerPaint.paintChoice(g, b, hovered, tr("action.unlink"), snapshot().unlink()),
+                () -> actions.setUnlink(true)).tooltip(() -> tr("action.unlink.tooltip")));
 
-        column.addWidgets(x, y);
-
-        // a posição dos botões dos tipos, do Todos e do cubo das faces vem de refresh()
-        for (int i = 0; i < TABS.length; i++) {
-            ResourceType t = TABS[i];
-            tabButtons.add(add(new FlatButton(x + X0, y + frameY(), TYPE_BTN_W, TYPE_BTN_H, LinkerText.typeName(t),
-                    (g, b, hovered) -> LinkerPaint.paintType(g, b, hovered, snapshot(), t), () -> actions.toggleTab(t))
-                    .tooltip(() -> LinkerText.tabTooltip(snapshot(), t))));
-        }
-        allButton = add(new FlatButton(x + X0, y + frameY(), TYPES_ALL_W, TYPE_BTN_H, tr("type.all"),
-                (g, b, hovered) -> LinkerPaint.paintAll(g, b, hovered, snapshot()), actions::setAllTabs)
-                .tooltip(() -> LinkerText.allTooltip(snapshot())));
-
-        allFacesButton = add(new FlatButton(x + X0, y + frameY(), FACES_ALL_W, FACE_BTN_H, tr("faces.all"),
-                (g, b, hovered) -> LinkerPaint.paintAllFaces(g, b, hovered, snapshot()), actions::setAllFaces)
-                .tooltip(() -> LinkerText.allFacesTooltip(snapshot())));
-        for (int i = 0; i < SIDES.length; i++) {
-            RemoteSide side = SIDES[i];
-            faceButtons.add(add(new FlatButton(x + X0, y + frameY(), FACE_BTN_W, FACE_BTN_H,
-                    LinkerItem.sideLetter(side), (g, b, hovered) -> LinkerPaint.paintFace(g, b, hovered, snapshot(), side),
-                    () -> actions.toggleFace(side)).tooltip(() -> LinkerText.faceTooltip(snapshot(), side))));
-        }
-
-        linkButton = add(new FlatButton(x + RX, y + actionY(), rw() - 48, 16, tr("link.count", 0),
+        linkButton = add(new FlatButton(x + RX, y + actionY(), rw() - 48, 16, tr("link.label"),
                 (g, b, hovered) -> LinkerPaint.paintLink(g, b, hovered, snapshot()), actions::link)
                 .tooltip(() -> LinkerText.linkTooltip(snapshot())));
         clearButton = add(new FlatButton(x + x1() - 46, y + actionY(), 46, 16, tr("clear"),
@@ -275,46 +152,10 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         return addRenderableWidget(button);
     }
 
-    void addBox(EditBox box) {
-        addRenderableWidget(box);
-    }
-
-    /** Visibilidade e mensagens que dependem do estado. */
+    /** Estado dos botões que depende do snapshot. */
     void refresh() {
         LinkerSnapshot s = snapshot();
-        column.refresh();
-        int shown = 0;
-        int rowY = topPos + frameY() + FRAME_PAD;
-        for (int i = 0; i < TABS.length; i++) {
-            FlatButton chip = tabButtons.get(i);
-            chip.visible = s.available().contains(TABS[i]);
-            if (chip.visible) {
-                chip.setX(leftPos + X0 + FRAME_PAD + shown * (TYPE_BTN_W + TYPE_GAP));
-                chip.setY(rowY);
-                shown++;
-            }
-        }
-        allButton.setX(leftPos + X0 + FRAME_PAD + shown * (TYPE_BTN_W + TYPE_GAP) + 2);
-        allButton.setY(rowY);
-        column.refreshCreate(topPos);
-        boolean area = s.mode() != LinkerMode.SINGLE;
-        linkButton.visible = clearButton.visible = area;
-        // o cubo das faces some no modo Máquinas
-        boolean showFaces = !LinkerText.machines(s);
-        int cubeX = leftPos + X0 + FRAME_PAD;
-        int cubeY = topPos + frameY() + FACES_TOP;
-        allFacesButton.visible = showFaces;
-        allFacesButton.setX(cubeX + 4 * (FACE_BTN_W + FACE_GAP) + 4);
-        allFacesButton.setY(cubeY);
-        for (int i = 0; i < faceButtons.size(); i++) {
-            FlatButton face = faceButtons.get(i);
-            int[] cell = FaceNet.cell(SIDES[i]);
-            face.visible = showFaces;
-            face.setX(cubeX + cell[0] * (FACE_BTN_W + FACE_GAP));
-            face.setY(cubeY + cell[1] * (FACE_BTN_H + FACE_GAP));
-        }
-        // em Máquinas a contagem é de roteadores; o servidor decide quais máquinas entram
-        linkButton.active = s.problem() == LinkerProblem.NONE && (LinkerText.machines(s) || LinkerText.toLink(s) > 0);
+        linkButton.active = LinkerText.canLink(s);
         linkButton.setMessage(LinkerText.linkLabel(s));
         clearButton.active = s.first().isPresent() || s.otherDimension();
     }
@@ -329,14 +170,7 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && resizeHandle.begin(mouseX, mouseY, leftPos, topPos, w, h)) {
             return true;
         }
-        column.clickOutside(mouseX, mouseY);
-        boolean wasCreating = column.creating();
-        boolean handled = super.mouseClicked(mouseX, mouseY, button);
-        if (column.creating() && !wasCreating) {
-            // a tela dá o foco ao botão clicado depois do onPress, tirando-o do campo do nome
-            setFocused(column.nameBox());
-        }
-        return handled;
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
@@ -373,18 +207,8 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         if (newW != w || newH != h) {
             savedW = newW;
             savedH = newH;
-            rebuild();
+            rebuildWidgets();
         }
-    }
-
-    /**
-     * Refaz os widgets no tamanho lembrado. A rolagem e o modo ficam em campos; o campo de nome de
-     * rede nova é fechado ({@link NetworkColumn#close()}).
-     */
-    private void rebuild() {
-        column.close();
-        setFocused(null);
-        rebuildWidgets();
     }
 
     @Override
@@ -393,53 +217,10 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
         super.resize(minecraft, width, height);
     }
 
-    @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        if (column.mouseScrolled(mouseX, mouseY, scrollY)) {
-            return true;
-        }
-        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
-    }
-
-    @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (column.keyPressed(keyCode, scanCode, modifiers)) {
-            return true;
-        }
-        return super.keyPressed(keyCode, scanCode, modifiers);
-    }
-
-    @Override
-    public boolean charTyped(char codePoint, int modifiers) {
-        if (column.creating()) {
-            boolean typed = column.nameBox().charTyped(codePoint, modifiers);
-            refresh();
-            return typed;
-        }
-        return super.charTyped(codePoint, modifiers);
-    }
-
     // ------------------------------------------------------------------ desenho
-
-    /** Versão do tema com que os campos de texto foram pintados ({@link GuiThemes#version()}). */
-    private int inkVersion = -1;
-
-    /** Os campos foram recriados: a cor deles volta a seguir o tema no próximo quadro. */
-    void resetInk() {
-        inkVersion = -1;
-    }
-
-    /** Cor do texto e da dica do campo: o EditBox guarda a cor, então segue o tema por aqui. */
-    private void inkBoxes() {
-        inkVersion = GuiThemes.version();
-        GuiPaint.ink(column.nameBox(), tr("network.name"));
-    }
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        if (inkVersion != GuiThemes.version()) {
-            inkBoxes();
-        }
         refresh();
         GuiText.beginFrame();
         super.render(g, mouseX, mouseY, partialTick);
@@ -456,11 +237,6 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
                 }
                 break;
             }
-        }
-        Component more = snapshot().mode() == LinkerMode.SINGLE ? single.tooltip(mouseX, mouseY) : null;
-        if (more != null) {
-            setTooltipForNextRenderPass(more);
-            return;
         }
         if (resizeHandle.hover(mouseX, mouseY, leftPos, topPos, w, h) != null) {
             setTooltipForNextRenderPass(Component.translatable("gui.wirelessautomate.resize.tooltip"));
@@ -487,59 +263,22 @@ public class LinkerScreen extends AbstractContainerScreen<LinkerMenu> {
 
         int titleW = font.width(title);
         GuiText.draw(g, font, title, x + X0, y + HEAD_Y + 3, titleW, GuiPaint.FG);
-        Component tabsName = LinkerText.tabsName(s);
-        Component typeText = s.unlink() ? tr("head.unlink", tabsName) : tr("head.type", tabsName);
-        int headX = X0 + titleW + 8;
-        // até os botões de modo, à direita
-        int headW = x1() - HEAD_SHIFT - LinkerMode.values().length * (modeW() + 2) - 4 - headX;
-        GuiText.draw(g, font, typeText, x + headX, y + HEAD_Y + 3, headW, s.unlink() ? GuiPaint.DANGER : GuiPaint.MUTED);
         ThemeToggle.render(g, themeX(), themeY(), mouseX, mouseY);
         g.fill(x + X0, y + SEP_Y, x + x1(), y + SEP_Y + 1, GuiPaint.LINE);
 
-        // rede ativa
-        column.render(g, x, y);
-
-        GuiPaint.text(g, font, tr("type.label"), x + X0, y + typeLabelY(), GuiPaint.MUTED);
-        GuiPaint.inset(g, x + X0, y + frameY(), LW, frameH());
-
-        // corpo do modo
+        routerPanel.render(g, s, x, y);
         g.fill(x + RX - 5, y + BODY_Y, x + RX - 4, y + h - 9, GuiPaint.LINE);
-        if (s.mode() == LinkerMode.SINGLE) {
-            single.render(g, x + RX, y + BODY_Y);
-        } else {
-            area.render(g, s, x + RX, y + BODY_Y);
-        }
+        area.render(g, s, x + RX, y + BODY_Y);
         ResizeGrip.renderDotted(g, x, y, w, h, resizeHandle.hover(mouseX, mouseY, x, y, w, h), GuiPaint.ACCENT);
     }
 
     // ------------------------------------------------------------------ captura de desenvolvimento
 
-    public void previewCreate(String name) {
-        column.startCreate();
-        column.nameBox().setValue(name);
-        refresh();
-    }
-
-    public void previewCancelCreate() {
-        column.finishCreate(false);
-        column.forgetDraft();
-    }
-
-    /** e2e: o campo do nome da rede nova. */
-    public EditBox nameBox() {
-        return column.nameBox();
-    }
-
-    /** e2e: o campo do nome está aberto. */
-    public boolean creating() {
-        return column.creating();
-    }
-
     /** e2e: muda o tamanho como se a borda tivesse sido arrastada. */
     public void previewResize(int width, int height) {
         savedW = width;
         savedH = height;
-        rebuild();
+        rebuildWidgets();
     }
 
     /** Tamanho atual do painel, {@code {largura, altura}} (gancho do e2e). */

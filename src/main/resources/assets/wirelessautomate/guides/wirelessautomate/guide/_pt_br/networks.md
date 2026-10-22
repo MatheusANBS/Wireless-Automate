@@ -54,7 +54,7 @@ recebe vem do modo das faces.
 | Regra | Explicação |
 | --- | --- |
 | **Sem rede ao colocar** | Um roteador novo não está em rede nenhuma: ponha as faces dele numa rede (abaixo) para ele trabalhar. |
-| **Rede ativa** | Cada jogador tem uma rede ativa (a primeira leva o nome dele). É nela que o Vinculador põe os roteadores. |
+| **Rede ativa** | Cada jogador tem uma rede ativa, a que o [Tablet](network-tablet.md) usa como destino do **Mover**. |
 | **Rede por face** | Numa fornalha, a face de **Cima** (entrada) pode estar na rede "Mina" e a de **Baixo** (saída) na rede "Armazém": o minério chega pela Mina e o lingote sai pelo Armazém. Cada aba tem as suas: a energia pode ir para a rede "Base". |
 | **Ordem de entrega** | Prioridade maior primeiro; empates se revezam (round-robin). |
 | **Armazém** | Recebe de quem extrai e entrega para quem insere, sem ficar trocando com outro Armazém. |
@@ -65,9 +65,6 @@ recebe vem do modo das faces.
 | Jeito | Quantos de uma vez |
 | --- | --- |
 | Linha **Rede** da face, na tela do roteador | Uma face de um roteador, numa aba |
-| <ItemLink id="wirelessautomate:linker" />, modo Único | Um roteador: as faces e as abas marcadas |
-| <ItemLink id="wirelessautomate:linker" />, modo Área | Todos os roteadores carregados de uma área (as faces e as abas marcadas) |
-| <ItemLink id="wirelessautomate:linker" />, rede **Nenhuma (desvincular)** | Tira as faces e as abas marcadas da rede, num roteador ou numa área |
 | <ItemLink id="wirelessautomate:network_tablet" />, Selecionar | Os nós que você marcar na lista: todas as faces deles no tipo escolhido (ou em todos) |
 | <ItemLink id="wirelessautomate:configurator" /> | A rede de cada face vai junto com a configuração colada (todas as abas ou só um tipo) |
 

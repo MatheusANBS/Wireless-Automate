@@ -4,7 +4,6 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerTabs;
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
@@ -15,7 +14,6 @@ import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
-import io.github.matheusanbs.wirelessautomate.packet.CycleLinkerTypePayload;
 import io.github.matheusanbs.wirelessautomate.packet.ModPayloads;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
@@ -233,94 +231,6 @@ public final class TypeNetworkGameTests {
         assertNetwork(helper, copy.networkId(ResourceType.FLUID), legacy, "fluidos");
         assertNetwork(helper, copy.networkId(ResourceType.ENERGY), energy, "energia");
         helper.assertTrue(copy.networkId(ResourceType.CHEMICAL) == null, "químicos sem rede");
-        helper.succeed();
-    }
-
-    /**
-     * Vinculador com o componente antigo {@code linker_type} em Energia (item da 0.1.0) põe só a
-     * energia na rede ativa; sem componente (Todos), todas as abas que existem (Químicos só com o
-     * Mekanism).
-     */
-    @GameTest(template = "empty")
-    public static void linkerWithTypeLinksOnlyThatType(GameTestHelper helper) {
-        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
-        UUID before = newNetwork(helper, "teste-vinculador-antes");
-        RouterBlockEntity router = place(helper, new BlockPos(1, 1, 1), Blocks.CHEST.defaultBlockState(),
-                before, before);
-        ServerPlayer player = TestPlayers.inLevel(helper);
-        WaNetwork active = data.create(player.getUUID(), "Base " + player.getUUID());
-        data.setActiveNetwork(player.getUUID(), active.id());
-        ItemStack linker = new ItemStack(ModItems.LINKER.get());
-        linker.set(ModDataComponents.LINKER_TYPE.get(), ResourceType.ENERGY);
-        player.setItemInHand(InteractionHand.MAIN_HAND, linker);
-        try {
-            helper.assertTrue(use(player, ModItems.LINKER.get(), router, false), "vinculador não agiu");
-            assertNetwork(helper, router.networkId(ResourceType.ENERGY), active.id(), "energia");
-            assertNetwork(helper, router.networkId(ResourceType.ITEM), before, "itens mudaram");
-            assertNetwork(helper, router.networkId(ResourceType.FLUID), before, "fluidos mudaram");
-            assertNetwork(helper, router.networkId(ResourceType.CHEMICAL), before, "químicos mudaram");
-
-            linker.remove(ModDataComponents.LINKER_TYPE.get());
-            helper.assertValueEqual(LinkerItem.tabs(linker), LinkerTabs.ALL, "sem componente não é Todos");
-            use(player, ModItems.LINKER.get(), router, false);
-            for (ResourceType type : LoadedTypes.LIST) {
-                assertNetwork(helper, router.networkId(type), active.id(), "Todos não vinculou " + type);
-            }
-        } finally {
-            data.remove(active.id());
-            data.remove(before);
-            helper.getLevel().getServer().getPlayerList().remove(player);
-        }
-        helper.succeed();
-    }
-
-    /**
-     * Shift + roda: Todos → um tipo por vez, só os carregados (Químicos com o Mekanism, Source com o Ars) → Todos, e
-     * para trás; uma combinação vai para Todos; só com o Vinculador na mão.
-     */
-    @GameTest(template = "empty")
-    public static void cycleLinkerTypePayloadCycles(GameTestHelper helper) {
-        ServerPlayer player = TestPlayers.inLevel(helper);
-        try {
-            ItemStack linker = new ItemStack(ModItems.LINKER.get());
-            player.setItemInHand(InteractionHand.MAIN_HAND, linker);
-            List<LinkerTabs> forward = new ArrayList<>();
-            for (ResourceType type : LoadedTypes.LIST) {
-                forward.add(LinkerTabs.of(type));
-            }
-            forward.add(LinkerTabs.ALL);
-            for (LinkerTabs expected : forward) {
-                helper.assertTrue(ModPayloads.handleCycleLinkerType(player, new CycleLinkerTypePayload(1)),
-                        "recusou avançar");
-                helper.assertValueEqual(LinkerItem.tabs(linker), expected, "avançar");
-            }
-            helper.assertFalse(linker.has(ModDataComponents.LINKER_TABS.get()), "Todos deixou o componente");
-            helper.assertTrue(ModPayloads.handleCycleLinkerType(player, new CycleLinkerTypePayload(-1)),
-                    "recusou voltar");
-            helper.assertValueEqual(LinkerItem.tabs(linker),
-                    LinkerTabs.of(Chemicals.LOADED ? ResourceType.CHEMICAL : ResourceType.ENERGY), "voltar de Todos");
-            // uma combinação marcada na tela vai para Todos
-            LinkerItem.setTabs(linker, LinkerTabs.of(ResourceType.ITEM, ResourceType.FLUID));
-            helper.assertTrue(ModPayloads.handleCycleLinkerType(player, new CycleLinkerTypePayload(1)),
-                    "recusou avançar da combinação");
-            helper.assertValueEqual(LinkerItem.tabs(linker), LinkerTabs.ALL, "combinação não foi para Todos");
-            // o componente antigo vale como a aba dele e some na primeira troca
-            linker.set(ModDataComponents.LINKER_TYPE.get(), ResourceType.FLUID);
-            helper.assertTrue(ModPayloads.handleCycleLinkerType(player, new CycleLinkerTypePayload(1)),
-                    "recusou avançar do tipo antigo");
-            helper.assertValueEqual(LinkerItem.tabs(linker), LinkerTabs.of(ResourceType.ENERGY), "depois de Fluidos");
-            helper.assertFalse(linker.has(ModDataComponents.LINKER_TYPE.get()), "o componente antigo ficou");
-            helper.assertFalse(ModPayloads.handleCycleLinkerType(player, new CycleLinkerTypePayload(0)),
-                    "aceitou direção 0");
-
-            ItemStack other = new ItemStack(ModItems.CONFIGURATOR.get());
-            player.setItemInHand(InteractionHand.MAIN_HAND, other);
-            helper.assertFalse(ModPayloads.handleCycleLinkerType(player, new CycleLinkerTypePayload(1)),
-                    "aceitou sem o Vinculador na mão");
-            helper.assertFalse(other.has(ModDataComponents.LINKER_TABS.get()), "mexeu noutro item");
-        } finally {
-            helper.getLevel().getServer().getPlayerList().remove(player);
-        }
         helper.succeed();
     }
 

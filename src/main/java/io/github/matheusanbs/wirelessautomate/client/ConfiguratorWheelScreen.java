@@ -10,13 +10,10 @@ import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.math.Axis;
 import io.github.matheusanbs.wirelessautomate.GuiTheme;
-import io.github.matheusanbs.wirelessautomate.client.WheelLayout.Hit;
-import io.github.matheusanbs.wirelessautomate.client.WheelLayout.Ring;
 import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.ConfiguratorWheelPayload;
-import io.github.matheusanbs.wirelessautomate.preset.PasteMode;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -38,16 +35,14 @@ import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * Roda radial do Configurador (segurar a tecla {@link ConfiguratorWheelKeys#WHEEL}): o anel de dentro
- * escolhe o modo de colar, o de fora o tipo colado (Todos e os tipos carregados). Soltar a tecla
- * escolhe a fatia sob o mouse e fecha; clique esquerdo escolhe sem fechar; Esc fecha. Não pausa o jogo
- * nem escurece a tela inteira: só um disco translúcido atrás da roda. Fatias
- * na cor do painel com contorno de tinta, a atual de cada anel com contorno de destaque mais grosso,
- * a sob o mouse cresce 6 % e clareia; o centro mostra o nome e a descrição dela.
+ * Roda radial do Configurador (segurar a tecla {@link ConfiguratorWheelKeys#WHEEL}): um anel escolhe o
+ * tipo colado (Todos e os tipos carregados). Soltar a tecla escolhe a fatia sob o mouse e fecha;
+ * clique esquerdo escolhe sem fechar; Esc fecha. Não pausa o jogo nem escurece a tela inteira: só um
+ * disco translúcido atrás da roda. Fatias na cor do painel com contorno de tinta, a atual com contorno
+ * de destaque mais grosso, a sob o mouse cresce 6 % e clareia; o centro mostra o nome e a descrição dela.
  */
 public final class ConfiguratorWheelScreen extends Screen {
     private static final String KEY = "gui.wirelessautomate.configurator_wheel.";
-    private static final PasteMode[] MODES = PasteMode.values();
     private static final long OPEN_MS = 150;
     /** Raio externo da roda no desenho, antes da escala para a tela. */
     private static final double DESIGN_RADIUS = 150;
@@ -70,13 +65,9 @@ public final class ConfiguratorWheelScreen extends Screen {
     /** Linhas máximas do nome e da descrição no centro. */
     private static final int TITLE_LINES = 2;
     private static final int DESC_LINES = 3;
-    /** Cores misturadas do ícone "qualquer máquina", como no mockup. */
-    private static final int[] ANY_COLORS = {0xFFB57A3A, 0xFF6E7480, 0xFF2F9D5C, 0xFF8E4FC9, 0xFFB57A3A, 0xFFD59A1E};
 
     private final List<@Nullable ResourceType> types;
-    private final ItemStack brushIcon = new ItemStack(ModItems.CONFIGURATOR.get());
     private final long openedAt = Util.getMillis();
-    private PasteMode mode;
     private @Nullable ResourceType pasteType;
     /**
      * A roda é desenhada sempre no mesmo tamanho ({@link #DESIGN_RADIUS}) e escalada para a tela por
@@ -89,8 +80,8 @@ public final class ConfiguratorWheelScreen extends Screen {
     private int centerY;
     private double lastMouseX = -1;
     private double lastMouseY = -1;
-    /** Fatia realçada à força nas capturas (o cursor de verdade da janela não mexe nela); {@code null} = a do mouse. */
-    private @Nullable Hit previewHover;
+    /** Fatia realçada à força nas capturas (o cursor de verdade da janela não mexe nela); {@link WheelLayout#NONE} = a do mouse. */
+    private int previewHover = WheelLayout.NONE;
     /** Aberta pela tecla (não pelo e2e): o {@link #tick()} confere se a tecla ainda está apertada. */
     private boolean openedByKey;
     /** Já chegou o {@code keyReleased}/{@code mouseReleased} da tecla da roda. */
@@ -114,7 +105,6 @@ public final class ConfiguratorWheelScreen extends Screen {
         this.types = Collections.unmodifiableList(list);
         Player player = Minecraft.getInstance().player;
         ItemStack stack = player == null ? ItemStack.EMPTY : player.getMainHandItem();
-        this.mode = ConfiguratorItem.pasteMode(stack);
         this.pasteType = ConfiguratorItem.type(stack);
     }
 
@@ -131,17 +121,12 @@ public final class ConfiguratorWheelScreen extends Screen {
 
     // ------------------------------------------------------------------ estado (também para o e2e)
 
-    /** Modo escolhido agora (começa no do item). */
-    public PasteMode mode() {
-        return mode;
-    }
-
     /** Tipo colado escolhido agora; {@code null} = Todos. */
     public @Nullable ResourceType pasteType() {
         return pasteType;
     }
 
-    /** Os itens do anel de fora: Todos ({@code null}) e os tipos carregados. */
+    /** Os itens do anel: Todos ({@code null}) e os tipos carregados. */
     public List<@Nullable ResourceType> types() {
         return types;
     }
@@ -150,14 +135,10 @@ public final class ConfiguratorWheelScreen extends Screen {
         return layout;
     }
 
-    public Hit hitOf(PasteMode mode) {
-        return new Hit(Ring.INNER, mode.ordinal());
-    }
-
-    /** A fatia do tipo {@code type} ({@code null} = Todos), ou {@code null} se ele não está na roda. */
-    public @Nullable Hit hitOf(@Nullable ResourceType type) {
+    /** A fatia do tipo {@code type} ({@code null} = Todos), ou {@link WheelLayout#NONE} se ele não está na roda. */
+    public int sliceOf(@Nullable ResourceType type) {
         int index = types.indexOf(type);
-        return index < 0 ? null : new Hit(Ring.OUTER, index);
+        return index < 0 ? WheelLayout.NONE : index;
     }
 
     /** Escala da roda na tela (o desenho tem raio externo {@link #DESIGN_RADIUS}). */
@@ -165,46 +146,36 @@ public final class ConfiguratorWheelScreen extends Screen {
         return wheelScale;
     }
 
-    /** Capturas (e2e e vitrine): realça a fatia {@code hit} como se o mouse estivesse nela. */
-    public void previewHover(@Nullable Hit hit) {
-        previewHover = hit;
+    /** Capturas (e2e e vitrine): realça a fatia {@code slice} como se o mouse estivesse nela. */
+    public void previewHover(int slice) {
+        previewHover = slice;
     }
 
-    /** A fatia no ponto da tela, ou {@code null} no centro e fora da roda. */
-    public @Nullable Hit hitAt(double x, double y) {
-        return layout.hit((x - centerX) / wheelScale, (y - centerY) / wheelScale, MODES.length, types.size());
+    /** A fatia no ponto da tela, ou {@link WheelLayout#NONE} no centro e fora da roda. */
+    public int sliceAt(double x, double y) {
+        return layout.hit((x - centerX) / wheelScale, (y - centerY) / wheelScale, types.size());
     }
 
-    /** Ponto da tela no meio da fatia {@code hit} (para mover o mouse até ela no e2e e nas capturas). */
-    public int[] pointOf(Hit hit) {
-        double radius = layout.ringMiddle(hit.ring()) * wheelScale;
-        double angle = WheelLayout.sliceMiddle(hit.index(), count(hit.ring()));
+    /** Ponto da tela no meio da fatia {@code slice} (para mover o mouse até ela no e2e e nas capturas). */
+    public int[] pointOf(int slice) {
+        double radius = layout.ringMiddle() * wheelScale;
+        double angle = WheelLayout.sliceMiddle(slice, types.size());
         return new int[] {(int) Math.round(centerX + radius * Math.sin(angle)),
                 (int) Math.round(centerY - radius * Math.cos(angle))};
     }
 
     /**
-     * Aplica a escolha da fatia {@code hit}: muda o estado da tela na hora e manda o estado completo ao
-     * servidor (que confere e grava no item). {@code null} não muda nada e devolve {@code false}.
+     * Aplica a escolha da fatia {@code slice}: muda o estado da tela na hora e manda o tipo ao servidor
+     * (que confere e grava no item). Uma fatia que não existe não muda nada e devolve {@code false}.
      */
-    public boolean choose(@Nullable Hit hit) {
-        if (hit == null) {
+    public boolean choose(int slice) {
+        if (slice < 0 || slice >= types.size()) {
             return false;
         }
-        if (hit.ring() == Ring.INNER) {
-            if (hit.index() < 0 || hit.index() >= MODES.length) {
-                return false;
-            }
-            mode = MODES[hit.index()];
-        } else {
-            if (hit.index() < 0 || hit.index() >= types.size()) {
-                return false;
-            }
-            pasteType = types.get(hit.index());
-        }
+        pasteType = types.get(slice);
         ClientPacketListener connection = Minecraft.getInstance().getConnection();
         if (connection != null && connection.hasChannel(ConfiguratorWheelPayload.TYPE)) {
-            PacketDistributor.sendToServer(new ConfiguratorWheelPayload(mode, Optional.ofNullable(pasteType)));
+            PacketDistributor.sendToServer(new ConfiguratorWheelPayload(Optional.ofNullable(pasteType)));
         }
         return true;
     }
@@ -252,7 +223,7 @@ public final class ConfiguratorWheelScreen extends Screen {
     public boolean keyReleased(int keyCode, int scanCode, int modifiers) {
         if (ConfiguratorWheelKeys.WHEEL.matches(keyCode, scanCode)) {
             releaseSeen = true;
-            choose(hitAt(lastMouseX, lastMouseY));
+            choose(sliceAt(lastMouseX, lastMouseY));
             onClose();
             return true;
         }
@@ -267,7 +238,7 @@ public final class ConfiguratorWheelScreen extends Screen {
             return true;
         }
         if (button == 0) {
-            choose(hitAt(x, y));
+            choose(sliceAt(x, y));
             return true;
         }
         return super.mouseClicked(x, y, button);
@@ -277,7 +248,7 @@ public final class ConfiguratorWheelScreen extends Screen {
     public boolean mouseReleased(double x, double y, int button) {
         if (ConfiguratorWheelKeys.WHEEL.matchesMouse(button)) {
             releaseSeen = true;
-            choose(hitAt(x, y));
+            choose(sliceAt(x, y));
             onClose();
             return true;
         }
@@ -294,7 +265,7 @@ public final class ConfiguratorWheelScreen extends Screen {
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         GuiText.beginFrame();
-        Hit hot = previewHover != null ? previewHover : hitAt(mouseX, mouseY);
+        int hot = previewHover != WheelLayout.NONE ? previewHover : sliceAt(mouseX, mouseY);
         float eased = easeOutBack(Mth.clamp((Util.getMillis() - openedAt) / (float) OPEN_MS, 0, 1));
         float scale = wheelScale * (0.6f + 0.4f * eased);
         PoseStack pose = g.pose();
@@ -304,8 +275,7 @@ public final class ConfiguratorWheelScreen extends Screen {
         pose.scale(scale, scale, 1);
         // daqui em diante, coordenadas relativas ao centro da roda
         drawShapes(g, hot);
-        drawRing(g, Ring.INNER);
-        drawRing(g, Ring.OUTER);
+        drawRing(g);
         drawCenter(g, hot);
         pose.popPose();
     }
@@ -330,16 +300,10 @@ public final class ConfiguratorWheelScreen extends Screen {
         return (float) k / gui;
     }
 
-    private Component label(Ring ring, int index) {
-        return ring == Ring.INNER
-                ? Component.translatable(KEY + "short." + MODES[index].key())
-                : ConfiguratorItem.typeName(types.get(index));
-    }
-
     // ------------------------------------------------------------------ formas
 
     /** Disco escuro, fatias com contorno por dentro (a sob o mouse por último) e o centro, num só lote de triângulos. */
-    private void drawShapes(GuiGraphics g, @Nullable Hit hot) {
+    private void drawShapes(GuiGraphics g, int hot) {
         g.flush();
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
@@ -350,20 +314,18 @@ public final class ConfiguratorWheelScreen extends Screen {
         Matrix4f matrix = g.pose().last().pose();
 
         sector(buffer, matrix, 0, layout.outerRadius() + layout.gap() + 1, 0, 2 * Math.PI, 0, DISC, 64);
-        for (Ring ring : Ring.values()) {
-            int count = count(ring);
-            for (int i = 0; i < count; i++) {
-                if (!isHit(hot, ring, i)) {
-                    slice(buffer, matrix, ring, i, false);
-                }
+        for (int i = 0; i < types.size(); i++) {
+            if (i != hot) {
+                slice(buffer, matrix, i, false);
             }
         }
-        if (hot != null) {
-            slice(buffer, matrix, hot.ring(), hot.index(), true);
+        if (hot != WheelLayout.NONE) {
+            slice(buffer, matrix, hot, true);
         }
         double r = layout.centerRadius();
         sector(buffer, matrix, 0, r, 0, 2 * Math.PI, 0, GuiPaint.FG, 48);
-        sector(buffer, matrix, 0, r - BORDER, 0, 2 * Math.PI, 0, hot != null ? GuiPaint.FG : GuiPaint.PANEL, 48);
+        sector(buffer, matrix, 0, r - BORDER, 0, 2 * Math.PI, 0, hot != WheelLayout.NONE ? GuiPaint.FG : GuiPaint.PANEL,
+                48);
 
         BufferUploader.drawWithShader(buffer.buildOrThrow());
         RenderSystem.enableCull();
@@ -376,15 +338,15 @@ public final class ConfiguratorWheelScreen extends Screen {
      * divide as fatias, em pixels, então o vão tem a mesma largura perto e longe do centro. A sob o
      * mouse cresce um pouco para dentro do vão, sem fechá-lo.
      */
-    private void slice(BufferBuilder buffer, Matrix4f matrix, Ring ring, int index, boolean hot) {
-        int count = count(ring);
+    private void slice(BufferBuilder buffer, Matrix4f matrix, int index, boolean hot) {
+        int count = types.size();
         double grow = hot ? layout.gap() / 4 : 0;
-        double r1 = layout.ringStart(ring) - grow;
-        double r2 = layout.ringEnd(ring) + grow;
+        double r1 = layout.innerRadius() - grow;
+        double r2 = layout.outerRadius() + grow;
         double a0 = WheelLayout.sliceStart(index, count);
         double a1 = WheelLayout.sliceEnd(index, count);
         double side = layout.gap() / 2 - grow;
-        boolean current = isCurrent(ring, index);
+        boolean current = types.get(index) == pasteType;
         int border = current ? CURRENT_BORDER : BORDER;
         int segments = Math.max(12, (int) Math.ceil((a1 - a0) / (Math.PI / 48)));
         sector(buffer, matrix, r1, r2, a0, a1, side, current ? GuiPaint.ACCENT : GuiPaint.FG, segments);
@@ -447,15 +409,15 @@ public final class ConfiguratorWheelScreen extends Screen {
     // ------------------------------------------------------------------ conteúdo
 
     /**
-     * Ícones e nomes curtos de um anel. O ícone fica reto, no ângulo do meio da fatia; o nome acompanha
+     * Ícones e nomes curtos do anel. O ícone fica reto, no ângulo do meio da fatia; o nome acompanha
      * a curva do anel, centrado no mesmo ângulo. Ícone e nome ocupam juntos a altura
      * {@link #CONTENT_HEIGHT}, centrada no raio do meio do anel, com o ícone sempre "acima" do nome na
      * tela: na metade de cima o ícone vai para fora e o nome para dentro; na de baixo o nome é virado e
      * os dois trocam de lado ({@link WheelLayout#flipped}).
      */
-    private void drawRing(GuiGraphics g, Ring ring) {
-        int count = count(ring);
-        double middleRadius = layout.ringMiddle(ring);
+    private void drawRing(GuiGraphics g) {
+        int count = types.size();
+        double middleRadius = layout.ringMiddle();
         double iconOffset = CONTENT_HEIGHT / 2.0 - ICON / 2.0;
         double labelOffset = CONTENT_HEIGHT / 2.0 - LABEL_HEIGHT / 2.0;
         for (int i = 0; i < count; i++) {
@@ -464,13 +426,9 @@ public final class ConfiguratorWheelScreen extends Screen {
             double iconRadius = middleRadius + (flipped ? -iconOffset : iconOffset);
             int x = (int) Math.round(iconRadius * Math.sin(angle));
             int y = (int) Math.round(-iconRadius * Math.cos(angle));
-            if (ring == Ring.INNER) {
-                modeIcon(g, MODES[i], x, y);
-            } else {
-                typeIcon(g, types.get(i), x, y);
-            }
+            typeIcon(g, types.get(i), x, y);
             double labelRadius = middleRadius + (flipped ? labelOffset : -labelOffset);
-            arcText(g, label(ring, i), labelRadius, angle, flipped,
+            arcText(g, ConfiguratorItem.typeName(types.get(i)), labelRadius, angle, flipped,
                     layout.labelArc(labelRadius, count, CURRENT_BORDER + 2));
         }
     }
@@ -505,24 +463,6 @@ public final class ConfiguratorWheelScreen extends Screen {
         }
     }
 
-    /** Ícone de modo centrado em ({@code x}, {@code y}): o Configurador no pincel, grades nos de área. */
-    private void modeIcon(GuiGraphics g, PasteMode mode, int x, int y) {
-        if (mode == PasteMode.BRUSH) {
-            g.renderItem(brushIcon, x - 8, y - 8);
-            return;
-        }
-        int left = x - 10;
-        int top = y - 7;
-        int same = ResourceStyle.color(ResourceType.ITEM);
-        for (int i = 0; i < 6; i++) {
-            int bx = left + (i % 3) * 7;
-            int by = top + (i / 3) * 8;
-            int fill = mode.anyMachine() ? ANY_COLORS[i] : same;
-            g.fill(bx, by, bx + 6, by + 6, GuiPaint.FG);
-            g.fill(bx + 1, by + 1, bx + 5, by + 5, fill);
-        }
-    }
-
     /** Ícone de tipo centrado em ({@code x}, {@code y}), em dobro (18 × 18); Todos é um quadrado neutro. */
     private void typeIcon(GuiGraphics g, @Nullable ResourceType type, int x, int y) {
         int size = ResourceStyle.ICON;
@@ -544,18 +484,14 @@ public final class ConfiguratorWheelScreen extends Screen {
      * disco central. A largura das linhas é a do disco menos uma margem (a corda no alto e embaixo do
      * bloco de até cinco linhas ainda cabe); texto maior que isso o {@link GuiText} abrevia.
      */
-    private void drawCenter(GuiGraphics g, @Nullable Hit hot) {
+    private void drawCenter(GuiGraphics g, int hot) {
         Component title;
         Component desc;
-        if (hot == null) {
+        if (hot == WheelLayout.NONE) {
             title = Component.translatable(KEY + "cancel");
             desc = null;
-        } else if (hot.ring() == Ring.INNER) {
-            PasteMode m = MODES[hot.index()];
-            title = ConfiguratorItem.modeName(m);
-            desc = Component.translatable(KEY + "desc." + m.key());
         } else {
-            ResourceType type = types.get(hot.index());
+            ResourceType type = types.get(hot);
             title = ConfiguratorItem.typeName(type);
             desc = type == null ? Component.translatable(KEY + "all_tabs") : capitalized(ConfiguratorItem.onlyTab(type));
         }
@@ -565,7 +501,7 @@ public final class ConfiguratorWheelScreen extends Screen {
         int height = (titleLines + descLines) * LINE - 2 + (descLines > 0 ? 3 : 0);
         int y = -height / 2;
         y += GuiText.wrapCentered(g, font, title, 0, y, width, TITLE_LINES,
-                hot != null ? GuiPaint.SELECTED_TEXT : GuiPaint.FG);
+                hot != WheelLayout.NONE ? GuiPaint.SELECTED_TEXT : GuiPaint.FG);
         if (desc != null) {
             // no escuro o miolo aceso é claro: a descrição vira o tom apagado escuro, que lê sobre ele
             GuiText.wrapCentered(g, font, desc, 0, y + 3, width, DESC_LINES,
@@ -576,17 +512,5 @@ public final class ConfiguratorWheelScreen extends Screen {
     private static Component capitalized(@Nullable Component text) {
         String s = text == null ? "" : text.getString();
         return Component.literal(s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1));
-    }
-
-    private int count(Ring ring) {
-        return ring == Ring.INNER ? MODES.length : types.size();
-    }
-
-    private boolean isCurrent(Ring ring, int index) {
-        return ring == Ring.INNER ? MODES[index] == mode : types.get(index) == pasteType;
-    }
-
-    private static boolean isHit(@Nullable Hit hit, Ring ring, int index) {
-        return hit != null && hit.ring() == ring && hit.index() == index;
     }
 }

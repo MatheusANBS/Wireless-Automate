@@ -1,74 +1,45 @@
 package io.github.matheusanbs.wirelessautomate.client;
 
-import org.jetbrains.annotations.Nullable;
-
 /**
- * Geometria da roda do Configurador (lógica pura): um disco central, um anel de dentro e um anel de
- * fora, cada anel dividido em fatias iguais. Ângulos em radianos, 0 no topo e crescendo no sentido
- * horário (com y para baixo, como na tela); a fatia 0 fica centrada no topo. Entre o disco central e
- * os anéis, e entre as fatias, há um vão de largura constante ({@link #gap()}).
+ * Geometria da roda do Configurador (lógica pura): um disco central e um anel dividido em fatias iguais.
+ * Ângulos em radianos, 0 no topo e crescendo no sentido horário (com y para baixo, como na tela); a
+ * fatia 0 fica centrada no topo. Entre o disco central e o anel, e entre as fatias, há um vão de
+ * largura constante ({@link #gap()}).
  *
- * @param innerRadius começo do anel de dentro (antes dele, o disco central, não há escolha)
- * @param ringSplit   limite entre os dois anéis (o meio do vão entre eles)
- * @param outerRadius raio externo do anel de fora, o desenhado
- * @param outerLimit  até onde o mouse ainda conta como anel de fora (um pouco além do desenho)
+ * @param innerRadius começo do anel (antes dele, o disco central, não há escolha)
+ * @param outerRadius raio externo do anel, o desenhado
+ * @param outerLimit  até onde o mouse ainda conta como anel (um pouco além do desenho)
  */
-public record WheelLayout(double innerRadius, double ringSplit, double outerRadius, double outerLimit) {
-    public enum Ring { INNER, OUTER }
-
-    /** A fatia {@code index} do anel {@code ring}. */
-    public record Hit(Ring ring, int index) {
-    }
+public record WheelLayout(double innerRadius, double outerRadius, double outerLimit) {
+    /** Nenhuma fatia sob o ponto. */
+    public static final int NONE = -1;
 
     /**
-     * Proporções do raio externo: o disco central até 0,40 (grande, para o nome e a descrição caberem
-     * em texto de escala 1), o vão entre as peças, o anel de dentro de 0,43 a 0,70 e o de fora de 0,73
-     * a 1; o mouse ainda conta até 1,06.
+     * Proporções do raio externo: o disco central até 0,47 (grande, para o nome e a descrição caberem
+     * em texto de escala 1), o vão e o anel de 0,50 a 1; o mouse ainda conta até 1,06.
      */
     private static final double GAP = 0.03;
-    private static final double INNER_START = 0.43;
-    private static final double INNER_END = 0.70;
-    private static final double OUTER_START = 0.73;
+    private static final double INNER_START = 0.50;
     private static final double LIMIT = 1.06;
 
     /** A roda de raio externo {@code outer}. */
     public static WheelLayout forRadius(double outer) {
-        return new WheelLayout(INNER_START * outer, (INNER_END + OUTER_START) / 2 * outer, outer, LIMIT * outer);
+        return new WheelLayout(INNER_START * outer, outer, LIMIT * outer);
     }
 
-    /** Largura do vão entre o disco central e os anéis, entre os anéis e entre as fatias. */
+    /** Largura do vão entre o disco central e o anel e entre as fatias. */
     public double gap() {
         return GAP * outerRadius;
     }
 
-    /** Raio do disco central (o vão antes do anel de dentro). */
+    /** Raio do disco central (o vão antes do anel). */
     public double centerRadius() {
         return innerRadius - gap();
     }
 
-    /** Fim do anel de dentro (desenho). */
-    public double innerRingEnd() {
-        return INNER_END * outerRadius;
-    }
-
-    /** Começo do anel de fora (desenho). */
-    public double outerRingStart() {
-        return OUTER_START * outerRadius;
-    }
-
-    /** Raio de dentro do anel {@code ring}. */
-    public double ringStart(Ring ring) {
-        return ring == Ring.INNER ? innerRadius : outerRingStart();
-    }
-
-    /** Raio de fora do anel {@code ring}. */
-    public double ringEnd(Ring ring) {
-        return ring == Ring.INNER ? innerRingEnd() : outerRadius;
-    }
-
     /** Raio do meio do anel: onde fica o centro do conteúdo (ícone e nome) de cada fatia. */
-    public double ringMiddle(Ring ring) {
-        return (ringStart(ring) + ringEnd(ring)) / 2;
+    public double ringMiddle() {
+        return (innerRadius + outerRadius) / 2;
     }
 
     /**
@@ -89,20 +60,15 @@ public record WheelLayout(double innerRadius, double ringSplit, double outerRadi
     }
 
     /**
-     * A fatia sob o ponto ({@code dx}, {@code dy}) em relação ao centro, ou {@code null} no disco
-     * central, fora da roda ou num anel sem fatias.
+     * O índice da fatia sob o ponto ({@code dx}, {@code dy}) em relação ao centro, ou {@link #NONE} no
+     * disco central, fora da roda ou sem fatias.
      */
-    public @Nullable Hit hit(double dx, double dy, int innerCount, int outerCount) {
+    public int hit(double dx, double dy, int count) {
         double distance = Math.hypot(dx, dy);
-        if (distance < innerRadius || distance > outerLimit) {
-            return null;
+        if (distance < innerRadius || distance > outerLimit || count <= 0) {
+            return NONE;
         }
-        Ring ring = distance <= ringSplit ? Ring.INNER : Ring.OUTER;
-        int count = ring == Ring.INNER ? innerCount : outerCount;
-        if (count <= 0) {
-            return null;
-        }
-        return new Hit(ring, slice(angle(dx, dy), count));
+        return slice(angle(dx, dy), count);
     }
 
     /** Ângulo do ponto: 0 no topo ({@code dy < 0}), horário, em [0, 2π). */

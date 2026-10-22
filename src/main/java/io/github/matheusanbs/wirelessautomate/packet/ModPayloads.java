@@ -502,8 +502,8 @@ public final class ModPayloads {
     }
 
     /**
-     * Escolha na roda do Configurador: grava o modo de colar e o tipo colado e mostra os dois na
-     * action bar. Recusa outra coisa na mão principal e um tipo que não está carregado.
+     * Escolha na roda do Configurador: grava o tipo colado e o mostra na action bar. Recusa outra coisa
+     * na mão principal e um tipo que não está carregado.
      */
     public static boolean handleConfiguratorWheel(@Nullable ServerPlayer player, ConfiguratorWheelPayload payload) {
         if (player == null) {
@@ -514,10 +514,9 @@ public final class ModPayloads {
         if (!(stack.getItem() instanceof ConfiguratorItem) || (type != null && !LoadedTypes.LIST.contains(type))) {
             return false;
         }
-        ConfiguratorItem.setPasteMode(stack, payload.mode());
         ConfiguratorItem.setType(stack, type);
-        player.displayClientMessage(Component.translatable("item.wirelessautomate.configurator.wheel",
-                ConfiguratorItem.modeName(payload.mode()), ConfiguratorItem.typeName(type)), true);
+        player.displayClientMessage(Component.translatable("item.wirelessautomate.configurator.type",
+                ConfiguratorItem.typeName(type)), true);
         return true;
     }
 

@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.registry;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
+import com.mojang.serialization.Dynamic;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
@@ -115,26 +116,19 @@ public final class ModDataComponents {
                     .persistent(ResourceLocation.CODEC)
                     .networkSynchronized(ResourceLocation.STREAM_CODEC));
 
-    /** Modo do Configurador ({@link LinkerMode#SINGLE} é o pincel); sem o componente, pincel. */
-    public static final Supplier<DataComponentType<LinkerMode>> CONFIGURATOR_MODE =
-            DATA_COMPONENTS.registerComponentType("configurator_mode", builder -> builder
-                    .persistent(LinkerMode.CODEC)
-                    .networkSynchronized(LinkerMode.STREAM_CODEC));
-
     /**
-     * Área do Configurador em "qualquer máquina": colar vale para todos os roteadores da área. Só
-     * gravado quando {@code true} (sem o componente, mesma máquina) e removido no pincel.
+     * Componentes de versões antigas que nada mais lê. Ficam registrados só para os itens que ainda os levam
+     * carregarem: sem o registro, o item com o componente falharia ao ler e sumiria do inventário.
      */
-    public static final Supplier<DataComponentType<Boolean>> CONFIGURATOR_ANY_MACHINE =
-            DATA_COMPONENTS.registerComponentType("configurator_any_machine", builder -> builder
-                    .persistent(Codec.BOOL)
-                    .networkSynchronized(ByteBufCodecs.BOOL));
+    static {
+        legacy("configurator_mode");
+        legacy("configurator_any_machine");
+        legacy("configurator_area");
+    }
 
-    /** Cantos da área marcados com o Configurador em modo Área (o mesmo formato do Vinculador). */
-    public static final Supplier<DataComponentType<LinkerArea>> CONFIGURATOR_AREA =
-            DATA_COMPONENTS.registerComponentType("configurator_area", builder -> builder
-                    .persistent(LinkerArea.CODEC)
-                    .networkSynchronized(LinkerArea.STREAM_CODEC));
+    private static void legacy(String name) {
+        DATA_COMPONENTS.<Dynamic<?>>registerComponentType(name, builder -> builder.persistent(Codec.PASSTHROUGH));
+    }
 
     /**
      * Carga de um Cristal de Sinal ou Lapidado ({@link CrystalCharge}). Sem o componente, o cristal está

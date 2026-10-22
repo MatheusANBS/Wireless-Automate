@@ -7,7 +7,6 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
-import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
@@ -20,7 +19,6 @@ import io.github.matheusanbs.wirelessautomate.menu.LinkerSnapshot;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.LinkerActionPayload.Op;
 import io.github.matheusanbs.wirelessautomate.packet.LinkerActionPayload;
-import io.github.matheusanbs.wirelessautomate.preset.PasteMode;
 import io.github.matheusanbs.wirelessautomate.range.RangeLinks;
 import io.github.matheusanbs.wirelessautomate.range.RangeRules.LinkRefusal;
 import io.github.matheusanbs.wirelessautomate.range.RemoteIndex;
@@ -283,30 +281,6 @@ public final class RangeLinkerGameTests {
                     }
                 })
                 .thenSucceed();
-    }
-
-    /**
-     * O Configurador nunca fica no modo Máquinas: gravar Máquinas vira pincel, um componente com
-     * Máquinas é lido como pincel e o ciclo dele só passa por Pincel e Área.
-     */
-    @GameTest(template = "empty")
-    public static void configuratorNeverMachines(GameTestHelper helper) {
-        ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
-        ConfiguratorItem.setMode(configurator, LinkerMode.MACHINES);
-        helper.assertValueEqual(ConfiguratorItem.mode(configurator), LinkerMode.SINGLE, "setMode(MACHINES)");
-        helper.assertFalse(configurator.has(ModDataComponents.CONFIGURATOR_MODE.get()), "gravou Máquinas");
-        configurator.set(ModDataComponents.CONFIGURATOR_MODE.get(), LinkerMode.MACHINES);
-        helper.assertValueEqual(ConfiguratorItem.mode(configurator), LinkerMode.SINGLE, "componente com Máquinas");
-        helper.assertValueEqual(ConfiguratorItem.pasteMode(configurator), PasteMode.BRUSH, "modo de colar");
-        PasteMode mode = ConfiguratorItem.pasteMode(configurator);
-        for (int i = 0; i < PasteMode.values().length * 2; i++) {
-            mode = mode.next();
-            ConfiguratorItem.setPasteMode(configurator, mode);
-            helper.assertTrue(ConfiguratorItem.mode(configurator) != LinkerMode.MACHINES, "o ciclo chegou a Máquinas");
-        }
-        helper.assertValueEqual(LinkerMode.MACHINES.toggled(), LinkerMode.AREA, "toggled de Máquinas");
-        helper.assertValueEqual(LinkerMode.AREA.toggled(), LinkerMode.SINGLE, "toggled de Área");
-        helper.succeed();
     }
 
     /** As chaves de tradução de uma mensagem e das partes dela, em ordem. */

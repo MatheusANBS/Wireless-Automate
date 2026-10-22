@@ -4,7 +4,6 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
@@ -19,8 +18,6 @@ import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.packet.ConfiguratorWheelPayload;
 import io.github.matheusanbs.wirelessautomate.packet.CycleConfiguratorTypePayload;
 import io.github.matheusanbs.wirelessautomate.packet.ModPayloads;
-import io.github.matheusanbs.wirelessautomate.preset.ConfiguratorArea;
-import io.github.matheusanbs.wirelessautomate.preset.PasteMode;
 import io.github.matheusanbs.wirelessautomate.preset.PresetApplier;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
@@ -234,252 +231,6 @@ public final class ConfiguratorGameTests {
         }
     }
 
-    /** Clique direito com o Configurador no ar. */
-    private static void clickAir(GameTestHelper helper, ServerPlayer player, boolean sneak) {
-        player.setShiftKeyDown(sneak);
-        ModItems.CONFIGURATOR.get().use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
-    }
-
-    /**
-     * Modo Área: Shift + clique no ar troca o modo; cliques em dois blocos marcam a área; clique no
-     * ar cola só nos roteadores presos à mesma máquina do copiado.
-     */
-    @GameTest(template = "empty")
-    public static void areaPastesOnlyOnSameMachine(GameTestHelper helper) {
-        // Roteadores em (0,1,0) copiado, (2,1,0) e (2,0,1) em fornalhas, (0,1,2) num baú.
-        RouterBlockEntity source = place(helper, new BlockPos(0, 0, 0), Direction.UP, Blocks.FURNACE);
-        RouterBlockEntity sameA = place(helper, new BlockPos(2, 0, 0), Direction.UP, Blocks.FURNACE);
-        RouterBlockEntity sameB = place(helper, new BlockPos(2, 0, 2), Direction.NORTH, Blocks.FURNACE);
-        RouterBlockEntity chest = place(helper, new BlockPos(0, 0, 2), Direction.UP, Blocks.CHEST);
-        ServerPlayer player = TestPlayers.inLevel(helper);
-        ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
-        // O jogador falso nasce longe da estrutura; a área exige estar perto.
-        player.moveTo(Vec3.atCenterOf(helper.absolutePos(new BlockPos(1, 1, 1))));
-        player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
-
-        helper.startSequence()
-                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(chest), "sem onLoad"))
-                .thenExecute(() -> {
-                    try {
-                        configureUp(source);
-                        clickBlock(helper, player, new BlockPos(0, 1, 0), true);
-                        helper.assertTrue(configurator.has(ModDataComponents.PRESET.get()), "nada copiado");
-                        helper.assertValueEqual(ConfiguratorItem.machine(configurator),
-                                BuiltInRegistries.BLOCK.getKey(Blocks.FURNACE), "máquina copiada");
-
-                        clickAir(helper, player, true);
-                        helper.assertValueEqual(ConfiguratorItem.mode(configurator), LinkerMode.AREA, "modo Área");
-                        helper.assertValueEqual(ConfiguratorItem.pasteMode(configurator), PasteMode.AREA_SAME,
-                                "o primeiro Shift + clique vai à Área na mesma máquina");
-                        clickAir(helper, player, false);
-                        helper.assertTrue(sameA.face(ResourceType.ITEM, RelativeSide.FRONT).isDefault(),
-                                "colou sem área");
-
-                        // Área de (1,0,0) a (2,2,2): só os dois roteadores das fornalhas da direita.
-                        clickBlock(helper, player, new BlockPos(1, 0, 0), false);
-                        clickBlock(helper, player, new BlockPos(2, 2, 2), false);
-                        helper.assertTrue(ConfiguratorItem.area(configurator) != null
-                                && ConfiguratorItem.area(configurator).complete(), "área não marcada");
-                        clickAir(helper, player, false);
-                        for (ResourceType type : TYPES) {
-                            for (RelativeSide side : SIDES) {
-                                helper.assertValueEqual(sameA.face(type, side), source.face(type, side),
-                                        "mesma máquina, " + type + " " + side);
-                                helper.assertValueEqual(sameB.face(type, side), source.face(type, side),
-                                        "mesma máquina girada, " + type + " " + side);
-                            }
-                        }
-
-                        // Área de (0,0,0) a (0,2,2): o copiado e o do baú; o do baú fica como estava.
-                        clickBlock(helper, player, new BlockPos(0, 0, 0), false);
-                        clickBlock(helper, player, new BlockPos(0, 2, 2), false);
-                        clickAir(helper, player, false);
-                        for (ResourceType type : TYPES) {
-                            for (RelativeSide side : SIDES) {
-                                helper.assertTrue(chest.face(type, side).isDefault(),
-                                        "colou noutra máquina: " + type + " " + side);
-                            }
-                        }
-
-                        // Shift + clique num bloco sem roteador limpa a cópia e a área; o modo fica.
-                        clickBlock(helper, player, new BlockPos(1, 0, 1), true);
-                        helper.assertTrue(ConfiguratorItem.area(configurator) == null, "área não foi limpa");
-                        helper.assertTrue(!configurator.has(ModDataComponents.PRESET.get())
-                                && ConfiguratorItem.machine(configurator) == null, "cópia não foi limpa");
-                        helper.assertValueEqual(ConfiguratorItem.mode(configurator), LinkerMode.AREA, "modo mudou");
-                        // Num roteador, Shift + clique continua copiando.
-                        clickBlock(helper, player, new BlockPos(0, 1, 2), true);
-                        helper.assertValueEqual(ConfiguratorItem.machine(configurator),
-                                BuiltInRegistries.BLOCK.getKey(Blocks.CHEST), "Shift + clique no roteador não copiou");
-
-                        // O ciclo tem três modos: Área (qualquer máquina) e depois o pincel.
-                        clickAir(helper, player, true);
-                        helper.assertValueEqual(ConfiguratorItem.pasteMode(configurator), PasteMode.AREA_ANY,
-                                "Área na mesma máquina → qualquer máquina");
-                        helper.assertTrue(configurator.getOrDefault(
-                                ModDataComponents.CONFIGURATOR_ANY_MACHINE.get(), false), "sem o any_machine");
-                        clickAir(helper, player, true);
-                        helper.assertValueEqual(ConfiguratorItem.mode(configurator), LinkerMode.SINGLE,
-                                "volta ao pincel");
-                        helper.assertFalse(configurator.has(ModDataComponents.CONFIGURATOR_ANY_MACHINE.get()),
-                                "o pincel guardou o any_machine");
-                        // No pincel também limpa.
-                        clickBlock(helper, player, new BlockPos(1, 0, 1), true);
-                        helper.assertTrue(!configurator.has(ModDataComponents.PRESET.get()), "pincel não limpou");
-                        helper.assertValueEqual(ConfiguratorItem.mode(configurator), LinkerMode.SINGLE,
-                                "Shift + clique num bloco trocou o modo");
-                    } finally {
-                        player.setShiftKeyDown(false);
-                        helper.getLevel().getServer().getPlayerList().remove(player);
-                    }
-                })
-                .thenSucceed();
-    }
-
-    /**
-     * Área (qualquer máquina): a cópia de um roteador num barril vai para o de um baú na área. Na
-     * mesma máquina o do baú fica como estava (e conta como outra máquina); o canto 2 usa a mensagem
-     * sem a contagem da mesma máquina.
-     */
-    @GameTest(template = "empty")
-    public static void areaAnyMachinePastesEverywhere(GameTestHelper helper) {
-        RouterBlockEntity source = place(helper, new BlockPos(0, 0, 0), Direction.UP, Blocks.BARREL);
-        RouterBlockEntity chest = place(helper, new BlockPos(2, 0, 0), Direction.UP, Blocks.CHEST);
-        ServerPlayer player = TestPlayers.inLevel(helper);
-        ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
-        player.moveTo(Vec3.atCenterOf(helper.absolutePos(new BlockPos(1, 1, 1))));
-        player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
-
-        helper.startSequence()
-                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(chest), "sem onLoad"))
-                .thenExecute(() -> {
-                    try {
-                        configureUp(source);
-                        clickBlock(helper, player, new BlockPos(0, 1, 0), true);
-                        RouterPreset copied = configurator.get(ModDataComponents.PRESET.get());
-                        helper.assertTrue(copied != null, "nada copiado");
-                        helper.assertValueEqual(ConfiguratorItem.machine(configurator),
-                                BuiltInRegistries.BLOCK.getKey(Blocks.BARREL), "máquina copiada");
-
-                        // Mesma máquina: o do baú fica como estava.
-                        ConfiguratorItem.setPasteMode(configurator, PasteMode.AREA_SAME);
-                        clickBlock(helper, player, new BlockPos(0, 0, 0), false);
-                        clickBlock(helper, player, new BlockPos(2, 2, 0), false);
-                        ConfiguratorArea.Outcome same = ConfiguratorArea.paste(player, configurator, copied);
-                        helper.assertValueEqual(same.otherMachine(), 1, "outra máquina na mesma máquina");
-                        for (ResourceType type : TYPES) {
-                            for (RelativeSide side : SIDES) {
-                                helper.assertTrue(chest.face(type, side).isDefault(),
-                                        "colou noutra máquina: " + type + " " + side);
-                            }
-                        }
-
-                        // Qualquer máquina: o canto 2 sem a contagem e o do baú igual ao copiado.
-                        ConfiguratorItem.setPasteMode(configurator, PasteMode.AREA_ANY);
-                        clickBlock(helper, player, new BlockPos(0, 0, 0), false);
-                        Component corner2 = ConfiguratorArea.markCorner(player, configurator,
-                                helper.absolutePos(new BlockPos(2, 2, 0)));
-                        helper.assertTrue(corner2.getContents() instanceof TranslatableContents contents
-                                && contents.getKey().equals("item.wirelessautomate.configurator.area.corner2_any"),
-                                "canto 2: " + corner2.getString());
-                        clickAir(helper, player, false);
-                        for (ResourceType type : TYPES) {
-                            for (RelativeSide side : SIDES) {
-                                helper.assertValueEqual(chest.face(type, side), source.face(type, side),
-                                        "qualquer máquina, " + type + " " + side);
-                            }
-                        }
-                        ConfiguratorArea.Outcome any = ConfiguratorArea.paste(player, configurator, copied);
-                        helper.assertValueEqual(any.otherMachine(), 0, "outra máquina em qualquer máquina");
-                        helper.assertValueEqual(any.applied(), 2, "roteadores colados");
-                    } finally {
-                        player.setShiftKeyDown(false);
-                        helper.getLevel().getServer().getPlayerList().remove(player);
-                    }
-                })
-                .thenSucceed();
-    }
-
-    /**
-     * Uma varinha sem os componentes é pincel; só o modo Área vale mesma máquina; o {@code any_machine}
-     * no pincel é ignorado (e o Shift + clique no ar segue o ciclo dele), e o pincel o remove.
-     */
-    @GameTest(template = "empty")
-    public static void pasteModeDefaultsAndComponents(GameTestHelper helper) {
-        ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
-        helper.assertValueEqual(ConfiguratorItem.pasteMode(configurator), PasteMode.BRUSH, "varinha nova");
-
-        ConfiguratorItem.setMode(configurator, LinkerMode.AREA);
-        helper.assertValueEqual(ConfiguratorItem.pasteMode(configurator), PasteMode.AREA_SAME,
-                "Área sem o any_machine");
-
-        ConfiguratorItem.setPasteMode(configurator, PasteMode.AREA_ANY);
-        helper.assertValueEqual(ConfiguratorItem.mode(configurator), LinkerMode.AREA, "AREA_ANY grava a Área");
-        helper.assertTrue(configurator.getOrDefault(ModDataComponents.CONFIGURATOR_ANY_MACHINE.get(), false),
-                "AREA_ANY sem o componente");
-        ConfiguratorItem.setPasteMode(configurator, PasteMode.AREA_SAME);
-        helper.assertFalse(configurator.has(ModDataComponents.CONFIGURATOR_ANY_MACHINE.get()),
-                "AREA_SAME deixou o componente");
-        ConfiguratorItem.setPasteMode(configurator, PasteMode.BRUSH);
-        helper.assertFalse(configurator.has(ModDataComponents.CONFIGURATOR_MODE.get()), "pincel deixou o modo");
-        helper.assertFalse(configurator.has(ModDataComponents.CONFIGURATOR_ANY_MACHINE.get()),
-                "pincel deixou o any_machine");
-        for (PasteMode mode : PasteMode.values()) {
-            helper.assertValueEqual(PasteMode.of(mode.linkerMode(), mode.anyMachine()), mode, "ida e volta " + mode);
-            ConfiguratorItem.setPasteMode(configurator, mode);
-            helper.assertValueEqual(ConfiguratorItem.pasteMode(configurator), mode, "no item " + mode);
-        }
-
-        // any_machine perdido num pincel: continua pincel, e o Shift + clique no ar vai à Área mesma máquina.
-        ConfiguratorItem.setPasteMode(configurator, PasteMode.BRUSH);
-        configurator.set(ModDataComponents.CONFIGURATOR_ANY_MACHINE.get(), true);
-        helper.assertValueEqual(ConfiguratorItem.pasteMode(configurator), PasteMode.BRUSH, "pincel com any_machine");
-        ServerPlayer player = TestPlayers.inLevel(helper);
-        try {
-            player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
-            clickAir(helper, player, true);
-            helper.assertValueEqual(ConfiguratorItem.pasteMode(configurator), PasteMode.AREA_SAME,
-                    "Shift + clique no ar a partir do pincel");
-            helper.assertFalse(configurator.has(ModDataComponents.CONFIGURATOR_ANY_MACHINE.get()),
-                    "a Área mesma máquina ficou com o any_machine");
-        } finally {
-            player.setShiftKeyDown(false);
-            helper.getLevel().getServer().getPlayerList().remove(player);
-        }
-        helper.succeed();
-    }
-
-    /** Uma área acima do volume da config não é marcada, e colar sem a área completa não muda nada. */
-    @GameTest(template = "empty")
-    public static void areaTooBigIsRefused(GameTestHelper helper) {
-        RouterBlockEntity source = place(helper, new BlockPos(0, 0, 0), Direction.UP, Blocks.FURNACE);
-        RouterBlockEntity target = place(helper, new BlockPos(2, 0, 0), Direction.UP, Blocks.FURNACE);
-        ServerPlayer player = TestPlayers.inLevel(helper);
-        ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
-        player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
-
-        helper.startSequence()
-                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(target), "sem onLoad"))
-                .thenExecute(() -> {
-                    try {
-                        configureUp(source);
-                        clickBlock(helper, player, new BlockPos(0, 1, 0), true);
-                        ConfiguratorItem.setMode(configurator, LinkerMode.AREA);
-                        clickBlock(helper, player, new BlockPos(2, 0, 0), false);
-                        // 300 × 1 × 1000 = 300.000 blocos, acima do padrão de 262.144.
-                        clickBlock(helper, player, new BlockPos(301, 0, 999), false);
-                        helper.assertTrue(!ConfiguratorItem.area(configurator).complete(), "área grande marcada");
-                        clickAir(helper, player, false);
-                        helper.assertTrue(target.face(ResourceType.ITEM, RelativeSide.FRONT).isDefault(),
-                                "colou numa área incompleta");
-                    } finally {
-                        player.setShiftKeyDown(false);
-                        helper.getLevel().getServer().getPlayerList().remove(player);
-                    }
-                })
-                .thenSucceed();
-    }
-
     /** Destino com faces e rede próprias em todas as abas, para ver o que o colar por tipo não toca. */
     private static void configureTarget(RouterBlockEntity target, UUID network) {
         target.setNetworkId(network);
@@ -578,54 +329,6 @@ public final class ConfiguratorGameTests {
                 .thenSucceed();
     }
 
-    /** Colar em área com o seletor em Energia: só a aba de energia dos roteadores da mesma máquina muda. */
-    @GameTest(template = "empty")
-    public static void areaPasteWithType(GameTestHelper helper) {
-        RouterBlockEntity source = place(helper, new BlockPos(0, 0, 0), Direction.UP, Blocks.FURNACE);
-        RouterBlockEntity target = place(helper, new BlockPos(2, 0, 0), Direction.UP, Blocks.FURNACE);
-        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
-        ServerPlayer player = TestPlayers.inLevel(helper);
-        WaNetwork power = data.create(player.getUUID(), "Energia área " + player.getUUID());
-        WaNetwork before = data.create(player.getUUID(), "Antes área " + player.getUUID());
-        ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
-        player.moveTo(Vec3.atCenterOf(helper.absolutePos(new BlockPos(1, 1, 1))));
-        player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
-
-        helper.startSequence()
-                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(target), "sem onLoad"))
-                .thenExecute(() -> {
-                    try {
-                        configureUp(source);
-                        source.setNetworkId(power.id());
-                        configureTarget(target, before.id());
-                        RouterPreset targetBefore = RouterPreset.copyOf(target);
-                        clickBlock(helper, player, new BlockPos(0, 1, 0), true);
-                        RouterPreset copied = configurator.get(ModDataComponents.PRESET.get());
-                        helper.assertTrue(copied != null, "nada copiado");
-
-                        ConfiguratorItem.setMode(configurator, LinkerMode.AREA);
-                        ConfiguratorItem.setType(configurator, ResourceType.ENERGY);
-                        clickBlock(helper, player, new BlockPos(1, 0, 0), false);
-                        clickBlock(helper, player, new BlockPos(2, 2, 0), false);
-                        clickAir(helper, player, false);
-
-                        assertFaces(helper, target, ResourceType.ENERGY, copied, "energia não colada:");
-                        assertNetwork(helper, target.networkId(ResourceType.ENERGY), power.id(), "rede da energia");
-                        for (ResourceType other : new ResourceType[] {ResourceType.ITEM, ResourceType.FLUID,
-                                ResourceType.CHEMICAL, ResourceType.SOURCE}) {
-                            assertFaces(helper, target, other, targetBefore, "aba mexida:");
-                            assertNetwork(helper, target.networkId(other), before.id(), "rede mexida: " + other);
-                        }
-                    } finally {
-                        player.setShiftKeyDown(false);
-                        data.remove(power.id());
-                        data.remove(before.id());
-                        helper.getLevel().getServer().getPlayerList().remove(player);
-                    }
-                })
-                .thenSucceed();
-    }
-
     /**
      * Shift + roda com o Configurador: Todos → um tipo por vez, só os carregados (Químicos com o
      * Mekanism, Source com o Ars) → Todos, e para trás; só com o Configurador na mão.
@@ -672,40 +375,35 @@ public final class ConfiguratorGameTests {
     }
 
     /**
-     * A roda do Configurador grava o modo de colar e o tipo de uma vez; vazio é Todos. Recusa outra
-     * coisa na mão e um tipo que não está carregado, sem mexer no item.
+     * A roda do Configurador grava o tipo colado; vazio é Todos. Recusa outra coisa na mão e um tipo que não
+     * está carregado, sem mexer no item.
      */
     @GameTest(template = "empty")
-    public static void wheelPayloadSetsModeAndType(GameTestHelper helper) {
+    public static void wheelPayloadSetsType(GameTestHelper helper) {
         ServerPlayer player = TestPlayers.inLevel(helper);
         try {
             ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
             player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
             helper.assertTrue(ModPayloads.handleConfiguratorWheel(player,
-                    new ConfiguratorWheelPayload(PasteMode.AREA_ANY, Optional.of(ResourceType.FLUID))), "recusou");
-            helper.assertValueEqual(ConfiguratorItem.pasteMode(configurator), PasteMode.AREA_ANY, "modo");
+                    new ConfiguratorWheelPayload(Optional.of(ResourceType.FLUID))), "recusou");
             helper.assertValueEqual(ConfiguratorItem.type(configurator), ResourceType.FLUID, "tipo");
 
             helper.assertTrue(ModPayloads.handleConfiguratorWheel(player,
-                    new ConfiguratorWheelPayload(PasteMode.BRUSH, Optional.empty())), "recusou o pincel");
-            helper.assertValueEqual(ConfiguratorItem.pasteMode(configurator), PasteMode.BRUSH, "pincel");
+                    new ConfiguratorWheelPayload(Optional.empty())), "recusou Todos");
             helper.assertFalse(configurator.has(ModDataComponents.CONFIGURATOR_TYPE.get()), "Todos deixou o tipo");
-            helper.assertFalse(configurator.has(ModDataComponents.CONFIGURATOR_ANY_MACHINE.get()),
-                    "pincel guardou o qualquer máquina");
 
             if (!Chemicals.LOADED) {
                 helper.assertFalse(ModPayloads.handleConfiguratorWheel(player,
-                        new ConfiguratorWheelPayload(PasteMode.AREA_SAME, Optional.of(ResourceType.CHEMICAL))),
+                        new ConfiguratorWheelPayload(Optional.of(ResourceType.CHEMICAL))),
                         "aceitou Químicos sem o Mekanism");
-                helper.assertValueEqual(ConfiguratorItem.pasteMode(configurator), PasteMode.BRUSH, "mudou ao recusar");
+                helper.assertFalse(configurator.has(ModDataComponents.CONFIGURATOR_TYPE.get()), "mudou ao recusar");
             }
 
             ItemStack linker = new ItemStack(ModItems.LINKER.get());
             player.setItemInHand(InteractionHand.MAIN_HAND, linker);
             helper.assertFalse(ModPayloads.handleConfiguratorWheel(player,
-                    new ConfiguratorWheelPayload(PasteMode.AREA_ANY, Optional.empty())), "aceitou sem o Configurador");
-            helper.assertFalse(linker.has(ModDataComponents.CONFIGURATOR_ANY_MACHINE.get())
-                    || linker.has(ModDataComponents.CONFIGURATOR_MODE.get()), "mexeu noutro item");
+                    new ConfiguratorWheelPayload(Optional.of(ResourceType.FLUID))), "aceitou sem o Configurador");
+            helper.assertFalse(linker.has(ModDataComponents.CONFIGURATOR_TYPE.get()), "mexeu noutro item");
         } finally {
             helper.getLevel().getServer().getPlayerList().remove(player);
         }

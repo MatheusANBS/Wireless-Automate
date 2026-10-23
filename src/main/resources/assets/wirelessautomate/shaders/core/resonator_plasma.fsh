@@ -1,5 +1,7 @@
 #version 150
 
+#moj_import <wirelessautomate:wa_common.glsl>
+
 uniform float GameTime;
 
 in vec2 quad;
@@ -10,17 +12,9 @@ out vec4 fragColor;
 
 const vec3 CORAL = vec3(0.949, 0.569, 0.478);
 const vec3 WHITE = vec3(1.0, 0.94, 0.92);
+// o raio da esfera em unidades do quad (HALF = 1,45 bloco): 0,34 bloco
+const float SPHERE = 0.234;
 
-float h21(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
-float n2(vec2 p) {
-    vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
-    return mix(mix(h21(i), h21(i + vec2(1, 0)), f.x), mix(h21(i + vec2(0, 1)), h21(i + vec2(1, 1)), f.x), f.y);
-}
-float fbm(vec2 p, int octaves) {
-    float s = 0.0, a = 0.5;
-    for (int i = 0; i < 4; i++) { if (i >= octaves) break; s += a * n2(p); p = p * 2.03 + vec2(1.7, 9.2); a *= 0.5; }
-    return s;
-}
 float segD(vec2 p, vec2 a, vec2 b) { vec2 pa = p - a, ba = b - a; float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0); return length(pa - ba * h); }
 vec2 liss(float s, float t, float mis) {
     return vec2(sin(3.0 * s + t * 0.6), sin(2.0 * s + t * 0.35 + 1.5708)) * vec2(0.62, 0.42)
@@ -41,17 +35,45 @@ void main() {
     int octaves = detail >= 2 ? 4 : (detail == 1 ? 3 : 2);
     int samples = detail >= 2 ? 48 : (detail == 1 ? 32 : 16);
 
-    vec3 col = tier * 0.05 * (1.0 - r * 0.6);
-    vec2 q = p * 3.0;
-    float w = fbm(q + vec2(t * 0.4, -t * 0.3) + fbm(q * 1.5 - t * 0.2, octaves) * 1.6, octaves);
-    float radius = 0.26 + 0.03 * sin(t * 2.0) + mis * 0.08 * (w - 0.5) - press * 0.05;
-    float body = (1.0 - smoothstep(radius - 0.12, radius, r)) * (0.55 + 0.9 * w);
-    col += mix(CORAL * 0.8, CORAL, smoothstep(0.0, radius, radius - r + 0.1)) * vec3(1.5, 0.75, 0.55) * body;
-    float ring = (r - radius) / 0.07;
-    col += tier * 1.3 * exp(-ring * ring) * (1.0 + press * 0.9);
-    col += WHITE * exp(-r * r * 160.0) * (0.35 + 0.1 * sin(t * 3.0));
-    col += tier * 0.4 * exp(-r * 4.5);
+    // o raio respira, encolhe sob pressão e treme na borda quando fora de sintonia
+    float radius = SPHERE * (1.0 + 0.06 * sin(t * 2.0)) * (1.0 - press * 0.2);
+    if (mis > 0.02) {
+        radius += mis * 0.04 * wa_noise(vec3(normalize(p + vec2(1e-5)) * 2.5, t * 1.2));
+    }
 
+    vec3 col = vec3(0.0);
+
+    // o corpo: uma esfera de verdade, com normal, convecção e temperatura
+    float inside = 1.0 - smoothstep(radius - 0.012, radius, r);
+    if (inside > 0.0) {
+        float rr = min(r / radius, 1.0);
+        float zz = sqrt(max(0.0, 1.0 - rr * rr));
+        vec3 n = vec3(p / radius, zz);
+        float ca = cos(t * 0.35);
+        float sa = sin(t * 0.35);
+        vec3 sn = vec3(ca * n.x + sa * n.z, n.y, -sa * n.x + ca * n.z);
+        vec3 q = sn * 2.4;
+        float w1 = wa_fbm(q + vec3(0.0, t * 0.30, 0.0), octaves);
+        float w2 = wa_fbm(q * 1.7 + vec3(w1 * 1.8, -t * 0.22, w1 * 1.2), octaves);
+        float heat = clamp(0.30 + 1.1 * (w2 - 0.5) + 0.35 * zz + 0.3 * (w1 - 0.5) + (w1 - 0.5) * mis * 0.6, 0.0, 1.0);
+        float fres = pow(1.0 - zz, 2.6);
+        vec3 surf = wa_heat(heat) * (0.45 + 0.9 * heat * heat);
+        surf = mix(surf, tier * 1.0, fres * 0.6);
+        surf += tier * fres * (0.9 + press * 0.8);
+        surf += WHITE * pow(zz, 6.0) * 0.18 * (0.8 + 0.2 * sin(t * 3.0));
+        col += surf * inside;
+    }
+
+    // o halo: duas camadas exponenciais e um brilho amplo, todas a zero exato na borda do quad
+    float rim = max(r - radius, 0.0);
+    float fade = 1.0 - smoothstep(0.45, 1.0, r);
+    fade *= fade;
+    float outside = 1.0 - inside;
+    col += (tier * 0.8 * exp(-rim * 9.0) + CORAL * 0.4 * exp(-rim * 22.0)) * fade * (1.0 + press * 0.5) * outside;
+    col += WHITE * 0.12 * exp(-r * r * 38.0) * fade * outside;
+    col += tier * 0.25 * exp(-r * 3.0) * fade * outside;
+
+    // LINHAS
     float d = 1e3;
     vec2 prev = liss(0.0, t, mis);
     for (int i = 1; i <= 48; i++) {
@@ -70,10 +92,11 @@ void main() {
         col += mix(CORAL, tier, 0.35) * (0.0035 / (dc * dc + 0.0009)) * 0.08;
         col += tier * (0.0007 / (segD(p, c, vec2(0.0)) + 0.0015)) * tune * (0.5 + 0.5 * sin(t * 6.0 + float(i)));
     }
+    // FIM LINHAS
 
-    float st = h21(floor(gl_FragCoord.xy / 2.0) + floor(t * 24.0));
+    // chiado de TV quando fora de sintonia
+    float st = wa_h21(floor(gl_FragCoord.xy / 2.0) + vec2(floor(t * 24.0), 0.0));
     col += vec3(st) * mis * mis * 0.22 * (1.0 - r);
-    col = 1.0 - exp(-col * 0.9);
-    float edge = (1.0 - smoothstep(0.7, 1.0, r));
-    fragColor = vec4(col * edge, 1.0);
+
+    fragColor = vec4(wa_dither(wa_tonemap(col)), 1.0);
 }

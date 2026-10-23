@@ -59,7 +59,7 @@ Antes de escrever a primeira linha de um efeito novo, faça **pelo menos 3 busca
 
 O dono pediu menos elementos e mais qualidade. Regras:
 - Um elemento novo só entra se mostrar um dado que nenhum outro já mostra. Dois elementos para o mesmo dado: fica o melhor.
-- Nada que gira, orbita ou liga coisas só para "parecer vivo" (curvas girando, linhas cristal-estrela, auras com estrela, faíscas soltas já foram reprovadas como poluição).
+- O dono pediu (23/10) que os cristais girem no próprio eixo (pela sintonia) e que o anel orbite a esfera devagar, para o de trás não ficar sempre atrás: esses dois ficam. Fora isso, nada que gira, orbita ou liga coisas só para "parecer vivo" (curvas girando, linhas cristal-estrela, auras com estrela, faíscas soltas já foram reprovadas como poluição).
 - No máximo **um** efeito forte por vez na tela; os outros ficam discretos até o dado mudar.
 - Estado parado (sem vazão, sem recarga) tem de ser calmo.
 

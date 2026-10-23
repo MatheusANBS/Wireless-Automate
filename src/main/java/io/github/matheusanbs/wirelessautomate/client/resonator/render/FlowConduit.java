@@ -17,14 +17,15 @@ final class FlowConduit {
     /** O quadrado da distância da câmera ao centro além da qual o conduto some. */
     static final double RANGE_SQ = 40 * 40;
     /** Onde a fita começa: a borda do plasma, a partir do centro. */
-    private static final float START = 0.35f;
-    private static final float MIN_WIDTH = 0.30f;
-    private static final float MAX_WIDTH = 0.80f;
+    private static final float START = 0.04f;
+    private static final float WIDTH = 0.70f;
     private static final float VISIBLE = 0.05f;
     private static final int MODE_CONDUIT = 0;
     /** O parâmetro leva a faixa (3 bits), a sintonia de 0 a 15 (4 bits) e o buffer cheio (o bit 7). */
     private static final int TUNE_STEPS = 15;
     private static final int FULL_BIT = 128;
+    /** A faixa de vazão a partir da qual o raio está com a luz inteira; abaixo dela acende aos poucos. */
+    private static final float FADE_IN = 2.5f;
 
     private FlowConduit() {
     }
@@ -59,10 +60,10 @@ final class FlowConduit {
             float ay = by * k;
             float az = bz * k;
             int band = Math.clamp(Math.round(flow), 1, 7);
-            float width = MIN_WIDTH + (MAX_WIDTH - MIN_WIDTH) * (band - 1) / 6f;
-            int alpha = Math.round(255 * Math.min(1f, flow / 7f));
-            int param = band | (tune << 3) | (full ? FULL_BIT : 0);
-            RibbonQuad.strip(pose, buffer, ax, ay, az, bx, by, bz, cx, cy, cz, width, tierColor, alpha, MODE_CONDUIT,
+            int alpha = Math.round(255 * Math.min(1f, flow / FADE_IN));
+            int tenths = Math.clamp(Math.round((length - START) * 10f), 1, 127);
+            int param = band | (tune << 3) | (full ? FULL_BIT : 0) | (tenths << 8);
+            RibbonQuad.strip(pose, buffer, ax, ay, az, bx, by, bz, cx, cy, cz, WIDTH, tierColor, alpha, MODE_CONDUIT,
                     param);
         }
     }

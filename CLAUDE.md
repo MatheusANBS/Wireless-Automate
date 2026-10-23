@@ -13,6 +13,7 @@ Ao terminar uma sessão, **atualize `docs/progresso.md`**: a tabela de estado, o
 ## Skills do projeto (`.claude/skills/`)
 
 - `wa-performance` (**indispensável, em toda tarefa que mexe em código**): as leis de performance do mod (parado custa zero, caminho quente sem alocação, nada de busca repetida, trabalho proporcional à mudança, sem picos, cliente só com o que muda, nada por quadro além de desenhar, `setChanged` só quando precisa, memória sob demanda, medido e não suposto), a varredura `python -I .claude/skills/wa-performance/scripts/varrer_perf.py`, o roteiro do bench antes e depois (`references/medir.md`) e o backlog da auditoria de eficiência (`references/auditoria.md`). O custo de uma ideia é a primeira pergunta, antes do visual.
+- `wa-shaders`: qualquer efeito visual ou referência a replicar (GIF, vídeo, outro mod): decompor a referência quadro a quadro, pesquisar todas as opções (nativas e dependências como Veil, Photon, Lodestone, GeckoLib) e a matemática, comparar por números e verificar lado a lado (`scripts/quadros.py`, `scripts/lado_a_lado.py`); nenhuma tecnologia é a padrão.
 - `wa-feature`: feature, tela ou item novo, do mockup aprovado ao commit, com um subagente por tarefa.
 - `wa-mod-opcional`: integrar outro mod opcional (como Mekanism e Ars), sem quebrar o mod quando ele não está instalado.
 - `wa-release`: fechar uma versão (changelog separado e unificado, tag, release com o jar).

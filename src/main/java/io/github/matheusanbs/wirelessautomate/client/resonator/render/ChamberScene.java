@@ -148,7 +148,9 @@ final class ChamberScene {
         }
         for (int i = 0; i < flowNow.length; i++) {
             flowPrev[i] = flowNow[i];
-            flowNow[i] += (flowTarget[i] - flowNow[i]) * FLOW_RATE;
+            float flowGoal = ResonatorRenderer.forceBandForTests >= 0 ? ResonatorRenderer.forceBandForTests
+                    : flowTarget[i];
+            flowNow[i] += (flowGoal - flowNow[i]) * FLOW_RATE;
         }
         if (rechargingPrev >= 0 && !ringFired
                 && ChamberCrystals.recharge(rechargingPrev, chambers, gameTime, view) >= 1) {

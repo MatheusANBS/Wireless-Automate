@@ -22,16 +22,18 @@ import net.neoforged.neoforge.energy.IEnergyStorage;
 
 /**
  * As capturas da câmara que dependem do que o Núcleo faz: a energia saindo pela Porta (o conduto), o buffer cheio (o
- * plasma sob pressão, sem conduto), a vazão alta (o conduto grosso) e a recarga (a espiral, de longe e de perto, o
- * anel do fim e o Opaco de novo). O Núcleo e a câmera já estão na Vitrine montada, em sintonia.
+ * plasma sob pressão, sem conduto), a vazão alta (o conduto grosso) e a recarga (o tentáculo invertido e o cristal
+ * enchendo, de longe e de perto, o clarão do fim e o Opaco de novo). O Núcleo e a câmera já estão na Vitrine montada, em sintonia.
  */
 final class E2eResonatorFlowSteps {
     /** A faixa de vazão (de 7) a partir da qual o conduto conta como grosso. */
     private static final int HIGH_BAND = 6;
+    /** A câmara do Opaco da recarga: a 0 fica à frente e à direita, à vista da janela e da câmera de perto. */
+    private static final int RECHARGE_CHAMBER = 0;
     /** Os ticks da câmara depois do último pedido de extração para o conduto acender (ou apagar) por inteiro. */
     private static final int SETTLE_TICKS = 40;
     /** Os ticks entre o servidor avisar o fim da recarga e a captura do anel (ele dura 14). */
-    private static final int RING_DELAY_TICKS = 4;
+    private static final int FLASH_DELAY_TICKS = 4;
 
     private E2eResonatorFlowSteps() {
     }
@@ -128,8 +130,8 @@ final class E2eResonatorFlowSteps {
     }
 
     /**
-     * A recarga: o teste põe um Opaco na última câmara e redstone, espera a metade do tempo da config e fotografa a
-     * espiral e o cristal enchendo, de longe e da câmera de perto; espera o fim e fotografa o anel; depois põe o
+     * A recarga: o teste põe um Opaco na {@link #RECHARGE_CHAMBER} e redstone, espera a metade do tempo da config e fotografa o
+     * tentáculo invertido e o cristal enchendo, de longe e da câmera de perto; espera o fim e fotografa o clarão; depois põe o
      * Opaco de novo, sem redstone, e fotografa de perto os cristais vivos e ele caído.
      */
     private static void rechargeSteps(List<Step> list, UUID playerId, BlockPos[] origin) {
@@ -141,7 +143,7 @@ final class E2eResonatorFlowSteps {
             onServer(server -> {
                 ResonanceCoreBlockEntity core = (ResonanceCoreBlockEntity) server.overworld()
                         .getBlockEntity(core(origin[0]));
-                core.setCrystalAt(core.chambers() - 1, dull());
+                core.setCrystalAt(RECHARGE_CHAMBER, dull());
                 core.setRedstone(14);
                 return null;
             });
@@ -152,22 +154,22 @@ final class E2eResonatorFlowSteps {
             return seen[0] != 0 && stepTicks >= seen[0] + half;
         }, () -> "recarga no cliente"));
         list.add(capture("ressonador-camara-recarga"));
-        // a medida com a espiral em curso
+        // a medida com a recarga em curso
         for (int i = 0; i < 2; i++) {
-            list.add(E2eResonatorSteps.frameTime(true, " com espiral", () -> recharging(origin)));
-            list.add(E2eResonatorSteps.frameTime(false, " com espiral", () -> recharging(origin)));
+            list.add(E2eResonatorSteps.frameTime(true, " com recarga", () -> recharging(origin)));
+            list.add(E2eResonatorSteps.frameTime(false, " com recarga", () -> recharging(origin)));
         }
         list.add(E2eResonatorSteps.camera("Ressonador: câmera perto da recarga", playerId, () -> origin[0],
                 E2eResonatorSteps.CLOSE_VIEW));
-        list.add(DevEndToEnd.wait("a espiral de perto", 10));
+        list.add(DevEndToEnd.wait("a recarga de perto", 10));
         list.add(capture("ressonador-camara-recarga-perto"));
         list.add(new Step("Ressonador: o fim da recarga", waitMs, () -> seen[0] = 0, () -> {
             if (seen[0] == 0 && view(origin).rechargeStart() < 0) {
                 seen[0] = stepTicks;
             }
-            return seen[0] != 0 && stepTicks >= seen[0] + RING_DELAY_TICKS;
+            return seen[0] != 0 && stepTicks >= seen[0] + FLASH_DELAY_TICKS;
         }, () -> "fim da recarga no cliente"));
-        list.add(capture("ressonador-camara-recarga-anel"));
+        list.add(capture("ressonador-camara-recarga-fim"));
         list.add(new Step("Ressonador: Opaco de novo, sem redstone", STEP_TIMEOUT_MS, () -> onServer(server -> {
             ResonanceCoreBlockEntity core = (ResonanceCoreBlockEntity) server.overworld()
                     .getBlockEntity(core(origin[0]));
@@ -199,8 +201,8 @@ final class E2eResonatorFlowSteps {
     }
 
     /**
-     * Mantém a espiral durante a medida: com o cliente lento (quadros de ~50 ms) as quatro medidas passam da metade
-     * da recarga que sobra, então a recarga que acaba recomeça na hora com outro Opaco na última câmara. Os poucos
+     * Mantém a recarga durante a medida: com o cliente lento (quadros de ~50 ms) as quatro medidas passam da metade
+     * da recarga que sobra, então a recarga que acaba recomeça na hora com outro Opaco na mesma câmara. Os poucos
      * quadros até o servidor avisar ficam na média.
      */
     private static void recharging(BlockPos[] origin) throws Exception {
@@ -210,8 +212,8 @@ final class E2eResonatorFlowSteps {
         onServer(server -> {
             ResonanceCoreBlockEntity core = (ResonanceCoreBlockEntity) server.overworld()
                     .getBlockEntity(core(origin[0]));
-            if (!SignalCrystalItem.isRechargeable(core.crystals().get(core.chambers() - 1))) {
-                core.setCrystalAt(core.chambers() - 1, dull());
+            if (!SignalCrystalItem.isRechargeable(core.crystals().get(RECHARGE_CHAMBER))) {
+                core.setCrystalAt(RECHARGE_CHAMBER, dull());
             }
             return null;
         });

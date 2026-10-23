@@ -20,11 +20,11 @@ import net.minecraft.world.item.ItemStack;
 
 /**
  * Os cristais em anel na câmara e, sem o plasma, os feixes de cada cristal vivo até a cabeça da figura. Com o
- * shader, cada cristal é a gema facetada do {@link CrystalGem}, que enche de baixo para cima na recarga; sem ele (ou
- * com shaderpack do Iris), o modelo do item. Os cristais ficam de pé e parados no anel do {@link ChamberRing}; com o
- * shader, cada um vivo liga a ponta à esfera pelo tentáculo de plasma do {@link PlasmaTendrils}. O Opaco fica caído,
- * mais baixo e cinza, e volta com a recarga; só o primeiro Opaco recarrega, como no servidor. Com o plasma e as fitas
- * carregados e só o shader do cristal faltando, sai o modelo do item sem o enchimento da recarga.
+ * shader, cada cristal é a gema facetada do {@link CrystalGem}, que enche de baixo para cima na recarga e dá um
+ * clarão quando ela termina; sem ele (ou com shaderpack do Iris), o modelo do item. Os cristais ficam de pé e parados
+ * no anel do {@link ChamberRing}; com o shader, cada um vivo liga a ponta à esfera pelo tentáculo de plasma do {@link PlasmaTendrils}. O Opaco fica
+ * caído, mais baixo e cinza, e volta com a recarga; só o primeiro Opaco recarrega, como no servidor. Com o plasma e as
+ * fitas carregados e só o shader do cristal faltando, sai o modelo do item sem o enchimento da recarga.
  */
 final class ChamberCrystals {
     private static final double DULL_DROP = 0.35;
@@ -62,7 +62,6 @@ final class ChamberCrystals {
         }
         double ticks = gameTime + partialTick;
         ChamberView view = scene.view();
-        int tune = Math.round(Math.clamp(scene.tune(partialTick), 0f, 1f) * 255);
         int recharging = recharging(chambers, view);
         for (int i = 0; i < chambers.length; i++) {
             if (chambers[i] == EMPTY) {
@@ -84,7 +83,9 @@ final class ChamberCrystals {
                         : recharging == i ? CrystalParam.recharging(progress)
                         : chambers[i] >= CRACKED_SIGNAL ? CrystalParam.CRACKED : CrystalParam.DULL;
                 // os códigos pares (2, 4 e 6) são o Lapidado, o Afinado e os Opacos e rachados deles: o losango
-                CrystalGem.render(poseStack.last(), buffer, bandColor(scene.tier(i)), tune, state, i,
+                float flash = scene.flash(i, gameTime, partialTick);
+                int glow = flash >= 0 && flash < 1 ? Math.round((1 - flash) * (1 - flash) * 255) : 0;
+                CrystalGem.render(poseStack.last(), buffer, bandColor(scene.tier(i)), glow, state, i,
                         (chambers[i] & 1) == 0);
             } else {
                 Minecraft.getInstance().getItemRenderer().renderStatic(stacks()[chambers[i]], ItemDisplayContext.FIXED,

@@ -61,7 +61,7 @@ final class ChamberRenderTypes extends RenderType {
         return PLASMA;
     }
 
-    /** As fitas e os brilhos (conduto, espiral, aura e anel): aditivo, sem gravar profundidade, nas duas faces. */
+    /** As fitas e os brilhos (conduto, espiral e anel): aditivo, sem gravar profundidade, nas duas faces. */
     static RenderType ribbon() {
         return RIBBON;
     }

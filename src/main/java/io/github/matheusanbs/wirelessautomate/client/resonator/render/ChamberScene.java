@@ -63,7 +63,6 @@ final class ChamberScene {
     private boolean conduit;
     private float tunePrev;
     private float tuneNow;
-    private int charged;
     private double q;
     private double head;
     private double liveSpin;
@@ -103,12 +102,6 @@ final class ChamberScene {
             }
             pickPorts = true;
             trackRecharge(gameTime);
-            charged = 0;
-            for (byte chamber : chambers) {
-                if (chamber == 1 || chamber == 2) {
-                    charged++;
-                }
-            }
             int[] next = view.origin();
             if (!Arrays.equals(next, origin)) {
                 origin = next;
@@ -291,11 +284,6 @@ final class ChamberScene {
     /** A sintonia suavizada do plasma, de 0 a 1, interpolada entre o tick anterior e o de agora. */
     float tune(float partialTick) {
         return Mth.lerp(partialTick, tunePrev, tuneNow);
-    }
-
-    /** Os cristais não Opacos nas câmaras (Sinal e Lapidado com carga), de 0 a 8. */
-    int charged() {
-        return charged;
     }
 
     double q() {

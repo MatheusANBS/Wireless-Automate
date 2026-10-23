@@ -4,13 +4,12 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import org.joml.Quaternionf;
 
 /**
  * O Núcleo de plasma: um quad virado para a câmera no centro da câmara, desenhado pelo core shader do mod. Cada
  * vértice leva a cor do tier no RGB e a sintonia no alfa, o canto do quad no UV0 e, no UV2 (inteiros, os mesmos nos
- * quatro), os cristais carregados e o nível de detalhe, que cai com a distância (os dois bits de baixo), mais o
- * valor 4 (terceiro bit) com o buffer cheio.
+ * quatro), no y, o nível de detalhe, que cai com a distância (os dois bits de baixo), mais o valor 4 (terceiro bit)
+ * com o buffer cheio; o x vai zerado.
  */
 final class PlasmaCore {
     /** O bit do UV2.y que diz ao shader que o buffer está cheio; os dois de baixo são o detalhe. */
@@ -18,8 +17,6 @@ final class PlasmaCore {
     private static final float HALF = 1.45f;
     private static final double NEAR_SQ = 12 * 12;
     private static final double FAR_SQ = 32 * 32;
-    /** O inverso da rotação da câmera para o shader, reaproveitado a cada núcleo desenhado. */
-    private static final float[] VIEW = new float[9];
     private static final float[][] CORNERS = {{0, 0}, {0, 1}, {1, 1}, {1, 0}};
 
     private PlasmaCore() {
@@ -37,20 +34,16 @@ final class PlasmaCore {
         int r = (tierColor >> 16) & 0xFF;
         int g = (tierColor >> 8) & 0xFF;
         int b = tierColor & 0xFF;
-        int charged = scene.charged();
         int detail = detail(distanceSq) | (scene.full() ? FULL_BIT : 0);
         poseStack.pushPose();
-        Quaternionf camera = Minecraft.getInstance().gameRenderer.getMainCamera().rotation();
-        poseStack.mulPose(camera);
-        PlasmaView.inverseRotation(camera.x(), camera.y(), camera.z(), camera.w(), VIEW);
-        PlasmaShader.setViewRotation(VIEW);
+        poseStack.mulPose(Minecraft.getInstance().gameRenderer.getMainCamera().rotation());
         PoseStack.Pose pose = poseStack.last();
         VertexConsumer out = buffer.getBuffer(ChamberRenderTypes.plasma());
         for (int i = 0; i < 4; i++) {
             float u = CORNERS[i][0];
             float v = CORNERS[i][1];
             out.addVertex(pose, (u * 2 - 1) * HALF, (v * 2 - 1) * HALF, 0).setColor(r, g, b, alpha).setUv(u, v)
-                    .setUv2(charged, detail);
+                    .setUv2(0, detail);
         }
         poseStack.popPose();
     }

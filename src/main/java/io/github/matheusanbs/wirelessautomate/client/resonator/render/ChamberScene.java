@@ -15,7 +15,7 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * O estado da câmara de um Núcleo no cliente, atualizado uma vez por tick novo no desenho: a sintonia suavizada, a
- * cabeça da figura, os pontos do tick atual e do anterior (interpolados por {@code partialTick}), os cristais vivos,
+ * cabeça da figura, os pontos do tick atual e do anterior (interpolados por {@code partialTick}), o giro dos cristais,
  * as partículas e as Portas da casca. Guarda também o que as animações novas leem: a faixa de vazão de cada Porta de
  * Energia (suavizada por tick, para o conduto acender e apagar em cerca de 1 s e as faíscas seguirem a vazão real), a
  * pressão do plasma quando o buffer está cheio e o clarão do fim da recarga (o tick em que cada cristal terminou).
@@ -37,6 +37,8 @@ final class ChamberScene {
     /** A duração do clarão ao fim da recarga, em ticks (0,7 s). */
     static final int FLASH_TICKS = 14;
     private static final int SIZE = 5;
+    /** O giro do Opaco em torno do próprio eixo, em radianos por segundo. */
+    private static final double DULL_SPIN = 0.1;
     /** A face de dentro de uma Porta, um pouco para dentro da câmara. */
     private static final double PORT_INSET = 0.51;
 
@@ -63,6 +65,8 @@ final class ChamberScene {
     private float tunePrev;
     private float tuneNow;
     private double q;
+    private double liveSpin;
+    private double dullSpin;
     private double head;
     private boolean started;
     /** O tick em que o clarão de cada câmara começou, ou {@link #NEVER}; criado com as câmaras, nunca por quadro. */
@@ -109,6 +113,8 @@ final class ChamberScene {
         if (started) {
             q += (target - q) * Math.min(1, Q_RATE * TICK_SECONDS);
             head += LissajousCurve.advance(q) * TICK_SECONDS;
+            liveSpin += liveSpinRate() * TICK_SECONDS;
+            dullSpin += DULL_SPIN * TICK_SECONDS;
             System.arraycopy(current, 0, previous, 0, current.length);
             LissajousCurve.fill(current, head, q, gameTime * TICK_SECONDS);
         } else {
@@ -237,6 +243,19 @@ final class ChamberScene {
     /** A sintonia suavizada do plasma, de 0 a 1, interpolada entre o tick anterior e o de agora. */
     float tune(float partialTick) {
         return Mth.lerp(partialTick, tunePrev, tuneNow);
+    }
+
+    /**
+     * O giro acumulado dos cristais em torno do próprio eixo, em radianos, interpolado: o vivo mais rápido quanto
+     * mais perto da sintonia, o Opaco devagar. Acumulado por tick, para a velocidade mudar sem o ângulo saltar.
+     */
+    double spin(boolean dull, float partialTick) {
+        return dull ? dullSpin + DULL_SPIN * TICK_SECONDS * partialTick
+                : liveSpin + liveSpinRate() * TICK_SECONDS * partialTick;
+    }
+
+    private double liveSpinRate() {
+        return 0.4 + 1.2 * q;
     }
 
     double q() {

@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
+import org.joml.Quaternionf;
 
 /**
  * O Núcleo de plasma: um quad virado para a câmera no centro da câmara, desenhado pelo core shader do mod. Cada
@@ -17,6 +18,8 @@ final class PlasmaCore {
     private static final float HALF = 1.45f;
     private static final double NEAR_SQ = 12 * 12;
     private static final double FAR_SQ = 32 * 32;
+    /** O inverso da rotação da câmera para o shader, reaproveitado a cada núcleo desenhado. */
+    private static final float[] VIEW = new float[9];
     private static final float[][] CORNERS = {{0, 0}, {0, 1}, {1, 1}, {1, 0}};
 
     private PlasmaCore() {
@@ -37,7 +40,10 @@ final class PlasmaCore {
         int charged = scene.charged();
         int detail = detail(distanceSq) | (scene.full() ? FULL_BIT : 0);
         poseStack.pushPose();
-        poseStack.mulPose(Minecraft.getInstance().gameRenderer.getMainCamera().rotation());
+        Quaternionf camera = Minecraft.getInstance().gameRenderer.getMainCamera().rotation();
+        poseStack.mulPose(camera);
+        PlasmaView.inverseRotation(camera.x(), camera.y(), camera.z(), camera.w(), VIEW);
+        PlasmaShader.setViewRotation(VIEW);
         PoseStack.Pose pose = poseStack.last();
         VertexConsumer out = buffer.getBuffer(ChamberRenderTypes.plasma());
         for (int i = 0; i < 4; i++) {

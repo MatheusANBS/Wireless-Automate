@@ -1,5 +1,7 @@
 #version 150
 
+#moj_import <wirelessautomate:wa_common.glsl>
+
 uniform float GameTime;
 
 in vec2 quad;
@@ -11,12 +13,6 @@ out vec4 fragColor;
 const vec3 CORAL = vec3(0.949, 0.569, 0.478);
 const vec3 RED = vec3(0.839, 0.271, 0.231);
 const vec3 WHITE = vec3(1.0, 0.94, 0.92);
-
-float h21(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
-float n2(vec2 p) {
-    vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
-    return mix(mix(h21(i), h21(i + vec2(1, 0)), f.x), mix(h21(i + vec2(0, 1)), h21(i + vec2(1, 1)), f.x), f.y);
-}
 
 void main() {
     float t = GameTime * 1200.0;
@@ -52,7 +48,7 @@ void main() {
         vec3 base = mix(CORAL, tier, 0.3);
         float r = length(quad * 2.0 - 1.0);
         float aura = exp(-r * r * 6.0) * (0.6 + 0.4 * sin(t * 4.0 + seed * 2.4));
-        col += base * aura * 0.55 * (1.0 + mis * 0.6 * (n2(vec2(t * 9.0, seed * 3.7)) - 0.5));
+        col += base * aura * 0.55 * (1.0 + mis * 0.6 * (wa_noise(vec3(t * 9.0, seed * 3.7, 0.5)) * 1.2));
         col *= (1.0 - smoothstep(0.8, 1.0, r));
     } else {
         // anel: abre e some com o progresso
@@ -64,5 +60,5 @@ void main() {
     col *= power;
     float peak = max(col.r, max(col.g, col.b));
     if (peak < 0.003) discard;
-    fragColor = vec4(1.0 - exp(-col * 1.2), 1.0);
+    fragColor = vec4(wa_dither(wa_tonemap(col)), 1.0);
 }

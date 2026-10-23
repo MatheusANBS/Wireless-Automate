@@ -14,6 +14,15 @@ const vec3 CORAL = vec3(0.949, 0.569, 0.478);
 const vec3 RED = vec3(0.839, 0.271, 0.231);
 const vec3 WHITE = vec3(1.0, 0.94, 0.92);
 
+// Um arco: a linha central deslocada por ruído em duas escalas, sorteada de novo a 14 Hz (o tempo quantizado), com o
+// desvio crescendo no meio e sumindo nas pontas; núcleo gaussiano e uma cauda curta. {@code y} é de -1 a 1 na largura.
+float arc(float x, float y, float id, float t, float amp, float width) {
+    float slot = floor(t * 14.0) + id * 17.0;
+    float off = wa_noise(vec3(x * 7.0, slot, id * 3.1)) * 1.1 + wa_noise(vec3(x * 17.0, slot * 1.3, id)) * 0.45;
+    float dist = abs(y - off * amp * sin(3.14159 * x));
+    return exp(-dist * dist / (width * width)) * 1.6 + 0.12 * width / (dist + width);
+}
+
 void main() {
     float t = GameTime * 1200.0;
     vec3 tier = params.rgb;
@@ -23,16 +32,24 @@ void main() {
     vec3 col = vec3(0.0);
 
     if (mode == 0) {
-        // conduto: seção de cilindro com núcleo quente, halo exponencial, ruído de energia correndo, cometas e clarão nas pontas
-        float flow = clamp(arg / 7.0, 0.0, 1.0);
+        // conduto híbrido: um feixe cilíndrico com cometas e, em volta, arcos que enrolam e saltam e uma descarga que
+        // bate na Porta, tudo pela faixa de vazão. O parâmetro leva a faixa (3 bits), a sintonia de 0 a 15 (4 bits) e o
+        // buffer cheio (1 bit)
+        int bits = int(arg);
+        int band = bits & 7;
+        float tuneV = float((bits >> 3) & 15) / 15.0;
+        bool full = ((bits >> 7) & 1) != 0;
+        float flow = clamp(float(band) / 7.0, 0.0, 1.0);
         float x = quad.x;
-        float d = abs(quad.y - 0.5) * 2.0;
+        float y = (quad.y - 0.5) * 2.0;
+        // o feixe ocupa o meio da fita; o resto é dos arcos
+        float d = abs(y) / 0.42;
         float cyl = sqrt(max(0.0, 1.0 - d * d));
         float coreW = 0.18 + 0.22 * flow;
         float core = exp(-d * d / (coreW * coreW));
         float halo = exp(-d * 2.6) * (1.0 - smoothstep(0.7, 1.0, d));
-        float run = wa_noise(vec3(x * 14.0 - t * (3.0 + 1.5 * arg), d * 3.0, t * 0.5)) * 0.9 + 0.5;
-        float speed = 0.4 + 0.15 * arg;
+        float run = wa_noise(vec3(x * 14.0 - t * (3.0 + 1.5 * float(band)), d * 3.0, t * 0.5)) * 0.9 + 0.5;
+        float speed = 0.4 + 0.15 * float(band);
         float comet = 0.0;
         for (int k = 0; k < 3; k++) {
             float dx = fract(t * speed + float(k) / 3.0) - x;
@@ -44,6 +61,29 @@ void main() {
         col += WHITE * core * core * comet * flow * 1.5;
         float flare = (exp(-x * x * 220.0) + exp(-(1.0 - x) * (1.0 - x) * 220.0)) * exp(-d * d * 1.5);
         col += mix(hot, WHITE, 0.5) * flare * flow * 1.2;
+        // os arcos em volta: janelas que saltam, mais raras fora de sintonia, mais claras com o buffer cheio
+        float chance = mix(0.35, 1.0, tuneV);
+        int arcs = band >= 5 ? 3 : band == 4 ? 2 : band == 3 ? 1 : 0;
+        vec3 arcColor = mix(tier, WHITE, 0.55);
+        for (int k = 0; k < 3; k++) {
+            if (k >= arcs) break;
+            float cycle = t * (1.3 + 0.5 * float(k)) + float(k) * 0.37;
+            float on = step(fract(cycle), 0.55) * step(wa_h21(vec2(floor(cycle), float(k) * 5.0)), chance);
+            col += arcColor * arc(x, y, float(k), t, 0.62, 0.035) * on * (full ? 1.2 : 0.9);
+        }
+        // a descarga: um arco grosso e branco do plasma à Porta, com uma ramificação de cada lado
+        float period = band >= 7 ? 1.0 : band == 6 ? 1.6 : band == 5 ? 2.4 : 0.0;
+        if (period > 0.0) {
+            float phase = fract(t / period);
+            if (phase < 0.12) {
+                float strike = step(wa_h21(vec2(floor(t / period), 77.0)), chance) * (1.0 - phase / 0.12);
+                float branchZone = smoothstep(0.30, 0.45, x) * (1.0 - smoothstep(0.70, 0.85, x));
+                col += WHITE * arc(x, y, 9.0, t, 0.5, 0.075) * 1.8 * strike;
+                col += tier * (arc(x, y - 0.35, 11.0, t, 0.8, 0.03) + arc(x, y + 0.35, 12.0, t, 0.8, 0.03))
+                    * branchZone * 1.1 * strike;
+            }
+        }
+        col *= (1.0 - smoothstep(0.85, 1.0, abs(y)));
         col *= smoothstep(0.0, 0.02, x) * (1.0 - smoothstep(0.985, 1.0, x));
     } else if (mode == 1) {
         // espiral de catalisador: dez grãos sobem de u = 0 a u = 1, girando em v

@@ -40,6 +40,8 @@ public final class ResonatorRenderer implements BlockEntityRenderer<ResonanceCor
     private static long lastSweep;
     /** Só do e2e: força o desenho sem o shader (a figura de Lissajous e a lente), para medir o custo dos dois na mesma rodada. */
     public static boolean forceLegacyForTests;
+    /** Só do e2e: força a faixa de vazão (0 a 7) de todas as Portas de Energia, ou -1 para a vazão real. */
+    public static int forceBandForTests = -1;
 
     private record SceneKey(ResourceKey<Level> dimension, BlockPos pos) {
     }

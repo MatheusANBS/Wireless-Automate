@@ -239,6 +239,7 @@ final class E2eResonatorSteps {
         list.add(frameTime(false, "", null));
         list.add(frameTime(true, "", null));
         list.add(frameTime(false, "", null));
+        closeUp(list, playerId, origin, "ressonador-tentaculos");
         list.add(new Step("Ressonador: dial a 96,7", STEP_TIMEOUT_MS, () -> onServer(server -> {
             ((ResonanceCoreBlockEntity) server.overworld().getBlockEntity(core(origin[0]))).setDial(96.7);
             return null;
@@ -246,6 +247,7 @@ final class E2eResonatorSteps {
                 .clientView().band() < TuneSignal.BANDS - 1, () -> "faixa no cliente"));
         list.add(DevEndToEnd.wait("a figura escorregar", 60));
         list.add(capture("ressonador-camara-chiado"));
+        closeUp(list, playerId, origin, "ressonador-tentaculos-fora");
         list.add(new Step("Ressonador: dial de volta a 98,0", STEP_TIMEOUT_MS, () -> {
             Minecraft.getInstance().options.hideGui = false;
             onServer(server -> {
@@ -254,6 +256,19 @@ final class E2eResonatorSteps {
             });
         }, () -> true, () -> "dial"));
         E2eResonatorFlowSteps.flowSteps(list, playerId, origin);
+    }
+
+    /**
+     * Os tentáculos de perto em dois instantes (eles andam entre um e outro) e a câmera de volta à janela: capturas
+     * {@code <name>} e {@code <name>-2}.
+     */
+    private static void closeUp(List<Step> list, UUID playerId, BlockPos[] origin, String name) {
+        list.add(camera("Ressonador: câmera perto, " + name, playerId, () -> origin[0], CLOSE_VIEW));
+        list.add(DevEndToEnd.wait("a câmera chegar", 10));
+        list.add(capture(name));
+        list.add(DevEndToEnd.wait("outro instante", 13));
+        list.add(capture(name + "-2"));
+        list.add(camera("Ressonador: câmera na janela, " + name, playerId, () -> origin[0], WINDOW_VIEW));
     }
 
     /** O que a medida repete a cada tick de espera (a extração que mantém o conduto aceso). */

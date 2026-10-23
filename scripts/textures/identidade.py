@@ -218,8 +218,8 @@ def parado(img: Image.Image, **kw) -> Sprite:
     return Sprite(img, None, **kw)
 
 
-# Os únicos sprites que não têm 16 px de largura.
-LARGURAS_ESPECIAIS = {"block/resonator_chladni": 32}
+# Os sprites que não têm 16 px de largura.
+LARGURAS_ESPECIAIS: dict[str, int] = {}
 
 
 def validar(nome: str, sprite: Sprite) -> None:

@@ -23,15 +23,28 @@ void main() {
     vec3 col = vec3(0.0);
 
     if (mode == 0) {
-        // conduto: um núcleo contínuo de luz da cor do tier que cresce com a faixa, com os pacotes correndo por cima
+        // conduto: seção de cilindro com núcleo quente, halo exponencial, ruído de energia correndo, cometas e clarão nas pontas
         float flow = clamp(arg / 7.0, 0.0, 1.0);
+        float x = quad.x;
         float d = abs(quad.y - 0.5) * 2.0;
-        float core = 0.3 + 0.55 * flow;
-        float tube = (1.0 - smoothstep(core, 1.0, d));
-        float packets = pow(0.5 + 0.5 * sin(quad.x * 28.0 - t * (6.0 + 2.0 * arg)), 6.0);
-        col += mix(CORAL, tier, quad.x) * tube * (0.7 + 2.0 * packets);
-        col += WHITE * (1.0 - smoothstep(0.0, core * 0.6, d)) * (0.2 + 0.8 * packets) * flow;
-        col *= smoothstep(0.0, 0.04, quad.x) * (1.0 - smoothstep(0.96, 1.0, quad.x));
+        float cyl = sqrt(max(0.0, 1.0 - d * d));
+        float coreW = 0.18 + 0.22 * flow;
+        float core = exp(-d * d / (coreW * coreW));
+        float halo = exp(-d * 2.6) * (1.0 - smoothstep(0.7, 1.0, d));
+        float run = wa_noise(vec3(x * 14.0 - t * (3.0 + 1.5 * arg), d * 3.0, t * 0.5)) * 0.9 + 0.5;
+        float speed = 0.4 + 0.15 * arg;
+        float comet = 0.0;
+        for (int k = 0; k < 3; k++) {
+            float dx = fract(t * speed + float(k) / 3.0) - x;
+            comet += dx > 0.0 ? exp(-dx * 14.0) : exp(dx * 160.0);
+        }
+        vec3 hot = mix(CORAL, tier, x);
+        col += hot * halo * (0.5 + 0.6 * run) * (0.6 + flow);
+        col += mix(hot, WHITE, 0.6) * core * (0.8 + 1.8 * comet) * cyl;
+        col += WHITE * core * core * comet * flow * 1.5;
+        float flare = (exp(-x * x * 220.0) + exp(-(1.0 - x) * (1.0 - x) * 220.0)) * exp(-d * d * 1.5);
+        col += mix(hot, WHITE, 0.5) * flare * flow * 1.2;
+        col *= smoothstep(0.0, 0.02, x) * (1.0 - smoothstep(0.985, 1.0, x));
     } else if (mode == 1) {
         // espiral de catalisador: dez grãos sobem de u = 0 a u = 1, girando em v
         for (int k = 0; k < 10; k++) {

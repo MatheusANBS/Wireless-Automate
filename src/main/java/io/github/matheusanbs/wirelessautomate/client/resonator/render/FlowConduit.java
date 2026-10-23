@@ -18,8 +18,8 @@ final class FlowConduit {
     static final double RANGE_SQ = 40 * 40;
     /** Onde a fita começa: a borda do plasma, a partir do centro. */
     private static final float START = 0.35f;
-    private static final float MIN_WIDTH = 0.08f;
-    private static final float MAX_WIDTH = 0.3f;
+    private static final float MIN_WIDTH = 0.14f;
+    private static final float MAX_WIDTH = 0.5f;
     private static final float VISIBLE = 0.05f;
     private static final int MODE_CONDUIT = 0;
 

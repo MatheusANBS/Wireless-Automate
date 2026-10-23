@@ -55,13 +55,24 @@ void main() {
         }
         col *= smoothstep(0.0, 0.03, quad.x) * (1.0 - smoothstep(0.97, 1.0, quad.x));
     } else if (mode == 2) {
-        // aura do cristal: o parâmetro leva a sintonia (7 bits) e a semente do cristal (4 bits)
+        // aura do cristal: um halo suave e uma estrela de quatro pontas que gira devagar e pulsa com a carga; fora de
+        // sintonia a estrela encolhe e treme. O parâmetro leva a sintonia (7 bits) e a semente do cristal (4 bits)
         float seed = floor(arg / 128.0);
-        float mis = 1.0 - clamp((arg - seed * 128.0) / 100.0, 0.0, 1.0);
+        float tuneV = clamp((arg - seed * 128.0) / 100.0, 0.0, 1.0);
+        float mis = 1.0 - tuneV;
+        vec2 pp = quad * 2.0 - 1.0;
+        float r = length(pp);
         vec3 base = mix(CORAL, tier, 0.3);
-        float r = length(quad * 2.0 - 1.0);
-        float aura = exp(-r * r * 6.0) * (0.6 + 0.4 * sin(t * 4.0 + seed * 2.4));
-        col += base * aura * 0.55 * (1.0 + mis * 0.6 * (wa_noise(vec3(t * 9.0, seed * 3.7, 0.5)) * 1.2));
+        float pulse = 0.6 + 0.4 * sin(t * 4.0 + seed * 2.4);
+        float halo = exp(-r * r * 7.0) * pulse;
+        float ang = t * 0.25 + seed;
+        vec2 rp = vec2(cos(ang) * pp.x + sin(ang) * pp.y, -sin(ang) * pp.x + cos(ang) * pp.y);
+        float reach = mix(0.45, 1.0, tuneV);
+        float arm = exp(-abs(rp.y) * 42.0) * exp(-abs(rp.x) * 3.0 / reach)
+            + exp(-abs(rp.x) * 42.0) * exp(-abs(rp.y) * 3.0 / reach);
+        arm *= 0.6 * (0.3 + 0.7 * tuneV) * pulse;
+        float jitter = 1.0 + mis * 0.6 * wa_noise(vec3(t * 9.0, seed * 3.7, 0.5)) * 1.2;
+        col += base * halo * 0.55 * jitter + mix(base, WHITE, 0.5) * arm * jitter;
         col *= (1.0 - smoothstep(0.8, 1.0, r));
     } else {
         // anel: abre e some com o progresso

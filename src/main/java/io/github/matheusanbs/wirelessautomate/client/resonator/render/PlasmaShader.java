@@ -1,6 +1,5 @@
 package io.github.matheusanbs.wirelessautomate.client.resonator.render;
 
-import com.mojang.blaze3d.shaders.Uniform;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import java.io.IOException;
@@ -22,17 +21,6 @@ public final class PlasmaShader {
         } catch (IOException | RuntimeException e) {
             shader = null;
             WirelessAutomate.LOGGER.warn("O shader resonator_plasma não compilou; a câmara do Ressonador volta ao desenho antigo", e);
-        }
-    }
-
-    /** Escreve o uniform {@code ViewRot} (9 floats, coluna-maior); sem o shader ou sem o uniform, não faz nada. */
-    public static void setViewRotation(float[] matrix) {
-        if (shader == null) {
-            return;
-        }
-        Uniform uniform = shader.getUniform("ViewRot");
-        if (uniform != null) {
-            uniform.set(matrix);
         }
     }
 

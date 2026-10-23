@@ -57,10 +57,10 @@ float wa_fbm(vec3 p, int octaves) {
 
 // A temperatura do plasma: 0 é vermelho fundo, 1 é branco quente.
 vec3 wa_heat(float h) {
-    vec3 c = mix(vec3(0.35, 0.04, 0.05), vec3(0.90, 0.28, 0.20), smoothstep(0.0, 0.3, h));
-    c = mix(c, vec3(1.14, 0.68, 0.57), smoothstep(0.25, 0.55, h));
-    c = mix(c, vec3(1.0, 0.86, 0.62), smoothstep(0.55, 0.8, h));
-    return mix(c, vec3(1.0, 0.96, 0.92), smoothstep(0.8, 1.0, h));
+    vec3 c = mix(vec3(0.30, 0.02, 0.03), vec3(0.95, 0.18, 0.10), smoothstep(0.0, 0.3, h));
+    c = mix(c, vec3(1.15, 0.42, 0.22), smoothstep(0.25, 0.55, h));
+    c = mix(c, vec3(1.2, 0.72, 0.30), smoothstep(0.55, 0.8, h));
+    return mix(c, vec3(1.1, 0.95, 0.80), smoothstep(0.85, 1.0, h));
 }
 
 // O perfil de um traço de luz a distância d do eixo: núcleo gaussiano de largura w e uma cauda curta.

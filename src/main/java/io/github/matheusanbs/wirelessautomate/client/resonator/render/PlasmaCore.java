@@ -14,7 +14,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 final class PlasmaCore {
     /** O bit do UV2.y que diz ao shader que o buffer está cheio; os dois de baixo são o detalhe. */
     private static final int FULL_BIT = 4;
-    private static final float HALF = 1.3f;
+    private static final float HALF = 1.45f;
     private static final double NEAR_SQ = 12 * 12;
     private static final double FAR_SQ = 32 * 32;
     private static final float[][] CORNERS = {{0, 0}, {0, 1}, {1, 1}, {1, 0}};

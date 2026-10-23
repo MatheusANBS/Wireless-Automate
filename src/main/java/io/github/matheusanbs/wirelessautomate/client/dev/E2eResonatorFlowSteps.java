@@ -6,6 +6,7 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eUi.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
 import io.github.matheusanbs.wirelessautomate.Config;
+import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.resonator.ChamberView;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
@@ -162,6 +163,15 @@ final class E2eResonatorFlowSteps {
                 () -> "rachado no cliente"));
         list.add(DevEndToEnd.wait("o rachado assentar", 20));
         list.add(capture("ressonador-cristais-estados"));
+        list.add(new Step("Ressonador: Afinados de dois tiers", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            ResonanceCoreBlockEntity core = (ResonanceCoreBlockEntity) server.overworld()
+                    .getBlockEntity(core(origin[0]));
+            core.setCrystalAt(1, new ItemStack(ModItems.TUNED_CRYSTALS.get(RouterTier.ELITE).get()));
+            core.setCrystalAt(2, new ItemStack(ModItems.TUNED_CRYSTALS.get(RouterTier.ULTIMATE).get()));
+            return null;
+        }), () -> view(origin).tierAt(1) > 0 && view(origin).tierAt(2) > 0, () -> "Afinados no cliente"));
+        list.add(DevEndToEnd.wait("os Afinados assentarem", 20));
+        list.add(capture("ressonador-cristais-afinados"));
         E2eResonatorScreenSteps.crackedChamberSteps(list, origin);
     }
 

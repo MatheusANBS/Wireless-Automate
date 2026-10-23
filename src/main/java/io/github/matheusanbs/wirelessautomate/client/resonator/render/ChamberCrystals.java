@@ -35,7 +35,7 @@ final class ChamberCrystals {
     private static final double DULL_DROP = 0.35;
     private static final double DULL_TILT = 0.5;
     private static final double SWAY = 0.25;
-    private static final float SCALE = 0.55f;
+    private static final float SCALE = 0.40f;
     private static final double CRYSTAL_DELAY = 0.6;
     private static final double BEAM_DELAY = 1.2;
     private static final double PULSE_SECONDS = 1.6;

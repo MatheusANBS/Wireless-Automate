@@ -65,5 +65,6 @@ void main() {
     col += WHITE * 0.12 * exp(-r * r * 38.0) * fade * outside;
     col += tier * 0.25 * exp(-r * 3.0) * fade * outside;
 
-    fragColor = vec4(wa_dither(wa_tonemap(col)), 1.0);
+    // alfa pré-multiplicado: o corpo (inside = 1) cobre o que está atrás, o halo (inside = 0) soma
+    fragColor = vec4(wa_dither(wa_tonemap(col)), inside);
 }

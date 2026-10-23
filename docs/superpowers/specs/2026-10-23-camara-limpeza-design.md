@@ -123,3 +123,17 @@ Recarga = o tentáculo invertido (fino, vermelho do catalisador puxado para o co
 **Dados do jogo:** recarga em curso (o tentáculo invertido), o progresso (a altura do enchimento) e o fim (o clarão).
 
 **Custo:** o tentáculo invertido é a mesma fita do normal; o clarão é um `mix` no shader do cristal. Saem a espiral (10 grãos por pixel) e o anel.
+
+## Passo 4: a esfera cobre o que está atrás dela
+
+O defeito medido: o plasma é aditivo (`SRC_ALPHA, ONE`), então soma a luz dele por cima de tudo que está atrás do plano do billboard; o cristal que passa atrás da esfera fica lavado, quase branco, e parece estar na frente.
+
+### Pesquisa
+
+1. **Alfa pré-multiplicado une "por cima" e soma numa mistura só** (Wikipedia, "Alpha compositing"; o fórum da Khronos, "Blend problem", que cita o "Premultiplied alpha" de Tom Forsyth para fumaça e fogo na mesma imagem; a documentação de Blend do Unity: `One OneMinusSrcAlpha` é o pré-multiplicado). `destino = fonte + destino·(1 − α)`: com α = 1 cobre, com α = 0 soma. **Adotado:** o plasma passa a `ONE, ONE_MINUS_SRC_ALPHA`, com α = a cobertura do corpo (a mesma borda suave de antes) e α = 0 no halo, que segue somando igual.
+2. **O artigo da NVIDIA** ("Alpha Blending: To Pre or Not To Pre"; o resumo do Demofox): o pré-multiplicado também evita franjas na borda filtrada. **Adotado** de graça pela mesma troca.
+3. **Esfera impostora com `gl_FragDepth`** (o shader de esferas do VMD; o fórum da Khronos sobre esferas por ray tracing no fragment; o Mol*): gravar a profundidade da esfera de verdade por pixel. **Descartado:** o desenho pede só que o corpo cubra o que está atrás; gravar profundidade mexeria em como o raio e os tentáculos (que nascem dentro da esfera) aparecem, e o raio não muda.
+
+### Fórmula e dados
+
+Corpo da esfera com α = cobertura (cobre o que está atrás do plano do billboard; o que está na frente falha no teste de profundidade e fica); halo com α = 0 (soma). O raio e os tentáculos, aditivos e desenhados depois, ficam iguais. Sem dado novo: é correção de leitura (o que está atrás fica atrás). **Custo:** zero, a mesma passada.

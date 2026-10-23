@@ -6,11 +6,14 @@ package io.github.matheusanbs.wirelessautomate.client.resonator.render;
  * <ul>
  *   <li>{@link #CLUSTER}, o aglomerado de 4 pontas hexagonais de alturas diferentes do Cristal de Sinal (96
  *       triângulos);</li>
- *   <li>{@link #DIAMOND}, o losango com cinta do Lapidado e dos Afinados: um octógono com os dois ápices e uma
- *       faixa entre os anéis (32 triângulos), em {@link #BELT_BOTTOM} a {@link #BELT_TOP} de altura relativa.</li>
+ *   <li>{@link #DIAMOND}, o losango com cinta do Lapidado e dos Afinados: um hexágono com os dois ápices e uma
+ *       faixa entre os anéis, que de qualquer lado lê como o quadrado girado do sprite (24 triângulos), em {@link #BELT_BOTTOM} a
+ *       {@link #BELT_TOP} de altura relativa.</li>
  * </ul>
- * Por vértice: a posição e a altura relativa no cristal, de 0 em {@link #BOTTOM} a 1 em {@link #TOP}. Por triângulo: a
- * normal plana, para fora, e os vértices em sentido anti-horário vistos de fora.
+ * Por vértice: a posição, a altura relativa no cristal, de 0 em {@link #BOTTOM} a 1 em {@link #TOP}, e a direção do
+ * contorno, do ponto de dentro da peça até o vértice: a mesma em todos os triângulos que dividem o vértice, para o
+ * casco inflado não abrir nas arestas. Por triângulo: a normal plana, para fora, e os vértices em sentido anti-horário
+ * vistos de fora.
  */
 final class CrystalMesh {
     static final float TOP = 0.58f;
@@ -19,10 +22,10 @@ final class CrystalMesh {
     static final float BELT_BOTTOM = 0.42f;
     static final float BELT_TOP = 0.56f;
     static final int SPIKE_SIDES = 6;
-    static final int BELT_SIDES = 8;
+    static final int BELT_SIDES = 6;
     private static final float BELT_UPPER_Y = 0.12f;
     private static final float BELT_LOWER_Y = -0.02f;
-    private static final double BELT_RADIUS = 0.30;
+    static final double BELT_RADIUS = 0.38;
     static final CrystalMesh CLUSTER = cluster();
     static final CrystalMesh DIAMOND = diamond();
 
@@ -31,11 +34,14 @@ final class CrystalMesh {
     private final float[] positions;
     /** nx, ny, nz de cada triângulo. */
     private final float[] normals;
+    /** A direção do contorno de cada vértice, unitária. */
+    private final float[] outlines;
 
-    private CrystalMesh(int triangles, float[] positions, float[] normals) {
+    private CrystalMesh(int triangles, float[] positions, float[] normals, float[] outlines) {
         this.triangles = triangles;
         this.positions = positions;
         this.normals = normals;
+        this.outlines = outlines;
     }
 
     int triangles() {
@@ -61,6 +67,18 @@ final class CrystalMesh {
     /** A altura relativa do vértice no cristal, de 0 a 1. */
     float height(int vertex) {
         return (y(vertex) - BOTTOM) / (TOP - BOTTOM);
+    }
+
+    float outlineX(int vertex) {
+        return outlines[vertex * 3];
+    }
+
+    float outlineY(int vertex) {
+        return outlines[vertex * 3 + 1];
+    }
+
+    float outlineZ(int vertex) {
+        return outlines[vertex * 3 + 2];
     }
 
     float normalX(int triangle) {
@@ -137,12 +155,14 @@ final class CrystalMesh {
         private final int expected;
         private final float[] positions;
         private final float[] normals;
+        private final float[] outlines;
         private int count;
 
         Builder(int expected) {
             this.expected = expected;
             this.positions = new float[expected * 9];
             this.normals = new float[expected * 3];
+            this.outlines = new float[expected * 9];
         }
 
         /** O triângulo {@code a}, {@code b}, {@code c}, trocando a ordem se a normal sair para o lado de {@code inside}. */
@@ -179,14 +199,27 @@ final class CrystalMesh {
             normals[count * 3] = nx;
             normals[count * 3 + 1] = ny;
             normals[count * 3 + 2] = nz;
+            outline(a, p, insideX, insideY, insideZ);
+            outline(second, p + 3, insideX, insideY, insideZ);
+            outline(third, p + 6, insideX, insideY, insideZ);
             count++;
+        }
+
+        private void outline(float[] v, int at, float insideX, float insideY, float insideZ) {
+            float dx = v[0] - insideX;
+            float dy = v[1] - insideY;
+            float dz = v[2] - insideZ;
+            float length = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+            outlines[at] = dx / length;
+            outlines[at + 1] = dy / length;
+            outlines[at + 2] = dz / length;
         }
 
         CrystalMesh build() {
             if (count != expected) {
                 throw new IllegalStateException("a malha tem " + count + " triângulos, esperava " + expected);
             }
-            return new CrystalMesh(count, positions, normals);
+            return new CrystalMesh(count, positions, normals, outlines);
         }
     }
 }

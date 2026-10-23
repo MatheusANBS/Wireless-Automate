@@ -13,7 +13,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
  * seguintes.
  */
 final class CrystalAura {
-    private static final float SIZE = 1.0f;
+    private static final float SIZE = 1.2f;
     private static final double CRYSTAL_DELAY = 0.6;
     private static final int MODE_AURA = 2;
     private static final int SEED_STEP = 128;

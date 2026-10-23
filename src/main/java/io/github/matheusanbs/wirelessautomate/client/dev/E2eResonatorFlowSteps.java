@@ -153,6 +153,15 @@ final class E2eResonatorFlowSteps {
         }), () -> view(origin).rechargeStart() < 0, () -> "recarga parada no cliente"));
         list.add(DevEndToEnd.wait("o Opaco cair", 40));
         list.add(capture("ressonador-camara-cristais"));
+        list.add(new Step("Ressonador: um rachado ao lado do Opaco", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            ResonanceCoreBlockEntity core = (ResonanceCoreBlockEntity) server.overworld()
+                    .getBlockEntity(core(origin[0]));
+            core.setCrystalAt(0, E2eResonatorScreenSteps.cracked(new ItemStack(ModItems.SIGNAL_CRYSTAL.get())));
+            return null;
+        }), () -> view(origin).chambers()[0] == 5 && view(origin).rechargeStart() < 0,
+                () -> "rachado no cliente"));
+        list.add(DevEndToEnd.wait("o rachado assentar", 20));
+        list.add(capture("ressonador-cristais-estados"));
         E2eResonatorScreenSteps.crackedChamberSteps(list, origin);
     }
 

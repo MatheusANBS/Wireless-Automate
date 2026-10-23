@@ -65,9 +65,5 @@ void main() {
     col += WHITE * 0.12 * exp(-r * r * 38.0) * fade * outside;
     col += tier * 0.25 * exp(-r * 3.0) * fade * outside;
 
-    // chiado de TV quando fora de sintonia
-    float st = wa_h21(floor(gl_FragCoord.xy / 2.0) + vec2(floor(t * 24.0), 0.0));
-    col += vec3(st) * mis * mis * 0.22 * (1.0 - r);
-
     fragColor = vec4(wa_dither(wa_tonemap(col)), 1.0);
 }

@@ -62,7 +62,7 @@ final class E2eResonatorSteps {
     /** Os pés do jogador nas fotos de fora: a leste e ao sul da caixa, a uns 7 blocos do Núcleo. */
     static final double[] SIDE_VIEW = {8.5, 3.2, 7.5};
     /** Os pés do jogador nas fotos da câmara: a 2,5 blocos da janela, de frente para ela (yaw 180°). */
-    private static final double[] WINDOW_VIEW = {2.5, 2.3, 7.5};
+    static final double[] WINDOW_VIEW = {2.5, 2.3, 7.5};
     /**
      * Os pés do jogador na foto de perto dos cristais: dentro da câmara, junto da janela e com a cabeça perto do teto,
      * olhando o anel de cima. A Vitrine montada não tem vão no vidro, e de fora o vidro lavaria a foto.
@@ -324,6 +324,7 @@ final class E2eResonatorSteps {
      */
     static void restoreFrameSettings() {
         ResonatorRenderer.forceLegacyForTests = false;
+        ResonatorRenderer.forceBandForTests = -1;
         if (!measuring) {
             return;
         }

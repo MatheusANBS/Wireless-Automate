@@ -18,10 +18,13 @@ final class FlowConduit {
     static final double RANGE_SQ = 40 * 40;
     /** Onde a fita começa: a borda do plasma, a partir do centro. */
     private static final float START = 0.35f;
-    private static final float MIN_WIDTH = 0.14f;
-    private static final float MAX_WIDTH = 0.5f;
+    private static final float MIN_WIDTH = 0.30f;
+    private static final float MAX_WIDTH = 0.80f;
     private static final float VISIBLE = 0.05f;
     private static final int MODE_CONDUIT = 0;
+    /** O parâmetro leva a faixa (3 bits), a sintonia de 0 a 15 (4 bits) e o buffer cheio (o bit 7). */
+    private static final int TUNE_STEPS = 15;
+    private static final int FULL_BIT = 128;
 
     private FlowConduit() {
     }
@@ -36,6 +39,8 @@ final class FlowConduit {
         float cy = (float) (eye.y - center.y);
         float cz = (float) (eye.z - center.z);
         PoseStack.Pose pose = poseStack.last();
+        int tune = Math.round(Math.clamp(scene.tune(partialTick), 0f, 1f) * TUNE_STEPS);
+        boolean full = scene.full();
         for (int i = 0; i < ports.size(); i++) {
             float flow = scene.flow(i, partialTick);
             if (flow < VISIBLE) {
@@ -56,8 +61,9 @@ final class FlowConduit {
             int band = Math.clamp(Math.round(flow), 1, 7);
             float width = MIN_WIDTH + (MAX_WIDTH - MIN_WIDTH) * (band - 1) / 6f;
             int alpha = Math.round(255 * Math.min(1f, flow / 7f));
+            int param = band | (tune << 3) | (full ? FULL_BIT : 0);
             RibbonQuad.strip(pose, buffer, ax, ay, az, bx, by, bz, cx, cy, cz, width, tierColor, alpha, MODE_CONDUIT,
-                    band);
+                    param);
         }
     }
 }

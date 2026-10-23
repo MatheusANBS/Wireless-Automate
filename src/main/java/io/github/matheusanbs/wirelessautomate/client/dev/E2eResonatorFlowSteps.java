@@ -6,6 +6,7 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eUi.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
 import io.github.matheusanbs.wirelessautomate.Config;
+import io.github.matheusanbs.wirelessautomate.client.resonator.render.ResonatorRenderer;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.resonator.ChamberView;
@@ -57,7 +58,7 @@ final class E2eResonatorFlowSteps {
             return true;
         }, () -> "ressonador-camara-fluxo.png, faixa " + band(origin)));
         fullSteps(list, origin);
-        highFlowSteps(list, origin);
+        highFlowSteps(list, playerId, origin);
         rechargeSteps(list, playerId, origin);
         list.add(new Step("Ressonador: a mão de volta", STEP_TIMEOUT_MS,
                 () -> Minecraft.getInstance().options.hideGui = false, () -> true, () -> "mão"));
@@ -83,7 +84,7 @@ final class E2eResonatorFlowSteps {
     }
 
     /** A vazão alta: tira da Porta a cada tick até a faixa chegar a 6 ou 7 e fotografa o conduto grosso. */
-    private static void highFlowSteps(List<Step> list, BlockPos[] origin) {
+    private static void highFlowSteps(List<Step> list, UUID playerId, BlockPos[] origin) {
         long[] seen = new long[1];
         list.add(new Step("Ressonador: vazão alta pela Porta", 3 * STEP_TIMEOUT_MS, () -> seen[0] = 0, () -> {
             drain(origin);
@@ -102,6 +103,28 @@ final class E2eResonatorFlowSteps {
             list.add(E2eResonatorSteps.frameTime(true, " com conduto", () -> drain(origin)));
             list.add(E2eResonatorSteps.frameTime(false, " com conduto", () -> drain(origin)));
         }
+        // o raio de perto, em dois instantes (os arcos são sorteados de novo a 14 Hz), e a câmera volta à janela
+        list.add(E2eResonatorSteps.camera("Ressonador: câmera perto do raio", playerId, () -> origin[0],
+                E2eResonatorSteps.CLOSE_VIEW));
+        list.add(forcedBand("Ressonador: o raio de perto, faixa 7", 7));
+        list.add(capture("ressonador-raio-perto"));
+        list.add(new Step("Ressonador: o raio de perto, outro instante", STEP_TIMEOUT_MS, () -> {
+        }, () -> stepTicks >= 17, () -> "faixa forçada 7"));
+        list.add(capture("ressonador-raio-perto-2"));
+        list.add(forcedBand("Ressonador: o raio de perto, faixa 5", 5));
+        list.add(capture("ressonador-raio-perto-5"));
+        list.add(forcedBand("Ressonador: o raio de perto, faixa 4", 4));
+        list.add(capture("ressonador-raio-perto-4"));
+        list.add(new Step("Ressonador: a vazão real de volta", STEP_TIMEOUT_MS,
+                () -> ResonatorRenderer.forceBandForTests = -1, () -> true, () -> "vazão real"));
+        list.add(E2eResonatorSteps.camera("Ressonador: câmera na janela de novo", playerId, () -> origin[0],
+                E2eResonatorSteps.WINDOW_VIEW));
+    }
+
+    /** Força a faixa de vazão da câmara no cliente e espera a faixa suavizada chegar lá (60 ticks). */
+    private static Step forcedBand(String name, int band) {
+        return new Step(name, STEP_TIMEOUT_MS, () -> ResonatorRenderer.forceBandForTests = band,
+                () -> stepTicks >= 60, () -> "faixa forçada " + band);
     }
 
     /**

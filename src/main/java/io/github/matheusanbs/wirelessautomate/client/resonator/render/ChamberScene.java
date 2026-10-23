@@ -281,6 +281,11 @@ final class ChamberScene {
         return chambers;
     }
 
+    /** O tier do Afinado da câmara {@code i} mais um, ou 0 sem Afinado. */
+    int tier(int chamber) {
+        return view.tierAt(chamber);
+    }
+
     /** A sintonia suavizada do plasma, de 0 a 1, interpolada entre o tick anterior e o de agora. */
     float tune(float partialTick) {
         return Mth.lerp(partialTick, tunePrev, tuneNow);

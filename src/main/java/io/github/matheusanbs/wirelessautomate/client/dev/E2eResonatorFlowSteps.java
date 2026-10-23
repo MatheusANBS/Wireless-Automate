@@ -152,7 +152,7 @@ final class E2eResonatorFlowSteps {
             return seen[0] != 0 && stepTicks >= seen[0] + half;
         }, () -> "recarga no cliente"));
         list.add(capture("ressonador-camara-recarga"));
-        // a medida com a espiral e a aura em curso
+        // a medida com a espiral em curso
         for (int i = 0; i < 2; i++) {
             list.add(E2eResonatorSteps.frameTime(true, " com espiral", () -> recharging(origin)));
             list.add(E2eResonatorSteps.frameTime(false, " com espiral", () -> recharging(origin)));

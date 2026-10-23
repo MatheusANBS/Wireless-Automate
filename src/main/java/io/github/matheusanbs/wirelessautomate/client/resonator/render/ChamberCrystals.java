@@ -19,12 +19,12 @@ import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Os cristais em anel na câmara e os feixes de cada cristal vivo até a cabeça da figura. Com o shader, cada cristal é
- * a gema facetada do {@link CrystalGem}, que enche de baixo para cima na recarga; sem ele (ou com shaderpack do
- * Iris), o modelo do item. Em sintonia sobem e descem juntos; fora dela, cada um no seu ritmo e balançando. O Opaco
- * fica caído e cinza e volta à altura com a recarga; só o primeiro Opaco recarrega, como no servidor. Com o plasma e
- * as fitas carregados e só o shader do cristal faltando, sai o modelo do item sem o enchimento da recarga, que não
- * fica mais na aura.
+ * Os cristais em anel na câmara e, sem o plasma, os feixes de cada cristal vivo até a cabeça da figura. Com o
+ * shader, cada cristal é a gema facetada do {@link CrystalGem}, que enche de baixo para cima na recarga; sem ele (ou
+ * com shaderpack do Iris), o modelo do item. Em sintonia sobem e descem juntos; fora dela, cada um no seu ritmo e
+ * balançando. O Opaco fica caído e cinza e volta à altura com a recarga; só o primeiro Opaco recarrega, como no
+ * servidor. Com o plasma e as fitas carregados e só o shader do cristal faltando, sai o modelo do item sem o
+ * enchimento da recarga.
  */
 final class ChamberCrystals {
     private static final double RADIUS = 0.95;
@@ -41,8 +41,6 @@ final class ChamberCrystals {
     private static final double PULSE_SECONDS = 1.6;
     private static final float BEAM_HALF = 0.009f;
     private static final double TICK_SECONDS = 0.05;
-    /** O raio do plasma, onde terminam os feixes (o mesmo em que começa o conduto). */
-    private static final double PLASMA_EDGE = 0.35;
     /** O dourado da faixa do Lapidado, o dos sprites. */
     private static final int GOLD = 0xDDBC5C;
     /** Os tiers por posição, sem copiar o array do enum a cada cristal. */
@@ -102,27 +100,24 @@ final class ChamberCrystals {
             }
             poseStack.popPose();
         }
-        beams(poseStack.last(), buffer, scene, chambers, since, ticks, partialTick, plasma);
+        if (!plasma) {
+            beams(poseStack.last(), buffer, scene, chambers, since, ticks, partialTick);
+        }
     }
 
-    /**
-     * Os feixes dos cristais vivos, só com a sintonia acima da metade: até a cabeça da figura no desenho antigo e, com
-     * o plasma, até a borda dele, na direção de cada cristal (a câmara está na origem).
-     */
+    /** Os feixes dos cristais vivos até a cabeça da figura, só com a sintonia acima da metade. */
     private static void beams(PoseStack.Pose pose, MultiBufferSource buffer, ChamberScene scene, byte[] chambers,
-            double since, double ticks, float partialTick, boolean plasma) {
+            double since, double ticks, float partialTick) {
         double q = scene.q();
         double strength = ChamberScene.on(since, BEAM_DELAY) * Math.max(0, q - 0.5) * 2;
         if (strength <= 0) {
             return;
         }
         double t = ticks * TICK_SECONDS;
-        if (!plasma) {
-            double[] head = scene.headPoint(partialTick);
-            TO[0] = (float) head[0];
-            TO[1] = (float) head[1];
-            TO[2] = (float) head[2];
-        }
+        double[] head = scene.headPoint(partialTick);
+        TO[0] = (float) head[0];
+        TO[1] = (float) head[1];
+        TO[2] = (float) head[2];
         VertexConsumer out = null;
         for (int i = 0; i < chambers.length; i++) {
             if (chambers[i] == EMPTY || isDull(chambers[i])) {
@@ -137,16 +132,6 @@ final class ChamberCrystals {
             FROM[0] = (float) at[0];
             FROM[1] = (float) at[1];
             FROM[2] = (float) at[2];
-            if (plasma) {
-                double length = Math.sqrt(at[0] * at[0] + at[1] * at[1] + at[2] * at[2]);
-                if (length < 1e-4) {
-                    continue;
-                }
-                float k = (float) (PLASMA_EDGE / length);
-                TO[0] = FROM[0] * k;
-                TO[1] = FROM[1] * k;
-                TO[2] = FROM[2] * k;
-            }
             if (out == null) {
                 out = buffer.getBuffer(RenderType.lightning());
             }

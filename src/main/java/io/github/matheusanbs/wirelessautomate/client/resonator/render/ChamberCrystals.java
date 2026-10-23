@@ -3,6 +3,8 @@ package io.github.matheusanbs.wirelessautomate.client.resonator.render;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
+import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.resonator.ChamberView;
@@ -15,7 +17,6 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.phys.Vec3;
 
 /**
  * Os cristais em anel na câmara e os feixes de cada cristal vivo até a cabeça da figura. Com o shader, cada cristal é
@@ -42,6 +43,10 @@ final class ChamberCrystals {
     private static final double TICK_SECONDS = 0.05;
     /** O raio do plasma, onde terminam os feixes (o mesmo em que começa o conduto). */
     private static final double PLASMA_EDGE = 0.35;
+    /** O dourado da faixa do Lapidado, o dos sprites. */
+    private static final int GOLD = 0xDDBC5C;
+    /** Os tiers por posição, sem copiar o array do enum a cada cristal. */
+    private static final RouterTier[] TIERS = RouterTier.values();
     private static final byte EMPTY = 0;
     private static final byte DULL_SIGNAL = 3;
     private static final byte CRACKED_SIGNAL = 5;
@@ -56,7 +61,7 @@ final class ChamberCrystals {
     }
 
     static void render(PoseStack poseStack, MultiBufferSource buffer, ChamberScene scene, long gameTime,
-            float partialTick, ClientLevel level, boolean gem, boolean plasma, int tierColor) {
+            float partialTick, ClientLevel level, boolean gem, boolean plasma) {
         byte[] chambers = scene.chambers();
         double since = scene.sinceFormed(gameTime, partialTick);
         float scale = (float) (SCALE * ChamberScene.on(since, CRYSTAL_DELAY));
@@ -69,12 +74,6 @@ final class ChamberCrystals {
         ChamberView view = scene.view();
         int tune = Math.round(Math.clamp(scene.tune(partialTick), 0f, 1f) * 255);
         int recharging = recharging(chambers, view);
-        Vec3 eye = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
-        Vec3 world = scene.worldCenter();
-        double ex = eye.x - world.x;
-        double ey = eye.y - world.y;
-        double ez = eye.z - world.z;
-        boolean far = ex * ex + ey * ey + ez * ez > PlasmaCore.NEAR_SQ;
         for (int i = 0; i < chambers.length; i++) {
             if (chambers[i] == EMPTY) {
                 continue;
@@ -94,7 +93,9 @@ final class ChamberCrystals {
                 int state = !dull ? CrystalParam.LIVE
                         : recharging == i ? CrystalParam.recharging(progress)
                         : chambers[i] >= CRACKED_SIGNAL ? CrystalParam.CRACKED : CrystalParam.DULL;
-                CrystalGem.render(poseStack.last(), buffer, tierColor, tune, state, i, far);
+                // os códigos pares (2, 4 e 6) são o Lapidado, o Afinado e os Opacos e rachados deles: o losango
+                CrystalGem.render(poseStack.last(), buffer, bandColor(scene.tier(i)), tune, state, i,
+                        (chambers[i] & 1) == 0);
             } else {
                 Minecraft.getInstance().getItemRenderer().renderStatic(stacks()[chambers[i]], ItemDisplayContext.FIXED,
                         LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, poseStack, buffer, level, 0);
@@ -168,6 +169,11 @@ final class ChamberCrystals {
         out[1] = bob + rise + BASE_Y;
         out[2] = Math.sin(a) * RADIUS;
         return out;
+    }
+
+    /** A cor da faixa do losango: a do tier do Afinado ({@code tier} é o tier mais um) ou o dourado do Lapidado. */
+    private static int bandColor(int tier) {
+        return tier > 0 ? GuiPaint.tierColor(TIERS[tier - 1]) : GOLD;
     }
 
     /** A câmara do Opaco que recarrega agora (o primeiro não rachado, como no servidor), ou -1. */

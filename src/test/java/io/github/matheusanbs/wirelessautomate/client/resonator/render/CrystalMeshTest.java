@@ -7,9 +7,9 @@ import org.junit.jupiter.api.Test;
 
 class CrystalMeshTest {
     @Test
-    void temTrintaEDoisTriangulos() {
-        assertEquals(32, CrystalMesh.TRIANGLES);
-        assertEquals(96, CrystalMesh.VERTICES);
+    void temDozeTriangulos() {
+        assertEquals(12, CrystalMesh.TRIANGLES);
+        assertEquals(36, CrystalMesh.VERTICES);
     }
 
     @Test
@@ -65,9 +65,7 @@ class CrystalMeshTest {
     }
 
     @Test
-    void osAneisDoCorpoFicamNoRaioENaAlturaDaSpec() {
-        int lower = 0;
-        int upper = 0;
+    void oAnelFicaNoRaioENaAlturaDaSpec() {
         for (int v = 0; v < CrystalMesh.VERTICES; v++) {
             float y = CrystalMesh.y(v);
             if (y == CrystalMesh.TOP || y == CrystalMesh.BOTTOM) {
@@ -76,67 +74,8 @@ class CrystalMeshTest {
                 continue;
             }
             double r = Math.hypot(CrystalMesh.x(v), CrystalMesh.z(v));
-            assertTrue(r >= 0.25 - 1e-6 && r <= 0.31 + 1e-6, "raio " + r);
-            if (y < 0) {
-                lower++;
-                assertTrue(y >= -0.22 - 1e-6 && y <= -0.18 + 1e-6, "altura do anel de baixo " + y);
-            } else {
-                upper++;
-                assertTrue(y >= 0.24 - 1e-6 && y <= 0.28 + 1e-6, "altura do anel de cima " + y);
-            }
+            assertTrue(r >= 0.27 - 1e-6 && r <= 0.33 + 1e-6, "raio " + r);
+            assertTrue(y >= 0.015 - 1e-6 && y <= 0.065 + 1e-6, "altura " + y);
         }
-        assertTrue(lower > 0 && upper > 0);
-    }
-
-    @Test
-    void asDiagonaisDoCorpoNaoAcendemEAsPontasNaoTemDiagonal() {
-        int sides = 0;
-        for (int t = 0; t < CrystalMesh.TRIANGLES; t++) {
-            int hidden = CrystalMesh.hidden(t);
-            if (hidden < 0) {
-                continue;
-            }
-            sides++;
-            assertTrue(hidden <= 2);
-        }
-        assertEquals(2 * CrystalMesh.SIDES, sides, "um par de triângulos por face lateral");
-        // os dois triângulos de uma face escondem a mesma aresta: a que une os mesmos dois pontos
-        for (int face = 0; face < CrystalMesh.SIDES; face++) {
-            int[] first = hiddenEdge(4 * face);
-            int[] second = hiddenEdge(4 * face + 1);
-            assertTrue(samePoint(first[0], second[0]) && samePoint(first[1], second[1])
-                    || samePoint(first[0], second[1]) && samePoint(first[1], second[0]),
-                    "a face " + face + " esconde arestas diferentes");
-            assertEquals(-1, CrystalMesh.hidden(4 * face + 2));
-            assertEquals(-1, CrystalMesh.hidden(4 * face + 3));
-        }
-    }
-
-    @Test
-    void oUvCodificadoTrazOSinalSomadoDeOito() {
-        for (int t = 0; t < CrystalMesh.TRIANGLES; t++) {
-            for (int k = 0; k < 3; k++) {
-                int v = 3 * t + k;
-                assertEquals(CrystalMesh.u(v) + 8f * (CrystalMesh.hidden(t) + 1), CrystalMesh.encodedU(v), 1e-6);
-            }
-        }
-    }
-
-    /** Os dois vértices (índices) da aresta oposta ao canto escondido do triângulo {@code t}. */
-    private static int[] hiddenEdge(int t) {
-        int hidden = CrystalMesh.hidden(t);
-        int[] edge = new int[2];
-        int n = 0;
-        for (int k = 0; k < 3; k++) {
-            if (k != hidden) {
-                edge[n++] = 3 * t + k;
-            }
-        }
-        return edge;
-    }
-
-    private static boolean samePoint(int a, int b) {
-        return CrystalMesh.x(a) == CrystalMesh.x(b) && CrystalMesh.y(a) == CrystalMesh.y(b)
-                && CrystalMesh.z(a) == CrystalMesh.z(b);
     }
 }

@@ -83,14 +83,9 @@ void main() {
         col += vec3(1.0, 0.72, 0.6) * front * 1.8;
     }
 
-    // o UV0 leva o canto da faceta e, somado de 8 por canto escondido mais um, qual canto tem a aresta oposta que é a
-    // diagonal de uma face lateral: ela não é aresta do cristal e não acende
-    float code = floor(facet.x * 0.125 + 0.02);
-    vec2 corner = vec2(facet.x - 8.0 * code, facet.y);
-    vec3 bary = vec3(1.0 - corner.x - corner.y, corner.x, corner.y);
-    vec3 mask = vec3(1.0) - vec3(step(0.5, code) * step(code, 1.5), step(1.5, code) * step(code, 2.5), step(2.5, code));
+    vec3 bary = vec3(1.0 - facet.x - facet.y, facet.x, facet.y);
     vec3 fw = fwidth(bary);
-    vec3 e = max(smoothstep(vec3(0.0), fw * 1.3, bary), 1.0 - mask);
+    vec3 e = smoothstep(vec3(0.0), fw * 1.3, bary);
     float edge = 1.0 - min(min(e.x, e.y), e.z);
     // a aresta tem largura em pixels: na gema pequena na tela ela cobriria a faceta inteira, então enfraquece
     float small = clamp(1.0 - 12.0 * max(max(fw.x, fw.y), fw.z), 0.35, 1.0);

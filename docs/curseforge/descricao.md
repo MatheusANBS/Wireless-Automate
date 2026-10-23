@@ -112,7 +112,7 @@ A multiblock generator that turns vibrating quartz crystals into FE. Mine **Sign
 
 ![Signal Resonator](https://media.forgecdn.net/attachments/2085/348/ressonador-gif.gif)
 
-Through the glass you can read the tuning: the plasma Core with the ring of its tier, the light figure inside it that closes in tune and scribbles out of it, the crystals rising together, a Chladni pattern on the floor and an energy conduit to every port that is delivering. Spent crystals turn **Dull** and recharge inside the Core with a catalyst (redstone or Resonance Dust on the first tiers, the tier's Charged Dust from Allthemodium up). Energy leaves through the **Energy Port**, straight into a router.
+Through the glass you can read the tuning: the plasma Core with the ring of its tier, the crystals orbiting it, each live one feeding it through a plasma tendril that holds thick and steady in tune and thins out and lets go out of it, and a bolt of energy to every port that is delivering. Spent crystals turn **Dull** and recharge inside the Core with a catalyst (redstone or Resonance Dust on the first tiers, the tier's Charged Dust from Allthemodium up). Energy leaves through the **Energy Port**, straight into a router.
 
 ![Signal Resonator](https://media.forgecdn.net/attachments/2085/345/feature-21-resonator-png.png)
 

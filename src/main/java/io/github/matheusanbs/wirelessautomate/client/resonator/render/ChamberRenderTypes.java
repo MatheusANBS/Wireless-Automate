@@ -8,7 +8,7 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import net.minecraft.client.renderer.RenderType;
 
 /**
- * Os tipos de desenho da câmara: os sprites aditivos (o halo e a placa de Chladni), o billboard do Núcleo de plasma
+ * Os tipos de desenho da câmara: os sprites aditivos (o halo e as faíscas do desenho antigo), o billboard do Núcleo de plasma
  * (pré-multiplicado), as fitas e o cristal facetado, este o único opaco. As texturas guardam a intensidade no alfa,
  * com cor nos pixels transparentes; o {@code eyes} soma ONE, ONE e acenderia o quadrado inteiro. Aqui a soma é
  * SRC_ALPHA, ONE (a do {@code lightning}), sem gravar profundidade e nas duas faces; as fitas usam a mesma soma.

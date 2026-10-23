@@ -21,8 +21,9 @@ import net.minecraft.world.item.ItemStack;
 /**
  * Os cristais em anel na câmara e, sem o plasma, os feixes de cada cristal vivo até a cabeça da figura. Com o
  * shader, cada cristal é a gema facetada do {@link CrystalGem}, que enche de baixo para cima na recarga e dá um
- * clarão quando ela termina; sem ele (ou com shaderpack do Iris), o modelo do item. Os cristais ficam de pé e parados
- * no anel do {@link ChamberRing}; com o shader, cada um vivo liga a ponta à esfera pelo tentáculo de plasma do {@link PlasmaTendrils}. O Opaco fica
+ * clarão quando ela termina; sem ele (ou com shaderpack do Iris), o modelo do item. Os cristais ficam de pé no lugar
+ * deles no anel do {@link ChamberRing}, girando em torno do próprio eixo (mais rápido em sintonia, o Opaco devagar);
+ * com o shader, cada um vivo liga a ponta à esfera pelo tentáculo de plasma do {@link PlasmaTendrils}. O Opaco fica
  * caído, mais baixo e cinza, e volta com a recarga; só o primeiro Opaco recarrega, como no servidor. Com o plasma e as
  * fitas carregados e só o shader do cristal faltando, sai o modelo do item sem o enchimento da recarga.
  */
@@ -73,7 +74,7 @@ final class ChamberCrystals {
             double fallen = 1 - smoothstep(progress);
             poseStack.pushPose();
             poseStack.translate(at[0], at[1], at[2]);
-            poseStack.mulPose(Axis.YP.rotation((float) ChamberRing.seed(i)));
+            poseStack.mulPose(Axis.YP.rotation((float) (scene.spin(dull, partialTick) + ChamberRing.seed(i))));
             if (dull) {
                 poseStack.mulPose(Axis.ZP.rotation((float) (DULL_TILT * fallen)));
             }

@@ -21,8 +21,8 @@ import net.minecraft.world.item.ItemStack;
 /**
  * Os cristais em anel na câmara e, sem o plasma, os feixes de cada cristal vivo até a cabeça da figura. Com o
  * shader, cada cristal é a gema facetada do {@link CrystalGem}, que enche de baixo para cima na recarga e dá um
- * clarão quando ela termina; sem ele (ou com shaderpack do Iris), o modelo do item. Os cristais ficam de pé no lugar
- * deles no anel do {@link ChamberRing}, girando em torno do próprio eixo (mais rápido em sintonia, o Opaco devagar);
+ * clarão quando ela termina; sem ele (ou com shaderpack do Iris), o modelo do item. Os cristais ficam de pé no anel do
+ * {@link ChamberRing}, que orbita a esfera devagar, girando em torno do próprio eixo (mais rápido em sintonia, o Opaco devagar);
  * com o shader, cada um vivo liga a ponta à esfera pelo tentáculo de plasma do {@link PlasmaTendrils}. O Opaco fica
  * caído, mais baixo e cinza, e volta com a recarga; só o primeiro Opaco recarrega, como no servidor. Com o plasma e as
  * fitas carregados e só o shader do cristal faltando, sai o modelo do item sem o enchimento da recarga.
@@ -136,10 +136,10 @@ final class ChamberCrystals {
 
     /**
      * Onde fica o cristal da câmara {@code i}, relativo ao centro, no tempo {@code ticks} (com a fração do tick): o
-     * lugar fixo dele no anel, e o Opaco mais baixo até a recarga terminar. Escreve em {@code out} e o devolve.
+     * lugar dele no anel, que orbita a esfera, e o Opaco mais baixo até a recarga terminar. Escreve em {@code out} e o devolve.
      */
     static double[] crystalPos(int i, byte[] chambers, double ticks, ChamberView view, double[] out) {
-        ChamberRing.position(i, chambers.length, out);
+        ChamberRing.position(i, chambers.length, ticks, out);
         if (isDull(chambers[i])) {
             out[1] -= DULL_DROP * (1 - smoothstep(recharge(i, chambers, ticks, view)));
         }

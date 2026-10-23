@@ -35,7 +35,7 @@ final class RechargeSpiral {
         for (int i = 0; i < chambers.length; i++) {
             float ring = scene.ring(i, gameTime, partialTick);
             if (ring >= 0 && ring < 1) {
-                ChamberCrystals.crystalPos(i, chambers, scene.q(), ticks, scene.view(), AT);
+                ChamberCrystals.crystalPos(i, chambers, ticks, scene.view(), AT);
                 RibbonQuad.billboard(pose, buffer, (float) AT[0], (float) AT[1], (float) AT[2], RING_SIZE, tierColor,
                         FULL, MODE_RING, Math.round(ring * 100));
             }
@@ -48,7 +48,7 @@ final class RechargeSpiral {
         if (port == null) {
             return;
         }
-        ChamberCrystals.crystalPos(chamber, scene.chambers(), scene.q(), ticks, scene.view(), AT);
+        ChamberCrystals.crystalPos(chamber, scene.chambers(), ticks, scene.view(), AT);
         float bx = (float) AT[0];
         float by = (float) AT[1];
         float bz = (float) AT[2];

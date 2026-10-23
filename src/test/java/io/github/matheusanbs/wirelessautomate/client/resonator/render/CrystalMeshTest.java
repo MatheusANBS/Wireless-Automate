@@ -12,8 +12,8 @@ class CrystalMeshTest {
     void contaOsTriangulosDeCadaMalha() {
         assertEquals(96, CrystalMesh.CLUSTER.triangles());
         assertEquals(288, CrystalMesh.CLUSTER.vertices());
-        assertEquals(32, CrystalMesh.DIAMOND.triangles());
-        assertEquals(96, CrystalMesh.DIAMOND.vertices());
+        assertEquals(24, CrystalMesh.DIAMOND.triangles());
+        assertEquals(72, CrystalMesh.DIAMOND.vertices());
     }
 
     @Test
@@ -53,6 +53,32 @@ class CrystalMeshTest {
     }
 
     @Test
+    void oContornoSaiParaForaEEIgualNoVerticeDividido() {
+        for (CrystalMesh mesh : MESHES) {
+            for (int v = 0; v < mesh.vertices(); v++) {
+                float ox = mesh.outlineX(v);
+                float oy = mesh.outlineY(v);
+                float oz = mesh.outlineZ(v);
+                assertEquals(1.0, Math.sqrt(ox * ox + oy * oy + oz * oz), 1e-5);
+                int t = v / 3;
+                assertTrue(ox * mesh.normalX(t) + oy * mesh.normalY(t) + oz * mesh.normalZ(t) > 0,
+                        "vértice " + v + " com o contorno para dentro");
+            }
+        }
+        // no losango, uma peça só, cada posição tem uma direção só
+        CrystalMesh mesh = CrystalMesh.DIAMOND;
+        for (int a = 0; a < mesh.vertices(); a++) {
+            for (int b = a + 1; b < mesh.vertices(); b++) {
+                if (mesh.x(a) == mesh.x(b) && mesh.y(a) == mesh.y(b) && mesh.z(a) == mesh.z(b)) {
+                    assertEquals(mesh.outlineX(a), mesh.outlineX(b));
+                    assertEquals(mesh.outlineY(a), mesh.outlineY(b));
+                    assertEquals(mesh.outlineZ(a), mesh.outlineZ(b));
+                }
+            }
+        }
+    }
+
+    @Test
     void asAlturasVaoDeZeroAUm() {
         for (CrystalMesh mesh : MESHES) {
             float min = 1;
@@ -78,7 +104,7 @@ class CrystalMeshTest {
                 assertEquals(0, mesh.z(v));
                 continue;
             }
-            assertEquals(0.30, Math.hypot(mesh.x(v), mesh.z(v)), 1e-5);
+            assertEquals(CrystalMesh.BELT_RADIUS, Math.hypot(mesh.x(v), mesh.z(v)), 1e-5);
             float h = mesh.height(v);
             assertTrue(h >= CrystalMesh.BELT_BOTTOM - 0.02 && h <= CrystalMesh.BELT_TOP + 0.02, "altura da cinta " + h);
         }

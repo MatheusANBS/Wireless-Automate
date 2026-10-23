@@ -9,8 +9,8 @@ import net.minecraft.world.phys.Vec3;
 /**
  * Os tentáculos de plasma: de cada cristal vivo, uma fita da ponta dele até a esfera pelo modo 2 do shader das fitas,
  * como o filamento de um globo de plasma até o dedo no vidro. É a corrente que o cristal entrega à esfera; o raio do
- * {@link FlowConduit} é a que sai dela. O Opaco não tem tentáculo; o que recarrega ganha um que cresce com a recarga
- * (a força vai no alfa). A fita se vira para a câmera como a do raio, sem objeto novo por quadro; só se desenha
+ * {@link FlowConduit} é a que sai dela. O Opaco não tem tentáculo; o que recarrega ganha um invertido, mais fino e na
+ * cor do catalisador, com a corrente correndo da esfera para o cristal enquanto ele enche (o bit 14 do parâmetro). A fita se vira para a câmera como a do raio, sem objeto novo por quadro; só se desenha
  * dentro de {@link FlowConduit#RANGE_SQ}.
  */
 final class PlasmaTendrils {
@@ -25,6 +25,7 @@ final class PlasmaTendrils {
     private static final int SEED_SHIFT = 4;
     private static final int SEED_MASK = 7;
     private static final int LENGTH_SHIFT = 7;
+    private static final int REVERSE_BIT = 1 << 14;
     /** Rascunho do desenho, que é só na thread de render. */
     private static final double[] AT = new double[3];
 
@@ -53,14 +54,11 @@ final class PlasmaTendrils {
             if (chambers[i] == 0) {
                 continue;
             }
-            double strength = 1;
-            if (ChamberCrystals.isDull(chambers[i])) {
-                if (recharging != i) {
-                    continue;
-                }
-                strength = ChamberCrystals.smoothstep(ChamberCrystals.recharge(i, chambers, ticks, view));
+            boolean reverse = ChamberCrystals.isDull(chambers[i]);
+            if (reverse && (recharging != i || ChamberCrystals.recharge(i, chambers, ticks, view) >= 1)) {
+                continue;
             }
-            int alpha = (int) Math.round(255 * strength * appear);
+            int alpha = (int) Math.round(255 * appear);
             if (alpha <= 0) {
                 continue;
             }
@@ -77,7 +75,8 @@ final class PlasmaTendrils {
             float by = ay * k;
             float bz = az * k;
             int tenths = Math.clamp(Math.round((length - GRIP) * 10f), 1, 127);
-            int param = tune | ((i & SEED_MASK) << SEED_SHIFT) | (tenths << LENGTH_SHIFT);
+            int param = tune | ((i & SEED_MASK) << SEED_SHIFT) | (tenths << LENGTH_SHIFT)
+                    | (reverse ? REVERSE_BIT : 0);
             RibbonQuad.strip(pose, buffer, ax, ay, az, bx, by, bz, cx, cy, cz, WIDTH, tierColor, alpha, MODE_TENDRIL,
                     param);
         }

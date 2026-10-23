@@ -11,11 +11,11 @@ class CrystalParamTest {
     void idaEVoltaDeTodasAsCombinacoes() {
         for (int seed = 0; seed < 16; seed++) {
             for (int state = 0; state <= CrystalParam.CRACKED; state++) {
-                for (boolean far : new boolean[] {false, true}) {
-                    int p = CrystalParam.pack(seed, state, far);
+                for (boolean diamond : new boolean[] {false, true}) {
+                    int p = CrystalParam.pack(seed, state, diamond);
                     assertEquals(seed, CrystalParam.seed(p));
                     assertEquals(state, CrystalParam.state(p));
-                    assertEquals(far, CrystalParam.far(p));
+                    assertEquals(diamond, CrystalParam.diamond(p));
                     assertTrue(p >= 0 && p < 32768, "o parâmetro cabe num short: " + p);
                 }
             }
@@ -32,11 +32,11 @@ class CrystalParamTest {
     }
 
     @Test
-    void oBitLongeNaoMexeNoEstado() {
-        int near = CrystalParam.pack(5, CrystalParam.recharging(0.5), false);
-        int far = CrystalParam.pack(5, CrystalParam.recharging(0.5), true);
-        assertEquals(CrystalParam.state(near), CrystalParam.state(far));
-        assertFalse(CrystalParam.far(near));
-        assertTrue(CrystalParam.far(far));
+    void oBitDoLosangoNaoMexeNoEstado() {
+        int cluster = CrystalParam.pack(5, CrystalParam.recharging(0.5), false);
+        int diamond = CrystalParam.pack(5, CrystalParam.recharging(0.5), true);
+        assertEquals(CrystalParam.state(cluster), CrystalParam.state(diamond));
+        assertFalse(CrystalParam.diamond(cluster));
+        assertTrue(CrystalParam.diamond(diamond));
     }
 }

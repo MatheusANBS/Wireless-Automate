@@ -1,5 +1,7 @@
 # Ressonador: o cristal da câmara como gema de verdade (Parte A)
 
+> **Substituída** por `2026-10-23-ressonador-cristais-sprite-design.md` (23/10): o dono recusou a direção da gema por ruído; o cristal 3D passa a acompanhar os sprites do mod. Este arquivo fica como registro.
+
 Data: 2026-10-23. Só malha, shader e câmara; sem dependência nova, sem mudança de servidor, de rede ou de dados. Continua no ramo `ressonador-plasma-qualidade`, em cima do `wa_common.glsl` e do `ViewRot` da spec `2026-10-23-ressonador-plasma-qualidade-design.md`.
 
 ## Contexto e decomposição

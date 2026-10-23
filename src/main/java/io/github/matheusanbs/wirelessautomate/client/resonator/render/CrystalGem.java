@@ -41,7 +41,7 @@ final class CrystalGem {
                 pose.pose().transformPosition(x, CrystalMesh.y(v), z, POS);
                 out.addVertex(POS.x, POS.y, POS.z)
                         .setColor(r, g, b, tune)
-                        .setUv(CrystalMesh.u(v), CrystalMesh.v(v))
+                        .setUv(CrystalMesh.encodedU(v), CrystalMesh.v(v))
                         .setUv1(Math.round((x + 1) * SCALE), Math.round((z + 1) * SCALE))
                         .setUv2(Math.round(CrystalMesh.height(v) * SCALE), param)
                         .setNormal(NORMAL.x, NORMAL.y, NORMAL.z);

@@ -15,6 +15,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Os cristais em anel na câmara e os feixes de cada cristal vivo até a cabeça da figura. Com o shader, cada cristal é
@@ -68,6 +69,12 @@ final class ChamberCrystals {
         ChamberView view = scene.view();
         int tune = Math.round(Math.clamp(scene.tune(partialTick), 0f, 1f) * 255);
         int recharging = recharging(chambers, view);
+        Vec3 eye = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+        Vec3 world = scene.worldCenter();
+        double ex = eye.x - world.x;
+        double ey = eye.y - world.y;
+        double ez = eye.z - world.z;
+        boolean far = ex * ex + ey * ey + ez * ez > PlasmaCore.NEAR_SQ;
         for (int i = 0; i < chambers.length; i++) {
             if (chambers[i] == EMPTY) {
                 continue;
@@ -84,9 +91,10 @@ final class ChamberCrystals {
                     : Math.sin(3 * t + seed) * SWAY * (1 - q))));
             poseStack.scale(scale, scale, scale);
             if (gem) {
-                int state = !dull ? CrystalGem.LIVE
-                        : recharging == i ? CrystalGem.recharging(progress) : CrystalGem.DULL;
-                CrystalGem.render(poseStack.last(), buffer, tierColor, tune, state, i);
+                int state = !dull ? CrystalParam.LIVE
+                        : recharging == i ? CrystalParam.recharging(progress)
+                        : chambers[i] >= CRACKED_SIGNAL ? CrystalParam.CRACKED : CrystalParam.DULL;
+                CrystalGem.render(poseStack.last(), buffer, tierColor, tune, state, i, far);
             } else {
                 Minecraft.getInstance().getItemRenderer().renderStatic(stacks()[chambers[i]], ItemDisplayContext.FIXED,
                         LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, poseStack, buffer, level, 0);

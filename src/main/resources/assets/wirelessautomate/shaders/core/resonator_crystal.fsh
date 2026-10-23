@@ -41,10 +41,11 @@ float fbm(vec3 p) {
 }
 
 void main() {
-    // o parâmetro: a semente (4 bits) e o estado: 0 vivo, 1 Opaco, 2 a 1002 recarga de 0 a 1
+    // o parâmetro: a semente (4 bits), o estado (10 bits: 0 vivo, 1 Opaco, 2 a 1002 recarga de 0 a 1, 1003 rachado) e
+    // o bit 14 (longe)
     float seed = float(param & 15) * 0.73 + 0.1;
-    int state = param >> 4;
-    float rec = state >= 2 ? float(state - 2) / 1000.0 : -1.0;
+    int state = (param >> 4) & 1023;
+    float rec = state >= 2 && state <= 1002 ? float(state - 2) / 1000.0 : -1.0;
     float mis = 1.0 - tint.a;
     float t = GameTime * 1200.0;
     vec3 tier = tint.rgb;
@@ -64,7 +65,7 @@ void main() {
         vein = mix(vein, fbm(q - vec3(0.0, t * 1.75, 0.0)), mis);
     }
 
-    float lit = state == 1 ? 0.0 : 1.0;
+    float lit = state == 1 || state > 1002 ? 0.0 : 1.0;
     if (rec >= 0.0) {
         lit = step(h, rec);
     }

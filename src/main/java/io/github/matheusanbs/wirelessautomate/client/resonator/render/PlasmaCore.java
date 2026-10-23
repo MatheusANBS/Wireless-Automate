@@ -16,7 +16,7 @@ final class PlasmaCore {
     /** O bit do UV2.y que diz ao shader que o buffer está cheio; os dois de baixo são o detalhe. */
     private static final int FULL_BIT = 4;
     private static final float HALF = 1.45f;
-    private static final double NEAR_SQ = 12 * 12;
+    static final double NEAR_SQ = 12 * 12;
     private static final double FAR_SQ = 32 * 32;
     /** O inverso da rotação da câmera para o shader, reaproveitado a cada núcleo desenhado. */
     private static final float[] VIEW = new float[9];

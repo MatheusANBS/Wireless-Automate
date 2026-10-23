@@ -2,20 +2,21 @@
 
 #moj_import <wirelessautomate:wa_common.glsl>
 
-// O cristal em pixel-art 3D: facetas chapadas em tons da paleta dos sprites do mod, com contorno escuro na silhueta
-// e o brilho que varre o cristal, como nos quadros animados. A malha é o aglomerado do Cristal de Sinal ou o
+// O cristal em pixel-art 3D: facetas chapadas em 5 tons da paleta dos sprites do mod pela luz da vista, o contorno
+// escuro do casco invertido (o vertex shader o infla) e o brilho que varre o cristal, como nos quadros animados. A malha é o aglomerado do Cristal de Sinal ou o
 // losango com cinta do Lapidado e dos Afinados (o bit 14 do parâmetro); a cor do vértice é a da faixa do losango (o
 // dourado do Lapidado ou a cor do tier do Afinado, com as duas marcas em cruz nos polos). O Opaco é a paleta osso
 // com pintas, o rachado ganha um risco marrom e, na recarga, abaixo da altura do progresso vale a paleta coral. As
 // pintas e o risco usam só as coordenadas do cristal (crystal.x, a altura e crystal.z), então não escorregam quando
-// a câmera anda. Fora de sintonia, as facetas de algumas alturas caem um tom em saltos. O parâmetro leva a semente
+// a câmera anda. O parâmetro leva a semente
 // (4 bits), o estado (10 bits: 0 vivo, 1 Opaco, 2 a 1002 recarga de 0 a 1, 1003 rachado) e o bit 14 (losango).
 
 uniform float GameTime;
 
-in vec3 rel;
 in vec3 normal;
 in vec3 crystal;
+flat in vec3 light;
+flat in int hull;
 flat in vec4 tint;
 flat in int param;
 
@@ -50,30 +51,23 @@ void main() {
     bool cracked = state > 1002;
     bool dull = state == 1 || cracked;
     float rec = state >= 2 && state <= 1002 ? float(state - 2) / 1000.0 : -1.0;
-    float mis = 1.0 - tint.a;
     float t = GameTime * 1200.0;
-
-    vec3 N = normalize(normal);
-    vec3 V = normalize(-rel);
-    // o contorno: as facetas quase de lado
-    if (1.0 - abs(dot(N, V)) > 0.88) {
+    if (hull == 1) {
         fragColor = vec4(OUTLINE, 1.0);
         return;
     }
 
+    vec3 N = normalize(normal);
+
     float h = clamp(crystal.y, 0.0, 1.0);
     vec3 obj = vec3(crystal.x, mix(BOTTOM, TOP, h), crystal.z);
 
-    // o tom da faceta por uma luz em cima e à esquerda, em 5 degraus
-    float d = dot(N, normalize(vec3(-0.45, 0.75, 0.5)));
+    // o tom da faceta pela luz da vista, em 5 degraus
+    float d = dot(N, light);
     int tone = d > 0.82 ? 4 : d > 0.45 ? 3 : d > 0.02 ? 2 : d > -0.45 ? 1 : 0;
     // o brilho que varre o cristal sobe um tom
     if (fract(h * 0.9 + obj.x * 0.6 - t * 0.28 + seed * 0.13) < 0.07) {
         tone = min(tone + 1, 4);
-    }
-    // fora de sintonia, as facetas de algumas alturas caem um tom em saltos
-    if (mis > 0.01 && wa_h21(vec2(floor(t * 14.0), seed * 9.0 + floor(h * 6.0))) < mis * 0.5) {
-        tone = max(tone - 1, 0);
     }
 
     float lit = dull ? 0.0 : 1.0;

@@ -15,7 +15,7 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * O estado da câmara de um Núcleo no cliente, atualizado uma vez por tick novo no desenho: a sintonia suavizada, a
- * cabeça da figura, os pontos do tick atual e do anterior (interpolados por {@code partialTick}), o giro dos cristais,
+ * cabeça da figura, os pontos do tick atual e do anterior (interpolados por {@code partialTick}), os cristais vivos,
  * as partículas e as Portas da casca. Guarda também o que as animações novas leem: a faixa de vazão de cada Porta de
  * Energia (suavizada por tick, para o conduto acender e apagar em cerca de 1 s e as faíscas seguirem a vazão real), a
  * pressão do plasma quando o buffer está cheio e o anel do fim da recarga (o tick em que cada cristal terminou).
@@ -37,7 +37,6 @@ final class ChamberScene {
     /** A duração do anel ao fim da recarga, em ticks (0,7 s). */
     static final int RING_TICKS = 14;
     private static final int SIZE = 5;
-    private static final double DULL_SPIN = 0.1;
     /** A face de dentro de uma Porta, um pouco para dentro da câmara. */
     private static final double PORT_INSET = 0.51;
 
@@ -65,8 +64,6 @@ final class ChamberScene {
     private float tuneNow;
     private double q;
     private double head;
-    private double liveSpin;
-    private double dullSpin;
     private boolean started;
     /** O tick em que o anel de cada câmara começou, ou {@link #NEVER}; criado com as câmaras, nunca por quadro. */
     private long[] ringAt = new long[0];
@@ -120,8 +117,6 @@ final class ChamberScene {
             head += LissajousCurve.advance(q) * TICK_SECONDS;
             System.arraycopy(current, 0, previous, 0, current.length);
             LissajousCurve.fill(current, head, q, gameTime * TICK_SECONDS);
-            liveSpin += liveSpinRate() * TICK_SECONDS;
-            dullSpin += DULL_SPIN * TICK_SECONDS;
         } else {
             // Na primeira vez a figura já nasce na sintonia de agora, sem escorregar do zero ao chegar perto.
             q = target;
@@ -196,7 +191,7 @@ final class ChamberScene {
             if (!ChamberCrystals.isDull(chambers[i]) || crystalInner.isEmpty()) {
                 continue;
             }
-            ChamberCrystals.crystalPos(i, chambers, q, gameTime, view, pickAt);
+            ChamberCrystals.crystalPos(i, chambers, gameTime, view, pickAt);
             double best = Double.MAX_VALUE;
             for (int k = 0; k < crystalInner.size(); k++) {
                 Vec3 port = crystalInner.get(k);
@@ -321,16 +316,6 @@ final class ChamberScene {
     /** As faces de dentro das Portas de Cristais, no mundo. */
     List<Vec3> crystalInner() {
         return crystalInner;
-    }
-
-    /** O giro acumulado dos cristais, em radianos, interpolado: o Opaco devagar, os outros mais rápido com a sintonia. */
-    double spin(boolean dull, float partialTick) {
-        return dull ? dullSpin + DULL_SPIN * TICK_SECONDS * partialTick
-                : liveSpin + liveSpinRate() * TICK_SECONDS * partialTick;
-    }
-
-    private double liveSpinRate() {
-        return 0.4 + 1.2 * q;
     }
 
     /** A cabeça da figura, interpolada, relativa ao centro, num array da cena que a próxima chamada reescreve. */

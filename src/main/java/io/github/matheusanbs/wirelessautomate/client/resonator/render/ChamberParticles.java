@@ -168,7 +168,7 @@ final class ChamberParticles {
                 grain.alive = false;
             }
             if (advance(grain)) {
-                double[] crystal = ChamberCrystals.crystalPos(grain.chamber, chambers, scene.q(), gameTime, view,
+                double[] crystal = ChamberCrystals.crystalPos(grain.chamber, chambers, gameTime, view,
                         crystalAt);
                 Vec3 to = center.add(crystal[0], crystal[1], crystal[2]);
                 Vec3 at = grain.from.add(to.subtract(grain.from).scale(ChamberCrystals.smoothstep(grain.t)));

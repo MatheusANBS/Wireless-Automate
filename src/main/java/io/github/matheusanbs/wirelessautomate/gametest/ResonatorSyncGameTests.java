@@ -83,6 +83,30 @@ public final class ResonatorSyncGameTests {
     }
 
     @GameTest(template = "empty7")
+    public static void viewTemOTierDoAfinado(GameTestHelper helper) {
+        formed(helper, RouterTier.EMERALD, core -> {
+            assertInserted(helper, core, crystal(false, CrystalCharge.FULL));
+            ChamberView plain = ChamberView.of(core, -1);
+            CompoundTag plainTag = new CompoundTag();
+            plain.save(plainTag);
+            helper.assertTrue(!plainTag.contains("tiers"), "a chave tiers foi sem nenhum Afinado");
+            helper.assertTrue(plain.tierAt(0) == 0 && plain.tierAt(7) == 0, "tier sem Afinado");
+            assertInserted(helper, core, new ItemStack(ModItems.TUNED_CRYSTALS.get(RouterTier.ELITE).get()));
+            ChamberView view = ChamberView.of(core, -1);
+            helper.assertTrue(view.tierAt(0) == 0, "o Cristal de Sinal ganhou tier " + view.tierAt(0));
+            helper.assertTrue(view.tierAt(1) == RouterTier.ELITE.ordinal() + 1,
+                    "tier do Afinado " + view.tierAt(1) + ", esperava " + (RouterTier.ELITE.ordinal() + 1));
+            helper.assertTrue(!view.equals(plain), "a view com Afinado é igual à sem");
+            CompoundTag tag = new CompoundTag();
+            view.save(tag);
+            helper.assertTrue(view.equals(ChamberView.load(tag)), "a view com tier não voltou igual do NBT");
+            helper.assertTrue(view.equals(ChamberView.of(core, -1)), "a view do Núcleo agora não confere");
+            view.tiers()[1] = 9;
+            helper.assertTrue(view.tierAt(1) == RouterTier.ELITE.ordinal() + 1, "o tier mudou pelo array devolvido");
+        });
+    }
+
+    @GameTest(template = "empty7")
     public static void montagemMandaUmaUpdateTag(GameTestHelper helper) {
         formed(helper, RouterTier.EMERALD, core -> {
             ResonatorFormation.disassemble(helper.getLevel(), core);

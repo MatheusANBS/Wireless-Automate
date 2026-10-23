@@ -21,9 +21,10 @@ import net.minecraft.world.item.ItemStack;
 /**
  * Os cristais em anel na câmara e, sem o plasma, os feixes de cada cristal vivo até a cabeça da figura. Com o
  * shader, cada cristal é a gema facetada do {@link CrystalGem}, que enche de baixo para cima na recarga; sem ele (ou
- * com shaderpack do Iris), o modelo do item. Os cristais ficam de pé e parados no anel do {@link ChamberRing}. O
- * Opaco fica caído, mais baixo e cinza, e volta com a recarga; só o primeiro Opaco recarrega, como no servidor. Com o
- * plasma e as fitas carregados e só o shader do cristal faltando, sai o modelo do item sem o enchimento da recarga.
+ * com shaderpack do Iris), o modelo do item. Os cristais ficam de pé e parados no anel do {@link ChamberRing}; com o
+ * shader, cada um vivo liga a ponta à esfera pelo tentáculo de plasma do {@link PlasmaTendrils}. O Opaco fica caído,
+ * mais baixo e cinza, e volta com a recarga; só o primeiro Opaco recarrega, como no servidor. Com o plasma e as fitas
+ * carregados e só o shader do cristal faltando, sai o modelo do item sem o enchimento da recarga.
  */
 final class ChamberCrystals {
     private static final double DULL_DROP = 0.35;

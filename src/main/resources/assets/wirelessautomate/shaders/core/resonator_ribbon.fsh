@@ -55,6 +55,16 @@ vec2 boltLight(float d, float wc) {
     return vec2(core, g * g * 0.55 + exp(-d / (wc * 16.0)) * 0.18);
 }
 
+// O desvio lateral do tentáculo em x (0 a 1): curvo e orgânico, por ruído de gradiente suave com o domínio torcido
+// (o warping do Inigo Quilez: a primeira oitava desloca as outras), lento e preso a zero nas duas pontas. {@code tt}
+// é o tempo já na velocidade do tentáculo.
+float tendrilOffset(float x, float seed, float tt) {
+    float warp = wa_noise(vec3(x * 1.1 + tt * 0.4, seed, 0.3));
+    float s = 0.75 * wa_noise(vec3(x * 1.4 + warp * 1.2 - tt, seed + 3.1, 0.7))
+            + 0.25 * wa_noise(vec3(x * 2.9 + warp * 1.6 - tt * 1.5, seed + 6.3, 1.9));
+    return s * 2.4 * pow(sin(PI * clamp(x, 0.0, 1.0)), 0.8);
+}
+
 void main() {
     float t = GameTime * 1200.0;
     vec3 tier = params.rgb;
@@ -136,6 +146,50 @@ void main() {
             col += mix(RED, CORAL, s) * (0.0016 / (dot(dp, dp) + 0.0012)) * 0.6;
         }
         col *= smoothstep(0.0, 0.03, quad.x) * (1.0 - smoothstep(0.97, 1.0, quad.x));
+    } else if (mode == 2) {
+        // o tentáculo de plasma, da ponta de um cristal vivo até a esfera, como o filamento de um globo de plasma
+        // até o dedo no vidro: o caminho da corrente que o cristal entrega. Curvo e lento; os pacotes da corrente
+        // correm do cristal para a esfera e a ponta abre num clarão onde agarra. Em sintonia ele é grosso e firme;
+        // fora dela afina, treme e se solta, recua e volta a procurar a esfera. O parâmetro leva a sintonia de 0 a 15
+        // (4 bits), a semente do cristal (3 bits) e o comprimento em décimos de bloco (7 bits); o alfa é a força
+        // (o crescimento na recarga)
+        int bits = int(arg);
+        float tuneV = float(bits & 15) / 15.0;
+        float seed = float((bits >> 4) & 7) * 1.37 + 0.5;
+        float len = max(float((bits >> 7) & 127) * 0.1, 0.2);
+        float aspect = len / 0.30;
+        float mis = 1.0 - tuneV;
+        float x = quad.x;
+        float y = (quad.y - 0.5) * 2.0;
+        float tt = t * (0.35 + 1.6 * mis) + seed * 11.0;
+        float amp = mix(0.40, 0.70, mis);
+        float e = 0.006;
+        float off = tendrilOffset(x, seed, tt) * amp;
+        float slope = (tendrilOffset(x + e, seed, tt) - tendrilOffset(x - e, seed, tt)) * amp / (2.0 * e);
+        float kk = slope / aspect;
+        float d = abs(y - off) / sqrt(1.0 + kk * kk);
+        // fora de sintonia o tentáculo se solta: recua até onde alcança e volta a crescer, cada cristal no seu ritmo
+        float hold = clamp(tuneV * 1.6 + (wa_noise(vec3(t * 0.9, seed * 3.3, 4.1)) + 0.5) - 0.6, 0.0, 1.0);
+        float reach = mix(0.30, 1.04, smoothstep(0.0, 1.0, hold));
+        // o corpo de plasma é largo e macio na cor do cristal; o núcleo branco é fino e fraco, para não ser o raio
+        float wc = mix(0.014, 0.030, tuneV) * (0.75 + 0.5 * x) * (0.45 + 0.55 * power);
+        float body = mix(0.05, 0.13, tuneV) * (0.8 + 0.4 * x) * (0.45 + 0.55 * power);
+        // os pacotes da corrente, do cristal para a esfera
+        float packet = pow(0.5 + 0.5 * sin(x * len * 7.0 - t * 4.0 + seed), 10.0);
+        vec2 light = boltLight(d, wc) * vec2(0.35 + 0.9 * packet, 0.6);
+        float plasma = exp(-d * d / (body * body)) * (0.55 + 0.6 * packet);
+        float shimmer = 0.9 + 0.1 * sin(t * 23.0 + seed * 5.0) + mis * 0.35 * wa_noise(vec3(t * 14.0, seed, 8.0));
+        float cut = 1.0 - smoothstep(reach - 0.10, reach, x);
+        vec3 glow = mix(CORAL, tier, 0.25);
+        col += (WHITE * light.x + glow * light.y * 1.4 + glow * plasma * mix(0.5, 1.1, tuneV)) * shimmer * cut;
+        // o clarão onde agarra a esfera, só quando alcança, e a raiz na ponta do cristal
+        vec2 pe = vec2((1.0 - x) * len, (y - off) * 0.30);
+        col += mix(glow, WHITE, 0.4) * exp(-dot(pe, pe) / 0.004) * 1.6 * smoothstep(0.92, 1.02, reach);
+        vec2 ps = vec2(x * len, y * 0.30);
+        col += glow * exp(-dot(ps, ps) / 0.0025) * 0.8;
+        float edgeY = 1.0 - smoothstep(0.30, 1.0, abs(y));
+        col *= edgeY * edgeY;
+        col *= smoothstep(0.0, 0.05, x) * (1.0 - smoothstep(0.93, 1.0, x));
     } else {
         // anel: abre e some com o progresso
         float prog = clamp(arg / 100.0, 0.0, 1.0);

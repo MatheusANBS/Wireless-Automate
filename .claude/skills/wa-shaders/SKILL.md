@@ -71,6 +71,7 @@ O dono pediu menos elementos e mais qualidade. Regras:
 - Esfera estourada em branco (halo somado dentro dela) e rosada (stops dessaturados): halo só **fora** da esfera, rampa de temperatura com stops saturados.
 - Linhas 3D poligonais: frequência baixa e amplitude menor.
 - Muitos elementos ao mesmo tempo (poluição).
+- Cristais deitados apontando para a esfera, com um pulso de vai e vem, e anéis de onda na superfície da esfera (os "diapasões", 23/10): "horrível", tímido. O dono quer algo **épico, no nível do raio**: um efeito forte e criativo que ligue os cristais à esfera, não um detalhe discreto.
 
 ## Técnicas de referência por tipo de efeito
 

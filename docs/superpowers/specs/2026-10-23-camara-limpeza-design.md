@@ -137,3 +137,7 @@ O defeito medido: o plasma é aditivo (`SRC_ALPHA, ONE`), então soma a luz dele
 ### Fórmula e dados
 
 Corpo da esfera com α = cobertura (cobre o que está atrás do plano do billboard; o que está na frente falha no teste de profundidade e fica); halo com α = 0 (soma). O raio e os tentáculos, aditivos e desenhados depois, ficam iguais. Sem dado novo: é correção de leitura (o que está atrás fica atrás). **Custo:** zero, a mesma passada.
+
+## Passo 4b: a placa de Chladni sai (decisão do dono, 23/10)
+
+A placa do chão (textura de 32 px com a figura (3, 2) e o ruído em blocos fora de sintonia) mostrava a sintonia, que os tentáculos já mostram melhor. Entre tirar e refazer como Chladni de verdade no shader (o modo pelos cristais vivos), o dono escolheu tirar: o chão fica calmo. Saem o `ChladniPlate`, as duas texturas e as funções do gerador.

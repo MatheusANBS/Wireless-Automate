@@ -1,7 +1,7 @@
 #version 150
 
 // O contrato dos vértices é o do CrystalGem: Position e Normal já na pose (relativos à câmera, nos eixos do
-// mundo), a cor do tier e a sintonia em Color, 1 no UV0.x no casco do contorno, x e z do cristal em UV1 e a altura
+// mundo), a cor da faixa e o clarão do fim da recarga em Color, 1 no UV0.x no casco do contorno, x e z do cristal em UV1 e a altura
 // relativa e o parâmetro em UV2. Os inteiros viram float aqui, para o ruído interpolar preso ao cristal. O casco
 // infla pela direção do contorno (no Normal) com largura constante na tela: a distância vezes tan(FOV/2), que é
 // 1 / ProjMat[1][1], em OUTLINE_PX pixels da altura da janela. A luz vem de cima e da esquerda da vista, como nos

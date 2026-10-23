@@ -13,7 +13,7 @@ import org.joml.Vector3f;
 /**
  * Os viajantes da câmara do desenho antigo (sem o shader ou com o Iris), uma vez por tick e só com o jogador perto:
  * faíscas do centro até uma Porta de Energia com vazão, mais frequentes com a faixa dela, e grãos de redstone da Porta
- * de Cristais até o Opaco em recarga. No modo shader não há nenhum dos dois: o conduto e a espiral os substituem. Cada
+ * de Cristais até o Opaco em recarga. No modo shader não há nenhum dos dois: o conduto e os tentáculos os substituem. Cada
  * viajante anda por um {@code smoothstep} entre os dois pontos. As faíscas não são partículas: o
  * {@link ChamberSparks} as desenha no passe do renderer, com o tempo do tick anterior e o de agora interpolados,
  * porque as partículas translúcidas do vanilla saem depois do terreno translúcido e o Vidro, que grava

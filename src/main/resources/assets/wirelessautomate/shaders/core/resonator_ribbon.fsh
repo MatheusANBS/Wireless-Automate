@@ -137,26 +137,19 @@ void main() {
         float edgeY = 1.0 - smoothstep(0.25, 1.0, abs(y));
         col *= edgeY * edgeY;
         col *= smoothstep(0.0, 0.14, x) * (1.0 - smoothstep(0.90, 1.0, x));
-    } else if (mode == 1) {
-        // espiral de catalisador: dez grãos sobem de u = 0 a u = 1, girando em v
-        for (int k = 0; k < 10; k++) {
-            float s = fract(float(k) / 10.0 + t * 0.45);
-            float vc = 0.5 + 0.35 * sin(s * 18.0 + t * 3.0) * (1.0 - s);
-            vec2 dp = vec2((quad.x - s) * 0.4, (quad.y - vc) * 0.5);
-            col += mix(RED, CORAL, s) * (0.0016 / (dot(dp, dp) + 0.0012)) * 0.6;
-        }
-        col *= smoothstep(0.0, 0.03, quad.x) * (1.0 - smoothstep(0.97, 1.0, quad.x));
-    } else if (mode == 2) {
+    } else {
         // o tentáculo de plasma, da ponta de um cristal vivo até a esfera, como o filamento de um globo de plasma
         // até o dedo no vidro: o caminho da corrente que o cristal entrega. Curvo e lento; os pacotes da corrente
         // correm do cristal para a esfera e a ponta abre num clarão onde agarra. Em sintonia ele é grosso e firme;
-        // fora dela afina, treme e se solta, recua e volta a procurar a esfera. O parâmetro leva a sintonia de 0 a 15
-        // (4 bits), a semente do cristal (3 bits) e o comprimento em décimos de bloco (7 bits); o alfa é a força
-        // (o crescimento na recarga)
+        // fora dela afina, treme e se solta, recua e volta a procurar a esfera. Na recarga ele é o invertido: fino,
+        // na cor do catalisador, sempre agarrado, com a corrente da esfera para o cristal. O parâmetro leva a sintonia
+        // de 0 a 15 (4 bits), a semente do cristal (3 bits), o comprimento em décimos de bloco (7 bits) e o invertido
+        // (bit 14); o alfa é a força
         int bits = int(arg);
         float tuneV = float(bits & 15) / 15.0;
         float seed = float((bits >> 4) & 7) * 1.37 + 0.5;
         float len = max(float((bits >> 7) & 127) * 0.1, 0.2);
+        bool reverse = ((bits >> 14) & 1) != 0;
         float aspect = len / 0.30;
         float mis = 1.0 - tuneV;
         float x = quad.x;
@@ -170,17 +163,21 @@ void main() {
         float d = abs(y - off) / sqrt(1.0 + kk * kk);
         // fora de sintonia o tentáculo se solta: recua até onde alcança e volta a crescer, cada cristal no seu ritmo
         float hold = clamp(tuneV * 1.6 + (wa_noise(vec3(t * 0.9, seed * 3.3, 4.1)) + 0.5) - 0.6, 0.0, 1.0);
-        float reach = mix(0.30, 1.04, smoothstep(0.0, 1.0, hold));
+        float reach = reverse ? 1.04 : mix(0.30, 1.04, smoothstep(0.0, 1.0, hold));
         // o corpo de plasma é largo e macio na cor do cristal; o núcleo branco é fino e fraco, para não ser o raio
         float wc = mix(0.014, 0.030, tuneV) * (0.75 + 0.5 * x) * (0.45 + 0.55 * power);
         float body = mix(0.05, 0.13, tuneV) * (0.8 + 0.4 * x) * (0.45 + 0.55 * power);
+        if (reverse) {
+            wc = 0.014;
+            body = 0.06;
+        }
         // os pacotes da corrente, do cristal para a esfera
-        float packet = pow(0.5 + 0.5 * sin(x * len * 7.0 - t * 4.0 + seed), 10.0);
+        float packet = pow(0.5 + 0.5 * sin(x * len * 7.0 + (reverse ? t : -t) * 4.0 + seed), 10.0);
         vec2 light = boltLight(d, wc) * vec2(0.35 + 0.9 * packet, 0.6);
         float plasma = exp(-d * d / (body * body)) * (0.55 + 0.6 * packet);
         float shimmer = 0.9 + 0.1 * sin(t * 23.0 + seed * 5.0) + mis * 0.35 * wa_noise(vec3(t * 14.0, seed, 8.0));
         float cut = 1.0 - smoothstep(reach - 0.10, reach, x);
-        vec3 glow = mix(CORAL, tier, 0.25);
+        vec3 glow = reverse ? mix(RED, CORAL, 0.35) : mix(CORAL, tier, 0.25);
         col += (WHITE * light.x + glow * light.y * 1.4 + glow * plasma * mix(0.5, 1.1, tuneV)) * shimmer * cut;
         // o clarão onde agarra a esfera, só quando alcança, e a raiz na ponta do cristal
         vec2 pe = vec2((1.0 - x) * len, (y - off) * 0.30);
@@ -190,11 +187,6 @@ void main() {
         float edgeY = 1.0 - smoothstep(0.30, 1.0, abs(y));
         col *= edgeY * edgeY;
         col *= smoothstep(0.0, 0.05, x) * (1.0 - smoothstep(0.93, 1.0, x));
-    } else {
-        // anel: abre e some com o progresso
-        float prog = clamp(arg / 100.0, 0.0, 1.0);
-        float r = length(quad * 2.0 - 1.0);
-        col += CORAL * (1.0 - smoothstep(0.0, 0.08, abs(r - (0.28 + prog * 0.7)))) * prog * (1.0 - prog) * 4.0;
     }
 
     col *= power;

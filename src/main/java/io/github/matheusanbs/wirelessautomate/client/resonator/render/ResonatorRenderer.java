@@ -23,8 +23,8 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * A câmara animada do Núcleo montado, desenhada a partir do centro da estrutura: a placa de Chladni, os cristais
- * (facetados pelo shader do cristal, ou o modelo do item sem ele), o Núcleo de plasma, os tentáculos dos cristais,
- * o conduto de energia e a recarga em espiral, ou os feixes, as faíscas, a figura de Lissajous e a lente sem o shader (os cristais são opacos
+ * (facetados pelo shader do cristal, ou o modelo do item sem ele), o Núcleo de plasma, os tentáculos dos cristais
+ * e o conduto de energia, ou os feixes, as faíscas, a figura de Lissajous e a lente sem o shader (os cristais são opacos
  * e vão antes dos aditivos). Com um shaderpack do Iris em uso, o desenho é o sem o shader.
  * O estado de cada câmara fica numa {@link ChamberScene} por dimensão e posição, atualizada uma vez por tick novo; as
  * que não são desenhadas há mais de 200 ticks saem numa varredura a cada 200 ticks. Cada block entity guarda a cena
@@ -93,7 +93,6 @@ public final class ResonatorRenderer implements BlockEntityRenderer<ResonanceCor
             if (distanceSq < FlowConduit.RANGE_SQ) {
                 PlasmaTendrils.render(poseStack, buffer, scene, gameTime, partialTick, tierColor);
                 FlowConduit.render(poseStack, buffer, scene, partialTick, tierColor);
-                RechargeSpiral.render(poseStack, buffer, scene, gameTime, partialTick, tierColor);
             }
         } else {
             ChamberSparks.render(poseStack, buffer, scene, partialTick);

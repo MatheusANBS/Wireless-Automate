@@ -105,3 +105,21 @@ Tentáculo = eixo curvo por ruído suave com domínio torcido, preso nas pontas 
 **Contrato:** modo 2 do `resonator_ribbon.fsh` (o 0 do raio fica intocado); o parâmetro leva a sintonia de 0 a 15 (4 bits), a semente (3 bits) e o comprimento em décimos (7 bits); o alfa é a força.
 
 **Custo:** por pixel da fita, 3 avaliações do eixo (o ponto e a inclinação), cada uma com 4 `wa_noise`: 12 ruídos, sem loop. Até 8 fitas por Núcleo, só dentro de `RANGE_SQ`.
+
+## Passo 3: recarga nova
+
+No servidor a recarga não gasta energia: consome o catalisador do Núcleo ao longo de `rechargeTicks` e devolve a carga ao primeiro Opaco. A Porta de Cristais não participa, então a espiral saindo dela mostrava uma coisa que não acontece. Saem a espiral (modo 1) e o anel (modo 3).
+
+### Pesquisa
+
+1. **Sentido do fluxo pela direção dos pulsos** (patente US 2009/0309548, "Graphic State of Charge Indicator for a Battery Charging System": pulsos num sentido para carga entrando, no outro para saindo; o applet de capacitor do MOE de Singapura, a carga pela cor). **Adotado:** o Opaco em recarga ganha o tentáculo **invertido**, com os pacotes correndo da esfera para o cristal. **Descartado:** a contagem em número (é da tela do Núcleo).
+2. **Enchimento por altura com a linha da superfície** (o líquido do Half-Life: Alyx refeito em GLSL no projeto da Carleton, com a linha de espuma; o "Fill Liquid Volume" do Godot Shaders, CC0): limiar pela altura no espaço do objeto e uma linha clara na superfície. **Adotado:** o que o cristal já fazia (coral abaixo do nível, osso acima, a linha clara no nível), no espaço do cristal. **Descartado:** a superfície mexendo (onda no nível): mais um movimento, sem dado novo.
+3. **O fim marcado por um clarão curto** ("Juice It or Lose It", Jonasson e Purho, GDC Europe 2012; a resposta "Don't Juice It or Lose It", de Folmer Kelly, sobre não exagerar): um flash curto dá o retorno de "terminou". **Adotado:** o cristal acende quase branco e volta ao tom em 0,7 s, no próprio cristal. **Descartado:** o anel que abria em volta (um elemento a mais).
+
+### Fórmula
+
+Recarga = o tentáculo invertido (fino, vermelho do catalisador puxado para o coral, sempre agarrado, pacotes da esfera para o cristal) + o cristal enchendo de baixo para cima com a linha clara + o clarão de 0,7 s no fim. Quando acaba, o tentáculo vira o normal. **Não tem:** espiral, anel, grãos, ligação com a Porta de Cristais.
+
+**Dados do jogo:** recarga em curso (o tentáculo invertido), o progresso (a altura do enchimento) e o fim (o clarão).
+
+**Custo:** o tentáculo invertido é a mesma fita do normal; o clarão é um `mix` no shader do cristal. Saem a espiral (10 grãos por pixel) e o anel.

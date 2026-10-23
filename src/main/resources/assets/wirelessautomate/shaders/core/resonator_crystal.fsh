@@ -8,7 +8,7 @@
 // dourado do Lapidado ou a cor do tier do Afinado, com as duas marcas em cruz nos polos). O Opaco é a paleta osso
 // com pintas, o rachado ganha um risco marrom e, na recarga, abaixo da altura do progresso vale a paleta coral. As
 // pintas e o risco usam só as coordenadas do cristal (crystal.x, a altura e crystal.z), então não escorregam quando
-// a câmera anda. O parâmetro leva a semente
+// a câmera anda. O alfa da cor é o clarão do fim da recarga. O parâmetro leva a semente
 // (4 bits), o estado (10 bits: 0 vivo, 1 Opaco, 2 a 1002 recarga de 0 a 1, 1003 rachado) e o bit 14 (losango).
 
 uniform float GameTime;
@@ -105,5 +105,7 @@ void main() {
     if (rec > 0.001 && rec < 0.999 && abs(h - rec) < 0.025) {
         col = CORAL[4];
     }
+    // o clarão quando a recarga termina: o cristal acende quase branco e volta ao tom em 0,7 s
+    col = mix(col, CORAL[4], tint.a * 0.85);
     fragColor = vec4(col, 1.0);
 }

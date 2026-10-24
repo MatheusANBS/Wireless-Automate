@@ -22,10 +22,10 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * A câmara animada do Núcleo montado, desenhada a partir do centro da estrutura: a placa de Chladni, os cristais
- * (facetados pelo shader do cristal, ou o modelo do item sem ele) e os feixes, a aura dos cristais, o Núcleo de
- * plasma, o conduto de energia e a recarga em espiral, ou as faíscas, a figura de Lissajous e a lente sem o shader
- * (os cristais são opacos e vão antes dos aditivos). Com um shaderpack do Iris em uso, o desenho é o sem o shader.
+ * A câmara animada do Núcleo montado, desenhada a partir do centro da estrutura: os cristais (facetados pelo shader
+ * do cristal, ou o modelo do item sem ele), o Núcleo de plasma, os tentáculos dos cristais e o conduto de energia, ou
+ * os feixes, as faíscas, a figura de Lissajous e a lente sem o shader (os cristais são opacos e vão antes dos
+ * aditivos e do plasma). Com um shaderpack do Iris em uso, o desenho é o sem o shader.
  * O estado de cada câmara fica numa {@link ChamberScene} por dimensão e posição, atualizada uma vez por tick novo; as
  * que não são desenhadas há mais de 200 ticks saem numa varredura a cada 200 ticks. Cada block entity guarda a cena
  * que achou na primeira vez, para o quadro não criar uma chave nova; a cena por posição sobrevive à recarga do
@@ -40,6 +40,8 @@ public final class ResonatorRenderer implements BlockEntityRenderer<ResonanceCor
     private static long lastSweep;
     /** Só do e2e: força o desenho sem o shader (a figura de Lissajous e a lente), para medir o custo dos dois na mesma rodada. */
     public static boolean forceLegacyForTests;
+    /** Só do e2e: força a faixa de vazão (0 a 7) de todas as Portas de Energia, ou -1 para a vazão real. */
+    public static int forceBandForTests = -1;
 
     private record SceneKey(ResourceKey<Level> dimension, BlockPos pos) {
     }
@@ -77,9 +79,8 @@ public final class ResonatorRenderer implements BlockEntityRenderer<ResonanceCor
         Vec3 center = scene.center();
         poseStack.pushPose();
         poseStack.translate(center.x, center.y, center.z);
-        ChladniPlate.render(poseStack, buffer, scene, partialTick);
         ChamberCrystals.render(poseStack, buffer, scene, gameTime, partialTick, level,
-                shader && CrystalShader.get() != null, shader, tierColor);
+                shader && CrystalShader.get() != null, shader);
         if (shader) {
             Vec3 eye = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
             Vec3 world = scene.worldCenter();
@@ -87,13 +88,10 @@ public final class ResonatorRenderer implements BlockEntityRenderer<ResonanceCor
             double dy = eye.y - world.y;
             double dz = eye.z - world.z;
             double distanceSq = dx * dx + dy * dy + dz * dz;
-            if (distanceSq < FlowConduit.RANGE_SQ) {
-                CrystalAura.render(poseStack, buffer, scene, gameTime, partialTick, tierColor);
-            }
             PlasmaCore.render(poseStack, buffer, scene, partialTick, tierColor, distanceSq);
             if (distanceSq < FlowConduit.RANGE_SQ) {
+                PlasmaTendrils.render(poseStack, buffer, scene, gameTime, partialTick, tierColor);
                 FlowConduit.render(poseStack, buffer, scene, partialTick, tierColor);
-                RechargeSpiral.render(poseStack, buffer, scene, gameTime, partialTick, tierColor);
             }
         } else {
             ChamberSparks.render(poseStack, buffer, scene, partialTick);

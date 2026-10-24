@@ -3,6 +3,8 @@ package io.github.matheusanbs.wirelessautomate.client.resonator.render;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
+import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.resonator.ChamberView;
@@ -17,30 +19,27 @@ import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Os cristais em anel na câmara e os feixes de cada cristal vivo até a cabeça da figura. Com o shader, cada cristal é
- * a gema facetada do {@link CrystalGem}, que enche de baixo para cima na recarga; sem ele (ou com shaderpack do
- * Iris), o modelo do item. Em sintonia sobem e descem juntos; fora dela, cada um no seu ritmo e balançando. O Opaco
- * fica caído e cinza e volta à altura com a recarga; só o primeiro Opaco recarrega, como no servidor. Com o plasma e
- * as fitas carregados e só o shader do cristal faltando, sai o modelo do item sem o enchimento da recarga, que não
- * fica mais na aura.
+ * Os cristais em anel na câmara e, sem o plasma, os feixes de cada cristal vivo até a cabeça da figura. Com o
+ * shader, cada cristal é a gema facetada do {@link CrystalGem}, que enche de baixo para cima na recarga e dá um
+ * clarão quando ela termina; sem ele (ou com shaderpack do Iris), o modelo do item. Os cristais ficam de pé no anel do
+ * {@link ChamberRing}, que orbita a esfera devagar, girando em torno do próprio eixo (mais rápido em sintonia, o Opaco devagar);
+ * com o shader, cada um vivo liga a ponta à esfera pelo tentáculo de plasma do {@link PlasmaTendrils}. O Opaco fica
+ * caído, mais baixo e cinza, e volta com a recarga; só o primeiro Opaco recarrega, como no servidor. Com o plasma e as
+ * fitas carregados e só o shader do cristal faltando, sai o modelo do item sem o enchimento da recarga.
  */
 final class ChamberCrystals {
-    private static final double RADIUS = 0.95;
-    private static final double RING_SPEED = 0.08;
-    private static final double BOB = 0.12;
-    private static final double BOB_SECONDS = 2.4;
-    private static final double BASE_Y = -0.15;
     private static final double DULL_DROP = 0.35;
     private static final double DULL_TILT = 0.5;
-    private static final double SWAY = 0.25;
-    private static final float SCALE = 0.55f;
+    private static final float SCALE = 0.40f;
     private static final double CRYSTAL_DELAY = 0.6;
     private static final double BEAM_DELAY = 1.2;
     private static final double PULSE_SECONDS = 1.6;
     private static final float BEAM_HALF = 0.009f;
     private static final double TICK_SECONDS = 0.05;
-    /** O raio do plasma, onde terminam os feixes (o mesmo em que começa o conduto). */
-    private static final double PLASMA_EDGE = 0.35;
+    /** O dourado da faixa do Lapidado, o dos sprites. */
+    private static final int GOLD = 0xDDBC5C;
+    /** Os tiers por posição, sem copiar o array do enum a cada cristal. */
+    private static final RouterTier[] TIERS = RouterTier.values();
     private static final byte EMPTY = 0;
     private static final byte DULL_SIGNAL = 3;
     private static final byte CRACKED_SIGNAL = 5;
@@ -55,7 +54,7 @@ final class ChamberCrystals {
     }
 
     static void render(PoseStack poseStack, MultiBufferSource buffer, ChamberScene scene, long gameTime,
-            float partialTick, ClientLevel level, boolean gem, boolean plasma, int tierColor) {
+            float partialTick, ClientLevel level, boolean gem, boolean plasma) {
         byte[] chambers = scene.chambers();
         double since = scene.sinceFormed(gameTime, partialTick);
         float scale = (float) (SCALE * ChamberScene.on(since, CRYSTAL_DELAY));
@@ -63,81 +62,71 @@ final class ChamberCrystals {
             return;
         }
         double ticks = gameTime + partialTick;
-        double t = ticks * TICK_SECONDS;
-        double q = scene.q();
         ChamberView view = scene.view();
-        int tune = Math.round(Math.clamp(scene.tune(partialTick), 0f, 1f) * 255);
         int recharging = recharging(chambers, view);
         for (int i = 0; i < chambers.length; i++) {
             if (chambers[i] == EMPTY) {
                 continue;
             }
             boolean dull = isDull(chambers[i]);
-            double[] at = crystalPos(i, chambers, q, ticks, view, AT);
-            double seed = seed(i);
+            double[] at = crystalPos(i, chambers, ticks, view, AT);
             double progress = recharge(i, chambers, ticks, view);
             double fallen = 1 - smoothstep(progress);
             poseStack.pushPose();
             poseStack.translate(at[0], at[1], at[2]);
-            poseStack.mulPose(Axis.YP.rotation((float) (scene.spin(dull, partialTick) + seed)));
-            poseStack.mulPose(Axis.ZP.rotation((float) (dull ? DULL_TILT * fallen
-                    : Math.sin(3 * t + seed) * SWAY * (1 - q))));
+            poseStack.mulPose(Axis.YP.rotation((float) (scene.spin(dull, partialTick) + ChamberRing.seed(i))));
+            if (dull) {
+                poseStack.mulPose(Axis.ZP.rotation((float) (DULL_TILT * fallen)));
+            }
             poseStack.scale(scale, scale, scale);
             if (gem) {
-                int state = !dull ? CrystalGem.LIVE
-                        : recharging == i ? CrystalGem.recharging(progress) : CrystalGem.DULL;
-                CrystalGem.render(poseStack.last(), buffer, tierColor, tune, state, i);
+                int state = !dull ? CrystalParam.LIVE
+                        : recharging == i ? CrystalParam.recharging(progress)
+                        : chambers[i] >= CRACKED_SIGNAL ? CrystalParam.CRACKED : CrystalParam.DULL;
+                // os códigos pares (2, 4 e 6) são o Lapidado, o Afinado e os Opacos e rachados deles: o losango
+                float flash = scene.flash(i, gameTime, partialTick);
+                int glow = flash >= 0 && flash < 1 ? Math.round((1 - flash) * (1 - flash) * 255) : 0;
+                CrystalGem.render(poseStack.last(), buffer, bandColor(scene.tier(i)), glow, state, i,
+                        (chambers[i] & 1) == 0);
             } else {
                 Minecraft.getInstance().getItemRenderer().renderStatic(stacks()[chambers[i]], ItemDisplayContext.FIXED,
                         LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, poseStack, buffer, level, 0);
             }
             poseStack.popPose();
         }
-        beams(poseStack.last(), buffer, scene, chambers, since, ticks, partialTick, plasma);
+        if (!plasma) {
+            beams(poseStack.last(), buffer, scene, chambers, since, ticks, partialTick);
+        }
     }
 
-    /**
-     * Os feixes dos cristais vivos, só com a sintonia acima da metade: até a cabeça da figura no desenho antigo e, com
-     * o plasma, até a borda dele, na direção de cada cristal (a câmara está na origem).
-     */
+    /** Os feixes dos cristais vivos até a cabeça da figura, só com a sintonia acima da metade. */
     private static void beams(PoseStack.Pose pose, MultiBufferSource buffer, ChamberScene scene, byte[] chambers,
-            double since, double ticks, float partialTick, boolean plasma) {
+            double since, double ticks, float partialTick) {
         double q = scene.q();
         double strength = ChamberScene.on(since, BEAM_DELAY) * Math.max(0, q - 0.5) * 2;
         if (strength <= 0) {
             return;
         }
         double t = ticks * TICK_SECONDS;
-        if (!plasma) {
-            double[] head = scene.headPoint(partialTick);
-            TO[0] = (float) head[0];
-            TO[1] = (float) head[1];
-            TO[2] = (float) head[2];
-        }
+        double[] head = scene.headPoint(partialTick);
+        TO[0] = (float) head[0];
+        TO[1] = (float) head[1];
+        TO[2] = (float) head[2];
         VertexConsumer out = null;
         for (int i = 0; i < chambers.length; i++) {
             if (chambers[i] == EMPTY || isDull(chambers[i])) {
                 continue;
             }
-            double pulse = 0.5 + 0.5 * Math.sin(2 * Math.PI * t / PULSE_SECONDS + (q > 0.9 ? 0 : seed(i)));
+            double pulse = 0.5 + 0.5 * Math.sin(2 * Math.PI * t / PULSE_SECONDS
+                    + (q > 0.9 ? 0 : ChamberRing.seed(i)));
             int alpha = (int) Math.round(255 * strength * (0.5 + 0.5 * pulse) * 0.7);
             if (alpha <= 0) {
                 continue;
             }
-            double[] at = crystalPos(i, chambers, q, ticks, scene.view(), AT);
+            double[] at = crystalPos(i, chambers, ticks, scene.view(), AT);
             FROM[0] = (float) at[0];
             FROM[1] = (float) at[1];
             FROM[2] = (float) at[2];
-            if (plasma) {
-                double length = Math.sqrt(at[0] * at[0] + at[1] * at[1] + at[2] * at[2]);
-                if (length < 1e-4) {
-                    continue;
-                }
-                float k = (float) (PLASMA_EDGE / length);
-                TO[0] = FROM[0] * k;
-                TO[1] = FROM[1] * k;
-                TO[2] = FROM[2] * k;
-            }
             if (out == null) {
                 out = buffer.getBuffer(RenderType.lightning());
             }
@@ -146,20 +135,20 @@ final class ChamberCrystals {
     }
 
     /**
-     * Onde fica o cristal da câmara {@code i}, relativo ao centro, no tempo {@code ticks} (com a fração do tick):
-     * no anel, girando devagar, subindo e descendo com a sintonia; o Opaco mais baixo até a recarga terminar.
-     * Escreve em {@code out} e o devolve.
+     * Onde fica o cristal da câmara {@code i}, relativo ao centro, no tempo {@code ticks} (com a fração do tick): o
+     * lugar dele no anel, que orbita a esfera, e o Opaco mais baixo até a recarga terminar. Escreve em {@code out} e o devolve.
      */
-    static double[] crystalPos(int i, byte[] chambers, double q, double ticks, ChamberView view, double[] out) {
-        double t = ticks * TICK_SECONDS;
-        double a = 2 * Math.PI * i / chambers.length + RING_SPEED * t + Math.PI / 4;
-        double phase = seed(i) * (1 - q);
-        double bob = Math.sin(2 * Math.PI * t / BOB_SECONDS + phase) * BOB * q;
-        double rise = isDull(chambers[i]) ? -DULL_DROP * (1 - smoothstep(recharge(i, chambers, ticks, view))) : 0;
-        out[0] = Math.cos(a) * RADIUS;
-        out[1] = bob + rise + BASE_Y;
-        out[2] = Math.sin(a) * RADIUS;
+    static double[] crystalPos(int i, byte[] chambers, double ticks, ChamberView view, double[] out) {
+        ChamberRing.position(i, chambers.length, ticks, out);
+        if (isDull(chambers[i])) {
+            out[1] -= DULL_DROP * (1 - smoothstep(recharge(i, chambers, ticks, view)));
+        }
         return out;
+    }
+
+    /** A cor da faixa do losango: a do tier do Afinado ({@code tier} é o tier mais um) ou o dourado do Lapidado. */
+    private static int bandColor(int tier) {
+        return tier > 0 ? GuiPaint.tierColor(TIERS[tier - 1]) : GOLD;
     }
 
     /** A câmara do Opaco que recarrega agora (o primeiro não rachado, como no servidor), ou -1. */
@@ -186,11 +175,6 @@ final class ChamberCrystals {
     /** Opaco ou rachado: os dois sem carga. */
     static boolean isDull(byte code) {
         return code >= DULL_SIGNAL;
-    }
-
-    /** O desencontro fixo de cada câmara (o ângulo áureo), para os cristais não andarem juntos fora de sintonia. */
-    static double seed(int i) {
-        return (0.7 + i * 2.399963) % (2 * Math.PI);
     }
 
     static double smoothstep(double x) {

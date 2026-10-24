@@ -8,13 +8,13 @@ import net.minecraft.client.renderer.MultiBufferSource;
 /**
  * O Núcleo de plasma: um quad virado para a câmera no centro da câmara, desenhado pelo core shader do mod. Cada
  * vértice leva a cor do tier no RGB e a sintonia no alfa, o canto do quad no UV0 e, no UV2 (inteiros, os mesmos nos
- * quatro), os cristais carregados e o nível de detalhe, que cai com a distância (os dois bits de baixo), mais o
- * valor 4 (terceiro bit) com o buffer cheio.
+ * quatro), no y, o nível de detalhe, que cai com a distância (os dois bits de baixo), mais o valor 4 (terceiro bit)
+ * com o buffer cheio; o x vai zerado.
  */
 final class PlasmaCore {
     /** O bit do UV2.y que diz ao shader que o buffer está cheio; os dois de baixo são o detalhe. */
     private static final int FULL_BIT = 4;
-    private static final float HALF = 1.3f;
+    private static final float HALF = 1.45f;
     private static final double NEAR_SQ = 12 * 12;
     private static final double FAR_SQ = 32 * 32;
     private static final float[][] CORNERS = {{0, 0}, {0, 1}, {1, 1}, {1, 0}};
@@ -34,7 +34,6 @@ final class PlasmaCore {
         int r = (tierColor >> 16) & 0xFF;
         int g = (tierColor >> 8) & 0xFF;
         int b = tierColor & 0xFF;
-        int charged = scene.charged();
         int detail = detail(distanceSq) | (scene.full() ? FULL_BIT : 0);
         poseStack.pushPose();
         poseStack.mulPose(Minecraft.getInstance().gameRenderer.getMainCamera().rotation());
@@ -44,7 +43,7 @@ final class PlasmaCore {
             float u = CORNERS[i][0];
             float v = CORNERS[i][1];
             out.addVertex(pose, (u * 2 - 1) * HALF, (v * 2 - 1) * HALF, 0).setColor(r, g, b, alpha).setUv(u, v)
-                    .setUv2(charged, detail);
+                    .setUv2(0, detail);
         }
         poseStack.popPose();
     }

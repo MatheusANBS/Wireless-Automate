@@ -62,7 +62,7 @@ final class E2eResonatorSteps {
     /** Os pés do jogador nas fotos de fora: a leste e ao sul da caixa, a uns 7 blocos do Núcleo. */
     static final double[] SIDE_VIEW = {8.5, 3.2, 7.5};
     /** Os pés do jogador nas fotos da câmara: a 2,5 blocos da janela, de frente para ela (yaw 180°). */
-    private static final double[] WINDOW_VIEW = {2.5, 2.3, 7.5};
+    static final double[] WINDOW_VIEW = {2.5, 2.3, 7.5};
     /**
      * Os pés do jogador na foto de perto dos cristais: dentro da câmara, junto da janela e com a cabeça perto do teto,
      * olhando o anel de cima. A Vitrine montada não tem vão no vidro, e de fora o vidro lavaria a foto.
@@ -239,6 +239,7 @@ final class E2eResonatorSteps {
         list.add(frameTime(false, "", null));
         list.add(frameTime(true, "", null));
         list.add(frameTime(false, "", null));
+        closeUp(list, playerId, origin, "ressonador-tentaculos");
         list.add(new Step("Ressonador: dial a 96,7", STEP_TIMEOUT_MS, () -> onServer(server -> {
             ((ResonanceCoreBlockEntity) server.overworld().getBlockEntity(core(origin[0]))).setDial(96.7);
             return null;
@@ -246,6 +247,7 @@ final class E2eResonatorSteps {
                 .clientView().band() < TuneSignal.BANDS - 1, () -> "faixa no cliente"));
         list.add(DevEndToEnd.wait("a figura escorregar", 60));
         list.add(capture("ressonador-camara-chiado"));
+        closeUp(list, playerId, origin, "ressonador-tentaculos-fora");
         list.add(new Step("Ressonador: dial de volta a 98,0", STEP_TIMEOUT_MS, () -> {
             Minecraft.getInstance().options.hideGui = false;
             onServer(server -> {
@@ -254,6 +256,19 @@ final class E2eResonatorSteps {
             });
         }, () -> true, () -> "dial"));
         E2eResonatorFlowSteps.flowSteps(list, playerId, origin);
+    }
+
+    /**
+     * Os tentáculos de perto em dois instantes (eles andam entre um e outro) e a câmera de volta à janela: capturas
+     * {@code <name>} e {@code <name>-2}.
+     */
+    private static void closeUp(List<Step> list, UUID playerId, BlockPos[] origin, String name) {
+        list.add(camera("Ressonador: câmera perto, " + name, playerId, () -> origin[0], CLOSE_VIEW));
+        list.add(DevEndToEnd.wait("a câmera chegar", 10));
+        list.add(capture(name));
+        list.add(DevEndToEnd.wait("outro instante", 13));
+        list.add(capture(name + "-2"));
+        list.add(camera("Ressonador: câmera na janela, " + name, playerId, () -> origin[0], WINDOW_VIEW));
     }
 
     /** O que a medida repete a cada tick de espera (a extração que mantém o conduto aceso). */
@@ -324,6 +339,7 @@ final class E2eResonatorSteps {
      */
     static void restoreFrameSettings() {
         ResonatorRenderer.forceLegacyForTests = false;
+        ResonatorRenderer.forceBandForTests = -1;
         if (!measuring) {
             return;
         }

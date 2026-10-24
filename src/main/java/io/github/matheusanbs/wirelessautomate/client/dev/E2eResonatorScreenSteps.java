@@ -181,7 +181,7 @@ final class E2eResonatorScreenSteps {
         list.add(clipCheck(name));
     }
 
-    private static ItemStack cracked(ItemStack stack) {
+    static ItemStack cracked(ItemStack stack) {
         SignalCrystalItem.setCharge(stack, 0);
         SignalCrystalItem.setIntegrity(stack, 0);
         return stack;

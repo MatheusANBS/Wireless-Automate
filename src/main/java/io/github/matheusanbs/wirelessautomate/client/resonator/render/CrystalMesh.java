@@ -1,145 +1,225 @@
 package io.github.matheusanbs.wirelessautomate.client.resonator.render;
 
 /**
- * A malha do cristal da câmara, a "Ponta dupla": uma bipirâmide de 6 lados, 12 triângulos, em unidades do cristal
- * (antes da escala do desenho). O anel tem raio e altura um pouco desiguais por vértice, para as facetas não saírem
- * perfeitas. Montada uma vez; o desenho só lê as tabelas.
- *
- * <p>Por vértice: a posição, os cantos da faceta (0,0), (1,0) e (0,1), que o shader usa para acender as arestas, e
- * a altura relativa no cristal, de 0 na ponta de baixo a 1 na de cima. Por triângulo: a normal plana, para fora; os
- * vértices vêm em sentido anti-horário vistos de fora.
+ * As duas malhas do cristal da câmara, em unidades do cristal (antes da escala do desenho), montadas uma vez; o
+ * desenho só lê as tabelas. Acompanham os sprites do mod:
+ * <ul>
+ *   <li>{@link #CLUSTER}, o aglomerado de 4 pontas hexagonais de alturas diferentes do Cristal de Sinal (96
+ *       triângulos);</li>
+ *   <li>{@link #DIAMOND}, o losango com cinta do Lapidado e dos Afinados: um hexágono com os dois ápices e uma
+ *       faixa entre os anéis, que de qualquer lado lê como o quadrado girado do sprite (24 triângulos), em {@link #BELT_BOTTOM} a
+ *       {@link #BELT_TOP} de altura relativa.</li>
+ * </ul>
+ * Por vértice: a posição, a altura relativa no cristal, de 0 em {@link #BOTTOM} a 1 em {@link #TOP}, e a direção do
+ * contorno, do ponto de dentro da peça até o vértice: a mesma em todos os triângulos que dividem o vértice, para o
+ * casco inflado não abrir nas arestas. Por triângulo: a normal plana, para fora, e os vértices em sentido anti-horário
+ * vistos de fora.
  */
 final class CrystalMesh {
-    static final int SIDES = 6;
-    static final int TRIANGLES = 2 * SIDES;
-    static final int VERTICES = 3 * TRIANGLES;
     static final float TOP = 0.58f;
     static final float BOTTOM = -0.46f;
-    /** Um ponto dentro do cristal, para a normal sair para fora. */
-    private static final float INSIDE_Y = 0.05f;
-    /** x, y, z de cada vértice. */
-    private static final float[] POSITIONS = new float[VERTICES * 3];
-    /** u, v de cada vértice. */
-    private static final float[] CORNERS = new float[VERTICES * 2];
-    /** A altura relativa de cada vértice. */
-    private static final float[] HEIGHTS = new float[VERTICES];
-    /** nx, ny, nz de cada triângulo. */
-    private static final float[] NORMALS = new float[TRIANGLES * 3];
+    /** A altura relativa em que a faixa do losango começa e termina, a mesma do shader. */
+    static final float BELT_BOTTOM = 0.42f;
+    static final float BELT_TOP = 0.56f;
+    static final int SPIKE_SIDES = 6;
+    static final int BELT_SIDES = 6;
+    private static final float BELT_UPPER_Y = 0.12f;
+    private static final float BELT_LOWER_Y = -0.02f;
+    static final double BELT_RADIUS = 0.38;
+    static final CrystalMesh CLUSTER = cluster();
+    static final CrystalMesh DIAMOND = diamond();
 
-    static {
-        float[] ring = new float[SIDES * 3];
-        for (int i = 0; i < SIDES; i++) {
-            double a = 2 * Math.PI * i / SIDES;
-            double r = 0.3 * (0.9 + 0.2 * jitter(i, 1));
-            ring[i * 3] = (float) (Math.cos(a) * r);
-            ring[i * 3 + 1] = (float) (0.04 + 0.05 * (jitter(i, 2) - 0.5));
-            ring[i * 3 + 2] = (float) (Math.sin(a) * r);
+    private final int triangles;
+    /** x, y, z de cada vértice. */
+    private final float[] positions;
+    /** nx, ny, nz de cada triângulo. */
+    private final float[] normals;
+    /** A direção do contorno de cada vértice, unitária. */
+    private final float[] outlines;
+
+    private CrystalMesh(int triangles, float[] positions, float[] normals, float[] outlines) {
+        this.triangles = triangles;
+        this.positions = positions;
+        this.normals = normals;
+        this.outlines = outlines;
+    }
+
+    int triangles() {
+        return triangles;
+    }
+
+    int vertices() {
+        return 3 * triangles;
+    }
+
+    float x(int vertex) {
+        return positions[vertex * 3];
+    }
+
+    float y(int vertex) {
+        return positions[vertex * 3 + 1];
+    }
+
+    float z(int vertex) {
+        return positions[vertex * 3 + 2];
+    }
+
+    /** A altura relativa do vértice no cristal, de 0 a 1. */
+    float height(int vertex) {
+        return (y(vertex) - BOTTOM) / (TOP - BOTTOM);
+    }
+
+    float outlineX(int vertex) {
+        return outlines[vertex * 3];
+    }
+
+    float outlineY(int vertex) {
+        return outlines[vertex * 3 + 1];
+    }
+
+    float outlineZ(int vertex) {
+        return outlines[vertex * 3 + 2];
+    }
+
+    float normalX(int triangle) {
+        return normals[triangle * 3];
+    }
+
+    float normalY(int triangle) {
+        return normals[triangle * 3 + 1];
+    }
+
+    float normalZ(int triangle) {
+        return normals[triangle * 3 + 2];
+    }
+
+    private static CrystalMesh cluster() {
+        Builder b = new Builder(4 * SPIKE_SIDES * 4);
+        // x, z do centro, raio, inclinação x e z do ápice, altura do ombro, do ápice e giro
+        spike(b, 0.05, 0.00, 0.17, 0.02, 0.00, 0.30, TOP, 0.0);
+        spike(b, -0.23, 0.05, 0.14, -0.04, 0.00, 0.10, 0.30, 0.3);
+        spike(b, 0.25, -0.05, 0.12, 0.04, 0.00, -0.14, 0.06, 0.6);
+        spike(b, 0.02, 0.22, 0.10, 0.00, 0.03, -0.20, -0.02, 0.9);
+        return b.build();
+    }
+
+    /** Uma ponta hexagonal: o corpo do fundo ao ombro, a capa até o ápice e o fundo. */
+    private static void spike(Builder b, double cx, double cz, double r, double leanX, double leanZ, double shoulder,
+            double apexY, double turn) {
+        float[][] bottom = new float[SPIKE_SIDES][];
+        float[][] top = new float[SPIKE_SIDES][];
+        for (int i = 0; i < SPIKE_SIDES; i++) {
+            double a = turn + 2 * Math.PI * i / SPIKE_SIDES;
+            bottom[i] = new float[] {(float) (cx + Math.cos(a) * r), BOTTOM, (float) (cz + Math.sin(a) * r)};
+            top[i] = new float[] {(float) (cx + Math.cos(a) * r * 0.9 + leanX * 0.5), (float) shoulder,
+                (float) (cz + Math.sin(a) * r * 0.9 + leanZ * 0.5)};
+        }
+        float[] apex = {(float) (cx + leanX), (float) apexY, (float) (cz + leanZ)};
+        float[] floor = {(float) cx, BOTTOM, (float) cz};
+        float insideY = (float) ((BOTTOM + apexY) / 2);
+        for (int i = 0; i < SPIKE_SIDES; i++) {
+            int j = (i + 1) % SPIKE_SIDES;
+            b.triangle(bottom[i], bottom[j], top[j], (float) cx, insideY, (float) cz);
+            b.triangle(bottom[i], top[j], top[i], (float) cx, insideY, (float) cz);
+            b.triangle(top[i], top[j], apex, (float) cx, insideY, (float) cz);
+            b.triangle(bottom[j], bottom[i], floor, (float) cx, insideY, (float) cz);
+        }
+    }
+
+    private static CrystalMesh diamond() {
+        Builder b = new Builder(4 * BELT_SIDES);
+        float[][] upper = new float[BELT_SIDES][];
+        float[][] lower = new float[BELT_SIDES][];
+        for (int i = 0; i < BELT_SIDES; i++) {
+            double a = Math.PI / BELT_SIDES + 2 * Math.PI * i / BELT_SIDES;
+            float x = (float) (Math.cos(a) * BELT_RADIUS);
+            float z = (float) (Math.sin(a) * BELT_RADIUS);
+            upper[i] = new float[] {x, BELT_UPPER_Y, z};
+            lower[i] = new float[] {x, BELT_LOWER_Y, z};
         }
         float[] top = {0, TOP, 0};
         float[] bottom = {0, BOTTOM, 0};
-        for (int i = 0; i < SIDES; i++) {
-            int j = (i + 1) % SIDES;
-            triangle(2 * i, ring, i, ring, j, top, 0);
-            triangle(2 * i + 1, ring, j, ring, i, bottom, 0);
+        float insideY = (BELT_UPPER_Y + BELT_LOWER_Y) / 2;
+        for (int i = 0; i < BELT_SIDES; i++) {
+            int j = (i + 1) % BELT_SIDES;
+            b.triangle(upper[i], upper[j], top, 0, insideY, 0);
+            b.triangle(lower[j], lower[i], bottom, 0, insideY, 0);
+            b.triangle(lower[i], lower[j], upper[j], 0, insideY, 0);
+            b.triangle(lower[i], upper[j], upper[i], 0, insideY, 0);
         }
+        return b.build();
     }
 
-    private CrystalMesh() {
-    }
+    /** Junta os triângulos, virando para fora de um ponto de dentro. */
+    private static final class Builder {
+        private final int expected;
+        private final float[] positions;
+        private final float[] normals;
+        private final float[] outlines;
+        private int count;
 
-    /** O desvio fixo do vértice {@code i} do anel, de 0 a 1, o mesmo do protótipo. */
-    static double jitter(int i, int k) {
-        double s = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453;
-        return s - Math.floor(s);
-    }
-
-    static float x(int vertex) {
-        return POSITIONS[vertex * 3];
-    }
-
-    static float y(int vertex) {
-        return POSITIONS[vertex * 3 + 1];
-    }
-
-    static float z(int vertex) {
-        return POSITIONS[vertex * 3 + 2];
-    }
-
-    static float u(int vertex) {
-        return CORNERS[vertex * 2];
-    }
-
-    static float v(int vertex) {
-        return CORNERS[vertex * 2 + 1];
-    }
-
-    static float height(int vertex) {
-        return HEIGHTS[vertex];
-    }
-
-    static float normalX(int triangle) {
-        return NORMALS[triangle * 3];
-    }
-
-    static float normalY(int triangle) {
-        return NORMALS[triangle * 3 + 1];
-    }
-
-    static float normalZ(int triangle) {
-        return NORMALS[triangle * 3 + 2];
-    }
-
-    /** Grava o triângulo {@code t} de {@code a}, {@code b}, {@code c}, trocando a ordem se a normal sair para dentro. */
-    private static void triangle(int t, float[] pa, int ia, float[] pb, int ib, float[] pc, int ic) {
-        float ax = pa[ia * 3];
-        float ay = pa[ia * 3 + 1];
-        float az = pa[ia * 3 + 2];
-        float bx = pb[ib * 3];
-        float by = pb[ib * 3 + 1];
-        float bz = pb[ib * 3 + 2];
-        float cx = pc[ic * 3];
-        float cy = pc[ic * 3 + 1];
-        float cz = pc[ic * 3 + 2];
-        float[] n = cross(bx - ax, by - ay, bz - az, cx - ax, cy - ay, cz - az);
-        float mx = (ax + bx + cx) / 3;
-        float my = (ay + by + cy) / 3 - INSIDE_Y;
-        float mz = (az + bz + cz) / 3;
-        if (n[0] * mx + n[1] * my + n[2] * mz < 0) {
-            float sx = bx;
-            float sy = by;
-            float sz = bz;
-            bx = cx;
-            by = cy;
-            bz = cz;
-            cx = sx;
-            cy = sy;
-            cz = sz;
-            n[0] = -n[0];
-            n[1] = -n[1];
-            n[2] = -n[2];
+        Builder(int expected) {
+            this.expected = expected;
+            this.positions = new float[expected * 9];
+            this.normals = new float[expected * 3];
+            this.outlines = new float[expected * 9];
         }
-        NORMALS[t * 3] = n[0];
-        NORMALS[t * 3 + 1] = n[1];
-        NORMALS[t * 3 + 2] = n[2];
-        vertex(3 * t, ax, ay, az, 0, 0);
-        vertex(3 * t + 1, bx, by, bz, 1, 0);
-        vertex(3 * t + 2, cx, cy, cz, 0, 1);
-    }
 
-    private static void vertex(int vertex, float x, float y, float z, float u, float v) {
-        POSITIONS[vertex * 3] = x;
-        POSITIONS[vertex * 3 + 1] = y;
-        POSITIONS[vertex * 3 + 2] = z;
-        CORNERS[vertex * 2] = u;
-        CORNERS[vertex * 2 + 1] = v;
-        HEIGHTS[vertex] = (y - BOTTOM) / (TOP - BOTTOM);
-    }
+        /** O triângulo {@code a}, {@code b}, {@code c}, trocando a ordem se a normal sair para o lado de {@code inside}. */
+        void triangle(float[] a, float[] b, float[] c, float insideX, float insideY, float insideZ) {
+            float ux = b[0] - a[0];
+            float uy = b[1] - a[1];
+            float uz = b[2] - a[2];
+            float vx = c[0] - a[0];
+            float vy = c[1] - a[1];
+            float vz = c[2] - a[2];
+            float nx = uy * vz - uz * vy;
+            float ny = uz * vx - ux * vz;
+            float nz = ux * vy - uy * vx;
+            float length = (float) Math.sqrt(nx * nx + ny * ny + nz * nz);
+            nx /= length;
+            ny /= length;
+            nz /= length;
+            float mx = (a[0] + b[0] + c[0]) / 3 - insideX;
+            float my = (a[1] + b[1] + c[1]) / 3 - insideY;
+            float mz = (a[2] + b[2] + c[2]) / 3 - insideZ;
+            float[] second = b;
+            float[] third = c;
+            if (nx * mx + ny * my + nz * mz < 0) {
+                second = c;
+                third = b;
+                nx = -nx;
+                ny = -ny;
+                nz = -nz;
+            }
+            int p = count * 9;
+            System.arraycopy(a, 0, positions, p, 3);
+            System.arraycopy(second, 0, positions, p + 3, 3);
+            System.arraycopy(third, 0, positions, p + 6, 3);
+            normals[count * 3] = nx;
+            normals[count * 3 + 1] = ny;
+            normals[count * 3 + 2] = nz;
+            outline(a, p, insideX, insideY, insideZ);
+            outline(second, p + 3, insideX, insideY, insideZ);
+            outline(third, p + 6, insideX, insideY, insideZ);
+            count++;
+        }
 
-    private static float[] cross(float ax, float ay, float az, float bx, float by, float bz) {
-        float x = ay * bz - az * by;
-        float y = az * bx - ax * bz;
-        float z = ax * by - ay * bx;
-        float length = (float) Math.sqrt(x * x + y * y + z * z);
-        return new float[] {x / length, y / length, z / length};
+        private void outline(float[] v, int at, float insideX, float insideY, float insideZ) {
+            float dx = v[0] - insideX;
+            float dy = v[1] - insideY;
+            float dz = v[2] - insideZ;
+            float length = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+            outlines[at] = dx / length;
+            outlines[at + 1] = dy / length;
+            outlines[at + 2] = dz / length;
+        }
+
+        CrystalMesh build() {
+            if (count != expected) {
+                throw new IllegalStateException("a malha tem " + count + " triângulos, esperava " + expected);
+            }
+            return new CrystalMesh(count, positions, normals, outlines);
+        }
     }
 }

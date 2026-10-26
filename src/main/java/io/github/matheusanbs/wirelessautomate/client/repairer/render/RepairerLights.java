@@ -2,6 +2,9 @@ package io.github.matheusanbs.wirelessautomate.client.repairer.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import io.github.matheusanbs.wirelessautomate.client.resonator.render.PlasmaCore;
+import io.github.matheusanbs.wirelessautomate.client.resonator.render.RibbonParam;
+import io.github.matheusanbs.wirelessautomate.client.resonator.render.RibbonQuad;
+import io.github.matheusanbs.wirelessautomate.repairer.RepairMath;
 import net.minecraft.client.renderer.MultiBufferSource;
 
 /**
@@ -16,6 +19,15 @@ final class RepairerLights {
     private static final float EMITTER_HALF = RepairerGeometry.EMITTER_RADIUS / SPHERE;
     /** O laranja quente do núcleo de forja do mockup, mais claro que o coral para a borda do plasma brilhar. */
     private static final int EMITTER_COLOR = 0xFF8A5C;
+    private static final int RUNES = 8;
+    private static final float RUNE_HALF = 1.6f;
+    private static final float DOT_HALF = 0.8f;
+    private static final float PEDESTAL_HALF = 1.2f;
+    private static final int RUNE_COLOR = 0xFF825A;
+    private static final int PEDESTAL_COLOR = 0xFF9664;
+    /** O brilho redondo (sem anel) das runas e dos pedestais, largo para encher a peça como as do mockup. */
+    private static final int GLOW_DISC = RibbonParam.disc(0.8, false, 0);
+    private static final double MIN_LIGHT = 0.01;
 
     private RepairerLights() {
     }
@@ -31,6 +43,56 @@ final class RepairerLights {
         PlasmaCore.billboard(poseStack, buffer, EMITTER_HALF, EMITTER_COLOR, 255,
                 PlasmaCore.detail(frame.distanceSq), (int) Math.round(1000 * (1 - gain)));
         poseStack.popPose();
+        return 1;
+    }
+
+    /**
+     * As fitas, só com linha andando: as 8 runas e os 8 pontos do chão (fracos enquanto há reparo, com a onda de luz
+     * da puxada correndo do pedestal de cada linha) e o topo do pedestal de cada linha que anda; cada um é um disco de
+     * luz deitado. Devolve quantos quads desenhou.
+     */
+    static int ribbons(PoseStack.Pose pose, MultiBufferSource buffer, RepairFrame frame) {
+        if (!frame.running) {
+            return 0;
+        }
+        int drawn = 0;
+        for (int i = 0; i < RUNES; i++) {
+            drawn += disc(pose, buffer, RepairerGeometry.runeX(frame.quarter, i), RepairerGeometry.RUNE_Y,
+                    RepairerGeometry.runeZ(frame.quarter, i), RUNE_HALF, RUNE_COLOR, floorLight(frame, i, true));
+            drawn += disc(pose, buffer, RepairerGeometry.dotX(frame.quarter, i), RepairerGeometry.DOT_Y,
+                    RepairerGeometry.dotZ(frame.quarter, i), DOT_HALF, RUNE_COLOR, floorLight(frame, i, false));
+        }
+        for (int line = 0; line < RepairMath.LINES; line++) {
+            double s = frame.seconds[line];
+            if (s >= 0) {
+                drawn += disc(pose, buffer, RepairerGeometry.pedestalX(frame.quarter, line),
+                        RepairerGeometry.PEDESTAL_GLOW_Y, RepairerGeometry.pedestalZ(frame.quarter, line),
+                        PEDESTAL_HALF, PEDESTAL_COLOR, RepairTimeline.pedestal(s));
+            }
+        }
+        return drawn;
+    }
+
+    /** A luz da runa (ou do ponto) {@code i}: a de trabalho, mais a onda de cada linha que anda, até 1. */
+    private static double floorLight(RepairFrame frame, int i, boolean rune) {
+        double light = RepairTimeline.RUNES_WORKING;
+        for (int line = 0; line < RepairMath.LINES; line++) {
+            double s = frame.seconds[line];
+            if (s >= 0) {
+                double angle = rune ? RepairerGeometry.runeDistance(i, line) : RepairerGeometry.dotDistance(i, line);
+                light = Math.max(light, RepairTimeline.RUNES_WORKING + RepairTimeline.runeWave(s, angle));
+            }
+        }
+        return Math.min(1, light);
+    }
+
+    private static int disc(PoseStack.Pose pose, MultiBufferSource buffer, float x, float y, float z, float half,
+            int rgb, double intensity) {
+        if (intensity <= MIN_LIGHT) {
+            return 0;
+        }
+        RibbonQuad.flat(pose, buffer, x, y, z, half, rgb, (int) Math.round(255 * Math.min(1, intensity)),
+                RibbonParam.MODE_DISC, GLOW_DISC);
         return 1;
     }
 }

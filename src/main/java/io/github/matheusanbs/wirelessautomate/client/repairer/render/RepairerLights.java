@@ -6,13 +6,16 @@ import net.minecraft.client.renderer.MultiBufferSource;
 
 /**
  * As luzes do Reparador desenhadas pelo BER. O emissor é o plasma do Núcleo do Ressonador ({@link PlasmaCore}) em
- * miniatura, pendurado no centro do vidro: o meio lado do quad deixa a esfera do shader com ~1,6 px de raio, a largura
- * do {@code emitter_glow} do modelo, e o brilho da {@link RepairTimeline} vira o apagamento do shader.
+ * miniatura, pendurado logo abaixo do {@code emitter_glow} do modelo: o núcleo de forja do mockup é pequeno perto dos
+ * cristais (um terço da altura deles, com o brilho em volta), por isso a esfera tem o raio de
+ * {@link RepairerGeometry#EMITTER_RADIUS}, e o brilho da {@link RepairTimeline} vira o apagamento do shader.
  */
 final class RepairerLights {
-    private static final float EMITTER_HALF = 6.9f;
-    /** O coral do emissor no mockup aprovado. */
-    private static final int EMITTER_COLOR = 0xF0603E;
+    /** O raio da esfera do shader do plasma em frações do meio lado do quad ({@code SPHERE} do .fsh). */
+    private static final float SPHERE = 0.234f;
+    private static final float EMITTER_HALF = RepairerGeometry.EMITTER_RADIUS / SPHERE;
+    /** O laranja quente do núcleo de forja do mockup, mais claro que o coral para a borda do plasma brilhar. */
+    private static final int EMITTER_COLOR = 0xFF8A5C;
 
     private RepairerLights() {
     }

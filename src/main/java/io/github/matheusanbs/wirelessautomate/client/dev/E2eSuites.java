@@ -82,6 +82,10 @@ final class E2eSuites {
                     }, true, () -> true),
             suite("ressonador-jei", "JEI do Ressonador", Prereq.NENHUM, E2eJeiResonatorSteps::jeiResonatorSteps),
             suite("reparador", "Reparador de Cristais", Prereq.NENHUM, E2eRepairerSteps::repairerSteps),
+            suite("reparador-animacao", "a animação do Reparador no mundo e na tela, com o tempo parado em cada fase",
+                    Prereq.NENHUM, E2eRepairerAnimSteps::animationSteps),
+            optional("reparador-desempenho", "tempo de quadro do Reparador (mede, não afirma)", Prereq.NENHUM,
+                    E2eRepairerAnimSteps::perfSteps),
             new Suite("guia", "páginas do guia (com o GuideME)", Prereq.NENHUM, E2eGuideSteps::guideSteps, false,
                     () -> ModList.get().isLoaded("guideme")));
 

@@ -8,8 +8,8 @@ package io.github.matheusanbs.wirelessautomate.client.repairer.render;
  */
 public final class RepairerGeometry {
     public static final float CENTER = 8f;
-    public static final float EMITTER_Y = 11f;
-    public static final float EMITTER_RADIUS = 1.6f;
+    public static final float EMITTER_Y = 11.5f;
+    public static final float EMITTER_RADIUS = 1.1f;
     public static final float PEDESTAL_TOP_Y = 7.2f;
     public static final float RUNE_Y = 6.62f;
     public static final float DOT_Y = 6.64f;

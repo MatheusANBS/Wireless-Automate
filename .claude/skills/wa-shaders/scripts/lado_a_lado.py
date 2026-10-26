@@ -4,10 +4,15 @@ Uso:
     python -I lado_a_lado.py REFERENCIA.gif CAPTURAS_DIR SAIDA.png QUADRO:captura [QUADRO:captura ...]
         [--recorte-ref x0,y0,x1,y1] [--recorte-cap x0,y0,x1,y1] [--largura W]
 
+    python -I lado_a_lado.py REFERENCIAS_DIR CAPTURAS_DIR SAIDA.png nome:captura [nome:captura ...] [...]
+
 Cada par QUADRO:captura liga o número do quadro da referência ao nome do PNG em CAPTURAS_DIR (sem a extensão).
+Com uma pasta no lugar do GIF, cada par é nome:captura, onde nome.png é a referência dentro da pasta (as do
+scripts/preview/quadros_reparador.py, por exemplo raio-mundo:reparador-anim-raio-alto).
 Os recortes enquadram a mesma região nas duas; sem eles, as imagens inteiras. A saída tem uma linha por par.
 """
 import argparse
+import os
 
 from PIL import Image, ImageDraw
 
@@ -27,23 +32,27 @@ def main():
     ap.add_argument('--largura', type=int, default=560)
     a = ap.parse_args()
 
-    ref = Image.open(a.ref)
+    folder = os.path.isdir(a.ref)
     pairs = []
     for p in a.pairs:
         frame, name = p.split(':', 1)
-        pairs.append((int(frame), name))
+        pairs.append((frame if folder else int(frame), name))
+    ref = Image.open(os.path.join(a.ref, f'{pairs[0][0]}.png') if folder else a.ref)
     rbox = box(a.recorte_ref, ref.size)
     w = a.largura
     h = round(w * (rbox[3] - rbox[1]) / (rbox[2] - rbox[0]))
     sheet = Image.new('RGB', (2 * w + 10, len(pairs) * (h + 20)), (20, 20, 24))
     draw = ImageDraw.Draw(sheet)
     for k, (frame, name) in enumerate(pairs):
-        ref.seek(frame)
+        if folder:
+            ref = Image.open(os.path.join(a.ref, f'{frame}.png'))
+        else:
+            ref.seek(frame)
         left = ref.convert('RGB').crop(rbox).resize((w, h))
         shot = Image.open(f'{a.shots}/{name}.png').convert('RGB')
         right = shot.crop(box(a.recorte_cap, shot.size)).resize((w, h))
         y = k * (h + 20)
-        draw.text((6, y + 4), f'referência #{frame}', fill=(255, 255, 255))
+        draw.text((6, y + 4), f'referência {frame}' if folder else f'referência #{frame}', fill=(255, 255, 255))
         draw.text((w + 16, y + 4), name, fill=(255, 255, 255))
         sheet.paste(left, (0, y + 20))
         sheet.paste(right, (w + 10, y + 20))

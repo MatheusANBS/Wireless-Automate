@@ -63,6 +63,13 @@ td:last-child, th:last-child { text-align: right; }
 .scroll { overflow-x: auto; }
 .note { color: var(--muted); font-size: 13px; margin-top: 8px; }
 @media (prefers-reduced-motion: reduce) { canvas { } }
+/* Modo de quadro (#quadro=...): só as duas telas, uma sobre a outra, em 1056 px, para as referências do e2e. */
+html.quadro body { padding: 0; margin: 0; }
+html.quadro .wrap { max-width: none; width: 1056px; gap: 0; margin: 0; }
+html.quadro header, html.quadro .cols, html.quadro figcaption { display: none; }
+html.quadro .stage { display: block; }
+html.quadro figure { gap: 0; }
+html.quadro canvas { border: 0; border-radius: 0; width: 1056px; }
 </style>
 
 <div class="wrap">
@@ -563,7 +570,28 @@ td:last-child, th:last-child { text-align: right; }
   bTheme.addEventListener("click", function () { applyTheme(theme === "light" ? "dark" : "light"); });
   if (window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches) applyTheme("dark");
 
-  function start() { requestAnimationFrame(function (n) { last = n; t0 = n; frame(n); }); }
+  /* Um quadro parado, para as referências do e2e: todas as linhas no progresso p (0 a 1 dos 7 s), ou rachadas
+     paradas, com a energia ligada ou não; o relógio fica em 1 + 7p. Não mexe no desenho. */
+  window.waQuadro = function (p, energia, parado) {
+    state.power = !!energia; state.router = false; state.pool = 64; state.energy = energia ? 128000 : 0;
+    for (var i = 0; i < 8; i++) {
+      slots[i] = newSlot(i, parado ? "cracked" : "working", parado ? 0 : p);
+      outs[i] = null;
+    }
+    drawScreen(1 + p * 7);
+    drawWorld(1 + p * 7);
+  };
+  function quadro() {
+    var m = /^#quadro=([0-9.]+)(?:&energia=([01]))?(?:&parado=([01]))?/.exec(location.hash);
+    if (!m) return false;
+    document.documentElement.classList.add("quadro");
+    window.waQuadro(parseFloat(m[1]), m[2] !== "0", m[3] === "1");
+    return true;
+  }
+  function start() {
+    if (quadro()) return;
+    requestAnimationFrame(function (n) { last = n; t0 = n; frame(n); });
+  }
   if (document.fonts && document.fonts.load) {
     Promise.race([document.fonts.load("8px 'Pixelify Sans'"), new Promise(function (r) { setTimeout(r, 1500); })]).then(start, start);
   } else { start(); }

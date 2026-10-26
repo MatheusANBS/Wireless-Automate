@@ -95,6 +95,21 @@ public final class GuiPaint {
     public static final int SCOPE_BG = 0xFF1B1920;
     public static final int SCOPE_GRID = 0xFF2F2C35;
     public static final int SCOPE_LINE = 0xFF8EE8E1;
+    // -- a câmara do Reparador de Cristais: também fora da paleta, um vidro escuro nos dois temas
+    public static final int CHAMBER_TOP = 0xFF120F18;
+    public static final int CHAMBER_BOTTOM = 0xFF2B1D2D;
+    /** A borda dos pedestais e o anel do chão com energia (coral) e sem (cinza). */
+    public static final int CHAMBER_RIM = 0x99FF966E;
+    public static final int CHAMBER_RIM_OFF = 0x59968CAA;
+    /** O fundo dos pedestais, das barras e o véu da câmara sem energia. */
+    public static final int CHAMBER_SHADE = 0xB30A080E;
+    public static final int CHAMBER_VEIL = 0x730A080E;
+    /** O núcleo de forja: coral com energia, lilás apagado sem. */
+    public static final int CHAMBER_GLOW = 0xFFFF7A50;
+    public static final int CHAMBER_GLOW_OFF = 0xFF7A6E8C;
+    public static final int CHAMBER_CORE = 0xFFFFF8E1;
+    /** O aviso "Sem energia" sobre a câmara. */
+    public static final int CHAMBER_WARNING = 0xFFFF8A7A;
     /** O ciano do destaque no mundo, o do Olho aceso: fora da paleta, igual ao do contorno desenhado no mundo. */
     public static final int HIGHLIGHT = 0xFF3FC9BE;
 

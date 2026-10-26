@@ -4,6 +4,7 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorMenu;
+import io.github.matheusanbs.wirelessautomate.menu.RepairerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.ResonatorMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageScalarMenu;
@@ -43,6 +44,10 @@ public final class ModMenus {
     /** Tela do Núcleo de Ressonância (posição, tier e câmaras no buffer de abertura). */
     public static final Supplier<MenuType<ResonatorMenu>> RESONATOR =
             MENU_TYPES.register("resonator", () -> IMenuTypeExtension.create(ResonatorMenu::new));
+
+    /** Tela do Reparador de Cristais (a posição no buffer de abertura). */
+    public static final Supplier<MenuType<RepairerMenu>> CRYSTAL_REPAIRER =
+            MENU_TYPES.register("crystal_repairer", () -> IMenuTypeExtension.create(RepairerMenu::new));
 
     private ModMenus() {
     }

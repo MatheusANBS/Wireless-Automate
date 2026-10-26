@@ -15,6 +15,7 @@ import io.github.matheusanbs.wirelessautomate.menu.IdleNetworkUndo;
 import io.github.matheusanbs.wirelessautomate.client.linker.LinkerOpenClient;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorMenu;
+import io.github.matheusanbs.wirelessautomate.menu.RepairerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RemoteRouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterEditHost;
 import io.github.matheusanbs.wirelessautomate.menu.RouterFaceFilterTarget;
@@ -64,7 +65,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ModPayloads {
     /** Versão do protocolo; mude quando um payload mudar de formato. */
-    public static final String VERSION = "32";
+    public static final String VERSION = "33";
 
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(VERSION);
@@ -135,6 +136,8 @@ public final class ModPayloads {
         TabletPayloads.register(registrar);
         // Tela do Núcleo de Ressonância (packet/ResonatorPayloads).
         ResonatorPayloads.register(registrar);
+        // Tela do Reparador de Cristais (handler no RepairerMenu).
+        registrar.playToClient(RepairerStatePayload.TYPE, RepairerStatePayload.STREAM_CODEC, RepairerMenu::onState);
     }
 
     private static @Nullable ServerPlayer serverPlayer(IPayloadContext context) {

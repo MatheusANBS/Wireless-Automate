@@ -13,6 +13,7 @@ import io.github.matheusanbs.wirelessautomate.GuiTheme;
 import io.github.matheusanbs.wirelessautomate.client.filter.FilterScreen;
 import io.github.matheusanbs.wirelessautomate.client.linker.LinkerScreen;
 import io.github.matheusanbs.wirelessautomate.client.recipe.RecipeEditorScreen;
+import io.github.matheusanbs.wirelessautomate.client.repairer.RepairerScreen;
 import io.github.matheusanbs.wirelessautomate.client.resonator.screen.ResonatorScreen;
 import io.github.matheusanbs.wirelessautomate.client.router.RouterScreen;
 import io.github.matheusanbs.wirelessautomate.client.storage.StorageListScreen;
@@ -187,7 +188,7 @@ final class E2eDarkSteps {
         });
     }
 
-    /** A posição do botão do tema na tela aberta (cada uma das oito a calcula). */
+    /** A posição do botão do tema na tela aberta (cada uma a calcula). */
     private static int[] themeButton(@Nullable Screen screen) throws StepFailure {
         if (screen instanceof RouterScreen s) {
             return new int[] {s.themeX(), s.themeY()};
@@ -204,6 +205,8 @@ final class E2eDarkSteps {
         } else if (screen instanceof RecipeEditorScreen s) {
             return new int[] {s.themeX(), s.themeY()};
         } else if (screen instanceof ResonatorScreen s) {
+            return new int[] {s.themeX(), s.themeY()};
+        } else if (screen instanceof RepairerScreen s) {
             return new int[] {s.themeX(), s.themeY()};
         }
         throw new StepFailure("sem botão do tema na tela " + describe(screen));

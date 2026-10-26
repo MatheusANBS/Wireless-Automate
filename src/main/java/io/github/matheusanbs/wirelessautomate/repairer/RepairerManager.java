@@ -45,7 +45,9 @@ public final class RepairerManager {
         }
         long now = server.overworld().getGameTime();
         SCRATCH.clear();
-        SCRATCH.addAll(ACTIVE);
+        for (RepairerBlockEntity repairer : ACTIVE) {
+            SCRATCH.add(repairer);
+        }
         for (RepairerBlockEntity repairer : SCRATCH) {
             if (repairer.isRemoved() || !(repairer.getLevel() instanceof ServerLevel level)
                     || !level.shouldTickBlocksAt(ChunkPos.asLong(repairer.getBlockPos()))) {

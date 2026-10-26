@@ -39,14 +39,14 @@ final class CrystalRepairerCategory implements IRecipeCategory<CrystalRepairerCa
     private static final String KEY = "jei.wirelessautomate.crystal_repairer.";
 
     /** O cristal rachado, os Cristais de Sinal da alimentação (numa pilha só), o cristal reparado e o custo em FE. */
-    record Repair(ItemStack cracked, ItemStack feed, ItemStack repaired, long cost) {
+    record Repair(ItemStack cracked, ItemStack feed, ItemStack repaired) {
         static Repair of(Item crystal) {
             ItemStack cracked = new ItemStack(crystal);
             SignalCrystalItem.setCharge(cracked, 0);
             SignalCrystalItem.setIntegrity(cracked, 0);
             ItemStack feed = new ItemStack(ModItems.SIGNAL_CRYSTAL.get(), Math.max(1, Config.recastCrystals()));
             ItemStack repaired = new ItemStack(crystal);
-            return new Repair(cracked, feed, repaired, RepairerCosts.of(repaired));
+            return new Repair(cracked, feed, repaired);
         }
     }
 
@@ -124,13 +124,14 @@ final class CrystalRepairerCategory implements IRecipeCategory<CrystalRepairerCa
         String language = JeiText.language();
         int crystals = Config.recastCrystals();
         long ticks = Config.repairTicks();
-        if (!Objects.equals(language, noteLanguage) || crystals != noteCrystals || recipe.cost() != noteCost
+        long cost = RepairerCosts.of(recipe.repaired());
+        if (!Objects.equals(language, noteLanguage) || crystals != noteCrystals || cost != noteCost
                 || ticks != noteTicks) {
             noteLanguage = language;
             noteCrystals = crystals;
-            noteCost = recipe.cost();
+            noteCost = cost;
             noteTicks = ticks;
-            note = JeiText.split(Component.translatable(KEY + "note", crystals, TierCoreItem.grouped(recipe.cost()),
+            note = JeiText.split(Component.translatable(KEY + "note", crystals, TierCoreItem.grouped(cost),
                     JeiText.decimal(ticks / 20.0)), WIDTH - 8);
         }
         JeiText.drawCentered(graphics, note, WIDTH, 28);

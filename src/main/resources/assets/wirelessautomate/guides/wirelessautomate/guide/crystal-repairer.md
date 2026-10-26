@@ -50,7 +50,7 @@ the crystal type:
 | Tuned Ultimate | 536,870,912 |
 
 The numbers are the defaults; JEI shows your pack's. With little energy, a repair only starts when the buffer
-holds its whole cost.
+holds its whole cost. Breaking the block in the middle of a repair **loses the 4 crystals and the energy already spent** on it.
 
 ## Recipe
 

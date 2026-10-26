@@ -147,7 +147,7 @@ final class RepairerText {
 
     /**
      * A dica de um slot do Reparador vazio, ou {@code null} (o slot com item fica com a dica do item, mais a linha da
-     * entrada pelo {@link #inputLine}).
+     * entrada pelo {@link #inputLines}).
      */
     @Nullable List<Component> emptySlotTooltip(int index) {
         RepairerStatePayload state = menu.state();

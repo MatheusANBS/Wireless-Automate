@@ -1,109 +1,75 @@
 package io.github.matheusanbs.wirelessautomate.client.dev;
 
 import static io.github.matheusanbs.wirelessautomate.client.dev.DevEndToEnd.*;
-import static io.github.matheusanbs.wirelessautomate.client.dev.E2eConfiguratorSteps.*;
-import static io.github.matheusanbs.wirelessautomate.client.dev.E2eDarkSteps.*;
-import static io.github.matheusanbs.wirelessautomate.client.dev.E2eFilterSteps.*;
-import static io.github.matheusanbs.wirelessautomate.client.dev.E2eGuideSteps.*;
-import static io.github.matheusanbs.wirelessautomate.client.dev.E2eLinkerSteps.*;
-import static io.github.matheusanbs.wirelessautomate.client.dev.E2ePanelSteps.*;
-import static io.github.matheusanbs.wirelessautomate.client.dev.E2ePortugueseSteps.*;
-import static io.github.matheusanbs.wirelessautomate.client.dev.E2eRangeSteps.*;
-import static io.github.matheusanbs.wirelessautomate.client.dev.E2eRecipeSteps.*;
-import static io.github.matheusanbs.wirelessautomate.client.dev.E2eRepairerSteps.*;
-import static io.github.matheusanbs.wirelessautomate.client.dev.E2eResonatorSteps.*;
-import static io.github.matheusanbs.wirelessautomate.client.dev.E2eJeiResonatorSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eRouterSteps.*;
-import static io.github.matheusanbs.wirelessautomate.client.dev.E2eSourceTankSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eSteps.*;
-import static io.github.matheusanbs.wirelessautomate.client.dev.E2eStorageSteps.*;
-import static io.github.matheusanbs.wirelessautomate.client.dev.E2eTabletSteps.*;
 
+import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.client.dev.E2eSuites.Prereq;
+import io.github.matheusanbs.wirelessautomate.client.dev.E2eSuites.Suite;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import net.neoforged.fml.ModList;
-import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
+import java.util.Set;
 
 /**
- * O roteiro do e2e ({@code WA_E2E}): a ordem das áreas de passos, cada uma na sua classe. A ordem e os nomes dos
- * passos e das capturas são o contrato do {@code result.txt}.
+ * O roteiro do e2e ({@code WA_E2E}): a abertura e as suítes escolhidas, na ordem do {@link E2eSuites}. Escolha por
+ * {@code WA_E2E_ONLY=a,b,c} (vazio ou {@code todas}: as suítes padrão; {@code lista}: só mostra as suítes no log),
+ * {@code WA_E2E_SKIP=a,b} tira suítes, e {@code WA_E2E_PROFILE=completo} inclui as opcionais. Os nomes dos passos e das
+ * capturas são o contrato do {@code result.txt}.
  */
 final class E2eScript {
-    /**
-     * Opcional: {@code WA_E2E_ONLY=tablet} roda só a abertura, o nome e as redes de B, a transferência entre redes e os
-     * passos do Tablet; {@code WA_E2E_ONLY=vinculador}, só a abertura e os passos do Configurador e do Vinculador;
-     * {@code WA_E2E_ONLY=alcance}, só a abertura, as redes de B e os passos do roteador de alcance; {@code WA_E2E_ONLY=ressonador}, só a abertura e os passos do Ressonador,
-     * com os do JEI dele; {@code WA_E2E_ONLY=reparador}, só a abertura e a tela do Reparador de Cristais;
-     * {@code WA_E2E_ONLY=guia}, só a abertura e as páginas do guia (com o GuideME).
-     */
     private static final String ONLY = System.getenv("WA_E2E_ONLY");
+    private static final String SKIP = System.getenv("WA_E2E_SKIP");
 
     private E2eScript() {
     }
 
     static List<Step> script() {
+        List<Suite> available = new ArrayList<>();
+        for (Suite suite : E2eSuites.ALL) {
+            if (suite.disponivel().getAsBoolean()) {
+                available.add(suite);
+            }
+        }
+        if (E2eSelection.listOnly(ONLY)) {
+            for (Suite suite : available) {
+                WirelessAutomate.LOGGER.info("E2E suíte {}: {} (pré-requisito {}, {})", suite.nome(), suite.descricao(),
+                        suite.prereq(), suite.opcional() ? "opcional" : "padrão");
+            }
+            return new ArrayList<>();
+        }
+        List<String> names = new ArrayList<>();
+        Set<String> optional = new HashSet<>();
+        for (Suite suite : available) {
+            names.add(suite.nome());
+            if (suite.opcional()) {
+                optional.add(suite.nome());
+            }
+        }
+        List<String> chosen = E2eSelection.selectSuites(ONLY, SKIP, DevEndToEnd.PROFILE.optional(), names, optional);
         List<Step> list = new ArrayList<>();
         openingSteps(list);
-        if ("tablet".equals(ONLY)) {
-            networkSteps(list);
-            list.add(close("fechar B"));
-            typeNetworkTransferSteps(list);
-            tabletSteps(list);
-            return list;
-        }
-        if ("vinculador".equals(ONLY)) {
-            networkSteps(list);
-            list.add(close("fechar B"));
-            configuratorSteps(list);
-            linkerSteps(list);
-            return list;
-        }
-        if ("alcance".equals(ONLY)) {
-            networkSteps(list);
-            list.add(close("fechar B"));
-            rangeSteps(list);
-            return list;
-        }
-        if ("ressonador".equals(ONLY)) {
-            resonatorSteps(list);
-            jeiResonatorSteps(list);
-            return list;
-        }
-        if ("reparador".equals(ONLY)) {
-            repairerSteps(list);
-            return list;
-        }
-        if ("guia".equals(ONLY)) {
-            if (ModList.get().isLoaded("guideme")) {
-                guideSteps(list);
+        boolean needsNetworks = false;
+        boolean needsStorage = false;
+        for (Suite suite : available) {
+            if (chosen.contains(suite.nome())) {
+                needsNetworks |= suite.prereq() != Prereq.NENHUM;
+                needsStorage |= suite.prereq() == Prereq.ARMAZENAMENTO;
             }
-            return list;
         }
-        filterSteps(list);
-        networkSteps(list);
-        layoutSteps(list);
-        panelSteps(list);
-        attachedFrameSteps(list);
-        cardSteps(list);
-        chunkUpgradeSteps(list);
-        list.add(close("fechar B"));
-        rangeSteps(list);
-        typeNetworkTransferSteps(list);
-        tabletSteps(list);
-        configuratorSteps(list);
-        linkerSteps(list);
-        portugueseSteps(list);
-        storageChestSteps(list);
-        if (StorageKind.SOURCE_TANK.loaded()) {
-            sourceTankSteps(list);
+        if (needsStorage && !chosen.contains(E2eSuites.ARMAZENAMENTO)) {
+            chosen = new ArrayList<>(chosen);
+            chosen.add(E2eSuites.ARMAZENAMENTO);
         }
-        recipeEditorSteps(list);
-        darkSteps(list);
-        resonatorSteps(list);
-        jeiResonatorSteps(list);
-        repairerSteps(list);
-        if (ModList.get().isLoaded("guideme")) {
-            guideSteps(list);
+        if (needsNetworks && !chosen.contains(E2eSuites.ROTEADOR)) {
+            networkSteps(list);
+            list.add(close("fechar B"));
+        }
+        for (Suite suite : available) {
+            if (chosen.contains(suite.nome())) {
+                suite.passos().accept(list);
+            }
         }
         return list;
     }

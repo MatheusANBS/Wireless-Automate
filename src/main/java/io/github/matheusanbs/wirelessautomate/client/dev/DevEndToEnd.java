@@ -98,7 +98,7 @@ import io.github.matheusanbs.wirelessautomate.client.GuiThemes;
 public final class DevEndToEnd {
     /** Vitrine para a página do CurseForge: com {@code WA_SHOWCASE=<dir>}, monta uma fábrica e fotografa. */
     static final String SHOWCASE = System.getenv("WA_SHOWCASE");
-    private static final E2eSelection.Profile PROFILE = E2eSelection.profile(System.getenv("WA_E2E_PROFILE"));
+    static final E2eSelection.Profile PROFILE = E2eSelection.profile(System.getenv("WA_E2E_PROFILE"));
     private static final String CAPTURE = envOr("WA_E2E_CAPTURE", PROFILE.capture());
     private static final String OUTPUT = System.getenv("WA_E2E") != null ? System.getenv("WA_E2E") : SHOWCASE;
     /**

@@ -1,3 +1,15 @@
 {
-  "parent": "wirelessautomate:block/repairer/crystal_repairer"
+  "parent": "minecraft:block/block",
+  "loader": "neoforge:composite",
+  "textures": {
+    "particle": "wirelessautomate:block/repairer/repairer"
+  },
+  "children": {
+    "solido": {
+      "parent": "wirelessautomate:block/repairer/crystal_repairer"
+    },
+    "vidro": {
+      "parent": "wirelessautomate:block/repairer/crystal_repairer_glass"
+    }
+  }
 }

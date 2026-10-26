@@ -66,6 +66,13 @@ float tendrilOffset(float x, float seed, float tt) {
     return s * 2.4 * pow(sin(PI * clamp(x, 0.0, 1.0)), 0.8);
 }
 
+// O fio k do feixe do Reparador em x (0 a 1): uma hélice em volta do eixo (o seno da fase th, de lado; o cosseno é a
+// profundidade), com uma ondulação lenta por ruído, presa a zero nas duas pontas.
+float weaveY(float x, float th, float seed, float k, float amp) {
+    float wob = 0.18 * wa_noise(vec3(x * 3.0 - GameTime * 1200.0 * 0.8, seed + k * 4.7, 2.3));
+    return amp * pow(sin(PI * clamp(x, 0.0, 1.0)), 0.6) * (sin(th) + wob);
+}
+
 void main() {
     float t = GameTime * 1200.0;
     vec3 tier = params.rgb;
@@ -74,17 +81,14 @@ void main() {
     float arg = float(extra.y);
     vec3 col = vec3(0.0);
 
-    if (mode == 0 || mode == 1) {
+    if (mode == 0) {
         // o raio: um canal principal fractal, arcos secundários, forquilhas e uma descarga que o alarga, tudo pela faixa
         // de vazão. Sem tubo e sem contorno: núcleo branco em HDR, brilho que cai com a distância e o tier só no
         // brilho. O parâmetro leva a faixa (3 bits), a sintonia de 0 a 15 (4 bits), o buffer cheio (1 bit) e o
-        // comprimento da fita em décimos de bloco (7 bits). No modo 1 (o raio do Reparador) os 4 bits da sintonia são
-        // a semente da linha, para os 8 raios do mesmo quadro não terem o mesmo desenho, e a sintonia vale inteira
+        // comprimento da fita em décimos de bloco (7 bits)
         int bits = int(arg);
         int band = bits & 7;
-        bool repair = mode == 1;
-        float seedShift = repair ? float((bits >> 3) & 15) * 7.0 : 0.0;
-        float tuneV = repair ? 1.0 : float((bits >> 3) & 15) / 15.0;
+        float tuneV = float((bits >> 3) & 15) / 15.0;
         bool full = ((bits >> 7) & 1) != 0;
         float len = max(float((bits >> 8) & 127) * 0.1, 0.3);
         float aspect = len / 0.35;
@@ -94,12 +98,12 @@ void main() {
         // o raio é sorteado de novo a 11 a 17 Hz e cada sorteio acende forte e decai um pouco
         float rate = mix(11.0, 17.0, flow);
         float slot = floor(t * rate);
-        float flick = (0.75 + 0.5 * wa_h21(vec2(slot, 3.0 + seedShift))) * (0.85 + 0.15 * exp(-fract(t * rate) * 3.0));
+        float flick = (0.75 + 0.5 * wa_h21(vec2(slot, 3.0))) * (0.85 + 0.15 * exp(-fract(t * rate) * 3.0));
         float chance = mix(0.35, 1.0, tuneV);
         float wc = 0.018 + 0.018 * flow;
         // o canal principal, com pacotes de energia correndo
         float packet = 1.0 + 1.1 * pow(0.5 + 0.5 * sin(x * len * 9.0 - t * (6.0 + 2.0 * float(band))), 6.0);
-        float mainSeed = slot * 3.0 + seedShift;
+        float mainSeed = slot * 3.0;
         vec2 light = boltLight(boltDist(x, y, mainSeed, 0.42, aspect), wc) * vec2(packet, 1.0);
         // os arcos secundários: mais finos, mais soltos, em janelas que saltam
         int arcs = band >= 5 ? 3 : band == 4 ? 2 : band == 3 ? 1 : 0;
@@ -107,7 +111,7 @@ void main() {
             if (k >= arcs) break;
             float cycle = t * (1.1 + 0.4 * float(k)) + float(k) * 0.37;
             float on = step(fract(cycle), 0.6) * step(wa_h21(vec2(floor(cycle), float(k) * 5.0)), chance);
-            float seed = floor(t * 13.0 + float(k) * 3.0) * 5.0 + 101.0 + float(k) * 50.0 + seedShift;
+            float seed = floor(t * 13.0 + float(k) * 3.0) * 5.0 + 101.0 + float(k) * 50.0;
             light += boltLight(boltDist(x, y, seed, 0.75, aspect), wc * 0.6) * 0.55 * on;
         }
         // as forquilhas: saem do canal principal em ângulo, afinam e somem
@@ -141,6 +145,58 @@ void main() {
         float edgeY = 1.0 - smoothstep(0.25, 1.0, abs(y));
         col *= edgeY * edgeY;
         col *= smoothstep(0.0, 0.14, x) * (1.0 - smoothstep(0.90, 1.0, x));
+    } else if (mode == 1) {
+        // o feixe mágico do Reparador, do emissor ao rachado: três fios de plasma em espiral em volta do eixo, que
+        // ondulam devagar, com contas de luz correndo neles do emissor para o cristal, mais um fio fraco no eixo. Na
+        // convergência os fios abrem, engrossam, giram mais rápido e vibram sem ficar mais fortes, para não estourar em
+        // branco: o miolo é creme e fraco, não o HDR do raio. O parâmetro leva a semente da linha (4 bits), a força da convergência de 0 a 7
+        // (3 bits) e o comprimento sobre a meia largura vezes 0,35, em décimos (7 bits); o alfa é a força
+        int bits = int(arg);
+        float seed = float(bits & 15) * 2.31 + 0.7;
+        float surge = float((bits >> 4) & 7) / 7.0;
+        float aspect = max(float((bits >> 8) & 127) * 0.1, 0.3) / 0.35;
+        float x = quad.x;
+        float y = (quad.y - 0.5) * 2.0;
+        float amp = mix(0.40, 0.58, surge);
+        float turns = (1.4 + 0.6 * surge) * 2.0 * PI;
+        float spin = t * mix(2.2, 7.5, surge);
+        // a vibração da convergência: o feixe inteiro treme de lado
+        float shake = surge * 0.09 * sin(t * 61.0 + x * 37.0 + seed);
+        float wc = mix(0.040, 0.055, surge);
+        vec3 glowCol = mix(CORAL, tier, 0.5);
+        vec3 coreCol = mix(CREAM, tier, 0.3);
+        float e = 0.006;
+        for (int k = 0; k < 3; k++) {
+            float fk = float(k);
+            float ph = fk * 2.0944 + seed;
+            float th = x * turns - spin + ph;
+            float yk = weaveY(x, th, seed, fk, amp) + shake;
+            float slope = (weaveY(x + e, th + e * turns, seed, fk, amp) - weaveY(x - e, th - e * turns, seed, fk, amp))
+                    / (2.0 * e);
+            float kk = slope / aspect;
+            float d = abs(y - yk) / sqrt(1.0 + kk * kk);
+            // o fio da frente mais forte que o de trás, pela profundidade da hélice
+            float front = 0.5 + 0.5 * cos(th);
+            // as contas de luz, umas cinco por fio, correndo do emissor para o cristal
+            float bead = pow(0.5 + 0.5 * sin(x * 31.4 - t * 7.0 + ph * 3.0), 8.0);
+            float core = exp(-d * d / (wc * wc * 0.12)) * (0.45 + 0.55 * front) * (0.7 + 1.6 * bead);
+            float g = wc * 1.5 / (d + wc * 1.5);
+            col += coreCol * core * 0.9 + glowCol * g * g * (0.18 + 0.22 * front);
+        }
+        // as faíscas soltas que viajam pelos fios, uma por vez em cada um, mais rápidas que as contas
+        for (int m = 0; m < 3; m++) {
+            float fm = float(m);
+            float xm = fract(t * (0.55 + 0.1 * fm) + fm * 0.33 + seed * 0.1);
+            float thm = xm * turns - spin + fm * 2.0944 + seed;
+            vec2 dm = vec2((x - xm) * aspect, y - weaveY(xm, thm, seed, fm, amp) - shake);
+            col += CREAM * exp(-dot(dm, dm) / 0.02) * 1.1 * (0.5 + 0.5 * cos(thm));
+        }
+        col += glowCol * exp(-y * y / 0.03) * 0.16;
+        float edgeY = 1.0 - smoothstep(0.55, 1.0, abs(y));
+        col *= edgeY;
+        // os oito feixes nascem juntos no emissor e a fita soma: o começo some devagar, para a soma não estourar em
+        // branco perto dele (o brilho ali é o do próprio emissor)
+        col *= smoothstep(0.0, 0.30, x) * (1.0 - smoothstep(0.94, 1.0, x));
     } else if (mode == 3) {
         // o disco de luz do Reparador (runas, pedestais, clarão e onda de choque), num quad virado para a câmera ou
         // deitado: um brilho redondo (miolo creme e halo na cor) ou um anel fino com grão. O parâmetro leva o raio

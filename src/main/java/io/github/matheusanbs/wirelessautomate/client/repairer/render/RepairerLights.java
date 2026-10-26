@@ -49,7 +49,7 @@ final class RepairerLights {
     /**
      * As fitas, só com linha andando: as 8 runas e os 8 pontos do chão (fracos enquanto há reparo, com a onda de luz
      * da puxada correndo do pedestal de cada linha) e o topo do pedestal de cada linha que anda, cada um um disco de
-     * luz deitado, e os raios do {@link RepairerBeams}. Devolve quantos quads desenhou.
+     * luz deitado, e os feixes do {@link RepairerBeams}. Devolve quantos quads desenhou.
      */
     static int ribbons(PoseStack.Pose pose, MultiBufferSource buffer, RepairFrame frame) {
         if (!frame.running) {

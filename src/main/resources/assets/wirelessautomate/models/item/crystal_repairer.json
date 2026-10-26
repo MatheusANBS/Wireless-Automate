@@ -8,6 +8,9 @@
     "solido": {
       "parent": "wirelessautomate:block/repairer/crystal_repairer"
     },
+    "brilho": {
+      "parent": "wirelessautomate:block/repairer/crystal_repairer_glow"
+    },
     "vidro": {
       "parent": "wirelessautomate:block/repairer/crystal_repairer_glass"
     }

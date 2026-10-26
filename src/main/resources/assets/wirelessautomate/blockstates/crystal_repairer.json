@@ -18,6 +18,24 @@
     },
     {
       "when": {
+        "facing": "north",
+        "lit": "true"
+      },
+      "apply": {
+        "model": "wirelessautomate:block/repairer/crystal_repairer_glow"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "lit": "false"
+      },
+      "apply": {
+        "model": "wirelessautomate:block/repairer/crystal_repairer_glow_off"
+      }
+    },
+    {
+      "when": {
         "facing": "east"
       },
       "apply": {
@@ -31,6 +49,26 @@
       },
       "apply": {
         "model": "wirelessautomate:block/repairer/crystal_repairer_glass",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "lit": "true"
+      },
+      "apply": {
+        "model": "wirelessautomate:block/repairer/crystal_repairer_glow",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "lit": "false"
+      },
+      "apply": {
+        "model": "wirelessautomate:block/repairer/crystal_repairer_glow_off",
         "y": 90
       }
     },
@@ -49,6 +87,26 @@
       },
       "apply": {
         "model": "wirelessautomate:block/repairer/crystal_repairer_glass",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "lit": "true"
+      },
+      "apply": {
+        "model": "wirelessautomate:block/repairer/crystal_repairer_glow",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "lit": "false"
+      },
+      "apply": {
+        "model": "wirelessautomate:block/repairer/crystal_repairer_glow_off",
         "y": 180
       }
     },
@@ -67,6 +125,26 @@
       },
       "apply": {
         "model": "wirelessautomate:block/repairer/crystal_repairer_glass",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "lit": "true"
+      },
+      "apply": {
+        "model": "wirelessautomate:block/repairer/crystal_repairer_glow",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "lit": "false"
+      },
+      "apply": {
+        "model": "wirelessautomate:block/repairer/crystal_repairer_glow_off",
         "y": 270
       }
     }

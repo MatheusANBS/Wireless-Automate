@@ -11,8 +11,12 @@ A textura é o atlas pintado no Blockbench (256 × 256, embutido no `.bbmodel`):
 não misturar a face com o fundo transparente nem com a vizinha. O uv do JSON de bloco vai de 0 a 16, então é o uv
 em pixels × 16 / 256.
 
-O vidro (o elemento `glass`) vai num modelo à parte, translúcido; o blockstate junta os dois por `multipart` e
-o modelo de item pelo `neoforge:composite`. O JSON de bloco só aceita ângulos de -45 a 45 em passos de 22,5; os
+O vidro (o elemento `glass`) vai num modelo à parte, translúcido, e as luzes (os elementos do `_sem_sombra`) em
+dois modelos à parte, escolhidos pelo `lit` do blockstate: o aceso, com o atlas como foi pintado e a luz cheia
+(`neoforge_data`, o `ExtraFaceData` do NeoForge, lido por elemento no `BlockElement`), e o apagado, com a textura
+`repairer_off`, em que só os retângulos das luzes vão metade para o cinza e a 30% do brilho. Trocar o `lit` só
+remonta a seção no cliente: nada por quadro e visível a qualquer distância. O blockstate junta as partes por
+`multipart` e o modelo de item (aceso) pelo `neoforge:composite`. O JSON de bloco só aceita ângulos de -45 a 45 em passos de 22,5; os
 pedestais e as runas do anel giram em múltiplos de 22,5 até -405, então o giro é dividido em quartos de volta,
 aplicados na própria caixa (troca de faces e de eixos, exata), e o resto de -45 a 45, que fica como a rotação do
 elemento. A face que muda de lugar no quarto de volta ganha a `rotation` de face que põe cada canto da textura no
@@ -41,7 +45,10 @@ BBMODEL = RAIZ / "docs/preview/reparador-de-cristais.bbmodel"
 PASTA = "repairer"
 SOLIDO = "crystal_repairer"
 VIDRO = "crystal_repairer_glass"
+BRILHO = "crystal_repairer_glow"
+BRILHO_OFF = "crystal_repairer_glow_off"
 TEXTURA = f"block/{PASTA}/repairer"
+TEXTURA_OFF = f"block/{PASTA}/repairer_off"
 ELEMENTO_VIDRO = "glass"
 ELEMENTOS_ESPERADOS = 104
 ATLAS = 256
@@ -248,8 +255,34 @@ def _alfas(img: Image.Image, faces: list[dict]) -> list[int]:
     return alfas
 
 
-def _modelo(render_type: str, elementos: list[dict]) -> dict:
-    textura = f"{NS}:{TEXTURA}"
+def apagar(img: Image.Image, retangulos: list[tuple[int, int, int, int]]) -> Image.Image:
+    """As luzes apagadas: cada canal vai metade para o cinza (0,3r + 0,59g + 0,11b) e fica a 30%; o alfa não muda."""
+    out = img.copy()
+    for x0, y0, x1, y1 in retangulos:
+        for x in range(x0, x1):
+            for y in range(y0, y1):
+                r, g, b, a = img.getpixel((x, y))
+                cinza = 0.3 * r + 0.59 * g + 0.11 * b
+                out.putpixel((x, y), tuple(int(round((c + (cinza - c) * 0.5) * 0.30)) for c in (r, g, b)) + (a,))
+    return out
+
+
+def _acesa(el: dict) -> dict:
+    """A luz acesa: luz de bloco e de céu cheias no elemento, para brilhar no escuro sem `lightEmission`."""
+    saida = dict(el)
+    faces = saida.pop("faces")
+    saida["neoforge_data"] = {"block_light": 15, "sky_light": 15}
+    saida["faces"] = faces
+    return saida
+
+
+def _apagada(el: dict) -> dict:
+    """A luz apagada recebe a sombra e a luz do mundo como o resto do bloco."""
+    return {k: v for k, v in el.items() if k != "shade"}
+
+
+def _modelo(render_type: str, elementos: list[dict], textura_chave: str = TEXTURA) -> dict:
+    textura = f"{NS}:{textura_chave}"
     return {
         "parent": "minecraft:block/block",
         "render_type": render_type,
@@ -260,51 +293,67 @@ def _modelo(render_type: str, elementos: list[dict]) -> dict:
 
 
 def gerar(raiz_assets: Path = MODELOS) -> set[str]:
-    """Grava o atlas, os dois modelos, o blockstate e o modelo de item; devolve as chaves das texturas gravadas
+    """Grava os atlas aceso e apagado, os quatro modelos, o blockstate e o modelo de item; devolve as chaves das
+    texturas gravadas
     (relativas a `textures/`, como as do `limpar`)."""
     projeto = json.loads(BBMODEL.read_text(encoding="utf-8"))
     atlas = _atlas(projeto)
     elementos = [converter(el) for el in projeto["elements"]]
     vidro = [el for el in elementos if el["name"] == ELEMENTO_VIDRO]
-    solido = [el for el in elementos if el["name"] != ELEMENTO_VIDRO]
-    if len(solido) + len(vidro) != ELEMENTOS_ESPERADOS or len(projeto["elements"]) != ELEMENTOS_ESPERADOS:
-        raise ModeloInvalido(f"{len(solido)} sólidos + {len(vidro)} de vidro, esperado {ELEMENTOS_ESPERADOS}")
+    luzes = [el for el in elementos if _sem_sombra(el["name"])]
+    solido = [el for el in elementos if el["name"] != ELEMENTO_VIDRO and not _sem_sombra(el["name"])]
+    total = len(solido) + len(vidro) + len(luzes)
+    if total != ELEMENTOS_ESPERADOS or len(projeto["elements"]) != ELEMENTOS_ESPERADOS:
+        raise ModeloInvalido(f"{len(solido)} sólidos + {len(vidro)} de vidro + {len(luzes)} luzes, esperado "
+                             f"{ELEMENTOS_ESPERADOS}")
     if not vidro:
         raise ModeloInvalido("o .bbmodel não tem o elemento do vidro")
+    if not luzes:
+        raise ModeloInvalido("o .bbmodel não tem nenhuma luz")
     validar(elementos)
-    if any(a != 255 for a in _alfas(atlas, [f for el in solido for f in el["faces"].values()])):
-        raise ModeloInvalido("o modelo sólido usa um texel com alfa")
+    if any(a != 255 for a in _alfas(atlas, [f for el in solido + luzes for f in el["faces"].values()])):
+        raise ModeloInvalido("o modelo sólido ou as luzes usam um texel com alfa")
     alfas_vidro = _alfas(atlas, [f for el in vidro for f in el["faces"].values()])
     if any(a == 255 for a in alfas_vidro) or not any(alfas_vidro):
         raise ModeloInvalido("o vidro precisa de alfa parcial em todas as faces")
 
     retangulos = [_retangulo(face["uv"]) for el in projeto["elements"] for face in el["faces"].values()]
+    retangulos_luzes = [_retangulo(face["uv"]) for el in projeto["elements"] if _sem_sombra(el["name"])
+                        for face in el["faces"].values()]
     textura = ASSETS / f"{TEXTURA}.png"
     textura.parent.mkdir(parents=True, exist_ok=True)
     com_folga(atlas, retangulos).save(textura)
+    com_folga(apagar(atlas, retangulos_luzes), retangulos).save(ASSETS / f"{TEXTURA_OFF}.png")
     modelos = raiz_assets / "models/block" / PASTA
     grava_json(modelos / f"{SOLIDO}.json", _modelo("minecraft:solid", solido))
     grava_json(modelos / f"{VIDRO}.json", _modelo("minecraft:translucent", vidro))
+    grava_json(modelos / f"{BRILHO}.json", _modelo("minecraft:solid", [_acesa(el) for el in luzes]))
+    grava_json(modelos / f"{BRILHO_OFF}.json",
+               _modelo("minecraft:solid", [_apagada(el) for el in luzes], TEXTURA_OFF))
     partes = []
     for facing, y in GIRO_FACING.items():
-        for nome in (SOLIDO, VIDRO):
+        for nome, lit in ((SOLIDO, None), (VIDRO, None), (BRILHO, "true"), (BRILHO_OFF, "false")):
             aplica: dict = {"model": f"{NS}:block/{PASTA}/{nome}"}
             if y:
                 aplica["y"] = y
-            partes.append({"when": {"facing": facing}, "apply": aplica})
+            quando = {"facing": facing}
+            if lit:
+                quando["lit"] = lit
+            partes.append({"when": quando, "apply": aplica})
     grava_json(raiz_assets / f"blockstates/{SOLIDO}.json", {"multipart": partes})
-    # O item junta os dois pelo modelo composto do NeoForge: cada filho desenha com o próprio render_type, na ordem
-    # dos filhos (o sólido antes do vidro), e o `display` vem do `block/block`.
+    # O item junta as partes pelo modelo composto do NeoForge: cada filho desenha com o próprio render_type, na
+    # ordem dos filhos (o sólido e as luzes acesas antes do vidro), e o `display` vem do `block/block`.
     grava_json(raiz_assets / f"models/item/{SOLIDO}.json", {
         "parent": "minecraft:block/block",
         "loader": "neoforge:composite",
         "textures": {"particle": f"{NS}:{TEXTURA}"},
         "children": {
             "solido": {"parent": f"{NS}:block/{PASTA}/{SOLIDO}"},
+            "brilho": {"parent": f"{NS}:block/{PASTA}/{BRILHO}"},
             "vidro": {"parent": f"{NS}:block/{PASTA}/{VIDRO}"},
         },
     })
-    return {TEXTURA}
+    return {TEXTURA, TEXTURA_OFF}
 
 
 if __name__ == "__main__":

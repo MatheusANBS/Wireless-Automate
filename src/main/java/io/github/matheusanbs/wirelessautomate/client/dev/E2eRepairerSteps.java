@@ -237,7 +237,7 @@ final class E2eRepairerSteps {
                 return null;
             });
         }, () -> Minecraft.getInstance().player.getMainHandItem().is(ModItems.CRYSTAL_REPAIRER.get())
-                && itemPasses() == 2, () -> "mão " + Minecraft.getInstance().player.getMainHandItem() + ", "
+                && itemPasses() == 3, () -> "mão " + Minecraft.getInstance().player.getMainHandItem() + ", "
                 + itemPasses() + " passes do modelo do item"));
         list.add(blockShot("reparador-item", playerId, pos, Direction.NORTH));
         list.add(cameraShot("reparador-item-perto", playerId, () -> pos[0], new double[] {0, 0.35, -1.1}, 1.3));
@@ -247,7 +247,7 @@ final class E2eRepairerSteps {
         }), () -> true, () -> ""));
     }
 
-    /** Quantos modelos o item desenha: 2 (o sólido e o vidro) quando o modelo composto do item carregou. */
+    /** Quantos modelos o item desenha: 3 (o sólido, as luzes acesas e o vidro) quando o modelo composto do item carregou. */
     private static int itemPasses() {
         ItemStack stack = new ItemStack(ModItems.CRYSTAL_REPAIRER.get());
         return Minecraft.getInstance().getItemRenderer().getModel(stack, null, null, 0).getRenderPasses(stack, true)

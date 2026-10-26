@@ -40,7 +40,7 @@ final class E2eRepairerAnimSteps {
     static final String[] PHASES = {"puxa", "orbita", "raio", "solda", "fecha", "converge", "clarao", "onda"};
     static final double[] SECONDS = {0.25, 0.8, 2.0, 3.5, 5.0, 5.9, 6.45, 6.75};
     /** Quantos cristais e quads o BER põe em cada fase com as 8 linhas andando. */
-    static final int[] EXPECTED = {25, 33, 41, 41, 41, 41, 41, 41};
+    static final int[] EXPECTED = {25, 25, 33, 33, 33, 33, 33, 33};
     private static final long ANIM_REPAIR_TICKS = 1_000_000;
     private static final long ENERGY = 1_000_000;
     private static final long IDLE_ENERGY = 1_000;

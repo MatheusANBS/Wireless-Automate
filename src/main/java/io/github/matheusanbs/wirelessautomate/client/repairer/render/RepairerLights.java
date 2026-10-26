@@ -22,9 +22,7 @@ final class RepairerLights {
     private static final int RUNES = 8;
     private static final float RUNE_HALF = 1.6f;
     private static final float DOT_HALF = 0.8f;
-    private static final float PEDESTAL_HALF = 1.2f;
     private static final int RUNE_COLOR = 0xFF825A;
-    private static final int PEDESTAL_COLOR = 0xFF9664;
     /** O brilho redondo (sem anel) das runas e dos pedestais, largo para encher a peça como as do mockup. */
     private static final int GLOW_DISC = RibbonParam.disc(0.8, false, 0);
     private static final double MIN_LIGHT = 0.01;
@@ -54,8 +52,7 @@ final class RepairerLights {
 
     /**
      * As fitas, só com linha andando: as 8 runas e os 8 pontos do chão (fracos enquanto há reparo, com a onda de luz
-     * da puxada correndo do pedestal de cada linha) e o topo do pedestal de cada linha que anda, cada um um disco de
-     * luz deitado, e os feixes do {@link RepairerBeams}. Devolve quantos quads desenhou.
+     * da puxada correndo do pedestal de cada linha) e os feixes do {@link RepairerBeams}. Devolve quantos quads desenhou.
      */
     static int ribbons(PoseStack.Pose pose, MultiBufferSource buffer, RepairFrame frame) {
         if (!frame.running) {
@@ -67,14 +64,6 @@ final class RepairerLights {
                     RepairerGeometry.runeZ(frame.quarter, i), RUNE_HALF, RUNE_COLOR, floorLight(frame, i, true));
             drawn += disc(pose, buffer, RepairerGeometry.dotX(frame.quarter, i), RepairerGeometry.DOT_Y,
                     RepairerGeometry.dotZ(frame.quarter, i), DOT_HALF, RUNE_COLOR, floorLight(frame, i, false));
-        }
-        for (int line = 0; line < RepairMath.LINES; line++) {
-            double s = frame.seconds[line];
-            if (s >= 0) {
-                drawn += disc(pose, buffer, RepairerGeometry.pedestalX(frame.quarter, line),
-                        RepairerGeometry.PEDESTAL_GLOW_Y, RepairerGeometry.pedestalZ(frame.quarter, line),
-                        PEDESTAL_HALF, PEDESTAL_COLOR, RepairTimeline.pedestal(s));
-            }
         }
         return drawn + RepairerBeams.render(pose, buffer, frame) + burst(pose, buffer, frame);
     }

@@ -152,6 +152,7 @@ public final class DevEndToEnd {
     private static int ticks;
     private static long phaseStart;
     private static final List<String> log = new ArrayList<>();
+    private static final E2eTiming timing = new E2eTiming();
     private static List<Step> steps;
     private static int stepIndex;
     private static boolean stepStarted;
@@ -292,6 +293,7 @@ public final class DevEndToEnd {
         long spent = System.currentTimeMillis() - stepStart;
         if (done) {
             record(step.name(), spent + " ms, " + stepTicks + " ticks; " + describe(step));
+            timing.step(step.name(), spent);
             stepIndex++;
             stepStarted = false;
         } else if (spent > step.timeoutMs()) {
@@ -334,6 +336,7 @@ public final class DevEndToEnd {
             List<String> lines = new ArrayList<>();
             lines.add(head);
             lines.addAll(log);
+            lines.addAll(timing.summary());
             Files.write(dir.resolve("result.txt"), lines, StandardCharsets.UTF_8);
         } catch (IOException e) {
             WirelessAutomate.LOGGER.error("Falha ao escrever result.txt", e);
@@ -372,6 +375,12 @@ public final class DevEndToEnd {
                 registries -> registries.registryOrThrow(Registries.WORLD_PRESET)
                         .getHolderOrThrow(WorldPresets.FLAT).value().createWorldDimensions(),
                 parent);
+    }
+
+    /** Passo instantâneo que abre a suíte no roteiro; o {@link E2eTiming} soma o tempo dela a partir daqui. */
+    static Step suiteMarker(String suite) {
+        return new Step(E2eTiming.MARKER + suite + " ==", STEP_TIMEOUT_MS, () -> {
+        }, () -> true, () -> suite);
     }
 
     static Step wait(String name, int waitTicks) {

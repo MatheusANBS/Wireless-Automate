@@ -68,6 +68,7 @@ final class E2eScript {
         }
         for (Suite suite : available) {
             if (chosen.contains(suite.nome())) {
+                list.add(suiteMarker(suite.nome()));
                 suite.passos().accept(list);
             }
         }

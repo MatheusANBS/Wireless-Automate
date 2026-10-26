@@ -54,7 +54,7 @@ public final class RepairerRenderer implements BlockEntityRenderer<RepairerBlock
         boolean shader = !forceLegacyForTests && PlasmaShader.get() != null && RibbonShader.get() != null
                 && CrystalShader.get() != null && !ShaderPackCheck.active();
         if (!shader) {
-            lastPrimitivesForTests = 0;
+            lastPrimitivesForTests = RepairerFallback.render(poseStack, buffer, view, state, level);
             return;
         }
         RepairFrame frame = fill(repairer.getBlockPos(), state, view, lit, level.getGameTime(), partialTick, light);

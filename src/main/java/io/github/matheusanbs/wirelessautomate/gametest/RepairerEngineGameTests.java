@@ -289,4 +289,35 @@ public final class RepairerEngineGameTests {
             helper.assertTrue(repairer.items().get(0).isEmpty() && repairer.items().get(1).isEmpty(), "sobrou item");
         });
     }
+
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void linhaAndandoDevolveOsCristaisGastos(GameTestHelper helper) {
+        RepairerGameTests.repairer(helper, repairer -> {
+            ItemStack cracked = RepairerGameTests.cracked(true);
+            helper.assertValueEqual(repairer.refundCrystals(), 0, "devolução sem linha andando");
+            repairer.items().set(0, cracked);
+            repairer.items().set(RepairerSlots.FEED, full().copyWithCount(4));
+            bulk(helper).insert(RepairerCosts.of(cracked), false);
+            helper.assertTrue(repairer.running(0), "a linha 0 não começou");
+            helper.assertValueEqual(repairer.refundCrystals(), Config.recastCrystals(), "devolução da linha andando");
+            repairer.tick(later(helper));
+            helper.assertValueEqual(repairer.refundCrystals(), 0, "devolução depois do reparo");
+        });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void bufferCabeOReparoMaisCaroDeQualquerTier(GameTestHelper helper) {
+        RepairerGameTests.repairer(helper, repairer -> {
+            for (RouterTier tier : RouterTier.values()) {
+                long cost = RepairMath.cost(Config.resonatorFePerCrystal(tier), Config.repairCostFactor());
+                helper.assertTrue(repairer.energy().capacity() >= cost, "o buffer não cabe o reparo do " + tier);
+            }
+        });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void entradaRecusaCristalRachadoNoEstoque(GameTestHelper helper) {
+        helper.assertTrue(!RepairerSlots.acceptsFeed(RepairerGameTests.cracked()), "o estoque aceitou um rachado");
+        helper.succeed();
+    }
 }

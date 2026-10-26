@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<title>Seletor de rede e Voltar todas ao perfil</title>
+<style>
+  :root {
+    --panel:#c6c6c6; --inset:#b5b5b5; --btn:#d9d9d9; --border:#7a7a7a; --line:#9a9a9a;
+    --fg:#2b2b2b; --muted:#6b6b6b; --accent:#d9603b; --sel:#e8e8e8; --hover:#dcdcdc; --danger:#b3362b;
+    --font:"Courier New", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --panel:#2c2c2e; --inset:#232325; --btn:#3a3a3d; --border:#6a6a6e; --line:#4a4a4e;
+      --fg:#e6e6e6; --muted:#9a9a9e; --accent:#ef7a55; --sel:#48484c; --hover:#3e3e42; }
+  }
+  body { margin:0; padding:20px 16px 40px; background:var(--inset); color:var(--fg); font:14px/1.4 system-ui,sans-serif; }
+  h1 { font-size:18px; margin:0 0 4px; }
+  p.sub { margin:0 0 20px; color:var(--muted); max-width:720px; }
+  .grid { display:flex; flex-wrap:wrap; gap:20px; }
+  .card { background:var(--panel); border:2px solid var(--border); padding:12px; width:300px; }
+  .card h2 { font-size:12px; margin:0 0 10px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); }
+  .mc { font:12px var(--font); }
+  .pill { display:flex; align-items:center; gap:6px; height:16px; border:1px solid var(--border); border-radius:8px;
+    background:var(--btn); padding:0 6px; margin-bottom:2px; }
+  .dot { width:6px; height:6px; border-radius:50%; flex:none; }
+  .ring { width:6px; height:6px; border:1px solid var(--muted); flex:none; }
+  .pop { border:1px solid var(--border); background:var(--panel); box-shadow:2px 2px 0 rgba(0,0,0,.25); }
+  .title { padding:3px 6px 3px; color:var(--muted); border-bottom:1px solid var(--line); }
+  .search { display:flex; align-items:center; gap:5px; margin:4px; padding:0 5px; height:15px; background:var(--inset);
+    border:1px solid var(--border); }
+  .search .q { color:var(--fg); flex:1; }
+  .search .ph { color:var(--muted); flex:1; }
+  .caret { display:inline-block; width:1px; height:9px; background:var(--fg); vertical-align:middle; }
+  .row { display:flex; align-items:center; gap:6px; height:13px; padding:0 6px 0 7px; position:relative; }
+  .row.cur { background:var(--sel); }
+  .row.cur::before { content:""; position:absolute; left:0; top:0; bottom:0; width:2px; background:var(--accent); }
+  .row.hov { background:var(--hover); }
+  .row.dim { opacity:.45; }
+  .sw { width:7px; height:7px; flex:none; box-shadow:inset 0 0 0 1px rgba(0,0,0,.35); }
+  .nm { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ck { color:var(--accent); width:8px; text-align:right; }
+  .pin { border-bottom:1px solid var(--line); }
+  .hit { color:var(--accent); text-decoration:underline; }
+  .foot { padding:2px 7px; color:var(--muted); border-top:1px solid var(--line); font-size:11px; }
+  .empty { padding:6px 7px; color:var(--muted); }
+  .old .row { gap:6px; }
+  .lrow { display:flex; align-items:center; height:22px; padding:0 3px 0 6px; gap:4px; background:var(--sel);
+    border-left:2px solid var(--accent); }
+  .lrow .nm { font-weight:bold; }
+  .b { width:10px; height:10px; border:1px solid var(--border); background:var(--btn); display:grid; place-items:center;
+    font-size:8px; line-height:1; flex:none; }
+  .b.rv { border-color:var(--accent); color:var(--accent); }
+  .b.wide { width:auto; padding:0 3px; background:var(--danger); border-color:var(--danger); color:#fff; font-size:11px; height:10px; }
+  .lrow2 { height:16px; padding:0 6px; color:var(--muted); display:flex; align-items:center; gap:6px; }
+  .note { margin-top:10px; font:12px system-ui,sans-serif; color:var(--muted); }
+</style>
+</head>
+<body>
+<h1>Seletor de rede e Voltar todas ao perfil</h1>
+<p class="sub">Escala 2×, tema claro (o escuro segue o sistema). Proposta: "Sem rede" fixo no topo, busca sempre à vista, a cor da rede como amostra quadrada, ✓ na atual, e o ↺ no grupo escolhido com dois cliques.</p>
+
+<div class="grid">
+
+  <div class="card">
+    <h2>Hoje (referência)</h2>
+    <div class="mc old" style="zoom:1.6">
+      <div class="pill"><span class="dot" style="background:#3b8ad9"></span><span class="nm">Minha fábrica</span><span>▾</span></div>
+      <div class="pop">
+        <div class="title">Rede de Cima · Itens</div>
+        <div class="row cur"><span class="sw" style="background:#3b8ad9;border-radius:50%"></span><span class="nm">Minha fábrica</span></div>
+        <div class="row"><span class="sw" style="background:#4aa84a;border-radius:50%"></span><span class="nm">Mineração</span></div>
+        <div class="row"><span class="sw" style="background:#d9a43b;border-radius:50%"></span><span class="nm">Farm de mobs</span></div>
+        <div class="row"><span class="sw" style="background:#9a4ad9;border-radius:50%"></span><span class="nm">Reator</span></div>
+        <div class="row"><span class="ring"></span><span class="nm" style="color:var(--muted)">Sem rede</span></div>
+      </div>
+    </div>
+    <div class="note">Sem rede só no fim, sem busca: com 20+ redes é rolar a roda.</div>
+  </div>
+
+  <div class="card">
+    <h2>Novo · aberto</h2>
+    <div class="mc" style="zoom:1.6">
+      <div class="pill"><span class="dot" style="background:#3b8ad9"></span><span class="nm">Minha fábrica</span><span>▾</span></div>
+      <div class="pop">
+        <div class="title">Rede de Cima · Itens</div>
+        <div class="search"><span class="ph">Buscar rede…</span></div>
+        <div class="row pin"><span class="ring"></span><span class="nm" style="color:var(--muted)">Sem rede</span></div>
+        <div class="row cur"><span class="sw" style="background:#3b8ad9"></span><span class="nm">Minha fábrica</span><span class="ck">✓</span></div>
+        <div class="row hov"><span class="sw" style="background:#4aa84a"></span><span class="nm">Mineração</span></div>
+        <div class="row"><span class="sw" style="background:#d9a43b"></span><span class="nm">Farm de mobs</span></div>
+        <div class="row"><span class="sw" style="background:#9a4ad9"></span><span class="nm">Reator</span></div>
+        <div class="row dim"><span class="sw" style="background:#888"></span><span class="nm">Rede do Fulano 🔒</span></div>
+        <div class="row"><span class="sw" style="background:#d95a8a"></span><span class="nm">Química</span></div>
+        <div class="row"><span class="sw" style="background:#3bd9c7"></span><span class="nm">Ressonadores</span></div>
+        <div class="foot">12 redes ▼</div>
+      </div>
+    </div>
+    <div class="note">Sem rede e a busca não rolam; só as redes rolam (até 8 linhas).</div>
+  </div>
+
+  <div class="card">
+    <h2>Novo · digitando "mi"</h2>
+    <div class="mc" style="zoom:1.6">
+      <div class="pill"><span class="dot" style="background:#3b8ad9"></span><span class="nm">Minha fábrica</span><span>▾</span></div>
+      <div class="pop">
+        <div class="title">Rede de Cima · Itens</div>
+        <div class="search"><span class="q">mi<span class="caret"></span></span><span style="color:var(--muted)">✕</span></div>
+        <div class="row pin"><span class="ring"></span><span class="nm" style="color:var(--muted)">Sem rede</span></div>
+        <div class="row cur"><span class="sw" style="background:#3b8ad9"></span><span class="nm"><span class="hit">Mi</span>nha fábrica</span><span class="ck">✓</span></div>
+        <div class="row hov"><span class="sw" style="background:#4aa84a"></span><span class="nm"><span class="hit">Mi</span>neração</span></div>
+        <div class="row"><span class="sw" style="background:#d95a8a"></span><span class="nm">Quí<span class="hit">mi</span>ca</span></div>
+        <div class="foot">3 de 12</div>
+      </div>
+    </div>
+    <div class="note">Sem acento nem maiúscula (como a busca do filtro). Enter escolhe a primeira. Esc limpa, e de novo fecha.</div>
+  </div>
+
+  <div class="card">
+    <h2>Novo · sem resultado</h2>
+    <div class="mc" style="zoom:1.6">
+      <div class="pop">
+        <div class="title">Rede de Cima · Itens</div>
+        <div class="search"><span class="q">zzz<span class="caret"></span></span><span style="color:var(--muted)">✕</span></div>
+        <div class="row pin"><span class="ring"></span><span class="nm" style="color:var(--muted)">Sem rede</span></div>
+        <div class="empty">Nenhuma rede com "zzz"</div>
+      </div>
+    </div>
+    <div class="note">"Sem rede" continua à mão.</div>
+  </div>
+
+  <div class="card">
+    <h2>Grupo com exceções · escolhido</h2>
+    <div class="mc" style="zoom:1.6">
+      <div class="lrow"><span class="nm">Fornalha ×3</span><span class="b rv">↺</span><span class="b">✎</span></div>
+      <div class="lrow2"><span>2 exceções</span></div>
+    </div>
+    <div class="note">O ↺ só aparece no grupo escolhido e só com exceções (como o ↺ da máquina).</div>
+  </div>
+
+  <div class="card">
+    <h2>Grupo · armado (3 s)</h2>
+    <div class="mc" style="zoom:1.6">
+      <div class="lrow"><span class="nm">Fornalha ×3</span><span class="b wide">Voltar 2?</span></div>
+      <div class="lrow2"><span>2 exceções</span></div>
+    </div>
+    <div class="note">Segundo clique confirma; sair com o mouse ou trocar de linha desarma. Os outros botões saem para o texto caber.</div>
+  </div>
+
+</div>
+</body>
+</html>

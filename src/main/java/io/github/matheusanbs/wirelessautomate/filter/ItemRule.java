@@ -5,6 +5,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.netty.buffer.ByteBuf;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -40,12 +41,14 @@ import org.jetbrains.annotations.Nullable;
  * @param enchantment encantamento com nível mínimo (no item ou guardado num livro)
  * @param durability  durabilidade restante, em porcentagem; só itens que gastam
  * @param scope       "só em": vazio, {@code #tag} ou {@code @mod}
- * @param component   componente de dados de qualquer mod: vazio, {@code id} (tem o componente) ou
- *                    {@code id=valor} (o valor serializado é igual; o valor pode vir sem o namespace)
+ * @param component   condições sobre os componentes de dados de qualquer mod, separadas por {@code ;} (todas valem):
+ *                    vazio, {@code id}, {@code id op valor} ou {@code id->campo op valor}; ver {@link ComponentQuery}
  */
 public record ItemRule(Map<Property, Boolean> flags, Optional<Enchant> enchantment, Optional<Durability> durability,
         String scope, String component) {
     public static final int MAX_SCOPE = 128;
+    /** O componente cabe mais: várias condições ({@code ;}) com caminho. */
+    public static final int MAX_COMPONENT = 256;
     public static final ItemRule EMPTY = new ItemRule(Map.of(), Optional.empty(), Optional.empty(), "", "");
 
     public ItemRule {
@@ -137,7 +140,7 @@ public record ItemRule(Map<Property, Boolean> flags, Optional<Enchant> enchantme
         ByteBufCodecs.optional(Enchant.STREAM_CODEC).encode(buf, rule.enchantment);
         ByteBufCodecs.optional(Durability.STREAM_CODEC).encode(buf, rule.durability);
         ByteBufCodecs.stringUtf8(MAX_SCOPE).encode(buf, rule.scope);
-        ByteBufCodecs.stringUtf8(MAX_SCOPE).encode(buf, rule.component);
+        ByteBufCodecs.stringUtf8(MAX_COMPONENT).encode(buf, rule.component);
     }
 
     private static ItemRule decode(ByteBuf buf) {
@@ -154,7 +157,7 @@ public record ItemRule(Map<Property, Boolean> flags, Optional<Enchant> enchantme
         }
         return new ItemRule(flags, ByteBufCodecs.optional(Enchant.STREAM_CODEC).decode(buf),
                 ByteBufCodecs.optional(Durability.STREAM_CODEC).decode(buf), ByteBufCodecs.stringUtf8(MAX_SCOPE).decode(buf),
-                ByteBufCodecs.stringUtf8(MAX_SCOPE).decode(buf));
+                ByteBufCodecs.stringUtf8(MAX_COMPONENT).decode(buf));
     }
 
     // ------------------------------------------------------------------ edição
@@ -175,25 +178,18 @@ public record ItemRule(Map<Property, Boolean> flags, Optional<Enchant> enchantme
         return !isEmpty() && validScope() && validComponent() && scope.length() <= MAX_SCOPE;
     }
 
-    /** O componente é vazio ou {@code id} / {@code id=valor} bem escritos. */
-    public boolean validComponent() {
-        return component.isEmpty() || (componentId() != null && component.length() <= MAX_SCOPE);
-    }
-
-    /** O id do componente ({@code apotheosis:purity}), ou {@code null}. */
-    public @Nullable ResourceLocation componentId() {
-        int eq = component.indexOf('=');
-        return ResourceLocation.tryParse(eq < 0 ? component : component.substring(0, eq).strip());
-    }
-
-    /** O valor pedido do componente (o que vem depois do {@code =}), ou {@code null} se só exige o componente. */
-    public @Nullable String componentValue() {
-        int eq = component.indexOf('=');
-        if (eq < 0) {
-            return null;
+    /** As condições de componente para ler, juntas por " + " ({@link ComponentQuery#summary}); o texto cru se mal escritas. */
+    public String componentSummary() {
+        List<ComponentQuery> all = ComponentQuery.parseAll(component);
+        if (all == null) {
+            return component;
         }
-        String value = component.substring(eq + 1).strip();
-        return value.isEmpty() ? null : value;
+        return all.stream().map(ComponentQuery::summary).collect(java.util.stream.Collectors.joining(" + "));
+    }
+
+    /** O componente é vazio ou são condições ({@link ComponentQuery}) bem escritas, separadas por {@code ;}. */
+    public boolean validComponent() {
+        return component.isEmpty() || component.length() <= MAX_COMPONENT && ComponentQuery.parseAll(component) != null;
     }
 
     public @Nullable Boolean flag(Property property) {
@@ -265,7 +261,7 @@ public record ItemRule(Map<Property, Boolean> flags, Optional<Enchant> enchantme
             text.append(Component.translatable(TEXT + "text.any"));
         }
         if (!component.isEmpty()) {
-            part(text, Component.translatable(TEXT + "text.component", component));
+            part(text, Component.translatable(TEXT + "text.component", componentSummary()));
         }
         if (!scope.isEmpty()) {
             text.append(Component.translatable(TEXT + "text.scope", scope));
@@ -313,7 +309,7 @@ public record ItemRule(Map<Property, Boolean> flags, Optional<Enchant> enchantme
             wanted[i] = flags.get(properties[i]);
         }
         Durability wear = durability.orElse(null);
-        ComponentCondition custom = component.isEmpty() ? null : ComponentCondition.of(componentId(), componentValue());
+        ComponentCondition custom = component.isEmpty() ? null : ComponentCondition.of(component);
         return stack -> {
             if (badScope || stack.isEmpty()) {
                 return false;

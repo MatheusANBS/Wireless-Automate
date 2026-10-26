@@ -75,6 +75,16 @@ final class ScreenshotRouter {
             new Step(() -> {
                 screen.previewNetworkList(false);
                 screen.previewType(ResourceType.ITEM);
+                screen.previewNetworkList(true);
+                screen.previewNetworkQuery("mi");
+                mouseX = mouseY = -1;
+            }, "4f-redes-busca"),
+            new Step(() -> {
+                screen.previewNetworkQuery("zzz");
+            }, "4g-redes-busca-vazia"),
+            new Step(() -> {
+                screen.previewNetworkList(false);
+                screen.previewType(ResourceType.ITEM);
                 int[] center = screen.previewTabCenter(ResourceType.FLUID);
                 mouseX = center[0];
                 mouseY = center[1];

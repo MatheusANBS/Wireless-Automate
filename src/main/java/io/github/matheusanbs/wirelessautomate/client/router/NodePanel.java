@@ -566,6 +566,10 @@ public final class NodePanel {
         if (label.keyPressed(keyCode, scanCode, modifiers)) {
             return true;
         }
+        if (lists.keyPressed(keyCode, choice)) {
+            arranged.invalidate();
+            return true;
+        }
         if (lists.open() && keyCode == GLFW.GLFW_KEY_ESCAPE) {
             arranged.invalidate();
             lists.close();
@@ -580,7 +584,7 @@ public final class NodePanel {
     }
 
     public boolean charTyped(char codePoint, int modifiers) {
-        return label.charTyped(codePoint, modifiers);
+        return label.charTyped(codePoint, modifiers) || lists.charTyped(codePoint);
     }
 
     /** A dica do ponto (controles e faces), ou {@code null}; o texto abreviado fica com a tela. */
@@ -706,11 +710,16 @@ public final class NodePanel {
     }
 
     /**
-     * Centro da linha {@code row} da lista da linha Rede aberta (as redes do seletor e, por último, "Sem
-     * rede"), ou {@code null} se ela está fechada ou a linha fora da vista.
+     * Centro da linha {@code row} da lista da linha Rede aberta (as redes do seletor, depois da busca; o "Sem rede"
+     * fixo no topo é o {@link #networkNoneCenter}), ou {@code null} se ela está fechada ou a linha fora da vista.
      */
     public int @Nullable [] networkRowCenter(int row) {
         return lists.popup() == Popup.NETWORK ? rowCenter(Popup.NETWORK, row) : null;
+    }
+
+    /** Centro da linha fixa "Sem rede" da lista da linha Rede aberta, ou {@code null} se ela está fechada. */
+    public int @Nullable [] networkNoneCenter() {
+        return lists.noneCenter();
     }
 
     /** Centro de uma linha da lista do redstone aberta. */
@@ -805,6 +814,12 @@ public final class NodePanel {
         arrange();
         Hot hot = layout.hot(kind);
         return hot == null ? null : hot.center();
+    }
+
+    /** Põe o texto na busca da lista de redes aberta (captura sem teclado). */
+    public void previewNetworkQuery(String text) {
+        arranged.invalidate();
+        lists.previewQuery(text);
     }
 
     /** Abre ou fecha a lista da linha Rede (captura sem mouse). */

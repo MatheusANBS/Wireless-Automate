@@ -65,7 +65,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ModPayloads {
     /** Versão do protocolo; mude quando um payload mudar de formato. */
-    public static final String VERSION = "33";
+    public static final String VERSION = "34";
 
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(VERSION);
@@ -101,6 +101,8 @@ public final class ModPayloads {
                 (payload, context) -> handleRenameTarget(serverPlayer(context), payload));
         registrar.playToServer(UpdateMachinePayload.TYPE, UpdateMachinePayload.STREAM_CODEC,
                 (payload, context) -> handleUpdateMachine(serverPlayer(context), payload));
+        registrar.playToServer(RevertGroupPayload.TYPE, RevertGroupPayload.STREAM_CODEC,
+                (payload, context) -> handleRevertGroup(serverPlayer(context), payload));
         registrar.playToServer(ClearIdleNetworksPayload.TYPE, ClearIdleNetworksPayload.STREAM_CODEC,
                 (payload, context) -> handleClearIdleNetworks(serverPlayer(context), payload));
         // Ingrediente fantasma do JEI (compat/jei); registrado sempre, com ou sem o JEI.
@@ -258,6 +260,21 @@ public final class ModPayloads {
             return false;
         }
         boolean reverted = host.editedRouter().revertToProfile(payload.index());
+        host.editApplied();
+        return reverted;
+    }
+
+    /** Voltar ao perfil no grupo inteiro: tira as exceções das máquinas dele, se o grupo ainda é do bloco visto. */
+    public static boolean handleRevertGroup(@Nullable ServerPlayer player, RevertGroupPayload payload) {
+        RouterEditHost host = host(player, payload.containerId());
+        if (host == null || !host.editedRouter().rangeActive()) {
+            return false;
+        }
+        MachineGroup group = host.editedRouter().remoteMachines().group(payload.group());
+        if (group == null || !group.block().equals(payload.block())) {
+            return false;
+        }
+        boolean reverted = host.editedRouter().revertGroupToProfile(group.id()) > 0;
         host.editApplied();
         return reverted;
     }

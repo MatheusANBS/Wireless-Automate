@@ -8,6 +8,7 @@ import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.FaceView;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.NetworkEntry;
 import io.github.matheusanbs.wirelessautomate.packet.ClearIdleNetworksPayload;
+import io.github.matheusanbs.wirelessautomate.packet.RevertGroupPayload;
 import io.github.matheusanbs.wirelessautomate.packet.RevertMachinePayload;
 import io.github.matheusanbs.wirelessautomate.packet.SelectTargetPayload;
 import io.github.matheusanbs.wirelessautomate.packet.UnlinkMachinePayload;
@@ -209,6 +210,8 @@ final class MachineColumn {
             RangeView.GroupView group = range().group(row.group());
             if (group != null && action == RangeRowButtons.Action.UPDATE) {
                 send(UpdateMachinePayload.group(id, group.id(), group.block()));
+            } else if (group != null && action == RangeRowButtons.Action.REVERT_GROUP) {
+                send(new RevertGroupPayload(id, group.id(), group.block()));
             } else if (action == RangeRowButtons.Action.CLEAR_NETWORKS) {
                 send(new ClearIdleNetworksPayload(id, false));
             }
@@ -221,6 +224,7 @@ final class MachineColumn {
         send(switch (action) {
             case UPDATE -> UpdateMachinePayload.machine(id, row.machine(), machine.pos());
             case REVERT -> new RevertMachinePayload(id, row.machine(), machine.pos());
+            case REVERT_GROUP -> null;
             case UNLINK -> new UnlinkMachinePayload(id, row.machine(), machine.pos());
             case CLEAR_NETWORKS -> new ClearIdleNetworksPayload(id, false);
             case RENAME -> null;

@@ -96,6 +96,25 @@ final class ScreenshotFilter {
                 }, "f3c-filtro-regra"),
                 new Step(() -> {
                     mouseX = mouseY = -1;
+                    filterScreen.previewRule(ItemRule.EMPTY.withScope("@productivebees"));
+                    filterScreen.previewComponent(List.of("productivebees:gene_group->attribute=productivity"),
+                            "productivebees:gene_group->purity>=100");
+                }, "f3e-filtro-componente"),
+                new Step(() -> {
+                    mouseX = mouseY = -1;
+                    filterScreen.previewComponentSamples("productivebees:gene_group", List.of(
+                            gene("productivity", "high", 100), gene("endurance", "low", 40),
+                            gene("productivity", "low", 75), gene("weather_tolerance", "rain", 100)));
+                    filterScreen.previewComponent(List.of(), "gene");
+                }, "f3f-componente-1-id"),
+                new Step(() -> filterScreen.previewComponent(List.of(), "productivebees:gene_group->"),
+                        "f3g-componente-2-campo"),
+                new Step(() -> filterScreen.previewComponent(List.of(), "productivebees:gene_group->purity"),
+                        "f3h-componente-3-operador"),
+                new Step(() -> filterScreen.previewComponent(List.of(), "productivebees:gene_group->purity>="),
+                        "f3i-componente-4-valor"),
+                new Step(() -> {
+                    mouseX = mouseY = -1;
                     filterScreen.previewTab(FilterScreen.Tab.MORE);
                 }, "f3d-filtro-mais"),
                 new Step(() -> {
@@ -112,6 +131,15 @@ final class ScreenshotFilter {
                     mouseX = mouseY = -1;
                     filterScreen = filterScreen(Filter.EMPTY, null);
                 }, "f6-filtro-cartao-vazio"));
+    }
+
+    /** Um gene de exemplo, na forma serializada do gene_group do Productive Bees (attribute, value e purity). */
+    private static java.util.Map<String, Object> gene(String attribute, String value, int purity) {
+        java.util.Map<String, Object> map = new java.util.LinkedHashMap<>();
+        map.put("attribute", attribute);
+        map.put("value", value);
+        map.put("purity", purity);
+        return map;
     }
 
     /** Filtro de uma face (ou de um cartão, sem face) com o inventário de exemplo e a cor Elite. */

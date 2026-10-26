@@ -352,7 +352,7 @@ final class RangeList {
             if (selected) {
                 targetShown = true;
                 buttons.track(target, placed, mouseX, mouseY);
-                buttons.render(g, font, target, placed, mouseX, mouseY);
+                buttons.render(g, font, view, target, placed, mouseX, mouseY);
             }
         }
         if (!targetShown) { // a linha do alvo saiu da vista pela rolagem: o "Desvincular?" desarma

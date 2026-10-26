@@ -642,6 +642,14 @@ public class RouterBlockEntity extends BlockEntity {
     }
 
     /**
+     * Tira a exceção de todas as máquinas do grupo {@code groupId}, numa mudança só: elas voltam a seguir o
+     * perfil. Devolve quantas voltaram (0 se nenhuma tinha exceção).
+     */
+    public int revertGroupToProfile(int groupId) {
+        return range.revertGroupToProfile(groupId);
+    }
+
+    /**
      * Troca o perfil do grupo {@code groupId} por uma cópia de {@code config} (com as redes); as exceções que ficam
      * iguais ao perfil somem, as outras ficam. Devolve se mudou (o Tablet, ao colar e mover num grupo inteiro).
      */

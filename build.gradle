@@ -235,6 +235,9 @@ dependencies {
     clientMods "maven.modrinth:apothic-enchanting:1.21.1-1.6.4"
     clientMods "maven.modrinth:apothic-spawners:1.21.1-1.4.0"
     clientMods "maven.modrinth:patchouli:1.21.1-93-neoforge"
+    // Productive Bees (genes e abelhas: componentes com campos internos, como o gene_group com a pureza, para testar
+    // o filtro de componentes); sem dependências obrigatórias.
+    clientMods "maven.modrinth:productivebees:1.21.1-13.13.0"
     // Os mods das receitas de cascata dos Corações do Ressonador (resonator_heart_<tier>_cascade): MEGA Cells
     // (com o AE2), Draconic Evolution (com o Brandon's Core e o CodeChicken Lib) e Modern Industrialization.
     // Só no cliente de dev: sem eles carregam as receitas de antes; os GameTests não os carregam.

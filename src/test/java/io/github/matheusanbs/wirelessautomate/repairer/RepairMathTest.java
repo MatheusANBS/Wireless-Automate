@@ -32,6 +32,7 @@ class RepairMathTest {
     void bufferCobreAsOitoLinhas() {
         assertEquals(4_294_967_296L, RepairMath.bufferCapacity(536_870_912L, 8));
         assertEquals(Long.MAX_VALUE, RepairMath.bufferCapacity(Long.MAX_VALUE, 8));
+        assertEquals(1L, RepairMath.bufferCapacity(0L, 8));
     }
 
     @Test

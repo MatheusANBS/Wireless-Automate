@@ -51,7 +51,7 @@ do cristal:
 | Afinado Ultimate | 536.870.912 |
 
 Os números são os padrões; o JEI mostra os do seu pack. Com pouca energia, o reparo só começa quando o buffer
-tem o custo inteiro.
+tem o custo inteiro. Quebrar o bloco no meio de um reparo **perde os 4 cristais e a energia já gastos** nele.
 
 ## Receita
 

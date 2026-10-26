@@ -92,7 +92,11 @@ public final class RepairerContainer implements Container {
 
     @Override
     public void clearContent() {
-        repairer.items().clear();
+        for (int slot = 0; slot < repairer.items().size(); slot++) {
+            if (!locked(slot)) {
+                repairer.items().set(slot, ItemStack.EMPTY);
+            }
+        }
         repairer.itemsChanged();
     }
 }

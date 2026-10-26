@@ -29,9 +29,12 @@ public final class RepairMath {
         return CoreMath.mulSat(Math.max(0, fePerCrystal), Math.max(0, factor));
     }
 
-    /** A capacidade do buffer: o reparo mais caro vezes as linhas, para as oito poderem começar juntas. */
+    /**
+     * A capacidade do buffer: o reparo mais caro vezes as linhas, para as oito poderem começar juntas. No mínimo 1,
+     * porque no {@code ScalarStore} a capacidade 0 quer dizer sem limite.
+     */
     public static long bufferCapacity(long highestCost, int lines) {
-        return CoreMath.mulSat(highestCost, lines);
+        return Math.max(1L, CoreMath.mulSat(highestCost, lines));
     }
 
     /** Quanto da linha já andou, de 0 a 1000, pelo fim ({@code end}) e a duração total do reparo. */

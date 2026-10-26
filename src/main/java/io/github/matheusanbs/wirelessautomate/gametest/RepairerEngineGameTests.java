@@ -215,6 +215,26 @@ public final class RepairerEngineGameTests {
         helper.succeed();
     }
 
+    @GameTest(template = "empty", timeoutTicks = 200, batch = "wirelessautomate_config")
+    public static void fatorZeroNaoViraBufferSemLimite(GameTestHelper helper) {
+        int old = Config.repairCostFactor();
+        Config.REPAIR_COST_FACTOR.set(0);
+        try {
+            RepairerGameTests.repairer(helper, repairer -> {
+                try {
+                    helper.assertTrue(repairer.energy().capacity() == 1L, "a capacidade devia ser 1");
+                    long accepted = bulk(helper).insert(1_000_000L, false);
+                    helper.assertTrue(accepted <= 1L, "o buffer virou um ralo: aceitou " + accepted);
+                } finally {
+                    Config.REPAIR_COST_FACTOR.set(old);
+                }
+            });
+        } catch (RuntimeException e) {
+            Config.REPAIR_COST_FACTOR.set(old);
+            throw e;
+        }
+    }
+
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void entradaDeLinhaOcupadaNaoSaiNemTroca(GameTestHelper helper) {
         RepairerGameTests.repairer(helper, repairer -> {

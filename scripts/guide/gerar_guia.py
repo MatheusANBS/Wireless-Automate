@@ -3157,7 +3157,7 @@ do cristal:
 ''' + TABLE_REPAIR_PT + '''
 
 Os números são os padrões; o JEI mostra os do seu pack. Com pouca energia, o reparo só começa quando o buffer
-tem o custo inteiro.
+tem o custo inteiro. Quebrar o bloco no meio de um reparo **perde os 4 cristais e a energia já gastos** nele.
 
 ## Receita
 
@@ -3196,7 +3196,7 @@ the crystal type:
 ''' + TABLE_REPAIR_EN + '''
 
 The numbers are the defaults; JEI shows your pack's. With little energy, a repair only starts when the buffer
-holds its whole cost.
+holds its whole cost. Breaking the block in the middle of a repair **loses the 4 crystals and the energy already spent** on it.
 
 ## Recipe
 

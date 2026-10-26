@@ -42,7 +42,6 @@ final class PlasmaTendrils {
         byte[] chambers = scene.chambers();
         ChamberView view = scene.view();
         double ticks = gameTime + partialTick;
-        int recharging = ChamberCrystals.recharging(chambers, view);
         Vec3 eye = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
         Vec3 center = scene.worldCenter();
         float cx = (float) (eye.x - center.x);
@@ -55,7 +54,8 @@ final class PlasmaTendrils {
                 continue;
             }
             boolean reverse = ChamberCrystals.isDull(chambers[i]);
-            if (reverse && (recharging != i || ChamberCrystals.recharge(i, chambers, ticks, view) >= 1)) {
+            if (reverse && (!ChamberCrystals.isRecharging(i, chambers, view)
+                    || ChamberCrystals.recharge(i, chambers, ticks, view) >= 1)) {
                 continue;
             }
             int alpha = (int) Math.round(255 * appear);

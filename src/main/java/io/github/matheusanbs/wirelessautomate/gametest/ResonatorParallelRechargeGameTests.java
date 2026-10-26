@@ -7,11 +7,13 @@ import static io.github.matheusanbs.wirelessautomate.gametest.ResonatorTestSuppo
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.resonator.ChamberView;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBatch;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.gametest.GameTestHolder;
@@ -93,6 +95,44 @@ public final class ResonatorParallelRechargeGameTests {
             helper.assertTrue(SignalCrystalItem.isDull(core.crystals().get(0)), "encheu sem catalisador");
             helper.assertTrue(SignalCrystalItem.isDull(core.crystals().get(1)), "encheu sem catalisador");
             helper.assertValueEqual(core.rechargeProgress(), 0, "o cronômetro andou sem catalisador");
+        });
+    }
+
+    @GameTest(template = "empty7")
+    public static void viewDizQuantosRecarregam(GameTestHelper helper) {
+        formed(helper, RouterTier.ADVANCED, core -> {
+            assertInserted(helper, core, crystal(false, 0));
+            assertInserted(helper, core, crystal(true, 0));
+            helper.assertValueEqual(ChamberView.of(core, -1).rechargers(), 0, "sem catalisador");
+            core.addCatalyst(new ItemStack(Items.REDSTONE, 1));
+            helper.assertValueEqual(ChamberView.of(core, -1).rechargers(), 1, "um catalisador, dois Opacos");
+            core.addCatalyst(new ItemStack(Items.REDSTONE, 3));
+            helper.assertValueEqual(ChamberView.of(core, -1).rechargers(), 2, "catalisador de sobra");
+        });
+    }
+
+    @GameTest(template = "empty7")
+    public static void rachadoNaoContaNosQueRecarregam(GameTestHelper helper) {
+        formed(helper, RouterTier.ADVANCED, core -> {
+            crackedAt(helper, core, 0);
+            core.addCatalyst(new ItemStack(Items.REDSTONE, 2));
+            helper.assertValueEqual(ChamberView.of(core, -1).rechargers(), 0, "só o rachado");
+            helper.assertTrue(core.insertCrystalAt(1, crystal(false, 0)), "o Opaco não entrou");
+            helper.assertValueEqual(ChamberView.of(core, -1).rechargers(), 1, "o rachado contou");
+        });
+    }
+
+    @GameTest(template = "empty7")
+    public static void rechargersVaiNoUpdateTag(GameTestHelper helper) {
+        formed(helper, RouterTier.ADVANCED, core -> {
+            assertInserted(helper, core, crystal(false, 0));
+            assertInserted(helper, core, crystal(true, 0));
+            core.addCatalyst(new ItemStack(Items.REDSTONE, 2));
+            ChamberView view = ChamberView.of(core, 100);
+            CompoundTag tag = new CompoundTag();
+            view.save(tag);
+            helper.assertValueEqual(ChamberView.load(tag).rechargers(), 2, "o update tag perdeu o rechargers");
+            helper.assertTrue(ChamberView.load(tag).equals(view), "a view lida não é a gravada");
         });
     }
 }

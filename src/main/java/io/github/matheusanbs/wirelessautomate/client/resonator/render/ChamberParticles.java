@@ -150,7 +150,7 @@ final class ChamberParticles {
                 spark.start(start, port.subtract(center), born++ * 7919 + 13);
             }
         }
-        int target = ChamberCrystals.recharging(chambers, view);
+        int target = ChamberCrystals.firstRecharging(chambers, view);
         redClock += 2.0 * (target < 0 || !legacy ? 0 : 1) / 20;
         if (redClock > 1) {
             redClock -= 1;

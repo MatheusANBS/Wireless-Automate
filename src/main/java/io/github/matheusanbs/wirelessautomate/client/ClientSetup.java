@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.client.filter.FilterScreen;
 import io.github.matheusanbs.wirelessautomate.client.linker.LinkerScreen;
 import io.github.matheusanbs.wirelessautomate.client.recipe.RecipeEditorScreen;
 import io.github.matheusanbs.wirelessautomate.client.repairer.RepairerScreen;
+import io.github.matheusanbs.wirelessautomate.client.repairer.render.RepairerRenderer;
 import io.github.matheusanbs.wirelessautomate.client.resonator.ResonatorProjection;
 import io.github.matheusanbs.wirelessautomate.client.resonator.render.ResonatorRenderer;
 import io.github.matheusanbs.wirelessautomate.client.resonator.screen.ResonatorScreen;
@@ -108,10 +109,11 @@ public final class ClientSetup {
                 (RepairerMenu menu, Inventory inventory, Component title) -> new RepairerScreen(menu, inventory, title));
     }
 
-    /** A câmara animada do Núcleo montado. */
+    /** A câmara animada do Núcleo montado e a animação do Reparador de Cristais. */
     @SubscribeEvent
     static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(ModBlockEntities.RESONANCE_CORE.get(), ResonatorRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.CRYSTAL_REPAIRER.get(), RepairerRenderer::new);
     }
 
     /** Os core shaders da câmara: o Núcleo de plasma, as fitas e o cristal. */

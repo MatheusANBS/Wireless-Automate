@@ -467,6 +467,13 @@ final class E2eResonatorSteps {
                 level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
             }
         }
+        // o Núcleo solta cristais, redstone e catalisador ao sair: sem isso ficam no chão da câmara da próxima montagem
+        net.minecraft.world.phys.AABB box = new net.minecraft.world.phys.AABB(origin.getX() - 4,
+                origin.getY() - 2, origin.getZ() - 4, origin.getX() + 9, origin.getY() + 9, origin.getZ() + 9);
+        for (net.minecraft.world.entity.item.ItemEntity item : level.getEntitiesOfClass(
+                net.minecraft.world.entity.item.ItemEntity.class, box)) {
+            item.discard();
+        }
     }
 
     /** O jogador voando com os pés em {@code origin + feet}, olhando o centro da caixa. */

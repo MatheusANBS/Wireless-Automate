@@ -41,8 +41,12 @@ public final class RepairerGameTests {
                 .thenSucceed();
     }
 
-    private static ItemStack cracked() {
-        ItemStack stack = ResonatorTestSupport.crystal(false, 0);
+    static ItemStack cracked() {
+        return cracked(false);
+    }
+
+    static ItemStack cracked(boolean cut) {
+        ItemStack stack = ResonatorTestSupport.crystal(cut, 0);
         SignalCrystalItem.setIntegrity(stack, 0);
         return stack;
     }
@@ -148,6 +152,21 @@ public final class RepairerGameTests {
             helper.assertTrue(SignalCrystalItem.isFull(repairer.items().get(RepairerSlots.OUTPUT_FIRST + 3)), "a saída não voltou");
             helper.assertTrue(repairer.items().get(0).isEmpty(), "um slot vazio ganhou item");
             helper.assertValueEqual(repairer.energy().stored(), 777L, "energia");
+        });
+    }
+
+    @GameTest(template = "empty")
+    public static void simulacaoNaoGrava(GameTestHelper helper) {
+        repairer(helper, repairer -> {
+            IItemHandler handler = items(helper);
+            IEnergyStorage fe = helper.getLevel().getCapability(Capabilities.EnergyStorage.BLOCK, helper.absolutePos(A), Direction.NORTH);
+            helper.assertValueEqual(handler.insertItem(0, cracked(), true).getCount(), 0, "o simulado devia caber");
+            helper.assertTrue(repairer.items().get(0).isEmpty(), "o simulado gravou a entrada");
+            ItemStack full = ResonatorTestSupport.crystal(false, CrystalCharge.FULL);
+            handler.insertItem(RepairerSlots.FEED, full.copyWithCount(3), true);
+            helper.assertTrue(repairer.items().get(RepairerSlots.FEED).isEmpty(), "o simulado gravou o estoque");
+            helper.assertValueEqual(fe.receiveEnergy(1000, true), 1000, "o simulado devia caber");
+            helper.assertValueEqual(repairer.energy().stored(), 0L, "o simulado gravou a energia");
         });
     }
 

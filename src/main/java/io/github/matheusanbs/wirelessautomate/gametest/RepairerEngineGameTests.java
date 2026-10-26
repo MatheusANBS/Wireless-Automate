@@ -214,4 +214,59 @@ public final class RepairerEngineGameTests {
         helper.assertValueEqual(RepairMath.costTier(false, RouterTier.ELITE.ordinal()), RouterTier.ELITE.ordinal(), "costTier");
         helper.succeed();
     }
+
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void entradaDeLinhaOcupadaNaoSaiNemTroca(GameTestHelper helper) {
+        RepairerGameTests.repairer(helper, repairer -> {
+            ItemStack original = RepairerGameTests.cracked();
+            long cost = RepairerCosts.of(original);
+            repairer.items().set(0, original);
+            repairer.items().set(RepairerSlots.FEED, full().copyWithCount(4));
+            bulk(helper).insert(cost, false);
+            helper.assertTrue(repairer.running(0), "não começou");
+            var container = repairer.container();
+            helper.assertTrue(container.removeItem(0, 1).isEmpty(), "removeItem tirou a entrada");
+            helper.assertTrue(container.removeItemNoUpdate(0).isEmpty(), "removeItemNoUpdate tirou a entrada");
+            container.setItem(0, RepairerGameTests.cracked(true));
+            helper.assertTrue(!repairer.items().get(0).is(ModItems.CUT_SIGNAL_CRYSTAL.get()), "setItem trocou a entrada");
+            helper.assertTrue(!container.getItem(0).isEmpty(), "getItem não devolve a pilha");
+            repairer.tick(later(helper));
+            helper.assertTrue(repairer.items().get(0).isEmpty(), "a entrada não esvaziou");
+            ItemStack out = repairer.items().get(RepairerSlots.OUTPUT_FIRST);
+            helper.assertTrue(SignalCrystalItem.isFull(out) && out.is(ModItems.SIGNAL_CRYSTAL.get()), "a saída não é o original");
+            helper.assertValueEqual(repairer.energy().stored(), 0L, "o custo não foi o do original");
+        });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void linhaTravadaProtegeAEntrada(GameTestHelper helper) {
+        RepairerGameTests.repairer(helper, repairer -> {
+            for (int i = RepairerSlots.OUTPUT_FIRST; i < RepairerSlots.TOTAL; i++) {
+                repairer.items().set(i, full());
+            }
+            ItemStack cracked = RepairerGameTests.cracked();
+            repairer.items().set(0, cracked);
+            repairer.items().set(RepairerSlots.FEED, full().copyWithCount(4));
+            bulk(helper).insert(RepairerCosts.of(cracked), false);
+            repairer.tick(later(helper));
+            helper.assertTrue(repairer.lineBlocked(0), "não travou");
+            helper.assertTrue(repairer.container().removeItem(0, 1).isEmpty(), "removeItem tirou");
+            helper.assertTrue(repairer.container().removeItemNoUpdate(0).isEmpty(), "removeItemNoUpdate tirou");
+            repairer.container().setItem(0, ItemStack.EMPTY);
+            helper.assertTrue(!repairer.items().get(0).isEmpty(), "setItem esvaziou a entrada travada");
+        });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void linhaParadaDeixaTirarETrocar(GameTestHelper helper) {
+        RepairerGameTests.repairer(helper, repairer -> {
+            var container = repairer.container();
+            container.setItem(0, RepairerGameTests.cracked());
+            helper.assertTrue(!repairer.items().get(0).isEmpty(), "setItem não pôs");
+            helper.assertTrue(!container.removeItem(0, 1).isEmpty(), "removeItem não tirou");
+            container.setItem(1, RepairerGameTests.cracked());
+            helper.assertTrue(!container.removeItemNoUpdate(1).isEmpty(), "removeItemNoUpdate não tirou");
+            helper.assertTrue(repairer.items().get(0).isEmpty() && repairer.items().get(1).isEmpty(), "sobrou item");
+        });
+    }
 }

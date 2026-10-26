@@ -33,8 +33,16 @@ public final class RepairerContainer implements Container {
         return repairer.items().get(slot);
     }
 
+    /** A entrada de uma linha ocupada (andando ou travada) não sai nem troca: só o motor mexe nela. */
+    private boolean locked(int slot) {
+        return RepairerSlots.isInput(slot) && repairer.lineEnd(slot) > 0;
+    }
+
     @Override
     public ItemStack removeItem(int slot, int amount) {
+        if (locked(slot)) {
+            return ItemStack.EMPTY;
+        }
         ItemStack removed = ContainerHelper.removeItem(repairer.items(), slot, amount);
         if (!removed.isEmpty()) {
             repairer.itemsChanged();
@@ -44,11 +52,17 @@ public final class RepairerContainer implements Container {
 
     @Override
     public ItemStack removeItemNoUpdate(int slot) {
+        if (locked(slot)) {
+            return ItemStack.EMPTY;
+        }
         return ContainerHelper.takeItem(repairer.items(), slot);
     }
 
     @Override
     public void setItem(int slot, ItemStack stack) {
+        if (locked(slot)) {
+            return;
+        }
         repairer.items().set(slot, stack);
         repairer.itemsChanged();
     }

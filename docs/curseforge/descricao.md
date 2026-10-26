@@ -110,11 +110,11 @@ The **Wireless Source Tank** holds from 10,000 Source (Basic) to unlimited (Ulti
 
 A multiblock generator that turns vibrating quartz crystals into FE. Mine **Signal Quartz** (Overworld, stone and deepslate), build a hollow 5×5×5 box around a **Resonance Core** and put **Signal Crystals** in its chambers. Every Resonator has its own **station**, a frequency that drifts slowly: turn the dial until the lamp says **IN TUNE** for 100%, or add a **Tuner** to follow the station on its own, a little below the top. Off the station, it generates nothing.
 
-![Signal Resonator](https://media.forgecdn.net/attachments/2085/348/ressonador-gif.gif)
+![Signal Resonator](https://media.forgecdn.net/attachments/2109/600/ressonador-gif.gif)
 
 Through the glass you can read the tuning: the plasma Core with the ring of its tier, the crystals orbiting it, each live one feeding it through a plasma tendril that holds thick and steady in tune and thins out and lets go out of it, and a bolt of energy to every port that is delivering. Spent crystals turn **Dull** and recharge inside the Core with a catalyst (redstone or Resonance Dust on the first tiers, the tier's Charged Dust from Allthemodium up). Energy leaves through the **Energy Port**, straight into a router.
 
-![Signal Resonator](https://media.forgecdn.net/attachments/2085/345/feature-21-resonator-png.png)
+![Signal Resonator](https://media.forgecdn.net/attachments/2109/601/feature-21-resonator-png.png)
 
 | Core tier | Chambers | FE/t per crystal | Tuner ceiling |
 | --- | --- | --- | --- |
@@ -137,7 +137,7 @@ A Cut Signal Crystal yields twice as much and lasts twice as long. From Elite up
 
 A cracked crystal no longer means a trip to the crafting table. Put it on one of the **8 pedestals** of the Crystal Repairer and it mends it, **up to eight crystals in parallel**. Each repair takes 7 seconds and uses **4 full Signal Crystals** from the shared stock slot plus energy: 2 times the FE per crystal of the crystal's tier (432 FE for a Signal Crystal, 13,824 FE for a Cut one, and the tier's own price for a Tuned one). The crystal comes out of the output slots fully charged and with full integrity.
 
-![Crystal Repairer](ENVIAR:feature-26-repairer.png)
+![Crystal Repairer](https://media.forgecdn.net/attachments/2109/602/feature-26-repairer-png.png)
 
 Energy and items go in from any side, so a router can keep it fed. The cracks close from the inside out, the crystals converge on the emitter and the mended one rises out. The Resonator's Core also got faster at the other end: it now recharges **every Dull crystal the catalyst pays for at once**. Recipe: Resonator Casing, Phase Circuit, Hopper, Harmonic Lens and a Redstone Block. The repair time and cost are in the config (`repairer.repairTicks` and `repairer.costFactor`).
 

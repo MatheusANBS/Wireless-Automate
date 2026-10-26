@@ -90,13 +90,15 @@ final class E2eTabletMachinesSteps {
         list.add(flowingCapture("7o-tablet-maquinas"));
         list.add(clipCheck("Tablet: máquinas"));
         list.add(listClipTooltip("Tablet: máquinas"));
-        list.add(new Step("máquinas: tema escuro", STEP_TIMEOUT_MS, () -> {
-            themeBefore = GuiThemes.current();
-            GuiThemes.preview(GuiTheme.DARK);
-        }, () -> GuiThemes.current() == GuiTheme.DARK, () -> "tema " + GuiThemes.current()));
-        list.add(flowingCapture("7o-tablet-maquinas-escuro"));
-        list.add(new Step("máquinas: tema de volta", STEP_TIMEOUT_MS, () -> GuiThemes.preview(themeBefore),
-                () -> GuiThemes.current() == themeBefore, () -> "tema " + GuiThemes.current()));
+        E2eVariants.escuro(list, () -> {
+            list.add(new Step("máquinas: tema escuro", STEP_TIMEOUT_MS, () -> {
+                themeBefore = GuiThemes.current();
+                GuiThemes.preview(GuiTheme.DARK);
+            }, () -> GuiThemes.current() == GuiTheme.DARK, () -> "tema " + GuiThemes.current()));
+            list.add(flowingCapture("7o-tablet-maquinas-escuro"));
+            list.add(new Step("máquinas: tema de volta", STEP_TIMEOUT_MS, () -> GuiThemes.preview(themeBefore),
+                    () -> GuiThemes.current() == themeBefore, () -> "tema " + GuiThemes.current()));
+        });
         list.add(new Step("máquinas: o Mapa mostra as máquinas do roteador", STEP_TIMEOUT_MS,
                 () -> tabletScreen().previewTab(TabletScreen.Tab.MAP),
                 () -> stepTicks >= 2 && tabletScreen().mapMachinesDrawn() > 0, () -> "o Mapa sem as máquinas"));
@@ -119,7 +121,7 @@ final class E2eTabletMachinesSteps {
         }, () -> page().active() && block(CHEST) != null && block(CHEST).collapsed() && furnaceRows() == 8,
                 () -> "linhas " + page().rows().size()));
         E2eTabletMarkSteps.markSteps(list);
-        portugueseSteps(list);
+        E2eVariants.pt(list, () -> portugueseSteps(list));
         list.add(E2eTabletMarkSteps.forget());
         list.add(tearDown());
     }

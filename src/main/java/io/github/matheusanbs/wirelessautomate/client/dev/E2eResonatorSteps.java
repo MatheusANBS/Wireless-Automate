@@ -194,25 +194,29 @@ final class E2eResonatorSteps {
             return true;
         }, () -> "ressonador-tela.png"));
         list.add(clipCheck("ressonador-tela"));
-        list.add(E2eDarkSteps.themeClick("Ressonador: tema escuro", GuiTheme.DARK));
-        list.add(new Step("captura ressonador-tela-escuro", STEP_TIMEOUT_MS, () -> moveMouse(0, 0), () -> {
-            if (stepTicks < 6) {
-                return false;
-            }
-            capture(Minecraft.getInstance(), "ressonador-tela-escuro");
-            return true;
-        }, () -> "ressonador-tela-escuro.png"));
-        list.add(clipCheck("ressonador-tela-escuro"));
-        list.add(E2eDarkSteps.themeClick("Ressonador: tema claro", GuiTheme.LIGHT));
+        E2eVariants.escuro(list, () -> {
+            list.add(E2eDarkSteps.themeClick("Ressonador: tema escuro", GuiTheme.DARK));
+            list.add(new Step("captura ressonador-tela-escuro", STEP_TIMEOUT_MS, () -> moveMouse(0, 0), () -> {
+                if (stepTicks < 6) {
+                    return false;
+                }
+                capture(Minecraft.getInstance(), "ressonador-tela-escuro");
+                return true;
+            }, () -> "ressonador-tela-escuro.png"));
+            list.add(clipCheck("ressonador-tela-escuro"));
+            list.add(E2eDarkSteps.themeClick("Ressonador: tema claro", GuiTheme.LIGHT));
+        });
         list.add(close("Ressonador: fechar a tela"));
-        list.add(language("pt_br"));
-        list.add(new Step("Ressonador: abrir em pt_br", STEP_TIMEOUT_MS, () -> useOn(core(origin[0])),
-                () -> Minecraft.getInstance().screen instanceof ResonatorScreen screen && screen.getMenu().received(),
-                () -> "tela " + describe(Minecraft.getInstance().screen)));
-        list.add(capture("ressonador-tela-pt"));
-        list.add(clipCheck("ressonador-tela-pt"));
-        list.add(close("Ressonador: fechar em pt_br"));
-        list.add(language("en_us"));
+        E2eVariants.pt(list, () -> {
+            list.add(language("pt_br"));
+            list.add(new Step("Ressonador: abrir em pt_br", STEP_TIMEOUT_MS, () -> useOn(core(origin[0])),
+                    () -> Minecraft.getInstance().screen instanceof ResonatorScreen screen && screen.getMenu().received(),
+                    () -> "tela " + describe(Minecraft.getInstance().screen)));
+            list.add(capture("ressonador-tela-pt"));
+            list.add(clipCheck("ressonador-tela-pt"));
+            list.add(close("Ressonador: fechar em pt_br"));
+            list.add(language("en_us"));
+        });
     }
 
     /**
@@ -235,10 +239,9 @@ final class E2eResonatorSteps {
         list.add(camera("Ressonador: câmera na janela", playerId, () -> origin[0], WINDOW_VIEW));
         list.add(DevEndToEnd.wait("a câmara acender", 30));
         list.add(capture("ressonador-camara"));
-        list.add(frameTime(true, "", null));
-        list.add(frameTime(false, "", null));
-        list.add(frameTime(true, "", null));
-        list.add(frameTime(false, "", null));
+        for (int i = 0; i < 2; i++) {
+            timed(list, "", null);
+        }
         closeUp(list, playerId, origin, "ressonador-tentaculos");
         list.add(new Step("Ressonador: dial a 96,7", STEP_TIMEOUT_MS, () -> onServer(server -> {
             ((ResonanceCoreBlockEntity) server.overworld().getBlockEntity(core(origin[0]))).setDial(96.7);
@@ -290,6 +293,20 @@ final class E2eResonatorSteps {
         }
         throw new IllegalStateException("a Vitrine não tem Porta de Energia");
     }
+
+    /**
+     * Só com a suíte {@code ressonador-desempenho} ({@link #perf}): a medida do tempo de quadro com o desenho antigo e
+     * com o plasma, que é uma comparação e não uma asserção.
+     */
+    static void timed(List<Step> list, String situation, Tick perTick) {
+        if (perf) {
+            list.add(frameTime(true, situation, perTick));
+            list.add(frameTime(false, situation, perTick));
+        }
+    }
+
+    /** Ligada só enquanto o roteiro da suíte {@code ressonador-desempenho} é montado. */
+    static boolean perf;
 
     /**
      * O tempo médio de quadro em 120 quadros com a câmara ocupando a tela, sem o limite de FPS e sem o vsync (o

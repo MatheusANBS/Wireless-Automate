@@ -81,7 +81,7 @@ final class E2eRangeSteps {
     static void rangeSteps(List<Step> list) {
         UUID playerId = Minecraft.getInstance().player.getUUID();
         rangeSetupSteps(list, playerId);
-        for (String code : new String[] {"en_us", "pt_br"}) {
+        for (String code : E2eVariants.ptOn() ? new String[] {"en_us", "pt_br"} : new String[] {"en_us"}) {
             boolean pt = code.equals("pt_br");
             String suffix = pt ? "-pt" : "";
             String label = pt ? "pt: alcance: " : "alcance: ";
@@ -358,11 +358,13 @@ final class E2eRangeSteps {
                     () -> routerScreen().rangeButtonCenter(RangeRowButtons.Action.CLEAR_NETWORKS) != null));
             list.add(resizeStep(label + "de volta à tela larga", MEDIUM_W));
             list.add(showListStep(label + "de volta à linha Editando", false));
-            list.add(E2eDarkSteps.themeClick(label + "tema escuro", GuiTheme.DARK));
-            list.add(rangeClipCheck(label + "Tirar redes no escuro"));
-            list.add(capture("range-6f-limpar-escuro"));
-            clearAndUndoSteps(list, label + "escuro: ", "range-6f-limpar-escuro-aviso");
-            list.add(E2eDarkSteps.themeClick(label + "de volta ao tema claro", GuiTheme.LIGHT));
+            E2eVariants.escuro(list, () -> {
+                list.add(E2eDarkSteps.themeClick(label + "tema escuro", GuiTheme.DARK));
+                list.add(rangeClipCheck(label + "Tirar redes no escuro"));
+                list.add(capture("range-6f-limpar-escuro"));
+                clearAndUndoSteps(list, label + "escuro: ", "range-6f-limpar-escuro-aviso");
+                list.add(E2eDarkSteps.themeClick(label + "de volta ao tema claro", GuiTheme.LIGHT));
+            });
         }
         clearAndUndoSteps(list, label, "range-6b-limpar-aviso" + suffix);
         list.add(resizeStep(label + "de volta ao mínimo", 300));

@@ -100,11 +100,13 @@ final class E2eJeiResonatorSteps {
         list.add(jeiCapture("ressonador-jei-cascata", 5, GLFW.GLFW_KEY_R, Shot.plain("ressonador-jei-cascata")));
         list.add(jeiCapture("ressonador-jei-liga", 6, GLFW.GLFW_KEY_R, Shot.plain("ressonador-jei-liga")));
         list.add(jeiCapture("ressonador-jei-coracao", 7, GLFW.GLFW_KEY_R, Shot.plain("ressonador-jei-coracao")));
-        list.add(language("pt_br"));
-        list.add(jeiCapture("ressonador-jei-recarga-pt", 0, GLFW.GLFW_KEY_R, Shot.plain("ressonador-jei-recarga-pt")));
-        list.add(jeiCapture("ressonador-jei-refazer-pt", 4, GLFW.GLFW_KEY_R,
-                new Shot("ressonador-jei-refazer-pt", RECAST_TAB_X, RECAST_TAB_Y)));
-        list.add(language("en_us"));
+        E2eVariants.pt(list, () -> {
+            list.add(language("pt_br"));
+            list.add(jeiCapture("ressonador-jei-recarga-pt", 0, GLFW.GLFW_KEY_R, Shot.plain("ressonador-jei-recarga-pt")));
+            list.add(jeiCapture("ressonador-jei-refazer-pt", 4, GLFW.GLFW_KEY_R,
+                    new Shot("ressonador-jei-refazer-pt", RECAST_TAB_X, RECAST_TAB_Y)));
+            list.add(language("en_us"));
+        });
         list.add(close("jei ressonador: fechar o inventário"));
         list.add(new Step("jei ressonador: limpar o inventário", STEP_TIMEOUT_MS, () -> onServer(server -> {
             ServerPlayer player = server.getPlayerList().getPlayer(playerId);

@@ -77,9 +77,11 @@ final class E2eResonatorScreenSteps {
         }), () -> onServer(server -> ((ResonanceCoreBlockEntity) server.overworld().getBlockEntity(core(second[0])))
                 .eco().value() == ECO), () -> "Eco no Ultimate"));
         shots(list, playerId, origin, second, "");
-        list.add(language("pt_br"));
-        shots(list, playerId, origin, second, "-pt");
-        list.add(language("en_us"));
+        E2eVariants.pt(list, () -> {
+            list.add(language("pt_br"));
+            shots(list, playerId, origin, second, "-pt");
+            list.add(language("en_us"));
+        });
         list.add(new Step("Ressonador: o Elite como antes, sem o Ultimate", STEP_TIMEOUT_MS, () -> onServer(server -> {
             ServerLevel level = server.overworld();
             E2eResonatorSteps.clear(level, second[0]);
@@ -100,7 +102,7 @@ final class E2eResonatorScreenSteps {
      * inglês também no tema escuro (o {@code suffix} vazio).
      */
     private static void shots(List<Step> list, UUID playerId, BlockPos[] origin, BlockPos[] second, String suffix) {
-        boolean withDark = suffix.isEmpty();
+        boolean withDark = suffix.isEmpty() && E2eVariants.darkOn();
         list.add(E2eResonatorSteps.camera("Ressonador: câmera no Elite" + suffix, playerId, () -> origin[0],
                 E2eResonatorSteps.SIDE_VIEW));
         list.add(open("Ressonador: abrir o Elite" + suffix, () -> core(origin[0]),

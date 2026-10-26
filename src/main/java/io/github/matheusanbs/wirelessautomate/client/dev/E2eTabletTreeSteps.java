@@ -90,13 +90,15 @@ final class E2eTabletTreeSteps {
         list.add(flowingCapture("7l-tablet-arvore"));
         list.add(clipCheck("Tablet: árvore"));
         list.add(listClipTooltip("Tablet: árvore"));
-        list.add(new Step("árvore: tema escuro", STEP_TIMEOUT_MS, () -> {
-            themeBefore = GuiThemes.current();
-            GuiThemes.preview(GuiTheme.DARK);
-        }, () -> GuiThemes.current() == GuiTheme.DARK, () -> "tema " + GuiThemes.current()));
-        list.add(flowingCapture("7l-tablet-arvore-escuro"));
-        list.add(new Step("árvore: tema de volta", STEP_TIMEOUT_MS, () -> GuiThemes.preview(themeBefore),
-                () -> GuiThemes.current() == themeBefore, () -> "tema " + GuiThemes.current()));
+        E2eVariants.escuro(list, () -> {
+            list.add(new Step("árvore: tema escuro", STEP_TIMEOUT_MS, () -> {
+                themeBefore = GuiThemes.current();
+                GuiThemes.preview(GuiTheme.DARK);
+            }, () -> GuiThemes.current() == GuiTheme.DARK, () -> "tema " + GuiThemes.current()));
+            list.add(flowingCapture("7l-tablet-arvore-escuro"));
+            list.add(new Step("árvore: tema de volta", STEP_TIMEOUT_MS, () -> GuiThemes.preview(themeBefore),
+                    () -> GuiThemes.current() == themeBefore, () -> "tema " + GuiThemes.current()));
+        });
         list.add(new Step("árvore: ↓ e Enter escolhem a máquina seguinte", STEP_TIMEOUT_MS, () -> {
             TabletScreen screen = tabletScreen();
             screen.keyPressed(GLFW.GLFW_KEY_DOWN, 0, 0);
@@ -111,7 +113,7 @@ final class E2eTabletTreeSteps {
             click(tabletScreen(), c[0], c[1]);
         }, () -> rows().isEmpty(), () -> "linhas " + rows().size()));
         mapSteps(list);
-        portugueseSteps(list);
+        E2eVariants.pt(list, () -> portugueseSteps(list));
         list.add(tearDown());
     }
 
@@ -178,11 +180,13 @@ final class E2eTabletTreeSteps {
         }, () -> EditTarget.machine(machine).equals(panelTarget()) && stepTicks >= 4, () -> "alvo " + panelTarget()));
         list.add(capture("7n-tablet-mapa-maquinas"));
         list.add(clipCheck("Tablet: mapa com as máquinas"));
-        list.add(new Step("mapa: tema escuro", STEP_TIMEOUT_MS, () -> {
-            themeBefore = GuiThemes.current();
-            GuiThemes.preview(GuiTheme.DARK);
-        }, () -> GuiThemes.current() == GuiTheme.DARK, () -> "tema " + GuiThemes.current()));
-        list.add(capture("7n-tablet-mapa-maquinas-escuro"));
+        E2eVariants.escuro(list, () -> {
+            list.add(new Step("mapa: tema escuro", STEP_TIMEOUT_MS, () -> {
+                themeBefore = GuiThemes.current();
+                GuiThemes.preview(GuiTheme.DARK);
+            }, () -> GuiThemes.current() == GuiTheme.DARK, () -> "tema " + GuiThemes.current()));
+            list.add(capture("7n-tablet-mapa-maquinas-escuro"));
+        });
         list.add(new Step("mapa: clicar no vazio larga o roteador, sem ponto nem linha", STEP_TIMEOUT_MS, () -> {
             int[] c = tabletScreen().mapEmptyPoint();
             click(tabletScreen(), c[0], c[1]);
@@ -204,9 +208,12 @@ final class E2eTabletTreeSteps {
                 () -> tabletScreen().mapPan()[0] == 0 && tabletScreen().mapPan()[1] == 0,
                 () -> "pan " + java.util.Arrays.toString(tabletScreen().mapPan())));
         list.add(new Step("mapa: tema de volta e a Lista", STEP_TIMEOUT_MS, () -> {
-            GuiThemes.preview(themeBefore);
+            if (E2eVariants.darkOn()) {
+                GuiThemes.preview(themeBefore);
+            }
             tabletScreen().previewTab(TabletScreen.Tab.LIST);
-        }, () -> GuiThemes.current() == themeBefore && tabletScreen().currentTab() == TabletScreen.Tab.LIST,
+        }, () -> (!E2eVariants.darkOn() || GuiThemes.current() == themeBefore)
+                && tabletScreen().currentTab() == TabletScreen.Tab.LIST,
                 () -> "tema " + GuiThemes.current()));
     }
 

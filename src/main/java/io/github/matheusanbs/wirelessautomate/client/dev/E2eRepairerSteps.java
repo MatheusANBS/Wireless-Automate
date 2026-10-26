@@ -24,6 +24,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 
@@ -47,6 +48,17 @@ final class E2eRepairerSteps {
     /** As fotos do bloco: o olho a 2 blocos do centro, na altura de quem está de pé no chão do bloco. */
     private static final double VIEW_DISTANCE = 2.0;
     private static final double VIEW_TARGET_Y = 0.45;
+    private static final double EYE_HEIGHT = 1.62;
+    /** As oblíquas: (giro a partir da frente, inclinação) em graus; inclinação positiva é a câmera acima do alvo. */
+    private static final double[][] OBLIQUE_VIEWS = {{45, 35}, {45, -15}, {135, 35}, {135, -15}};
+    private static final double OBLIQUE_DISTANCE = 1.8;
+    private static final int OBLIQUE_LIFT = 3;
+    /**
+     * O centro da coluna de vidro (de 6,3 a 13,7 px) e a câmera rente a ela, do lado leste, a 0,9 bloco do centro: mais
+     * perto, a caixa do jogador encosta no bloco e o jogo o empurra para fora.
+     */
+    private static final double GLASS_CENTER_Y = 10.0 / 16.0;
+    private static final double GRAZE_DISTANCE = 0.9;
     /** Ticks com a câmera parada antes da foto, para o chunk refazer a malha com o estado novo. */
     private static final int BLOCK_SETTLE_TICKS = 20;
     private static final Direction[] FACINGS = {Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
@@ -123,10 +135,10 @@ final class E2eRepairerSteps {
 
     /**
      * O modelo no mundo: para cada {@code facing}, a foto de frente (de onde o jogador que o pôs estava, com a porta de
-     * energia para a câmera) e a de lado (vindo do horário do {@code facing}), sem a interface. O mundo do e2e tem o
-     * ciclo do dia desligado, então a luz é a mesma em todas. No fim, o voo e a interface voltam ao que eram, porque na
-     * rodada completa outros passos vêm depois (uma falha encerra o e2e inteiro, então só o caminho que passa precisa
-     * restaurar).
+     * energia para a câmera) e a de lado (vindo do horário do {@code facing}), sem a interface; depois as oblíquas, com
+     * o bloco no ar, e o item. O mundo do e2e tem o ciclo do dia desligado, então a luz é a mesma em todas. No fim, o
+     * voo e a interface voltam ao que eram, porque na rodada completa outros passos vêm depois (uma falha encerra o e2e
+     * inteiro, então só o caminho que passa precisa restaurar).
      */
     private static void blockShots(List<Step> list, UUID playerId, BlockPos[] pos) {
         boolean[] before = new boolean[2];
@@ -136,45 +148,131 @@ final class E2eRepairerSteps {
             Minecraft.getInstance().options.hideGui = true;
         }, () -> true, () -> ""));
         for (Direction facing : FACINGS) {
-            list.add(new Step("Reparador: bloco para " + facing, STEP_TIMEOUT_MS, () -> onServer(server -> {
-                ServerLevel level = server.overworld();
-                level.setBlockAndUpdate(pos[0], level.getBlockState(pos[0]).setValue(RepairerBlock.FACING, facing));
-                return null;
-            }), () -> Minecraft.getInstance().level.getBlockState(pos[0]).getValue(RepairerBlock.FACING) == facing,
-                    () -> "estado " + Minecraft.getInstance().level.getBlockState(pos[0])));
+            list.add(setFacing(pos, facing));
             String name = "reparador-bloco-" + facing.getSerializedName();
             list.add(blockShot(name + "-frente", playerId, pos, facing));
             list.add(blockShot(name + "-lado", playerId, pos, facing.getClockWise()));
         }
+        obliqueShots(list, playerId, pos);
+        itemShot(list, playerId, pos);
         list.add(new Step("Reparador: voo e interface de volta", STEP_TIMEOUT_MS, () -> {
             Minecraft.getInstance().options.hideGui = before[0];
             onServer(server -> {
                 ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+                player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
                 player.getAbilities().flying = before[1];
                 player.onUpdateAbilities();
                 return null;
             });
-        }, () -> Minecraft.getInstance().player.getAbilities().flying == before[1],
+        }, () -> Minecraft.getInstance().player.getAbilities().flying == before[1]
+                && Minecraft.getInstance().player.getMainHandItem().isEmpty(),
                 () -> "voo " + Minecraft.getInstance().player.getAbilities().flying));
     }
 
+    private static Step setFacing(BlockPos[] pos, Direction facing) {
+        return new Step("Reparador: bloco para " + facing, STEP_TIMEOUT_MS, () -> onServer(server -> {
+            ServerLevel level = server.overworld();
+            level.setBlockAndUpdate(pos[0], level.getBlockState(pos[0]).setValue(RepairerBlock.FACING, facing));
+            return null;
+        }), () -> Minecraft.getInstance().level.getBlockState(pos[0]).getValue(RepairerBlock.FACING) == facing,
+                () -> "estado " + Minecraft.getInstance().level.getBlockState(pos[0]));
+    }
+
     /**
-     * O jogador voando com os pés no chão do bloco, a {@link #VIEW_DISTANCE} do centro do lado {@code from}, olhando o
-     * bloco. A janela é real e o mouse gira a câmera: o ângulo volta a cada tick até a foto.
+     * O interior visto pelo vidro de vários ângulos, para conferir que nada some atrás dele: o bloco (para o norte)
+     * sobe {@link #OBLIQUE_LIFT} blocos, para a câmera poder olhar de baixo, e a câmera fica a {@link #OBLIQUE_DISTANCE}
+     * do centro do vidro em cada par (giro a partir da frente, inclinação) de {@link #OBLIQUE_VIEWS}; a última é rente
+     * ao vidro, do lado leste. O bloco do ar sai no fim.
      */
+    private static void obliqueShots(List<Step> list, UUID playerId, BlockPos[] pos) {
+        BlockPos[] high = new BlockPos[1];
+        list.add(new Step("Reparador: bloco no ar", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            ServerLevel level = server.overworld();
+            high[0] = pos[0].above(OBLIQUE_LIFT);
+            level.setBlockAndUpdate(high[0], ModBlocks.CRYSTAL_REPAIRER.get().defaultBlockState()
+                    .setValue(RepairerBlock.FACING, Direction.NORTH));
+            return null;
+        }), () -> Minecraft.getInstance().level.getBlockState(high[0]).is(ModBlocks.CRYSTAL_REPAIRER.get()),
+                () -> "bloco no ar no cliente"));
+        int n = 1;
+        for (double[] view : OBLIQUE_VIEWS) {
+            double yaw = Math.toRadians(view[0]);
+            double pitch = Math.toRadians(view[1]);
+            double horizontal = OBLIQUE_DISTANCE * Math.cos(pitch);
+            double[] offset = {Math.sin(yaw) * horizontal, OBLIQUE_DISTANCE * Math.sin(pitch),
+                    -Math.cos(yaw) * horizontal};
+            list.add(cameraShot("reparador-bloco-obliquo-" + n++, playerId, () -> high[0], offset, GLASS_CENTER_Y));
+        }
+        list.add(cameraShot("reparador-bloco-obliquo-" + n, playerId, () -> high[0],
+                new double[] {GRAZE_DISTANCE, 0, 0.15}, GLASS_CENTER_Y));
+        list.add(new Step("Reparador: bloco do ar fora", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            remove(server.overworld(), high[0]);
+            return null;
+        }), () -> Minecraft.getInstance().level.getBlockState(high[0]).isAir(), () -> "bloco no ar no cliente"));
+    }
+
+    /**
+     * O item na mão (em primeira pessoa e na barra, com a interface) e solto sobre o bloco, sem gravidade e sem poder
+     * ser pego, para o vidro do modelo composto aparecer; a entidade sai depois da foto.
+     */
+    private static void itemShot(List<Step> list, UUID playerId, BlockPos[] pos) {
+        ItemEntity[] dropped = new ItemEntity[1];
+        list.add(setFacing(pos, Direction.NORTH));
+        list.add(new Step("Reparador: item na mão e no ar", STEP_TIMEOUT_MS, () -> {
+            Minecraft.getInstance().options.hideGui = false;
+            onServer(server -> {
+                ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+                ItemStack stack = new ItemStack(ModItems.CRYSTAL_REPAIRER.get());
+                player.setItemInHand(InteractionHand.MAIN_HAND, stack.copy());
+                ServerLevel level = player.serverLevel();
+                ItemEntity entity = new ItemEntity(level, pos[0].getX() + 0.5, pos[0].getY() + 1.05,
+                        pos[0].getZ() + 0.5, stack, 0, 0, 0);
+                entity.setNoGravity(true);
+                entity.setPickUpDelay(Short.MAX_VALUE);
+                level.addFreshEntity(entity);
+                dropped[0] = entity;
+                return null;
+            });
+        }, () -> Minecraft.getInstance().player.getMainHandItem().is(ModItems.CRYSTAL_REPAIRER.get())
+                && itemPasses() == 2, () -> "mão " + Minecraft.getInstance().player.getMainHandItem() + ", "
+                + itemPasses() + " passes do modelo do item"));
+        list.add(blockShot("reparador-item", playerId, pos, Direction.NORTH));
+        list.add(cameraShot("reparador-item-perto", playerId, () -> pos[0], new double[] {0, 0.35, -1.1}, 1.3));
+        list.add(new Step("Reparador: item do ar fora", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            dropped[0].discard();
+            return null;
+        }), () -> true, () -> ""));
+    }
+
+    /** Quantos modelos o item desenha: 2 (o sólido e o vidro) quando o modelo composto do item carregou. */
+    private static int itemPasses() {
+        ItemStack stack = new ItemStack(ModItems.CRYSTAL_REPAIRER.get());
+        return Minecraft.getInstance().getItemRenderer().getModel(stack, null, null, 0).getRenderPasses(stack, true)
+                .size();
+    }
+
+    /** A câmera de frente ou de lado: o olho na altura de quem está de pé no chão do bloco, a {@link #VIEW_DISTANCE}. */
     private static Step blockShot(String file, UUID playerId, BlockPos[] pos, Direction from) {
+        return cameraShot(file, playerId, () -> pos[0], new double[] {from.getStepX() * VIEW_DISTANCE,
+                EYE_HEIGHT - VIEW_TARGET_Y, from.getStepZ() * VIEW_DISTANCE}, VIEW_TARGET_Y);
+    }
+
+    /**
+     * O jogador voando com o olho em {@code alvo + offset}, onde o alvo é o centro do bloco na altura {@code targetY},
+     * olhando o alvo. A janela é real e o mouse gira a câmera: o ângulo volta a cada tick até a foto.
+     */
+    private static Step cameraShot(String file, UUID playerId, java.util.function.Supplier<BlockPos> block,
+                                   double[] offset, double targetY) {
         double[] cam = new double[3];
         float[] ang = new float[2];
         return new Step("captura " + file, STEP_TIMEOUT_MS, () -> {
-            BlockPos p = pos[0];
-            cam[0] = p.getX() + 0.5 + from.getStepX() * VIEW_DISTANCE;
-            cam[1] = p.getY();
-            cam[2] = p.getZ() + 0.5 + from.getStepZ() * VIEW_DISTANCE;
-            double ex = p.getX() + 0.5 - cam[0];
-            double ey = p.getY() + VIEW_TARGET_Y - (cam[1] + 1.62);
-            double ez = p.getZ() + 0.5 - cam[2];
-            ang[0] = (float) Math.toDegrees(Math.atan2(-ex, ez));
-            ang[1] = (float) -Math.toDegrees(Math.atan2(ey, Math.sqrt(ex * ex + ez * ez)));
+            BlockPos p = block.get();
+            cam[0] = p.getX() + 0.5 + offset[0];
+            cam[1] = p.getY() + targetY + offset[1] - EYE_HEIGHT;
+            cam[2] = p.getZ() + 0.5 + offset[2];
+            ang[0] = (float) Math.toDegrees(Math.atan2(offset[0], -offset[2]));
+            ang[1] = (float) Math.toDegrees(Math.atan2(offset[1], Math.sqrt(offset[0] * offset[0]
+                    + offset[2] * offset[2])));
             Minecraft.getInstance().mouseHandler.releaseMouse();
             look(ang);
             onServer(server -> {

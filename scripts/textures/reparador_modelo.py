@@ -3,19 +3,20 @@
 O `gerar_texturas.py` chama `gerar(raiz_assets)` depois do `blocos.modelos()`. Não usa a classe `Modelo` do
 `blocos.py`, que proíbe elementos que se atravessam (o modelo aprovado tem vários), e grava tudo em subpastas:
 `models/block/repairer/` (o `blocos.modelos()` só apaga os `models/block/*.json` da raiz) e
-`textures/block/repairer/palette.png` (o `limpar` do `gerar_texturas.py` varre as subpastas, por isso `gerar`
-devolve a chave da paleta para entrar no conjunto que ele preserva).
+`textures/block/repairer/repairer.png` (o `limpar` do `gerar_texturas.py` varre as subpastas, por isso `gerar`
+devolve a chave da textura para entrar no conjunto que ele preserva).
 
-A textura do projeto no Blockbench é uma paleta de 128 × 128: cada material é uma coluna de blocos de 8 × 8 px e
-cada tom (a direção da face no projeto) uma linha. Aqui ela vira uma paleta de 16 × 16 com 1 px por material e
-tom (x = material, y = tom), lida da própria textura embutida no `.bbmodel` e conferida contra as cores base e os
-fatores de tom do desenho. Cada face aponta para um retângulo de 0,5 px no centro do seu texel, para o filtro
-não puxar a cor do vizinho.
+A textura é o atlas pintado no Blockbench (256 × 256, embutido no `.bbmodel`): cada face tem o seu retângulo, com
+1 px de folga entre eles. Ao gravar, a borda de cada retângulo é repetida 1 px para fora, na folga, para o mipmap
+não misturar a face com o fundo transparente nem com a vizinha. O uv do JSON de bloco vai de 0 a 16, então é o uv
+em pixels × 16 / 256.
 
-O vidro (o elemento `glass`) vai num modelo à parte, translúcido; o blockstate junta os dois por `multipart`.
-O JSON de bloco só aceita ângulos de -45 a 45 em passos de 22,5; os pedestais e as runas do anel giram em
-múltiplos de 22,5 até -405, então o giro é dividido em quartos de volta, aplicados na própria caixa (troca de
-faces e de eixos, exata), e o resto de -45 a 45, que fica como a rotação do elemento.
+O vidro (o elemento `glass`) vai num modelo à parte, translúcido; o blockstate junta os dois por `multipart` e
+o modelo de item pelo `neoforge:composite`. O JSON de bloco só aceita ângulos de -45 a 45 em passos de 22,5; os
+pedestais e as runas do anel giram em múltiplos de 22,5 até -405, então o giro é dividido em quartos de volta,
+aplicados na própria caixa (troca de faces e de eixos, exata), e o resto de -45 a 45, que fica como a rotação do
+elemento. A face que muda de lugar no quarto de volta ganha a `rotation` de face que põe cada canto da textura no
+mesmo canto do mundo, achada pela regra de uv do jogo (`FaceInfo` e `BlockFaceUV`).
 
 Uso isolado (na raiz): `python scripts/textures/reparador_modelo.py`.
 """
@@ -40,29 +41,24 @@ BBMODEL = RAIZ / "docs/preview/reparador-de-cristais.bbmodel"
 PASTA = "repairer"
 SOLIDO = "crystal_repairer"
 VIDRO = "crystal_repairer_glass"
-TEXTURA = f"block/{PASTA}/palette"
+TEXTURA = f"block/{PASTA}/repairer"
 ELEMENTO_VIDRO = "glass"
-ELEMENTOS_ESPERADOS = 105
-
-# Os materiais na ordem das colunas da paleta, com a cor base (o tom "north") do desenho aprovado.
-MATERIAIS = ("slab", "step", "bronze", "steel", "post", "mull", "cap", "floor", "ped", "dark", "coral", "glow",
-             "led", "glass")
-BASES = ("#3f3b4c", "#4d495a", "#a67c38", "#6b6779", "#5c5869", "#76728a", "#58546a", "#24212c", "#7d788f",
-         "#1d1b24", "#e8573a", "#ff9a66", "#ffc27a", "#a9cbe8")
-# Os tons na ordem das linhas, com o fator que o desenho aplica sobre a cor base.
-TONS = ("up", "north", "south", "east", "west", "down")
-FATORES = (1.22, 1.0, 0.9, 0.84, 1.06, 0.62)
-# Brilho, luz e vidro não têm tom por face no desenho; os elementos só com eles saem com "shade": false.
-SEM_SOMBRA = frozenset(MATERIAIS.index(m) for m in ("glow", "led", "glass"))
-ALFA_VIDRO = 51
-# A textura embutida passa pelo PNG com alfa 51: a cor do vidro volta com até 3 de erro por canal.
-TOLERANCIA = 3
-BLOCO_PX = 8
+ELEMENTOS_ESPERADOS = 104
+ATLAS = 256
 
 ANGULOS_JSON = (-45.0, -22.5, 0.0, 22.5, 45.0)
 EIXOS = ("x", "y", "z")
 NORMAIS = {"east": (1, 0, 0), "west": (-1, 0, 0), "up": (0, 1, 0), "down": (0, -1, 0), "south": (0, 0, 1),
            "north": (0, 0, -1)}
+# Os cantos de cada face na ordem do `FaceInfo` do jogo: 0 = mínimo, 1 = máximo, por eixo (x, y, z).
+CANTOS_FACE = {
+    "down": ((0, 0, 1), (0, 0, 0), (1, 0, 0), (1, 0, 1)),
+    "up": ((0, 1, 0), (0, 1, 1), (1, 1, 1), (1, 1, 0)),
+    "north": ((1, 1, 0), (1, 0, 0), (0, 0, 0), (0, 1, 0)),
+    "south": ((0, 1, 1), (0, 0, 1), (1, 0, 1), (1, 1, 1)),
+    "west": ((0, 1, 0), (0, 0, 0), (0, 0, 1), (0, 1, 1)),
+    "east": ((1, 1, 1), (1, 0, 1), (1, 0, 0), (1, 1, 0)),
+}
 # O blockstate gira o modelo (que olha para o norte) no sentido horário visto de cima, como o `ROTACOES_PECA`.
 GIRO_FACING = {"north": 0, "east": 90, "south": 180, "west": 270}
 
@@ -71,35 +67,42 @@ class ModeloInvalido(ValueError):
     pass
 
 
-def _paleta_embutida(projeto: dict) -> Image.Image:
+def _sem_sombra(nome: str) -> bool:
+    """Luzes e brilhos ficam chapados: o jogo não escurece a face pela direção. Os brilhos repetidos levam o índice
+    depois do `_glow` (`rune_glow_0`, `fin_tip_glow_a`)."""
+    return nome.endswith("_glow") or "_glow_" in nome or nome.startswith("led_")
+
+
+def _atlas(projeto: dict) -> Image.Image:
     fonte = projeto["textures"][0]["source"]
     if not fonte.startswith("data:image/png;base64,"):
         raise ModeloInvalido("a textura do .bbmodel não está embutida como PNG")
     img = Image.open(io.BytesIO(base64.b64decode(fonte.split(",", 1)[1]))).convert("RGBA")
-    if img.size != (128, 128):
-        raise ModeloInvalido(f"a textura do .bbmodel tem {img.size}, esperado 128 × 128")
+    if img.size != (ATLAS, ATLAS):
+        raise ModeloInvalido(f"a textura do .bbmodel tem {img.size}, esperado {ATLAS} × {ATLAS}")
     return img
 
 
-def _esperada(material: int, tom: int) -> tuple[int, int, int, int]:
-    hexa = BASES[material].lstrip("#")
-    base = [int(hexa[i:i + 2], 16) for i in (0, 2, 4)]
-    fator = 1.0 if material in SEM_SOMBRA else FATORES[tom]
-    alfa = ALFA_VIDRO if MATERIAIS[material] == "glass" else 255
-    return (*(min(255, round(c * fator)) for c in base), alfa)
+def _retangulo(uv) -> tuple[int, int, int, int]:
+    x0, y0, x1, y1 = (int(round(v)) for v in uv)
+    return min(x0, x1), min(y0, y1), max(x0, x1), max(y0, y1)
 
 
-def paleta(projeto: dict) -> Image.Image:
-    """A paleta de 16 × 16 lida do centro de cada bloco da textura do projeto, conferida contra o desenho."""
-    origem = _paleta_embutida(projeto)
-    out = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
-    for m in range(len(MATERIAIS)):
-        for t in range(len(TONS)):
-            px = origem.getpixel((m * BLOCO_PX + BLOCO_PX // 2, t * BLOCO_PX + BLOCO_PX // 2))
-            esperada = _esperada(m, t)
-            if px[3] != esperada[3] or any(abs(a - b) > TOLERANCIA for a, b in zip(px[:3], esperada[:3])):
-                raise ModeloInvalido(f"cor de {MATERIAIS[m]}/{TONS[t]} no .bbmodel é {px}, o desenho dá {esperada}")
-            out.putpixel((m, t), px)
+def com_folga(img: Image.Image, retangulos: list[tuple[int, int, int, int]]) -> Image.Image:
+    """Repete a borda de cada retângulo 1 px para fora, só nos pixels que não são de nenhuma face."""
+    ocupado = set()
+    for x0, y0, x1, y1 in retangulos:
+        ocupado.update((x, y) for x in range(x0, x1) for y in range(y0, y1))
+    out = img.copy()
+    escrito = set()
+    for x0, y0, x1, y1 in retangulos:
+        for x in range(x0 - 1, x1 + 1):
+            for y in range(y0 - 1, y1 + 1):
+                if not (0 <= x < ATLAS and 0 <= y < ATLAS) or (x, y) in ocupado or (x, y) in escrito:
+                    continue
+                fonte = (min(max(x, x0), x1 - 1), min(max(y, y0), y1 - 1))
+                out.putpixel((x, y), img.getpixel(fonte))
+                escrito.add((x, y))
     return out
 
 
@@ -136,16 +139,21 @@ def _num(v: float) -> float | int:
     return int(r) if r == int(r) else r
 
 
-def _face(nome_el: str, direcao: str, face: dict) -> tuple[dict, int]:
-    if face.get("texture") is None:
-        raise ModeloInvalido(f"{nome_el}.{direcao}: face sem textura")
-    u0, v0, u1, v1 = face["uv"]
-    material = int(((u0 + u1) / 2) // BLOCO_PX)
-    tom = int(((v0 + v1) / 2) // BLOCO_PX)
-    if not (0 <= material < len(MATERIAIS) and 0 <= tom < len(TONS)):
-        raise ModeloInvalido(f"{nome_el}.{direcao}: uv {face['uv']} fora da paleta")
-    uv = [material + 0.25, tom + 0.25, material + 0.75, tom + 0.75]
-    return {"uv": uv, "texture": "#palette"}, material
+def _uv_cantos(direcao: str, de, ate, uv, rotacao: int) -> list[tuple[tuple, tuple]]:
+    """O uv que o jogo dá a cada canto da face: `BlockFaceUV.getU/getV` com o índice deslocado pela rotação."""
+    saida = []
+    for indice, canto in enumerate(CANTOS_FACE[direcao]):
+        pos = tuple((de, ate)[canto[i]][i] for i in range(3))
+        k = (indice + rotacao // 90) % 4
+        saida.append((pos, (uv[0] if k in (0, 1) else uv[2], uv[1] if k in (0, 3) else uv[3])))
+    return saida
+
+
+def _mesmos_cantos(a: list[tuple[tuple, tuple]], b: list[tuple[tuple, tuple]]) -> bool:
+    """Cada canto de `a` tem em `b` um canto na mesma posição (até 1e-3, o erro do giro) com o mesmo uv."""
+    def perto(p, q):
+        return all(abs(p[i] - q[i]) < 1e-3 for i in range(len(p)))
+    return all(any(perto(pa, pb) and perto(ua, ub) for pb, ub in b) for pa, ua in a)
 
 
 def converter(el: dict) -> dict:
@@ -174,22 +182,36 @@ def converter(el: dict) -> dict:
     novo_ate = [max(c[i] for c in cantos) + origem[i] for i in range(3)]
     por_normal = {v: k for k, v in NORMAIS.items()}
     faces: dict[str, dict] = {}
-    materiais: set[int] = set()
     for direcao, face in faces_bb.items():
+        if face.get("texture") is None:
+            raise ModeloInvalido(f"{nome}.{direcao}: face sem textura")
+        if face.get("rotation"):
+            raise ModeloInvalido(f"{nome}.{direcao}: rotação de face no .bbmodel não é tratada")
+        uv = [v * 16 / ATLAS for v in face["uv"]]
         nova = por_normal[tuple(int(c) for c in _quarto(NORMAIS[direcao], eixo, quartos))]
-        faces[nova], material = _face(nome, direcao, face)
-        materiais.add(material)
+        # Onde cada canto da textura cai no mundo depois do quarto de volta; a rotação de face que repete isso.
+        alvo = []
+        for pos, coord in _uv_cantos(direcao, de, ate, uv, 0):
+            girado = _quarto(tuple(pos[i] - origem[i] for i in range(3)), eixo, quartos)
+            alvo.append((tuple(girado[i] + origem[i] for i in range(3)), coord))
+        rotacao = next((r for r in (0, 90, 180, 270)
+                        if _mesmos_cantos(alvo, _uv_cantos(nova, novo_de, novo_ate, uv, r))), None)
+        if rotacao is None:
+            raise ModeloInvalido(f"{nome}.{direcao}: nenhuma rotação de face reproduz a textura girada")
+        faces[nova] = {"uv": [_num(v) for v in uv], "texture": "#repairer"}
+        if rotacao:
+            faces[nova]["rotation"] = rotacao
 
     # A caixa com o resto do giro tem de cair exatamente nos cantos da original com o giro inteiro.
-    alvo = sorted(tuple(round(c, 4) for c in _gira(p, eixo, graus, origem)) for p in _cantos(de, ate))
+    alvo_cantos = sorted(tuple(round(c, 4) for c in _gira(p, eixo, graus, origem)) for p in _cantos(de, ate))
     obtido = sorted(tuple(round(c, 4) for c in _gira(p, eixo, resto, origem)) for p in _cantos(novo_de, novo_ate))
-    if alvo != obtido:
+    if alvo_cantos != obtido:
         raise ModeloInvalido(f"{nome}: o giro dividido não reproduz o original")
 
     saida: dict = {"name": nome, "from": [_num(v) for v in novo_de], "to": [_num(v) for v in novo_ate]}
     if resto:
         saida["rotation"] = {"origin": [_num(v) for v in origem], "axis": EIXOS[eixo], "angle": resto}
-    if materiais <= SEM_SOMBRA:
+    if _sem_sombra(nome):
         saida["shade"] = False
     saida["faces"] = {d: faces[d] for d in NORMAIS if d in faces}
     return saida
@@ -210,10 +232,20 @@ def validar(elementos: list[dict]) -> None:
         if not el["faces"]:
             raise ModeloInvalido(f"{nome}: elemento sem face")
         for direcao, face in el["faces"].items():
-            if face.get("texture") != "#palette":
-                raise ModeloInvalido(f"{nome}.{direcao}: face sem a textura da paleta")
+            if face.get("texture") != "#repairer":
+                raise ModeloInvalido(f"{nome}.{direcao}: face sem a textura do atlas")
             if not all(0 <= v <= 16 for v in face["uv"]):
                 raise ModeloInvalido(f"{nome}.{direcao}: uv {face['uv']} fora de 0..16")
+
+
+def _alfas(img: Image.Image, faces: list[dict]) -> list[int]:
+    alfas = []
+    for face in faces:
+        x0, y0, x1, y1 = _retangulo([v * ATLAS / 16 for v in face["uv"]])
+        if x1 <= x0 or y1 <= y0:
+            raise ModeloInvalido(f"face de área zero no atlas: {face['uv']}")
+        alfas.extend(img.getpixel((x, y))[3] for x in range(x0, x1) for y in range(y0, y1))
+    return alfas
 
 
 def _modelo(render_type: str, elementos: list[dict]) -> dict:
@@ -222,16 +254,16 @@ def _modelo(render_type: str, elementos: list[dict]) -> dict:
         "parent": "minecraft:block/block",
         "render_type": render_type,
         "ambientocclusion": False,
-        "textures": {"palette": textura, "particle": textura},
+        "textures": {"repairer": textura, "particle": textura},
         "elements": elementos,
     }
 
 
 def gerar(raiz_assets: Path = MODELOS) -> set[str]:
-    """Grava a paleta, os dois modelos, o blockstate e o modelo de item; devolve as chaves das texturas gravadas
+    """Grava o atlas, os dois modelos, o blockstate e o modelo de item; devolve as chaves das texturas gravadas
     (relativas a `textures/`, como as do `limpar`)."""
     projeto = json.loads(BBMODEL.read_text(encoding="utf-8"))
-    img = paleta(projeto)
+    atlas = _atlas(projeto)
     elementos = [converter(el) for el in projeto["elements"]]
     vidro = [el for el in elementos if el["name"] == ELEMENTO_VIDRO]
     solido = [el for el in elementos if el["name"] != ELEMENTO_VIDRO]
@@ -240,15 +272,16 @@ def gerar(raiz_assets: Path = MODELOS) -> set[str]:
     if not vidro:
         raise ModeloInvalido("o .bbmodel não tem o elemento do vidro")
     validar(elementos)
-    vidro_cols = {int(f["uv"][0]) for el in vidro for f in el["faces"].values()}
-    if vidro_cols != {MATERIAIS.index("glass")}:
-        raise ModeloInvalido("o vidro usa outro material além do vidro")
-    if any(img.getpixel((int(f["uv"][0]), int(f["uv"][1])))[3] != 255 for el in solido for f in el["faces"].values()):
+    if any(a != 255 for a in _alfas(atlas, [f for el in solido for f in el["faces"].values()])):
         raise ModeloInvalido("o modelo sólido usa um texel com alfa")
+    alfas_vidro = _alfas(atlas, [f for el in vidro for f in el["faces"].values()])
+    if any(a == 255 for a in alfas_vidro) or not any(alfas_vidro):
+        raise ModeloInvalido("o vidro precisa de alfa parcial em todas as faces")
 
+    retangulos = [_retangulo(face["uv"]) for el in projeto["elements"] for face in el["faces"].values()]
     textura = ASSETS / f"{TEXTURA}.png"
     textura.parent.mkdir(parents=True, exist_ok=True)
-    img.save(textura)
+    com_folga(atlas, retangulos).save(textura)
     modelos = raiz_assets / "models/block" / PASTA
     grava_json(modelos / f"{SOLIDO}.json", _modelo("minecraft:solid", solido))
     grava_json(modelos / f"{VIDRO}.json", _modelo("minecraft:translucent", vidro))
@@ -260,7 +293,17 @@ def gerar(raiz_assets: Path = MODELOS) -> set[str]:
                 aplica["y"] = y
             partes.append({"when": {"facing": facing}, "apply": aplica})
     grava_json(raiz_assets / f"blockstates/{SOLIDO}.json", {"multipart": partes})
-    grava_json(raiz_assets / f"models/item/{SOLIDO}.json", {"parent": f"{NS}:block/{PASTA}/{SOLIDO}"})
+    # O item junta os dois pelo modelo composto do NeoForge: cada filho desenha com o próprio render_type, na ordem
+    # dos filhos (o sólido antes do vidro), e o `display` vem do `block/block`.
+    grava_json(raiz_assets / f"models/item/{SOLIDO}.json", {
+        "parent": "minecraft:block/block",
+        "loader": "neoforge:composite",
+        "textures": {"particle": f"{NS}:{TEXTURA}"},
+        "children": {
+            "solido": {"parent": f"{NS}:block/{PASTA}/{SOLIDO}"},
+            "vidro": {"parent": f"{NS}:block/{PASTA}/{VIDRO}"},
+        },
+    })
     return {TEXTURA}
 
 

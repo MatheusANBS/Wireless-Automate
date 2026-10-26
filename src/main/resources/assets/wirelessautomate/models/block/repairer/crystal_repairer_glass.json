@@ -3,8 +3,8 @@
   "render_type": "minecraft:translucent",
   "ambientocclusion": false,
   "textures": {
-    "palette": "wirelessautomate:block/repairer/palette",
-    "particle": "wirelessautomate:block/repairer/palette"
+    "repairer": "wirelessautomate:block/repairer/repairer",
+    "particle": "wirelessautomate:block/repairer/repairer"
   },
   "elements": [
     {
@@ -19,61 +19,60 @@
         13.7,
         13.4
       ],
-      "shade": false,
       "faces": {
         "east": {
           "uv": [
-            13.25,
-            3.25,
-            13.75,
-            3.75
+            10.4375,
+            3.6875,
+            11.8125,
+            4.625
           ],
-          "texture": "#palette"
+          "texture": "#repairer"
         },
         "west": {
           "uv": [
-            13.25,
-            4.25,
-            13.75,
-            4.75
+            13.3125,
+            3.6875,
+            14.6875,
+            4.625
           ],
-          "texture": "#palette"
+          "texture": "#repairer"
         },
         "up": {
           "uv": [
-            13.25,
-            0.25,
-            13.75,
-            0.75
+            9.75,
+            1.9375,
+            11.125,
+            3.3125
           ],
-          "texture": "#palette"
+          "texture": "#repairer"
         },
         "down": {
           "uv": [
-            13.25,
-            5.25,
-            13.75,
-            5.75
+            11.1875,
+            1.9375,
+            12.5625,
+            3.3125
           ],
-          "texture": "#palette"
+          "texture": "#repairer"
         },
         "south": {
           "uv": [
+            11.875,
+            3.6875,
             13.25,
-            2.25,
-            13.75,
-            2.75
+            4.625
           ],
-          "texture": "#palette"
+          "texture": "#repairer"
         },
         "north": {
           "uv": [
-            13.25,
-            1.25,
-            13.75,
-            1.75
+            9,
+            3.6875,
+            10.375,
+            4.625
           ],
-          "texture": "#palette"
+          "texture": "#repairer"
         }
       }
     }

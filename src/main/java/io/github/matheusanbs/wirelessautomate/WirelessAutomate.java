@@ -19,6 +19,7 @@ import io.github.matheusanbs.wirelessautomate.registry.ModRecipes;
 import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeEditor;
 import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeOverridePack;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorCapabilities;
+import io.github.matheusanbs.wirelessautomate.repairer.RepairerManager;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorManager;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorMembers;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorPorts;
@@ -88,6 +89,7 @@ public final class WirelessAutomate {
         NetworkManager.get().tick(event.getServer());
         SourceTankLevels.tick();
         ResonatorManager.tick(event.getServer());
+        RepairerManager.tick(event.getServer());
         // Por último: junta num aviso só as mudanças de conteúdo do tick, inclusive as do motor e do Ressonador.
         StorageNeighbors.tick();
     }
@@ -106,6 +108,7 @@ public final class WirelessAutomate {
         NetworkManager.reset();
         RemoteIndex.reset();
         SourceTankLevels.reset();
+        RepairerManager.reset();
         StorageNeighbors.reset();
         ResonatorManager.reset();
         ResonatorPorts.reset();

@@ -1,7 +1,9 @@
 package io.github.matheusanbs.wirelessautomate.repairer;
 
 import com.mojang.serialization.MapCodec;
+import io.github.matheusanbs.wirelessautomate.menu.RepairerMenu;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.core.Direction;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionResult;
@@ -66,11 +68,15 @@ public class RepairerBlock extends BaseEntityBlock {
         return new RepairerBlockEntity(pos, state);
     }
 
-    /** A tela abre numa tarefa seguinte; por ora o clique não faz nada. */
+    /** O clique de mão vazia abre a tela do Reparador. */
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
                                                BlockHitResult hit) {
-        return InteractionResult.PASS;
+        if (!level.isClientSide && player instanceof ServerPlayer serverPlayer
+                && level.getBlockEntity(pos) instanceof RepairerBlockEntity repairer) {
+            RepairerMenu.open(serverPlayer, repairer);
+        }
+        return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
     /** Quebrar larga os 17 slots; a energia se perde, como no Núcleo. */

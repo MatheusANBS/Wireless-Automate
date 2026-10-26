@@ -4,6 +4,7 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.client.filter.FilterScreen;
 import io.github.matheusanbs.wirelessautomate.client.linker.LinkerScreen;
 import io.github.matheusanbs.wirelessautomate.client.recipe.RecipeEditorScreen;
+import io.github.matheusanbs.wirelessautomate.client.repairer.RepairerScreen;
 import io.github.matheusanbs.wirelessautomate.client.resonator.ResonatorProjection;
 import io.github.matheusanbs.wirelessautomate.client.resonator.render.ResonatorRenderer;
 import io.github.matheusanbs.wirelessautomate.client.resonator.screen.ResonatorScreen;
@@ -15,6 +16,7 @@ import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorMenu;
+import io.github.matheusanbs.wirelessautomate.menu.RepairerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.ResonatorMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageScalarMenu;
@@ -102,6 +104,8 @@ public final class ClientSetup {
                 -> new RecipeEditorScreen(menu, inventory, title));
         event.register(ModMenus.RESONATOR.get(),
                 (ResonatorMenu menu, Inventory inventory, Component title) -> new ResonatorScreen(menu, inventory, title));
+        event.register(ModMenus.CRYSTAL_REPAIRER.get(),
+                (RepairerMenu menu, Inventory inventory, Component title) -> new RepairerScreen(menu, inventory, title));
     }
 
     /** A câmara animada do Núcleo montado. */

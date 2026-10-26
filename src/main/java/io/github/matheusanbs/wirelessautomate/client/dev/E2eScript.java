@@ -10,6 +10,7 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2ePanelSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2ePortugueseSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eRangeSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eRecipeSteps.*;
+import static io.github.matheusanbs.wirelessautomate.client.dev.E2eRepairerSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eResonatorSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eJeiResonatorSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eRouterSteps.*;
@@ -32,7 +33,8 @@ final class E2eScript {
      * Opcional: {@code WA_E2E_ONLY=tablet} roda só a abertura, o nome e as redes de B, a transferência entre redes e os
      * passos do Tablet; {@code WA_E2E_ONLY=vinculador}, só a abertura e os passos do Configurador e do Vinculador;
      * {@code WA_E2E_ONLY=alcance}, só a abertura, as redes de B e os passos do roteador de alcance; {@code WA_E2E_ONLY=ressonador}, só a abertura e os passos do Ressonador,
-     * com os do JEI dele; {@code WA_E2E_ONLY=guia}, só a abertura e as páginas do guia (com o GuideME).
+     * com os do JEI dele; {@code WA_E2E_ONLY=reparador}, só a abertura e a tela do Reparador de Cristais;
+     * {@code WA_E2E_ONLY=guia}, só a abertura e as páginas do guia (com o GuideME).
      */
     private static final String ONLY = System.getenv("WA_E2E_ONLY");
 
@@ -67,6 +69,10 @@ final class E2eScript {
             jeiResonatorSteps(list);
             return list;
         }
+        if ("reparador".equals(ONLY)) {
+            repairerSteps(list);
+            return list;
+        }
         if ("guia".equals(ONLY)) {
             if (ModList.get().isLoaded("guideme")) {
                 guideSteps(list);
@@ -95,6 +101,7 @@ final class E2eScript {
         darkSteps(list);
         resonatorSteps(list);
         jeiResonatorSteps(list);
+        repairerSteps(list);
         if (ModList.get().isLoaded("guideme")) {
             guideSteps(list);
         }

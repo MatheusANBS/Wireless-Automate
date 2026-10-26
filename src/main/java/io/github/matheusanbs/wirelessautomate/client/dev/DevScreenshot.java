@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.client.dev;
 import static io.github.matheusanbs.wirelessautomate.client.dev.ScreenshotFilter.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.ScreenshotGalleries.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.ScreenshotLinker.*;
+import static io.github.matheusanbs.wirelessautomate.client.dev.ScreenshotRepairer.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.ScreenshotResonator.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.ScreenshotRouter.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.ScreenshotTablet.*;
@@ -80,10 +81,10 @@ public final class DevScreenshot {
 
     /**
      * Todos os passos, na ordem: roteador, visor 3D, filtro, cartões, upgrade, Tablet, Vinculador, Núcleo do
-     * Ressonador e as galerias (giro, blocos, capa, roda).
+     * Ressonador, Reparador de Cristais e as galerias (giro, blocos, capa, roda).
      */
     private static final List<Step> SEQUENCE = Stream.of(STEPS, viewSteps(), filterSteps(), cardSteps(),
-                    upgradeSteps(), rangeSteps(), tabletSteps(), linkerSteps(), resonatorSteps(), spinSteps(), blockSteps(), coverSteps(), wheelSteps())
+                    upgradeSteps(), rangeSteps(), tabletSteps(), linkerSteps(), resonatorSteps(), repairerSteps(), spinSteps(), blockSteps(), coverSteps(), wheelSteps())
             .flatMap(List::stream)
             .filter(step -> ONLY == null || step.file().startsWith(ONLY))
             .toList();
@@ -128,7 +129,8 @@ public final class DevScreenshot {
             screen = new RouterScreen(menu, new Inventory(null), Component.translatable("block.wirelessautomate.router"),
                     true);
         }
-        AbstractContainerScreen<?> active = resonatorScreen != null ? resonatorScreen
+        AbstractContainerScreen<?> active = repairerScreen != null ? repairerScreen
+                : resonatorScreen != null ? resonatorScreen
                 : linkerScreen != null ? linkerScreen
                 : tabletScreen != null ? tabletScreen
                 : filterScreen != null ? filterScreen : screen;

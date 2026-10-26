@@ -64,19 +64,32 @@ final class E2eSuites {
                 configuratorSteps(list);
                 linkerSteps(list);
             }),
-            suite("portugues", "telas em português", Prereq.REDES, E2ePortugueseSteps::portugueseSteps),
+            optional("portugues", "telas em português (a variante pt de todas)", Prereq.REDES, E2ePortugueseSteps::portugueseSteps),
             suite(ARMAZENAMENTO, "Baú de armazenamento", Prereq.REDES, E2eStorageSteps::storageChestSteps),
             new Suite("source", "Tanque de Source (com o Ars Nouveau)", Prereq.REDES, E2eSourceTankSteps::sourceTankSteps,
                     false, StorageKind.SOURCE_TANK::loaded),
             suite("receitas", "editor de receitas", Prereq.REDES, E2eRecipeSteps::recipeEditorSteps),
-            suite("escuro", "tema escuro (usa os baús e a Bateria do armazenamento)", Prereq.ARMAZENAMENTO, E2eDarkSteps::darkSteps),
+            optional("escuro", "tema escuro (usa os baús e a Bateria do armazenamento)", Prereq.ARMAZENAMENTO, E2eDarkSteps::darkSteps),
             suite("ressonador", "Ressonador de Sinal", Prereq.NENHUM, E2eResonatorSteps::resonatorSteps),
+            new Suite("ressonador-desempenho", "tempo de quadro da câmara: desenho antigo × plasma (mede, não afirma)",
+                    Prereq.NENHUM, list -> {
+                        E2eResonatorSteps.perf = true;
+                        try {
+                            E2eResonatorSteps.resonatorSteps(list);
+                        } finally {
+                            E2eResonatorSteps.perf = false;
+                        }
+                    }, true, () -> true),
             suite("ressonador-jei", "JEI do Ressonador", Prereq.NENHUM, E2eJeiResonatorSteps::jeiResonatorSteps),
             suite("reparador", "Reparador de Cristais", Prereq.NENHUM, E2eRepairerSteps::repairerSteps),
             new Suite("guia", "páginas do guia (com o GuideME)", Prereq.NENHUM, E2eGuideSteps::guideSteps, false,
                     () -> ModList.get().isLoaded("guideme")));
 
     private E2eSuites() {
+    }
+
+    private static Suite optional(String nome, String descricao, Prereq prereq, Consumer<List<Step>> passos) {
+        return new Suite(nome, descricao, prereq, passos, true, () -> true);
     }
 
     private static Suite suite(String nome, String descricao, Prereq prereq, Consumer<List<Step>> passos) {

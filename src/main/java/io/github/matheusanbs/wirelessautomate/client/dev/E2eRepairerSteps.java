@@ -72,9 +72,11 @@ final class E2eRepairerSteps {
         BlockPos[] pos = new BlockPos[1];
         list.add(close("Reparador: fechar a tela de antes"));
         round(list, playerId, pos, "");
-        list.add(language("pt_br"));
-        round(list, playerId, pos, "-pt");
-        list.add(language("en_us"));
+        E2eVariants.pt(list, () -> {
+            list.add(language("pt_br"));
+            round(list, playerId, pos, "-pt");
+            list.add(language("en_us"));
+        });
         blockShots(list, playerId, pos);
         list.add(new Step("Reparador: tirar o bloco", STEP_TIMEOUT_MS, () -> onServer(server -> {
             remove(server.overworld(), pos[0]);
@@ -84,7 +86,7 @@ final class E2eRepairerSteps {
 
     /** Um idioma: o Reparador novo, os três estados com uma foto cada e, em inglês, a foto no escuro também. */
     private static void round(List<Step> list, UUID playerId, BlockPos[] pos, String suffix) {
-        boolean withDark = suffix.isEmpty();
+        boolean withDark = suffix.isEmpty() && E2eVariants.darkOn();
         list.add(new Step("Reparador: bloco novo" + suffix, STEP_TIMEOUT_MS, () -> onServer(server -> {
             ServerPlayer player = server.getPlayerList().getPlayer(playerId);
             ServerLevel level = player.serverLevel();
@@ -127,7 +129,7 @@ final class E2eRepairerSteps {
         }), () -> stepTicks >= WORK_TICKS && ready(state -> state.ends()[0] > 0 && state.ends()[1] > 0
                 && state.ends()[2] > 0), () -> "estado " + describeState()));
         shot(list, "reparador-tela-reparando" + suffix, withDark);
-        if (withDark) {
+        if (suffix.isEmpty()) {
             hovered(list, "reparador-tela-dica", 1);
             smallWindow(list);
         }

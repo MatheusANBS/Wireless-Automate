@@ -59,7 +59,7 @@ final class E2eSourceTankSteps {
         }), () -> Minecraft.getInstance().level != null
                 && Minecraft.getInstance().level.getBlockState(at[0]).getBlock() instanceof StorageSourceTankBlock,
                 () -> "bloco no cliente"));
-        for (String code : new String[] {"en_us", "pt_br"}) {
+        for (String code : E2eVariants.ptOn() ? new String[] {"en_us", "pt_br"} : new String[] {"en_us"}) {
             String suffix = code.equals("pt_br") ? "-pt" : "";
             String label = code.equals("pt_br") ? "pt: " : "";
             if (code.equals("pt_br")) {

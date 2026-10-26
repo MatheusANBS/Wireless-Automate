@@ -83,13 +83,15 @@ final class E2eTabletMarkSteps {
         list.add(markFurnaces("marcar: "));
         list.add(captureMarked("7q-tablet-marcar-maquinas"));
         list.add(clipCheck("Tablet: marcar máquinas"));
-        list.add(new Step("marcar: tema escuro", STEP_TIMEOUT_MS, () -> {
-            themeBefore = GuiThemes.current();
-            GuiThemes.preview(GuiTheme.DARK);
-        }, () -> GuiThemes.current() == GuiTheme.DARK, () -> "tema " + GuiThemes.current()));
-        list.add(captureMarked("7q-tablet-marcar-maquinas-escuro"));
-        list.add(new Step("marcar: tema de volta", STEP_TIMEOUT_MS, () -> GuiThemes.preview(themeBefore),
-                () -> GuiThemes.current() == themeBefore, () -> "tema " + GuiThemes.current()));
+        E2eVariants.escuro(list, () -> {
+            list.add(new Step("marcar: tema escuro", STEP_TIMEOUT_MS, () -> {
+                themeBefore = GuiThemes.current();
+                GuiThemes.preview(GuiTheme.DARK);
+            }, () -> GuiThemes.current() == GuiTheme.DARK, () -> "tema " + GuiThemes.current()));
+            list.add(captureMarked("7q-tablet-marcar-maquinas-escuro"));
+            list.add(new Step("marcar: tema de volta", STEP_TIMEOUT_MS, () -> GuiThemes.preview(themeBefore),
+                    () -> GuiThemes.current() == themeBefore, () -> "tema " + GuiThemes.current()));
+        });
         list.add(new Step("marcar: Colar nos marcados", STEP_TIMEOUT_MS, () -> {
             aBefore = onServer(server -> RouterPreset.copyOf(router(server, routerA)));
             bBefore = onServer(server -> RouterPreset.copyOf(router(server, routerB)));

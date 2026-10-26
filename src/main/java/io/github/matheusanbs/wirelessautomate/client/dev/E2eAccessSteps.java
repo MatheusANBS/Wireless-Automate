@@ -94,13 +94,15 @@ final class E2eAccessSteps {
         }
         list.add(capture("7s-tablet-acesso"));
         list.add(clipCheck("Tablet: lista de acesso"));
-        list.add(new Step("acesso: tema escuro", STEP_TIMEOUT_MS, () -> {
-            themeBefore = GuiThemes.current();
-            GuiThemes.preview(GuiTheme.DARK);
-        }, () -> GuiThemes.current() == GuiTheme.DARK, () -> "tema " + GuiThemes.current()));
-        list.add(capture("7s-tablet-acesso-escuro"));
-        list.add(new Step("acesso: tema de volta", STEP_TIMEOUT_MS, () -> GuiThemes.preview(themeBefore),
-                () -> GuiThemes.current() == themeBefore, () -> "tema " + GuiThemes.current()));
+        E2eVariants.escuro(list, () -> {
+            list.add(new Step("acesso: tema escuro", STEP_TIMEOUT_MS, () -> {
+                themeBefore = GuiThemes.current();
+                GuiThemes.preview(GuiTheme.DARK);
+            }, () -> GuiThemes.current() == GuiTheme.DARK, () -> "tema " + GuiThemes.current()));
+            list.add(capture("7s-tablet-acesso-escuro"));
+            list.add(new Step("acesso: tema de volta", STEP_TIMEOUT_MS, () -> GuiThemes.preview(themeBefore),
+                    () -> GuiThemes.current() == themeBefore, () -> "tema " + GuiThemes.current()));
+        });
         list.add(new Step("acesso: o ✕ pede dois cliques", STEP_TIMEOUT_MS, () -> {
             int[] c = tabletScreen().access().removeCenter(false, 0);
             click(tabletScreen(), c[0], c[1]);

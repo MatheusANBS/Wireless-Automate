@@ -102,8 +102,7 @@ final class E2eResonatorFlowSteps {
         }, () -> "ressonador-camara-fluxo-alto.png, faixa " + band(origin)));
         // a medida com o conduto aceso: a extração continua a cada tick de espera
         for (int i = 0; i < 2; i++) {
-            list.add(E2eResonatorSteps.frameTime(true, " com conduto", () -> drain(origin)));
-            list.add(E2eResonatorSteps.frameTime(false, " com conduto", () -> drain(origin)));
+            E2eResonatorSteps.timed(list, " com conduto", () -> drain(origin));
         }
         // o raio de perto, em dois instantes (os arcos são sorteados de novo a 14 Hz), e a câmera volta à janela
         list.add(E2eResonatorSteps.camera("Ressonador: câmera perto do raio", playerId, () -> origin[0],
@@ -156,8 +155,7 @@ final class E2eResonatorFlowSteps {
         list.add(capture("ressonador-camara-recarga"));
         // a medida com a recarga em curso
         for (int i = 0; i < 2; i++) {
-            list.add(E2eResonatorSteps.frameTime(true, " com recarga", () -> recharging(origin)));
-            list.add(E2eResonatorSteps.frameTime(false, " com recarga", () -> recharging(origin)));
+            E2eResonatorSteps.timed(list, " com recarga", () -> recharging(origin));
         }
         list.add(E2eResonatorSteps.camera("Ressonador: câmera perto da recarga", playerId, () -> origin[0],
                 E2eResonatorSteps.CLOSE_VIEW));

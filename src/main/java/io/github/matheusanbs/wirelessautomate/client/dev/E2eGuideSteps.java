@@ -39,9 +39,11 @@ final class E2eGuideSteps {
                 () -> "o livro não foi entregue (a marca no jogador não está lá)"));
         guidePages(list, "");
         // De novo em português (as páginas de _pt_br/), e de volta ao idioma de antes.
-        list.add(language("pt_br"));
-        guidePages(list, "-pt");
-        list.add(language("en_us"));
+        E2eVariants.pt(list, () -> {
+            list.add(language("pt_br"));
+            guidePages(list, "-pt");
+            list.add(language("en_us"));
+        });
     }
 
     /** Teto de capturas por página do guia (a primeira e as rolagens). */

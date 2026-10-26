@@ -421,7 +421,7 @@ public final class DevEndToEnd {
         return screen == null ? "nenhuma" : screen.getClass().getSimpleName();
     }
 
-    private static String envOr(String name, String fallback) {
+    static String envOr(String name, String fallback) {
         String value = System.getenv(name);
         return value == null || value.isBlank() ? fallback : value;
     }

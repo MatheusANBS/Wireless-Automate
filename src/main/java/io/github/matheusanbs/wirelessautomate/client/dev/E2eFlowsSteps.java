@@ -84,14 +84,16 @@ final class E2eFlowsSteps {
                 () -> "Por rede " + flows().byNetwork()));
         list.add(capture("7c-tablet-fluxos-rede"));
         list.add(clipCheck("Tablet: Fluxos Por rede"));
-        list.add(themeClick("Fluxos: escuro", GuiTheme.DARK));
-        list.add(new Step("Fluxos: Por tipo no escuro", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessageKey("gui.wirelessautomate.tablet.flows.by_type"), "Por tipo")),
-                () -> !flows().byNetwork() && flows().rowCenter(ResourceType.ENERGY, energyNetwork) != null,
-                () -> "Por rede " + flows().byNetwork()));
-        list.add(capture("7c-tablet-fluxos-escuro"));
-        list.add(clipCheck("Tablet: Fluxos no escuro"));
-        list.add(themeClick("Fluxos: claro de novo", GuiTheme.LIGHT));
+        E2eVariants.escuro(list, () -> {
+            list.add(themeClick("Fluxos: escuro", GuiTheme.DARK));
+            list.add(new Step("Fluxos: Por tipo no escuro", STEP_TIMEOUT_MS,
+                    () -> click(widget(byMessageKey("gui.wirelessautomate.tablet.flows.by_type"), "Por tipo")),
+                    () -> !flows().byNetwork() && flows().rowCenter(ResourceType.ENERGY, energyNetwork) != null,
+                    () -> "Por rede " + flows().byNetwork()));
+            list.add(capture("7c-tablet-fluxos-escuro"));
+            list.add(clipCheck("Tablet: Fluxos no escuro"));
+            list.add(themeClick("Fluxos: claro de novo", GuiTheme.LIGHT));
+        });
         list.add(new Step("linha da Energia na rede filtra a Lista", STEP_TIMEOUT_MS, () -> {
             int[] c = flows().rowCenter(ResourceType.ENERGY, energyNetwork);
             click(tabletScreen(), c[0], c[1]);

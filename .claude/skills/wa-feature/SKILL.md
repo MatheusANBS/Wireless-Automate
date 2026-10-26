@@ -40,7 +40,7 @@ Em resumo:
 ./gradlew build runGameTestServer runGameTestServerChemicals runGameTestServerSource
 ```
 
-Se mexeu em tela, payload ou mundo, rode também o e2e: `WA_E2E="$PWD/run/e2e" ./gradlew runClient`, cujo `run/e2e/result.txt` precisa dizer `OK`. Depois olhe as capturas novas em `run/e2e/` (folha de contato: `scripts/folha.py` da skill `wa-curseforge-imagens`). Texto cortado, gema preta e nível desatualizado só apareceram olhando as imagens.
+Se mexeu em tela, payload ou mundo, rode também o e2e: `./scripts/e2e.sh --only <suíte> --capture <prefixo>` (rápido por padrão; `--lista` mostra as suítes, `--completo` roda tudo; veja `docs/e2e.md`), cujo `run/e2e/result.txt` precisa dizer `OK`. Depois olhe as capturas novas em `run/e2e/` (folha de contato: `scripts/folha.py` da skill `wa-curseforge-imagens`). Texto cortado, gema preta e nível desatualizado só apareceram olhando as imagens.
 
 Cada run de jogo usa uns 3 GB e o build service `oneGame` já serializa as runs. Mesmo assim, nunca dispare dois jogos ao mesmo tempo.
 

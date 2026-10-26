@@ -1,0 +1,571 @@
+<title>Reparador de Cristais</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Pixelify+Sans:wght@400;600&display=swap">
+<style>
+/* Layout: cabeçalho com controles, a tela do bloco ao lado da vista no mundo, depois estados e custos. */
+:root {
+  --bg: #efe9dc;
+  --surface: #f7f2e7;
+  --fg: #2a2730;
+  --muted: #7a7366;
+  --rule: #d6ccb6;
+  --accent: #f0603e;
+  --accent-deep: #c2442a;
+  --ok: #2f9d5c;
+  --warn: #d88a1a;
+  --font-body: "DM Sans", system-ui, sans-serif;
+  --font-pixel: "Pixelify Sans", "Courier New", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1d1b21; --surface: #26232b; --fg: #ece5d6; --muted: #a79f90; --rule: #3a3640;
+    --accent: #f26a48; --accent-deep: #c2442a; --ok: #3db56e; --warn: #e39a2e;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1d1b21; --surface: #26232b; --fg: #ece5d6; --muted: #a79f90; --rule: #3a3640;
+  --accent: #f26a48; --accent-deep: #c2442a; --ok: #3db56e; --warn: #e39a2e;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font-body);
+  font-size: 15px; line-height: 1.5;
+  padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+header { display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: end; justify-content: space-between; }
+header h1 { font-family: var(--font-pixel); font-weight: 600; font-size: 34px; line-height: 1.1; margin: 0 0 6px; text-wrap: balance; }
+header p { margin: 0; color: var(--muted); max-width: 56ch; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; }
+button {
+  font: inherit; font-size: 13px; font-weight: 500; color: var(--fg); background: var(--surface);
+  border: 1px solid var(--rule); border-radius: 3px; padding: 7px 12px; cursor: pointer;
+}
+button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent-deep); color: #fff; }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.stage { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 820px) { .stage { grid-template-columns: minmax(0, 1fr); } }
+figure { margin: 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+figcaption { font-size: 13px; color: var(--muted); }
+canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; border: 1px solid var(--rule); border-radius: 3px; }
+h2 { font-family: var(--font-pixel); font-weight: 600; font-size: 22px; margin: 0 0 10px; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+.cols > section { min-width: 0; }
+ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--rule); }
+th { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+td:last-child, th:last-child { text-align: right; }
+.scroll { overflow-x: auto; }
+.note { color: var(--muted); font-size: 13px; margin-top: 8px; }
+@media (prefers-reduced-motion: reduce) { canvas { } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Reparador de Cristais</h1>
+      <p>Mockup da tela e do bloco no mundo. A animação roda ao vivo: ligue e desligue a energia, tire os cristais cheios e veja cada estado.</p>
+    </div>
+    <div class="controls" role="group" aria-label="Controles da simulação">
+      <button id="bPower" aria-pressed="true">Energia ligada</button>
+      <button id="bRouter" aria-pressed="true">Roteador alimentando</button>
+      <button id="bPool">Zerar cristais cheios</button>
+      <button id="bTheme">Tema: claro</button>
+    </div>
+  </header>
+
+  <div class="stage">
+    <figure>
+      <canvas id="screen" aria-label="Tela do Reparador de Cristais"></canvas>
+      <figcaption>A tela, 352 × 272 como as do mod, no tema escolhido. O número de cada linha aparece no anel ao redor da câmara.</figcaption>
+    </figure>
+    <figure>
+      <canvas id="world" aria-label="O bloco no mundo"></canvas>
+      <figcaption>O bloco no mundo: câmara de vidro sobre a base, com a mesma animação que a tela mostra.</figcaption>
+    </figure>
+  </div>
+
+  <div class="cols">
+    <section>
+      <h2>O que acontece em um reparo</h2>
+      <ul>
+        <li>Os 4 cristais cheios giram dentro do núcleo de forja e se dissolvem em filetes de luz.</li>
+        <li>Os filetes correm até o cristal rachado, e as rachaduras se fecham do centro para fora.</li>
+        <li>No fim, um clarão e o cristal reparado vai para a saída.</li>
+        <li>Sem energia, as rachaduras ficam apagadas e a câmara pulsa fraca. Sem cristais cheios, a linha espera.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Custo por reparo</h2>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Cristal rachado</th><th>FE</th></tr></thead>
+          <tbody>
+            <tr><td>Cristal de Sinal</td><td>432</td></tr>
+            <tr><td>Cristal Lapidado</td><td>13.824</td></tr>
+            <tr><td>Afinado Elite</td><td>20.000</td></tr>
+            <tr><td>Afinado Ultimate</td><td>536.870.912</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">Mais 4 Cristais de Sinal cheios por reparo, 7 s por linha, 8 linhas em paralelo. Os números da barra de energia no mockup são de exemplo.</p>
+    </section>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var S = 3; // pixels de canvas por pixel lógico
+  var PAL = {
+    light: { panel: "#f2ebdd", bevelLight: "#fffbf3", inset: "#ddd3bf", bevelDark: "#bdb19a", fg: "#2a2730", muted: "#7a7366", accent: "#f0603e", accentDeep: "#c2442a", ok: "#2f9d5c", warn: "#d88a1a", danger: "#d5453a", brass: "#b48e2e", rowHover: "#f8f3e8" },
+    dark: { panel: "#26232b", bevelLight: "#312d37", inset: "#1c1a20", bevelDark: "#4a4550", fg: "#ece5d6", muted: "#a79f90", accent: "#f26a48", accentDeep: "#c2442a", ok: "#3db56e", warn: "#e39a2e", danger: "#e55a4e", brass: "#d2ae4e", rowHover: "#3a3640" }
+  };
+  var theme = "light";
+  var P = PAL.light;
+
+  var KINDS = {
+    signal: { name: "Sinal", base: [240, 96, 62], band: null, cost: 432 },
+    cut: { name: "Lapidado", base: [255, 140, 110], band: [212, 170, 70], cost: 13824 },
+    elite: { name: "Afinado Elite", base: [77, 163, 232], band: [210, 235, 255], cost: 20000 },
+    emerald: { name: "Afinado Esmeralda", base: [61, 181, 110], band: [210, 255, 225], cost: 160000 }
+  };
+  var ORDER = ["signal", "cut", "elite", "signal", "emerald", "cut", "signal", "elite"];
+  var BONE_L = [141, 134, 120], BONE_R = [181, 173, 156];
+  var DUR = 7, CAP = 160000, FE_REGEN = 12000;
+
+  var state = { power: true, router: true, pool: 64, energy: 128000, feedTimer: 0, pullTimer: 0 };
+  var slots = [], outs = [];
+  function newSlot(i, st, p) { return { kind: ORDER[i % ORDER.length], state: st, p: p || 0, flash: 0, seed: i * 1.7 + 0.3 }; }
+  for (var i = 0; i < 8; i++) { slots.push(newSlot(i, i < 6 ? "cracked" : "empty", 0)); outs.push(null); }
+  slots[0].state = "working"; slots[0].p = 0.35;
+  slots[2].state = "working"; slots[2].p = 0.72;
+  outs[0] = { kind: "elite" }; outs[1] = { kind: "signal" };
+
+  function mix(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]; }
+  function rgb(c, a) { return "rgba(" + (c[0] | 0) + "," + (c[1] | 0) + "," + (c[2] | 0) + "," + (a === undefined ? 1 : a) + ")"; }
+  function shade(c, k) { return [Math.min(255, c[0] * k), Math.min(255, c[1] * k), Math.min(255, c[2] * k)]; }
+  function clamp01(x) { return x < 0 ? 0 : x > 1 ? 1 : x; }
+
+  /* ---------- cristal ---------- */
+  var CRACKS = [
+    [[-0.04, -0.92], [0.12, -0.56], [-0.1, -0.26], [0.08, 0.22], [-0.02, 0.62]],
+    [[0.12, -0.56], [0.42, -0.34]],
+    [[-0.1, -0.26], [-0.4, -0.08]]
+  ];
+  function crystalColors(slot, p) {
+    var k = KINDS[slot.kind];
+    var t = clamp01((p - 0.15) / 0.75);
+    return { L: mix(BONE_L, shade(k.base, 0.78), t), R: mix(BONE_R, k.base, t), k: k, t: t };
+  }
+  function drawKite(ctx, x, y, s, L, R, band, glowCol, glowA) {
+    if (glowA > 0) {
+      var g = ctx.createRadialGradient(x, y, 0, x, y, s * 1.9);
+      g.addColorStop(0, rgb(glowCol, glowA)); g.addColorStop(1, rgb(glowCol, 0));
+      ctx.fillStyle = g; ctx.fillRect(x - s * 2, y - s * 2, s * 4, s * 4);
+    }
+    var w = 0.55 * s;
+    ctx.fillStyle = rgb(L);
+    ctx.beginPath(); ctx.moveTo(x, y - s); ctx.lineTo(x - w, y - 0.1 * s); ctx.lineTo(x, y + 0.9 * s); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = rgb(R);
+    ctx.beginPath(); ctx.moveTo(x, y - s); ctx.lineTo(x + w, y - 0.1 * s); ctx.lineTo(x, y + 0.9 * s); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = rgb(shade(R, 1.22), 0.9);
+    ctx.beginPath(); ctx.moveTo(x, y - s); ctx.lineTo(x + w * 0.45, y - 0.32 * s); ctx.lineTo(x, y - 0.1 * s); ctx.lineTo(x - w * 0.3, y - 0.42 * s); ctx.closePath(); ctx.fill();
+    if (band) {
+      ctx.strokeStyle = rgb(band, 0.95); ctx.lineWidth = Math.max(0.6, s * 0.12);
+      ctx.beginPath(); ctx.moveTo(x - w, y - 0.1 * s); ctx.lineTo(x, y + 0.12 * s); ctx.lineTo(x + w, y - 0.1 * s); ctx.stroke();
+    }
+    ctx.strokeStyle = "rgba(20,14,22,0.85)"; ctx.lineWidth = Math.max(0.5, s * 0.08);
+    ctx.beginPath(); ctx.moveTo(x, y - s); ctx.lineTo(x + w, y - 0.1 * s); ctx.lineTo(x, y + 0.9 * s); ctx.lineTo(x - w, y - 0.1 * s); ctx.closePath(); ctx.stroke();
+  }
+  function drawCracks(ctx, x, y, s, alpha, lit, p) {
+    if (alpha <= 0.01) return;
+    ctx.save();
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    for (var c = 0; c < CRACKS.length; c++) {
+      var pts = CRACKS[c];
+      ctx.beginPath();
+      for (var j = 0; j < pts.length; j++) { var px = x + pts[j][0] * s, py = y + pts[j][1] * s; if (j === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); }
+      ctx.strokeStyle = "rgba(24,12,16," + alpha * 0.9 + ")"; ctx.lineWidth = Math.max(0.7, s * 0.13); ctx.stroke();
+      if (lit) { ctx.strokeStyle = "rgba(255,120,80," + alpha * 0.85 + ")"; ctx.lineWidth = Math.max(0.4, s * 0.06); ctx.stroke(); }
+    }
+    if (lit && p > 0.02 && p < 0.95) {
+      var main = CRACKS[0], f = p * (main.length - 1), a = Math.min(main.length - 2, Math.floor(f)), u = f - a;
+      var wx = x + (main[a][0] + (main[a + 1][0] - main[a][0]) * u) * s;
+      var wy = y + (main[a][1] + (main[a + 1][1] - main[a][1]) * u) * s;
+      var g = ctx.createRadialGradient(wx, wy, 0, wx, wy, s * 0.7);
+      g.addColorStop(0, "rgba(255,244,210,0.95)"); g.addColorStop(1, "rgba(255,170,90,0)");
+      ctx.fillStyle = g; ctx.fillRect(wx - s, wy - s, s * 2, s * 2);
+    }
+    ctx.restore();
+  }
+
+  /* ---------- câmara ---------- */
+  function quad(a, b, c, t) { var u = 1 - t; return [u * u * a[0] + 2 * u * t * b[0] + t * t * c[0], u * u * a[1] + 2 * u * t * b[1] + t * t * c[1]]; }
+
+  function drawChamber(ctx, X, Y, W, H, time, opt) {
+    var power = state.power;
+    var cx = X + W / 2, floorY = Y + H * 0.64, orbY = Y + H * 0.36;
+    var rx = W * 0.37, ry = H * 0.17, s0 = H * 0.13;
+    var pulse = 0.5 + 0.5 * Math.sin(time * (power ? 2.2 : 1.1));
+
+    ctx.save();
+    ctx.beginPath(); ctx.rect(X, Y, W, H); ctx.clip();
+    var bg = ctx.createLinearGradient(0, Y, 0, Y + H);
+    bg.addColorStop(0, "#120f18"); bg.addColorStop(1, "#2b1d2d");
+    ctx.fillStyle = bg; ctx.fillRect(X, Y, W, H);
+    var halo = ctx.createRadialGradient(cx, orbY, 0, cx, orbY, W * 0.55);
+    halo.addColorStop(0, power ? "rgba(255,120,80," + (0.34 + 0.1 * pulse) + ")" : "rgba(120,110,140,0.16)");
+    halo.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = halo; ctx.fillRect(X, Y, W, H);
+
+    // chão: anel de runas
+    ctx.save();
+    ctx.translate(cx, floorY); ctx.scale(1, ry / rx);
+    ctx.strokeStyle = power ? "rgba(255,130,90,0.55)" : "rgba(150,140,170,0.3)"; ctx.lineWidth = Math.max(0.8, W * 0.006) * (rx / ry) * 0.6;
+    ctx.beginPath(); ctx.arc(0, 0, rx * 1.12, 0, 6.2832); ctx.stroke();
+    ctx.strokeStyle = power ? "rgba(255,200,150,0.3)" : "rgba(150,140,170,0.18)"; ctx.setLineDash([W * 0.012, W * 0.02]);
+    ctx.beginPath(); ctx.arc(0, 0, rx * 0.72, 0, 6.2832); ctx.stroke();
+    ctx.restore();
+
+    // posições das 8 câmaras
+    var pos = [];
+    for (var i = 0; i < 8; i++) {
+      var a = i / 8 * 6.2832 - 1.5708 + 0.3927;
+      var depth = (Math.sin(a) + 1) / 2;
+      pos.push({ i: i, x: cx + rx * Math.cos(a), y: floorY + ry * Math.sin(a), d: depth, s: s0 * (0.8 + 0.3 * depth) });
+    }
+    pos.sort(function (u, v) { return u.y - v.y; });
+
+    function crystalAt(pp, front) {
+      var sl = slots[pp.i];
+      var bob = Math.sin(time * 1.6 + sl.seed) * pp.s * 0.12;
+      var cy = pp.y - pp.s * 1.1 + bob;
+      // pedestal
+      ctx.fillStyle = "rgba(10,8,14,0.7)";
+      ctx.beginPath(); ctx.ellipse(pp.x, pp.y + pp.s * 0.1, pp.s * 0.75, pp.s * 0.28, 0, 0, 6.2832); ctx.fill();
+      ctx.strokeStyle = power ? "rgba(255,150,110,0.6)" : "rgba(150,140,170,0.35)"; ctx.lineWidth = Math.max(0.5, pp.s * 0.07);
+      ctx.beginPath(); ctx.ellipse(pp.x, pp.y + pp.s * 0.1, pp.s * 0.75, pp.s * 0.28, 0, 0, 6.2832); ctx.stroke();
+      if (sl.state === "cracked" || sl.state === "working") {
+        var p = sl.state === "working" ? sl.p : 0;
+        var col = crystalColors(sl, p);
+        var glowA = sl.state === "working" && power ? 0.25 + 0.3 * p : 0;
+        drawKite(ctx, pp.x, cy, pp.s, col.L, col.R, col.t > 0.6 ? col.k.band : null, power ? [255, 150, 100] : [0, 0, 0], glowA);
+        drawCracks(ctx, pp.x, cy, pp.s, 1 - clamp01(p / 0.85), power, p);
+      }
+      if (sl.flash > 0) {
+        var f = sl.flash, r = pp.s * (1.2 + (1 - f) * 3.4);
+        var g = ctx.createRadialGradient(pp.x, cy, 0, pp.x, cy, r);
+        g.addColorStop(0, "rgba(255,248,225," + (0.9 * f) + ")"); g.addColorStop(0.5, "rgba(255,190,120," + (0.4 * f) + ")"); g.addColorStop(1, "rgba(255,120,80,0)");
+        ctx.fillStyle = g; ctx.fillRect(pp.x - r, cy - r, r * 2, r * 2);
+        ctx.strokeStyle = "rgba(255,230,190," + (0.8 * f) + ")"; ctx.lineWidth = Math.max(0.6, pp.s * 0.08);
+        ctx.beginPath(); ctx.ellipse(pp.x, pp.y + pp.s * 0.1, pp.s * (0.8 + (1 - f) * 2.6), pp.s * (0.3 + (1 - f) * 0.9), 0, 0, 6.2832); ctx.stroke();
+      }
+    }
+
+    var orbR = H * 0.075 * (1 + 0.06 * pulse);
+    var orbDone = false;
+    for (var k = 0; k < pos.length; k++) {
+      if (!orbDone && pos[k].y > floorY + 1) { drawOrb(); orbDone = true; }
+      crystalAt(pos[k]);
+    }
+    if (!orbDone) drawOrb();
+
+    function drawOrb() {
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      // filetes e partículas até os cristais em reparo
+      if (power) {
+        for (var i = 0; i < 8; i++) {
+          var sl = slots[i];
+          if (sl.state !== "working") continue;
+          var pp = null; for (var q = 0; q < 8; q++) if (pos[q].i === i) pp = pos[q];
+          var tx = pp.x, ty = pp.y - pp.s * 1.1;
+          var ctrl = [(cx + tx) / 2, Math.min(orbY, ty) - H * 0.12];
+          // o fluxo é forte no começo e some quando as rachaduras fecham
+          var flow = sl.p < 0.08 ? sl.p / 0.08 : sl.p > 0.85 ? clamp01((1 - sl.p) / 0.15) : 1;
+          ctx.strokeStyle = "rgba(255,150,100," + 0.18 * flow + ")"; ctx.lineWidth = Math.max(1, W * 0.012);
+          ctx.beginPath(); ctx.moveTo(cx, orbY); ctx.quadraticCurveTo(ctrl[0], ctrl[1], tx, ty); ctx.stroke();
+          for (var n = 0; n < 12; n++) {
+            var t = (n / 12 + time * 0.55 + sl.seed * 0.13) % 1;
+            var pt = quad([cx, orbY], ctrl, [tx, ty], t);
+            var wob = Math.sin(t * 12 + time * 6 + n) * W * 0.006;
+            var rr = Math.max(0.6, W * 0.008) * (1 - 0.4 * t) * (0.6 + 0.4 * flow);
+            var gg = ctx.createRadialGradient(pt[0] + wob, pt[1], 0, pt[0] + wob, pt[1], rr * 3);
+            gg.addColorStop(0, "rgba(255,225,170," + 0.95 * flow + ")"); gg.addColorStop(1, "rgba(255,110,60,0)");
+            ctx.fillStyle = gg; ctx.fillRect(pt[0] + wob - rr * 3, pt[1] - rr * 3, rr * 6, rr * 6);
+          }
+        }
+      }
+      // núcleo de forja
+      var og = ctx.createRadialGradient(cx, orbY, 0, cx, orbY, orbR * 2.6);
+      if (power) { og.addColorStop(0, "rgba(255,248,225,0.95)"); og.addColorStop(0.25, "rgba(255,170,110,0.8)"); og.addColorStop(1, "rgba(240,96,62,0)"); }
+      else { og.addColorStop(0, "rgba(190,180,205,0.45)"); og.addColorStop(1, "rgba(120,110,140,0)"); }
+      ctx.fillStyle = og; ctx.fillRect(cx - orbR * 3, orbY - orbR * 3, orbR * 6, orbR * 6);
+      ctx.restore();
+
+      // cristais cheios em órbita (o estoque)
+      var count = state.pool <= 0 ? 0 : Math.min(8, Math.ceil(state.pool / 8));
+      for (var m = 0; m < count; m++) {
+        var ang = time * (power ? 0.9 : 0.25) + m / Math.max(count, 1) * 6.2832;
+        var ox = cx + Math.cos(ang) * orbR * 2.1, oy = orbY + Math.sin(ang) * orbR * 0.8 - orbR * 0.2;
+        var depth = (Math.sin(ang) + 1) / 2;
+        var ms = H * (0.03 + 0.012 * depth);
+        drawKite(ctx, ox, oy, ms, power ? [200, 70, 45] : [90, 84, 100], power ? [255, 120, 84] : [128, 122, 138], null, [255, 150, 100], 0);
+      }
+    }
+
+    // vinheta
+    var vg = ctx.createRadialGradient(cx, Y + H / 2, H * 0.3, cx, Y + H / 2, W * 0.75);
+    vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,0.5)");
+    ctx.fillStyle = vg; ctx.fillRect(X, Y, W, H);
+    ctx.restore();
+  }
+
+  /* ---------- tela ---------- */
+  var screenC = document.getElementById("screen"), sctx = screenC.getContext("2d");
+  var SW = 352, SH = 272;
+  screenC.width = SW * S; screenC.height = SH * S;
+
+  function bevel(c, x, y, w, h, fill, light, dark) {
+    c.fillStyle = fill; c.fillRect(x, y, w, h);
+    c.fillStyle = light; c.fillRect(x, y, w, 1); c.fillRect(x, y, 1, h);
+    c.fillStyle = dark; c.fillRect(x, y + h - 1, w, 1); c.fillRect(x + w - 1, y, 1, h);
+  }
+  function sunken(c, x, y, w, h) { bevel(c, x, y, w, h, P.inset, P.bevelDark, P.bevelLight); }
+  function text(c, str, x, y, size, color, align) {
+    c.font = "400 " + size + "px 'Pixelify Sans', 'Courier New', monospace";
+    c.fillStyle = color; c.textAlign = align || "left"; c.textBaseline = "alphabetic";
+    c.fillText(str, x, y);
+  }
+  function fmt(n) { return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
+
+  function slotBox(c, x, y, slotIdx, kindKey, mode, p) {
+    sunken(c, x, y, 18, 18);
+    if (kindKey) {
+      var k = KINDS[kindKey];
+      if (mode === "cracked" || mode === "working") {
+        var col = crystalColors({ kind: kindKey }, mode === "working" ? p : 0);
+        drawKite(c, x + 9, y + 10, 5.6, col.L, col.R, col.t > 0.6 ? k.band : null, [255, 150, 100], 0);
+        if (mode === "cracked" || p < 0.85) drawCracks(c, x + 9, y + 10, 5.6, mode === "working" ? 1 - clamp01(p / 0.85) : 1, false, 0);
+      } else if (mode === "out") {
+        drawKite(c, x + 9, y + 10, 5.6, shade(k.base, 0.78), k.base, k.band, [255, 190, 130], 0.35);
+      }
+    }
+    if (mode === "working") {
+      c.fillStyle = P.inset; c.fillRect(x + 1, y + 15, 16, 2);
+      c.fillStyle = state.power ? P.accent : P.muted; c.fillRect(x + 1, y + 15, Math.round(16 * clamp01(p)), 2);
+      c.strokeStyle = state.power ? P.accent : P.muted; c.lineWidth = 1; c.strokeRect(x + 0.5, y + 0.5, 17, 17);
+    }
+    if (slotIdx !== null) text(c, String(slotIdx + 1), x + 2, y + 7, 6, P.muted);
+  }
+
+  function status() {
+    var cracked = slots.some(function (s) { return s.state === "cracked"; });
+    var working = slots.filter(function (s) { return s.state === "working"; }).length;
+    if (!state.power) return { t: "Sem energia: as linhas esperam", c: P.danger };
+    if (state.pool < 4 && (cracked || working === 0)) return { t: "Faltam cristais cheios (4 por reparo)", c: P.warn };
+    if (working > 0) return { t: "Reparando " + working + " de 8 · " + KINDS[ORDER[0]].cost + " FE o mais barato", c: P.ok };
+    return { t: "Parado · sem cristais rachados", c: P.muted };
+  }
+
+  function drawScreen(time) {
+    var c = sctx;
+    c.setTransform(S, 0, 0, S, 0, 0);
+    c.imageSmoothingEnabled = false;
+    bevel(c, 0, 0, SW, SH, P.panel, P.bevelLight, P.bevelDark);
+
+    // cabeçalho
+    text(c, "Reparador de Cristais", 8, 15, 11, P.fg);
+    var bx = 168, bw = 150;
+    sunken(c, bx, 6, bw, 12);
+    var pct = clamp01(state.energy / CAP);
+    c.fillStyle = state.power ? P.accent : P.muted; c.fillRect(bx + 1, 7, Math.round((bw - 2) * pct), 10);
+    c.fillStyle = "rgba(255,255,255,0.22)"; c.fillRect(bx + 1, 7, Math.round((bw - 2) * pct), 3);
+    text(c, fmt(state.energy) + " / " + fmt(CAP) + " FE", bx + bw / 2, 15, 8, "#fffbf3", "center");
+    bevel(c, 332, 6, 12, 12, P.panel, P.bevelLight, P.bevelDark);
+    c.fillStyle = P.brass; c.beginPath(); c.arc(338, 12, 2.6, 0, 6.2832); c.fill();
+
+    // câmara
+    var CX = 8, CY = 26, CW = 192, CH = 132;
+    sunken(c, CX - 1, CY - 1, CW + 2, CH + 2);
+    drawChamber(c, CX, CY, CW, CH, time);
+    if (!state.power) {
+      c.fillStyle = "rgba(10,8,14,0.45)"; c.fillRect(CX, CY, CW, CH);
+      text(c, "SEM ENERGIA", CX + CW / 2, CY + CH - 8, 8, "#ff8a7a", "center");
+    }
+
+    // rachados
+    text(c, "RACHADOS", 208, 34, 7, P.muted);
+    for (var i = 0; i < 8; i++) {
+      var col = i % 4, row = (i / 4) | 0, sl = slots[i];
+      slotBox(c, 208 + col * 34, 38 + row * 20, i, sl.state === "empty" ? null : sl.kind, sl.state, sl.p);
+    }
+    // entrada de cristais cheios
+    text(c, "CRISTAIS CHEIOS", 208, 90, 7, P.muted);
+    sunken(c, 208, 94, 18, 18);
+    if (state.pool > 0) {
+      drawKite(c, 217, 104, 5.6, shade(KINDS.signal.base, 0.78), KINDS.signal.base, null, [255, 150, 100], 0);
+      text(c, String(state.pool), 225, 111, 7, P.fg, "right");
+    }
+    text(c, "4 por reparo", 232, 106, 7, state.pool < 4 ? P.warn : P.muted);
+    // saída
+    text(c, "REPARADOS", 208, 126, 7, P.muted);
+    for (var j = 0; j < 8; j++) {
+      slotBox(c, 208 + (j % 4) * 34, 130 + ((j / 4) | 0) * 20, null, outs[j] ? outs[j].kind : null, outs[j] ? "out" : "empty", 0);
+    }
+
+    // seta de fluxo
+    c.fillStyle = P.muted; c.beginPath(); c.moveTo(310, 100); c.lineTo(318, 100); c.lineTo(314, 106); c.closePath(); c.fill();
+
+    // estado
+    var st = status();
+    sunken(c, 8, 164, 336, 14);
+    c.fillStyle = st.c; c.fillRect(11, 168, 5, 5);
+    text(c, st.t, 22, 174, 8, P.fg);
+
+    // inventário do jogador
+    text(c, "Inventário", 95, 186, 7, P.muted);
+    for (var r = 0; r < 3; r++) for (var q = 0; q < 9; q++) sunken(c, 95 + q * 18, 190 + r * 18, 18, 18);
+    for (var h = 0; h < 9; h++) sunken(c, 95 + h * 18, 250, 18, 18);
+  }
+
+  /* ---------- mundo ---------- */
+  var worldC = document.getElementById("world"), wctx = worldC.getContext("2d");
+  var WW = 352, WH = 300;
+  worldC.width = WW * S; worldC.height = WH * S;
+
+  function drawWorld(time) {
+    var c = wctx;
+    c.setTransform(S, 0, 0, S, 0, 0);
+    c.imageSmoothingEnabled = false;
+    var sky = c.createLinearGradient(0, 0, 0, WH);
+    sky.addColorStop(0, theme === "dark" ? "#14111a" : "#cfc6d8"); sky.addColorStop(1, theme === "dark" ? "#231e2a" : "#e8dccb");
+    c.fillStyle = sky; c.fillRect(0, 0, WW, WH);
+    // chão
+    c.fillStyle = theme === "dark" ? "#2b2830" : "#b7ad98"; c.fillRect(0, 262, WW, 38);
+    c.fillStyle = "rgba(0,0,0,0.18)"; c.beginPath(); c.ellipse(176, 266, 128, 9, 0, 0, 6.2832); c.fill();
+
+    var X = 76, W = 200;
+    // base
+    var base = c.createLinearGradient(0, 214, 0, 262);
+    base.addColorStop(0, "#6e6a78"); base.addColorStop(1, "#46424f");
+    c.fillStyle = base; c.fillRect(X - 6, 214, W + 12, 48);
+    c.fillStyle = "rgba(255,255,255,0.18)"; c.fillRect(X - 6, 214, W + 12, 2);
+    c.fillStyle = "rgba(0,0,0,0.35)"; c.fillRect(X - 6, 260, W + 12, 2);
+    // porta de energia e escotilhas
+    c.fillStyle = "#2a2733"; c.fillRect(X + 12, 226, 38, 24);
+    c.fillStyle = state.power ? "#3db56e" : "#e55a4e"; c.fillRect(X + 16, 230, 6, 6);
+    c.fillStyle = "#8c8799"; c.fillRect(X + 28, 232, 16, 3); c.fillRect(X + 28, 238, 16, 3);
+    c.fillStyle = "#2a2733"; c.fillRect(X + W - 50, 226, 38, 24);
+    c.fillStyle = "#8c8799"; c.fillRect(X + W - 44, 232, 26, 12);
+    for (var r = 0; r < 4; r++) { c.fillStyle = "#58546a"; c.fillRect(X + 60 + r * 20, 238, 12, 8); }
+
+    // câmara dentro do vidro
+    var GX = X + 4, GY = 62, GW = W - 8, GH = 152;
+    drawChamber(c, GX, GY, GW, GH, time);
+
+    // vidro: reflexos e arestas
+    c.fillStyle = "rgba(190,215,255,0.07)"; c.fillRect(GX, GY, GW, GH);
+    c.fillStyle = "rgba(255,255,255,0.12)";
+    c.beginPath(); c.moveTo(GX + 14, GY); c.lineTo(GX + 34, GY); c.lineTo(GX + 6, GY + GH); c.lineTo(GX - 6, GY + GH); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(GX + 48, GY); c.lineTo(GX + 54, GY); c.lineTo(GX + 26, GY + GH); c.lineTo(GX + 22, GY + GH); c.closePath(); c.fill();
+    c.strokeStyle = "rgba(210,225,255,0.55)"; c.lineWidth = 1; c.strokeRect(GX + 0.5, GY + 0.5, GW - 1, GH - 1);
+    // montantes
+    c.fillStyle = "#58546a";
+    c.fillRect(X - 6, 56, 8, 160); c.fillRect(X + W - 2, 56, 8, 160);
+    c.fillStyle = "rgba(255,255,255,0.2)"; c.fillRect(X - 6, 56, 2, 160); c.fillRect(X + W - 2, 56, 2, 160);
+    // tampa com o brilho do núcleo
+    var cap = c.createLinearGradient(0, 44, 0, 62);
+    cap.addColorStop(0, "#7a7588"); cap.addColorStop(1, "#4b4758");
+    c.fillStyle = cap; c.fillRect(X - 8, 44, W + 16, 18);
+    c.fillStyle = "rgba(255,255,255,0.2)"; c.fillRect(X - 8, 44, W + 16, 2);
+    var lit = state.power ? 0.5 + 0.5 * Math.sin(time * 2.2) : 0;
+    c.fillStyle = state.power ? "rgba(255," + (120 + lit * 80 | 0) + ",80,0.95)" : "#3a3744";
+    c.fillRect(X + W / 2 - 18, 50, 36, 6);
+    if (state.power) {
+      var gg = c.createRadialGradient(X + W / 2, 53, 0, X + W / 2, 53, 50);
+      gg.addColorStop(0, "rgba(255,150,100," + (0.25 + 0.15 * lit) + ")"); gg.addColorStop(1, "rgba(255,120,80,0)");
+      c.fillStyle = gg; c.fillRect(X - 30, 10, W + 60, 90);
+    }
+  }
+
+  /* ---------- simulação ---------- */
+  function step(dt) {
+    var i, sl;
+    if (state.power) state.energy = Math.min(CAP, state.energy + FE_REGEN * dt);
+    for (i = 0; i < 8; i++) {
+      sl = slots[i];
+      if (sl.flash > 0) sl.flash = Math.max(0, sl.flash - dt / 0.8);
+      if (sl.state === "cracked" && state.power && state.pool >= 4 && state.energy >= KINDS[sl.kind].cost) {
+        sl.state = "working"; sl.p = 0; state.pool -= 4; state.energy -= KINDS[sl.kind].cost;
+      } else if (sl.state === "working" && state.power) {
+        sl.p += dt / DUR;
+        if (sl.p >= 1) {
+          var free = outs.indexOf(null);
+          if (free >= 0) { outs[free] = { kind: sl.kind }; sl.state = "empty"; sl.p = 0; sl.flash = 1; }
+          else sl.p = 0.999;
+        }
+      }
+    }
+    if (state.router) {
+      state.feedTimer += dt;
+      if (state.feedTimer > 2.2) {
+        state.feedTimer = 0;
+        for (i = 0; i < 8; i++) if (slots[i].state === "empty") { slots[i] = newSlot((Math.random() * 8) | 0, "cracked", 0); slots[i].seed = i * 1.7 + 0.3; break; }
+      }
+      if (outs.indexOf(null) < 0) {
+        state.pullTimer += dt;
+        if (state.pullTimer > 1.6) { state.pullTimer = 0; outs = [null, null, null, null, null, null, null, null]; }
+      }
+      if (state.pool < 4 && !state.poolHeld) { /* o roteador só repõe cristais cheios pelo botão */ }
+    }
+  }
+
+  var last = performance.now(), t0 = last;
+  var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function frame(now) {
+    var dt = Math.min(0.1, (now - last) / 1000); last = now;
+    var tm = (now - t0) / 1000;
+    step(reduce ? dt * 0.4 : dt);
+    drawScreen(reduce ? 1 : tm);
+    drawWorld(reduce ? 1 : tm);
+    requestAnimationFrame(frame);
+  }
+
+  /* ---------- controles ---------- */
+  var bPower = document.getElementById("bPower"), bRouter = document.getElementById("bRouter"),
+      bPool = document.getElementById("bPool"), bTheme = document.getElementById("bTheme");
+  bPower.addEventListener("click", function () {
+    state.power = !state.power;
+    bPower.setAttribute("aria-pressed", String(state.power));
+    bPower.textContent = state.power ? "Energia ligada" : "Energia desligada";
+  });
+  bRouter.addEventListener("click", function () {
+    state.router = !state.router;
+    bRouter.setAttribute("aria-pressed", String(state.router));
+    bRouter.textContent = state.router ? "Roteador alimentando" : "Roteador parado";
+  });
+  bPool.addEventListener("click", function () {
+    if (state.pool > 0) { state.pool = 0; bPool.textContent = "Repor 64 cristais cheios"; }
+    else { state.pool = 64; bPool.textContent = "Zerar cristais cheios"; }
+  });
+  function applyTheme(t) {
+    theme = t; P = PAL[t];
+    document.documentElement.setAttribute("data-theme", t);
+    bTheme.textContent = "Tema: " + (t === "dark" ? "escuro" : "claro");
+  }
+  bTheme.addEventListener("click", function () { applyTheme(theme === "light" ? "dark" : "light"); });
+  if (window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches) applyTheme("dark");
+
+  function start() { requestAnimationFrame(function (n) { last = n; t0 = n; frame(n); }); }
+  if (document.fonts && document.fonts.load) {
+    Promise.race([document.fonts.load("8px 'Pixelify Sans'"), new Promise(function (r) { setTimeout(r, 1500); })]).then(start, start);
+  } else { start(); }
+})();
+</script>

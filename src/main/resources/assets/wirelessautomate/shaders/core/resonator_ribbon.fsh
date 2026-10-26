@@ -13,6 +13,7 @@ out vec4 fragColor;
 const vec3 CORAL = vec3(0.949, 0.569, 0.478);
 const vec3 RED = vec3(0.839, 0.271, 0.231);
 const vec3 WHITE = vec3(1.0, 0.94, 0.92);
+const vec3 CREAM = vec3(1.0, 0.96, 0.84);
 
 const float PI = 3.14159265;
 
@@ -137,6 +138,26 @@ void main() {
         float edgeY = 1.0 - smoothstep(0.25, 1.0, abs(y));
         col *= edgeY * edgeY;
         col *= smoothstep(0.0, 0.14, x) * (1.0 - smoothstep(0.90, 1.0, x));
+    } else if (mode == 3) {
+        // o disco de luz do Reparador (runas, pedestais, clarão e onda de choque), num quad virado para a câmera ou
+        // deitado: um brilho redondo (miolo creme e halo na cor) ou um anel fino com grão. O parâmetro leva o raio
+        // (7 bits, fração do meio lado do quad), o anel (bit 7) e a espessura do anel (7 bits); o alfa é a força
+        int bits = int(arg);
+        float rad = max(float(bits & 127) / 127.0, 0.02);
+        bool ring = ((bits >> 7) & 1) != 0;
+        float ringW = max(float((bits >> 8) & 127) / 127.0, 0.01);
+        vec2 p = quad * 2.0 - 1.0;
+        float r = length(p);
+        if (ring) {
+            float d = abs(r - rad);
+            float grain = 1.0 + 0.3 * wa_noise(vec3(p * 9.0, t * 2.0));
+            float glow = exp(-d * d / (ringW * ringW)) * 2.0 + exp(-d / (ringW * 3.0)) * 0.35;
+            col += mix(tier, WHITE, 0.55) * glow * grain;
+        } else {
+            col += CREAM * exp(-r * r / (rad * rad * 0.08)) * 1.6;
+            col += mix(tier, WHITE, 0.3) * exp(-r / (rad * 0.35));
+        }
+        col *= 1.0 - smoothstep(0.85, 1.0, r);
     } else {
         // o tentáculo de plasma, da ponta de um cristal vivo até a esfera, como o filamento de um globo de plasma
         // até o dedo no vidro: o caminho da corrente que o cristal entrega. Curvo e lento; os pacotes da corrente

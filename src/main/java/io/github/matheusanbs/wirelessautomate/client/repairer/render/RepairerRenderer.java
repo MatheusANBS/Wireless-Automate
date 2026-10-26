@@ -22,10 +22,11 @@ import net.minecraft.world.phys.Vec3;
 /**
  * A animação do Reparador no mundo, sem estado próprio: tudo sai da {@link RepairerView} do block entity, do
  * {@code lit} do blockstate e do relógio do mundo (o progresso de cada linha pela {@link RepairTimeline}). As luzes
- * fixas do modelo, acesas ou apagadas, são do próprio chunk (o {@code lit}); aqui ficam os cristais nos pedestais e o
- * emissor. Apagado e vazio, sai na primeira linha. O desenho é agrupado por tipo de render (cristais, depois o plasma),
- * porque trocar de {@code RenderType} no buffer fecha o lote, e em pixels do modelo ({@code scale(1/16)}), com o facing
- * aplicado nos pontos pela {@link RepairerGeometry}, para os billboards usarem os eixos da câmera do mundo.
+ * fixas do modelo, acesas ou apagadas, são do próprio chunk (o {@code lit}); aqui ficam os cristais nos pedestais, o
+ * emissor e as fitas (as runas e os pedestais acesos). Apagado e vazio, sai na primeira linha. O desenho é agrupado por
+ * tipo de render (cristais, depois o plasma, depois as fitas), porque trocar de {@code RenderType} no buffer fecha o
+ * lote, e em pixels do modelo ({@code scale(1/16)}), com o facing aplicado nos pontos pela {@link RepairerGeometry},
+ * para os billboards usarem os eixos da câmera do mundo.
  */
 public final class RepairerRenderer implements BlockEntityRenderer<RepairerBlockEntity> {
     private static final int VIEW_DISTANCE = 64;
@@ -61,6 +62,7 @@ public final class RepairerRenderer implements BlockEntityRenderer<RepairerBlock
         poseStack.scale(PIXEL, PIXEL, PIXEL);
         int drawn = RepairerCrystals.render(poseStack, buffer, view, frame);
         drawn += RepairerLights.emitter(poseStack, buffer, frame);
+        drawn += RepairerLights.ribbons(poseStack.last(), buffer, frame);
         poseStack.popPose();
         lastPrimitivesForTests = drawn;
     }

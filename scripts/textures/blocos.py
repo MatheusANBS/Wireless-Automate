@@ -1662,6 +1662,9 @@ def limpar_texturas_antigas(nomes: set[str]) -> list[str]:
     pasta = ASSETS / "block"
     apagados = []
     for arq in sorted(pasta.iterdir()):
+        # As subpastas (como a `repairer/` do `reparador_modelo.py`) são de outro gerador.
+        if not arq.is_file():
+            continue
         base = arq.name.split(".")[0]
         if f"block/{base}" not in nomes:
             arq.unlink()

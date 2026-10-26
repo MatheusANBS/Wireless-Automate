@@ -67,29 +67,6 @@ public final class RepairTimeline {
         return s < FLASH ? smooth(0.3, PULL_END, s) : 1 - smooth(FLASH, TOTAL, s);
     }
 
-    /** O cristal {@code k} (0 a 3) em órbita aparecendo, um depois do outro, entre 0,3 e 1,2 s. */
-    public static double orbitAppear(double s, int k) {
-        double a = 0.3 + 0.15 * k;
-        return smooth(a, a + 0.3, s);
-    }
-
-    /** Quanto do cristal {@code k} em órbita já se dissolveu, de 5,5 a 6,3 s, um depois do outro. */
-    public static double dissolve(double s, int k) {
-        double a = CONVERGE + 0.1 * k;
-        return smooth(a, a + 0.5, s);
-    }
-
-    /** O ângulo da órbita, em radianos: 1,4 rad/s, acelerando na convergência. */
-    public static double orbitAngle(double s) {
-        double extra = s > CONVERGE ? 3.0 * (s - CONVERGE) * (s - CONVERGE) : 0;
-        return 1.4 * s + extra;
-    }
-
-    /** O raio da órbita sobre o de base: encolhe 35% na convergência. */
-    public static double orbitShrink(double s) {
-        return 1 - 0.35 * smooth(CONVERGE, FLASH, s);
-    }
-
     /** A força do feixe: acende de 1,0 a 1,3 s e corta no clarão (6,3 a 6,45 s). */
     public static double beam(double s) {
         return s < FLASH ? smooth(BEAM_START, 1.3, s) : 1 - smooth(FLASH, 6.45, s);
@@ -110,11 +87,6 @@ public final class RepairTimeline {
         return clamp((s - BEAM_START) / (CONVERGE - BEAM_START));
     }
 
-    /** A amplitude da vibração do cristal, em pixels do modelo: sobe na convergência e para no clarão. */
-    public static double vibration(double s) {
-        return s < CONVERGE || s >= FLASH ? 0 : 0.25 * smooth(CONVERGE, FLASH, s);
-    }
-
     /** O clarão do próprio cristal (o alfa da cor no shader do cristal): sobe na convergência, pico em 6,4 s, some em 7 s. */
     public static double crystalGlow(double s) {
         if (s < CONVERGE) {
@@ -127,20 +99,6 @@ public final class RepairTimeline {
             return 0.6 + 0.4 * smooth(FLASH, 6.4, s);
         }
         return 1 - smooth(6.4, TOTAL, s);
-    }
-
-    /** O clarão em volta do cristal, de 6,3 a 7 s: estoura e cai ao quadrado. */
-    public static double flash(double s) {
-        if (s < FLASH) {
-            return 0;
-        }
-        double f = clamp(1 - (s - FLASH) / (TOTAL - FLASH));
-        return f * f;
-    }
-
-    /** O tamanho do clarão em pixels do modelo: de 2 a 6. */
-    public static double flashSize(double s) {
-        return 2 + 4 * clamp((s - FLASH) / (TOTAL - FLASH));
     }
 
     /** O raio da onda de choque no chão em volta do pedestal, em pixels do modelo: de 0,6 a 3 (ease-out). */

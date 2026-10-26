@@ -141,6 +141,11 @@ public class RepairerBlockEntity extends BlockEntity {
 
     /** Move o cristal reparado (cheio, sem rachadura) para a primeira saída livre; sem saída, trava a linha. */
     private boolean finish(int line) {
+        if (!RepairerSlots.acceptsCracked(items.get(line))) {
+            end[line] = 0;
+            blocked[line] = false;
+            return true;
+        }
         int out = -1;
         for (int i = RepairerSlots.OUTPUT_FIRST; i < RepairerSlots.TOTAL; i++) {
             if (items.get(i).isEmpty()) {

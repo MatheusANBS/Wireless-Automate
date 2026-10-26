@@ -24,6 +24,8 @@ flat out vec3 light;
 flat out int hull;
 flat out vec4 tint;
 flat out int param;
+// o canal de efeito do CrystalParam (UV0.y): 0 no Núcleo, as rachaduras e a dissolução no Reparador
+flat out float fx;
 
 const float POS_SCALE = 10000.0;
 const float BOTTOM = -0.46;
@@ -43,4 +45,5 @@ void main() {
     crystal = vec3(float(UV1.x) / POS_SCALE - 1.0, h, float(UV1.y) / POS_SCALE - 1.0);
     tint = Color;
     param = UV2.y;
+    fx = UV0.y;
 }

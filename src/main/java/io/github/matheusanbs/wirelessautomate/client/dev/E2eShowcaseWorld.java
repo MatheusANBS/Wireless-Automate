@@ -104,6 +104,7 @@ final class E2eShowcaseWorld {
             showcaseRange(server, level, smelting.id());
             showcaseDisplay(server);
             showcaseCascade(server, level);
+            showcaseRepairerStand(level);
             showcaseTiers(server, level, data.create(player.getUUID(), "Tier Hall").id());
             if (StorageKind.SOURCE_TANK.loaded()) {
                 showcaseArcane(server, level, arcane.id());
@@ -550,6 +551,49 @@ final class E2eShowcaseWorld {
                                 + "brightness:{sky:15,block:15},transformation:{left_rotation:[0f,0f,0f,1f],"
                                 + "right_rotation:[0f,0f,0f,1f],translation:[0f,0f,0f],scale:[0.8f,0.8f,0.8f]}}",
                         x, y, z, row.get(i)));
+            }
+        }
+    }
+
+    /** O centro do altar do Reparador: no jardim, a leste da Vitrine do Ressonador. */
+    static final int REPAIRER_X = 13, REPAIRER_Z = 4;
+
+    /**
+     * Jardim, a leste da Vitrine do Ressonador: o altar do Reparador de Cristais. Um piso de quartzo com borda de
+     * ardósia polida, um pódio de quartzo, 3 por 2, com o bloco no topo (em y 1), quatro
+     * colunas de quartzo com lanternas nos cantos, tapete ciano na frente e flores em volta.
+     */
+    private static void showcaseRepairerStand(ServerLevel level) {
+        int r = 4;
+        for (int x = REPAIRER_X - r; x <= REPAIRER_X + r; x++) {
+            for (int z = REPAIRER_Z - r; z <= REPAIRER_Z + r; z++) {
+                boolean border = Math.abs(x - REPAIRER_X) == r || Math.abs(z - REPAIRER_Z) == r;
+                put(level, x, -1, z, (border ? Blocks.POLISHED_DEEPSLATE : Blocks.SMOOTH_QUARTZ).defaultBlockState());
+            }
+        }
+        for (int x = REPAIRER_X - 1; x <= REPAIRER_X + 1; x++) {
+            for (int z = REPAIRER_Z - 1; z <= REPAIRER_Z; z++) {
+                put(level, x, 0, z, Blocks.QUARTZ_BLOCK.defaultBlockState());
+            }
+        }
+        put(level, REPAIRER_X, 0, REPAIRER_Z, Blocks.CHISELED_QUARTZ_BLOCK.defaultBlockState());
+        for (int[] corner : new int[][] {{-3, -3}, {3, -3}, {-3, 3}, {3, 3}}) {
+            int x = REPAIRER_X + corner[0], z = REPAIRER_Z + corner[1];
+            put(level, x, 0, z, Blocks.QUARTZ_PILLAR.defaultBlockState());
+            put(level, x, 1, z, Blocks.QUARTZ_PILLAR.defaultBlockState());
+            put(level, x, 2, z, Blocks.CHISELED_QUARTZ_BLOCK.defaultBlockState());
+            put(level, x, 3, z, Blocks.LANTERN.defaultBlockState());
+            put(level, x, -1, z, Blocks.SEA_LANTERN.defaultBlockState());
+        }
+        for (int x = REPAIRER_X - 1; x <= REPAIRER_X + 1; x++) {
+            put(level, x, 0, REPAIRER_Z + 2, Blocks.CYAN_CARPET.defaultBlockState());
+            put(level, x, 0, REPAIRER_Z + 3, Blocks.CYAN_CARPET.defaultBlockState());
+        }
+        net.minecraft.world.level.block.Block[] flowers = {Blocks.AZURE_BLUET, Blocks.CORNFLOWER, Blocks.ALLIUM,
+            Blocks.OXEYE_DAISY};
+        for (int i = 0; i < 4; i++) {
+            for (int side = -1; side <= 1; side += 2) {
+                put(level, REPAIRER_X + side * 2, 0, REPAIRER_Z - 2 + i, flowers[i].defaultBlockState());
             }
         }
     }

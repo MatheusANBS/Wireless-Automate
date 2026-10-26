@@ -8,6 +8,7 @@ import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.resonator.ChamberView;
+import io.github.matheusanbs.wirelessautomate.resonator.RechargeRank;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -63,7 +64,6 @@ final class ChamberCrystals {
         }
         double ticks = gameTime + partialTick;
         ChamberView view = scene.view();
-        int recharging = recharging(chambers, view);
         for (int i = 0; i < chambers.length; i++) {
             if (chambers[i] == EMPTY) {
                 continue;
@@ -81,7 +81,7 @@ final class ChamberCrystals {
             poseStack.scale(scale, scale, scale);
             if (gem) {
                 int state = !dull ? CrystalParam.LIVE
-                        : recharging == i ? CrystalParam.recharging(progress)
+                        : isRecharging(i, chambers, view) ? CrystalParam.recharging(progress)
                         : chambers[i] >= CRACKED_SIGNAL ? CrystalParam.CRACKED : CrystalParam.DULL;
                 // os códigos pares (2, 4 e 6) são o Lapidado, o Afinado e os Opacos e rachados deles: o losango
                 float flash = scene.flash(i, gameTime, partialTick);
@@ -151,13 +151,34 @@ final class ChamberCrystals {
         return tier > 0 ? GuiPaint.tierColor(TIERS[tier - 1]) : GOLD;
     }
 
-    /** A câmara do Opaco que recarrega agora (o primeiro não rachado, como no servidor), ou -1. */
-    static int recharging(byte[] chambers, ChamberView view) {
-        if (view.rechargeStart() < 0) {
+    /** O posto da câmara {@code i} entre os Opacos recarregáveis (0 é o primeiro), ou -1 se ela não é um. */
+    private static int rank(int i, byte[] chambers) {
+        if (!rechargeable(chambers[i])) {
             return -1;
         }
+        int rank = 0;
+        for (int j = 0; j < i; j++) {
+            if (rechargeable(chambers[j])) {
+                rank++;
+            }
+        }
+        return rank;
+    }
+
+    /** Opaco que o Núcleo recarrega: sem carga e não rachado. */
+    private static boolean rechargeable(byte code) {
+        return isDull(code) && code < CRACKED_SIGNAL;
+    }
+
+    /** Se a câmara {@code i} é um Opaco que recarrega agora: recarga em curso e o posto dentro do que o catalisador paga. */
+    static boolean isRecharging(int i, byte[] chambers, ChamberView view) {
+        return view.rechargeStart() >= 0 && RechargeRank.includes(rank(i, chambers), view.rechargers());
+    }
+
+    /** A primeira câmara que recarrega agora, ou -1. */
+    static int firstRecharging(byte[] chambers, ChamberView view) {
         for (int i = 0; i < chambers.length; i++) {
-            if (isDull(chambers[i]) && chambers[i] < CRACKED_SIGNAL) {
+            if (isRecharging(i, chambers, view)) {
                 return i;
             }
         }
@@ -166,7 +187,7 @@ final class ChamberCrystals {
 
     /** De 0 a 1, o quanto a recarga da câmara {@code i} já andou; 0 se ela não recarrega. */
     static double recharge(int i, byte[] chambers, double ticks, ChamberView view) {
-        if (recharging(chambers, view) != i) {
+        if (!isRecharging(i, chambers, view)) {
             return 0;
         }
         return Math.clamp((ticks - view.rechargeStart()) / view.rechargeTicks(), 0.0, 1.0);

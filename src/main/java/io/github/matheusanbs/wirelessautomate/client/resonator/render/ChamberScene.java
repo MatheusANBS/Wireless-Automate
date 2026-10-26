@@ -71,9 +71,9 @@ final class ChamberScene {
     private boolean started;
     /** O tick em que o clarão de cada câmara começou, ou {@link #NEVER}; criado com as câmaras, nunca por quadro. */
     private long[] flashAt = new long[0];
-    /** A câmara que recarregava na view anterior, ou -1, e se o clarão dela já saiu. */
-    private int rechargingPrev = -1;
-    private boolean flashFired;
+    /** As câmaras que recarregavam na view anterior (um bit por câmara) e as que já tiveram o clarão do fim. */
+    private int rechargingPrev;
+    private int flashFired;
     long lastUsed;
 
     ChamberScene(BlockPos core) {
@@ -94,7 +94,8 @@ final class ChamberScene {
             if (flashAt.length != chambers.length) {
                 flashAt = new long[chambers.length];
                 Arrays.fill(flashAt, NEVER);
-                rechargingPrev = -1;
+                rechargingPrev = 0;
+                flashFired = 0;
             }
             trackRecharge(gameTime);
             int[] next = view.origin();
@@ -135,10 +136,13 @@ final class ChamberScene {
                     : flowTarget[i];
             flowNow[i] += (flowGoal - flowNow[i]) * FLOW_RATE;
         }
-        if (rechargingPrev >= 0 && !flashFired
-                && ChamberCrystals.recharge(rechargingPrev, chambers, gameTime, view) >= 1) {
-            flashAt[rechargingPrev] = gameTime;
-            flashFired = true;
+        for (int i = 0; i < chambers.length; i++) {
+            int bit = 1 << i;
+            if ((rechargingPrev & bit) != 0 && (flashFired & bit) == 0
+                    && ChamberCrystals.recharge(i, chambers, gameTime, view) >= 1) {
+                flashAt[i] = gameTime;
+                flashFired |= bit;
+            }
         }
         for (int i = 0; i < flashAt.length; i++) {
             if (flashAt[i] != NEVER && gameTime - flashAt[i] >= FLASH_TICKS) {
@@ -150,19 +154,28 @@ final class ChamberScene {
     }
 
     /**
-     * O clarão sai quando a câmara que recarregava deixa de ser Opaco (a view nova) e ainda não saiu pelo progresso
-     * (a recarga do cliente chegou a 1 antes); só então, e nunca por uma câmara esvaziada.
+     * O clarão de uma câmara sai quando ela deixa de ser Opaco que recarrega (a view nova) e ainda não saiu pelo
+     * progresso (a recarga do cliente chegou a 1 antes); só então, e nunca por uma câmara esvaziada.
      */
     private void trackRecharge(long gameTime) {
-        int now = ChamberCrystals.recharging(chambers, view);
+        int now = 0;
+        for (int i = 0; i < chambers.length; i++) {
+            if (ChamberCrystals.isRecharging(i, chambers, view)) {
+                now |= 1 << i;
+            }
+        }
         if (now == rechargingPrev) {
             return;
         }
-        if (rechargingPrev >= 0 && !flashFired && (chambers[rechargingPrev] == 1 || chambers[rechargingPrev] == 2)) {
-            flashAt[rechargingPrev] = gameTime;
+        for (int i = 0; i < chambers.length; i++) {
+            int bit = 1 << i;
+            if ((rechargingPrev & bit) != 0 && (now & bit) == 0 && (flashFired & bit) == 0
+                    && (chambers[i] == 1 || chambers[i] == 2)) {
+                flashAt[i] = gameTime;
+            }
         }
+        flashFired &= now;
         rechargingPrev = now;
-        flashFired = false;
     }
 
     /** O quanto o clarão do fim da recarga da câmara {@code i} andou, de 0 a 1 em 0,7 s; negativo sem clarão. */

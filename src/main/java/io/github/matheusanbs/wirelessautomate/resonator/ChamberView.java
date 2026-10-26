@@ -19,17 +19,19 @@ import net.minecraft.world.item.ItemStack;
  *     + 1}); vazio quando nenhuma câmara tem Afinado
  * @param rechargeStart o tempo de jogo em que a recarga em curso começou, ou -1 sem recarga
  * @param rechargeTicks a duração da recarga, pelo menos 1
+ * @param rechargers quantos Opacos recarregam agora: um por catalisador no Núcleo, até o total de recarregáveis
+ *     ({@link RechargeRank#size}); 0 sem recarga
  * @param formedAt o {@link ResonanceCoreBlockEntity#formedAt()}: -1 nunca montou, 0 já montado de antes
  * @param origin o canto mínimo da caixa (x, y, z)
  * @param flows a faixa de vazão (0 a 7) de cada Porta de Energia no último lote, na ordem do {@link PortOrder}
  * @param full o buffer terminou o último lote cheio
  */
 public record ChamberView(byte[] chambers, byte[] tiers, int band, boolean tuned, long rechargeStart, int rechargeTicks,
-        long formedAt, int[] origin, byte[] flows, boolean full) {
+        int rechargers, long formedAt, int[] origin, byte[] flows, boolean full) {
     /** A duração padrão da recarga, para quem dividir por ela nunca ver 0. */
     private static final int DEFAULT_RECHARGE_TICKS = (int) Math.min(Config.RECHARGE_TICKS.getDefault(),
             Integer.MAX_VALUE);
-    public static final ChamberView EMPTY = new ChamberView(new byte[0], new byte[0], 0, false, -1, DEFAULT_RECHARGE_TICKS, -1,
+    public static final ChamberView EMPTY = new ChamberView(new byte[0], new byte[0], 0, false, -1, DEFAULT_RECHARGE_TICKS, 0, -1,
             new int[3], new byte[0], false);
 
     private static final byte EMPTY_CHAMBER = 0;
@@ -45,6 +47,7 @@ public record ChamberView(byte[] chambers, byte[] tiers, int band, boolean tuned
         origin = origin.clone();
         flows = flows.clone();
         rechargeTicks = Math.max(1, rechargeTicks);
+        rechargers = Math.max(0, rechargers);
     }
 
     @Override
@@ -96,7 +99,7 @@ public record ChamberView(byte[] chambers, byte[] tiers, int band, boolean tuned
         }
         return new ChamberView(chambers, tiers, TuneSignal.band(core.efficiency()),
                 TuneSignal.tuned(core.station(), core.dial()), rechargeStart,
-                (int) Math.min(Config.rechargeTicks(), Integer.MAX_VALUE), core.formedAt(), core.origin(),
+                (int) Math.min(Config.rechargeTicks(), Integer.MAX_VALUE), rechargers(core), core.formedAt(), core.origin(),
                 core.flow().bands(), core.flow().full());
     }
 
@@ -109,6 +112,7 @@ public record ChamberView(byte[] chambers, byte[] tiers, int band, boolean tuned
         if (chambers.length != count || this.rechargeStart != rechargeStart || formedAt != core.formedAt()
                 || band != TuneSignal.band(core.efficiency()) || tuned != TuneSignal.tuned(core.station(), core.dial())
                 || rechargeTicks != Math.max(1, (int) Math.min(Config.rechargeTicks(), Integer.MAX_VALUE))
+                || rechargers != rechargers(core)
                 || !Arrays.equals(origin, core.origin()) || full != core.flow().full()
                 || !Arrays.equals(flows, core.flow().bands())) {
             return false;
@@ -138,18 +142,20 @@ public record ChamberView(byte[] chambers, byte[] tiers, int band, boolean tuned
         return 0;
     }
 
-    /** Se há recarga em curso: um Opaco não rachado numa câmara do tier e catalisador no Núcleo. */
-    static boolean recharging(ResonanceCoreBlockEntity core) {
-        if (core.redstone() <= 0) {
-            return false;
-        }
+    /** Quantos Opacos recarregam agora: um por catalisador no Núcleo, até o total de recarregáveis (o rachado fica de fora). */
+    static int rechargers(ResonanceCoreBlockEntity core) {
+        int rechargeable = 0;
         for (int i = 0; i < core.chambers(); i++) {
-            ItemStack stack = core.crystals().get(i);
-            if (SignalCrystalItem.isRechargeable(stack)) {
-                return true;
+            if (SignalCrystalItem.isRechargeable(core.crystals().get(i))) {
+                rechargeable++;
             }
         }
-        return false;
+        return RechargeRank.size(rechargeable, core.redstone());
+    }
+
+    /** Se há recarga em curso: um Opaco não rachado numa câmara do tier e catalisador no Núcleo. */
+    static boolean recharging(ResonanceCoreBlockEntity core) {
+        return rechargers(core) > 0;
     }
 
     /** O canto mínimo da caixa (x, y, z): o dos membros, ou o próprio Núcleo sem membros. */
@@ -177,6 +183,7 @@ public record ChamberView(byte[] chambers, byte[] tiers, int band, boolean tuned
         tag.putBoolean("tuned", tuned);
         tag.putLong("recharge_start", rechargeStart);
         tag.putInt("recharge_ticks", rechargeTicks);
+        tag.putByte("rechargers", (byte) rechargers);
         tag.putLong("formed_at", formedAt);
         tag.putIntArray("origin", origin);
         tag.putByteArray("flows", flows);
@@ -190,7 +197,7 @@ public record ChamberView(byte[] chambers, byte[] tiers, int band, boolean tuned
         }
         int[] origin = tag.getIntArray("origin");
         return new ChamberView(tag.getByteArray("chambers"), tag.getByteArray("tiers"), tag.getByte("band"), tag.getBoolean("tuned"),
-                tag.getLong("recharge_start"), tag.getInt("recharge_ticks"), tag.getLong("formed_at"),
+                tag.getLong("recharge_start"), tag.getInt("recharge_ticks"), tag.getByte("rechargers"), tag.getLong("formed_at"),
                 origin.length == 3 ? origin : new int[3], tag.getByteArray("flows"), tag.getBoolean("full"));
     }
 
@@ -198,7 +205,7 @@ public record ChamberView(byte[] chambers, byte[] tiers, int band, boolean tuned
     public boolean equals(Object other) {
         return other instanceof ChamberView view && Arrays.equals(chambers, view.chambers) && Arrays.equals(tiers, view.tiers)
                 && band == view.band
-                && tuned == view.tuned && rechargeStart == view.rechargeStart && rechargeTicks == view.rechargeTicks
+                && tuned == view.tuned && rechargeStart == view.rechargeStart && rechargeTicks == view.rechargeTicks && rechargers == view.rechargers
                 && formedAt == view.formedAt && Arrays.equals(origin, view.origin) && full == view.full
                 && Arrays.equals(flows, view.flows);
     }
@@ -211,6 +218,7 @@ public record ChamberView(byte[] chambers, byte[] tiers, int band, boolean tuned
         hash = 31 * hash + Boolean.hashCode(tuned);
         hash = 31 * hash + Long.hashCode(rechargeStart);
         hash = 31 * hash + rechargeTicks;
+        hash = 31 * hash + rechargers;
         hash = 31 * hash + Long.hashCode(formedAt);
         hash = 31 * hash + Arrays.hashCode(origin);
         hash = 31 * hash + Arrays.hashCode(flows);
@@ -220,7 +228,7 @@ public record ChamberView(byte[] chambers, byte[] tiers, int band, boolean tuned
     @Override
     public String toString() {
         return "ChamberView[chambers=" + Arrays.toString(chambers) + ", tiers=" + Arrays.toString(tiers) + ", band=" + band + ", tuned=" + tuned
-                + ", rechargeStart=" + rechargeStart + ", rechargeTicks=" + rechargeTicks + ", formedAt=" + formedAt
+                + ", rechargeStart=" + rechargeStart + ", rechargeTicks=" + rechargeTicks + ", rechargers=" + rechargers + ", formedAt=" + formedAt
                 + ", origin=" + Arrays.toString(origin) + ", flows=" + Arrays.toString(flows) + ", full=" + full + "]";
     }
 }

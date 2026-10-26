@@ -20,7 +20,7 @@ public final class RepairerEnergy implements IEnergyStorage {
         }
         int taken = (int) store.insert(toReceive, simulate);
         if (taken > 0 && !simulate) {
-            repairer.wake();
+            repairer.wakeForEnergy();
         }
         return taken;
     }

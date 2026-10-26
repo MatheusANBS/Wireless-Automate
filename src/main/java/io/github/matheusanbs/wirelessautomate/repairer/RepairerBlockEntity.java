@@ -135,6 +135,19 @@ public class RepairerBlockEntity extends BlockEntity {
         }
     }
 
+    /** Entrou energia: só roda o motor se há uma linha parada que ela pode destravar (rachado, estoque e custo ao alcance). */
+    public void wakeForEnergy() {
+        if (level == null || level.isClientSide || items.get(RepairerSlots.FEED).getCount() < Config.recastCrystals()) {
+            return;
+        }
+        for (int i = 0; i < RepairMath.LINES; i++) {
+            if (end[i] == 0 && RepairerSlots.acceptsCracked(items.get(i)) && energy.stored() >= RepairerCosts.of(items.get(i))) {
+                tick(level.getGameTime());
+                return;
+            }
+        }
+    }
+
     /** O conteúdo mudou: marca o chunk, acorda o motor e avisa os vizinhos (os roteadores dormem por vazio e por cheio). */
     public void itemsChanged() {
         setChanged();
@@ -164,7 +177,9 @@ public class RepairerBlockEntity extends BlockEntity {
         if (changed) {
             setChanged();
             sync.markDirty();
-            notifyNeighbors();
+            if (!loading) {
+                notifyNeighbors();
+            }
         }
         if (anyRunning()) {
             RepairerManager.add(this);

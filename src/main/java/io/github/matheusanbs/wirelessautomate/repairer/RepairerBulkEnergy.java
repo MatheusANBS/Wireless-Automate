@@ -20,7 +20,7 @@ public final class RepairerBulkEnergy implements BulkEnergy {
         }
         long taken = store.insert(amount, simulate);
         if (taken > 0 && !simulate) {
-            repairer.wake();
+            repairer.wakeForEnergy();
         }
         return taken;
     }

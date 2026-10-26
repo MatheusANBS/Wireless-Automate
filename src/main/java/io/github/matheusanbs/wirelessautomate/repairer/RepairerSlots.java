@@ -30,6 +30,6 @@ public final class RepairerSlots {
 
     /** O mesmo cristal que a {@code RecastCrystalRecipe} pede: o Cristal de Sinal comum com a carga cheia. */
     public static boolean acceptsFeed(ItemStack stack) {
-        return stack.is(ModItems.SIGNAL_CRYSTAL.get()) && SignalCrystalItem.isFull(stack);
+        return stack.is(ModItems.SIGNAL_CRYSTAL.get()) && SignalCrystalItem.isFull(stack) && !SignalCrystalItem.isCracked(stack);
     }
 }

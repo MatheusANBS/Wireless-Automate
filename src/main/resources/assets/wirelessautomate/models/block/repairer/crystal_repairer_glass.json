@@ -1,0 +1,81 @@
+{
+  "parent": "minecraft:block/block",
+  "render_type": "minecraft:translucent",
+  "ambientocclusion": false,
+  "textures": {
+    "palette": "wirelessautomate:block/repairer/palette",
+    "particle": "wirelessautomate:block/repairer/palette"
+  },
+  "elements": [
+    {
+      "name": "glass",
+      "from": [
+        2.6,
+        6.3,
+        2.6
+      ],
+      "to": [
+        13.4,
+        13.7,
+        13.4
+      ],
+      "shade": false,
+      "faces": {
+        "east": {
+          "uv": [
+            13.25,
+            3.25,
+            13.75,
+            3.75
+          ],
+          "texture": "#palette"
+        },
+        "west": {
+          "uv": [
+            13.25,
+            4.25,
+            13.75,
+            4.75
+          ],
+          "texture": "#palette"
+        },
+        "up": {
+          "uv": [
+            13.25,
+            0.25,
+            13.75,
+            0.75
+          ],
+          "texture": "#palette"
+        },
+        "down": {
+          "uv": [
+            13.25,
+            5.25,
+            13.75,
+            5.75
+          ],
+          "texture": "#palette"
+        },
+        "south": {
+          "uv": [
+            13.25,
+            2.25,
+            13.75,
+            2.75
+          ],
+          "texture": "#palette"
+        },
+        "north": {
+          "uv": [
+            13.25,
+            1.25,
+            13.75,
+            1.75
+          ],
+          "texture": "#palette"
+        }
+      }
+    }
+  ]
+}

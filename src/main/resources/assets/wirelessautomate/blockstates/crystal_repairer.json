@@ -1,0 +1,74 @@
+{
+  "multipart": [
+    {
+      "when": {
+        "facing": "north"
+      },
+      "apply": {
+        "model": "wirelessautomate:block/repairer/crystal_repairer"
+      }
+    },
+    {
+      "when": {
+        "facing": "north"
+      },
+      "apply": {
+        "model": "wirelessautomate:block/repairer/crystal_repairer_glass"
+      }
+    },
+    {
+      "when": {
+        "facing": "east"
+      },
+      "apply": {
+        "model": "wirelessautomate:block/repairer/crystal_repairer",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east"
+      },
+      "apply": {
+        "model": "wirelessautomate:block/repairer/crystal_repairer_glass",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "south"
+      },
+      "apply": {
+        "model": "wirelessautomate:block/repairer/crystal_repairer",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south"
+      },
+      "apply": {
+        "model": "wirelessautomate:block/repairer/crystal_repairer_glass",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "west"
+      },
+      "apply": {
+        "model": "wirelessautomate:block/repairer/crystal_repairer",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west"
+      },
+      "apply": {
+        "model": "wirelessautomate:block/repairer/crystal_repairer_glass",
+        "y": 270
+      }
+    }
+  ]
+}

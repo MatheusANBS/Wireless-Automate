@@ -11,6 +11,7 @@ import io.github.matheusanbs.wirelessautomate.client.repairer.RepairerScreen;
 import io.github.matheusanbs.wirelessautomate.packet.RepairerStatePayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
+import io.github.matheusanbs.wirelessautomate.repairer.RepairerBlock;
 import io.github.matheusanbs.wirelessautomate.repairer.RepairerBlockEntity;
 import io.github.matheusanbs.wirelessautomate.repairer.RepairerSlots;
 import java.util.List;
@@ -18,6 +19,7 @@ import java.util.UUID;
 import java.util.function.Predicate;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -28,7 +30,8 @@ import net.minecraft.world.level.block.Blocks;
 /**
  * A tela do Reparador de Cristais em três estados, nos dois temas e em pt_br: parado (o estoque e dois reparados, sem
  * rachado), sem energia (um Sinal, um Lapidado e um Afinado rachados esperando, a câmara escura) e reparando (a
- * energia chega e as três linhas andam). Cada idioma começa com um Reparador novo, ao lado do jogador; no fim ele sai.
+ * energia chega e as três linhas andam). Cada idioma começa com um Reparador novo, ao lado do jogador. Depois, o bloco
+ * no mundo nos quatro {@code facing}, de frente (a porta de energia) e de lado; no fim ele sai.
  */
 final class E2eRepairerSteps {
     /** A energia do estado parado: paga qualquer um dos três reparos, para a câmara não escurecer. */
@@ -41,6 +44,12 @@ final class E2eRepairerSteps {
     private static final int OPEN_RETRY_TICKS = 40;
     private static final int SMALL_W = 1366;
     private static final int SMALL_H = 768;
+    /** As fotos do bloco: o olho a 2 blocos do centro, na altura de quem está de pé no chão do bloco. */
+    private static final double VIEW_DISTANCE = 2.0;
+    private static final double VIEW_TARGET_Y = 0.45;
+    /** Ticks com a câmera parada antes da foto, para o chunk refazer a malha com o estado novo. */
+    private static final int BLOCK_SETTLE_TICKS = 20;
+    private static final Direction[] FACINGS = {Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
 
     private E2eRepairerSteps() {
     }
@@ -53,6 +62,7 @@ final class E2eRepairerSteps {
         list.add(language("pt_br"));
         round(list, playerId, pos, "-pt");
         list.add(language("en_us"));
+        blockShots(list, playerId, pos);
         list.add(new Step("Reparador: tirar o bloco", STEP_TIMEOUT_MS, () -> onServer(server -> {
             remove(server.overworld(), pos[0]);
             return null;
@@ -109,6 +119,74 @@ final class E2eRepairerSteps {
             smallWindow(list);
         }
         list.add(close("Reparador: fechar" + suffix));
+    }
+
+    /**
+     * O modelo no mundo: para cada {@code facing}, a foto de frente (de onde o jogador que o pôs estava, com a porta de
+     * energia para a câmera) e a de lado (vindo do horário do {@code facing}), sem a interface. O mundo do e2e tem o
+     * ciclo do dia desligado, então a luz é a mesma em todas.
+     */
+    private static void blockShots(List<Step> list, UUID playerId, BlockPos[] pos) {
+        list.add(new Step("Reparador: sem interface", STEP_TIMEOUT_MS,
+                () -> Minecraft.getInstance().options.hideGui = true, () -> true, () -> ""));
+        for (Direction facing : FACINGS) {
+            list.add(new Step("Reparador: bloco para " + facing, STEP_TIMEOUT_MS, () -> onServer(server -> {
+                ServerLevel level = server.overworld();
+                level.setBlockAndUpdate(pos[0], level.getBlockState(pos[0]).setValue(RepairerBlock.FACING, facing));
+                return null;
+            }), () -> Minecraft.getInstance().level.getBlockState(pos[0]).getValue(RepairerBlock.FACING) == facing,
+                    () -> "estado " + Minecraft.getInstance().level.getBlockState(pos[0])));
+            String name = "reparador-bloco-" + facing.getSerializedName();
+            list.add(blockShot(name + "-frente", playerId, pos, facing));
+            list.add(blockShot(name + "-lado", playerId, pos, facing.getClockWise()));
+        }
+        list.add(new Step("Reparador: interface de volta", STEP_TIMEOUT_MS,
+                () -> Minecraft.getInstance().options.hideGui = false, () -> true, () -> ""));
+    }
+
+    /**
+     * O jogador voando com os pés no chão do bloco, a {@link #VIEW_DISTANCE} do centro do lado {@code from}, olhando o
+     * bloco. A janela é real e o mouse gira a câmera: o ângulo volta a cada tick até a foto.
+     */
+    private static Step blockShot(String file, UUID playerId, BlockPos[] pos, Direction from) {
+        double[] cam = new double[3];
+        float[] ang = new float[2];
+        return new Step("captura " + file, STEP_TIMEOUT_MS, () -> {
+            BlockPos p = pos[0];
+            cam[0] = p.getX() + 0.5 + from.getStepX() * VIEW_DISTANCE;
+            cam[1] = p.getY();
+            cam[2] = p.getZ() + 0.5 + from.getStepZ() * VIEW_DISTANCE;
+            double ex = p.getX() + 0.5 - cam[0];
+            double ey = p.getY() + VIEW_TARGET_Y - (cam[1] + 1.62);
+            double ez = p.getZ() + 0.5 - cam[2];
+            ang[0] = (float) Math.toDegrees(Math.atan2(-ex, ez));
+            ang[1] = (float) -Math.toDegrees(Math.atan2(ey, Math.sqrt(ex * ex + ez * ez)));
+            Minecraft.getInstance().mouseHandler.releaseMouse();
+            look(ang);
+            onServer(server -> {
+                ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+                player.getAbilities().flying = true;
+                player.onUpdateAbilities();
+                player.teleportTo(player.serverLevel(), cam[0], cam[1], cam[2], ang[0], ang[1]);
+                return null;
+            });
+        }, () -> {
+            look(ang);
+            if (stepTicks < BLOCK_SETTLE_TICKS
+                    || Minecraft.getInstance().player.position().distanceToSqr(cam[0], cam[1], cam[2]) > 0.01) {
+                return false;
+            }
+            capture(Minecraft.getInstance(), file);
+            return true;
+        }, () -> "câmera em " + Minecraft.getInstance().player.position());
+    }
+
+    private static void look(float[] ang) {
+        Minecraft minecraft = Minecraft.getInstance();
+        minecraft.player.setYRot(ang[0]);
+        minecraft.player.setXRot(ang[1]);
+        minecraft.player.yRotO = ang[0];
+        minecraft.player.xRotO = ang[1];
     }
 
     /** A foto no tema claro e, com {@code withDark}, a do escuro, cada uma com a conferência dos textos cortados. */

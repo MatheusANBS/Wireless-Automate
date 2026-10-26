@@ -13,7 +13,7 @@ import org.joml.Vector3f;
  * (ou a posição ao longo e através da fita) no UV0 e o modo e o parâmetro no UV2. Tudo em {@code float}, sem objeto
  * novo por quadro.
  */
-final class RibbonQuad {
+public final class RibbonQuad {
     private static final float[][] CORNERS = {{0, 0}, {0, 1}, {1, 1}, {1, 0}};
 
     private RibbonQuad() {
@@ -24,7 +24,7 @@ final class RibbonQuad {
      * longo dela. {@code cx, cy, cz} é a câmera relativa ao mesmo centro. O lado é a direção × (meio − câmera); sem
      * lado (de frente para a câmera) não desenha e devolve {@code false}.
      */
-    static boolean strip(PoseStack.Pose pose, MultiBufferSource buffer, float ax, float ay, float az, float bx,
+    public static boolean strip(PoseStack.Pose pose, MultiBufferSource buffer, float ax, float ay, float az, float bx,
             float by, float bz, float cx, float cy, float cz, float width, int rgb, int alpha, int mode, int param) {
         float dx = bx - ax;
         float dy = by - ay;
@@ -55,7 +55,7 @@ final class RibbonQuad {
     }
 
     /** O quadrado de lado {@code size} centrado em {@code (x, y, z)}, de frente para a câmera; o UV0 vai de 0 a 1. */
-    static void billboard(PoseStack.Pose pose, MultiBufferSource buffer, float x, float y, float z, float size,
+    public static void billboard(PoseStack.Pose pose, MultiBufferSource buffer, float x, float y, float z, float size,
             int rgb, int alpha, int mode, int param) {
         Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
         Vector3f left = camera.getLeftVector();
@@ -70,6 +70,19 @@ final class RibbonQuad {
             float v = corner[1] * 2 - 1;
             vertex(out, pose, x + (left.x * u + up.x * v) * h, y + (left.y * u + up.y * v) * h,
                     z + (left.z * u + up.z * v) * h, r, g, b, alpha, corner[0], corner[1], mode, param);
+        }
+    }
+
+    /** O quadrado de meio lado {@code half} deitado (normal +y) centrado em {@code (x, y, z)}; o UV0 vai de 0 a 1 nos cantos. */
+    public static void flat(PoseStack.Pose pose, MultiBufferSource buffer, float x, float y, float z, float half,
+            int rgb, int alpha, int mode, int param) {
+        VertexConsumer out = buffer.getBuffer(ChamberRenderTypes.ribbon());
+        int r = (rgb >> 16) & 0xFF;
+        int g = (rgb >> 8) & 0xFF;
+        int b = rgb & 0xFF;
+        for (float[] corner : CORNERS) {
+            vertex(out, pose, x + (corner[0] * 2 - 1) * half, y, z + (corner[1] * 2 - 1) * half, r, g, b, alpha,
+                    corner[0], corner[1], mode, param);
         }
     }
 

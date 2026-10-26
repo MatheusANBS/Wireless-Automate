@@ -9,7 +9,7 @@ import java.lang.invoke.MethodType;
  * Se um shaderpack do Iris está em uso: com ele, o core shader do plasma pode sair errado, e a câmara volta ao desenho
  * de hoje. Por reflexão, para o mod não depender do Iris; a resposta vale por um quadro.
  */
-final class ShaderPackCheck {
+public final class ShaderPackCheck {
     private static final MethodHandle IN_USE = find();
     private static long frame = -1;
     private static boolean active;
@@ -17,7 +17,7 @@ final class ShaderPackCheck {
     private ShaderPackCheck() {
     }
 
-    static boolean active() {
+    public static boolean active() {
         if (IN_USE == null) {
             return false;
         }

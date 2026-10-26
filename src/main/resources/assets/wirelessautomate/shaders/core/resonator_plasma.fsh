@@ -16,6 +16,9 @@ const vec3 WHITE = vec3(1.0, 0.94, 0.92);
 const float SPHERE = 0.234;
 
 void main() {
+    // extra.x é o apagamento da luz em milésimos (0 = inteira, 1000 = apagada); o Núcleo manda 0 e fica como está
+    float gain = 1.0 - clamp(float(extra.x) / 1000.0, 0.0, 1.0);
+    if (gain <= 0.0) discard;
     vec2 p = quad * 2.0 - 1.0;
     float r = length(p);
     if (r > 1.0) discard;
@@ -66,5 +69,5 @@ void main() {
     col += tier * 0.25 * exp(-r * 3.0) * fade * outside;
 
     // alfa pré-multiplicado: o corpo (inside = 1) cobre o que está atrás, o halo (inside = 0) soma
-    fragColor = vec4(wa_dither(wa_tonemap(col)), inside);
+    fragColor = vec4(wa_dither(wa_tonemap(col) * gain), inside * gain);
 }

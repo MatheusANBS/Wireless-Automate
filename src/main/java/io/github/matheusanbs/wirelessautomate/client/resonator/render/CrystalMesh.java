@@ -15,9 +15,9 @@ package io.github.matheusanbs.wirelessautomate.client.resonator.render;
  * casco inflado não abrir nas arestas. Por triângulo: a normal plana, para fora, e os vértices em sentido anti-horário
  * vistos de fora.
  */
-final class CrystalMesh {
-    static final float TOP = 0.58f;
-    static final float BOTTOM = -0.46f;
+public final class CrystalMesh {
+    public static final float TOP = 0.58f;
+    public static final float BOTTOM = -0.46f;
     /** A altura relativa em que a faixa do losango começa e termina, a mesma do shader. */
     static final float BELT_BOTTOM = 0.42f;
     static final float BELT_TOP = 0.56f;

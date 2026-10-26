@@ -87,6 +87,7 @@ public final class ModCreativeTabs {
                         output.accept(ModItems.RESONATOR_ENERGY_PORT.get());
                         output.accept(ModItems.RESONATOR_CRYSTAL_PORT.get());
                         output.accept(ModItems.RESONATOR_TUNER.get());
+                        output.accept(ModItems.CRYSTAL_REPAIRER.get());
                         GuideBook.create().ifPresent(output::accept);
                     })
                     .build());

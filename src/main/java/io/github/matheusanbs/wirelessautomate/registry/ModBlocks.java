@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlock;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import io.github.matheusanbs.wirelessautomate.storage.StorageSourceTankBlock;
+import io.github.matheusanbs.wirelessautomate.repairer.RepairerBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorCasingBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorGlassBlock;
@@ -105,6 +106,8 @@ public final class ModBlocks {
             resonatorPart());
     public static final DeferredBlock<ResonatorPartBlock> RESONATOR_TUNER = BLOCKS.registerBlock("resonator_tuner",
             props -> new ResonatorPartBlock(ResonatorPartBlock.Kind.TUNER, props), resonatorPart());
+    public static final DeferredBlock<RepairerBlock> CRYSTAL_REPAIRER = BLOCKS.registerBlock("crystal_repairer",
+            RepairerBlock::new, stone().pushReaction(PushReaction.BLOCK).noOcclusion());
 
     private static boolean never(BlockState state, BlockGetter level, BlockPos pos) {
         return false;

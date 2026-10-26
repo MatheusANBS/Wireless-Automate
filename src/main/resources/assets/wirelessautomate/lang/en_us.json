@@ -21,6 +21,7 @@
   "block.wirelessautomate.resonator_energy_port": "Resonator Energy Port",
   "block.wirelessautomate.resonator_crystal_port": "Resonator Crystal Port",
   "block.wirelessautomate.resonator_tuner": "Resonator Tuner",
+  "block.wirelessautomate.crystal_repairer": "Crystal Repairer",
   "block.wirelessautomate.resonance_core.tooltip": "%s · %s crystal chambers",
   "block.wirelessautomate.resonance_core.tooltip.eco": "Resonant Echo %s",
   "block.wirelessautomate.resonance_core.formed": "Resonator formed",

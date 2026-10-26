@@ -143,6 +143,8 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> RESONATOR_CRYSTAL_PORT =
             ITEMS.registerSimpleBlockItem(ModBlocks.RESONATOR_CRYSTAL_PORT);
     public static final DeferredItem<BlockItem> RESONATOR_TUNER = ITEMS.registerSimpleBlockItem(ModBlocks.RESONATOR_TUNER);
+    public static final DeferredItem<BlockItem> CRYSTAL_REPAIRER =
+            ITEMS.registerSimpleBlockItem(ModBlocks.CRYSTAL_REPAIRER);
 
     /** Cartões de Upgrade de Avançado a Ultimate (os do Allthemodium sempre registrados); não há Básico (o roteador já nasce Básico). */
     public static final Map<RouterTier, DeferredItem<TierCoreItem>> TIER_CORES = new EnumMap<>(RouterTier.class);

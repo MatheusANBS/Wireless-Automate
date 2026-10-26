@@ -57,6 +57,7 @@ public final class WirelessAutomate {
         ModCreativeTabs.CREATIVE_MODE_TABS.register(modEventBus);
         modEventBus.addListener(ModPayloads::register);
         modEventBus.addListener(StorageCapabilities::register);
+        modEventBus.addListener(io.github.matheusanbs.wirelessautomate.repairer.RepairerCapabilities::register);
         modEventBus.addListener(ResonatorCapabilities::register);
         modEventBus.addListener(RecipeOverridePack::onAddPackFinders);
 

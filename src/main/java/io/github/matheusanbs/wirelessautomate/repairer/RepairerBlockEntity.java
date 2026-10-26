@@ -67,9 +67,12 @@ public class RepairerBlockEntity extends BlockEntity {
         return bulkEnergyView;
     }
 
-    /** O reparo mais caro (o Afinado Ultimate) vezes as oito linhas, pela config. */
+    /** O reparo mais caro de qualquer tier (pela config, que pode sair da escada) vezes as oito linhas. */
     private static long bufferCapacity() {
-        long highest = RepairMath.cost(Config.resonatorFePerCrystal(RouterTier.ULTIMATE), Config.repairCostFactor());
+        long highest = 0;
+        for (RouterTier tier : RouterTier.values()) {
+            highest = Math.max(highest, RepairMath.cost(Config.resonatorFePerCrystal(tier), Config.repairCostFactor()));
+        }
         return RepairMath.bufferCapacity(highest, RepairMath.LINES);
     }
 
@@ -115,6 +118,17 @@ public class RepairerBlockEntity extends BlockEntity {
     }
 
     /** A linha está andando: tem fim marcado e não está travada. */
+    /** Os Cristais de Sinal que as linhas ainda andando já gastaram do estoque: voltam a quem quebra o bloco. */
+    public int refundCrystals() {
+        int lines = 0;
+        for (int i = 0; i < RepairMath.LINES; i++) {
+            if (running(i)) {
+                lines++;
+            }
+        }
+        return lines * Config.recastCrystals();
+    }
+
     public boolean running(int line) {
         return end[line] > 0 && !blocked[line];
     }

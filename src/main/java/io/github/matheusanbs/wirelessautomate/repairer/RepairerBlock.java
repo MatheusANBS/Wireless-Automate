@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.repairer;
 
 import com.mojang.serialization.MapCodec;
 import io.github.matheusanbs.wirelessautomate.menu.RepairerMenu;
+import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.core.Direction;
@@ -9,6 +10,7 @@ import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
@@ -88,6 +90,12 @@ public class RepairerBlock extends BaseEntityBlock {
         if (!state.is(newState.getBlock()) && !level.isClientSide
                 && level.getBlockEntity(pos) instanceof RepairerBlockEntity repairer) {
             Containers.dropContents(level, pos, repairer.container());
+            int refund = repairer.refundCrystals();
+            while (refund > 0) {
+                ItemStack back = new ItemStack(ModItems.SIGNAL_CRYSTAL.get(), Math.min(refund, 64));
+                refund -= back.getCount();
+                Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), back);
+            }
         }
         super.onRemove(state, level, pos, newState, movedByPiston);
     }

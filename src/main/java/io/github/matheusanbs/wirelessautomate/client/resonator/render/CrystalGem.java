@@ -15,7 +15,7 @@ import org.joml.Vector3f;
  * o corte das faces de trás do vanilla deixa à vista só a parte de trás do casco, que o shader infla e pinta de
  * escuro.
  */
-final class CrystalGem {
+public final class CrystalGem {
     private static final float SCALE = 10000f;
     /** Rascunhos do desenho, que é só na thread de render: nada alocado por quadro. */
     private static final Vector3f POS = new Vector3f();
@@ -28,8 +28,14 @@ final class CrystalGem {
      * Os triângulos do cristal na pose de agora; {@code state} é um dos estados do {@link CrystalParam} e
      * {@code diamond} escolhe o losango em vez do aglomerado.
      */
-    static void render(PoseStack.Pose pose, MultiBufferSource buffer, int bandColor, int flash, int state, int seed,
+    public static void render(PoseStack.Pose pose, MultiBufferSource buffer, int bandColor, int flash, int state, int seed,
             boolean diamond) {
+        render(pose, buffer, bandColor, flash, state, seed, diamond, 0f);
+    }
+
+    /** Como o de cima, com o canal de efeito {@code fx} do {@link CrystalParam} no UV0.y (0 não muda nada no shader). */
+    public static void render(PoseStack.Pose pose, MultiBufferSource buffer, int bandColor, int flash, int state, int seed,
+            boolean diamond, float fx) {
         CrystalMesh mesh = diamond ? CrystalMesh.DIAMOND : CrystalMesh.CLUSTER;
         VertexConsumer out = buffer.getBuffer(ChamberRenderTypes.crystal());
         int r = (bandColor >> 16) & 0xFF;
@@ -39,26 +45,26 @@ final class CrystalGem {
         for (int t = 0; t < mesh.triangles(); t++) {
             pose.normal().transform(mesh.normalX(t), mesh.normalY(t), mesh.normalZ(t), NORMAL).normalize();
             for (int k = 0; k < 3; k++) {
-                vertex(pose, out, mesh, 3 * t + k, r, g, b, flash, param, 0);
+                vertex(pose, out, mesh, 3 * t + k, r, g, b, flash, param, 0, fx);
             }
         }
         for (int t = 0; t < mesh.triangles(); t++) {
             for (int k = 2; k >= 0; k--) {
                 int v = 3 * t + k;
                 pose.normal().transform(mesh.outlineX(v), mesh.outlineY(v), mesh.outlineZ(v), NORMAL).normalize();
-                vertex(pose, out, mesh, v, r, g, b, flash, param, 1);
+                vertex(pose, out, mesh, v, r, g, b, flash, param, 1, fx);
             }
         }
     }
 
     private static void vertex(PoseStack.Pose pose, VertexConsumer out, CrystalMesh mesh, int v, int r, int g, int b,
-            int flash, int param, float hull) {
+            int flash, int param, float hull, float fx) {
         float x = mesh.x(v);
         float z = mesh.z(v);
         pose.pose().transformPosition(x, mesh.y(v), z, POS);
         out.addVertex(POS.x, POS.y, POS.z)
                 .setColor(r, g, b, flash)
-                .setUv(hull, 0)
+                .setUv(hull, fx)
                 .setUv1(Math.round((x + 1) * SCALE), Math.round((z + 1) * SCALE))
                 .setUv2(Math.round(mesh.height(v) * SCALE), param)
                 .setNormal(NORMAL.x, NORMAL.y, NORMAL.z);

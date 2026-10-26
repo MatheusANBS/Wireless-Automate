@@ -13,7 +13,7 @@ import net.minecraft.client.renderer.RenderType;
  * com cor nos pixels transparentes; o {@code eyes} soma ONE, ONE e acenderia o quadrado inteiro. Aqui a soma é
  * SRC_ALPHA, ONE (a do {@code lightning}), sem gravar profundidade e nas duas faces; as fitas usam a mesma soma.
  */
-final class ChamberRenderTypes extends RenderType {
+public final class ChamberRenderTypes extends RenderType {
     /**
      * A mistura do plasma, com alfa pré-multiplicado: {@code ONE, ONE_MINUS_SRC_ALPHA}. Com alfa 1 a cor cobre o que
      * está atrás (o corpo da esfera esconde o cristal de trás); com alfa 0 ela soma (o halo), numa passada só.
@@ -66,7 +66,7 @@ final class ChamberRenderTypes extends RenderType {
     }
 
     /** Os sprites do atlas de blocos, somados pelo alfa (o alfa do vértice multiplica o da textura). */
-    static RenderType glow() {
+    public static RenderType glow() {
         return GLOW;
     }
 
@@ -74,17 +74,17 @@ final class ChamberRenderTypes extends RenderType {
      * O billboard do Núcleo de plasma: alfa pré-multiplicado (o corpo cobre, o halo soma), sem gravar profundidade,
      * nas duas faces. Vem depois dos cristais, então cobre só os que estão atrás do plano dele.
      */
-    static RenderType plasma() {
+    public static RenderType plasma() {
         return PLASMA;
     }
 
     /** As fitas e os brilhos (o raio e os tentáculos): aditivo, sem gravar profundidade, nas duas faces. */
-    static RenderType ribbon() {
+    public static RenderType ribbon() {
         return RIBBON;
     }
 
     /** O cristal facetado: opaco, com profundidade e sem blend, só as faces de fora. */
-    static RenderType crystal() {
+    public static RenderType crystal() {
         return CRYSTAL;
     }
 }

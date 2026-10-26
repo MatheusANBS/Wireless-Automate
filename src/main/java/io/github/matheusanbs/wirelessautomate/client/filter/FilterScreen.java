@@ -668,6 +668,14 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         rule.preview(draft);
     }
 
+    public void previewComponentSamples(String id, List<Object> trees) {
+        rule.previewSamples(id, trees);
+    }
+
+    public void previewComponent(List<String> written, String typing) {
+        rule.previewComponent(written, typing);
+    }
+
     public void previewArmClear() {
         more.armForPreview();
     }

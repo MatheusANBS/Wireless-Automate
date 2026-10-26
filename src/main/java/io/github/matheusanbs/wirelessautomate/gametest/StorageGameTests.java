@@ -215,6 +215,59 @@ public final class StorageGameTests {
     }
 
     /**
+     * O pick block do AE2WTLib pede sempre uma pilha cheia ao Storage Bus. Esta é a extração do
+     * {@code ExternalStorageFacade} do AE2 (varre os slots, repete no slot enquanto o item continua nele): com 1,
+     * 40 ou 100 itens no Baú, nunca sai mais do que ele tem, e a simulação diz o mesmo que a extração.
+     */
+    @GameTest(template = "empty")
+    public static void ae2StyleExtractionNeverExceedsStock(GameTestHelper helper) {
+        for (int stock : new int[] {1, 40, 64, 100}) {
+            StorageChestBlockEntity chest = storageChest(helper, A, RouterTier.ULTIMATE);
+            chest.storage().insert(new ItemStack(Items.COBBLESTONE), stock, false);
+            chest.storage().insert(new ItemStack(Items.DIAMOND), 5, false);
+            ItemStorageHandler handler = chest.handler();
+            int expected = Math.min(64, stock);
+
+            helper.assertValueEqual(ae2Extract(handler, Items.COBBLESTONE, 64, true), expected,
+                    "simulado com " + stock);
+            helper.assertValueEqual(ae2Extract(handler, Items.COBBLESTONE, 64, false), expected,
+                    "extraído com " + stock);
+            helper.assertValueEqual(chest.storage().countItem(new ItemStack(Items.COBBLESTONE)), (long) (stock - expected),
+                    "sobra com " + stock);
+            helper.assertValueEqual(chest.storage().countItem(new ItemStack(Items.DIAMOND)), 5L, "outro tipo intacto");
+            chest.storage().extract(new ItemStack(Items.DIAMOND), 5, false);
+            chest.storage().extract(new ItemStack(Items.COBBLESTONE), stock, false);
+        }
+        helper.succeed();
+    }
+
+    /** A varredura de slots e o laço por slot do {@code ExternalStorageFacade.ItemHandlerFacade} do AE2. */
+    private static int ae2Extract(ItemStorageHandler handler, Item item, int amount, boolean simulate) {
+        int total = 0;
+        for (int slot = 0; slot < handler.getSlots() && total < amount; slot++) {
+            ItemStack inSlot = handler.getStackInSlot(slot);
+            if (inSlot.isEmpty() || !inSlot.is(item)) {
+                continue;
+            }
+            if (simulate) {
+                total += handler.extractItem(slot, amount - total, true).getCount();
+                continue;
+            }
+            while (true) {
+                int got = handler.extractItem(slot, amount - total, false).getCount();
+                if (got <= 0) {
+                    break;
+                }
+                total += got;
+                if (!handler.getStackInSlot(slot).is(item)) {
+                    break;
+                }
+            }
+        }
+        return total;
+    }
+
+    /**
      * Baú → Baú no Ultimate: os 12 milhões de pedregulho passam numa visita, sem item criado nem perdido em nenhum tick.
      */
     @GameTest(template = "empty", timeoutTicks = 100)

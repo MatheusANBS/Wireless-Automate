@@ -26,7 +26,7 @@ import org.jetbrains.annotations.Nullable;
  * coluna da lista. Público só pela {@link Action}, que o e2e usa.
  */
 public final class RangeRowButtons {
-    public enum Action { UPDATE, REVERT, UNLINK, CLEAR_NETWORKS, RENAME }
+    public enum Action { UPDATE, REVERT, REVERT_GROUP, UNLINK, CLEAR_NETWORKS, RENAME }
 
     /** Um botão posto na tela. */
     record Button(Action action, int x, int y, int w, int h) {
@@ -53,6 +53,8 @@ public final class RangeRowButtons {
 
     private final ArmedClick unlinkArm = new ArmedClick();
     private @Nullable EditTarget armedFor;
+    private final ArmedClick revertGroupArm = new ArmedClick();
+    private @Nullable EditTarget revertGroupFor;
     /** O alvo tem faces sem modo com rede ({@link IdleNetworks#shown}), lido do snapshot a cada quadro. */
     private boolean idleNetworks;
     private @Nullable RangeView widthView;
@@ -114,6 +116,21 @@ public final class RangeRowButtons {
         return target.equals(armedFor) && unlinkArm.armed(System.currentTimeMillis());
     }
 
+    /** O ↺ do grupo {@code target} está armado, esperando o segundo clique. */
+    boolean revertGroupArmed(EditTarget target) {
+        return target.equals(revertGroupFor) && revertGroupArm.armed(System.currentTimeMillis());
+    }
+
+    /** Quantas máquinas do grupo {@code target} têm exceção. */
+    static int exceptions(RangeView view, EditTarget target) {
+        RangeView.GroupView group = target.kind() == EditTarget.Kind.GROUP ? view.group(target.id()) : null;
+        return group == null ? 0 : group.exceptions();
+    }
+
+    private static Component revertGroupArmedText(RangeView view, EditTarget target) {
+        return tr("range.revert_group.armed", exceptions(view, target));
+    }
+
     /**
      * Os botões da linha do alvo {@code target}, com o topo em {@code ry} e a borda direita em {@code right};
      * {@code minX} é onde o texto da linha começa: até onde o "Desvincular?" pode crescer e, no grupo, onde o
@@ -126,15 +143,21 @@ public final class RangeRowButtons {
             case ATTACHED -> {
             }
             case GROUP -> {
-                if (replaced(view, target.id()) > 0) {
-                    actions.add(Action.UPDATE);
+                if (exceptions(view, target) > 0) {
+                    actions.add(Action.REVERT_GROUP);
                 }
-                if (idleNetworks) {
-                    actions.add(Action.CLEAR_NETWORKS);
-                }
-                int withRename = right - PAD - (actions.size() + 1) * (SIZE + GAP) - 1;
-                if (actions.isEmpty() || minX + groupNameWidth(font, view, target.id()) <= withRename - 2) {
-                    actions.add(Action.RENAME);
+                // armado, só o ↺ fica, para o "Voltar 3?" caber
+                if (!revertGroupArmed(target)) {
+                    if (replaced(view, target.id()) > 0) {
+                        actions.add(Action.UPDATE);
+                    }
+                    if (idleNetworks) {
+                        actions.add(Action.CLEAR_NETWORKS);
+                    }
+                    int withRename = right - PAD - (actions.size() + 1) * (SIZE + GAP) - 1;
+                    if (actions.isEmpty() || minX + groupNameWidth(font, view, target.id()) <= withRename - 2) {
+                        actions.add(Action.RENAME);
+                    }
                 }
             }
             case MACHINE -> {
@@ -164,6 +187,8 @@ public final class RangeRowButtons {
             int w = SIZE;
             if (action == Action.UNLINK && unlinkArmed(target)) {
                 w = Math.max(SIZE, Math.min(font.width(tr("range.unlink.armed")) + 6, bx - minX));
+            } else if (action == Action.REVERT_GROUP && revertGroupArmed(target)) {
+                w = Math.max(SIZE, Math.min(font.width(revertGroupArmedText(view, target)) + 6, bx - minX));
             }
             bx -= w;
             buttons.add(new Button(action, bx, by, w, SIZE));
@@ -178,6 +203,20 @@ public final class RangeRowButtons {
      * não está à vista).
      */
     void track(EditTarget target, List<Button> buttons, int mouseX, int mouseY) {
+        if (target.equals(revertGroupFor)) {
+            Button revert = null;
+            for (Button button : buttons) {
+                if (button.action() == Action.REVERT_GROUP) {
+                    revert = button;
+                }
+            }
+            if (revert == null || !revert.contains(mouseX, mouseY)) {
+                revertGroupArm.disarm();
+            }
+        } else {
+            revertGroupArm.disarm();
+            revertGroupFor = null;
+        }
         if (!target.equals(armedFor)) {
             unlinkArm.disarm();
             armedFor = null;
@@ -193,6 +232,13 @@ public final class RangeRowButtons {
 
     /** O clique no botão {@code button} do alvo {@code target}: a ação, ou {@code null} se só armou o ✕. */
     @Nullable Action press(Button button, EditTarget target) {
+        if (button.action() == Action.REVERT_GROUP) {
+            if (!target.equals(revertGroupFor)) {
+                revertGroupArm.disarm();
+                revertGroupFor = target;
+            }
+            return revertGroupArm.click(System.currentTimeMillis()) ? Action.REVERT_GROUP : null;
+        }
         if (button.action() != Action.UNLINK) {
             return button.action();
         }
@@ -205,9 +251,16 @@ public final class RangeRowButtons {
 
     // ------------------------------------------------------------------ desenho e dicas
 
-    void render(GuiGraphics g, Font font, EditTarget target, List<Button> buttons, int mouseX, int mouseY) {
+    void render(GuiGraphics g, Font font, RangeView view, EditTarget target, List<Button> buttons, int mouseX,
+            int mouseY) {
         for (Button b : buttons) {
             boolean hovered = b.contains(mouseX, mouseY);
+            if (b.action() == Action.REVERT_GROUP && revertGroupArmed(target)) {
+                GuiPaint.box(g, b.x(), b.y(), b.w(), b.h(), GuiPaint.DANGER, GuiPaint.DANGER);
+                GuiText.draw(g, font, revertGroupArmedText(view, target), b.x() + 3, b.y() + 1, b.w() - 5,
+                        GuiPaint.SELECTED_TEXT);
+                continue;
+            }
             if (b.action() == Action.UNLINK && unlinkArmed(target)) {
                 GuiPaint.box(g, b.x(), b.y(), b.w(), b.h(), GuiPaint.DANGER, GuiPaint.DANGER);
                 GuiText.draw(g, font, tr("range.unlink.armed"), b.x() + 3, b.y() + 1, b.w() - 5, GuiPaint.SELECTED_TEXT);
@@ -215,12 +268,13 @@ public final class RangeRowButtons {
             }
             int color = switch (b.action()) {
                 case UPDATE -> GuiPaint.OK;
-                case REVERT -> GuiPaint.ACCENT;
+                case REVERT, REVERT_GROUP -> GuiPaint.ACCENT;
                 case UNLINK, CLEAR_NETWORKS, RENAME -> GuiPaint.FG;
             };
+            boolean revert = b.action() == Action.REVERT || b.action() == Action.REVERT_GROUP;
             // o ↺ já tem a borda coral: com o mouse em cima, ela escurece
-            int hover = b.action() == Action.REVERT ? GuiPaint.FG : GuiPaint.BUTTON_HOVER_BORDER;
-            boolean plain = b.action() != Action.UPDATE && b.action() != Action.REVERT;
+            int hover = revert ? GuiPaint.FG : GuiPaint.BUTTON_HOVER_BORDER;
+            boolean plain = b.action() != Action.UPDATE && !revert;
             int border = hovered ? hover : plain ? GuiPaint.BUTTON_BORDER : color;
             GuiPaint.box(g, b.x(), b.y(), b.w(), b.h(), GuiPaint.BUTTON, border);
             if (b.action() == Action.UNLINK) {
@@ -230,7 +284,7 @@ public final class RangeRowButtons {
             } else if (b.action() == Action.RENAME) {
                 pencil(g, b.x() + 2, b.y() + 2, color);
             } else {
-                arrow(g, b.x() + 2, b.y() + 2, b.action() == Action.REVERT, color);
+                arrow(g, b.x() + 2, b.y() + 2, revert, color);
             }
         }
     }
@@ -265,7 +319,8 @@ public final class RangeRowButtons {
 
     /** A dica do botão {@code action} do alvo {@code target}: o nome e o que ele faz. */
     Component tooltip(RangeView view, EditTarget target, Action action) {
-        boolean armed = action == Action.UNLINK && unlinkArmed(target);
+        boolean armed = action == Action.UNLINK && unlinkArmed(target)
+                || action == Action.REVERT_GROUP && revertGroupArmed(target);
         return tooltip(view, target, action, armed);
     }
 
@@ -274,6 +329,8 @@ public final class RangeRowButtons {
         Component head = switch (action) {
             case UPDATE -> tr("range.update");
             case REVERT -> tr("range.revert");
+            case REVERT_GROUP -> tr(armed ? "range.revert_group.armed" : "range.revert_group",
+                    exceptions(view, target));
             case UNLINK -> tr(armed ? "range.unlink.armed" : "range.unlink");
             case CLEAR_NETWORKS -> PanelModel.panelTr("idle.clear");
             case RENAME -> tr("range.rename");
@@ -281,6 +338,8 @@ public final class RangeRowButtons {
         Component detail = switch (action) {
             case UPDATE -> updateDetail(view, target);
             case REVERT -> tr("range.revert.tooltip");
+            case REVERT_GROUP -> tr(armed ? "range.revert_group.armed.tooltip" : "range.revert_group.tooltip",
+                    exceptions(view, target));
             case UNLINK -> tr(armed ? "range.unlink.armed.tooltip" : "range.unlink.tooltip");
             case CLEAR_NETWORKS -> PanelModel.panelTr("idle.clear.tooltip");
             case RENAME -> tr("range.rename.tooltip");

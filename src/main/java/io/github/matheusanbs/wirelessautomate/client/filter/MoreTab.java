@@ -54,9 +54,9 @@ final class MoreTab {
         boolean more = screen.tab() == FilterScreen.Tab.MORE;
         importButton.visible = exportButton.visible = more && !screen.view().isCard();
         importButton.active = exportButton.active = screen.view().hasCard();
-        importButton.setPosition(px, y + BOX_Y + 40);
+        importButton.setPosition(px, y + BOX_Y + 52);
         importButton.setWidth(half);
-        exportButton.setPosition(px + IW - half, y + BOX_Y + 40);
+        exportButton.setPosition(px + IW - half, y + BOX_Y + 52);
         exportButton.setWidth(half);
         clearButton.visible = more;
         clearButton.active = !screen.filter().isEmpty();
@@ -104,8 +104,8 @@ final class MoreTab {
         int ty = y + BOX_Y + 6;
         if (!screen.view().isCard()) {
             GuiPaint.text(g, font, tr("card"), x, ty, GuiPaint.FG);
-            wrapped(g, tr("card.hint"), x, ty + 11, IW, 2, GuiPaint.MUTED);
-            ty = y + BOX_Y + 40 + BTN_H + 8;
+            wrapped(g, tr("card.hint"), x, ty + 11, IW, 3, GuiPaint.MUTED);
+            ty = y + BOX_Y + 52 + BTN_H + 8;
         }
         wrapped(g, tr("more.hint"), x, ty, IW, Math.max(0, (y + frame.innerBottom() - BTN_H - 4 - ty) / 10),
                 GuiPaint.DISABLED);

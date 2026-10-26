@@ -6,13 +6,13 @@ package io.github.matheusanbs.wirelessautomate.client.filter;
  */
 final class FilterLayout {
     // tamanho: mínimo e máximo (o padrão, lembrado na sessão, fica na tela)
-    static final int MIN_W = 344;
-    static final int MIN_H = 252;
+    static final int MIN_W = 392;
+    static final int MIN_H = 264;
     static final int MAX_W = 560;
     static final int MAX_H = 450;
     // moldura
     static final int X0 = 8;
-    static final int PANEL_W = 160;
+    static final int PANEL_W = 208;
     static final int GAP = 6;
     static final int PAD = 5;
     static final int IW = PANEL_W - 2 * PAD;
@@ -40,11 +40,11 @@ final class FilterLayout {
     // aba Regra
     static final int COND_Y = BOX_Y + 17;
     static final int COND_ROW = 11;
-    static final int TRI_W = 20;
+    static final int TRI_W = 26;
     /** Campo do nível mínimo (3 dígitos), à direita do encantamento. */
     static final int LEVEL_W = 28;
-    /** Lista de sugestões do encantamento: até 5 linhas de 12 px e a linha "+N". */
-    static final int SUGGEST_ROWS = 5;
+    /** Lista de sugestões do encantamento: até 7 linhas de 12 px e a linha "+N". */
+    static final int SUGGEST_ROWS = 7;
     static final int SUGGEST_ROW = 12;
     static final int SUGGEST_MORE_H = 11;
 

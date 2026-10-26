@@ -539,6 +539,10 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         panel.previewNetworkList(open);
     }
 
+    public void previewNetworkQuery(String text) {
+        panel.previewNetworkQuery(text);
+    }
+
     /** A lista de redes da linha Rede está aberta (gancho do e2e). */
     public boolean networkListShown() {
         return panel.networkListShown();

@@ -116,6 +116,21 @@ final class RouterRange {
         return true;
     }
 
+    /** Ver {@link RouterBlockEntity#revertGroupToProfile(int)}. */
+    int revertGroupToProfile(int groupId) {
+        int reverted = 0;
+        for (RemoteMachine machine : remotes.machines()) {
+            if (machine.group() == groupId && machine.hasException()) {
+                machine.setException(null);
+                reverted++;
+            }
+        }
+        if (reverted > 0) {
+            router.changed(NetworkManager.ALL_TYPES);
+        }
+        return reverted;
+    }
+
     /** Ver {@link RouterBlockEntity#setGroupProfile}. */
     boolean setGroupProfile(int groupId, MachineConfig config) {
         MachineGroup group = remotes.group(groupId);

@@ -332,6 +332,59 @@ public final class RuleFilterGameTests {
                 .thenSucceed();
     }
 
+    /** Um item com um gene no {@code custom_data}, no formato do gene_group do Productive Bees (attribute e purity). */
+    private static ItemStack geneLike(String attribute, int purity) {
+        net.minecraft.nbt.CompoundTag gene = new net.minecraft.nbt.CompoundTag();
+        gene.putString("attribute", attribute);
+        gene.putInt("purity", purity);
+        ItemStack stack = new ItemStack(Items.PAPER);
+        stack.set(DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(gene));
+        return stack;
+    }
+
+    /** O filtro por componente de qualquer mod: campo interno, comparações, contém e várias condições. */
+    @GameTest(template = "empty")
+    public static void componentFieldsOperatorsAndSeveralConditions(GameTestHelper helper) {
+        ItemStack pure = geneLike("productivity", 100);
+        ItemStack weak = geneLike("productivity", 40);
+        ItemStack other = geneLike("endurance", 100);
+        ItemStack plain = new ItemStack(Items.PAPER);
+
+        ItemRule purity = ItemRule.EMPTY.withComponent("minecraft:custom_data->purity>=100");
+        expect(helper, purity, pure, true, "pureza 100");
+        expect(helper, purity, other, true, "pureza 100 de outro gene");
+        expect(helper, purity, weak, false, "pureza 40");
+        expect(helper, purity, plain, false, "sem o componente");
+
+        ItemRule both = ItemRule.EMPTY.withComponent(
+                "minecraft:custom_data->attribute=productivity; minecraft:custom_data->purity>=100");
+        expect(helper, both, pure, true, "gene certo e puro");
+        expect(helper, both, other, false, "puro, mas de outro gene");
+        expect(helper, both, weak, false, "gene certo, mas fraco");
+
+        expect(helper, ItemRule.EMPTY.withComponent("minecraft:custom_data->attribute!=endurance"), weak, true, "!=");
+        expect(helper, ItemRule.EMPTY.withComponent("minecraft:custom_data->attribute!=endurance"), other, false, "!= igual");
+        expect(helper, ItemRule.EMPTY.withComponent("minecraft:custom_data->attribute~duct"), pure, true, "contém");
+        expect(helper, ItemRule.EMPTY.withComponent("minecraft:custom_data->purity<50"), weak, true, "<");
+        expect(helper, ItemRule.EMPTY.withComponent("minecraft:custom_data->missing=1"), pure, false, "campo que não existe");
+        expect(helper, ItemRule.EMPTY.withComponent("minecraft:custom_data"), pure, true, "só exige o componente");
+        expect(helper, ItemRule.EMPTY.withComponent("minecraft:custom_data=x"), plain, false, "sem o componente com valor");
+
+        // o antigo id=valor segue valendo, também com um componente que não é objeto
+        ItemStack named = new ItemStack(Items.DIAMOND);
+        named.set(DataComponents.RARITY, net.minecraft.world.item.Rarity.EPIC);
+        expect(helper, ItemRule.EMPTY.withComponent("minecraft:rarity=epic"), named, true, "id=valor");
+        expect(helper, ItemRule.EMPTY.withComponent("minecraft:rarity=rare"), named, false, "id=valor errado");
+
+        helper.assertTrue(ItemRule.EMPTY.withComponent("minecraft:custom_data->purity>=").component().length() > 0
+                && !ItemRule.EMPTY.withComponent("minecraft:custom_data->purity>=").validComponent(), "operador sem valor");
+        helper.assertTrue(ItemRule.EMPTY.withComponent("a:b->c=1;a:b->d=2").validComponent(), "duas condições");
+        helper.assertTrue(ItemRule.EMPTY.withComponent("minecraft:custom_data->" + "x.".repeat(100) + "y=1").validComponent(),
+                "condição longa dentro do limite");
+        helper.assertFalse(ItemRule.EMPTY.withComponent("a:b->" + "x".repeat(300)).validComponent(), "acima do limite");
+        helper.succeed();
+    }
+
     private static RouterBlockEntity chest(GameTestHelper helper, BlockPos pos, UUID network, PortMode mode, Filter filter) {
         helper.setBlock(pos, Blocks.CHEST);
         helper.setBlock(pos.above(), io.github.matheusanbs.wirelessautomate.registry.ModBlocks.ROUTER.get()

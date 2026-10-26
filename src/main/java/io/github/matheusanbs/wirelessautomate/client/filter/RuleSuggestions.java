@@ -4,9 +4,11 @@ import static io.github.matheusanbs.wirelessautomate.client.filter.FilterText.tr
 
 import io.github.matheusanbs.wirelessautomate.client.filter.TextSuggest.Suggestion;
 import io.github.matheusanbs.wirelessautomate.filter.ComponentCondition;
+import io.github.matheusanbs.wirelessautomate.filter.ComponentQuery;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -37,7 +39,8 @@ final class RuleSuggestions {
     private List<String> tags;
     private List<DataComponentType<?>> componentTypes;
     private List<ItemStack> creative;
-    private final Map<String, List<String>> values = new HashMap<>();
+    private Map<String, Form> forms;
+    private final Map<String, List<Object>> samples = new HashMap<>();
 
     /** "Só em": {@code #tag} ou {@code @mod}; sem prefixo, os dois. */
     List<Suggestion> scope(String text) {
@@ -58,31 +61,198 @@ final class RuleSuggestions {
         return out;
     }
 
-    /** "Componente": antes do {@code =} os ids (os do inventário primeiro); depois, os valores do componente. */
+    /** Como um componente aparece nas sugestões: o que escolher o id leva a digitar depois. */
+    private enum Form { SCALAR, OBJECT, LIST }
+
+    /**
+     * "Componente" por etapas, pelo que já foi digitado: o id (os do inventário primeiro, com a forma do valor), depois
+     * da seta o campo (com o tipo e a faixa vistos nos itens), depois o operador e por fim o valor (os vistos nos itens).
+     * Tudo vem dos itens do jogo, sem nome de mod no código; o texto livre continua valendo.
+     */
     List<Suggestion> component(String text) {
-        int eq = text.indexOf('=');
+        ComponentQuery.Parts parts = ComponentQuery.parts(text);
+        if (!parts.arrow() && parts.op().isEmpty()) {
+            return componentIds(parts.id());
+        }
+        List<Object> trees = samples(parts.id());
+        if (parts.op().isEmpty()) {
+            return pathStage(parts.id(), parts.path(), trees);
+        }
+        return valueStage(parts, trees);
+    }
+
+    private List<Suggestion> componentIds(String text) {
+        Set<String> inventory = inventoryComponents();
+        Map<String, Form> forms = forms();
+        List<String> ids = new ArrayList<>();
+        for (DataComponentType<?> type : componentTypes()) {
+            ids.add(String.valueOf(BuiltInRegistries.DATA_COMPONENT_TYPE.getKey(type)));
+        }
+        List<String> found = EnchantSearch.search(ids, s -> s, s -> s, text);
+        List<String> ordered = new ArrayList<>();
+        found.stream().filter(inventory::contains).forEach(ordered::add);
+        found.stream().filter(id -> !inventory.contains(id)).forEach(ordered::add);
         List<Suggestion> out = new ArrayList<>();
-        if (eq < 0) {
-            Set<String> inventory = inventoryComponents();
-            List<String> ids = new ArrayList<>();
-            for (DataComponentType<?> type : componentTypes()) {
-                ids.add(String.valueOf(BuiltInRegistries.DATA_COMPONENT_TYPE.getKey(type)));
+        for (String id : cap(ordered)) {
+            // sem nenhum item com o componente, a forma é desconhecida: o id entra sem sufixo e quem digita escolhe
+            Form form = forms.get(id);
+            String where = inventory.contains(id) ? tr("rule.suggest.inventory").getString()
+                    : modName(id.substring(0, Math.max(0, id.indexOf(':'))));
+            String note = form == null ? where
+                    : tr("rule.form." + form.name().toLowerCase(java.util.Locale.ROOT)).getString() + " · " + where;
+            out.add(new Suggestion(form == null ? id : id + (form == Form.SCALAR ? "=" : "->"), id, note, form != null));
+        }
+        return out;
+    }
+
+    /** Depois da seta: os campos do componente; com o campo inteiro digitado, os operadores. */
+    private List<Suggestion> pathStage(String id, String typed, List<Object> trees) {
+        Set<String> paths = new LinkedHashSet<>();
+        for (Object tree : trees) {
+            paths.addAll(ComponentQuery.leafPaths(tree, 5, 60));
+            if (paths.size() >= 120) {
+                break;
             }
-            List<String> found = EnchantSearch.search(ids, s -> s, s -> s, text);
-            List<String> ordered = new ArrayList<>();
-            found.stream().filter(inventory::contains).forEach(ordered::add);
-            found.stream().filter(id -> !inventory.contains(id)).forEach(ordered::add);
-            for (String id : cap(ordered)) {
-                out.add(new Suggestion(id + "=", id, inventory.contains(id) ? tr("rule.suggest.inventory").getString()
-                        : modName(id.substring(0, Math.max(0, id.indexOf(':')))), true));
+        }
+        List<String> all = new ArrayList<>(paths);
+        List<Suggestion> out = new ArrayList<>();
+        if (all.contains(typed)) {
+            boolean numeric = !leaf(trees, typed, 60).isEmpty() && leaf(trees, typed, 60).stream().allMatch(RuleSuggestions::isNumber);
+            for (ComponentQuery.Op op : ComponentQuery.Op.values()) {
+                if (op != ComponentQuery.Op.EXISTS && (numeric ? op != ComponentQuery.Op.CONTAINS : true)) {
+                    out.add(new Suggestion(id + "->" + typed + op.token(), op.symbol() + "  "
+                            + tr("rule.op." + op.name().toLowerCase(java.util.Locale.ROOT)).getString(), null, true));
+                }
             }
             return out;
         }
-        String id = text.substring(0, eq).strip();
-        for (String value : cap(EnchantSearch.search(valuesOf(id), s -> s, s -> s, text.substring(eq + 1).strip()))) {
-            out.add(new Suggestion(id + "=" + value, value, null, false));
+        for (String path : cap(EnchantSearch.search(all, s -> s, s -> s, typed))) {
+            out.add(new Suggestion(id + "->" + path, path, pathNote(trees, path), true));
         }
         return out;
+    }
+
+    /** Depois do operador: os valores vistos nos itens, do mais comum ao menos. */
+    private List<Suggestion> valueStage(ComponentQuery.Parts parts, List<Object> trees) {
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        for (Object tree : trees) {
+            for (String value : ComponentQuery.leafValues(tree, pathOf(parts.path()), 20)) {
+                counts.merge(value, 1, Integer::sum);
+            }
+        }
+        List<String> values = new ArrayList<>(counts.keySet());
+        values.sort((a, b) -> counts.get(b) - counts.get(a));
+        String base = parts.id() + (parts.arrow() ? "->" + parts.path() : "") + parts.op();
+        List<Suggestion> out = new ArrayList<>();
+        for (String value : cap(EnchantSearch.search(values, s -> s, s -> s, parts.value()))) {
+            int n = counts.get(value);
+            out.add(new Suggestion(base + value, value, tr(n == 1 ? "rule.suggest.item" : "rule.suggest.items", n).getString(),
+                    false));
+        }
+        return out;
+    }
+
+    private static List<String> pathOf(String path) {
+        return path.isEmpty() ? List.of() : List.of(path.split("\\."));
+    }
+
+    private static List<String> leaf(List<Object> trees, String path, int cap) {
+        Set<String> values = new LinkedHashSet<>();
+        for (Object tree : trees) {
+            values.addAll(ComponentQuery.leafValues(tree, pathOf(path), cap));
+            if (values.size() >= cap) {
+                break;
+            }
+        }
+        return new ArrayList<>(values);
+    }
+
+    private static boolean isNumber(String text) {
+        try {
+            return Double.isFinite(Double.parseDouble(text));
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    /** "number · 15 to 100" ou "text · high, low": o tipo e a faixa que os itens mostram no campo. */
+    private static String pathNote(List<Object> trees, String path) {
+        List<String> values = leaf(trees, path, 40);
+        if (values.isEmpty()) {
+            return "";
+        }
+        if (values.stream().allMatch(RuleSuggestions::isNumber)) {
+            double min = Double.MAX_VALUE;
+            double max = -Double.MAX_VALUE;
+            for (String value : values) {
+                double d = Double.parseDouble(value);
+                min = Math.min(min, d);
+                max = Math.max(max, d);
+            }
+            return tr("rule.suggest.number", ComponentQuery.text(min), ComponentQuery.text(max)).getString();
+        }
+        return tr("rule.suggest.text", String.join(", ", values.subList(0, Math.min(3, values.size())))).getString();
+    }
+
+    /** Captura: amostras de exemplo de um componente, no lugar das lidas dos itens (a captura não tem mundo). */
+    void previewSamples(String id, List<Object> trees, boolean structured) {
+        samples.put(id, trees);
+        forms().put(id, structured ? Form.OBJECT : Form.SCALAR);
+    }
+
+    /** O que a forma de cada componente do inventário e das abas do criativo é (lido uma vez). */
+    private Map<String, Form> forms() {
+        if (forms == null) {
+            Map<String, Form> map = new HashMap<>();
+            List<ItemStack> all = new ArrayList<>(inventoryStacks());
+            all.addAll(creative());
+            int budget = 8000;
+            for (ItemStack stack : all) {
+                if (budget-- <= 0) {
+                    break;
+                }
+                for (var typed : stack.getComponents()) {
+                    String id = String.valueOf(BuiltInRegistries.DATA_COMPONENT_TYPE.getKey(typed.type()));
+                    Form form = formOf(typed.value());
+                    map.merge(id, form, (a, b) -> a == Form.SCALAR ? b : a);
+                }
+            }
+            forms = map;
+        }
+        return forms;
+    }
+
+    private static Form formOf(Object value) {
+        if (value instanceof CharSequence || value instanceof Number || value instanceof Boolean || value instanceof Enum<?>
+                || value instanceof ResourceLocation || value instanceof net.minecraft.resources.ResourceKey<?>) {
+            return Form.SCALAR;
+        }
+        return value instanceof java.util.Collection<?> ? Form.LIST : Form.OBJECT;
+    }
+
+    /** Os valores serializados do componente {@code id} nos itens do inventário e das abas do criativo (até 400). */
+    private List<Object> samples(String id) {
+        return samples.computeIfAbsent(id, key -> {
+            ResourceLocation rl = ResourceLocation.tryParse(key);
+            DataComponentType<?> type = rl == null ? null : BuiltInRegistries.DATA_COMPONENT_TYPE.get(rl);
+            if (type == null) {
+                return List.of();
+            }
+            List<Object> out = new ArrayList<>();
+            List<ItemStack> all = new ArrayList<>(inventoryStacks());
+            all.addAll(creative());
+            for (ItemStack stack : all) {
+                Object value = stack.get(type);
+                Object tree = value == null ? null : ComponentCondition.tree(type, value);
+                if (tree != null) {
+                    out.add(tree);
+                }
+                if (out.size() >= 400) {
+                    break;
+                }
+            }
+            return out;
+        });
     }
 
     private static <T> List<T> cap(List<T> list) {
@@ -172,31 +342,5 @@ final class RuleSuggestions {
             creative = list;
         }
         return creative;
-    }
-
-    private List<String> valuesOf(String id) {
-        return values.computeIfAbsent(id, key -> {
-            ResourceLocation rl = ResourceLocation.tryParse(key);
-            DataComponentType<?> type = rl == null ? null : BuiltInRegistries.DATA_COMPONENT_TYPE.get(rl);
-            if (type == null) {
-                return List.of();
-            }
-            Set<String> found = new LinkedHashSet<>();
-            List<ItemStack> all = new ArrayList<>(inventoryStacks());
-            all.addAll(creative());
-            for (ItemStack stack : all) {
-                Object value = stack.get(type);
-                if (value != null) {
-                    String text = ComponentCondition.valueText(type, value);
-                    if (text != null && text.length() <= 64) {
-                        found.add(text);
-                    }
-                }
-                if (found.size() >= 300) {
-                    break;
-                }
-            }
-            return new ArrayList<>(found);
-        });
     }
 }

@@ -204,8 +204,12 @@ final class E2eRouterSteps {
             clickPanel(panel().networkCenter(), "pílula da linha Rede");
         }
         List<NetworkEntry> networks = screen.getMenu().snapshot().networks();
-        // "Sem rede" é a última linha, depois das redes
-        int row = network == null ? networks.size() : -1;
+        // "Sem rede" é a linha fixa de cima, fora da rolagem
+        if (network == null) {
+            clickPanel(panel().networkNoneCenter(), "a linha Sem rede");
+            return;
+        }
+        int row = -1;
         for (int i = 0; i < networks.size(); i++) {
             if (networks.get(i).id().equals(network)) {
                 row = i;

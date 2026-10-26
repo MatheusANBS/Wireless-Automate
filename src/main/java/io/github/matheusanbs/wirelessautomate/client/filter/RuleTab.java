@@ -18,10 +18,12 @@ import io.github.matheusanbs.wirelessautomate.client.FlatButton;
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.client.filter.FilterScreen.Tab;
+import io.github.matheusanbs.wirelessautomate.filter.ComponentQuery;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry.RuleEntry;
 import io.github.matheusanbs.wirelessautomate.filter.ItemRule;
 import io.github.matheusanbs.wirelessautomate.filter.ItemRule.Property;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
@@ -51,7 +53,14 @@ final class RuleTab {
     private final TextSuggest scopeSuggest;
     private final TextSuggest componentSuggest;
 
+    /** Quantas condições de componente cabem como linhas (cada uma com o ✕); o campo de baixo é a próxima. */
+    private static final int MAX_CHIPS = 4;
+    private static final int CHIP_H = COND_ROW + 1;
+
     private ItemRule draft = ItemRule.EMPTY;
+    /** As condições de componente já escritas (as linhas); o campo guarda a que está sendo digitada. */
+    private final List<String> conditions = new ArrayList<>();
+    private final FlatButton[] chipRemove = new FlatButton[MAX_CHIPS];
     private int editing = -1;
     private @Nullable ItemRule compiledFor;
     private Predicate<ItemStack> compiled = stack -> false;
@@ -109,7 +118,73 @@ final class RuleTab {
     }
 
     boolean suggestionKey(EditBox box, int keyCode, boolean enter) {
-        return scopeSuggest.keyPressed(box, keyCode, enter) || componentSuggest.keyPressed(box, keyCode, enter);
+        return scopeSuggest.keyPressed(box, keyCode, enter) || componentSuggest.keyPressed(box, keyCode, enter)
+                || enter && box == componentBox && commitPending();
+    }
+
+    // ------------------------------------------------------------------ condições de componente
+
+    /** As condições escritas mais a que está no campo (se há), juntas por {@code ;}: o que a regra guarda. */
+    private String composedComponent() {
+        String pending = componentBox == null ? "" : componentBox.getValue().strip();
+        List<String> all = new ArrayList<>(conditions);
+        if (!pending.isEmpty()) {
+            all.add(pending);
+        }
+        return String.join("; ", all);
+    }
+
+    /** Enter com uma condição inteira no campo: ela vira uma linha e o campo fica livre para a próxima. */
+    private boolean commitPending() {
+        String pending = componentBox.getValue().strip();
+        if (conditions.size() >= MAX_CHIPS || ComponentQuery.parse(pending) == null) {
+            return false;
+        }
+        conditions.add(pending);
+        componentBox.setValue("");
+        return true;
+    }
+
+    private void removeCondition(int index) {
+        if (index < conditions.size()) {
+            conditions.remove(index);
+            setDraft(draft.withComponent(composedComponent()));
+        }
+    }
+
+    /** Põe as condições de {@code component} nas linhas e deixa o campo vazio (a regra já tem o mesmo texto). */
+    private void loadComponent(String component) {
+        conditions.clear();
+        for (String piece : component.split(";")) {
+            if (!piece.isBlank() && conditions.size() < MAX_CHIPS) {
+                conditions.add(piece.strip());
+            }
+        }
+        componentBox.setValue("");
+    }
+
+    private static void paintCross(GuiGraphics g, int x, int y, int color) {
+        for (int i = 0; i < 5; i++) {
+            g.fill(x + i, y + i, x + i + 1, y + i + 1, color);
+            g.fill(x + 4 - i, y + i, x + 5 - i, y + i + 1, color);
+        }
+    }
+
+    /** Captura: amostras de exemplo para as sugestões de {@code id}. */
+    void previewSamples(String id, List<Object> trees) {
+        suggestions.previewSamples(id, trees, true);
+    }
+
+    /** Captura: uma condição já escrita e outra sendo digitada, com a lista de sugestões aberta. */
+    void previewComponent(List<String> written, String typing) {
+        screen.openTab(Tab.RULE);
+        conditions.clear();
+        conditions.addAll(written);
+        scopeSuggest.close();
+        componentBox.setValue(typing);
+        screen.setFocused(componentBox);
+        componentBox.moveCursorToEnd(false);
+        componentSuggest.typed();
     }
 
     boolean scrollSuggestions(double mx, double my, int step) {
@@ -161,11 +236,17 @@ final class RuleTab {
             setDraft(draft.withScope(value));
             scopeSuggest.typed();
         });
-        componentBox = screen.box(tr("rule.component"), ItemRule.MAX_SCOPE, draft.component(),
+        componentBox = screen.box(tr("rule.component"), ItemRule.MAX_COMPONENT, "",
                 value -> {
-                    setDraft(draft.withComponent(value));
+                    setDraft(draft.withComponent(composedComponent()));
                     componentSuggest.typed();
                 });
+        for (int i = 0; i < MAX_CHIPS; i++) {
+            int index = i;
+            chipRemove[i] = screen.add(new FlatButton(0, 0, 10, CHIP_H - 3, Component.literal("✕"),
+                    (g, b, hovered) -> paintCross(g, b.getX() + 2, b.getY() + 2, hovered ? GuiPaint.ACCENT : GuiPaint.MUTED),
+                    () -> removeCondition(index)).tooltip(() -> tr("rule.component.remove")));
+        }
         componentBox.setTooltip(net.minecraft.client.gui.components.Tooltip.create(tr("rule.component.tooltip")));
         ruleResetButton = screen.add(new FlatButton(0, 0, 40, BTN_H, Component.empty(),
                 (g, b, hovered) -> paintTextButton(g, b, hovered, editing >= 0 ? tr("rule.cancel") : tr("rule.reset"), false),
@@ -207,6 +288,11 @@ final class RuleTab {
         scopeBox.setPosition(px + scopeLabel + 4, ry + 2);
         scopeBox.setWidth(IW - scopeLabel - 8);
         ry += FIELD_H + 3;
+        for (int i = 0; i < MAX_CHIPS; i++) {
+            chipRemove[i].visible = rule && i < conditions.size();
+            chipRemove[i].setPosition(px + IW - 12, ry + i * CHIP_H + 1);
+        }
+        ry += conditions.size() * CHIP_H;
         componentBox.visible = rule;
         int componentLabel = font().width(tr("rule.component")) + 5;
         componentBox.setPosition(px + componentLabel + 4, ry + 2);
@@ -286,6 +372,7 @@ final class RuleTab {
         setDraft(ItemRule.EMPTY);
         picker.syncEnchantFields();
         scopeBox.setValue("");
+        conditions.clear();
         componentBox.setValue("");
     }
 
@@ -300,6 +387,7 @@ final class RuleTab {
         setDraft(ItemRule.EMPTY);
         picker.syncEnchantFields();
         scopeBox.setValue("");
+        conditions.clear();
         componentBox.setValue("");
         screen.setTab(Tab.ENTRY);
         screen.unfocus();
@@ -311,7 +399,7 @@ final class RuleTab {
         setDraft(rule);
         picker.syncEnchantFields();
         scopeBox.setValue(rule.scope());
-        componentBox.setValue(rule.component());
+        loadComponent(rule.component());
         screen.openTab(Tab.RULE);
     }
 
@@ -321,7 +409,7 @@ final class RuleTab {
         setDraft(rule);
         picker.syncEnchantFields();
         scopeBox.setValue(rule.scope());
-        componentBox.setValue(rule.component());
+        loadComponent(rule.component());
     }
 
     /** Botão direito na porcentagem volta 10. */
@@ -380,6 +468,14 @@ final class RuleTab {
         int border = !draft.validScope() ? GuiPaint.DANGER : scopeBox.isFocused() ? GuiPaint.ACCENT : GuiPaint.LINE;
         GuiPaint.box(g, scopeX, ry, x + IW - scopeX, FIELD_H, GuiPaint.PANEL, border);
         ry += FIELD_H + 3;
+        for (int i = 0; i < conditions.size(); i++) {
+            int cy = ry + i * CHIP_H;
+            ComponentQuery query = ComponentQuery.parse(conditions.get(i));
+            GuiPaint.box(g, x, cy, IW, CHIP_H - 1, GuiPaint.BUTTON, query == null ? GuiPaint.DANGER : GuiPaint.BUTTON_BORDER);
+            GuiText.draw(g, font, Component.literal(query == null ? conditions.get(i) : query.summary()), x + 4, cy + 2,
+                    IW - 18, query == null ? GuiPaint.DANGER : GuiPaint.FG);
+        }
+        ry += conditions.size() * CHIP_H;
         GuiPaint.text(g, font, tr("rule.component"), x, ry + 3, draft.component().isEmpty() ? GuiPaint.MUTED : GuiPaint.FG);
         int componentX = x + font.width(tr("rule.component")) + 5;
         int componentBorder = !draft.validComponent() ? GuiPaint.DANGER

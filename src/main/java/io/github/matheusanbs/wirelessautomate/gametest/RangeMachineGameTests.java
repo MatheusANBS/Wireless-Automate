@@ -236,6 +236,45 @@ public final class RangeMachineGameTests {
                 .thenSucceed();
     }
 
+    /** Voltar todas ao perfil: tira as exceções do grupo de uma vez, só as dele, e uma remontagem só. */
+    @GameTest(template = "empty")
+    public static void revertGroupDropsOnlyThatGroupsExceptions(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    link(helper, router, FURNACE_A);
+                    link(helper, router, FURNACE_B);
+                    link(helper, router, BARREL);
+                    RemoteMachines remotes = router.remoteMachines();
+                    int indexA = remotes.index(helper.absolutePos(FURNACE_A));
+                    int indexB = remotes.index(helper.absolutePos(FURNACE_B));
+                    int indexBarrel = remotes.index(helper.absolutePos(BARREL));
+                    int furnaces = remotes.machine(indexA).group();
+                    int barrels = remotes.machine(indexBarrel).group();
+
+                    router.configureFace(EditTarget.machine(indexA), ResourceType.ITEM, Direction.NORTH, PortMode.EXTRACT, 0,
+                            RedstoneMode.IGNORE);
+                    router.configureFace(EditTarget.machine(indexB), ResourceType.ITEM, Direction.NORTH, PortMode.INSERT, 0,
+                            RedstoneMode.IGNORE);
+                    router.configureFace(EditTarget.machine(indexBarrel), ResourceType.ITEM, Direction.NORTH, PortMode.EXTRACT, 0,
+                            RedstoneMode.IGNORE);
+                    helper.assertTrue(remotes.machine(indexA).hasException() && remotes.machine(indexB).hasException()
+                            && remotes.machine(indexBarrel).hasException(), "as exceções não nasceram");
+
+                    helper.assertValueEqual(router.revertGroupToProfile(furnaces), 2, "quantas voltaram");
+                    helper.assertFalse(remotes.machine(indexA).hasException(), "a exceção da A ficou");
+                    helper.assertFalse(remotes.machine(indexB).hasException(), "a exceção da B ficou");
+                    helper.assertTrue(remotes.machine(indexBarrel).hasException(), "mexeu no outro grupo");
+                    helper.assertTrue(router.face(EditTarget.machine(indexA), ResourceType.ITEM, Direction.NORTH).mode()
+                            == PortMode.NONE, "a A não voltou ao perfil");
+
+                    helper.assertValueEqual(router.revertGroupToProfile(furnaces), 0, "sem exceção não faz nada");
+                    helper.assertValueEqual(router.revertGroupToProfile(barrels), 1, "o outro grupo");
+                })
+                .thenSucceed();
+    }
+
     @GameTest(template = "empty")
     public static void unlinkLastMachineDropsGroupCards(GameTestHelper helper) {
         RouterBlockEntity router = routerWithMachines(helper);

@@ -66,3 +66,7 @@ Com shaderpack do Iris ativo (`ShaderPackCheck`): o caminho de contingência do 
 ## Fora de escopo
 
 Recarregar Opacos fora do Núcleo; Tablet (o Ressonador é só presencial); tiers do Reparador; reparo dentro do Núcleo.
+
+## Animação entregue (26/10/2026)
+
+Implementada nativa (plano `docs/superpowers/plans/2026-10-26-reparador-animacao.md`): BER com o emissor, os cristais nos pedestais, as rachaduras fechando no shader do cristal, os tentáculos mágicos do emissor ao rachado (no lugar do raio reto), a convergência com o brilho subindo, a onda de choque no chão e a saída do reparado; na tela, o núcleo pulsa e um tentáculo com pacote de luz liga o núcleo ao cristal de cada linha que repara. **Cortado pelo dono:** os cristais cheios em órbita, o clarão do cristal, a vibração e os discos de luz nos pedestais e nas runas soltos. A contingência com shaderpack do Iris é não desenhar o BER (o modelo, com as luzes pelo `lit`, segue valendo). Não feito: a linha do Reparador no `/wa profile`.

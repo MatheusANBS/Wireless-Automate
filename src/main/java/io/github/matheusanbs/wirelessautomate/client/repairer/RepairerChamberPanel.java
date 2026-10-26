@@ -4,6 +4,7 @@ import static io.github.matheusanbs.wirelessautomate.client.repairer.RepairerLay
 
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
+import io.github.matheusanbs.wirelessautomate.client.repairer.render.RepairTimeline;
 import io.github.matheusanbs.wirelessautomate.menu.RepairerMenu;
 import io.github.matheusanbs.wirelessautomate.packet.RepairerStatePayload;
 import io.github.matheusanbs.wirelessautomate.repairer.RepairMath;
@@ -12,9 +13,11 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * A câmara do Reparador, estática (a animada é da etapa 3): o vidro escuro em gradiente, o anel de runas no chão, o
+ * A câmara do Reparador: o vidro escuro em gradiente, o anel de runas no chão, o
  * núcleo de forja no meio e os 8 pedestais em anel, cada um com o ícone do cristal da linha e a barra do progresso.
- * Sem energia para o próximo reparo, um véu escurece a câmara com o aviso. A geometria é fixa e calculada uma vez.
+ * Cada linha que repara liga o núcleo ao cristal dela por um tentáculo ondulante com um pacote de luz correndo (a
+ * força vem da {@link RepairTimeline#beam}, pelo progresso do servidor), e o núcleo pulsa com o relógio do mundo. Sem
+ * energia para o próximo reparo, um véu escurece a câmara com o aviso. A geometria é fixa e calculada uma vez.
  */
 final class RepairerChamberPanel {
     private static final int CX = CHAMBER.x() + CHAMBER.w() / 2;
@@ -88,8 +91,10 @@ final class RepairerChamberPanel {
         for (int i = 0; i < INNER_X.length; i += 2) {
             pixel(g, INNER_X[i], INNER_Y[i], GuiPaint.alpha(rim, 0x40));
         }
-        orb(g, powerless);
+        boolean working = working(gameTime);
+        orb(g, powerless, working, gameTime);
         for (int k = 0; k < RepairMath.LINES; k++) {
+            tendril(g, BACK_TO_FRONT[k], gameTime, powerless);
             pedestal(g, BACK_TO_FRONT[k], rim, gameTime, powerless);
         }
         if (powerless) {
@@ -106,15 +111,74 @@ final class RepairerChamberPanel {
         g.fill(left + x, top + y, left + x + 1, top + y + 1, color);
     }
 
-    /** O núcleo de forja: discos concêntricos, coral com energia e lilás apagado sem. */
-    private void orb(GuiGraphics g, boolean powerless) {
+    /** Se alguma linha está reparando. */
+    private boolean working(long gameTime) {
+        RepairerStatePayload state = menu.state();
+        if (state == null) {
+            return false;
+        }
+        for (int line = 0; line < RepairMath.LINES; line++) {
+            if (state.ends()[line] > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** O núcleo de forja: discos concêntricos, coral com energia e lilás apagado sem; pulsa devagar e mais forte trabalhando. */
+    private void orb(GuiGraphics g, boolean powerless, boolean working, long gameTime) {
         int glow = powerless ? GuiPaint.CHAMBER_GLOW_OFF : GuiPaint.CHAMBER_GLOW;
-        disc(g, 15, GuiPaint.alpha(glow, 0x22));
-        disc(g, 10, GuiPaint.alpha(glow, 0x48));
+        double pulse = 0.5 + 0.5 * Math.sin(gameTime * (working ? 0.25 : 0.06));
+        int swell = powerless ? 0 : (int) Math.round(pulse * (working ? 2 : 1));
+        disc(g, 15 + swell, GuiPaint.alpha(glow, 0x22));
+        disc(g, 10 + swell, GuiPaint.alpha(glow, 0x48));
         disc(g, 6, GuiPaint.alpha(glow, 0xA0));
         if (!powerless) {
             disc(g, 3, GuiPaint.CHAMBER_CORE);
         }
+    }
+
+    /**
+     * O tentáculo do núcleo ao cristal da linha que repara: uma curva que ondula (a amplitude é zero nas pontas) com
+     * um pacote de luz correndo para o cristal. Só enquanto a {@link RepairTimeline#beam} da linha é maior que zero.
+     */
+    private void tendril(GuiGraphics g, int line, long gameTime, boolean powerless) {
+        RepairerStatePayload state = menu.state();
+        if (powerless || state == null || state.ends()[line] <= 0 || state.blocked()[line]) {
+            return;
+        }
+        double s = RepairTimeline.TOTAL * menu.progress(line, gameTime) / 1000.0;
+        double strength = RepairTimeline.beam(s);
+        if (strength <= 0.02) {
+            return;
+        }
+        int x1 = FOOT_X[line];
+        int y1 = FOOT_Y[line] - 12;
+        double dx = x1 - CX;
+        double dy = y1 - ORB_Y;
+        double len = Math.max(1, Math.sqrt(dx * dx + dy * dy));
+        double nx = -dy / len;
+        double ny = dx / len;
+        double time = gameTime * 0.18 + line * 1.7;
+        int body = GuiPaint.alpha(GuiPaint.CHAMBER_GLOW, (int) Math.round(0xC0 * strength));
+        double packet = (gameTime * 0.045 + line * 0.31) % 1.0;
+        int steps = (int) Math.ceil(len);
+        g.pose().pushPose();
+        g.pose().translate(0, 0, 150);
+        for (int i = 0; i <= steps; i++) {
+            double t = (double) i / steps;
+            double wave = Math.sin(t * Math.PI) * (3.5 * Math.sin(t * 9 - time) + 1.5 * Math.sin(t * 17 + time * 1.3));
+            int px = (int) Math.round(CX + dx * t + nx * wave);
+            int py = (int) Math.round(ORB_Y + dy * t + ny * wave);
+            double near = Math.abs(t - packet);
+            boolean lit = near < 0.05;
+            pixel(g, px, py, lit ? GuiPaint.CHAMBER_CORE : body);
+            if (lit) {
+                pixel(g, px + 1, py, GuiPaint.alpha(GuiPaint.CHAMBER_GLOW, 0x80));
+                pixel(g, px, py + 1, GuiPaint.alpha(GuiPaint.CHAMBER_GLOW, 0x80));
+            }
+        }
+        g.pose().popPose();
     }
 
     private void disc(GuiGraphics g, int r, int color) {

@@ -49,7 +49,7 @@ final class E2eRepairerSteps {
     /** As fotos do bloco: o olho a 2 blocos do centro, na altura de quem está de pé no chão do bloco. */
     private static final double VIEW_DISTANCE = 2.0;
     private static final double VIEW_TARGET_Y = 0.45;
-    private static final double EYE_HEIGHT = 1.62;
+    static final double EYE_HEIGHT = 1.62;
     /** As oblíquas: (giro a partir da frente, inclinação) em graus; inclinação positiva é a câmera acima do alvo. */
     private static final double[][] OBLIQUE_VIEWS = {{45, 35}, {45, -15}, {135, 35}, {135, -15}};
     private static final double OBLIQUE_DISTANCE = 1.8;
@@ -58,8 +58,8 @@ final class E2eRepairerSteps {
      * O centro da coluna de vidro (de 6,3 a 13,7 px) e a câmera rente a ela, do lado leste, a 0,9 bloco do centro: mais
      * perto, a caixa do jogador encosta no bloco e o jogo o empurra para fora.
      */
-    private static final double GLASS_CENTER_Y = 10.0 / 16.0;
-    private static final double GRAZE_DISTANCE = 0.9;
+    static final double GLASS_CENTER_Y = 10.0 / 16.0;
+    static final double GRAZE_DISTANCE = 0.9;
     /** Ticks com a câmera parada antes da foto, para o chunk refazer a malha com o estado novo. */
     private static final int BLOCK_SETTLE_TICKS = 20;
     private static final Direction[] FACINGS = {Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
@@ -264,7 +264,7 @@ final class E2eRepairerSteps {
      * O jogador voando com o olho em {@code alvo + offset}, onde o alvo é o centro do bloco na altura {@code targetY},
      * olhando o alvo. A janela é real e o mouse gira a câmera: o ângulo volta a cada tick até a foto.
      */
-    private static Step cameraShot(String file, UUID playerId, Supplier<BlockPos> block,
+    static Step cameraShot(String file, UUID playerId, Supplier<BlockPos> block,
                                    double[] offset, double targetY) {
         double[] cam = new double[3];
         float[] ang = new float[2];
@@ -296,7 +296,7 @@ final class E2eRepairerSteps {
         }, () -> "câmera em " + Minecraft.getInstance().player.position());
     }
 
-    private static void look(float[] ang) {
+    static void look(float[] ang) {
         Minecraft minecraft = Minecraft.getInstance();
         minecraft.player.setYRot(ang[0]);
         minecraft.player.setXRot(ang[1]);
@@ -373,7 +373,7 @@ final class E2eRepairerSteps {
         list.add(clipCheck(name));
     }
 
-    private static Step open(String name, BlockPos[] pos, Predicate<RepairerStatePayload> ready) {
+    static Step open(String name, BlockPos[] pos, Predicate<RepairerStatePayload> ready) {
         return new Step(name, STEP_TIMEOUT_MS, () -> useOn(pos[0]), () -> {
             if (Minecraft.getInstance().screen == null && stepTicks > 0 && stepTicks % OPEN_RETRY_TICKS == 0) {
                 useOn(pos[0]);
@@ -383,7 +383,7 @@ final class E2eRepairerSteps {
         }, () -> "tela " + describe(Minecraft.getInstance().screen) + ", estado " + describeState());
     }
 
-    private static RepairerScreen screen() throws StepFailure {
+    static RepairerScreen screen() throws StepFailure {
         if (Minecraft.getInstance().screen instanceof RepairerScreen screen) {
             return screen;
         }
@@ -404,14 +404,14 @@ final class E2eRepairerSteps {
     }
 
     /** Tira o bloco sem largar o conteúdo no chão. */
-    private static void remove(ServerLevel level, BlockPos pos) {
+    static void remove(ServerLevel level, BlockPos pos) {
         if (level.getBlockEntity(pos) instanceof RepairerBlockEntity repairer) {
             repairer.container().clearContent();
         }
         level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
     }
 
-    private static RepairerBlockEntity repairer(MinecraftServer server, BlockPos pos) {
+    static RepairerBlockEntity repairer(MinecraftServer server, BlockPos pos) {
         return (RepairerBlockEntity) server.overworld().getBlockEntity(pos);
     }
 }

@@ -48,6 +48,8 @@ Ordem do registro. "Pré-requisito": o que a suíte pressupõe além da abertura
 | `ressonador-desempenho` | tempo de quadro da câmara, desenho antigo × plasma (mede, não afirma) | nenhum | opcional |
 | `ressonador-jei` | JEI do Ressonador | nenhum | padrão |
 | `reparador` | Reparador de Cristais (~21 s com as capturas) | nenhum | padrão |
+| `reparador-animacao` | a animação do Reparador no mundo, com o tempo parado em cada fase (capturas `reparador-anim-*`; confere quantos cristais e quads o BER pôs) | nenhum | padrão |
+| `reparador-desempenho` | tempo de quadro do Reparador (mede, não afirma) | nenhum | opcional |
 | `guia` | páginas do guia (só com o GuideME) | nenhum | padrão |
 
 Tempos de referência (Windows, janela real): conjunto padrão sem capturas ~343 s; perfil `completo` ~712 s. A tabela por suíte vem no `result.txt` de cada rodada.

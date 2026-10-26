@@ -6,6 +6,7 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eUi.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
 import io.github.matheusanbs.wirelessautomate.client.FrameClock;
+import io.github.matheusanbs.wirelessautomate.client.repairer.render.RepairerRenderer;
 import io.github.matheusanbs.wirelessautomate.client.resonator.ResonatorProjection;
 import io.github.matheusanbs.wirelessautomate.client.resonator.render.ResonatorRenderer;
 import io.github.matheusanbs.wirelessautomate.GuiTheme;
@@ -308,15 +309,22 @@ final class E2eResonatorSteps {
     /** Ligada só enquanto o roteiro da suíte {@code ressonador-desempenho} é montado. */
     static boolean perf;
 
-    /**
-     * O tempo médio de quadro em 120 quadros com a câmara ocupando a tela, sem o limite de FPS e sem o vsync (o
-     * que valia volta ao fim), com o desenho antigo forçado ou com o plasma; a linha vai para o result.txt.
-     */
+    /** A medida da câmara ocupando a tela, com o desenho antigo forçado ou com o plasma. */
     static Step frameTime(boolean legacy, String situation, Tick perTick) {
-        long[] start = new long[2];
         String label = (legacy ? "camara antiga" : "camara plasma") + situation;
+        return frameTimeStep("Ressonador: " + label + " (tempo de quadro)", label,
+                () -> ResonatorRenderer.forceLegacyForTests = legacy, perTick);
+    }
+
+    /**
+     * O tempo médio de quadro em 120 quadros, sem o limite de FPS e sem o vsync (o que valia volta ao fim): o
+     * {@code setup} liga o gancho do desenho medido e o {@code perTick} repete a cada tick de espera; a linha
+     * {@code label: N ms/quadro} vai para o result.txt.
+     */
+    static Step frameTimeStep(String name, String label, Runnable setup, Tick perTick) {
+        long[] start = new long[2];
         double[] result = new double[1];
-        return new Step("Ressonador: " + label + " (tempo de quadro)", 60_000, () -> {
+        return new Step(name, 60_000, () -> {
             var options = Minecraft.getInstance().options;
             if (!measuring) {
                 measuring = true;
@@ -325,7 +333,7 @@ final class E2eResonatorSteps {
             }
             options.enableVsync().set(false);
             options.framerateLimit().set(260);
-            ResonatorRenderer.forceLegacyForTests = legacy;
+            setup.run();
             start[0] = FrameClock.frame() + 30;
         }, () -> {
             if (perTick != null) {
@@ -345,18 +353,26 @@ final class E2eResonatorSteps {
                 return false;
             }
             result[0] = (System.nanoTime() - start[1]) / (double) (frame - start[0]) / 1_000_000.0;
-            restoreFrameSettings();
+            restoreMeasure();
             return true;
         }, () -> String.format(java.util.Locale.ROOT, "%s: %.3f ms/quadro", label, result[0]));
     }
 
     /**
-     * Devolve o vsync, o limite de FPS e o desenho da câmara. Idempotente; o motor chama em qualquer saída
-     * (sucesso, falha ou tempo esgotado), sem gravar o options.txt.
+     * Devolve o vsync, o limite de FPS, o desenho da câmara e os ganchos do Reparador (o tempo parado e o
+     * {@code repairTicks}). Idempotente; o motor chama em qualquer saída (sucesso, falha ou tempo esgotado), sem
+     * gravar o options.txt.
      */
     static void restoreFrameSettings() {
+        restoreMeasure();
+        E2eRepairerAnimSteps.restoreHooks();
+    }
+
+    /** O fim de uma medida: o vsync, o limite de FPS e os desenhos forçados; o tempo parado do Reparador fica. */
+    private static void restoreMeasure() {
         ResonatorRenderer.forceLegacyForTests = false;
         ResonatorRenderer.forceBandForTests = -1;
+        RepairerRenderer.forceLegacyForTests = false;
         if (!measuring) {
             return;
         }

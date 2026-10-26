@@ -35,7 +35,7 @@ float boltOffset(float x, float seed) {
         a *= 0.5;
         fr *= 2.1;
     }
-    return s * pow(sin(PI * clamp(x, 0.0, 1.0)), 0.7);
+    return s * pow(max(sin(PI * clamp(x, 0.0, 1.0)), 0.0), 0.7);
 }
 
 // A distância de (x, y) ao raio, em unidades de y, corrigida pela inclinação do trecho para a espessura ficar a mesma
@@ -63,14 +63,14 @@ float tendrilOffset(float x, float seed, float tt) {
     float warp = wa_noise(vec3(x * 1.1 + tt * 0.4, seed, 0.3));
     float s = 0.75 * wa_noise(vec3(x * 1.4 + warp * 1.2 - tt, seed + 3.1, 0.7))
             + 0.25 * wa_noise(vec3(x * 2.9 + warp * 1.6 - tt * 1.5, seed + 6.3, 1.9));
-    return s * 2.4 * pow(sin(PI * clamp(x, 0.0, 1.0)), 0.8);
+    return s * 2.4 * pow(max(sin(PI * clamp(x, 0.0, 1.0)), 0.0), 0.8);
 }
 
 // O fio k do feixe do Reparador em x (0 a 1): uma hélice em volta do eixo (o seno da fase th, de lado; o cosseno é a
 // profundidade), com uma ondulação lenta por ruído, presa a zero nas duas pontas.
 float weaveY(float x, float th, float seed, float k, float amp) {
     float wob = 0.18 * wa_noise(vec3(x * 3.0 - GameTime * 1200.0 * 0.8, seed + k * 4.7, 2.3));
-    return amp * pow(sin(PI * clamp(x, 0.0, 1.0)), 0.6) * (sin(th) + wob);
+    return amp * pow(max(sin(PI * clamp(x, 0.0, 1.0)), 0.0), 0.6) * (sin(th) + wob);
 }
 
 void main() {

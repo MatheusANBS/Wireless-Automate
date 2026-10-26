@@ -25,7 +25,7 @@ import net.minecraft.world.item.ItemStack;
  * clarão quando ela termina; sem ele (ou com shaderpack do Iris), o modelo do item. Os cristais ficam de pé no anel do
  * {@link ChamberRing}, que orbita a esfera devagar, girando em torno do próprio eixo (mais rápido em sintonia, o Opaco devagar);
  * com o shader, cada um vivo liga a ponta à esfera pelo tentáculo de plasma do {@link PlasmaTendrils}. O Opaco fica
- * caído, mais baixo e cinza, e volta com a recarga; só o primeiro Opaco recarrega, como no servidor. Com o plasma e as
+ * caído, mais baixo e cinza, e volta com a recarga; recarregam juntos todos os Opacos pagos pelo catalisador, como no servidor. Com o plasma e as
  * fitas carregados e só o shader do cristal faltando, sai o modelo do item sem o enchimento da recarga.
  */
 final class ChamberCrystals {

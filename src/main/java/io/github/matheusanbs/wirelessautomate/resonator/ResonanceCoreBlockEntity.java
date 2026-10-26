@@ -396,7 +396,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         energy += Math.max(0, Math.min(amount, capacity() - energy));
     }
 
-    /** Ticks já andados da recarga do próximo Opaco (parado sem Opaco recarregável ou sem catalisador). */
+    /** Ticks já andados do ciclo de recarga dos Opacos pagos (parado sem Opaco recarregável ou sem catalisador). */
     public int rechargeProgress() {
         return recharge;
     }

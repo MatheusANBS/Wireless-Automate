@@ -62,12 +62,14 @@ final class E2eScript {
             chosen = new ArrayList<>(chosen);
             chosen.add(E2eSuites.ARMAZENAMENTO);
         }
-        if (needsNetworks && !chosen.contains(E2eSuites.ROTEADOR)) {
-            networkSteps(list);
-            list.add(close("fechar B"));
-        }
+        boolean networksPending = needsNetworks && !chosen.contains(E2eSuites.ROTEADOR);
         for (Suite suite : available) {
             if (chosen.contains(suite.nome())) {
+                if (networksPending && suite.prereq() != Prereq.NENHUM) {
+                    networkSteps(list);
+                    list.add(close("fechar B"));
+                    networksPending = false;
+                }
                 list.add(suiteMarker(suite.nome()));
                 suite.passos().accept(list);
             }

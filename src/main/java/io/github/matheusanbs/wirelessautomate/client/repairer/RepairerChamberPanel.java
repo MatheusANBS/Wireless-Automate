@@ -118,7 +118,7 @@ final class RepairerChamberPanel {
             return false;
         }
         for (int line = 0; line < RepairMath.LINES; line++) {
-            if (state.ends()[line] > 0) {
+            if (state.ends()[line] > 0 && !state.blocked()[line]) {
                 return true;
             }
         }

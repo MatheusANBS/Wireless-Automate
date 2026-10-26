@@ -245,7 +245,7 @@ public final class Config {
         builder.push("repairer");
         REPAIR_TICKS = builder
                 .comment("Ticks que uma linha do Reparador de Cristais leva para refazer um cristal rachado.")
-                .defineInRange("repairTicks", 140L, 1L, Long.MAX_VALUE);
+                .defineInRange("repairTicks", 140L, 1L, 72_000_000L);
         REPAIR_COST_FACTOR = builder
                 .comment("Quantas vezes o FE por cristal do tipo reparado o Reparador gasta por reparo (0 repara de graça).")
                 .defineInRange("costFactor", 2, 0, 1000);

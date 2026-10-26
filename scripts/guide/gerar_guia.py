@@ -282,6 +282,7 @@ recursos entre si, sem canos.
 | ''' + item('storage_source_tank') + ''' [Tanque de Source Wireless](wireless-source-tank.md) | Source do Ars Nouveau em grande quantidade. |
 | ''' + item('signal_crystal') + ''' [Quartzo de Sinal e cristais](signal-quartz.md) | O minério e os cristais que movem o Ressonador. |
 | ''' + item('resonance_core') + ''' [Ressonador de Sinal](signal-resonator.md) | Um gerador de energia: cristais, sintonia e FE. |
+| ''' + item('crystal_repairer') + ''' [Reparador de Cristais](crystal-repairer.md) | Conserta cristais rachados, até oito de uma vez. |
 | [Editor de receitas](recipe-editor.md) | Operadores ajustam as receitas de bancada do mod dentro do jogo. |
 
 ## Por onde começar
@@ -339,6 +340,7 @@ resources with the others, with no pipes.
 | ''' + item('storage_source_tank') + ''' [Wireless Source Tank](wireless-source-tank.md) | Ars Nouveau Source in large amounts. |
 | ''' + item('signal_crystal') + ''' [Signal Quartz and crystals](signal-quartz.md) | The ore and the crystals that power the Resonator. |
 | ''' + item('resonance_core') + ''' [Signal Resonator](signal-resonator.md) | A power generator: crystals, tuning and FE. |
+| ''' + item('crystal_repairer') + ''' [Crystal Repairer](crystal-repairer.md) | Fixes cracked crystals, up to eight at a time. |
 | [Recipe editor](recipe-editor.md) | Operators tweak the mod's crafting recipes in-game. |
 
 ## Where to start
@@ -3098,10 +3100,113 @@ The numbers are the defaults; JEI shows your pack's.
 <RecipeFor id="wirelessautomate:resonator_tuner" />
 ''')
 
+TABLE_REPAIR_PT = '''| Cristal | FE por reparo |
+| --- | --- |
+| Cristal de Sinal | 432 |
+| Cristal Lapidado | 13.824 |
+| Afinado Elite | 20.000 |
+| Afinado Esmeralda | 320.000 |
+| Afinado Allthemodium | 12.800.000 |
+| Afinado Vibranium | 13.400.000 |
+| Afinado Unobtainium | 21.400.000 |
+| Afinado Ultimate | 536.870.912 |'''
+
+TABLE_REPAIR_EN = '''| Crystal | FE per repair |
+| --- | --- |
+| Signal Crystal | 432 |
+| Cut Crystal | 13,824 |
+| Tuned Elite | 20,000 |
+| Tuned Emerald | 320,000 |
+| Tuned Allthemodium | 12,800,000 |
+| Tuned Vibranium | 13,400,000 |
+| Tuned Unobtainium | 21,400,000 |
+| Tuned Ultimate | 536,870,912 |'''
+
+page('crystal-repairer.md', front('Reparador de Cristais', 'wirelessautomate:crystal_repairer', 20, item_ids=[
+    'wirelessautomate:crystal_repairer']) + '''
+# Reparador de Cristais
+
+<ItemImage id="wirelessautomate:crystal_repairer" scale="2" float="left" />
+
+Um bloco que **conserta os cristais rachados** do [Ressonador de Sinal](signal-resonator.md): o cristal volta cheio, com
+a carga e a integridade cheias. É a mesma coisa que refazer o cristal na bancada, só que sem ficar na bancada e com
+**até oito reparos ao mesmo tempo**. Não tem tier e não precisa estar perto de um Ressonador.
+
+<br clear="all" />
+
+## Como usar
+
+1. Coloque o Reparador e dê **energia** a ele. A energia entra por **qualquer face**: um cabo, um roteador no modo
+   **Insere** com a Bateria ou o gerador do outro lado, ou uma Bateria Wireless. Nenhum roteador tira energia dele.
+2. Ponha os **cristais rachados** nos oito slots de entrada (um por linha) e os **Cristais de Sinal cheios** no slot do
+   meio. Pode ser pela tela (clique direito), por um roteador preso ao bloco ou por um funil: cada slot só aceita o
+   que cabe nele.
+3. Cada linha começa sozinha quando tem um rachado, **4 Cristais de Sinal cheios** do estoque e a energia do reparo.
+   Os reparos levam **7 segundos** e as oito linhas andam juntas.
+4. O cristal consertado vai para os slots de saída. Tire-os pela tela, por um roteador ou por um funil. Se a saída
+   está cheia, a linha espera.
+
+A tela mostra a energia do bloco, o progresso de cada linha e o que falta quando nada anda (**sem energia**,
+**faltam cristais** ou **saída cheia**).
+
+## O custo
+
+Cada reparo gasta **4 Cristais de Sinal cheios** (o mesmo da bancada) e uma quantidade de **FE** que depende do tipo
+do cristal:
+
+''' + TABLE_REPAIR_PT + '''
+
+Os números são os padrões; o JEI mostra os do seu pack. Com pouca energia, o reparo só começa quando o buffer
+tem o custo inteiro.
+
+## Receita
+
+<RecipeFor id="wirelessautomate:crystal_repairer" />
+''', front('Crystal Repairer', 'wirelessautomate:crystal_repairer', 20, item_ids=[
+    'wirelessautomate:crystal_repairer']) + '''
+# Crystal Repairer
+
+<ItemImage id="wirelessautomate:crystal_repairer" scale="2" float="left" />
+
+A block that **fixes the cracked crystals** of the [Signal Resonator](signal-resonator.md): the crystal comes back full,
+with full charge and integrity. It does the same as recasting the crystal at a crafting table, without standing at
+the table and with **up to eight repairs at the same time**. It has no tier and doesn't need to be near a Resonator.
+
+<br clear="all" />
+
+## How to use
+
+1. Place the Repairer and give it **energy**. Energy enters through **any face**: a cable, a router in **Insert** mode
+   with a Battery or a generator on the other side, or a Wireless Battery. No router pulls energy out of it.
+2. Put the **cracked crystals** in the eight input slots (one per line) and the **full Signal Crystals** in the middle
+   slot. Use the screen (right click), a router attached to the block or a hopper: each slot only accepts what fits.
+3. Each line starts by itself when it has a cracked crystal, **4 full Signal Crystals** in the stock and the repair's
+   energy. A repair takes **7 seconds** and the eight lines run together.
+4. The fixed crystal goes to the output slots. Take them out from the screen, with a router or a hopper. If the output
+   is full, the line waits.
+
+The screen shows the block's energy, each line's progress and what is missing when nothing moves (**no energy**,
+**missing crystals** or **output full**).
+
+## The cost
+
+Each repair spends **4 full Signal Crystals** (the same as the crafting table) and an amount of **FE** that depends on
+the crystal type:
+
+''' + TABLE_REPAIR_EN + '''
+
+The numbers are the defaults; JEI shows your pack's. With little energy, a repair only starts when the buffer
+holds its whole cost.
+
+## Recipe
+
+<RecipeFor id="wirelessautomate:crystal_repairer" />
+''')
+
 # =====================================================================================
 # Problemas comuns
 # =====================================================================================
-page('troubleshooting.md', front('Problemas comuns', 'minecraft:barrier', 20) + '''
+page('troubleshooting.md', front('Problemas comuns', 'minecraft:barrier', 21) + '''
 # Problemas comuns
 
 Algo não se move? Confira na ordem: quase sempre é uma destas.
@@ -3122,7 +3227,7 @@ Algo não se move? Confira na ordem: quase sempre é uma destas.
 
 Ainda com dúvida? Abra o [Tablet de Rede](network-tablet.md): a aba **Fluxos** mostra o que
 cada rede está movendo, quais faces esperam destino e quais destinos estão cheios.
-''', front('Troubleshooting', 'minecraft:barrier', 20) + '''
+''', front('Troubleshooting', 'minecraft:barrier', 21) + '''
 # Troubleshooting
 
 Something not moving? Check in order: it's almost always one of these.
@@ -3169,9 +3274,10 @@ RECIPES = '''<RecipeFor id="wirelessautomate:router" />
 <RecipeFor id="wirelessautomate:resonator_energy_port" />
 <RecipeFor id="wirelessautomate:resonator_crystal_port" />
 <RecipeFor id="wirelessautomate:resonator_tuner" />
+<RecipeFor id="wirelessautomate:crystal_repairer" />
 <Recipe id="wirelessautomate:guide" />'''
 
-page('recipe-editor.md', front('Editor de receitas', 'minecraft:writable_book', 21) + '''
+page('recipe-editor.md', front('Editor de receitas', 'minecraft:writable_book', 22) + '''
 # Editor de receitas
 
 Troque os ingredientes e o resultado das receitas de bancada do mod sem sair do jogo e sem mexer em
@@ -3224,7 +3330,7 @@ Se você fechar a tela com mudanças salvas ainda não aplicadas, elas são reca
 | **Outros datapacks e KubeJS** | Se outro datapack ou o KubeJS mexer na mesma receita, o dele vale, e a tela avisa que a receita é diferente do que está carregado. |
 | **O que não aparece** | Receitas de outros mods, a cópia de Cartão de Filtro e o upgrade de roteador na bancada. Também não dá para criar receitas novas. |
 | **Voltar tudo** | Apague a pasta `data` dentro de `config/wirelessautomate/recipes/` e recarregue (`/reload`). |
-''', front('Recipe editor', 'minecraft:writable_book', 21) + '''
+''', front('Recipe editor', 'minecraft:writable_book', 22) + '''
 # Recipe editor
 
 Change the ingredients and the result of the mod's crafting-table recipes without leaving the game
@@ -3279,7 +3385,7 @@ If you close the screen with saved changes that haven't been applied, they are r
 | **Undo everything** | Delete the `data` folder inside `config/wirelessautomate/recipes/` and reload (`/reload`). |
 ''')
 
-page('recipes.md', front('Todas as receitas', 'minecraft:crafting_table', 22) + '''
+page('recipes.md', front('Todas as receitas', 'minecraft:crafting_table', 23) + '''
 # Todas as receitas
 
 Todas com itens vanilla, na bancada.
@@ -3291,7 +3397,7 @@ Todas com itens vanilla, na bancada.
 | **Este guia** | Livro + redstone. |
 
 ''' + RECIPES + '''
-''', front('All recipes', 'minecraft:crafting_table', 22) + '''
+''', front('All recipes', 'minecraft:crafting_table', 23) + '''
 # All recipes
 
 All of them with vanilla items, in a crafting table.

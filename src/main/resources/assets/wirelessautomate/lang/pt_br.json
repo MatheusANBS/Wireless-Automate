@@ -1292,5 +1292,7 @@
   "jei.wirelessautomate.resonator.info.interference": "Interferência: cada outro Núcleo montado a até %s blocos tira %s%% da eficiência, até %s%%.",
   "jei.wirelessautomate.resonator.info.interference.off": "Sem interferência entre Núcleos.",
   "jei.wirelessautomate.resonator.info.eco": "Eco: um Cristal Afinado Ultimate rachado queimado no slot Eco soma 1 Eco, e cada Eco dá +%s%% de geração.",
-  "jei.wirelessautomate.resonator.info.eco.max": "Eco: um Cristal Afinado Ultimate rachado queimado no slot Eco soma 1 Eco, e cada Eco dá +%s%% de geração (até %s Ecos)."
+  "jei.wirelessautomate.resonator.info.eco.max": "Eco: um Cristal Afinado Ultimate rachado queimado no slot Eco soma 1 Eco, e cada Eco dá +%s%% de geração (até %s Ecos).",
+  "jei.wirelessautomate.crystal_repairer.title": "Reparador de Cristais",
+  "jei.wirelessautomate.crystal_repairer.note": "Até 8 reparos ao mesmo tempo: o cristal rachado e %s Cristais de Sinal cheios entram, e ele volta cheio e com a integridade cheia. Custa %s FE por reparo, %s s cada"
 }

@@ -1,0 +1,30 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "KCK",
+    "HLH",
+    "KRK"
+  ],
+  "key": {
+    "K": {
+      "item": "wirelessautomate:resonator_casing"
+    },
+    "C": {
+      "item": "wirelessautomate:phase_circuit"
+    },
+    "H": {
+      "item": "minecraft:hopper"
+    },
+    "L": {
+      "item": "wirelessautomate:harmonic_lens"
+    },
+    "R": {
+      "item": "minecraft:redstone_block"
+    }
+  },
+  "result": {
+    "id": "wirelessautomate:crystal_repairer",
+    "count": 1
+  }
+}

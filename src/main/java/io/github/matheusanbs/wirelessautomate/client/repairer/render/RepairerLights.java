@@ -28,6 +28,12 @@ final class RepairerLights {
     /** O brilho redondo (sem anel) das runas e dos pedestais, largo para encher a peça como as do mockup. */
     private static final int GLOW_DISC = RibbonParam.disc(0.8, false, 0);
     private static final double MIN_LIGHT = 0.01;
+    private static final int BURST_COLOR = 0xFFBE78;
+    /** O alfa máximo da onda: aditiva, estoura em branco logo acima disso. */
+    private static final double SHOCK_ALPHA = 70;
+    /** O meio lado do quad da onda, em pixels do modelo: o raio final dela é 3. */
+    private static final float SHOCK_HALF = 3.6f;
+    private static final float SHOCK_WIDTH = 0.5f;
 
     private RepairerLights() {
     }
@@ -70,7 +76,30 @@ final class RepairerLights {
                         PEDESTAL_HALF, PEDESTAL_COLOR, RepairTimeline.pedestal(s));
             }
         }
-        return drawn + RepairerBeams.render(pose, buffer, frame);
+        return drawn + RepairerBeams.render(pose, buffer, frame) + burst(pose, buffer, frame);
+    }
+
+    /**
+     * O fim do reparo, por linha que anda entre 6,3 e 7 s: a onda de choque no chão em volta do pedestal (um anel
+     * deitado que abre e some). Devolve quantos quads desenhou.
+     */
+    private static int burst(PoseStack.Pose pose, MultiBufferSource buffer, RepairFrame frame) {
+        int drawn = 0;
+        for (int line = 0; line < RepairMath.LINES; line++) {
+            double s = frame.seconds[line];
+            if (s < RepairTimeline.FLASH) {
+                continue;
+            }
+            int shock = (int) Math.round(SHOCK_ALPHA * RepairTimeline.shockAlpha(s));
+            if (shock >= 1) {
+                RibbonQuad.flat(pose, buffer, RepairerGeometry.pedestalX(frame.quarter, line), RepairerGeometry.FLOOR_Y,
+                        RepairerGeometry.pedestalZ(frame.quarter, line), SHOCK_HALF, BURST_COLOR, shock,
+                        RibbonParam.MODE_DISC, RibbonParam.disc(RepairTimeline.shockRadius(s) / SHOCK_HALF, true,
+                                SHOCK_WIDTH / SHOCK_HALF));
+                drawn++;
+            }
+        }
+        return drawn;
     }
 
     /** A luz da runa (ou do ponto) {@code i}: a de trabalho, mais a onda de cada linha que anda, até 1. */

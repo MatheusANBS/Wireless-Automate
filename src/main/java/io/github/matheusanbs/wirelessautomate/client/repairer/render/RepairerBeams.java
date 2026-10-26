@@ -11,7 +11,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
  * O feixe mágico do emissor até o rachado de cada linha que anda, pelo modo 1 do {@code resonator_ribbon}: três fios de
  * plasma em espiral em volta do eixo, com contas de luz correndo para o cristal, numa fita virada para a câmera, da
  * borda da esfera do emissor ao meio do cristal; a semente da linha dá a cada feixe o seu desenho. Acende de 1,0 a
- * 1,3 s, abre, engrossa e vibra na convergência e corta no clarão, pela {@link RepairTimeline}.
+ * 1,3 s, abre, engrossa na convergência e corta aos 6,3 s, pela {@link RepairTimeline}.
  */
 final class RepairerBeams {
     /** A largura de base da fita, em pixels do modelo: a espiral ocupa pouco mais da metade, o resto é o brilho. */
@@ -20,6 +20,8 @@ final class RepairerBeams {
     private static final double MIN_BEAM = 0.02;
     /** Onde o feixe bate no cristal, acima da origem da malha, em unidades da malha. */
     private static final float HIT = 0.06f;
+    /** A origem do cristal da linha, rascunho do desenho. */
+    private static final float[] END = new float[3];
 
     private RepairerBeams() {
     }
@@ -36,9 +38,10 @@ final class RepairerBeams {
             if (beam <= MIN_BEAM) {
                 continue;
             }
-            float bx = RepairerGeometry.pedestalX(frame.quarter, line);
-            float by = RepairerGeometry.PEDESTAL_TOP_Y + (HIT - CrystalMesh.BOTTOM) * RepairerCrystals.MAIN;
-            float bz = RepairerGeometry.pedestalZ(frame.quarter, line);
+            RepairerCrystals.center(frame, line, s, END);
+            float bx = END[0];
+            float by = END[1] + (HIT - CrystalMesh.BOTTOM) * RepairerCrystals.MAIN;
+            float bz = END[2];
             float dx = bx - ex;
             float dy = by - ey;
             float dz = bz - ez;

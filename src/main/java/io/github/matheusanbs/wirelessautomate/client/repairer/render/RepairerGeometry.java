@@ -15,8 +15,6 @@ public final class RepairerGeometry {
     public static final float DOT_Y = 6.64f;
     public static final float PEDESTAL_GLOW_Y = 7.22f;
     public static final float FLOOR_Y = 6.70f;
-    public static final float ORBIT_Y = 10.6f;
-    public static final float ORBIT_RADIUS = 3.2f;
     private static final float[] PEDESTALS = {11.69552f, 9.53073f, 9.53073f, 11.69552f, 6.46927f, 11.69552f,
         4.30448f, 9.53073f, 4.30448f, 6.46927f, 6.46927f, 4.30448f, 9.53073f, 4.30448f, 11.69552f, 6.46927f};
     private static final float[] RUNES = {13.2f, 8f, 11.67696f, 11.67696f, 8f, 13.2f, 4.32304f, 11.67696f, 2.8f, 8f,

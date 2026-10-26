@@ -14,8 +14,9 @@ import net.minecraft.client.renderer.MultiBufferSource;
 /**
  * Os cristais de pé nos pedestais, um por linha com cristal, pela gema facetada do shader do cristal do Ressonador: o
  * losango no Lapidado e nos Afinados (a faixa dourada ou na cor do tier) e o aglomerado no Cristal de Sinal. O da linha
- * travada (terminou e espera a saída) já está reparado; os outros, rachados. Cada um tem um giro fixo, o do pedestal,
- * para os oito não mostrarem a mesma faceta.
+ * travada (terminou e espera a saída) já está reparado; o da linha que anda fecha as rachaduras pelo canal de efeito
+ * do shader até a convergência e dali em diante já é o reparado; o que espera fica rachado, com as rachaduras acesas
+ * se há energia. Cada um tem um giro fixo, o do pedestal, para os oito não mostrarem a mesma faceta.
  */
 final class RepairerCrystals {
     /** Pixels do modelo por unidade da malha: ~2,7 px de altura. */
@@ -42,9 +43,18 @@ final class RepairerCrystals {
                     RepairerGeometry.pedestalZ(frame.quarter, line));
             poseStack.mulPose(Axis.YP.rotationDegrees(-(22.5f + 45f * line + 90f * frame.quarter)));
             poseStack.scale(MAIN, MAIN, MAIN);
-            int state = view.blocked(line) ? CrystalParam.LIVE : CrystalParam.CRACKED;
+            double s = frame.seconds[line];
+            int state;
+            float fx;
+            if (view.blocked(line) || s >= RepairTimeline.CONVERGE) {
+                state = CrystalParam.LIVE;
+                fx = 0f;
+            } else {
+                state = CrystalParam.CRACKED;
+                fx = CrystalParam.repairing(s < 0 ? 0 : RepairTimeline.cracks(s), s >= 0 || frame.lit);
+            }
             CrystalGem.render(poseStack.last(), buffer, bandColor(kind), 0, state, line, kind != RepairerView.SIGNAL,
-                    0f);
+                    fx);
             poseStack.popPose();
             drawn++;
         }

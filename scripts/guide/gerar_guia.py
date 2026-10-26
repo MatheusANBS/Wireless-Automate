@@ -2520,11 +2520,11 @@ Sem carga, o cristal fica **Opaco**: é o mesmo item, só que apagado. Um Opaco 
 2. Ponha o **catalisador** do tier no Núcleo (clique com ele na mão, pela tela ou pela Porta de Cristais):
    **redstone** ou **Pó de Ressonância** no Básico e no Avançado, só **Pó de Ressonância** no Elite e na Esmeralda,
    e o **Pó Carregado** do tier do Allthemodium para cima.
-3. O Núcleo recarrega **um Opaco por vez**: leva 30 segundos e gasta 1 catalisador, e o cristal volta cheio.
+3. O Núcleo recarrega **todos os Opacos de uma vez**: leva 30 segundos, gasta 1 catalisador por cristal e cada um volta cheio. Com menos catalisador que Opacos, recarregam os primeiros e os outros esperam o próximo ciclo.
 
 O slot do catalisador guarda um tipo por vez: para trocar de catalisador, espere o que está lá acabar ou tire-o
 pela tela. A Porta de Cristais só devolve os Opacos quando o Núcleo está sem catalisador; com ele, o Opaco fica lá
-dentro esperando a vez de recarregar.
+dentro esperando o catalisador e o ciclo de recarga.
 
 ## Integridade e cristal rachado
 
@@ -2705,11 +2705,11 @@ nothing, but you can **recharge** it:
 2. Put the tier's **catalyst** in the Core (click with it in hand, through the screen or through the Crystal Port):
    **redstone** or **Resonance Dust** on Basic and Advanced, only **Resonance Dust** on Elite and Emerald, and the
    tier's **Charged Dust** from Allthemodium up.
-3. The Core recharges **one Dull crystal at a time**: it takes 30 seconds and uses 1 catalyst, and the crystal comes back full.
+3. The Core recharges **all Dull crystals at once**: it takes 30 seconds, uses 1 catalyst per crystal, and each one comes back full. With less catalyst than Dull crystals, the first ones recharge and the rest wait for the next cycle.
 
 The catalyst slot holds one kind at a time: to switch catalysts, wait for the current one to run out or take it out
 through the screen. The Crystal Port only hands the Dull crystals back when the Core has no catalyst; with catalyst
-in it, the Dull crystal stays inside, waiting its turn to recharge.
+in it, the Dull crystal stays inside, waiting for the catalyst and the recharge cycle.
 
 ## Integrity and cracked crystals
 

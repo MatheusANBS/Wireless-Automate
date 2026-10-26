@@ -1192,7 +1192,7 @@
   "gui.wirelessautomate.resonator.chamber.charge": "Charge: %s%%",
   "gui.wirelessautomate.resonator.chamber.yield": "Yields %s× · generating %s FE/t",
   "gui.wirelessautomate.resonator.chamber.recharging": "Recharging: %s%%",
-  "gui.wirelessautomate.resonator.chamber.waiting": "Waiting: one Dull crystal recharges at a time",
+  "gui.wirelessautomate.resonator.chamber.waiting": "Waiting: not enough catalyst for this Dull crystal",
   "gui.wirelessautomate.resonator.chamber.with_redstone": "with the Core's catalyst",
   "gui.wirelessautomate.resonator.chamber.no_redstone": "No catalyst in the Core",
   "gui.wirelessautomate.resonator.redstone": "Redstone",

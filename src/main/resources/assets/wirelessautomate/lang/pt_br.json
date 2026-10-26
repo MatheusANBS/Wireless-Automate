@@ -1192,7 +1192,7 @@
   "gui.wirelessautomate.resonator.chamber.charge": "Carga: %s%%",
   "gui.wirelessautomate.resonator.chamber.yield": "Rende %s× · gerando %s FE/t",
   "gui.wirelessautomate.resonator.chamber.recharging": "Recarregando: %s%%",
-  "gui.wirelessautomate.resonator.chamber.waiting": "Na fila: recarrega um Opaco por vez",
+  "gui.wirelessautomate.resonator.chamber.waiting": "Na fila: falta catalisador para este Opaco",
   "gui.wirelessautomate.resonator.chamber.with_redstone": "com o catalisador do Núcleo",
   "gui.wirelessautomate.resonator.chamber.no_redstone": "Sem catalisador no Núcleo",
   "gui.wirelessautomate.resonator.redstone": "Redstone",

@@ -7,6 +7,7 @@ import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.menu.ResonatorMenu;
 import io.github.matheusanbs.wirelessautomate.packet.ResonatorStatePayload;
 import io.github.matheusanbs.wirelessautomate.resonator.CrystalCharge;
+import io.github.matheusanbs.wirelessautomate.resonator.RechargeRank;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
 import java.util.ArrayList;
 import java.util.List;
@@ -70,7 +71,7 @@ final class CrystalSlots {
      */
     void renderBar(GuiGraphics g, Slot slot) {
         ResonatorStatePayload state = menu.state();
-        if (state == null || slot.container != menu.getSlot(0).container || slot.index != recharging()) {
+        if (state == null || slot.container != menu.getSlot(0).container || !recharging(slot.index)) {
             return;
         }
         int x = slot.x + 2;
@@ -114,7 +115,7 @@ final class CrystalSlots {
             return lines;
         }
         if (SignalCrystalItem.isDull(stack)) {
-            if (index != recharging()) {
+            if (!recharging(index)) {
                 lines.add(ResonatorText.muted(ResonatorText.key("chamber.waiting")));
                 return lines;
             }
@@ -134,15 +135,23 @@ final class CrystalSlots {
         return lines;
     }
 
-    /** A câmara do Opaco que recarrega: o primeiro não rachado, a mesma regra do servidor e da câmara; -1 sem ele. */
-    private int recharging() {
+    /**
+     * Se a câmara {@code index} é um Opaco que recarrega no ciclo: o posto dela entre os recarregáveis cabe no que o
+     * catalisador paga, a mesma regra do servidor. Sem catalisador o primeiro ainda conta (a dica diz que falta o
+     * catalisador no Núcleo), por isso o mínimo de 1.
+     */
+    private boolean recharging(int index) {
+        int paid = Math.max(1, menu.getSlot(menu.redstoneSlot()).getItem().getCount());
+        int rank = 0;
         for (int i = 0; i < menu.chambers(); i++) {
-            ItemStack stack = menu.getSlot(i).getItem();
-            if (SignalCrystalItem.isRechargeable(stack)) {
-                return i;
+            if (SignalCrystalItem.isRechargeable(menu.getSlot(i).getItem())) {
+                if (i == index) {
+                    return RechargeRank.includes(rank, paid);
+                }
+                rank++;
             }
         }
-        return -1;
+        return false;
     }
 
     /**

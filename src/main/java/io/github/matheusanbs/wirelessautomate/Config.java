@@ -61,6 +61,8 @@ public final class Config {
     public static final ModConfigSpec.DoubleValue INTERFERENCE_MAX;
     public static final ModConfigSpec.DoubleValue ECO_BONUS;
     public static final ModConfigSpec.LongValue ECO_MAX;
+    public static final ModConfigSpec.LongValue REPAIR_TICKS;
+    public static final ModConfigSpec.IntValue REPAIR_COST_FACTOR;
     /** FE por tick que um cristal de rendimento 1 dá ao Núcleo de Ressonância, por tier. */
     public static final Map<RouterTier, ModConfigSpec.LongValue> RESONATOR_FE_PER_CRYSTAL = new EnumMap<>(RouterTier.class);
 
@@ -238,6 +240,15 @@ public final class Config {
                     .defineInRange("fePerCrystal", CoreMath.defaultFePerCrystal(tier.ordinal()), 0L, Long.MAX_VALUE));
             builder.pop();
         }
+        builder.pop();
+
+        builder.push("repairer");
+        REPAIR_TICKS = builder
+                .comment("Ticks que uma linha do Reparador de Cristais leva para refazer um cristal rachado.")
+                .defineInRange("repairTicks", 140L, 1L, Long.MAX_VALUE);
+        REPAIR_COST_FACTOR = builder
+                .comment("Quantas vezes o FE por cristal do tipo reparado o Reparador gasta por reparo (0 repara de graça).")
+                .defineInRange("costFactor", 2, 0, 1000);
         builder.pop();
 
         builder.push("guide");
@@ -477,6 +488,16 @@ public final class Config {
     /** Ticks que o Núcleo leva para recarregar um cristal Opaco. */
     public static long rechargeTicks() {
         return read(RECHARGE_TICKS);
+    }
+
+    /** Ticks que uma linha do Reparador leva para refazer um cristal rachado. */
+    public static long repairTicks() {
+        return read(REPAIR_TICKS);
+    }
+
+    /** Quantas vezes o FE por cristal do tipo reparado o Reparador gasta por reparo. */
+    public static int repairCostFactor() {
+        return read(REPAIR_COST_FACTOR);
     }
 
     /** Capacidade do armazenamento no tier, pela config (o padrão se ela ainda não carregou); 0 = sem limite. */

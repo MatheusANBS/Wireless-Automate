@@ -51,7 +51,7 @@ import io.github.matheusanbs.wirelessautomate.client.ConfiguratorWheelScreen;
 final class E2eShowcase {
     /**
      * Com {@code WA_SHOWCASE_ONLY=ressonador}, a vitrine monta a casa e grava só o Ressonador (GIF e fotos); com
-     * {@code cascata}, só a foto da cascata.
+     * {@code cascata}, só a foto da cascata, e com {@code reparador}, só as fotos do Reparador de Cristais.
      */
     private static final String ONLY = System.getenv("WA_SHOWCASE_ONLY");
 
@@ -73,6 +73,11 @@ final class E2eShowcase {
             E2eShowcaseResonator.steps(list);
             return list;
         }
+        if ("reparador".equals(ONLY)) {
+            list.add(mountWorld());
+            E2eShowcaseRepairer.steps(list);
+            return list;
+        }
         if ("cascata".equals(ONLY)) {
             list.add(mountWorld());
             showcaseCascadeShots(list);
@@ -84,6 +89,7 @@ final class E2eShowcase {
         showcaseTierAndRangeShots(list);
         showcaseStorageShots(list);
         showcaseTabletShots(list);
+        E2eShowcaseRepairer.steps(list);
         // por último: o GIF congela o tempo enquanto grava
         E2eShowcaseResonator.steps(list);
         return list;

@@ -133,6 +133,14 @@ A Cut Signal Crystal yields twice as much and lasts twice as long. From Elite up
 
 ![The Resonator cascade](https://media.forgecdn.net/attachments/2085/347/feature-23-cascade-png.png)
 
+### Crystal Repairer
+
+A cracked crystal no longer means a trip to the crafting table. Put it on one of the **8 pedestals** of the Crystal Repairer and it mends it, **up to eight crystals in parallel**. Each repair takes 7 seconds and uses **4 full Signal Crystals** from the shared stock slot plus energy: 2 times the FE per crystal of the crystal's tier (432 FE for a Signal Crystal, 13,824 FE for a Cut one, and the tier's own price for a Tuned one). The crystal comes out of the output slots fully charged and with full integrity.
+
+![Crystal Repairer](ENVIAR:feature-26-repairer.png)
+
+Energy and items go in from any side, so a router can keep it fed. The cracks close from the inside out, the crystals converge on the emitter and the mended one rises out. The Resonator's Core also got faster at the other end: it now recharges **every Dull crystal the catalyst pays for at once**. Recipe: Resonator Casing, Phase Circuit, Hopper, Harmonic Lens and a Redstone Block. The repair time and cost are in the config (`repairer.repairTicks` and `repairer.costFactor`).
+
 ### Tools for big builds
 
 ![The toolkit](https://media.forgecdn.net/attachments/2085/338/feature-14-toolkit-png.png)

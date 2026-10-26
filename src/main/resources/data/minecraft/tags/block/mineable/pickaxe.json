@@ -12,6 +12,7 @@
     "wirelessautomate:resonance_core",
     "wirelessautomate:resonator_energy_port",
     "wirelessautomate:resonator_crystal_port",
-    "wirelessautomate:resonator_tuner"
+    "wirelessautomate:resonator_tuner",
+    "wirelessautomate:crystal_repairer"
   ]
 }

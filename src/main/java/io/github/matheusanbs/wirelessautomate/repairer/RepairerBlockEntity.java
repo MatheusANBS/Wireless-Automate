@@ -9,9 +9,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -32,6 +35,9 @@ public class RepairerBlockEntity extends BlockEntity {
     private final boolean[] blocked = new boolean[RepairMath.LINES];
     /** Os tempos que faltavam, lidos do NBT e convertidos em tempo de jogo no {@code onLoad}. */
     private int[] loadedLines;
+    private final RepairerSync sync = new RepairerSync();
+    /** O {@code onLoad} está rodando: mexer em bloco ou mandar pacote na carga do chunk é proibido. */
+    private boolean loading;
 
     public RepairerBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.CRYSTAL_REPAIRER.get(), pos, state);
@@ -71,7 +77,33 @@ public class RepairerBlockEntity extends BlockEntity {
     private void markUnsaved() {
         if (level != null) {
             level.blockEntityChanged(worldPosition);
+            updateLit();
         }
+    }
+
+    /** Aceso com energia no buffer ou linha andando; só troca o estado quando o valor muda, sem avisar os vizinhos. */
+    private void updateLit() {
+        if (level == null || level.isClientSide || loading || isRemoved()) {
+            return;
+        }
+        BlockState state = getBlockState();
+        if (!state.hasProperty(RepairerBlock.LIT)) {
+            return;
+        }
+        boolean lit = energy.stored() > 0 || anyRunning();
+        if (state.getValue(RepairerBlock.LIT) != lit) {
+            level.setBlock(worldPosition, state.setValue(RepairerBlock.LIT, lit),
+                    Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+        }
+    }
+
+    /** A view da animação que o cliente recebeu. */
+    public RepairerView clientView() {
+        return sync.clientView();
+    }
+
+    public int syncCount() {
+        return sync.syncCount();
     }
 
     public long lineEnd(int line) {
@@ -106,6 +138,7 @@ public class RepairerBlockEntity extends BlockEntity {
     /** O conteúdo mudou: marca o chunk, acorda o motor e avisa os vizinhos (os roteadores dormem por vazio e por cheio). */
     public void itemsChanged() {
         setChanged();
+        sync.markDirty();
         wake();
         notifyNeighbors();
     }
@@ -130,12 +163,17 @@ public class RepairerBlockEntity extends BlockEntity {
         changed |= startLines(now);
         if (changed) {
             setChanged();
+            sync.markDirty();
             notifyNeighbors();
         }
         if (anyRunning()) {
             RepairerManager.add(this);
         } else {
             RepairerManager.remove(this);
+        }
+        if (!loading) {
+            updateLit();
+            sync.sendIfChanged(this);
         }
     }
 
@@ -212,8 +250,34 @@ public class RepairerBlockEntity extends BlockEntity {
                 }
                 loadedLines = null;
             }
-            wake();
+            loading = true;
+            try {
+                wake();
+            } finally {
+                loading = false;
+            }
         }
+    }
+
+    @Override
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        return sync.tag(this);
+    }
+
+    @Override
+    public ClientboundBlockEntityDataPacket getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    @Override
+    public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
+        sync.receive(tag);
+    }
+
+    /** O pacote leva só a view: não pode passar pelo {@code loadWithComponents}, que zeraria os slots. */
+    @Override
+    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket packet, HolderLookup.Provider registries) {
+        handleUpdateTag(packet.getTag(), registries);
     }
 
     @Override

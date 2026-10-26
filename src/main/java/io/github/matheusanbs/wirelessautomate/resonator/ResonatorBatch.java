@@ -5,8 +5,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Um lote do Núcleo de Ressonância: deriva da estação, geração pela sintonia, desgaste dos cristais e recarga do
- * Opaco com o catalisador. O gerenciador roda um lote de 20 ticks por Núcleo a cada 20 ticks.
+ * Um lote do Núcleo de Ressonância: deriva da estação, geração pela sintonia, desgaste dos cristais e recarga dos
+ * Opacos com o catalisador (todos os pagos de uma vez). O gerenciador roda um lote de 20 ticks por Núcleo a cada 20
+ * ticks.
  */
 public final class ResonatorBatch {
     /** Lotes de 20 ticks entre dois passos da deriva (400 ticks). */
@@ -102,13 +103,13 @@ public final class ResonatorBatch {
     }
 
     /**
-     * O progresso só anda com um Opaco recarregável e catalisador; ao completar, gasta 1 do catalisador e termina a
-     * recarga do primeiro Opaco ({@link #finishRecharge}).
+     * Um cronômetro só para todos: o progresso anda com pelo menos um Opaco recarregável e catalisador; ao completar,
+     * recarregam os Opacos recarregáveis na ordem das câmaras enquanto houver catalisador, cada um gastando 1
+     * ({@link #finishRecharge}). Os que o catalisador não pagou esperam o próximo ciclo.
      */
     private static boolean recharge(ResonanceCoreBlockEntity core, int ticks) {
-        int dull = firstRechargeable(core);
-        if (dull < 0) {
-            // O Opaco saiu no meio: o progresso era dele, o próximo que entrar começa do zero.
+        if (rechargeable(core) == 0) {
+            // O último Opaco saiu no meio: o progresso era deles, o próximo que entrar começa do zero.
             if (core.rechargeProgress() != 0) {
                 core.setRechargeProgress(0);
             }
@@ -119,8 +120,13 @@ public final class ResonatorBatch {
         }
         long progress = (long) core.rechargeProgress() + ticks;
         if (progress >= Config.rechargeTicks()) {
-            core.spendCatalyst();
-            finishRecharge(core.crystals().get(dull));
+            for (int i = 0; i < core.chambers() && core.redstone() > 0; i++) {
+                ItemStack stack = core.crystals().get(i);
+                if (SignalCrystalItem.isRechargeable(stack)) {
+                    core.spendCatalyst();
+                    finishRecharge(stack);
+                }
+            }
             progress = 0;
         }
         core.setRechargeProgress((int) Math.min(progress, Integer.MAX_VALUE));
@@ -139,13 +145,14 @@ public final class ResonatorBatch {
         }
     }
 
-    /** A primeira câmara com um Opaco que o Núcleo recarrega (o rachado fica de fora), ou -1. */
-    private static int firstRechargeable(ResonanceCoreBlockEntity core) {
+    /** Quantos Opacos o Núcleo recarrega (o rachado fica de fora). */
+    static int rechargeable(ResonanceCoreBlockEntity core) {
+        int total = 0;
         for (int i = 0; i < core.chambers(); i++) {
             if (SignalCrystalItem.isRechargeable(core.crystals().get(i))) {
-                return i;
+                total++;
             }
         }
-        return -1;
+        return total;
     }
 }

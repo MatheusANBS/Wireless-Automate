@@ -18,8 +18,8 @@ import net.minecraft.world.item.ItemStack;
  */
 final class RepairerChamberPanel {
     private static final int CX = CHAMBER.x() + CHAMBER.w() / 2;
-    private static final int FLOOR_Y = CHAMBER.y() + 82;
-    private static final int ORB_Y = CHAMBER.y() + 48;
+    private static final int FLOOR_Y = CHAMBER.y() + 80;
+    private static final int ORB_Y = CHAMBER.y() + 46;
     private static final double RX = 71;
     private static final double RY = 32;
     private static final int RING_POINTS = 96;

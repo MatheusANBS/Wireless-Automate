@@ -25,7 +25,7 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A tela do Reparador de Cristais, 352 × 272 de tamanho fixo: o cabeçalho com o medidor de energia, a câmara com os 8
+ * A tela do Reparador de Cristais, 352 × 256 de tamanho fixo: o cabeçalho com o medidor de energia, a câmara com os 8
  * pedestais à esquerda, os slots (rachados, estoque e reparados) à direita, a linha de estado e o inventário embaixo.
  * Esta classe só junta as partes: cada uma desenha e dá a dica da sua área. O progresso vem do relógio do mundo e do
  * fim de cada linha, sem pacote por tick.

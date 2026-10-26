@@ -132,11 +132,11 @@ Sem carga, o cristal fica **Opaco**: é o mesmo item, só que apagado. Um Opaco 
 2. Ponha o **catalisador** do tier no Núcleo (clique com ele na mão, pela tela ou pela Porta de Cristais):
    **redstone** ou **Pó de Ressonância** no Básico e no Avançado, só **Pó de Ressonância** no Elite e na Esmeralda,
    e o **Pó Carregado** do tier do Allthemodium para cima.
-3. O Núcleo recarrega **um Opaco por vez**: leva 30 segundos e gasta 1 catalisador, e o cristal volta cheio.
+3. O Núcleo recarrega **todos os Opacos de uma vez**: leva 30 segundos, gasta 1 catalisador por cristal e cada um volta cheio. Com menos catalisador que Opacos, recarregam os primeiros e os outros esperam o próximo ciclo.
 
 O slot do catalisador guarda um tipo por vez: para trocar de catalisador, espere o que está lá acabar ou tire-o
 pela tela. A Porta de Cristais só devolve os Opacos quando o Núcleo está sem catalisador; com ele, o Opaco fica lá
-dentro esperando a vez de recarregar.
+dentro esperando o catalisador e o ciclo de recarga.
 
 ## Integridade e cristal rachado
 

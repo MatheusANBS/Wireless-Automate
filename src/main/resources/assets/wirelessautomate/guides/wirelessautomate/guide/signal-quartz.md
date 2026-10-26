@@ -132,11 +132,11 @@ nothing, but you can **recharge** it:
 2. Put the tier's **catalyst** in the Core (click with it in hand, through the screen or through the Crystal Port):
    **redstone** or **Resonance Dust** on Basic and Advanced, only **Resonance Dust** on Elite and Emerald, and the
    tier's **Charged Dust** from Allthemodium up.
-3. The Core recharges **one Dull crystal at a time**: it takes 30 seconds and uses 1 catalyst, and the crystal comes back full.
+3. The Core recharges **all Dull crystals at once**: it takes 30 seconds, uses 1 catalyst per crystal, and each one comes back full. With less catalyst than Dull crystals, the first ones recharge and the rest wait for the next cycle.
 
 The catalyst slot holds one kind at a time: to switch catalysts, wait for the current one to run out or take it out
 through the screen. The Crystal Port only hands the Dull crystals back when the Core has no catalyst; with catalyst
-in it, the Dull crystal stays inside, waiting its turn to recharge.
+in it, the Dull crystal stays inside, waiting for the catalyst and the recharge cycle.
 
 ## Integrity and cracked crystals
 

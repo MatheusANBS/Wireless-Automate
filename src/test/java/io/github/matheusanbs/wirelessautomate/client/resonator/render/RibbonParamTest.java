@@ -8,16 +8,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class RibbonParamTest {
     @Test
     void maximoCabeEmUmShort() {
-        assertTrue(RibbonParam.bolt(7, 15, true, 100) < 32768);
+        assertTrue(RibbonParam.weave(15, 7, 100) < 32768);
         assertTrue(RibbonParam.disc(1, true, 1) < 32768);
     }
 
     @Test
-    void boltDecodificaPelosDeslocamentosDoShader() {
-        int p = RibbonParam.bolt(4, 3, true, 2.7);
-        assertEquals(4, p & 7);
-        assertEquals(3, (p >> 3) & 15);
-        assertEquals(128, p & 128);
+    void weaveDecodificaPelosDeslocamentosDoShader() {
+        int p = RibbonParam.weave(11, 9, 2.7);
+        assertEquals(11, p & 15);
+        assertEquals(7, (p >> 4) & 7);
+        assertEquals(0, p & 128);
         assertEquals(27, p >> 8);
     }
 

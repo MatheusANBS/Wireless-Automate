@@ -90,17 +90,17 @@ public final class RepairTimeline {
         return 1 - 0.35 * smooth(CONVERGE, FLASH, s);
     }
 
-    /** A força do raio: acende de 1,0 a 1,3 s e corta no clarão (6,3 a 6,45 s). */
+    /** A força do feixe: acende de 1,0 a 1,3 s e corta no clarão (6,3 a 6,45 s). */
     public static double beam(double s) {
         return s < FLASH ? smooth(BEAM_START, 1.3, s) : 1 - smooth(FLASH, 6.45, s);
     }
 
-    /** A faixa do raio no shader (1 a 7): 4 no reparo, engrossando até 7 na convergência. */
-    public static int beamBand(double s) {
-        return 4 + (int) Math.round(3 * smooth(CONVERGE, 6.0, s));
+    /** A força da convergência no feixe (0 a 7): 0 no reparo, 7 em 6,0 s. */
+    public static int beamSurge(double s) {
+        return (int) Math.round(7 * smooth(CONVERGE, 6.0, s));
     }
 
-    /** A largura do raio sobre a de base: de 1 a 1,7 na convergência. */
+    /** A largura do feixe sobre a de base: de 1 a 1,7 na convergência. */
     public static double beamWidth(double s) {
         return 1 + 0.7 * smooth(CONVERGE, FLASH, s);
     }

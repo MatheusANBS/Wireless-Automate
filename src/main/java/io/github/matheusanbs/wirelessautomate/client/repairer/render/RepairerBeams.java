@@ -8,22 +8,23 @@ import io.github.matheusanbs.wirelessautomate.repairer.RepairMath;
 import net.minecraft.client.renderer.MultiBufferSource;
 
 /**
- * O raio fractal do emissor até o rachado de cada linha que anda, pelo modo 1 do {@code resonator_ribbon} (o raio
- * aprovado do Ressonador com a semente da linha): uma fita virada para a câmera, da borda da esfera do emissor ao meio
- * do cristal. Acende de 1,0 a 1,3 s, engrossa na convergência e corta no clarão, pela {@link RepairTimeline}.
+ * O feixe mágico do emissor até o rachado de cada linha que anda, pelo modo 1 do {@code resonator_ribbon}: três fios de
+ * plasma em espiral em volta do eixo, com contas de luz correndo para o cristal, numa fita virada para a câmera, da
+ * borda da esfera do emissor ao meio do cristal; a semente da linha dá a cada feixe o seu desenho. Acende de 1,0 a
+ * 1,3 s, abre, engrossa e vibra na convergência e corta no clarão, pela {@link RepairTimeline}.
  */
 final class RepairerBeams {
-    /** A largura de base da fita, em pixels do modelo: o núcleo do raio é fino, e o brilho em volta precisa de lugar. */
-    private static final float WIDTH = 1.8f;
+    /** A largura de base da fita, em pixels do modelo: a espiral ocupa pouco mais da metade, o resto é o brilho. */
+    private static final float WIDTH = 2.4f;
     private static final int COLOR = 0xFF9664;
     private static final double MIN_BEAM = 0.02;
-    /** Onde o raio bate no cristal, acima da origem da malha, em unidades da malha. */
+    /** Onde o feixe bate no cristal, acima da origem da malha, em unidades da malha. */
     private static final float HIT = 0.06f;
 
     private RepairerBeams() {
     }
 
-    /** Desenha os raios e devolve quantos. */
+    /** Desenha os feixes e devolve quantos. */
     static int render(PoseStack.Pose pose, MultiBufferSource buffer, RepairFrame frame) {
         int drawn = 0;
         float ex = RepairerGeometry.CENTER;
@@ -47,10 +48,9 @@ final class RepairerBeams {
             float ay = ey + dy * k;
             float az = ez + dz * k;
             float width = (float) (WIDTH * RepairTimeline.beamWidth(s));
-            int param = RibbonParam.bolt(RepairTimeline.beamBand(s), 2 * line + 1, s >= RepairTimeline.CONVERGE,
-                    0.7 * length * (1 - k) / width);
+            int param = RibbonParam.weave(2 * line + 1, RepairTimeline.beamSurge(s), 0.7 * length * (1 - k) / width);
             if (RibbonQuad.strip(pose, buffer, ax, ay, az, bx, by, bz, frame.ex, frame.ey, frame.ez, width, COLOR,
-                    (int) Math.round(255 * beam), RibbonParam.MODE_REPAIR_BOLT, param)) {
+                    (int) Math.round(255 * beam), RibbonParam.MODE_WEAVE, param)) {
                 drawn++;
             }
         }

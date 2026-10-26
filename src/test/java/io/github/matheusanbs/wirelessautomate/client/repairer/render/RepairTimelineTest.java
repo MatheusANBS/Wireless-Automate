@@ -39,8 +39,8 @@ class RepairTimelineTest {
         assertEquals(0, RepairTimeline.crystalGlow(5.5), EPS);
         assertEquals(1, RepairTimeline.crystalGlow(6.4), EPS);
         assertEquals(0, RepairTimeline.crystalGlow(7), EPS);
-        assertEquals(4, RepairTimeline.beamBand(3));
-        assertEquals(7, RepairTimeline.beamBand(6.1));
+        assertEquals(0, RepairTimeline.beamSurge(3));
+        assertEquals(7, RepairTimeline.beamSurge(6.1));
         assertEquals(0, RepairTimeline.vibration(6.3), EPS);
         assertEquals(0, RepairTimeline.exit(6.7), EPS);
         assertEquals(1, RepairTimeline.exit(7), EPS);

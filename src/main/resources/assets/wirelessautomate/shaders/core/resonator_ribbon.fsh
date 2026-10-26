@@ -74,14 +74,17 @@ void main() {
     float arg = float(extra.y);
     vec3 col = vec3(0.0);
 
-    if (mode == 0) {
+    if (mode == 0 || mode == 1) {
         // o raio: um canal principal fractal, arcos secundários, forquilhas e uma descarga que o alarga, tudo pela faixa
         // de vazão. Sem tubo e sem contorno: núcleo branco em HDR, brilho que cai com a distância e o tier só no
         // brilho. O parâmetro leva a faixa (3 bits), a sintonia de 0 a 15 (4 bits), o buffer cheio (1 bit) e o
-        // comprimento da fita em décimos de bloco (7 bits)
+        // comprimento da fita em décimos de bloco (7 bits). No modo 1 (o raio do Reparador) os 4 bits da sintonia são
+        // a semente da linha, para os 8 raios do mesmo quadro não terem o mesmo desenho, e a sintonia vale inteira
         int bits = int(arg);
         int band = bits & 7;
-        float tuneV = float((bits >> 3) & 15) / 15.0;
+        bool repair = mode == 1;
+        float seedShift = repair ? float((bits >> 3) & 15) * 7.0 : 0.0;
+        float tuneV = repair ? 1.0 : float((bits >> 3) & 15) / 15.0;
         bool full = ((bits >> 7) & 1) != 0;
         float len = max(float((bits >> 8) & 127) * 0.1, 0.3);
         float aspect = len / 0.35;
@@ -91,12 +94,12 @@ void main() {
         // o raio é sorteado de novo a 11 a 17 Hz e cada sorteio acende forte e decai um pouco
         float rate = mix(11.0, 17.0, flow);
         float slot = floor(t * rate);
-        float flick = (0.75 + 0.5 * wa_h21(vec2(slot, 3.0))) * (0.85 + 0.15 * exp(-fract(t * rate) * 3.0));
+        float flick = (0.75 + 0.5 * wa_h21(vec2(slot, 3.0 + seedShift))) * (0.85 + 0.15 * exp(-fract(t * rate) * 3.0));
         float chance = mix(0.35, 1.0, tuneV);
         float wc = 0.018 + 0.018 * flow;
         // o canal principal, com pacotes de energia correndo
         float packet = 1.0 + 1.1 * pow(0.5 + 0.5 * sin(x * len * 9.0 - t * (6.0 + 2.0 * float(band))), 6.0);
-        float mainSeed = slot * 3.0;
+        float mainSeed = slot * 3.0 + seedShift;
         vec2 light = boltLight(boltDist(x, y, mainSeed, 0.42, aspect), wc) * vec2(packet, 1.0);
         // os arcos secundários: mais finos, mais soltos, em janelas que saltam
         int arcs = band >= 5 ? 3 : band == 4 ? 2 : band == 3 ? 1 : 0;
@@ -104,7 +107,7 @@ void main() {
             if (k >= arcs) break;
             float cycle = t * (1.1 + 0.4 * float(k)) + float(k) * 0.37;
             float on = step(fract(cycle), 0.6) * step(wa_h21(vec2(floor(cycle), float(k) * 5.0)), chance);
-            float seed = floor(t * 13.0 + float(k) * 3.0) * 5.0 + 101.0 + float(k) * 50.0;
+            float seed = floor(t * 13.0 + float(k) * 3.0) * 5.0 + 101.0 + float(k) * 50.0 + seedShift;
             light += boltLight(boltDist(x, y, seed, 0.75, aspect), wc * 0.6) * 0.55 * on;
         }
         // as forquilhas: saem do canal principal em ângulo, afinam e somem

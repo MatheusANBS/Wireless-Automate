@@ -48,8 +48,8 @@ final class RepairerLights {
 
     /**
      * As fitas, só com linha andando: as 8 runas e os 8 pontos do chão (fracos enquanto há reparo, com a onda de luz
-     * da puxada correndo do pedestal de cada linha) e o topo do pedestal de cada linha que anda; cada um é um disco de
-     * luz deitado. Devolve quantos quads desenhou.
+     * da puxada correndo do pedestal de cada linha) e o topo do pedestal de cada linha que anda, cada um um disco de
+     * luz deitado, e os raios do {@link RepairerBeams}. Devolve quantos quads desenhou.
      */
     static int ribbons(PoseStack.Pose pose, MultiBufferSource buffer, RepairFrame frame) {
         if (!frame.running) {
@@ -70,7 +70,7 @@ final class RepairerLights {
                         PEDESTAL_HALF, PEDESTAL_COLOR, RepairTimeline.pedestal(s));
             }
         }
-        return drawn;
+        return drawn + RepairerBeams.render(pose, buffer, frame);
     }
 
     /** A luz da runa (ou do ponto) {@code i}: a de trabalho, mais a onda de cada linha que anda, até 1. */

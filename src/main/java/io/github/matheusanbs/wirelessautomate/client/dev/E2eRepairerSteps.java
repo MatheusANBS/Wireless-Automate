@@ -17,6 +17,7 @@ import io.github.matheusanbs.wirelessautomate.repairer.RepairerSlots;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -261,7 +262,7 @@ final class E2eRepairerSteps {
      * O jogador voando com o olho em {@code alvo + offset}, onde o alvo é o centro do bloco na altura {@code targetY},
      * olhando o alvo. A janela é real e o mouse gira a câmera: o ângulo volta a cada tick até a foto.
      */
-    private static Step cameraShot(String file, UUID playerId, java.util.function.Supplier<BlockPos> block,
+    private static Step cameraShot(String file, UUID playerId, Supplier<BlockPos> block,
                                    double[] offset, double targetY) {
         double[] cam = new double[3];
         float[] ang = new float[2];

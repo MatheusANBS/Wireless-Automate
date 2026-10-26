@@ -3,7 +3,7 @@ navigation:
   title: Editor de receitas
   icon: minecraft:writable_book
   parent: index.md
-  position: 21
+  position: 22
 ---
 
 

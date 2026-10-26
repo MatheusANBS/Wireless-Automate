@@ -134,11 +134,13 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
     @Override
     public void registerCategories(IRecipeCategoryRegistration registration) {
         ResonatorJei.registerCategories(registration);
+        CrystalRepairerCategory.registerCategory(registration);
     }
 
     @Override
     public void registerRecipeCatalysts(IRecipeCatalystRegistration registration) {
         ResonatorJei.registerCatalysts(registration);
+        CrystalRepairerCategory.registerCatalysts(registration);
     }
 
     /**
@@ -196,6 +198,7 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
         }
         registration.addRecipes(RecipeTypes.CRAFTING, shown);
         ResonatorJei.registerRecipes(registration);
+        CrystalRepairerCategory.registerRecipes(registration);
         WirelessAutomate.LOGGER.info("JEI: {} receitas de exibição de upgrade registradas", shown.size());
     }
 

@@ -20,7 +20,7 @@
 6. **A energia só entra** (`canExtract` falso nas duas capabilities): nenhum roteador tira energia do Reparador.
 7. **Custo por reparo** = `costFactor` (config, padrão 2) × o FE por cristal da config do tier: Sinal = tier Básico (432 com os padrões), Lapidado = tier Avançado (13.824), Afinado = o tier dele (Elite 20.000 … Ultimate 536.870.912). A capacidade do buffer = `costFactor` × FE por cristal do Ultimate × 8 linhas. Config nova (seção `repairer`): `repairTicks` (padrão 140) e `costFactor` (padrão 2).
 8. **A tela do bloco, na etapa 2, tem o centro estático** (anel de 8 pedestais com o ícone do cristal e a barra de progresso por linha); a câmara animada da tela vem na etapa 3.
-9. **Modelo:** o JSON do bloco vem do `.bbmodel` aprovado por um script próprio e fica numa subpasta (`models/block/repairer/`), porque o gerador `blocos.py` apaga os modelos da raiz que ele não gerou e não aceita elementos que se atravessam; o vidro é um segundo modelo translúcido (blockstate `multipart`). O brilho do emissor, das runas e das luzes é do BER (etapa 3); na etapa 2 essas peças são texels claros.
+9. **Modelo:** o JSON do bloco vem do `.bbmodel` aprovado por um script próprio e fica numa subpasta (`models/block/repairer/`), porque o gerador `blocos.py` apaga os modelos da raiz que ele não gerou e não aceita elementos que se atravessam; o vidro é um segundo modelo translúcido (blockstate `multipart`). A textura é um atlas pintado à mão no Blockbench (`reparador_alma`, 256 × 256, embutida no `.bbmodel`) e gravado em `textures/block/repairer/repairer.png`; não há paleta 16 × 16. O item é um `neoforge:composite` (sólido + vidro). O brilho do emissor, das runas e das luzes é do BER (etapa 3); na etapa 2 essas peças são texels claros.
 
 ## Restrições globais
 
@@ -646,6 +646,8 @@ git commit -m "Reparador: o menu, o estado da tela (protocolo 33) e a tela nos d
 ---
 
 ### Task 6: O modelo 3D, a textura e o blockstate
+
+> **Mudança de plano (26/10/2026, vale sobre o texto abaixo):** o modelo vem de um atlas PINTADO no Blockbench, com luz e sombra: `docs/preview/reparador-de-cristais.bbmodel` (104 elementos, textura `reparador_alma` de 256 × 256 embutida). O `scripts/textures/reparador_modelo.py` o converte em `models/block/repairer/crystal_repairer.json` e `_glass.json`, `textures/block/repairer/repairer.png`, o blockstate `multipart` por `facing` e o item composto `neoforge:composite`. Não existe mais a paleta 16 × 16 nem o `palette.png`; onde o texto abaixo cita `repairer/palette`, leia `repairer/repairer`.
 
 **Files:**
 - Create: `scripts/textures/reparador_modelo.py`

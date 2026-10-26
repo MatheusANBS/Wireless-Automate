@@ -9,7 +9,7 @@ Uso (na raiz do repositório):
 
 Paleta, materiais, o Olho e as utilidades vêm de `identidade.py`; as texturas e os modelos dos blocos
 vêm de `blocos.py` (`sprites()`, `modelos()`, `previas()`), quando o módulo existe; o modelo do Reparador de
-Cristais, a paleta dele e o blockstate vêm de `reparador_modelo.py`, a partir do `.bbmodel` aprovado.
+Cristais, o atlas pintado dele e o blockstate vêm de `reparador_modelo.py`, a partir do `.bbmodel` aprovado.
 
 Cada item é uma grade de texto (a forma, pela legenda comum `LEG`) mais código para o que muda por
 quadro. Regras: 16×16, alfa só 0 ou 255, contorno de 1 px em grafite.0, luz de cima à esquerda, 3 a

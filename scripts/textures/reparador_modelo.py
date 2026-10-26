@@ -70,7 +70,7 @@ class ModeloInvalido(ValueError):
 def _sem_sombra(nome: str) -> bool:
     """Luzes e brilhos ficam chapados: o jogo não escurece a face pela direção. Os brilhos repetidos levam o índice
     depois do `_glow` (`rune_glow_0`, `fin_tip_glow_a`)."""
-    return nome.endswith("_glow") or "_glow_" in nome or nome.startswith("led_")
+    return nome.endswith("_glow") or "_glow_" in nome or nome == "led_glow"
 
 
 def _atlas(projeto: dict) -> Image.Image:

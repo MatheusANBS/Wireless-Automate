@@ -1292,5 +1292,7 @@
   "jei.wirelessautomate.resonator.info.interference": "Interference: each other assembled Core within %s blocks takes %s%% of the efficiency, up to %s%%.",
   "jei.wirelessautomate.resonator.info.interference.off": "No interference between Cores.",
   "jei.wirelessautomate.resonator.info.eco": "Echo: a cracked Tuned Signal Crystal (Ultimate) burned in the Echo slot adds 1 Echo, and each Echo gives +%s%% generation.",
-  "jei.wirelessautomate.resonator.info.eco.max": "Echo: a cracked Tuned Signal Crystal (Ultimate) burned in the Echo slot adds 1 Echo, and each Echo gives +%s%% generation (up to %s Echo)."
+  "jei.wirelessautomate.resonator.info.eco.max": "Echo: a cracked Tuned Signal Crystal (Ultimate) burned in the Echo slot adds 1 Echo, and each Echo gives +%s%% generation (up to %s Echo).",
+  "jei.wirelessautomate.crystal_repairer.title": "Crystal Repairer",
+  "jei.wirelessautomate.crystal_repairer.note": "Up to 8 repairs at once: the cracked crystal and %s full Signal Crystals go in, and it comes back full, with full integrity. Costs %s FE per repair, %s s each"
 }

@@ -42,6 +42,7 @@ resources with the others, with no pipes.
 | <ItemImage id="wirelessautomate:storage_source_tank" /> [Wireless Source Tank](wireless-source-tank.md) | Ars Nouveau Source in large amounts. |
 | <ItemImage id="wirelessautomate:signal_crystal" /> [Signal Quartz and crystals](signal-quartz.md) | The ore and the crystals that power the Resonator. |
 | <ItemImage id="wirelessautomate:resonance_core" /> [Signal Resonator](signal-resonator.md) | A power generator: crystals, tuning and FE. |
+| <ItemImage id="wirelessautomate:crystal_repairer" /> [Crystal Repairer](crystal-repairer.md) | Fixes cracked crystals, up to eight at a time. |
 | [Recipe editor](recipe-editor.md) | Operators tweak the mod's crafting recipes in-game. |
 
 ## Where to start

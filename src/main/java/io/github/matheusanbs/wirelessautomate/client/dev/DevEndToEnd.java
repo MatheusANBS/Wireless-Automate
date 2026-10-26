@@ -98,6 +98,8 @@ import io.github.matheusanbs.wirelessautomate.client.GuiThemes;
 public final class DevEndToEnd {
     /** Vitrine para a página do CurseForge: com {@code WA_SHOWCASE=<dir>}, monta uma fábrica e fotografa. */
     static final String SHOWCASE = System.getenv("WA_SHOWCASE");
+    private static final E2eSelection.Profile PROFILE = E2eSelection.profile(System.getenv("WA_E2E_PROFILE"));
+    private static final String CAPTURE = envOr("WA_E2E_CAPTURE", PROFILE.capture());
     private static final String OUTPUT = System.getenv("WA_E2E") != null ? System.getenv("WA_E2E") : SHOWCASE;
     /**
      * Ampliação das fotos da vitrine: o quadro é renderizado fora da tela em 1280x800 vezes este fator, com a
@@ -379,6 +381,10 @@ public final class DevEndToEnd {
 
     /** Alguns quadros depois (mouse fora da tela, sem dicas), salva a captura. */
     static Step capture(String file) {
+        if (!captureWanted(file)) {
+            return new Step("captura " + file + " (pulada)", STEP_TIMEOUT_MS, () -> {
+            }, () -> true, () -> file + ".png");
+        }
         return new Step("captura " + file, STEP_TIMEOUT_MS, () -> {
             moveMouse(0, 0);
             if (SHOWCASE != null) {
@@ -415,7 +421,20 @@ public final class DevEndToEnd {
         return screen == null ? "nenhuma" : screen.getClass().getSimpleName();
     }
 
+    private static String envOr(String name, String fallback) {
+        String value = System.getenv(name);
+        return value == null || value.isBlank() ? fallback : value;
+    }
+
+    /** A vitrine e a captura de falha sempre saem; as demais pelo {@code WA_E2E_CAPTURE}. */
+    private static boolean captureWanted(String file) {
+        return SHOWCASE != null || "falha".equals(file) || E2eSelection.captureWanted(CAPTURE, file);
+    }
+
     static void capture(Minecraft minecraft, String name) {
+        if (!captureWanted(name)) {
+            return;
+        }
         Path dir = Path.of(OUTPUT);
         try (NativeImage image = Screenshot.takeScreenshot(minecraft.getMainRenderTarget())) {
             Files.createDirectories(dir);

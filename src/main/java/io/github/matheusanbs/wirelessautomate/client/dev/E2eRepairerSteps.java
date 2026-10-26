@@ -39,6 +39,8 @@ final class E2eRepairerSteps {
     /** Ticks de reparo antes da foto, para as barras aparecerem. */
     private static final int WORK_TICKS = 30;
     private static final int OPEN_RETRY_TICKS = 40;
+    private static final int SMALL_W = 1366;
+    private static final int SMALL_H = 768;
 
     private E2eRepairerSteps() {
     }
@@ -104,6 +106,7 @@ final class E2eRepairerSteps {
         shot(list, "reparador-tela-reparando" + suffix, withDark);
         if (withDark) {
             hovered(list, "reparador-tela-dica", 1);
+            smallWindow(list);
         }
         list.add(close("Reparador: fechar" + suffix));
     }
@@ -118,6 +121,48 @@ final class E2eRepairerSteps {
             list.add(clipCheck(name + "-escuro"));
             list.add(E2eDarkSteps.themeClick(name + ": tema claro", GuiTheme.LIGHT));
         }
+    }
+
+    /**
+     * A tela numa janela de 1366 × 768 na escala 3 da interface, a da escala automática nesse tamanho: 256 px de
+     * altura útil, e a tela tem de caber inteira. A janela muda primeiro (o e2e escolhe a escala dele ao ver o tamanho
+     * novo) e a escala 3 vem no passo seguinte; no fim a janela volta a 1280 × 800 e o e2e refaz a escala dele.
+     */
+    private static void smallWindow(List<Step> list) {
+        list.add(new Step("Reparador: janela 1366x768", STEP_TIMEOUT_MS,
+                () -> Minecraft.getInstance().getWindow().setWindowed(SMALL_W, SMALL_H),
+                () -> stepTicks >= 10 && Minecraft.getInstance().getWindow().getWidth() == SMALL_W
+                        && Minecraft.getInstance().getWindow().getHeight() == SMALL_H,
+                () -> "janela " + Minecraft.getInstance().getWindow().getWidth() + "x"
+                        + Minecraft.getInstance().getWindow().getHeight()));
+        list.add(new Step("Reparador: escala 3", STEP_TIMEOUT_MS, () -> {
+            Minecraft minecraft = Minecraft.getInstance();
+            minecraft.options.guiScale().set(3);
+            minecraft.resizeDisplay();
+        }, () -> stepTicks >= 5 && Minecraft.getInstance().getWindow().getGuiScale() == 3 && fits(),
+                E2eRepairerSteps::describeFit));
+        list.add(capture("reparador-tela-1366x768"));
+        list.add(clipCheck("reparador-tela-1366x768"));
+        list.add(new Step("Reparador: janela de volta", STEP_TIMEOUT_MS,
+                () -> Minecraft.getInstance().getWindow().setWindowed(1280, 800),
+                () -> stepTicks >= 10 && Minecraft.getInstance().getWindow().getGuiScale() != 3,
+                E2eRepairerSteps::describeFit));
+    }
+
+    /** A tela inteira dentro da área da interface, sem corte em cima nem embaixo. */
+    private static boolean fits() {
+        return Minecraft.getInstance().screen instanceof RepairerScreen screen && screen.getGuiTop() >= 0
+                && screen.getGuiTop() + screen.getYSize() <= screen.height && screen.getGuiLeft() >= 0
+                && screen.getGuiLeft() + screen.getXSize() <= screen.width;
+    }
+
+    private static String describeFit() {
+        if (!(Minecraft.getInstance().screen instanceof RepairerScreen screen)) {
+            return "tela " + describe(Minecraft.getInstance().screen);
+        }
+        return "escala " + Minecraft.getInstance().getWindow().getGuiScale() + ", interface " + screen.width + "x"
+                + screen.height + ", tela em " + screen.getGuiLeft() + "," + screen.getGuiTop() + " com "
+                + screen.getXSize() + "x" + screen.getYSize();
     }
 
     /** A foto com o mouse num slot do Reparador (a dica aberta). */

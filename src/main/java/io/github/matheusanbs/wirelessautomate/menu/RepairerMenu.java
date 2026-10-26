@@ -44,12 +44,12 @@ public class RepairerMenu extends AbstractContainerMenu {
     public static final int COLUMN_STEP = 34;
     public static final int ROW_STEP = 20;
     public static final int FEED_X = 209;
-    public static final int FEED_Y = 92;
+    public static final int FEED_Y = 89;
     public static final int OUTPUT_X = 209;
-    public static final int OUTPUT_Y = 124;
+    public static final int OUTPUT_Y = 120;
     public static final int INVENTORY_X = 96;
-    public static final int INVENTORY_Y = 191;
-    public static final int HOTBAR_Y = 251;
+    public static final int INVENTORY_Y = 178;
+    public static final int HOTBAR_Y = 236;
 
     private final BlockPos pos;
     private final Container container;

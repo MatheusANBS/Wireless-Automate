@@ -124,11 +124,17 @@ final class E2eRepairerSteps {
     /**
      * O modelo no mundo: para cada {@code facing}, a foto de frente (de onde o jogador que o pôs estava, com a porta de
      * energia para a câmera) e a de lado (vindo do horário do {@code facing}), sem a interface. O mundo do e2e tem o
-     * ciclo do dia desligado, então a luz é a mesma em todas.
+     * ciclo do dia desligado, então a luz é a mesma em todas. No fim, o voo e a interface voltam ao que eram, porque na
+     * rodada completa outros passos vêm depois (uma falha encerra o e2e inteiro, então só o caminho que passa precisa
+     * restaurar).
      */
     private static void blockShots(List<Step> list, UUID playerId, BlockPos[] pos) {
-        list.add(new Step("Reparador: sem interface", STEP_TIMEOUT_MS,
-                () -> Minecraft.getInstance().options.hideGui = true, () -> true, () -> ""));
+        boolean[] before = new boolean[2];
+        list.add(new Step("Reparador: sem interface", STEP_TIMEOUT_MS, () -> {
+            before[0] = Minecraft.getInstance().options.hideGui;
+            before[1] = onServer(server -> server.getPlayerList().getPlayer(playerId).getAbilities().flying);
+            Minecraft.getInstance().options.hideGui = true;
+        }, () -> true, () -> ""));
         for (Direction facing : FACINGS) {
             list.add(new Step("Reparador: bloco para " + facing, STEP_TIMEOUT_MS, () -> onServer(server -> {
                 ServerLevel level = server.overworld();
@@ -140,8 +146,16 @@ final class E2eRepairerSteps {
             list.add(blockShot(name + "-frente", playerId, pos, facing));
             list.add(blockShot(name + "-lado", playerId, pos, facing.getClockWise()));
         }
-        list.add(new Step("Reparador: interface de volta", STEP_TIMEOUT_MS,
-                () -> Minecraft.getInstance().options.hideGui = false, () -> true, () -> ""));
+        list.add(new Step("Reparador: voo e interface de volta", STEP_TIMEOUT_MS, () -> {
+            Minecraft.getInstance().options.hideGui = before[0];
+            onServer(server -> {
+                ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+                player.getAbilities().flying = before[1];
+                player.onUpdateAbilities();
+                return null;
+            });
+        }, () -> Minecraft.getInstance().player.getAbilities().flying == before[1],
+                () -> "voo " + Minecraft.getInstance().player.getAbilities().flying));
     }
 
     /**

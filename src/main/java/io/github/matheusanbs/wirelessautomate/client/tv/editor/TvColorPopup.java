@@ -237,11 +237,11 @@ final class TvColorPopup implements TvPopup {
     }
 
     private static void checker(GuiGraphics g, int left, int top, int w, int h) {
-        g.fill(left, top, left + w, top + h, 0xFFFFFFFF);
+        g.fill(left, top, left + w, top + h, GuiPaint.BEVEL_LIGHT);
         for (int row = 0; row * 4 < h; row++) {
             for (int col = row & 1; col * 4 < w; col += 2) {
                 g.fill(left + col * 4, top + row * 4, Math.min(left + w, left + col * 4 + 4),
-                        Math.min(top + h, top + row * 4 + 4), 0xFFB5B0A6);
+                        Math.min(top + h, top + row * 4 + 4), GuiPaint.INSET);
             }
         }
     }
@@ -254,7 +254,7 @@ final class TvColorPopup implements TvPopup {
             g.fill(left + 1, top + 1, left + w - 1, top + h - 1, color);
         } else {
             for (int i = 1; i < Math.min(w, h) - 1; i++) {
-                g.fill(left + i, top + i, left + i + 1, top + i + 1, 0xFFD04A4A);
+                g.fill(left + i, top + i, left + i + 1, top + i + 1, GuiPaint.DANGER);
             }
         }
         GuiPaint.outline(g, left, top, w, h, on ? GuiPaint.ACCENT

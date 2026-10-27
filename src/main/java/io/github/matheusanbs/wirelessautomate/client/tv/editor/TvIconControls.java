@@ -106,8 +106,12 @@ final class TvIconControls {
                 int left = ax + i * (each + 1);
                 boolean on = i == current;
                 boolean over = mouseX >= left && mouseX < left + each && mouseY >= ay && mouseY < ay + h;
-                GuiPaint.box(g, left, ay, each, h, on ? GuiPaint.SELECTED : GuiPaint.BUTTON,
+                GuiPaint.box(g, left, ay, each, h, GuiPaint.BUTTON,
                         on ? GuiPaint.ACCENT : over ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
+                if (on) {
+                    // o realce vem do coral sobre o botão do tema: o SELECTED é porcelana nos dois temas e some o ícone
+                    g.fill(left + 1, ay + 1, left + each - 1, ay + h - 1, GuiPaint.alpha(GuiPaint.ACCENT, 0x40));
+                }
                 TvIcons.draw(g, icons.get(i), left + (each - TvIcons.SIZE) / 2, ay + (h - TvIcons.SIZE) / 2);
             }
         }

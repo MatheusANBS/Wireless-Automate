@@ -11,12 +11,12 @@ import net.minecraft.resources.ResourceLocation;
  * {@value #SIZE} × {@value #SIZE} px em {@code textures/gui/tv/} (gerados pelo {@code tela_icones.py}), numa variante
  * para cada tema. Sempre em escala inteira, sem reduzir.
  */
-final class TvIcons {
-    static final int SIZE = 16;
+public final class TvIcons {
+    public static final int SIZE = 16;
     private static final float DISABLED_ALPHA = 0.4f;
 
     /** Os ícones e onde aparecem. */
-    enum Icon {
+    public enum Icon {
         /** A peça Valor: paleta e Camadas. */
         VALUE("value"),
         /** A peça Texto: paleta e Camadas. */
@@ -66,7 +66,17 @@ final class TvIcons {
         /** Subir a regra: botões de cada regra da aba Regras. */
         MOVE_UP("move_up"),
         /** Descer a regra: botões de cada regra da aba Regras. */
-        MOVE_DOWN("move_down");
+        MOVE_DOWN("move_down"),
+        /** A Tela cresce para cima e para a direita: aba Tamanho da tela do bloco. */
+        GROW_UP_RIGHT("grow_up_right"),
+        /** A Tela cresce para cima e para a esquerda: aba Tamanho da tela do bloco. */
+        GROW_UP_LEFT("grow_up_left"),
+        /** A Tela cresce para os dois lados: aba Tamanho da tela do bloco. */
+        GROW_CENTER("grow_center"),
+        /** Passo para menos: os campos de número do editor e a Largura e a Altura da aba Tamanho. */
+        STEP_LEFT("step_left"),
+        /** Passo para mais: os campos de número do editor e a Largura e a Altura da aba Tamanho. */
+        STEP_RIGHT("step_right");
 
         private final ResourceLocation light;
         private final ResourceLocation dark;
@@ -81,12 +91,12 @@ final class TvIcons {
     private TvIcons() {
     }
 
-    static void draw(GuiGraphics g, Icon icon, int x, int y) {
+    public static void draw(GuiGraphics g, Icon icon, int x, int y) {
         draw(g, icon, x, y, true);
     }
 
     /** Desenha o sprite do tema atual com o canto em ({@code x}, {@code y}); desligado, apagado. */
-    static void draw(GuiGraphics g, Icon icon, int x, int y, boolean enabled) {
+    public static void draw(GuiGraphics g, Icon icon, int x, int y, boolean enabled) {
         ResourceLocation sprite = GuiThemes.current() == GuiTheme.DARK ? icon.dark : icon.light;
         if (!enabled) {
             g.setColor(1f, 1f, 1f, DISABLED_ALPHA);

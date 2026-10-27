@@ -5,6 +5,7 @@ import static io.github.matheusanbs.wirelessautomate.client.tv.TvScreenLayout.*;
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.client.tv.TvButtons.Label;
+import io.github.matheusanbs.wirelessautomate.client.tv.editor.TvIcons;
 import io.github.matheusanbs.wirelessautomate.menu.TvMenu;
 import io.github.matheusanbs.wirelessautomate.tv.TvArea;
 import io.github.matheusanbs.wirelessautomate.tv.TvAreaCheck;
@@ -30,6 +31,8 @@ import org.jetbrains.annotations.Nullable;
 final class TvSizeTab {
     private static final int SHIFT_STEP = 4;
     private static final TvArea.Grow[] GROWS = TvArea.Grow.values();
+    private static final TvIcons.Icon[] GROW_ICONS = {TvIcons.Icon.GROW_UP_RIGHT, TvIcons.Icon.GROW_UP_LEFT,
+        TvIcons.Icon.GROW_CENTER};
 
     private final TvMenu menu;
     private final TvScreenActions actions;
@@ -46,8 +49,6 @@ final class TvSizeTab {
     private GuiText.Fitted heightLabel;
     private GuiText.Fitted unitText;
     private TvScreenText.Wrapped growLabel;
-    private Label minus;
-    private Label plus;
     private final Label[] growNames = new Label[GROWS.length];
     private Label apply;
     private Label widthValue;
@@ -72,10 +73,8 @@ final class TvSizeTab {
         heightLabel = GuiText.fit(font, TvScreenText.key("height"), HEIGHT_LABEL.w());
         unitText = GuiText.fit(font, TvScreenText.key("blocks"), UNIT_W);
         growLabel = TvScreenText.wrap(font, TvScreenText.key("grow"), GROW_LABEL.w(), 2);
-        minus = TvButtons.label(font, Component.literal("‹"), STEP - 2);
-        plus = TvButtons.label(font, Component.literal("›"), STEP - 2);
         for (int i = 0; i < GROWS.length; i++) {
-            growNames[i] = TvButtons.label(font, TvScreenText.growName(GROWS[i]), GROW_W - 8);
+            growNames[i] = TvButtons.label(font, TvScreenText.growName(GROWS[i]), GROW_W - 8 - TvIcons.SIZE - 3);
         }
         apply = TvButtons.label(font, TvScreenText.key("apply"), APPLY.w() - 6);
         changed();
@@ -144,7 +143,7 @@ final class TvSizeTab {
         for (int i = 0; i < GROWS.length; i++) {
             Rect r = GROW_BUTTONS[i];
             TvButtons.choice(g, font, r, left, top, r.contains(left, top, mouseX, mouseY), grow == GROWS[i],
-                    growNames[i]);
+                    GROW_ICONS[i], growNames[i]);
         }
         TvButtons.primary(g, font, APPLY, left, top, APPLY.contains(left, top, mouseX, mouseY), problem.ok(),
                 GuiPaint.ACCENT, apply);
@@ -155,10 +154,10 @@ final class TvSizeTab {
 
     private void stepper(GuiGraphics g, int left, int top, int row, Label value, int mouseX, int mouseY) {
         int y = top + row;
-        TvButtons.symbol(g, font, left + MINUS_X, y, STEP, inside(left + MINUS_X, y, mouseX, mouseY), minus);
+        TvButtons.symbol(g, left + MINUS_X, y, STEP, inside(left + MINUS_X, y, mouseX, mouseY), TvIcons.Icon.STEP_LEFT);
         GuiPaint.box(g, left + VALUE_X, y, VALUE_W, STEP, GuiPaint.INSET, GuiPaint.LINE);
         GuiText.draw(g, font, value.text(), left + VALUE_X + (VALUE_W - value.width()) / 2 + 1, y + 3, GuiPaint.FG);
-        TvButtons.symbol(g, font, left + PLUS_X, y, STEP, inside(left + PLUS_X, y, mouseX, mouseY), plus);
+        TvButtons.symbol(g, left + PLUS_X, y, STEP, inside(left + PLUS_X, y, mouseX, mouseY), TvIcons.Icon.STEP_RIGHT);
         GuiText.draw(g, font, unitText, left + UNIT_X, y + 3, GuiPaint.MUTED);
     }
 

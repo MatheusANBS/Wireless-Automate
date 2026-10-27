@@ -19,8 +19,6 @@ import org.lwjgl.glfw.GLFW;
  */
 final class TvNumberField extends TvControl {
     static final int ARROW = 10;
-    private static final Component LEFT = Component.literal("‹");
-    private static final Component RIGHT = Component.literal("›");
 
     private final Font font;
     private final TvTextField text;
@@ -84,16 +82,16 @@ final class TvNumberField extends TvControl {
 
     @Override
     void render(GuiGraphics g, int mouseX, int mouseY) {
-        arrow(g, ax, LEFT, mouseX, mouseY);
-        arrow(g, ax + w - ARROW, RIGHT, mouseX, mouseY);
+        arrow(g, ax, TvIcons.Icon.STEP_LEFT, mouseX, mouseY);
+        arrow(g, ax + w - ARROW, TvIcons.Icon.STEP_RIGHT, mouseX, mouseY);
         text.render(g, mouseX, mouseY);
     }
 
-    private void arrow(GuiGraphics g, int left, Component glyph, int mouseX, int mouseY) {
+    private void arrow(GuiGraphics g, int left, TvIcons.Icon icon, int mouseX, int mouseY) {
         boolean hovered = mouseX >= left && mouseX < left + ARROW && mouseY >= ay && mouseY < ay + h;
         GuiPaint.box(g, left, ay, ARROW, h, GuiPaint.BUTTON,
                 hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
-        GuiPaint.text(g, font, glyph, left + (ARROW - font.width(glyph)) / 2, ay + 2, GuiPaint.FG);
+        TvIcons.draw(g, icon, left + (ARROW - TvIcons.SIZE) / 2, ay + (h - TvIcons.SIZE) / 2);
     }
 
     @Override

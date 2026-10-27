@@ -6,8 +6,12 @@ import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
+import io.github.matheusanbs.wirelessautomate.packet.TvLayoutPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TvSizePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TvTemplatePayload;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -76,6 +80,76 @@ public final class TvEditing {
         }
         tv.setLayout(layout);
         return true;
+    }
+
+    /** O resultado de salvar um layout: se gravou e quantas ligações saíram. */
+    public record LayoutResult(boolean ok, int dropped) {
+        static final LayoutResult DENIED = new LayoutResult(false, 0);
+    }
+
+    /**
+     * Salva o layout do editor: só dono ou operador; peças e ligações dentro dos tetos da config (senão recusa);
+     * cada caixa cortada à área; ligação a rede que o jogador não pode usar ou a tipo não carregado sai, a peça
+     * fica. Avisa na barra de ação.
+     */
+    public static LayoutResult applyLayout(ServerPlayer player, TvBlockEntity tv, TvLayout layout) {
+        if (!tv.canEdit(player)) {
+            player.displayClientMessage(Component.translatable("message.wirelessautomate.tv.layout_denied"), true);
+            return LayoutResult.DENIED;
+        }
+        if (layout.pieces().size() > Config.tvMaxElements() || layout.bindings().size() > Config.tvMaxBindings()) {
+            player.displayClientMessage(Component.translatable("message.wirelessautomate.tv.layout_too_big"), true);
+            return LayoutResult.DENIED;
+        }
+        NetworkSavedData data = NetworkSavedData.get(player.server);
+        int[] dropped = {0};
+        List<TvPiece> pieces = new ArrayList<>(layout.pieces().size());
+        for (TvPiece piece : layout.pieces()) {
+            Optional<TvBinding> own = allowed(data, player, piece.binding(), dropped);
+            List<TvRule> rules = new ArrayList<>(piece.rules().size());
+            boolean rulesChanged = false;
+            for (TvRule rule : piece.rules()) {
+                Optional<TvBinding> bind = allowed(data, player, rule.bind(), dropped);
+                if (bind.equals(rule.bind())) {
+                    rules.add(rule);
+                } else {
+                    rules.add(new TvRule(rule.op(), rule.value(), bind, rule.color(), rule.background(), rule.blink(),
+                            rule.hide()));
+                    rulesChanged = true;
+                }
+            }
+            TvPiece fixed = own.equals(piece.binding()) ? piece : piece.withBinding(own);
+            pieces.add(rulesChanged ? fixed.withRules(rules) : fixed);
+        }
+        tv.setLayout(layout.withPieces(pieces));
+        Component message = dropped[0] == 0
+                ? Component.translatable("message.wirelessautomate.tv.layout_saved")
+                : Component.translatable("message.wirelessautomate.tv.layout_saved_dropped", dropped[0]);
+        player.displayClientMessage(message, true);
+        return new LayoutResult(true, dropped[0]);
+    }
+
+    /** A ligação se o jogador pode usar a rede e o tipo está carregado; senão vazia, contando uma saída. */
+    private static Optional<TvBinding> allowed(NetworkSavedData data, ServerPlayer player,
+            Optional<TvBinding> binding, int[] dropped) {
+        if (binding.isEmpty()) {
+            return binding;
+        }
+        TvBinding value = binding.get();
+        WaNetwork found = data.network(value.network());
+        if (found != null && found.canUse(player.getUUID(), false) && LoadedTypes.contains(value.type())) {
+            return binding;
+        }
+        dropped[0]++;
+        return Optional.empty();
+    }
+
+    /** O handler do layout: só com a tela aberta; a validação é a do {@link #applyLayout}. */
+    public static void handleLayout(@Nullable ServerPlayer player, TvLayoutPayload payload) {
+        TvBlockEntity tv = open(player, payload.containerId());
+        if (tv != null) {
+            applyLayout(player, tv, payload.layout());
+        }
     }
 
     /** O handler do tamanho: só com a tela aberta, e a estrutura da área validada antes de construí-la. */

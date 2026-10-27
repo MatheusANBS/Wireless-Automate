@@ -68,8 +68,8 @@ import org.jetbrains.annotations.Nullable;
  * de filtro segue a mesma regra com o {@link FilterMenu} e a {@link FilterViewPayload}.
  */
 public final class ModPayloads {
-    /** Versão do protocolo (35: o {@code TvValuesPayload} das Telas de Sinal); mude quando um payload mudar de formato. */
-    public static final String VERSION = "35";
+    /** Versão do protocolo (36: o {@code TvLayoutPayload} do editor da Tela de Sinal); mude quando um payload mudar de formato. */
+    public static final String VERSION = "36";
 
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(VERSION);
@@ -152,6 +152,8 @@ public final class ModPayloads {
         // Tamanho e modelo da Tela de Sinal, da tela aberta (handlers no TvEditing).
         registrar.playToServer(TvSizePayload.TYPE, TvSizePayload.STREAM_CODEC,
                 (payload, context) -> TvEditing.handleSize(serverPlayer(context), payload));
+        registrar.playToServer(TvLayoutPayload.TYPE, TvLayoutPayload.STREAM_CODEC,
+                (payload, context) -> TvEditing.handleLayout(serverPlayer(context), payload));
         registrar.playToServer(TvTemplatePayload.TYPE, TvTemplatePayload.STREAM_CODEC,
                 (payload, context) -> TvEditing.handleTemplate(serverPlayer(context), payload));
     }

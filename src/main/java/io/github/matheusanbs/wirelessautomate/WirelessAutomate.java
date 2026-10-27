@@ -28,6 +28,7 @@ import io.github.matheusanbs.wirelessautomate.storage.SourceTankLevels;
 import io.github.matheusanbs.wirelessautomate.storage.StorageCapabilities;
 import io.github.matheusanbs.wirelessautomate.storage.StorageNeighbors;
 import io.github.matheusanbs.wirelessautomate.storage.StorageSavedData;
+import io.github.matheusanbs.wirelessautomate.tv.TvEditing;
 import io.github.matheusanbs.wirelessautomate.tv.TvLoaded;
 import io.github.matheusanbs.wirelessautomate.tv.TvManager;
 import net.minecraft.resources.ResourceLocation;
@@ -100,6 +101,7 @@ public final class WirelessAutomate {
     private static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         TabletMenu.forget(event.getEntity().getUUID());
         IdleNetworkUndo.forget(event.getEntity().getUUID());
+        TvEditing.forget(event.getEntity().getUUID());
         NetworkManager.get().flows().unwatch(event.getEntity().getUUID());
     }
 
@@ -113,6 +115,7 @@ public final class WirelessAutomate {
         SourceTankLevels.reset();
         RepairerManager.reset();
         TvManager.reset();
+        TvEditing.reset();
         TvLoaded.clearServer();
         StorageNeighbors.reset();
         ResonatorManager.reset();

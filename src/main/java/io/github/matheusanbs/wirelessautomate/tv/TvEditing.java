@@ -113,8 +113,7 @@ public final class TvEditing {
                 if (bind.equals(rule.bind())) {
                     rules.add(rule);
                 } else {
-                    rules.add(new TvRule(rule.op(), rule.value(), bind, rule.color(), rule.background(), rule.blink(),
-                            rule.hide()));
+                    // Sem a ligação própria a regra leria o dado da peça e esconderia ou pintaria por outro valor.
                     rulesChanged = true;
                 }
             }
@@ -124,7 +123,8 @@ public final class TvEditing {
         tv.setLayout(layout.withPieces(pieces));
         Component message = dropped[0] == 0
                 ? Component.translatable("message.wirelessautomate.tv.layout_saved")
-                : Component.translatable("message.wirelessautomate.tv.layout_saved_dropped", dropped[0]);
+                : Component.translatable("message.wirelessautomate.tv.layout_saved_dropped"
+                        + (dropped[0] == 1 ? ".one" : ""), dropped[0]);
         player.displayClientMessage(message, true);
         return new LayoutResult(true, dropped[0]);
     }
@@ -144,10 +144,28 @@ public final class TvEditing {
         return Optional.empty();
     }
 
-    /** O handler do layout: só com a tela aberta; a validação é a do {@link #applyLayout}. */
+    /** O limite de ações do editor por jogador (salvar o layout e mexer na biblioteca), 10 por segundo. */
+    private static final TvRateGate GATE = new TvRateGate();
+
+    /** Conta uma ação do editor do jogador; falso se passou de 10 no segundo. */
+    static boolean allowAction(ServerPlayer player) {
+        return GATE.allow(player.getUUID(), player.level().getGameTime());
+    }
+
+    /** Solta a janela do jogador que saiu. */
+    public static void forget(UUID player) {
+        GATE.forget(player);
+    }
+
+    /** Esquece todas as janelas (parada do servidor). */
+    public static void reset() {
+        GATE.clear();
+    }
+
+    /** O handler do layout: só com a tela aberta e dentro do limite; a validação é a do {@link #applyLayout}. */
     public static void handleLayout(@Nullable ServerPlayer player, TvLayoutPayload payload) {
         TvBlockEntity tv = open(player, payload.containerId());
-        if (tv != null) {
+        if (tv != null && allowAction(player)) {
             applyLayout(player, tv, payload.layout());
         }
     }
@@ -177,7 +195,7 @@ public final class TvEditing {
         applyTemplate(player, tv, payload.network().orElse(null), ResourceType.byKey(payload.typeKey()));
     }
 
-    private static @Nullable TvBlockEntity open(@Nullable ServerPlayer player, int containerId) {
+    static @Nullable TvBlockEntity open(@Nullable ServerPlayer player, int containerId) {
         if (player != null && player.containerMenu instanceof TvMenu menu && menu.containerId == containerId
                 && menu.stillValid(player)) {
             return menu.tv();

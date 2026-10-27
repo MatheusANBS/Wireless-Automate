@@ -105,8 +105,34 @@ public class TvBlockEntity extends BlockEntity {
 
     /** A caixa de todas as células da área, para o culling do renderer. */
     public AABB renderBox() {
-        AABB first = new AABB(cellPos(0));
-        return first.minmax(new AABB(cellPos(area.cells() - 1)));
+        return box(worldPosition, getBlockState().getValue(TvBlock.FACING), area);
+    }
+
+    /** A caixa das células de uma área com o bloco colocado em {@code pos}, sem precisar de um block entity. */
+    public static AABB box(BlockPos pos, Direction facing, TvArea area) {
+        Direction right = TvBlock.rightOf(facing);
+        int last = area.cells() - 1;
+        BlockPos first = pos.relative(right, area.rightOf(0)).above(area.upOf(0));
+        BlockPos end = pos.relative(right, area.rightOf(last)).above(area.upOf(last));
+        return new AABB(first).minmax(new AABB(end));
+    }
+
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        TvLoaded.add(this);
+    }
+
+    @Override
+    public void setRemoved() {
+        TvLoaded.remove(this);
+        super.setRemoved();
+    }
+
+    @Override
+    public void onChunkUnloaded() {
+        TvLoaded.remove(this);
+        super.onChunkUnloaded();
     }
 
     private void writeShared(CompoundTag tag) {

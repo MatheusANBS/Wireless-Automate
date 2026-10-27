@@ -34,6 +34,15 @@ public final class MekanismChemicals {
         return ((IChemicalHandler) handler).getChemicalTanks();
     }
 
+    /** Soma em {@code out[0]} o que há nos tanques e em {@code out[1]} a capacidade deles. */
+    public static void held(Object handler, long[] out) {
+        IChemicalHandler chemicals = (IChemicalHandler) handler;
+        for (int tank = 0, n = chemicals.getChemicalTanks(); tank < n; tank++) {
+            out[0] += chemicals.getChemicalInTank(tank).getAmount();
+            out[1] += chemicals.getChemicalTankCapacity(tank);
+        }
+    }
+
     private static final ResourceLocation EMPTY = ResourceLocation.fromNamespaceAndPath("mekanism", "empty");
 
     /** Id do químico ({@code mekanism:hydrogen}); a chave dos filtros. Chamado no laço, não aloca. */

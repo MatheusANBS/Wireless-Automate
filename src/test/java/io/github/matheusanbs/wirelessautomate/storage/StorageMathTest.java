@@ -82,4 +82,12 @@ class StorageMathTest {
         assertFalse(StorageMath.stashExpired(0, 1_000 * day, 0), "0 é sem prazo");
         assertFalse(StorageMath.stashExpired(5 * day, day, 1), "relógio que voltou não vence");
     }
+
+    @Test
+    void aFracaoVaiDeZeroAUmESemCapacidadeEhZero() {
+        assertEquals(0.25, StorageMath.fraction(250, 1_000));
+        assertEquals(1.0, StorageMath.fraction(2_000, 1_000));
+        assertEquals(0.0, StorageMath.fraction(500, 0));
+        assertEquals(0.0, StorageMath.fraction(0, 1_000));
+    }
 }

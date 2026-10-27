@@ -14,6 +14,12 @@ public interface BulkSource {
     BlockCapability<BulkSource, @Nullable Direction> BLOCK =
             BlockCapability.createSided(WirelessAutomate.id("bulk_source"), BulkSource.class);
 
+    /** A Source guardada. */
+    long stored();
+
+    /** A capacidade; {@code <= 0} é sem limite. */
+    long capacity();
+
     /** Guarda até {@code amount}; devolve quanto coube. */
     long insert(long amount, boolean simulate);
 

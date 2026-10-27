@@ -36,6 +36,11 @@ public final class Chemicals {
         return MekanismChemicals.tanks(handler);
     }
 
+    /** Soma o guardado e a capacidade dos tanques do handler em {@code out[0]} e {@code out[1]}. */
+    static void held(Object handler, long[] out) {
+        MekanismChemicals.held(handler, out);
+    }
+
     /** O primeiro químico guardado num item (tanque do Mekanism), se houver. */
     public static Optional<ResourceLocation> chemicalIn(ItemStack stack) {
         return LOADED && !stack.isEmpty() ? MekanismChemicals.chemicalIn(stack) : Optional.empty();

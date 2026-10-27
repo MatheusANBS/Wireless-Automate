@@ -105,6 +105,15 @@ public record TvBinding(@Nullable UUID network, ResourceType type, TvMetric metr
         };
     }
 
+    /** Se o número é uma fração de 0 a 1, que a peça mostra em porcentagem. */
+    public boolean fraction() {
+        return switch (source()) {
+            case NETWORK -> metric.fraction();
+            case STORAGE -> storage.metric() == TvStorageMetric.FILL;
+            case CLOCK -> false;
+        };
+    }
+
     private Raw raw() {
         return switch (source()) {
             case NETWORK -> new Raw(Source.NETWORK, Optional.ofNullable(network), type, metric.getSerializedName(),

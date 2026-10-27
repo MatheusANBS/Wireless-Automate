@@ -202,10 +202,21 @@ public final class TvManager {
     private static double number(TvBinding binding, NetworkSavedData data, @Nullable UUID who, MinecraftServer server,
             @Nullable TvBlockEntity tv, @Nullable TvFeed feed) {
         return switch (binding.source()) {
-            case NETWORK -> canRead(data, who, binding.network()) ? binding.metric().read(statsOf(binding)) : Double.NaN;
+            case NETWORK -> canRead(data, who, binding.network()) ? networkNumber(binding, server) : Double.NaN;
             case STORAGE -> TvStorageFeed.read(server, tv, feed, binding);
             case CLOCK -> Double.NaN;
         };
+    }
+
+    /** A métrica de rede: dos fluxos, ou o guardado nos Armazéns (que este pedido liga no amostrador). */
+    private static double networkNumber(TvBinding binding, MinecraftServer server) {
+        TvMetric metric = binding.metric();
+        if (!metric.held()) {
+            return metric.read(statsOf(binding));
+        }
+        FlowSampler sampler = NetworkManager.get().flows();
+        sampler.requestHeld(binding.network(), binding.type(), server.getTickCount());
+        return metric.readHeld(sampler.held(binding.network(), binding.type()));
     }
 
     /** A rede existe e o dono da Tela pode usá-la; sem dono, não. */

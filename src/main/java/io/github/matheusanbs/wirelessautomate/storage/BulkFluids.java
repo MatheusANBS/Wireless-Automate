@@ -16,6 +16,12 @@ public interface BulkFluids {
     BlockCapability<BulkFluids, @Nullable Direction> BLOCK =
             BlockCapability.createSided(WirelessAutomate.id("bulk_fluids"), BulkFluids.class);
 
+    /** O total guardado, em mB, de todos os tipos. */
+    long total();
+
+    /** A capacidade em mB; {@code <= 0} é sem limite. */
+    long capacity();
+
     /** Quantos slots há, contando os que zeraram neste tick (com 0), como no {@link BulkItems}. */
     int slots();
 

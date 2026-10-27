@@ -23,7 +23,7 @@ final class TvLeftTabs {
     /** A aba fechada: o ícone de 16 px tem 2 px de folga de cada lado, então cabe em 14. */
     private static final int SMALL_W = 14;
     /** O que o ícone ocupa de fato (a parte desenhada) mais 1 px até o nome. */
-    private static final int ICON_W = TvIcons.SIZE - 3;
+    private static final int ICON_W = TvIcons.SIZE + TvIcons.LABEL_GAP;
     private static final int GAP = 1;
 
     private final TvRect[] rects = new TvRect[TABS.length];
@@ -77,8 +77,8 @@ final class TvLeftTabs {
             int color = GuiPaint.tabText(active, hovered);
             if (active) {
                 int left = r.x() + (r.w() - ICON_W - nameWidths[i]) / 2;
-                TvIcons.draw(g, ICONS[i], left - 2, r.y() + (r.h() - TvIcons.SIZE) / 2);
-                GuiText.draw(g, font, names[i], left + ICON_W, r.y() + 4, color);
+                TvIcons.draw(g, ICONS[i], left, r.y() + (r.h() - TvIcons.SIZE) / 2);
+                GuiText.draw(g, font, names[i], left + ICON_W, r.y() + (r.h() - 8) / 2, color);
             } else {
                 TvIcons.draw(g, ICONS[i], r.x() + (r.w() - TvIcons.SIZE) / 2, r.y() + (r.h() - TvIcons.SIZE) / 2);
             }

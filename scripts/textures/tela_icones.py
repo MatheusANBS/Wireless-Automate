@@ -436,6 +436,27 @@ def _move_down(q: Quadro) -> None:
         q.p(8 + i, 12 - i)
 
 
+@icone("to_front")
+def _to_front(q: Quadro) -> None:
+    # A barra do topo e a seta subindo até ela.
+    q.h(3, 12, 2, "A")
+    q.v(7, 7, 13)
+    q.v(8, 7, 13)
+    for i in range(4):
+        q.p(7 - i, 5 + i)
+        q.p(8 + i, 5 + i)
+
+
+@icone("to_back")
+def _to_back(q: Quadro) -> None:
+    q.h(3, 12, 13, "A")
+    q.v(7, 2, 8)
+    q.v(8, 2, 8)
+    for i in range(4):
+        q.p(7 - i, 10 - i)
+        q.p(8 + i, 10 - i)
+
+
 # ---------------------------------------------------------------- aba Tamanho
 
 @icone("grow_up_right")

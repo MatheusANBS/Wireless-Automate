@@ -22,7 +22,8 @@ final class TvCanvasMenu {
     private static final int SEP = 3;
     private static final int PAD_X = 6;
     /** O ícone de cada linha, ou {@code null} nas que não têm (as camadas). */
-    private static final TvIcons.Icon[] ICONS = {null, null, null, null, TvIcons.Icon.EYE_CLOSED, TvIcons.Icon.GROUP,
+    private static final TvIcons.Icon[] ICONS = {TvIcons.Icon.TO_FRONT, TvIcons.Icon.MOVE_UP,
+            TvIcons.Icon.MOVE_DOWN, TvIcons.Icon.TO_BACK, TvIcons.Icon.EYE_CLOSED, TvIcons.Icon.GROUP,
         TvIcons.Icon.UNGROUP, TvIcons.Icon.DUPLICATE, TvIcons.Icon.REMOVE};
 
     private final TvEditorDoc doc;
@@ -110,9 +111,9 @@ final class TvCanvasMenu {
             int color = !on ? GuiPaint.DISABLED : item == Item.REMOVE ? GuiPaint.DANGER : GuiPaint.FG;
             TvIcons.Icon icon = ICONS[item.ordinal()];
             if (icon != null) {
-                TvIcons.draw(g, icon, x + 2, rowY, on);
+                TvIcons.draw(g, icon, x + TvIcons.PAD, rowY + (ROW_H - TvIcons.SIZE) / 2, on);
             }
-            GuiText.draw(g, font, labels[item.ordinal()], x + PAD_X + TvIcons.SIZE - 2, rowY + 4, color);
+            GuiText.draw(g, font, labels[item.ordinal()], x + TvIcons.LABEL_OFFSET, rowY + (ROW_H - 8) / 2, color);
         }
     }
 

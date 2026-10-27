@@ -16,6 +16,7 @@ import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerProblem;
+import io.github.matheusanbs.wirelessautomate.packet.CycleLinkerModePayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.util.List;
@@ -33,6 +34,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * O Vinculador no e2e: um roteador Avançado com o Upgrade de Alcance escolhido com o clique, a área marcada com
@@ -163,10 +165,9 @@ final class E2eLinkerSteps {
      */
     private static void openSteps(List<Step> list) {
         list.add(shift("Shift pressionado", true));
-        list.add(new Step("Vinculador: Shift + clique no ar troca para Abrir", STEP_TIMEOUT_MS, () -> {
-            Minecraft minecraft = Minecraft.getInstance();
-            minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);
-        }, () -> serverLinker(stack -> LinkerItem.mode(stack) == LinkerMode.OPEN)
+        // o pacote que o HeldScrollHandler manda no Shift + roda (a roda de verdade não chega à janela no e2e)
+        list.add(new Step("Vinculador: Shift + roda troca para Abrir", STEP_TIMEOUT_MS,
+                () -> PacketDistributor.sendToServer(new CycleLinkerModePayload(1)), () -> serverLinker(stack -> LinkerItem.mode(stack) == LinkerMode.OPEN)
                 && LinkerItem.mode(Minecraft.getInstance().player.getMainHandItem()) == LinkerMode.OPEN,
                 () -> "modo no servidor " + serverLinker(stack -> LinkerItem.mode(stack).name())));
         list.add(shift("Shift solto", false));

@@ -117,6 +117,11 @@ final class E2eFlowsSteps {
         list.add(machines("Fluxos: tirar os roteadores", false));
     }
 
+    /** A rede {@link #FLOWS_NETWORK} enquanto os roteadores dos Fluxos estão no mundo, ou {@code null}. */
+    static @Nullable UUID flowsNetworkId() {
+        return flowsNetwork;
+    }
+
     static FlowsTab flows() throws StepFailure {
         return tabletScreen().flows();
     }

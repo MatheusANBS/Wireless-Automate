@@ -215,11 +215,13 @@ final class TvControls {
             for (int i = 0; i < names.length; i++) {
                 int left = ax + i * (each + 1);
                 boolean on = i == current;
-                GuiPaint.box(g, left, ay, each, h, on ? GuiPaint.SELECTED : GuiPaint.BUTTON,
+                GuiPaint.box(g, left, ay, each, h, GuiPaint.BUTTON,
                         on ? GuiPaint.ACCENT : mouseX >= left && mouseX < left + each && mouseY >= ay && mouseY < ay + h
                                 ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
-                GuiText.draw(g, font, names[i], left + (each - widths[i]) / 2, ay + 2,
-                        on ? GuiPaint.SELECTED_TEXT : GuiPaint.FG);
+                if (on) {
+                    g.fill(left + 1, ay + 1, left + each - 1, ay + h - 1, GuiPaint.alpha(GuiPaint.ACCENT, 0x40));
+                }
+                GuiText.draw(g, font, names[i], left + (each - widths[i]) / 2, ay + 2, GuiPaint.FG);
             }
         }
 

@@ -77,11 +77,11 @@ final class TvColorPicker {
 
         @Override
         void render(GuiGraphics g, int mouseX, int mouseY) {
-            g.fill(ax + 1, ay + 1, ax + w - 1, ay + h - 1, 0xFFFFFFFF);
+            g.fill(ax + 1, ay + 1, ax + w - 1, ay + h - 1, GuiPaint.BEVEL_LIGHT);
             for (int col = 0; col * 4 < w - 2; col++) {
                 for (int row = col & 1; row * 4 < h - 2; row += 2) {
                     g.fill(ax + 1 + col * 4, ay + 1 + row * 4, Math.min(ax + w - 1, ax + 5 + col * 4),
-                            Math.min(ay + h - 1, ay + 5 + row * 4), 0xFFB5B0A6);
+                            Math.min(ay + h - 1, ay + 5 + row * 4), GuiPaint.INSET);
                 }
             }
             if (value != 0) {
@@ -89,7 +89,7 @@ final class TvColorPicker {
             }
             GuiPaint.outline(g, ax, ay, w, h, contains(mouseX, mouseY) ? GuiPaint.BUTTON_HOVER_BORDER
                     : GuiPaint.BUTTON_BORDER);
-            int ink = value == 0 || (resolved >>> 24) < 0x80 ? 0xFF303030 : luminance(resolved) > 140 ? 0xFF101010
+            int ink = value == 0 || (resolved >>> 24) < 0x80 ? GuiPaint.FG : luminance(resolved) > 140 ? 0xFF101010
                     : 0xFFF4F1EA;
             GuiText.draw(g, font, text, ax + 3, ay + 2, ink);
         }

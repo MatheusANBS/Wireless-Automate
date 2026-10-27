@@ -4,7 +4,6 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexSorting;
 import io.github.matheusanbs.wirelessautomate.ClientConfig;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
-import io.github.matheusanbs.wirelessautomate.tv.TvArea;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlockEntity;
 import it.unimi.dsi.fastutil.ints.IntArrayFIFOQueue;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -39,7 +38,7 @@ public final class TvCanvases {
     private static final LongOpenHashSet QUEUED = new LongOpenHashSet();
     private static final IntArrayFIFOQueue FREE_SLOTS = new IntArrayFIFOQueue();
     private static final List<ResourceLocation> IDS = new ArrayList<>();
-    private static int ppb = TvArea.PIXELS_PER_BLOCK;
+    private static int ppb = ClientConfig.TV_PIXELS_PER_BLOCK.getDefault();
     private static int ticks;
     private static String language = "";
     private static char decimalSep = '.';
@@ -173,7 +172,7 @@ public final class TvCanvases {
         FREE_SLOTS.enqueue(canvas.slot);
     }
 
-    /** Ao sair do mundo: solta todas as imagens. */
+    /** Ao trocar de dimensão e ao sair do mundo: solta todas as imagens (a chave é só a posição). */
     public static void clear() {
         Minecraft minecraft = Minecraft.getInstance();
         for (TvCanvas canvas : CANVASES.values()) {

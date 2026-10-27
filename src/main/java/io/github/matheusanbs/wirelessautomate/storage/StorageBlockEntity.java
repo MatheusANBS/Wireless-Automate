@@ -74,6 +74,14 @@ public abstract class StorageBlockEntity extends BlockEntity {
 
     public abstract boolean isEmptyContents();
 
+    /** Os contadores de entra e sai de uma Tela de Sinal, ou {@code null} sem vigia. */
+    public abstract @Nullable StorageWatch watch();
+
+    /** Liga a vigia do armazenamento (a mesma, se já ligada). */
+    public abstract StorageWatch startWatch();
+
+    public abstract void stopWatch();
+
     /** Total guardado, na unidade do tipo (itens, mB, FE). */
     public abstract long total();
 

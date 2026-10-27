@@ -56,6 +56,13 @@ public final class ArsSources {
         }
     };
 
+    /** Soma em {@code out[0]} a Source da {@link ISourceCap} e em {@code out[1]} a capacidade dela. */
+    public static void held(Object handler, long[] out) {
+        ISourceCap cap = (ISourceCap) handler;
+        out[0] += cap.getSource();
+        out[1] += cap.getMaxSource();
+    }
+
     private static int clamp(long amount) {
         return (int) Math.min(amount, Integer.MAX_VALUE);
     }

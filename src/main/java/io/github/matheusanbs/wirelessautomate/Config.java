@@ -63,6 +63,15 @@ public final class Config {
     public static final ModConfigSpec.LongValue ECO_MAX;
     public static final ModConfigSpec.LongValue REPAIR_TICKS;
     public static final ModConfigSpec.IntValue REPAIR_COST_FACTOR;
+    public static final ModConfigSpec.IntValue TV_MAX_WIDTH;
+    public static final ModConfigSpec.IntValue TV_MAX_HEIGHT;
+    public static final ModConfigSpec.IntValue TV_MAX_ELEMENTS;
+    public static final ModConfigSpec.IntValue TV_MAX_BINDINGS;
+    public static final ModConfigSpec.IntValue TV_MAX_LAYOUT_BYTES;
+    public static final ModConfigSpec.IntValue TV_VIEW_DISTANCE;
+    public static final ModConfigSpec.IntValue TV_MAX_COMPONENTS;
+    public static final ModConfigSpec.IntValue TV_MAX_THEMES;
+    public static final ModConfigSpec.IntValue TV_MAX_LINKS;
     /** FE por tick que um cristal de rendimento 1 dá ao Núcleo de Ressonância, por tier. */
     public static final Map<RouterTier, ModConfigSpec.LongValue> RESONATOR_FE_PER_CRYSTAL = new EnumMap<>(RouterTier.class);
 
@@ -249,6 +258,42 @@ public final class Config {
         REPAIR_COST_FACTOR = builder
                 .comment("Quantas vezes o FE por cristal do tipo reparado o Reparador gasta por reparo (0 repara de graça).")
                 .defineInRange("costFactor", 2, 0, 1000);
+        builder.pop();
+
+        builder.push("tv");
+        TV_MAX_WIDTH = builder
+                .comment("Largura máxima, em blocos, de uma Tela de Sinal.")
+                .defineInRange("maxWidth", 32, 1, 64);
+        TV_MAX_HEIGHT = builder
+                .comment("Altura máxima, em blocos, de uma Tela de Sinal.")
+                .defineInRange("maxHeight", 32, 1, 64);
+        TV_MAX_ELEMENTS = builder
+                .comment("Quantas peças (valores, textos e formas) uma Tela de Sinal aceita.")
+                .defineInRange("maxElements", 128, 1, 512);
+        TV_MAX_BINDINGS = builder
+                .comment("Quantas ligações distintas (rede e tipo) uma Tela de Sinal lê.")
+                .defineInRange("maxBindings", 64, 1, 256);
+        TV_MAX_LAYOUT_BYTES = builder
+                .comment("Tamanho máximo, em bytes de NBT, do layout de uma Tela de Sinal. O layout vai inteiro no pacote do "
+                        + "chunk de quem chega perto, e o cliente descarta um chunk que passa de 8 MiB e desconecta o "
+                        + "jogador: sem este teto, umas 130 Telas com o layout do tamanho máximo do pacote de salvar (64 KB) "
+                        + "num chunk só derrubariam quem o carregasse. O padrão de 16 KB deixa folga para centenas de Telas "
+                        + "por chunk; o máximo é 24 KB.")
+                .defineInRange("maxLayoutBytes", 16 * 1024, 1024, 24 * 1024);
+        TV_VIEW_DISTANCE = builder
+                .comment("Distância, em blocos, até onde a Tela de Sinal é desenhada e recebe números novos.")
+                .defineInRange("viewDistance", 64, 8, 256);
+        TV_MAX_COMPONENTS = builder
+                .comment("Quantos componentes cada jogador guarda na biblioteca do editor da Tela de Sinal. O máximo é 64 porque "
+                        + "cada componente ocupa até 12 KB e a biblioteca inteira vai num só pacote de até 900 KB.")
+                .defineInRange("maxComponents", 64, 1, 64);
+        TV_MAX_THEMES = builder
+                .comment("Quantos temas cada jogador guarda na biblioteca do editor da Tela de Sinal.")
+                .defineInRange("maxThemes", 32, 1, 256);
+        TV_MAX_LINKS = builder
+                .comment("Quantos armazenamentos do mod (Baús, Baterias e Tanques) uma Tela de Sinal pode ter ligados pelo "
+                        + "Vinculador, em qualquer distância e dimensão.")
+                .defineInRange("maxLinks", 32, 1, 256);
         builder.pop();
 
         builder.push("guide");
@@ -493,6 +538,51 @@ public final class Config {
     /** Ticks que uma linha do Reparador leva para refazer um cristal rachado. */
     public static long repairTicks() {
         return read(REPAIR_TICKS);
+    }
+
+    /** Largura máxima de uma Tela de Sinal, em blocos. */
+    public static int tvMaxWidth() {
+        return read(TV_MAX_WIDTH);
+    }
+
+    /** Altura máxima de uma Tela de Sinal, em blocos. */
+    public static int tvMaxHeight() {
+        return read(TV_MAX_HEIGHT);
+    }
+
+    /** Máximo de peças de uma Tela de Sinal. */
+    public static int tvMaxElements() {
+        return read(TV_MAX_ELEMENTS);
+    }
+
+    /** Máximo de ligações distintas de uma Tela de Sinal. */
+    public static int tvMaxBindings() {
+        return read(TV_MAX_BINDINGS);
+    }
+
+    /** Máximo, em bytes de NBT, do layout de uma Tela de Sinal. */
+    public static int tvMaxLayoutBytes() {
+        return read(TV_MAX_LAYOUT_BYTES);
+    }
+
+    /** Máximo de componentes na biblioteca de um jogador. */
+    public static int tvMaxComponents() {
+        return read(TV_MAX_COMPONENTS);
+    }
+
+    /** Máximo de temas na biblioteca de um jogador. */
+    public static int tvMaxThemes() {
+        return read(TV_MAX_THEMES);
+    }
+
+    /** Máximo de armazenamentos ligados a uma Tela de Sinal. */
+    public static int tvMaxLinks() {
+        return read(TV_MAX_LINKS);
+    }
+
+    /** Distância de desenho e de envio da Tela de Sinal, em blocos. */
+    public static int tvViewDistance() {
+        return read(TV_VIEW_DISTANCE);
     }
 
     /** Quantas vezes o FE por cristal do tipo reparado o Reparador gasta por reparo. */

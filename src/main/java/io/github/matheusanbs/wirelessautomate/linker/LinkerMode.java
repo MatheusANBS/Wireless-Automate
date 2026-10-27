@@ -4,7 +4,7 @@ import java.util.Locale;
 
 /**
  * Modo do Vinculador: vincular máquinas a um roteador de alcance, ou abrir a tela do roteador que chega
- * numa máquina. Shift + clique no ar alterna. Lógica pura, com JUnit; os codecs do componente ficam no
+ * numa máquina. Shift + roda do mouse alterna. Lógica pura, com JUnit; os codecs do componente ficam no
  * {@link LinkerModeCodecs}, que carrega as classes do Minecraft.
  */
 public enum LinkerMode {
@@ -22,7 +22,7 @@ public enum LinkerMode {
         return name().toLowerCase(Locale.ROOT);
     }
 
-    /** O ciclo do Shift + clique no ar. */
+    /** O ciclo do Shift + roda do mouse. */
     public LinkerMode next() {
         return this == LINK ? OPEN : LINK;
     }

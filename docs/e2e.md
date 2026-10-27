@@ -50,6 +50,8 @@ Ordem do registro. "Pré-requisito": o que a suíte pressupõe além da abertura
 | `reparador` | Reparador de Cristais (~21 s com as capturas) | nenhum | padrão |
 | `reparador-animacao` | a animação do Reparador no mundo, com o tempo parado em cada fase (capturas `reparador-anim-*`; confere quantos cristais e quads o BER pôs) | nenhum | padrão |
 | `reparador-desempenho` | tempo de quadro do Reparador (mede, não afirma) | nenhum | opcional |
+| `tela` | Tela de Sinal: a aba Tamanho (4 × 2 com ↗ aplicado e conferido no servidor, o problema da tocha na prévia), a aba Conteúdo (o Painel da rede dos Fluxos em Itens), um número chegando, o desenho no mundo e as quatro fontes TTF em três tamanhos (capturas `tela-*`, com `pt` e `escuro`) | nenhum | padrão |
+| `tela-desempenho` | tempo de quadro com 8 Telas 32 × 32 com o Painel contra nenhuma, e o tempo de um redesenho da imagem (mede, não afirma) | nenhum | opcional |
 | `guia` | páginas do guia (só com o GuideME) | nenhum | padrão |
 
 Tempos de referência (Windows, janela real): conjunto padrão sem capturas ~343 s; perfil `completo` ~712 s. A tabela por suíte vem no `result.txt` de cada rodada.

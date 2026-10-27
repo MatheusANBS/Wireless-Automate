@@ -43,6 +43,7 @@ recursos entre si, sem canos.
 | <ItemImage id="wirelessautomate:signal_crystal" /> [Quartzo de Sinal e cristais](signal-quartz.md) | O minério e os cristais que movem o Ressonador. |
 | <ItemImage id="wirelessautomate:resonance_core" /> [Ressonador de Sinal](signal-resonator.md) | Um gerador de energia: cristais, sintonia e FE. |
 | <ItemImage id="wirelessautomate:crystal_repairer" /> [Reparador de Cristais](crystal-repairer.md) | Conserta cristais rachados, até oito de uma vez. |
+| <ItemImage id="wirelessautomate:signal_screen" /> [Tela de Sinal](signal-screen.md) | Um painel na parede, do tamanho que você quiser, com os números das suas redes. |
 | [Editor de receitas](recipe-editor.md) | Operadores ajustam as receitas de bancada do mod dentro do jogo. |
 
 ## Por onde começar

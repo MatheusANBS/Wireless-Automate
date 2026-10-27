@@ -25,6 +25,11 @@ public final class StorageMath {
      * Sinal do comparador, como no baú vanilla: 0 vazio, 1 com qualquer coisa e 15 cheio. Sem
      * limite, é 1 com qualquer coisa.
      */
+    /** A fração cheia, de 0 a 1; 0 sem capacidade (sem limite ou sem nada). */
+    public static double fraction(long stored, long capacity) {
+        return capacity <= 0 ? 0 : Math.min(1.0, (double) stored / capacity);
+    }
+
     public static int signal(long total, long capacity) {
         if (total <= 0) {
             return 0;

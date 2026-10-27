@@ -39,7 +39,10 @@ import org.jetbrains.annotations.Nullable;
  *       que viram porta pelos perfis e exceções), contada uma vez e guardada no nó ({@link NodeConfig})
  *       até a versão do roteador, a das redes ou a config mudar; não lê o mundo.
  * </ul>
- * Um nó em que nada mudou desde a leitura anterior não tem as portas lidas de novo: o que a leitura achou fica
+ * O guardado na rede ({@link #requestHeld}, {@link #held}) é do {@link FlowHeld}: só para as redes × tipos que uma
+ * Tela de Sinal pede.
+ *
+ * <p>Um nó em que nada mudou desde a leitura anterior não tem as portas lidas de novo: o que a leitura achou fica
  * no nó ({@link NodeFlows}) e é somado outra vez. Vale enquanto nenhum contador saiu do zero, nenhum
  * {@link Backoff} das portas mudou ({@link NodePorts#flowChanges}), nenhuma rota foi remontada e nenhuma porta
  * que dormia acordou pelo tempo; a leitura em que algo moveu nunca é repetida.
@@ -81,6 +84,7 @@ public final class FlowSampler {
     private final List<List<NodePorts>> phases = new ArrayList<>(SAMPLE_TICKS);
     private final Set<UUID> watchers = new HashSet<>();
     private final Map<UUID, NetworkFlows> flows = new HashMap<>();
+    private final FlowHeld heldReader = new FlowHeld();
     /** As faces sem rede por tipo, somadas na volta em curso e as da última volta fechada. */
     private final int[] withoutNetwork = new int[TYPES.length];
     private final int[] closedWithout = new int[TYPES.length];
@@ -232,6 +236,36 @@ public final class FlowSampler {
             readPorts(ports, now);
         }
         addConfig(ports, data);
+        if (heldReader.any()) {
+            heldReader.add(this, ports, now);
+        }
+    }
+
+    /**
+     * Uma Tela pede o guardado da rede no tipo (renova o pedido). O número só aparece em {@link #held} depois de uma
+     * volta inteira lida com o pedido já valendo; antes, {@code null}.
+     */
+    public void requestHeld(UUID network, ResourceType type, long now) {
+        heldReader.request(network, type, now, cycle);
+    }
+
+    /** O guardado da rede no tipo na última volta fechada, ou {@code null} sem pedido valendo ou sem volta inteira. */
+    public @Nullable Held held(UUID network, ResourceType type) {
+        NetworkFlows entry = flows.get(network);
+        int t = type.ordinal();
+        return entry == null || !entry.heldShown[t] ? null : new Held(entry.closedHeld[t], entry.closedHeldCapacity[t]);
+    }
+
+    /** Para GameTests: quantas máquinas foram lidas para o guardado desde que o gerenciador foi criado. */
+    public long heldReadsForTests() {
+        return heldReader.reads();
+    }
+
+    /**
+     * O que as máquinas em Armazém de uma rede × tipo guardam e quanto cabe nelas; a capacidade de uma máquina sem
+     * limite não entra.
+     */
+    public record Held(long stored, long capacity) {
     }
 
     /** Lê as portas do nó e guarda o que achou ({@link NodeFlows}) para a próxima volta. */
@@ -323,7 +357,7 @@ public final class FlowSampler {
     }
 
     /** A entrada da rede da porta nesta volta, guardada nas rotas para não procurar a cada porta. */
-    private NetworkFlows entry(NetworkRoutes routes) {
+    NetworkFlows entry(NetworkRoutes routes) {
         NetworkFlows entry = routes.flowEntry;
         if (entry == null || entry.removed) {
             entry = entry(routes.id);
@@ -397,6 +431,9 @@ public final class FlowSampler {
             }
             for (ResourceType type : LOADED) {
                 int t = type.ordinal();
+                if (heldReader.any()) {
+                    heldReader.close(entry, t, now, cycle);
+                }
                 int[] states = entry.states[t];
                 if (!entry.used[t] && states[REDSTONE] == 0) {
                     entry.windows[t] = null;
@@ -421,6 +458,7 @@ public final class FlowSampler {
                 entry.shown[t] = true;
             }
         }
+        heldReader.endCycle(now);
         System.arraycopy(withoutNetwork, 0, closedWithout, 0, withoutNetwork.length);
         Arrays.fill(withoutNetwork, 0);
         List<NodeWithoutNetwork> swap = closedNodes;
@@ -547,6 +585,12 @@ public final class FlowSampler {
         /** As janelas de cada tipo em uso, uma por número; {@code null} no tipo sem uso. */
         final FlowWindow[][] windows = new FlowWindow[TYPES.length][];
         int cycle = -1;
+        /** O guardado e a capacidade somados na volta em curso, e os da última volta fechada que valem. */
+        final long[] held = new long[TYPES.length];
+        final long[] heldCapacity = new long[TYPES.length];
+        final long[] closedHeld = new long[TYPES.length];
+        final long[] closedHeldCapacity = new long[TYPES.length];
+        final boolean[] heldShown = new boolean[TYPES.length];
         /** A rede não apareceu numa volta e saiu do amostrador: as rotas que a guardam pegam outra. */
         boolean removed;
 
@@ -558,6 +602,8 @@ public final class FlowSampler {
             for (int t = 0; t < TYPES.length; t++) {
                 Arrays.fill(amounts[t], 0);
                 Arrays.fill(states[t], 0);
+                held[t] = 0;
+                heldCapacity[t] = 0;
                 used[t] = false;
             }
         }

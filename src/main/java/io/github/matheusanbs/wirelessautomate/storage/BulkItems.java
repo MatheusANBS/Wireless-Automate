@@ -19,6 +19,12 @@ public interface BulkItems {
     BlockCapability<BulkItems, @Nullable Direction> BLOCK =
             BlockCapability.createSided(WirelessAutomate.id("bulk_items"), BulkItems.class);
 
+    /** O total guardado, de todos os tipos. */
+    long total();
+
+    /** A capacidade em itens; {@code <= 0} é sem limite. */
+    long capacity();
+
     /** Quantos slots há, contando os que zeraram neste tick (com 0). */
     int slots();
 

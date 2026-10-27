@@ -283,6 +283,7 @@ recursos entre si, sem canos.
 | ''' + item('signal_crystal') + ''' [Quartzo de Sinal e cristais](signal-quartz.md) | O minério e os cristais que movem o Ressonador. |
 | ''' + item('resonance_core') + ''' [Ressonador de Sinal](signal-resonator.md) | Um gerador de energia: cristais, sintonia e FE. |
 | ''' + item('crystal_repairer') + ''' [Reparador de Cristais](crystal-repairer.md) | Conserta cristais rachados, até oito de uma vez. |
+| ''' + item('signal_screen') + ''' [Tela de Sinal](signal-screen.md) | Um painel na parede, do tamanho que você quiser, com os números das suas redes. |
 | [Editor de receitas](recipe-editor.md) | Operadores ajustam as receitas de bancada do mod dentro do jogo. |
 
 ## Por onde começar
@@ -341,6 +342,7 @@ resources with the others, with no pipes.
 | ''' + item('signal_crystal') + ''' [Signal Quartz and crystals](signal-quartz.md) | The ore and the crystals that power the Resonator. |
 | ''' + item('resonance_core') + ''' [Signal Resonator](signal-resonator.md) | A power generator: crystals, tuning and FE. |
 | ''' + item('crystal_repairer') + ''' [Crystal Repairer](crystal-repairer.md) | Fixes cracked crystals, up to eight at a time. |
+| ''' + item('signal_screen') + ''' [Signal Screen](signal-screen.md) | A wall panel, as big as you want, showing your networks' numbers. |
 | [Recipe editor](recipe-editor.md) | Operators tweak the mod's crafting recipes in-game. |
 
 ## Where to start
@@ -1127,19 +1129,22 @@ numa máquina.
 
 | | |
 | --- | --- |
-| **Modos** | **Vincular** (padrão) e **Abrir**. Shift + clique no ar troca de um para o outro. |
+| **Modos** | **Vincular** (padrão) e **Abrir**. Shift + roda do mouse troca de um para o outro. |
 | **Vincular** | Escolha um roteador com o Upgrade de Alcance e clique nas máquinas: cada clique vincula a máquina a ele (um clique numa já vinculada a desvincula). A tela vincula uma área inteira de uma vez. |
 | **Abrir** | Clique numa máquina: abre a tela do roteador que chega nela, já na máquina. Se chegam vários (o preso nela e os de alcance), uma lista curta deixa escolher. |
 | **Redes** | O Vinculador não mexe nelas: escolha a rede de cada face na linha **Rede** da tela do roteador ou pelo [Tablet](network-tablet.md). |
+| **Tela de Sinal** | Clique numa [Tela de Sinal](signal-screen.md) para escolhê-la e depois num Baú, Bateria ou Tanque do mod: o armazenamento fica ligado à Tela (outro clique nele desliga). Sem limite de distância nem de dimensão. |
 
 ## Comandos
 
 | Gesto | Vincular | Abrir |
 | --- | --- | --- |
 | Clique num roteador | Escolhe o roteador | — |
+| Clique numa Tela de Sinal | Escolhe a Tela | — |
+| Clique num Baú, Bateria ou Tanque do mod | Com uma Tela escolhida, liga ou desliga o armazenamento a ela | Abre o roteador que chega nele |
 | Clique numa máquina | Vincula ou desvincula a máquina | Abre o roteador que chega nela |
 | Clique no ar | Abre a tela | Mostra a dica do modo |
-| Shift + clique no ar | Passa para **Abrir** | Passa para **Vincular** |
+| Shift + roda do mouse | Passa para **Abrir** | Passa para **Vincular** |
 | Shift + clique em dois blocos | Marca os cantos da área | — |
 
 ## Na tela (modo Vincular)
@@ -1162,6 +1167,10 @@ blocos dela.
 Quando mais de um roteador chega na máquina, a lista mostra uma linha por roteador: o nome, se ele está
 **preso** na máquina ou chega por **alcance** e a distância. Clique numa linha para abrir. Só entram
 roteadores ao seu alcance e que você pode tocar.
+
+## Ligar armazenamentos a uma Tela
+
+Clique com o Vinculador numa [Tela de Sinal](signal-screen.md): ela fica escolhida e a action bar mostra quantos armazenamentos ela já tem. Depois clique num **Baú, Bateria ou Tanque** do mod para ligá-lo à Tela; clique de novo nele para desligar. Não há limite de distância nem de dimensão. Você precisa poder editar a Tela. Com o armazenamento ligado, a Tela mostra o conteúdo dele ao vivo; se o chunk estiver descarregado, ela mantém o último número, apagado.
 
 ## Exemplo: ligar as máquinas de uma sala
 
@@ -1189,19 +1198,22 @@ machine.
 
 | | |
 | --- | --- |
-| **Modes** | **Link** (default) and **Open**. Shift + click the air switches between them. |
+| **Modes** | **Link** (default) and **Open**. Shift + mouse wheel switches between them. |
 | **Link** | Pick a router with the Range Upgrade and click machines: each click links the machine to it (clicking one that is already linked unlinks it). The screen links a whole area at once. |
 | **Open** | Click a machine: opens the screen of the router that reaches it, already on the machine. If several reach it (the one attached to it and the range ones), a short list lets you choose. |
 | **Networks** | The Linker doesn't touch them: pick each face's network in the router screen's **Network** row or with the [Tablet](network-tablet.md). |
+| **Signal Screen** | Click a [Signal Screen](signal-screen.md) to pick it, then a mod Chest, Battery or Tank: the storage becomes linked to the Screen (clicking it again unlinks). No limit on distance or dimension. |
 
 ## Actions
 
 | Action | Link | Open |
 | --- | --- | --- |
 | Click a router | Picks the router | — |
+| Click a Signal Screen | Picks the Screen | — |
+| Click a mod Chest, Battery or Tank | With a Screen picked, links or unlinks the storage to it | Opens the router that reaches it |
 | Click a machine | Links or unlinks the machine | Opens the router that reaches it |
 | Click the air | Opens the screen | Shows the mode's hint |
-| Shift + click the air | Goes to **Open** | Goes to **Link** |
+| Shift + mouse wheel | Goes to **Open** | Goes to **Link** |
 | Shift + click two blocks | Marks the area corners | — |
 
 ## On the screen (Link mode)
@@ -1224,6 +1236,10 @@ blocks of it.
 When more than one router reaches the machine, the list shows a row per router: its name, whether it is
 **attached** to the machine or reaches it by **range**, and the distance. Click a row to open it. Only
 routers within your reach that you can touch are listed.
+
+## Linking storages to a Screen
+
+Click a [Signal Screen](signal-screen.md) with the Linker: it becomes the picked one and the action bar shows how many storages it already has. Then click a mod **Chest, Battery or Tank** to link it to the Screen; click it again to unlink. There is no limit on distance or dimension. You must be allowed to edit the Screen. Once linked, the Screen shows the storage's contents live; if its chunk is unloaded, the Screen keeps the last number, dimmed.
 
 ## Example: link the machines of a room
 
@@ -3201,6 +3217,208 @@ holds its whole cost. Breaking the block in the middle of a repair **loses the 4
 ## Recipe
 
 <RecipeFor id="wirelessautomate:crystal_repairer" />
+''')
+
+page('signal-screen.md', front('Tela de Sinal', 'wirelessautomate:signal_screen', 20, item_ids=[
+    'wirelessautomate:signal_screen']) + '''
+# Tela de Sinal
+
+<ItemImage id="wirelessautomate:signal_screen" scale="2" float="left" />
+
+Um painel que você prende numa parede e estica pelo tamanho que quiser, de **1 × 1 até 32 × 32 blocos**. Ele mostra os
+números das suas [redes](networks.md) ao vivo: o que entra, o que sai e quantas faces estão movendo.
+
+<br clear="all" />
+
+## Como colocar
+
+1. Clique com a Tela na **lateral de um bloco sólido**: ela fica rente à parede, virada para você. Não dá para pôr no
+   chão nem no teto, e ela cai se a parede atrás dela sair.
+2. Clique nela com a **mão vazia** para abrir a tela de configuração. Só quem a colocou (e os operadores) pode
+   configurar; os outros só olham.
+
+## Escolher o tamanho
+
+Na aba **Tamanho**:
+
+| Parte | Como usar |
+| --- | --- |
+| **Largura** e **Altura** | ‹ e › mudam de 1 em 1 bloco; com **Shift**, de 4 em 4. |
+| **Cresce a partir do bloco para** | ↗ cima e direita, ↖ cima e esquerda ou ✥ centro: onde o bloco que você colocou fica dentro da tela. |
+| **Prévia** | A parede em volta, com a área da tela. A célula vermelha é a que impede o tamanho. |
+| **Aplicar** | Estica a tela. Fica desligado enquanto algo impede. |
+
+A tela grande **não ocupa blocos**: ela é desenhada sobre a parede. Para caber, cada bloco da área precisa de
+**parede sólida atrás** e de **espaço livre na frente** (ar ou grama, por exemplo; uma tocha impede), e a área não pode
+cruzar outra Tela.
+
+## O que mostrar: o editor
+
+Na aba **Editar** você monta o que a Tela mostra, com **peças**. A janela cresce para ocupar a tela do jogo; se não
+couber, diminua a escala da interface.
+
+| Peça | Para quê |
+| --- | --- |
+| **Valor** | Um número ao vivo de uma [rede](networks.md): o que entra, o que sai, o que está guardado, quantas faces movem... |
+| **Texto** | Uma frase fixa. |
+| **Forma** | Um retângulo com fundo, borda e cantos: cartão, moldura, divisória. |
+| **Ícone de item** | O desenho de um item, escolhido pelo id ou na lista de um baú ligado. |
+| **Barra** | Uma barra que enche conforme um número, deitada ou em pé. |
+| **Medidor** | Um mostrador em arco com um ponteiro. |
+| **Gráfico** | O histórico de um número, em linha ou colunas, dos últimos minutos. |
+| **Seta** | Sobe, desce ou fica parada conforme o número cresce, cai ou se mantém. |
+
+- **Escolher e mexer:** clique numa peça para escolhê-la (numa peça de grupo, o grupo inteiro; dois cliques entram no
+  grupo). **Shift** + clique soma ou tira da escolha; clique no vazio solta. Arraste para mover e puxe a alça do canto
+  de baixo para redimensionar. Tudo encaixa numa grade de 4 px; segure **Alt** para ajustar de 1 em 1 px.
+- **Grupos e camadas:** **Agrupar** junta as peças escolhidas para mover e redimensionar juntas; **Desagrupar** solta.
+  Embaixo, as **Camadas** listam as peças de cima para baixo: arraste uma linha para trocar a ordem, use o olho para
+  esconder e **[** e **]** para subir e descer.
+- **Abas da direita:** **Dado** liga o Valor a uma rede (e escolhe o tipo e o que ler); **Formato** define casas,
+  abreviar (k, M, G), sinal, prefixo, sufixo e unidade; **Estilo** muda posição, tamanho, cores, borda, cantos,
+  opacidade e fonte; **Regras** muda a cor, esconde ou pisca quando o número passa de um valor.
+- **De onde vem o número:** na aba **Dado**, a **Fonte** é a **Rede** (o que entra, sai ou está guardado, e quantas faces movem), um **Armazém** ligado pelo [Vinculador](linker.md) (guardado, capacidade, enchimento e o que entra, sai ou sobra por segundo; num Baú, dá para ler um item só) ou o **Relógio** do jogo (hora do dia e dia). Na Rede, **Guardado** soma o que os Armazéns da rede guardam.
+- **Item de um Baú:** com um baú ligado, a aba **Dado** mostra a grade dos itens dele com um campo **Buscar itens...** e um clique escolhe o item. Com o JEI, também dá para **arrastar um item** do JEI para o campo do Ícone ou do filtro do Baú.
+- **Salvar:** nada vai para a parede até clicar em **Salvar** (ou **Ctrl+S**). Fechar com mudanças pede dois cliques
+  no ✕ (**Descartar?**). A miniatura mostra os números de uma ligação nova antes de salvar.
+
+| Atalho | O que faz |
+| --- | --- |
+| **Ctrl+Z**, **Ctrl+Y** (ou **Ctrl+Shift+Z**) | Desfaz e refaz. |
+| **Ctrl+C**, **Ctrl+X**, **Ctrl+V** | Copia, recorta e cola, inclusive de uma Tela para outra. |
+| **Ctrl+D**, **Delete** | Duplica e remove. |
+| **Ctrl+A**, **Ctrl+G**, **Ctrl+Shift+G** | Escolhe tudo, agrupa e desagrupa. |
+| **Setas** | Movem 4 px; com **Shift**, 32 px; com **Alt**, 1 px. |
+
+### Temas e fundo
+
+Com **nada escolhido**, a coluna da direita mostra a **base** da Tela. O **Tema** é uma paleta de seis cores (fundo,
+cartão, texto, apagado, alta e baixa): há quatro prontos (Grafite, Fósforo, Âmbar e Porcelana) e os seus. As cores das
+peças marcadas como "do tema" (as bolinhas redondas) acompanham a troca; as quadradas são fixas. Edite as seis cores
+pelo código `#RRGGBB` e use **Salvar tema** para guardar a paleta com um nome. O **Fundo** pode ser o do tema, uma cor
+fixa ou um degradê, e dá para ligar as **linhas** de varredura e a **grade** da miniatura. A Tela guarda a paleta
+inteira: apagar um tema seu depois não muda nenhuma Tela.
+
+### Layouts prontos e o seu
+
+Com nada escolhido, **Layout pronto** na base oferece **Energia**, **Armazenamento**, **Rede** e **Relógio**: escolha um e clique em **Aplicar layout**; ele se ajusta ao tamanho da Tela e troca o que está nela (dá para desfazer com **Ctrl+Z** antes de salvar). Para guardar o seu, escreva um nome no campo e clique em **Salvar layout atual**; ele passa a aparecer na mesma lista, em qualquer Tela sua. **Remover layout** apaga o seu escolhido, em dois cliques.
+
+### Componentes
+
+Na coluna da esquerda, **Componentes** são grupos de peças prontos para inserir: **Painel de rede**, **Cartão de
+número** e **Título** já vêm, e você guarda os seus. Clique num componente para inseri-lo, num grupo novo, no primeiro
+lugar livre. Para guardar o seu, escolha as peças, clique em **Salvar como componente** (⊕) e dê um nome; o ✎ renomeia
+e o ✕ remove, em dois cliques. Os componentes e os temas ficam na sua biblioteca e valem em qualquer Tela sua. Um
+componente ligado a uma rede que você não pode mais usar entra com **—**.
+
+Para mostrar o conteúdo de um Baú, Bateria ou Tanque, ligue-o à Tela com o [Vinculador](linker.md) antes de escolhê-lo na aba **Dado**.
+
+Os números chegam uma vez por segundo enquanto há alguém perto. Uma rede privada da qual quem colocou a Tela perdeu o
+acesso mostra **—**.
+
+## Receita
+
+<RecipeFor id="wirelessautomate:signal_screen" />
+''', front('Signal Screen', 'wirelessautomate:signal_screen', 20, item_ids=[
+    'wirelessautomate:signal_screen']) + '''
+# Signal Screen
+
+<ItemImage id="wirelessautomate:signal_screen" scale="2" float="left" />
+
+A panel you attach to a wall and stretch to any size, from **1 × 1 up to 32 × 32 blocks**. It shows your
+[networks'](networks.md) numbers live: what comes in, what goes out and how many faces are moving.
+
+<br clear="all" />
+
+## Placing it
+
+1. Click with the Screen on the **side of a solid block**: it sits flush against the wall, facing you. It can't go on
+   the floor or the ceiling, and it drops if the wall behind it goes away.
+2. Click it with an **empty hand** to open its settings. Only whoever placed it (and operators) can configure it;
+   everyone else just watches.
+
+## Choosing the size
+
+In the **Size** tab:
+
+| Part | How to use |
+| --- | --- |
+| **Width** and **Height** | ‹ and › change it 1 block at a time; with **Shift**, 4 at a time. |
+| **Grows from the block toward** | ↗ up and right, ↖ up and left or ✥ center: where the block you placed sits inside the screen. |
+| **Preview** | The wall around it, with the screen's area. The red cell is the one in the way. |
+| **Apply** | Stretches the screen. It stays off while something is in the way. |
+
+The big screen **takes no blocks**: it is drawn over the wall. To fit, every block of the area needs a **solid wall
+behind it** and **free space in front** (air or grass, for example; a torch is in the way), and the area can't cross
+another Screen.
+
+## What to show: the editor
+
+In the **Edit** tab you build what the Screen shows out of **pieces**. The window grows to fill the game screen; if it
+doesn't fit, lower the interface scale.
+
+| Piece | What for |
+| --- | --- |
+| **Value** | A live number from a [network](networks.md): what comes in, what goes out, what is stored, how many faces move... |
+| **Text** | A fixed phrase. |
+| **Shape** | A rectangle with a fill, border and corners: card, frame, divider. |
+| **Item icon** | The picture of an item, picked by id or from the list of a linked chest. |
+| **Bar** | A bar that fills with a number, lying down or standing up. |
+| **Gauge** | An arc dial with a needle. |
+| **Graph** | A number's history over the last minutes, as a line or columns. |
+| **Arrow** | Points up, down or stays flat as the number rises, falls or holds. |
+
+- **Picking and moving:** click a piece to pick it (on a grouped piece, the whole group; two clicks enter the group).
+  **Shift** + click adds or removes from the pick; click the empty space to let go. Drag to move and pull the corner
+  handle to resize. Everything snaps to a 4 px grid; hold **Alt** to adjust 1 px at a time.
+- **Groups and layers:** **Group** joins the picked pieces to move and resize together; **Ungroup** lets them go.
+  Below, **Layers** lists the pieces from top to bottom: drag a row to change the order, use the eye to hide, and
+  **[** and **]** to raise and lower.
+- **Tabs on the right:** **Data** links a Value to a network (and picks the type and what to read); **Format** sets
+  decimals, abbreviating (k, M, G), sign, prefix, suffix and unit; **Style** changes position, size, colors, border,
+  corners, opacity and font; **Rules** changes the color, hides or blinks when the number crosses a value.
+- **Where the number comes from:** in the **Data** tab, the **Source** is the **Network** (what comes in, goes out or is stored, and how many faces move), a **Storage** linked with the [Linker](linker.md) (stored, capacity, fill, and what comes in, goes out or is left over per second; on a Chest you can read a single item) or the game **Clock** (time of day and day). On the Network, **Held** adds up what the network's Storages hold.
+- **A Chest's item:** with a chest linked, the **Data** tab shows a grid of its items with a **Search items...** field, and a click picks the item. With JEI you can also **drag an item** from JEI onto the Icon's field or the Chest filter.
+- **Saving:** nothing reaches the wall until you click **Save** (or **Ctrl+S**). Closing with changes takes two clicks
+  on the ✕ (**Discard?**). The thumbnail shows the numbers of a new link before saving.
+
+| Shortcut | What it does |
+| --- | --- |
+| **Ctrl+Z**, **Ctrl+Y** (or **Ctrl+Shift+Z**) | Undo and redo. |
+| **Ctrl+C**, **Ctrl+X**, **Ctrl+V** | Copy, cut and paste, even from one Screen to another. |
+| **Ctrl+D**, **Delete** | Duplicate and remove. |
+| **Ctrl+A**, **Ctrl+G**, **Ctrl+Shift+G** | Pick all, group and ungroup. |
+| **Arrow keys** | Move 4 px; with **Shift**, 32 px; with **Alt**, 1 px. |
+
+### Themes and background
+
+With **nothing picked**, the right column shows the Screen's **base**. The **Theme** is a palette of six colors
+(background, card, text, muted, high and low): there are four ready ones (Graphite, Phosphor, Amber and Porcelain) and
+your own. The colors of pieces set "from the theme" (the round dots) follow the swap; the square ones are fixed. Edit
+the six colors by their `#RRGGBB` code and use **Save theme** to keep the palette under a name. The **Background** can
+be the theme's, a fixed color or a gradient, and you can turn on the scan **lines** and the preview **grid**. The
+Screen keeps the whole palette: deleting one of your themes later changes no Screen.
+
+### Ready layouts and your own
+
+With nothing picked, **Ready layout** in the base offers **Energy**, **Storage**, **Network** and **Clock**: pick one and click **Apply layout**; it fits the Screen's size and replaces what is on it (undo with **Ctrl+Z** before saving). To keep your own, type a name in the field and click **Save current layout**; it then shows up in the same list, on any Screen of yours. **Remove layout** deletes your picked one, in two clicks.
+
+### Components
+
+In the left column, **Components** are groups of pieces ready to insert: **Network panel**, **Number card** and
+**Title** come built in, and you keep your own. Click a component to insert it, in a new group, in the first free
+spot. To keep your own, pick the pieces, click **Save as component** (⊕) and name it; the ✎ renames and the ✕ removes,
+in two clicks. Components and themes live in your library and work on any Screen of yours. A component linked to a
+network you can no longer use comes in with **—**.
+
+To show the contents of a Chest, Battery or Tank, link it to the Screen with the [Linker](linker.md) before picking it in the **Data** tab.
+
+The numbers arrive once a second while someone is nearby. A private network that whoever placed the Screen lost access
+to shows **—**.
+
+## Recipe
+
+<RecipeFor id="wirelessautomate:signal_screen" />
 ''')
 
 # =====================================================================================

@@ -5,7 +5,9 @@ import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
 import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
+import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerOpen;
 import io.github.matheusanbs.wirelessautomate.menu.CardFilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.EditTargetRef;
@@ -34,6 +36,11 @@ import io.github.matheusanbs.wirelessautomate.range.IdleNetworkFace;
 import io.github.matheusanbs.wirelessautomate.range.MachineGroup;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
+import io.github.matheusanbs.wirelessautomate.tv.TvClientHooks;
+import io.github.matheusanbs.wirelessautomate.tv.TvEditing;
+import io.github.matheusanbs.wirelessautomate.tv.TvLibraryActions;
+import io.github.matheusanbs.wirelessautomate.tv.TvPreview;
+import io.github.matheusanbs.wirelessautomate.tv.TvStorageContents;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -64,8 +71,13 @@ import org.jetbrains.annotations.Nullable;
  * de filtro segue a mesma regra com o {@link FilterMenu} e a {@link FilterViewPayload}.
  */
 public final class ModPayloads {
-    /** Versão do protocolo; mude quando um payload mudar de formato. */
-    public static final String VERSION = "34";
+    /**
+     * Versão do protocolo (37: os payloads {@code TvStorageContentsRequestPayload} e {@code TvStorageContentsPayload} (os itens de um Baú ligado, só com o editor aberto); o {@code TvValuesPayload} leva os bits de dado antigo dos armazenamentos ligados, e a
+     * ligação de uma peça ganha as fontes de armazenamento e relógio; 36: os payloads do editor da Tela de Sinal, {@code TvLayoutPayload}, {@code TvLayoutAckPayload},
+     * {@code TvLibraryPayload}, {@code TvLibraryActionPayload}, {@code TvPreviewPayload} e {@code TvPreviewValuesPayload},
+     * e o teto de bytes do layout no buffer de abertura da Tela); mude quando um payload mudar de formato.
+     */
+    public static final String VERSION = "37";
 
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(VERSION);
@@ -112,6 +124,8 @@ public final class ModPayloads {
                 (payload, context) -> handleFilterEntries(serverPlayer(context), payload));
         registrar.playToServer(CycleConfiguratorTypePayload.TYPE, CycleConfiguratorTypePayload.STREAM_CODEC,
                 (payload, context) -> handleCycleConfiguratorType(serverPlayer(context), payload));
+        registrar.playToServer(CycleLinkerModePayload.TYPE, CycleLinkerModePayload.STREAM_CODEC,
+                (payload, context) -> handleCycleLinkerMode(serverPlayer(context), payload));
         registrar.playToServer(ConfiguratorWheelPayload.TYPE, ConfiguratorWheelPayload.STREAM_CODEC,
                 (payload, context) -> handleConfiguratorWheel(serverPlayer(context), payload));
         // Tela do Vinculador (handlers em LinkerActions e LinkerMenu).
@@ -140,6 +154,31 @@ public final class ModPayloads {
         ResonatorPayloads.register(registrar);
         // Tela do Reparador de Cristais (handler no RepairerMenu).
         registrar.playToClient(RepairerStatePayload.TYPE, RepairerStatePayload.STREAM_CODEC, RepairerMenu::onState);
+        // Números da Tela de Sinal (o cliente preenche o gancho).
+        registrar.playToClient(TvValuesPayload.TYPE, TvValuesPayload.STREAM_CODEC,
+                (payload, context) -> TvClientHooks.values.accept(payload));
+        // Tamanho e layout da Tela de Sinal, da tela aberta (handlers no TvEditing).
+        registrar.playToServer(TvSizePayload.TYPE, TvSizePayload.STREAM_CODEC,
+                (payload, context) -> TvEditing.handleSize(serverPlayer(context), payload));
+        registrar.playToServer(TvLayoutPayload.TYPE, TvLayoutPayload.STREAM_CODEC,
+                (payload, context) -> TvEditing.handleLayout(serverPlayer(context), payload));
+        registrar.playToClient(TvLayoutAckPayload.TYPE, TvLayoutAckPayload.STREAM_CODEC,
+                (payload, context) -> TvClientHooks.layoutAck.accept(payload));
+        // Biblioteca de componentes e temas do jogador, com o editor aberto.
+        registrar.playToClient(TvLibraryPayload.TYPE, TvLibraryPayload.STREAM_CODEC,
+                (payload, context) -> TvClientHooks.library.accept(payload));
+        registrar.playToServer(TvLibraryActionPayload.TYPE, TvLibraryActionPayload.STREAM_CODEC,
+                (payload, context) -> TvLibraryActions.handle(serverPlayer(context), payload));
+        // Prévia dos números do rascunho do editor, antes de salvar.
+        registrar.playToServer(TvPreviewPayload.TYPE, TvPreviewPayload.STREAM_CODEC,
+                (payload, context) -> TvPreview.handle(serverPlayer(context), payload));
+        registrar.playToClient(TvPreviewValuesPayload.TYPE, TvPreviewValuesPayload.STREAM_CODEC,
+                (payload, context) -> TvClientHooks.preview.accept(payload));
+        // Os itens de um Baú ligado, para a grade da aba Dado (só com o editor aberto e depois do pedido).
+        registrar.playToServer(TvStorageContentsRequestPayload.TYPE, TvStorageContentsRequestPayload.STREAM_CODEC,
+                (payload, context) -> TvStorageContents.handle(serverPlayer(context), payload));
+        registrar.playToClient(TvStorageContentsPayload.TYPE, TvStorageContentsPayload.STREAM_CODEC,
+                (payload, context) -> TvClientHooks.storageContents.accept(payload));
     }
 
     private static @Nullable ServerPlayer serverPlayer(IPayloadContext context) {
@@ -510,6 +549,25 @@ public final class ModPayloads {
         ResourceType type = ConfiguratorItem.cycleType(stack, payload.direction());
         player.displayClientMessage(Component.translatable("item.wirelessautomate.configurator.type",
                 ConfiguratorItem.typeName(type)), true);
+        return true;
+    }
+
+    /**
+     * Shift + roda do mouse com o Vinculador na mão principal: passa ao outro modo (Vincular ↔ Abrir) e o mostra
+     * na action bar. Recusa direção 0 e outra coisa na mão principal.
+     */
+    public static boolean handleCycleLinkerMode(@Nullable ServerPlayer player, CycleLinkerModePayload payload) {
+        if (player == null || payload.direction() == 0) {
+            return false;
+        }
+        ItemStack stack = player.getMainHandItem();
+        if (!(stack.getItem() instanceof LinkerItem)) {
+            return false;
+        }
+        LinkerMode mode = LinkerItem.mode(stack).next();
+        LinkerItem.setMode(stack, mode);
+        player.displayClientMessage(Component.translatable("item.wirelessautomate.linker.mode",
+                LinkerItem.modeName(mode)), true);
         return true;
     }
 

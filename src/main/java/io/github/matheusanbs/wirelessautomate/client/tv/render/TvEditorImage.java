@@ -100,11 +100,10 @@ public final class TvEditorImage {
         separators(minecraft);
         Matrix4f projection = RenderSystem.getProjectionMatrix();
         VertexSorting sorting = RenderSystem.getVertexSorting();
-        if (target == null) {
-            target = new TextureTarget(width, height, false, Minecraft.ON_OSX);
+        TextureTarget before = target;
+        target = TvTargets.ensure(target, width, height, TvPaintIcon.has(draft));
+        if (target != before) {
             minecraft.getTextureManager().register(ID, new TvTargetTexture(target));
-        } else if (target.width != width || target.height != height) {
-            target.resize(width, height, Minecraft.ON_OSX);
         }
         float scale = width / (float) area.pixelWidth();
         long gameTime = minecraft.level == null ? 0 : minecraft.level.getGameTime();
@@ -112,7 +111,8 @@ public final class TvEditorImage {
         int flags = TvPainter.paint(graphics, minecraft.font, draft, values, area, pos, revision, decimalSep, groupSep,
                 TvPaintMath.blinkOff(gameTime), scale, height, true);
         blinking = (flags & TvPainter.FLAG_BLINK) != 0;
-        TvTimed.editor((flags & TvPainter.FLAG_GRAPH) != 0, (flags & TvPainter.FLAG_CLOCK) != 0);
+        TvTimed.editor((flags & TvPainter.FLAG_GRAPH) != 0, (flags & TvPainter.FLAG_CLOCK) != 0,
+                (flags & TvPainter.FLAG_ICON) != 0);
         TvTargets.end(graphics);
         RenderSystem.setProjectionMatrix(projection, sorting);
         minecraft.getMainRenderTarget().bindWrite(true);

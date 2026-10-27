@@ -34,6 +34,7 @@ public final class TvPainter {
     public static final int FLAG_BLINK = 1;
     public static final int FLAG_GRAPH = 2;
     public static final int FLAG_CLOCK = 4;
+    public static final int FLAG_ICON = 8;
     private static final float LINE = 9f;
     /** A altura das letras sem a folga de baixo da linha, para centrar na caixa. */
     private static final float GLYPH = 8f;
@@ -103,7 +104,9 @@ public final class TvPainter {
         int opacity = piece.style().opacity();
         TvTheme theme = layout.theme();
         switch (piece.type()) {
-            case ICON -> TvPaintIcon.paint(g, piece, part);
+            case ICON -> {
+                return TvPaintIcon.paint(g, piece, part) ? FLAG_ICON : 0;
+            }
             case BAR -> TvPaintBar.paint(g, piece, part, piece.style().radius(),
                     TvPaintFill.fraction(piece, part, resolved.value, values, pos, revision, preview, gameTime),
                     resolved.color, TvPaintMath.withOpacity(TvColor.resolve(part.track(), theme), opacity));

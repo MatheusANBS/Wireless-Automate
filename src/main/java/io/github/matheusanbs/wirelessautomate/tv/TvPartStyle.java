@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.Optional;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.StringRepresentable;
 
@@ -26,11 +27,12 @@ import net.minecraft.util.StringRepresentable;
  * @param upColor     a cor da Seta que sobe
  * @param downColor   a cor da Seta que desce
  * @param flatColor   a cor da Seta parada
- * @param item        o item do Ícone
+ * @param item        o id do que o Ícone mostra (item, fluido ou químico, conforme {@code icon.kind()})
+ * @param icon        o tipo do que o Ícone mostra e, num item com componentes (as gemas do Apotheosis), o item inteiro
  */
 public record TvPartStyle(Orientation orientation, boolean reverse, double min, double max, int track, int sweep,
         int thickness, int window, GraphMode mode, boolean area, double deadZone, int upColor, int downColor,
-        int flatColor, Optional<ResourceLocation> item) {
+        int flatColor, Optional<ResourceLocation> item, IconExtra icon) {
     public static final int MIN_SWEEP = 90;
     public static final int MAX_SWEEP = 360;
     public static final int MAX_THICKNESS = 32;
@@ -56,6 +58,39 @@ public record TvPartStyle(Orientation orientation, boolean reverse, double min, 
         }
     }
 
+    /** O que o Ícone mostra: um item, um fluido ou um químico do Mekanism. */
+    public enum IconKind implements StringRepresentable {
+        ITEM("item"),
+        FLUID("fluid"),
+        CHEMICAL("chemical");
+
+        public static final Codec<IconKind> CODEC = StringRepresentable.fromEnum(IconKind::values);
+
+        private final String id;
+
+        IconKind(String id) {
+            this.id = id;
+        }
+
+        @Override
+        public String getSerializedName() {
+            return id;
+        }
+    }
+
+    /**
+     * O tipo do Ícone e, só num item com componentes de dado, o {@code ItemStack} codificado (o que o servidor guarda
+     * sem ler: quem o decodifica é o cliente, com o acesso aos registros dele, porque os componentes podem depender
+     * de registros dinâmicos).
+     */
+    public record IconExtra(IconKind kind, Optional<CompoundTag> stack) {
+        public static final IconExtra NONE = new IconExtra(IconKind.ITEM, Optional.empty());
+        public static final Codec<IconExtra> CODEC = RecordCodecBuilder.create(i -> i.group(
+                IconKind.CODEC.lenientOptionalFieldOf("kind", IconKind.ITEM).forGetter(IconExtra::kind),
+                CompoundTag.CODEC.lenientOptionalFieldOf("stack").forGetter(IconExtra::stack))
+                .apply(i, IconExtra::new));
+    }
+
     /** O Gráfico em linha ou em colunas. */
     public enum GraphMode implements StringRepresentable {
         LINE("line"),
@@ -77,7 +112,7 @@ public record TvPartStyle(Orientation orientation, boolean reverse, double min, 
 
     public static final TvPartStyle DEFAULT = new TvPartStyle(Orientation.HORIZONTAL, false, 0, 0, 0x66808090, 270, 5,
             1, GraphMode.LINE, true, 0, TvColor.theme(TvColor.HIGH), TvColor.theme(TvColor.LOW),
-            TvColor.theme(TvColor.MUTED), Optional.empty());
+            TvColor.theme(TvColor.MUTED), Optional.empty(), IconExtra.NONE);
 
     /** Lê o campo se há, grava só se difere do padrão; um valor ilegível cai no padrão, sem derrubar a peça. */
     private static <T> MapCodec<T> field(Codec<T> codec, String name, T fallback) {
@@ -100,7 +135,8 @@ public record TvPartStyle(Orientation orientation, boolean reverse, double min, 
             field(Codec.INT, "upColor", DEFAULT.upColor).forGetter(TvPartStyle::upColor),
             field(Codec.INT, "downColor", DEFAULT.downColor).forGetter(TvPartStyle::downColor),
             field(Codec.INT, "flatColor", DEFAULT.flatColor).forGetter(TvPartStyle::flatColor),
-            ResourceLocation.CODEC.lenientOptionalFieldOf("item").forGetter(TvPartStyle::item))
+            ResourceLocation.CODEC.lenientOptionalFieldOf("item").forGetter(TvPartStyle::item),
+            field(IconExtra.CODEC, "icon", IconExtra.NONE).forGetter(TvPartStyle::icon))
             .apply(i, TvPartStyle::new));
 
     public TvPartStyle {
@@ -120,61 +156,71 @@ public record TvPartStyle(Orientation orientation, boolean reverse, double min, 
 
     public TvPartStyle withOrientation(Orientation orientation) {
         return new TvPartStyle(orientation, reverse, min, max, track, sweep, thickness, window, mode, area, deadZone,
-                upColor, downColor, flatColor, item);
+                upColor, downColor, flatColor, item, icon);
     }
 
     public TvPartStyle withReverse(boolean reverse) {
         return new TvPartStyle(orientation, reverse, min, max, track, sweep, thickness, window, mode, area, deadZone,
-                upColor, downColor, flatColor, item);
+                upColor, downColor, flatColor, item, icon);
     }
 
     public TvPartStyle withRange(double min, double max) {
         return new TvPartStyle(orientation, reverse, min, max, track, sweep, thickness, window, mode, area, deadZone,
-                upColor, downColor, flatColor, item);
+                upColor, downColor, flatColor, item, icon);
     }
 
     public TvPartStyle withTrack(int track) {
         return new TvPartStyle(orientation, reverse, min, max, track, sweep, thickness, window, mode, area, deadZone,
-                upColor, downColor, flatColor, item);
+                upColor, downColor, flatColor, item, icon);
     }
 
     public TvPartStyle withSweep(int sweep) {
         return new TvPartStyle(orientation, reverse, min, max, track, sweep, thickness, window, mode, area, deadZone,
-                upColor, downColor, flatColor, item);
+                upColor, downColor, flatColor, item, icon);
     }
 
     public TvPartStyle withThickness(int thickness) {
         return new TvPartStyle(orientation, reverse, min, max, track, sweep, thickness, window, mode, area, deadZone,
-                upColor, downColor, flatColor, item);
+                upColor, downColor, flatColor, item, icon);
     }
 
     public TvPartStyle withWindow(int window) {
         return new TvPartStyle(orientation, reverse, min, max, track, sweep, thickness, window, mode, area, deadZone,
-                upColor, downColor, flatColor, item);
+                upColor, downColor, flatColor, item, icon);
     }
 
     public TvPartStyle withMode(GraphMode mode) {
         return new TvPartStyle(orientation, reverse, min, max, track, sweep, thickness, window, mode, area, deadZone,
-                upColor, downColor, flatColor, item);
+                upColor, downColor, flatColor, item, icon);
     }
 
     public TvPartStyle withArea(boolean area) {
         return new TvPartStyle(orientation, reverse, min, max, track, sweep, thickness, window, mode, area, deadZone,
-                upColor, downColor, flatColor, item);
+                upColor, downColor, flatColor, item, icon);
     }
 
     public TvPartStyle withDeadZone(double deadZone) {
         return new TvPartStyle(orientation, reverse, min, max, track, sweep, thickness, window, mode, area, deadZone,
-                upColor, downColor, flatColor, item);
+                upColor, downColor, flatColor, item, icon);
     }
 
     public TvPartStyle withArrowColors(int up, int down, int flat) {
         return new TvPartStyle(orientation, reverse, min, max, track, sweep, thickness, window, mode, area, deadZone,
-                up, down, flat, item);
+                up, down, flat, item, icon);
+    }
+
+    /** O que o Ícone mostra: o id, o tipo e, num item com componentes, o item codificado. */
+    public TvPartStyle withIcon(Optional<ResourceLocation> item, IconExtra icon) {
+        return new TvPartStyle(orientation, reverse, min, max, track, sweep, thickness, window, mode, area, deadZone,
+                upColor, downColor, flatColor, item, icon);
+    }
+
+    public IconKind iconKind() {
+        return icon.kind();
     }
 
     public TvPartStyle withItem(Optional<ResourceLocation> item) {
         return new TvPartStyle(orientation, reverse, min, max, track, sweep, thickness, window, mode, area, deadZone,
-                upColor, downColor, flatColor, item);
+                upColor, downColor, flatColor, item, IconExtra.NONE);
     }
 }

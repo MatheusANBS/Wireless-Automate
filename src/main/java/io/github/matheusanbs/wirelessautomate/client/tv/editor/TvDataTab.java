@@ -3,9 +3,11 @@ package io.github.matheusanbs.wirelessautomate.client.tv.editor;
 import io.github.matheusanbs.wirelessautomate.client.ResourceStyle;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
+import io.github.matheusanbs.wirelessautomate.client.tv.TvIcons;
 import io.github.matheusanbs.wirelessautomate.tv.TvBinding;
 import io.github.matheusanbs.wirelessautomate.tv.TvClockMetric;
 import io.github.matheusanbs.wirelessautomate.tv.TvMetric;
+import io.github.matheusanbs.wirelessautomate.tv.TvPartStyle;
 import io.github.matheusanbs.wirelessautomate.tv.TvPieceType;
 import io.github.matheusanbs.wirelessautomate.tv.TvStorageMetric;
 import java.util.List;
@@ -201,7 +203,7 @@ final class TvDataTab {
     private static void icon(TvForm form, TvPropsCtx ctx) {
         form.label("data.icon.title", TvPropsCtx.key("data.icon"));
         form.add(new TvItemSlot(form.font, "data.icon.slot", 0, form.y(),
-                () -> ctx.piece().style().part().item(), () -> setIconItem(ctx, Optional.empty())));
+                () -> ctx.piece().style().part(), () -> setIconItem(ctx, Optional.empty())));
         form.skip(26);
         form.hint("data.icon.hint", TvPropsCtx.key("data.icon.hint"));
     }
@@ -209,6 +211,14 @@ final class TvDataTab {
     /** Troca o item do Ícone; a grade e o campo de id compartilham a chave, para o desfazer juntar as mudanças. */
     static void setIconItem(TvPropsCtx ctx, Optional<ResourceLocation> item) {
         ctx.change("data.icon", p -> p.withStyle(p.style().withPart(p.style().part().withItem(item))));
+    }
+
+    /** Troca o Ícone por um ingrediente do JEI (item com componentes, fluido ou químico); outro tipo, nada. */
+    static void setIconIngredient(TvPropsCtx ctx, Object ingredient) {
+        ctx.change("data.icon", p -> {
+            TvPartStyle chosen = TvIcons.choose(p.style().part(), ingredient);
+            return chosen == null ? p : p.withStyle(p.style().withPart(chosen));
+        });
     }
 
     // ------------------------------------------------------------------ comuns

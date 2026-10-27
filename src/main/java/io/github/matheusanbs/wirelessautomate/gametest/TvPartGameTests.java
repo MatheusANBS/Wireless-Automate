@@ -40,9 +40,28 @@ public final class TvPartGameTests {
     }
 
     @GameTest(template = "empty", timeoutTicks = 100)
+    public static void iconKindAndStackRoundTrip(GameTestHelper helper) {
+        CompoundTag stack = new CompoundTag();
+        stack.putString("id", "minecraft:diamond_sword");
+        TvPartStyle.IconExtra fluid = new TvPartStyle.IconExtra(TvPartStyle.IconKind.FLUID, Optional.empty());
+        TvPartStyle.IconExtra item = new TvPartStyle.IconExtra(TvPartStyle.IconKind.ITEM, Optional.of(stack));
+        for (TvPartStyle.IconExtra extra : List.of(fluid, item)) {
+            TvPartStyle part = TvPartStyle.DEFAULT.withIcon(Optional.of(ResourceLocation.withDefaultNamespace("water")),
+                    extra);
+            TvStyle style = TvStyle.DEFAULT.withPart(part);
+            Tag tag = TvStyle.CODEC.encodeStart(NbtOps.INSTANCE, style).getOrThrow();
+            helper.assertTrue(TvStyle.CODEC.parse(NbtOps.INSTANCE, tag).getOrThrow().part().equals(part),
+                    "o tipo e o item do Ícone voltam");
+        }
+        helper.assertTrue(TvPartStyle.DEFAULT.withItem(Optional.of(ResourceLocation.withDefaultNamespace("diamond")))
+                .iconKind() == TvPartStyle.IconKind.ITEM, "withItem fica no item");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 100)
     public static void defaultPartWritesNothingAndOldNbtReads(GameTestHelper helper) {
         CompoundTag style = (CompoundTag) TvStyle.CODEC.encodeStart(NbtOps.INSTANCE, TvStyle.DEFAULT).getOrThrow();
-        helper.assertTrue(!style.contains("direction") && !style.contains("sweep") && !style.contains("item"),
+        helper.assertTrue(!style.contains("direction") && !style.contains("sweep") && !style.contains("item") && !style.contains("icon"),
                 "o padrão não grava os campos novos");
         CompoundTag old = new CompoundTag();
         old.putInt("color", 5);

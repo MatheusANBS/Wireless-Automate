@@ -40,7 +40,7 @@ Siga o fluxo da `wa-feature` (mockup, spec, plano, subagentes). Esta skill diz *
 
 **Fechamento**
 - Páginas do guia nos dois idiomas, por `scripts/guide/gerar_guia.py`.
-- `CLAUDE.md` (mapa do código, convenções), `docs/especificacao.md` e `docs/progresso.md`.
+- `docs/mapa/<área>.md` e `CLAUDE.md` (convenções), `docs/especificacao.md` e `docs/progresso.md`.
 - e2e com o tipo novo: o roteador com N abas (`1f-roteador-largo`), o Tablet com N cartões e o Vinculador com N chips.
 
 ## Verificação

@@ -56,7 +56,7 @@ Uma divisão **não muda comportamento nem visual**. Se aparecer um bug no camin
    - `./gradlew build runGameTestServer` (e as outras três runs se tocou em código comum);
    - o e2e `WA_E2E="$PWD/run/e2e" ./gradlew runClient` (`run/e2e/result.txt` = `OK`);
    - capture o depois em `run/shots-depois` e compare: `python -I .claude/skills/wa-modular/scripts/comparar.py run/shots-antes run/shots-depois`. Diferença só fora do painel (o mundo atrás anima) é normal; dentro do painel, investigue.
-6. **Atualize o `CLAUDE.md`** (mapa do código: pacote novo, classes novas e o papel de cada uma) e rode a `wa-comentarios`.
+6. **Atualize o mapa** em `docs/mapa/<área>.md` (pacote novo, classes novas e o papel de cada uma; o índice está no `CLAUDE.md`) e rode a `wa-comentarios`.
 7. **Commit por tela**: `Modular: <tela> em partes (<parte>, <parte>, ...)`, sem linhas de atribuição e sem push.
 
 Se a anfitriã continuar acima do limite depois de tirar tudo o que é componente, é sinal de que ainda falta uma parte; não force uma divisão artificial só pelo número, registre no relatório o porquê.

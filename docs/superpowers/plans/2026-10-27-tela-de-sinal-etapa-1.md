@@ -56,6 +56,7 @@ Pacote base: `src/main/java/io/github/matheusanbs/wirelessautomate/`.
 | `client/tv/TvScreen.java`, `TvScreenLayout.java`, `TvSizeTab.java`, `TvContentTab.java`, `TvScreenText.java`, `TvScreenActions.java` | A tela do bloco | 8 |
 | `client/dev/E2eTvSteps.java`, `client/dev/E2eSuites.java` (mudar), `docs/e2e.md` (mudar) | e2e `tela` e `tela-desempenho` | 8 |
 | `scripts/guide/gerar_guia.py` + páginas geradas, `CLAUDE.md`, `docs/especificacao.md`, `docs/progresso.md` | Guia e docs | 9 |
+| `client/HeldScrollHandler.java` (era `ConfiguratorScrollHandler`), `packet/CycleLinkerModePayload.java`, `item/LinkerItem.java` | Shift + roda troca o modo do Vinculador | 10 |
 
 ---
 
@@ -735,6 +736,23 @@ O mapa rede × tipo → `FlowStats` é do `TvManager`, montado uma vez por volta
 - [ ] **Step 1:** gerar o guia (`python scripts/guide/gerar_guia.py`) e conferir pelo e2e da suíte do guia que a página abre nos dois idiomas.
 - [ ] **Step 2:** atualizar as docs.
 - [ ] **Step 3:** `./gradlew build runGameTestServer runGameTestServerChemicals runGameTestServerSource runGameTestServerAllthemodium runGameTestServerTeams` → passa; commit (`Tela de Sinal: guia e documentação da etapa 1`).
+
+---
+
+### Task 10: Shift + roda troca o modo do Vinculador (pedido do dono em 27/10)
+
+O Shift + clique no ar para trocar o modo do Vinculador (Vincular ↔ Abrir) é ruim de usar. Passa a ser **Shift + roda do mouse com o Vinculador na mão principal**, como o Configurador já faz para o tipo colado. O Shift + clique no ar deixa de trocar o modo e faz o mesmo que o clique comum (Vincular: abre a tela; Abrir: a dica na action bar). Os gestos de Shift + clique em blocos (marcar a área) não mudam.
+
+**Files:**
+- Create: `packet/CycleLinkerModePayload.java` (`record CycleLinkerModePayload(int direction)`, `playToServer`, mesmo formato do `CycleConfiguratorTypePayload`)
+- Modify: `client/ConfiguratorScrollHandler.java` (com o Vinculador na mão principal manda o `CycleLinkerModePayload`; renomeie a classe para `client/HeldScrollHandler.java` e ajuste o javadoc, porque passa a servir aos dois itens), `item/LinkerItem.java` (o `use` sem a troca de modo; o tooltip com o gesto novo), `packet/ModPayloads.java` (registro e `handleCycleLinkerMode(ServerPlayer, CycleLinkerModePayload)`, público para os testes: só age com o Vinculador na mão principal e `direction != 0`; troca para o próximo ou o anterior pelo `LinkerMode`, grava pelo `LinkerItem.setMode` e mostra o modo na action bar com a mesma chave de hoje; devolve se trocou), `lang` (o tooltip e a dica do gesto, nos dois idiomas), `scripts/guide/gerar_guia.py` e as páginas geradas (a página do Vinculador e onde mais o gesto aparece), `client/dev/E2eLinkerSteps.java` se ele troca o modo por Shift + clique no ar, `CLAUDE.md` (a linha do `linker/` e do `client/`)
+- Test: `gametest/LinkerModeScrollGameTests.java` (ou junto dos GameTests do Vinculador que já existem): troca com o Vinculador na mão principal, nas duas direções; não troca com `direction` 0, com outro item, com o Vinculador só na secundária; o Shift + clique no ar (`LinkerItem.use` com o jogador agachado) não muda mais o modo.
+
+**Protocolo:** o pacote novo entra no mesmo `ModPayloads.VERSION = "35"` desta etapa (a Tarefa 5 já subiu; não suba de novo).
+
+**Custo:** nenhum: o evento da roda no cliente já existe e sai cedo sem Shift; um pacote por clique da roda.
+
+- [ ] **Step 1:** GameTests (falham). **Step 2:** implementar. **Step 3:** `./gradlew build runGameTestServer` e o e2e da suíte do Vinculador (`./scripts/e2e.sh --only vinculador`; confira o nome em `--lista`). **Step 4:** varreduras e commit (`Vinculador: Shift + roda troca o modo`).
 
 ---
 

@@ -81,7 +81,7 @@ public final class TvPainter {
 
     /**
      * Prefixo, número, unidade e sufixo. A unidade só numa taxa (métrica de taxa e unidade de tempo) e só sem
-     * sufixo; sem número ({@code NaN}), o traço sem unidade.
+     * sufixo; uma fração (o enchimento) vira porcentagem, com o "%" no lugar da unidade; sem número ({@code NaN}), o traço sem unidade.
      */
     static String valueText(TvPiece piece, TvLayout values, long pos, int revision, char decimalSep, char groupSep,
             boolean preview) {
@@ -95,9 +95,12 @@ public final class TvPainter {
         }
         TvUnit unit = format.unit();
         boolean rate = binding.rate() && unit != TvUnit.NONE;
-        double shown = rate ? value * unit.perSecond() : value;
+        boolean percent = binding.fraction();
+        double shown = percent ? value * 100 : rate ? value * unit.perSecond() : value;
         out.append(TvNumbers.format(shown, format.decimals(), format.abbreviate(), format.sign(), decimalSep, groupSep));
-        if (rate && format.suffix().isEmpty()) {
+        if (percent && format.suffix().isEmpty()) {
+            out.append('%');
+        } else if (rate && format.suffix().isEmpty()) {
             String label = TvUnits.label(binding.type(), unit);
             if (!label.isEmpty() && label.charAt(0) != '/') {
                 out.append(' ');

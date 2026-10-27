@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.tv;
 
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockEntity;
+import io.github.matheusanbs.wirelessautomate.storage.StorageMath;
 import io.github.matheusanbs.wirelessautomate.storage.StorageWatch;
 import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import java.util.IdentityHashMap;
@@ -96,7 +97,7 @@ final class TvStorageFeed {
         return switch (storage.metric()) {
             case STORED -> stored(found, item);
             case CAPACITY -> capacity;
-            case FILL -> capacity <= 0 ? 0 : Math.min(1.0, (double) stored(found, item) / capacity);
+            case FILL -> StorageMath.fraction(stored(found, item), capacity);
             case IN -> rates(server, found, item, 0);
             case OUT -> rates(server, found, item, 1);
             case BALANCE -> rates(server, found, item, 2);

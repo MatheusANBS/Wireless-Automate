@@ -14,6 +14,16 @@ public final class RepairerBulkEnergy implements BulkEnergy {
     }
 
     @Override
+    public long stored() {
+        return store.stored();
+    }
+
+    @Override
+    public long capacity() {
+        return store.capacity();
+    }
+
+    @Override
     public long insert(long amount, boolean simulate) {
         if (amount <= 0) {
             return 0;

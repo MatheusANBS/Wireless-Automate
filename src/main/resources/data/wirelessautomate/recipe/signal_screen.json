@@ -2,22 +2,22 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "pattern": [
-    "GGG",
-    "GLG",
-    "IRI"
+    "KGK",
+    "GCG",
+    "KRK"
   ],
   "key": {
+    "K": {
+      "item": "wirelessautomate:resonator_casing"
+    },
     "G": {
       "tag": "c:glass_panes"
     },
-    "L": {
-      "tag": "c:dusts/glowstone"
+    "C": {
+      "item": "wirelessautomate:phase_circuit"
     },
     "R": {
       "tag": "c:dusts/redstone"
-    },
-    "I": {
-      "tag": "c:ingots/iron"
     }
   },
   "result": {

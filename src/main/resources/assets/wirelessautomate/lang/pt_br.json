@@ -1337,6 +1337,8 @@
   "message.wirelessautomate.tv.library_full": "Sua biblioteca está cheia: remova algo antes",
   "message.wirelessautomate.tv.library_exists": "Você já tem um com esse nome",
   "message.wirelessautomate.tv.library_invalid": "Esse nome ou conteúdo não vale",
+  "message.wirelessautomate.tv.library_component_too_big": "Esse componente é grande demais para salvar: use menos peças",
+  "message.wirelessautomate.tv.library_too_big": "Sua biblioteca é grande demais para enviar: remova algo",
   "gui.wirelessautomate.tv.component.network_panel": "Painel de rede",
   "gui.wirelessautomate.tv.component.number_card": "Cartão de número",
   "gui.wirelessautomate.tv.component.title": "Título",

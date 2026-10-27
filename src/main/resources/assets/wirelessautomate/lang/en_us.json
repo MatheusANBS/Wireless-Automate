@@ -1337,6 +1337,8 @@
   "message.wirelessautomate.tv.library_full": "Your library is full: remove something first",
   "message.wirelessautomate.tv.library_exists": "You already have one with that name",
   "message.wirelessautomate.tv.library_invalid": "That name or content is not valid",
+  "message.wirelessautomate.tv.library_component_too_big": "That component is too big to save: use fewer pieces",
+  "message.wirelessautomate.tv.library_too_big": "Your library is too big to send: remove something",
   "gui.wirelessautomate.tv.component.network_panel": "Network panel",
   "gui.wirelessautomate.tv.component.number_card": "Number card",
   "gui.wirelessautomate.tv.component.title": "Title",

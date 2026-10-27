@@ -370,7 +370,7 @@ final class TvPropsPanel {
             if (control instanceof TvItemGrid) {
                 return control;
             }
-            if (control.id.equals("data.icon.id")) {
+            if (control.id.equals("data.icon.slot")) {
                 field = control;
             }
         }

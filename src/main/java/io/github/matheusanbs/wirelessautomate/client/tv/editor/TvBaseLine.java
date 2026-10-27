@@ -8,13 +8,14 @@ import net.minecraft.client.gui.GuiGraphics;
 
 /**
  * A barra da base, em cima da miniatura: o tamanho da Tela ("6×3 · 192×96 px") e, à direita, "Não salvo" enquanto o
- * rascunho difere do salvo. No lugar dela, os avisos: o layout grande demais para salvar e a Tela que mudou no
- * servidor, este com o Recarregar. Os textos são medidos no {@link #layout} e o do tamanho quando a área muda.
+ * rascunho difere do salvo. No lugar dela, os avisos: o salvar que não valeu (grande demais, sem permissão, rápido
+ * demais ou sem resposta) e a Tela que mudou no servidor, este com o Recarregar. Os textos são medidos no {@link #layout} e o do tamanho quando a área muda.
  */
 final class TvBaseLine {
     private static final int RELOAD_PAD = 10;
 
     private final TvEditorDoc doc;
+    private final int maxKb;
     private TvRect rect = TvRect.NONE;
     private TvRect reload = TvRect.NONE;
     private Font font;
@@ -24,12 +25,12 @@ final class TvBaseLine {
     private GuiText.Fitted unsaved;
     private int unsavedWidth;
     private GuiText.Fitted changed;
-    private GuiText.Fitted tooBig;
+    private final GuiText.Fitted[] failures = new GuiText.Fitted[TvEditorDoc.Failure.values().length];
     private TvEditorPaint.Label reloadLabel;
-    private boolean tooBigShown;
 
-    TvBaseLine(TvEditorDoc doc) {
+    TvBaseLine(TvEditorDoc doc, int maxKb) {
         this.doc = doc;
+        this.maxKb = maxKb;
     }
 
     void layout(Font font, TvRect rect) {
@@ -42,12 +43,16 @@ final class TvBaseLine {
         int reloadW = reloadLabel.width() + RELOAD_PAD;
         reload = new TvRect(rect.right() - reloadW, rect.y(), reloadW, rect.h());
         changed = GuiText.fit(font, TvEditorText.key("changed"), rect.w() - reloadW - 4);
-        tooBig = GuiText.fit(font, TvEditorText.key("too_big"), rect.w());
-    }
-
-    /** O layout passou do teto do pacote: o aviso fica até a próxima mudança do rascunho. */
-    void showTooBig(boolean shown) {
-        tooBigShown = shown;
+        for (TvEditorDoc.Failure failure : TvEditorDoc.Failure.values()) {
+            String key = switch (failure) {
+                case TOO_BIG -> "too_big";
+                case DENIED -> "not_saved_denied";
+                case THROTTLED -> "not_saved_throttled";
+                case TIMEOUT -> "not_saved_timeout";
+            };
+            failures[failure.ordinal()] = GuiText.fit(font, failure == TvEditorDoc.Failure.TOO_BIG
+                    ? TvEditorText.key(key, maxKb) : TvEditorText.key(key), rect.w());
+        }
     }
 
     void render(GuiGraphics g, int mouseX, int mouseY) {
@@ -56,8 +61,9 @@ final class TvBaseLine {
             TvEditorPaint.button(g, font, reload, reloadLabel, reload.contains(mouseX, mouseY), true);
             return;
         }
-        if (tooBigShown) {
-            GuiText.draw(g, font, tooBig, rect.x(), rect.y() + 2, GuiPaint.DANGER);
+        TvEditorDoc.Failure failure = doc.failure();
+        if (failure != null) {
+            GuiText.draw(g, font, failures[failure.ordinal()], rect.x(), rect.y() + 2, GuiPaint.DANGER);
             return;
         }
         TvArea area = doc.area();

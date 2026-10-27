@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client.tv.editor;
 
+import io.github.matheusanbs.wirelessautomate.packet.TvLayoutAckPayload;
 import io.github.matheusanbs.wirelessautomate.tv.TvArea;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlockEntity;
 import io.github.matheusanbs.wirelessautomate.tv.TvComponent;
@@ -17,16 +18,23 @@ import org.jetbrains.annotations.Nullable;
  * O documento que as partes do editor dividem: o {@link TvEditorModel} do rascunho, a Tela no cliente (área,
  * revisão e o layout salvo, relidos uma vez por tick, nunca por quadro) e as edições que as partes pedem, todas pelo
  * {@link TvEditOps}. Também acompanha o salvar: o layout mandado espera a revisão nova do servidor, que vira a base;
- * uma revisão nova que não é a nossa nem só a área cortando as peças vira o aviso "mudou no servidor".
+ * uma revisão nova que não é a nossa nem só a área cortando as peças vira o aviso "mudou no servidor". O servidor
+ * responde a todo salvar ({@code acked}) e há um prazo ({@link TvPendingSave}): um salvar recusado ou perdido nunca
+ * fica pendente, senão a mudança de outro operador seria tomada como nossa e salva por cima sem aviso.
  */
 final class TvEditorDoc {
     private static final TvEditOps.Access<TvPiece> A = TvPieceAccess.INSTANCE;
+
+    /** Por que o último salvar não valeu; o aviso fica até o rascunho mudar. */
+    enum Failure { TOO_BIG, DENIED, THROTTLED, TIMEOUT }
 
     private final BlockPos pos;
     private final TvEditorModel<TvLayout> model;
     private TvArea area;
     private int revision;
-    private @Nullable TvLayout sent;
+    private final TvPendingSave<TvLayout> pending = new TvPendingSave<>();
+    private @Nullable Failure failure;
+    private int failureVersion;
     private @Nullable TvLayout changedOnServer;
     private boolean grid = true;
     private String themeName = "";
@@ -50,6 +58,9 @@ final class TvEditorDoc {
 
     /** Uma vez por tick: a área e a revisão da Tela no cliente, e o que fazer com uma revisão nova. */
     void tick() {
+        if (pending.tick()) {
+            fail(Failure.TIMEOUT);
+        }
         TvBlockEntity tv = tv();
         if (tv == null || tv.revision() == revision) {
             return;
@@ -59,9 +70,8 @@ final class TvEditorDoc {
         TvLayout server = tv.layout();
         boolean areaChanged = !newArea.equals(area);
         area = newArea;
-        if (sent != null) {
-            boolean unchanged = model.draft() == sent;
-            sent = null;
+        if (pending.pending()) {
+            boolean unchanged = model.draft() == pending.release();
             model.rebase(server);
             if (unchanged) {
                 model.edit(server, model.selection().below(server.pieces().size()));
@@ -98,9 +108,42 @@ final class TvEditorDoc {
         }
     }
 
-    /** O salvar saiu: o rascunho de agora espera a revisão do servidor. */
+    /** O salvar saiu: o rascunho de agora espera a resposta e a revisão do servidor. */
     void sent() {
-        sent = model.draft();
+        failure = null;
+        pending.begin(model.draft());
+    }
+
+    /**
+     * A resposta do servidor ao salvar. {@code SAVED} segue esperando a revisão nova, que vem pelo update tag do
+     * bloco (o prazo cobre o que se perder); qualquer outra solta o pendente na hora, e a recusa vira aviso.
+     */
+    void acked(TvLayoutAckPayload.Result result) {
+        if (!pending.pending() || result == TvLayoutAckPayload.Result.SAVED) {
+            return;
+        }
+        pending.release();
+        switch (result) {
+            case TOO_BIG -> fail(Failure.TOO_BIG);
+            case DENIED -> fail(Failure.DENIED);
+            case THROTTLED -> fail(Failure.THROTTLED);
+            default -> {
+            }
+        }
+    }
+
+    /** O salvar não valeu: o aviso fica até o rascunho mudar. */
+    void fail(Failure why) {
+        failure = why;
+        failureVersion = model.version();
+    }
+
+    /** O aviso do último salvar que não valeu, ou nulo (some com a próxima mudança do rascunho). */
+    @Nullable Failure failure() {
+        if (failure != null && failureVersion != model.version()) {
+            failure = null;
+        }
+        return failure;
     }
 
     /** Na captura nada vai ao servidor: o rascunho vira a base na hora. */

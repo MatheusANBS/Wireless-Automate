@@ -67,6 +67,7 @@ public final class Config {
     public static final ModConfigSpec.IntValue TV_MAX_HEIGHT;
     public static final ModConfigSpec.IntValue TV_MAX_ELEMENTS;
     public static final ModConfigSpec.IntValue TV_MAX_BINDINGS;
+    public static final ModConfigSpec.IntValue TV_MAX_LAYOUT_BYTES;
     public static final ModConfigSpec.IntValue TV_VIEW_DISTANCE;
     public static final ModConfigSpec.IntValue TV_MAX_COMPONENTS;
     public static final ModConfigSpec.IntValue TV_MAX_THEMES;
@@ -271,6 +272,13 @@ public final class Config {
         TV_MAX_BINDINGS = builder
                 .comment("Quantas ligações distintas (rede e tipo) uma Tela de Sinal lê.")
                 .defineInRange("maxBindings", 64, 1, 256);
+        TV_MAX_LAYOUT_BYTES = builder
+                .comment("Tamanho máximo, em bytes de NBT, do layout de uma Tela de Sinal. O layout vai inteiro no pacote do "
+                        + "chunk de quem chega perto, e o cliente descarta um chunk que passa de 8 MiB e desconecta o "
+                        + "jogador: sem este teto, umas 130 Telas com o layout do tamanho máximo do pacote de salvar (64 KB) "
+                        + "num chunk só derrubariam quem o carregasse. O padrão de 16 KB deixa folga para centenas de Telas "
+                        + "por chunk; o máximo é 24 KB.")
+                .defineInRange("maxLayoutBytes", 16 * 1024, 1024, 24 * 1024);
         TV_VIEW_DISTANCE = builder
                 .comment("Distância, em blocos, até onde a Tela de Sinal é desenhada e recebe números novos.")
                 .defineInRange("viewDistance", 64, 8, 256);
@@ -545,6 +553,11 @@ public final class Config {
     /** Máximo de ligações distintas de uma Tela de Sinal. */
     public static int tvMaxBindings() {
         return read(TV_MAX_BINDINGS);
+    }
+
+    /** Máximo, em bytes de NBT, do layout de uma Tela de Sinal. */
+    public static int tvMaxLayoutBytes() {
+        return read(TV_MAX_LAYOUT_BYTES);
     }
 
     /** Máximo de componentes na biblioteca de um jogador. */

@@ -1,14 +1,17 @@
 package io.github.matheusanbs.wirelessautomate.gametest;
 
+import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.menu.TvMenu;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
+import io.github.matheusanbs.wirelessautomate.packet.TvLayoutAckPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TvLayoutPayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.tv.TvArea;
 import io.github.matheusanbs.wirelessautomate.tv.TvBinding;
+import io.github.matheusanbs.wirelessautomate.tv.TvBackground;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlock;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlockEntity;
 import io.github.matheusanbs.wirelessautomate.tv.TvEditing;
@@ -21,6 +24,8 @@ import io.github.matheusanbs.wirelessautomate.tv.TvRule;
 import io.github.matheusanbs.wirelessautomate.tv.TvRuleOp;
 import io.github.matheusanbs.wirelessautomate.tv.TvStyle;
 import io.github.matheusanbs.wirelessautomate.tv.TvTemplates;
+import io.github.matheusanbs.wirelessautomate.tv.TvTheme;
+import io.netty.buffer.Unpooled;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -28,6 +33,10 @@ import java.util.UUID;
 import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.level.block.Blocks;
@@ -225,19 +234,158 @@ public final class TvEditGameTests {
     }
 
     @GameTest(template = "empty", timeoutTicks = 100)
-    public static void salvarAcimaDeDezPorSegundoEIgnorado(GameTestHelper helper) {
+    public static void salvarAcimaDeDoisPorSegundoEBarradoEAvisado(GameTestHelper helper) {
         TestPlayers.MenuPlayer player = TestPlayers.menuOpener(helper);
         withScreen(helper, player.getUUID(), tv -> {
             TvMenu menu = opened(helper, player);
-            TvLayout last = null;
-            for (int i = 0; i < 12; i++) {
+            TvLayout second = null;
+            TvLayoutAckPayload third = null;
+            for (int i = 0; i < 3; i++) {
                 TvLayout layout = TvLayout.of(List.of(text(0, 0, 30, 10, "v" + i)));
-                if (i == 9) {
-                    last = layout;
+                if (i == 1) {
+                    second = layout;
                 }
-                TvEditing.handleLayout(player, new TvLayoutPayload(menu.containerId, layout));
+                TvLayoutAckPayload ack = TvEditing.handleLayout(player, new TvLayoutPayload(menu.containerId, layout));
+                if (i == 2) {
+                    third = ack;
+                } else {
+                    helper.assertValueEqual(ack.result(), TvLayoutAckPayload.Result.SAVED, "salvar " + i);
+                }
             }
-            helper.assertValueEqual(tv.layout(), last, "só os 10 primeiros valem no mesmo segundo");
+            helper.assertValueEqual(tv.layout(), second, "só os 2 primeiros valem no mesmo segundo");
+            helper.assertValueEqual(third.result(), TvLayoutAckPayload.Result.THROTTLED, "o terceiro foi barrado, mas respondido");
         });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void todoSalvarRecebeRespostaInclusiveSemMudanca(GameTestHelper helper) {
+        TestPlayers.MenuPlayer player = TestPlayers.menuOpener(helper);
+        withScreen(helper, player.getUUID(), tv -> {
+            TvMenu menu = opened(helper, player);
+            TvLayout layout = TvLayout.of(List.of(text(0, 0, 30, 10, "igual")));
+            helper.assertValueEqual(TvEditing.handleLayout(player, new TvLayoutPayload(menu.containerId, layout)).result(),
+                    TvLayoutAckPayload.Result.SAVED, "primeiro");
+            int revision = tv.revision();
+            TvLayoutAckPayload again = TvEditing.handleLayout(player, new TvLayoutPayload(menu.containerId, layout));
+            helper.assertValueEqual(again.result(), TvLayoutAckPayload.Result.UNCHANGED, "igual ao salvo");
+            helper.assertValueEqual(tv.revision(), revision, "a revisão não sobe quando nada muda");
+            helper.assertValueEqual(again.containerId(), menu.containerId, "o menu da resposta");
+            helper.assertTrue(TvEditing.handleLayout(player, new TvLayoutPayload(menu.containerId + 50, layout)) == null,
+                    "menu errado não tem a quem responder");
+        });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void recusaPorPermissaoTemMotivoDeNegado(GameTestHelper helper) {
+        TestPlayers.MenuPlayer owner = TestPlayers.menuOpener(helper);
+        TestPlayers.MenuPlayer other = TestPlayers.menuOpener(helper);
+        withScreen(helper, owner.getUUID(), tv -> helper.assertValueEqual(
+                TvEditing.applyLayout(other, tv, TvLayout.of(List.of(text(0, 0, 10, 10, "x")))).reason(),
+                TvLayoutAckPayload.Result.DENIED, "motivo"));
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 100, batch = "wirelessautomate_config_tv")
+    public static void layoutAcimaDoTetoDeBytesERecusado(GameTestHelper helper) {
+        int max = Config.tvMaxLayoutBytes();
+        TestPlayers.MenuPlayer player = TestPlayers.menuOpener(helper);
+        withScreen(helper, player.getUUID(), tv -> {
+            try {
+                Config.TV_MAX_LAYOUT_BYTES.set(1024);
+                List<TvPiece> pieces = new ArrayList<>();
+                for (int i = 0; i < 12; i++) {
+                    pieces.add(text(0, 0, 30, 10, "x".repeat(100)));
+                }
+                TvLayout big = TvLayout.of(pieces);
+                helper.assertTrue(TvLayoutPayload.encodedSize(big) > 1024, "o layout de teste ficou pequeno");
+                TvEditing.LayoutResult result = TvEditing.applyLayout(player, tv, big);
+                helper.assertFalse(result.ok(), "salvou acima do teto");
+                helper.assertValueEqual(result.reason(), TvLayoutAckPayload.Result.TOO_BIG, "motivo");
+                helper.assertValueEqual(tv.layout(), TvLayout.EMPTY, "o layout mudou");
+                helper.assertTrue(TvEditing.applyLayout(player, tv, TvLayout.of(List.of(text(0, 0, 10, 10, "ok")))).ok(),
+                        "um layout pequeno deve caber");
+            } finally {
+                Config.TV_MAX_LAYOUT_BYTES.set(max);
+            }
+        });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void valorDesconhecidoNasChavesNovasCaiNoPadraoSemPerderOLayout(GameTestHelper helper) {
+        CompoundTag piece = new CompoundTag();
+        piece.putString("type", "text");
+        piece.putInt("w", 20);
+        piece.putInt("h", 8);
+        CompoundTag style = new CompoundTag();
+        style.putString("font", "fonte_do_futuro");
+        style.putString("radius", "muito");
+        piece.put("style", style);
+        piece.putString("hidden", "talvez");
+        ListTag rules = new ListTag();
+        CompoundTag bogus = new CompoundTag();
+        bogus.putString("op", "entre");
+        bogus.putDouble("value", 1);
+        CompoundTag good = new CompoundTag();
+        good.putString("op", "gt");
+        good.putDouble("value", 5);
+        rules.add(bogus);
+        rules.add(good);
+        piece.put("rules", rules);
+        CompoundTag layout = new CompoundTag();
+        ListTag pieces = new ListTag();
+        pieces.add(piece);
+        layout.put("pieces", pieces);
+        CompoundTag background = new CompoundTag();
+        background.putString("kind", "mosaico");
+        layout.put("background", background);
+        layout.put("theme", new CompoundTag());
+        layout.putString("scanlines", "sim");
+        TvLayout read = TvLayout.CODEC.parse(NbtOps.INSTANCE, layout).result().orElse(null);
+        helper.assertTrue(read != null, "o layout inteiro foi perdido");
+        helper.assertValueEqual(read.pieces().size(), 1, "a peça");
+        TvPiece first = read.pieces().get(0);
+        helper.assertValueEqual(first.style().font(), TvStyle.DEFAULT.font(), "fonte desconhecida");
+        helper.assertValueEqual(first.style().radius(), TvStyle.DEFAULT.radius(), "raio inválido");
+        helper.assertFalse(first.hidden(), "hidden inválido");
+        helper.assertValueEqual(first.rules().size(), 1, "só a regra boa fica");
+        helper.assertValueEqual(first.rules().get(0).op(), TvRuleOp.GT, "a regra boa");
+        helper.assertValueEqual(read.background(), TvBackground.DEFAULT, "fundo desconhecido");
+        helper.assertValueEqual(read.theme(), TvTheme.DEFAULT, "tema malformado");
+        helper.assertFalse(read.scanlines(), "linhas inválidas");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void idaEVoltaDoPayloadDeLayoutEDaResposta(GameTestHelper helper) {
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), helper.getLevel().registryAccess());
+        TvLayout layout = TvLayout.of(List.of(text(1, 2, 30, 10, "abc"), text(0, 0, 8, 8, "d")));
+        TvLayoutPayload.STREAM_CODEC.encode(buf, new TvLayoutPayload(5, layout));
+        TvLayoutPayload back = TvLayoutPayload.STREAM_CODEC.decode(buf);
+        helper.assertValueEqual(back.layout(), layout, "layout");
+        helper.assertValueEqual(back.containerId(), 5, "menu");
+        for (TvLayoutAckPayload.Result result : TvLayoutAckPayload.Result.values()) {
+            TvLayoutAckPayload ack = new TvLayoutAckPayload(9, result, 3);
+            TvLayoutAckPayload.STREAM_CODEC.encode(buf, ack);
+            helper.assertValueEqual(TvLayoutAckPayload.STREAM_CODEC.decode(buf), ack, "ack " + result);
+        }
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void layoutAcimaDe64KbNaoCabeNoPacote(GameTestHelper helper) {
+        List<TvPiece> pieces = new ArrayList<>();
+        for (int i = 0; i < TvLayout.HARD_CAP; i++) {
+            pieces.add(text(0, 0, 30, 10, "x".repeat(TvStyle.MAX_TEXT)));
+        }
+        TvLayout huge = TvLayout.of(pieces);
+        helper.assertTrue(TvLayoutPayload.encodedSize(huge) > TvLayoutPayload.MAX_BYTES, "o teste deveria passar de 64 KB");
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), helper.getLevel().registryAccess());
+        boolean refused = false;
+        try {
+            TvLayoutPayload.STREAM_CODEC.encode(buf, new TvLayoutPayload(1, huge));
+        } catch (RuntimeException e) {
+            refused = true;
+        }
+        helper.assertTrue(refused, "o codec deve recusar acima de 64 KB");
+        helper.succeed();
     }
 }

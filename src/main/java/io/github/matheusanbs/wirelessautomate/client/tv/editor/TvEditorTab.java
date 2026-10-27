@@ -55,16 +55,16 @@ public final class TvEditorTab {
     private List<FormattedCharSequence> tooSmall = List.of();
     private int[] tooSmallWidths = new int[0];
     private Font font;
-    private int tooBigVersion = -1;
 
     public TvEditorTab(BlockPos pos, TvArea area, List<TvMenu.NetworkChoice> networks, TvEditorActions actions) {
         this.doc = new TvEditorDoc(pos, area);
         this.actions = actions;
+        TvEditorAck.listen(actions.containerId(), doc::acked);
         this.menu = new TvCanvasMenu(doc);
         this.components = new TvComponentsPanel(doc, actions);
         this.canvas = new TvEditorCanvas(doc);
         this.palette = new TvPalettePanel(doc, canvas);
-        this.base = new TvBaseLine(doc);
+        this.base = new TvBaseLine(doc, actions.maxLayoutBytes() / 1024);
         this.bar = new TvEditorBar(doc);
         this.layers = new TvLayersPanel(doc);
         this.props = new TvPropsPanel(doc, networks, actions, popups);
@@ -107,10 +107,6 @@ public final class TvEditorTab {
     public void tick() {
         doc.tick();
         actions.previewBindings(doc.draft().bindings());
-        if (tooBigVersion >= 0 && tooBigVersion != doc.model().version()) {
-            tooBigVersion = -1;
-            base.showTooBig(false);
-        }
     }
 
     public void render(GuiGraphics g, int mouseX, int mouseY) {
@@ -255,10 +251,7 @@ public final class TvEditorTab {
         switch (actions.save(doc.draft())) {
             case SENT -> doc.sent();
             case LOCAL -> doc.savedLocally();
-            case TOO_BIG -> {
-                tooBigVersion = doc.model().version();
-                base.showTooBig(true);
-            }
+            case TOO_BIG -> doc.fail(TvEditorDoc.Failure.TOO_BIG);
         }
     }
 
@@ -392,6 +385,7 @@ public final class TvEditorTab {
     public void release() {
         actions.stopPreview();
         TvEditorImage.release();
+        TvEditorAck.stop();
         TvLibraryClient.clear();
     }
 

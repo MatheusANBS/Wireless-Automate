@@ -61,7 +61,7 @@ doesn't fit, lower the interface scale.
   decimals, abbreviating (k, M, G), sign, prefix, suffix and unit; **Style** changes position, size, colors, border,
   corners, opacity and font; **Rules** changes the color, hides or blinks when the number crosses a value.
 - **Saving:** nothing reaches the wall until you click **Save** (or **Ctrl+S**). Closing with changes takes two clicks
-  on the ✕ (**Discard?**). The numbers of a new link only show up after saving.
+  on the ✕ (**Discard?**). The thumbnail shows the numbers of a new link before saving.
 
 | Shortcut | What it does |
 | --- | --- |

@@ -28,6 +28,8 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class TvPreview {
     private static final Map<UUID, State> STATES = new HashMap<>();
+    /** O limite próprio da prévia: o do salvar e o das ações da biblioteca não a engolem. */
+    private static final TvRateGate GATE = new TvRateGate();
 
     private TvPreview() {
     }
@@ -48,7 +50,8 @@ public final class TvPreview {
 
     /** O pedido do editor: valida o menu e a frequência e troca a lista do jogador. */
     public static void handle(@Nullable ServerPlayer player, TvPreviewPayload payload) {
-        if (TvEditing.open(player, payload.containerId()) == null || !TvEditing.allowAction(player)) {
+        if (TvEditing.open(player, payload.containerId()) == null
+                || !GATE.allow(player.getUUID(), player.level().getGameTime())) {
             return;
         }
         if (payload.bindings().isEmpty()) {
@@ -71,7 +74,15 @@ public final class TvPreview {
         if (STATES.isEmpty()) {
             return;
         }
-        FlowSampler.Report report = NetworkManager.get().flows().report();
+        tick(server, NetworkManager.get().flows().report());
+    }
+
+    /** O mesmo tick com o relatório dado (os testes montam o relatório à mão). */
+    public static void tickForTests(MinecraftServer server, FlowSampler.Report report) {
+        tick(server, report);
+    }
+
+    private static void tick(MinecraftServer server, FlowSampler.Report report) {
         NetworkSavedData data = NetworkSavedData.get(server);
         Iterator<Map.Entry<UUID, State>> it = STATES.entrySet().iterator();
         while (it.hasNext()) {
@@ -116,9 +127,11 @@ public final class TvPreview {
 
     public static void forget(UUID player) {
         STATES.remove(player);
+        GATE.forget(player);
     }
 
     public static void reset() {
         STATES.clear();
+        GATE.clear();
     }
 }

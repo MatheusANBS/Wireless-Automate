@@ -61,7 +61,7 @@ couber, diminua a escala da interface.
   abreviar (k, M, G), sinal, prefixo, sufixo e unidade; **Estilo** muda posição, tamanho, cores, borda, cantos,
   opacidade e fonte; **Regras** muda a cor, esconde ou pisca quando o número passa de um valor.
 - **Salvar:** nada vai para a parede até clicar em **Salvar** (ou **Ctrl+S**). Fechar com mudanças pede dois cliques
-  no ✕ (**Descartar?**). Os números de uma ligação nova só aparecem depois de salvar.
+  no ✕ (**Descartar?**). A miniatura mostra os números de uma ligação nova antes de salvar.
 
 | Atalho | O que faz |
 | --- | --- |

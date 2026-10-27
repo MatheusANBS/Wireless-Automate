@@ -4,9 +4,12 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.DevEndToEnd.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eUi.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
+import io.github.matheusanbs.wirelessautomate.client.tv.TvPreviewValues;
 import io.github.matheusanbs.wirelessautomate.client.tv.TvScreen;
 import io.github.matheusanbs.wirelessautomate.client.tv.editor.TvEditorTab;
 import io.github.matheusanbs.wirelessautomate.client.tv.editor.TvSelection;
+import io.github.matheusanbs.wirelessautomate.client.tv.render.TvEditorImage;
+import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlockEntity;
 import io.github.matheusanbs.wirelessautomate.tv.TvColor;
 import io.github.matheusanbs.wirelessautomate.tv.TvFont;
@@ -76,6 +79,44 @@ final class E2eTvEditorPropsSteps {
                 () -> "peças " + editor().draft().pieces().size()));
     }
 
+    /**
+     * A prévia dos números do rascunho: a ligação nova (ainda não salva) ganha o número do servidor e a miniatura
+     * redesenha; trocar o tipo do Valor pede os números da ligação nova, sem salvar; desfazer volta ao tipo de antes.
+     */
+    private static void previewSteps(List<Step> list) {
+        int[] paints = new int[1];
+        list.add(step("Prévia: o número da ligação nova chega sem salvar", () -> paints[0] = TvEditorImage.paintsForTests,
+                () -> previewNumber() >= 0 && editor().dirty() && TvEditorImage.paintsForTests > paints[0],
+                () -> "número " + previewNumber() + ", mudou " + editor().dirty() + ", redesenhos "
+                        + (TvEditorImage.paintsForTests - paints[0])));
+        E2eTvSteps.shot(list, "tela-editor-previa-itens");
+        list.add(step("Prévia: trocar o tipo do Valor pede os números da ligação nova", () -> {
+            paints[0] = TvEditorImage.paintsForTests;
+            clickAt(editor().probe().propCenter("data.type"));
+        }, () -> editor().draft().pieces().get(0).binding().map(b -> b.type() != ResourceType.ITEM).orElse(false)
+                && previewNumber() >= 0 && TvEditorImage.paintsForTests > paints[0],
+                () -> "ligação " + editor().draft().pieces().get(0).binding() + ", número " + previewNumber()));
+        E2eTvSteps.shot(list, "tela-editor-previa");
+        list.add(step("Prévia: Ctrl+Z volta ao tipo de antes", () -> press(GLFW.GLFW_KEY_Z, CTRL),
+                () -> editor().draft().pieces().get(0).binding().map(b -> b.type() == ResourceType.ITEM
+                        && b.metric() == TvMetric.OUT).orElse(false) && previewNumber() >= 0,
+                () -> "ligação " + editor().draft().pieces().get(0).binding()));
+    }
+
+    /** O número da prévia da ligação da primeira peça, ou -1 se ainda não chegou (ou sem ligação). */
+    private static double previewNumber() {
+        try {
+            var binding = editor().draft().pieces().get(0).binding();
+            if (binding.isEmpty()) {
+                return -1;
+            }
+            double value = TvPreviewValues.value(binding.get());
+            return Double.isNaN(value) ? -1 : value;
+        } catch (StepFailure e) {
+            return -1;
+        }
+    }
+
     /** As quatro abas: liga o Valor à rede dos Fluxos, formata, pinta, escreve uma regra e salva com Ctrl+S. */
     static void propsSteps(List<Step> list, Supplier<BlockPos> tv) {
         int[] before = new int[1];
@@ -96,6 +137,7 @@ final class E2eTvEditorPropsSteps {
         list.add(step("Dado: a métrica avança para Sai", () -> clickAt(editor().probe().propCenter("data.metric")),
                 () -> editor().draft().pieces().get(0).binding().map(b -> b.metric() == TvMetric.OUT).orElse(false),
                 () -> "ligação " + editor().draft().pieces().get(0).binding()));
+        previewSteps(list);
         E2eTvSteps.shot(list, "tela-editor-dado");
         list.add(step("Formato: aba, casas e abreviar", () -> {
             clickAt(editor().probe().propsTabCenter("FORMAT"));

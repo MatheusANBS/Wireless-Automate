@@ -78,7 +78,7 @@ final class TvCanvas {
         GuiGraphics graphics = TvTargets.begin(minecraft, target, width, height, scale);
         blinking = TvPainter.paint(graphics, minecraft.font, tv.layout(), tv.layout(), area,
                 tv.getBlockPos().asLong(), tv.revision(), decimalSep, groupSep, TvPaintMath.blinkOff(gameTime), scale,
-                height);
+                height, false);
         TvTargets.end(graphics);
         mipmaps(target.getColorTextureId());
         revision = tv.revision();

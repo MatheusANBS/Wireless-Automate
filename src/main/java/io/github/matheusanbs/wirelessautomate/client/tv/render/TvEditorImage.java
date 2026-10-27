@@ -11,6 +11,7 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.blaze3d.vertex.VertexSorting;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.client.tv.TvClientValues;
+import io.github.matheusanbs.wirelessautomate.client.tv.TvPreviewValues;
 import io.github.matheusanbs.wirelessautomate.tv.TvArea;
 import io.github.matheusanbs.wirelessautomate.tv.TvLayout;
 import java.nio.ByteBuffer;
@@ -31,8 +32,8 @@ import org.lwjgl.system.MemoryStack;
  * (há um editor aberto por vez), no tamanho em que a miniatura aparece na janela. O editor pede a cada quadro
  * ({@link #request}: comparação de referências e números); o redesenho só acontece no começo do quadro seguinte
  * ({@link #onFrame}) e só com o rascunho, a base dos números, os números, o tamanho ou a fase do piscar mudados. Os
- * números vêm das ligações do layout salvo ({@code values}): uma ligação nova mostra "—" até salvar. Fechar o editor
- * solta o framebuffer ({@link #release}). Só na thread de render.
+ * números vêm da prévia do rascunho ({@link TvPreviewValues}) e, sem ela, das ligações do layout salvo
+ * ({@code values}). Fechar o editor solta o framebuffer ({@link #release}). Só na thread de render.
  */
 public final class TvEditorImage {
     private static final ResourceLocation ID = WirelessAutomate.id("tv/editor");
@@ -45,6 +46,7 @@ public final class TvEditorImage {
     private static int width;
     private static int height;
     private static int valuesVersion;
+    private static int previewVersion;
     private static long blinkSlot;
     private static boolean blinking;
     private static boolean dirty;
@@ -69,6 +71,7 @@ public final class TvEditorImage {
         if (draft != TvEditorImage.draft || values != TvEditorImage.values || !area.equals(TvEditorImage.area)
                 || pos != TvEditorImage.pos || revision != TvEditorImage.revision || width != TvEditorImage.width
                 || height != TvEditorImage.height || valuesVersion != TvClientValues.version()
+                || previewVersion != TvPreviewValues.version()
                 || blinking && slot != blinkSlot) {
             TvEditorImage.draft = draft;
             TvEditorImage.values = values;
@@ -78,6 +81,7 @@ public final class TvEditorImage {
             TvEditorImage.width = width;
             TvEditorImage.height = height;
             valuesVersion = TvClientValues.version();
+            previewVersion = TvPreviewValues.version();
             blinkSlot = slot;
             dirty = true;
         }
@@ -103,7 +107,7 @@ public final class TvEditorImage {
         long gameTime = minecraft.level == null ? 0 : minecraft.level.getGameTime();
         GuiGraphics graphics = TvTargets.begin(minecraft, target, width, height, scale);
         blinking = TvPainter.paint(graphics, minecraft.font, draft, values, area, pos, revision, decimalSep, groupSep,
-                TvPaintMath.blinkOff(gameTime), scale, height);
+                TvPaintMath.blinkOff(gameTime), scale, height, true);
         TvTargets.end(graphics);
         RenderSystem.setProjectionMatrix(projection, sorting);
         minecraft.getMainRenderTarget().bindWrite(true);

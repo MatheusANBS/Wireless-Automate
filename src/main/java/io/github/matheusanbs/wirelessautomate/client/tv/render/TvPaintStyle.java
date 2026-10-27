@@ -1,6 +1,5 @@
 package io.github.matheusanbs.wirelessautomate.client.tv.render;
 
-import io.github.matheusanbs.wirelessautomate.client.tv.TvClientValues;
 import io.github.matheusanbs.wirelessautomate.tv.TvBinding;
 import io.github.matheusanbs.wirelessautomate.tv.TvColor;
 import io.github.matheusanbs.wirelessautomate.tv.TvLayout;
@@ -30,12 +29,15 @@ final class TvPaintStyle implements Function<TvBinding, OptionalDouble> {
     private TvLayout values;
     private long pos;
     private int revision;
+    private boolean preview;
 
     /**
      * Resolve a peça: {@code values} é o layout cujas ligações indexam os números (ver {@link TvPainter#paint}) e
-     * {@code blinkOff} a fase do piscar no instante do desenho.
+     * {@code blinkOff} a fase do piscar no instante do desenho e {@code preview} se é a miniatura do editor (os
+     * números vêm primeiro da prévia, ver {@link TvPaintNumbers}).
      */
-    void resolve(TvPiece piece, TvLayout layout, TvLayout values, long pos, int revision, boolean blinkOff) {
+    void resolve(TvPiece piece, TvLayout layout, TvLayout values, long pos, int revision, boolean blinkOff,
+            boolean preview) {
         TvStyle style = piece.style();
         int textColor = style.color();
         int fill = style.background();
@@ -45,6 +47,7 @@ final class TvPaintStyle implements Function<TvBinding, OptionalDouble> {
             this.values = values;
             this.pos = pos;
             this.revision = revision;
+            this.preview = preview;
             Optional<TvRule> hit = TvRules.first(piece.rules(), own(piece), this);
             if (hit.isPresent()) {
                 TvRule rule = hit.get();
@@ -74,7 +77,7 @@ final class TvPaintStyle implements Function<TvBinding, OptionalDouble> {
     }
 
     private OptionalDouble number(TvBinding binding) {
-        double value = TvClientValues.value(pos, revision, values.bindingIndex(binding));
+        double value = TvPaintNumbers.of(binding, values, pos, revision, preview);
         return Double.isNaN(value) ? OptionalDouble.empty() : OptionalDouble.of(value);
     }
 }

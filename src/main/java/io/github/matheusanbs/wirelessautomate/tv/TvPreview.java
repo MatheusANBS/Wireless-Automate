@@ -102,7 +102,7 @@ public final class TvPreview {
             for (int i = 0; i < values.length; i++) {
                 TvBinding binding = state.bindings.get(i);
                 values[i] = LoadedTypes.contains(binding.type())
-                        ? TvManager.read(binding, report, data, player.getUUID()) : Double.NaN;
+                        ? TvManager.read(binding, report, data, player.getUUID(), server, menu.tv()) : Double.NaN;
             }
             if (state.sent != null && Arrays.equals(values, state.sent)) {
                 continue;

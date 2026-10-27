@@ -24,6 +24,21 @@ public abstract class KeyedStorageBlockEntity<K> extends StorageBlockEntity {
     public abstract KeyedStorage<K> keyed();
 
     @Override
+    public @Nullable StorageWatch watch() {
+        return keyed().watch();
+    }
+
+    @Override
+    public StorageWatch startWatch() {
+        return keyed().startWatch();
+    }
+
+    @Override
+    public void stopWatch() {
+        keyed().stopWatch();
+    }
+
+    @Override
     public boolean isEmptyContents() {
         return keyed().isEmpty();
     }

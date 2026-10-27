@@ -64,6 +64,8 @@ public abstract class KeyedStorage<K> {
     /** A soma por grupo ({@link #groupOf}), criada no primeiro tipo com grupo. */
     private @Nullable Reference2LongOpenHashMap<Object> groupTotals;
     private int version;
+    /** Os contadores de entra e sai, só enquanto uma Tela de Sinal vigia; nulo no resto do tempo. */
+    private @Nullable StorageWatch watch;
     private Admission<K> admission = (key, amount) -> amount;
 
     /** @param what nome do bloco para o log ("Baú", "Tanque"...) */
@@ -87,6 +89,23 @@ public abstract class KeyedStorage<K> {
 
     public void setAdmission(Admission<K> admission) {
         this.admission = admission;
+    }
+
+    /** Os contadores de entra e sai, ou {@code null} sem vigia. */
+    public @Nullable StorageWatch watch() {
+        return watch;
+    }
+
+    /** Liga a vigia (a mesma, se já ligada). */
+    public StorageWatch startWatch() {
+        if (watch == null) {
+            watch = new StorageWatch();
+        }
+        return watch;
+    }
+
+    public void stopWatch() {
+        watch = null;
     }
 
     /** Sobe a cada mudança do conteúdo. */
@@ -197,6 +216,11 @@ public abstract class KeyedStorage<K> {
         return groupTotals == null ? 0 : groupTotals.getLong(group);
     }
 
+    /** Quanto há do grupo (o item sem os componentes), nos armazenamentos com grupo. O(1). */
+    public long countOfGroup(Object group) {
+        return groupTotals == null ? 0 : groupTotals.getLong(group);
+    }
+
     private void addToGroup(K key, long amount) {
         Object group = groupOf(key);
         if (group == null) {
@@ -241,6 +265,9 @@ public abstract class KeyedStorage<K> {
         entry.count = StorageMath.add(entry.count, accepted);
         total = StorageMath.add(total, accepted);
         addToGroup(entry.key, accepted);
+        if (watch != null) {
+            watch.inserted(groupOf(entry.key), accepted);
+        }
         changed();
         return accepted;
     }
@@ -261,6 +288,9 @@ public abstract class KeyedStorage<K> {
         entry.count -= taken;
         total -= taken;
         takeFromGroup(entry.key, taken);
+        if (watch != null) {
+            watch.extracted(groupOf(entry.key), taken);
+        }
         if (entry.count <= 0) {
             // Fica no lugar até o compact, para os slots não andarem (ver slots()).
             holes++;

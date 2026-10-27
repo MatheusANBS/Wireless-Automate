@@ -32,6 +32,8 @@ public final class TvManager {
     private static final int TYPE_COUNT = ResourceType.values().length;
     /** Os valores de uma leitura antes de saber se mudaram; o teto da config de ligações é 256. */
     private static final double[] SCRATCH = new double[256];
+    /** Os bits de dado antigo de uma leitura, uma palavra por 64 ligações. */
+    private static final long[] STALE_SCRATCH = new long[SCRATCH.length / 64];
     private static final List<ServerPlayer> NEAR = new ArrayList<>();
     /** Rede → o {@link FlowStats} de cada tipo, pela ordem do {@code ordinal}; refeito uma vez por volta do amostrador. */
     private static final Map<UUID, FlowStats[]> STATS = new HashMap<>();
@@ -62,6 +64,7 @@ public final class TvManager {
         loaded = TvLoaded.serverCount();
         if (loaded == 0) {
             TvPreview.dropIdle();
+            TvStorageFeed.releaseAll();
             return;
         }
         long start = System.nanoTime();
@@ -90,6 +93,7 @@ public final class TvManager {
         }
         NEAR.clear();
         if (phase == PHASES - 1) {
+            TvStorageFeed.sweep(server.getTickCount());
             watched = cycleWatched;
             cycleWatched = 0;
         }
@@ -117,7 +121,8 @@ public final class TvManager {
         for (int i = 0; i < near.size(); i++) {
             ServerPlayer player = near.get(i);
             if (feed.seen.getInt(player.getUUID()) != feed.valuesVersion) {
-                TvValuesPayload payload = new TvValuesPayload(tv.getBlockPos(), feed.readRevision, feed.values);
+                TvValuesPayload payload = new TvValuesPayload(tv.getBlockPos(), feed.readRevision, feed.values,
+                        feed.stale);
                 if (forced == null) {
                     // Sem o canal negociado (ou sem conexão) não recebe e não entra no seen: recebe quando passar a ter.
                     if (player.connection == null || !player.connection.hasChannel(payload)) {
@@ -156,17 +161,27 @@ public final class TvManager {
         NetworkSavedData data = NetworkSavedData.get(server);
         List<TvBinding> bindings = layout.bindings();
         int count = Math.min(bindings.size(), SCRATCH.length);
+        int words = (count + 63) >> 6;
+        Arrays.fill(STALE_SCRATCH, 0, words, 0L);
+        boolean anyStale = false;
         for (int i = 0; i < count; i++) {
             TvBinding binding = bindings.get(i);
-            SCRATCH[i] = canRead(data, tv.owner(), binding.network())
-                    ? binding.metric().read(statsOf(binding)) : Double.NaN;
+            SCRATCH[i] = number(binding, data, tv.owner(), server, tv, feed);
+            if (binding.storage() != null && TvStorageFeed.wasStale()) {
+                STALE_SCRATCH[i >> 6] |= 1L << (i & 63);
+                anyStale = true;
+            }
         }
         boolean changed = tv.revision() != feed.readRevision || feed.values.length != count;
         for (int i = 0; !changed && i < count; i++) {
             changed = Double.compare(SCRATCH[i], feed.values[i]) != 0;
         }
+        for (int w = 0; !changed && w < words; w++) {
+            changed = (w < feed.stale.length ? feed.stale[w] : 0L) != STALE_SCRATCH[w];
+        }
         if (changed) {
             feed.values = Arrays.copyOf(SCRATCH, count);
+            feed.stale = anyStale ? Arrays.copyOf(STALE_SCRATCH, words) : TvFeed.NO_STALE;
             feed.valuesVersion++;
         }
         feed.readSample = report.sampledAt();
@@ -174,9 +189,23 @@ public final class TvManager {
     }
 
     /** O número de uma ligação no relatório, com o acesso de {@code who}; a prévia do editor lê por aqui. */
-    static double read(TvBinding binding, FlowSampler.Report report, NetworkSavedData data, UUID who) {
+    static double read(TvBinding binding, FlowSampler.Report report, NetworkSavedData data, UUID who,
+            MinecraftServer server, @Nullable TvBlockEntity tv) {
         ensureStats(report);
-        return canRead(data, who, binding.network()) ? binding.metric().read(statsOf(binding)) : Double.NaN;
+        if (binding.storage() != null && tv == null) {
+            return Double.NaN;
+        }
+        return number(binding, data, who, server, tv, tv == null ? null : tv.feedOrCreate());
+    }
+
+    /** O número de uma ligação por fonte: a rede pelo relatório, o armazenamento ligado à Tela, o relógio no cliente. */
+    private static double number(TvBinding binding, NetworkSavedData data, @Nullable UUID who, MinecraftServer server,
+            @Nullable TvBlockEntity tv, @Nullable TvFeed feed) {
+        return switch (binding.source()) {
+            case NETWORK -> canRead(data, who, binding.network()) ? binding.metric().read(statsOf(binding)) : Double.NaN;
+            case STORAGE -> TvStorageFeed.read(server, tv, feed, binding);
+            case CLOCK -> Double.NaN;
+        };
     }
 
     /** A rede existe e o dono da Tela pode usá-la; sem dono, não. */
@@ -209,6 +238,7 @@ public final class TvManager {
     /** Parada do servidor: o próximo mundo começa sem estado. */
     public static void reset() {
         TvPreview.reset();
+        TvStorageFeed.releaseAll();
         NEAR.clear();
         STATS.clear();
         mapReport = null;
@@ -230,6 +260,16 @@ public final class TvManager {
         } finally {
             forced = null;
         }
+    }
+
+    /** Quantos armazenamentos estão vigiados por alguma Tela. */
+    public static int watchedStoragesForTests() {
+        return TvStorageFeed.watchedCount();
+    }
+
+    /** Roda o varrer das vigias vencidas no tick dado (a volta do servidor roda uma vez por segundo). */
+    public static void sweepForTests(long now) {
+        TvStorageFeed.sweep(now);
     }
 
     public static long packetsForTests() {

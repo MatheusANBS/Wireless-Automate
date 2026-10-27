@@ -20,6 +20,7 @@ public final class TvClientValues {
     private static final class Entry {
         int revision;
         double[] values;
+        long[] stale;
     }
 
     public static void receive(TvValuesPayload payload) {
@@ -31,6 +32,7 @@ public final class TvClientValues {
         }
         entry.revision = payload.revision();
         entry.values = payload.values();
+        entry.stale = payload.stale();
         version++;
         TvCanvases.markDirty(pos);
     }
@@ -42,6 +44,16 @@ public final class TvClientValues {
             return Double.NaN;
         }
         return entry.values[index];
+    }
+
+    /** Se o número {@code index} é o último lido de um armazenamento num chunk descarregado (a Tela o pinta em Apagado). */
+    public static boolean stale(long pos, int revision, int index) {
+        Entry entry = VALUES.get(pos);
+        if (entry == null || entry.revision != revision || index < 0 || index >= entry.values.length) {
+            return false;
+        }
+        int word = index >> 6;
+        return word < entry.stale.length && (entry.stale[word] >>> (index & 63) & 1L) != 0;
     }
 
     /** O maior número que chegou para a Tela em {@code pos}, ou {@code NaN} sem nenhum (gancho do e2e). */

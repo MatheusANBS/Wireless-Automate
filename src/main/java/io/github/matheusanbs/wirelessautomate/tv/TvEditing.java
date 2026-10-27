@@ -83,11 +83,11 @@ public final class TvEditing {
         int[] dropped = {0};
         List<TvPiece> pieces = new ArrayList<>(layout.pieces().size());
         for (TvPiece piece : layout.pieces()) {
-            Optional<TvBinding> own = allowed(data, player, piece.binding(), dropped);
+            Optional<TvBinding> own = allowed(data, player, tv, piece.binding(), dropped);
             List<TvRule> rules = new ArrayList<>(piece.rules().size());
             boolean rulesChanged = false;
             for (TvRule rule : piece.rules()) {
-                Optional<TvBinding> bind = allowed(data, player, rule.bind(), dropped);
+                Optional<TvBinding> bind = allowed(data, player, tv, rule.bind(), dropped);
                 if (bind.equals(rule.bind())) {
                     rules.add(rule);
                 } else {
@@ -110,15 +110,25 @@ public final class TvEditing {
                 changed ? TvLayoutAckPayload.Result.SAVED : TvLayoutAckPayload.Result.UNCHANGED);
     }
 
-    /** A ligação se o jogador pode usar a rede e o tipo está carregado; senão vazia, contando uma saída. */
-    private static Optional<TvBinding> allowed(NetworkSavedData data, ServerPlayer player,
+    /**
+     * A ligação se vale: numa rede, o jogador pode usá-la e o tipo está carregado; num armazenamento, ele está ligado
+     * à Tela e o tipo está carregado; o relógio sempre vale. Senão vazia, contando uma saída.
+     */
+    private static Optional<TvBinding> allowed(NetworkSavedData data, ServerPlayer player, TvBlockEntity tv,
             Optional<TvBinding> binding, int[] dropped) {
         if (binding.isEmpty()) {
             return binding;
         }
         TvBinding value = binding.get();
-        WaNetwork found = data.network(value.network());
-        if (found != null && found.canUse(player.getUUID(), false) && LoadedTypes.contains(value.type())) {
+        boolean valid = switch (value.source()) {
+            case NETWORK -> {
+                WaNetwork found = data.network(value.network());
+                yield found != null && found.canUse(player.getUUID(), false) && LoadedTypes.contains(value.type());
+            }
+            case STORAGE -> tv.hasLink(value.storage().pos()) && LoadedTypes.contains(value.type());
+            case CLOCK -> true;
+        };
+        if (valid) {
             return binding;
         }
         dropped[0]++;

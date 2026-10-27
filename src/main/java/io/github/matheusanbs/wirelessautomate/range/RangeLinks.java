@@ -134,6 +134,7 @@ public final class RangeLinks {
             return refuse(player, Result.refused(LinkRefusal.PROTECTED), router, 0);
         }
         LinkerItem.setRouter(stack, GlobalPos.of(player.level().dimension(), router.getBlockPos()));
+        LinkerItem.setTv(stack, null);
         LinkRefusal state = upgradeRefusal(router);
         player.displayClientMessage(state == LinkRefusal.NONE
                 ? Component.translatable(KEY + "chosen", routerName(router), used(router), max(router))

@@ -94,7 +94,7 @@ public final class TvPainter {
             return out.append(NO_DATA).append(format.suffix()).toString();
         }
         TvUnit unit = format.unit();
-        boolean rate = binding.metric().rate() && unit != TvUnit.NONE;
+        boolean rate = binding.rate() && unit != TvUnit.NONE;
         double shown = rate ? value * unit.perSecond() : value;
         out.append(TvNumbers.format(shown, format.decimals(), format.abbreviate(), format.sign(), decimalSep, groupSep));
         if (rate && format.suffix().isEmpty()) {

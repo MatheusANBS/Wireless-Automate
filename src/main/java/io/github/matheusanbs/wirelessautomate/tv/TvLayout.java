@@ -12,11 +12,12 @@ import java.util.Set;
 import net.minecraft.nbt.NbtOps;
 
 /**
- * O layout de uma Tela de Sinal: as peças na ordem de desenho e, derivadas delas, as ligações distintas, na ordem
- * da primeira peça que usa cada uma. As ligações são calculadas uma vez no construtor, não por amostra; o NBT só
- * leva as peças.
+ * O layout de uma Tela de Sinal: as peças na ordem de desenho, o tema, o fundo, as linhas de varredura e, derivadas
+ * das peças, as ligações distintas: primeiro as das peças, depois as das regras, na ordem em que aparecem. As
+ * ligações são calculadas uma vez no construtor, não por amostra; o NBT não as leva.
  */
-public record TvLayout(List<TvPiece> pieces, List<TvBinding> bindings) {
+public record TvLayout(List<TvPiece> pieces, TvTheme theme, TvBackground background, boolean scanlines,
+        List<TvBinding> bindings) {
     public static final int HARD_CAP = 512;
 
     /** Lê cada peça à parte: uma que não decodifica é largada, e as que passam de {@link #HARD_CAP} também. */
@@ -39,7 +40,10 @@ public record TvLayout(List<TvPiece> pieces, List<TvBinding> bindings) {
             TvLayout::dynamics);
 
     public static final Codec<TvLayout> CODEC = RecordCodecBuilder.create(i -> i.group(
-            LENIENT_PIECES.optionalFieldOf("pieces", List.of()).forGetter(TvLayout::pieces)).apply(i, TvLayout::of));
+            LENIENT_PIECES.optionalFieldOf("pieces", List.of()).forGetter(TvLayout::pieces),
+            TvCodecs.THEME.optionalFieldOf("theme", TvTheme.DEFAULT).forGetter(TvLayout::theme),
+            TvBackground.CODEC.optionalFieldOf("background", TvBackground.DEFAULT).forGetter(TvLayout::background),
+            Codec.BOOL.optionalFieldOf("scanlines", false).forGetter(TvLayout::scanlines)).apply(i, TvLayout::of));
 
     public static final TvLayout EMPTY = of(List.of());
 
@@ -48,6 +52,11 @@ public record TvLayout(List<TvPiece> pieces, List<TvBinding> bindings) {
         Set<TvBinding> distinct = new LinkedHashSet<>();
         for (TvPiece piece : pieces) {
             piece.binding().ifPresent(distinct::add);
+        }
+        for (TvPiece piece : pieces) {
+            for (TvRule rule : piece.rules()) {
+                rule.bind().ifPresent(distinct::add);
+            }
         }
         bindings = List.copyOf(distinct);
     }
@@ -61,7 +70,27 @@ public record TvLayout(List<TvPiece> pieces, List<TvBinding> bindings) {
     }
 
     public static TvLayout of(List<TvPiece> pieces) {
-        return new TvLayout(pieces, List.of());
+        return of(pieces, TvTheme.DEFAULT, TvBackground.DEFAULT, false);
+    }
+
+    public static TvLayout of(List<TvPiece> pieces, TvTheme theme, TvBackground background, boolean scanlines) {
+        return new TvLayout(pieces, theme, background, scanlines, List.of());
+    }
+
+    public TvLayout withPieces(List<TvPiece> pieces) {
+        return of(pieces, theme, background, scanlines);
+    }
+
+    public TvLayout withTheme(TvTheme theme) {
+        return of(pieces, theme, background, scanlines);
+    }
+
+    public TvLayout withBackground(TvBackground background) {
+        return of(pieces, theme, background, scanlines);
+    }
+
+    public TvLayout withScanlines(boolean scanlines) {
+        return of(pieces, theme, background, scanlines);
     }
 
     /** A posição da ligação em {@link #bindings()}, ou -1 se nenhuma peça a usa. */
@@ -79,6 +108,6 @@ public record TvLayout(List<TvPiece> pieces, List<TvBinding> bindings) {
             int h = Math.min(piece.height(), maxH);
             clamped.add(piece.withBox(TvText.clamp(piece.x(), 0, maxW - w), TvText.clamp(piece.y(), 0, maxH - h), w, h));
         }
-        return of(clamped);
+        return of(clamped, theme, background, scanlines);
     }
 }

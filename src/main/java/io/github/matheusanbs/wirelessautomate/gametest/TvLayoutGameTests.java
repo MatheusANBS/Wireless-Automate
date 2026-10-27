@@ -2,19 +2,31 @@ package io.github.matheusanbs.wirelessautomate.gametest;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.tv.TvAlign;
 import io.github.matheusanbs.wirelessautomate.tv.TvArea;
+import io.github.matheusanbs.wirelessautomate.tv.TvBackground;
 import io.github.matheusanbs.wirelessautomate.tv.TvBinding;
+import io.github.matheusanbs.wirelessautomate.tv.TvBlockEntity;
+import io.github.matheusanbs.wirelessautomate.tv.TvCodecs;
+import io.github.matheusanbs.wirelessautomate.tv.TvFont;
 import io.github.matheusanbs.wirelessautomate.tv.TvFormat;
 import io.github.matheusanbs.wirelessautomate.tv.TvLayout;
 import io.github.matheusanbs.wirelessautomate.tv.TvMetric;
 import io.github.matheusanbs.wirelessautomate.tv.TvPiece;
 import io.github.matheusanbs.wirelessautomate.tv.TvPieceType;
+import io.github.matheusanbs.wirelessautomate.tv.TvRule;
+import io.github.matheusanbs.wirelessautomate.tv.TvRuleOp;
+import io.github.matheusanbs.wirelessautomate.tv.TvRules;
 import io.github.matheusanbs.wirelessautomate.tv.TvStyle;
+import io.github.matheusanbs.wirelessautomate.tv.TvTheme;
 import io.github.matheusanbs.wirelessautomate.tv.TvUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalDouble;
 import java.util.UUID;
+import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
@@ -119,6 +131,119 @@ public final class TvLayoutGameTests {
         helper.assertValueEqual(clamped.pieces().get(0).width(), 40, "largura da primeira");
         helper.assertValueEqual(clamped.pieces().get(1).x(), 0, "x da segunda");
         helper.assertValueEqual(clamped.pieces().get(1).width(), 192, "largura da segunda");
+        helper.succeed();
+    }
+
+    private static TvRule rule(TvRuleOp op, double value, Optional<TvBinding> bind) {
+        return new TvRule(op, value, bind, Optional.of(0xFF010203), Optional.empty(), true, false);
+    }
+
+    private static TvBlockEntity entity(GameTestHelper helper) {
+        return new TvBlockEntity(helper.absolutePos(new BlockPos(1, 1, 1)),
+                ModBlocks.SIGNAL_SCREEN.get().defaultBlockState());
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void layoutDaEtapa1LeIgualEEscreveSemChavesNovas(GameTestHelper helper) {
+        CompoundTag style = new CompoundTag();
+        style.putInt("color", 0xFF112233);
+        CompoundTag piece = new CompoundTag();
+        piece.putString("type", "shape");
+        piece.put("style", style);
+        ListTag list = new ListTag();
+        list.add(piece);
+        CompoundTag root = new CompoundTag();
+        root.put("pieces", list);
+        TvLayout read = TvLayout.CODEC.parse(NbtOps.INSTANCE, root).getOrThrow();
+        helper.assertValueEqual(read.theme(), TvTheme.DEFAULT, "tema padrão");
+        helper.assertValueEqual(read.background(), TvBackground.DEFAULT, "fundo padrão");
+        helper.assertFalse(read.scanlines(), "sem linhas de varredura");
+        TvPiece first = read.pieces().get(0);
+        helper.assertFalse(first.hidden(), "visível");
+        helper.assertTrue(first.rules().isEmpty(), "sem regras");
+        helper.assertValueEqual(first.style().radius(), 0, "raio");
+        helper.assertValueEqual(first.style().opacity(), 100, "opacidade");
+        helper.assertValueEqual(first.style().font(), TvFont.MINECRAFT, "fonte");
+        CompoundTag written = (CompoundTag) encode(read);
+        helper.assertFalse(written.contains("theme") || written.contains("background") || written.contains("scanlines"),
+                "o layout não escreve as chaves novas no padrão");
+        CompoundTag writtenPiece = written.getList("pieces", Tag.TAG_COMPOUND).getCompound(0);
+        helper.assertFalse(writtenPiece.contains("hidden") || writtenPiece.contains("rules"),
+                "a peça não escreve as chaves novas no padrão");
+        CompoundTag writtenStyle = writtenPiece.getCompound("style");
+        helper.assertFalse(writtenStyle.contains("radius") || writtenStyle.contains("opacity")
+                || writtenStyle.contains("font"), "o estilo não escreve as chaves novas no padrão");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void layoutCompletoFazIdaEVoltaPeloNbtEPeloUpdateTag(GameTestHelper helper) {
+        TvBinding bind = new TvBinding(UUID.randomUUID(), ResourceType.FLUID, TvMetric.OUT);
+        TvStyle style = TvStyle.DEFAULT.withColor(3).withBackground(2).withRadius(5).withOpacity(40)
+                .withFont(TvFont.TERMINAL);
+        TvPiece piece = plain(TvPieceType.VALUE, 0, 30, Optional.empty()).withStyle(style).withHidden(true)
+                .withRules(List.of(rule(TvRuleOp.GT, 3.5, Optional.of(bind)), rule(TvRuleOp.EQ, 0, Optional.empty())));
+        TvLayout layout = TvLayout.of(List.of(piece), new TvTheme("Meu", 1, 2, 3, 4, 5, 6),
+                new TvBackground(TvBackground.Kind.GRADIENT, 0xFF000000, 0xFF112233), true);
+        TvLayout back = TvLayout.CODEC.parse(NbtOps.INSTANCE, encode(layout)).getOrThrow();
+        helper.assertValueEqual(back, layout, "ida e volta pelo NBT");
+        var registries = helper.getLevel().registryAccess();
+        TvBlockEntity tv = entity(helper);
+        tv.setLayout(layout);
+        TvBlockEntity fromSave = entity(helper);
+        fromSave.loadWithComponents(tv.saveWithFullMetadata(registries), registries);
+        helper.assertValueEqual(fromSave.layout(), layout, "ida e volta pelo save");
+        TvBlockEntity fromUpdate = entity(helper);
+        fromUpdate.handleUpdateTag(tv.getUpdateTag(registries), registries);
+        helper.assertValueEqual(fromUpdate.layout(), layout, "ida e volta pelo update tag");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void regrasAlemDeOitoSaoCortadas(GameTestHelper helper) {
+        List<TvRule> nine = new ArrayList<>();
+        for (int n = 0; n < 9; n++) {
+            nine.add(rule(TvRuleOp.LT, n, Optional.empty()));
+        }
+        TvPiece piece = plain(TvPieceType.VALUE, 0, 10, Optional.empty()).withRules(nine);
+        helper.assertValueEqual(piece.rules().size(), 8, "o construtor corta");
+        ListTag rules = new ListTag();
+        for (TvRule rule : nine) {
+            rules.add(TvCodecs.RULE.encodeStart(NbtOps.INSTANCE, rule).getOrThrow());
+        }
+        CompoundTag raw = new CompoundTag();
+        raw.putString("type", "value");
+        raw.put("rules", rules);
+        helper.assertValueEqual(TvPiece.CODEC.parse(NbtOps.INSTANCE, raw).getOrThrow().rules().size(), 8,
+                "o codec corta");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void bindingsIncluemAsDasRegrasDepoisDasDasPecas(GameTestHelper helper) {
+        TvBinding onPiece = new TvBinding(UUID.randomUUID(), ResourceType.ITEM, TvMetric.IN);
+        TvBinding onRule = new TvBinding(UUID.randomUUID(), ResourceType.FLUID, TvMetric.OUT);
+        TvPiece first = plain(TvPieceType.SHAPE, 0, 10, Optional.empty())
+                .withRules(List.of(rule(TvRuleOp.LT, 1, Optional.of(onRule)),
+                        rule(TvRuleOp.GT, 2, Optional.of(onPiece))));
+        TvPiece second = plain(TvPieceType.VALUE, 10, 10, Optional.of(onPiece));
+        TvLayout layout = TvLayout.of(List.of(first, second));
+        helper.assertValueEqual(layout.bindings().size(), 2, "distintas");
+        helper.assertValueEqual(layout.bindingIndex(onPiece), 0, "a da peça primeiro");
+        helper.assertValueEqual(layout.bindingIndex(onRule), 1, "a da regra depois");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void regraComLigacaoPropriaLeOValorDela(GameTestHelper helper) {
+        TvBinding binding = new TvBinding(UUID.randomUUID(), ResourceType.ITEM, TvMetric.IN);
+        TvRule own = rule(TvRuleOp.GT, 100, Optional.empty());
+        TvRule bound = rule(TvRuleOp.LT, 10, Optional.of(binding));
+        TvRule hit = TvRules.first(List.of(own, bound), OptionalDouble.of(1),
+                b -> b.equals(binding) ? OptionalDouble.of(2) : OptionalDouble.empty()).orElseThrow();
+        helper.assertTrue(hit == bound, "vale a regra com a ligação própria");
+        helper.assertTrue(TvRules.first(List.of(bound), OptionalDouble.of(1), b -> OptionalDouble.empty()).isEmpty(),
+                "sem valor na ligação não bate");
         helper.succeed();
     }
 }

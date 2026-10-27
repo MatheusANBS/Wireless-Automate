@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.client.tv.render;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.core.Direction;
+import org.joml.Vector3f;
 
 /**
  * Os quadriláteros da Tela, escritos direto no {@link VertexConsumer} sem alocar nem mexer no {@code PoseStack}.
@@ -19,6 +20,10 @@ final class TvQuads {
     private static final float[] Z = new float[CORNERS];
     private static final float[] U = new float[CORNERS];
     private static final float[] V = new float[CORNERS];
+    /** A posição e a normal transformadas pela {@code Pose}, reusadas: os {@code addVertex(Pose, ...)} e
+     * {@code setNormal(Pose, ...)} padrão do {@code VertexConsumer} criam um {@code Vector3f} por chamada. */
+    private static final Vector3f POS = new Vector3f();
+    private static final Vector3f NORMAL = new Vector3f();
     private static final int[] FORWARD = {0, 1, 2, 3};
     private static final int[] BACKWARD = {0, 3, 2, 1};
     private static Direction facing = Direction.NORTH;
@@ -59,26 +64,32 @@ final class TvQuads {
     /** Emite os quatro cantos no formato das entidades, com a normal dada no modelo. */
     static void solid(VertexConsumer out, PoseStack.Pose pose, float nx, float ny, float nz, int overlay, int light) {
         int[] order = order(nx, ny, nz);
-        float wx = worldX(nx, nz);
-        float wz = worldZ(nx, nz);
+        pose.normal().transform(worldX(nx, nz), ny, worldZ(nx, nz), NORMAL).normalize();
         for (int k : order) {
-            out.addVertex(pose, blockX(X[k], Z[k]), Y[k] / TvFrame.UNITS_PER_BLOCK, blockZ(X[k], Z[k]))
+            position(pose, k);
+            out.addVertex(POS.x, POS.y, POS.z)
                     .setColor(-1)
                     .setUv(U[k], V[k])
                     .setOverlay(overlay)
                     .setLight(light)
-                    .setNormal(pose, wx, ny, wz);
+                    .setNormal(NORMAL.x, NORMAL.y, NORMAL.z);
         }
     }
 
     /** Emite os quatro cantos no formato do texto (posição, cor, uv e luz), virados para fora da tela. */
     static void text(VertexConsumer out, PoseStack.Pose pose, int light) {
         for (int k : order(0, 0, -1)) {
-            out.addVertex(pose, blockX(X[k], Z[k]), Y[k] / TvFrame.UNITS_PER_BLOCK, blockZ(X[k], Z[k]))
+            position(pose, k);
+            out.addVertex(POS.x, POS.y, POS.z)
                     .setColor(-1)
                     .setUv(U[k], V[k])
                     .setLight(light);
         }
+    }
+
+    /** O canto {@code k} no bloco, transformado pela {@code Pose} em {@link #POS}. */
+    private static void position(PoseStack.Pose pose, int k) {
+        pose.pose().transformPosition(blockX(X[k], Z[k]), Y[k] / TvFrame.UNITS_PER_BLOCK, blockZ(X[k], Z[k]), POS);
     }
 
     /** Anti-horário visto pelo lado da normal: inverte se o produto vetorial dos lados aponta para o outro lado. */

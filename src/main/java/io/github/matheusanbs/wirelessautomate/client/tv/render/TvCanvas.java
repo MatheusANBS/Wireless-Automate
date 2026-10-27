@@ -49,9 +49,11 @@ final class TvCanvas {
 
     /**
      * Redesenha o layout. Deixa ligado o framebuffer desta imagem e a projeção dela: quem chama guarda e devolve os
-     * do jogo depois de todos os redesenhos do quadro.
+     * do jogo depois de todos os redesenhos do quadro. A névoa fica desligada só durante o desenho (o texto está em
+     * z −11000 e um mod que deixe a névoa ligada o apagaria).
+     *
+     * @param ppb a qualidade da config do cliente ({@code tv.pixelsPerBlock}), que o {@link TvResolution} usa
      */
-    /** @param ppb a qualidade da config do cliente ({@code tv.pixelsPerBlock}), que o {@link TvResolution} usa */
     void paint(Minecraft minecraft, int ppb, char decimalSep, char groupSep) {
         TvArea area = tv.area();
         int effective = Math.max(1, Math.min(TvResolution.pixelsPerBlock(area.width(), area.height(), ppb),
@@ -74,12 +76,15 @@ final class TvCanvas {
         modelView.pushMatrix();
         modelView.translation(0, 0, 10000 - far);
         RenderSystem.applyModelViewMatrix();
+        float fogStart = RenderSystem.getShaderFogStart();
+        RenderSystem.setShaderFogStart(Float.MAX_VALUE);
         GuiGraphics graphics = new GuiGraphics(minecraft, minecraft.renderBuffers().bufferSource());
         float scale = effective / (float) TvArea.PIXELS_PER_BLOCK;
         graphics.pose().scale(scale, scale, 1);
         TvPainter.paint(graphics, minecraft.font, tv.layout(), tv.getBlockPos().asLong(), tv.revision(), decimalSep,
                 groupSep, scale, height);
         graphics.flush();
+        RenderSystem.setShaderFogStart(fogStart);
         mipmaps(target.getColorTextureId());
         modelView.popMatrix();
         RenderSystem.applyModelViewMatrix();

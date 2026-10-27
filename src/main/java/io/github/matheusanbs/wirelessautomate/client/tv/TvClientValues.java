@@ -6,8 +6,8 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 /**
  * Os números das Telas que chegaram do servidor, por posição, com a revisão do layout que o servidor leu. Cada
- * chegada marca a imagem da Tela como suja. Guarda uma entrada por Tela vista, até sair do mundo. Só na thread do
- * cliente.
+ * chegada marca a imagem da Tela como suja. Guarda uma entrada por Tela vista na dimensão atual: o
+ * {@link TvClientEvents} limpa tudo ao trocar de dimensão e ao sair do mundo. Só na thread do cliente.
  */
 public final class TvClientValues {
     private static final Long2ObjectOpenHashMap<Entry> VALUES = new Long2ObjectOpenHashMap<>();
@@ -41,7 +41,7 @@ public final class TvClientValues {
         return entry.values[index];
     }
 
-    /** Ao sair do mundo. */
+    /** Ao trocar de dimensão e ao sair do mundo. */
     public static void clear() {
         VALUES.clear();
         VALUES.trim();

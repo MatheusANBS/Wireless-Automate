@@ -43,6 +43,10 @@ public final class TvCanvases {
     private static String language = "";
     private static char decimalSep = '.';
     private static char groupSep = ',';
+    /** Quantos redesenhos houve, o tempo somado e o maior, em ns (o e2e de desempenho lê e zera). */
+    public static long paintsForTests;
+    public static long paintNanosForTests;
+    public static long maxPaintNanosForTests;
 
     private TvCanvases() {
     }
@@ -113,7 +117,12 @@ public final class TvCanvases {
                 projection = RenderSystem.getProjectionMatrix();
                 sorting = RenderSystem.getVertexSorting();
             }
+            long start = System.nanoTime();
             canvas.paint(minecraft, ppb, decimalSep, groupSep);
+            long spent = System.nanoTime() - start;
+            paintsForTests++;
+            paintNanosForTests += spent;
+            maxPaintNanosForTests = Math.max(maxPaintNanosForTests, spent);
             painted++;
         }
         if (projection != null) {

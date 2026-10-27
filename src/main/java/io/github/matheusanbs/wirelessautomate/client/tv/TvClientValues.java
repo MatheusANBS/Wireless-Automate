@@ -41,6 +41,20 @@ public final class TvClientValues {
         return entry.values[index];
     }
 
+    /** O maior número que chegou para a Tela em {@code pos}, ou {@code NaN} sem nenhum (gancho do e2e). */
+    public static double maxForTests(long pos) {
+        Entry entry = VALUES.get(pos);
+        double max = Double.NaN;
+        if (entry != null) {
+            for (double value : entry.values) {
+                if (Double.isNaN(max) || value > max) {
+                    max = value;
+                }
+            }
+        }
+        return max;
+    }
+
     /** Ao trocar de dimensão e ao sair do mundo. */
     public static void clear() {
         VALUES.clear();

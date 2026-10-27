@@ -14,6 +14,7 @@ import io.github.matheusanbs.wirelessautomate.client.storage.StorageListScreen;
 import io.github.matheusanbs.wirelessautomate.client.storage.StorageScalarScreen;
 import io.github.matheusanbs.wirelessautomate.client.tablet.TabletScreen;
 import io.github.matheusanbs.wirelessautomate.client.tv.TvClientValues;
+import io.github.matheusanbs.wirelessautomate.client.tv.TvScreen;
 import io.github.matheusanbs.wirelessautomate.client.tv.render.TvCanvases;
 import io.github.matheusanbs.wirelessautomate.client.tv.render.TvRenderer;
 import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
@@ -26,6 +27,7 @@ import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageScalarMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
+import io.github.matheusanbs.wirelessautomate.menu.TvMenu;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
@@ -114,6 +116,8 @@ public final class ClientSetup {
                 (ResonatorMenu menu, Inventory inventory, Component title) -> new ResonatorScreen(menu, inventory, title));
         event.register(ModMenus.CRYSTAL_REPAIRER.get(),
                 (RepairerMenu menu, Inventory inventory, Component title) -> new RepairerScreen(menu, inventory, title));
+        event.register(ModMenus.SIGNAL_SCREEN.get(),
+                (TvMenu menu, Inventory inventory, Component title) -> new TvScreen(menu, inventory, title));
     }
 
     /** A câmara animada do Núcleo montado, a animação do Reparador de Cristais e a Tela de Sinal. */

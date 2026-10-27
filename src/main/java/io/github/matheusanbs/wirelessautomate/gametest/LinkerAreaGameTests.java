@@ -8,8 +8,10 @@ import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerProblem;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerSnapshot;
+import io.github.matheusanbs.wirelessautomate.packet.CycleLinkerModePayload;
 import io.github.matheusanbs.wirelessautomate.packet.LinkerActionPayload;
 import io.github.matheusanbs.wirelessautomate.packet.LinkerActionPayload.Op;
+import io.github.matheusanbs.wirelessautomate.packet.ModPayloads;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -22,6 +24,7 @@ import net.minecraft.nbt.StringTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
@@ -139,20 +142,57 @@ public final class LinkerAreaGameTests {
         helper.succeed();
     }
 
-    /** Shift + clique no ar passa de Vincular a Abrir e volta; o padrão, sem componente, é Vincular. */
+    /** Shift + roda do mouse (o pacote) passa de Vincular a Abrir e volta, nas duas direções; o padrão é Vincular. */
     @GameTest(template = "empty")
-    public static void shiftClickInTheAirTogglesTheMode(GameTestHelper helper) {
+    public static void shiftScrollTogglesTheMode(GameTestHelper helper) {
         ItemStack linker = new ItemStack(ModItems.LINKER.get());
         ServerPlayer player = player(helper, linker);
         try {
             helper.assertValueEqual(LinkerItem.mode(linker), LinkerMode.LINK, "o padrão");
-            player.setShiftKeyDown(true);
-            ModItems.LINKER.get().use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
-            helper.assertValueEqual(LinkerItem.mode(linker), LinkerMode.OPEN, "depois do primeiro Shift");
-            ModItems.LINKER.get().use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
-            helper.assertValueEqual(LinkerItem.mode(linker), LinkerMode.LINK, "depois do segundo Shift");
+            helper.assertTrue(ModPayloads.handleCycleLinkerMode(player, new CycleLinkerModePayload(1)),
+                    "rolar para baixo trocou");
+            helper.assertValueEqual(LinkerItem.mode(linker), LinkerMode.OPEN, "depois de rolar para baixo");
+            helper.assertTrue(ModPayloads.handleCycleLinkerMode(player, new CycleLinkerModePayload(-1)),
+                    "rolar para cima trocou");
+            helper.assertValueEqual(LinkerItem.mode(linker), LinkerMode.LINK, "depois de rolar para cima");
             helper.assertFalse(linker.has(io.github.matheusanbs.wirelessautomate.registry.ModDataComponents.LINKER_MODE
                     .get()), "Vincular deixou o componente no item");
+            helper.assertFalse(ModPayloads.handleCycleLinkerMode(player, new CycleLinkerModePayload(0)),
+                    "direção 0 trocou");
+            helper.assertValueEqual(LinkerItem.mode(linker), LinkerMode.LINK, "direção 0 mudou o modo");
+        } finally {
+            cleanup(player, helper);
+        }
+        helper.succeed();
+    }
+
+    /** O pacote da roda só age com o Vinculador na mão principal: na secundária ou com outro item, nada muda. */
+    @GameTest(template = "empty")
+    public static void shiftScrollNeedsTheLinkerInTheMainHand(GameTestHelper helper) {
+        ItemStack linker = new ItemStack(ModItems.LINKER.get());
+        ServerPlayer player = player(helper, new ItemStack(Items.STICK));
+        try {
+            player.setItemInHand(InteractionHand.OFF_HAND, linker);
+            helper.assertFalse(ModPayloads.handleCycleLinkerMode(player, new CycleLinkerModePayload(1)),
+                    "trocou com o Vinculador só na secundária");
+            helper.assertValueEqual(LinkerItem.mode(linker), LinkerMode.LINK, "o modo mudou");
+        } finally {
+            player.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
+            cleanup(player, helper);
+        }
+        helper.succeed();
+    }
+
+    /** Shift + clique no ar não troca mais o modo: faz o mesmo que o clique comum. */
+    @GameTest(template = "empty")
+    public static void shiftClickInTheAirKeepsTheMode(GameTestHelper helper) {
+        ItemStack linker = new ItemStack(ModItems.LINKER.get());
+        ServerPlayer player = player(helper, linker);
+        try {
+            LinkerItem.setMode(linker, LinkerMode.OPEN);
+            player.setShiftKeyDown(true);
+            ModItems.LINKER.get().use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
+            helper.assertValueEqual(LinkerItem.mode(linker), LinkerMode.OPEN, "o Shift + clique no ar trocou o modo");
         } finally {
             player.setShiftKeyDown(false);
             cleanup(player, helper);

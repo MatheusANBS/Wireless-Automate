@@ -756,6 +756,20 @@ O Shift + clique no ar para trocar o modo do Vinculador (Vincular ↔ Abrir) é 
 
 ---
 
+### Task 11: Tamanho padrão da tela de filtro (bug da 2.10.0, pedido do dono em 27/10)
+
+A 2.10.0 (commit 4576aaa6) subiu o mínimo da tela de filtro para 392 × 264 (`FilterLayout.MIN_W`/`MIN_H`) e deixou o padrão do `FilterSize` em 356 × 270. A largura fica abaixo do mínimo, e a altura cai fora da grade de linhas (`MIN_H + k × ROW`, `ROW = 18`). O e2e "filtro: tamanho de volta" nunca volta a 270 e falha.
+
+**Files:**
+- Modify: `client/filter/FilterSize.java` (padrão `savedW = 392`, `savedH = 282`, um degrau acima do mínimo)
+- Test: `src/test/java/io/github/matheusanbs/wirelessautomate/client/filter/FilterSizeTest.java` (JUnit: o padrão é pelo menos o mínimo, a altura padrão está na grade, `(savedHeight() - MIN_H) % ROW == 0`, e um arrasto que volta ao tamanho inicial chega nele de novo pelo `drag`; se `FilterLayout` e `FilterSize` forem de pacote, o teste fica no mesmo pacote)
+
+**Custo:** nenhum.
+
+- [ ] **Step 1:** o JUnit (falha com 356 × 270). **Step 2:** mudar o padrão. **Step 3:** `./gradlew test --tests "*FilterSizeTest"` e o e2e da suíte do filtro (`./scripts/e2e.sh --only filtro`) com `OK`. **Step 4:** commit (`Filtro: tamanho padrão dentro do mínimo e na grade`).
+
+---
+
 ## Autorrevisão (feita ao escrever)
 
 - **Cobertura da spec (etapa 1):** bloco contra a parede e sumir sem ela (T3); tamanho 1×1 ao teto, o "cresce para", a validação (T1, T4, T6, T8); área desenhada sem blocos (T7); o layout com Valor, Texto e Forma (T2); dados das redes com o acesso do dono e "—" (T5); texto que cabe (T1, T7); textura por Tela, redesenho só com mudança, até 4 por quadro, liberar depois de 200 ticks (T7); tetos e config (T3); quem edita (T3, T6); receita (T3); protocolo 35 (T5); guia (T9). As decisões 5 a 16 da spec que não estão aqui são das etapas 2 a 4.

@@ -1127,7 +1127,7 @@ numa máquina.
 
 | | |
 | --- | --- |
-| **Modos** | **Vincular** (padrão) e **Abrir**. Shift + clique no ar troca de um para o outro. |
+| **Modos** | **Vincular** (padrão) e **Abrir**. Shift + roda do mouse troca de um para o outro. |
 | **Vincular** | Escolha um roteador com o Upgrade de Alcance e clique nas máquinas: cada clique vincula a máquina a ele (um clique numa já vinculada a desvincula). A tela vincula uma área inteira de uma vez. |
 | **Abrir** | Clique numa máquina: abre a tela do roteador que chega nela, já na máquina. Se chegam vários (o preso nela e os de alcance), uma lista curta deixa escolher. |
 | **Redes** | O Vinculador não mexe nelas: escolha a rede de cada face na linha **Rede** da tela do roteador ou pelo [Tablet](network-tablet.md). |
@@ -1139,7 +1139,7 @@ numa máquina.
 | Clique num roteador | Escolhe o roteador | — |
 | Clique numa máquina | Vincula ou desvincula a máquina | Abre o roteador que chega nela |
 | Clique no ar | Abre a tela | Mostra a dica do modo |
-| Shift + clique no ar | Passa para **Abrir** | Passa para **Vincular** |
+| Shift + roda do mouse | Passa para **Abrir** | Passa para **Vincular** |
 | Shift + clique em dois blocos | Marca os cantos da área | — |
 
 ## Na tela (modo Vincular)
@@ -1189,7 +1189,7 @@ machine.
 
 | | |
 | --- | --- |
-| **Modes** | **Link** (default) and **Open**. Shift + click the air switches between them. |
+| **Modes** | **Link** (default) and **Open**. Shift + mouse wheel switches between them. |
 | **Link** | Pick a router with the Range Upgrade and click machines: each click links the machine to it (clicking one that is already linked unlinks it). The screen links a whole area at once. |
 | **Open** | Click a machine: opens the screen of the router that reaches it, already on the machine. If several reach it (the one attached to it and the range ones), a short list lets you choose. |
 | **Networks** | The Linker doesn't touch them: pick each face's network in the router screen's **Network** row or with the [Tablet](network-tablet.md). |
@@ -1201,7 +1201,7 @@ machine.
 | Click a router | Picks the router | — |
 | Click a machine | Links or unlinks the machine | Opens the router that reaches it |
 | Click the air | Opens the screen | Shows the mode's hint |
-| Shift + click the air | Goes to **Open** | Goes to **Link** |
+| Shift + mouse wheel | Goes to **Open** | Goes to **Link** |
 | Shift + click two blocks | Marks the area corners | — |
 
 ## On the screen (Link mode)

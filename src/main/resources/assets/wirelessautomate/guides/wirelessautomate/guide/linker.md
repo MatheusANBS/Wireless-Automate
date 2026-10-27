@@ -22,7 +22,7 @@ machine.
 
 | | |
 | --- | --- |
-| **Modes** | **Link** (default) and **Open**. Shift + click the air switches between them. |
+| **Modes** | **Link** (default) and **Open**. Shift + mouse wheel switches between them. |
 | **Link** | Pick a router with the Range Upgrade and click machines: each click links the machine to it (clicking one that is already linked unlinks it). The screen links a whole area at once. |
 | **Open** | Click a machine: opens the screen of the router that reaches it, already on the machine. If several reach it (the one attached to it and the range ones), a short list lets you choose. |
 | **Networks** | The Linker doesn't touch them: pick each face's network in the router screen's **Network** row or with the [Tablet](network-tablet.md). |
@@ -34,7 +34,7 @@ machine.
 | Click a router | Picks the router | — |
 | Click a machine | Links or unlinks the machine | Opens the router that reaches it |
 | Click the air | Opens the screen | Shows the mode's hint |
-| Shift + click the air | Goes to **Open** | Goes to **Link** |
+| Shift + mouse wheel | Goes to **Open** | Goes to **Link** |
 | Shift + click two blocks | Marks the area corners | — |
 
 ## On the screen (Link mode)

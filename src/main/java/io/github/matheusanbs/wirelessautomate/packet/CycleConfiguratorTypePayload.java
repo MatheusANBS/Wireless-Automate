@@ -9,7 +9,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 /**
  * Cliente → servidor: Shift + roda do mouse com o Configurador na mão principal troca o tipo (aba)
  * que ele cola (Todos → um tipo por vez, só os carregados: Químicos com o Mekanism, Source com o Ars Nouveau;
- * {@code direction} +1 ou −1). Irmão do {@link CycleLinkerTypePayload}.
+ * {@code direction} +1 ou −1). Irmão do {@link CycleLinkerModePayload}.
  */
 public record CycleConfiguratorTypePayload(int direction) implements CustomPacketPayload {
     public static final Type<CycleConfiguratorTypePayload> TYPE =

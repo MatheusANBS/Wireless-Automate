@@ -1319,5 +1319,14 @@
   "gui.wirelessautomate.filter.rule.suggest.number": "número · %s a %s",
   "gui.wirelessautomate.filter.rule.suggest.text": "texto · %s",
   "gui.wirelessautomate.filter.rule.suggest.items": "%s itens",
-  "gui.wirelessautomate.filter.rule.suggest.item": "%s item"
+  "gui.wirelessautomate.filter.rule.suggest.item": "%s item",
+  "container.wirelessautomate.signal_screen": "Tela de Sinal",
+  "message.wirelessautomate.tv.not_owner": "Esta Tela é de %s",
+  "message.wirelessautomate.tv.operator": "um operador",
+  "message.wirelessautomate.tv.problem.too_big": "Grande demais: no máximo %s x %s blocos",
+  "message.wirelessautomate.tv.problem.no_wall": "Sem parede atrás do bloco em %s",
+  "message.wirelessautomate.tv.problem.blocked": "Há algo no caminho em %s",
+  "message.wirelessautomate.tv.problem.overlap": "Outra Tela está no caminho em %s",
+  "message.wirelessautomate.tv.template_denied": "Você não pode usar essa rede ou esse tipo",
+  "message.wirelessautomate.tv.template_too_big": "O modelo não cabe nos limites do servidor"
 }

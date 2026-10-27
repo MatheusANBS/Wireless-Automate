@@ -13,8 +13,8 @@ import org.jetbrains.annotations.Nullable;
  * consulta um chunk descarregado.
  */
 public final class TvAreaCheck {
-    /** As Telas mais longe que isto (do bloco colocado) não entram na comparação de caixas. */
-    private static final double OTHERS_RANGE_SQ = 64.0 * 64.0;
+    /** As Telas mais longe que isto (mais o maior lado do teto, pela âncora) não entram na comparação de caixas. */
+    private static final double OTHERS_RANGE = 64.0;
 
     public enum Kind { NONE, TOO_BIG, NO_WALL, BLOCKED, OVERLAP }
 
@@ -58,9 +58,11 @@ public final class TvAreaCheck {
             }
         }
         AABB box = TvBlockEntity.box(pos, facing, area);
+        double range = OTHERS_RANGE + Math.max(maxWidth, maxHeight);
+        double rangeSq = range * range;
         for (TvBlockEntity other : others) {
             if (other.getLevel() != level || other.getBlockPos().equals(pos)
-                    || other.getBlockPos().distSqr(pos) > OTHERS_RANGE_SQ) {
+                    || other.getBlockPos().distSqr(pos) > rangeSq) {
                 continue;
             }
             if (box.intersects(other.renderBox())) {

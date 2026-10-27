@@ -10,6 +10,7 @@ import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageScalarMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
+import io.github.matheusanbs.wirelessautomate.menu.TvMenu;
 import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.inventory.MenuType;
@@ -48,6 +49,10 @@ public final class ModMenus {
     /** Tela do Reparador de Cristais (a posição no buffer de abertura). */
     public static final Supplier<MenuType<RepairerMenu>> CRYSTAL_REPAIRER =
             MENU_TYPES.register("crystal_repairer", () -> IMenuTypeExtension.create(RepairerMenu::new));
+
+    /** Tela da Tela de Sinal (sem slots; tudo no buffer de abertura). */
+    public static final Supplier<MenuType<TvMenu>> SIGNAL_SCREEN =
+            MENU_TYPES.register("signal_screen", () -> IMenuTypeExtension.create(TvMenu::new));
 
     private ModMenus() {
     }

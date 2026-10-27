@@ -1,8 +1,12 @@
 package io.github.matheusanbs.wirelessautomate.tv;
 
 import com.mojang.serialization.MapCodec;
+import io.github.matheusanbs.wirelessautomate.menu.TvMenu;
+import io.github.matheusanbs.wirelessautomate.network.KnownPlayers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -134,10 +138,22 @@ public class TvBlock extends BaseEntityBlock {
         return new TvBlockEntity(pos, state);
     }
 
-    /** O clique de mão vazia abre a tela do bloco na Tarefa 6. */
+    /** O clique de mão vazia abre a tela para quem pode editar; os outros veem de quem é a Tela. */
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
                                                BlockHitResult hit) {
-        return InteractionResult.PASS;
+        if (!level.isClientSide && player instanceof ServerPlayer serverPlayer
+                && level.getBlockEntity(pos) instanceof TvBlockEntity tv) {
+            if (tv.canEdit(serverPlayer)) {
+                TvMenu.open(serverPlayer, tv);
+            } else {
+                Component owner = tv.owner() == null
+                        ? Component.translatable("message.wirelessautomate.tv.operator")
+                        : Component.literal(KnownPlayers.name(serverPlayer.server, tv.owner()));
+                serverPlayer.displayClientMessage(
+                        Component.translatable("message.wirelessautomate.tv.not_owner", owner), true);
+            }
+        }
+        return InteractionResult.sidedSuccess(level.isClientSide);
     }
 }

@@ -14,8 +14,8 @@ import io.github.matheusanbs.wirelessautomate.client.ResizeHandle;
  */
 final class FilterSize {
     // tamanho padrão, lembrado na sessão
-    private static int savedW = 356;
-    private static int savedH = 270;
+    private static int savedW = 392;
+    private static int savedH = 282;
 
     private FilterSize() {
     }

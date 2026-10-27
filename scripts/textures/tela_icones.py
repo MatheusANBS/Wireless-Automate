@@ -425,6 +425,54 @@ def _move_down(q: Quadro) -> None:
         q.p(8 + i, 12 - i)
 
 
+# ---------------------------------------------------------------- aba Tamanho
+
+@icone("grow_up_right")
+def _grow_up_right(q: Quadro) -> None:
+    # O bloco colocado no canto de baixo à esquerda e a seta para cima e para a direita.
+    q.cheio(2, 10, 5, 13, "A")
+    q.diag(5, 10, 12, 3)
+    q.diag(5, 11, 12, 4)
+    q.h(8, 13, 2)
+    q.v(13, 2, 7)
+
+
+ICONES["grow_up_left"] = lambda: ICONES["grow_up_right"]().espelho()
+
+
+@icone("grow_center")
+def _grow_center(q: Quadro) -> None:
+    # O bloco no meio e as quatro setas para fora.
+    q.cheio(6, 6, 9, 9, "A")
+    q.v(7, 2, 4)
+    q.v(8, 2, 4)
+    q.v(7, 11, 13)
+    q.v(8, 11, 13)
+    q.h(2, 4, 7)
+    q.h(2, 4, 8)
+    q.h(11, 13, 7)
+    q.h(11, 13, 8)
+    q.p(6, 3)
+    q.p(9, 3)
+    q.p(6, 12)
+    q.p(9, 12)
+    q.p(3, 6)
+    q.p(3, 9)
+    q.p(12, 6)
+    q.p(12, 9)
+
+
+@icone("step_left")
+def _step_left(q: Quadro) -> None:
+    q.diag(9, 4, 6, 7)
+    q.diag(6, 8, 9, 11)
+    q.diag(10, 4, 7, 7)
+    q.diag(7, 8, 10, 11)
+
+
+ICONES["step_right"] = lambda: ICONES["step_left"]().espelho()
+
+
 # ---------------------------------------------------------------- saída
 
 def imagem(nome: str, tema: str) -> Image.Image:

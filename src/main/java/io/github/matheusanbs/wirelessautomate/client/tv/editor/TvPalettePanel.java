@@ -9,8 +9,8 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 
 /**
- * A coluna da esquerda: as Peças da etapa 2 (Valor, Texto e Forma; o clique insere uma nova no primeiro lugar livre
- * e a escolhe) e o rótulo dos Componentes (a lista é do {@link TvComponentsPanel}). Os textos são medidos no {@link #layout}.
+ * A aba Peças da coluna da esquerda: Valor, Texto e Forma; o clique insere uma nova no primeiro lugar livre e a
+ * escolhe. Os textos são medidos no {@link #layout}.
  */
 final class TvPalettePanel {
     private static final List<TvPieceType> TYPES = List.of(TvPieceType.VALUE, TvPieceType.TEXT, TvPieceType.SHAPE);
@@ -18,8 +18,6 @@ final class TvPalettePanel {
     private final TvEditorDoc doc;
     private TvEditorLayout layout;
     private Font font;
-    private GuiText.Fitted piecesLabel;
-    private GuiText.Fitted componentsLabel;
     private final GuiText.Fitted[] names = new GuiText.Fitted[TYPES.size()];
     private final Component[] glyphs = new Component[TYPES.size()];
     private String defaultText = "";
@@ -31,8 +29,6 @@ final class TvPalettePanel {
     void layout(Font font, TvEditorLayout layout) {
         this.font = font;
         this.layout = layout;
-        piecesLabel = GuiText.fit(font, TvEditorText.key("pieces"), layout.piecesLabel().w());
-        componentsLabel = GuiText.fit(font, TvEditorText.key("components"), layout.componentsLabel().w());
         for (int i = 0; i < names.length; i++) {
             names[i] = GuiText.fit(font, TvEditorText.typeName(TYPES.get(i)), layout.pieceButtons()[i].w() - 20);
             glyphs[i] = Component.literal(TvEditorText.glyph(TYPES.get(i)));
@@ -41,7 +37,6 @@ final class TvPalettePanel {
     }
 
     void render(GuiGraphics g, int mouseX, int mouseY) {
-        GuiText.draw(g, font, piecesLabel, layout.piecesLabel().x(), layout.piecesLabel().y(), GuiPaint.MUTED);
         for (int i = 0; i < TYPES.size(); i++) {
             TvRect r = layout.pieceButtons()[i];
             GuiPaint.box(g, r.x(), r.y(), r.w(), r.h(), GuiPaint.BUTTON,
@@ -49,8 +44,6 @@ final class TvPalettePanel {
             GuiPaint.text(g, font, glyphs[i], r.x() + 5, r.y() + 3, GuiPaint.ACCENT);
             GuiText.draw(g, font, names[i], r.x() + 16, r.y() + 3, GuiPaint.FG);
         }
-        TvRect c = layout.componentsLabel();
-        GuiText.draw(g, font, componentsLabel, c.x(), c.y(), GuiPaint.MUTED);
     }
 
     boolean mouseClicked(double mouseX, double mouseY) {

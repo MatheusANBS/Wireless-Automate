@@ -10,12 +10,12 @@ class TvEditorLayoutTest {
     @Test
     void cabeNaEscala3De1366Por768() {
         TvEditorLayout l = TvEditorLayout.of(4, 4, 447, 248);
-        assertEquals(203, l.canvas().w());
-        assertEquals(132, l.canvas().h());
-        assertEquals(TvEditorLayout.LAYERS_H, l.layers().h());
-        assertTrue(l.layers().bottom() <= 4 + 248);
+        assertEquals(187, l.canvas().w());
+        assertEquals(184, l.canvas().h());
+        assertTrue(l.buttons().bottom() <= 4 + 248);
         assertTrue(l.props().right() <= 4 + 447);
-        assertTrue(l.components().h() > 0, "sobra lugar para os Componentes");
+        assertTrue(l.layers().h() > 150, "as Camadas usam a altura inteira da coluna");
+        assertEquals(l.layers(), l.components());
     }
 
     @Test
@@ -25,7 +25,7 @@ class TvEditorLayoutTest {
         assertEquals(small.canvas().w() + 200, big.canvas().w());
         assertEquals(small.canvas().h() + 100, big.canvas().h());
         assertEquals(small.props().w(), big.props().w());
-        assertEquals(small.layers().h(), big.layers().h());
+        assertEquals(small.leftBody().w(), big.leftBody().w());
     }
 
     @Test
@@ -40,8 +40,9 @@ class TvEditorLayoutTest {
         TvEditorLayout l = TvEditorLayout.of(0, 0, 400, 240);
         assertTrue(l.base().bottom() <= l.canvas().y());
         assertTrue(l.canvas().bottom() <= l.buttons().y());
-        assertTrue(l.buttons().bottom() <= l.layers().y());
-        assertTrue(l.pieceButtons()[2].bottom() <= l.componentsLabel().y());
+        assertTrue(l.leftTabs().bottom() <= l.leftBody().y());
+        assertTrue(l.pieceButtons()[2].bottom() <= l.leftBody().bottom());
+        assertTrue(l.leftBody().right() <= l.canvas().x());
         assertTrue(l.canvas().right() <= l.props().x());
         assertTrue(l.canvas().w() > 0 && l.canvas().h() > 0);
     }

@@ -287,6 +287,12 @@ Gerador multibloco (estrutura 5×5×5 de Carcaça e Vidro com o Núcleo de Resso
 
 **Tela do Núcleo** (352 × 244): osciloscópio, dial e modo, câmaras com a barra de integridade, o catalisador pelo tier, eficiência, geração, buffer, a linha da interferência, a Estrutura e, no Ultimate, a caixa do Eco. Sem comparador, sem redstone de controle e sem Tablet (decisões do dono).
 
+## Tela de Sinal
+
+Um painel que o jogador prende na lateral de um bloco sólido e estica pela parede, de 1 × 1 a 32 × 32 blocos, desenhado sobre a parede sem blocos extras. Mostra o que o jogador montar com peças soltas (Valor, Texto, Forma e, nas etapas seguintes, Ícone de item, Barra, Medidor, Gráfico, Seta e Imagem), ligadas às redes que quem edita pode usar e aos armazenamentos do mod ligados à Tela pelo Vinculador. Spec: `docs/superpowers/specs/2026-10-27-tela-de-sinal-design.md` (decisões, custo e etapas). Etapa 1: bloco, tamanho, canal de dados e o modelo "Painel de rede"; etapa 2: o editor de peças; etapa 3: mais peças e os armazenamentos; etapa 4: pixel art.
+
+**Custo.** Sem tick: o `TvManager` visita uma Tela por segundo pela fase da posição, e só com jogador perto; os números vêm do amostrador dos Fluxos, uma vez por volta, e vão só a quem não os tem. No cliente, cada Tela é uma textura redesenhada só quando muda; por quadro, o BER desenha a moldura e um quadrilátero. A resolução segue o tamanho em que a Tela aparece, com um orçamento de memória de vídeo na config do cliente (o dono prioriza a beleza dentro desse teto).
+
 ## Arquitetura de performance
 
 Regra de ouro: uma operação que não move nada não pode custar nada. O custo vem de verificar, filtrar e tentar inserir em destinos cheios, então a arquitetura evita cada um desses passos.
@@ -378,6 +384,7 @@ O v1 entrega o motor de transferência e a configuração essencial; o v2 comple
 - [x] Configurador colando em área (mesma máquina) e Vinculador modo Área (saíram em 22/10/2026: o Configurador ficou só com o Pincel)
 - [ ] Atalhos para AE2 e Refined Storage 2
 - [x] Upgrade de chunk loading
+- [ ] Tela de Sinal: etapa 1 (bloco, tamanho, canal de dados, Painel de rede) pronta no ramo `tela-de-sinal`; etapas 2 a 4 (editor, peças e armazenamentos, pixel art) a fazer
 - [x] Texturas finais (geradas por `scripts/textures/gerar_texturas.py`)
 - [x] Livro-guia no GuideME (opcional)
 - [ ] Balanceamento das receitas

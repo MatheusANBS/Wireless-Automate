@@ -706,6 +706,29 @@ O mapa rede × tipo → `FlowStats` é do `TvManager`, montado uma vez por volta
 
 ---
 
+### Task 7b: Qualidade da imagem com orçamento de memória (pedido do dono em 27/10)
+
+O dono quer a Tela mais nítida sem passar de um teto de memória de vídeo. Três mudanças no desenho da Tarefa 7; as fontes TTF ficam para a etapa 2.
+
+**1. Resolução pelo tamanho na tela, com orçamento global.** A resolução de cada Tela deixa de ser fixa pelo tamanho dela (o `TvResolution` da Tarefa 7) e passa a seguir o tamanho em que ela aparece na tela do jogador:
+- A cada 10 ticks do cliente (no `TvCanvases.onClientTick`, nunca por quadro), para cada Tela desenhada nos últimos 20 ticks, estime quantos pixels da janela um bloco dela ocupa: `alturaDaJanela / (2 × distância × tan(fov / 2))`, com a distância da câmera ao centro da área e um fator pelo ângulo de visão (`max(0,25, |cos|)` entre a normal da Tela e a direção da câmera).
+- Os px por bloco desejados são a potência de 2 acima de 1,5 × esse valor, entre 32 e 512, vezes a qualidade da config (16 = metade, 32 = normal, 64 = dobro), e nunca mais que 4096 px no maior lado da textura.
+- Orçamento global: `tv.vramBudgetMb` na config do cliente (padrão 400, de 64 a 4096). Se a soma das Telas (largura × altura × ppb² × 4 × 4/3) passa do orçamento, corte pela metade o ppb da Tela que mais gasta por pixel de tela visto, repetindo até caber.
+- Histerese: só redimensiona quando o desejado é pelo menos o dobro ou no máximo a metade do atual, e no máximo 2 Telas redimensionadas por avaliação, para não haver pico nem pisca-pisca ao andar.
+- A conta (projeção, potência de 2, orçamento e histerese) vai numa classe pura com JUnit (`client/tv/render/TvBudget.java` + `TvBudgetTest`). O `TvResolution` vira só o teto por tamanho, ou é absorvido pelo `TvBudget`; sem duplicar.
+
+**2. Filtro anisotrópico.** Ao criar a textura, ligue o anisotrópico em 8× (ou no máximo que a placa suporta), pela extensão `GL_EXT_texture_filter_anisotropic` ou pelo `GL46` quando disponível (`GL.getCapabilities()`). Sem suporte, segue sem.
+
+**3. Transparência certa.** Fundos semitransparentes saem mais escuros porque a textura guarda a cor já multiplicada pelo alfa sobre o fundo transparente preto. Pinte no framebuffer com `blendFuncSeparate(SRC_ALPHA, ONE_MINUS_SRC_ALPHA, ONE, ONE_MINUS_SRC_ALPHA)`, e desenhe o quadrilátero com mistura de alfa pré-multiplicado (`ONE, ONE_MINUS_SRC_ALPHA`), num `RenderType` próprio, se o `RenderType.text` não servir. Confira numa captura com um fundo a 50%.
+
+**Files:** `client/tv/render/TvBudget.java` (novo, puro), `TvCanvases.java`, `TvCanvas.java`, `TvQuads.java` ou `TvRenderer.java`, um `RenderType` em `client/tv/render/` se preciso, `ClientConfig.java` (a chave `tv.vramBudgetMb`, com o comentário para o jogador), `TvResolution.java` e o teste dele (absorver ou ajustar), `src/test/.../TvBudgetTest.java`.
+
+**Custo:** a avaliação roda a cada 10 ticks e passa só pelas Telas à vista (dezenas, no máximo); nada por quadro além do que já existe. O redimensionamento é um redesenho, no máximo 2 por avaliação. A memória fica abaixo do orçamento por construção.
+
+- [ ] **Step 1:** `TvBudgetTest` (falha). **Step 2:** `TvBudget`. **Step 3:** ligar no `TvCanvases` (avaliação, redimensionar, orçamento), o anisotrópico e a transparência. **Step 4:** `./gradlew build runGameTestServer` e o e2e `./scripts/e2e.sh --only tela --capture tela` (da Tarefa 8), olhando as capturas de perto, de longe e de lado. **Step 5:** varreduras e commit (`Tela de Sinal: resolução por orçamento, anisotrópico e transparência`).
+
+---
+
 ### Task 8: A tela do bloco e o e2e
 
 **Files:**

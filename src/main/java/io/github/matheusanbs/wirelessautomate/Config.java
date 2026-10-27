@@ -63,6 +63,11 @@ public final class Config {
     public static final ModConfigSpec.LongValue ECO_MAX;
     public static final ModConfigSpec.LongValue REPAIR_TICKS;
     public static final ModConfigSpec.IntValue REPAIR_COST_FACTOR;
+    public static final ModConfigSpec.IntValue TV_MAX_WIDTH;
+    public static final ModConfigSpec.IntValue TV_MAX_HEIGHT;
+    public static final ModConfigSpec.IntValue TV_MAX_ELEMENTS;
+    public static final ModConfigSpec.IntValue TV_MAX_BINDINGS;
+    public static final ModConfigSpec.IntValue TV_VIEW_DISTANCE;
     /** FE por tick que um cristal de rendimento 1 dá ao Núcleo de Ressonância, por tier. */
     public static final Map<RouterTier, ModConfigSpec.LongValue> RESONATOR_FE_PER_CRYSTAL = new EnumMap<>(RouterTier.class);
 
@@ -249,6 +254,24 @@ public final class Config {
         REPAIR_COST_FACTOR = builder
                 .comment("Quantas vezes o FE por cristal do tipo reparado o Reparador gasta por reparo (0 repara de graça).")
                 .defineInRange("costFactor", 2, 0, 1000);
+        builder.pop();
+
+        builder.push("tv");
+        TV_MAX_WIDTH = builder
+                .comment("Largura máxima, em blocos, de uma Tela de Sinal.")
+                .defineInRange("maxWidth", 32, 1, 64);
+        TV_MAX_HEIGHT = builder
+                .comment("Altura máxima, em blocos, de uma Tela de Sinal.")
+                .defineInRange("maxHeight", 32, 1, 64);
+        TV_MAX_ELEMENTS = builder
+                .comment("Quantas peças (valores, textos e formas) uma Tela de Sinal aceita.")
+                .defineInRange("maxElements", 128, 1, 512);
+        TV_MAX_BINDINGS = builder
+                .comment("Quantas ligações distintas (rede e tipo) uma Tela de Sinal lê.")
+                .defineInRange("maxBindings", 64, 1, 256);
+        TV_VIEW_DISTANCE = builder
+                .comment("Distância, em blocos, até onde a Tela de Sinal é desenhada e recebe números novos.")
+                .defineInRange("viewDistance", 64, 8, 256);
         builder.pop();
 
         builder.push("guide");
@@ -493,6 +516,31 @@ public final class Config {
     /** Ticks que uma linha do Reparador leva para refazer um cristal rachado. */
     public static long repairTicks() {
         return read(REPAIR_TICKS);
+    }
+
+    /** Largura máxima de uma Tela de Sinal, em blocos. */
+    public static int tvMaxWidth() {
+        return read(TV_MAX_WIDTH);
+    }
+
+    /** Altura máxima de uma Tela de Sinal, em blocos. */
+    public static int tvMaxHeight() {
+        return read(TV_MAX_HEIGHT);
+    }
+
+    /** Máximo de peças de uma Tela de Sinal. */
+    public static int tvMaxElements() {
+        return read(TV_MAX_ELEMENTS);
+    }
+
+    /** Máximo de ligações distintas de uma Tela de Sinal. */
+    public static int tvMaxBindings() {
+        return read(TV_MAX_BINDINGS);
+    }
+
+    /** Distância de desenho e de envio da Tela de Sinal, em blocos. */
+    public static int tvViewDistance() {
+        return read(TV_VIEW_DISTANCE);
     }
 
     /** Quantas vezes o FE por cristal do tipo reparado o Reparador gasta por reparo. */

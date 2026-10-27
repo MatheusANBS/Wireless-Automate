@@ -22,6 +22,7 @@
   "block.wirelessautomate.resonator_crystal_port": "Porta de Cristais",
   "block.wirelessautomate.resonator_tuner": "Sintonizador",
   "block.wirelessautomate.crystal_repairer": "Reparador de Cristais",
+  "block.wirelessautomate.signal_screen": "Tela de Sinal",
   "block.wirelessautomate.resonance_core.tooltip": "%s · %s câmaras de cristal",
   "block.wirelessautomate.resonance_core.tooltip.eco": "Eco Ressonante %s",
   "block.wirelessautomate.resonance_core.formed": "Ressonador montado",

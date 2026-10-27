@@ -1319,5 +1319,14 @@
   "gui.wirelessautomate.filter.rule.suggest.number": "number · %s to %s",
   "gui.wirelessautomate.filter.rule.suggest.text": "text · %s",
   "gui.wirelessautomate.filter.rule.suggest.items": "%s items",
-  "gui.wirelessautomate.filter.rule.suggest.item": "%s item"
+  "gui.wirelessautomate.filter.rule.suggest.item": "%s item",
+  "container.wirelessautomate.signal_screen": "Signal Screen",
+  "message.wirelessautomate.tv.not_owner": "This Screen belongs to %s",
+  "message.wirelessautomate.tv.operator": "an operator",
+  "message.wirelessautomate.tv.problem.too_big": "Too big: at most %s x %s blocks",
+  "message.wirelessautomate.tv.problem.no_wall": "No wall behind the block at %s",
+  "message.wirelessautomate.tv.problem.blocked": "Something is in the way at %s",
+  "message.wirelessautomate.tv.problem.overlap": "Another Screen is in the way at %s",
+  "message.wirelessautomate.tv.template_denied": "You cannot use that network or type",
+  "message.wirelessautomate.tv.template_too_big": "The template does not fit the server limits"
 }

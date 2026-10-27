@@ -35,6 +35,7 @@ import io.github.matheusanbs.wirelessautomate.range.MachineGroup;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.tv.TvClientHooks;
+import io.github.matheusanbs.wirelessautomate.tv.TvEditing;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -144,6 +145,11 @@ public final class ModPayloads {
         // Números da Tela de Sinal (o cliente preenche o gancho).
         registrar.playToClient(TvValuesPayload.TYPE, TvValuesPayload.STREAM_CODEC,
                 (payload, context) -> TvClientHooks.values.accept(payload));
+        // Tamanho e modelo da Tela de Sinal, da tela aberta (handlers no TvEditing).
+        registrar.playToServer(TvSizePayload.TYPE, TvSizePayload.STREAM_CODEC,
+                (payload, context) -> TvEditing.handleSize(serverPlayer(context), payload));
+        registrar.playToServer(TvTemplatePayload.TYPE, TvTemplatePayload.STREAM_CODEC,
+                (payload, context) -> TvEditing.handleTemplate(serverPlayer(context), payload));
     }
 
     private static @Nullable ServerPlayer serverPlayer(IPayloadContext context) {

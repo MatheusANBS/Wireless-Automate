@@ -1,0 +1,35 @@
+{
+  "parent": "minecraft:block/block",
+  "render_type": "minecraft:translucent",
+  "ambientocclusion": false,
+  "textures": {
+    "screen": "wirelessautomate:block/signal_screen/signal_screen",
+    "particle": "wirelessautomate:block/signal_screen/signal_screen"
+  },
+  "elements": [
+    {
+      "name": "glass",
+      "from": [
+        1,
+        1,
+        14.875
+      ],
+      "to": [
+        15,
+        15,
+        14.9
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            4.875,
+            4.375,
+            8.375,
+            7.875
+          ],
+          "texture": "#screen"
+        }
+      }
+    }
+  ]
+}

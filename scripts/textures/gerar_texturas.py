@@ -9,7 +9,8 @@ Uso (na raiz do repositório):
 
 Paleta, materiais, o Olho e as utilidades vêm de `identidade.py`; as texturas e os modelos dos blocos
 vêm de `blocos.py` (`sprites()`, `modelos()`, `previas()`), quando o módulo existe; o modelo do Reparador de
-Cristais, o atlas pintado dele e o blockstate vêm de `reparador_modelo.py`, a partir do `.bbmodel` aprovado.
+Cristais, o atlas pintado dele e o blockstate vêm de `reparador_modelo.py`, e os da Tela de Sinal de `tela_modelo.py`,
+a partir dos `.bbmodel` aprovados (a conversão comum fica no `bbmodel_json.py`).
 
 Cada item é uma grade de texto (a forma, pela legenda comum `LEG`) mais código para o que muda por
 quadro. Regras: 16×16, alfa só 0 ou 255, contorno de 1 px em grafite.0, luz de cima à esquerda, 3 a
@@ -32,6 +33,7 @@ from PIL import Image, ImageDraw, ImageFont
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import reparador_modelo  # noqa: E402
+import tela_modelo  # noqa: E402
 from identidade import (  # noqa: E402
     ASSETS, LENTE, MARCAS, MODELOS, PALETA, PREVIEW, RAIZ, MODO, RECURSO, TIERS, TIERS_ATM, TIERS_CARTAO,
     Cor, Sprite, animacao, contorno, cor, escurece, grava_json, legenda, mistura, olho, parado, pinta,
@@ -2041,7 +2043,7 @@ def main() -> None:
         modelos_itens()
         if blocos:
             blocos.modelos()
-        gerados = set(todos) | reparador_modelo.gerar()
+        gerados = set(todos) | reparador_modelo.gerar() | tela_modelo.gerar()
         pastas = ["item", "gui"] + (["block"] if blocos_sprites else [])
         apagados = limpar(gerados, pastas)
 

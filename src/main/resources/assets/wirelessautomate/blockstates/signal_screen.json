@@ -1,0 +1,74 @@
+{
+  "multipart": [
+    {
+      "when": {
+        "facing": "north"
+      },
+      "apply": {
+        "model": "wirelessautomate:block/signal_screen/signal_screen"
+      }
+    },
+    {
+      "when": {
+        "facing": "north"
+      },
+      "apply": {
+        "model": "wirelessautomate:block/signal_screen/signal_screen_glass"
+      }
+    },
+    {
+      "when": {
+        "facing": "east"
+      },
+      "apply": {
+        "model": "wirelessautomate:block/signal_screen/signal_screen",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east"
+      },
+      "apply": {
+        "model": "wirelessautomate:block/signal_screen/signal_screen_glass",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "south"
+      },
+      "apply": {
+        "model": "wirelessautomate:block/signal_screen/signal_screen",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south"
+      },
+      "apply": {
+        "model": "wirelessautomate:block/signal_screen/signal_screen_glass",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "west"
+      },
+      "apply": {
+        "model": "wirelessautomate:block/signal_screen/signal_screen",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west"
+      },
+      "apply": {
+        "model": "wirelessautomate:block/signal_screen/signal_screen_glass",
+        "y": 270
+      }
+    }
+  ]
+}

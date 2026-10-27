@@ -3,25 +3,55 @@ package io.github.matheusanbs.wirelessautomate.tv;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.packet.TvLibraryActionPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TvLibraryPayload;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * As ações na biblioteca do jogador pela tela da Tela de Sinal: só com o menu aberto, no máximo 10 por segundo, tudo
- * validado aqui. Depois de cada ação a biblioteca inteira volta ao cliente, que é quem desenha a lista.
+ * validado aqui. A biblioteca inteira só volta ao cliente quando mudou (uma ação que valeu) e, no {@code OPEN}, uma
+ * vez por menu aberto: a recusa só avisa na barra de ação, e repetir o pedido não custa nada. Assim um cliente que
+ * insiste não vira amplificação de banda e de codificação.
  */
 public final class TvLibraryActions {
     /** O maior componente guardado, em bytes de NBT: 64 deles cabem no payload da biblioteca. */
     public static final int MAX_COMPONENT_BYTES = 12 * 1024;
 
+    /**
+     * O menu em que cada jogador já recebeu a biblioteca por um {@code OPEN} (a instância, não o {@code containerId},
+     * que se repete de um menu para o outro).
+     */
+    private static final Map<UUID, AbstractContainerMenu> OPENED = new HashMap<>();
+
     private TvLibraryActions() {
     }
 
-    public static void handle(@Nullable ServerPlayer player, TvLibraryActionPayload payload) {
+    /** Solta o jogador que saiu. */
+    public static void forget(UUID player) {
+        OPENED.remove(player);
+    }
+
+    /** Esquece todos (parada do servidor). */
+    public static void reset() {
+        OPENED.clear();
+    }
+
+    /** Trata a ação; devolve se a biblioteca foi (ou iria, sem o canal dos testes) ao cliente. */
+    public static boolean handle(@Nullable ServerPlayer player, TvLibraryActionPayload payload) {
         if (TvEditing.open(player, payload.containerId()) == null || !TvEditing.allowAction(player)) {
-            return;
+            return false;
+        }
+        if (payload.action() == TvLibraryActionPayload.Action.OPEN) {
+            if (OPENED.put(player.getUUID(), player.containerMenu) == player.containerMenu) {
+                return false;
+            }
+            send(player, payload.containerId(), TvLibrary.get(player.server));
+            return true;
         }
         TvLibrary library = TvLibrary.get(player.server);
         TvLibrary.Result result;
@@ -52,7 +82,11 @@ public final class TvLibraryActions {
         if (key != null) {
             player.displayClientMessage(Component.translatable("message.wirelessautomate.tv." + key), true);
         }
+        if (result != TvLibrary.Result.OK) {
+            return false;
+        }
         send(player, payload.containerId(), library);
+        return true;
     }
 
     /** A biblioteca do jogador como payload. */

@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.tv;
 
 import io.github.matheusanbs.wirelessautomate.Config;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,11 +17,16 @@ import net.minecraft.world.level.saveddata.SavedData;
 /**
  * A biblioteca de cada jogador: os componentes e os temas que ele salvou, pelo UUID. Fica no data storage do
  * overworld e só é lida ao abrir o editor e nas ações; a Tela não depende dela para ser desenhada. Nome repetido
- * substitui; os tetos vêm da config ({@code tv.maxComponents}, {@code tv.maxThemes}).
+ * substitui; os tetos vêm da config ({@code tv.maxComponents}, {@code tv.maxThemes}) e os componentes de um jogador
+ * somam no máximo {@link #MAX_COMPONENT_BYTES_PER_PLAYER}: o arquivo fica todo na memória e é regravado inteiro a cada
+ * autosave, então sem esse teto dezenas de jogadores com a biblioteca cheia chegariam a dezenas de MB.
  */
 public final class TvLibrary extends SavedData {
     public static final String DATA_NAME = "wirelessautomate_tv_library";
     public static final SavedData.Factory<TvLibrary> FACTORY = new SavedData.Factory<>(TvLibrary::new, TvLibrary::load);
+
+    /** Quanto os componentes de um jogador podem ocupar juntos (a estimativa de memória do NBT de cada um). */
+    public static final int MAX_COMPONENT_BYTES_PER_PLAYER = 256 * 1024;
 
     /** O resultado de salvar, renomear ou remover. */
     public enum Result { OK, FULL, INVALID, TOO_BIG, MISSING, EXISTS }
@@ -28,6 +34,9 @@ public final class TvLibrary extends SavedData {
     /** Os dois conjuntos de um jogador, em ordem de criação. */
     private static final class Shelf {
         final Map<String, TvComponent> components = new LinkedHashMap<>();
+        /** O tamanho estimado de cada componente, pelo nome (a soma é a cota do jogador). */
+        final Map<String, Integer> sizes = new HashMap<>();
+        int bytes;
         final Map<String, TvTheme> themes = new LinkedHashMap<>();
 
         boolean isEmpty() {
@@ -39,6 +48,28 @@ public final class TvLibrary extends SavedData {
 
     public static TvLibrary get(MinecraftServer server) {
         return server.overworld().getDataStorage().computeIfAbsent(FACTORY, DATA_NAME);
+    }
+
+    /** A estimativa de memória do componente: o que conta na cota do jogador. */
+    private static int sizeOf(TvComponent component) {
+        return sizeOf(TvComponent.CODEC.encodeStart(NbtOps.INSTANCE, component).getOrThrow());
+    }
+
+    private static int sizeOf(Tag tag) {
+        return (int) Math.min(tag.sizeInBytes(), Integer.MAX_VALUE);
+    }
+
+    /** Guarda o componente já medido, mantendo a soma em dia. */
+    private static void putComponent(Shelf shelf, String name, TvComponent component, int size) {
+        Integer old = shelf.sizes.put(name, size);
+        shelf.bytes += size - (old == null ? 0 : old);
+        shelf.components.put(name, component);
+    }
+
+    private static void removeComponent(Shelf shelf, String name) {
+        Integer old = shelf.sizes.remove(name);
+        shelf.bytes -= old == null ? 0 : old;
+        shelf.components.remove(name);
     }
 
     public List<TvComponent> components(UUID player) {
@@ -62,7 +93,14 @@ public final class TvLibrary extends SavedData {
             drop(player, shelf);
             return Result.FULL;
         }
-        shelf.components.put(name, new TvComponent(name, component.pieces()));
+        TvComponent stored = new TvComponent(name, component.pieces());
+        int size = sizeOf(stored);
+        int others = shelf.bytes - shelf.sizes.getOrDefault(name, 0);
+        if (others + size > MAX_COMPONENT_BYTES_PER_PLAYER) {
+            drop(player, shelf);
+            return Result.FULL;
+        }
+        putComponent(shelf, name, stored, size);
         setDirty();
         return Result.OK;
     }
@@ -98,6 +136,7 @@ public final class TvLibrary extends SavedData {
             return Result.EXISTS;
         }
         rebuild(shelf.components, from, name, new TvComponent(name, shelf.components.get(from).pieces()));
+        rebuild(shelf.sizes, from, name, shelf.sizes.getOrDefault(from, 0));
         setDirty();
         return Result.OK;
     }
@@ -124,9 +163,10 @@ public final class TvLibrary extends SavedData {
 
     public Result removeComponent(UUID player, String name) {
         Shelf shelf = shelves.get(player);
-        if (shelf == null || shelf.components.remove(name) == null) {
+        if (shelf == null || !shelf.components.containsKey(name)) {
             return Result.MISSING;
         }
+        removeComponent(shelf, name);
         drop(player, shelf);
         setDirty();
         return Result.OK;
@@ -196,8 +236,9 @@ public final class TvLibrary extends SavedData {
             Shelf shelf = new Shelf();
             ListTag components = player.getList("components", Tag.TAG_COMPOUND);
             for (int j = 0; j < components.size(); j++) {
-                TvComponent.CODEC.parse(NbtOps.INSTANCE, components.get(j)).result()
-                        .ifPresent(component -> shelf.components.put(component.name(), component));
+                Tag item = components.get(j);
+                TvComponent.CODEC.parse(NbtOps.INSTANCE, item).result()
+                        .ifPresent(component -> putComponent(shelf, component.name(), component, sizeOf(item)));
             }
             ListTag themes = player.getList("themes", Tag.TAG_COMPOUND);
             for (int j = 0; j < themes.size(); j++) {

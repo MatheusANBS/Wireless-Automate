@@ -61,6 +61,7 @@ public final class TvManager {
     public static void tick(MinecraftServer server) {
         loaded = TvLoaded.serverCount();
         if (loaded == 0) {
+            TvPreview.dropIdle();
             return;
         }
         long start = System.nanoTime();

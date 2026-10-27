@@ -18,8 +18,11 @@ public final class TvLibraryClient {
     private TvLibraryClient() {
     }
 
-    /** O gancho do payload (preenchido no {@code ClientSetup}). */
+    /** O gancho do payload (preenchido no {@code ClientSetup}); uma resposta atrasada, sem o editor aberto, é ignorada. */
     public static void receive(TvLibraryPayload payload) {
+        if (!TvEditorAck.isOpen(payload.containerId())) {
+            return;
+        }
         components = payload.components();
         themes = payload.themes();
         version++;

@@ -125,6 +125,13 @@ public final class TvPreview {
         return STATES.containsKey(player);
     }
 
+    /** Sem nenhuma Tela carregada nenhum menu vale: solta as prévias que ficaram (o menu fechou e as Telas descarregaram). */
+    static void dropIdle() {
+        if (!STATES.isEmpty()) {
+            STATES.clear();
+        }
+    }
+
     public static void forget(UUID player) {
         STATES.remove(player);
         GATE.forget(player);

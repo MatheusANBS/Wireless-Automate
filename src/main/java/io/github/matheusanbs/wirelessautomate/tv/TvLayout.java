@@ -39,11 +39,16 @@ public record TvLayout(List<TvPiece> pieces, TvTheme theme, TvBackground backgro
             },
             TvLayout::dynamics);
 
+    /**
+     * As chaves da etapa 2 (tema, fundo e linhas) leem de forma tolerante: um valor que esta versão não conhece (um
+     * fundo novo, um tema com campo a mais, de um jar mais novo que voltou de versão) cai no padrão em vez de derrubar
+     * o layout inteiro, que o próximo save gravaria vazio.
+     */
     public static final Codec<TvLayout> CODEC = RecordCodecBuilder.create(i -> i.group(
             LENIENT_PIECES.optionalFieldOf("pieces", List.of()).forGetter(TvLayout::pieces),
-            TvCodecs.THEME.optionalFieldOf("theme", TvTheme.DEFAULT).forGetter(TvLayout::theme),
-            TvBackground.CODEC.optionalFieldOf("background", TvBackground.DEFAULT).forGetter(TvLayout::background),
-            Codec.BOOL.optionalFieldOf("scanlines", false).forGetter(TvLayout::scanlines)).apply(i, TvLayout::of));
+            TvCodecs.THEME.lenientOptionalFieldOf("theme", TvTheme.DEFAULT).forGetter(TvLayout::theme),
+            TvBackground.CODEC.lenientOptionalFieldOf("background", TvBackground.DEFAULT).forGetter(TvLayout::background),
+            Codec.BOOL.lenientOptionalFieldOf("scanlines", false).forGetter(TvLayout::scanlines)).apply(i, TvLayout::of));
 
     public static final TvLayout EMPTY = of(List.of());
 

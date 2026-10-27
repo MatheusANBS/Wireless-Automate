@@ -25,9 +25,9 @@ public record TvStyle(int color, int background, int border, int borderWidth, in
             TvAlign.CODEC.optionalFieldOf("align", DEFAULT.align).forGetter(TvStyle::align),
             Codec.BOOL.optionalFieldOf("fit", DEFAULT.fit).forGetter(TvStyle::fit),
             Codec.STRING.optionalFieldOf("text", DEFAULT.text).forGetter(TvStyle::text),
-            Codec.INT.optionalFieldOf("radius", DEFAULT.radius).forGetter(TvStyle::radius),
-            Codec.INT.optionalFieldOf("opacity", DEFAULT.opacity).forGetter(TvStyle::opacity),
-            TvFont.CODEC.optionalFieldOf("font", DEFAULT.font).forGetter(TvStyle::font)).apply(i, TvStyle::new));
+            Codec.INT.lenientOptionalFieldOf("radius", DEFAULT.radius).forGetter(TvStyle::radius),
+            Codec.INT.lenientOptionalFieldOf("opacity", DEFAULT.opacity).forGetter(TvStyle::opacity),
+            TvFont.CODEC.lenientOptionalFieldOf("font", DEFAULT.font).forGetter(TvStyle::font)).apply(i, TvStyle::new));
 
     public TvStyle {
         borderWidth = TvText.clamp(borderWidth, 0, MAX_BORDER);
@@ -82,5 +82,4 @@ public record TvStyle(int color, int background, int border, int borderWidth, in
     public TvStyle withBorder(int border, int borderWidth) {
         return new TvStyle(color, background, border, borderWidth, size, align, fit, text, radius, opacity, font);
     }
-
 }

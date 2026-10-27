@@ -89,6 +89,7 @@ final class E2eTvEditorSteps {
                 () -> "escolha " + editor().selection()));
         E2eTvEditorPropsSteps.keySteps(list);
         E2eTvEditorPropsSteps.propsSteps(list, tv);
+        E2eTvLibrarySteps.componentSteps(list);
     }
 
     /** O editor na escala 3 de 1366 × 768 e abaixo do mínimo; a janela volta ao tamanho dela no fim. */

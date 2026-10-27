@@ -110,7 +110,8 @@ final class TvControls {
             if (!contains(mouseX, mouseY)) {
                 return false;
             }
-            set.accept(!checked);
+            checked = !checked;
+            set.accept(checked);
             return true;
         }
     }

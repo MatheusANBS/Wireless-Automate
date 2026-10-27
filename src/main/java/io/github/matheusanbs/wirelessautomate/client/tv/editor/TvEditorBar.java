@@ -9,17 +9,19 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * A barra de botões embaixo da miniatura: o desfazer e o refazer (↶ ↷) na ponta esquerda, Agrupar, Desagrupar,
- * Duplicar e Remover, e Salvar na ponta direita, na cor de destaque enquanto há mudança não salva. Quando os
- * nomes não cabem (janela estreita), os quatro viram símbolos com o nome na dica. Medida e disposta só no
+ * Salvar como componente, Duplicar e Remover, e Salvar na ponta direita, na cor de destaque enquanto há mudança não salva. Quando os
+ * nomes não cabem (janela estreita), os cinco viram símbolos com o nome na dica. Medida e disposta só no
  * {@link #layout}.
  */
 final class TvEditorBar {
     /** O que cada botão faz, na ordem da barra. */
-    enum Action { UNDO, REDO, GROUP, UNGROUP, DUPLICATE, REMOVE, SAVE }
+    enum Action { UNDO, REDO, GROUP, UNGROUP, SAVE_COMPONENT, DUPLICATE, REMOVE, SAVE }
 
-    private static final List<Action> TOOLS = List.of(Action.GROUP, Action.UNGROUP, Action.DUPLICATE, Action.REMOVE);
-    private static final String[] KEYS = {"undo", "redo", "group_selection", "ungroup", "duplicate", "remove", "save"};
-    private static final String[] SYMBOLS = {"⊞", "⊟", "⧉", "✕"};
+    private static final List<Action> TOOLS = List.of(Action.GROUP, Action.UNGROUP, Action.SAVE_COMPONENT, Action.DUPLICATE,
+            Action.REMOVE);
+    private static final String[] KEYS = {"undo", "redo", "group_selection", "ungroup", "save_component", "duplicate",
+        "remove", "save"};
+    private static final String[] SYMBOLS = {"⊞", "⊟", "⊕", "⧉", "✕"};
     private static final Component[] HISTORY_GLYPHS = {Component.literal("↶"), Component.literal("↷")};
     /** O lugar dos dois botões do desfazer e do refazer na ponta esquerda (↶ ↷). */
     private static final int RESERVED = 34;
@@ -74,7 +76,7 @@ final class TvEditorBar {
             case REDO -> doc.model().history().canRedo();
             case GROUP -> doc.canGroup();
             case UNGROUP -> doc.canUngroup();
-            case DUPLICATE, REMOVE -> doc.hasSelection();
+            case SAVE_COMPONENT, DUPLICATE, REMOVE -> doc.hasSelection();
             case SAVE -> doc.model().dirty();
         };
     }

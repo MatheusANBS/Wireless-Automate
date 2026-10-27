@@ -15,6 +15,7 @@ import io.github.matheusanbs.wirelessautomate.client.storage.StorageScalarScreen
 import io.github.matheusanbs.wirelessautomate.client.tablet.TabletScreen;
 import io.github.matheusanbs.wirelessautomate.client.tv.TvClientValues;
 import io.github.matheusanbs.wirelessautomate.client.tv.TvScreen;
+import io.github.matheusanbs.wirelessautomate.client.tv.editor.TvLibraryClient;
 import io.github.matheusanbs.wirelessautomate.client.tv.render.TvCanvases;
 import io.github.matheusanbs.wirelessautomate.client.tv.render.TvRenderer;
 import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
@@ -93,6 +94,7 @@ public final class ClientSetup {
             ResonanceCoreBlock.projectionHook = ResonatorProjection::toggle;
             TvClientHooks.changed = tv -> TvCanvases.markDirty(tv.getBlockPos().asLong());
             TvClientHooks.values = TvClientValues::receive;
+            TvClientHooks.library = TvLibraryClient::receive;
         });
     }
 

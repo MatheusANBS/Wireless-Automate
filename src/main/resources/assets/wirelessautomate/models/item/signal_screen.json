@@ -1,0 +1,41 @@
+{
+  "parent": "minecraft:block/block",
+  "loader": "neoforge:composite",
+  "transform": {
+    "translation": [
+      0,
+      0,
+      -0.4375
+    ]
+  },
+  "textures": {
+    "particle": "wirelessautomate:block/signal_screen/signal_screen"
+  },
+  "display": {
+    "gui": {
+      "rotation": [
+        20,
+        200,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.8,
+        0.8,
+        0.8
+      ]
+    }
+  },
+  "children": {
+    "solido": {
+      "parent": "wirelessautomate:block/signal_screen/signal_screen"
+    },
+    "vidro": {
+      "parent": "wirelessautomate:block/signal_screen/signal_screen_glass"
+    }
+  }
+}

@@ -39,6 +39,9 @@ final class TvEditorText {
         if (piece.type() == TvPieceType.VALUE && piece.binding().isPresent()) {
             return key("piece.value.bound", ResourceStyle.name(piece.binding().get().type()));
         }
+        if (piece.type() == TvPieceType.ICON && piece.style().part().item().isPresent()) {
+            return Component.literal(piece.style().part().item().get().getPath());
+        }
         return typeName(piece.type());
     }
 }

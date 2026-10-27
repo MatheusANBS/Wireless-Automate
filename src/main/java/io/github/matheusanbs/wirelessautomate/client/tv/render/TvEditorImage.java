@@ -49,6 +49,7 @@ public final class TvEditorImage {
     private static int previewVersion;
     private static long blinkSlot;
     private static boolean blinking;
+    private static int timedVersion;
     private static boolean dirty;
     private static boolean painted;
     private static String language = "";
@@ -72,6 +73,7 @@ public final class TvEditorImage {
                 || pos != TvEditorImage.pos || revision != TvEditorImage.revision || width != TvEditorImage.width
                 || height != TvEditorImage.height || valuesVersion != TvClientValues.version()
                 || previewVersion != TvPreviewValues.version()
+                || timedVersion != TvTimed.editorVersion()
                 || blinking && slot != blinkSlot) {
             TvEditorImage.draft = draft;
             TvEditorImage.values = values;
@@ -83,6 +85,7 @@ public final class TvEditorImage {
             valuesVersion = TvClientValues.version();
             previewVersion = TvPreviewValues.version();
             blinkSlot = slot;
+            timedVersion = TvTimed.editorVersion();
             dirty = true;
         }
     }
@@ -106,8 +109,10 @@ public final class TvEditorImage {
         float scale = width / (float) area.pixelWidth();
         long gameTime = minecraft.level == null ? 0 : minecraft.level.getGameTime();
         GuiGraphics graphics = TvTargets.begin(minecraft, target, width, height, scale);
-        blinking = TvPainter.paint(graphics, minecraft.font, draft, values, area, pos, revision, decimalSep, groupSep,
+        int flags = TvPainter.paint(graphics, minecraft.font, draft, values, area, pos, revision, decimalSep, groupSep,
                 TvPaintMath.blinkOff(gameTime), scale, height, true);
+        blinking = (flags & TvPainter.FLAG_BLINK) != 0;
+        TvTimed.editor((flags & TvPainter.FLAG_GRAPH) != 0, (flags & TvPainter.FLAG_CLOCK) != 0);
         TvTargets.end(graphics);
         RenderSystem.setProjectionMatrix(projection, sorting);
         minecraft.getMainRenderTarget().bindWrite(true);
@@ -184,6 +189,7 @@ public final class TvEditorImage {
         dirty = false;
         painted = false;
         blinking = false;
+        TvTimed.editorClosed();
     }
 
     /** Os separadores do idioma atual, lidos de novo só quando ele muda. */

@@ -133,6 +133,83 @@ def _shape(q: Quadro) -> None:
     q.p(5, 6, "L")
 
 
+@icone("icon")
+def _icon(q: Quadro) -> None:
+    # Cubo isométrico em contorno, com a face de cima em coral.
+    for y, x0, x1 in ((3, 7, 8), (4, 5, 10), (5, 6, 9), (6, 7, 8)):
+        q.h(x0, x1, y, "A")
+    q.h(7, 8, 2)
+    q.h(5, 6, 3)
+    q.h(9, 10, 3)
+    q.h(3, 4, 4)
+    q.h(11, 12, 4)
+    q.v(3, 5, 10)
+    q.v(12, 5, 10)
+    q.diag(5, 5, 7, 7)
+    q.diag(10, 5, 8, 7)
+    q.v(7, 8, 11)
+    q.h(3, 4, 11)
+    q.h(11, 12, 11)
+    q.h(5, 6, 12)
+    q.h(9, 10, 12)
+    q.h(7, 8, 13)
+
+
+@icone("bar")
+def _bar(q: Quadro) -> None:
+    q.caixa(2, 5, 13, 10, redonda=True)
+    q.cheio(3, 6, 8, 9, "A")
+    q.p(3, 6, "L")
+
+
+@icone("gauge")
+def _gauge(q: Quadro) -> None:
+    q.h(6, 9, 3)
+    q.h(4, 5, 4)
+    q.h(10, 11, 4)
+    q.p(3, 5)
+    q.p(12, 5)
+    q.v(2, 6, 9)
+    q.v(13, 6, 9)
+    q.p(3, 10)
+    q.p(12, 10)
+    q.diag(8, 7, 10, 5, "A")
+    q.p(7, 8, "A")
+
+
+@icone("graph")
+def _graph(q: Quadro) -> None:
+    q.v(3, 3, 12)
+    q.h(3, 12, 12)
+    q.diag(5, 10, 8, 7, "A")
+    q.diag(9, 8, 10, 9, "A")
+    q.diag(11, 8, 12, 7, "A")
+
+
+@icone("arrow")
+def _arrow(q: Quadro) -> None:
+    # Tendência: ▲ em contorno com miolo coral em cima, ▼ em contorno na tinta embaixo.
+    q.h(7, 8, 3, "A")
+    q.h(6, 9, 4, "A")
+    q.h(5, 10, 5, "A")
+    q.h(7, 8, 2)
+    q.p(6, 3)
+    q.p(9, 3)
+    q.p(5, 4)
+    q.p(10, 4)
+    q.p(4, 5)
+    q.p(11, 5)
+    q.h(4, 11, 6)
+    q.h(4, 11, 9)
+    q.p(4, 10)
+    q.p(11, 10)
+    q.p(5, 11)
+    q.p(10, 11)
+    q.p(6, 12)
+    q.p(9, 12)
+    q.h(7, 8, 13)
+
+
 # ---------------------------------------------------------------- abas da coluna
 
 @icone("pieces")
@@ -152,24 +229,21 @@ def _components(q: Quadro) -> None:
 
 @icone("layers")
 def _layers(q: Quadro) -> None:
-    # A placa de cima em losango cheio e duas bordas em V embaixo, com 1 px de folga entre elas.
-    q.h(7, 8, 2)
-    q.h(5, 6, 3)
-    q.h(9, 10, 3)
-    q.h(3, 4, 4)
-    q.h(11, 12, 4)
-    q.h(5, 6, 5)
-    q.h(9, 10, 5)
-    q.h(7, 8, 6)
-    q.h(7, 8, 3, "A")
-    q.h(5, 10, 4, "A")
-    q.h(7, 8, 5, "A")
-    for y in (8, 11):
+    # Três losangos empilhados em linha: o de cima inteiro e em coral, os de baixo só em V.
+    q.h(7, 8, 2, "A")
+    q.h(5, 6, 3, "A")
+    q.h(9, 10, 3, "A")
+    q.h(3, 4, 4, "A")
+    q.h(11, 12, 4, "A")
+    q.h(5, 6, 5, "A")
+    q.h(9, 10, 5, "A")
+    q.h(7, 8, 6, "A")
+    for y in (7, 10):
         q.h(3, 4, y)
-        q.h(5, 6, y + 1)
-        q.h(7, 8, y + 2)
-        q.h(9, 10, y + 1)
         q.h(11, 12, y)
+        q.h(5, 6, y + 1)
+        q.h(9, 10, y + 1)
+        q.h(7, 8, y + 2)
 
 
 # ---------------------------------------------------------------- barra de botões
@@ -391,14 +465,16 @@ def _rename(q: Quadro) -> None:
 
 @icone("section_open")
 def _section_open(q: Quadro) -> None:
-    for i in range(4):
-        q.h(4 + i, 11 - i, 6 + i)
+    for i in range(5):
+        q.p(3 + i, 5 + i)
+        q.p(12 - i, 5 + i)
 
 
 @icone("section_closed")
 def _section_closed(q: Quadro) -> None:
-    for i in range(4):
-        q.v(6 + i, 4 + i, 11 - i)
+    for i in range(5):
+        q.p(5 + i, 3 + i)
+        q.p(5 + i, 12 - i)
 
 
 @icone("add")
@@ -419,42 +495,38 @@ def _rules(q: Quadro) -> None:
 
 @icone("move_up")
 def _move_up(q: Quadro) -> None:
-    # A seta para cima: haste de 2 px e a ponta em V, simétrica.
-    q.v(7, 5, 12)
-    q.v(8, 5, 12)
-    for i in range(4):
+    # A seta para cima: haste de 1 px e a ponta em V.
+    q.v(7, 3, 12)
+    for i in range(1, 4):
         q.p(7 - i, 3 + i)
-        q.p(8 + i, 3 + i)
+        q.p(7 + i, 3 + i)
 
 
 @icone("move_down")
 def _move_down(q: Quadro) -> None:
-    q.v(7, 3, 10)
-    q.v(8, 3, 10)
-    for i in range(4):
+    q.v(7, 3, 12)
+    for i in range(1, 4):
         q.p(7 - i, 12 - i)
-        q.p(8 + i, 12 - i)
+        q.p(7 + i, 12 - i)
 
 
 @icone("to_front")
 def _to_front(q: Quadro) -> None:
     # A barra do topo e a seta subindo até ela.
-    q.h(3, 12, 2, "A")
-    q.v(7, 7, 13)
-    q.v(8, 7, 13)
-    for i in range(4):
+    q.h(4, 10, 2, "A")
+    q.v(7, 5, 13)
+    for i in range(1, 4):
         q.p(7 - i, 5 + i)
-        q.p(8 + i, 5 + i)
+        q.p(7 + i, 5 + i)
 
 
 @icone("to_back")
 def _to_back(q: Quadro) -> None:
-    q.h(3, 12, 13, "A")
-    q.v(7, 2, 8)
-    q.v(8, 2, 8)
-    for i in range(4):
+    q.h(4, 10, 13, "A")
+    q.v(7, 2, 10)
+    for i in range(1, 4):
         q.p(7 - i, 10 - i)
-        q.p(8 + i, 10 - i)
+        q.p(7 + i, 10 - i)
 
 
 # ---------------------------------------------------------------- aba Tamanho
@@ -496,10 +568,9 @@ def _grow_center(q: Quadro) -> None:
 
 @icone("step_left")
 def _step_left(q: Quadro) -> None:
-    q.diag(9, 4, 6, 7)
-    q.diag(6, 8, 9, 11)
-    q.diag(10, 4, 7, 7)
-    q.diag(7, 8, 10, 11)
+    for i in range(5):
+        q.p(10 - i, 3 + i)
+        q.p(10 - i, 12 - i)
 
 
 ICONES["step_right"] = lambda: ICONES["step_left"]().espelho()

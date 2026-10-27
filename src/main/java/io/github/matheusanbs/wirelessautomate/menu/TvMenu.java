@@ -4,6 +4,7 @@ import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
+import io.github.matheusanbs.wirelessautomate.storage.StorageBlockEntity;
 import io.github.matheusanbs.wirelessautomate.tv.TvArea;
 import io.github.matheusanbs.wirelessautomate.tv.TvBinding;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlockEntity;
@@ -12,11 +13,14 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Inventory;
@@ -33,6 +37,8 @@ import org.jetbrains.annotations.Nullable;
 public class TvMenu extends AbstractContainerMenu {
     /** No máximo tantas redes na lista da abertura. */
     public static final int MAX_NETWORKS = 256;
+    /** No máximo tantos armazenamentos ligados na lista da abertura. */
+    public static final int MAX_LINKS = 64;
     private static final double REACH_SQ = 8.0 * 8.0;
 
     /** Uma rede que o jogador pode usar, como a lista da tela a mostra. */
@@ -44,10 +50,18 @@ public class TvMenu extends AbstractContainerMenu {
                 NetworkChoice::new);
     }
 
+    /** Um armazenamento ligado à Tela como a lista da aba Dado o mostra: onde está e o tipo ({@code ""} se não carregado). */
+    public record LinkChoice(GlobalPos pos, String kind) {
+        public static final StreamCodec<RegistryFriendlyByteBuf, LinkChoice> STREAM_CODEC = StreamCodec.composite(
+                GlobalPos.STREAM_CODEC, LinkChoice::pos,
+                ByteBufCodecs.stringUtf8(32), LinkChoice::kind,
+                LinkChoice::new);
+    }
+
     /** O que o buffer de abertura leva. */
     private record Data(BlockPos pos, TvArea area, int maxWidth, int maxHeight, int maxLayoutBytes,
             @Nullable UUID currentNetwork,
-            String currentType, List<NetworkChoice> networks) {
+            String currentType, List<NetworkChoice> networks, List<LinkChoice> links) {
         static Data read(RegistryFriendlyByteBuf buf) {
             BlockPos pos = BlockPos.STREAM_CODEC.decode(buf);
             TvArea area = new TvArea(buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt());
@@ -61,7 +75,12 @@ public class TvMenu extends AbstractContainerMenu {
             for (int i = 0; i < size; i++) {
                 list.add(NetworkChoice.STREAM_CODEC.decode(buf));
             }
-            return new Data(pos, area, maxWidth, maxHeight, maxLayoutBytes, network, type, list);
+            int linkCount = Math.min(buf.readVarInt(), MAX_LINKS);
+            List<LinkChoice> links = new ArrayList<>(linkCount);
+            for (int i = 0; i < linkCount; i++) {
+                links.add(LinkChoice.STREAM_CODEC.decode(buf));
+            }
+            return new Data(pos, area, maxWidth, maxHeight, maxLayoutBytes, network, type, list, links);
         }
 
         void write(RegistryFriendlyByteBuf buf) {
@@ -77,6 +96,10 @@ public class TvMenu extends AbstractContainerMenu {
             buf.writeVarInt(networks.size());
             for (NetworkChoice choice : networks) {
                 NetworkChoice.STREAM_CODEC.encode(buf, choice);
+            }
+            buf.writeVarInt(links.size());
+            for (LinkChoice link : links) {
+                LinkChoice.STREAM_CODEC.encode(buf, link);
             }
         }
     }
@@ -108,12 +131,27 @@ public class TvMenu extends AbstractContainerMenu {
         if (networks.size() > MAX_NETWORKS) {
             networks = new ArrayList<>(networks.subList(0, MAX_NETWORKS));
         }
+        List<LinkChoice> links = new ArrayList<>();
+        for (GlobalPos link : tv.links()) {
+            if (links.size() >= MAX_LINKS) {
+                break;
+            }
+            links.add(new LinkChoice(link, linkKind(player.server, link)));
+        }
         TvBinding first = tv.layout().bindings().isEmpty() ? null : tv.layout().bindings().get(0);
         Data data = new Data(tv.getBlockPos(), tv.area(), Config.tvMaxWidth(), Config.tvMaxHeight(),
                 Config.tvMaxLayoutBytes(), first == null ? null : first.network(),
-                first == null ? "" : first.type().key(), networks);
+                first == null ? "" : first.type().key(), networks, links);
         player.openMenu(new SimpleMenuProvider((containerId, inventory, p) -> new TvMenu(containerId, data, tv),
                 Component.translatable("container.wirelessautomate.signal_screen")), data::write);
+    }
+
+    /** O tipo do armazenamento numa posição ligada, se o chunk está carregado (nunca o carrega); senão vazio. */
+    private static String linkKind(MinecraftServer server, GlobalPos link) {
+        ServerLevel level = server.getLevel(link.dimension());
+        return level != null && level.isLoaded(link.pos())
+                && level.getBlockEntity(link.pos()) instanceof StorageBlockEntity storage
+                ? storage.kind().getSerializedName() : "";
     }
 
     public BlockPos pos() {
@@ -140,6 +178,11 @@ public class TvMenu extends AbstractContainerMenu {
     /** As redes que o jogador pode usar, ordenadas pelo nome. */
     public List<NetworkChoice> networks() {
         return data.networks;
+    }
+
+    /** Os armazenamentos ligados à Tela na abertura, com o tipo de cada um. */
+    public List<LinkChoice> links() {
+        return data.links;
     }
 
     /** A rede do primeiro valor do layout na abertura, ou {@code null}. */

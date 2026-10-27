@@ -21,9 +21,9 @@ final class TvLeftTabs {
     private static final TvIcons.Icon[] ICONS = {TvIcons.Icon.PIECES, TvIcons.Icon.COMPONENTS, TvIcons.Icon.LAYERS};
     private static final Tab[] TABS = Tab.values();
     /** A aba fechada: o ícone de 16 px tem 2 px de folga de cada lado, então cabe em 14. */
-    private static final int SMALL_W = 14;
+    private static final int SMALL_W = 13;
     /** O que o ícone ocupa de fato (a parte desenhada) mais 1 px até o nome. */
-    private static final int ICON_W = TvIcons.SIZE + TvIcons.LABEL_GAP;
+    private static final int ICON_W = TvIcons.SIZE + 2;
     private static final int GAP = 1;
 
     private final TvRect[] rects = new TvRect[TABS.length];

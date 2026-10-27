@@ -77,6 +77,11 @@ public final class TvEditorProbe {
         return props.center(id);
     }
 
+    /** O centro do campo de busca da grade de itens da aba Dado, ou {@code null} sem a grade. */
+    public int @Nullable [] itemSearchCenter() {
+        return props.find("data.storage.items") instanceof TvItemGrid grid ? grid.searchCenter() : null;
+    }
+
     public int @Nullable [] propNetworkCenter(String id, UUID network) {
         return props.networkCenter(id, network);
     }

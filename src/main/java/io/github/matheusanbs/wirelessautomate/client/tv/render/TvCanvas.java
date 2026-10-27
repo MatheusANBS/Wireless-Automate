@@ -42,6 +42,9 @@ final class TvCanvas {
     long bytes;
     /** A última vez que foi desenhada, alguma regra que bate mandava piscar (a {@link TvCanvases} a redesenha). */
     boolean blinking;
+    /** A última vez que foi desenhada, tinha um Gráfico (redesenha a cada segundo) ou um número do relógio. */
+    boolean graphing;
+    boolean clocking;
     /** O último tick do mundo em que o BER a pediu. */
     long lastWanted;
 
@@ -76,9 +79,12 @@ final class TvCanvas {
         float scale = effective / (float) TvArea.PIXELS_PER_BLOCK;
         long gameTime = minecraft.level == null ? 0 : minecraft.level.getGameTime();
         GuiGraphics graphics = TvTargets.begin(minecraft, target, width, height, scale);
-        blinking = TvPainter.paint(graphics, minecraft.font, tv.layout(), tv.layout(), area,
+        int flags = TvPainter.paint(graphics, minecraft.font, tv.layout(), tv.layout(), area,
                 tv.getBlockPos().asLong(), tv.revision(), decimalSep, groupSep, TvPaintMath.blinkOff(gameTime), scale,
                 height, false);
+        blinking = (flags & TvPainter.FLAG_BLINK) != 0;
+        graphing = (flags & TvPainter.FLAG_GRAPH) != 0;
+        clocking = (flags & TvPainter.FLAG_CLOCK) != 0;
         TvTargets.end(graphics);
         mipmaps(target.getColorTextureId());
         revision = tv.revision();
@@ -128,6 +134,8 @@ final class TvCanvas {
         }
         revision = -1;
         blinking = false;
+        graphing = false;
+        clocking = false;
         ppb = 0;
         bytes = 0;
     }

@@ -28,6 +28,16 @@ public final class TvIcons {
         TEXT("text"),
         /** A peça Forma: paleta e Camadas. */
         SHAPE("shape"),
+        /** A peça Ícone de item: paleta e Camadas. */
+        ICON("icon"),
+        /** A peça Barra: paleta e Camadas. */
+        BAR("bar"),
+        /** A peça Medidor: paleta e Camadas. */
+        GAUGE("gauge"),
+        /** A peça Gráfico: paleta e Camadas. */
+        GRAPH("graph"),
+        /** A peça Seta: paleta e Camadas. */
+        ARROW("arrow"),
         /** A aba Peças da coluna. */
         PIECES("pieces"),
         /** A aba Componentes da coluna. */
@@ -122,6 +132,11 @@ public final class TvIcons {
             case VALUE -> Icon.VALUE;
             case TEXT -> Icon.TEXT;
             case SHAPE -> Icon.SHAPE;
+            case ICON -> Icon.ICON;
+            case BAR -> Icon.BAR;
+            case GAUGE -> Icon.GAUGE;
+            case GRAPH -> Icon.GRAPH;
+            case ARROW -> Icon.ARROW;
         };
     }
 }

@@ -167,6 +167,7 @@ public final class TvCanvases {
                     CANVASES.remove(pos);
                 }
                 BLINKING.remove(pos);
+                TvTimed.forget(pos);
                 continue;
             }
             if (canvas.wantedPpb == 0) {
@@ -193,6 +194,7 @@ public final class TvCanvases {
             } else {
                 BLINKING.remove(pos);
             }
+            TvTimed.track(pos, canvas.graphing, canvas.clocking);
             paintsForTests++;
             paintNanosForTests += spent;
             maxPaintNanosForTests = Math.max(maxPaintNanosForTests, spent);
@@ -286,6 +288,7 @@ public final class TvCanvases {
             if (now - canvas.lastWanted > IDLE_TICKS || now < canvas.lastWanted) {
                 release(minecraft, canvas);
                 BLINKING.remove(canvas.tv.getBlockPos().asLong());
+                TvTimed.forget(canvas.tv.getBlockPos().asLong());
                 it.remove();
             }
         }
@@ -390,6 +393,21 @@ public final class TvCanvases {
         FREE_SLOTS.enqueue(canvas.slot);
     }
 
+    /**
+     * Marca suja a Tela em {@code pos} se o BER a pediu nos últimos {@link #SEEN_TICKS} ticks (o redesenho por tempo
+     * do {@link TvTimed}); falso se a imagem não existe mais, e o conjunto do chamador a esquece.
+     */
+    static boolean refreshIfSeen(long pos, long now) {
+        TvCanvas canvas = CANVASES.get(pos);
+        if (canvas == null) {
+            return false;
+        }
+        if (now - canvas.lastWanted <= SEEN_TICKS) {
+            markDirty(pos);
+        }
+        return true;
+    }
+
     /** Quantas Telas têm uma regra de piscar valendo (gancho do e2e e dos testes). */
     public static int blinkingForTests() {
         return BLINKING.size();
@@ -411,6 +429,7 @@ public final class TvCanvases {
         DIRTY.clear();
         QUEUED.clear();
         BLINKING.clear();
+        TvTimed.clear();
         blinkSlot = Long.MIN_VALUE;
         allocatedBytes = 0;
         ticks = 0;

@@ -12,7 +12,14 @@ import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.tv.TvArea;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlock;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlockEntity;
+import io.github.matheusanbs.wirelessautomate.tv.TvColor;
+import io.github.matheusanbs.wirelessautomate.tv.TvFormat;
+import io.github.matheusanbs.wirelessautomate.tv.TvLayout;
+import io.github.matheusanbs.wirelessautomate.tv.TvPiece;
+import io.github.matheusanbs.wirelessautomate.tv.TvPieceType;
+import io.github.matheusanbs.wirelessautomate.tv.TvStyle;
 import io.github.matheusanbs.wirelessautomate.tv.TvTemplates;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
@@ -182,8 +189,14 @@ final class E2eTvPerfSteps {
                     TvBlockEntity tv = (TvBlockEntity) level.getBlockEntity(pos);
                     tv.setOwner(playerId);
                     tv.setArea(area);
-                    tv.setLayout(TvTemplates.networkPanel(network.name(), network.color(), network.id(),
-                            ResourceType.ITEM, area));
+                    TvLayout panel = TvTemplates.networkPanel(network.name(), network.color(), network.id(),
+                            ResourceType.ITEM, area);
+                    List<TvPiece> pieces = new ArrayList<>(panel.pieces());
+                    int h = area.pixelHeight();
+                    pieces.add(new TvPiece(TvPieceType.GRAPH, area.pixelWidth() / 8, h * 5 / 8, area.pixelWidth() * 3 / 4,
+                            h / 5, 0, "", pieces.get(2).binding(), TvFormat.DEFAULT,
+                            TvStyle.DEFAULT.withColor(TvColor.theme(TvColor.HIGH))));
+                    tv.setLayout(panel.withPieces(pieces));
                 }
             }
             return null;

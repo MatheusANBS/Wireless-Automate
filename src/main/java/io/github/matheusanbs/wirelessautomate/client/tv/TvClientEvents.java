@@ -2,8 +2,10 @@ package io.github.matheusanbs.wirelessautomate.client.tv;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.client.tv.editor.TvLibraryClient;
+import io.github.matheusanbs.wirelessautomate.client.tv.editor.TvStorageClient;
 import io.github.matheusanbs.wirelessautomate.client.tv.render.TvCanvases;
 import io.github.matheusanbs.wirelessautomate.client.tv.render.TvEditorImage;
+import io.github.matheusanbs.wirelessautomate.client.tv.render.TvTimed;
 import io.github.matheusanbs.wirelessautomate.tv.TvLoaded;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
@@ -36,6 +38,7 @@ public final class TvClientEvents {
     @SubscribeEvent
     static void onClientTick(ClientTickEvent.Post event) {
         TvCanvases.onClientTick();
+        TvTimed.onClientTick();
     }
 
     @SubscribeEvent
@@ -64,5 +67,6 @@ public final class TvClientEvents {
         TvClientValues.clear();
         TvCanvases.clear();
         TvLibraryClient.clear();
+        TvStorageClient.clear();
     }
 }

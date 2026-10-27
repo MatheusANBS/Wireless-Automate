@@ -40,6 +40,7 @@ import io.github.matheusanbs.wirelessautomate.tv.TvClientHooks;
 import io.github.matheusanbs.wirelessautomate.tv.TvEditing;
 import io.github.matheusanbs.wirelessautomate.tv.TvLibraryActions;
 import io.github.matheusanbs.wirelessautomate.tv.TvPreview;
+import io.github.matheusanbs.wirelessautomate.tv.TvStorageContents;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -71,7 +72,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ModPayloads {
     /**
-     * Versão do protocolo (37: o {@code TvValuesPayload} leva os bits de dado antigo dos armazenamentos ligados, e a
+     * Versão do protocolo (37: os payloads {@code TvStorageContentsRequestPayload} e {@code TvStorageContentsPayload} (os itens de um Baú ligado, só com o editor aberto); o {@code TvValuesPayload} leva os bits de dado antigo dos armazenamentos ligados, e a
      * ligação de uma peça ganha as fontes de armazenamento e relógio; 36: os payloads do editor da Tela de Sinal, {@code TvLayoutPayload}, {@code TvLayoutAckPayload},
      * {@code TvLibraryPayload}, {@code TvLibraryActionPayload}, {@code TvPreviewPayload} e {@code TvPreviewValuesPayload},
      * e o teto de bytes do layout no buffer de abertura da Tela); mude quando um payload mudar de formato.
@@ -173,6 +174,11 @@ public final class ModPayloads {
                 (payload, context) -> TvPreview.handle(serverPlayer(context), payload));
         registrar.playToClient(TvPreviewValuesPayload.TYPE, TvPreviewValuesPayload.STREAM_CODEC,
                 (payload, context) -> TvClientHooks.preview.accept(payload));
+        // Os itens de um Baú ligado, para a grade da aba Dado (só com o editor aberto e depois do pedido).
+        registrar.playToServer(TvStorageContentsRequestPayload.TYPE, TvStorageContentsRequestPayload.STREAM_CODEC,
+                (payload, context) -> TvStorageContents.handle(serverPlayer(context), payload));
+        registrar.playToClient(TvStorageContentsPayload.TYPE, TvStorageContentsPayload.STREAM_CODEC,
+                (payload, context) -> TvClientHooks.storageContents.accept(payload));
     }
 
     private static @Nullable ServerPlayer serverPlayer(IPayloadContext context) {

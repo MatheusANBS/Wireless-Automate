@@ -36,19 +36,23 @@ final class TvStyleTab {
             return;
         }
         TvPieceType type = ctx.piece().type();
-        boolean texty = type != TvPieceType.SHAPE;
+        boolean texty = type == TvPieceType.VALUE || type == TvPieceType.TEXT;
+        boolean content = type != TvPieceType.SHAPE;
         form.text("style.name", TvPropsCtx.key("style.name"), TvPiece.MAX_NAME, null,
                 TvPropsCtx.key("style.name.hint"), () -> ctx.piece().name(),
                 text -> ctx.change("style.name", p -> p.withName(text)));
         form.skip(2);
-        if (texty && form.section("content", TvPropsCtx.key("section.content"), true)) {
+        if (content && form.section("content", TvPropsCtx.key("section.content"), true)) {
             content(form, ctx, type);
         }
         if (texty && form.section("text", TvPropsCtx.key("section.text"), true)) {
             text(form, ctx);
         }
+        if (TvPartTab.has(type) && form.section("part", TvPropsCtx.key("section.part"), true)) {
+            TvPartTab.build(form, ctx, type);
+        }
         if (form.section("colors", TvPropsCtx.key("section.colors"), true)) {
-            colors(form, ctx, texty);
+            colors(form, ctx, type);
         }
         if (form.section("box", TvPropsCtx.key("section.box"), true)) {
             box(form, ctx);
@@ -68,11 +72,22 @@ final class TvStyleTab {
         }
     }
 
-    /** "Itens · Fábrica · entra": o dado do Valor numa linha, ou "Sem dado". */
+    /** "Itens · Fábrica · entra": o dado da peça numa linha, ou "Sem dado". */
     private static Component summary(TvPropsCtx ctx) {
+        if (ctx.piece().type() == TvPieceType.ICON) {
+            return ctx.piece().style().part().item().map(id -> (Component) Component.literal(id.toString()))
+                    .orElse(TvPropsCtx.key("rules.nodata"));
+        }
         TvBinding binding = ctx.piece().binding().orElse(null);
         if (binding == null) {
             return TvPropsCtx.key("rules.nodata");
+        }
+        if (binding.storage() != null) {
+            return Component.empty().append(TvLinkList.name(ctx.data().kindOf(binding.storage().pos())))
+                    .append(" · ").append(TvDataTab.storageMetricName(binding));
+        }
+        if (binding.clock() != null) {
+            return TvPropsCtx.key("data.clock.metric." + binding.clock().getSerializedName());
         }
         String network = "?";
         for (TvMenu.NetworkChoice choice : ctx.networks()) {
@@ -106,9 +121,13 @@ final class TvStyleTab {
         form.endRow(TvIcons.SIZE);
     }
 
-    private static void colors(TvForm form, TvPropsCtx ctx, boolean texty) {
-        if (texty) {
+    private static void colors(TvForm form, TvPropsCtx ctx, TvPieceType type) {
+        if (type == TvPieceType.VALUE || type == TvPieceType.TEXT) {
             TvColorPicker.add(form, ctx, "style.color", TvPropsCtx.key("color.text.short"),
+                    () -> ctx.piece().style().color(), c -> style(ctx, "style.color", s -> s.withColor(c)), false,
+                    true);
+        } else if (type == TvPieceType.BAR || type == TvPieceType.GAUGE || type == TvPieceType.GRAPH) {
+            TvColorPicker.add(form, ctx, "style.color", TvPropsCtx.key("color.part"),
                     () -> ctx.piece().style().color(), c -> style(ctx, "style.color", s -> s.withColor(c)), false,
                     true);
         }

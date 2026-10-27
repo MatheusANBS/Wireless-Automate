@@ -205,9 +205,9 @@ public final class TvLibraryGameTests {
     }
 
     @GameTest(template = "empty", timeoutTicks = 100)
-    public static void componentesProntosSoTemAsTresPecas(GameTestHelper helper) {
+    public static void componentesProntosSemLigacaoECabemNaConfig(GameTestHelper helper) {
         List<TvComponent> ready = TvTemplates.components();
-        helper.assertValueEqual(ready.size(), 3, "quantos prontos");
+        helper.assertValueEqual(ready.size(), 6, "quantos prontos");
         for (TvComponent component : ready) {
             helper.assertTrue(!component.pieces().isEmpty() && component.pieces().size() <= Config.tvMaxElements(),
                     "peças de " + component.name());

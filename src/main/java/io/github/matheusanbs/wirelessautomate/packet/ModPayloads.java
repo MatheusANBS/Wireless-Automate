@@ -16,6 +16,7 @@ import io.github.matheusanbs.wirelessautomate.client.linker.LinkerOpenClient;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RepairerMenu;
+import io.github.matheusanbs.wirelessautomate.tv.TvClientHooks;
 import io.github.matheusanbs.wirelessautomate.menu.RemoteRouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterEditHost;
 import io.github.matheusanbs.wirelessautomate.menu.RouterFaceFilterTarget;
@@ -64,8 +65,8 @@ import org.jetbrains.annotations.Nullable;
  * de filtro segue a mesma regra com o {@link FilterMenu} e a {@link FilterViewPayload}.
  */
 public final class ModPayloads {
-    /** Versão do protocolo; mude quando um payload mudar de formato. */
-    public static final String VERSION = "34";
+    /** Versão do protocolo (35: o {@code TvValuesPayload} das Telas de Sinal); mude quando um payload mudar de formato. */
+    public static final String VERSION = "35";
 
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(VERSION);
@@ -140,6 +141,9 @@ public final class ModPayloads {
         ResonatorPayloads.register(registrar);
         // Tela do Reparador de Cristais (handler no RepairerMenu).
         registrar.playToClient(RepairerStatePayload.TYPE, RepairerStatePayload.STREAM_CODEC, RepairerMenu::onState);
+        // Números da Tela de Sinal (o cliente preenche o gancho).
+        registrar.playToClient(TvValuesPayload.TYPE, TvValuesPayload.STREAM_CODEC,
+                (payload, context) -> TvClientHooks.values.accept(payload));
     }
 
     private static @Nullable ServerPlayer serverPlayer(IPayloadContext context) {

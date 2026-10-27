@@ -215,6 +215,7 @@
   "command.wirelessautomate.profile.no_networks": "  Nenhuma rede ativa com roteadores carregados.",
   "command.wirelessautomate.profile.resonator": "  Ressonadores: %s Núcleos (%s montados) · lotes média %s ms/tick · último %s ms · revalidação média %s ms/tick · última %s ms",
   "command.wirelessautomate.profile.flows": "  Fluxos: %s olhando · %s amostras · média %s ms/segundo · último %s ms · pico %s ms/tick",
+  "command.wirelessautomate.profile.tv": "  Telas: %s carregadas · %s com alguém perto · %s pacotes · média %s µs/tick · pico %s µs",
   "command.wirelessautomate.invalid_value": "Valor inválido: %s",
   "command.wirelessautomate.network.list.empty": "Nenhuma rede ainda. Crie uma com /wa network create <nome>.",
   "command.wirelessautomate.network.list.header": "Redes (%s):",

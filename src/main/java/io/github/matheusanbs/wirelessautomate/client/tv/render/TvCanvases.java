@@ -56,6 +56,8 @@ public final class TvCanvases {
     private static final Long2ObjectOpenHashMap<TvCanvas> CANVASES = new Long2ObjectOpenHashMap<>();
     private static final LongArrayFIFOQueue DIRTY = new LongArrayFIFOQueue();
     private static final LongOpenHashSet QUEUED = new LongOpenHashSet();
+    /** As Telas cuja última imagem tinha uma regra de piscar valendo, atualizado a cada redesenho. */
+    private static final LongOpenHashSet BLINKING = new LongOpenHashSet();
     private static final IntArrayFIFOQueue FREE_SLOTS = new IntArrayFIFOQueue();
     private static final List<ResourceLocation> IDS = new ArrayList<>();
     /** O rascunho da avaliação, reusado (cresce até o número de Telas vistas ao mesmo tempo). */
@@ -70,6 +72,8 @@ public final class TvCanvases {
     /** A memória de vídeo de todas as imagens, mantida a cada redesenho e a cada liberação. */
     private static long allocatedBytes;
     private static int ticks;
+    /** O bloco do piscar em que o último tick estava ({@link TvPaintMath#blinkSlot}). */
+    private static long blinkSlot = Long.MIN_VALUE;
     private static String language = "";
     private static char decimalSep = '.';
     private static char groupSep = ',';
@@ -162,6 +166,7 @@ public final class TvCanvases {
                     release(minecraft, canvas);
                     CANVASES.remove(pos);
                 }
+                BLINKING.remove(pos);
                 continue;
             }
             if (canvas.wantedPpb == 0) {
@@ -183,6 +188,11 @@ public final class TvCanvases {
             canvas.paint(minecraft, decimalSep, groupSep);
             long spent = System.nanoTime() - start;
             allocatedBytes += canvas.bytes - before;
+            if (canvas.blinking) {
+                BLINKING.add(pos);
+            } else {
+                BLINKING.remove(pos);
+            }
             paintsForTests++;
             paintNanosForTests += spent;
             maxPaintNanosForTests = Math.max(maxPaintNanosForTests, spent);
@@ -265,6 +275,7 @@ public final class TvCanvases {
         if (++ticks % EVAL_TICKS == 0) {
             evaluate(minecraft, now);
         }
+        blink(now);
         if (ticks < SWEEP_TICKS) {
             return;
         }
@@ -274,7 +285,34 @@ public final class TvCanvases {
             TvCanvas canvas = it.next().getValue();
             if (now - canvas.lastWanted > IDLE_TICKS || now < canvas.lastWanted) {
                 release(minecraft, canvas);
+                BLINKING.remove(canvas.tv.getBlockPos().asLong());
                 it.remove();
+            }
+        }
+    }
+
+    /**
+     * Na troca da fase do piscar ({@link TvPaintMath#BLINK_TICKS} ticks, 2 por segundo), marca suja só cada Tela do
+     * {@link #BLINKING} vista nos últimos {@link #SEEN_TICKS} ticks: o resto das Telas não é tocado. Sem nenhuma Tela
+     * piscando, a conta de um tick é uma divisão e uma comparação.
+     */
+    private static void blink(long now) {
+        long slot = TvPaintMath.blinkSlot(now);
+        if (slot == blinkSlot) {
+            return;
+        }
+        blinkSlot = slot;
+        if (BLINKING.isEmpty()) {
+            return;
+        }
+        LongIterator it = BLINKING.iterator();
+        while (it.hasNext()) {
+            long pos = it.nextLong();
+            TvCanvas canvas = CANVASES.get(pos);
+            if (canvas == null) {
+                it.remove();
+            } else if (now - canvas.lastWanted <= SEEN_TICKS) {
+                markDirty(pos);
             }
         }
     }
@@ -352,6 +390,11 @@ public final class TvCanvases {
         FREE_SLOTS.enqueue(canvas.slot);
     }
 
+    /** Quantas Telas têm uma regra de piscar valendo (gancho do e2e e dos testes). */
+    public static int blinkingForTests() {
+        return BLINKING.size();
+    }
+
     /** A memória de vídeo das imagens, em bytes (o e2e de desempenho lê). */
     public static long allocatedBytesForTests() {
         return allocatedBytes;
@@ -367,6 +410,8 @@ public final class TvCanvases {
         CANVASES.trim();
         DIRTY.clear();
         QUEUED.clear();
+        BLINKING.clear();
+        blinkSlot = Long.MIN_VALUE;
         allocatedBytes = 0;
         ticks = 0;
     }

@@ -90,6 +90,7 @@ final class E2eTvSteps {
         list.add(view("tela-mundo-longe", playerId, () -> worldTarget().add(0, 2, -16), E2eTvSteps::worldTarget));
         // a última foto deixa o jogador de frente para a Tela, ao alcance do clique que a abre em pt
         list.add(view("tela-mundo", playerId, E2eTvSteps::worldEye, E2eTvSteps::worldTarget));
+        E2eTvDrawSteps.drawSteps(list, playerId, () -> tv);
         list.add(hideGui(playerId, false));
         E2eVariants.pt(list, () -> {
             list.add(language("pt_br"));
@@ -355,7 +356,7 @@ final class E2eTvSteps {
     }
 
     /** Liga ({@code hide}) ou desliga a interface e o voo das fotos do mundo, guardando o que havia. */
-    private static Step hideGui(UUID playerId, boolean hide) {
+    static Step hideGui(UUID playerId, boolean hide) {
         return new Step(hide ? "Tela: sem interface" : "Tela: interface de volta", STEP_TIMEOUT_MS, () -> {
             if (hide) {
                 SAVED[0] = Minecraft.getInstance().options.hideGui;
@@ -374,11 +375,11 @@ final class E2eTvSteps {
     }
 
     /** O centro da área 4 × 2 na frente da Tela: as colunas vão de x + 7 a x + 10 e as linhas de y + 1 a y + 2. */
-    private static Vec3 worldTarget() {
+    static Vec3 worldTarget() {
         return new Vec3(tv.getX() - 1.0, tv.getY() + 1.0, tv.getZ() + FRONT);
     }
 
-    private static Vec3 worldEye() {
+    static Vec3 worldEye() {
         return worldTarget().add(0, 0, -WORLD_DISTANCE);
     }
 

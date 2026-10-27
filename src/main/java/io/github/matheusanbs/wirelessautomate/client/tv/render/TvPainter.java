@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.client.tv.TvClientValues;
 import io.github.matheusanbs.wirelessautomate.client.tv.TvFit;
 import io.github.matheusanbs.wirelessautomate.client.tv.TvNumbers;
 import io.github.matheusanbs.wirelessautomate.client.tv.TvUnits;
+import io.github.matheusanbs.wirelessautomate.tv.TvArea;
 import io.github.matheusanbs.wirelessautomate.tv.TvBinding;
 import io.github.matheusanbs.wirelessautomate.tv.TvFormat;
 import io.github.matheusanbs.wirelessautomate.tv.TvLayout;
@@ -17,9 +18,10 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 
 /**
- * O desenho do layout de uma Tela na textura dela, só no redesenho (nunca por quadro). As peças vão em ordem, em
- * pixels de desenho: o chamador já escalou o {@code pose} para os pixels da textura. Fundo e borda valem para
- * qualquer peça; Texto e Valor escrevem o texto com o tamanho do {@link TvFit}, centrado na altura da caixa e
+ * O desenho do layout de uma Tela na textura dela, só no redesenho (nunca por quadro). O fundo da Tela e as linhas
+ * de varredura ({@link TvPaintBackground}) vão em volta das peças, que vão em ordem, em pixels de desenho: o
+ * chamador já escalou o {@code pose} para os pixels da textura. Fundo e borda ({@link TvPaintBox}, com os cantos)
+ * valem para qualquer peça; Texto e Valor escrevem o texto com o tamanho do {@link TvFit}, centrado na altura da caixa e
  * alinhado pela {@code TvAlign}. O {@code TvFit} nunca desce de 1 px: numa caixa menor que isso o texto passa um
  * pouco dela, sem recorte (o recorte só existe com o ajuste desligado, e então pela caixa).
  */
@@ -28,46 +30,49 @@ public final class TvPainter {
     /** A altura das letras sem a folga de baixo da linha, para centrar na caixa. */
     private static final float GLYPH = 8f;
     private static final String NO_DATA = "—";
+    /** O estado da peça da vez, reusado (só a thread de render desenha). */
+    private static final TvPaintStyle STYLE = new TvPaintStyle();
 
     private TvPainter() {
     }
 
     /**
+     * Desenha o fundo, as peças em ordem e as linhas de varredura. Cada peça resolve a regra que bate, as cores pelo
+     * tema e a opacidade ({@link TvPaintStyle}); a escondida, e a que pisca na fase apagada, não é desenhada.
+     *
+     * @param area         a área da Tela, para o fundo e as linhas
+     * @param blinkOff     a fase apagada do piscar no instante do desenho
      * @param scale        pixels da textura por pixel de desenho (o mesmo do {@code pose})
      * @param targetHeight a altura da textura em pixels, para o recorte (o GL conta de baixo para cima)
+     * @return se alguma regra que bate manda piscar (a Tela precisa do redesenho do piscar)
      */
-    public static void paint(GuiGraphics g, Font font, TvLayout layout, long pos, int revision, char decimalSep,
-            char groupSep, float scale, int targetHeight) {
+    public static boolean paint(GuiGraphics g, Font font, TvLayout layout, TvArea area, long pos, int revision,
+            char decimalSep, char groupSep, boolean blinkOff, float scale, int targetHeight) {
+        TvPaintBackground.fill(g, layout, area.pixelWidth(), area.pixelHeight());
+        TvPaintStyle resolved = STYLE;
+        boolean blinks = false;
         for (TvPiece piece : layout.pieces()) {
+            if (piece.hidden()) {
+                continue;
+            }
+            resolved.resolve(piece, layout, pos, revision, blinkOff);
+            blinks |= resolved.blinks;
+            if (resolved.skip) {
+                continue;
+            }
             TvStyle style = piece.style();
-            box(g, piece, style);
+            TvPaintBox.paint(g, piece, style, resolved.background, resolved.border);
             String text = switch (piece.type()) {
                 case TEXT -> style.text();
                 case VALUE -> valueText(piece, layout, pos, revision, decimalSep, groupSep);
                 case SHAPE -> "";
             };
-            if (!text.isEmpty()) {
-                text(g, font, piece, style, text, scale, targetHeight);
+            if (!text.isEmpty() && resolved.color >>> 24 >= TvPaintMath.MIN_TEXT_ALPHA) {
+                text(g, font, piece, style, resolved.color, text, scale, targetHeight);
             }
         }
-    }
-
-    private static void box(GuiGraphics g, TvPiece piece, TvStyle style) {
-        int x0 = piece.x();
-        int y0 = piece.y();
-        int x1 = x0 + piece.width();
-        int y1 = y0 + piece.height();
-        if (style.background() >>> 24 != 0) {
-            g.fill(x0, y0, x1, y1, style.background());
-        }
-        int b = Math.min(style.borderWidth(), Math.min(piece.width(), piece.height()) / 2);
-        if (b > 0 && style.border() >>> 24 != 0) {
-            int color = style.border();
-            g.fill(x0, y0, x1, y0 + b, color);
-            g.fill(x0, y1 - b, x1, y1, color);
-            g.fill(x0, y0 + b, x0 + b, y1 - b, color);
-            g.fill(x1 - b, y0 + b, x1, y1 - b, color);
-        }
+        TvPaintBackground.scanlines(g, layout, area.pixelWidth(), area.pixelHeight());
+        return blinks;
     }
 
     /**
@@ -97,8 +102,8 @@ public final class TvPainter {
         return out.append(format.suffix()).toString();
     }
 
-    private static void text(GuiGraphics g, Font font, TvPiece piece, TvStyle style, String text, float scale,
-            int targetHeight) {
+    private static void text(GuiGraphics g, Font font, TvPiece piece, TvStyle style, int color, String text,
+            float scale, int targetHeight) {
         Component line = TvFonts.text(style.font(), text);
         int width = font.width(line);
         float size = TvFit.size(style.size(), piece.width(), piece.height(), width / LINE, style.fit());
@@ -119,7 +124,7 @@ public final class TvPainter {
         g.pose().pushPose();
         g.pose().translate(x, y, 0);
         g.pose().scale(k, k, 1);
-        g.drawString(font, line, 0, 0, style.color(), false);
+        g.drawString(font, line, 0, 0, color, false);
         g.pose().popPose();
         if (clip) {
             RenderSystem.disableScissor();

@@ -46,6 +46,8 @@ final class TvCanvas {
     int wantedPpb;
     /** A memória de vídeo da textura atual, com os mipmaps. */
     long bytes;
+    /** A última vez que foi desenhada, alguma regra que bate mandava piscar (a {@link TvCanvases} a redesenha). */
+    boolean blinking;
     /** O último tick do mundo em que o BER a pediu. */
     long lastWanted;
 
@@ -93,8 +95,9 @@ final class TvCanvas {
         GuiGraphics graphics = new GuiGraphics(minecraft, minecraft.renderBuffers().bufferSource());
         float scale = effective / (float) TvArea.PIXELS_PER_BLOCK;
         graphics.pose().scale(scale, scale, 1);
-        TvPainter.paint(graphics, minecraft.font, tv.layout(), tv.getBlockPos().asLong(), tv.revision(), decimalSep,
-                groupSep, scale, height);
+        long gameTime = minecraft.level == null ? 0 : minecraft.level.getGameTime();
+        blinking = TvPainter.paint(graphics, minecraft.font, tv.layout(), area, tv.getBlockPos().asLong(),
+                tv.revision(), decimalSep, groupSep, TvPaintMath.blinkOff(gameTime), scale, height);
         graphics.flush();
         RenderSystem.setShaderFogStart(fogStart);
         mipmaps(target.getColorTextureId());
@@ -146,6 +149,7 @@ final class TvCanvas {
             target = null;
         }
         revision = -1;
+        blinking = false;
         ppb = 0;
         bytes = 0;
     }

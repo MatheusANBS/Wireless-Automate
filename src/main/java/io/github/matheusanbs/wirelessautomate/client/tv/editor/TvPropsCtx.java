@@ -9,11 +9,12 @@ import net.minecraft.network.chat.Component;
 
 /**
  * O que as abas de propriedades precisam para montar os controles: o documento do editor, as redes que o
- * jogador pode usar e a peça escolhida (a primeira, quando só uma vale). Toda mudança passa por {@link #change}, que
+ * jogador pode usar, o que a aba Dado lembra ({@link TvDataState}) e a peça escolhida (a primeira, quando só uma vale). Toda mudança passa por {@link #change}, que
  * troca a peça escolhida pelo {@link TvEditorDoc} (entra no desfazer; a mesma {@code key} em mudanças seguidas de um
  * campo vira uma só).
  */
-record TvPropsCtx(TvEditorDoc doc, List<TvMenu.NetworkChoice> networks, TvEditorActions actions, TvPopups popups) {
+record TvPropsCtx(TvEditorDoc doc, List<TvMenu.NetworkChoice> networks, TvEditorActions actions, TvPopups popups,
+        TvDataState data) {
     /** A primeira peça escolhida. */
     TvPiece piece() {
         return doc.pieces().get(doc.selection().first());

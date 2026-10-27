@@ -37,7 +37,7 @@ final class TvPaintBox {
         }
     }
 
-    private static void fillRounded(GuiGraphics g, int x0, int y0, int w, int h, int r, int color) {
+    static void fillRounded(GuiGraphics g, int x0, int y0, int w, int h, int r, int color) {
         if (r == 0) {
             g.fill(x0, y0, x0 + w, y0 + h, color);
             return;

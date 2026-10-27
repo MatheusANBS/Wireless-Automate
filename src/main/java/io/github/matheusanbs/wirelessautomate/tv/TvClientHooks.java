@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.tv;
 import io.github.matheusanbs.wirelessautomate.packet.TvLayoutAckPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TvLibraryPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TvPreviewValuesPayload;
+import io.github.matheusanbs.wirelessautomate.packet.TvStorageContentsPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TvValuesPayload;
 import java.util.function.Consumer;
 
@@ -26,6 +27,10 @@ public final class TvClientHooks {
 
     /** Chamado no cliente quando os números da prévia do editor chegam. */
     public static volatile Consumer<TvPreviewValuesPayload> preview = payload -> {
+    };
+
+    /** Chamado no cliente quando os itens de um Baú ligado chegam, com o editor aberto. */
+    public static volatile Consumer<TvStorageContentsPayload> storageContents = payload -> {
     };
 
     private TvClientHooks() {

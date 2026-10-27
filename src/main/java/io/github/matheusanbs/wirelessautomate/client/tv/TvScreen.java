@@ -61,7 +61,7 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
         this.imageWidth = W;
         this.imageHeight = H;
         this.sizeTab = new TvSizeTab(menu, new TvScreenActions(menu.containerId, false));
-        this.editorTab = new TvEditorTab(menu.pos(), menu.area(), menu.networks(),
+        this.editorTab = new TvEditorTab(menu.pos(), menu.area(), menu.networks(), menu.links(),
                 new TvEditorActions(menu.containerId, false, menu.maxLayoutBytes()));
     }
 

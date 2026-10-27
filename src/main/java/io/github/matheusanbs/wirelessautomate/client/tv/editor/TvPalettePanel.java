@@ -9,12 +9,13 @@ import net.minecraft.client.gui.GuiGraphics;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A aba Peças da coluna da esquerda: Valor, Texto e Forma. O clique insere uma nova no primeiro lugar livre e a
+ * A aba Peças da coluna da esquerda: Valor, Texto, Forma, Ícone, Barra, Medidor, Gráfico e Seta. O clique insere uma nova no primeiro lugar livre e a
  * escolhe; arrastar o botão até a miniatura mostra um fantasma do tamanho da peça e soltar põe a peça ali, com o
  * centro no ponto (soltar fora da miniatura cancela). Os textos são medidos no {@link #layout}.
  */
 final class TvPalettePanel {
-    private static final List<TvPieceType> TYPES = List.of(TvPieceType.VALUE, TvPieceType.TEXT, TvPieceType.SHAPE);
+    private static final List<TvPieceType> TYPES = List.of(TvPieceType.VALUE, TvPieceType.TEXT, TvPieceType.SHAPE,
+            TvPieceType.ICON, TvPieceType.BAR, TvPieceType.GAUGE, TvPieceType.GRAPH, TvPieceType.ARROW);
     private static final int DRAG_START = 4;
 
     private final TvEditorDoc doc;

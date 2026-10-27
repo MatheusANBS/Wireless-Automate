@@ -56,7 +56,8 @@ public final class TvEditorTab {
     private int[] tooSmallWidths = new int[0];
     private Font font;
 
-    public TvEditorTab(BlockPos pos, TvArea area, List<TvMenu.NetworkChoice> networks, TvEditorActions actions) {
+    public TvEditorTab(BlockPos pos, TvArea area, List<TvMenu.NetworkChoice> networks, List<TvMenu.LinkChoice> links,
+            TvEditorActions actions) {
         this.doc = new TvEditorDoc(pos, area);
         this.actions = actions;
         TvEditorAck.listen(actions.containerId(), doc::acked);
@@ -67,7 +68,7 @@ public final class TvEditorTab {
         this.base = new TvBaseLine(doc, actions.maxLayoutBytes() / 1024);
         this.bar = new TvEditorBar(doc);
         this.layers = new TvLayersPanel(doc);
-        this.props = new TvPropsPanel(doc, networks, actions, popups);
+        this.props = new TvPropsPanel(doc, networks, links, actions, popups);
         this.keys = new TvEditorKeys(doc, this::save);
         this.probe = new TvEditorProbe(doc, leftTabs, palette, components, canvas, bar, layers, props, menu,
                 popups);
@@ -387,6 +388,7 @@ public final class TvEditorTab {
         TvEditorImage.release();
         TvEditorAck.stop();
         TvLibraryClient.clear();
+        TvStorageClient.clear();
     }
 
     public TvLayout draft() {

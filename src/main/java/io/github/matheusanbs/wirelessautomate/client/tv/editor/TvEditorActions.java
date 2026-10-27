@@ -3,11 +3,13 @@ package io.github.matheusanbs.wirelessautomate.client.tv.editor;
 import io.github.matheusanbs.wirelessautomate.client.tv.TvPreviewValues;
 import io.github.matheusanbs.wirelessautomate.packet.TvLayoutPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TvLibraryActionPayload;
+import io.github.matheusanbs.wirelessautomate.packet.TvStorageContentsRequestPayload;
 import io.github.matheusanbs.wirelessautomate.tv.TvBinding;
 import io.github.matheusanbs.wirelessautomate.tv.TvComponent;
 import io.github.matheusanbs.wirelessautomate.tv.TvLayout;
 import io.github.matheusanbs.wirelessautomate.tv.TvTheme;
 import java.util.List;
+import net.minecraft.core.GlobalPos;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
@@ -65,6 +67,13 @@ public final class TvEditorActions {
     /** Pede a biblioteca do jogador; o servidor responde com o {@code TvLibraryPayload}. */
     void requestLibrary() {
         send(TvLibraryActionPayload.open(containerId));
+    }
+
+    /** Pede os itens de um Baú ligado à Tela, para a grade da aba Dado; a resposta volta pelo {@link TvStorageClient}. */
+    void requestStorageContents(GlobalPos pos, String query) {
+        if (!preview) {
+            PacketDistributor.sendToServer(new TvStorageContentsRequestPayload(containerId, pos, query));
+        }
     }
 
     void saveComponent(TvComponent component) {

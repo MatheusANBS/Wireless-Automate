@@ -102,6 +102,7 @@ final class E2eTvSteps {
         list.add(view("tela-mundo", playerId, E2eTvSteps::worldEye, E2eTvSteps::worldTarget));
         E2eTvDrawSteps.drawSteps(list, playerId, () -> tv);
         list.add(hideGui(playerId, false));
+        E2eTvPiecesSteps.piecesSteps(list, playerId, () -> tv, () -> origin);
         E2eVariants.pt(list, () -> {
             list.add(language("pt_br"));
             list.add(open("Tela: abrir em pt"));

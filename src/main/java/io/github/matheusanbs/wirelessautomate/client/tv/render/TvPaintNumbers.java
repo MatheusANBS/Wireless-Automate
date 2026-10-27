@@ -13,6 +13,9 @@ import net.minecraft.client.Minecraft;
  * não chegou ou sem acesso), o da Tela. Sem alocar.
  */
 final class TvPaintNumbers {
+    /** Algum número do desenho em curso veio do relógio (o {@link TvPainter} zera antes e lê depois). */
+    static boolean clockRead;
+
     private TvPaintNumbers() {
     }
 
@@ -31,6 +34,7 @@ final class TvPaintNumbers {
 
     /** O relógio do jogo, lido aqui mesmo: o servidor não manda nada. */
     private static double clock(TvBinding binding) {
+        clockRead = true;
         Minecraft minecraft = Minecraft.getInstance();
         return minecraft.level == null ? Double.NaN : binding.clock().read(minecraft.level.getDayTime());
     }

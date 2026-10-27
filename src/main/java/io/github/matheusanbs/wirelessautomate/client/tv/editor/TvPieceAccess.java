@@ -10,7 +10,8 @@ import java.util.Optional;
 
 /**
  * As peças do layout pelas operações do {@link TvEditOps}, e as peças novas da paleta com as medidas do mockup: o
- * Valor 40 × 12 sem ligação ("—" até ligar), o Texto 48 × 10 e a Forma 40 × 24 no Cartão do tema com cantos de 2 px.
+ * Valor 40 × 12 sem ligação ("—" até ligar), o Texto 48 × 10 e a Forma 40 × 24 no Cartão do tema com cantos de 2 px,
+ * o Ícone 16 × 16, a Barra 48 × 4, o Medidor 32 × 32, o Gráfico 48 × 20 e a Seta 8 × 10.
  * Os textos e o fundo pelos papéis do tema, para acompanhar a troca de tema.
  */
 final class TvPieceAccess implements TvEditOps.Access<TvPiece> {
@@ -79,6 +80,14 @@ final class TvPieceAccess implements TvEditOps.Access<TvPiece> {
                     textStyle.withText(text));
             case SHAPE -> new TvPiece(type, 0, 0, 40, 24, 0, "", Optional.empty(), TvFormat.DEFAULT,
                     textStyle.withBackground(TvColor.theme(TvColor.CARD)).withRadius(2));
+            case ICON -> new TvPiece(type, 0, 0, 16, 16, 0, "", Optional.empty(), TvFormat.DEFAULT, textStyle);
+            case BAR -> new TvPiece(type, 0, 0, 48, 4, 0, "", Optional.empty(), TvFormat.DEFAULT,
+                    textStyle.withColor(TvColor.theme(TvColor.HIGH)));
+            case GAUGE -> new TvPiece(type, 0, 0, 32, 32, 0, "", Optional.empty(), TvFormat.DEFAULT,
+                    textStyle.withColor(TvColor.theme(TvColor.HIGH)));
+            case GRAPH -> new TvPiece(type, 0, 0, 48, 20, 0, "", Optional.empty(), TvFormat.DEFAULT,
+                    textStyle.withColor(TvColor.theme(TvColor.HIGH)));
+            case ARROW -> new TvPiece(type, 0, 0, 8, 10, 0, "", Optional.empty(), TvFormat.DEFAULT, textStyle);
         };
     }
 }

@@ -7,11 +7,21 @@ import net.minecraft.util.StringRepresentable;
 public enum TvPieceType implements StringRepresentable {
     VALUE("value"),
     TEXT("text"),
-    SHAPE("shape");
+    SHAPE("shape"),
+    ICON("icon"),
+    BAR("bar"),
+    GAUGE("gauge"),
+    GRAPH("graph"),
+    ARROW("arrow");
 
     public static final Codec<TvPieceType> CODEC = StringRepresentable.fromEnum(TvPieceType::values);
 
     private final String id;
+
+    /** Se a peça lê um dado (a ligação): o Valor e as peças da etapa 3, menos o Ícone, que só mostra um item. */
+    public boolean bindable() {
+        return this != TEXT && this != SHAPE && this != ICON;
+    }
 
     TvPieceType(String id) {
         this.id = id;

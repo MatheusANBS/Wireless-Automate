@@ -4,7 +4,6 @@ import io.github.matheusanbs.wirelessautomate.tv.TvBinding;
 import io.github.matheusanbs.wirelessautomate.tv.TvColor;
 import io.github.matheusanbs.wirelessautomate.tv.TvLayout;
 import io.github.matheusanbs.wirelessautomate.tv.TvPiece;
-import io.github.matheusanbs.wirelessautomate.tv.TvPieceType;
 import io.github.matheusanbs.wirelessautomate.tv.TvRule;
 import io.github.matheusanbs.wirelessautomate.tv.TvRules;
 import io.github.matheusanbs.wirelessautomate.tv.TvStyle;
@@ -25,6 +24,10 @@ final class TvPaintStyle implements Function<TvBinding, OptionalDouble> {
     boolean skip;
     /** Alguma regra que bate manda piscar (a Tela entra no conjunto do {@link TvCanvases}). */
     boolean blinks;
+    /** Uma regra que bate trocou a cor (a Seta então não usa as cores dela por sinal). */
+    boolean ruleColor;
+    /** O número do dado da peça (Valor e peças da etapa 3), ou {@code NaN} sem ligação ou sem número. */
+    double value;
 
     private TvLayout values;
     private long pos;
@@ -43,21 +46,25 @@ final class TvPaintStyle implements Function<TvBinding, OptionalDouble> {
         int fill = style.background();
         skip = false;
         blinks = false;
+        ruleColor = false;
         this.values = values;
         this.pos = pos;
         this.revision = revision;
         this.preview = preview;
+        value = piece.type().bindable() && piece.binding().isPresent()
+                ? TvPaintNumbers.of(piece.binding().get(), values, pos, revision, preview) : Double.NaN;
         if (!piece.rules().isEmpty()) {
             Optional<TvRule> hit = TvRules.first(piece.rules(), own(piece), this);
             if (hit.isPresent()) {
                 TvRule rule = hit.get();
+                ruleColor = rule.color().isPresent();
                 textColor = rule.color().orElse(textColor);
                 fill = rule.background().orElse(fill);
                 blinks = rule.blink();
                 skip = rule.hide() || blinks && blinkOff;
             }
         }
-        if (piece.type() == TvPieceType.VALUE && piece.binding().isPresent()
+        if (piece.type().bindable() && piece.binding().isPresent()
                 && TvPaintNumbers.stale(piece.binding().get(), values, pos, revision, preview)) {
             textColor = TvColor.theme(TvColor.MUTED);
         }
@@ -66,12 +73,9 @@ final class TvPaintStyle implements Function<TvBinding, OptionalDouble> {
         border = TvPaintMath.withOpacity(TvColor.resolve(style.border(), layout.theme()), style.opacity());
     }
 
-    /** O dado da própria peça: o número da ligação do Valor; as outras não têm. */
+    /** O dado da própria peça: o número da ligação; as peças sem dado não têm. */
     private OptionalDouble own(TvPiece piece) {
-        if (piece.type() != TvPieceType.VALUE || piece.binding().isEmpty()) {
-            return OptionalDouble.empty();
-        }
-        return number(piece.binding().get());
+        return Double.isNaN(value) ? OptionalDouble.empty() : OptionalDouble.of(value);
     }
 
     /** O número de uma ligação (o do Valor ou o de uma regra com ligação própria); sem número, vazio. */

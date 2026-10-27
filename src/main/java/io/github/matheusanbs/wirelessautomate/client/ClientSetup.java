@@ -95,6 +95,7 @@ public final class ClientSetup {
             TvClientHooks.changed = tv -> TvCanvases.markDirty(tv.getBlockPos().asLong());
             TvClientHooks.values = TvClientValues::receive;
             TvClientHooks.library = TvLibraryClient::receive;
+            TvClientHooks.storageContents = io.github.matheusanbs.wirelessautomate.client.tv.editor.TvStorageClient::receive;
             TvClientHooks.layoutAck = io.github.matheusanbs.wirelessautomate.client.tv.editor.TvEditorAck::receive;
             TvClientHooks.preview = io.github.matheusanbs.wirelessautomate.client.tv.TvPreviewValues::receive;
         });

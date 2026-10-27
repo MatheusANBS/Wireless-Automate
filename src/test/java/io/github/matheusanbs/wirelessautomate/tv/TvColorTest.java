@@ -40,4 +40,24 @@ class TvColorTest {
     void nomeDoTemaEhCortadoEm24() {
         assertEquals(24, new TvTheme("x".repeat(40), 0, 0, 0, 0, 0, 0).name().length());
     }
+
+    @Test
+    void campoHexasIdaEVolta() {
+        assertEquals("#4FD1C5", TvColor.hex(0xFF4FD1C5));
+        assertEquals("#4FD1C580", TvColor.hex(0x804FD1C5));
+        assertEquals("", TvColor.hex(TvColor.theme(TvColor.HIGH)), "o papel do tema não tem texto");
+        assertEquals("", TvColor.hex(0));
+        assertEquals(0xFF4FD1C5, TvColor.fromHex("#4FD1C5"));
+        assertEquals(0xFF4FD1C5, TvColor.fromHex("4fd1c5"), "o # é opcional e as letras podem ser minúsculas");
+        assertEquals(0x804FD1C5, TvColor.fromHex("#4FD1C580"));
+    }
+
+    @Test
+    void textoQueNaoEhCorNaoLe() {
+        assertEquals(null, TvColor.fromHex(""));
+        assertEquals(null, TvColor.fromHex("#4FD1C"));
+        assertEquals(null, TvColor.fromHex("#GGGGGG"));
+        assertEquals(null, TvColor.fromHex("#4FD1C5800"));
+        assertEquals(0, TvColor.fromHex("#4FD1C500"), "alfa zero é a cor transparente");
+    }
 }

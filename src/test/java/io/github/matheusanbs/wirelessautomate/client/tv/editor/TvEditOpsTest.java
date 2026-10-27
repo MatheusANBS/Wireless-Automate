@@ -177,12 +177,12 @@ class TvEditOpsTest {
     @Test
     void subirEDescerCamada() {
         List<P> pieces = List.of(new P("a", 0, 0, 4, 4, 0), new P("b", 0, 0, 4, 4, 0), new P("c", 0, 0, 4, 4, 0));
-        TvEditOps.Edit<P> up = TvEditOps.raise(pieces, TvSelection.of(0));
+        TvEditOps.Edit<P> up = TvEditOps.raise(A, pieces, TvSelection.of(0));
         assertEquals(List.of("b", "a", "c"), ids(up.pieces()));
         assertEquals(TvSelection.of(1), up.selection());
-        TvEditOps.Edit<P> top = TvEditOps.raise(pieces, TvSelection.of(1, 2));
+        TvEditOps.Edit<P> top = TvEditOps.raise(A, pieces, TvSelection.of(1, 2));
         assertEquals(List.of("a", "b", "c"), ids(top.pieces()), "a de cima não sobe mais e a vizinha escolhida espera");
-        TvEditOps.Edit<P> down = TvEditOps.lower(pieces, TvSelection.of(2));
+        TvEditOps.Edit<P> down = TvEditOps.lower(A, pieces, TvSelection.of(2));
         assertEquals(List.of("a", "c", "b"), ids(down.pieces()));
         assertEquals(TvSelection.of(1), down.selection());
     }
@@ -191,13 +191,13 @@ class TvEditOpsTest {
     void levarParaOutraCamadaPelaLista() {
         List<P> pieces = List.of(new P("a", 0, 0, 4, 4, 0), new P("b", 0, 0, 4, 4, 0), new P("c", 0, 0, 4, 4, 0),
                 new P("d", 0, 0, 4, 4, 0));
-        TvEditOps.Edit<P> top = TvEditOps.moveTo(pieces, TvSelection.of(0), 4);
+        TvEditOps.Edit<P> top = TvEditOps.moveTo(A, pieces, TvSelection.of(0), 4);
         assertEquals(List.of("b", "c", "d", "a"), ids(top.pieces()));
         assertEquals(TvSelection.of(3), top.selection());
-        TvEditOps.Edit<P> bottom = TvEditOps.moveTo(pieces, TvSelection.of(2, 3), 0);
+        TvEditOps.Edit<P> bottom = TvEditOps.moveTo(A, pieces, TvSelection.of(2, 3), 0);
         assertEquals(List.of("c", "d", "a", "b"), ids(bottom.pieces()));
         assertEquals(TvSelection.of(0, 1), bottom.selection());
-        TvEditOps.Edit<P> middle = TvEditOps.moveTo(pieces, TvSelection.of(3), 1);
+        TvEditOps.Edit<P> middle = TvEditOps.moveTo(A, pieces, TvSelection.of(3), 1);
         assertEquals(List.of("a", "d", "b", "c"), ids(middle.pieces()));
     }
 
@@ -231,5 +231,88 @@ class TvEditOpsTest {
         assertArrayEquals(new int[] {0, 8, 12, 32}, TvEditOps.bounds(A, pieces, TvSelection.of(0, 2)));
         assertEquals(TvSelection.of(0, 2), TvEditOps.members(A, pieces, 1));
         assertEquals(2, TvEditOps.nextGroup(A, pieces));
+    }
+
+    private static P g(String id, int group) {
+        return new P(id, 0, 0, 4, 4, group);
+    }
+
+    @Test
+    void subirEDescerMoveOGrupoInteiroSemIntercalar() {
+        List<P> pieces = List.of(g("a", 0), g("b", 1), g("c", 1), g("d", 0));
+        TvEditOps.Edit<P> up = TvEditOps.raise(A, pieces, TvSelection.of(0));
+        assertEquals(List.of("b", "c", "a", "d"), ids(up.pieces()), "a solta pula o grupo todo");
+        assertEquals(TvSelection.of(2), up.selection());
+        TvEditOps.Edit<P> down = TvEditOps.lower(A, pieces, TvSelection.of(3));
+        assertEquals(List.of("a", "d", "b", "c"), ids(down.pieces()));
+        TvEditOps.Edit<P> group = TvEditOps.raise(A, pieces, TvSelection.of(1, 2));
+        assertEquals(List.of("a", "d", "b", "c"), ids(group.pieces()), "o grupo escolhido sobe junto");
+        assertEquals(TvSelection.of(2, 3), group.selection());
+        TvEditOps.Edit<P> two = TvEditOps.raise(A, List.of(g("a", 1), g("b", 1), g("c", 2), g("d", 2)),
+                TvSelection.of(0, 1));
+        assertEquals(List.of("c", "d", "a", "b"), ids(two.pieces()), "um grupo sobe sobre o outro sem misturar");
+    }
+
+    @Test
+    void pecaEscolhidaDeUmGrupoSoAndaDentroDele() {
+        List<P> pieces = List.of(g("a", 0), g("b", 1), g("c", 1), g("d", 0));
+        TvEditOps.Edit<P> in = TvEditOps.raise(A, pieces, TvSelection.of(1));
+        assertEquals(List.of("a", "c", "b", "d"), ids(in.pieces()));
+        assertEquals(TvSelection.of(2), in.selection());
+        TvEditOps.Edit<P> edge = TvEditOps.raise(A, pieces, TvSelection.of(2));
+        assertSame(pieces, edge.pieces(), "na ponta do grupo não sai dele");
+        TvEditOps.Edit<P> low = TvEditOps.lower(A, pieces, TvSelection.of(1));
+        assertSame(pieces, low.pieces());
+    }
+
+    @Test
+    void levarPelaListaNuncaCaiNoMeioDeUmGrupo() {
+        List<P> pieces = List.of(g("a", 0), g("b", 1), g("c", 1), g("d", 1), g("e", 0));
+        TvEditOps.Edit<P> near = TvEditOps.moveTo(A, pieces, TvSelection.of(0), 3);
+        assertEquals(List.of("b", "c", "d", "a", "e"), ids(near.pieces()), "caiu perto do fim do grupo: vai para o fim");
+        TvEditOps.Edit<P> start = TvEditOps.moveTo(A, pieces, TvSelection.of(4), 2);
+        assertEquals(List.of("a", "e", "b", "c", "d"), ids(start.pieces()), "caiu perto do começo: vai para o começo");
+        TvEditOps.Edit<P> whole = TvEditOps.moveTo(A, pieces, TvSelection.of(1, 2, 3), 5);
+        assertEquals(List.of("a", "e", "b", "c", "d"), ids(whole.pieces()));
+        TvEditOps.Edit<P> single = TvEditOps.moveTo(A, pieces, TvSelection.of(1), 5);
+        assertEquals(List.of("a", "c", "d", "b", "e"), ids(single.pieces()), "uma peça do grupo só fica dentro dele");
+    }
+
+    @Test
+    void copiarGuardaPosicoesRelativasEGrupos() {
+        List<P> pieces = List.of(new P("a", 8, 8, 4, 4, 5), new P("b", 16, 12, 8, 4, 5), new P("c", 40, 0, 4, 4, 0),
+                new P("d", 20, 20, 4, 4, 9));
+        TvEditOps.Clip<P> clip = TvEditOps.copy(A, pieces, TvSelection.of(0, 1, 3));
+        assertEquals(8, clip.x());
+        assertEquals(8, clip.y());
+        assertEquals(16, clip.width());
+        assertEquals(16, clip.height());
+        assertEquals(new P("a", 0, 0, 4, 4, 1), clip.pieces().get(0));
+        assertEquals(new P("b", 8, 4, 8, 4, 1), clip.pieces().get(1));
+        assertEquals(new P("d", 12, 12, 4, 4, 2), clip.pieces().get(2));
+    }
+
+    @Test
+    void colarNoMesmoLugarSeEstiverLivreSenaoNoPrimeiroLivre() {
+        List<P> pieces = List.of(new P("a", 8, 8, 4, 4, 5), new P("b", 16, 8, 4, 4, 5), new P("c", 0, 0, 4, 4, 0));
+        TvEditOps.Clip<P> clip = TvEditOps.copy(A, pieces, TvSelection.of(0, 1));
+        List<P> without = TvEditOps.remove(pieces, TvSelection.of(0, 1)).pieces();
+        TvEditOps.Edit<P> same = TvEditOps.paste(A, without, clip, 64, 32);
+        assertEquals(3, same.pieces().size());
+        assertEquals(new P("a", 8, 8, 4, 4, 1), same.pieces().get(1), "no mesmo lugar, com o grupo novo");
+        assertEquals(new P("b", 16, 8, 4, 4, 1), same.pieces().get(2));
+        assertEquals(TvSelection.of(1, 2), same.selection());
+        TvEditOps.Edit<P> busy = TvEditOps.paste(A, pieces, clip, 64, 32);
+        assertEquals(5, busy.pieces().size());
+        assertEquals(new P("a", 4, 0, 4, 4, 6), busy.pieces().get(3), "ocupado: o primeiro lugar livre que cabe");
+        assertEquals(new P("b", 12, 0, 4, 4, 6), busy.pieces().get(4));
+        assertEquals(TvSelection.of(3, 4), busy.selection());
+    }
+
+    @Test
+    void colarNaOutraTelaMaisPequenaFicaDentroDaArea() {
+        TvEditOps.Clip<P> clip = new TvEditOps.Clip<>(List.of(new P("a", 0, 0, 40, 4, 0)), 50, 20, 40, 4);
+        TvEditOps.Edit<P> edit = TvEditOps.paste(A, List.of(), clip, 32, 32);
+        assertEquals(new P("a", 0, 0, 32, 4, 0), edit.pieces().get(0), "a peça maior que a Tela encolhe");
     }
 }

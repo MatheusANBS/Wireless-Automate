@@ -49,7 +49,7 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
         this.imageWidth = W;
         this.imageHeight = H;
         this.sizeTab = new TvSizeTab(menu, new TvScreenActions(menu.containerId, false));
-        this.editorTab = new TvEditorTab(menu.pos(), menu.area(), new TvEditorActions(menu.containerId, false));
+        this.editorTab = new TvEditorTab(menu.pos(), menu.area(), menu.networks(), new TvEditorActions(menu.containerId, false));
     }
 
     @Override
@@ -203,7 +203,7 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
                 return true;
             }
             boolean used = tab == Tab.SIZE ? sizeTab.mouseClicked(leftPos, topPos, mouseX, mouseY)
-                    : editorTab.mouseClicked(mouseX, mouseY);
+                    : editorTab.mouseClicked(mouseX, mouseY, button);
             if (used) {
                 return true;
             }
@@ -236,11 +236,15 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
     }
 
     /**
-     * O Esc solta a escolha do editor; sem escolha, fecha (com mudança, pelo "Descartar?" do ✕, que aparece na aba
-     * Editar). Na aba Editar, a tecla do inventário não fecha a tela.
+     * Na aba Editar, o campo de texto com o foco e os atalhos do editor têm a vez primeiro. O Esc solta a escolha do
+     * editor; sem escolha, fecha (com mudança, pelo "Descartar?" do ✕, que aparece na aba Editar). A tecla do
+     * inventário não fecha a tela.
      */
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (tab == Tab.EDIT && editorTab.keyPressed(keyCode, scanCode, modifiers)) {
+            return true;
+        }
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
             if (tab == Tab.EDIT && editorTab.escape()) {
                 return true;
@@ -256,6 +260,14 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
+    public boolean charTyped(char codePoint, int modifiers) {
+        if (tab == Tab.EDIT && editorTab.charTyped(codePoint, modifiers)) {
+            return true;
+        }
+        return super.charTyped(codePoint, modifiers);
     }
 
     @Override

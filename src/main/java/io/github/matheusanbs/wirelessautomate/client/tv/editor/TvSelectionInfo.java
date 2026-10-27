@@ -8,8 +8,8 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 
 /**
- * A coluna da direita: o resumo da escolha (o tipo e o nome, ou "N peças", o tamanho e onde está), no topo do lugar
- * das propriedades. Os textos são refeitos só quando o rascunho ou a escolha mudam.
+ * O resumo da escolha no topo da coluna da direita: o tipo (ou "N peças") e, na linha de baixo, o tamanho e onde está.
+ * Os textos são refeitos só quando o rascunho ou a escolha mudam.
  */
 final class TvSelectionInfo {
     private static final int LINE = 11;
@@ -17,7 +17,7 @@ final class TvSelectionInfo {
     private final TvEditorDoc doc;
     private TvRect rect = TvRect.NONE;
     private Font font;
-    private final GuiText.Fitted[] lines = new GuiText.Fitted[3];
+    private final GuiText.Fitted[] lines = new GuiText.Fitted[2];
     private int count;
     private int builtVersion = -1;
     private TvSelection builtSelection;
@@ -53,16 +53,15 @@ final class TvSelectionInfo {
         } else {
             lines[0] = GuiText.fit(font, TvEditorText.key("many", selection.size()), w);
         }
-        lines[1] = GuiText.fit(font, TvEditorText.key("box", b[2] - b[0], b[3] - b[1]), w);
-        lines[2] = GuiText.fit(font, TvEditorText.key("at", b[0], b[1]), w);
-        count = 3;
+        lines[1] = GuiText.fit(font, TvEditorText.key("geometry", b[2] - b[0], b[3] - b[1], b[0], b[1]), w);
+        count = 2;
     }
 
     void render(GuiGraphics g) {
         rebuild();
         GuiPaint.inset(g, rect.x(), rect.y(), rect.w(), rect.h());
         for (int i = 0; i < count; i++) {
-            GuiText.draw(g, font, lines[i], rect.x() + 6, rect.y() + 6 + i * LINE, i == 0 ? GuiPaint.FG : GuiPaint.MUTED);
+            GuiText.draw(g, font, lines[i], rect.x() + 6, rect.y() + 3 + i * LINE, i == 0 ? GuiPaint.FG : GuiPaint.MUTED);
         }
     }
 }

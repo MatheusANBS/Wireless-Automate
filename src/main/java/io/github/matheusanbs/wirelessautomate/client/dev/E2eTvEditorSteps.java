@@ -87,6 +87,8 @@ final class E2eTvEditorSteps {
                 () -> screen().keyPressed(GLFW.GLFW_KEY_ESCAPE, 0, 0),
                 () -> editor().selection().isEmpty() && Minecraft.getInstance().screen instanceof TvScreen,
                 () -> "escolha " + editor().selection()));
+        E2eTvEditorPropsSteps.keySteps(list);
+        E2eTvEditorPropsSteps.propsSteps(list, tv);
     }
 
     /** O editor na escala 3 de 1366 × 768 e abaixo do mínimo; a janela volta ao tamanho dela no fim. */

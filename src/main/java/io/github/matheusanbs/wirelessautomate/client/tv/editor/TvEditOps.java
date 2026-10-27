@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.client.tv.editor;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -146,13 +147,7 @@ public final class TvEditOps {
         for (int y = 0; y <= areaH - h; y += TvSnap.GRID) {
             int x = 0;
             while (x <= areaW - w) {
-                int blockedRight = -1;
-                for (T o : pieces) {
-                    if (!a.hidden(o) && a.occupies(o) && x < a.x(o) + a.width(o) && x + w > a.x(o)
-                            && y < a.y(o) + a.height(o) && y + h > a.y(o)) {
-                        blockedRight = Math.max(blockedRight, a.x(o) + a.width(o));
-                    }
-                }
+                int blockedRight = blockedRight(a, pieces, x, y, w, h);
                 if (blockedRight < 0) {
                     return new int[] {x, y};
                 }
@@ -160,6 +155,18 @@ public final class TvEditOps {
             }
         }
         return new int[] {0, 0};
+    }
+
+    /** O lado direito da peça visível que ocupa lugar e cruza a caixa, o mais à direita; -1 se a caixa está livre. */
+    private static <T> int blockedRight(Access<T> a, List<T> pieces, int x, int y, int w, int h) {
+        int blockedRight = -1;
+        for (T o : pieces) {
+            if (!a.hidden(o) && a.occupies(o) && x < a.x(o) + a.width(o) && x + w > a.x(o)
+                    && y < a.y(o) + a.height(o) && y + h > a.y(o)) {
+                blockedRight = Math.max(blockedRight, a.x(o) + a.width(o));
+            }
+        }
+        return blockedRight;
     }
 
     /** Põe a peça nova em cima de todas, no primeiro lugar livre e no tamanho que cabe na área; escolhe só ela. */
@@ -262,35 +269,89 @@ public final class TvEditOps {
         return new Edit<>(out, TvSelection.range(pieces.size(), out.size()));
     }
 
-    /** Cada escolhida sobe uma camada, trocando com a de cima se ela não está escolhida. */
-    public static <T> Edit<T> raise(List<T> pieces, TvSelection selection) {
-        List<T> out = new ArrayList<>(pieces);
-        int[] chosen = flags(selection, pieces.size());
-        for (int i = pieces.size() - 2; i >= 0; i--) {
-            if (chosen[i] == 1 && chosen[i + 1] == 0) {
-                swap(out, chosen, i, i + 1);
-            }
-        }
-        return new Edit<>(out, selectionOf(chosen));
+    /**
+     * Sobe uma camada. A unidade é a peça solta ou o grupo (a sequência de peças do mesmo grupo): uma unidade toda
+     * escolhida troca com a de cima se ela não está toda escolhida, e o grupo anda inteiro, nunca peça a peça. Uma
+     * peça escolhida dentro de um grupo (sem o grupo todo) só anda dentro dele. Nunca intercala grupos diferentes.
+     */
+    public static <T> Edit<T> raise(Access<T> a, List<T> pieces, TvSelection selection) {
+        return shift(a, pieces, selection, true);
     }
 
-    /** Cada escolhida desce uma camada, trocando com a de baixo se ela não está escolhida. */
-    public static <T> Edit<T> lower(List<T> pieces, TvSelection selection) {
-        List<T> out = new ArrayList<>(pieces);
-        int[] chosen = flags(selection, pieces.size());
-        for (int i = 1; i < pieces.size(); i++) {
-            if (chosen[i] == 1 && chosen[i - 1] == 0) {
-                swap(out, chosen, i, i - 1);
+    /** Desce uma camada, pela mesma regra do {@link #raise}. */
+    public static <T> Edit<T> lower(Access<T> a, List<T> pieces, TvSelection selection) {
+        return shift(a, pieces, selection, false);
+    }
+
+    private record Unit(int[] indices, boolean whole) {
+    }
+
+    private static <T> Edit<T> shift(Access<T> a, List<T> pieces, TvSelection selection, boolean up) {
+        List<Unit> units = new ArrayList<>();
+        int n = pieces.size();
+        for (int i = 0; i < n;) {
+            int group = a.group(pieces.get(i));
+            int j = i + 1;
+            while (group != 0 && j < n && a.group(pieces.get(j)) == group) {
+                j++;
+            }
+            int[] indices = new int[j - i];
+            int chosen = 0;
+            for (int k = 0; k < indices.length; k++) {
+                indices[k] = i + k;
+                chosen += selection.contains(i + k) ? 1 : 0;
+            }
+            boolean whole = chosen == indices.length;
+            units.add(new Unit(chosen > 0 && !whole ? inside(indices, selection, up) : indices, whole));
+            i = j;
+        }
+        for (int step = 0; step < units.size() - 1; step++) {
+            int u = up ? units.size() - 2 - step : step + 1;
+            int other = up ? u + 1 : u - 1;
+            if (units.get(u).whole() && !units.get(other).whole()) {
+                Unit t = units.get(u);
+                units.set(u, units.get(other));
+                units.set(other, t);
             }
         }
-        return new Edit<>(out, selectionOf(chosen));
+        List<T> out = new ArrayList<>(n);
+        int[] chosen = new int[selection.size()];
+        int count = 0;
+        boolean reordered = false;
+        for (Unit unit : units) {
+            for (int i : unit.indices()) {
+                reordered |= i != out.size();
+                out.add(pieces.get(i));
+                if (selection.contains(i)) {
+                    chosen[count++] = out.size() - 1;
+                }
+            }
+        }
+        return reordered ? new Edit<>(out, TvSelection.of(Arrays.copyOf(chosen, count))) : new Edit<>(pieces, selection);
+    }
+
+    /** Dentro de um grupo: cada escolhida troca com a vizinha não escolhida do mesmo grupo. */
+    private static int[] inside(int[] indices, TvSelection selection, boolean up) {
+        int[] out = indices.clone();
+        for (int step = 0; step < out.length - 1; step++) {
+            int p = up ? out.length - 2 - step : step + 1;
+            int q = up ? p + 1 : p - 1;
+            if (selection.contains(out[p]) && !selection.contains(out[q])) {
+                int t = out[p];
+                out[p] = out[q];
+                out[q] = t;
+            }
+        }
+        return out;
     }
 
     /**
      * Leva as peças de {@code block} (em ordem) para a frente da posição {@code before} da lista original (0 é embaixo
-     * de todas, o tamanho é em cima de todas): a lista de Camadas arrastada. Escolhe as levadas.
+     * de todas, o tamanho é em cima de todas): a lista de Camadas arrastada. Escolhe as levadas. Nunca intercala
+     * grupos: a queda no meio de um grupo vai para a ponta mais perto dele, e uma peça tirada de um grupo (sem o
+     * grupo todo) só se mexe dentro dele.
      */
-    public static <T> Edit<T> moveTo(List<T> pieces, TvSelection block, int before) {
+    public static <T> Edit<T> moveTo(Access<T> a, List<T> pieces, TvSelection block, int before) {
         List<T> rest = new ArrayList<>(pieces.size());
         List<T> moved = new ArrayList<>(block.size());
         int below = 0;
@@ -305,8 +366,100 @@ public final class TvEditOps {
             }
         }
         int at = Math.max(0, Math.min(rest.size(), before - below));
+        int group = commonGroup(a, moved);
+        int first = group == 0 ? -1 : indexOfGroup(a, rest, group, false);
+        if (first >= 0) {
+            at = Math.max(first, Math.min(indexOfGroup(a, rest, group, true) + 1, at));
+        } else if (at > 0 && at < rest.size() && a.group(rest.get(at)) != 0
+                && a.group(rest.get(at - 1)) == a.group(rest.get(at))) {
+            int g = a.group(rest.get(at));
+            int start = at;
+            while (start > 0 && a.group(rest.get(start - 1)) == g) {
+                start--;
+            }
+            int end = at;
+            while (end < rest.size() && a.group(rest.get(end)) == g) {
+                end++;
+            }
+            at = at - start <= end - at ? start : end;
+        }
         rest.addAll(at, moved);
         return new Edit<>(rest, TvSelection.range(at, at + moved.size()));
+    }
+
+    /** O grupo que todas as peças têm, ou 0 se são soltas ou de grupos diferentes. */
+    private static <T> int commonGroup(Access<T> a, List<T> pieces) {
+        int group = a.group(pieces.get(0));
+        for (T p : pieces) {
+            if (a.group(p) != group) {
+                return 0;
+            }
+        }
+        return group;
+    }
+
+    /** A primeira ({@code last} falso) ou a última peça do grupo na lista, ou -1. */
+    private static <T> int indexOfGroup(Access<T> a, List<T> pieces, int group, boolean last) {
+        int found = -1;
+        for (int i = 0; i < pieces.size(); i++) {
+            if (a.group(pieces.get(i)) == group) {
+                if (!last) {
+                    return i;
+                }
+                found = i;
+            }
+        }
+        return found;
+    }
+
+    /** As peças copiadas: caixas relativas ao canto da escolha e grupos de 1 a k; {@code x}, {@code y} é o canto de antes. */
+    public record Clip<T>(List<T> pieces, int x, int y, int width, int height) {
+    }
+
+    /** A cópia da escolha para a área de transferência: posições relativas ao canto, grupos renumerados de 1. */
+    public static <T> Clip<T> copy(Access<T> a, List<T> pieces, TvSelection selection) {
+        int[] b = bounds(a, pieces, selection);
+        List<T> out = new ArrayList<>(selection.size());
+        List<Integer> groups = new ArrayList<>();
+        for (int k = 0; k < selection.size(); k++) {
+            T p = pieces.get(selection.get(k));
+            int group = a.group(p);
+            int mapped = 0;
+            if (group != 0) {
+                int at = groups.indexOf(group);
+                if (at < 0) {
+                    groups.add(group);
+                    at = groups.size() - 1;
+                }
+                mapped = at + 1;
+            }
+            out.add(a.withGroup(a.withBox(p, a.x(p) - b[0], a.y(p) - b[1], a.width(p), a.height(p)), mapped));
+        }
+        return new Clip<>(out, b[0], b[1], b[2] - b[0], b[3] - b[1]);
+    }
+
+    /**
+     * Cola a cópia em cima de todas, com grupos novos: no lugar de onde veio se couber e estiver livre, senão no
+     * primeiro lugar livre que caiba (sem lugar, o canto). Cada peça fica dentro da área. Escolhe as coladas.
+     */
+    public static <T> Edit<T> paste(Access<T> a, List<T> pieces, Clip<T> clip, int areaW, int areaH) {
+        int w = Math.min(clip.width(), areaW);
+        int h = Math.min(clip.height(), areaH);
+        boolean same = clip.x() + clip.width() <= areaW && clip.y() + clip.height() <= areaH
+                && blockedRight(a, pieces, clip.x(), clip.y(), w, h) < 0;
+        int[] at = same ? new int[] {clip.x(), clip.y()} : freeSpot(a, pieces, w, h, areaW, areaH);
+        int next = nextGroup(a, pieces);
+        List<T> out = new ArrayList<>(pieces.size() + clip.pieces().size());
+        out.addAll(pieces);
+        for (T p : clip.pieces()) {
+            int pw = Math.min(a.width(p), areaW);
+            int ph = Math.min(a.height(p), areaH);
+            int x = Math.max(0, Math.min(areaW - pw, at[0] + a.x(p)));
+            int y = Math.max(0, Math.min(areaH - ph, at[1] + a.y(p)));
+            int group = a.group(p);
+            out.add(a.withGroup(a.withBox(p, x, y, pw, ph), group == 0 ? 0 : next + group - 1));
+        }
+        return new Edit<>(out, TvSelection.range(pieces.size(), out.size()));
     }
 
     /**
@@ -350,39 +503,5 @@ public final class TvEditOps {
             }
         }
         return false;
-    }
-
-    private static int[] flags(TvSelection selection, int size) {
-        int[] chosen = new int[size];
-        for (int k = 0; k < selection.size(); k++) {
-            if (selection.get(k) < size) {
-                chosen[selection.get(k)] = 1;
-            }
-        }
-        return chosen;
-    }
-
-    private static <T> void swap(List<T> list, int[] chosen, int i, int j) {
-        T t = list.get(i);
-        list.set(i, list.get(j));
-        list.set(j, t);
-        int c = chosen[i];
-        chosen[i] = chosen[j];
-        chosen[j] = c;
-    }
-
-    private static TvSelection selectionOf(int[] chosen) {
-        int count = 0;
-        for (int c : chosen) {
-            count += c;
-        }
-        int[] out = new int[count];
-        int k = 0;
-        for (int i = 0; i < chosen.length; i++) {
-            if (chosen[i] == 1) {
-                out[k++] = i;
-            }
-        }
-        return TvSelection.of(out);
     }
 }

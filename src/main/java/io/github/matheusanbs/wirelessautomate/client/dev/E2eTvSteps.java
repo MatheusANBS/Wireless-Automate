@@ -85,6 +85,7 @@ final class E2eTvSteps {
             list.add(E2eDarkSteps.themeClick("Tela: claro de novo", GuiTheme.LIGHT));
         });
         E2eTvEditorSteps.smallSteps(list);
+        E2eTvEditorPropsSteps.pasteSteps(list, () -> small);
         list.add(close("Tela: fechar"));
         list.add(hideGui(playerId, true));
         list.add(view("tela-editor-salvo", playerId, E2eTvSteps::worldEye, E2eTvSteps::worldTarget));

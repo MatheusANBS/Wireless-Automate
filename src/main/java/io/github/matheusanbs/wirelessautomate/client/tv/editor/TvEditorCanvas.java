@@ -209,6 +209,7 @@ final class TvEditorCanvas {
 
     private void start(Drag mode, double mouseX, double mouseY) {
         drag = mode;
+        doc.beginGesture();
         dragFrom = doc.pieces();
         dragX = mouseX;
         dragY = mouseY;
@@ -243,6 +244,7 @@ final class TvEditorCanvas {
         }
         drag = Drag.NONE;
         dragFrom = List.of();
+        doc.endGesture();
         return true;
     }
 

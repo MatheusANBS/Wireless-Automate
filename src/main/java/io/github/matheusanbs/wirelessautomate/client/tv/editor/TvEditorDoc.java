@@ -7,6 +7,7 @@ import io.github.matheusanbs.wirelessautomate.tv.TvPiece;
 import io.github.matheusanbs.wirelessautomate.tv.TvPieceType;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.UnaryOperator;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.Nullable;
@@ -64,6 +65,10 @@ final class TvEditorDoc {
             }
         } else if (server.equals(model.saved())) {
             return;
+        } else if (!model.dirty()) {
+            // sem mudança local, o layout novo entra sozinho, sem aviso
+            model.rebase(server);
+            model.adopt(server, model.selection().below(server.pieces().size()));
         } else if (areaChanged && model.saved().clampedTo(newArea).equals(server)) {
             model.rebase(server);
             TvLayout clamped = model.draft().clampedTo(newArea);
@@ -133,10 +138,100 @@ final class TvEditorDoc {
     }
 
     void apply(List<TvPiece> pieces, TvSelection selection) {
-        model.edit(pieces == pieces() ? model.draft() : model.draft().withPieces(pieces), selection);
+        apply(pieces, selection, null);
+    }
+
+    /** As peças novas e a escolha depois delas; a {@code key} junta mudanças seguidas no desfazer. */
+    void apply(List<TvPiece> pieces, TvSelection selection, @Nullable Object key) {
+        model.edit(pieces == pieces() ? model.draft() : model.draft().withPieces(pieces), selection, key);
+    }
+
+    /** O arrastar começa e termina: tudo no meio é uma mudança só no desfazer. */
+    void beginGesture() {
+        model.history().beginGesture();
+    }
+
+    void endGesture() {
+        model.history().endGesture();
+    }
+
+    /**
+     * Troca cada peça escolhida por {@code change} aplicada a ela (a aba de propriedades); nada muda se nenhuma troca.
+     * A {@code key} junta o digitar e o girar da roda num campo como uma mudança só.
+     */
+    void changeSelected(UnaryOperator<TvPiece> change, Object key) {
+        List<TvPiece> pieces = pieces();
+        TvSelection selection = selection();
+        List<TvPiece> out = null;
+        for (int k = 0; k < selection.size(); k++) {
+            int i = selection.get(k);
+            if (i >= pieces.size()) {
+                continue;
+            }
+            TvPiece changed = change.apply(pieces.get(i));
+            if (!changed.equals(pieces.get(i))) {
+                if (out == null) {
+                    out = new ArrayList<>(pieces);
+                }
+                out.set(i, changed);
+            }
+        }
+        if (out != null) {
+            apply(out, selection, key);
+        }
+    }
+
+    boolean undo() {
+        return model.undo();
+    }
+
+    boolean redo() {
+        return model.redo();
+    }
+
+    void copy() {
+        if (hasSelection()) {
+            TvClipboard.put(TvEditOps.copy(A, pieces(), selection()));
+        }
+    }
+
+    void cut() {
+        if (hasSelection()) {
+            copy();
+            remove();
+        }
+    }
+
+    void paste() {
+        TvEditOps.Clip<TvPiece> clip = TvClipboard.get();
+        if (clip != null && !clip.pieces().isEmpty()) {
+            apply(TvEditOps.paste(A, pieces(), clip, area.pixelWidth(), area.pixelHeight()));
+            model.select(model.selection(), 0);
+        }
+    }
+
+    void selectAll() {
+        model.select(TvSelection.range(0, pieces().size()), 0);
+    }
+
+    /** As setas: a escolha anda {@code dx}, {@code dy} px; os toques seguidos viram uma mudança só. */
+    void nudge(int dx, int dy) {
+        if (hasSelection()) {
+            apply(TvEditOps.move(A, pieces(), selection(), dx, dy, area.pixelWidth(), area.pixelHeight()),
+                    selection(), "nudge");
+        }
+    }
+
+    void raise() {
+        apply(TvEditOps.raise(A, pieces(), selection()));
+    }
+
+    void lower() {
+        apply(TvEditOps.lower(A, pieces(), selection()));
     }
 
     void select(TvSelection selection, int focusGroup) {
+        model.history().breakKey();
         model.select(selection, focusGroup);
     }
 
@@ -166,7 +261,7 @@ final class TvEditorDoc {
     }
 
     void moveTo(TvSelection block, int before) {
-        apply(TvEditOps.moveTo(pieces(), block, before));
+        apply(TvEditOps.moveTo(A, pieces(), block, before));
     }
 
     void toggleHidden(int index) {

@@ -283,6 +283,7 @@ recursos entre si, sem canos.
 | ''' + item('signal_crystal') + ''' [Quartzo de Sinal e cristais](signal-quartz.md) | O minério e os cristais que movem o Ressonador. |
 | ''' + item('resonance_core') + ''' [Ressonador de Sinal](signal-resonator.md) | Um gerador de energia: cristais, sintonia e FE. |
 | ''' + item('crystal_repairer') + ''' [Reparador de Cristais](crystal-repairer.md) | Conserta cristais rachados, até oito de uma vez. |
+| ''' + item('signal_screen') + ''' [Tela de Sinal](signal-screen.md) | Um painel na parede, do tamanho que você quiser, com os números das suas redes. |
 | [Editor de receitas](recipe-editor.md) | Operadores ajustam as receitas de bancada do mod dentro do jogo. |
 
 ## Por onde começar
@@ -341,6 +342,7 @@ resources with the others, with no pipes.
 | ''' + item('signal_crystal') + ''' [Signal Quartz and crystals](signal-quartz.md) | The ore and the crystals that power the Resonator. |
 | ''' + item('resonance_core') + ''' [Signal Resonator](signal-resonator.md) | A power generator: crystals, tuning and FE. |
 | ''' + item('crystal_repairer') + ''' [Crystal Repairer](crystal-repairer.md) | Fixes cracked crystals, up to eight at a time. |
+| ''' + item('signal_screen') + ''' [Signal Screen](signal-screen.md) | A wall panel, as big as you want, showing your networks' numbers. |
 | [Recipe editor](recipe-editor.md) | Operators tweak the mod's crafting recipes in-game. |
 
 ## Where to start
@@ -3201,6 +3203,98 @@ holds its whole cost. Breaking the block in the middle of a repair **loses the 4
 ## Recipe
 
 <RecipeFor id="wirelessautomate:crystal_repairer" />
+''')
+
+page('signal-screen.md', front('Tela de Sinal', 'wirelessautomate:signal_screen', 20, item_ids=[
+    'wirelessautomate:signal_screen']) + '''
+# Tela de Sinal
+
+<ItemImage id="wirelessautomate:signal_screen" scale="2" float="left" />
+
+Um painel que você prende numa parede e estica pelo tamanho que quiser, de **1 × 1 até 32 × 32 blocos**. Ele mostra os
+números das suas [redes](networks.md) ao vivo: o que entra, o que sai e quantas faces estão movendo.
+
+<br clear="all" />
+
+## Como colocar
+
+1. Clique com a Tela na **lateral de um bloco sólido**: ela fica rente à parede, virada para você. Não dá para pôr no
+   chão nem no teto, e ela cai se a parede atrás dela sair.
+2. Clique nela com a **mão vazia** para abrir a tela de configuração. Só quem a colocou (e os operadores) pode
+   configurar; os outros só olham.
+
+## Escolher o tamanho
+
+Na aba **Tamanho**:
+
+| Parte | Como usar |
+| --- | --- |
+| **Largura** e **Altura** | ‹ e › mudam de 1 em 1 bloco; com **Shift**, de 4 em 4. |
+| **Cresce a partir do bloco para** | ↗ cima e direita, ↖ cima e esquerda ou ✥ centro: onde o bloco que você colocou fica dentro da tela. |
+| **Prévia** | A parede em volta, com a área da tela. A célula vermelha é a que impede o tamanho. |
+| **Aplicar** | Estica a tela. Fica desligado enquanto algo impede. |
+
+A tela grande **não ocupa blocos**: ela é desenhada sobre a parede. Para caber, cada bloco da área precisa de
+**parede sólida atrás** e de **espaço livre na frente** (ar ou grama, por exemplo; uma tocha impede), e a área não pode
+cruzar outra Tela.
+
+## O que mostrar
+
+Na aba **Conteúdo**, escolha uma **rede** (só aparecem as que você pode usar) e um **tipo** (Itens, Fluidos, Energia...)
+e clique em **Aplicar o Painel de rede**. A Tela passa a mostrar o nome da rede, o que **entra** (▲), o que **sai** (▼) e
+quantas faces estão **movendo** (⇄), com a unidade do tipo. **Limpar** (dois cliques) apaga o conteúdo.
+
+Os números chegam uma vez por segundo enquanto há alguém perto. Uma rede privada da qual quem colocou a Tela perdeu o
+acesso mostra **—**.
+
+## Receita
+
+<RecipeFor id="wirelessautomate:signal_screen" />
+''', front('Signal Screen', 'wirelessautomate:signal_screen', 20, item_ids=[
+    'wirelessautomate:signal_screen']) + '''
+# Signal Screen
+
+<ItemImage id="wirelessautomate:signal_screen" scale="2" float="left" />
+
+A panel you attach to a wall and stretch to any size, from **1 × 1 up to 32 × 32 blocks**. It shows your
+[networks'](networks.md) numbers live: what comes in, what goes out and how many faces are moving.
+
+<br clear="all" />
+
+## Placing it
+
+1. Click with the Screen on the **side of a solid block**: it sits flush against the wall, facing you. It can't go on
+   the floor or the ceiling, and it drops if the wall behind it goes away.
+2. Click it with an **empty hand** to open its settings. Only whoever placed it (and operators) can configure it;
+   everyone else just watches.
+
+## Choosing the size
+
+In the **Size** tab:
+
+| Part | How to use |
+| --- | --- |
+| **Width** and **Height** | ‹ and › change it 1 block at a time; with **Shift**, 4 at a time. |
+| **Grows from the block toward** | ↗ up and right, ↖ up and left or ✥ center: where the block you placed sits inside the screen. |
+| **Preview** | The wall around it, with the screen's area. The red cell is the one in the way. |
+| **Apply** | Stretches the screen. It stays off while something is in the way. |
+
+The big screen **takes no blocks**: it is drawn over the wall. To fit, every block of the area needs a **solid wall
+behind it** and **free space in front** (air or grass, for example; a torch is in the way), and the area can't cross
+another Screen.
+
+## What to show
+
+In the **Content** tab, pick a **network** (only the ones you can use are listed) and a **type** (Items, Fluids,
+Energy...) and click **Apply the Network panel**. The Screen then shows the network's name, what **comes in** (▲),
+what **goes out** (▼) and how many faces are **moving** (⇄), in the type's unit. **Clear** (two clicks) wipes the content.
+
+The numbers arrive once a second while someone is nearby. A private network that whoever placed the Screen lost access
+to shows **—**.
+
+## Recipe
+
+<RecipeFor id="wirelessautomate:signal_screen" />
 ''')
 
 # =====================================================================================

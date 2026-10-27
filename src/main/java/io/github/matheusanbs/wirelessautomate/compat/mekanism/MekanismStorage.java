@@ -99,12 +99,12 @@ public final class MekanismStorage {
 
         @Override
         public int getChemicalTanks() {
-            return storage.types() + 1;
+            return storage.slots() + 1;
         }
 
         @Override
         public ChemicalStack getChemicalInTank(int tank) {
-            return tank < 0 || tank >= storage.types() ? ChemicalStack.EMPTY
+            return tank < 0 || tank >= storage.slots() ? ChemicalStack.EMPTY
                     : stack(storage.key(tank), storage.count(tank));
         }
 
@@ -121,10 +121,10 @@ public final class MekanismStorage {
 
         @Override
         public boolean isValid(int tank, ChemicalStack stack) {
-            if (tank < 0 || tank > storage.types()) {
+            if (tank < 0 || tank > storage.slots()) {
                 return false;
             }
-            return tank == storage.types() || storage.key(tank).equals(MekanismChemicals.id(stack));
+            return tank == storage.slots() || storage.key(tank).equals(MekanismChemicals.id(stack));
         }
 
         @Override
@@ -146,7 +146,7 @@ public final class MekanismStorage {
 
         @Override
         public ChemicalStack extractChemical(int tank, long amount, Action action) {
-            if (tank < 0 || tank >= storage.types() || amount <= 0) {
+            if (tank < 0 || tank >= storage.slots() || amount <= 0) {
                 return ChemicalStack.EMPTY;
             }
             ResourceLocation id = storage.key(tank);
@@ -155,7 +155,8 @@ public final class MekanismStorage {
 
         @Override
         public ChemicalStack extractChemical(long amount, Action action) {
-            return storage.isEmpty() ? ChemicalStack.EMPTY : extractChemical(0, amount, action);
+            int first = storage.firstSlot();
+            return first < 0 ? ChemicalStack.EMPTY : extractChemical(first, amount, action);
         }
 
         @Override

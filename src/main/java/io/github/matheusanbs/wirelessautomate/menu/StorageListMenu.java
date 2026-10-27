@@ -254,9 +254,12 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
     /** Tipos com quantidade diferente da última enviada, e os que saíram (com 0). Marca como enviados. */
     private List<StorageListView.Entry<K>> diff(KeyedStorage<K> keyed) {
         List<StorageListView.Entry<K>> changes = new ArrayList<>();
-        for (int i = 0, n = keyed.types(); i < n; i++) {
-            K key = keyed.key(i);
+        for (int i = 0, n = keyed.slots(); i < n; i++) {
             long count = keyed.count(i);
+            if (count <= 0) {
+                continue;
+            }
+            K key = keyed.key(i);
             if (!sent.containsKey(key)) {
                 K copy = kind.copy(key);
                 sent.put(copy, count);

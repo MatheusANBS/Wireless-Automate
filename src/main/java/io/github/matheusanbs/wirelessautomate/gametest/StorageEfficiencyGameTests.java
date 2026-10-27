@@ -180,7 +180,7 @@ public final class StorageEfficiencyGameTests {
     /** A soma de todos os tipos do item, tipo a tipo: o que o {@code countItem} contava antes. */
     private static long bruteItem(ItemStorage storage, Item item) {
         long sum = 0;
-        for (int i = 0; i < storage.types(); i++) {
+        for (int i = 0; i < storage.slots(); i++) {
             if (storage.key(i).is(item)) {
                 sum += storage.count(i);
             }
@@ -257,7 +257,7 @@ public final class StorageEfficiencyGameTests {
         }
         for (FluidStack fluid : new FluidStack[] {new FluidStack(Fluids.WATER, 1), new FluidStack(Fluids.LAVA, 1)}) {
             long sum = 0;
-            for (int i = 0; i < storage.types(); i++) {
+            for (int i = 0; i < storage.slots(); i++) {
                 if (FluidStack.isSameFluid(storage.key(i), fluid)) {
                     sum += storage.count(i);
                 }
@@ -328,7 +328,7 @@ public final class StorageEfficiencyGameTests {
         copy.load(first, registries);
         helper.assertValueEqual(copy.types(), storage.types(), "tipos");
         helper.assertValueEqual(copy.total(), storage.total(), "total");
-        for (int i = 0; i < storage.types(); i++) {
+        for (int i = 0; i < storage.slots(); i++) {
             helper.assertValueEqual(copy.count(storage.key(i)), storage.count(i), "quantidade do tipo " + i);
         }
         helper.assertValueEqual(copy.count(damaged), 3L, "a picareta com o dano");

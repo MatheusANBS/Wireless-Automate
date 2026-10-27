@@ -22,6 +22,6 @@ Wireless Automate 2.10.0 makes the filter's **component rule work for any mod** 
 
 **Other changes**
 
-- A new test confirms the Wireless Chest never hands out more items than it stores when an AE2 storage bus asks for a full stack (the pick block of AE2WTLib asks for a stack by design).
+- **Fix: item duplication and vanishing items with an AE2 storage bus on the Wireless Chest.** When a request emptied one item type, the next type slid into its slot and the storage bus kept pulling from that slot: the requested item was duplicated and the other one was deleted (seen with AE2WTLib's pick block, export buses and autocrafting). An emptied type now keeps its slot until the end of the tick. The same fix covers the Chemical Tank (Mekanism) and the Fluid Tank. Items already lost are not restored.
 
 **Compatibility note:** the network protocol changed to **34**, so a server and its clients need the same version. No world or configuration migration is needed. NeoForge 21.1.248 or newer is still required, and all optional integrations remain optional.

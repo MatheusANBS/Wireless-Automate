@@ -18,12 +18,12 @@ public final class FluidStorageHandler implements IFluidHandler {
 
     @Override
     public int getTanks() {
-        return storage.types() + 1;
+        return storage.slots() + 1;
     }
 
     @Override
     public FluidStack getFluidInTank(int tank) {
-        if (tank < 0 || tank >= storage.types()) {
+        if (tank < 0 || tank >= storage.slots() || storage.count(tank) <= 0) {
             return FluidStack.EMPTY;
         }
         // O fluido guardado do tipo, sem cópia por chamada; o contrato do IFluidHandler proíbe alterá-lo.
@@ -38,10 +38,10 @@ public final class FluidStorageHandler implements IFluidHandler {
     /** Um tanque de fluido só aceita o próprio fluido; o vazio do fim aceita qualquer um. */
     @Override
     public boolean isFluidValid(int tank, FluidStack stack) {
-        if (tank < 0 || tank > storage.types()) {
+        if (tank < 0 || tank > storage.slots()) {
             return false;
         }
-        return tank == storage.types() || FluidStack.isSameFluidSameComponents(storage.key(tank), stack);
+        return tank == storage.slots() || FluidStack.isSameFluidSameComponents(storage.key(tank), stack);
     }
 
     @Override
@@ -64,10 +64,11 @@ public final class FluidStorageHandler implements IFluidHandler {
     /** Drena do primeiro fluido guardado, como um tanque comum de um fluido só. */
     @Override
     public FluidStack drain(int maxDrain, FluidAction action) {
-        if (maxDrain <= 0 || storage.isEmpty()) {
+        int first = storage.firstSlot();
+        if (maxDrain <= 0 || first < 0) {
             return FluidStack.EMPTY;
         }
-        FluidStack key = storage.key(0);
+        FluidStack key = storage.key(first);
         long taken = storage.extract(key, maxDrain, action.simulate());
         return taken <= 0 ? FluidStack.EMPTY : key.copyWithAmount((int) taken);
     }

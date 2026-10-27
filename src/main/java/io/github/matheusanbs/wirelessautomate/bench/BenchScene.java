@@ -787,9 +787,8 @@ final class BenchScene {
             return clear(handler, 0);
         }
         long removed = 0;
-        while (chest.types() > 0) {
-            int last = chest.types() - 1;
-            removed += chest.extract(chest.key(last), chest.count(last), false);
+        for (int i = 0, n = chest.slots(); i < n; i++) {
+            removed += chest.extract(chest.key(i), chest.count(i), false);
         }
         return removed;
     }

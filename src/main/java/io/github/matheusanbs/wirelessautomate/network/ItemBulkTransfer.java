@@ -37,7 +37,7 @@ final class ItemBulkTransfer {
             return 0;
         }
         List<Port> pass = order.pass();
-        int types = bulk.types();
+        int types = bulk.slots();
         if (types <= 0) {
             SourceSleep.nothingToMove(source, now);
             return 0;
@@ -60,8 +60,8 @@ final class ItemBulkTransfer {
         boolean destinationsAsleep = false;
         boolean capped = false;
         while (scanned < limit) {
-            // A lista encolhe quando um tipo zera: o cursor volta ao começo.
-            types = bulk.types();
+            // A lista encolhe no fim do tick em que um tipo zera: o cursor volta ao começo.
+            types = bulk.slots();
             if (types == 0) {
                 break;
             }
@@ -115,7 +115,7 @@ final class ItemBulkTransfer {
             source.idleSlots = 0;
             source.limiter.consume(moved);
             source.sourceBackoff.wake();
-            boolean more = tokens > 0 && (capped || (scanned >= limit && limit < bulk.types()));
+            boolean more = tokens > 0 && (capped || (scanned >= limit && limit < bulk.slots()));
             return more ? NetworkManager.MOVED | NetworkManager.MORE : NetworkManager.MOVED;
         }
         source.idleSlots += scanned;

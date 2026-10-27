@@ -5,7 +5,8 @@ import net.neoforged.neoforge.items.IItemHandler;
 
 /**
  * O Baú visto como um inventário comum, para funis, AE2, RS e outros mods: um slot por tipo, mais
- * um vazio no fim que aceita qualquer item. A extração segue o contrato do {@link IItemHandler}
+ * um vazio no fim que aceita qualquer item. Um tipo que acaba fica como slot vazio até o fim do tick
+ * ({@link KeyedStorage#slots}): os slots não andam no meio de uma chamada. A extração segue o contrato do {@link IItemHandler}
  * (no máximo uma pilha por chamada); a pilha de um slot mostra a quantidade real, até
  * {@link Integer#MAX_VALUE}. O roteador do mod não passa por aqui: usa o {@link BulkItems}.
  */
@@ -18,12 +19,12 @@ public final class ItemStorageHandler implements IItemHandler {
 
     @Override
     public int getSlots() {
-        return storage.types() + 1;
+        return storage.slots() + 1;
     }
 
     @Override
     public ItemStack getStackInSlot(int slot) {
-        if (slot < 0 || slot >= storage.types()) {
+        if (slot < 0 || slot >= storage.slots() || storage.count(slot) <= 0) {
             return ItemStack.EMPTY;
         }
         // A pilha guardada do tipo, sem cópia por chamada; o contrato do IItemHandler proíbe alterá-la.
@@ -42,7 +43,7 @@ public final class ItemStorageHandler implements IItemHandler {
 
     @Override
     public ItemStack extractItem(int slot, int amount, boolean simulate) {
-        if (amount <= 0 || slot < 0 || slot >= storage.types()) {
+        if (amount <= 0 || slot < 0 || slot >= storage.slots()) {
             return ItemStack.EMPTY;
         }
         // A chave continua valendo depois da extração, mesmo se o tipo sair da lista.
@@ -59,9 +60,9 @@ public final class ItemStorageHandler implements IItemHandler {
     /** Um slot de tipo só aceita o próprio tipo; o vazio do fim aceita qualquer um. */
     @Override
     public boolean isItemValid(int slot, ItemStack stack) {
-        if (slot < 0 || slot > storage.types()) {
+        if (slot < 0 || slot > storage.slots()) {
             return false;
         }
-        return slot == storage.types() || ItemStack.isSameItemSameComponents(storage.key(slot), stack);
+        return slot == storage.slots() || ItemStack.isSameItemSameComponents(storage.key(slot), stack);
     }
 }

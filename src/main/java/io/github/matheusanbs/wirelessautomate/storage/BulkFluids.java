@@ -16,7 +16,8 @@ public interface BulkFluids {
     BlockCapability<BulkFluids, @Nullable Direction> BLOCK =
             BlockCapability.createSided(WirelessAutomate.id("bulk_fluids"), BulkFluids.class);
 
-    int types();
+    /** Quantos slots há, contando os que zeraram neste tick (com 0), como no {@link BulkItems}. */
+    int slots();
 
     FluidStack key(int index);
 

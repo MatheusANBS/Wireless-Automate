@@ -114,9 +114,14 @@ public abstract class StorageBlockEntity extends BlockEntity {
         }
     }
 
+    /** Fim do tick, antes do aviso: fecha os slots que esgotaram no tick (só os armazenamentos por tipo). */
+    protected void compactContents() {
+    }
+
     /** O aviso da fila: o que o {@code setChanged} faria depois de marcar o chunk. */
     void flushNeighbors() {
         neighborsQueued = false;
+        compactContents();
         Level current = level;
         if (current == null || isRemoved()) {
             return;

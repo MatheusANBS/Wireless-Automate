@@ -4,7 +4,7 @@
 
 **Estado:** rascunho preparado durante a etapa 2 (27/10/2026); o dono aprova a spec antes de executar.
 
-**Objetivo:** as peças Ícone de item, Barra, Medidor, Gráfico e Seta; os Baús, Baterias e Tanques do mod como dado, ligados pelo Vinculador, com entra e sai por item no Baú; o relógio do jogo; e os componentes prontos com as peças novas.
+**Objetivo:** as peças Ícone de item, Barra, Medidor, Gráfico e Seta; os Baús, Baterias e Tanques do mod como dado, ligados pelo Vinculador, com entra e sai por item no Baú (sem "um item pela rede", removido); o relógio do jogo; e os componentes prontos com as peças novas.
 
 **Arquitetura:** a ligação (`TvBinding`) ganha a fonte (`network`, `storage`, `clock`) com o NBT antigo lido como `network`; a Tela guarda as posições ligadas; o `TvManager` lê os armazenamentos carregados na volta da Tela; o Baú conta entra e sai só dos itens vigiados, na entrada do `KeyedStorage`; as peças novas são pintadas pelo `TvPainter` no redesenho, e o histórico do Gráfico fica no cliente.
 
@@ -49,13 +49,12 @@ Custo: nada por tick sem Tela com armazenamento ligado; com ele, uma leitura por
 - [ ] Bench antes e depois do Baú com e sem vigia (`./scripts/bench.sh` num cenário de Baú; números no relatório).
 - [ ] GameTests (`TvLinkGameTests`, `TvStorageFeedGameTests`): ligar e desligar, recusas, leitura, vigia ligando e soltando, contador exato com inserção e extração reais e nenhuma conta nas simuladas. Commit "Tela de Sinal: armazenamentos ligados pelo Vinculador".
 
-### Task 1b: Guardado na rede e um item pela rede
+### Task 1b: Guardado na rede
 
-Custo: sem Tela pedindo, zero; com Tela, a leitura do guardado uma vez por volta do amostrador pelos caches das portas, e no caminho de itens uma consulta num conjunto pequeno por transferência real só com algum item vigiado. **Bench antes e depois obrigatório** (`./scripts/bench.sh` nos cenários de itens; nenhuma piora acima do ruído sem vigia).
+Custo: sem Tela pedindo, zero; com Tela, a leitura do guardado uma vez por volta do amostrador pelos caches das portas. Nada no caminho de itens.
 
 - [ ] `held`, `held_capacity` e `held_fill` (spec, decisão 12): o `FlowSampler` soma o conteúdo e a capacidade das portas em Armazém da rede × tipo pedida, só para as redes × tipos que alguma Tela pede (o `TvManager` registra o pedido pela volta, como a vigia do Baú).
-- [ ] Item pela rede (decisão 13): o `item` opcional na ligação de rede; o conjunto de vigiados por rede; os contadores na porta pelas transferências reais de `ItemTransfer`, `ItemBulkTransfer`, `FluidTransfer` e `ChemicalTransfer`; as métricas lidas na amostra.
-- [ ] GameTests (o guardado com uma Bateria e um Baú em Armazém; o item vigiado contado exato e um não vigiado ignorado; sem vigia, nenhum contador mexe). Commit "Tela de Sinal: guardado na rede e um item pela rede".
+- [ ] GameTests (o guardado com uma Bateria e um Baú em Armazém; sem Tela pedindo, a amostra não lê nada a mais). Commit "Tela de Sinal: guardado na rede".
 
 ### Task 2: As peças novas no desenho e no editor
 

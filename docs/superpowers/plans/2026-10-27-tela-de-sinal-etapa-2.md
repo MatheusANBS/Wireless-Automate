@@ -183,6 +183,16 @@ Custo: nenhum em jogo; sprites carregados uma vez pelo atlas da GUI.
 - [ ] Todos os ícones do `TvIcons` (Tarefa 12) passam a ser esses sprites: peças (Valor, Texto, Forma), abas da coluna (Peças, Componentes, Camadas), desfazer e refazer, agrupar, desagrupar, duplicar, remover, salvar, salvar como componente, caber, olho e olho fechado, cadeado, alinhar esquerda/centro/direita, conta-gotas, seção aberta e fechada, renomear, e o que mais a Tarefa 12 listar. Nenhum ícone desenhado por fill ou por caractere de texto no editor.
 - [ ] e2e: as capturas do editor de novo, olhadas lado a lado com as de antes; commit "Tela de Sinal: ícones do editor em sprites".
 
+### Task 14: A miniatura ao vivo antes de salvar (pedido do dono em 27/10)
+
+O dono troca o tipo, a rede ou a métrica de uma peça e a miniatura só muda depois de salvar. Esta tarefa troca a decisão 10 da spec ("os números de uma ligação nova só chegam depois de salvar").
+
+Custo: só com o editor aberto; um pacote pequeno por mudança de ligação no rascunho (não por quadro), limitado pelo `TvRateGate`; o servidor responde da amostra que o `TvManager` já tem, sem leitura nova do motor.
+
+- [ ] Primeiro, reproduza e ache a causa: toda mudança do rascunho (tipo, rede, métrica, formato, unidade, estilo, regra) tem que redesenhar a miniatura na hora. Se alguma não redesenha, conserte e cubra com teste.
+- [ ] Prévia dos números: com o editor aberto, o cliente manda as ligações do rascunho que a Tela salva ainda não tem (`TvPreviewPayload`, até `tv.maxBindings`); o servidor confere o acesso de quem edita (`canUse(jogador, false)`, tipo carregado) e responde os números delas pelo `TvValuesPayload` (ou um irmão), marcados como prévia e só para esse jogador, e segue mandando enquanto o editor estiver aberto e a ligação estiver no rascunho. Ao fechar o editor, para. Ligação sem acesso continua "—".
+- [ ] GameTest do pacote (acesso, teto, parar ao fechar); e2e: trocar o tipo de um Valor e ver o número novo na miniatura sem salvar, captura `tela-editor-previa`; commit "Tela de Sinal: miniatura ao vivo antes de salvar".
+
 ## Autorrevisão (feita ao escrever)
 
 - **Cobertura da spec:** decisões 1 e 2 (Tarefa 6), 3 (6), 4 (6, aviso e Descartar), 5 (4), 6 (6), 7 (7), 8 (7), 9 (6), 10 (8), 11 (8), 12 (8), 13 (1, 3 e 8), 14 (2), 15 (1 e 9), 16 (3 e 9), 17 (5 e 9), 18 (5 e 9); chaves e protocolo (1, 4 e 5); custo em cada tarefa.

@@ -17,8 +17,9 @@ import org.jetbrains.annotations.Nullable;
  * Conteúdo de um armazenamento do mod por tipo: chaves ({@code K}: item, fluido ou químico) com
  * quantidade {@code long}, numa lista na ordem de chegada mais um índice por chave. Guardar, tirar e
  * contar um tipo são O(1), e contar um item ou fluido com quaisquer componentes também
- * ({@link #countGroup}); só tirar o último de um tipo é O(tipos), para a lista não ficar com
- * buracos. A capacidade conta o total de todos os tipos ({@link StorageMath}); {@code <= 0} é sem
+ * ({@link #countGroup}). O tipo que acaba fica na lista com 0 até o fim do tick, para os slots das
+ * visões não andarem no meio de uma chamada ({@link #slots}), e o {@link #compact} fecha os buracos numa
+ * passada. A capacidade conta o total de todos os tipos ({@link StorageMath}); {@code <= 0} é sem
  * limite, e ela é lida a cada inserção (muda com o tier e com a config, sem copiar nada).
  *
  * <p>Cada mudança real chama {@code onChange} (o block entity marca o chunk e põe o aviso aos vizinhos
@@ -58,6 +59,8 @@ public abstract class KeyedStorage<K> {
     private final LongSupplier capacity;
     private final String what;
     private long total;
+    /** Quantas entradas da lista estão com 0, à espera do {@link #compact}. */
+    private int holes;
     /** A soma por grupo ({@link #groupOf}), criada no primeiro tipo com grupo. */
     private @Nullable Reference2LongOpenHashMap<Object> groupTotals;
     private int version;
@@ -100,24 +103,49 @@ public abstract class KeyedStorage<K> {
     }
 
     public boolean isEmpty() {
-        return entries.isEmpty();
+        return entries.size() == holes;
     }
 
+    /** Os tipos guardados, sem os slots esgotados. */
     public int types() {
+        return entries.size() - holes;
+    }
+
+    /**
+     * Os slots das visões de outros mods ({@code IItemHandler}, {@code IFluidHandler}, químicos): os tipos e,
+     * até o fim do tick, os que acabaram, com 0 no mesmo lugar. O storage bus do AE2 tira de um slot em laço
+     * até ele voltar vazio; se o tipo seguinte andasse para o lugar do esgotado, o laço o levaria contado
+     * como o pedido (o pedido duplicado e o outro tipo apagado). O {@link #compact} fecha a lista no fim do
+     * tick, quando nenhuma chamada está no meio.
+     */
+    public int slots() {
         return entries.size();
     }
 
-    public K key(int index) {
-        return entries.get(index).key;
+    /** A chave do slot; a de um esgotado continua valendo. */
+    public K key(int slot) {
+        return entries.get(slot).key;
     }
 
-    public long count(int index) {
-        return entries.get(index).count;
+    /** A quantidade do slot; 0 num esgotado. */
+    public long count(int slot) {
+        return entries.get(slot).count;
+    }
+
+    /** O primeiro slot com alguma quantidade, ou -1 sem nenhum. */
+    public int firstSlot() {
+        for (int i = 0, n = entries.size(); i < n; i++) {
+            if (entries.get(i).count > 0) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     /**
      * A chave do tipo na posição com a quantidade dele (até {@link Integer#MAX_VALUE}), para as visões de
-     * slot ({@code getStackInSlot}, {@code getFluidInTank}), que quem chama não pode alterar. A mesma pilha
+     * slot ({@code getStackInSlot}, {@code getFluidInTank}), que quem chama não pode alterar; um slot
+     * esgotado dá a quantidade 0, que quem chama confere antes. A mesma pilha
      * volta enquanto a quantidade não muda; quando muda, uma nova toma o lugar e a antiga, que alguém pode
      * estar guardando para comparar, fica como estava. Sem isso, seria uma pilha nova por chamada (um funil
      * olha todos os slots a cada transferência).
@@ -207,6 +235,8 @@ public abstract class KeyedStorage<K> {
             entry = new Entry(normalize(key));
             entries.add(entry);
             index.put(entry.key, entry);
+        } else if (entry.count <= 0) {
+            holes--;
         }
         entry.count = StorageMath.add(entry.count, accepted);
         total = StorageMath.add(total, accepted);
@@ -225,18 +255,40 @@ public abstract class KeyedStorage<K> {
             return 0;
         }
         long taken = Math.min(amount, entry.count);
-        if (simulate) {
+        if (taken <= 0 || simulate) {
             return taken;
         }
         entry.count -= taken;
         total -= taken;
         takeFromGroup(entry.key, taken);
         if (entry.count <= 0) {
-            index.remove(entry.key);
-            entries.remove(entry);
+            // Fica no lugar até o compact, para os slots não andarem (ver slots()).
+            holes++;
         }
         changed();
         return taken;
+    }
+
+    /**
+     * Tira da lista os slots esgotados, numa passada; chamado no fim do tick pelo {@link StorageNeighbors}
+     * (cada esgotamento passa pelo {@code onChange}, que põe o armazenamento na fila). O conteúdo não muda,
+     * só os slots andam, por isso a versão fica igual.
+     */
+    public void compact() {
+        if (holes == 0) {
+            return;
+        }
+        int kept = 0;
+        for (int i = 0, n = entries.size(); i < n; i++) {
+            Entry entry = entries.get(i);
+            if (entry.count > 0) {
+                entries.set(kept++, entry);
+            } else {
+                index.remove(entry.key);
+            }
+        }
+        entries.subList(kept, entries.size()).clear();
+        holes = 0;
     }
 
     private void changed() {
@@ -252,6 +304,7 @@ public abstract class KeyedStorage<K> {
             groupTotals.clear();
         }
         total = 0;
+        holes = 0;
         version++;
     }
 
@@ -262,6 +315,9 @@ public abstract class KeyedStorage<K> {
     public ListTag save(HolderLookup.Provider registries) {
         ListTag list = new ListTag();
         for (Entry entry : entries) {
+            if (entry.count <= 0) {
+                continue;
+            }
             if (entry.tag == null) {
                 entry.tag = saveKey(entry.key, registries);
             }

@@ -12,14 +12,15 @@ import org.jetbrains.annotations.Nullable;
  * de itens do NeoForge: entre dois baús do mod, mover milhões de um tipo é uma chamada só.
  *
  * <p>As chaves são pilhas de 1 (item e componentes); quem chama não pode alterá-las. As posições
- * ({@code index}) valem até a próxima mudança: um tipo que zera sai da lista.
+ * ({@code index}) são os slots: um tipo que zera fica com 0 no lugar até o fim do tick e então sai
+ * da lista, e as posições seguintes andam.
  */
 public interface BulkItems {
     BlockCapability<BulkItems, @Nullable Direction> BLOCK =
             BlockCapability.createSided(WirelessAutomate.id("bulk_items"), BulkItems.class);
 
-    /** Quantos tipos há guardados. */
-    int types();
+    /** Quantos slots há, contando os que zeraram neste tick (com 0). */
+    int slots();
 
     /** A chave do tipo na posição (pilha de 1, não alterar). */
     ItemStack key(int index);

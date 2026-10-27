@@ -54,6 +54,11 @@ public abstract class KeyedStorageBlockEntity<K> extends StorageBlockEntity {
     }
 
     @Override
+    protected void compactContents() {
+        keyed().compact();
+    }
+
+    @Override
     protected void clearContents() {
         keyed().clear();
     }

@@ -55,7 +55,7 @@ final class FluidTransfer {
             return false;
         }
         List<Port> pass = order.pass();
-        int tanks = bulk != null ? bulk.types() : handler.getTanks();
+        int tanks = bulk != null ? bulk.slots() : handler.getTanks();
         if (tanks <= 0) {
             SourceSleep.nothingToMove(source, now);
             return false;
@@ -67,15 +67,15 @@ final class FluidTransfer {
         long moved = 0;
         boolean destinationsAsleep = false;
         while (scanned < limit) {
-            // No Tanque do mod a lista encolhe quando um tipo zera.
-            if (bulk != null && (tanks = bulk.types()) == 0) {
+            // No Tanque do mod a lista encolhe no fim do tick em que um tipo zera.
+            if (bulk != null && (tanks = bulk.slots()) == 0) {
                 break;
             }
             int current = tank < tanks ? tank : 0;
             scanned++;
             tank = current + 1 == tanks ? 0 : current + 1;
             FluidStack inTank = bulk != null ? bulk.key(current) : handler.getFluidInTank(current);
-            if (inTank.isEmpty() || !filter.testFluid(inTank)) {
+            if (inTank.isEmpty() || bulk != null && bulk.count(current) <= 0 || !filter.testFluid(inTank)) {
                 continue;
             }
             if (bulk == null) {

@@ -39,6 +39,7 @@ import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.tv.TvClientHooks;
 import io.github.matheusanbs.wirelessautomate.tv.TvEditing;
 import io.github.matheusanbs.wirelessautomate.tv.TvLibraryActions;
+import io.github.matheusanbs.wirelessautomate.tv.TvPreview;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -160,6 +161,11 @@ public final class ModPayloads {
                 (payload, context) -> TvClientHooks.library.accept(payload));
         registrar.playToServer(TvLibraryActionPayload.TYPE, TvLibraryActionPayload.STREAM_CODEC,
                 (payload, context) -> TvLibraryActions.handle(serverPlayer(context), payload));
+        // Prévia dos números do rascunho do editor, antes de salvar.
+        registrar.playToServer(TvPreviewPayload.TYPE, TvPreviewPayload.STREAM_CODEC,
+                (payload, context) -> TvPreview.handle(serverPlayer(context), payload));
+        registrar.playToClient(TvPreviewValuesPayload.TYPE, TvPreviewValuesPayload.STREAM_CODEC,
+                (payload, context) -> TvClientHooks.preview.accept(payload));
     }
 
     private static @Nullable ServerPlayer serverPlayer(IPayloadContext context) {

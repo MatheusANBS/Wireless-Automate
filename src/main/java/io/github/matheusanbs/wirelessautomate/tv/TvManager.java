@@ -64,6 +64,7 @@ public final class TvManager {
             return;
         }
         long start = System.nanoTime();
+        TvPreview.tick(server);
         int phase = Math.floorMod(server.getTickCount(), PHASES);
         double maxSq = (double) Config.tvViewDistance() * Config.tvViewDistance();
         List<TvBlockEntity> bucket = TvLoaded.serverBucket(phase);
@@ -171,6 +172,12 @@ public final class TvManager {
         feed.readRevision = tv.revision();
     }
 
+    /** O número de uma ligação no relatório, com o acesso de {@code who}; a prévia do editor lê por aqui. */
+    static double read(TvBinding binding, FlowSampler.Report report, NetworkSavedData data, UUID who) {
+        ensureStats(report);
+        return canRead(data, who, binding.network()) ? binding.metric().read(statsOf(binding)) : Double.NaN;
+    }
+
     /** A rede existe e o dono da Tela pode usá-la; sem dono, não. */
     private static boolean canRead(NetworkSavedData data, @Nullable UUID owner, UUID network) {
         if (owner == null) {
@@ -200,6 +207,7 @@ public final class TvManager {
 
     /** Parada do servidor: o próximo mundo começa sem estado. */
     public static void reset() {
+        TvPreview.reset();
         NEAR.clear();
         STATS.clear();
         mapReport = null;

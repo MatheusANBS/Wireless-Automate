@@ -31,6 +31,7 @@ import io.github.matheusanbs.wirelessautomate.storage.StorageSavedData;
 import io.github.matheusanbs.wirelessautomate.tv.TvEditing;
 import io.github.matheusanbs.wirelessautomate.tv.TvLoaded;
 import io.github.matheusanbs.wirelessautomate.tv.TvManager;
+import io.github.matheusanbs.wirelessautomate.tv.TvPreview;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.bus.api.IEventBus;
@@ -102,6 +103,7 @@ public final class WirelessAutomate {
         TabletMenu.forget(event.getEntity().getUUID());
         IdleNetworkUndo.forget(event.getEntity().getUUID());
         TvEditing.forget(event.getEntity().getUUID());
+        TvPreview.forget(event.getEntity().getUUID());
         NetworkManager.get().flows().unwatch(event.getEntity().getUUID());
     }
 

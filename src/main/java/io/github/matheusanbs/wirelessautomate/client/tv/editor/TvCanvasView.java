@@ -5,7 +5,11 @@ import io.github.matheusanbs.wirelessautomate.tv.TvArea;
 /**
  * Onde a imagem da Tela fica na miniatura e com que escala: a escala em que ela cabe ({@link #fit}) vezes o nível de
  * zoom ({@link TvZoom}), com o canto da imagem movido pelo zoom centrado no mouse e pelo arrasto. As contas de ponto
- * entre a tela e a imagem também ficam aqui. Só números: nada é alocado nem refeito por quadro; a escala de caber e o
+ * entre a tela e a imagem também ficam aqui, e só aqui: {@link #screenX} e {@link #screenY} são a única conversão
+ * pixel de desenho → pixel de tela, e a grade, as linhas de bloco, as caixas, a alça e a textura da miniatura a usam
+ * (a borda direita de uma caixa é {@code screenX(x + largura)}, nunca a origem mais a largura arredondada à parte, que
+ * com escala fracionária cai um pixel ao lado da linha da grade). A escala efetiva de cada eixo é a da imagem inteira
+ * na tela ({@code imageW / pixelWidth}), para o último pixel de desenho cair exatamente no fim da textura. Só números: nada é alocado nem refeito por quadro; a escala de caber e o
  * lugar são refeitos só quando a área da Tela ou o retângulo mudam.
  */
 final class TvCanvasView {
@@ -20,6 +24,8 @@ final class TvCanvasView {
     private int imageH;
     private int fitW;
     private int fitH;
+    private double stepX = 1;
+    private double stepY = 1;
 
     /** O retângulo da miniatura mudou: volta a caber. */
     void layout(TvRect rect) {
@@ -79,6 +85,8 @@ final class TvCanvasView {
         scale = newScale;
         imageW = newW;
         imageH = newH;
+        stepX = newW / (double) fittedArea.pixelWidth();
+        stepY = newH / (double) fittedArea.pixelHeight();
         originX = TvZoom.clamp(ox, imageW, rect.x() + 2, rect.w() - 4);
         originY = TvZoom.clamp(oy, imageH, rect.y() + 2, rect.h() - 4);
     }
@@ -118,19 +126,29 @@ final class TvCanvasView {
                 && rect.contains(mouseX, mouseY);
     }
 
+    /** Pixels de tela por pixel de desenho, no eixo x (o da imagem inteira, não o nominal). */
+    double stepX() {
+        return stepX;
+    }
+
+    double stepY() {
+        return stepY;
+    }
+
     double toX(double mouseX) {
-        return (mouseX - originX) / scale;
+        return (mouseX - originX) / stepX;
     }
 
     double toY(double mouseY) {
-        return (mouseY - originY) / scale;
+        return (mouseY - originY) / stepY;
     }
 
+    /** A coluna de tela do pixel de desenho {@code px} (o começo dele; {@code pixelWidth} cai no fim da imagem). */
     int screenX(int px) {
-        return originX + Math.round(px * scale);
+        return originX + (int) Math.round(px * stepX);
     }
 
     int screenY(int py) {
-        return originY + Math.round(py * scale);
+        return originY + (int) Math.round(py * stepY);
     }
 }

@@ -22,6 +22,7 @@ final class TvSlider extends TvControl {
     private final IntConsumer set;
     private int current = Integer.MIN_VALUE;
     private Component shown = Component.empty();
+    private int shownWidth;
 
     TvSlider(Font font, String id, int x, int y, int w, int min, int max, int step, String suffix, IntSupplier get,
             IntConsumer set) {
@@ -42,6 +43,7 @@ final class TvSlider extends TvControl {
         if (now != current) {
             current = now;
             shown = Component.literal(now + suffix);
+            shownWidth = font.width(shown);
         }
     }
 
@@ -51,7 +53,7 @@ final class TvSlider extends TvControl {
                 : GuiPaint.BUTTON_BORDER);
         int fill = (w - 2) * (current - min) / Math.max(1, max - min);
         g.fill(ax + 1, ay + 1, ax + 1 + fill, ay + h - 1, GuiPaint.alpha(GuiPaint.ACCENT, 0x90));
-        GuiPaint.text(g, font, shown, ax + (w - font.width(shown)) / 2, ay + 2, GuiPaint.FG);
+        GuiPaint.text(g, font, shown, ax + (w - shownWidth) / 2, ay + 2, GuiPaint.FG);
     }
 
     private void pick(double mouseX) {

@@ -236,24 +236,25 @@ final class TvEditorCanvas {
     }
 
     private void outline(GuiGraphics g, TvPiece p, int color) {
-        float scale = view.scale();
-        GuiPaint.outline(g, view.screenX(p.x()), view.screenY(p.y()), Math.max(2, Math.round(p.width() * scale)),
-                Math.max(2, Math.round(p.height() * scale)), color);
+        int x0 = view.screenX(p.x());
+        int y0 = view.screenY(p.y());
+        GuiPaint.outline(g, x0, y0, Math.max(2, view.screenX(p.x() + p.width()) - x0 + 1),
+                Math.max(2, view.screenY(p.y() + p.height()) - y0 + 1), color);
     }
 
     private void box(GuiGraphics g, int[] b, int color) {
-        float scale = view.scale();
-        GuiPaint.outline(g, view.screenX(b[0]) - 1, view.screenY(b[1]) - 1, Math.round((b[2] - b[0]) * scale) + 2,
-                Math.round((b[3] - b[1]) * scale) + 2, color);
+        int x0 = view.screenX(b[0]);
+        int y0 = view.screenY(b[1]);
+        GuiPaint.outline(g, x0, y0, view.screenX(b[2]) - x0 + 1, view.screenY(b[3]) - y0 + 1, color);
     }
 
     /** O canto da alça, centrada no canto de baixo à direita da escolha. */
     private int handleX() {
-        return view.screenX(selectionBox[2]) - HANDLE / 2 - 1;
+        return view.screenX(selectionBox[2]) - HANDLE / 2;
     }
 
     private int handleY() {
-        return view.screenY(selectionBox[3]) - HANDLE / 2 - 1;
+        return view.screenY(selectionBox[3]) - HANDLE / 2;
     }
 
     /**
@@ -367,9 +368,8 @@ final class TvEditorCanvas {
             return true;
         }
         boolean fine = Screen.hasAltDown();
-        float scale = view.scale();
-        int dx = TvSnap.delta((mouseX - dragX) / scale, fine);
-        int dy = TvSnap.delta((mouseY - dragY) / scale, fine);
+        int dx = TvSnap.delta((mouseX - dragX) / view.stepX(), fine);
+        int dy = TvSnap.delta((mouseY - dragY) / view.stepY(), fine);
         if (dx == lastDx && dy == lastDy) {
             return true;
         }
@@ -402,9 +402,8 @@ final class TvEditorCanvas {
     int[] pieceCenter(int index) {
         fit();
         TvPiece p = doc.pieces().get(index);
-        float scale = view.scale();
-        return new int[] {view.screenX(p.x()) + Math.round(p.width() * scale / 2), view.screenY(p.y())
-                + Math.round(p.height() * scale / 2)};
+        return new int[] {(view.screenX(p.x()) + view.screenX(p.x() + p.width())) / 2,
+                (view.screenY(p.y()) + view.screenY(p.y() + p.height())) / 2};
     }
 
     /** O centro da alça. */

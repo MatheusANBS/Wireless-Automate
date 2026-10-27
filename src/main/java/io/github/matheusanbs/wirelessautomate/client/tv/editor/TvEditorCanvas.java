@@ -11,6 +11,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.util.FormattedCharSequence;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
@@ -22,13 +23,15 @@ import org.lwjgl.glfw.GLFW;
  * regra do mockup (Alt + clique, a peça de baixo na mesma posição, pelo {@link TvHitCycle}), arrastar move a escolha e
  * a alça redimensiona (uma peça, ou o grupo em proporção), tudo pelo {@link TvEditOps} a partir das peças de quando o
  * arrasto começou, com o encaixe da grade (1 px com o Alt). O clique direito escolhe a peça e quem usa abre o
- * {@link TvCanvasMenu}. A textura da imagem é pedida no tamanho de "caber" e só refeita quando o rascunho muda, nunca
- * por zoom. Por quadro: um pedido à imagem (comparações), os retângulos e uma busca da peça sob o mouse, sem alocar.
+ * {@link TvCanvasMenu}. A textura da imagem é pedida no tamanho em que ela aparece (até {@link #TEXTURE_CAP} px) e só refeita
+ * quando o rascunho ou o nível de zoom muda, nunca ao mover a vista. Por quadro: um pedido à imagem (comparações), os retângulos e uma busca da peça sob o mouse, sem alocar.
  */
 final class TvEditorCanvas {
     private static final TvEditOps.Access<TvPiece> A = TvPieceAccess.INSTANCE;
     private static final long TWICE_MS = 350;
     private static final int HANDLE = 5;
+    /** O maior lado da textura da miniatura, em pixels, qualquer que seja o zoom. */
+    static final int TEXTURE_CAP = 2048;
     /** O vidro apagado atrás da imagem, como o do bloco; o layout vazio da etapa 1 só mostra ele, como na parede. */
     private static final int GLASS = 0xFF0B0C10;
 
@@ -38,6 +41,7 @@ final class TvEditorCanvas {
     private final TvCanvasView view = new TvCanvasView();
     private TvRect rect = TvRect.NONE;
     private Font font;
+    private List<FormattedCharSequence> emptyHint = List.of();
     private TvRect fitButton = TvRect.NONE;
     private TvEditorPaint.Label fitLabel;
     private int fitLabelFactor;
@@ -68,6 +72,7 @@ final class TvEditorCanvas {
         this.rect = rect;
         view.layout(rect);
         fitLabelFactor = 0;
+        emptyHint = font.split(TvEditorText.key("canvas_empty"), Math.max(40, rect.w() - 24));
     }
 
     /** A escala e o lugar da imagem, refeitos só quando a área da Tela ou o retângulo mudam. */
@@ -98,6 +103,9 @@ final class TvEditorCanvas {
         if (doc.gridVisible()) {
             grid(g);
         }
+        if (doc.pieces().isEmpty()) {
+            emptyHint(g);
+        }
         List<TvPiece> pieces = doc.pieces();
         boxes(pieces);
         int hover = drag == Drag.NONE && view.contains(mouseX, mouseY)
@@ -116,6 +124,44 @@ final class TvEditorCanvas {
         }
     }
 
+    /** A dica da miniatura vazia: como pôr a primeira peça. */
+    private void emptyHint(GuiGraphics g) {
+        int top = rect.centerY() - emptyHint.size() * 5;
+        for (int i = 0; i < emptyHint.size(); i++) {
+            FormattedCharSequence line = emptyHint.get(i);
+            GuiPaint.text(g, font, line, rect.centerX() - font.width(line) / 2, top + i * 10, GuiPaint.MUTED);
+        }
+    }
+
+    /**
+     * O ponto da imagem (em px de desenho) sob o mouse, se ele está na miniatura; o ponto fora da imagem, mas dentro
+     * da miniatura, é preso à borda dela. Usado ao soltar uma peça arrastada da paleta.
+     */
+    int @Nullable [] imagePoint(double mouseX, double mouseY) {
+        if (!rect.contains(mouseX, mouseY)) {
+            return null;
+        }
+        fit();
+        TvArea area = doc.area();
+        return new int[] {(int) Math.max(0, Math.min(area.pixelWidth() - 1, view.toX(mouseX))),
+                (int) Math.max(0, Math.min(area.pixelHeight() - 1, view.toY(mouseY)))};
+    }
+
+    /** A cor (ARGB) do pixel da imagem sob o mouse, para o conta-gotas; {@code null} fora da imagem ou transparente. */
+    @Nullable Integer pixelAt(double mouseX, double mouseY) {
+        if (!view.contains(mouseX, mouseY)) {
+            return null;
+        }
+        int argb = TvEditorImage.pixelAt((mouseX - view.x()) / view.width(), (mouseY - view.y()) / view.height());
+        return argb >>> 24 == 0 ? null : argb;
+    }
+
+    /** A escala da GUI por px de desenho (para o fantasma da peça arrastada). */
+    float guiScale() {
+        fit();
+        return view.scale();
+    }
+
     private void boxes(List<TvPiece> pieces) {
         TvSelection selection = doc.selection();
         int focus = doc.model().focusGroup();
@@ -131,15 +177,19 @@ final class TvEditorCanvas {
         resizable = valid && TvEditOps.resizable(A, pieces, selection);
     }
 
-    /** O tamanho da textura em pixels da janela: o de "caber" vezes a escala da GUI, até o teto da placa. */
+    /**
+     * O tamanho da textura em pixels da janela: o da imagem como está na tela (o de "caber" vezes o zoom) vezes a
+     * escala da GUI, com teto de {@link #TEXTURE_CAP} px no maior lado e o da placa. Só muda com o nível de zoom: mover
+     * a vista não refaz a textura.
+     */
     private void requestImage() {
         double gui = Minecraft.getInstance().getWindow().getGuiScale();
-        double max = RenderSystem.maxSupportedTextureSize();
-        int fitW = view.fitWidth();
-        int fitH = view.fitHeight();
-        double k = Math.min(gui, Math.min(max / fitW, max / fitH));
+        double max = Math.min(TEXTURE_CAP, RenderSystem.maxSupportedTextureSize());
+        int shownW = view.width();
+        int shownH = view.height();
+        double k = Math.min(gui, Math.min(max / shownW, max / shownH));
         TvArea area = doc.area();
-        int texW = (int) Math.round(fitW * k);
+        int texW = Math.max(1, (int) Math.round(shownW * k));
         int texH = (int) Math.round(texW * area.pixelHeight() / (double) area.pixelWidth());
         TvEditorImage.request(doc.draft(), doc.model().saved(), area, doc.pos().asLong(), doc.revision(), texW,
                 texH);

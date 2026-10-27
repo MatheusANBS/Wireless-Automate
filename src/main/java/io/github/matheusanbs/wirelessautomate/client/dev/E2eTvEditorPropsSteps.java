@@ -9,6 +9,7 @@ import io.github.matheusanbs.wirelessautomate.client.tv.editor.TvEditorTab;
 import io.github.matheusanbs.wirelessautomate.client.tv.editor.TvSelection;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlockEntity;
 import io.github.matheusanbs.wirelessautomate.tv.TvColor;
+import io.github.matheusanbs.wirelessautomate.tv.TvFont;
 import io.github.matheusanbs.wirelessautomate.tv.TvLayout;
 import io.github.matheusanbs.wirelessautomate.tv.TvMetric;
 import io.github.matheusanbs.wirelessautomate.tv.TvPiece;
@@ -77,58 +78,90 @@ final class E2eTvEditorPropsSteps {
 
     /** As quatro abas: liga o Valor à rede dos Fluxos, formata, pinta, escreve uma regra e salva com Ctrl+S. */
     static void propsSteps(List<Step> list, Supplier<BlockPos> tv) {
+        int[] before = new int[1];
         list.add(step("Abas: escolher o Valor pelas Camadas", () -> {
-            click(screen(), editor().layerCenter(0)[0], editor().layerCenter(0)[1]);
-            clickAt(editor().propsTabCenter("DATA"));
-        }, () -> editor().selection().equals(TvSelection.of(0)) && "DATA".equals(editor().propsTab()),
-                () -> "escolha " + editor().selection() + ", aba " + editor().propsTab()));
+            click(screen(), editor().probe().layerCenter(0)[0], editor().probe().layerCenter(0)[1]);
+            clickAt(editor().probe().propsTabCenter("DATA"));
+        }, () -> editor().selection().equals(TvSelection.of(0)) && "DATA".equals(editor().probe().propsTab()),
+                () -> "escolha " + editor().selection() + ", aba " + editor().probe().propsTab()));
         list.add(step("Dado: escolher a rede dos Fluxos", () -> {
             UUID network = E2eFlowsSteps.flowsNetworkId();
-            int[] at = editor().propNetworkCenter("data.network", network);
+            int[] at = editor().probe().propNetworkCenter("data.network", network);
             if (at == null) {
                 throw new StepFailure("a rede dos Fluxos não está na lista");
             }
             clickAt(at);
         }, () -> editor().draft().pieces().get(0).binding().map(b -> b.network().equals(E2eFlowsSteps.flowsNetworkId()))
                 .orElse(false), () -> "ligação " + editor().draft().pieces().get(0).binding()));
-        list.add(step("Dado: a métrica avança para Sai", () -> clickAt(editor().propCenter("data.metric")),
+        list.add(step("Dado: a métrica avança para Sai", () -> clickAt(editor().probe().propCenter("data.metric")),
                 () -> editor().draft().pieces().get(0).binding().map(b -> b.metric() == TvMetric.OUT).orElse(false),
                 () -> "ligação " + editor().draft().pieces().get(0).binding()));
         E2eTvSteps.shot(list, "tela-editor-dado");
         list.add(step("Formato: aba, casas e abreviar", () -> {
-            clickAt(editor().propsTabCenter("FORMAT"));
-            clickAt(editor().propArrowCenter("format.decimals", true));
-            clickAt(editor().propCenter("format.abbreviate"));
+            clickAt(editor().probe().propsTabCenter("FORMAT"));
+            clickAt(editor().probe().propArrowCenter("format.decimals", true));
+            clickAt(editor().probe().propCenter("format.abbreviate"));
         }, () -> {
             var format = editor().draft().pieces().get(0).format();
             return format.decimals() == 2 && !format.abbreviate();
         }, () -> "formato " + editor().draft().pieces().get(0).format()));
         E2eTvSteps.shot(list, "tela-editor-formato");
-        list.add(step("Estilo: cor do tema, cor fixa e hexadecimal", () -> {
-            clickAt(editor().propsTabCenter("STYLE"));
-            clickAt(editor().propSwatchCenter("style.color.sw", TvColor.HIGH));
-            clickAt(editor().propSwatchCenter("style.background.sw", 0xFFE39A2E));
-            if (!editor().focusProp("style.border.hex")) {
-                throw new StepFailure("o campo hexadecimal não abriu");
-            }
-            type("#336699");
-            screen().keyPressed(GLFW.GLFW_KEY_ENTER, 0, 0);
+        list.add(step("Estilo: cor do tema, cor fixa e hexadecimal pelo seletor", () -> {
+            clickAt(editor().probe().propsTabCenter("STYLE"));
+            pickTheme("style.color", TvColor.HIGH);
+            pickHex("style.background", "#E39A2E");
+            pickHex("style.border", "#336699");
         }, () -> {
             var style = editor().draft().pieces().get(0).style();
             return style.color() == TvColor.theme(TvColor.HIGH) && style.background() == 0xFFE39A2E
-                    && style.border() == 0xFF336699 && !editor().textFocused();
+                    && style.border() == 0xFF336699 && !editor().textFocused() && !editor().probe().popupOpen();
         }, () -> "estilo " + editor().draft().pieces().get(0).style() + ", foco " + editor().textFocused()));
-        list.add(step("Estilo: de volta ao topo da aba", () -> clickAt(editor().propsTabCenter("STYLE")),
-                () -> true, () -> "aba " + editor().propsTab()));
+        list.add(step("Estilo: de volta ao topo da aba", () -> clickAt(editor().probe().propsTabCenter("STYLE")),
+                () -> true, () -> "aba " + editor().probe().propsTab()));
         E2eTvSteps.shot(list, "tela-editor-estilo");
+        list.add(step("Cor: abrir o seletor e escolher no quadrado", () -> {
+            clickAt(editor().probe().propCenter("style.color"));
+            if (!editor().probe().popupOpen()) {
+                throw new StepFailure("o seletor de cor não abriu");
+            }
+            clickAt(editor().probe().colorSquareCenter());
+        }, () -> editor().probe().popupOpen() && !TvColor.isTheme(editor().draft().pieces().get(0).style().color())
+                && editor().draft().pieces().get(0).style().color() != 0xFFE39A2E,
+                () -> "cor " + editor().draft().pieces().get(0).style().color()));
+        E2eTvSteps.shot(list, "tela-editor-cor");
+        list.add(step("Cor: Esc fecha o seletor", () -> editor().escape(), () -> !editor().probe().popupOpen(),
+                () -> "seletor " + editor().probe().popupOpen()));
+        list.add(step("Estilo: a fonte pela lista com prévia", () -> {
+            clickAt(editor().probe().propCenter("style.font"));
+            clickAt(editor().probe().fontRowCenter(TvFont.MONO));
+        }, () -> editor().draft().pieces().get(0).style().font() == TvFont.MONO && !editor().probe().popupOpen(),
+                () -> "fonte " + editor().draft().pieces().get(0).style().font()));
+        list.add(step("Estilo: o número arrasta e a roda muda", () -> {
+            int[] at = editor().probe().propCenter("style.size");
+            before[0] = editor().draft().pieces().get(0).style().size();
+            drag(screen(), at[0], at[1], at[0] + 20, at[1]);
+            screen().mouseScrolled(at[0], at[1], 0, 1);
+        }, () -> editor().draft().pieces().get(0).style().size() == before[0] + 5 + 1,
+                () -> "tamanho " + editor().draft().pieces().get(0).style().size() + " de " + before[0]));
+        list.add(step("Estilo: recolher a Caixa e abrir a Posição", () -> {
+            clickAt(editor().probe().propCenter("section.box"));
+            clickAt(editor().probe().propCenter("section.position"));
+        }, () -> editor().probe().propCenter("style.radius") == null && editor().probe().propCenter("style.x") != null,
+                () -> "raio " + editor().probe().propCenter("style.radius")));
+        E2eTvSteps.shot(list, "tela-editor-secoes");
+        list.add(step("Estilo: as seções voltam ao padrão", () -> {
+            clickAt(editor().probe().propCenter("section.box"));
+            clickAt(editor().probe().propCenter("section.position"));
+        }, () -> editor().probe().propCenter("style.radius") != null && editor().probe().propCenter("style.x") == null,
+                () -> "raio " + editor().probe().propCenter("style.radius")));
         list.add(step("Regras: nova regra, comparação e valor", () -> {
-            clickAt(editor().propsTabCenter("RULES"));
-            clickAt(editor().propCenter("rules.add"));
+            clickAt(editor().probe().propsTabCenter("RULES"));
+            clickAt(editor().probe().propCenter("rules.add"));
         }, () -> editor().draft().pieces().get(0).rules().size() == 1,
                 () -> "regras " + editor().draft().pieces().get(0).rules()));
         list.add(step("Regras: maior que 5", () -> {
-            clickAt(editor().propChipCenter("rule0.op", 1));
-            if (!editor().focusProp("rule0.value")) {
+            clickAt(editor().probe().propCenter("rule0.op"));
+            if (!editor().probe().focusProp("rule0.value")) {
                 throw new StepFailure("o campo do valor não abriu");
             }
             type("5");
@@ -137,7 +170,7 @@ final class E2eTvEditorPropsSteps {
             var rules = editor().draft().pieces().get(0).rules();
             return rules.size() == 1 && rules.get(0).op() == TvRuleOp.GT && rules.get(0).value() == 5;
         }, () -> "regras " + editor().draft().pieces().get(0).rules()));
-        E2eTvSteps.shot(list, "tela-editor-regras");
+        E2eTvSteps.shot(list, "tela-editor-regras-frase");
         list.add(step("Salvar com Ctrl+S e conferir no servidor", () -> press(GLFW.GLFW_KEY_S, CTRL), () -> {
             TvLayout saved = onServer(server -> ((TvBlockEntity) server.overworld().getBlockEntity(tv.get())).layout());
             return saved.equals(editor().draft()) && !editor().dirty() && saved.pieces().get(0).binding().isPresent()
@@ -196,6 +229,24 @@ final class E2eTvEditorPropsSteps {
 
     private static TvEditorTab editor() throws StepFailure {
         return screen().editor();
+    }
+
+    /** Abre o seletor da cor {@code id}, escolhe o papel do tema e fecha. */
+    private static void pickTheme(String id, int role) throws StepFailure {
+        clickAt(editor().probe().propCenter(id));
+        clickAt(editor().probe().colorThemeCenter(role));
+        editor().escape();
+    }
+
+    /** Abre o seletor da cor {@code id}, digita o hexadecimal no campo dele e fecha. */
+    private static void pickHex(String id, String hex) throws StepFailure {
+        clickAt(editor().probe().propCenter(id));
+        if (!editor().probe().colorHexFocus()) {
+            throw new StepFailure("o campo hexadecimal do seletor não abriu");
+        }
+        type(hex);
+        screen().keyPressed(GLFW.GLFW_KEY_ENTER, 0, 0);
+        editor().escape();
     }
 
     private static void clickAt(int[] point) throws StepFailure {

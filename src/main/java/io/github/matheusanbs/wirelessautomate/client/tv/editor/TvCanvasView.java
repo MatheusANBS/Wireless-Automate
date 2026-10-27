@@ -113,15 +113,6 @@ final class TvCanvasView {
         return imageH;
     }
 
-    /** O tamanho da imagem em "caber": a textura da miniatura é pedida nele, sem refazer por zoom. */
-    int fitWidth() {
-        return fitW;
-    }
-
-    int fitHeight() {
-        return fitH;
-    }
-
     boolean contains(double mouseX, double mouseY) {
         return mouseX >= originX && mouseX < originX + imageW && mouseY >= originY && mouseY < originY + imageH
                 && rect.contains(mouseX, mouseY);

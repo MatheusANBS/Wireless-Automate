@@ -266,6 +266,19 @@ final class TvEditorDoc {
         model.select(model.selection(), 0);
     }
 
+    /** Põe uma peça nova do tipo com o centro em ({@code cx}, {@code cy}), presa à área, e escolhe só ela. */
+    void insertAt(TvPieceType type, String text, int cx, int cy) {
+        TvPiece piece = TvPieceAccess.create(type, text);
+        int w = Math.min(piece.width(), area.pixelWidth());
+        int h = Math.min(piece.height(), area.pixelHeight());
+        int x = Math.max(0, Math.min(area.pixelWidth() - w, cx - w / 2));
+        int y = Math.max(0, Math.min(area.pixelHeight() - h, cy - h / 2));
+        List<TvPiece> out = new ArrayList<>(pieces());
+        out.add(piece.withBox(x, y, w, h));
+        apply(new TvEditOps.Edit<>(out, TvSelection.of(out.size() - 1)));
+        model.select(model.selection(), 0);
+    }
+
     void group() {
         apply(TvEditOps.group(A, pieces(), selection()));
         model.select(model.selection(), 0);

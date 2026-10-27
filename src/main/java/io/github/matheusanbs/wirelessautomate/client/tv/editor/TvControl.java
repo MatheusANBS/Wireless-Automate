@@ -1,6 +1,8 @@
 package io.github.matheusanbs.wirelessautomate.client.tv.editor;
 
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Um controle da coluna de propriedades: uma caixa ({@code x}, {@code y}, {@code w}, {@code h}) no conteúdo, que o
@@ -39,6 +41,20 @@ abstract class TvControl {
 
     boolean mouseClicked(double mouseX, double mouseY, int button) {
         return false;
+    }
+
+    /** O mouse andou com o botão apertado sobre este controle (o painel repassa só ao controle clicado). */
+    void mouseDragged(double mouseX, double mouseY) {
+    }
+
+    /** O botão foi solto; devolve se o controle passa a receber o teclado (o clique sem arrasto num número). */
+    boolean mouseReleased(double mouseX, double mouseY) {
+        return false;
+    }
+
+    /** A dica do controle sob o mouse, ou nulo. */
+    @Nullable Component tooltip(double mouseX, double mouseY) {
+        return null;
     }
 
     boolean mouseScrolled(double mouseX, double mouseY, double delta) {

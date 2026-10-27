@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client.tv.editor;
 
+import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.ResourceStyle;
 import io.github.matheusanbs.wirelessautomate.menu.TvMenu;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
@@ -18,7 +19,8 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * A aba Regras (decisão 13 da spec): até {@link TvRule#MAX_PER_PIECE} regras por peça, lidas de cima para baixo (vale a
- * primeira que bate), cada uma com a comparação (menor, maior ou igual a um número), o efeito (trocar a cor do texto,
+ * primeira que bate), cada uma escrita como frase, com cada parte clicável ("Se o valor for [menor que] [25] → [cor do texto] [■]"):
+ * a comparação (menor, maior ou igual a um número), o efeito (trocar a cor do texto,
  * trocar o fundo, piscar ou esconder), a ordem (↑ ↓) e o ✕. No Valor a regra compara com o dado da própria peça; no
  * Texto e na Forma cada regra tem a ligação própria (rede, tipo e métrica), que vem depois do efeito. A estrutura
  * muda com o efeito e a ligação; {@link #structure} resume isso para o painel refazer a aba só quando precisa.
@@ -46,51 +48,68 @@ final class TvRulesTab {
         }
     }
 
+    /**
+     * Uma regra como frase, cada parte clicável: "Se o valor for [menor que] [25]" e, na linha de baixo, "→ [cor do
+     * texto] [■]" e "[✓] piscar". Na linha do "Se" ficam os botões de subir, descer e tirar a regra. Texto e Forma
+     * trazem antes os três seletores do dado da própria regra.
+     */
     private static void buildRule(TvForm form, TvPropsCtx ctx, int i, boolean value) {
         String id = "rule" + i;
         TvRule rule = ctx.piece().rules().get(i);
         int y = form.y();
-        form.add(new TvControls.Segment(form.font, id + ".op", 0, y, 38,
-                List.of(Component.literal("<"), Component.literal(">"), Component.literal("=")),
-                () -> rule(ctx, i).op().ordinal(), index -> edit(ctx, i, r -> copy(r, TvRuleOp.values()[index],
-                        null, null, null, null, null, null))));
-        form.add(new TvTextField(form.font, id + ".value", 40, y, 44, 12, text -> text.matches("-?[0-9]*\\.?[0-9]*"),
-                Component.literal("0"), () -> number(rule(ctx, i).value()), text -> {
+        form.add(new TvControls.Label(form.font, id + ".if", 0, y + 2, 82, GuiPaint.MUTED,
+                () -> TvPropsCtx.key(value ? "rules.if.value" : "rules.if.own")));
+        form.add(new TvIconControls.IconButton(id + ".up", 84, y, SMALL, TvIcons.Icon.MOVE_UP,
+                TvPropsCtx.key("rules.up"), () -> ctx.change("rules.move", p -> p.withRules(swap(p.rules(), i, i - 1))))
+                .enabledWhen(() -> i > 0));
+        form.add(new TvIconControls.IconButton(id + ".down", 96, y, SMALL, TvIcons.Icon.MOVE_DOWN,
+                TvPropsCtx.key("rules.down"), () -> ctx.change("rules.move", p -> p.withRules(swap(p.rules(), i,
+                        i + 1)))).enabledWhen(() -> i < ctx.piece().rules().size() - 1));
+        form.add(new TvIconControls.IconButton(id + ".remove", 108, y, SMALL, TvIcons.Icon.REMOVE,
+                TvPropsCtx.key("rules.remove"), () -> ctx.change("rules.remove", p -> p.withRules(without(p.rules(),
+                        i)))));
+        form.endRow(TvControls.ROW - 1);
+        if (!value) {
+            own(form, ctx, i, rule);
+            form.label(id + ".for", TvPropsCtx.key("rules.for"));
+        }
+        y = form.y();
+        form.add(new TvControls.Cycle(form.font, id + ".op", 0, y, 84, () -> TvPropsCtx.key("rules.op."
+                + rule(ctx, i).op().name().toLowerCase(java.util.Locale.ROOT)), delta -> edit(ctx, i,
+                        r -> copy(r, TvDataTab.step(List.of(TvRuleOp.values()), r.op(), delta), null, null, null,
+                                null, null, null))));
+        form.add(new TvTextField(form.font, id + ".value", 88, y, TvForm.W - 88, 12,
+                text -> text.matches("-?[0-9]*\\.?[0-9]*"), Component.literal("0"),
+                () -> number(rule(ctx, i).value()), text -> {
                     try {
                         edit(ctx, i, r -> copy(r, null, Double.parseDouble(text), null, null, null, null, null));
                     } catch (NumberFormatException e) {
                         // "-" ou "." sozinhos: o valor fica até o texto virar um número
                     }
                 }));
-        form.add(new TvControls.Button(form.font, id + ".up", 86, y, SMALL, Component.literal("↑"),
-                () -> ctx.change("rules.move", p -> p.withRules(swap(p.rules(), i, i - 1))))
-                .enabledWhen(() -> i > 0));
-        form.add(new TvControls.Button(form.font, id + ".down", 98, y, SMALL, Component.literal("↓"),
-                () -> ctx.change("rules.move", p -> p.withRules(swap(p.rules(), i, i + 1))))
-                .enabledWhen(() -> i < ctx.piece().rules().size() - 1));
-        form.add(new TvControls.Button(form.font, id + ".remove", 109, y, SMALL, Component.literal("✕"),
-                () -> ctx.change("rules.remove", p -> p.withRules(without(p.rules(), i)))));
-        form.endRow(TvControls.ROW - 1);
-        form.add(new TvControls.Cycle(form.font, id + ".effect", 0, form.y(), TvForm.W,
-                () -> effectName(effect(rule(ctx, i))), delta -> edit(ctx, i, r -> withEffect(r,
-                        TvDataTab.step(List.of(Effect.values()), effect(r), delta)))));
         form.endRow(TvControls.ROW - 1);
         Effect effect = effect(rule);
+        boolean colored = effect == Effect.COLOR || effect == Effect.BACKGROUND;
+        y = form.y();
+        form.add(new TvControls.Label(form.font, id + ".then", 0, y + 2, 9, GuiPaint.MUTED,
+                () -> TvPropsCtx.key("rules.then")));
+        form.add(new TvControls.Cycle(form.font, id + ".effect", 10, y, TvForm.W - 10 - (colored ? 30 : 0),
+                () -> effectName(effect(rule(ctx, i))), delta -> edit(ctx, i, r -> withEffect(r,
+                        TvDataTab.step(List.of(Effect.values()), effect(r), delta)))));
         if (effect == Effect.COLOR) {
-            TvColorPicker.add(form, id + ".color", TvPropsCtx.key("rules.color"),
-                    () -> rule(ctx, i).color().orElse(0), c -> edit(ctx, i, r -> copy(r, null, null, null,
-                            Optional.of(c), null, null, null)), false, false, ctx::theme);
+            TvColorPicker.chip(form, ctx, id + ".color", TvForm.W - 28, y, 28, () -> rule(ctx, i).color().orElse(0),
+                    c -> edit(ctx, i, r -> copy(r, null, null, null, Optional.of(c), null, null, null)));
         } else if (effect == Effect.BACKGROUND) {
-            TvColorPicker.add(form, id + ".background", TvPropsCtx.key("rules.background"),
-                    () -> rule(ctx, i).background().orElse(0), c -> edit(ctx, i, r -> copy(r, null, null, null, null,
-                            Optional.of(c), null, null)), false, false, ctx::theme);
+            TvColorPicker.chip(form, ctx, id + ".background", TvForm.W - 28, y, 28,
+                    () -> rule(ctx, i).background().orElse(0),
+                    c -> edit(ctx, i, r -> copy(r, null, null, null, null, Optional.of(c), null, null)));
         }
-        if (effect == Effect.COLOR || effect == Effect.BACKGROUND) {
-            form.toggle(id + ".blink", TvPropsCtx.key("rules.blink"), () -> rule(ctx, i).blink(),
-                    on -> edit(ctx, i, r -> copy(r, null, null, null, null, null, on, null)));
-        }
-        if (!value) {
-            own(form, ctx, i, rule);
+        form.endRow(TvControls.ROW - 1);
+        if (colored) {
+            form.add(new TvControls.Toggle(form.font, id + ".blink", 10, form.y(), TvForm.W - 10,
+                    TvPropsCtx.key("rules.blink"), () -> rule(ctx, i).blink(),
+                    on -> edit(ctx, i, r -> copy(r, null, null, null, null, null, on, null))));
+            form.endRow(11);
         }
         form.skip(3);
     }

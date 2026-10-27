@@ -38,8 +38,8 @@ final class E2eTvEditorSteps {
         }, () -> editor().fits() && editor().draft().pieces().isEmpty(),
                 () -> "cabe " + editor().fits() + ", peças " + editor().draft().pieces().size()));
         list.add(new Step("Editor: inserir um Valor e um Texto", STEP_TIMEOUT_MS, () -> {
-            clickAt(editor().paletteCenter(TvPieceType.VALUE));
-            clickAt(editor().paletteCenter(TvPieceType.TEXT));
+            clickAt(editor().probe().paletteCenter(TvPieceType.VALUE));
+            clickAt(editor().probe().paletteCenter(TvPieceType.TEXT));
         }, () -> {
             List<TvPiece> pieces = editor().draft().pieces();
             return pieces.size() == 2 && pieces.get(0).type() == TvPieceType.VALUE && box(pieces.get(0), 0, 0, 40, 12)
@@ -47,30 +47,30 @@ final class E2eTvEditorSteps {
                     && editor().selection().equals(TvSelection.of(1));
         }, () -> "rascunho " + editor().draft().pieces()));
         list.add(new Step("Editor: arrastar o Texto", STEP_TIMEOUT_MS, () -> {
-            int[] from = editor().pieceCenter(1);
-            float scale = editor().canvasScale();
+            int[] from = editor().probe().pieceCenter(1);
+            float scale = editor().probe().canvasScale();
             drag(screen(), from[0], from[1], from[0] + Math.round(8 * scale), from[1] + Math.round(16 * scale));
         }, () -> box(editor().draft().pieces().get(1), 48, 16, 48, 10), () -> "Texto " + editor().draft().pieces()
                 .get(1)));
         list.add(new Step("Editor: puxar a alça", STEP_TIMEOUT_MS, () -> {
-            int[] from = editor().handleCenter();
-            float scale = editor().canvasScale();
+            int[] from = editor().probe().handleCenter();
+            float scale = editor().probe().canvasScale();
             drag(screen(), from[0], from[1], from[0] + Math.round(8 * scale), from[1] + Math.round(4 * scale));
         }, () -> box(editor().draft().pieces().get(1), 48, 16, 56, 14), () -> "Texto " + editor().draft().pieces()
                 .get(1)));
         E2eTvSteps.shot(list, "tela-editor");
         list.add(new Step("Editor: escolher os dois e agrupar", STEP_TIMEOUT_MS, () -> {
-            clickAt(editor().pieceCenter(0));
+            clickAt(editor().probe().pieceCenter(0));
             TvEditorTab.e2eShift = true;
             try {
-                clickAt(editor().pieceCenter(1));
+                clickAt(editor().probe().pieceCenter(1));
             } finally {
                 TvEditorTab.e2eShift = false;
             }
             if (!editor().selection().equals(TvSelection.of(0, 1))) {
                 throw new StepFailure("a escolha não somou com Shift: " + editor().selection());
             }
-            clickAt(editor().barCenter("GROUP"));
+            clickAt(editor().probe().barCenter("GROUP"));
         }, () -> {
             List<TvPiece> pieces = editor().draft().pieces();
             return pieces.size() == 2 && pieces.get(0).group() != 0 && pieces.get(0).group() == pieces.get(1).group()
@@ -78,7 +78,7 @@ final class E2eTvEditorSteps {
         }, () -> "rascunho " + editor().draft().pieces()));
         E2eTvSteps.shot(list, "tela-editor-grupo");
         list.add(new Step("Editor: salvar e conferir no servidor", STEP_TIMEOUT_MS,
-                () -> clickAt(editor().barCenter("SAVE")), () -> {
+                () -> clickAt(editor().probe().barCenter("SAVE")), () -> {
                     TvLayout saved = onServer(server -> ((TvBlockEntity) server.overworld().getBlockEntity(tv.get()))
                             .layout());
                     return saved.equals(editor().draft()) && !editor().dirty() && saved.pieces().size() == 2;

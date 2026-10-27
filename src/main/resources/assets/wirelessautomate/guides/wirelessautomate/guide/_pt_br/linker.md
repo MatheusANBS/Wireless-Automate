@@ -26,12 +26,15 @@ numa máquina.
 | **Vincular** | Escolha um roteador com o Upgrade de Alcance e clique nas máquinas: cada clique vincula a máquina a ele (um clique numa já vinculada a desvincula). A tela vincula uma área inteira de uma vez. |
 | **Abrir** | Clique numa máquina: abre a tela do roteador que chega nela, já na máquina. Se chegam vários (o preso nela e os de alcance), uma lista curta deixa escolher. |
 | **Redes** | O Vinculador não mexe nelas: escolha a rede de cada face na linha **Rede** da tela do roteador ou pelo [Tablet](network-tablet.md). |
+| **Tela de Sinal** | Clique numa [Tela de Sinal](signal-screen.md) para escolhê-la e depois num Baú, Bateria ou Tanque do mod: o armazenamento fica ligado à Tela (outro clique nele desliga). Sem limite de distância nem de dimensão. |
 
 ## Comandos
 
 | Gesto | Vincular | Abrir |
 | --- | --- | --- |
 | Clique num roteador | Escolhe o roteador | — |
+| Clique numa Tela de Sinal | Escolhe a Tela | — |
+| Clique num Baú, Bateria ou Tanque do mod | Com uma Tela escolhida, liga ou desliga o armazenamento a ela | Abre o roteador que chega nele |
 | Clique numa máquina | Vincula ou desvincula a máquina | Abre o roteador que chega nela |
 | Clique no ar | Abre a tela | Mostra a dica do modo |
 | Shift + roda do mouse | Passa para **Abrir** | Passa para **Vincular** |
@@ -57,6 +60,10 @@ blocos dela.
 Quando mais de um roteador chega na máquina, a lista mostra uma linha por roteador: o nome, se ele está
 **preso** na máquina ou chega por **alcance** e a distância. Clique numa linha para abrir. Só entram
 roteadores ao seu alcance e que você pode tocar.
+
+## Ligar armazenamentos a uma Tela
+
+Clique com o Vinculador numa [Tela de Sinal](signal-screen.md): ela fica escolhida e a action bar mostra quantos armazenamentos ela já tem. Depois clique num **Baú, Bateria ou Tanque** do mod para ligá-lo à Tela; clique de novo nele para desligar. Não há limite de distância nem de dimensão. Você precisa poder editar a Tela. Com o armazenamento ligado, a Tela mostra o conteúdo dele ao vivo; se o chunk estiver descarregado, ela mantém o último número, apagado.
 
 ## Exemplo: ligar as máquinas de uma sala
 

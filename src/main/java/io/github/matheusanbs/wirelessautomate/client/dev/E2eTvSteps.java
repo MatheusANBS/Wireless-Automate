@@ -11,10 +11,11 @@ import io.github.matheusanbs.wirelessautomate.client.tv.TvClientValues;
 import io.github.matheusanbs.wirelessautomate.client.tv.TvScreen;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
+import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
+import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.repairer.RepairerBlock;
 import io.github.matheusanbs.wirelessautomate.tv.TvArea;
 import io.github.matheusanbs.wirelessautomate.tv.TvAreaCheck;
-import io.github.matheusanbs.wirelessautomate.tv.TvBinding;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlock;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlockEntity;
 import io.github.matheusanbs.wirelessautomate.tv.TvFont;
@@ -23,6 +24,7 @@ import io.github.matheusanbs.wirelessautomate.tv.TvLayout;
 import io.github.matheusanbs.wirelessautomate.tv.TvPiece;
 import io.github.matheusanbs.wirelessautomate.tv.TvPieceType;
 import io.github.matheusanbs.wirelessautomate.tv.TvStyle;
+import io.github.matheusanbs.wirelessautomate.tv.TvTemplates;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -42,9 +44,10 @@ import org.lwjgl.glfw.GLFW;
 /**
  * A Tela de Sinal no e2e: uma parede atrás do jogador com a Tela (para o norte), uma tocha na parede e, ao lado, uma
  * Tela 1 × 1 vazia junto de um Reparador. As máquinas e a rede são as dos Fluxos ({@link E2eFlowsSteps#machines}).
- * Pede 4 × 2 com ↗ e aplica (o servidor confere), mostra o problema da tocha com 6 × 2, aplica o Painel da rede em
- * Itens, espera um número maior que zero chegar e fotografa a Tela no mundo de frente, de longe e de lado, a pequena
- * em 3/4 e, com um layout de branco opaco, branco a 50% e cinza 50% opaco, a transparência de perto.
+ * Pede 4 × 2 com ↗ e aplica (o servidor confere), mostra o problema da tocha com 6 × 2, monta e salva um layout no
+ * editor ({@link E2eTvEditorSteps}) e o fotografa na parede, põe o Painel da rede em Itens pelo servidor, espera um
+ * número maior que zero chegar e fotografa a Tela no mundo de frente, de longe e de lado, a pequena em 3/4 e, com um
+ * layout de branco opaco, branco a 50% e cinza 50% opaco, a transparência de perto.
  */
 final class E2eTvSteps {
     /** O olho a 4 blocos da frente da Tela; a frente fica a 13/16 do bloco, como a forma do bloco. */
@@ -71,18 +74,22 @@ final class E2eTvSteps {
         list.add(build(playerId));
         list.add(open("Tela: abrir"));
         sizeSteps(list, "");
-        contentSteps(list, "");
+        E2eTvEditorSteps.editorSteps(list, () -> tv);
         E2eVariants.escuro(list, () -> {
             list.add(E2eDarkSteps.themeClick("Tela: escuro", GuiTheme.DARK));
             list.add(tab("Tela: aba Tamanho no escuro", TvScreen.Tab.SIZE));
             shot(list, "tela-tamanho-escuro");
             problemSteps(list, "-escuro");
-            list.add(tab("Tela: aba Conteúdo no escuro", TvScreen.Tab.CONTENT));
-            shot(list, "tela-conteudo-escuro");
-            searchSteps(list, "-escuro");
+            list.add(tab("Tela: aba Editar no escuro", TvScreen.Tab.EDIT));
+            shot(list, "tela-editor-escuro");
             list.add(E2eDarkSteps.themeClick("Tela: claro de novo", GuiTheme.LIGHT));
         });
+        E2eTvEditorSteps.smallSteps(list);
         list.add(close("Tela: fechar"));
+        list.add(hideGui(playerId, true));
+        list.add(view("tela-editor-salvo", playerId, E2eTvSteps::worldEye, E2eTvSteps::worldTarget));
+        list.add(hideGui(playerId, false));
+        list.add(panel());
         list.add(values());
         list.add(hideGui(playerId, true));
         list.add(view("tela-bloco", playerId, () -> blockTarget().add(-1.6, 1.0, -2.3), E2eTvSteps::blockTarget));
@@ -100,9 +107,8 @@ final class E2eTvSteps {
                     () -> "pedido " + screen().requested()));
             shot(list, "tela-tamanho-pt");
             problemSteps(list, "-pt");
-            list.add(tab("Tela: aba Conteúdo em pt", TvScreen.Tab.CONTENT));
-            shot(list, "tela-conteudo-pt");
-            searchSteps(list, "-pt");
+            list.add(tab("Tela: aba Editar em pt", TvScreen.Tab.EDIT));
+            shot(list, "tela-editor-pt");
             list.add(close("Tela: fechar em pt"));
             list.add(hideGui(playerId, true));
             list.add(view("tela-mundo-pt", playerId, E2eTvSteps::worldEye, E2eTvSteps::worldTarget));
@@ -159,52 +165,18 @@ final class E2eTvSteps {
         }, () -> screen().requested().width() == 4 && screen().problem().ok(), () -> "pedido " + screen().requested()));
     }
 
-    /** A rede dos Fluxos e Itens na aba Conteúdo, o Painel aplicado e conferido no servidor. */
-    private static void contentSteps(List<Step> list, String suffix) {
-        list.add(tab("Tela: aba Conteúdo" + suffix, TvScreen.Tab.CONTENT));
-        list.add(new Step("Tela: escolher a rede dos Fluxos e Itens" + suffix, STEP_TIMEOUT_MS, () -> {
-            TvScreen s = screen();
-            UUID network = E2eFlowsSteps.flowsNetworkId();
-            int[] row = network == null ? null : s.networkCenter(network);
-            if (row == null) {
-                throw new StepFailure("a rede dos Fluxos não está à vista na lista");
-            }
-            clickAt(row);
-            clickAt(s.typeCenter(ResourceType.ITEM));
-        }, () -> E2eFlowsSteps.flowsNetworkId().equals(screen().selectedNetwork())
-                && screen().selectedType() == ResourceType.ITEM, () -> "rede " + screen().selectedNetwork()
-                + ", tipo " + screen().selectedType()));
-        list.add(new Step("Tela: aplicar o Painel de rede" + suffix, STEP_TIMEOUT_MS,
-                () -> clickAt(screen().templateCenter()), () -> {
-                    TvBinding first = onServer(server -> {
-                        TvBlockEntity entity = (TvBlockEntity) server.overworld().getBlockEntity(tv);
-                        return entity.layout().bindings().isEmpty() ? null : entity.layout().bindings().get(0);
-                    });
-                    return first != null && first.network().equals(E2eFlowsSteps.flowsNetworkId())
-                            && first.type() == ResourceType.ITEM
-                            && E2eFlowsSteps.flowsNetworkId().equals(screen().currentNetwork());
-                }, () -> "atual na tela " + screen().currentNetwork()));
-        shot(list, "tela-conteudo" + suffix);
-        searchSteps(list, suffix);
-    }
-
-    /**
-     * A busca das redes: "flu" deixa só a rede dos Fluxos (o trecho em coral e o rodapé "1 de N"), Enter a escolhe e Esc
-     * limpa a busca sem fechar a tela.
-     */
-    private static void searchSteps(List<Step> list, String suffix) {
-        list.add(new Step("Tela: buscar \"flu\"" + suffix, STEP_TIMEOUT_MS, () -> type("flu"),
-                () -> "flu".equals(screen().networkQuery()) && screen().networksShown() == 1
-                        && screen().networkCenter(E2eFlowsSteps.flowsNetworkId()) != null,
-                () -> "busca \"" + screen().networkQuery() + "\", " + screen().networksShown() + " rede(s)"));
-        shot(list, "tela-conteudo-busca" + suffix);
-        list.add(new Step("Tela: Enter escolhe e Esc limpa a busca" + suffix, STEP_TIMEOUT_MS, () -> {
-            TvScreen s = screen();
-            s.keyPressed(GLFW.GLFW_KEY_ENTER, 0, 0);
-            s.keyPressed(GLFW.GLFW_KEY_ESCAPE, 0, 0);
-        }, () -> Minecraft.getInstance().screen instanceof TvScreen s && s.networkQuery().isEmpty()
-                && E2eFlowsSteps.flowsNetworkId().equals(s.selectedNetwork()),
-                () -> "tela " + describe(Minecraft.getInstance().screen)));
+    /** O Painel da rede dos Fluxos em Itens, posto pelo servidor, para as fotos da Tela no mundo com números. */
+    private static Step panel() {
+        return new Step("Tela: Painel da rede dos Fluxos", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            TvBlockEntity entity = (TvBlockEntity) server.overworld().getBlockEntity(tv);
+            WaNetwork network = NetworkSavedData.get(server).network(E2eFlowsSteps.flowsNetworkId());
+            entity.setLayout(TvTemplates.networkPanel(network.name(), network.color(), network.id(),
+                    ResourceType.ITEM, entity.area()));
+            return null;
+        }), () -> Minecraft.getInstance().level.getBlockEntity(tv) instanceof TvBlockEntity entity
+                && !entity.layout().bindings().isEmpty()
+                && E2eFlowsSteps.flowsNetworkId().equals(entity.layout().bindings().get(0).network()),
+                () -> "layout no cliente");
     }
 
     /**
@@ -285,7 +257,7 @@ final class E2eTvSteps {
                 () -> "tela " + describe(Minecraft.getInstance().screen));
     }
 
-    private static Step tab(String name, TvScreen.Tab wanted) {
+    static Step tab(String name, TvScreen.Tab wanted) {
         return new Step(name, STEP_TIMEOUT_MS, () -> {
             if (screen().currentTab() != wanted) {
                 clickAt(screen().tabCenter(wanted));
@@ -294,7 +266,7 @@ final class E2eTvSteps {
     }
 
     /** A foto da tela aberta, sem nenhum texto cortado (o {@code GuiText} não abreviou nada). */
-    private static void shot(List<Step> list, String name) {
+    static void shot(List<Step> list, String name) {
         list.add(capture(name));
         list.add(new Step(name + ": nenhum texto cortado", STEP_TIMEOUT_MS, () -> {
         }, () -> stepTicks >= 2 && GuiText.clipCount() == 0, () -> GuiText.clipCount() + " texto(s) cortado(s)"));

@@ -150,7 +150,7 @@ public final class ModPayloads {
         // Números da Tela de Sinal (o cliente preenche o gancho).
         registrar.playToClient(TvValuesPayload.TYPE, TvValuesPayload.STREAM_CODEC,
                 (payload, context) -> TvClientHooks.values.accept(payload));
-        // Tamanho e modelo da Tela de Sinal, da tela aberta (handlers no TvEditing).
+        // Tamanho e layout da Tela de Sinal, da tela aberta (handlers no TvEditing).
         registrar.playToServer(TvSizePayload.TYPE, TvSizePayload.STREAM_CODEC,
                 (payload, context) -> TvEditing.handleSize(serverPlayer(context), payload));
         registrar.playToServer(TvLayoutPayload.TYPE, TvLayoutPayload.STREAM_CODEC,
@@ -160,8 +160,6 @@ public final class ModPayloads {
                 (payload, context) -> TvClientHooks.library.accept(payload));
         registrar.playToServer(TvLibraryActionPayload.TYPE, TvLibraryActionPayload.STREAM_CODEC,
                 (payload, context) -> TvLibraryActions.handle(serverPlayer(context), payload));
-        registrar.playToServer(TvTemplatePayload.TYPE, TvTemplatePayload.STREAM_CODEC,
-                (payload, context) -> TvEditing.handleTemplate(serverPlayer(context), payload));
     }
 
     private static @Nullable ServerPlayer serverPlayer(IPayloadContext context) {

@@ -246,4 +246,18 @@ public final class TvLayoutGameTests {
                 "sem valor na ligação não bate");
         helper.succeed();
     }
+
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void soOVazioDaEtapa1NaoDesenha(GameTestHelper helper) {
+        helper.assertTrue(TvLayout.EMPTY.blank(), "o vazio da etapa 1 desenha");
+        TvLayout read = TvLayout.CODEC.parse(NbtOps.INSTANCE, encode(TvLayout.EMPTY)).getOrThrow();
+        helper.assertTrue(read.blank(), "o vazio lido do NBT desenha");
+        helper.assertFalse(TvLayout.EMPTY.withTheme(TvTheme.AMBER).blank(), "só com tema não desenha");
+        helper.assertFalse(TvLayout.EMPTY.withScanlines(true).blank(), "só com as linhas não desenha");
+        helper.assertFalse(TvLayout.EMPTY.withBackground(new TvBackground(TvBackground.Kind.SOLID, 0xFF203040, 0))
+                .blank(), "só com o fundo fixo não desenha");
+        helper.assertFalse(TvLayout.of(List.of(plain(TvPieceType.SHAPE, 0, 4, Optional.empty()))).blank(),
+                "com peça não desenha");
+        helper.succeed();
+    }
 }

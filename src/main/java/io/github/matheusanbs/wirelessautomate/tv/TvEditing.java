@@ -4,11 +4,9 @@ import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.menu.TvMenu;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
-import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.packet.TvLayoutPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TvSizePayload;
-import io.github.matheusanbs.wirelessautomate.packet.TvTemplatePayload;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -18,7 +16,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
 
-/** As edições da Tela de Sinal pela tela do bloco: tamanho e modelo. Servidor, sempre validando tudo. */
+/** As edições da Tela de Sinal pela tela do bloco: o tamanho e o layout do editor. Servidor, sempre validando tudo. */
 public final class TvEditing {
     private TvEditing() {
     }
@@ -56,30 +54,6 @@ public final class TvEditing {
             case OVERLAP -> "overlap";
             case NONE -> "none";
         };
-    }
-
-    /**
-     * Sem rede, limpa o layout; com rede, exige que o jogador possa usá-la e o tipo carregado e aplica o Painel de
-     * rede dentro dos tetos da config. Devolve se aplicou; recusas avisam na barra de ação.
-     */
-    public static boolean applyTemplate(ServerPlayer player, TvBlockEntity tv, @Nullable UUID network,
-            @Nullable ResourceType type) {
-        if (network == null) {
-            tv.setLayout(TvLayout.EMPTY);
-            return true;
-        }
-        WaNetwork found = NetworkSavedData.get(player.server).network(network);
-        if (found == null || !found.canUse(player) || type == null || !LoadedTypes.contains(type)) {
-            player.displayClientMessage(Component.translatable("message.wirelessautomate.tv.template_denied"), true);
-            return false;
-        }
-        TvLayout layout = TvTemplates.networkPanel(found.name(), found.color(), network, type, tv.area());
-        if (layout.pieces().size() > Config.tvMaxElements() || layout.bindings().size() > Config.tvMaxBindings()) {
-            player.displayClientMessage(Component.translatable("message.wirelessautomate.tv.template_too_big"), true);
-            return false;
-        }
-        tv.setLayout(layout);
-        return true;
     }
 
     /** O resultado de salvar um layout: se gravou e quantas ligações saíram. */
@@ -184,15 +158,6 @@ public final class TvEditing {
             return;
         }
         applySize(player, tv, new TvArea(w, h, col, row));
-    }
-
-    /** O handler do modelo: o tipo vem pela chave, e uma desconhecida conta como tipo ausente. */
-    public static void handleTemplate(@Nullable ServerPlayer player, TvTemplatePayload payload) {
-        TvBlockEntity tv = open(player, payload.containerId());
-        if (tv == null) {
-            return;
-        }
-        applyTemplate(player, tv, payload.network().orElse(null), ResourceType.byKey(payload.typeKey()));
     }
 
     static @Nullable TvBlockEntity open(@Nullable ServerPlayer player, int containerId) {

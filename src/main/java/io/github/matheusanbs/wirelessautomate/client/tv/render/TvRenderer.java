@@ -49,7 +49,7 @@ public final class TvRenderer implements BlockEntityRenderer<TvBlockEntity> {
             TvFrameMesh.render(buffer.getBuffer(RenderType.entitySolid(ATLAS)), pose, w, h, overlay, light);
         }
         Level level = tv.getLevel();
-        if (tv.layout().pieces().isEmpty() || level == null) {
+        if (tv.layout().blank() || level == null) {
             return;
         }
         RenderType image = TvCanvases.image(tv, level.getGameTime());

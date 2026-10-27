@@ -111,6 +111,29 @@ final class E2eUi {
         screen.mouseReleased(x, y, GLFW.GLFW_MOUSE_BUTTON_LEFT);
     }
 
+    /**
+     * Arrasta com o botão esquerdo como o mouse: aperta em ({@code x0}, {@code y0}), passa por quatro pontos no
+     * caminho e solta em ({@code x1}, {@code y1}), com o cursor junto.
+     */
+    static void drag(Screen screen, int x0, int y0, int x1, int y1) throws StepFailure {
+        if (screen == null) {
+            throw new StepFailure("sem tela para arrastar");
+        }
+        moveMouse(x0, y0);
+        screen.mouseClicked(x0, y0, GLFW.GLFW_MOUSE_BUTTON_LEFT);
+        double lastX = x0;
+        double lastY = y0;
+        for (int i = 1; i <= 4; i++) {
+            double x = x0 + (x1 - x0) * i / 4.0;
+            double y = y0 + (y1 - y0) * i / 4.0;
+            moveMouse((int) x, (int) y);
+            screen.mouseDragged(x, y, GLFW.GLFW_MOUSE_BUTTON_LEFT, x - lastX, y - lastY);
+            lastX = x;
+            lastY = y;
+        }
+        screen.mouseReleased(x1, y1, GLFW.GLFW_MOUSE_BUTTON_LEFT);
+    }
+
     /** Digita na tela aberta como o teclado faria ({@code charTyped} letra a letra). */
     static void type(String text) throws StepFailure {
         Screen screen = Minecraft.getInstance().screen;

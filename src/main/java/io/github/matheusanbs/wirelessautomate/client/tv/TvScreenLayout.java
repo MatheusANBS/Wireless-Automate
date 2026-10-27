@@ -1,9 +1,10 @@
 package io.github.matheusanbs.wirelessautomate.client.tv;
 
 /**
- * As medidas da tela da Tela de Sinal, 320 × 220 de tamanho fixo, em pixels de interface a partir do canto da tela.
- * A aba Tamanho segue o mockup aprovado ({@code docs/preview/tela-de-sinal.html}, "Escolher o tamanho"): os controles
- * à esquerda e a prévia da parede à direita; a aba Conteúdo tem a lista das redes à esquerda e os tipos à direita.
+ * As medidas da tela da Tela de Sinal em pixels de interface a partir do canto da tela: o cabeçalho, comum às duas
+ * abas, e a aba Tamanho, 320 × 220 de tamanho fixo, que segue o mockup aprovado ({@code docs/preview/tela-de-sinal.html},
+ * "Escolher o tamanho"): os controles à esquerda e a prévia da parede à direita. A aba Editar tem as medidas dela no
+ * {@code TvEditorLayout}. A lista das redes ({@link TvNetworkList}) tem as dela aqui.
  */
 final class TvScreenLayout {
     static final int W = 320;
@@ -11,9 +12,10 @@ final class TvScreenLayout {
 
     static final Rect TITLE = new Rect(8, 8, 96, 9);
     static final Rect SIZE_TAB = new Rect(108, 5, 76, 14);
-    static final Rect CONTENT_TAB = new Rect(188, 5, 84, 14);
-    static final int THEME_X = W - 8 - 11;
+    static final Rect EDIT_TAB = new Rect(188, 5, 76, 14);
     static final int THEME_Y = 6;
+    /** A largura do "Descartar?" que o ✕ armado ganha à esquerda. */
+    static final int DISCARD_W = 64;
     /** A linha embaixo do cabeçalho. */
     static final int RULE_Y = 22;
 
@@ -41,38 +43,21 @@ final class TvScreenLayout {
     /** A prévia da parede, afundada. */
     static final Rect PREVIEW = new Rect(158, 28, 154, 154);
 
-    static final Rect NETWORKS_LABEL = new Rect(8, 30, 160, 9);
     /** O campo da busca das redes, no topo da lista. */
     static final Rect SEARCH = new Rect(8, 41, 160, 13);
     static final Rect LIST = new Rect(8, 56, 160, 113);
     /** "3 de 12", embaixo da lista. */
     static final Rect FOOTER = new Rect(8, 171, 160, 9);
     static final int ROW_H = 14;
-    static final Rect TYPE_LABEL = new Rect(178, 30, 134, 9);
-    static final int TYPE_X = 178;
-    static final int TYPE_Y = 41;
-    static final int TYPE_W = 134;
-    static final int TYPE_H = 14;
-    static final int TYPE_GAP = 3;
-    static final Rect TEMPLATE = new Rect(178, 134, 134, 16);
-    static final Rect CLEAR = new Rect(178, 154, 134, 16);
-    /** A linha que diz que o editor completo chega depois, em até duas linhas. */
-    static final Rect NOTE = new Rect(8, 184, 304, 20);
 
     private TvScreenLayout() {
     }
 
     /** Os três botões do crescer, na ordem do {@code TvArea.Grow}. */
     static final Rect[] GROW_BUTTONS = {growButton(0), growButton(1), growButton(2)};
-    /** Os botões dos tipos, um embaixo do outro; cabem todos os tipos do registro. */
-    static final Rect[] TYPE_BUTTONS = {typeButton(0), typeButton(1), typeButton(2), typeButton(3), typeButton(4)};
 
     private static Rect growButton(int index) {
         return new Rect(GROW_X, GROW_Y + index * (GROW_H + GROW_GAP), GROW_W, GROW_H);
-    }
-
-    private static Rect typeButton(int index) {
-        return new Rect(TYPE_X, TYPE_Y + index * (TYPE_H + TYPE_GAP), TYPE_W, TYPE_H);
     }
 
     /** Um retângulo relativo ao canto da tela. */

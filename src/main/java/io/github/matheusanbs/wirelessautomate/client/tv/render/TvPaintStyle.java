@@ -27,19 +27,22 @@ final class TvPaintStyle implements Function<TvBinding, OptionalDouble> {
     /** Alguma regra que bate manda piscar (a Tela entra no conjunto do {@link TvCanvases}). */
     boolean blinks;
 
-    private TvLayout layout;
+    private TvLayout values;
     private long pos;
     private int revision;
 
-    /** Resolve a peça: {@code blinkOff} é a fase do piscar no instante do desenho. */
-    void resolve(TvPiece piece, TvLayout layout, long pos, int revision, boolean blinkOff) {
+    /**
+     * Resolve a peça: {@code values} é o layout cujas ligações indexam os números (ver {@link TvPainter#paint}) e
+     * {@code blinkOff} a fase do piscar no instante do desenho.
+     */
+    void resolve(TvPiece piece, TvLayout layout, TvLayout values, long pos, int revision, boolean blinkOff) {
         TvStyle style = piece.style();
         int textColor = style.color();
         int fill = style.background();
         skip = false;
         blinks = false;
         if (!piece.rules().isEmpty()) {
-            this.layout = layout;
+            this.values = values;
             this.pos = pos;
             this.revision = revision;
             Optional<TvRule> hit = TvRules.first(piece.rules(), own(piece), this);
@@ -71,7 +74,7 @@ final class TvPaintStyle implements Function<TvBinding, OptionalDouble> {
     }
 
     private OptionalDouble number(TvBinding binding) {
-        double value = TvClientValues.value(pos, revision, layout.bindingIndex(binding));
+        double value = TvClientValues.value(pos, revision, values.bindingIndex(binding));
         return Double.isNaN(value) ? OptionalDouble.empty() : OptionalDouble.of(value);
     }
 }

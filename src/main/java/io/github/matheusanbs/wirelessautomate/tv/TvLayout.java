@@ -93,6 +93,16 @@ public record TvLayout(List<TvPiece> pieces, TvTheme theme, TvBackground backgro
         return of(pieces, theme, background, scanlines);
     }
 
+    /**
+     * Se o layout é o vazio da etapa 1 ({@link #EMPTY}: sem peças, com o tema, o fundo e as linhas de padrão): a
+     * Tela não desenha nada e mostra o vidro apagado. Com qualquer outra coisa (inclusive só um tema ou um fundo
+     * escolhido no editor) ela desenha. Barato: a primeira comparação já decide numa Tela com peças.
+     */
+    public boolean blank() {
+        return pieces.isEmpty() && !scanlines && theme.equals(TvTheme.DEFAULT)
+                && background.equals(TvBackground.DEFAULT);
+    }
+
     /** A posição da ligação em {@link #bindings()}, ou -1 se nenhuma peça a usa. */
     public int bindingIndex(TvBinding binding) {
         return bindings.indexOf(binding);

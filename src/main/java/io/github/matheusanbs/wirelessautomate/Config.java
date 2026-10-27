@@ -71,6 +71,7 @@ public final class Config {
     public static final ModConfigSpec.IntValue TV_VIEW_DISTANCE;
     public static final ModConfigSpec.IntValue TV_MAX_COMPONENTS;
     public static final ModConfigSpec.IntValue TV_MAX_THEMES;
+    public static final ModConfigSpec.IntValue TV_MAX_LINKS;
     /** FE por tick que um cristal de rendimento 1 dá ao Núcleo de Ressonância, por tier. */
     public static final Map<RouterTier, ModConfigSpec.LongValue> RESONATOR_FE_PER_CRYSTAL = new EnumMap<>(RouterTier.class);
 
@@ -289,6 +290,10 @@ public final class Config {
         TV_MAX_THEMES = builder
                 .comment("Quantos temas cada jogador guarda na biblioteca do editor da Tela de Sinal.")
                 .defineInRange("maxThemes", 32, 1, 256);
+        TV_MAX_LINKS = builder
+                .comment("Quantos armazenamentos do mod (Baús, Baterias e Tanques) uma Tela de Sinal pode ter ligados pelo "
+                        + "Vinculador, em qualquer distância e dimensão.")
+                .defineInRange("maxLinks", 32, 1, 256);
         builder.pop();
 
         builder.push("guide");
@@ -568,6 +573,11 @@ public final class Config {
     /** Máximo de temas na biblioteca de um jogador. */
     public static int tvMaxThemes() {
         return read(TV_MAX_THEMES);
+    }
+
+    /** Máximo de armazenamentos ligados a uma Tela de Sinal. */
+    public static int tvMaxLinks() {
+        return read(TV_MAX_LINKS);
     }
 
     /** Distância de desenho e de envio da Tela de Sinal, em blocos. */

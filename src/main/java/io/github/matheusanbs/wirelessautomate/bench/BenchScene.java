@@ -297,10 +297,19 @@ final class BenchScene {
                 tier.rate(ResourceType.ENERGY));
     }
 
+    /** {@code WA_BENCH_WATCH=1} liga a vigia de uma Tela de Sinal nos Baús do mod da cena (a medida da etapa 3 da Tela). */
+    private static final boolean WATCH_CHESTS = "1".equals(System.getenv("WA_BENCH_WATCH"));
+
     private void placeMachine(Node node) {
         switch (node.kind()) {
             case SMALL -> level.setBlock(node.machine(), storage.small(), PLACE_FLAGS);
-            case CHEST -> level.setBlock(node.machine(), BenchStorage.chest(), PLACE_FLAGS);
+            case CHEST -> {
+                level.setBlock(node.machine(), BenchStorage.chest(), PLACE_FLAGS);
+                if (WATCH_CHESTS && level.getBlockEntity(node.machine()) instanceof StorageChestBlockEntity chest) {
+                    // Mede o custo da vigia de uma Tela de Sinal no Baú: o total e o pedregulho.
+                    chest.startWatch().watchItem(Items.COBBLESTONE);
+                }
+            }
             case BIG -> {
                 if (storage.bigIsDoubleChest()) {
                     // Facing norte: a metade LEFT se liga à de leste (RIGHT).

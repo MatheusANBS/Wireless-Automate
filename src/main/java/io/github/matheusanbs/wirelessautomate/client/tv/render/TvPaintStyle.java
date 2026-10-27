@@ -43,11 +43,11 @@ final class TvPaintStyle implements Function<TvBinding, OptionalDouble> {
         int fill = style.background();
         skip = false;
         blinks = false;
+        this.values = values;
+        this.pos = pos;
+        this.revision = revision;
+        this.preview = preview;
         if (!piece.rules().isEmpty()) {
-            this.values = values;
-            this.pos = pos;
-            this.revision = revision;
-            this.preview = preview;
             Optional<TvRule> hit = TvRules.first(piece.rules(), own(piece), this);
             if (hit.isPresent()) {
                 TvRule rule = hit.get();
@@ -56,6 +56,10 @@ final class TvPaintStyle implements Function<TvBinding, OptionalDouble> {
                 blinks = rule.blink();
                 skip = rule.hide() || blinks && blinkOff;
             }
+        }
+        if (piece.type() == TvPieceType.VALUE && piece.binding().isPresent()
+                && TvPaintNumbers.stale(piece.binding().get(), values, pos, revision, preview)) {
+            textColor = TvColor.theme(TvColor.MUTED);
         }
         color = TvPaintMath.withOpacity(TvColor.resolve(textColor, layout.theme()), style.opacity());
         background = TvPaintMath.withOpacity(TvColor.resolve(fill, layout.theme()), style.opacity());

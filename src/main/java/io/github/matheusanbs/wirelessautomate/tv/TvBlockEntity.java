@@ -1,13 +1,19 @@
 package io.github.matheusanbs.wirelessautomate.tv;
 
 import com.mojang.serialization.DataResult;
+import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.Connection;
@@ -28,6 +34,10 @@ public class TvBlockEntity extends BlockEntity {
     private TvArea area = TvArea.SINGLE;
     private TvLayout layout = TvLayout.EMPTY;
     private int revision;
+    /** Os armazenamentos do mod ligados pelo Vinculador (qualquer dimensão), na ordem em que foram ligados. */
+    private static final int HARD_LINKS = 256;
+    private final List<GlobalPos> links = new ArrayList<>();
+    private final List<GlobalPos> linksView = Collections.unmodifiableList(links);
     /** Só no servidor, criado quando alguém perto precisa dos números; não vai ao NBT. */
     private @Nullable TvFeed feed;
     /** A caixa do {@link #renderBox()} e a área e o facing com que foi feita; o renderer a pede a cada quadro. */
@@ -59,6 +69,43 @@ public class TvBlockEntity extends BlockEntity {
     /** Sobe a cada mudança de área ou de layout; o cliente a usa para saber se a imagem está velha. */
     public int revision() {
         return revision;
+    }
+
+    /** Os armazenamentos ligados; só leitura. */
+    public List<GlobalPos> links() {
+        return linksView;
+    }
+
+    public boolean hasLink(GlobalPos pos) {
+        return links.contains(pos);
+    }
+
+    /** Liga o armazenamento; falso se já está ligado ou se passou de {@code tv.maxLinks}. */
+    public boolean link(GlobalPos pos) {
+        if (links.contains(pos) || links.size() >= Config.tvMaxLinks()) {
+            return false;
+        }
+        links.add(pos);
+        linksChanged();
+        return true;
+    }
+
+    /** Desliga o armazenamento; falso se não estava ligado. */
+    public boolean unlink(GlobalPos pos) {
+        if (!links.remove(pos)) {
+            return false;
+        }
+        linksChanged();
+        return true;
+    }
+
+    /** As ligações não mudam o que a Tela desenha: avisa o chunk e os clientes, sem subir a revisão do layout. */
+    private void linksChanged() {
+        setChanged();
+        if (level != null) {
+            BlockState state = getBlockState();
+            level.sendBlockUpdated(worldPosition, state, state, Block.UPDATE_CLIENTS);
+        }
     }
 
     /** O canal de dados desta Tela no servidor, ou {@code null} se nunca houve quem lesse. */
@@ -166,6 +213,13 @@ public class TvBlockEntity extends BlockEntity {
         tag.putInt("anchor_row", area.anchorRow());
         tag.putInt("revision", revision);
         TvLayout.CODEC.encodeStart(NbtOps.INSTANCE, layout).result().ifPresent(value -> tag.put("layout", value));
+        if (!links.isEmpty()) {
+            ListTag list = new ListTag();
+            for (GlobalPos link : links) {
+                GlobalPos.CODEC.encodeStart(NbtOps.INSTANCE, link).result().ifPresent(list::add);
+            }
+            tag.put("links", list);
+        }
     }
 
     private void readShared(CompoundTag tag) {
@@ -190,6 +244,13 @@ public class TvBlockEntity extends BlockEntity {
             }
         }
         layout = loaded;
+        links.clear();
+        if (tag.get("links") instanceof ListTag list) {
+            for (int i = 0; i < list.size() && links.size() < HARD_LINKS; i++) {
+                GlobalPos.CODEC.parse(NbtOps.INSTANCE, list.get(i)).result()
+                        .filter(link -> !links.contains(link)).ifPresent(links::add);
+            }
+        }
     }
 
     @Override

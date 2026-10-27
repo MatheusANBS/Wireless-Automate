@@ -14,6 +14,7 @@ import io.github.matheusanbs.wirelessautomate.tv.TvStyle;
 import io.github.matheusanbs.wirelessautomate.tv.TvUnit;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
 
 /**
  * O desenho do layout de uma Tela na textura dela, só no redesenho (nunca por quadro). As peças vão em ordem, em
@@ -98,7 +99,8 @@ public final class TvPainter {
 
     private static void text(GuiGraphics g, Font font, TvPiece piece, TvStyle style, String text, float scale,
             int targetHeight) {
-        int width = font.width(text);
+        Component line = TvFonts.text(style.font(), text);
+        int width = font.width(line);
         float size = TvFit.size(style.size(), piece.width(), piece.height(), width / LINE, style.fit());
         float k = size / LINE;
         float shown = width * k;
@@ -117,7 +119,7 @@ public final class TvPainter {
         g.pose().pushPose();
         g.pose().translate(x, y, 0);
         g.pose().scale(k, k, 1);
-        g.drawString(font, text, 0, 0, style.color(), false);
+        g.drawString(font, line, 0, 0, style.color(), false);
         g.pose().popPose();
         if (clip) {
             RenderSystem.disableScissor();

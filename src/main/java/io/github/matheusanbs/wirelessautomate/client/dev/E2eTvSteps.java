@@ -17,6 +17,7 @@ import io.github.matheusanbs.wirelessautomate.tv.TvAreaCheck;
 import io.github.matheusanbs.wirelessautomate.tv.TvBinding;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlock;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlockEntity;
+import io.github.matheusanbs.wirelessautomate.tv.TvFont;
 import io.github.matheusanbs.wirelessautomate.tv.TvFormat;
 import io.github.matheusanbs.wirelessautomate.tv.TvLayout;
 import io.github.matheusanbs.wirelessautomate.tv.TvPiece;
@@ -107,6 +108,11 @@ final class E2eTvSteps {
             list.add(hideGui(playerId, false));
             list.add(language("en_us"));
         });
+        list.add(fonts());
+        list.add(hideGui(playerId, true));
+        list.add(view("tela-fontes", playerId, E2eTvSteps::worldEye, E2eTvSteps::worldTarget));
+        list.add(view("tela-fontes-longe", playerId, () -> worldTarget().add(0, 0, -8), E2eTvSteps::worldTarget));
+        list.add(hideGui(playerId, false));
         list.add(halfAlpha());
         list.add(hideGui(playerId, true));
         list.add(view("tela-transparencia", playerId, () -> smallTarget().add(0, 0, -1.3), E2eTvSteps::smallTarget));
@@ -311,6 +317,35 @@ final class E2eTvSteps {
             return null;
         }), () -> Minecraft.getInstance().level.getBlockEntity(small) instanceof TvBlockEntity entity
                 && entity.layout().pieces().size() == 3, () -> "layout no cliente");
+    }
+
+    /**
+     * A Tela 4 × 2 (128 × 64 px de desenho) com uma coluna por fonte TTF (pixel, terminal, mono e sans)
+     * e três linhas de Texto nos tamanhos 8, 16 e 32, sem o ajuste, para o tamanho
+     * pedido valer.
+     */
+    private static Step fonts() {
+        return new Step("Tela: layout das fontes na Tela 4 × 2", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            TvBlockEntity entity = (TvBlockEntity) server.overworld().getBlockEntity(tv);
+            TvFont[] fonts = {TvFont.PIXEL, TvFont.TERMINAL, TvFont.MONO, TvFont.SANS};
+            String[] lines = {"Ag1", "Ag", "A"};
+            int[] sizes = {8, 16, 32};
+            int[] tops = {0, 8, 24};
+            List<TvPiece> pieces = new java.util.ArrayList<>();
+            for (int c = 0; c < fonts.length; c++) {
+                for (int r = 0; r < sizes.length; r++) {
+                    pieces.add(text(c * 32, tops[r], 32, sizes[r], lines[r], fonts[c]));
+                }
+            }
+            entity.setLayout(TvLayout.of(pieces));
+            return null;
+        }), () -> Minecraft.getInstance().level.getBlockEntity(tv) instanceof TvBlockEntity entity
+                && entity.layout().pieces().size() == 12, () -> "layout das fontes no cliente");
+    }
+
+    private static TvPiece text(int x, int y, int w, int size, String text, TvFont font) {
+        return new TvPiece(TvPieceType.TEXT, x, y, w, size, 0, "", Optional.empty(), TvFormat.DEFAULT,
+                TvStyle.DEFAULT.withText(text).withSize(size).withFit(false).withFont(font));
     }
 
     private static TvPiece shape(int x, int y, int w, int h, int background) {

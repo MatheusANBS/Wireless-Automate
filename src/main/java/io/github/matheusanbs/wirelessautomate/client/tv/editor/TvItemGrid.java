@@ -252,4 +252,9 @@ final class TvItemGrid extends TvControl {
     int[] bounds() {
         return new int[] {ax, ay, w, h};
     }
+
+    /** Escolhe o item largado pelo JEI, como um clique na célula dele. */
+    void accept(ResourceLocation id) {
+        choose.accept(Optional.of(id));
+    }
 }

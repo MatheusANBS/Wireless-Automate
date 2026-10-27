@@ -154,13 +154,63 @@ final class E2eTvPiecesSteps {
         E2eTvSteps.shot(list, "tela-editor-armazenamento");
         list.add(new Step("Peças: Esc solta o foco da busca", STEP_TIMEOUT_MS, () -> E2eTvSteps.screen().editor().escape(),
                 () -> true, () -> ""));
+        ghostSteps(list);
         list.add(close("Peças: fechar o editor"));
+        E2eTvLayoutSteps.layoutSteps(list, playerId, tv, () -> chest, () -> battery);
+        list.add(new Step("Peças: de volta ao painel", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            ((TvBlockEntity) server.overworld().getBlockEntity(tv.get())).setLayout(panel());
+            return null;
+        }), () -> Minecraft.getInstance().level.getBlockEntity(tv.get()) instanceof TvBlockEntity entity
+                && entity.layout().pieces().size() == panel().pieces().size(), () -> "layout no cliente"));
         list.add(new Step("Peças: soltar o Baú e a Bateria", STEP_TIMEOUT_MS, () -> onServer(server -> {
             ServerLevel level = server.overworld();
             level.setBlockAndUpdate(chest, Blocks.AIR.defaultBlockState());
             level.setBlockAndUpdate(battery, Blocks.AIR.defaultBlockState());
             return null;
         }), () -> Minecraft.getInstance().level.getBlockState(chest).isAir(), () -> "blocos no cliente"));
+    }
+
+    /**
+     * O arrastar do JEI, sem o JEI: o retângulo que o {@code TvGhostHandler} oferece existe com a aba Editar e a grade
+     * de itens, e o item largado vira o filtro do Baú no Valor e o item do Ícone.
+     */
+    private static void ghostSteps(List<Step> list) {
+        ResourceLocation redstone = ResourceLocation.withDefaultNamespace("redstone");
+        list.add(new Step("Peças: escolher o Valor do Baú de novo", STEP_TIMEOUT_MS, () -> {
+            var probe = E2eTvSteps.screen().editor().probe();
+            click(E2eTvSteps.screen(), probe.layerCenter(stockPiece)[0], probe.layerCenter(stockPiece)[1]);
+        }, () -> E2eTvSteps.screen().editor().selection().size() == 1
+                && E2eTvSteps.screen().editor().probe().propCenter("data.storage.items") != null && stepTicks >= 10,
+                () -> "escolha " + E2eTvSteps.screen().editor().selection()));
+        list.add(new Step("Peças: soltar um item do JEI no filtro do Baú", STEP_TIMEOUT_MS, () -> {
+            if (E2eTvSteps.screen().ghostBounds() == null) {
+                throw new StepFailure("sem alvo do JEI na grade do Baú");
+            }
+            E2eTvSteps.screen().editor().acceptGhost(redstone);
+        }, () -> E2eTvSteps.screen().editor().draft().pieces().get(stockPiece).binding().map(
+                b -> b.storage() != null && b.storage().item().equals(Optional.of(redstone))).orElse(false),
+                () -> "ligação " + E2eTvSteps.screen().editor().draft().pieces().get(stockPiece).binding()));
+        list.add(new Step("Peças: escolher o Ícone", STEP_TIMEOUT_MS, () -> {
+            var probe = E2eTvSteps.screen().editor().probe();
+            click(E2eTvSteps.screen(), probe.layerCenter(stockPiece - 1)[0], probe.layerCenter(stockPiece - 1)[1]);
+        }, () -> E2eTvSteps.screen().editor().selection().size() == 1
+                && E2eTvSteps.screen().editor().probe().propCenter("data.icon.id") != null && stepTicks >= 10,
+                () -> "escolha " + E2eTvSteps.screen().editor().selection()));
+        list.add(new Step("Peças: soltar um item do JEI no Ícone", STEP_TIMEOUT_MS, () -> {
+            if (E2eTvSteps.screen().ghostBounds() == null) {
+                throw new StepFailure("sem alvo do JEI no Ícone");
+            }
+            E2eTvSteps.screen().editor().acceptGhost(redstone);
+        }, () -> E2eTvSteps.screen().editor().draft().pieces().get(stockPiece - 1).style().part().item()
+                .equals(Optional.of(redstone)), () -> "Ícone " + E2eTvSteps.screen().editor().draft().pieces()
+                .get(stockPiece - 1).style().part().item()));
+        list.add(new Step("Peças: salvar para poder fechar sem confirmar", STEP_TIMEOUT_MS,
+                () -> click(E2eTvSteps.screen(), E2eTvSteps.screen().editor().probe().barCenter("SAVE")[0],
+                        E2eTvSteps.screen().editor().probe().barCenter("SAVE")[1]),
+                () -> !E2eTvSteps.screen().editor().dirty(), () -> "não salvo"));
+        list.add(new Step("Peças: Esc solta a escolha do Ícone", STEP_TIMEOUT_MS,
+                () -> E2eTvSteps.screen().editor().escape(), () -> E2eTvSteps.screen().editor().selection().isEmpty(),
+                () -> "escolha " + E2eTvSteps.screen().editor().selection()));
     }
 
     private static boolean linked(BlockPos tv, BlockPos storage) throws Exception {

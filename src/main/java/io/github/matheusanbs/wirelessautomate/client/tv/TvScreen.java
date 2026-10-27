@@ -371,6 +371,11 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
         return editorTab;
     }
 
+    /** O retângulo onde o JEI pode largar um item, só com a aba Editar aberta; {@code null} sem alvo. */
+    public int @Nullable [] ghostBounds() {
+        return tab == Tab.EDIT ? editorTab.ghostBounds() : null;
+    }
+
     /** O ponto da alça do canto da aba Editar (gancho do e2e). */
     public int[] gripCenter() {
         return new int[] {leftPos + imageWidth - 3, topPos + imageHeight - 3};

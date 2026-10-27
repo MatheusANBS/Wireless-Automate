@@ -175,6 +175,14 @@ Custo: só GUI; o quadrado de cor é pintado uma vez numa textura pequena por ma
 - [ ] Arrastar uma peça da paleta direto para a posição no canvas; dica no canvas vazio; dica (tooltip) em todo botão de ícone.
 - [ ] e2e: capturas `tela-editor-cor`, `tela-editor-secoes`, `tela-editor-regras-frase`; commit "Tela de Sinal: seletor de cor e editor mais prático".
 
+### Task 13: Ícones do editor em sprites (pedido do dono em 27/10)
+
+Custo: nenhum em jogo; sprites carregados uma vez pelo atlas da GUI.
+
+- [ ] Um script próprio `scripts/textures/tela_icones.py` (PIL, sobre a paleta de `scripts/textures/identidade.py`, no estilo dos sprites `gui/port_*` e `gui/type/*`; não rode o `gerar_texturas.py`) gera os ícones do editor em `textures/gui/tv/<nome>.png`, 16 × 16, desenhados à mão em pixel art com contorno e as duas variantes que os temas pedirem, e uma folha de prévia `docs/preview/tela-icones.png`.
+- [ ] Todos os ícones do `TvIcons` (Tarefa 12) passam a ser esses sprites: peças (Valor, Texto, Forma), abas da coluna (Peças, Componentes, Camadas), desfazer e refazer, agrupar, desagrupar, duplicar, remover, salvar, salvar como componente, caber, olho e olho fechado, cadeado, alinhar esquerda/centro/direita, conta-gotas, seção aberta e fechada, renomear, e o que mais a Tarefa 12 listar. Nenhum ícone desenhado por fill ou por caractere de texto no editor.
+- [ ] e2e: as capturas do editor de novo, olhadas lado a lado com as de antes; commit "Tela de Sinal: ícones do editor em sprites".
+
 ## Autorrevisão (feita ao escrever)
 
 - **Cobertura da spec:** decisões 1 e 2 (Tarefa 6), 3 (6), 4 (6, aviso e Descartar), 5 (4), 6 (6), 7 (7), 8 (7), 9 (6), 10 (8), 11 (8), 12 (8), 13 (1, 3 e 8), 14 (2), 15 (1 e 9), 16 (3 e 9), 17 (5 e 9), 18 (5 e 9); chaves e protocolo (1, 4 e 5); custo em cada tarefa.

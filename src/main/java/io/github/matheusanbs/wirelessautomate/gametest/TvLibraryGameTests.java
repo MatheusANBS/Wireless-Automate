@@ -238,4 +238,47 @@ public final class TvLibraryGameTests {
                     .MAX_COMPONENT_BYTES + 64L * 1024 < TvLibraryPayload.MAX_BYTES, "o teto não cabe no payload");
         });
     }
+
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void bibliotecaSoVoltaQuandoMudouEOpenUmaVezPorMenu(GameTestHelper helper) {
+        TestPlayers.MenuPlayer player = TestPlayers.menuOpener(helper);
+        withScreen(helper, player.getUUID(), tv -> {
+            TvMenu menu = opened(helper, player);
+            helper.assertTrue(TvLibraryActions.handle(player, TvLibraryActionPayload.open(menu.containerId)),
+                    "o primeiro OPEN responde");
+            helper.assertFalse(TvLibraryActions.handle(player, TvLibraryActionPayload.open(menu.containerId)),
+                    "o OPEN repetido no mesmo menu não responde");
+            helper.assertFalse(TvLibraryActions.handle(player, TvLibraryActionPayload.remove(menu.containerId,
+                    Kind.COMPONENT, "não existe")), "remover o que não existe não manda nada");
+            helper.assertFalse(TvLibraryActions.handle(player, TvLibraryActionPayload.rename(menu.containerId,
+                    Kind.THEME, "nada", "outro")), "renomear o que não existe não manda nada");
+            helper.assertTrue(TvLibraryActions.handle(player, TvLibraryActionPayload.saveTheme(menu.containerId,
+                    theme("Um", 0xFF000000))), "salvar que valeu manda a biblioteca");
+        });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void cotaDeBytesPorJogadorRecusaComoCheia(GameTestHelper helper) {
+        TvLibrary library = new TvLibrary();
+        UUID id = UUID.randomUUID();
+        List<TvPiece> pieces = new java.util.ArrayList<>();
+        for (int i = 0; i < 100; i++) {
+            pieces.add(new TvPiece(TvPieceType.TEXT, 0, 0, 20, 8, 1, "", Optional.empty(), TvFormat.DEFAULT,
+                    new TvStyle(TvStyle.DEFAULT.color(), 0, 0, 0, 8, TvStyle.DEFAULT.align(), true, "y".repeat(100))));
+        }
+        TvLibrary.Result last = TvLibrary.Result.OK;
+        int saved = 0;
+        for (int i = 0; i < 64 && last == TvLibrary.Result.OK; i++) {
+            last = library.saveComponent(id, new TvComponent("C" + i, pieces));
+            if (last == TvLibrary.Result.OK) {
+                saved++;
+            }
+        }
+        helper.assertValueEqual(last, TvLibrary.Result.FULL, "a cota de bytes deve encher antes dos 64 componentes");
+        helper.assertTrue(saved >= 1 && saved < 64, "quantos coube: " + saved);
+        helper.assertValueEqual(library.removeComponent(id, "C0"), TvLibrary.Result.OK, "remover libera a cota");
+        helper.assertValueEqual(library.saveComponent(id, new TvComponent("C0", pieces)), TvLibrary.Result.OK,
+                "cabe de novo depois de remover");
+        helper.succeed();
+    }
 }

@@ -29,6 +29,7 @@ final class TvColorPopup implements TvPopup {
     private static final int STRIP = 8;
     private static final int COLUMN = 2;
     private static final int ROW2_Y = 94;
+    private static final int EYE_Y = ROW2_Y - 2;
     private static final int THEME_Y = 14;
     private static final int SWATCH = 14;
     private static final int RECENT_Y = 119;
@@ -192,11 +193,10 @@ final class TvColorPopup implements TvPopup {
             alphaStrip(g);
         }
         hex.render(g, mouseX, mouseY);
-        boolean eyeOver = in(mouseX, mouseY, eyeX(), y + ROW2_Y, 13, 11);
-        GuiPaint.box(g, eyeX(), y + ROW2_Y, 13, 11, picking ? GuiPaint.SELECTED : GuiPaint.BUTTON,
+        boolean eyeOver = in(mouseX, mouseY, eyeX(), y + EYE_Y, TvIcons.SIZE, TvIcons.SIZE);
+        GuiPaint.box(g, eyeX(), y + EYE_Y, TvIcons.SIZE, TvIcons.SIZE, picking ? GuiPaint.SELECTED : GuiPaint.BUTTON,
                 picking ? GuiPaint.ACCENT : eyeOver ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
-        TvIcons.draw(g, TvIcons.Icon.EYEDROPPER, eyeX() + 2, y + ROW2_Y + 1,
-                picking ? GuiPaint.SELECTED_TEXT : GuiPaint.FG);
+        TvIcons.draw(g, TvIcons.Icon.EYEDROPPER, eyeX(), y + EYE_Y);
         if (allowNone) {
             fillSwatch(g, noneX(), y + ROW2_Y, 11, 11, 0, value == 0, mouseX, mouseY);
         }
@@ -287,7 +287,7 @@ final class TvColorPopup implements TvPopup {
         } else if (alpha && in(mx, my, alphaX(), svY(), STRIP, SV_H)) {
             drag = Drag.ALPHA;
             dragTo(mx, my);
-        } else if (in(mx, my, eyeX(), y + ROW2_Y, 13, 11)) {
+        } else if (in(mx, my, eyeX(), y + EYE_Y, TvIcons.SIZE, TvIcons.SIZE)) {
             picking = !picking;
         } else if (allowNone && in(mx, my, noneX(), y + ROW2_Y, 11, 11)) {
             value = 0;
@@ -365,7 +365,7 @@ final class TvColorPopup implements TvPopup {
 
     @Override
     public @Nullable Component tooltip(double mx, double my) {
-        return in(mx, my, eyeX(), y + ROW2_Y, 13, 11) ? eyeTip : null;
+        return in(mx, my, eyeX(), y + EYE_Y, TvIcons.SIZE, TvIcons.SIZE) ? eyeTip : null;
     }
 
     @Override
@@ -396,7 +396,7 @@ final class TvColorPopup implements TvPopup {
     }
 
     int[] eyeCenter() {
-        return new int[] {eyeX() + 6, y + ROW2_Y + 5};
+        return new int[] {eyeX() + TvIcons.SIZE / 2, y + EYE_Y + TvIcons.SIZE / 2};
     }
 
     int value() {

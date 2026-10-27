@@ -85,10 +85,10 @@ final class TvStyleTab {
     }
 
     private static void text(TvForm form, TvPropsCtx ctx) {
-        int y = form.inline("style.font", TvPropsCtx.key("style.font"));
+        int y = form.inline("style.font", TvPropsCtx.key("style.font"), 4);
         form.add(new TvFontMenu.Field(form.font, "style.font", TvForm.LABEL_W, y, TvForm.W - TvForm.LABEL_W, ctx,
                 () -> ctx.piece().style().font(), f -> style(ctx, "style.font", s -> s.withFont(f))));
-        form.endRow(TvControls.ROW - 1);
+        form.endRow(TvIcons.SIZE);
         form.add(new TvControls.Label(form.font, "style.size.label", 0, form.y() + 2, TvForm.LABEL_W - 2,
                 GuiPaint.MUTED, () -> TvPropsCtx.key(ctx.piece().style().fit() ? "style.size.max" : "style.size")));
         form.add(new TvNumberField(form.font, "style.size", TvForm.LABEL_W, form.y(), TvForm.W - TvForm.LABEL_W, 1,
@@ -97,13 +97,13 @@ final class TvStyleTab {
         form.endRow(TvTextField.H);
         form.toggle("style.fit", TvPropsCtx.key("style.fit"), () -> ctx.piece().style().fit(),
                 on -> style(ctx, "style.fit", s -> s.withFit(on)));
-        int alignY = form.inline("style.align", TvPropsCtx.key("style.align"));
+        int alignY = form.inline("style.align", TvPropsCtx.key("style.align"), 4);
         form.add(new TvIconControls.IconSegment("style.align", TvForm.LABEL_W, alignY, TvForm.W - TvForm.LABEL_W,
                 ALIGN_ICONS, List.of(TvPropsCtx.key("align.left.tip"), TvPropsCtx.key("align.center.tip"),
                         TvPropsCtx.key("align.right.tip")),
                 () -> ctx.piece().style().align().ordinal(),
                 index -> style(ctx, "style.align", s -> s.withAlign(TvAlign.values()[index]))));
-        form.endRow(TvControls.ROW - 1);
+        form.endRow(TvIcons.SIZE);
     }
 
     private static void colors(TvForm form, TvPropsCtx ctx, boolean texty) {

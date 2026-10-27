@@ -8,7 +8,7 @@ import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A barra de botões embaixo da miniatura: o desfazer e o refazer (↶ ↷) na ponta esquerda, Agrupar, Desagrupar,
+ * A barra de botões embaixo da miniatura: o desfazer e o refazer (ícones) na ponta esquerda, Agrupar, Desagrupar,
  * Salvar como componente, Duplicar e Remover, e Salvar na ponta direita, na cor de destaque enquanto há mudança não salva. Quando os
  * nomes não cabem (janela estreita), os cinco viram símbolos com o nome na dica. Medida e disposta só no
  * {@link #layout}.
@@ -21,9 +21,10 @@ final class TvEditorBar {
             Action.REMOVE);
     private static final String[] KEYS = {"undo", "redo", "group_selection", "ungroup", "save_component", "duplicate",
         "remove", "save"};
-    private static final String[] SYMBOLS = {"⊞", "⊟", "⊕", "⧉", "✕"};
-    private static final Component[] HISTORY_GLYPHS = {Component.literal("↶"), Component.literal("↷")};
-    /** O lugar dos dois botões do desfazer e do refazer na ponta esquerda (↶ ↷). */
+    /** O ícone de cada botão da barra, na ordem do {@link Action} (o Salvar é só texto). */
+    private static final TvIcons.Icon[] ICONS = {TvIcons.Icon.UNDO, TvIcons.Icon.REDO, TvIcons.Icon.GROUP,
+        TvIcons.Icon.UNGROUP, TvIcons.Icon.SAVE_COMPONENT, TvIcons.Icon.DUPLICATE, TvIcons.Icon.REMOVE};
+    /** O lugar dos dois botões do desfazer e do refazer na ponta esquerda. */
     private static final int RESERVED = 34;
     private static final int HISTORY_W = 16;
     private static final int GAP = 2;
@@ -54,7 +55,6 @@ final class TvEditorBar {
         for (int k = 0; k < 2; k++) {
             Action history = Action.values()[k];
             rects[history.ordinal()] = new TvRect(bar.x() + k * (HISTORY_W + GAP), bar.y(), HISTORY_W, bar.h());
-            labels[history.ordinal()] = TvEditorPaint.label(font, HISTORY_GLYPHS[k], HISTORY_W - 4);
         }
         int right = bar.right();
         rects[Action.SAVE.ordinal()] = new TvRect(right - saveW, bar.y(), saveW, bar.h());
@@ -62,10 +62,9 @@ final class TvEditorBar {
         right -= saveW + GAP * 2;
         for (int k = TOOLS.size() - 1; k >= 0; k--) {
             Action tool = TOOLS.get(k);
-            Component shown = symbols ? Component.literal(SYMBOLS[k]) : names[tool.ordinal()];
-            int w = symbols ? SYMBOL_W : font.width(shown) + 10;
+            int w = symbols ? SYMBOL_W : font.width(names[tool.ordinal()]) + 10;
             rects[tool.ordinal()] = new TvRect(right - w, bar.y(), w, bar.h());
-            labels[tool.ordinal()] = TvEditorPaint.label(font, shown, w - 4);
+            labels[tool.ordinal()] = TvEditorPaint.label(font, names[tool.ordinal()], w - 4);
             right -= w + GAP;
         }
     }
@@ -85,12 +84,16 @@ final class TvEditorBar {
         for (int k = 0; k < 2; k++) {
             Action history = Action.values()[k];
             TvRect r = rects[history.ordinal()];
-            TvEditorPaint.button(g, font, r, labels[history.ordinal()], r.contains(mouseX, mouseY), enabled(history));
+            TvEditorPaint.iconButton(g, r, ICONS[history.ordinal()], r.contains(mouseX, mouseY), enabled(history));
         }
         for (int k = 0; k < TOOLS.size(); k++) {
             Action action = TOOLS.get(k);
             TvRect r = rects[action.ordinal()];
-            TvEditorPaint.button(g, font, r, labels[action.ordinal()], r.contains(mouseX, mouseY), enabled(action));
+            if (symbols) {
+                TvEditorPaint.iconButton(g, r, ICONS[action.ordinal()], r.contains(mouseX, mouseY), enabled(action));
+            } else {
+                TvEditorPaint.button(g, font, r, labels[action.ordinal()], r.contains(mouseX, mouseY), enabled(action));
+            }
         }
         TvRect save = rects[Action.SAVE.ordinal()];
         TvEditorPaint.primary(g, font, save, labels[Action.SAVE.ordinal()], save.contains(mouseX, mouseY),

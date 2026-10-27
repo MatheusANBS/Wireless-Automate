@@ -81,7 +81,12 @@ final class TvForm {
 
     /** O rótulo de uma linha "rótulo + controle": põe o rótulo e devolve o {@code y} do controle. */
     int inline(String id, Component label) {
-        controls.add(new TvControls.Label(font, id + ".label", 0, y + 2, LABEL_W - 2, GuiPaint.MUTED, () -> label));
+        return inline(id, label, 2);
+    }
+
+    /** O mesmo, com o rótulo {@code dy} px abaixo do topo da linha (4 numa linha de ícones de 16 px). */
+    int inline(String id, Component label, int dy) {
+        controls.add(new TvControls.Label(font, id + ".label", 0, y + dy, LABEL_W - 2, GuiPaint.MUTED, () -> label));
         return y;
     }
 

@@ -87,8 +87,8 @@ final class TvEditorCanvas {
         }
         fitLabelFactor = view.factor();
         fitLabel = TvEditorPaint.label(font, TvEditorText.key("zoom_fit", fitLabelFactor), rect.w() - 12);
-        int w = fitLabel.width() + 10;
-        fitButton = new TvRect(rect.right() - w - 3, rect.y() + 3, w, 11);
+        int w = TvIcons.SIZE + fitLabel.width() + 6;
+        fitButton = new TvRect(rect.right() - w - 3, rect.y() + 3, w, TvIcons.SIZE);
     }
 
     void render(GuiGraphics g, int mouseX, int mouseY) {
@@ -120,7 +120,7 @@ final class TvEditorCanvas {
         g.disableScissor();
         if (view.zoomed()) {
             fitButton();
-            TvEditorPaint.button(g, font, fitButton, fitLabel, fitButton.contains(mouseX, mouseY), true);
+            TvEditorPaint.iconButton(g, font, fitButton, TvIcons.Icon.FIT, fitLabel, fitButton.contains(mouseX, mouseY));
         }
     }
 

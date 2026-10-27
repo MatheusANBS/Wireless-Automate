@@ -19,9 +19,13 @@ import net.minecraft.network.chat.Component;
  * recolhido ou o tamanho mudam; por quadro, só o desenho.
  */
 final class TvLayersPanel {
-    static final int ROW_H = 14;
-    private static final int EYE = 5;
+    static final int ROW_H = TvIcons.SIZE;
+    private static final int EYE = TvIcons.SIZE;
     private static final int DRAG_START = 3;
+    /** Onde o nome começa: o ícone de 16 px tem 2 px de folga em cada lado, que o nome ocupa. */
+    private static final int TEXT_X = TvIcons.SIZE - 1;
+    /** Quanto o olho tira da largura do nome (a folga dele também é aproveitada). */
+    private static final int EYE_SPACE = EYE - 4;
 
     /** Uma linha: a peça (ou -1 no cabeçalho), o grupo, o texto medido, onde cair acima dela e o que ela leva. */
     private record Row(int piece, int group, boolean header, GuiText.Fitted label, Component count, int countWidth,
@@ -31,7 +35,6 @@ final class TvLayersPanel {
     private final TvEditorDoc doc;
     private final List<Row> rows = new ArrayList<>();
     private final IntOpenHashSet collapsed = new IntOpenHashSet();
-    private final Component[] glyphs = new Component[TvPieceType.values().length];
     private TvRect rect = TvRect.NONE;
     private Font font;
     private GuiText.Fitted empty;
@@ -51,9 +54,6 @@ final class TvLayersPanel {
         this.font = font;
         this.rect = rect;
         empty = GuiText.fit(font, TvEditorText.key("layers.empty"), rect.w() - 8);
-        for (TvPieceType type : TvPieceType.values()) {
-            glyphs[type.ordinal()] = Component.literal(TvEditorText.glyph(type));
-        }
         stale = true;
     }
 
@@ -70,7 +70,7 @@ final class TvLayersPanel {
         builtVersion = doc.model().version();
         rows.clear();
         List<TvPiece> pieces = doc.pieces();
-        int labelW = rect.w() - 12 - EYE - 8;
+        int labelW = rect.w() - TEXT_X - EYE_SPACE - 3;
         int lastGroup = -1;
         for (int i = pieces.size() - 1; i >= 0; i--) {
             TvPiece p = pieces.get(i);
@@ -133,24 +133,21 @@ final class TvLayersPanel {
         }
         int textColor = GuiPaint.FG;
         if (row.header()) {
-            if (collapsed.contains(row.group())) {
-                GuiPaint.arrowRight(g, x + 4, y + 4, GuiPaint.MUTED);
-            } else {
-                GuiPaint.arrowDown(g, x + 3, y + 5, GuiPaint.MUTED);
-            }
-            GuiText.draw(g, font, row.label(), x + 12, y + 3, textColor);
-            GuiPaint.text(g, font, row.count(), x + w - row.countWidth() - 2, y + 3, GuiPaint.MUTED);
+            TvIcons.draw(g, collapsed.contains(row.group()) ? TvIcons.Icon.SECTION_CLOSED : TvIcons.Icon.SECTION_OPEN, x,
+                    y);
+            GuiText.draw(g, font, row.label(), x + TEXT_X, y + 4, textColor);
+            GuiPaint.text(g, font, row.count(), x + w - row.countWidth() - 2, y + 4, GuiPaint.MUTED);
             return;
         }
         int indent = row.group() != 0 ? 6 : 0;
         boolean hidden = doc.pieces().get(row.piece()).hidden();
-        GuiPaint.text(g, font, glyphs[row.type().ordinal()], x + 3 + indent, y + 3, GuiPaint.ACCENT);
-        GuiText.draw(g, font, row.label(), x + 12 + indent, y + 3, hidden ? GuiPaint.MUTED : textColor);
-        GuiPaint.eye(g, eyeX(), y + 4, hidden ? GuiPaint.DISABLED : GuiPaint.HIGHLIGHT);
+        TvIcons.draw(g, TvIcons.of(row.type()), x + indent, y);
+        GuiText.draw(g, font, row.label(), x + TEXT_X + indent, y + 4, hidden ? GuiPaint.MUTED : textColor);
+        TvIcons.draw(g, hidden ? TvIcons.Icon.EYE_CLOSED : TvIcons.Icon.EYE, eyeX(), y);
     }
 
     private int eyeX() {
-        return rect.x() + rect.w() - 4 - EYE - 3;
+        return rect.x() + rect.w() - EYE - 1;
     }
 
     /** A linha está escolhida: a peça, ou o cabeçalho com todas as peças da sequência escolhidas. */
@@ -188,7 +185,7 @@ final class TvLayersPanel {
         }
         Row row = rows.get(r);
         if (row.header()) {
-            if (mouseX < rect.x() + 10) {
+            if (mouseX < rect.x() + TvIcons.SIZE - 2) {
                 if (!collapsed.remove(row.group())) {
                     collapsed.add(row.group());
                 }

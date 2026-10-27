@@ -5,7 +5,7 @@ package io.github.matheusanbs.wirelessautomate.client.tv.editor;
  * esquerda de {@link #LEFT_W} px (a faixa das abas Peças, Componentes e Camadas e, embaixo dela, o corpo da aba aberta,
  * com a altura que sobra), a da direita de {@link #RIGHT_W} px (as propriedades) e o centro com a barra da base em
  * cima, a miniatura e a barra de botões embaixo. Toda a largura e a altura que sobram vão para a miniatura. Na escala
- * 3 de 1366 × 768 (447 × 248 úteis) a miniatura tem 187 × 184. Pura, com JUnit; refeita só quando a janela muda.
+ * 3 de 1366 × 768 (447 × 248 úteis) a miniatura tem 187 × 182. Pura, com JUnit; refeita só quando a janela muda.
  */
 public record TvEditorLayout(TvRect leftTabs, TvRect leftBody, TvRect[] pieceButtons, TvRect props, TvRect base,
         TvRect canvas, TvRect buttons) {
@@ -18,9 +18,9 @@ public record TvEditorLayout(TvRect leftTabs, TvRect leftBody, TvRect[] pieceBut
     public static final int LEFT_W = 108;
     public static final int RIGHT_W = 132;
     public static final int BASE_H = 12;
-    public static final int BUTTONS_H = 14;
-    public static final int TABS_H = 14;
-    public static final int PIECE_H = 14;
+    public static final int BUTTONS_H = TvIcons.SIZE;
+    public static final int TABS_H = TvIcons.SIZE;
+    public static final int PIECE_H = TvIcons.SIZE;
     public static final int PIECE_COUNT = 3;
 
     /** Se a janela cabe no mínimo do editor; abaixo disso a aba só mostra o pedido de uma escala menor. */

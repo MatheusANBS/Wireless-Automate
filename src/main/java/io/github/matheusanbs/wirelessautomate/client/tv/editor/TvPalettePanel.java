@@ -6,7 +6,6 @@ import io.github.matheusanbs.wirelessautomate.tv.TvPieceType;
 import java.util.List;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -23,7 +22,6 @@ final class TvPalettePanel {
     private TvEditorLayout layout;
     private Font font;
     private final GuiText.Fitted[] names = new GuiText.Fitted[TYPES.size()];
-    private final Component[] glyphs = new Component[TYPES.size()];
     private String defaultText = "";
     private @Nullable TvPieceType pressed;
     private double pressX;
@@ -39,8 +37,7 @@ final class TvPalettePanel {
         this.font = font;
         this.layout = layout;
         for (int i = 0; i < names.length; i++) {
-            names[i] = GuiText.fit(font, TvEditorText.typeName(TYPES.get(i)), layout.pieceButtons()[i].w() - 20);
-            glyphs[i] = Component.literal(TvEditorText.glyph(TYPES.get(i)));
+            names[i] = GuiText.fit(font, TvEditorText.typeName(TYPES.get(i)), layout.pieceButtons()[i].w() - TvIcons.SIZE - 6);
         }
         defaultText = TvEditorText.key("default_text").getString();
     }
@@ -50,8 +47,8 @@ final class TvPalettePanel {
             TvRect r = layout.pieceButtons()[i];
             GuiPaint.box(g, r.x(), r.y(), r.w(), r.h(), GuiPaint.BUTTON,
                     r.contains(mouseX, mouseY) ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
-            GuiPaint.text(g, font, glyphs[i], r.x() + 5, r.y() + 3, GuiPaint.ACCENT);
-            GuiText.draw(g, font, names[i], r.x() + 16, r.y() + 3, GuiPaint.FG);
+            TvIcons.draw(g, TvIcons.of(TYPES.get(i)), r.x() + 2, r.y());
+            GuiText.draw(g, font, names[i], r.x() + TvIcons.SIZE + 4, r.y() + 4, GuiPaint.FG);
         }
     }
 

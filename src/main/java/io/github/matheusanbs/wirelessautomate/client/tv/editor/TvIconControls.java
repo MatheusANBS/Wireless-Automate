@@ -23,7 +23,7 @@ final class TvIconControls {
         private boolean on = true;
 
         IconButton(String id, int x, int y, int size, TvIcons.Icon icon, Component tip, Runnable action) {
-            super(id, x, y, size, TvControls.ROW - 1);
+            super(id, x, y, size, TvIcons.SIZE);
             this.icon = icon;
             this.tip = tip;
             this.action = action;
@@ -48,8 +48,7 @@ final class TvIconControls {
             } else {
                 GuiPaint.box(g, ax, ay, w, h, GuiPaint.INSET, GuiPaint.LINE);
             }
-            TvIcons.draw(g, icon, ax + (w - TvIcons.SIZE) / 2, ay + (h - TvIcons.SIZE) / 2,
-                    on ? GuiPaint.FG : GuiPaint.DISABLED);
+            TvIcons.draw(g, icon, ax + (w - TvIcons.SIZE) / 2, ay + (h - TvIcons.SIZE) / 2, on);
         }
 
         @Override
@@ -79,7 +78,7 @@ final class TvIconControls {
 
         IconSegment(String id, int x, int y, int w, List<TvIcons.Icon> icons, List<Component> tips, IntSupplier get,
                 IntConsumer set) {
-            super(id, x, y, w, TvControls.ROW - 1);
+            super(id, x, y, w, TvIcons.SIZE);
             this.icons = icons;
             this.tips = tips;
             this.get = get;
@@ -109,8 +108,7 @@ final class TvIconControls {
                 boolean over = mouseX >= left && mouseX < left + each && mouseY >= ay && mouseY < ay + h;
                 GuiPaint.box(g, left, ay, each, h, on ? GuiPaint.SELECTED : GuiPaint.BUTTON,
                         on ? GuiPaint.ACCENT : over ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
-                TvIcons.draw(g, icons.get(i), left + (each - TvIcons.SIZE) / 2, ay + (h - TvIcons.SIZE) / 2,
-                        on ? GuiPaint.SELECTED_TEXT : GuiPaint.FG);
+                TvIcons.draw(g, icons.get(i), left + (each - TvIcons.SIZE) / 2, ay + (h - TvIcons.SIZE) / 2);
             }
         }
 

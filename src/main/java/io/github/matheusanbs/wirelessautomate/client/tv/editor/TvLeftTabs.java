@@ -18,16 +18,17 @@ final class TvLeftTabs {
 
     private static final String[] NAMES = {"pieces", "components", "layers.tab"};
     private static final String[] TIPS = {"pieces", "components", "layers"};
-    private static final String[] GLYPHS = {"■", "⊞", "≡"};
+    private static final TvIcons.Icon[] ICONS = {TvIcons.Icon.PIECES, TvIcons.Icon.COMPONENTS, TvIcons.Icon.LAYERS};
     private static final Tab[] TABS = Tab.values();
-    private static final int SMALL_W = 16;
+    /** A aba fechada: o ícone de 16 px tem 2 px de folga de cada lado, então cabe em 14. */
+    private static final int SMALL_W = 14;
+    /** O que o ícone ocupa de fato (a parte desenhada) mais 1 px até o nome. */
+    private static final int ICON_W = TvIcons.SIZE - 3;
     private static final int GAP = 1;
 
     private final TvRect[] rects = new TvRect[TABS.length];
     private final GuiText.Fitted[] names = new GuiText.Fitted[TABS.length];
     private final int[] nameWidths = new int[TABS.length];
-    private final Component[] glyphs = new Component[TABS.length];
-    private final int[] glyphWidths = new int[TABS.length];
     private final Component[] tips = new Component[TABS.length];
     private Font font;
     private TvRect strip = TvRect.NONE;
@@ -39,10 +40,8 @@ final class TvLeftTabs {
         int open = strip.w() - 2 * SMALL_W - 2 * GAP;
         for (Tab each : TABS) {
             int i = each.ordinal();
-            names[i] = GuiText.fit(font, TvEditorText.key(NAMES[i]), open - 6);
+            names[i] = GuiText.fit(font, TvEditorText.key(NAMES[i]), open - ICON_W - 4);
             nameWidths[i] = font.width(names[i].shown());
-            glyphs[i] = Component.literal(GLYPHS[i]);
-            glyphWidths[i] = font.width(glyphs[i]);
             tips[i] = TvEditorText.key(TIPS[i]);
         }
         place();
@@ -77,9 +76,11 @@ final class TvLeftTabs {
             GuiPaint.tab(g, r.x(), r.y(), r.w(), r.h(), active, hovered);
             int color = GuiPaint.tabText(active, hovered);
             if (active) {
-                GuiText.draw(g, font, names[i], r.x() + (r.w() - nameWidths[i]) / 2, r.y() + 3, color);
+                int left = r.x() + (r.w() - ICON_W - nameWidths[i]) / 2;
+                TvIcons.draw(g, ICONS[i], left - 2, r.y() + (r.h() - TvIcons.SIZE) / 2);
+                GuiText.draw(g, font, names[i], left + ICON_W, r.y() + 4, color);
             } else {
-                GuiPaint.text(g, font, glyphs[i], r.x() + (r.w() - glyphWidths[i]) / 2, r.y() + 3, color);
+                TvIcons.draw(g, ICONS[i], r.x() + (r.w() - TvIcons.SIZE) / 2, r.y() + (r.h() - TvIcons.SIZE) / 2);
             }
         }
     }

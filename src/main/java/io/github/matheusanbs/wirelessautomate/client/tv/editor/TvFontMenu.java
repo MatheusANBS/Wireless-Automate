@@ -40,7 +40,7 @@ final class TvFontMenu {
         private GuiText.Fitted name;
 
         Field(Font font, String id, int x, int y, int w, TvPropsCtx ctx, Supplier<TvFont> get, Consumer<TvFont> set) {
-            super(id, x, y, w, TvControls.ROW - 1);
+            super(id, x, y, w, TvIcons.SIZE);
             this.font = font;
             this.ctx = ctx;
             this.get = get;
@@ -61,8 +61,8 @@ final class TvFontMenu {
         void render(GuiGraphics g, int mouseX, int mouseY) {
             GuiPaint.box(g, ax, ay, w, h, GuiPaint.BUTTON, contains(mouseX, mouseY) ? GuiPaint.BUTTON_HOVER_BORDER
                     : GuiPaint.BUTTON_BORDER);
-            GuiText.draw(g, font, name, ax + 4, ay + 2, GuiPaint.FG);
-            TvIcons.draw(g, TvIcons.Icon.SECTION_OPEN, ax + w - 11, ay + 1, GuiPaint.MUTED);
+            GuiText.draw(g, font, name, ax + 4, ay + 4, GuiPaint.FG);
+            TvIcons.draw(g, TvIcons.Icon.SECTION_OPEN, ax + w - TvIcons.SIZE, ay);
         }
 
         @Override

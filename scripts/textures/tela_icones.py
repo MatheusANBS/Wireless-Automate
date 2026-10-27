@@ -406,6 +406,25 @@ def _rules(q: Quadro) -> None:
     q.p(3, 4, "A")
 
 
+@icone("move_up")
+def _move_up(q: Quadro) -> None:
+    # A seta para cima: haste de 2 px e a ponta em V, simétrica.
+    q.v(7, 5, 12)
+    q.v(8, 5, 12)
+    for i in range(4):
+        q.p(7 - i, 3 + i)
+        q.p(8 + i, 3 + i)
+
+
+@icone("move_down")
+def _move_down(q: Quadro) -> None:
+    q.v(7, 3, 10)
+    q.v(8, 3, 10)
+    for i in range(4):
+        q.p(7 - i, 12 - i)
+        q.p(8 + i, 12 - i)
+
+
 # ---------------------------------------------------------------- saída
 
 def imagem(nome: str, tema: str) -> Image.Image:

@@ -18,9 +18,12 @@ final class TvCanvasMenu {
 
     private static final String[] KEYS = {"menu.front", "menu.up", "menu.down", "menu.back", "menu.hide",
         "group_selection", "ungroup", "duplicate", "remove"};
-    private static final int ROW_H = 12;
+    private static final int ROW_H = TvIcons.SIZE;
     private static final int SEP = 3;
     private static final int PAD_X = 6;
+    /** O ícone de cada linha, ou {@code null} nas que não têm (as camadas). */
+    private static final TvIcons.Icon[] ICONS = {null, null, null, null, TvIcons.Icon.EYE_CLOSED, TvIcons.Icon.GROUP,
+        TvIcons.Icon.UNGROUP, TvIcons.Icon.DUPLICATE, TvIcons.Icon.REMOVE};
 
     private final TvEditorDoc doc;
     private final GuiText.Fitted[] labels = new GuiText.Fitted[Item.values().length];
@@ -47,7 +50,7 @@ final class TvCanvasMenu {
             labels[item.ordinal()] = label;
             widest = Math.max(widest, font.width(label.shown()));
         }
-        width = widest + 2 * PAD_X;
+        width = widest + 2 * PAD_X + TvIcons.SIZE;
         open = false;
     }
 
@@ -105,7 +108,11 @@ final class TvCanvasMenu {
                 g.fill(x + 1, rowY, x + width - 1, rowY + ROW_H, GuiPaint.ROW_HOVER);
             }
             int color = !on ? GuiPaint.DISABLED : item == Item.REMOVE ? GuiPaint.DANGER : GuiPaint.FG;
-            GuiText.draw(g, font, labels[item.ordinal()], x + PAD_X, rowY + 2, color);
+            TvIcons.Icon icon = ICONS[item.ordinal()];
+            if (icon != null) {
+                TvIcons.draw(g, icon, x + 2, rowY, on);
+            }
+            GuiText.draw(g, font, labels[item.ordinal()], x + PAD_X + TvIcons.SIZE - 2, rowY + 4, color);
         }
     }
 

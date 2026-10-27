@@ -16,6 +16,14 @@ final class TvEditorText {
         return Component.translatable(PREFIX + key, args);
     }
 
+    /**
+     * O nome de um tema ou componente pronto: a chave {@code tv.*} guardada, traduzida com o prefixo do lang. Os do
+     * jogador são texto dele e nunca passam por aqui.
+     */
+    static Component readyName(String stored) {
+        return Component.translatable("gui.wirelessautomate." + stored);
+    }
+
     static Component typeName(TvPieceType type) {
         return key("piece." + type.getSerializedName());
     }

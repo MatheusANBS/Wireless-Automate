@@ -22,6 +22,24 @@ public record TvTheme(String name, int bg, int card, int text, int muted, int hi
         name = TvText.cut(name, MAX_NAME);
     }
 
+    /** O mesmo tema com a cor do {@code role} (1 a 6) trocada; o nome fica. */
+    public TvTheme withColor(int role, int argb) {
+        return switch (role) {
+            case TvColor.BG -> new TvTheme(name, argb, card, text, muted, high, low);
+            case TvColor.CARD -> new TvTheme(name, bg, argb, text, muted, high, low);
+            case TvColor.MUTED -> new TvTheme(name, bg, card, text, argb, high, low);
+            case TvColor.HIGH -> new TvTheme(name, bg, card, text, muted, argb, low);
+            case TvColor.LOW -> new TvTheme(name, bg, card, text, muted, high, argb);
+            default -> new TvTheme(name, bg, card, argb, muted, high, low);
+        };
+    }
+
+    /** Se a paleta é a mesma, sem olhar o nome (o editor casa a paleta da Tela com um tema da lista). */
+    public boolean sameColors(TvTheme other) {
+        return bg == other.bg && card == other.card && text == other.text && muted == other.muted
+                && high == other.high && low == other.low;
+    }
+
     /** A cor do papel (1 a 6, as constantes do {@link TvColor}); papel fora da faixa dá o texto. */
     public int color(int role) {
         return switch (role) {

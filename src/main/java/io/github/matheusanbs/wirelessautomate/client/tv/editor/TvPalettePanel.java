@@ -10,7 +10,7 @@ import net.minecraft.network.chat.Component;
 
 /**
  * A coluna da esquerda: as Peças da etapa 2 (Valor, Texto e Forma; o clique insere uma nova no primeiro lugar livre
- * e a escolhe) e, embaixo, o lugar dos Componentes. Os textos são medidos no {@link #layout}.
+ * e a escolhe) e o rótulo dos Componentes (a lista é do {@link TvComponentsPanel}). Os textos são medidos no {@link #layout}.
  */
 final class TvPalettePanel {
     private static final List<TvPieceType> TYPES = List.of(TvPieceType.VALUE, TvPieceType.TEXT, TvPieceType.SHAPE);
@@ -51,10 +51,6 @@ final class TvPalettePanel {
         }
         TvRect c = layout.componentsLabel();
         GuiText.draw(g, font, componentsLabel, c.x(), c.y(), GuiPaint.MUTED);
-        TvRect box = layout.components();
-        if (box.h() > 0) {
-            GuiPaint.inset(g, box.x(), box.y(), box.w(), box.h());
-        }
     }
 
     boolean mouseClicked(double mouseX, double mouseY) {

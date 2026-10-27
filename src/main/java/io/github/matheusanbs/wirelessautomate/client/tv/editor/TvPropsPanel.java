@@ -11,7 +11,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A coluna da direita do editor: o resumo da escolha, as abas Dado, Formato, Estilo e Regras (em duas fileiras, porque
+ * A coluna da direita do editor: o resumo da escolha (com nada escolhido, a base da Tela: {@link TvBasePanel}), as abas Dado, Formato, Estilo e Regras (em duas fileiras, porque
  * os quatro nomes não cabem em 132 px) e, abaixo, os controles da aba da peça escolhida, que rolam pela roda do mouse.
  * Com várias peças só vale o que é de todas (a "Cor de tudo" e a opacidade). Os controles ({@link TvControl}) são
  * montados pelo {@link TvForm} da aba só quando a escolha, a aba ou a estrutura da peça mudam, e relidos
@@ -45,14 +45,15 @@ final class TvPropsPanel {
     private @Nullable TvControl focus;
     private boolean stale = true;
     private int builtVersion = -1;
+    private int builtLibrary = -1;
     private int builtStructure;
     private @Nullable Tab builtTab;
     private TvSelection builtSelection = TvSelection.EMPTY;
 
-    TvPropsPanel(TvEditorDoc doc, List<TvMenu.NetworkChoice> networks) {
+    TvPropsPanel(TvEditorDoc doc, List<TvMenu.NetworkChoice> networks, TvEditorActions actions) {
         this.doc = doc;
         this.info = new TvSelectionInfo(doc);
-        this.ctx = new TvPropsCtx(doc, networks);
+        this.ctx = new TvPropsCtx(doc, networks, actions);
     }
 
     void layout(Font font, TvRect rect) {
@@ -80,12 +81,13 @@ final class TvPropsPanel {
     private void sync() {
         TvSelection selection = doc.selection();
         boolean valid = !selection.isEmpty() && selection.last() < doc.pieces().size();
-        int structure = valid ? structure(selection) : 0;
+        int structure = valid ? structure(selection) : TvBasePanel.structure(doc);
         boolean rebuild = stale || tab != builtTab || !selection.equals(builtSelection) || structure != builtStructure;
-        if (!rebuild && builtVersion == doc.model().version()) {
+        if (!rebuild && builtVersion == doc.model().version() && builtLibrary == TvLibraryClient.version()) {
             return;
         }
         builtVersion = doc.model().version();
+        builtLibrary = TvLibraryClient.version();
         if (rebuild) {
             build(selection, valid, structure);
         } else {
@@ -107,13 +109,12 @@ final class TvPropsPanel {
         builtTab = tab;
         builtSelection = selection;
         builtStructure = structure;
+        TvForm form = new TvForm(font);
         if (!valid) {
-            controls = List.of();
-            contentHeight = 0;
-            scroll = 0;
+            TvBasePanel.build(form, ctx);
+            install(form);
             return;
         }
-        TvForm form = new TvForm(font);
         boolean many = selection.size() > 1;
         if (many && tab != Tab.STYLE) {
             form.hint("props.many", TvEditorText.key("props.many"));
@@ -125,6 +126,10 @@ final class TvPropsPanel {
                 case RULES -> TvRulesTab.build(form, ctx);
             }
         }
+        install(form);
+    }
+
+    private void install(TvForm form) {
         controls = form.controls();
         contentHeight = form.height();
         scroll = Math.max(0, Math.min(scroll, maxScroll()));
@@ -151,12 +156,14 @@ final class TvPropsPanel {
     void render(GuiGraphics g, int mouseX, int mouseY) {
         sync();
         info.render(g);
+        boolean base = builtSelection.isEmpty() || builtSelection.last() >= doc.pieces().size();
         for (int i = 0; i < tabRects.length; i++) {
             TvRect r = tabRects[i];
             boolean hovered = r.contains(mouseX, mouseY);
-            GuiPaint.tab(g, r.x(), r.y(), r.w(), r.h(), i == tab.ordinal(), hovered);
+            boolean active = !base && i == tab.ordinal();
+            GuiPaint.tab(g, r.x(), r.y(), r.w(), r.h(), active, hovered);
             GuiText.draw(g, font, tabNames[i], r.x() + (r.w() - tabWidths[i]) / 2, r.y() + 2,
-                    GuiPaint.tabText(i == tab.ordinal(), hovered));
+                    GuiPaint.tabText(active, hovered));
         }
         GuiPaint.inset(g, content.x(), content.y(), content.w(), content.h());
         if (controls.isEmpty()) {

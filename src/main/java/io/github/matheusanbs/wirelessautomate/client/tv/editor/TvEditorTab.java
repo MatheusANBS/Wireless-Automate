@@ -30,6 +30,7 @@ public final class TvEditorTab {
     private final TvEditorDoc doc;
     private final TvEditorActions actions;
     private final TvPalettePanel palette;
+    private final TvComponentsPanel components;
     private final TvEditorCanvas canvas;
     private final TvBaseLine base;
     private final TvEditorBar bar;
@@ -37,6 +38,7 @@ public final class TvEditorTab {
     private final TvPropsPanel props;
     private final TvEditorKeys keys;
     private boolean fits;
+    private boolean libraryRequested;
     private int x;
     private int y;
     private int w;
@@ -50,11 +52,12 @@ public final class TvEditorTab {
         this.doc = new TvEditorDoc(pos, area);
         this.actions = actions;
         this.palette = new TvPalettePanel(doc);
+        this.components = new TvComponentsPanel(doc, actions);
         this.canvas = new TvEditorCanvas(doc);
         this.base = new TvBaseLine(doc);
         this.bar = new TvEditorBar(doc);
         this.layers = new TvLayersPanel(doc);
-        this.props = new TvPropsPanel(doc, networks);
+        this.props = new TvPropsPanel(doc, networks, actions);
         this.keys = new TvEditorKeys(doc, this::save);
     }
 
@@ -76,6 +79,7 @@ public final class TvEditorTab {
         }
         TvEditorLayout layout = TvEditorLayout.of(x, y, w, h);
         palette.layout(font, layout);
+        components.layout(font, layout);
         canvas.layout(layout.canvas());
         base.layout(font, layout.base());
         bar.layout(font, layout.buttons());
@@ -102,6 +106,7 @@ public final class TvEditorTab {
             return;
         }
         palette.render(g, mouseX, mouseY);
+        components.render(g, mouseX, mouseY);
         base.render(g, mouseX, mouseY);
         canvas.render(g, mouseX, mouseY);
         bar.render(g, mouseX, mouseY);
@@ -116,6 +121,10 @@ public final class TvEditorTab {
         if (props.mouseClicked(mouseX, mouseY, button)) {
             return true;
         }
+        if (components.mouseClicked(mouseX, mouseY)) {
+            return true;
+        }
+        components.cancel();
         if (bar.contains(mouseX, mouseY)) {
             TvEditorBar.Action action = bar.clicked(mouseX, mouseY);
             if (action != null) {
@@ -133,6 +142,7 @@ public final class TvEditorTab {
             case REDO -> doc.redo();
             case GROUP -> doc.group();
             case UNGROUP -> doc.ungroup();
+            case SAVE_COMPONENT -> components.beginSave();
             case DUPLICATE -> doc.duplicate();
             case REMOVE -> doc.remove();
             case SAVE -> save();
@@ -161,7 +171,8 @@ public final class TvEditorTab {
     }
 
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-        return fits && (props.mouseScrolled(mouseX, mouseY, delta) || layers.mouseScrolled(mouseX, mouseY, delta));
+        return fits && (props.mouseScrolled(mouseX, mouseY, delta) || components.mouseScrolled(mouseX, mouseY, delta)
+                || layers.mouseScrolled(mouseX, mouseY, delta));
     }
 
     /** Uma tecla: o campo de texto com o foco primeiro, depois os atalhos; {@code true} se foi usada. */
@@ -169,7 +180,8 @@ public final class TvEditorTab {
         if (!fits) {
             return false;
         }
-        return props.keyPressed(keyCode, scanCode, modifiers) || keys.keyPressed(keyCode, modifiers);
+        return components.keyPressed(keyCode) || props.keyPressed(keyCode, scanCode, modifiers)
+                || keys.keyPressed(keyCode, modifiers);
     }
 
     /** Uma letra: vai ao campo de texto com o foco; sem campo, {@code [} e {@code ]} mudam a camada. */
@@ -177,16 +189,29 @@ public final class TvEditorTab {
         if (!fits) {
             return false;
         }
-        return props.charTyped(c, modifiers) || (!props.textFocused() && keys.charTyped(c));
+        return components.charTyped(c, modifiers) || props.charTyped(c, modifiers)
+                || (!textFocused() && keys.charTyped(c));
     }
 
-    /** Um campo de texto da coluna de propriedades está com o teclado. */
+    /** Um campo de texto (da coluna de propriedades ou o nome de um componente) está com o teclado. */
     public boolean textFocused() {
-        return props.textFocused();
+        return props.textFocused() || components.textFocused();
     }
 
     public @Nullable Component tooltip(double mouseX, double mouseY) {
-        return fits ? bar.tooltip(mouseX, mouseY) : null;
+        if (!fits) {
+            return null;
+        }
+        Component barTip = bar.tooltip(mouseX, mouseY);
+        return barTip != null ? barTip : components.tooltip(mouseX, mouseY);
+    }
+
+    /** A aba Editar abriu: pede a biblioteca do jogador, uma vez por tela. */
+    public void opened() {
+        if (!libraryRequested) {
+            libraryRequested = true;
+            actions.requestLibrary();
+        }
     }
 
     /** O Esc com algo escolhido solta a escolha; devolve se usou a tecla. */
@@ -203,9 +228,10 @@ public final class TvEditorTab {
         return doc.model().dirty();
     }
 
-    /** Ao fechar a tela: solta a textura da miniatura. */
+    /** Ao fechar a tela: solta a textura da miniatura e a biblioteca. */
     public void release() {
         TvEditorImage.release();
+        TvLibraryClient.clear();
     }
 
     public TvLayout draft() {
@@ -283,6 +309,20 @@ public final class TvEditorTab {
     /** Dá o foco a um campo de texto (como um clique nele). */
     public boolean focusProp(String id) {
         return props.focusField(id);
+    }
+
+    /** O centro da linha do componente de nome guardado {@code name} (os prontos pela chave {@code tv.component.*}). */
+    public int @Nullable [] componentCenter(String name) {
+        return components.rowCenter(name);
+    }
+
+    /** O centro do ✎ ({@code remove} falso) ou do ✕ de um componente do jogador. */
+    public int @Nullable [] componentButton(String name, boolean remove) {
+        return components.buttonCenter(name, remove);
+    }
+
+    public boolean componentNaming() {
+        return components.textFocused();
     }
 
     public int undoSize() {

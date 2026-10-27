@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.client.tv;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.client.tv.editor.TvLibraryClient;
 import io.github.matheusanbs.wirelessautomate.client.tv.render.TvCanvases;
 import io.github.matheusanbs.wirelessautomate.client.tv.render.TvEditorImage;
 import io.github.matheusanbs.wirelessautomate.tv.TvLoaded;
@@ -62,5 +63,6 @@ public final class TvClientEvents {
         TvLoaded.clearClient();
         TvClientValues.clear();
         TvCanvases.clear();
+        TvLibraryClient.clear();
     }
 }

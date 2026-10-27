@@ -49,6 +49,15 @@ public final class TvTemplates {
         return List.of(shape, title, in, out, moving);
     }
 
+    /**
+     * O contrato dos componentes prontos: o {@link TvComponent#name()} guardado é a chave {@code tv.component.*} e o
+     * lang tem {@code gui.wirelessautomate.} mais a chave. Os textos {@link #LABEL_TEXT} e {@link #TITLE_TEXT} vão
+     * fixos em português no dado (o layout é salvo no servidor e vale para todos); quem insere o componente troca
+     * esses dois pelo texto do idioma dele ({@code tv.component.number_card.label} e {@code tv.component.title.text}).
+     */
+    public static final String LABEL_TEXT = "Rótulo";
+    public static final String TITLE_TEXT = "Título";
+
     /** O nome (chave de tradução) do componente pronto "Painel de rede". */
     public static final String NETWORK_PANEL = "tv.component.network_panel";
     public static final String NUMBER_CARD = "tv.component.number_card";
@@ -68,12 +77,12 @@ public final class TvTemplates {
                                 new TvStyle(TvColor.theme(TvColor.TEXT), TvColor.theme(TvColor.CARD), 0, 0, 8,
                                         TvAlign.LEFT, true, "", 2, 100, TvFont.MINECRAFT)),
                         new TvPiece(TvPieceType.TEXT, 4, 3, 56, 8, 1, "", Optional.empty(), TvFormat.DEFAULT,
-                                new TvStyle(TvColor.theme(TvColor.MUTED), 0, 0, 0, 8, TvAlign.LEFT, true, "Rótulo")),
+                                new TvStyle(TvColor.theme(TvColor.MUTED), 0, 0, 0, 8, TvAlign.LEFT, true, LABEL_TEXT)),
                         new TvPiece(TvPieceType.VALUE, 4, 14, 56, 14, 1, "", Optional.empty(), TvFormat.DEFAULT,
                                 new TvStyle(TvColor.theme(TvColor.TEXT), 0, 0, 0, 14, TvAlign.LEFT, true, "")))),
                 new TvComponent(TITLE, List.of(
                         new TvPiece(TvPieceType.TEXT, 0, 0, 96, 16, 1, "", Optional.empty(), TvFormat.DEFAULT,
-                                new TvStyle(TvColor.theme(TvColor.TEXT), 0, 0, 0, 16, TvAlign.LEFT, true, "Título")),
+                                new TvStyle(TvColor.theme(TvColor.TEXT), 0, 0, 0, 16, TvAlign.LEFT, true, TITLE_TEXT)),
                         new TvPiece(TvPieceType.SHAPE, 0, 18, 96, 2, 1, "", Optional.empty(), TvFormat.DEFAULT,
                                 new TvStyle(TvColor.theme(TvColor.HIGH), TvColor.theme(TvColor.HIGH), 0, 0, 8,
                                         TvAlign.LEFT, true, "")))));

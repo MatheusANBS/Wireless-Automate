@@ -86,9 +86,11 @@ final class E2eTvSteps {
         });
         E2eTvEditorSteps.smallSteps(list);
         E2eTvEditorPropsSteps.pasteSteps(list, () -> small);
+        E2eTvLibrarySteps.themeSteps(list, () -> small);
         list.add(close("Tela: fechar"));
         list.add(hideGui(playerId, true));
         list.add(view("tela-editor-salvo", playerId, E2eTvSteps::worldEye, E2eTvSteps::worldTarget));
+        list.add(view("tela-tema-proprio", playerId, () -> smallTarget().add(0, 0, -1.3), E2eTvSteps::smallTarget));
         list.add(hideGui(playerId, false));
         list.add(panel());
         list.add(values());

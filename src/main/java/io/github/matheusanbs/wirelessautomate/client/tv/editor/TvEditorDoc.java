@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.client.tv.editor;
 
 import io.github.matheusanbs.wirelessautomate.tv.TvArea;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlockEntity;
+import io.github.matheusanbs.wirelessautomate.tv.TvComponent;
 import io.github.matheusanbs.wirelessautomate.tv.TvLayout;
 import io.github.matheusanbs.wirelessautomate.tv.TvPiece;
 import io.github.matheusanbs.wirelessautomate.tv.TvPieceType;
@@ -27,6 +28,8 @@ final class TvEditorDoc {
     private int revision;
     private @Nullable TvLayout sent;
     private @Nullable TvLayout changedOnServer;
+    private boolean grid = true;
+    private String themeName = "";
 
     TvEditorDoc(BlockPos pos, TvArea area) {
         this.pos = pos;
@@ -258,6 +261,56 @@ final class TvEditorDoc {
     void remove() {
         apply(TvEditOps.remove(pieces(), selection()));
         model.select(TvSelection.EMPTY, 0);
+    }
+
+    /** O nome que o jogador digitou para o próximo "Salvar tema"; é do editor, não do layout. */
+    String themeName() {
+        return themeName;
+    }
+
+    void setThemeName(String name) {
+        themeName = name;
+    }
+
+    /** Se a miniatura mostra a grade; é do editor, não do layout. */
+    boolean gridVisible() {
+        return grid;
+    }
+
+    void setGrid(boolean visible) {
+        grid = visible;
+    }
+
+    /** Muda o layout inteiro (tema, fundo, linhas); a {@code key} junta mudanças seguidas de um controle. */
+    void changeLayout(UnaryOperator<TvLayout> change, Object key) {
+        TvLayout now = model.draft();
+        TvLayout next = change.apply(now);
+        if (!next.equals(now)) {
+            model.edit(next, selection(), key);
+        }
+    }
+
+    /** A escolha como componente de nome {@code name}: posições relativas ao canto e grupos renumerados. */
+    TvComponent selectionAsComponent(String name) {
+        return new TvComponent(name, TvEditOps.copy(A, pieces(), selection()).pieces());
+    }
+
+    /**
+     * Insere o componente como peças soltas num grupo novo, no primeiro lugar livre (o mesmo do colar). Um componente
+     * de peças soltas ganha um grupo só; um que já tem grupos os mantém, renumerados.
+     */
+    void insertComponent(TvComponent component) {
+        List<TvPiece> parts = new ArrayList<>(component.pieces());
+        if (parts.isEmpty()) {
+            return;
+        }
+        if (parts.size() > 1 && parts.stream().allMatch(p -> p.group() == 0)) {
+            parts.replaceAll(p -> p.withGroup(1));
+        }
+        int[] b = TvEditOps.bounds(A, parts, TvSelection.range(0, parts.size()));
+        apply(TvEditOps.paste(A, pieces(), new TvEditOps.Clip<>(parts, 0, 0, b[2], b[3]), area.pixelWidth(),
+                area.pixelHeight()));
+        model.select(model.selection(), 0);
     }
 
     void moveTo(TvSelection block, int before) {

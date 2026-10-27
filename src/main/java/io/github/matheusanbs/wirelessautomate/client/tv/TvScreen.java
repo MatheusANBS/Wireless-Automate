@@ -281,6 +281,9 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
             return;
         }
         tab = chosen;
+        if (chosen == Tab.EDIT) {
+            editorTab.opened();
+        }
         if (minecraft != null) {
             init(minecraft, width, height);
         }

@@ -86,7 +86,9 @@ final class TvEditorCanvas {
             requestImage();
             TvEditorImage.blit(g, imageX, imageY, imageW, imageH);
         }
-        grid(g);
+        if (doc.gridVisible()) {
+            grid(g);
+        }
         List<TvPiece> pieces = doc.pieces();
         boxes(pieces);
         int hover = drag == Drag.NONE && inImage(mouseX, mouseY)

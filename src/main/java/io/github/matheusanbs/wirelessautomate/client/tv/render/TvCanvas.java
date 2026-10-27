@@ -3,19 +3,13 @@ package io.github.matheusanbs.wirelessautomate.client.tv.render;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.VertexSorting;
 import io.github.matheusanbs.wirelessautomate.tv.TvArea;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlockEntity;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.packs.resources.ResourceManager;
-import net.neoforged.neoforge.client.ClientHooks;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Matrix4f;
-import org.joml.Matrix4fStack;
 import org.lwjgl.opengl.EXTTextureFilterAnisotropic;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GL11;
@@ -63,10 +57,9 @@ final class TvCanvas {
     }
 
     /**
-     * Redesenha o layout. Deixa ligado o framebuffer desta imagem e a projeção dela: quem chama guarda e devolve os
-     * do jogo depois de todos os redesenhos do quadro. A névoa fica desligada só durante o desenho (o texto está em
-     * z −11000 e um mod que deixe a névoa ligada o apagaria). Desenha com o {@link #wantedPpb}, no teto da área atual
-     * (a área pode ter mudado depois da escolha), e atualiza {@link #ppb} e {@link #bytes}.
+     * Redesenha o layout pelo {@link TvTargets}. Deixa ligado o framebuffer desta imagem e a projeção dela: quem chama
+     * guarda e devolve os do jogo depois de todos os redesenhos do quadro. Desenha com o {@link #wantedPpb}, no teto da
+     * área atual (a área pode ter mudado depois da escolha), e atualiza {@link #ppb} e {@link #bytes}.
      */
     void paint(Minecraft minecraft, char decimalSep, char groupSep) {
         TvArea area = tv.area();
@@ -76,33 +69,18 @@ final class TvCanvas {
         int height = area.height() * effective;
         if (target == null) {
             target = new TextureTarget(width, height, false, Minecraft.ON_OSX);
-            minecraft.getTextureManager().register(id, new Texture(target));
+            minecraft.getTextureManager().register(id, new TvTargetTexture(target));
         } else if (target.width != width || target.height != height) {
             target.resize(width, height, Minecraft.ON_OSX);
         }
-        target.setClearColor(0, 0, 0, 0);
-        target.clear(Minecraft.ON_OSX);
-        target.bindWrite(true);
-        float far = ClientHooks.getGuiFarPlane();
-        RenderSystem.setProjectionMatrix(new Matrix4f().setOrtho(0, width, height, 0, 1000, far),
-                VertexSorting.ORTHOGRAPHIC_Z);
-        Matrix4fStack modelView = RenderSystem.getModelViewStack();
-        modelView.pushMatrix();
-        modelView.translation(0, 0, 10000 - far);
-        RenderSystem.applyModelViewMatrix();
-        float fogStart = RenderSystem.getShaderFogStart();
-        RenderSystem.setShaderFogStart(Float.MAX_VALUE);
-        GuiGraphics graphics = new GuiGraphics(minecraft, minecraft.renderBuffers().bufferSource());
         float scale = effective / (float) TvArea.PIXELS_PER_BLOCK;
-        graphics.pose().scale(scale, scale, 1);
         long gameTime = minecraft.level == null ? 0 : minecraft.level.getGameTime();
-        blinking = TvPainter.paint(graphics, minecraft.font, tv.layout(), area, tv.getBlockPos().asLong(),
-                tv.revision(), decimalSep, groupSep, TvPaintMath.blinkOff(gameTime), scale, height);
-        graphics.flush();
-        RenderSystem.setShaderFogStart(fogStart);
+        GuiGraphics graphics = TvTargets.begin(minecraft, target, width, height, scale);
+        blinking = TvPainter.paint(graphics, minecraft.font, tv.layout(), tv.layout(), area,
+                tv.getBlockPos().asLong(), tv.revision(), decimalSep, groupSep, TvPaintMath.blinkOff(gameTime), scale,
+                height);
+        TvTargets.end(graphics);
         mipmaps(target.getColorTextureId());
-        modelView.popMatrix();
-        RenderSystem.applyModelViewMatrix();
         revision = tv.revision();
         ppb = effective;
         bytes = TvBudget.bytes(area.width(), area.height(), effective);
@@ -112,7 +90,7 @@ final class TvCanvas {
      * Gera os níveis de mipmap da imagem (o GL aloca os que faltam) e põe o filtro: linear entre os níveis de longe,
      * para a Tela não cintilar, o {@link #MAG_FILTER} de perto e o anisotrópico, para a Tela vista de lado não
      * borrar. O {@code TextureTarget} só cria o nível 0 e põe {@code NEAREST} ao criar ou refazer o framebuffer; por
-     * isso o filtro vai a cada redesenho, e a {@link Texture} não deixa o tipo de render trocá-lo.
+     * isso o filtro vai a cada redesenho, e a {@link TvTargetTexture} não deixa o tipo de render trocá-lo.
      */
     private static void mipmaps(int texture) {
         GlStateManager._bindTexture(texture);
@@ -152,39 +130,5 @@ final class TvCanvas {
         blinking = false;
         ppb = 0;
         bytes = 0;
-    }
-
-    /**
-     * A textura que o {@code TextureManager} conhece: o id é o da cor do framebuffer, lido na hora (muda quando ele
-     * é refeito). Não apaga nada no {@code close}: quem apaga é o {@code destroyBuffers} do framebuffer.
-     */
-    private static final class Texture extends AbstractTexture {
-        private final TextureTarget target;
-
-        Texture(TextureTarget target) {
-            this.target = target;
-        }
-
-        @Override
-        public int getId() {
-            return target.getColorTextureId();
-        }
-
-        @Override
-        public void load(ResourceManager resourceManager) {
-        }
-
-        /** O filtro é o do {@link #mipmaps}: o {@code RenderType.text} pediria {@code NEAREST} sem mipmap. */
-        @Override
-        public void setFilter(boolean blur, boolean mipmap) {
-        }
-
-        @Override
-        public void releaseId() {
-        }
-
-        @Override
-        public void close() {
-        }
     }
 }

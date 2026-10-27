@@ -11,6 +11,8 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  */
 public final class TvClientValues {
     private static final Long2ObjectOpenHashMap<Entry> VALUES = new Long2ObjectOpenHashMap<>();
+    /** Sobe a cada chegada e a cada limpeza: o editor compara para saber se a miniatura precisa dos números novos. */
+    private static int version;
 
     private TvClientValues() {
     }
@@ -29,6 +31,7 @@ public final class TvClientValues {
         }
         entry.revision = payload.revision();
         entry.values = payload.values();
+        version++;
         TvCanvases.markDirty(pos);
     }
 
@@ -55,8 +58,13 @@ public final class TvClientValues {
         return max;
     }
 
+    public static int version() {
+        return version;
+    }
+
     /** Ao trocar de dimensão e ao sair do mundo. */
     public static void clear() {
+        version++;
         VALUES.clear();
         VALUES.trim();
     }

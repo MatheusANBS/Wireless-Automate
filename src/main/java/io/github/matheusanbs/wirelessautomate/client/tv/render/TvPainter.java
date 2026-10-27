@@ -40,13 +40,17 @@ public final class TvPainter {
      * Desenha o fundo, as peças em ordem e as linhas de varredura. Cada peça resolve a regra que bate, as cores pelo
      * tema e a opacidade ({@link TvPaintStyle}); a escondida, e a que pisca na fase apagada, não é desenhada.
      *
+     * @param values       o layout cujas ligações indexam os números que chegaram do servidor: na parede, o próprio
+     *                     {@code layout}; no editor, o salvo, para o rascunho mostrar os números das ligações que já
+     *                     existiam e "—" nas novas
      * @param area         a área da Tela, para o fundo e as linhas
      * @param blinkOff     a fase apagada do piscar no instante do desenho
      * @param scale        pixels da textura por pixel de desenho (o mesmo do {@code pose})
      * @param targetHeight a altura da textura em pixels, para o recorte (o GL conta de baixo para cima)
      * @return se alguma regra que bate manda piscar (a Tela precisa do redesenho do piscar)
      */
-    public static boolean paint(GuiGraphics g, Font font, TvLayout layout, TvArea area, long pos, int revision,
+    public static boolean paint(GuiGraphics g, Font font, TvLayout layout, TvLayout values, TvArea area, long pos,
+            int revision,
             char decimalSep, char groupSep, boolean blinkOff, float scale, int targetHeight) {
         TvPaintBackground.fill(g, layout, area.pixelWidth(), area.pixelHeight());
         TvPaintStyle resolved = STYLE;
@@ -55,7 +59,7 @@ public final class TvPainter {
             if (piece.hidden()) {
                 continue;
             }
-            resolved.resolve(piece, layout, pos, revision, blinkOff);
+            resolved.resolve(piece, layout, values, pos, revision, blinkOff);
             blinks |= resolved.blinks;
             if (resolved.skip) {
                 continue;
@@ -64,7 +68,7 @@ public final class TvPainter {
             TvPaintBox.paint(g, piece, style, resolved.background, resolved.border);
             String text = switch (piece.type()) {
                 case TEXT -> style.text();
-                case VALUE -> valueText(piece, layout, pos, revision, decimalSep, groupSep);
+                case VALUE -> valueText(piece, values, pos, revision, decimalSep, groupSep);
                 case SHAPE -> "";
             };
             if (!text.isEmpty() && resolved.color >>> 24 >= TvPaintMath.MIN_TEXT_ALPHA) {
@@ -79,11 +83,11 @@ public final class TvPainter {
      * Prefixo, número, unidade e sufixo. A unidade só numa taxa (métrica de taxa e unidade de tempo) e só sem
      * sufixo; sem número ({@code NaN}), o traço sem unidade.
      */
-    static String valueText(TvPiece piece, TvLayout layout, long pos, int revision, char decimalSep, char groupSep) {
+    static String valueText(TvPiece piece, TvLayout values, long pos, int revision, char decimalSep, char groupSep) {
         TvFormat format = piece.format();
         TvBinding binding = piece.binding().orElse(null);
         double value = binding == null ? Double.NaN
-                : TvClientValues.value(pos, revision, layout.bindingIndex(binding));
+                : TvClientValues.value(pos, revision, values.bindingIndex(binding));
         StringBuilder out = new StringBuilder(format.prefix());
         if (Double.isNaN(value)) {
             return out.append(NO_DATA).append(format.suffix()).toString();

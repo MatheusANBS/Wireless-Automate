@@ -28,7 +28,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Menu da tela da Tela de Sinal: sem slots. Os dados de abertura (posição, área, tetos, a rede e o tipo do primeiro
  * valor do layout e as redes que o jogador pode usar) vão no buffer do {@code openMenu}; o resto são os pacotes de
- * tamanho e de modelo, validados no servidor.
+ * tamanho, do layout e da biblioteca, validados no servidor.
  */
 public class TvMenu extends AbstractContainerMenu {
     /** No máximo tantas redes na lista da abertura. */

@@ -35,6 +35,11 @@ public record TvLayoutPayload(int containerId, TvLayout layout) implements Custo
             },
             buf -> new TvLayoutPayload(ByteBufCodecs.VAR_INT.decode(buf), decode(BYTES.decode(buf))));
 
+    /** Quantos bytes o layout ocupa no pacote: o editor confere antes de mandar. */
+    public static int encodedSize(TvLayout layout) {
+        return encode(layout).length;
+    }
+
     private static byte[] encode(TvLayout layout) {
         Tag tag = TvLayout.CODEC.encodeStart(NbtOps.INSTANCE, layout).getOrThrow();
         ByteArrayOutputStream out = new ByteArrayOutputStream();

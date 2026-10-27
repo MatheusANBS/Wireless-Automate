@@ -3,23 +3,14 @@ package io.github.matheusanbs.wirelessautomate.gametest;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.menu.TvMenu;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
-import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.packet.TvSizePayload;
-import io.github.matheusanbs.wirelessautomate.packet.TvTemplatePayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.tv.TvArea;
-import io.github.matheusanbs.wirelessautomate.tv.TvBinding;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlock;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlockEntity;
 import io.github.matheusanbs.wirelessautomate.tv.TvEditing;
-import io.github.matheusanbs.wirelessautomate.tv.TvLayout;
-import io.github.matheusanbs.wirelessautomate.tv.TvMetric;
-import io.github.matheusanbs.wirelessautomate.tv.TvPieceType;
-import io.github.matheusanbs.wirelessautomate.tv.TvTemplates;
 import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
@@ -32,7 +23,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
-/** A tela da Tela de Sinal: abrir, o menu, aplicar o tamanho e o modelo Painel de rede. */
+/** A tela da Tela de Sinal: abrir, o menu, aplicar o tamanho e a lista das redes da abertura. */
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
 public final class TvMenuGameTests {
@@ -121,55 +112,6 @@ public final class TvMenuGameTests {
             size(player, menu, 2, 1, 0, 1);
             TvEditing.handleSize(player, new TvSizePayload(menu.containerId + 1, 2, 1, 0, 0));
             helper.assertValueEqual(tv.area(), TvArea.SINGLE, "a área mudou com um pedido inválido");
-        });
-    }
-
-    @GameTest(template = "empty", timeoutTicks = 100)
-    public static void modeloPrecisaDeAcessoARede(GameTestHelper helper) {
-        TestPlayers.MenuPlayer player = TestPlayers.menuOpener(helper);
-        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
-        WaNetwork foreign = data.create(UUID.randomUUID(), "teste-tv-alheia");
-        WaNetwork own = data.create(player.getUUID(), "teste-tv-propria");
-        withScreen(helper, player.getUUID(), tv -> {
-            try {
-                TvMenu menu = opened(helper, player);
-                TvEditing.handleTemplate(player, new TvTemplatePayload(menu.containerId, Optional.of(foreign.id()),
-                        ResourceType.ITEM.key()));
-                helper.assertValueEqual(tv.layout(), TvLayout.EMPTY, "aplicou uma rede privada alheia");
-                TvEditing.handleTemplate(player, new TvTemplatePayload(menu.containerId, Optional.of(own.id()),
-                        ResourceType.ITEM.key()));
-                helper.assertValueEqual(tv.layout().pieces().size(), 5, "peças");
-                List<TvBinding> bindings = tv.layout().bindings();
-                helper.assertValueEqual(bindings.size(), 3, "ligações");
-                TvMetric[] expected = {TvMetric.IN, TvMetric.OUT, TvMetric.MOVING};
-                for (int i = 0; i < 3; i++) {
-                    helper.assertTrue(Objects.equals(bindings.get(i).network(), own.id())
-                            && bindings.get(i).type() == ResourceType.ITEM && bindings.get(i).metric() == expected[i],
-                            "ligação " + i);
-                }
-                helper.assertTrue(tv.layout().pieces().get(0).type() == TvPieceType.SHAPE, "o fundo vem primeiro");
-            } finally {
-                data.remove(foreign.id());
-                data.remove(own.id());
-            }
-        });
-    }
-
-    @GameTest(template = "empty", timeoutTicks = 100)
-    public static void modeloSemRedeLimpa(GameTestHelper helper) {
-        TestPlayers.MenuPlayer player = TestPlayers.menuOpener(helper);
-        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
-        WaNetwork own = data.create(player.getUUID(), "teste-tv-limpa");
-        withScreen(helper, player.getUUID(), tv -> {
-            try {
-                TvMenu menu = opened(helper, player);
-                tv.setLayout(TvTemplates.networkPanel(own.name(), own.color(), own.id(), ResourceType.ITEM, tv.area()));
-                helper.assertFalse(tv.layout().pieces().isEmpty(), "o modelo não aplicou");
-                TvEditing.handleTemplate(player, new TvTemplatePayload(menu.containerId, Optional.empty(), ""));
-                helper.assertValueEqual(tv.layout(), TvLayout.EMPTY, "layout");
-            } finally {
-                data.remove(own.id());
-            }
         });
     }
 

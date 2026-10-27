@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.client.tv;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.client.tv.render.TvCanvases;
+import io.github.matheusanbs.wirelessautomate.client.tv.render.TvEditorImage;
 import io.github.matheusanbs.wirelessautomate.tv.TvLoaded;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
@@ -14,10 +15,10 @@ import net.neoforged.neoforge.client.event.RenderFrameEvent;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Os eventos do jogo que a imagem das Telas usa: o começo do quadro (redesenhar as sujas), o tick do cliente (soltar
- * as que saíram da vista), a troca de dimensão e a saída do mundo (limpar tudo). Os números e as imagens são guardados
- * pela posição: valem só para a dimensão atual, e trocar de dimensão os limpa. Os ganchos do {@code TvClientHooks} e o BER ficam no
- * {@code ClientSetup}.
+ * Os eventos do jogo que a imagem das Telas usa: o começo do quadro (redesenhar as sujas e a miniatura do editor), o
+ * tick do cliente (soltar as que saíram da vista), a troca de dimensão e a saída do mundo (limpar tudo). Os números e
+ * as imagens são guardados pela posição: valem só para a dimensão atual, e trocar de dimensão os limpa. Os ganchos do
+ * {@code TvClientHooks} e o BER ficam no {@code ClientSetup}.
  */
 @EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
 public final class TvClientEvents {
@@ -28,6 +29,7 @@ public final class TvClientEvents {
     @SubscribeEvent
     static void onFrame(RenderFrameEvent.Pre event) {
         TvCanvases.onFrame();
+        TvEditorImage.onFrame();
     }
 
     @SubscribeEvent

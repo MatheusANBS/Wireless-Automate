@@ -28,6 +28,8 @@ public class TvBlockEntity extends BlockEntity {
     private TvArea area = TvArea.SINGLE;
     private TvLayout layout = TvLayout.EMPTY;
     private int revision;
+    /** Só no servidor, criado quando alguém perto precisa dos números; não vai ao NBT. */
+    private @Nullable TvFeed feed;
 
     public TvBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.SIGNAL_SCREEN.get(), pos, state);
@@ -53,6 +55,18 @@ public class TvBlockEntity extends BlockEntity {
     /** Sobe a cada mudança de área ou de layout; o cliente a usa para saber se a imagem está velha. */
     public int revision() {
         return revision;
+    }
+
+    /** O canal de dados desta Tela no servidor, ou {@code null} se nunca houve quem lesse. */
+    public @Nullable TvFeed feed() {
+        return feed;
+    }
+
+    TvFeed feedOrCreate() {
+        if (feed == null) {
+            feed = new TvFeed();
+        }
+        return feed;
     }
 
     /** O dono ou um operador; sem dono, só o operador. */

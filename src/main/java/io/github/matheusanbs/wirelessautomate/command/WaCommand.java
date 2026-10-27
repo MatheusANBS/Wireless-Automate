@@ -22,6 +22,7 @@ import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.TickBudget;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorProfile;
+import io.github.matheusanbs.wirelessautomate.tv.TvManager;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Locale;
@@ -184,6 +185,13 @@ public final class WaCommand {
                 ms(flows.averageNanos()),
                 ms(flows.lastNanos()),
                 ms(flows.peakNanos())), false);
+        TvManager.Cost screens = TvManager.cost();
+        source.sendSuccess(() -> Component.translatable("command.wirelessautomate.profile.tv",
+                screens.loaded(),
+                screens.watched(),
+                screens.packets(),
+                micros(screens.averageNanos()),
+                micros(screens.peakNanos())), false);
         return manager.nodeCount();
     }
 
@@ -337,6 +345,10 @@ public final class WaCommand {
             throw INVALID_VALUE.create(key);
         }
         return value;
+    }
+
+    private static String micros(double nanos) {
+        return String.format("%.1f", nanos / 1_000.0);
     }
 
     private static String ms(double nanos) {

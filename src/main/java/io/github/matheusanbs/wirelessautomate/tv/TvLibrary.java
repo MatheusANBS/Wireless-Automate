@@ -23,7 +23,7 @@ public final class TvLibrary extends SavedData {
     public static final SavedData.Factory<TvLibrary> FACTORY = new SavedData.Factory<>(TvLibrary::new, TvLibrary::load);
 
     /** O resultado de salvar, renomear ou remover. */
-    public enum Result { OK, FULL, INVALID, MISSING, EXISTS }
+    public enum Result { OK, FULL, INVALID, TOO_BIG, MISSING, EXISTS }
 
     /** Os dois conjuntos de um jogador, em ordem de criação. */
     private static final class Shelf {

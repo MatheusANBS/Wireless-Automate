@@ -217,4 +217,25 @@ public final class TvLibraryGameTests {
         }
         helper.succeed();
     }
+
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void componenteGrandeDemaisTemAvisoProprioEOTetoDaConfigCabeNoPayload(GameTestHelper helper) {
+        TestPlayers.MenuPlayer player = TestPlayers.menuOpener(helper);
+        withScreen(helper, player.getUUID(), tv -> {
+            TvMenu menu = opened(helper, player);
+            List<TvPiece> pieces = new java.util.ArrayList<>();
+            for (int i = 0; i < 100; i++) {
+                pieces.add(component("x", "t".repeat(120)).pieces().get(0));
+            }
+            TvLibraryActions.handle(player, TvLibraryActionPayload.saveComponent(menu.containerId,
+                    new TvComponent("Grande", pieces)));
+            helper.assertTrue(TvLibrary.get(helper.getLevel().getServer()).components(player.getUUID()).isEmpty(),
+                    "salvou o grande");
+            helper.assertTrue(player.actionBar != null && player.actionBar.getContents()
+                    instanceof net.minecraft.network.chat.contents.TranslatableContents key
+                    && key.getKey().equals("message.wirelessautomate.tv.library_component_too_big"), "aviso");
+            helper.assertTrue((Integer) Config.TV_MAX_COMPONENTS.getSpec().getRange().getMax() * (long) TvLibraryActions
+                    .MAX_COMPONENT_BYTES + 64L * 1024 < TvLibraryPayload.MAX_BYTES, "o teto não cabe no payload");
+        });
+    }
 }

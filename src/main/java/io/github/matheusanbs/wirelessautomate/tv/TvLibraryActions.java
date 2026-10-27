@@ -1,9 +1,8 @@
 package io.github.matheusanbs.wirelessautomate.tv;
 
+import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.packet.TvLibraryActionPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TvLibraryPayload;
-import java.util.ArrayList;
-import java.util.List;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -29,7 +28,7 @@ public final class TvLibraryActions {
         try {
             result = switch (payload.action()) {
                 case OPEN -> TvLibrary.Result.OK;
-                case SAVE_COMPONENT -> payload.content().length > MAX_COMPONENT_BYTES ? TvLibrary.Result.INVALID
+                case SAVE_COMPONENT -> payload.content().length > MAX_COMPONENT_BYTES ? TvLibrary.Result.TOO_BIG
                         : library.saveComponent(player.getUUID(), payload.component());
                 case SAVE_THEME -> library.saveTheme(player.getUUID(), payload.theme());
                 case RENAME -> payload.kind() == TvLibraryActionPayload.Kind.COMPONENT
@@ -47,6 +46,7 @@ public final class TvLibraryActions {
             case FULL -> "library_full";
             case EXISTS -> "library_exists";
             case INVALID -> "library_invalid";
+            case TOO_BIG -> "library_component_too_big";
             default -> null;
         };
         if (key != null) {
@@ -55,22 +55,27 @@ public final class TvLibraryActions {
         send(player, payload.containerId(), library);
     }
 
-    /** A biblioteca do jogador como payload; se passar do teto do payload, os últimos componentes ficam de fora. */
+    /** A biblioteca do jogador como payload. */
     public static TvLibraryPayload payload(ServerPlayer player, int containerId, TvLibrary library) {
-        List<TvComponent> components = new ArrayList<>(library.components(player.getUUID()));
-        TvLibraryPayload payload = new TvLibraryPayload(containerId, components, library.themes(player.getUUID()));
-        while (payload.encodedSize() > TvLibraryPayload.MAX_BYTES && !components.isEmpty()) {
-            components.remove(components.size() - 1);
-            payload = new TvLibraryPayload(containerId, components, payload.themes());
-        }
-        return payload;
+        return new TvLibraryPayload(containerId, library.components(player.getUUID()), library.themes(player.getUUID()));
     }
 
-    /** Manda a biblioteca a quem tem o canal negociado (sem conexão de verdade, como nos testes, não manda). */
+    /**
+     * Manda a biblioteca a quem tem o canal negociado (sem conexão de verdade, como nos testes, não manda). Os tetos
+     * da config já garantem que cabe; a conferência é uma passada só e, se algum dia passar, avisa em vez de largar
+     * componentes.
+     */
     public static void send(ServerPlayer player, int containerId, TvLibrary library) {
         TvLibraryPayload payload = payload(player, containerId, library);
-        if (player.connection != null && player.connection.hasChannel(payload)) {
-            PacketDistributor.sendToPlayer(player, payload);
+        if (player.connection == null || !player.connection.hasChannel(payload)) {
+            return;
         }
+        if (payload.encodedSize() > TvLibraryPayload.MAX_BYTES) {
+            WirelessAutomate.LOGGER.warn("Tela de Sinal: a biblioteca de {} passa de {} bytes e não foi enviada",
+                    player.getGameProfile().getName(), TvLibraryPayload.MAX_BYTES);
+            player.displayClientMessage(Component.translatable("message.wirelessautomate.tv.library_too_big"), true);
+            return;
+        }
+        PacketDistributor.sendToPlayer(player, payload);
     }
 }

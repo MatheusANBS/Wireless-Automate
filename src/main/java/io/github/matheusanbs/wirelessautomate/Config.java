@@ -275,8 +275,9 @@ public final class Config {
                 .comment("Distância, em blocos, até onde a Tela de Sinal é desenhada e recebe números novos.")
                 .defineInRange("viewDistance", 64, 8, 256);
         TV_MAX_COMPONENTS = builder
-                .comment("Quantos componentes cada jogador guarda na biblioteca do editor da Tela de Sinal.")
-                .defineInRange("maxComponents", 64, 1, 512);
+                .comment("Quantos componentes cada jogador guarda na biblioteca do editor da Tela de Sinal. O máximo é 64 porque "
+                        + "cada componente ocupa até 12 KB e a biblioteca inteira vai num só pacote de até 900 KB.")
+                .defineInRange("maxComponents", 64, 1, 64);
         TV_MAX_THEMES = builder
                 .comment("Quantos temas cada jogador guarda na biblioteca do editor da Tela de Sinal.")
                 .defineInRange("maxThemes", 32, 1, 256);

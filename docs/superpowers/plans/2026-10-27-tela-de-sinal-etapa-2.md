@@ -154,6 +154,27 @@ Custo: a biblioteca vai ao cliente só com o editor aberto.
 - [ ] `./gradlew build runGameTestServer` e o e2e `--only tela --capture tela --variants pt,escuro`; as quatro runs restantes ficam para a verificação final do ramo.
 - [ ] Commit "Tela de Sinal: guia e docs da etapa 2".
 
+### Task 11: Tamanho, zoom, Camadas e o menu do canvas (pedido do dono em 27/10)
+
+Custo: só GUI; o zoom muda só a escala do desenho da miniatura (a textura do editor não é refeita por zoom, só quando o rascunho muda).
+
+- [ ] A aba Editar deixa de ocupar a janela: é redimensionável pela borda e pela alça do canto como a tela do roteador (`ResizeHandle` + `ResizeGrip`), mínimo 400 × 240, máximo a janela menos 8 px, o tamanho lembrado na sessão. A aba Tamanho continua 320 × 220.
+- [ ] Ctrl + roda sobre a miniatura dá zoom (de "caber" até 8 ×, em passos, centrado no mouse); com zoom, arrastar com o botão do meio ou com Espaço segurado move a vista; um botão "Caber" volta. Sem Ctrl, a roda continua como antes.
+- [ ] As Camadas saem de baixo: a coluna da esquerda ganha as abas Peças · Componentes · Camadas, e a lista de camadas usa a altura inteira (linhas maiores, olho, grupo recolhível, arrastar para mudar a ordem). O espaço de baixo volta para a miniatura.
+- [ ] Clique direito numa peça do canvas abre um menu curto: Trazer para frente, Subir, Descer, Enviar para trás, Esconder, Agrupar ou Desagrupar, Duplicar, Remover. Alt + clique escolhe a peça de baixo na mesma posição (cicla).
+- [ ] e2e: capturas `tela-editor-redimensionado`, `tela-editor-zoom`, `tela-editor-camadas`, `tela-editor-menu`; commit "Tela de Sinal: editor redimensionável, zoom, Camadas e menu do canvas".
+
+### Task 12: Seletor de cor, seções e campos mais práticos (pedido do dono em 27/10)
+
+Custo: só GUI; o quadrado de cor é pintado uma vez numa textura pequena por matiz, não pixel a pixel por quadro.
+
+- [ ] Seletor de cor em popup ao clicar na amostra: quadrado de saturação e brilho, faixa de matiz, faixa de alfa, as 6 cores do tema em cima (marcadas "do tema"), as 8 últimas usadas (na sessão), o campo hex e o conta-gotas (um clique na miniatura pega a cor do pixel). Substitui as fileiras de amostras.
+- [ ] A aba Estilo em seções que recolhem (▾), nesta ordem: Conteúdo (o texto, ou o resumo do dado "Itens · Fábrica · entra"), Texto (fonte num menu com a prévia de cada uma, tamanho, "Diminuir para caber", alinhar em 3 botões de ícone), Cores (uma linha por cor: Texto, Fundo, Borda, com a amostra), Caixa (borda, cantos, opacidade por controle deslizante), Posição e tamanho (X Y L A em 2 × 2, recolhida por padrão). O estado aberto ou fechado de cada seção é lembrado na sessão.
+- [ ] Campos de número: arrastar sobre o número muda o valor, a roda também, clique digita.
+- [ ] Regras em forma de frase: "Se o valor for [menor que] [25] → [cor ■] [piscar]", cada parte clicável.
+- [ ] Arrastar uma peça da paleta direto para a posição no canvas; dica no canvas vazio; dica (tooltip) em todo botão de ícone.
+- [ ] e2e: capturas `tela-editor-cor`, `tela-editor-secoes`, `tela-editor-regras-frase`; commit "Tela de Sinal: seletor de cor e editor mais prático".
+
 ## Autorrevisão (feita ao escrever)
 
 - **Cobertura da spec:** decisões 1 e 2 (Tarefa 6), 3 (6), 4 (6, aviso e Descartar), 5 (4), 6 (6), 7 (7), 8 (7), 9 (6), 10 (8), 11 (8), 12 (8), 13 (1, 3 e 8), 14 (2), 15 (1 e 9), 16 (3 e 9), 17 (5 e 9), 18 (5 e 9); chaves e protocolo (1, 4 e 5); custo em cada tarefa.

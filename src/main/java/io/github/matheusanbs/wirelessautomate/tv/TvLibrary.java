@@ -93,7 +93,7 @@ public final class TvLibrary extends SavedData {
             drop(player, shelf);
             return Result.FULL;
         }
-        TvComponent stored = new TvComponent(name, component.pieces());
+        TvComponent stored = new TvComponent(name, component.pieces(), component.layout());
         int size = sizeOf(stored);
         int others = shelf.bytes - shelf.sizes.getOrDefault(name, 0);
         if (others + size > MAX_COMPONENT_BYTES_PER_PLAYER) {
@@ -135,7 +135,8 @@ public final class TvLibrary extends SavedData {
         if (!name.equals(from) && shelf.components.containsKey(name)) {
             return Result.EXISTS;
         }
-        rebuild(shelf.components, from, name, new TvComponent(name, shelf.components.get(from).pieces()));
+        TvComponent old = shelf.components.get(from);
+        rebuild(shelf.components, from, name, new TvComponent(name, old.pieces(), old.layout()));
         rebuild(shelf.sizes, from, name, shelf.sizes.getOrDefault(from, 0));
         setDirty();
         return Result.OK;

@@ -421,6 +421,17 @@ final class TvEditorDoc {
         layoutKind = kind;
     }
 
+    private String layoutName = "";
+
+    /** O nome digitado para "Salvar layout atual". */
+    String layoutName() {
+        return layoutName;
+    }
+
+    void layoutName(String name) {
+        layoutName = name;
+    }
+
     boolean hasSelection() {
         return !selection().isEmpty();
     }

@@ -21,8 +21,9 @@ public final class ClientConfig {
         builder.pop();
         builder.push("tv");
         TV_PIXELS_PER_BLOCK = builder
-                .comment("Resolução da imagem da Tela de Sinal, em pixels por bloco: 16, 32 ou 64.")
-                .defineInList("pixelsPerBlock", 32, java.util.List.of(16, 32, 64));
+                .comment("Qualidade da imagem da Tela de Sinal: 16 (metade), 32 (normal) ou 64 (dobro). A resolução sai do tamanho",
+                        "da Tela (128 px por bloco nas pequenas, até 2048 px no maior lado) vezes esta qualidade.")
+                .defineInList("pixelsPerBlock", 32, java.util.Arrays.asList(16, 32, 64));
         builder.pop();
         SPEC = builder.build();
     }

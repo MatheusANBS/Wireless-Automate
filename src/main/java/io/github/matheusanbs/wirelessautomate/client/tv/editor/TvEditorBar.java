@@ -8,20 +8,22 @@ import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A barra de botões embaixo da miniatura: Agrupar, Desagrupar, Duplicar e Remover, e Salvar na ponta direita, na
- * cor de destaque enquanto há mudança não salva. A ponta esquerda fica livre para o desfazer e o refazer. Quando os
+ * A barra de botões embaixo da miniatura: o desfazer e o refazer (↶ ↷) na ponta esquerda, Agrupar, Desagrupar,
+ * Duplicar e Remover, e Salvar na ponta direita, na cor de destaque enquanto há mudança não salva. Quando os
  * nomes não cabem (janela estreita), os quatro viram símbolos com o nome na dica. Medida e disposta só no
  * {@link #layout}.
  */
 final class TvEditorBar {
     /** O que cada botão faz, na ordem da barra. */
-    enum Action { GROUP, UNGROUP, DUPLICATE, REMOVE, SAVE }
+    enum Action { UNDO, REDO, GROUP, UNGROUP, DUPLICATE, REMOVE, SAVE }
 
     private static final List<Action> TOOLS = List.of(Action.GROUP, Action.UNGROUP, Action.DUPLICATE, Action.REMOVE);
-    private static final String[] KEYS = {"group_selection", "ungroup", "duplicate", "remove", "save"};
+    private static final String[] KEYS = {"undo", "redo", "group_selection", "ungroup", "duplicate", "remove", "save"};
     private static final String[] SYMBOLS = {"⊞", "⊟", "⧉", "✕"};
-    /** O lugar reservado na ponta esquerda (↶ ↷). */
+    private static final Component[] HISTORY_GLYPHS = {Component.literal("↶"), Component.literal("↷")};
+    /** O lugar dos dois botões do desfazer e do refazer na ponta esquerda (↶ ↷). */
     private static final int RESERVED = 34;
+    private static final int HISTORY_W = 16;
     private static final int GAP = 2;
     private static final int SYMBOL_W = 16;
 
@@ -47,6 +49,11 @@ final class TvEditorBar {
             textW += font.width(names[tool.ordinal()]) + 10 + GAP;
         }
         symbols = textW + saveW + RESERVED > bar.w();
+        for (int k = 0; k < 2; k++) {
+            Action history = Action.values()[k];
+            rects[history.ordinal()] = new TvRect(bar.x() + k * (HISTORY_W + GAP), bar.y(), HISTORY_W, bar.h());
+            labels[history.ordinal()] = TvEditorPaint.label(font, HISTORY_GLYPHS[k], HISTORY_W - 4);
+        }
         int right = bar.right();
         rects[Action.SAVE.ordinal()] = new TvRect(right - saveW, bar.y(), saveW, bar.h());
         labels[Action.SAVE.ordinal()] = TvEditorPaint.label(font, names[Action.SAVE.ordinal()], saveW - 4);
@@ -63,6 +70,8 @@ final class TvEditorBar {
 
     private boolean enabled(Action action) {
         return switch (action) {
+            case UNDO -> doc.model().history().canUndo();
+            case REDO -> doc.model().history().canRedo();
             case GROUP -> doc.canGroup();
             case UNGROUP -> doc.canUngroup();
             case DUPLICATE, REMOVE -> doc.hasSelection();
@@ -71,6 +80,11 @@ final class TvEditorBar {
     }
 
     void render(GuiGraphics g, int mouseX, int mouseY) {
+        for (int k = 0; k < 2; k++) {
+            Action history = Action.values()[k];
+            TvRect r = rects[history.ordinal()];
+            TvEditorPaint.button(g, font, r, labels[history.ordinal()], r.contains(mouseX, mouseY), enabled(history));
+        }
         for (int k = 0; k < TOOLS.size(); k++) {
             Action action = TOOLS.get(k);
             TvRect r = rects[action.ordinal()];
@@ -100,8 +114,13 @@ final class TvEditorBar {
         return false;
     }
 
-    /** O nome do botão sob o mouse quando a barra está em símbolos, ou {@code null}. */
+    /** O nome do botão sob o mouse: o desfazer e o refazer sempre, os outros quando a barra está em símbolos. */
     @Nullable Component tooltip(double mouseX, double mouseY) {
+        for (int k = 0; k < 2; k++) {
+            if (rects[k].contains(mouseX, mouseY)) {
+                return names[k];
+            }
+        }
         if (!symbols) {
             return null;
         }

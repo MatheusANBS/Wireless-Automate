@@ -25,13 +25,19 @@ final class TvEditorPaint {
     }
 
     static void button(GuiGraphics g, Font font, TvRect r, Label label, boolean hovered, boolean enabled) {
+        button(g, font, r.x(), r.y(), r.w(), r.h(), label, hovered, enabled);
+    }
+
+    /** O botão comum num retângulo dado por inteiros (os controles da coluna de propriedades). */
+    static void button(GuiGraphics g, Font font, int x, int y, int w, int h, Label label, boolean hovered,
+            boolean enabled) {
         if (enabled) {
-            GuiPaint.box(g, r.x(), r.y(), r.w(), r.h(), GuiPaint.BUTTON,
-                    hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
+            GuiPaint.box(g, x, y, w, h, GuiPaint.BUTTON, hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
         } else {
-            GuiPaint.box(g, r.x(), r.y(), r.w(), r.h(), GuiPaint.INSET, GuiPaint.LINE);
+            GuiPaint.box(g, x, y, w, h, GuiPaint.INSET, GuiPaint.LINE);
         }
-        centered(g, font, r, label, enabled ? GuiPaint.FG : GuiPaint.DISABLED);
+        GuiText.draw(g, font, label.text(), x + (w - label.width()) / 2, y + (h - 8) / 2,
+                enabled ? GuiPaint.FG : GuiPaint.DISABLED);
     }
 
     /** O botão principal na cor {@code color}; desligado, afundado e apagado. */

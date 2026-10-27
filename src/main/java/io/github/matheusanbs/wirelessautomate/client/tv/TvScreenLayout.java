@@ -4,7 +4,7 @@ package io.github.matheusanbs.wirelessautomate.client.tv;
  * As medidas da tela da Tela de Sinal em pixels de interface a partir do canto da tela: o cabeçalho, comum às duas
  * abas, e a aba Tamanho, 320 × 220 de tamanho fixo, que segue o mockup aprovado ({@code docs/preview/tela-de-sinal.html},
  * "Escolher o tamanho"): os controles à esquerda e a prévia da parede à direita. A aba Editar tem as medidas dela no
- * {@code TvEditorLayout}. A lista das redes ({@link TvNetworkList}) tem as dela aqui.
+ * {@code TvEditorLayout}.
  */
 final class TvScreenLayout {
     static final int W = 320;
@@ -42,13 +42,6 @@ final class TvScreenLayout {
     static final Rect MESSAGE = new Rect(8, 192, 304, 9);
     /** A prévia da parede, afundada. */
     static final Rect PREVIEW = new Rect(158, 28, 154, 154);
-
-    /** O campo da busca das redes, no topo da lista. */
-    static final Rect SEARCH = new Rect(8, 41, 160, 13);
-    static final Rect LIST = new Rect(8, 56, 160, 113);
-    /** "3 de 12", embaixo da lista. */
-    static final Rect FOOTER = new Rect(8, 171, 160, 9);
-    static final int ROW_H = 14;
 
     private TvScreenLayout() {
     }

@@ -139,8 +139,8 @@ public final class TvEditGameTests {
                 helper.assertValueEqual(tv.layout().pieces().size(), 2, "as peças ficam");
                 helper.assertTrue(tv.layout().pieces().get(0).binding().isPresent(), "a rede própria perdeu a ligação");
                 helper.assertTrue(tv.layout().pieces().get(1).binding().isEmpty(), "a alheia manteve a ligação");
-                helper.assertTrue(tv.layout().pieces().get(1).rules().size() == 1
-                        && tv.layout().pieces().get(1).rules().get(0).bind().isEmpty(), "a regra manteve a ligação");
+                helper.assertTrue(tv.layout().pieces().get(1).rules().isEmpty(),
+                        "a regra com ligação sem acesso ficou e leria o dado da peça");
                 helper.assertValueEqual(tv.layout().bindings().size(), 1, "ligações salvas");
             } finally {
                 data.remove(own.id());
@@ -179,6 +179,65 @@ public final class TvEditGameTests {
             } finally {
                 data.remove(own.id());
             }
+        });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void regraSemAcessoSaiEORestanteFica(GameTestHelper helper) {
+        TestPlayers.MenuPlayer player = TestPlayers.menuOpener(helper);
+        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
+        WaNetwork own = data.create(player.getUUID(), "teste-tv-edit-regra-propria");
+        WaNetwork foreign = data.create(UUID.randomUUID(), "teste-tv-edit-regra-alheia");
+        withScreen(helper, player.getUUID(), tv -> {
+            try {
+                TvRule kept = new TvRule(TvRuleOp.LT, 5, Optional.empty(), Optional.of(0xFF00FF00), Optional.empty(),
+                        false, false);
+                TvRule ownBound = new TvRule(TvRuleOp.GT, 1, Optional.of(new TvBinding(own.id(), ResourceType.ITEM,
+                        TvMetric.OUT)), Optional.empty(), Optional.empty(), true, false);
+                TvRule foreignBound = new TvRule(TvRuleOp.GT, 1, Optional.of(new TvBinding(foreign.id(),
+                        ResourceType.ITEM, TvMetric.OUT)), Optional.empty(), Optional.empty(), false, true);
+                TvPiece piece = value(own.id(), null).withRules(List.of(kept, foreignBound, ownBound));
+                TvEditing.LayoutResult result = TvEditing.applyLayout(player, tv, TvLayout.of(List.of(piece)));
+                helper.assertTrue(result.ok(), "recusou");
+                helper.assertValueEqual(result.dropped(), 1, "só a regra alheia conta");
+                helper.assertValueEqual(tv.layout().pieces().get(0).rules(), List.of(kept, ownBound), "regras salvas");
+            } finally {
+                data.remove(own.id());
+                data.remove(foreign.id());
+            }
+        });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void avisoUsaSingularEPlural(GameTestHelper helper) {
+        TestPlayers.MenuPlayer player = TestPlayers.menuOpener(helper);
+        UUID foreign = UUID.randomUUID();
+        withScreen(helper, player.getUUID(), tv -> {
+            TvEditing.applyLayout(player, tv, TvLayout.of(List.of(value(foreign, null))));
+            helper.assertTrue(player.actionBar != null && player.actionBar.getContents()
+                    instanceof net.minecraft.network.chat.contents.TranslatableContents one
+                    && one.getKey().equals("message.wirelessautomate.tv.layout_saved_dropped.one"), "singular");
+            TvEditing.applyLayout(player, tv, TvLayout.of(List.of(value(foreign, null), value(foreign, null))));
+            helper.assertTrue(player.actionBar != null && player.actionBar.getContents()
+                    instanceof net.minecraft.network.chat.contents.TranslatableContents many
+                    && many.getKey().equals("message.wirelessautomate.tv.layout_saved_dropped"), "plural");
+        });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void salvarAcimaDeDezPorSegundoEIgnorado(GameTestHelper helper) {
+        TestPlayers.MenuPlayer player = TestPlayers.menuOpener(helper);
+        withScreen(helper, player.getUUID(), tv -> {
+            TvMenu menu = opened(helper, player);
+            TvLayout last = null;
+            for (int i = 0; i < 12; i++) {
+                TvLayout layout = TvLayout.of(List.of(text(0, 0, 30, 10, "v" + i)));
+                if (i == 9) {
+                    last = layout;
+                }
+                TvEditing.handleLayout(player, new TvLayoutPayload(menu.containerId, layout));
+            }
+            helper.assertValueEqual(tv.layout(), last, "só os 10 primeiros valem no mesmo segundo");
         });
     }
 }

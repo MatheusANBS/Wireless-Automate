@@ -38,6 +38,7 @@ import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.tv.TvClientHooks;
 import io.github.matheusanbs.wirelessautomate.tv.TvEditing;
+import io.github.matheusanbs.wirelessautomate.tv.TvLibraryActions;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -154,6 +155,11 @@ public final class ModPayloads {
                 (payload, context) -> TvEditing.handleSize(serverPlayer(context), payload));
         registrar.playToServer(TvLayoutPayload.TYPE, TvLayoutPayload.STREAM_CODEC,
                 (payload, context) -> TvEditing.handleLayout(serverPlayer(context), payload));
+        // Biblioteca de componentes e temas do jogador, com o editor aberto.
+        registrar.playToClient(TvLibraryPayload.TYPE, TvLibraryPayload.STREAM_CODEC,
+                (payload, context) -> TvClientHooks.library.accept(payload));
+        registrar.playToServer(TvLibraryActionPayload.TYPE, TvLibraryActionPayload.STREAM_CODEC,
+                (payload, context) -> TvLibraryActions.handle(serverPlayer(context), payload));
         registrar.playToServer(TvTemplatePayload.TYPE, TvTemplatePayload.STREAM_CODEC,
                 (payload, context) -> TvEditing.handleTemplate(serverPlayer(context), payload));
     }

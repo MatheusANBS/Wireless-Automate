@@ -14,7 +14,8 @@ import org.lwjgl.glfw.GLFW;
  * Um campo numérico com limites: ‹ e › passam o valor de {@code step} em {@code step} (com Shift, quatro vezes), a
  * roda do mouse sobre o campo também, e dá para digitar (só dígitos, e o sinal quando o mínimo é negativo). O valor
  * digitado é limitado a {@code min}..{@code max} e já vai para o rascunho a cada letra; soltar o foco refaz o texto.
- * O número vem do {@code get}, lido só no {@link #refresh}.
+ * Arrastar sobre o número muda o valor ({@link TvNumberDrag}) e o clique sem arrastar dá o foco para digitar. O número
+ * vem do {@code get}, lido só no {@link #refresh}.
  */
 final class TvNumberField extends TvControl {
     static final int ARROW = 10;
@@ -28,6 +29,10 @@ final class TvNumberField extends TvControl {
     private final int step;
     private final IntSupplier get;
     private final IntConsumer set;
+    private boolean pressed;
+    private boolean dragging;
+    private double pressX;
+    private int pressValue;
 
     TvNumberField(Font font, String id, int x, int y, int w, int min, int max, int step, IntSupplier get,
             IntConsumer set) {
@@ -102,9 +107,40 @@ final class TvNumberField extends TvControl {
         } else if (mouseX >= ax + w - ARROW) {
             change(1, big);
         } else {
-            text.mouseClicked(mouseX, mouseY, button);
+            pressed = true;
+            dragging = false;
+            pressX = mouseX;
+            pressValue = get.getAsInt();
         }
         return true;
+    }
+
+    /** Arrastar sobre o número muda o valor (4 px por passo); soltar sem arrastar dá o foco, para digitar. */
+    @Override
+    void mouseDragged(double mouseX, double mouseY) {
+        if (!pressed) {
+            return;
+        }
+        int dx = (int) (mouseX - pressX);
+        dragging = dragging || TvNumberDrag.started(dx);
+        if (dragging) {
+            int next = TvNumberDrag.value(pressValue, dx, step, min, max, Screen.hasShiftDown() || TvEditorTab.e2eShift);
+            if (next != get.getAsInt()) {
+                set.accept(next);
+                text.syncNow();
+            }
+        }
+    }
+
+    @Override
+    boolean mouseReleased(double mouseX, double mouseY) {
+        boolean click = pressed && !dragging;
+        pressed = false;
+        dragging = false;
+        if (click) {
+            text.mouseClicked(mouseX, mouseY, 0);
+        }
+        return click;
     }
 
     @Override

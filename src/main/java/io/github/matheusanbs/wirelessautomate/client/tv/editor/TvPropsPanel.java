@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.UUID;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -43,6 +44,7 @@ final class TvPropsPanel {
     private int contentHeight;
     private int scroll;
     private @Nullable TvControl focus;
+    private @Nullable TvControl pressed;
     private boolean stale = true;
     private int builtVersion = -1;
     private int builtLibrary = -1;
@@ -50,10 +52,10 @@ final class TvPropsPanel {
     private @Nullable Tab builtTab;
     private TvSelection builtSelection = TvSelection.EMPTY;
 
-    TvPropsPanel(TvEditorDoc doc, List<TvMenu.NetworkChoice> networks, TvEditorActions actions) {
+    TvPropsPanel(TvEditorDoc doc, List<TvMenu.NetworkChoice> networks, TvEditorActions actions, TvPopups popups) {
         this.doc = doc;
         this.info = new TvSelectionInfo(doc);
-        this.ctx = new TvPropsCtx(doc, networks, actions);
+        this.ctx = new TvPropsCtx(doc, networks, actions, popups);
     }
 
     void layout(Font font, TvRect rect) {
@@ -81,7 +83,7 @@ final class TvPropsPanel {
     private void sync() {
         TvSelection selection = doc.selection();
         boolean valid = !selection.isEmpty() && selection.last() < doc.pieces().size();
-        int structure = valid ? structure(selection) : TvBasePanel.structure(doc);
+        int structure = (valid ? structure(selection) : TvBasePanel.structure(doc)) * 31 + TvSections.version();
         boolean rebuild = stale || tab != builtTab || !selection.equals(builtSelection) || structure != builtStructure;
         if (!rebuild && builtVersion == doc.model().version() && builtLibrary == TvLibraryClient.version()) {
             return;
@@ -207,6 +209,7 @@ final class TvPropsPanel {
                 }
             }
         }
+        pressed = hit;
         if (focus != null && focus != hit) {
             blurFocus();
         }
@@ -214,6 +217,42 @@ final class TvPropsPanel {
             focus = hit;
         }
         return true;
+    }
+
+    /** O mouse andou com o botão apertado: só o controle clicado recebe (o número arrastado, o controle deslizante). */
+    boolean mouseDragged(double mouseX, double mouseY) {
+        if (pressed == null) {
+            return false;
+        }
+        pressed.mouseDragged(mouseX, mouseY);
+        return true;
+    }
+
+    boolean mouseReleased(double mouseX, double mouseY) {
+        TvControl control = pressed;
+        if (control == null) {
+            return false;
+        }
+        pressed = null;
+        if (control.mouseReleased(mouseX, mouseY) && control.wantsKeys()) {
+            focus = control;
+        }
+        doc.model().history().breakKey();
+        return true;
+    }
+
+    /** A dica do controle sob o mouse, ou nulo. */
+    @Nullable Component tooltip(double mouseX, double mouseY) {
+        if (!content.contains(mouseX, mouseY)) {
+            return null;
+        }
+        for (TvControl control : controls) {
+            Component tip = control.tooltip(mouseX, mouseY);
+            if (tip != null) {
+                return tip;
+            }
+        }
+        return null;
     }
 
     boolean mouseScrolled(double mouseX, double mouseY, double delta) {
@@ -298,16 +337,16 @@ final class TvPropsPanel {
         return find(id) instanceof TvNetworkList list ? list.centerOf(network) : null;
     }
 
-    int @Nullable [] swatchCenter(String id, int value) {
-        return find(id) instanceof TvColorPicker.Swatches swatches ? swatches.centerOf(value) : null;
-    }
-
     int @Nullable [] arrowCenter(String id, boolean right) {
         return find(id) instanceof TvNumberField field ? field.arrowCenter(right) : null;
     }
 
     int @Nullable [] chipCenter(String id, int index) {
-        return find(id) instanceof TvControls.Segment segment ? segment.chipCenter(index) : null;
+        TvControl control = find(id);
+        if (control instanceof TvIconControls.IconSegment icons) {
+            return icons.chipCenter(index);
+        }
+        return control instanceof TvControls.Segment segment ? segment.chipCenter(index) : null;
     }
 
     int @Nullable [] center(String id) {
@@ -322,7 +361,7 @@ final class TvPropsPanel {
         if (control == null || !control.mouseClicked(control.centerX(), control.centerY(), 0)) {
             return false;
         }
-        if (control.wantsKeys()) {
+        if (control.mouseReleased(control.centerX(), control.centerY()) || control.wantsKeys()) {
             focus = control;
         }
         return focus != null;

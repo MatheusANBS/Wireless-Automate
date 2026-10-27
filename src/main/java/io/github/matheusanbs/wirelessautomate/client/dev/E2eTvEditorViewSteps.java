@@ -5,6 +5,7 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eUi.*;
 
 import io.github.matheusanbs.wirelessautomate.client.tv.TvScreen;
 import io.github.matheusanbs.wirelessautomate.client.tv.editor.TvEditorTab;
+import io.github.matheusanbs.wirelessautomate.client.tv.render.TvEditorImage;
 import java.util.Arrays;
 import java.util.List;
 import net.minecraft.client.Minecraft;
@@ -36,7 +37,7 @@ final class E2eTvEditorViewSteps {
         }, () -> "painel " + Arrays.toString(screen().panelSize()) + " de " + Arrays.toString(BEFORE)));
         E2eTvSteps.shot(list, "tela-editor-redimensionado");
         list.add(new Step("Vista: Ctrl + roda dá zoom e o botão do meio move", STEP_TIMEOUT_MS, () -> {
-            int[] at = editor().canvasCenter();
+            int[] at = editor().probe().canvasCenter();
             TvEditorTab.e2eCtrl = true;
             try {
                 for (int i = 0; i < 3; i++) {
@@ -48,26 +49,35 @@ final class E2eTvEditorViewSteps {
             screen().mouseClicked(at[0], at[1], GLFW.GLFW_MOUSE_BUTTON_MIDDLE);
             screen().mouseDragged(at[0] + 12, at[1] + 6, GLFW.GLFW_MOUSE_BUTTON_MIDDLE, 12, 6);
             screen().mouseReleased(at[0] + 12, at[1] + 6, GLFW.GLFW_MOUSE_BUTTON_MIDDLE);
-        }, () -> editor().zoomFactor() == 4 && editor().fitCenter() != null, () -> "zoom " + editor().zoomFactor()));
+        }, () -> editor().probe().zoomFactor() == 4 && editor().probe().fitCenter() != null, () -> "zoom " + editor().probe().zoomFactor()));
         E2eTvSteps.shot(list, "tela-editor-zoom");
-        list.add(new Step("Vista: o botão Caber volta", STEP_TIMEOUT_MS, () -> click(screen(), editor().fitCenter()[0],
-                editor().fitCenter()[1]), () -> editor().zoomFactor() == 1, () -> "zoom " + editor().zoomFactor()));
+        long[] paints = new long[1];
+        list.add(new Step("Vista: mover a vista não refaz a textura", STEP_TIMEOUT_MS, () -> {
+            paints[0] = TvEditorImage.paintsForTests;
+            int[] at = editor().probe().canvasCenter();
+            screen().mouseClicked(at[0], at[1], GLFW.GLFW_MOUSE_BUTTON_MIDDLE);
+            screen().mouseDragged(at[0] - 10, at[1] - 5, GLFW.GLFW_MOUSE_BUTTON_MIDDLE, -10, -5);
+            screen().mouseReleased(at[0] - 10, at[1] - 5, GLFW.GLFW_MOUSE_BUTTON_MIDDLE);
+        }, () -> stepTicks >= 3 && TvEditorImage.paintsForTests == paints[0],
+                () -> "redesenhos " + (TvEditorImage.paintsForTests - paints[0])));
+        list.add(new Step("Vista: o botão Caber volta", STEP_TIMEOUT_MS, () -> click(screen(), editor().probe().fitCenter()[0],
+                editor().probe().fitCenter()[1]), () -> editor().probe().zoomFactor() == 1, () -> "zoom " + editor().probe().zoomFactor()));
         list.add(new Step("Vista: a aba Camadas pelo clique", STEP_TIMEOUT_MS, () -> {
-            int[] tab = editor().leftTabCenter("LAYERS");
+            int[] tab = editor().probe().leftTabCenter("LAYERS");
             click(screen(), tab[0], tab[1]);
-        }, () -> "LAYERS".equals(editor().leftTab()), () -> "aba " + editor().leftTab()));
+        }, () -> "LAYERS".equals(editor().probe().leftTab()), () -> "aba " + editor().probe().leftTab()));
         E2eTvSteps.shot(list, "tela-editor-camadas");
         list.add(new Step("Vista: clique direito numa peça abre o menu", STEP_TIMEOUT_MS, () -> {
-            int[] at = editor().pieceCenter(1);
+            int[] at = editor().probe().pieceCenter(1);
             moveMouse(at[0], at[1]);
             screen().mouseClicked(at[0], at[1], GLFW.GLFW_MOUSE_BUTTON_RIGHT);
             screen().mouseReleased(at[0], at[1], GLFW.GLFW_MOUSE_BUTTON_RIGHT);
-        }, () -> editor().menuOpen() && !editor().selection().isEmpty(), () -> "menu " + editor().menuOpen()));
+        }, () -> editor().probe().menuOpen() && !editor().selection().isEmpty(), () -> "menu " + editor().probe().menuOpen()));
         E2eTvSteps.shot(list, "tela-editor-menu");
         list.add(new Step("Vista: Duplicar pelo menu e Ctrl+Z desfaz", STEP_TIMEOUT_MS, () -> {
-            int[] at = editor().menuCenter("DUPLICATE");
+            int[] at = editor().probe().menuCenter("DUPLICATE");
             click(screen(), at[0], at[1]);
-        }, () -> !editor().menuOpen() && editor().draft().pieces().size() > 2, () -> "peças "
+        }, () -> !editor().probe().menuOpen() && editor().draft().pieces().size() > 2, () -> "peças "
                 + editor().draft().pieces().size()));
         list.add(new Step("Vista: Ctrl+Z tira a cópia", STEP_TIMEOUT_MS,
                 () -> screen().keyPressed(GLFW.GLFW_KEY_Z, 0, GLFW.GLFW_MOD_CONTROL),

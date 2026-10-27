@@ -64,6 +64,12 @@ final class TvPieceAccess implements TvEditOps.Access<TvPiece> {
         return piece.withGroup(group);
     }
 
+    /** A largura e a altura de uma peça nova do tipo, em px de desenho. */
+    static int[] defaultSize(TvPieceType type) {
+        TvPiece piece = create(type, "");
+        return new int[] {piece.width(), piece.height()};
+    }
+
     /** Uma peça nova do tipo, no canto; o {@code text} é o do Texto. */
     static TvPiece create(TvPieceType type, String text) {
         TvStyle textStyle = new TvStyle(TvColor.theme(TvColor.TEXT), 0, 0, 0, 8, TvAlign.LEFT, true, "");

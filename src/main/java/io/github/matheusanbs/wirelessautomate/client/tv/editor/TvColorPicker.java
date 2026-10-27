@@ -1,104 +1,101 @@
 package io.github.matheusanbs.wirelessautomate.client.tv.editor;
 
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
+import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.tv.TvColor;
-import io.github.matheusanbs.wirelessautomate.tv.TvTheme;
 import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
-import java.util.function.Supplier;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import org.jetbrains.annotations.Nullable;
 
 /**
- * O seletor de cor da coluna de propriedades: uma fileira com os seis papéis do tema (as amostras redondas, que
- * acompanham a troca de tema), as amostras fixas (quadradas) e, quando a cor pode faltar, a "nenhuma" xadrez; e abaixo
- * o campo {@code #RRGGBB} ou {@code #RRGGBBAA}. Uma cor do tema vale {@code 0x0000000N} (ver {@link TvColor}); a fixa,
- * ARGB. Montado pelas abas com {@link #add}.
+ * A cor na coluna de propriedades: uma linha "rótulo + amostra" (a amostra mostra a cor, e por cima o nome do papel do
+ * tema, o hexadecimal ou "Nenhuma"); o clique abre o {@link TvColorPopup}. Uma cor do tema vale {@code 0x0000000N}
+ * (ver {@link TvColor}); a fixa, ARGB. {@code alpha} diz se o jogador pode pôr transparência; {@code allowNone}, se a
+ * cor pode faltar.
  */
 final class TvColorPicker {
-    private static final int[] FIXED = {0xFF4FD1C5, 0xFFE39A2E, 0xFF8A8EE8, 0xFFFFFFFF};
-    private static final int SIZE = 10;
-    private static final int STEP = SIZE + 1;
+    private static final String[] ROLES = {"bg", "card", "text", "muted", "high", "low"};
 
     private TvColorPicker() {
     }
 
-    /**
-     * Põe o título, as amostras e (com {@code hex}) o campo no formulário. {@code theme} dá a paleta do layout para
-     * pintar as amostras dos papéis.
-     */
-    static void add(TvForm form, String id, Component title, IntSupplier get, IntConsumer set, boolean allowNone,
-            boolean hex, Supplier<TvTheme> theme) {
-        form.label(id + ".title", title);
-        form.add(new Swatches(id + ".sw", form.y(), get, set, allowNone, theme));
-        form.skip(SIZE + 2);
-        if (hex) {
-            form.add(new TvTextField(form.font, id + ".hex", 0, form.y(), TvForm.W, 9,
-                    text -> text.matches("#?[0-9a-fA-F]*"), Component.literal("#RRGGBB"),
-                    () -> TvColor.hex(get.getAsInt()), text -> {
-                        Integer parsed = TvColor.fromHex(text);
-                        if (parsed != null && (parsed != 0 || allowNone)) {
-                            set.accept(parsed);
-                        }
-                    }));
-            form.skip(TvTextField.H + 2);
-        }
-        form.skip(TvForm.GAP);
+    /** Uma linha com o rótulo à esquerda e a amostra clicável. */
+    static TvColorField add(TvForm form, TvPropsCtx ctx, String id, Component title, IntSupplier get, IntConsumer set,
+            boolean allowNone, boolean alpha) {
+        int y = form.inline(id + ".title", title);
+        TvColorField field = form.add(new TvColorField(form.font, id, TvForm.LABEL_W, y, TvForm.W - TvForm.LABEL_W,
+                ctx, get, set, allowNone, alpha));
+        form.endRow(TvTextField.H);
+        return field;
     }
 
-    /** A fileira de amostras. */
-    static final class Swatches extends TvControl {
+    /** Só a amostra, numa posição dada (as frases das regras). */
+    static TvColorField chip(TvForm form, TvPropsCtx ctx, String id, int x, int y, int w, IntSupplier get,
+            IntConsumer set) {
+        return form.add(new TvColorField(form.font, id, x, y, w, ctx, get, set, false, false));
+    }
+
+    /** A amostra da cor atual. */
+    static final class TvColorField extends TvControl {
+        private final Font font;
+        private final TvPropsCtx ctx;
         private final IntSupplier get;
         private final IntConsumer set;
-        private final int[] values;
-        private final Supplier<TvTheme> theme;
-        private final int[] shown;
-        private int current;
+        private final boolean allowNone;
+        private final boolean alpha;
+        private int value = Integer.MIN_VALUE;
+        private int resolved;
+        private GuiText.Fitted text;
 
-        Swatches(String id, int y, IntSupplier get, IntConsumer set, boolean allowNone, Supplier<TvTheme> theme) {
-            super(id, 0, y, TvForm.W, SIZE);
+        TvColorField(Font font, String id, int x, int y, int w, TvPropsCtx ctx, IntSupplier get, IntConsumer set,
+                boolean allowNone, boolean alpha) {
+            super(id, x, y, w, TvTextField.H);
+            this.font = font;
+            this.ctx = ctx;
             this.get = get;
             this.set = set;
-            this.theme = theme;
-            values = new int[6 + FIXED.length + (allowNone ? 1 : 0)];
-            for (int i = 0; i < 6; i++) {
-                values[i] = i + 1;
-            }
-            System.arraycopy(FIXED, 0, values, 6, FIXED.length);
-            shown = new int[values.length];
+            this.allowNone = allowNone;
+            this.alpha = alpha;
             refresh();
         }
 
         @Override
         void refresh() {
-            current = get.getAsInt();
-            TvTheme t = theme.get();
-            for (int i = 0; i < values.length; i++) {
-                shown[i] = i < 6 ? t.color(values[i]) | 0xFF000000 : values[i];
+            int now = get.getAsInt();
+            int shown = TvColor.resolve(now, ctx.theme());
+            if (now == value && shown == resolved && text != null) {
+                return;
             }
+            value = now;
+            resolved = shown;
+            Component label = now == 0 ? TvEditorText.key("color.none") : TvColor.isTheme(now)
+                    ? TvEditorText.key("base.role." + ROLES[now - 1]) : Component.literal(TvColor.hex(now));
+            text = w < 40 ? GuiText.fit(font, Component.empty(), w) : GuiText.fit(font, label, w - 6);
         }
 
         @Override
         void render(GuiGraphics g, int mouseX, int mouseY) {
-            for (int i = 0; i < values.length; i++) {
-                int left = ax + i * STEP;
-                boolean on = values[i] == current;
-                boolean over = mouseX >= left && mouseX < left + SIZE && mouseY >= ay && mouseY < ay + SIZE;
-                int border = on ? GuiPaint.ACCENT : over ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER;
-                if (values[i] == 0) {
-                    g.fill(left + 1, ay + 1, left + SIZE - 1, ay + SIZE - 1, 0xFFFFFFFF);
-                    g.fill(left + 1, ay + 1, left + 5, ay + 5, 0xFFB5B0A6);
-                    g.fill(left + 5, ay + 5, left + SIZE - 1, ay + SIZE - 1, 0xFFB5B0A6);
-                } else {
-                    g.fill(left + 1, ay + 1, left + SIZE - 1, ay + SIZE - 1, shown[i]);
+            g.fill(ax + 1, ay + 1, ax + w - 1, ay + h - 1, 0xFFFFFFFF);
+            for (int col = 0; col * 4 < w - 2; col++) {
+                for (int row = col & 1; row * 4 < h - 2; row += 2) {
+                    g.fill(ax + 1 + col * 4, ay + 1 + row * 4, Math.min(ax + w - 1, ax + 5 + col * 4),
+                            Math.min(ay + h - 1, ay + 5 + row * 4), 0xFFB5B0A6);
                 }
-                int corner = i < 6 ? 1 : 0;
-                g.fill(left + corner, ay, left + SIZE - corner, ay + 1, border);
-                g.fill(left + corner, ay + SIZE - 1, left + SIZE - corner, ay + SIZE, border);
-                g.fill(left, ay + corner, left + 1, ay + SIZE - corner, border);
-                g.fill(left + SIZE - 1, ay + corner, left + SIZE, ay + SIZE - corner, border);
             }
+            if (value != 0) {
+                g.fill(ax + 1, ay + 1, ax + w - 1, ay + h - 1, resolved);
+            }
+            GuiPaint.outline(g, ax, ay, w, h, contains(mouseX, mouseY) ? GuiPaint.BUTTON_HOVER_BORDER
+                    : GuiPaint.BUTTON_BORDER);
+            int ink = value == 0 || (resolved >>> 24) < 0x80 ? 0xFF303030 : luminance(resolved) > 140 ? 0xFF101010
+                    : 0xFFF4F1EA;
+            GuiText.draw(g, font, text, ax + 3, ay + 2, ink);
+        }
+
+        private static int luminance(int argb) {
+            return ((argb >> 16 & 0xFF) * 3 + (argb >> 8 & 0xFF) * 6 + (argb & 0xFF)) / 10;
         }
 
         @Override
@@ -106,21 +103,10 @@ final class TvColorPicker {
             if (!contains(mouseX, mouseY)) {
                 return false;
             }
-            int index = (int) (mouseX - ax) / STEP;
-            if (index < values.length && mouseX - ax - index * STEP < SIZE) {
-                set.accept(values[index]);
-            }
+            TvRect anchor = new TvRect(ax, ay, w, h);
+            ctx.popups().open(new TvColorPopup(font, anchor, ctx.popups().bounds(), get.getAsInt(), allowNone, alpha,
+                    ctx.theme(), set));
             return true;
-        }
-
-        /** O centro da amostra de um papel (1 a 6) ou da cor fixa {@code value} (ganchos do e2e), ou nulo. */
-        int @Nullable [] centerOf(int value) {
-            for (int i = 0; i < values.length; i++) {
-                if (values[i] == value) {
-                    return new int[] {ax + i * STEP + SIZE / 2, ay + SIZE / 2};
-                }
-            }
-            return null;
         }
     }
 }

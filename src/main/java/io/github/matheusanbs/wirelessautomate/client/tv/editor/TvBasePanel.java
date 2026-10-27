@@ -43,14 +43,13 @@ final class TvBasePanel {
                 .getSerializedName()), delta -> stepBackground(ctx, delta));
         TvBackground background = ctx.doc().draft().background();
         switch (background.kind()) {
-            case SOLID -> TvColorPicker.add(form, "base.bg.top", TvPropsCtx.key("base.bg.fill"),
-                    () -> ctx.doc().draft().background().top(), v -> setTop(ctx, v), false, true, ctx::theme);
+            case SOLID -> TvColorPicker.add(form, ctx, "base.bg.top", TvPropsCtx.key("base.bg.fill"),
+                    () -> ctx.doc().draft().background().top(), v -> setTop(ctx, v), false, true);
             case GRADIENT -> {
-                TvColorPicker.add(form, "base.bg.top", TvPropsCtx.key("base.bg.top"),
-                        () -> ctx.doc().draft().background().top(), v -> setTop(ctx, v), false, true, ctx::theme);
-                TvColorPicker.add(form, "base.bg.bottom", TvPropsCtx.key("base.bg.bottom"),
-                        () -> ctx.doc().draft().background().bottom(), v -> setBottom(ctx, v), false, true,
-                        ctx::theme);
+                TvColorPicker.add(form, ctx, "base.bg.top", TvPropsCtx.key("base.bg.top"),
+                        () -> ctx.doc().draft().background().top(), v -> setTop(ctx, v), false, true);
+                TvColorPicker.add(form, ctx, "base.bg.bottom", TvPropsCtx.key("base.bg.bottom"),
+                        () -> ctx.doc().draft().background().bottom(), v -> setBottom(ctx, v), false, true);
             }
             default -> {
             }

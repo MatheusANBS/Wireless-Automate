@@ -23,7 +23,8 @@ import org.jetbrains.annotations.Nullable;
  * {@link TvCanvasMenu} do clique direito) e {@link TvEditorBar}; na direita, as propriedades ({@link TvPropsPanel}).
  * Repassa o desenho, o mouse, a roda e o teclado ({@link TvEditorKeys}, com o campo de texto focado tendo a vez) e faz
  * o salvar pelo {@link TvEditorActions}; o rascunho só vai ao servidor no Salvar. Numa janela abaixo do mínimo, só a
- * mensagem pedindo uma escala menor. Os ganchos do e2e ficam aqui.
+ * mensagem pedindo uma escala menor. As janelas soltas (o seletor de cor e a lista de fontes, {@link TvPopups}) ficam por cima de tudo e têm a vez
+ * do mouse e do teclado. Os ganchos do e2e ficam no {@link TvEditorProbe}.
  */
 public final class TvEditorTab {
     /** O Shift do e2e (a janela de teste não tem teclado de verdade). */
@@ -43,6 +44,8 @@ public final class TvEditorTab {
     private final TvLayersPanel layers;
     private final TvPropsPanel props;
     private final TvEditorKeys keys;
+    private final TvPopups popups = new TvPopups();
+    private final TvEditorProbe probe;
     private boolean fits;
     private boolean libraryRequested;
     private int x;
@@ -58,14 +61,16 @@ public final class TvEditorTab {
         this.doc = new TvEditorDoc(pos, area);
         this.actions = actions;
         this.menu = new TvCanvasMenu(doc);
-        this.palette = new TvPalettePanel(doc);
         this.components = new TvComponentsPanel(doc, actions);
         this.canvas = new TvEditorCanvas(doc);
+        this.palette = new TvPalettePanel(doc, canvas);
         this.base = new TvBaseLine(doc);
         this.bar = new TvEditorBar(doc);
         this.layers = new TvLayersPanel(doc);
-        this.props = new TvPropsPanel(doc, networks, actions);
+        this.props = new TvPropsPanel(doc, networks, actions, popups);
         this.keys = new TvEditorKeys(doc, this::save);
+        this.probe = new TvEditorProbe(doc, leftTabs, palette, components, canvas, bar, layers, props, menu,
+                popups);
     }
 
     /** Dispõe as partes na janela ({@code x}, {@code y}, {@code w} × {@code h}), já com o cabeçalho incluso. */
@@ -85,6 +90,8 @@ public final class TvEditorTab {
             return;
         }
         TvEditorLayout layout = TvEditorLayout.of(x, y, w, h);
+        popups.close();
+        popups.bounds(new TvRect(x, y, w, h));
         leftTabs.layout(font, layout.leftTabs());
         menu.layout(font, new TvRect(x, y, w, h));
         palette.layout(font, layout);
@@ -125,6 +132,11 @@ public final class TvEditorTab {
         bar.render(g, mouseX, mouseY);
         props.render(g, mouseX, mouseY);
         menu.render(g, mouseX, mouseY);
+        palette.renderGhost(g, mouseX, mouseY);
+        TvPopup popup = popups.current();
+        if (popup != null) {
+            popup.render(g, mouseX, mouseY);
+        }
     }
 
     /**
@@ -135,6 +147,9 @@ public final class TvEditorTab {
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (!fits) {
             return false;
+        }
+        if (popups.isOpen()) {
+            return popupClicked(mouseX, mouseY, button);
         }
         if (menu.isOpen()) {
             TvCanvasMenu.Item item = menu.itemAt(mouseX, mouseY);
@@ -177,6 +192,24 @@ public final class TvEditorTab {
         }
         return base.mouseClicked(mouseX, mouseY) || tabBodyClicked(mouseX, mouseY)
                 || canvas.mouseClicked(mouseX, mouseY, button);
+    }
+
+    /** Com uma janela solta aberta: o clique dentro é dela; o conta-gotas pega a cor da miniatura; fora, fecha. */
+    private boolean popupClicked(double mouseX, double mouseY, int button) {
+        TvPopup popup = popups.current();
+        if (popup.contains(mouseX, mouseY)) {
+            popup.mouseClicked(mouseX, mouseY, button);
+            return true;
+        }
+        if (popup instanceof TvColorPopup color && color.picking()) {
+            Integer argb = canvas.pixelAt(mouseX, mouseY);
+            if (argb != null) {
+                color.picked(argb);
+                return true;
+            }
+        }
+        popups.close();
+        return button == 0;
     }
 
     private boolean tabBodyClicked(double mouseX, double mouseY) {
@@ -229,13 +262,27 @@ public final class TvEditorTab {
     }
 
     public boolean mouseDragged(double mouseX, double mouseY) {
-        return fits && (canvas.mouseDragged(mouseX, mouseY) || layers.mouseDragged(mouseX, mouseY));
+        if (!fits) {
+            return false;
+        }
+        TvPopup popup = popups.current();
+        if (popup != null) {
+            return popup.mouseDragged(mouseX, mouseY);
+        }
+        return props.mouseDragged(mouseX, mouseY) || palette.mouseDragged(mouseX, mouseY)
+                || canvas.mouseDragged(mouseX, mouseY) || layers.mouseDragged(mouseX, mouseY);
     }
 
-    public boolean mouseReleased() {
+    public boolean mouseReleased(double mouseX, double mouseY) {
+        TvPopup popup = popups.current();
+        if (popup != null) {
+            return popup.mouseReleased(mouseX, mouseY);
+        }
+        boolean propsDrag = props.mouseReleased(mouseX, mouseY);
+        boolean paletteDrag = palette.mouseReleased(mouseX, mouseY);
         boolean canvasDrag = canvas.mouseReleased();
         boolean layersDrag = layers.mouseReleased();
-        return canvasDrag || layersDrag;
+        return propsDrag || paletteDrag || canvasDrag || layersDrag;
     }
 
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
@@ -243,6 +290,10 @@ public final class TvEditorTab {
             return false;
         }
         menu.close();
+        TvPopup popup = popups.current();
+        if (popup != null) {
+            return popup.mouseScrolled(mouseX, mouseY, delta);
+        }
         if (canvas.mouseScrolled(mouseX, mouseY, delta, Screen.hasControlDown() || e2eCtrl)) {
             return true;
         }
@@ -256,6 +307,10 @@ public final class TvEditorTab {
         if (!fits) {
             return false;
         }
+        TvPopup popup = popups.current();
+        if (popup != null) {
+            return popup.keyPressed(keyCode, scanCode, modifiers);
+        }
         return components.keyPressed(keyCode) || props.keyPressed(keyCode, scanCode, modifiers)
                 || keys.keyPressed(keyCode, modifiers);
     }
@@ -265,18 +320,31 @@ public final class TvEditorTab {
         if (!fits) {
             return false;
         }
+        TvPopup popup = popups.current();
+        if (popup != null) {
+            return popup.charTyped(c, modifiers);
+        }
         return components.charTyped(c, modifiers) || props.charTyped(c, modifiers)
                 || (!textFocused() && keys.charTyped(c));
     }
 
     /** Um campo de texto (da coluna de propriedades ou o nome de um componente) está com o teclado. */
     public boolean textFocused() {
-        return props.textFocused() || components.textFocused();
+        TvPopup popup = popups.current();
+        return popup != null && popup.wantsKeys() || props.textFocused() || components.textFocused();
     }
 
     public @Nullable Component tooltip(double mouseX, double mouseY) {
         if (!fits) {
             return null;
+        }
+        TvPopup popup = popups.current();
+        if (popup != null) {
+            return popup.tooltip(mouseX, mouseY);
+        }
+        Component propsTip = props.tooltip(mouseX, mouseY);
+        if (propsTip != null) {
+            return propsTip;
         }
         Component barTip = bar.tooltip(mouseX, mouseY);
         if (barTip != null) {
@@ -299,6 +367,10 @@ public final class TvEditorTab {
 
     /** O Esc fecha o menu do clique direito; senão, com algo escolhido, solta a escolha. Devolve se usou a tecla. */
     public boolean escape() {
+        if (popups.isOpen()) {
+            popups.close();
+            return true;
+        }
         if (menu.isOpen()) {
             menu.close();
             return true;
@@ -333,125 +405,12 @@ public final class TvEditorTab {
         return doc.changedOnServer();
     }
 
-    public int[] paletteCenter(TvPieceType type) {
-        leftTabs.select(TvLeftTabs.Tab.PIECES);
-        return palette.center(type);
-    }
-
-    public int[] pieceCenter(int index) {
-        return canvas.pieceCenter(index);
-    }
-
-    public int[] handleCenter() {
-        return canvas.handleCenter();
-    }
-
-    public float canvasScale() {
-        return canvas.scale();
-    }
-
-    public int[] barCenter(String action) {
-        return bar.center(TvEditorBar.Action.valueOf(action));
-    }
-
-    public int @Nullable [] layerCenter(int index) {
-        leftTabs.select(TvLeftTabs.Tab.LAYERS);
-        return layers.rowCenter(index);
-    }
-
     public boolean fits() {
         return fits;
     }
 
-    // ------------------------------------------------------------------ ganchos do e2e
-
-    /** As abas da coluna de propriedades pelo nome: {@code DATA}, {@code FORMAT}, {@code STYLE}, {@code RULES}. */
-    public int[] propsTabCenter(String tab) {
-        return props.tabCenter(TvPropsPanel.Tab.valueOf(tab));
-    }
-
-    public String propsTab() {
-        return props.tab().name();
-    }
-
-    /** O centro do controle de {@code id} (rolado até aparecer), ou {@code null}. */
-    public int @Nullable [] propCenter(String id) {
-        return props.center(id);
-    }
-
-    public int @Nullable [] propNetworkCenter(String id, UUID network) {
-        return props.networkCenter(id, network);
-    }
-
-    public int @Nullable [] propSwatchCenter(String id, int value) {
-        return props.swatchCenter(id, value);
-    }
-
-    public int @Nullable [] propArrowCenter(String id, boolean right) {
-        return props.arrowCenter(id, right);
-    }
-
-    public int @Nullable [] propChipCenter(String id, int index) {
-        return props.chipCenter(id, index);
-    }
-
-    /** Dá o foco a um campo de texto (como um clique nele). */
-    public boolean focusProp(String id) {
-        return props.focusField(id);
-    }
-
-    /** O centro da linha do componente de nome guardado {@code name} (os prontos pela chave {@code tv.component.*}). */
-    public int @Nullable [] componentCenter(String name) {
-        leftTabs.select(TvLeftTabs.Tab.COMPONENTS);
-        return components.rowCenter(name);
-    }
-
-    /** O centro do ✎ ({@code remove} falso) ou do ✕ de um componente do jogador. */
-    public int @Nullable [] componentButton(String name, boolean remove) {
-        leftTabs.select(TvLeftTabs.Tab.COMPONENTS);
-        return components.buttonCenter(name, remove);
-    }
-
-    public boolean componentNaming() {
-        return components.textFocused();
-    }
-
-    /** As abas da coluna da esquerda pelo nome: {@code PIECES}, {@code COMPONENTS}, {@code LAYERS}. */
-    public int[] leftTabCenter(String tab) {
-        return leftTabs.center(TvLeftTabs.Tab.valueOf(tab));
-    }
-
-    public String leftTab() {
-        return leftTabs.tab().name();
-    }
-
-    /** O fator do zoom da miniatura, 1 em "caber". */
-    public int zoomFactor() {
-        return canvas.zoomFactor();
-    }
-
-    public int @Nullable [] fitCenter() {
-        return canvas.fitCenter();
-    }
-
-    public int[] canvasCenter() {
-        return canvas.center();
-    }
-
-    public boolean menuOpen() {
-        return menu.isOpen();
-    }
-
-    /** O centro da linha do menu do clique direito pelo item ({@code FRONT}, {@code UP}...), ou {@code null}. */
-    public int @Nullable [] menuCenter(String item) {
-        return menu.center(TvCanvasMenu.Item.valueOf(item));
-    }
-
-    public int undoSize() {
-        return doc.model().history().undoSize();
-    }
-
-    public boolean canRedo() {
-        return doc.model().history().canRedo();
+    /** Os ganchos do e2e e das capturas. */
+    public TvEditorProbe probe() {
+        return probe;
     }
 }

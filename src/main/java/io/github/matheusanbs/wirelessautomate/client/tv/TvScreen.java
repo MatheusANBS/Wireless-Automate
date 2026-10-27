@@ -121,7 +121,7 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
             g.renderComponentTooltip(font, List.of(TvScreenText.key("close")), mouseX, mouseY);
             return;
         }
-        if (tab == Tab.EDIT && !editorTab.menuOpen() && resizeHandle.hover(mouseX, mouseY, leftPos, topPos,
+        if (tab == Tab.EDIT && !editorTab.probe().menuOpen() && resizeHandle.hover(mouseX, mouseY, leftPos, topPos,
                 imageWidth, imageHeight) != null) {
             g.renderComponentTooltip(font, RESIZE_TIP, mouseX, mouseY);
             return;
@@ -157,7 +157,7 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
         if (tab == Tab.SIZE) {
             sizeTab.render(g, leftPos, topPos, mouseX, mouseY);
         } else {
-            ResizeHandle.Edge hover = editorTab.menuOpen() ? null
+            ResizeHandle.Edge hover = editorTab.probe().menuOpen() ? null
                     : resizeHandle.hover(mouseX, mouseY, leftPos, topPos, imageWidth, imageHeight);
             ResizeGrip.renderDotted(g, leftPos, topPos, imageWidth, imageHeight, hover, GuiPaint.ACCENT);
             editorTab.render(g, mouseX, mouseY);
@@ -217,7 +217,7 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
                 return true;
             }
             closeClick.disarm();
-            if (tab == Tab.EDIT && !editorTab.menuOpen()
+            if (tab == Tab.EDIT && !editorTab.probe().menuOpen()
                     && resizeHandle.begin(mouseX, mouseY, leftPos, topPos, imageWidth, imageHeight)) {
                 return true;
             }
@@ -283,7 +283,7 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
             resizeHandle.end();
             return true;
         }
-        if ((button == 0 || button == 2) && editorTab.mouseReleased()) {
+        if ((button == 0 || button == 2) && editorTab.mouseReleased(mouseX, mouseY)) {
             return true;
         }
         return super.mouseReleased(mouseX, mouseY, button);

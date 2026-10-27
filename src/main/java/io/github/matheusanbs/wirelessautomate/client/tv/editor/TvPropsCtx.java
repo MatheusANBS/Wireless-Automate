@@ -13,7 +13,7 @@ import net.minecraft.network.chat.Component;
  * troca a peça escolhida pelo {@link TvEditorDoc} (entra no desfazer; a mesma {@code key} em mudanças seguidas de um
  * campo vira uma só).
  */
-record TvPropsCtx(TvEditorDoc doc, List<TvMenu.NetworkChoice> networks, TvEditorActions actions) {
+record TvPropsCtx(TvEditorDoc doc, List<TvMenu.NetworkChoice> networks, TvEditorActions actions, TvPopups popups) {
     /** A primeira peça escolhida. */
     TvPiece piece() {
         return doc.pieces().get(doc.selection().first());

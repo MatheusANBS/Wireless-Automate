@@ -11,7 +11,7 @@ import net.minecraft.resources.ResourceLocation;
  * (um provedor {@code ttf} com o padrão do jogo como reserva dos caracteres que faltam). {@code MINECRAFT} usa a
  * fonte padrão, sem estilo, e o desenho dela não muda. Os estilos são criados uma vez.
  */
-final class TvFonts {
+public final class TvFonts {
     private static final Style[] STYLES = new Style[TvFont.values().length];
 
     static {
@@ -26,7 +26,7 @@ final class TvFonts {
     }
 
     /** O texto na fonte pedida; o padrão sem estilo é o texto literal comum. */
-    static Component text(TvFont font, String text) {
+    public static Component text(TvFont font, String text) {
         return Component.literal(text).withStyle(STYLES[font.ordinal()]);
     }
 }

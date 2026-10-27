@@ -71,6 +71,14 @@ final class TvForm {
         y += hint.h + GAP;
     }
 
+    /** Começa uma seção recolhível; devolve se está aberta (as abas só montam os controles dela se sim). */
+    boolean section(String id, Component title, boolean openByDefault) {
+        boolean open = TvSections.open(id, openByDefault);
+        add(new TvSectionHeader(font, "section." + id, id, y, W, title, open));
+        y += TvSectionHeader.HEIGHT + 3;
+        return open;
+    }
+
     /** O rótulo de uma linha "rótulo + controle": põe o rótulo e devolve o {@code y} do controle. */
     int inline(String id, Component label) {
         controls.add(new TvControls.Label(font, id + ".label", 0, y + 2, LABEL_W - 2, GuiPaint.MUTED, () -> label));

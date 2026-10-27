@@ -13,6 +13,7 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.client.tv.TvClientValues;
 import io.github.matheusanbs.wirelessautomate.tv.TvArea;
 import io.github.matheusanbs.wirelessautomate.tv.TvLayout;
+import java.nio.ByteBuffer;
 import java.text.DecimalFormatSymbols;
 import java.util.Locale;
 import net.minecraft.client.Minecraft;
@@ -21,6 +22,9 @@ import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL30;
+import org.lwjgl.system.MemoryStack;
 
 /**
  * A miniatura do editor: o rascunho desenhado pelo mesmo {@link TvPainter} da parede, num framebuffer só do editor
@@ -133,6 +137,33 @@ public final class TvEditorImage {
         BufferUploader.drawWithShader(b.buildOrThrow());
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableBlend();
+    }
+
+    /**
+     * A cor (ARGB, sem alfa pré-multiplicado) do pixel em ({@code u}, {@code v}), de 0 a 1 com o 0 em cima, lido do
+     * framebuffer: uma leitura de um pixel por clique do conta-gotas, nunca por quadro. {@code 0} sem imagem.
+     */
+    public static int pixelAt(double u, double v) {
+        if (!ready() || target == null) {
+            return 0;
+        }
+        int px = Math.max(0, Math.min(width - 1, (int) (u * width)));
+        int py = Math.max(0, Math.min(height - 1, height - 1 - (int) (v * height)));
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            ByteBuffer pixel = stack.malloc(4);
+            GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, target.frameBufferId);
+            GL11.glReadPixels(px, py, 1, 1, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixel);
+            GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER,
+                    Minecraft.getInstance().getMainRenderTarget().frameBufferId);
+            int a = pixel.get(3) & 0xFF;
+            if (a == 0) {
+                return 0;
+            }
+            int r = Math.min(255, (pixel.get(0) & 0xFF) * 255 / a);
+            int g = Math.min(255, (pixel.get(1) & 0xFF) * 255 / a);
+            int b = Math.min(255, (pixel.get(2) & 0xFF) * 255 / a);
+            return a << 24 | r << 16 | g << 8 | b;
+        }
     }
 
     /** Fecha o editor: solta o framebuffer e o nome, e esquece o pedido. */

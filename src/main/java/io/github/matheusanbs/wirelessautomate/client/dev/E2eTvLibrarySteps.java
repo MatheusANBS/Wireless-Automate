@@ -43,15 +43,15 @@ final class E2eTvLibrarySteps {
     static void componentSteps(List<Step> list) {
         list.add(step("Componentes: escolher tudo e salvar como componente", () -> {
             press(GLFW.GLFW_KEY_A, CTRL);
-            clickAt(editor().barCenter("SAVE_COMPONENT"));
-        }, () -> editor().selection().size() == 2 && editor().componentNaming(),
-                () -> "escolha " + editor().selection() + ", nomeando " + editor().componentNaming()));
+            clickAt(editor().probe().barCenter("SAVE_COMPONENT"));
+        }, () -> editor().selection().size() == 2 && editor().probe().componentNaming(),
+                () -> "escolha " + editor().selection() + ", nomeando " + editor().probe().componentNaming()));
         list.add(step("Componentes: dar o nome e confirmar", () -> {
             type(COMPONENT);
             press(GLFW.GLFW_KEY_ENTER, 0);
-        }, () -> !editor().componentNaming() && inClient(COMPONENT) && inServer(COMPONENT),
+        }, () -> !editor().probe().componentNaming() && inClient(COMPONENT) && inServer(COMPONENT),
                 () -> "no cliente " + inClient(COMPONENT) + ", no servidor " + inServer(COMPONENT)));
-        list.add(step("Componentes: inserir o Cartão de número pronto", () -> clickAt(editor().componentCenter(
+        list.add(step("Componentes: inserir o Cartão de número pronto", () -> clickAt(editor().probe().componentCenter(
                 TvTemplates.NUMBER_CARD)), () -> {
             List<TvPiece> pieces = editor().draft().pieces();
             return pieces.size() == 5 && pieces.get(2).group() != 0 && pieces.get(2).group() == pieces.get(4).group()
@@ -68,19 +68,19 @@ final class E2eTvLibrarySteps {
         list.add(step("Biblioteca: o componente chegou à segunda Tela", () -> {
         }, () -> inClient(COMPONENT), () -> "componentes " + TvLibraryClient.components().size()));
         list.add(step("Componentes: inserir o do jogador (a ligação vai junto)", () -> clickAt(editor()
-                .componentCenter(COMPONENT)), () -> {
+                .probe().componentCenter(COMPONENT)), () -> {
             List<TvPiece> pieces = editor().draft().pieces();
             return pieces.size() == 2 && pieces.get(0).group() != 0 && pieces.get(0).group() == pieces.get(1).group()
                     && pieces.get(0).binding().isPresent();
         }, () -> "peças " + editor().draft().pieces()));
         list.add(step("Base: soltar a escolha mostra o tema e o fundo", () -> editor().escape(),
-                () -> editor().selection().isEmpty() && editor().propCenter("base.theme") != null,
+                () -> editor().selection().isEmpty() && editor().probe().propCenter("base.theme") != null,
                 () -> "escolha " + editor().selection()));
-        list.add(step("Tema: o seguinte é o Fósforo", () -> clickAt(editor().propCenter("base.theme")),
+        list.add(step("Tema: o seguinte é o Fósforo", () -> clickAt(editor().probe().propCenter("base.theme")),
                 () -> editor().draft().theme().sameColors(TvTheme.PHOSPHOR),
                 () -> "tema " + editor().draft().theme()));
         list.add(step("Tema: editar a cor Alta pelo hexadecimal", () -> {
-            if (!editor().focusProp("base.color" + 5)) {
+            if (!editor().probe().focusProp("base.color" + 5)) {
                 throw new StepFailure("o campo da cor Alta não abriu");
             }
             press(GLFW.GLFW_KEY_END, 0);
@@ -92,27 +92,27 @@ final class E2eTvLibrarySteps {
         }, () -> editor().draft().theme().high() == PINK && !editor().textFocused(),
                 () -> "tema " + editor().draft().theme() + ", foco " + editor().textFocused()));
         list.add(step("Tema: Salvar tema com o nome", () -> {
-            if (!editor().focusProp("base.theme_name")) {
+            if (!editor().probe().focusProp("base.theme_name")) {
                 throw new StepFailure("o campo do nome não abriu");
             }
             type(THEME);
             press(GLFW.GLFW_KEY_ENTER, 0);
-            clickAt(editor().propCenter("base.theme.save"));
+            clickAt(editor().probe().propCenter("base.theme.save"));
         }, () -> themeInClient() != null && themeInServer(),
                 () -> "no cliente " + (themeInClient() != null) + ", no servidor " + themeInServer()));
         list.add(step("Tema: fundo em degradê e linhas de varredura", () -> {
-            clickAt(editor().propCenter("base.bg.kind"));
-            clickAt(editor().propCenter("base.bg.kind"));
-            clickAt(editor().propCenter("base.scanlines"));
+            clickAt(editor().probe().propCenter("base.bg.kind"));
+            clickAt(editor().probe().propCenter("base.bg.kind"));
+            clickAt(editor().probe().propCenter("base.scanlines"));
         }, () -> editor().draft().background().kind() == TvBackground.Kind.GRADIENT && editor().draft().scanlines(),
                 () -> "fundo " + editor().draft().background() + ", linhas " + editor().draft().scanlines()));
-        list.add(step("Tema: voltar ao topo da base", () -> editor().propCenter("base.theme"), () -> true, () -> ""));
+        list.add(step("Tema: voltar ao topo da base", () -> editor().probe().propCenter("base.theme"), () -> true, () -> ""));
         E2eTvSteps.shot(list, "tela-editor-tema");
-        list.add(step("Tema: trocar para o seguinte (Grafite)", () -> clickAt(editor().propCenter("base.theme")),
+        list.add(step("Tema: trocar para o seguinte (Grafite)", () -> clickAt(editor().probe().propCenter("base.theme")),
                 () -> editor().draft().theme().sameColors(TvTheme.GRAPHITE), () -> "tema " + editor().draft().theme()));
         list.add(step("Tema: quatro passos de volta ao do jogador", () -> {
             for (int i = 0; i < 4; i++) {
-                clickAt(editor().propCenter("base.theme"));
+                clickAt(editor().probe().propCenter("base.theme"));
             }
         }, () -> {
             TvTheme mine = themeInClient();

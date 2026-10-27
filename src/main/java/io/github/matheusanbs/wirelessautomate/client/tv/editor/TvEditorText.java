@@ -28,15 +28,6 @@ final class TvEditorText {
         return key("piece." + type.getSerializedName());
     }
 
-    /** O símbolo do tipo, na paleta e nas Camadas. */
-    static String glyph(TvPieceType type) {
-        return switch (type) {
-            case VALUE -> "#";
-            case TEXT -> "T";
-            case SHAPE -> "■";
-        };
-    }
-
     /** O nome da peça nas Camadas: o nome dado, o texto do Texto, o tipo de recurso do Valor ligado, ou o tipo. */
     static Component label(TvPiece piece) {
         if (!piece.name().isEmpty()) {

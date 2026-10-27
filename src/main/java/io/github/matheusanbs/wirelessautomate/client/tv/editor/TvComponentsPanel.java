@@ -24,8 +24,8 @@ import org.lwjgl.glfw.GLFW;
  * mudam, nunca por quadro; só as linhas à vista são desenhadas.
  */
 final class TvComponentsPanel {
-    private static final int ROW_H = 12;
-    private static final int BTN = 10;
+    private static final int ROW_H = TvIcons.SIZE;
+    private static final int BTN = TvIcons.SIZE;
     private static final int EDIT_H = TvTextField.H + 3;
 
     /** Uma linha da lista: o componente, se é do jogador e o nome medido. */
@@ -48,8 +48,6 @@ final class TvComponentsPanel {
     private GuiText.Fitted confirm;
     private final Component renameTip = TvEditorText.key("component.rename");
     private final Component removeTip = TvEditorText.key("component.remove");
-    private final Component pencil = Component.literal("✎");
-    private final Component cross = Component.literal("✕");
 
     TvComponentsPanel(TvEditorDoc doc, TvEditorActions actions) {
         this.doc = doc;
@@ -179,13 +177,16 @@ final class TvComponentsPanel {
             boolean confirming = row.mine && armedName != null && row.component.name().equals(armedName)
                     && armed.armed(now);
             if (confirming) {
-                GuiText.draw(g, font, confirm, x + 4, y + 2, GuiPaint.DANGER);
+                GuiText.draw(g, font, confirm, x + 4, y + 4, GuiPaint.DANGER);
             } else {
-                GuiText.draw(g, font, row.name, x + 4, y + 2, GuiPaint.FG);
+                GuiText.draw(g, font, row.name, x + 4, y + 4, GuiPaint.FG);
             }
             if (row.mine) {
-                GuiPaint.text(g, font, pencil, x + w - 2 * BTN + 1, y + 2, GuiPaint.MUTED);
-                GuiPaint.text(g, font, cross, x + w - BTN + 1, y + 2, confirming ? GuiPaint.DANGER : GuiPaint.MUTED);
+                TvIcons.draw(g, TvIcons.Icon.RENAME, x + w - 2 * BTN, y);
+                if (confirming) {
+                    g.fill(x + w - BTN + 1, y + 1, x + w - 1, y + ROW_H - 1, GuiPaint.alpha(GuiPaint.DANGER, 0x60));
+                }
+                TvIcons.draw(g, TvIcons.Icon.REMOVE, x + w - BTN, y);
             }
         }
         g.disableScissor();

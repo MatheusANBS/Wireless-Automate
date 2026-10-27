@@ -40,6 +40,25 @@ final class TvEditorPaint {
                 enabled ? GuiPaint.FG : GuiPaint.DISABLED);
     }
 
+    /** O botão comum com um ícone de 16 px no meio; desligado, afundado e com o ícone apagado. */
+    static void iconButton(GuiGraphics g, TvRect r, TvIcons.Icon icon, boolean hovered, boolean enabled) {
+        if (enabled) {
+            GuiPaint.box(g, r.x(), r.y(), r.w(), r.h(), GuiPaint.BUTTON,
+                    hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
+        } else {
+            GuiPaint.box(g, r.x(), r.y(), r.w(), r.h(), GuiPaint.INSET, GuiPaint.LINE);
+        }
+        TvIcons.draw(g, icon, r.x() + (r.w() - TvIcons.SIZE) / 2, r.y() + (r.h() - TvIcons.SIZE) / 2, enabled);
+    }
+
+    /** O botão comum com o ícone à esquerda e o texto ao lado. */
+    static void iconButton(GuiGraphics g, Font font, TvRect r, TvIcons.Icon icon, Label label, boolean hovered) {
+        GuiPaint.box(g, r.x(), r.y(), r.w(), r.h(), GuiPaint.BUTTON,
+                hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
+        TvIcons.draw(g, icon, r.x() + 1, r.y() + (r.h() - TvIcons.SIZE) / 2);
+        GuiText.draw(g, font, label.text(), r.x() + TvIcons.SIZE + 1, r.y() + (r.h() - 8) / 2, GuiPaint.FG);
+    }
+
     /** O botão principal na cor {@code color}; desligado, afundado e apagado. */
     static void primary(GuiGraphics g, Font font, TvRect r, Label label, boolean hovered, boolean active, int color) {
         if (active) {

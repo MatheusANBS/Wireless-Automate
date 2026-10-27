@@ -11,7 +11,7 @@ class TvEditorLayoutTest {
     void cabeNaEscala3De1366Por768() {
         TvEditorLayout l = TvEditorLayout.of(4, 4, 447, 248);
         assertEquals(187, l.canvas().w());
-        assertEquals(184, l.canvas().h());
+        assertEquals(182, l.canvas().h());
         assertTrue(l.buttons().bottom() <= 4 + 248);
         assertTrue(l.props().right() <= 4 + 447);
         assertTrue(l.layers().h() > 150, "as Camadas usam a altura inteira da coluna");

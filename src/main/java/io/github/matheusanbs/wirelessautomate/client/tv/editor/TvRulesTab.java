@@ -29,7 +29,8 @@ final class TvRulesTab {
     /** O efeito que a ficha da regra mostra. */
     enum Effect { COLOR, BACKGROUND, BLINK, HIDE }
 
-    private static final int SMALL = 11;
+    /** A largura dos botões da regra: o sprite de 16 px tem 2 px de folga de cada lado. */
+    private static final int SMALL = 14;
 
     private TvRulesTab() {
     }
@@ -57,18 +58,18 @@ final class TvRulesTab {
         String id = "rule" + i;
         TvRule rule = ctx.piece().rules().get(i);
         int y = form.y();
-        form.add(new TvControls.Label(form.font, id + ".if", 0, y + 2, 82, GuiPaint.MUTED,
+        form.add(new TvControls.Label(form.font, id + ".if", 0, y + 4, TvForm.W - 3 * SMALL - 6, GuiPaint.MUTED,
                 () -> TvPropsCtx.key(value ? "rules.if.value" : "rules.if.own")));
-        form.add(new TvIconControls.IconButton(id + ".up", 84, y, SMALL, TvIcons.Icon.MOVE_UP,
+        form.add(new TvIconControls.IconButton(id + ".up", TvForm.W - 3 * SMALL - 2, y, SMALL, TvIcons.Icon.MOVE_UP,
                 TvPropsCtx.key("rules.up"), () -> ctx.change("rules.move", p -> p.withRules(swap(p.rules(), i, i - 1))))
                 .enabledWhen(() -> i > 0));
-        form.add(new TvIconControls.IconButton(id + ".down", 96, y, SMALL, TvIcons.Icon.MOVE_DOWN,
+        form.add(new TvIconControls.IconButton(id + ".down", TvForm.W - 2 * SMALL - 1, y, SMALL, TvIcons.Icon.MOVE_DOWN,
                 TvPropsCtx.key("rules.down"), () -> ctx.change("rules.move", p -> p.withRules(swap(p.rules(), i,
                         i + 1)))).enabledWhen(() -> i < ctx.piece().rules().size() - 1));
-        form.add(new TvIconControls.IconButton(id + ".remove", 108, y, SMALL, TvIcons.Icon.REMOVE,
+        form.add(new TvIconControls.IconButton(id + ".remove", TvForm.W - SMALL, y, SMALL, TvIcons.Icon.REMOVE,
                 TvPropsCtx.key("rules.remove"), () -> ctx.change("rules.remove", p -> p.withRules(without(p.rules(),
                         i)))));
-        form.endRow(TvControls.ROW - 1);
+        form.endRow(TvIcons.SIZE);
         if (!value) {
             own(form, ctx, i, rule);
             form.label(id + ".for", TvPropsCtx.key("rules.for"));

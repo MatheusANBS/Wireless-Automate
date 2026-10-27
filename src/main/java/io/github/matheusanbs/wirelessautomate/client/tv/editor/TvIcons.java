@@ -1,93 +1,108 @@
 package io.github.matheusanbs.wirelessautomate.client.tv.editor;
 
-import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
+import io.github.matheusanbs.wirelessautomate.GuiTheme;
+import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.client.GuiThemes;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.resources.ResourceLocation;
 
 /**
- * O único ponto de desenho dos ícones do editor da Tela de Sinal: cada ícone é um item de {@link Icon}, desenhado numa
- * caixa de {@link #SIZE} px. Hoje são traços com {@code fill}; trocar por sprites é mexer só aqui, sem tocar nos
- * painéis.
+ * O único ponto de desenho dos ícones do editor da Tela de Sinal: cada ícone é um item de {@link Icon}, um sprite de
+ * {@value #SIZE} × {@value #SIZE} px em {@code textures/gui/tv/} (gerados pelo {@code tela_icones.py}), numa variante
+ * para cada tema. Sempre em escala inteira, sem reduzir.
  */
 final class TvIcons {
-    static final int SIZE = 9;
+    static final int SIZE = 16;
+    private static final float DISABLED_ALPHA = 0.4f;
 
     /** Os ícones e onde aparecem. */
     enum Icon {
+        /** A peça Valor: paleta e Camadas. */
+        VALUE("value"),
+        /** A peça Texto: paleta e Camadas. */
+        TEXT("text"),
+        /** A peça Forma: paleta e Camadas. */
+        SHAPE("shape"),
+        /** A aba Peças da coluna. */
+        PIECES("pieces"),
+        /** A aba Componentes da coluna. */
+        COMPONENTS("components"),
+        /** A aba Camadas da coluna. */
+        LAYERS("layers"),
+        /** Desfazer: barra de botões. */
+        UNDO("undo"),
+        /** Refazer: barra de botões. */
+        REDO("redo"),
+        /** Agrupar: barra de botões e menu da miniatura. */
+        GROUP("group"),
+        /** Desagrupar: barra de botões e menu da miniatura. */
+        UNGROUP("ungroup"),
+        /** Duplicar: barra de botões e menu da miniatura. */
+        DUPLICATE("duplicate"),
+        /** Remover: barra de botões, menu, componentes e regras. */
+        REMOVE("remove"),
+        /** Salvar como componente: barra de botões. */
+        SAVE_COMPONENT("save_component"),
+        /** Caber: o botão do zoom da miniatura. */
+        FIT("fit"),
+        /** Peça à vista: Camadas. */
+        EYE("eye"),
+        /** Peça escondida: Camadas e menu da miniatura. */
+        EYE_CLOSED("eye_closed"),
+        /** Renomear: componentes do jogador. */
+        RENAME("rename"),
         /** Alinhar à esquerda: aba Estilo, seção Texto. */
-        ALIGN_LEFT,
+        ALIGN_LEFT("align_left"),
         /** Alinhar ao centro: aba Estilo, seção Texto. */
-        ALIGN_CENTER,
+        ALIGN_CENTER("align_center"),
         /** Alinhar à direita: aba Estilo, seção Texto. */
-        ALIGN_RIGHT,
+        ALIGN_RIGHT("align_right"),
         /** O conta-gotas: janela do seletor de cor. */
-        EYEDROPPER,
-        /** A seta da seção aberta: cabeçalho das seções da aba Estilo. */
-        SECTION_OPEN,
-        /** A seta da seção recolhida: cabeçalho das seções da aba Estilo. */
-        SECTION_CLOSED,
+        EYEDROPPER("eyedropper"),
+        /** A seta da seção aberta: cabeçalho das seções e das Camadas. */
+        SECTION_OPEN("section_open"),
+        /** A seta da seção recolhida: cabeçalho das seções e das Camadas. */
+        SECTION_CLOSED("section_closed"),
         /** Subir a regra: botões de cada regra da aba Regras. */
-        MOVE_UP,
+        MOVE_UP("move_up"),
         /** Descer a regra: botões de cada regra da aba Regras. */
-        MOVE_DOWN,
-        /** Tirar a regra: botões de cada regra da aba Regras. */
-        REMOVE
+        MOVE_DOWN("move_down");
+
+        private final ResourceLocation light;
+        private final ResourceLocation dark;
+
+        Icon(String name) {
+            this.light = ResourceLocation.fromNamespaceAndPath(WirelessAutomate.MODID, "textures/gui/tv/" + name + ".png");
+            this.dark = ResourceLocation.fromNamespaceAndPath(WirelessAutomate.MODID,
+                    "textures/gui/tv/" + name + "_dark.png");
+        }
     }
 
     private TvIcons() {
     }
 
     static void draw(GuiGraphics g, Icon icon, int x, int y) {
-        draw(g, icon, x, y, GuiPaint.FG);
+        draw(g, icon, x, y, true);
     }
 
-    static void draw(GuiGraphics g, Icon icon, int x, int y, int color) {
-        switch (icon) {
-            case ALIGN_LEFT -> lines(g, x, y, color, 0);
-            case ALIGN_CENTER -> lines(g, x, y, color, 1);
-            case ALIGN_RIGHT -> lines(g, x, y, color, 2);
-            case EYEDROPPER -> {
-                g.fill(x + 5, y, x + 9, y + 4, color);
-                g.fill(x + 3, y + 3, x + 6, y + 6, color);
-                g.fill(x + 1, y + 5, x + 4, y + 8, color);
-                g.fill(x, y + 7, x + 2, y + 9, color);
-            }
-            case SECTION_OPEN -> {
-                g.fill(x + 1, y + 3, x + 8, y + 4, color);
-                g.fill(x + 2, y + 4, x + 7, y + 5, color);
-                g.fill(x + 3, y + 5, x + 6, y + 6, color);
-                g.fill(x + 4, y + 6, x + 5, y + 7, color);
-            }
-            case SECTION_CLOSED -> {
-                g.fill(x + 3, y + 1, x + 4, y + 8, color);
-                g.fill(x + 4, y + 2, x + 5, y + 7, color);
-                g.fill(x + 5, y + 3, x + 6, y + 6, color);
-                g.fill(x + 6, y + 4, x + 7, y + 5, color);
-            }
-            case MOVE_UP -> {
-                g.fill(x + 4, y + 1, x + 5, y + 8, color);
-                g.fill(x + 3, y + 2, x + 6, y + 3, color);
-                g.fill(x + 2, y + 3, x + 7, y + 4, color);
-            }
-            case MOVE_DOWN -> {
-                g.fill(x + 4, y + 1, x + 5, y + 8, color);
-                g.fill(x + 3, y + 6, x + 6, y + 7, color);
-                g.fill(x + 2, y + 5, x + 7, y + 6, color);
-            }
-            case REMOVE -> {
-                for (int i = 1; i < 8; i++) {
-                    g.fill(x + i, y + i, x + i + 1, y + i + 1, color);
-                    g.fill(x + 8 - i, y + i, x + 9 - i, y + i + 1, color);
-                }
-            }
+    /** Desenha o sprite do tema atual com o canto em ({@code x}, {@code y}); desligado, apagado. */
+    static void draw(GuiGraphics g, Icon icon, int x, int y, boolean enabled) {
+        ResourceLocation sprite = GuiThemes.current() == GuiTheme.DARK ? icon.dark : icon.light;
+        if (!enabled) {
+            g.setColor(1f, 1f, 1f, DISABLED_ALPHA);
+        }
+        g.blit(sprite, x, y, 0, 0, SIZE, SIZE, SIZE, SIZE);
+        if (!enabled) {
+            g.setColor(1f, 1f, 1f, 1f);
         }
     }
 
-    /** Quatro traços de largura alternada, colados à esquerda, ao centro ou à direita. */
-    private static void lines(GuiGraphics g, int x, int y, int color, int align) {
-        int[] widths = {9, 5, 9, 5};
-        for (int i = 0; i < widths.length; i++) {
-            int left = align == 0 ? 0 : align == 1 ? (SIZE - widths[i]) / 2 : SIZE - widths[i];
-            g.fill(x + left, y + i * 2 + 1, x + left + widths[i], y + i * 2 + 2, color);
-        }
+    /** O ícone do tipo de peça, na paleta e nas Camadas. */
+    static Icon of(io.github.matheusanbs.wirelessautomate.tv.TvPieceType type) {
+        return switch (type) {
+            case VALUE -> Icon.VALUE;
+            case TEXT -> Icon.TEXT;
+            case SHAPE -> Icon.SHAPE;
+        };
     }
 }

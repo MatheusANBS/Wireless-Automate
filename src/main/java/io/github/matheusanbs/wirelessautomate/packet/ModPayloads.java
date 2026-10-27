@@ -70,7 +70,11 @@ import org.jetbrains.annotations.Nullable;
  * de filtro segue a mesma regra com o {@link FilterMenu} e a {@link FilterViewPayload}.
  */
 public final class ModPayloads {
-    /** Versão do protocolo (36: o {@code TvLayoutPayload} do editor da Tela de Sinal); mude quando um payload mudar de formato. */
+    /**
+     * Versão do protocolo (36: os payloads do editor da Tela de Sinal, {@code TvLayoutPayload}, {@code TvLayoutAckPayload},
+     * {@code TvLibraryPayload}, {@code TvLibraryActionPayload}, {@code TvPreviewPayload} e {@code TvPreviewValuesPayload},
+     * e o teto de bytes do layout no buffer de abertura da Tela); mude quando um payload mudar de formato.
+     */
     public static final String VERSION = "36";
 
     public static void register(RegisterPayloadHandlersEvent event) {
@@ -156,6 +160,8 @@ public final class ModPayloads {
                 (payload, context) -> TvEditing.handleSize(serverPlayer(context), payload));
         registrar.playToServer(TvLayoutPayload.TYPE, TvLayoutPayload.STREAM_CODEC,
                 (payload, context) -> TvEditing.handleLayout(serverPlayer(context), payload));
+        registrar.playToClient(TvLayoutAckPayload.TYPE, TvLayoutAckPayload.STREAM_CODEC,
+                (payload, context) -> TvClientHooks.layoutAck.accept(payload));
         // Biblioteca de componentes e temas do jogador, com o editor aberto.
         registrar.playToClient(TvLibraryPayload.TYPE, TvLibraryPayload.STREAM_CODEC,
                 (payload, context) -> TvClientHooks.library.accept(payload));

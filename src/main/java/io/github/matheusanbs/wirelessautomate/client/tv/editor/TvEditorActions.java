@@ -12,7 +12,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * Tudo o que o editor manda ao servidor: salvar o rascunho inteiro pelo {@link TvLayoutPayload} (o tamanho é
- * conferido antes: acima de {@link TvLayoutPayload#MAX_BYTES} nada sai e o editor avisa) e as ações na biblioteca
+ * conferido antes: acima do teto do servidor, o {@code maxLayoutBytes}, nada sai e o editor avisa) e as ações na biblioteca
  * pelo {@link TvLibraryActionPayload} (pedir, salvar, renomear e remover componentes e temas; a resposta volta pelo
  * {@link TvLibraryClient}). Na prévia de desenvolvimento ({@code preview}), nada sai e o rascunho vira a base na hora.
  */
@@ -22,14 +22,25 @@ public final class TvEditorActions {
 
     private final int containerId;
     private final boolean preview;
+    private final int maxLayoutBytes;
 
-    public TvEditorActions(int containerId, boolean preview) {
+    public TvEditorActions(int containerId, boolean preview, int maxLayoutBytes) {
         this.containerId = containerId;
         this.preview = preview;
+        this.maxLayoutBytes = Math.min(maxLayoutBytes, TvLayoutPayload.MAX_BYTES);
+    }
+
+    int containerId() {
+        return containerId;
+    }
+
+    /** O teto de bytes do layout salvo: o do servidor, que veio na abertura, e nunca mais que o do pacote. */
+    int maxLayoutBytes() {
+        return maxLayoutBytes;
     }
 
     Saved save(TvLayout layout) {
-        if (TvLayoutPayload.encodedSize(layout) > TvLayoutPayload.MAX_BYTES) {
+        if (TvLayoutPayload.encodedSize(layout) > maxLayoutBytes) {
             return Saved.TOO_BIG;
         }
         if (preview) {

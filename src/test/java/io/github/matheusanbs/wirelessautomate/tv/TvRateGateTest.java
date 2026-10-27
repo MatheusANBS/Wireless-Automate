@@ -41,4 +41,14 @@ class TvRateGateTest {
         }
         assertTrue(gate.allow(id, 10));
     }
+
+    @Test
+    void limiteProprioValeEmVezDosDez() {
+        TvRateGate gate = new TvRateGate(2);
+        UUID id = UUID.randomUUID();
+        assertTrue(gate.allow(id, 100));
+        assertTrue(gate.allow(id, 100));
+        assertFalse(gate.allow(id, 100));
+        assertTrue(gate.allow(id, 120));
+    }
 }

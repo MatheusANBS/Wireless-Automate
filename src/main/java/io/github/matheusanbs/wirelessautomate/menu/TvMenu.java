@@ -45,13 +45,15 @@ public class TvMenu extends AbstractContainerMenu {
     }
 
     /** O que o buffer de abertura leva. */
-    private record Data(BlockPos pos, TvArea area, int maxWidth, int maxHeight, @Nullable UUID currentNetwork,
+    private record Data(BlockPos pos, TvArea area, int maxWidth, int maxHeight, int maxLayoutBytes,
+            @Nullable UUID currentNetwork,
             String currentType, List<NetworkChoice> networks) {
         static Data read(RegistryFriendlyByteBuf buf) {
             BlockPos pos = BlockPos.STREAM_CODEC.decode(buf);
             TvArea area = new TvArea(buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt());
             int maxWidth = buf.readVarInt();
             int maxHeight = buf.readVarInt();
+            int maxLayoutBytes = buf.readVarInt();
             UUID network = buf.readBoolean() ? UUIDUtil.STREAM_CODEC.decode(buf) : null;
             String type = buf.readUtf(32);
             int size = Math.min(buf.readVarInt(), MAX_NETWORKS);
@@ -59,14 +61,14 @@ public class TvMenu extends AbstractContainerMenu {
             for (int i = 0; i < size; i++) {
                 list.add(NetworkChoice.STREAM_CODEC.decode(buf));
             }
-            return new Data(pos, area, maxWidth, maxHeight, network, type, list);
+            return new Data(pos, area, maxWidth, maxHeight, maxLayoutBytes, network, type, list);
         }
 
         void write(RegistryFriendlyByteBuf buf) {
             BlockPos.STREAM_CODEC.encode(buf, pos);
             buf.writeVarInt(area.width()).writeVarInt(area.height()).writeVarInt(area.anchorCol())
                     .writeVarInt(area.anchorRow());
-            buf.writeVarInt(maxWidth).writeVarInt(maxHeight);
+            buf.writeVarInt(maxWidth).writeVarInt(maxHeight).writeVarInt(maxLayoutBytes);
             buf.writeBoolean(currentNetwork != null);
             if (currentNetwork != null) {
                 UUIDUtil.STREAM_CODEC.encode(buf, currentNetwork);
@@ -107,7 +109,8 @@ public class TvMenu extends AbstractContainerMenu {
             networks = new ArrayList<>(networks.subList(0, MAX_NETWORKS));
         }
         TvBinding first = tv.layout().bindings().isEmpty() ? null : tv.layout().bindings().get(0);
-        Data data = new Data(tv.getBlockPos(), tv.area(), Config.tvMaxWidth(), Config.tvMaxHeight(), first == null ? null : first.network(),
+        Data data = new Data(tv.getBlockPos(), tv.area(), Config.tvMaxWidth(), Config.tvMaxHeight(),
+                Config.tvMaxLayoutBytes(), first == null ? null : first.network(),
                 first == null ? "" : first.type().key(), networks);
         player.openMenu(new SimpleMenuProvider((containerId, inventory, p) -> new TvMenu(containerId, data, tv),
                 Component.translatable("container.wirelessautomate.signal_screen")), data::write);
@@ -127,6 +130,11 @@ public class TvMenu extends AbstractContainerMenu {
 
     public int maxHeight() {
         return data.maxHeight;
+    }
+
+    /** O teto, em bytes, do layout salvo: o editor confere antes de mandar. */
+    public int maxLayoutBytes() {
+        return data.maxLayoutBytes;
     }
 
     /** As redes que o jogador pode usar, ordenadas pelo nome. */

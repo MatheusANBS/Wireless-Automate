@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.tv;
 
+import io.github.matheusanbs.wirelessautomate.packet.TvLayoutAckPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TvLibraryPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TvPreviewValuesPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TvValuesPayload;
@@ -13,6 +14,10 @@ public final class TvClientHooks {
 
     /** Chamado no cliente quando os números de uma Tela chegam do servidor. */
     public static volatile Consumer<TvValuesPayload> values = payload -> {
+    };
+
+    /** Chamado no cliente quando a resposta a um salvar do layout chega. */
+    public static volatile Consumer<TvLayoutAckPayload> layoutAck = payload -> {
     };
 
     /** Chamado no cliente quando a biblioteca do jogador chega, com o editor aberto. */

@@ -28,8 +28,8 @@ public record TvBackground(Kind kind, int top, int bottom) {
     public static final TvBackground DEFAULT = new TvBackground(Kind.THEME, 0, 0);
 
     public static final Codec<TvBackground> CODEC = RecordCodecBuilder.create(i -> i.group(
-            Kind.CODEC.optionalFieldOf("kind", DEFAULT.kind).forGetter(TvBackground::kind),
-            Codec.INT.optionalFieldOf("top", DEFAULT.top).forGetter(TvBackground::top),
-            Codec.INT.optionalFieldOf("bottom", DEFAULT.bottom).forGetter(TvBackground::bottom))
+            Kind.CODEC.lenientOptionalFieldOf("kind", DEFAULT.kind).forGetter(TvBackground::kind),
+            Codec.INT.lenientOptionalFieldOf("top", DEFAULT.top).forGetter(TvBackground::top),
+            Codec.INT.lenientOptionalFieldOf("bottom", DEFAULT.bottom).forGetter(TvBackground::bottom))
             .apply(i, TvBackground::new));
 }

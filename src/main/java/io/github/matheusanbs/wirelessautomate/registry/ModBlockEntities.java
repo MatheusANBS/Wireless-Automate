@@ -10,6 +10,7 @@ import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import io.github.matheusanbs.wirelessautomate.storage.StorageSourceTankBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageTankBlockEntity;
+import io.github.matheusanbs.wirelessautomate.tv.TvBlockEntity;
 import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -43,6 +44,9 @@ public final class ModBlockEntities {
     public static final Supplier<BlockEntityType<RepairerBlockEntity>> CRYSTAL_REPAIRER =
             BLOCK_ENTITY_TYPES.register("crystal_repairer", () -> BlockEntityType.Builder.of(
                     RepairerBlockEntity::new, ModBlocks.CRYSTAL_REPAIRER.get()).build(null));
+    public static final Supplier<BlockEntityType<TvBlockEntity>> SIGNAL_SCREEN =
+            BLOCK_ENTITY_TYPES.register("signal_screen", () -> BlockEntityType.Builder.of(
+                    TvBlockEntity::new, ModBlocks.SIGNAL_SCREEN.get()).build(null));
 
     private ModBlockEntities() {
     }

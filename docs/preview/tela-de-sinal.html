@@ -1,0 +1,818 @@
+<title>Tela de Sinal</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&family=VT323&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: página de proposta em coluna; o editor é a peça central, no estilo "Porcelana e Sinal" das telas do mod. */
+:root{
+  --bg:#ECE5D6; --page-fg:#2A2730; --page-muted:#6E675B; --rule:#CFC4AE;
+  --panel:#F2EBDD; --bevel-l:#FFFBF3; --inset:#DDD3BF; --bevel-d:#BDB19A; --hover:#F8F3E8;
+  --fg:#2A2730; --muted:#7A7366; --accent:#F0603E; --accent-deep:#C2442A;
+  --ok:#2F9D5C; --warn:#D88A1A; --danger:#D5453A; --paused:#6B6FD0; --brass:#B48E2E;
+  --wall:#7d7468; --wall2:#6c645a;
+  --f-pix:"Silkscreen",ui-monospace,monospace;
+  --f-body:"IBM Plex Sans",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#1E1C22; --page-fg:#ECE5D6; --page-muted:#A79F90; --rule:#3A3640;
+  --panel:#26232B; --bevel-l:#312D37; --inset:#1C1A20; --bevel-d:#4A4550; --hover:#3A3640;
+  --fg:#ECE5D6; --muted:#A79F90; --accent:#F26A48; --ok:#3DB56E; --warn:#E39A2E; --danger:#E55A4E; --paused:#8A8EE8; --brass:#D2AE4E;
+  --wall:#4d4740; --wall2:#423d37; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1E1C22; --page-fg:#ECE5D6; --page-muted:#A79F90; --rule:#3A3640;
+  --panel:#26232B; --bevel-l:#312D37; --inset:#1C1A20; --bevel-d:#4A4550; --hover:#3A3640;
+  --fg:#ECE5D6; --muted:#A79F90; --accent:#F26A48; --ok:#3DB56E; --warn:#E39A2E; --danger:#E55A4E; --paused:#8A8EE8; --brass:#D2AE4E;
+  --wall:#4d4740; --wall2:#423d37; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--page-fg);font-family:var(--f-body);font-size:15px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:32px 64px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{font-family:var(--f-pix);font-weight:400;text-wrap:balance;margin:0;letter-spacing:.02em}
+h1{font-size:clamp(28px,5vw,44px);line-height:1.1}
+h2{font-size:22px;margin-bottom:6px}
+h3{font-size:14px}
+p{margin:0;max-width:72ch}
+.lede{color:var(--page-muted);font-size:17px}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+section{display:flex;flex-direction:column;gap:16px}
+.note{color:var(--page-muted);font-size:14px}
+.scroll{overflow-x:auto;padding-bottom:6px}
+.new{font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;background:var(--accent);color:#fff;padding:1px 5px;vertical-align:middle;margin-left:6px}
+
+/* ---------- parede ---------- */
+.world{position:relative;padding:28px;overflow:hidden;
+  background:repeating-linear-gradient(0deg,transparent 0 63px,rgba(0,0,0,.18) 63px 64px),
+   repeating-linear-gradient(90deg,transparent 0 63px,rgba(0,0,0,.18) 63px 64px),linear-gradient(var(--wall),var(--wall2))}
+.tvframe{position:relative;margin:0 auto;width:min(100%,384px);aspect-ratio:2/1;border:4px solid #23242a;box-shadow:0 0 0 2px #0a0a0c,0 10px 30px rgba(0,0,0,.45)}
+.tvframe .anchor{position:absolute;left:-4px;bottom:-4px;width:calc(100%/6 + 4px);height:calc(100%/3 + 4px);outline:2px dashed var(--accent);outline-offset:-2px;pointer-events:none;z-index:5}
+
+/* ---------- superfície da TV (mesmo desenho no mundo e no editor) ---------- */
+.surface{position:absolute;inset:0;overflow:hidden;user-select:none;-webkit-user-select:none}
+.el{position:absolute;overflow:hidden;line-height:1;white-space:nowrap}
+.el.txt{display:flex;align-items:center}
+.el canvas{width:100%;height:100%;image-rendering:pixelated;display:block}
+.el svg{width:100%;height:100%;display:block;overflow:visible}
+.f-pix{font-family:"Silkscreen",ui-monospace,monospace}
+.f-vt{font-family:"VT323",ui-monospace,monospace}
+.f-mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+.f-sans{font-family:"IBM Plex Sans",system-ui,sans-serif;font-weight:600}
+.scanl::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.2) 0 1px,transparent 1px 3px);z-index:50}
+
+/* ---------- telas do mod ---------- */
+.gui{background:var(--panel);color:var(--fg);border:2px solid #1B1920;
+  box-shadow:inset 2px 2px 0 var(--bevel-l),inset -2px -2px 0 var(--bevel-d);padding:10px;font-size:13px}
+.gui-h{display:flex;align-items:center;gap:8px;padding:2px 2px 8px;font-family:var(--f-pix);font-size:12px}
+.gui-h .sp{flex:1}
+.pill{font-family:var(--f-mono);font-size:11px;padding:1px 6px;border:1px solid var(--bevel-d);background:var(--hover);color:var(--muted)}
+.sunk{background:var(--inset);box-shadow:inset 2px 2px 0 var(--bevel-d),inset -2px -2px 0 var(--bevel-l);padding:8px}
+.btn{font:500 12px var(--f-body);color:var(--fg);background:var(--hover);border:1px solid #1B1920;
+  box-shadow:inset 1px 1px 0 var(--bevel-l),inset -1px -1px 0 var(--bevel-d);padding:3px 9px;cursor:pointer;white-space:nowrap}
+.btn:disabled{opacity:.45;cursor:default}
+.btn:focus-visible,.chip:focus-visible,.tab:focus-visible,.pitem:focus-visible,.sw:focus-visible,.tool:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btn.primary{background:var(--accent);color:#fff;box-shadow:inset 1px 1px 0 #ff9a80,inset -1px -1px 0 var(--accent-deep)}
+.lbl{font-family:var(--f-mono);font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.field{width:100%;font:12px var(--f-body);padding:3px 5px;background:var(--bevel-l);color:var(--fg);border:1px solid var(--bevel-d);min-width:0}
+.chip{font:12px var(--f-body);padding:2px 7px;border:1px solid var(--bevel-d);background:var(--hover);color:var(--fg);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent-deep);color:#fff}
+.sw{width:18px;height:18px;border:1px solid #1B1920;cursor:pointer;padding:0;flex:none}
+.sw[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:1px}
+
+/* tamanho */
+.size{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);gap:12px;max-width:760px}
+.step{display:flex;align-items:center;gap:6px;margin:4px 0 10px}
+.step output{font-family:var(--f-pix);font-size:18px;min-width:44px;text-align:center}
+.wallmini{position:relative;height:220px;overflow:hidden;background:
+   repeating-linear-gradient(0deg,transparent 0 15px,rgba(0,0,0,.16) 15px 16px),
+   repeating-linear-gradient(90deg,transparent 0 15px,rgba(0,0,0,.16) 15px 16px),var(--wall)}
+.ghost{position:absolute;border:2px solid var(--accent);background:rgba(240,96,62,.18)}
+.ghost.bad{border-color:var(--danger);background:rgba(213,69,58,.25)}
+.anch{position:absolute;width:16px;height:16px;background:#111;outline:2px solid #fff}
+.radio{display:flex;flex-wrap:wrap;gap:4px}
+
+/* editor */
+.editor{display:grid;grid-template-columns:180px minmax(0,1fr) 250px;gap:10px;min-width:1040px}
+.col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.pitem{display:flex;align-items:center;gap:6px;padding:4px 6px;background:var(--panel);border:1px solid var(--bevel-d);cursor:pointer;font:12px var(--f-body);color:var(--fg);text-align:left}
+.pitem:hover{background:var(--hover)}
+.pitem .g{width:14px;text-align:center;font-family:var(--f-pix);font-size:11px;color:var(--accent)}
+.comp{display:flex;flex-direction:column;gap:4px}
+.comp .pitem{width:100%}
+.comp .pitem small{color:var(--muted);margin-left:auto;font-size:10px}
+.cbox{display:flex;flex-direction:column;gap:6px}
+.cv{position:relative;aspect-ratio:2/1;touch-action:none;background:#0f1117}
+.cv .grid{position:absolute;inset:0;pointer-events:none;z-index:40;
+  background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px),
+  linear-gradient(rgba(255,255,255,.16) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.16) 1px,transparent 1px);
+  background-size:calc(100%/48) calc(100%/24),calc(100%/48) calc(100%/24),calc(100%/6) calc(100%/3),calc(100%/6) calc(100%/3)}
+.cv .el{cursor:move}
+.selbox{position:absolute;outline:2px solid var(--accent);pointer-events:none;z-index:45}
+.selbox.grp{outline-style:dashed}
+.handle{position:absolute;width:9px;height:9px;background:var(--accent);cursor:nwse-resize;z-index:46}
+.cfoot{display:flex;gap:6px;align-items:center;font-family:var(--f-mono);font-size:11px;color:var(--muted);flex-wrap:wrap}
+.layers{max-height:236px;overflow:auto;display:flex;flex-direction:column;gap:1px}
+.lrow{display:flex;align-items:center;gap:6px;padding:3px 5px;font-size:12px;cursor:pointer;background:var(--panel)}
+.lrow:hover{background:var(--hover)}
+.lrow.on{background:var(--accent);color:#fff}
+.lrow.ing{padding-left:18px}
+.lrow .t{font-family:var(--f-pix);font-size:10px;width:14px;text-align:center}
+.lrow .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lrow .eye{font-size:11px;opacity:.75}
+.lhead{font-family:var(--f-mono);font-size:10.5px;color:var(--muted);padding:4px 5px 2px;text-transform:uppercase;letter-spacing:.06em}
+.tabs{display:flex;gap:2px;margin-bottom:-2px}
+.tab{font:500 12px var(--f-body);padding:4px 9px;border:1px solid #1B1920;border-bottom:0;background:var(--inset);color:var(--muted);cursor:pointer}
+.tab[aria-selected="true"]{background:var(--panel);color:var(--fg);box-shadow:inset 0 2px 0 var(--accent)}
+.props{border:1px solid #1B1920;background:var(--panel);padding:10px;display:flex;flex-direction:column;gap:8px;min-height:340px}
+.row{display:grid;grid-template-columns:76px minmax(0,1fr);gap:6px;align-items:center}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.swrow{display:flex;gap:3px;flex-wrap:wrap;align-items:center}
+.swrow input[type=color]{width:22px;height:20px;padding:0;border:1px solid #1B1920;background:none;cursor:pointer}
+.rule{display:grid;grid-template-columns:auto 52px minmax(0,1fr) 22px;gap:4px;align-items:center;font-size:12px}
+.chk{display:flex;align-items:center;gap:6px;font-size:12px}
+.hint{font-size:11.5px;color:var(--muted);line-height:1.4}
+
+/* atalhos */
+.keys{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px 24px}
+.keys div{display:flex;flex-wrap:wrap;align-items:center;gap:4px;font-size:13px;font-family:var(--f-mono);color:var(--page-muted)}
+.keys span{flex-basis:100%;font-family:var(--f-body);color:var(--page-fg);font-size:14px}
+.keys span kbd{font-size:11px}
+kbd{font:11px var(--f-mono);padding:1px 6px;background:var(--panel);color:var(--fg);border:1px solid var(--bevel-d);box-shadow:inset 0 -2px 0 var(--bevel-d)}
+
+/* temas */
+.themes{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.theme-card{display:flex;flex-direction:column;gap:6px}
+.theme-card .tvframe{width:100%}
+.theme-card .cap{font-family:var(--f-mono);font-size:12px;color:var(--page-muted)}
+
+/* pixel art */
+.pix{display:grid;grid-template-columns:auto minmax(0,1fr) 200px;gap:10px;min-width:760px}
+.tools{display:flex;flex-direction:column;gap:4px}
+.tool{width:34px;height:30px;border:1px solid #1B1920;background:var(--hover);color:var(--fg);font:11px var(--f-pix);cursor:pointer}
+.tool[aria-pressed="true"]{background:var(--accent);color:#fff}
+#art{width:100%;max-width:420px;aspect-ratio:1;image-rendering:pixelated;background:
+  conic-gradient(#d9d2c4 25%,#ece6da 0 50%,#d9d2c4 0 75%,#ece6da 0) 0 0/14px 14px;cursor:crosshair;touch-action:none;display:block;margin:0 auto}
+.pal{display:grid;grid-template-columns:repeat(8,1fr);gap:3px}
+.pal .sw{width:100%;aspect-ratio:1;height:auto}
+.lib{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.lib canvas{width:100%;aspect-ratio:1;image-rendering:pixelated;background:#111;border:1px solid var(--bevel-d)}
+
+/* texto */
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px}
+dl{margin:0;display:grid;grid-template-columns:max-content minmax(0,1fr);gap:8px 16px;font-size:14px}
+dt{font-family:var(--f-mono);font-size:12px;color:var(--accent);padding-top:2px}
+dd{margin:0}
+ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.pieces{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px 24px}
+.piece{display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;font-size:14px}
+.piece .g{font-family:var(--f-pix);color:var(--accent);font-size:13px;padding-top:1px}
+.piece b{font-weight:600}
+.stages{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.stage{border-top:3px solid var(--accent);padding-top:8px;display:flex;flex-direction:column;gap:4px}
+.stage b{font-family:var(--f-pix);font-weight:400;font-size:13px}
+.stage span{font-size:13px;color:var(--page-muted)}
+.cost{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.cost div{border-left:3px solid var(--ok);padding:4px 0 4px 10px;font-size:14px}
+.cost div.w{border-color:var(--warn)}
+.cost b{display:block;font-family:var(--f-mono);font-size:12px;color:var(--ok);font-weight:500}
+.cost div.w b{color:var(--warn)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media (max-width:640px){.size{grid-template-columns:1fr}}
+</style>
+
+<div class="wrap">
+
+<header style="display:flex;flex-direction:column;gap:14px">
+  <span class="eyebrow">Wireless Automate · proposta para aprovação · v2</span>
+  <h1>Tela de Sinal</h1>
+  <p class="lede">Um bloco que você prende na parede, escolhe o tamanho (de 1×1 a 32×32) e monta do zero. Não há widget fechado: tudo é feito de peças soltas (valor, ícone de item, barra, medidor, gráfico, seta, forma, texto, imagem), cada uma ligada ao dado que você quiser, com a cor, a fonte, o formato e as regras que você der. O seu próprio painel de energia é só um grupo dessas peças, que você salva e reusa em outras TVs.</p>
+</header>
+
+<!-- ============ 1. no mundo ============ -->
+<section>
+  <span class="eyebrow">1 · No mundo</span>
+  <h2>O painel que está no editor, na parede</h2>
+  <p class="note">Esta TV 6×3 mostra o layout do editor abaixo, ao vivo: mude algo lá e veja aqui. O quadrado tracejado é o único bloco de verdade; o resto é desenhado sobre a parede, rente a ela.</p>
+  <div class="world"><div class="tvframe"><div class="surface" id="worldTv"></div><div class="anchor" title="o bloco colocado"></div></div></div>
+</section>
+
+<!-- ============ 2. editor ============ -->
+<section>
+  <span class="eyebrow">2 · Editor<span class="new">NOVO</span></span>
+  <h2>Monte com peças, agrupe, salve como componente</h2>
+  <p class="note">Tudo aqui funciona. Clique numa peça para escolhê-la (numa peça de grupo, escolhe o grupo inteiro; dois cliques entram no grupo). Shift + clique escolhe várias. Arraste para mover e puxe o canto para redimensionar. À direita, as abas <b>Dado</b>, <b>Formato</b>, <b>Estilo</b> e <b>Regras</b> mudam a peça escolhida. Os números do exemplo variam sozinhos, para as regras de cor aparecerem.</p>
+  <div class="scroll"><div class="gui editor">
+    <div class="col">
+      <div>
+        <div class="gui-h"><span>Peças</span></div>
+        <div class="pgrid" id="palette"></div>
+      </div>
+      <div>
+        <div class="gui-h"><span>Componentes</span></div>
+        <div class="comp" id="comps"></div>
+        <p class="hint" style="margin-top:6px">Componentes são grupos salvos. Os prontos são só um ponto de partida: inseridos, viram peças soltas que você edita, desagrupa ou apaga.</p>
+      </div>
+    </div>
+    <div class="cbox">
+      <div class="gui-h"><span>Base principal</span><span class="pill">6×3 · 192×96 px</span><span class="sp"></span>
+        <label class="lbl" for="bgSel">Fundo</label>
+        <select class="field" id="bgSel" style="width:auto"><option value="#0f1117">Do tema</option><option value="#06100a">Fósforo</option><option value="#140c02">Âmbar</option><option value="#F2EBDD">Porcelana</option><option value="grad">Degradê</option><option value="art">Pixel art em mosaico</option></select>
+        <label class="chk"><input type="checkbox" id="scanChk"> linhas</label>
+        <label class="chk"><input type="checkbox" id="gridChk" checked> grade</label>
+      </div>
+      <div class="cv" id="cv"><div class="surface" id="edTv"></div><div class="grid" id="grid"></div></div>
+      <div class="cfoot"><button class="btn" id="bUndo" title="Desfazer (Ctrl+Z)">↶</button><button class="btn" id="bRedo" title="Refazer (Ctrl+Y)">↷</button><span id="histInfo"></span>
+        <span id="selInfo">Nada escolhido</span><span id="kbMsg" style="color:var(--accent);opacity:0;transition:opacity .2s"></span><span style="flex:1"></span>
+        <button class="btn" id="bGroup">Agrupar</button><button class="btn" id="bUngroup">Desagrupar</button>
+        <button class="btn" id="bSaveComp">Salvar como componente</button><button class="btn" id="bDup" title="Ctrl+D">Duplicar</button><button class="btn" id="bDel" title="Delete">Remover <kbd>Del</kbd></button><button class="btn primary">Salvar na TV</button></div>
+      <div class="sunk"><div class="lhead" style="padding-top:0">Camadas · de cima para baixo</div><div class="layers" id="layers"></div></div>
+    </div>
+    <div class="col">
+      <div>
+        <div class="tabs" role="tablist" id="tabs"></div>
+        <div class="props" id="props"></div>
+      </div>
+    </div>
+  </div></div>
+</section>
+
+<section>
+  <span class="eyebrow">Atalhos<span class="new">NOVO</span></span>
+  <h2>Os atalhos de qualquer editor</h2>
+  <p class="note">Funcionam aqui no mockup depois de você clicar no editor (fora dos campos de texto), e vão iguais para o jogo. O desfazer guarda as últimas 100 mudanças enquanto a tela está aberta. A área de cópia vale entre TVs: copie peças de uma, abra outra e cole.</p>
+  <div class="keys">
+    <div><kbd>Ctrl</kbd>+<kbd>Z</kbd><span>Desfazer</span></div>
+    <div><kbd>Ctrl</kbd>+<kbd>Y</kbd> · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd><span>Refazer</span></div>
+    <div><kbd>Ctrl</kbd>+<kbd>C</kbd> · <kbd>X</kbd> · <kbd>V</kbd><span>Copiar, recortar, colar (grupos continuam grupos)</span></div>
+    <div><kbd>Ctrl</kbd>+<kbd>D</kbd><span>Duplicar</span></div>
+    <div><kbd>Ctrl</kbd>+<kbd>A</kbd><span>Escolher tudo</span></div>
+    <div><kbd>Ctrl</kbd>+<kbd>G</kbd> · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>G</kbd><span>Agrupar, desagrupar</span></div>
+    <div><kbd>Delete</kbd> · <kbd>Backspace</kbd><span>Remover</span></div>
+    <div><kbd>←</kbd><kbd>↑</kbd><kbd>→</kbd><kbd>↓</kbd><span>Mover 4 px · com <kbd>Shift</kbd> 1 bloco · com <kbd>Alt</kbd> 1 px</span></div>
+    <div><kbd>[</kbd> · <kbd>]</kbd><span>Descer, subir uma camada</span></div>
+    <div><kbd>Esc</kbd><span>Soltar a escolha (no jogo, com nada escolhido, fecha a tela)</span></div>
+    <div><kbd>Ctrl</kbd>+<kbd>S</kbd><span>Salvar na TV</span></div>
+    <div><kbd>Shift</kbd>+clique · 2 cliques<span>Escolher várias · entrar no grupo</span></div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">3 · As peças</span>
+  <h2>O que dá para montar</h2>
+  <div class="pieces">
+    <div class="piece"><span class="g">#</span><div><b>Valor.</b> Um número ligado a um dado: unidade, casas, abreviar (k, M, G), sinal, prefixo e sufixo. FE/t ou FE/s, itens/s ou itens/min. Quando o número cresce ou a caixa diminui, a fonte encolhe para caber.</div></div>
+    <div class="piece"><span class="g">◆</span><div><b>Ícone de item.</b> O item renderizado de verdade, como no inventário (bloco em 3D, item chapado). Sem nome, a menos que você ponha um Texto.</div></div>
+    <div class="piece"><span class="g">▬</span><div><b>Barra.</b> Horizontal ou vertical, cheia pela fração do dado (carga da Bateria, ocupação do Baú) ou entre um mínimo e um máximo seus.</div></div>
+    <div class="piece"><span class="g">◔</span><div><b>Medidor.</b> Arco com abertura, espessura, cor da trilha e do preenchimento.</div></div>
+    <div class="piece"><span class="g">⌇</span><div><b>Gráfico.</b> Linha ou colunas do dado nos últimos 1 a 10 minutos, com área cheia opcional.</div></div>
+    <div class="piece"><span class="g">▲</span><div><b>Seta.</b> Sobe, desce ou fica parada pelo sinal do dado (saldo da energia, item entrando ou saindo).</div></div>
+    <div class="piece"><span class="g">■</span><div><b>Forma.</b> Retângulo ou linha, com fundo, borda, cantos e opacidade: moldura, cartão e divisória.</div></div>
+    <div class="piece"><span class="g">T</span><div><b>Texto.</b> Livre, em quatro fontes, com alinhamento e tamanho máximo; a fonte diminui sozinha para o texto caber na caixa, sem cortar. Pode levar valores dentro, como <code>{carga} de {capacidade}</code>.</div></div>
+    <div class="piece"><span class="g">▣</span><div><b>Imagem.</b> Uma pixel art da sua biblioteca, em qualquer tamanho e posição; também como fundo da TV em mosaico.</div></div>
+  </div>
+  <p class="note"><b>Regras</b> valem para qualquer peça: "se o valor for menor que 25%, fica vermelho e pisca", "se for 0, esconde". As regras são lidas de cima para baixo e vence a primeira que bater.</p>
+</section>
+
+<!-- ============ 4. tamanho ============ -->
+<section>
+  <span class="eyebrow">4 · Depois de colocar</span>
+  <h2>Escolher o tamanho</h2>
+  <p class="note">A aba Tamanho define largura, altura e o canto de onde a tela cresce a partir do bloco. A área fica vermelha se bater em algo na frente da parede (aumente a largura até a tocha) ou em outra TV. A resolução é de 32 px por bloco: 16 ou 64 na config, para letras menores ou mais nítidas.</p>
+  <div class="gui size">
+    <div>
+      <div class="gui-h"><span>Tela de Sinal</span><span class="sp"></span><span class="pill">Tamanho</span></div>
+      <div class="lbl">Largura</div>
+      <div class="step"><button class="btn" data-d="w-1" aria-label="Diminuir largura">‹</button><output id="ow">6</output><button class="btn" data-d="w+1" aria-label="Aumentar largura">›</button><span class="note">blocos</span></div>
+      <div class="lbl">Altura</div>
+      <div class="step"><button class="btn" data-d="h-1" aria-label="Diminuir altura">‹</button><output id="oh">3</output><button class="btn" data-d="h+1" aria-label="Aumentar altura">›</button><span class="note">blocos</span></div>
+      <div class="lbl" style="margin-bottom:4px">Cresce a partir do bloco para</div>
+      <div class="radio" id="grow">
+        <button class="chip" aria-pressed="true" data-g="ur">↗ cima e direita</button>
+        <button class="chip" aria-pressed="false" data-g="ul">↖ cima e esquerda</button>
+        <button class="chip" aria-pressed="false" data-g="c">✥ centro</button>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:14px"><button class="btn primary" id="apply">Aplicar</button><button class="btn">Editar layout ›</button></div>
+      <p class="note" id="sizeMsg" style="margin-top:8px;font-size:12px"></p>
+      <p class="hint" style="margin-top:6px">Ao mudar o tamanho, as peças ficam onde estão em pixels; as que saírem da área vão para a borda.</p>
+    </div>
+    <div class="sunk"><div class="wallmini" id="wallmini"><div class="ghost" id="ghost"></div><div class="anch" id="anch"></div></div></div>
+  </div>
+</section>
+
+<!-- ============ 5. temas ============ -->
+<section>
+  <span class="eyebrow">5 · Temas</span>
+  <h2>Temas trocam a paleta de tudo de uma vez</h2>
+  <p class="note">Um tema é uma paleta de 6 cores com nome (fundo, cartão, texto, apagado, alta e baixa). As peças podem usar uma cor do tema, e aí acompanham a troca, ou uma cor fixa sua. Você cria seus temas, e eles ficam na sua biblioteca junto das pixel arts e dos componentes.</p>
+  <div class="themes" id="themes"></div>
+</section>
+
+<!-- ============ 6. pixel art ============ -->
+<section>
+  <span class="eyebrow">6 · Pixel art</span>
+  <h2>Editor de pixel art e a sua biblioteca</h2>
+  <p class="note">Desenhe aqui (o balde preenche a área): o logo muda na TV e no editor. Os desenhos têm até 64×64 e qualquer TV sua pode usá-los.</p>
+  <div class="scroll"><div class="gui pix">
+    <div class="tools" role="group" aria-label="Ferramentas">
+      <div class="gui-h" style="padding-bottom:4px"><span>&nbsp;</span></div>
+      <button class="tool" data-tool="pen" aria-pressed="true" title="Lápis">✎</button>
+      <button class="tool" data-tool="fill" aria-pressed="false" title="Balde">▣</button>
+      <button class="tool" data-tool="erase" aria-pressed="false" title="Borracha">⌫</button>
+      <button class="tool" data-tool="pick" aria-pressed="false" title="Conta-gotas">⊙</button>
+      <button class="tool" id="clearArt" title="Limpar">✕</button>
+    </div>
+    <div>
+      <div class="gui-h"><span>Logo da base</span><span class="pill">16×16</span><span class="sp"></span><span class="pill">16 · 32 · 64</span></div>
+      <div class="sunk"><canvas id="art" width="16" height="16" aria-label="Tela de desenho"></canvas></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div><div class="gui-h"><span>Paleta</span></div><div class="pal" id="pal"></div></div>
+      <div><div class="gui-h"><span>Biblioteca</span><span class="sp"></span><span class="pill">3 / 32</span></div><div class="lib" id="lib"></div></div>
+      <button class="btn primary">Salvar na biblioteca</button>
+    </div>
+  </div></div>
+</section>
+
+<!-- ============ 7. custo ============ -->
+<section>
+  <span class="eyebrow">7 · Custo</span>
+  <h2>Por que ela não pesa</h2>
+  <div class="cost">
+    <div><b>Servidor, parado</b>Nenhum tick. TV sem jogador perto não pede nada a ninguém.</div>
+    <div><b>Servidor, com alguém olhando</b>Cada TV diz quais dados as peças dela usam; o servidor junta todas e manda só esses números, só os que mudaram, no máximo 1×/s e só para quem está a até 64 blocos. Redes vêm do relatório dos Fluxos, que já existe.</div>
+    <div><b>Item do Baú e Bateria</b>O Baú só conta entra/sai dos itens que alguma TV vigia (uma consulta num conjunto pequeno por inserção). Sem TV vigiando, zero. A carga da Bateria é só ler um número.</div>
+    <div><b>Cliente</b>A TV é desenhada numa textura e só é refeita quando um número que ela mostra muda. Por quadro, um retângulo. Ícones de item entram na textura como imagem parada (sem o brilho animado de encantamento).</div>
+    <div><b>Fonte que se ajusta</b>A largura do texto é medida só quando a textura é refeita (quando um número muda), nunca por quadro. A fonte é desenhada escalada, sem gerar fontes novas.</div>
+    <div><b>Gráficos</b>O histórico fica no cliente, um número por segundo por dado ligado a um gráfico (10 min = 600 números). Nada de histórico no servidor.</div>
+    <div class="w"><b>Memória de vídeo</b>Uma 32×32 a 32 px por bloco é uma textura de 1024×1024 (4 MB). Longe (mais de 64 blocos) a textura é liberada e a TV mostra só a última imagem reduzida.</div>
+    <div><b>Tetos</b>Até 32×32 blocos, 128 peças e 64 dados ligados por TV; ajustáveis na config do servidor. O layout salvo é compacto (poucos KB) e só vai ao cliente quando muda.</div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">8 · Decisões</span>
+  <h2>O que fica combinado</h2>
+  <div class="cols">
+    <dl>
+      <dt>Bloco</dt><dd>Tela de Sinal, sem tier. Contra a face de um bloco sólido.</dd>
+      <dt>Tamanho</dt><dd>1×1 a 32×32. Área desenhada, sem blocos extras e sem colisão; parede sólida atrás e nada na frente.</dd>
+      <dt>Montagem</dt><dd>Só peças soltas. Os "widgets" de antes viram componentes prontos, feitos das mesmas peças.</dd>
+      <dt>Dados</dt><dd>Redes que quem edita pode usar (energia, itens, fluidos, químicos e Source: entra, sai, saldo, estados), Baús do mod (estoque e entra/sai por item, ocupação), Baterias e Tanques do mod (carga e capacidade) e o relógio do jogo.</dd>
+      <dt>Item</dt><dd>Ícone renderizado. O nome só aparece se você puser um Texto com ele.</dd>
+      <dt>Biblioteca</dt><dd>Por jogador no servidor: componentes, temas e pixel arts, usáveis em qualquer TV sua.</dd>
+      <dt>Quem edita</dt><dd>Quem colocou e operadores. Os outros só olham.</dd>
+    </dl>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <h3>Fica de fora (por agora)</h3>
+      <ul>
+        <li>Importar PNG do computador.</li>
+        <li>Item em storages de outros mods (Sophisticated, AE2).</li>
+        <li>Dados do Ressonador (continua só presencial).</li>
+        <li>Editar olhando direto na parede.</li>
+        <li>Fórmulas entre dados (por exemplo "entra − sai de duas redes").</li>
+        <li>Clicar na TV para fazer algo no mundo (botões).</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">9 · Etapas</span>
+  <h2>Cada etapa termina jogável</h2>
+  <div class="stages">
+    <div class="stage"><b>1 · Bloco e motor</b><span>Bloco, aba Tamanho, render por textura, o canal de dados, e as peças Valor, Texto e Forma ligadas às redes.</span></div>
+    <div class="stage"><b>2 · Editor</b><span>Arrastar, redimensionar, camadas, grupos, abas Dado/Formato/Estilo/Regras, temas, componentes.</span></div>
+    <div class="stage"><b>3 · Mais peças e dados</b><span>Ícone de item, Barra, Medidor, Gráfico, Seta; contador por item no Baú, Bateria e Tanques.</span></div>
+    <div class="stage"><b>4 · Pixel art</b><span>Editor, biblioteca, peça Imagem e fundo em mosaico, guia e receita.</span></div>
+  </div>
+</section>
+
+</div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const TW=192,TH=96,SNAP=4;
+
+/* ---------- pixel art e sprites ---------- */
+const PAL=["#00000000","#0f0e12","#ECE5D6","#F0603E","#C2442A","#FFB39E","#2F9D5C","#3DB56E","#D88A1A","#FFD58A","#6B6FD0","#8A8EE8","#4fd1c5","#B48E2E","#7A7366","#ffffff"];
+const LOGO=["................","......3333......","....33555533....","...3500000053...","..350.2222.053..","..30.2....2.03..",".350.2.33.2.053.",".30..2.33.2..03.",".30..2....2..03.",".350..2222..053.","..30........03..","..3500....0053..","...3355555533...",".....333333.....","......4..4......",".....44..44....."];
+let art=LOGO.map(r=>[...r].map(c=>c==="."?0:+c));
+function drawGrid(cv,g){const c=cv.getContext("2d");c.clearRect(0,0,cv.width,cv.height);
+  for(let y=0;y<g.length;y++)for(let x=0;x<g[y].length;x++){const v=g[y][x];if(!v)continue;c.fillStyle=PAL[v];c.fillRect(x,y,1,1);}}
+const SPR={
+ diamond:{p:{1:"#0b3b3a",a:"#e6fffb",b:"#4fd1c5",c:"#1e9e95"},r:["................","................","....11111111....","...1aaabbbbc1...","..1aabbbbbbcc1..",".1aabbbbbbbbcc1.",".11111111111111.","..1abbbbbbbbc1..","...1abbbbbbc1...","....1abbbbc1....",".....1abbc1.....","......1bc1......",".......11.......","................","................","................"]},
+ iron:{p:{1:"#3a3a3a",a:"#ffffff",b:"#d8d8d8",c:"#a3a3a3"},r:["................","................","................","......1111111...",".....1aaaaab1...","....1abbbbbc1...","...1abbbbbcc1...","..1abbbbbccc1...",".1abbbbbccc1....",".1bbbbbccc1.....",".1cccccccc1.....",".1111111111.....","................","................","................","................"]},
+ redstone:{p:{1:"#4a0000",a:"#ff5a4a",b:"#c40d0d",c:"#7a0000"},r:["................","................",".....aa.........","....abba...a....","....bbcb..aba...","...a.cc...bc....","..aba....aa.....","..bcb...abba....","...c....bbcb.a..","......a..cc.aba.",".....aba....bcb.","..a..bcb.....c..",".aba..c..a......",".bcb....aba.....","..c.....bcb.....",".........c......"]},
+ battery:{p:{1:"#1B1920",a:"#F0603E",b:"#ECE5D6",c:"#3DB56E"},r:["................","......1111......","......1bb1......","....11111111....","....1bbbbbb1....","....1b1111b1....","....1b1cc1b1....","....1b1cc1b1....","....1b1cc1b1....","....1b1cc1b1....","....1b1cc1b1....","....1b1111b1....","....1bbbbbb1....","....11111111....","................","................"]}
+};
+function drawSprite(cv,name){const s=SPR[name];const c=cv.getContext("2d");c.clearRect(0,0,16,16);
+  s.r.forEach((row,y)=>[...row].forEach((ch,x)=>{if(ch==="."||!s.p[ch])return;c.fillStyle=s.p[ch];c.fillRect(x,y,1,1);}));}
+
+/* ---------- dados simulados ---------- */
+const SRC={
+ "bat.charge":{g:"Bateria \"Reserva\"",n:"Carga",u:"FE",v:6.2e8,max:1e9,j:2.5e7},
+ "bat.pct":{g:"Bateria \"Reserva\"",n:"Carga %",u:"%",v:62,max:100,j:2.5},
+ "bat.cap":{g:"Bateria \"Reserva\"",n:"Capacidade",u:"FE",v:1e9,j:0},
+ "en.in":{g:"Rede \"Fábrica\" · Energia",n:"Entra",u:"FE/t",v:1.84e6,max:3e6,j:2e5},
+ "en.out":{g:"Rede \"Fábrica\" · Energia",n:"Sai",u:"FE/t",v:1.21e6,max:3e6,j:2.5e5},
+ "en.net":{g:"Rede \"Fábrica\" · Energia",n:"Saldo",u:"FE/t",v:6.3e5,j:0,calc:()=>SRC["en.in"].v-SRC["en.out"].v},
+ "it.moving":{g:"Rede \"Fábrica\" · Itens",n:"Movendo",u:"",v:14,j:1,int:1},
+ "it.rate":{g:"Rede \"Fábrica\" · Itens",n:"Itens por segundo",u:"/s",v:1920,j:180,int:1},
+ "dia.stock":{g:"Baú \"Mina\" · Diamante",n:"Estoque",u:"",v:12480,j:0,int:1},
+ "dia.in":{g:"Baú \"Mina\" · Diamante",n:"Entra",u:"/s",v:64,j:12,int:1},
+ "dia.out":{g:"Baú \"Mina\" · Diamante",n:"Sai",u:"/s",v:8,j:6,int:1},
+ "dia.net":{g:"Baú \"Mina\" · Diamante",n:"Saldo",u:"/s",v:56,j:0,calc:()=>SRC["dia.in"].v-SRC["dia.out"].v},
+ "iron.stock":{g:"Baú \"Mina\" · Ferro",n:"Estoque",u:"",v:3204,j:0,int:1},
+ "iron.in":{g:"Baú \"Mina\" · Ferro",n:"Entra",u:"/s",v:22,j:8,int:1},
+ "iron.out":{g:"Baú \"Mina\" · Ferro",n:"Sai",u:"/s",v:30,j:8,int:1},
+ "clock.time":{g:"Relógio do jogo",n:"Hora",u:"",v:0,j:0},
+ "none":{g:"—",n:"Nenhum",u:"",v:0,j:0}
+};
+const HIST={};Object.keys(SRC).forEach(k=>HIST[k]=Array.from({length:40},()=>SRC[k].v));
+let tick=0;
+function step(){tick++;
+  Object.entries(SRC).forEach(([k,s])=>{if(s.j){s.v=Math.max(0,s.v+(Math.random()-.5)*2*s.j);if(s.max)s.v=Math.min(s.max,s.v);if(s.int)s.v=Math.round(s.v);}});
+  SRC["en.out"].v=Math.min(3e6,SRC["en.out"].v+(Math.sin(tick/6)*1.4e5));
+  SRC["bat.charge"].v=Math.max(0,Math.min(1e9,SRC["bat.charge"].v+(SRC["en.in"].v-SRC["en.out"].v)*4));
+  SRC["bat.pct"].v=SRC["bat.charge"].v/1e7;
+  SRC["dia.stock"].v+=SRC["dia.in"].v-SRC["dia.out"].v;SRC["iron.stock"].v=Math.max(0,SRC["iron.stock"].v+SRC["iron.in"].v-SRC["iron.out"].v);
+  Object.values(SRC).forEach(s=>{if(s.calc)s.v=s.calc();});
+  Object.keys(SRC).forEach(k=>{HIST[k].push(SRC[k].v);HIST[k].shift();});
+  paintAll();}
+
+/* ---------- modelo das peças ---------- */
+const TYPES={value:["#","Valor"],icon:["◆","Ícone de item"],bar:["▬","Barra"],gauge:["◔","Medidor"],graph:["⌇","Gráfico"],arrow:["▲","Seta"],shape:["■","Forma"],text:["T","Texto"],image:["▣","Imagem"]};
+const THEMES={
+ grafite:{name:"Grafite",bg:"#0f1117",card:"#1a1c24",fg:"#ECE5D6",mut:"#8d8577",hi:"#3DB56E",lo:"#F26A48"},
+ fosforo:{name:"Fósforo",bg:"#06100a",card:"#0b1a10",fg:"#7CFF9E",mut:"#2f8a4a",hi:"#B9FFCB",lo:"#e5ff7c"},
+ ambar:{name:"Âmbar",bg:"#140c02",card:"#211404",fg:"#FFB54A",mut:"#8a5d1d",hi:"#FFD58A",lo:"#ff7a3a"},
+ porcelana:{name:"Porcelana",bg:"#F2EBDD",card:"#E4DAC6",fg:"#2A2730",mut:"#7A7366",hi:"#2F9D5C",lo:"#D5453A"}
+};
+let themeKey="grafite";
+const TOK=["fg","mut","hi","lo","card","bg"];
+const TOKN={fg:"Texto",mut:"Apagado",hi:"Alta",lo:"Baixa",card:"Cartão",bg:"Fundo"};
+function col(c){return c&&c[0]==="@"?THEMES[themeKey][c.slice(1)]:c;}
+let uid=1;
+function mk(t,x,y,w,h,o){return Object.assign({id:uid++,t,x,y,w,h,g:0,name:"",hidden:false,
+  bind:"none",fmt:{dec:1,abbr:true,sign:false,pre:"",suf:"",unit:"auto"},
+  st:{color:"@fg",bg:"transparent",border:"transparent",bw:0,rad:0,op:100,font:"f-pix",size:8,align:"left",track:"@card",thick:5,dir:"h",fill:true,text:"",item:"diamond",min:0,max:0,blink:false,fit:true},
+  rules:[]},o||{});}
+function S(o){return o;}
+let els=[];
+function initLayout(){uid=1;els=[];
+  // cartão de energia (grupo 1)
+  els.push(mk("shape",0,0,124,96,{g:1,name:"Cartão",st:{...mk().st,bg:"@card",rad:2,border:"@mut",bw:1}}));
+  els.push(mk("text",6,5,80,10,{g:1,name:"Título",st:{...mk().st,text:"ENERGIA · BASE",color:"@mut",size:7}}));
+  els.push(mk("gauge",6,18,52,52,{g:1,name:"Medidor da Bateria",bind:"bat.pct",st:{...mk().st,color:"@hi",track:"#2a2d38",thick:6},
+     rules:[{op:"<",v:25,color:"@lo",blink:true},{op:"<",v:50,color:"#E39A2E",blink:false}]}));
+  els.push(mk("value",10,37,44,14,{g:1,name:"% da Bateria",bind:"bat.pct",fmt:{dec:0,abbr:false,sign:false,pre:"",suf:"%",unit:"auto"},st:{...mk().st,size:12,align:"center"},
+     rules:[{op:"<",v:25,color:"@lo",blink:true}]}));
+  els.push(mk("text",8,72,52,8,{g:1,name:"Rótulo",st:{...mk().st,text:"RESERVA",color:"@mut",size:6,align:"center"}}));
+  els.push(mk("arrow",64,20,8,10,{g:1,name:"Seta entra",bind:"en.in",st:{...mk().st,color:"@hi"}}));
+  els.push(mk("value",74,20,46,10,{g:1,name:"Entra",bind:"en.in",fmt:{dec:2,abbr:true,sign:false,pre:"",suf:"",unit:"auto"},st:{...mk().st,color:"@hi",size:8}}));
+  els.push(mk("arrow",64,34,8,10,{g:1,name:"Seta sai",bind:"en.out",st:{...mk().st,color:"@lo",dir:"down"}}));
+  els.push(mk("value",74,34,46,10,{g:1,name:"Sai",bind:"en.out",fmt:{dec:2,abbr:true,sign:false,pre:"",suf:"",unit:"auto"},st:{...mk().st,color:"@lo",size:8}}));
+  els.push(mk("graph",64,52,56,28,{g:1,name:"Gráfico do saldo",bind:"en.net",st:{...mk().st,color:"@hi",fill:true}}));
+  els.push(mk("value",64,84,56,8,{g:1,name:"Saldo",bind:"en.net",fmt:{dec:1,abbr:true,sign:true,pre:"saldo ",suf:"",unit:"auto"},st:{...mk().st,color:"@mut",size:6},
+     rules:[{op:"<",v:0,color:"@lo",blink:false}]}));
+  // item: diamante (grupo 2), sem nome
+  els.push(mk("shape",128,0,64,46,{g:2,name:"Cartão",st:{...mk().st,bg:"@card",rad:2,border:"@mut",bw:1}}));
+  els.push(mk("icon",132,6,20,20,{g:2,name:"Diamante",bind:"dia.stock",st:{...mk().st,item:"diamond"}}));
+  els.push(mk("value",156,8,34,12,{g:2,name:"Estoque",bind:"dia.stock",fmt:{dec:1,abbr:true,sign:false,pre:"",suf:"",unit:"auto"},st:{...mk().st,size:10}}));
+  els.push(mk("value",132,30,28,8,{g:2,name:"Entra",bind:"dia.in",fmt:{dec:0,abbr:false,sign:true,pre:"",suf:"/s",unit:"auto"},st:{...mk().st,color:"@hi",size:6}}));
+  els.push(mk("value",162,30,28,8,{g:2,name:"Sai",bind:"dia.out",fmt:{dec:0,abbr:false,sign:false,pre:"−",suf:"/s",unit:"auto"},st:{...mk().st,color:"@lo",size:6}}));
+  // ferro (grupo 3), só ícone e saldo em barra
+  els.push(mk("icon",130,52,16,16,{g:3,name:"Ferro",bind:"iron.stock",st:{...mk().st,item:"iron"}}));
+  els.push(mk("value",150,54,40,10,{g:3,name:"Estoque",bind:"iron.stock",fmt:{dec:1,abbr:true,sign:false,pre:"",suf:"",unit:"auto"},st:{...mk().st,size:8}}));
+  els.push(mk("bar",130,72,60,4,{g:3,name:"Barra",bind:"iron.stock",st:{...mk().st,color:"@hi",track:"#2a2d38",min:0,max:5000},rules:[{op:"<",v:1000,color:"@lo",blink:false}]}));
+  // logo
+  els.push(mk("image",162,78,18,18,{name:"Logo"}));
+  els.push(mk("text",128,84,34,8,{name:"Hora",bind:"clock.time",st:{...mk().st,text:"{hora}",color:"@mut",size:6}}));
+}
+initLayout();
+
+/* ---------- formatação e regras ---------- */
+function fmtNum(v,f,unit){let u=f.unit==="auto"?unit:f.unit;let x=v;
+  if(u==="FE/s"&&unit==="FE/t")x=v*20;if(u==="/min"&&unit==="/s")x=v*60;
+  let s,ab="";if(f.abbr&&Math.abs(x)>=1000){const L=["k","M","G","T"];let i=-1;while(Math.abs(x)>=1000&&i<3){x/=1000;i++;}ab=L[i];s=x.toFixed(f.dec).replace(".",",");}
+  else s=Math.abs(x)>=1000?Math.round(x).toLocaleString("pt-BR"):(Number.isInteger(x)?String(x):x.toFixed(f.dec).replace(".",","));
+  const sg=f.sign&&v>0?"+":"";
+  return f.pre+sg+s+(u&&u!=="%"&&f.suf===""?" "+ab+u:ab)+f.suf;}
+function rule(e){const v=SRC[e.bind]?SRC[e.bind].v:0;for(const r of e.rules){const ok=r.op==="<"?v<r.v:r.op===">"?v>r.v:r.op==="="?v==r.v:false;if(ok)return r;}return null;}
+function hhmm(){const t=(tick*37+800)%1440;return String(Math.floor(t/60)).padStart(2,"0")+":"+String(t%60).padStart(2,"0");}
+
+/* ---------- desenho ---------- */
+function bgOf(){const b=$("#bgSel").value;if(b==="grad")return"linear-gradient(160deg,"+THEMES[themeKey].card+","+THEMES[themeKey].bg+")";if(b==="art")return null;return b;}
+function paintSurface(root,scale,editor){
+  root.innerHTML="";const b=$("#bgSel").value;
+  if(b==="art"){const c=document.createElement("canvas");c.width=16;c.height=16;drawGrid(c,art);
+    root.style.background=THEMES[themeKey].bg+" url("+c.toDataURL()+") 0 0/"+(16*scale)+"px "+(16*scale)+"px";root.style.imageRendering="pixelated";}
+  else root.style.background=b==="#0f1117"?THEMES[themeKey].bg:bgOf();
+  root.parentElement.classList.toggle("scanl",$("#scanChk").checked);
+  els.forEach((e,i)=>{if(e.hidden&&!editor)return;
+    const d=document.createElement("div");d.className="el";d.dataset.i=i;
+    d.style.cssText=`left:${e.x*scale}px;top:${e.y*scale}px;width:${e.w*scale}px;height:${e.h*scale}px;opacity:${e.hidden?.25:e.st.op/100}`;
+    const r=rule(e);const c=col(r?r.color:e.st.color);
+    if(r&&r.blink&&tick%2)d.style.opacity=.25;
+    const src=SRC[e.bind]||SRC.none;const v=src.v;
+    const fs=e.st.size*scale;
+    switch(e.t){
+     case"shape":d.style.background=col(e.st.bg);d.style.border=e.st.bw?`${e.st.bw*scale}px solid ${col(e.st.border)}`:"0";d.style.borderRadius=e.st.rad*scale+"px";break;
+     case"text":case"value":{d.classList.add("txt",e.st.font);d.style.fontSize=fs+"px";d.style.color=c;d.style.justifyContent=e.st.align==="center"?"center":e.st.align==="right"?"flex-end":"flex-start";
+       d.style.background=col(e.st.bg);
+       const sp=document.createElement("span");sp.style.flex="none";
+       sp.textContent=e.t==="value"?fmtNum(v,e.fmt,src.u):(e.st.text||"").replace("{hora}",hhmm()).replace("{valor}",fmtNum(v,e.fmt,src.u));
+       d.appendChild(sp);break;}
+     case"icon":{const cv=document.createElement("canvas");cv.width=16;cv.height=16;drawSprite(cv,e.st.item);d.appendChild(cv);break;}
+     case"image":{const cv=document.createElement("canvas");cv.width=16;cv.height=16;drawGrid(cv,art);d.appendChild(cv);break;}
+     case"bar":{const max=e.st.max||src.max||1;const f=Math.max(0,Math.min(1,(v-e.st.min)/(max-e.st.min)));
+       d.style.background=col(e.st.track);const i=document.createElement("div");i.style.cssText=e.st.dir==="v"?`position:absolute;left:0;right:0;bottom:0;height:${f*100}%;background:${c}`:`height:100%;width:${f*100}%;background:${c}`;d.appendChild(i);break;}
+     case"gauge":{const max=e.st.max||src.max||100;const f=Math.max(0,Math.min(1,v/max));const R=50-e.st.thick*1.6,C=2*Math.PI*R,arc=C*.75;
+       d.innerHTML=`<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="${R}" fill="none" stroke="${col(e.st.track)}" stroke-width="${e.st.thick*2}" stroke-dasharray="${arc} ${C}" transform="rotate(135 50 50)"/><circle cx="50" cy="50" r="${R}" fill="none" stroke="${c}" stroke-width="${e.st.thick*2}" stroke-dasharray="${arc*f} ${C}" transform="rotate(135 50 50)"/></svg>`;break;}
+     case"graph":{const h=HIST[e.bind]||HIST.none;let mn=Math.min(...h),mx=Math.max(...h);if(mx===mn){mx+=1;mn-=1;}
+       const pts=h.map((y,k)=>`${(k/(h.length-1)*100).toFixed(1)},${(28-(y-mn)/(mx-mn)*26-1).toFixed(1)}`).join(" ");
+       d.innerHTML=`<svg viewBox="0 0 100 28" preserveAspectRatio="none">${e.st.fill?`<polygon points="0,28 ${pts} 100,28" fill="${c}" opacity=".18"/>`:""}<polyline points="${pts}" fill="none" stroke="${c}" stroke-width="1.4" vector-effect="non-scaling-stroke"/></svg>`;break;}
+     case"arrow":{const up=e.st.dir==="down"?false:(v>=0);const still=Math.abs(v)<1e-9;
+       d.innerHTML=`<svg viewBox="0 0 10 10">${still?`<rect x="1" y="4" width="8" height="2" fill="${c}"/>`:up?`<path d="M5 1 9 7H1z" fill="${c}"/><rect x="4" y="7" width="2" height="2" fill="${c}"/>`:`<path d="M5 9 9 3H1z" fill="${c}"/><rect x="4" y="1" width="2" height="2" fill="${c}"/>`}</svg>`;break;}
+    }
+    root.appendChild(d);
+    if((e.t==="text"||e.t==="value")&&e.st.fit){const got=fitText(d,fs,e.h*scale);if(editor)e._fit=got/scale;}
+    else if(editor)e._fit=e.st.size;});
+}
+/* A fonte começa no tamanho máximo da peça e desce até o texto caber na largura e na altura. */
+function fitText(d,max,h){const sp=d.firstChild;let fs=Math.min(max,h);d.style.fontSize=fs+"px";
+  const W=d.clientWidth;
+  if(sp.offsetWidth>W){fs*=W/sp.offsetWidth;d.style.fontSize=fs+"px";
+    for(let n=0;n<20&&sp.offsetWidth>W;n++){fs*=.92;d.style.fontSize=fs+"px";}}
+  return fs;}
+const edTv=$("#edTv"),cvBox=$("#cv"),worldTv=$("#worldTv");
+let sel=new Set(),focusGroup=0,tab="data";
+function scaleOf(el){return el.clientWidth/TW;}
+function paintAll(){
+  paintSurface(worldTv,scaleOf(worldTv),false);
+  paintSurface(edTv,scaleOf(edTv),true);
+  drawSel();
+  const fi=document.getElementById("fitInfo");if(fi&&sel.size===1)fi.textContent=fitInfo(els[[...sel][0]]);
+  if(document.activeElement&&document.activeElement.closest&&document.activeElement.closest("#props"))return;
+}
+function drawSel(){cvBox.querySelectorAll(".selbox,.handle").forEach(n=>n.remove());if(!sel.size)return;
+  const s=scaleOf(edTv);const L=[...sel].map(i=>els[i]);const x0=Math.min(...L.map(e=>e.x)),y0=Math.min(...L.map(e=>e.y)),x1=Math.max(...L.map(e=>e.x+e.w)),y1=Math.max(...L.map(e=>e.y+e.h));
+  const b=document.createElement("div");b.className="selbox"+(sel.size>1?" grp":"");b.style.cssText=`left:${x0*s}px;top:${y0*s}px;width:${(x1-x0)*s}px;height:${(y1-y0)*s}px`;cvBox.appendChild(b);
+  if(sel.size===1){const h=document.createElement("div");h.className="handle";h.style.left=(x1*s-5)+"px";h.style.top=(y1*s-5)+"px";cvBox.appendChild(h);}
+  const one=sel.size===1?L[0]:null;
+  $("#selInfo").textContent=one?`${TYPES[one.t][1]} · ${one.w}×${one.h} px · em ${one.x},${one.y}`:`${sel.size} peças · ${x1-x0}×${y1-y0} px`;}
+
+/* ---------- camadas ---------- */
+function label(e){return e.name||TYPES[e.t][1];}
+function groupName(g){const n={1:"Painel de energia",2:"Diamante",3:"Ferro"};return n[g]||("Grupo "+g);}
+function renderLayers(){const L=$("#layers");L.innerHTML="";let lastG=-1;
+  for(let i=els.length-1;i>=0;i--){const e=els[i];
+    if(e.g&&e.g!==lastG){const h=document.createElement("div");h.className="lrow";const all=els.map((x,k)=>x.g===e.g?k:-1).filter(k=>k>=0);
+      if(all.every(k=>sel.has(k)))h.classList.add("on");h.innerHTML=`<span class="t">▾</span><span class="n">${groupName(e.g)}</span><span class="eye">${all.length}</span>`;
+      h.onclick=()=>{sel=new Set(all);focusGroup=0;refresh();};L.appendChild(h);}
+    lastG=e.g;
+    const r=document.createElement("div");r.className="lrow"+(e.g?" ing":"")+(sel.has(i)?" on":"");
+    r.innerHTML=`<span class="t">${TYPES[e.t][0]}</span><span class="n">${label(e)}</span><button class="btn eye" style="padding:0 4px" title="Mostrar/esconder" data-h="${i}">${e.hidden?"◌":"◉"}</button><button class="btn" style="padding:0 4px" title="Subir" data-u="${i}">↑</button><button class="btn" style="padding:0 4px" title="Descer" data-dn="${i}">↓</button>`;
+    r.onclick=ev=>{if(ev.target.dataset.h){els[i].hidden=!els[i].hidden;refresh();return;}
+      if(ev.target.dataset.u){move(i,1);return;} if(ev.target.dataset.dn){move(i,-1);return;}
+      sel=new Set([i]);focusGroup=e.g;refresh();};
+    L.appendChild(r);}}
+function move(i,d){const j=i+d;if(j<0||j>=els.length)return;[els[i],els[j]]=[els[j],els[i]];const wasSel=sel.has(i);sel=new Set(wasSel?[j]:[]);refresh();}
+
+/* ---------- propriedades ---------- */
+const TABS=[["data","Dado"],["fmt","Formato"],["st","Estilo"],["rules","Regras"]];
+function renderTabs(){$("#tabs").innerHTML=TABS.map(([k,n])=>`<button class="tab" role="tab" aria-selected="${tab===k}" data-tab="${k}">${n}</button>`).join("");
+  $("#tabs").querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{tab=b.dataset.tab;renderTabs();renderProps();});}
+function swatches(path,cur,allowNone){
+  const opts=TOK.map(t=>["@"+t,THEMES[themeKey][t],TOKN[t]]).concat([["#4fd1c5","#4fd1c5",""],["#E39A2E","#E39A2E",""],["#8A8EE8","#8A8EE8",""],["#ffffff","#ffffff",""]]);
+  if(allowNone)opts.push(["transparent","transparent","nada"]);
+  return `<div class="swrow">${opts.map(([v,c,n])=>`<button class="sw" title="${n?("Tema: "+n):v}" aria-pressed="${cur===v}" data-set="${path}" data-val="${v}" style="background:${c==="transparent"?"repeating-conic-gradient(#aaa 0 25%,#fff 0 50%) 0 0/8px 8px":c};${v[0]==="@"?"border-radius:50%":""}"></button>`).join("")}<input type="color" title="Outra cor" data-set="${path}" value="${/^#[0-9a-f]{6}$/i.test(cur)?cur:"#ff00ff"}"></div>`;}
+function srcSelect(cur){const groups={};Object.entries(SRC).forEach(([k,s])=>{(groups[s.g]=groups[s.g]||[]).push([k,s.n]);});
+  return `<select class="field" data-set="bind">${Object.entries(groups).map(([g,l])=>`<optgroup label="${g}">${l.map(([k,n])=>`<option value="${k}" ${k===cur?"selected":""}>${n}</option>`).join("")}</optgroup>`).join("")}</select>`;}
+function renderProps(){const P=$("#props");
+  if(sel.size!==1){P.innerHTML=sel.size?`<p class="hint">${sel.size} peças escolhidas. Arraste para mover juntas, Agrupar para prendê-las, ou Salvar como componente. Dois cliques numa peça entram no grupo para editá-la.</p>
+    <div class="row"><span class="lbl">Cor de tudo</span>${swatches("multi.color","")}</div>`:`<p class="hint">Escolha uma peça na tela ou nas camadas.</p><div class="row"><span class="lbl">Tema</span><select class="field" id="thSel">${Object.entries(THEMES).map(([k,t])=>`<option value="${k}" ${k===themeKey?"selected":""}>${t.name}</option>`).join("")}</select></div><p class="hint">As bolinhas redondas nas cores são cores do tema: acompanham a troca. As quadradas são fixas.</p>`;
+    bindProps();return;}
+  const e=els[[...sel][0]];let h=`<div class="row"><span class="lbl">Nome</span><input class="field" data-set="name" value="${e.name}"></div>`;
+  if(tab==="data"){
+    if(["shape","image"].includes(e.t))h+=`<p class="hint">${e.t==="shape"?"Forma não usa dado. Dá para escondê-la por regra usando o dado de outra peça do grupo.":"A imagem vem da sua biblioteca de pixel art."}</p>`;
+    else{h+=`<div class="row"><span class="lbl">Fonte</span>${srcSelect(e.bind)}</div>`;
+      const s=SRC[e.bind];h+=`<p class="hint">Agora: <b>${fmtNum(s.v,e.fmt,s.u)}</b>${s.u?` · unidade ${s.u}`:""}</p>`;}
+    if(e.t==="icon")h+=`<div class="row"><span class="lbl">Item</span><select class="field" data-set="st.item">${["diamond","iron","redstone","battery"].map(k=>`<option value="${k}" ${k===e.st.item?"selected":""}>${{diamond:"Diamante",iron:"Barra de ferro",redstone:"Pó de redstone",battery:"Bateria (bloco)"}[k]}</option>`).join("")}</select></div><p class="hint">No jogo: arraste o item do inventário ou do JEI para cá, ou escolha um dos itens do Baú ligado. O nome não aparece; ponha um Texto se quiser.</p>`;
+    if(e.t==="text")h+=`<div class="row"><span class="lbl">Texto</span><input class="field" data-set="st.text" value="${e.st.text.replace(/"/g,"&quot;")}"></div><p class="hint">Use <code>{valor}</code> para o dado escolhido e <code>{hora}</code> para o relógio.</p>`;
+    if(["bar","gauge"].includes(e.t))h+=`<div class="row2"><div><span class="lbl">Mínimo</span><input class="field" type="number" data-set="st.min" value="${e.st.min}"></div><div><span class="lbl">Máximo (0 = do dado)</span><input class="field" type="number" data-set="st.max" value="${e.st.max}"></div></div>`;
+  }
+  if(tab==="fmt"){
+    if(!["value","text"].includes(e.t))h+=`<p class="hint">Formato vale para Valor e Texto.</p>`;
+    else{const f=e.fmt;h+=`<div class="row"><span class="lbl">Unidade</span><select class="field" data-set="fmt.unit">${["auto","FE/t","FE/s","/s","/min",""].map(u=>`<option value="${u}" ${u===f.unit?"selected":""}>${u==="auto"?"a do dado":u===""?"sem unidade":u}</option>`).join("")}</select></div>
+      <div class="row"><span class="lbl">Casas</span><select class="field" data-set="fmt.dec">${[0,1,2,3].map(n=>`<option ${n==f.dec?"selected":""}>${n}</option>`).join("")}</select></div>
+      <label class="chk"><input type="checkbox" data-set="fmt.abbr" ${f.abbr?"checked":""}> Abreviar (1,8 M em vez de 1.840.000)</label>
+      <label class="chk"><input type="checkbox" data-set="fmt.sign" ${f.sign?"checked":""}> Mostrar + nos positivos</label>
+      <div class="row2"><div><span class="lbl">Antes</span><input class="field" data-set="fmt.pre" value="${f.pre}"></div><div><span class="lbl">Depois</span><input class="field" data-set="fmt.suf" value="${f.suf}"></div></div>`;}
+  }
+  if(tab==="st"){
+    if(!["shape","image","icon"].includes(e.t))h+=`<div class="row"><span class="lbl">Cor</span>${swatches("st.color",e.st.color)}</div>`;
+    if(["value","text"].includes(e.t)){h+=`<div class="row"><span class="lbl">Fonte</span><select class="field" data-set="st.font">${[["f-pix","Pixel"],["f-vt","Terminal"],["f-mono","Mono"],["f-sans","Sans"]].map(([k,n])=>`<option value="${k}" ${k===e.st.font?"selected":""}>${n}</option>`).join("")}</select></div>
+      <div class="row"><span class="lbl">${e.st.fit?"Tamanho máx.":"Tamanho"}</span><input class="field" type="range" min="4" max="40" data-set="st.size" value="${e.st.size}"></div>
+      <label class="chk"><input type="checkbox" data-set="st.fit" ${e.st.fit?"checked":""}> Diminuir a fonte para caber</label>
+      <p class="hint" id="fitInfo">${fitInfo(e)}</p>
+      <div class="row"><span class="lbl">Alinhar</span><div class="radio">${[["left","Esq."],["center","Centro"],["right","Dir."]].map(([k,n])=>`<button class="chip" aria-pressed="${e.st.align===k}" data-set="st.align" data-val="${k}">${n}</button>`).join("")}</div></div>
+      <div class="row"><span class="lbl">Fundo</span>${swatches("st.bg",e.st.bg,true)}</div>`;}
+    if(e.t==="shape")h+=`<div class="row"><span class="lbl">Fundo</span>${swatches("st.bg",e.st.bg,true)}</div><div class="row"><span class="lbl">Borda</span>${swatches("st.border",e.st.border,true)}</div>
+      <div class="row2"><div><span class="lbl">Espessura</span><input class="field" type="range" min="0" max="4" data-set="st.bw" value="${e.st.bw}"></div><div><span class="lbl">Cantos</span><input class="field" type="range" min="0" max="12" data-set="st.rad" value="${e.st.rad}"></div></div>`;
+    if(["bar","gauge"].includes(e.t))h+=`<div class="row"><span class="lbl">Trilha</span>${swatches("st.track",e.st.track,true)}</div>`;
+    if(e.t==="gauge")h+=`<div class="row"><span class="lbl">Espessura</span><input class="field" type="range" min="1" max="12" data-set="st.thick" value="${e.st.thick}"></div>`;
+    if(e.t==="bar")h+=`<div class="row"><span class="lbl">Direção</span><div class="radio">${[["h","Deitada"],["v","Em pé"]].map(([k,n])=>`<button class="chip" aria-pressed="${e.st.dir===k}" data-set="st.dir" data-val="${k}">${n}</button>`).join("")}</div></div>`;
+    if(e.t==="graph")h+=`<label class="chk"><input type="checkbox" data-set="st.fill" ${e.st.fill?"checked":""}> Área cheia</label>`;
+    if(e.t==="arrow")h+=`<div class="row"><span class="lbl">Sentido</span><div class="radio">${[["h","Pelo sinal"],["down","Sempre ▼"]].map(([k,n])=>`<button class="chip" aria-pressed="${e.st.dir===k}" data-set="st.dir" data-val="${k}">${n}</button>`).join("")}</div></div>`;
+    h+=`<div class="row"><span class="lbl">Opacidade</span><input class="field" type="range" min="10" max="100" data-set="st.op" value="${e.st.op}"></div>`;
+    h+=`<div class="row2"><div><span class="lbl">X</span><input class="field" type="number" data-set="x" value="${e.x}"></div><div><span class="lbl">Y</span><input class="field" type="number" data-set="y" value="${e.y}"></div><div><span class="lbl">Largura</span><input class="field" type="number" data-set="w" value="${e.w}"></div><div><span class="lbl">Altura</span><input class="field" type="number" data-set="h" value="${e.h}"></div></div>`;
+  }
+  if(tab==="rules"){
+    h+=`<p class="hint">De cima para baixo; vale a primeira que bater. Compara com o dado da peça${SRC[e.bind]&&e.bind!=="none"?` (agora ${fmtNum(SRC[e.bind].v,{...e.fmt,pre:"",suf:""},SRC[e.bind].u)})`:""}.</p>`;
+    e.rules.forEach((r,k)=>{h+=`<div class="rule"><select class="field" data-rule="${k}.op" style="width:auto">${[["<","menor"],[">","maior"],["=","igual"]].map(([o,n])=>`<option value="${o}" ${o===r.op?"selected":""}>${n}</option>`).join("")}</select><input class="field" type="number" data-rule="${k}.v" value="${r.v}"><select class="field" data-rule="${k}.color">${TOK.map(t=>`<option value="@${t}" ${r.color==="@"+t?"selected":""}>${TOKN[t]}</option>`).join("")}<option value="#E39A2E" ${r.color==="#E39A2E"?"selected":""}>Laranja</option></select><button class="btn" style="padding:0 5px" data-rdel="${k}" title="Tirar a regra">✕</button></div>
+      <label class="chk" style="margin:-2px 0 4px 2px"><input type="checkbox" data-rule="${k}.blink" ${r.blink?"checked":""}> piscar</label>`;});
+    h+=`<button class="btn" id="addRule">+ Regra</button>`;
+  }
+  P.innerHTML=h;bindProps();}
+function fitInfo(e){if(!e.st.fit)return"Sem ajuste: o texto que não couber é cortado.";
+  const f=e._fit||e.st.size;return f<e.st.size-.05?`Agora em ${f.toFixed(1).replace(".",",")} px (máximo ${e.st.size}) para caber.`:`Cabe no tamanho máximo (${e.st.size} px).`;}
+function setPath(o,p,v){const k=p.split(".");let t=o;for(let i=0;i<k.length-1;i++)t=t[k[i]];t[k[k.length-1]]=v;}
+function getPath(o,p){return p.split(".").reduce((t,k)=>t[k],o);}
+function bindProps(){const P=$("#props");
+  const th=$("#thSel");if(th)th.onchange=()=>{themeKey=th.value;refresh();};
+  P.querySelectorAll("[data-set]").forEach(n=>{
+    const apply=val=>{const p=n.dataset.set;
+      if(p==="multi.color"){sel.forEach(i=>els[i].st.color=val);refresh();return;}
+      const e=els[[...sel][0]];const old=getPath(e,p);
+      if(typeof old==="number")val=+val;setPath(e,p,val);
+      if(["x","y","w","h"].includes(p)){e.x=Math.max(0,Math.min(TW-e.w,e.x));e.y=Math.max(0,Math.min(TH-e.h,e.y));}
+      paintAll();renderLayers();if(n.tagName==="BUTTON"||n.tagName==="SELECT")renderProps();commitSoon();};
+    if(n.tagName==="BUTTON")n.onclick=()=>apply(n.dataset.val);
+    else if(n.type==="checkbox")n.onchange=()=>apply(n.checked);
+    else if(n.type==="color")n.oninput=()=>apply(n.value);
+    else if(n.tagName==="SELECT")n.onchange=()=>apply(n.value);
+    else n.oninput=()=>apply(n.value);});
+  P.querySelectorAll("[data-rule]").forEach(n=>{const[k,f]=n.dataset.rule.split(".");const e=els[[...sel][0]];
+    const ap=()=>{e.rules[+k][f]=n.type==="checkbox"?n.checked:f==="v"?+n.value:n.value;paintAll();commitSoon();};n.onchange=ap;n.oninput=ap;});
+  P.querySelectorAll("[data-rdel]").forEach(n=>n.onclick=()=>{els[[...sel][0]].rules.splice(+n.dataset.rdel,1);renderProps();paintAll();});
+  const ar=$("#addRule");if(ar)ar.onclick=()=>{els[[...sel][0]].rules.push({op:"<",v:0,color:"@lo",blink:false});renderProps();paintAll();};}
+
+function refresh(){paintAll();renderLayers();renderProps();
+  $("#bGroup").disabled=sel.size<2;$("#bUngroup").disabled=![...sel].some(i=>els[i].g);
+  $("#bSaveComp").disabled=!sel.size;$("#bDup").disabled=!sel.size;$("#bDel").disabled=!sel.size;
+  if(typeof commit==="function")commit();}
+
+/* ---------- interação na tela ---------- */
+let drag=null,lastClick={i:-1,t:0};
+cvBox.addEventListener("pointerdown",ev=>{
+  const s=scaleOf(edTv);
+  if(ev.target.classList.contains("handle")){const e=els[[...sel][0]];drag={mode:"r",sx:ev.clientX,sy:ev.clientY,ow:e.w,oh:e.h,s};cvBox.setPointerCapture(ev.pointerId);return;}
+  const d=ev.target.closest(".el");
+  if(!d){sel=new Set();focusGroup=0;refresh();return;}
+  const i=+d.dataset.i,e=els[i];const now=Date.now();const dbl=lastClick.i===i&&now-lastClick.t<350;lastClick={i,t:now};
+  if(ev.shiftKey){sel.has(i)?sel.delete(i):sel.add(i);}
+  else if(dbl||(focusGroup&&e.g===focusGroup)){sel=new Set([i]);focusGroup=e.g;}
+  else if(!sel.has(i)){if(e.g){sel=new Set(els.map((x,k)=>x.g===e.g?k:-1).filter(k=>k>=0));focusGroup=0;}else sel=new Set([i]);}
+  drag={mode:"m",sx:ev.clientX,sy:ev.clientY,s,orig:[...sel].map(k=>[k,els[k].x,els[k].y])};
+  cvBox.setPointerCapture(ev.pointerId);refresh();});
+cvBox.addEventListener("pointermove",ev=>{if(!drag)return;
+  const dx=Math.round((ev.clientX-drag.sx)/drag.s/SNAP)*SNAP,dy=Math.round((ev.clientY-drag.sy)/drag.s/SNAP)*SNAP;
+  if(drag.mode==="m"){const xs=drag.orig.map(([k,x])=>[k,x]);
+    const minX=Math.min(...drag.orig.map(([k,x])=>x)),minY=Math.min(...drag.orig.map(([k,x,y])=>y));
+    const maxX=Math.max(...drag.orig.map(([k,x])=>x+els[k].w)),maxY=Math.max(...drag.orig.map(([k,x,y])=>y+els[k].h));
+    const cx=Math.max(-minX,Math.min(TW-maxX,dx)),cy=Math.max(-minY,Math.min(TH-maxY,dy));
+    drag.orig.forEach(([k,x,y])=>{els[k].x=x+cx;els[k].y=y+cy;});}
+  else{const e=els[[...sel][0]];e.w=Math.max(4,Math.min(TW-e.x,drag.ow+dx));e.h=Math.max(4,Math.min(TH-e.y,drag.oh+dy));}
+  paintAll();});
+cvBox.addEventListener("pointerup",()=>{if(drag){drag=null;renderProps();commit();}});
+
+/* ---------- paleta, componentes, ações ---------- */
+$("#palette").innerHTML=Object.entries(TYPES).map(([k,[g,n]])=>`<button class="pitem" data-add="${k}"><span class="g">${g}</span>${n}</button>`).join("");
+function freeSpot(w,h){for(let y=0;y<=TH-h;y+=SNAP)for(let x=0;x<=TW-w;x+=SNAP){if(!els.some(o=>!o.hidden&&o.t!=="shape"&&x<o.x+o.w&&x+w>o.x&&y<o.y+o.h&&y+h>o.y))return[x,y];}return[0,0];}
+const DEF={value:[40,12,{bind:"en.in",st:{...mk().st,size:8}}],icon:[16,16,{bind:"dia.stock"}],bar:[48,4,{bind:"bat.pct",st:{...mk().st,color:"@hi",track:"#2a2d38"}}],
+ gauge:[32,32,{bind:"bat.pct",st:{...mk().st,color:"@hi",track:"#2a2d38"}}],graph:[48,20,{bind:"en.in",st:{...mk().st,color:"@hi"}}],arrow:[8,10,{bind:"en.net",st:{...mk().st,color:"@hi"}}],
+ shape:[40,24,{st:{...mk().st,bg:"@card",rad:2}}],text:[48,10,{st:{...mk().st,text:"TEXTO"}}],image:[16,16,{}]};
+document.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>{const[w,h,o]=DEF[b.dataset.add];const[x,y]=freeSpot(w,h);
+  els.push(mk(b.dataset.add,x,y,w,h,JSON.parse(JSON.stringify(o))));sel=new Set([els.length-1]);focusGroup=0;tab="data";renderTabs();refresh();});
+let comps=[
+ {name:"Item do Baú",note:"ícone + números",items:[["shape",0,0,64,32,{st:{...mk().st,bg:"@card",rad:2}}],["icon",4,4,16,16,{bind:"iron.stock",st:{...mk().st,item:"redstone"}}],["value",24,6,38,10,{bind:"iron.stock",fmt:{dec:1,abbr:true,sign:false,pre:"",suf:"",unit:"auto"}}],["value",4,22,28,7,{bind:"iron.in",fmt:{dec:0,abbr:false,sign:true,pre:"",suf:"/s",unit:"auto"},st:{...mk().st,color:"@hi",size:6}}],["value",34,22,28,7,{bind:"iron.out",fmt:{dec:0,abbr:false,sign:false,pre:"−",suf:"/s",unit:"auto"},st:{...mk().st,color:"@lo",size:6}}]]},
+ {name:"Entra e sai",note:"setas + valores",items:[["arrow",0,0,8,10,{bind:"en.in",st:{...mk().st,color:"@hi"}}],["value",10,0,44,10,{bind:"en.in"}],["arrow",0,12,8,10,{bind:"en.out",st:{...mk().st,color:"@lo",dir:"down"}}],["value",10,12,44,10,{bind:"en.out",st:{...mk().st,color:"@lo"}}]]},
+ {name:"Carga da Bateria",note:"barra em pé + %",items:[["bar",0,0,8,40,{bind:"bat.pct",st:{...mk().st,color:"@hi",track:"#2a2d38",dir:"v"},rules:[{op:"<",v:25,color:"@lo",blink:true}]}],["value",12,30,36,10,{bind:"bat.pct",fmt:{dec:0,abbr:false,sign:false,pre:"",suf:"%",unit:"auto"}}]]}
+];
+let nextG=10;
+function renderComps(){$("#comps").innerHTML=comps.map((c,k)=>`<button class="pitem" data-comp="${k}"><span class="g">⧉</span>${c.name}<small>${c.note}</small></button>`).join("");
+  document.querySelectorAll("[data-comp]").forEach(b=>b.onclick=()=>{const c=comps[+b.dataset.comp];const w=Math.max(...c.items.map(i=>i[1]+i[3])),h=Math.max(...c.items.map(i=>i[2]+i[4]));
+    const[x,y]=freeSpot(Math.min(w,TW),Math.min(h,TH));const g=nextG++;const start=els.length;
+    c.items.forEach(([t,ix,iy,iw,ih,o])=>els.push(mk(t,Math.min(TW-iw,x+ix),Math.min(TH-ih,y+iy),iw,ih,{...JSON.parse(JSON.stringify(o)),g})));
+    sel=new Set(els.map((_,k)=>k>=start?k:-1).filter(k=>k>=0));refresh();});}
+renderComps();
+$("#bGroup").onclick=()=>{const g=nextG++;sel.forEach(i=>els[i].g=g);
+  const idx=[...sel].sort((a,b)=>a-b);const moved=idx.map(i=>els[i]);for(let k=idx.length-1;k>=0;k--)els.splice(idx[k],1);const at=Math.min(idx[idx.length-1]-idx.length+1,els.length);
+  els.splice(at,0,...moved);sel=new Set(moved.map(m=>els.indexOf(m)));refresh();};
+$("#bUngroup").onclick=()=>{sel.forEach(i=>els[i].g=0);refresh();};
+$("#bDel").onclick=()=>{els=els.filter((_,i)=>!sel.has(i));sel=new Set();refresh();};
+$("#bDup").onclick=()=>{const g=[...sel].some(i=>els[i].g)?nextG++:0;const start=els.length;[...sel].sort((a,b)=>a-b).forEach(i=>{const c=JSON.parse(JSON.stringify(els[i]));c.id=uid++;c.g=g;c.x=Math.min(TW-c.w,c.x+8);c.y=Math.min(TH-c.h,c.y+8);els.push(c);});
+  sel=new Set(els.map((_,k)=>k>=start?k:-1).filter(k=>k>=0));refresh();};
+$("#bSaveComp").onclick=()=>{const L=[...sel].sort((a,b)=>a-b).map(i=>els[i]);const x0=Math.min(...L.map(e=>e.x)),y0=Math.min(...L.map(e=>e.y));
+  comps.push({name:"Meu componente "+(comps.length-2),note:L.length+" peças",items:L.map(e=>[e.t,e.x-x0,e.y-y0,e.w,e.h,{bind:e.bind,fmt:e.fmt,st:e.st,rules:e.rules,name:e.name}])});renderComps();
+  const b=$("#comps").lastElementChild;b.style.outline="2px solid var(--accent)";setTimeout(()=>b.style.outline="",900);};
+/* ---------- histórico e atalhos ---------- */
+const snap=()=>JSON.stringify(els,(k,v)=>k==="_fit"?undefined:v);
+let hist=[snap()],hpos=0,restoring=false,ctimer=0,clip=null,edActive=false;
+function commit(){if(restoring)return;const s=snap();if(s===hist[hpos])return;hist=hist.slice(0,hpos+1);hist.push(s);if(hist.length>100)hist.shift();hpos=hist.length-1;undoBtns();}
+function commitSoon(){clearTimeout(ctimer);ctimer=setTimeout(commit,400);}
+function restore(p){if(p<0||p>=hist.length)return;hpos=p;restoring=true;els=JSON.parse(hist[p]);sel=new Set([...sel].filter(i=>i<els.length));refresh();restoring=false;undoBtns();}
+function undoBtns(){$("#bUndo").disabled=hpos<=0;$("#bRedo").disabled=hpos>=hist.length-1;$("#histInfo").textContent=`${hpos} de ${hist.length-1} mudanças`;}
+function flash(msg){if(!msg)return;const n=$("#kbMsg");n.textContent=msg;n.style.opacity=1;clearTimeout(n._t);n._t=setTimeout(()=>n.style.opacity=0,1200);}
+function selAll(){sel=new Set(els.map((_,i)=>i));refresh();}
+function copySel(){if(!sel.size)return false;clip=[...sel].sort((a,b)=>a-b).map(i=>JSON.parse(JSON.stringify(els[i])));return true;}
+function paste(){if(!clip)return;const start=els.length;const gmap={};
+  clip.forEach(c=>{const n=JSON.parse(JSON.stringify(c));n.id=uid++;if(n.g){gmap[n.g]=gmap[n.g]||nextG++;n.g=gmap[n.g];}n.x=Math.min(TW-n.w,n.x+8);n.y=Math.min(TH-n.h,n.y+8);els.push(n);});
+  clip=clip.map(c=>({...c,x:Math.min(TW-c.w,c.x+8),y:Math.min(TH-c.h,c.y+8)}));
+  sel=new Set(els.map((_,k)=>k>=start?k:-1).filter(k=>k>=0));refresh();}
+function nudge(dx,dy){if(!sel.size)return;const L=[...sel].map(i=>els[i]);
+  const cx=Math.max(-Math.min(...L.map(e=>e.x)),Math.min(TW-Math.max(...L.map(e=>e.x+e.w)),dx));
+  const cy=Math.max(-Math.min(...L.map(e=>e.y)),Math.min(TH-Math.max(...L.map(e=>e.y+e.h)),dy));
+  L.forEach(e=>{e.x+=cx;e.y+=cy;});paintAll();renderProps();commitSoon();}
+document.addEventListener("pointerdown",ev=>{edActive=!!ev.target.closest(".editor");});
+document.addEventListener("keydown",ev=>{
+  if(!edActive)return;const t=ev.target;if(t.matches&&t.matches("input,select,textarea"))return;
+  const c=ev.ctrlKey||ev.metaKey,k=ev.key.toLowerCase();let msg="";
+  if(c&&k==="z"&&!ev.shiftKey){restore(hpos-1);msg="Desfeito";}
+  else if(c&&(k==="y"||(k==="z"&&ev.shiftKey))){restore(hpos+1);msg="Refeito";}
+  else if(c&&k==="c"){if(copySel())msg=`${clip.length} peça(s) copiada(s)`;}
+  else if(c&&k==="x"){if(copySel()){$("#bDel").onclick();msg="Recortado";}}
+  else if(c&&k==="v"){paste();msg=clip?"Colado":"";}
+  else if(c&&k==="d"){$("#bDup").onclick();msg="Duplicado";}
+  else if(c&&k==="a"){selAll();msg="Tudo escolhido";}
+  else if(c&&k==="g"&&!ev.shiftKey){if(sel.size>1){$("#bGroup").onclick();msg="Agrupado";}}
+  else if(c&&k==="g"&&ev.shiftKey){$("#bUngroup").onclick();msg="Desagrupado";}
+  else if(c&&k==="s"){msg="Salvo na TV";}
+  else if(k==="delete"||k==="backspace"){if(sel.size){$("#bDel").onclick();msg="Removido";}}
+  else if(k==="escape"){sel=new Set();focusGroup=0;refresh();}
+  else if(k.startsWith("arrow")){const s=ev.shiftKey?32:ev.altKey?1:SNAP;nudge(k==="arrowleft"?-s:k==="arrowright"?s:0,k==="arrowup"?-s:k==="arrowdown"?s:0);}
+  else if(k==="]"&&sel.size===1){move([...sel][0],1);msg="Subiu uma camada";}
+  else if(k==="["&&sel.size===1){move([...sel][0],-1);msg="Desceu uma camada";}
+  else return;
+  ev.preventDefault();flash(msg);});
+$("#bUndo").onclick=()=>restore(hpos-1);$("#bRedo").onclick=()=>restore(hpos+1);undoBtns();
+["bgSel","scanChk"].forEach(id=>$("#"+id).onchange=paintAll);
+$("#gridChk").onchange=()=>{$("#grid").hidden=!$("#gridChk").checked;};
+addEventListener("resize",()=>{paintAll();drawSize();});
+renderTabs();sel=new Set(els.map((x,k)=>x.g===2?k:-1).filter(k=>k>=0));refresh();
+setInterval(step,1000);
+
+/* ---------- temas ---------- */
+function themeCard(k){const t=THEMES[k];return`<div class="theme-card"><div class="tvframe" style="background:${t.bg}"><div class="surface" style="display:grid;grid-template-columns:1fr 1fr;gap:6%;padding:6%;font-family:Silkscreen,monospace">
+  <div style="background:${t.card};padding:6%;color:${t.mut};font-size:9px">BATERIA<div style="color:${t.hi};font-size:18px;margin-top:4px">62%</div><div style="height:4px;background:${t.bg};margin-top:4px"><div style="width:62%;height:100%;background:${t.hi}"></div></div></div>
+  <div style="background:${t.card};padding:6%;display:flex;gap:8%;align-items:center"><canvas width="16" height="16" data-spr="diamond" style="width:40%;image-rendering:pixelated"></canvas><div style="color:${t.fg};font-size:13px">12,5k<div style="color:${t.lo};font-size:9px">−8/s</div></div></div>
+  </div></div><span class="cap"><b style="color:var(--page-fg)">${t.name}</b> · ${TOK.map(x=>`<i style="display:inline-block;width:9px;height:9px;background:${t[x]};vertical-align:middle;border:1px solid #0003"></i>`).join(" ")}</span>
+  <button class="chip" data-usetheme="${k}" aria-pressed="${k===themeKey}" style="align-self:flex-start">Usar no editor</button></div>`;}
+function renderThemes(){$("#themes").innerHTML=Object.keys(THEMES).map(themeCard).join("");
+  document.querySelectorAll("[data-spr]").forEach(c=>drawSprite(c,c.dataset.spr));
+  document.querySelectorAll("[data-usetheme]").forEach(b=>b.onclick=()=>{themeKey=b.dataset.usetheme;renderThemes();refresh();});}
+renderThemes();
+
+/* ---------- tamanho ---------- */
+let W=6,H=3,grow="ur";const MAX=32,obstacleX=7;const wm=$("#wallmini");
+function drawSize(){$("#ow").textContent=W;$("#oh").textContent=H;
+  const cell=16,box=wm.getBoundingClientRect();const ax=Math.floor(box.width/2/cell)*cell-48,ay=Math.floor((box.height-40)/cell)*cell;
+  const a=$("#anch");a.style.left=ax+"px";a.style.top=ay+"px";
+  const x0=grow==="ul"?ax-(W-1)*cell:grow==="c"?ax-Math.floor((W-1)/2)*cell:ax;
+  const y0=grow==="c"?ay-Math.floor((H-1)/2)*cell:ay-(H-1)*cell;
+  const g=$("#ghost");g.style.left=x0+"px";g.style.top=y0+"px";g.style.width=W*cell+"px";g.style.height=H*cell+"px";
+  let t=wm.querySelector(".torch");if(!t){t=document.createElement("div");t.className="torch";t.style.cssText="position:absolute;width:6px;height:12px;background:#F2C14E;box-shadow:0 0 10px #F2C14E";wm.appendChild(t);}
+  t.style.left=(ax+obstacleX*cell+5)+"px";t.style.top=(ay+2)+"px";
+  const bx0=(x0-ax)/cell,bx1=bx0+W-1;const inRow=y0<=ay&&y0+H*cell>ay;const bad=inRow&&obstacleX>=bx0&&obstacleX<=bx1;
+  g.classList.toggle("bad",bad);$("#apply").disabled=bad;
+  $("#sizeMsg").textContent=bad?"Uma tocha está na frente da parede em 1 bloco da área. Tire-a ou mude o tamanho.":"Área livre: "+(W*H)+" blocos de parede · textura "+(W*32)+"×"+(H*32)+" px.";}
+document.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>{const k=b.dataset.d[0],s=+b.dataset.d.slice(1);
+  if(k==="w")W=Math.min(MAX,Math.max(1,W+s));else H=Math.min(MAX,Math.max(1,H+s));drawSize();});
+document.querySelectorAll("#grow .chip").forEach(b=>b.onclick=()=>{grow=b.dataset.g;document.querySelectorAll("#grow .chip").forEach(x=>x.setAttribute("aria-pressed",x===b));drawSize();});
+drawSize();
+
+/* ---------- pixel art ---------- */
+const ac=$("#art");let cur=3,tool="pen";
+PAL.forEach((c,i)=>{const b=document.createElement("button");b.className="sw";
+  b.style.background=i===0?"repeating-conic-gradient(#aaa 0 25%,#fff 0 50%) 0 0/8px 8px":c;b.setAttribute("aria-label",i===0?"transparente":c);
+  b.setAttribute("aria-pressed",i===cur);b.onclick=()=>{cur=i;[...$("#pal").children].forEach((x,j)=>x.setAttribute("aria-pressed",j===cur));};$("#pal").appendChild(b);});
+document.querySelectorAll("[data-tool]").forEach(b=>b.onclick=()=>{tool=b.dataset.tool;document.querySelectorAll("[data-tool]").forEach(x=>x.setAttribute("aria-pressed",x===b));});
+$("#clearArt").onclick=()=>{art=art.map(r=>r.map(()=>0));redrawArt();};
+function cellAt(e){const r=ac.getBoundingClientRect();return[Math.floor((e.clientX-r.left)/r.width*16),Math.floor((e.clientY-r.top)/r.height*16)];}
+function fill(x,y,from,to){if(from===to)return;const st=[[x,y]];while(st.length){const[a,b]=st.pop();if(a<0||b<0||a>15||b>15||art[b][a]!==from)continue;art[b][a]=to;st.push([a+1,b],[a-1,b],[a,b+1],[a,b-1]);}}
+let painting=false;
+function act(e){const[x,y]=cellAt(e);if(x<0||y<0||x>15||y>15)return;
+  if(tool==="pen")art[y][x]=cur;else if(tool==="erase")art[y][x]=0;else if(tool==="fill")fill(x,y,art[y][x],cur);
+  else if(tool==="pick"){cur=art[y][x];[...$("#pal").children].forEach((b,j)=>b.setAttribute("aria-pressed",j===cur));}
+  redrawArt();}
+ac.addEventListener("pointerdown",e=>{painting=true;ac.setPointerCapture(e.pointerId);act(e);});
+ac.addEventListener("pointermove",e=>{if(painting&&(tool==="pen"||tool==="erase"))act(e);});
+ac.addEventListener("pointerup",()=>painting=false);
+function redrawArt(){drawGrid(ac,art);const l=$("#lib").children[0];if(l)drawGrid(l,art);paintAll();}
+const ex1=Array.from({length:16},(_,y)=>Array.from({length:16},(_,x)=>((x-8)**2+(y-8)**2<36)?((x+y)%5?8:9):((x*y)%7===0?1:0)));
+const ex2=Array.from({length:16},(_,y)=>Array.from({length:16},(_,x)=>(y>10?6:(y>7&&Math.abs(x-8)<y-5)?7:(x===12&&y<4)?9:0)));
+[art,ex1,ex2].forEach(g=>{const c=document.createElement("canvas");c.width=c.height=16;$("#lib").appendChild(c);drawGrid(c,g);});
+drawGrid(ac,art);
+})();
+</script>

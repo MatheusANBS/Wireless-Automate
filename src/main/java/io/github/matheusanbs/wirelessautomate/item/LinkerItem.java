@@ -8,6 +8,8 @@ import io.github.matheusanbs.wirelessautomate.linker.LinkerOpen;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.range.RangeLinks;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
+import io.github.matheusanbs.wirelessautomate.tv.TvBlockEntity;
+import io.github.matheusanbs.wirelessautomate.tv.TvLinks;
 import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.GlobalPos;
@@ -26,13 +28,16 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Vinculador (controle), com dois modos ({@link LinkerMode}, componente
- * {@link ModDataComponents#LINKER_MODE}); Shift + clique no ar passa ao outro.
+ * {@link ModDataComponents#LINKER_MODE}); Shift + roda do mouse passa ao outro.
  *
  * <p><b>Vincular</b>: clique num roteador o escolhe ({@link ModDataComponents#LINKER_ROUTER}); clique em outro
  * bloco vincula ou desvincula essa máquina a ele ({@link RangeLinks}). Shift + clique em dois blocos marca os
  * cantos de uma área ({@link ModDataComponents#LINKER_AREA}, ver {@link LinkerActions}); clique no ar abre a
  * tela ({@link LinkerMenu}), que vincula as máquinas da área e escolhe vincular ou desvincular
  * ({@link ModDataComponents#LINKER_UNLINK}: os mesmos gestos tiram em vez de pôr).
+ *
+ * <p>Com uma Tela de Sinal escolhida ({@link ModDataComponents#LINKER_TV}, por um clique nela, que esquece o
+ * roteador), o clique num armazenamento do mod o liga ou desliga da Tela ({@link TvLinks}).
  *
  * <p><b>Abrir</b>: clique numa máquina abre a tela do roteador que chega nela ({@link LinkerOpen}).
  */
@@ -76,6 +81,10 @@ public class LinkerItem extends Item {
                 LinkerOpen.click(player, stack, context.getClickedPos());
             } else if (level.getBlockEntity(context.getClickedPos()) instanceof RouterBlockEntity router) {
                 RangeLinks.choose(player, stack, router);
+            } else if (level.getBlockEntity(context.getClickedPos()) instanceof TvBlockEntity tv) {
+                TvLinks.choose(player, stack, tv);
+            } else if (tv(stack) != null) {
+                TvLinks.toggle(player, stack, context.getClickedPos());
             } else {
                 RangeLinks.toggle(player, stack, context.getClickedPos());
             }
@@ -83,7 +92,7 @@ public class LinkerItem extends Item {
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
-    /** Só chega aqui com Shift: vincular marca um canto; abrir só explica (o modo se troca no ar). */
+    /** Só chega aqui com Shift: vincular marca um canto; abrir só explica (o modo se troca com Shift + roda). */
     @Override
     public InteractionResult useOn(UseOnContext context) {
         if (!context.isSecondaryUseActive()) {
@@ -101,16 +110,15 @@ public class LinkerItem extends Item {
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
-    /** No ar: Shift + clique passa ao outro modo; clique abre a tela (Vincular) ou explica o gesto (Abrir). */
+    /**
+     * No ar, com ou sem Shift: abre a tela (Vincular) ou explica o gesto (Abrir). O modo se troca com Shift + roda
+     * do mouse ({@code client/HeldScrollHandler}).
+     */
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         if (player instanceof ServerPlayer serverPlayer) {
-            if (player.isSecondaryUseActive()) {
-                LinkerMode mode = mode(stack).next();
-                setMode(stack, mode);
-                serverPlayer.displayClientMessage(Component.translatable(KEY + "mode", modeName(mode)), true);
-            } else if (mode(stack) == LinkerMode.LINK) {
+            if (mode(stack) == LinkerMode.LINK) {
                 LinkerMenu.open(serverPlayer, hand);
             } else {
                 serverPlayer.displayClientMessage(Component.translatable(KEY + "open.hint"), true);
@@ -152,6 +160,20 @@ public class LinkerItem extends Item {
         }
     }
 
+    /** Tela de Sinal escolhida ao ligar armazenamentos; {@code null} se nenhuma. */
+    public static @Nullable GlobalPos tv(ItemStack stack) {
+        return stack.get(ModDataComponents.LINKER_TV.get());
+    }
+
+    /** {@code null} esquece a Tela escolhida. */
+    public static void setTv(ItemStack stack, @Nullable GlobalPos tv) {
+        if (tv == null) {
+            stack.remove(ModDataComponents.LINKER_TV.get());
+        } else {
+            stack.set(ModDataComponents.LINKER_TV.get(), tv);
+        }
+    }
+
     /** Cantos marcados; {@code null} se nenhum. */
     public static @Nullable LinkerArea area(ItemStack stack) {
         return stack.get(ModDataComponents.LINKER_AREA.get());
@@ -181,6 +203,11 @@ public class LinkerItem extends Item {
             if (router != null) {
                 tooltip.add(Component.translatable(KEY + "tooltip.router", LinkerActions.position(router.pos()))
                         .withStyle(ChatFormatting.GRAY));
+            }
+            GlobalPos tv = tv(stack);
+            if (tv != null) {
+                tooltip.add(Component.translatable(KEY + "tooltip.tv", LinkerActions.position(tv.pos()),
+                        tv.dimension().location().toString()).withStyle(ChatFormatting.GRAY));
             }
             LinkerArea area = area(stack);
             if (area != null) {

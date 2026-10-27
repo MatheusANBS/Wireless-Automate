@@ -28,6 +28,11 @@ public final class Sources {
         return LOADED && ScalarTransfer.move(source, now, ArsSources.ACCESS);
     }
 
+    /** Soma a Source guardada e a capacidade da cap do Ars em {@code out[0]} e {@code out[1]}. */
+    static void held(Object handler, long[] out) {
+        ArsSources.held(handler, out);
+    }
+
     /** A capability do Ars no Tanque de Source; sem o Ars, nada. */
     public static void registerStorage(RegisterCapabilitiesEvent event) {
         if (LOADED) {

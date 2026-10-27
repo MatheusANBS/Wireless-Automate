@@ -35,6 +35,21 @@ public abstract class ScalarStorageBlockEntity extends StorageBlockEntity {
     }
 
     @Override
+    public @Nullable StorageWatch watch() {
+        return store.watch();
+    }
+
+    @Override
+    public StorageWatch startWatch() {
+        return store.startWatch();
+    }
+
+    @Override
+    public void stopWatch() {
+        store.stopWatch();
+    }
+
+    @Override
     public boolean isEmptyContents() {
         return store.isEmpty();
     }

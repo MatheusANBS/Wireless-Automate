@@ -719,6 +719,7 @@ public final class NodePanel {
 
     /** Centro da linha fixa "Sem rede" da lista da linha Rede aberta, ou {@code null} se ela está fechada. */
     public int @Nullable [] networkNoneCenter() {
+        arrange();
         return lists.noneCenter();
     }
 

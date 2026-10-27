@@ -28,6 +28,10 @@ import io.github.matheusanbs.wirelessautomate.storage.SourceTankLevels;
 import io.github.matheusanbs.wirelessautomate.storage.StorageCapabilities;
 import io.github.matheusanbs.wirelessautomate.storage.StorageNeighbors;
 import io.github.matheusanbs.wirelessautomate.storage.StorageSavedData;
+import io.github.matheusanbs.wirelessautomate.tv.TvEditing;
+import io.github.matheusanbs.wirelessautomate.tv.TvLoaded;
+import io.github.matheusanbs.wirelessautomate.tv.TvManager;
+import io.github.matheusanbs.wirelessautomate.tv.TvPreview;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.bus.api.IEventBus;
@@ -90,6 +94,7 @@ public final class WirelessAutomate {
         SourceTankLevels.tick();
         ResonatorManager.tick(event.getServer());
         RepairerManager.tick(event.getServer());
+        TvManager.tick(event.getServer());
         // Por último: junta num aviso só as mudanças de conteúdo do tick, inclusive as do motor e do Ressonador.
         StorageNeighbors.tick();
     }
@@ -97,6 +102,8 @@ public final class WirelessAutomate {
     private static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         TabletMenu.forget(event.getEntity().getUUID());
         IdleNetworkUndo.forget(event.getEntity().getUUID());
+        TvEditing.forget(event.getEntity().getUUID());
+        TvPreview.forget(event.getEntity().getUUID());
         NetworkManager.get().flows().unwatch(event.getEntity().getUUID());
     }
 
@@ -109,6 +116,9 @@ public final class WirelessAutomate {
         RemoteIndex.reset();
         SourceTankLevels.reset();
         RepairerManager.reset();
+        TvManager.reset();
+        TvEditing.reset();
+        TvLoaded.clearServer();
         StorageNeighbors.reset();
         ResonatorManager.reset();
         ResonatorPorts.reset();

@@ -43,6 +43,7 @@ resources with the others, with no pipes.
 | <ItemImage id="wirelessautomate:signal_crystal" /> [Signal Quartz and crystals](signal-quartz.md) | The ore and the crystals that power the Resonator. |
 | <ItemImage id="wirelessautomate:resonance_core" /> [Signal Resonator](signal-resonator.md) | A power generator: crystals, tuning and FE. |
 | <ItemImage id="wirelessautomate:crystal_repairer" /> [Crystal Repairer](crystal-repairer.md) | Fixes cracked crystals, up to eight at a time. |
+| <ItemImage id="wirelessautomate:signal_screen" /> [Signal Screen](signal-screen.md) | A wall panel, as big as you want, showing your networks' numbers. |
 | [Recipe editor](recipe-editor.md) | Operators tweak the mod's crafting recipes in-game. |
 
 ## Where to start

@@ -19,6 +19,7 @@ import io.github.matheusanbs.wirelessautomate.client.router.RouterScreen;
 import io.github.matheusanbs.wirelessautomate.client.storage.StorageListScreen;
 import io.github.matheusanbs.wirelessautomate.client.storage.StorageScalarScreen;
 import io.github.matheusanbs.wirelessautomate.client.tablet.TabletScreen;
+import io.github.matheusanbs.wirelessautomate.client.tv.TvScreen;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.lang.reflect.Field;
 import java.util.List;
@@ -207,6 +208,8 @@ final class E2eDarkSteps {
         } else if (screen instanceof ResonatorScreen s) {
             return new int[] {s.themeX(), s.themeY()};
         } else if (screen instanceof RepairerScreen s) {
+            return new int[] {s.themeX(), s.themeY()};
+        } else if (screen instanceof TvScreen s) {
             return new int[] {s.themeX(), s.themeY()};
         }
         throw new StepFailure("sem botão do tema na tela " + describe(screen));

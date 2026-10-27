@@ -86,6 +86,9 @@ final class E2eSuites {
                     Prereq.NENHUM, E2eRepairerAnimSteps::animationSteps),
             optional("reparador-desempenho", "tempo de quadro do Reparador (mede, não afirma)", Prereq.NENHUM,
                     E2eRepairerAnimSteps::perfSteps),
+            suite("tela", "Tela de Sinal: tamanho, conteúdo e o desenho no mundo", Prereq.NENHUM, E2eTvSteps::tvSteps),
+            optional("tela-desempenho", "tempo de quadro e de redesenho com 8 Telas 32 x 32 (mede, não afirma)",
+                    Prereq.NENHUM, E2eTvPerfSteps::perfSteps),
             new Suite("guia", "páginas do guia (com o GuideME)", Prereq.NENHUM, E2eGuideSteps::guideSteps, false,
                     () -> ModList.get().isLoaded("guideme")));
 

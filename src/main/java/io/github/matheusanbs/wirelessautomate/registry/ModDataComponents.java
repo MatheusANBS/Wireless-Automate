@@ -82,6 +82,16 @@ public final class ModDataComponents {
                     .persistent(GlobalPos.CODEC)
                     .networkSynchronized(GlobalPos.STREAM_CODEC));
 
+    /**
+     * Tela de Sinal escolhida no Vinculador (posição e dimensão): o alvo dos armazenamentos ligados. Escolher uma Tela
+     * esquece o roteador e escolher um roteador esquece a Tela. Não é limpo quando a Tela some; o servidor confere a
+     * cada clique.
+     */
+    public static final Supplier<DataComponentType<GlobalPos>> LINKER_TV =
+            DATA_COMPONENTS.registerComponentType("linker_tv", builder -> builder
+                    .persistent(GlobalPos.CODEC)
+                    .networkSynchronized(GlobalPos.STREAM_CODEC));
+
     /** Bloco da máquina do roteador copiado pelo Configurador: colar em área só vale para essa máquina. */
     public static final Supplier<DataComponentType<ResourceLocation>> CONFIGURATOR_MACHINE =
             DATA_COMPONENTS.registerComponentType("configurator_machine", builder -> builder

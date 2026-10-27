@@ -74,6 +74,16 @@ public final class ResonatorPorts {
      */
     public record CoreEnergy(ResonanceCoreBlockEntity core, int port) implements BulkEnergy {
         @Override
+        public long stored() {
+            return alive(core) ? core.energy() : 0;
+        }
+
+        @Override
+        public long capacity() {
+            return alive(core) ? core.capacity() : 0;
+        }
+
+        @Override
         public long insert(long amount, boolean simulate) {
             return 0;
         }

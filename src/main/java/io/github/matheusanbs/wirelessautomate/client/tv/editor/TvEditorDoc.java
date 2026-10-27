@@ -233,6 +233,29 @@ final class TvEditorDoc {
         apply(TvEditOps.lower(A, pieces(), selection()));
     }
 
+    /** Leva a escolha para a camada de cima (dentro do grupo, se ela é de um). */
+    void toFront() {
+        apply(TvEditOps.moveTo(A, pieces(), selection(), pieces().size()));
+    }
+
+    /** Leva a escolha para a camada de baixo (dentro do grupo, se ela é de um). */
+    void toBack() {
+        apply(TvEditOps.moveTo(A, pieces(), selection(), 0));
+    }
+
+    /** Esconde as peças escolhidas (o olho das Camadas as mostra de novo). */
+    void hideSelection() {
+        List<TvPiece> pieces = new ArrayList<>(pieces());
+        TvSelection selection = selection();
+        for (int k = 0; k < selection.size(); k++) {
+            int i = selection.get(k);
+            if (i < pieces.size()) {
+                pieces.set(i, pieces.get(i).withHidden(true));
+            }
+        }
+        apply(pieces, selection);
+    }
+
     void select(TvSelection selection, int focusGroup) {
         model.history().breakKey();
         model.select(selection, focusGroup);

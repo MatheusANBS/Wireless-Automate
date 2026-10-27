@@ -5,14 +5,19 @@ import static io.github.matheusanbs.wirelessautomate.client.tv.TvScreenLayout.*;
 import io.github.matheusanbs.wirelessautomate.client.ArmedClick;
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
+import io.github.matheusanbs.wirelessautomate.client.ResizeGrip;
+import io.github.matheusanbs.wirelessautomate.client.ResizeHandle;
 import io.github.matheusanbs.wirelessautomate.client.ThemeToggle;
 import io.github.matheusanbs.wirelessautomate.client.tv.TvButtons.Label;
 import io.github.matheusanbs.wirelessautomate.client.tv.editor.TvEditorActions;
+import io.github.matheusanbs.wirelessautomate.client.tv.editor.TvEditorLayout;
+import io.github.matheusanbs.wirelessautomate.client.tv.editor.TvEditorSize;
 import io.github.matheusanbs.wirelessautomate.client.tv.editor.TvEditorTab;
 import io.github.matheusanbs.wirelessautomate.menu.TvMenu;
 import io.github.matheusanbs.wirelessautomate.tv.TvArea;
 import io.github.matheusanbs.wirelessautomate.tv.TvAreaCheck;
 import java.util.List;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
@@ -22,7 +27,9 @@ import org.lwjgl.glfw.GLFW;
 
 /**
  * A tela da Tela de Sinal: o cabeçalho com o nome, as abas Tamanho e Editar, o ✕ e o botão do tema. A aba Tamanho
- * tem 320 × 220 fixos; a Editar ocupa a janela menos {@link #EDITOR_MARGIN} px e acompanha o tamanho dela. Esta
+ * tem 320 × 220 fixos; a Editar é redimensionável pela borda e pela alça do canto como a tela do roteador (mínimo
+ * 400 × 240, máximo a janela menos {@link #EDITOR_MARGIN} px, o tamanho lembrado na sessão pelo {@link TvEditorSize}).
+ * Esta
  * classe só junta as partes ({@link TvSizeTab}, {@link TvEditorTab}) e repassa o desenho, o mouse, a roda, o teclado
  * e as dicas à aba aberta; os ganchos do e2e ficam aqui. Fechar com mudança não salva no editor pede dois cliques no ✕
  * ("Descartar?"); o Esc faz o mesmo. Sem slots: só existe aberta, e nada vem do servidor enquanto isso.
@@ -31,13 +38,18 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
     /** As abas da tela. */
     public enum Tab { SIZE, EDIT }
 
-    /** A aba Editar ocupa a janela menos esta margem (metade de cada lado). */
+    /** A aba Editar cresce no máximo até a janela menos esta margem (metade de cada lado). */
     public static final int EDITOR_MARGIN = 8;
+    private static final int GRIP = 7;
+    private static final int EDGE = 3;
     private static final Component CLOSE_GLYPH = Component.literal("✕");
+    private static final List<Component> RESIZE_TIP = List.of(
+            Component.translatable("gui.wirelessautomate.resize.tooltip"));
 
     private final TvSizeTab sizeTab;
     private final TvEditorTab editorTab;
     private final ArmedClick closeClick = new ArmedClick();
+    private final ResizeHandle resizeHandle = new ResizeHandle(GRIP, EDGE);
     private Tab tab = Tab.SIZE;
     private @Nullable GuiText.Fitted titleText;
     private @Nullable Label sizeLabel;
@@ -67,8 +79,8 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
     /** O tamanho do painel pela aba aberta; o {@code super.init} centra. */
     private void size() {
         if (tab == Tab.EDIT) {
-            imageWidth = Math.max(1, width - EDITOR_MARGIN);
-            imageHeight = Math.max(1, height - EDITOR_MARGIN);
+            imageWidth = TvEditorSize.fit(TvEditorSize.wantedWidth(), TvEditorLayout.MIN_W, width - EDITOR_MARGIN);
+            imageHeight = TvEditorSize.fit(TvEditorSize.wantedHeight(), TvEditorLayout.MIN_H, height - EDITOR_MARGIN);
         } else {
             imageWidth = W;
             imageHeight = H;
@@ -109,6 +121,11 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
             g.renderComponentTooltip(font, List.of(TvScreenText.key("close")), mouseX, mouseY);
             return;
         }
+        if (tab == Tab.EDIT && !editorTab.menuOpen() && resizeHandle.hover(mouseX, mouseY, leftPos, topPos,
+                imageWidth, imageHeight) != null) {
+            g.renderComponentTooltip(font, RESIZE_TIP, mouseX, mouseY);
+            return;
+        }
         List<Component> tip = tab == Tab.SIZE ? sizeTab.tooltip(leftPos, topPos, mouseX, mouseY) : null;
         Component editorTip = tab == Tab.EDIT ? editorTab.tooltip(mouseX, mouseY) : null;
         if (tip != null || editorTip != null) {
@@ -140,6 +157,9 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
         if (tab == Tab.SIZE) {
             sizeTab.render(g, leftPos, topPos, mouseX, mouseY);
         } else {
+            ResizeHandle.Edge hover = editorTab.menuOpen() ? null
+                    : resizeHandle.hover(mouseX, mouseY, leftPos, topPos, imageWidth, imageHeight);
+            ResizeGrip.renderDotted(g, leftPos, topPos, imageWidth, imageHeight, hover, GuiPaint.ACCENT);
             editorTab.render(g, mouseX, mouseY);
         }
     }
@@ -188,12 +208,19 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
         if (ThemeToggle.mouseClicked(themeX(), themeY(), mouseX, mouseY, button)) {
             return true;
         }
+        if (tab == Tab.EDIT && (button == 1 || button == 2)) {
+            return editorTab.mouseClicked(mouseX, mouseY, button) || super.mouseClicked(mouseX, mouseY, button);
+        }
         if (button == 0) {
             if (tab == Tab.EDIT && closeHovered(mouseX, mouseY)) {
                 requestClose();
                 return true;
             }
             closeClick.disarm();
+            if (tab == Tab.EDIT && !editorTab.menuOpen()
+                    && resizeHandle.begin(mouseX, mouseY, leftPos, topPos, imageWidth, imageHeight)) {
+                return true;
+            }
             if (SIZE_TAB.contains(leftPos, topPos, mouseX, mouseY)) {
                 select(Tab.SIZE);
                 return true;
@@ -213,15 +240,50 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        if (tab == Tab.EDIT && button == 0 && editorTab.mouseDragged(mouseX, mouseY)) {
+        if (resizeHandle.dragging()) {
+            dragResize(mouseX, mouseY);
+            return true;
+        }
+        if (tab == Tab.EDIT && (button == 0 || button == 2) && editorTab.mouseDragged(mouseX, mouseY)) {
             return true;
         }
         return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
     }
 
+    /**
+     * Redimensiona em torno do centro, como o roteador: a borda arrastada segue o mouse e a oposta se move igual,
+     * então o painel continua centralizado. O tamanho pedido fica lembrado e a tela é refeita no tamanho novo.
+     */
+    private void dragResize(double mouseX, double mouseY) {
+        int newW = imageWidth;
+        int newH = imageHeight;
+        if (resizeHandle.changesWidth()) {
+            newW = TvEditorSize.fit(TvEditorSize.even(resizeHandle.wantedWidth(mouseX)), TvEditorLayout.MIN_W,
+                    width - EDITOR_MARGIN);
+        }
+        if (resizeHandle.changesHeight()) {
+            newH = TvEditorSize.fit(TvEditorSize.even(resizeHandle.wantedHeight(mouseY)), TvEditorLayout.MIN_H,
+                    height - EDITOR_MARGIN);
+        }
+        if ((newW != imageWidth || newH != imageHeight) && minecraft != null) {
+            TvEditorSize.remember(newW, newH);
+            init(minecraft, width, height);
+        }
+    }
+
+    @Override
+    public void resize(Minecraft minecraft, int width, int height) {
+        resizeHandle.end();
+        super.resize(minecraft, width, height);
+    }
+
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (button == 0 && editorTab.mouseReleased()) {
+        if (resizeHandle.dragging()) {
+            resizeHandle.end();
+            return true;
+        }
+        if ((button == 0 || button == 2) && editorTab.mouseReleased()) {
             return true;
         }
         return super.mouseReleased(mouseX, mouseY, button);
@@ -306,6 +368,16 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
 
     public TvEditorTab editor() {
         return editorTab;
+    }
+
+    /** O ponto da alça do canto da aba Editar (gancho do e2e). */
+    public int[] gripCenter() {
+        return new int[] {leftPos + imageWidth - 3, topPos + imageHeight - 3};
+    }
+
+    /** A largura e a altura do painel (gancho do e2e). */
+    public int[] panelSize() {
+        return new int[] {imageWidth, imageHeight};
     }
 
     /** O centro do ‹ ({@code plus} falso) ou do › da Largura ou da Altura (gancho do e2e). */

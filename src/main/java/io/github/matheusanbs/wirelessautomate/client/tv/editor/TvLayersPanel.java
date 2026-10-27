@@ -12,15 +12,14 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 
 /**
- * As Camadas (decisão 9 da spec da etapa 2): a lista das peças de cima para baixo (a última desenhada no topo), com o
+ * As Camadas (decisão 9 da spec da etapa 2, na aba Camadas da coluna da esquerda, com a altura inteira dela): a lista das peças de cima para baixo (a última desenhada no topo), com o
  * símbolo do tipo, o nome e o olho que esconde; cada sequência de peças de um grupo ganha o cabeçalho "Grupo N", que
  * recolhe pela seta e escolhe o grupo inteiro pelo clique. Arrastar uma linha (ou um cabeçalho, com a sequência
  * dele) a leva para outra camada. As linhas e os textos medidos são refeitos só quando o rascunho, o que está
  * recolhido ou o tamanho mudam; por quadro, só o desenho.
  */
 final class TvLayersPanel {
-    static final int ROW_H = 10;
-    private static final int TOP = 11;
+    static final int ROW_H = 14;
     private static final int EYE = 5;
     private static final int DRAG_START = 3;
 
@@ -35,7 +34,6 @@ final class TvLayersPanel {
     private final Component[] glyphs = new Component[TvPieceType.values().length];
     private TvRect rect = TvRect.NONE;
     private Font font;
-    private GuiText.Fitted title;
     private GuiText.Fitted empty;
     private int builtVersion = -1;
     private boolean stale = true;
@@ -52,7 +50,6 @@ final class TvLayersPanel {
     void layout(Font font, TvRect rect) {
         this.font = font;
         this.rect = rect;
-        title = GuiText.fit(font, TvEditorText.key("layers"), rect.w());
         empty = GuiText.fit(font, TvEditorText.key("layers.empty"), rect.w() - 8);
         for (TvPieceType type : TvPieceType.values()) {
             glyphs[type.ordinal()] = Component.literal(TvEditorText.glyph(type));
@@ -61,7 +58,7 @@ final class TvLayersPanel {
     }
 
     private int visible() {
-        return Math.max(1, (rect.h() - TOP - 2) / ROW_H);
+        return Math.max(1, (rect.h() - 2) / ROW_H);
     }
 
     /** Refaz as linhas, só com o rascunho, o recolhido ou o tamanho mudados. */
@@ -101,13 +98,12 @@ final class TvLayersPanel {
 
     void render(GuiGraphics g, int mouseX, int mouseY) {
         rebuild();
-        GuiText.draw(g, font, title, rect.x(), rect.y(), GuiPaint.MUTED);
         int x = rect.x();
-        int y = rect.y() + TOP;
-        int h = rect.h() - TOP;
+        int y = rect.y();
+        int h = rect.h();
         GuiPaint.inset(g, x, y, rect.w(), h);
         if (rows.isEmpty()) {
-            GuiText.draw(g, font, empty, x + 4, y + 3, GuiPaint.MUTED);
+            GuiText.draw(g, font, empty, x + 4, y + 4, GuiPaint.MUTED);
             return;
         }
         int end = Math.min(rows.size(), scroll + visible());
@@ -138,19 +134,19 @@ final class TvLayersPanel {
         int textColor = GuiPaint.FG;
         if (row.header()) {
             if (collapsed.contains(row.group())) {
-                GuiPaint.arrowRight(g, x + 4, y + 2, GuiPaint.MUTED);
+                GuiPaint.arrowRight(g, x + 4, y + 4, GuiPaint.MUTED);
             } else {
-                GuiPaint.arrowDown(g, x + 3, y + 3, GuiPaint.MUTED);
+                GuiPaint.arrowDown(g, x + 3, y + 5, GuiPaint.MUTED);
             }
-            GuiText.draw(g, font, row.label(), x + 12, y + 1, textColor);
-            GuiPaint.text(g, font, row.count(), x + w - row.countWidth() - 2, y + 1, GuiPaint.MUTED);
+            GuiText.draw(g, font, row.label(), x + 12, y + 3, textColor);
+            GuiPaint.text(g, font, row.count(), x + w - row.countWidth() - 2, y + 3, GuiPaint.MUTED);
             return;
         }
         int indent = row.group() != 0 ? 6 : 0;
         boolean hidden = doc.pieces().get(row.piece()).hidden();
-        GuiPaint.text(g, font, glyphs[row.type().ordinal()], x + 3 + indent, y + 1, GuiPaint.ACCENT);
-        GuiText.draw(g, font, row.label(), x + 12 + indent, y + 1, hidden ? GuiPaint.MUTED : textColor);
-        GuiPaint.eye(g, eyeX(), y + 2, hidden ? GuiPaint.DISABLED : GuiPaint.HIGHLIGHT);
+        GuiPaint.text(g, font, glyphs[row.type().ordinal()], x + 3 + indent, y + 3, GuiPaint.ACCENT);
+        GuiText.draw(g, font, row.label(), x + 12 + indent, y + 3, hidden ? GuiPaint.MUTED : textColor);
+        GuiPaint.eye(g, eyeX(), y + 4, hidden ? GuiPaint.DISABLED : GuiPaint.HIGHLIGHT);
     }
 
     private int eyeX() {
@@ -173,7 +169,7 @@ final class TvLayersPanel {
 
     /** A linha sob o mouse, ou -1. */
     private int rowAt(double mouseX, double mouseY) {
-        int y = rect.y() + TOP + 1;
+        int y = rect.y() + 1;
         if (mouseX < rect.x() || mouseX >= rect.right() || mouseY < y) {
             return -1;
         }
@@ -220,7 +216,7 @@ final class TvLayersPanel {
             dragging = true;
         }
         if (dragging) {
-            int y = rect.y() + TOP + 1;
+            int y = rect.y() + 1;
             int gap = scroll + (int) Math.round((mouseY - y) / ROW_H);
             dropGap = Math.max(scroll, Math.min(gap, Math.min(rows.size(), scroll + visible())));
         }
@@ -255,7 +251,7 @@ final class TvLayersPanel {
         rebuild();
         for (int r = scroll; r < Math.min(rows.size(), scroll + visible()); r++) {
             if (!rows.get(r).header() && rows.get(r).piece() == index) {
-                return new int[] {rect.x() + rect.w() / 2, rect.y() + TOP + 1 + (r - scroll) * ROW_H + ROW_H / 2};
+                return new int[] {rect.x() + rect.w() / 2, rect.y() + 1 + (r - scroll) * ROW_H + ROW_H / 2};
             }
         }
         return null;

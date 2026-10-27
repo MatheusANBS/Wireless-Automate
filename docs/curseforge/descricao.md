@@ -141,6 +141,17 @@ A cracked crystal no longer means a trip to the crafting table. Put it on one of
 
 Energy and items go in from any side, so a router can keep it fed. The cracks close from the inside out, the crystals converge on the emitter and the mended one rises out. The Resonator's Core also got faster at the other end: it now recharges **every Dull crystal the catalyst pays for at once**. Recipe: Resonator Casing, Phase Circuit, Hopper, Harmonic Lens and a Redstone Block. The repair time and cost are in the config (`repairer.repairTicks` and `repairer.costFactor`).
 
+### Signal Screen
+
+A wall display that shows **live numbers from your networks and storages**. Stick it on the side of a solid block and stretch it from **1 × 1 to 32 × 32 blocks** in the Size tab: no extra blocks, the picture spans the whole wall.
+
+- **A full editor in the game:** drag, resize, group and layer pieces, copy and paste between Screens, undo up to 100 steps. Pieces: **Value, Text, Shape, Icon, Bar, Gauge, Graph and Arrow**, each fed by a **network**, a **linked storage** or the **in-game clock**.
+- **Rules** change a piece's color, background, blink or hide it when a number is below, above or equal to a value. Five fonts, four ready themes (Graphite, Phosphor, Amber, Porcelain) plus your own, backgrounds, scanlines.
+- **Ready layouts** for the whole Screen (Energy, Storage, Network, Clock) that fit any size, **layouts you save yourself** and ready or custom **components**, picked from a list with a click.
+- **Icon** shows **any item, fluid or Mekanism chemical** dragged from JEI, even items with data (Apotheosis gems, enchanted gear), in 3D with animated icons.
+- **Link storages with the Linker** (Screen mode): click the Screen, then a Wireless Chest, Battery or Tank, at any distance and in any dimension. A storage in an unloaded chunk shows its last number marked as stale; chunks are never force-loaded.
+- **Cheap:** nothing runs while nobody is near; the client redraws a Screen only when a number or the layout changes, within a video memory budget.
+
 ### Tools for big builds
 
 ![The toolkit](https://media.forgecdn.net/attachments/2085/338/feature-14-toolkit-png.png)

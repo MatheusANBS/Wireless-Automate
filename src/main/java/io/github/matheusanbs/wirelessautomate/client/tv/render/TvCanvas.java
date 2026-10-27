@@ -17,7 +17,7 @@ import org.lwjgl.opengl.GL30;
 import org.lwjgl.opengl.GLCapabilities;
 
 /**
- * A imagem de uma Tela: um framebuffer próprio ({@link TextureTarget}, sem profundidade, com mipmaps e o filtro
+ * A imagem de uma Tela: um framebuffer próprio ({@link TextureTarget}, com profundidade só se a Tela tem Ícone, com mipmaps e o filtro
  * anisotrópico) do tamanho da área vezes os pixels por bloco que a {@link TvCanvases} escolheu pelo {@link TvBudget},
  * registrado no {@code TextureManager} com um nome próprio para o BER o usar como textura. Criado sem nada de GL quando o BER pede; o framebuffer nasce no primeiro
  * redesenho, que só acontece no começo do quadro ({@link TvCanvases#onFrame}), porque criar ou limpar um framebuffer
@@ -45,6 +45,8 @@ final class TvCanvas {
     /** A última vez que foi desenhada, tinha um Gráfico (redesenha a cada segundo) ou um número do relógio. */
     boolean graphing;
     boolean clocking;
+    /** A última vez que foi desenhada, tinha um Ícone que se mexe (redesenha a ~10 Hz). */
+    boolean iconing;
     /** O último tick do mundo em que o BER a pediu. */
     long lastWanted;
 
@@ -70,11 +72,10 @@ final class TvCanvas {
                 TvBudget.maxPpb(area.width(), area.height(), RenderSystem.maxSupportedTextureSize()));
         int width = area.width() * effective;
         int height = area.height() * effective;
-        if (target == null) {
-            target = new TextureTarget(width, height, false, Minecraft.ON_OSX);
+        TextureTarget before = target;
+        target = TvTargets.ensure(target, width, height, TvPaintIcon.has(tv.layout()));
+        if (target != before) {
             minecraft.getTextureManager().register(id, new TvTargetTexture(target));
-        } else if (target.width != width || target.height != height) {
-            target.resize(width, height, Minecraft.ON_OSX);
         }
         float scale = effective / (float) TvArea.PIXELS_PER_BLOCK;
         long gameTime = minecraft.level == null ? 0 : minecraft.level.getGameTime();
@@ -85,6 +86,7 @@ final class TvCanvas {
         blinking = (flags & TvPainter.FLAG_BLINK) != 0;
         graphing = (flags & TvPainter.FLAG_GRAPH) != 0;
         clocking = (flags & TvPainter.FLAG_CLOCK) != 0;
+        iconing = (flags & TvPainter.FLAG_ICON) != 0;
         TvTargets.end(graphics);
         mipmaps(target.getColorTextureId());
         revision = tv.revision();
@@ -136,6 +138,7 @@ final class TvCanvas {
         blinking = false;
         graphing = false;
         clocking = false;
+        iconing = false;
         ppb = 0;
         bytes = 0;
     }

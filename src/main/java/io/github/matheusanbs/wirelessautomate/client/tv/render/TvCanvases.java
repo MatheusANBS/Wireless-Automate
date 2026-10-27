@@ -194,7 +194,7 @@ public final class TvCanvases {
             } else {
                 BLINKING.remove(pos);
             }
-            TvTimed.track(pos, canvas.graphing, canvas.clocking);
+            TvTimed.track(pos, canvas.graphing, canvas.clocking, canvas.iconing);
             paintsForTests++;
             paintNanosForTests += spent;
             maxPaintNanosForTests = Math.max(maxPaintNanosForTests, spent);

@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.client.tv.editor;
 
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
+import io.github.matheusanbs.wirelessautomate.client.tv.TvIcons;
 import io.github.matheusanbs.wirelessautomate.menu.TvMenu;
 import io.github.matheusanbs.wirelessautomate.tv.TvPiece;
 import java.util.List;
@@ -361,6 +362,27 @@ final class TvPropsPanel {
             grid.accept(id);
         } else if (target != null) {
             TvDataTab.setIconItem(ctx, Optional.of(id));
+        }
+    }
+
+    /** O alvo do arrasto aceita o ingrediente: a grade só itens; o espaço do Ícone item, fluido ou químico. */
+    boolean ghostAccepts(Object ingredient) {
+        TvControl target = ghostTarget();
+        if (target instanceof TvItemGrid) {
+            return ingredient instanceof net.minecraft.world.item.ItemStack stack && !stack.isEmpty();
+        }
+        return target != null && TvIcons.accepts(ingredient);
+    }
+
+    /** Escolhe o ingrediente largado pelo JEI no alvo de {@link #ghostBounds()}. */
+    void acceptGhostIngredient(Object ingredient) {
+        TvControl target = ghostTarget();
+        if (target instanceof TvItemGrid grid) {
+            if (ingredient instanceof net.minecraft.world.item.ItemStack stack && !stack.isEmpty()) {
+                grid.accept(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()));
+            }
+        } else if (target != null) {
+            TvDataTab.setIconIngredient(ctx, ingredient);
         }
     }
 

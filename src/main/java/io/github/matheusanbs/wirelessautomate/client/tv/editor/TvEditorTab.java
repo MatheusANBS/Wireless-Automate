@@ -418,6 +418,16 @@ public final class TvEditorTab {
         props.acceptGhost(id);
     }
 
+    /** O alvo do arrasto do JEI aceita este ingrediente (item, fluido ou químico, conforme o alvo). */
+    public boolean ghostAccepts(Object ingredient) {
+        return props.ghostAccepts(ingredient);
+    }
+
+    /** Escolhe o ingrediente largado pelo JEI. */
+    public void acceptGhostIngredient(Object ingredient) {
+        props.acceptGhostIngredient(ingredient);
+    }
+
     /** Os ganchos do e2e e das capturas. */
     public TvEditorProbe probe() {
         return probe;

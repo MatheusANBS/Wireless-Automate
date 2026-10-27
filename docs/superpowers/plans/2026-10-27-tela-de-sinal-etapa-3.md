@@ -2,7 +2,7 @@
 
 > **Para agentes:** SUB-SKILL OBRIGATÓRIA: use superpowers:subagent-driven-development (recomendado) ou superpowers:executing-plans para executar este plano tarefa por tarefa. Os passos usam caixas (`- [ ]`) para acompanhar.
 
-**Estado:** rascunho preparado durante a etapa 2 (27/10/2026); o dono aprova a spec antes de executar.
+**Estado:** concluído em 27/10/2026 (Tasks 1, 1b, 2, layouts prontos e salvos, e 3); a etapa 4 (pixel art) espera o dono.
 
 **Objetivo:** as peças Ícone de item, Barra, Medidor, Gráfico e Seta; os Baús, Baterias e Tanques do mod como dado, ligados pelo Vinculador, com entra e sai por item no Baú (sem "um item pela rede", removido); o relógio do jogo; e os componentes prontos com as peças novas.
 
@@ -69,6 +69,6 @@ Custo: só no redesenho; Gráfico e relógio redesenham por tempo, só a Tela à
 
 ### Task 3: Guia, docs e verificação
 
-- [ ] Guia (pt e en): ligar armazenamentos pelo Vinculador, as peças novas, o relógio; página do Vinculador com o clique na Tela.
-- [ ] `CLAUDE.md`, `docs/especificacao.md`, `docs/progresso.md`.
-- [ ] `./gradlew build runGameTestServer` e o e2e da Tela. Commit "Tela de Sinal: guia e docs da etapa 3".
+- [x] Guia (pt e en): ligar armazenamentos pelo Vinculador, as peças novas, o relógio; página do Vinculador com o clique na Tela.
+- [x] `CLAUDE.md`, `docs/especificacao.md`, `docs/progresso.md`.
+- [x] `./gradlew build runGameTestServer` e o e2e da Tela. Commit "Tela de Sinal: guia e docs da etapa 3".

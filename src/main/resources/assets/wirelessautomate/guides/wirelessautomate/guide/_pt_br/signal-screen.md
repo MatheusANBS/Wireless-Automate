@@ -50,6 +50,11 @@ couber, diminua a escala da interface.
 | **Valor** | Um número ao vivo de uma [rede](networks.md): o que entra, o que sai, o que está guardado, quantas faces movem... |
 | **Texto** | Uma frase fixa. |
 | **Forma** | Um retângulo com fundo, borda e cantos: cartão, moldura, divisória. |
+| **Ícone de item** | O desenho de um item, escolhido pelo id ou na lista de um baú ligado. |
+| **Barra** | Uma barra que enche conforme um número, deitada ou em pé. |
+| **Medidor** | Um mostrador em arco com um ponteiro. |
+| **Gráfico** | O histórico de um número, em linha ou colunas, dos últimos minutos. |
+| **Seta** | Sobe, desce ou fica parada conforme o número cresce, cai ou se mantém. |
 
 - **Escolher e mexer:** clique numa peça para escolhê-la (numa peça de grupo, o grupo inteiro; dois cliques entram no
   grupo). **Shift** + clique soma ou tira da escolha; clique no vazio solta. Arraste para mover e puxe a alça do canto
@@ -60,6 +65,8 @@ couber, diminua a escala da interface.
 - **Abas da direita:** **Dado** liga o Valor a uma rede (e escolhe o tipo e o que ler); **Formato** define casas,
   abreviar (k, M, G), sinal, prefixo, sufixo e unidade; **Estilo** muda posição, tamanho, cores, borda, cantos,
   opacidade e fonte; **Regras** muda a cor, esconde ou pisca quando o número passa de um valor.
+- **De onde vem o número:** na aba **Dado**, a **Fonte** é a **Rede** (o que entra, sai ou está guardado, e quantas faces movem), um **Armazém** ligado pelo [Vinculador](linker.md) (guardado, capacidade, enchimento e o que entra, sai ou sobra por segundo; num Baú, dá para ler um item só) ou o **Relógio** do jogo (hora do dia e dia). Na Rede, **Guardado** soma o que os Armazéns da rede guardam.
+- **Item de um Baú:** com um baú ligado, a aba **Dado** mostra a grade dos itens dele com um campo **Buscar itens...** e um clique escolhe o item. Com o JEI, também dá para **arrastar um item** do JEI para o campo do Ícone ou do filtro do Baú.
 - **Salvar:** nada vai para a parede até clicar em **Salvar** (ou **Ctrl+S**). Fechar com mudanças pede dois cliques
   no ✕ (**Descartar?**). A miniatura mostra os números de uma ligação nova antes de salvar.
 
@@ -80,6 +87,10 @@ pelo código `#RRGGBB` e use **Salvar tema** para guardar a paleta com um nome. 
 fixa ou um degradê, e dá para ligar as **linhas** de varredura e a **grade** da miniatura. A Tela guarda a paleta
 inteira: apagar um tema seu depois não muda nenhuma Tela.
 
+### Layouts prontos e o seu
+
+Com nada escolhido, **Layout pronto** na base oferece **Energia**, **Armazenamento**, **Rede** e **Relógio**: escolha um e clique em **Aplicar layout**; ele se ajusta ao tamanho da Tela e troca o que está nela (dá para desfazer com **Ctrl+Z** antes de salvar). Para guardar o seu, escreva um nome no campo e clique em **Salvar layout atual**; ele passa a aparecer na mesma lista, em qualquer Tela sua. **Remover layout** apaga o seu escolhido, em dois cliques.
+
 ### Componentes
 
 Na coluna da esquerda, **Componentes** são grupos de peças prontos para inserir: **Painel de rede**, **Cartão de
@@ -87,6 +98,8 @@ número** e **Título** já vêm, e você guarda os seus. Clique num componente 
 lugar livre. Para guardar o seu, escolha as peças, clique em **Salvar como componente** (⊕) e dê um nome; o ✎ renomeia
 e o ✕ remove, em dois cliques. Os componentes e os temas ficam na sua biblioteca e valem em qualquer Tela sua. Um
 componente ligado a uma rede que você não pode mais usar entra com **—**.
+
+Para mostrar o conteúdo de um Baú, Bateria ou Tanque, ligue-o à Tela com o [Vinculador](linker.md) antes de escolhê-lo na aba **Dado**.
 
 Os números chegam uma vez por segundo enquanto há alguém perto. Uma rede privada da qual quem colocou a Tela perdeu o
 acesso mostra **—**.

@@ -50,6 +50,11 @@ doesn't fit, lower the interface scale.
 | **Value** | A live number from a [network](networks.md): what comes in, what goes out, what is stored, how many faces move... |
 | **Text** | A fixed phrase. |
 | **Shape** | A rectangle with a fill, border and corners: card, frame, divider. |
+| **Item icon** | The picture of an item, picked by id or from the list of a linked chest. |
+| **Bar** | A bar that fills with a number, lying down or standing up. |
+| **Gauge** | An arc dial with a needle. |
+| **Graph** | A number's history over the last minutes, as a line or columns. |
+| **Arrow** | Points up, down or stays flat as the number rises, falls or holds. |
 
 - **Picking and moving:** click a piece to pick it (on a grouped piece, the whole group; two clicks enter the group).
   **Shift** + click adds or removes from the pick; click the empty space to let go. Drag to move and pull the corner
@@ -60,6 +65,8 @@ doesn't fit, lower the interface scale.
 - **Tabs on the right:** **Data** links a Value to a network (and picks the type and what to read); **Format** sets
   decimals, abbreviating (k, M, G), sign, prefix, suffix and unit; **Style** changes position, size, colors, border,
   corners, opacity and font; **Rules** changes the color, hides or blinks when the number crosses a value.
+- **Where the number comes from:** in the **Data** tab, the **Source** is the **Network** (what comes in, goes out or is stored, and how many faces move), a **Storage** linked with the [Linker](linker.md) (stored, capacity, fill, and what comes in, goes out or is left over per second; on a Chest you can read a single item) or the game **Clock** (time of day and day). On the Network, **Held** adds up what the network's Storages hold.
+- **A Chest's item:** with a chest linked, the **Data** tab shows a grid of its items with a **Search items...** field, and a click picks the item. With JEI you can also **drag an item** from JEI onto the Icon's field or the Chest filter.
 - **Saving:** nothing reaches the wall until you click **Save** (or **Ctrl+S**). Closing with changes takes two clicks
   on the ✕ (**Discard?**). The thumbnail shows the numbers of a new link before saving.
 
@@ -80,6 +87,10 @@ the six colors by their `#RRGGBB` code and use **Save theme** to keep the palett
 be the theme's, a fixed color or a gradient, and you can turn on the scan **lines** and the preview **grid**. The
 Screen keeps the whole palette: deleting one of your themes later changes no Screen.
 
+### Ready layouts and your own
+
+With nothing picked, **Ready layout** in the base offers **Energy**, **Storage**, **Network** and **Clock**: pick one and click **Apply layout**; it fits the Screen's size and replaces what is on it (undo with **Ctrl+Z** before saving). To keep your own, type a name in the field and click **Save current layout**; it then shows up in the same list, on any Screen of yours. **Remove layout** deletes your picked one, in two clicks.
+
 ### Components
 
 In the left column, **Components** are groups of pieces ready to insert: **Network panel**, **Number card** and
@@ -87,6 +98,8 @@ In the left column, **Components** are groups of pieces ready to insert: **Netwo
 spot. To keep your own, pick the pieces, click **Save as component** (⊕) and name it; the ✎ renames and the ✕ removes,
 in two clicks. Components and themes live in your library and work on any Screen of yours. A component linked to a
 network you can no longer use comes in with **—**.
+
+To show the contents of a Chest, Battery or Tank, link it to the Screen with the [Linker](linker.md) before picking it in the **Data** tab.
 
 The numbers arrive once a second while someone is nearby. A private network that whoever placed the Screen lost access
 to shows **—**.

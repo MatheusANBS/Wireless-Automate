@@ -26,12 +26,15 @@ machine.
 | **Link** | Pick a router with the Range Upgrade and click machines: each click links the machine to it (clicking one that is already linked unlinks it). The screen links a whole area at once. |
 | **Open** | Click a machine: opens the screen of the router that reaches it, already on the machine. If several reach it (the one attached to it and the range ones), a short list lets you choose. |
 | **Networks** | The Linker doesn't touch them: pick each face's network in the router screen's **Network** row or with the [Tablet](network-tablet.md). |
+| **Signal Screen** | Click a [Signal Screen](signal-screen.md) to pick it, then a mod Chest, Battery or Tank: the storage becomes linked to the Screen (clicking it again unlinks). No limit on distance or dimension. |
 
 ## Actions
 
 | Action | Link | Open |
 | --- | --- | --- |
 | Click a router | Picks the router | — |
+| Click a Signal Screen | Picks the Screen | — |
+| Click a mod Chest, Battery or Tank | With a Screen picked, links or unlinks the storage to it | Opens the router that reaches it |
 | Click a machine | Links or unlinks the machine | Opens the router that reaches it |
 | Click the air | Opens the screen | Shows the mode's hint |
 | Shift + mouse wheel | Goes to **Open** | Goes to **Link** |
@@ -57,6 +60,10 @@ blocks of it.
 When more than one router reaches the machine, the list shows a row per router: its name, whether it is
 **attached** to the machine or reaches it by **range**, and the distance. Click a row to open it. Only
 routers within your reach that you can touch are listed.
+
+## Linking storages to a Screen
+
+Click a [Signal Screen](signal-screen.md) with the Linker: it becomes the picked one and the action bar shows how many storages it already has. Then click a mod **Chest, Battery or Tank** to link it to the Screen; click it again to unlink. There is no limit on distance or dimension. You must be allowed to edit the Screen. Once linked, the Screen shows the storage's contents live; if its chunk is unloaded, the Screen keeps the last number, dimmed.
 
 ## Example: link the machines of a room
 

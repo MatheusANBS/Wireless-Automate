@@ -26,6 +26,13 @@
 13. *(Removida pelo dono em 27/10: "um item pela rede" fica fora; mexeria no caminho quente de itens.)*
 14. **Acesso na hora de mostrar:** armazenamento ligado vale para quem olha (foi ligado por quem edita, que estava perto e tinha permissão); o servidor só confere que a ligação ainda existe e o bloco é um armazenamento do mod.
 
+## O que mudou na execução
+
+- A decisão 13 (um item pela rede) foi removida pelo dono e fica fora.
+- Entrou o "guardado na rede" (decisão 12) e a busca na grade de itens do Baú ligado, com o arrastar do JEI para a grade e o campo do Ícone.
+- Entraram os layouts da Tela inteira: quatro prontos (Energia, Armazenamento, Rede e Relógio) e os do jogador, guardados na biblioteca (campo de nome, Salvar layout atual, Remover em dois cliques), no seletor da base do editor.
+- Os componentes prontos novos da decisão do mockup ficaram para depois dos layouts prontos; o guia cobre tudo isto (páginas da Tela de Sinal e do Vinculador).
+
 ## Modelo e chaves
 
 - `TvPieceType`: `icon`, `bar`, `gauge`, `graph`, `arrow` (as três de antes não mudam).

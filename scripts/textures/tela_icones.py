@@ -73,9 +73,20 @@ class Quadro:
         q.px = {(15 - x, y): c for (x, y), c in self.px.items()}
         return q
 
+    def centrada(self) -> "Quadro":
+        """A mesma arte com o centro da caixa ocupada no centro do quadro (7,5), por deslocamento inteiro: o
+        traço não é reamostrado. Arte de lado ímpar fica meio pixel para a esquerda ou para cima."""
+        xs = [x for x, _ in self.px]
+        ys = [y for _, y in self.px]
+        dx = int((15 - min(xs) - max(xs)) // 2)
+        dy = int((15 - min(ys) - max(ys)) // 2)
+        q = Quadro()
+        q.px = {(x + dx, y + dy): c for (x, y), c in self.px.items()}
+        return q
+
     def imagem(self, tema: dict[str, str]) -> Image.Image:
         img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
-        for (x, y), c in self.px.items():
+        for (x, y), c in self.centrada().px.items():
             img.putpixel((x, y), cor(tema[c]))
         return img
 
@@ -126,8 +137,8 @@ def _shape(q: Quadro) -> None:
 
 @icone("pieces")
 def _pieces(q: Quadro) -> None:
-    q.cheio(4, 4, 6, 6, "A")
-    for x0, y0 in ((3, 3), (9, 3), (3, 9), (9, 9)):
+    q.cheio(3, 3, 5, 5, "A")
+    for x0, y0 in ((2, 2), (9, 2), (2, 9), (9, 9)):
         q.caixa(x0, y0, x0 + 4, y0 + 4)
 
 
@@ -169,9 +180,9 @@ def _undo(q: Quadro) -> None:
     q.diag(3, 5, 5, 7)
     q.h(4, 10, 5)
     q.p(11, 6)
-    q.v(12, 7, 9)
-    q.p(11, 10)
-    q.h(5, 10, 11)
+    q.v(12, 7, 10)
+    q.p(11, 11)
+    q.h(5, 10, 12)
 
 
 ICONES["redo"] = lambda: ICONES["undo"]().espelho()
@@ -228,7 +239,7 @@ def _save(q: Quadro) -> None:
 
 @icone("save_component")
 def _save_component(q: Quadro) -> None:
-    q.caixa(3, 6, 9, 12)
+    q.caixa(2, 6, 9, 13)
     q.v(11, 2, 6, "A")
     q.h(9, 13, 4, "A")
 

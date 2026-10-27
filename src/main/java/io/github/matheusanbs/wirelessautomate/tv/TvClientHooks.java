@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.tv;
 
 import io.github.matheusanbs.wirelessautomate.packet.TvLibraryPayload;
+import io.github.matheusanbs.wirelessautomate.packet.TvPreviewValuesPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TvValuesPayload;
 import java.util.function.Consumer;
 
@@ -16,6 +17,10 @@ public final class TvClientHooks {
 
     /** Chamado no cliente quando a biblioteca do jogador chega, com o editor aberto. */
     public static volatile Consumer<TvLibraryPayload> library = payload -> {
+    };
+
+    /** Chamado no cliente quando os números da prévia do editor chegam. */
+    public static volatile Consumer<TvPreviewValuesPayload> preview = payload -> {
     };
 
     private TvClientHooks() {

@@ -12,7 +12,7 @@
 
 ## Decisões deste plano (o dono pode trocar antes da tarefa em que entram)
 
-1. **Receita (Tarefa 3):** `GGG / GLG / IRI`, G = `c:glass_panes`, L = `c:dusts/glowstone`, R = `c:dusts/redstone`, I = `c:ingots/iron`; resultado 1.
+1. **Receita (Tarefa 3, aprovada pelo dono em 27/10):** `KGK / GCG / KRK`, K = `wirelessautomate:resonator_casing`, G = `c:glass_panes`, C = `wirelessautomate:phase_circuit`, R = `c:dusts/redstone`; resultado 1.
 2. **Resolução de desenho fixa de 32 px por bloco** para as coordenadas do layout (`TvArea.PIXELS_PER_BLOCK`). O `tv.pixelsPerBlock` do cliente só muda a nitidez da textura (o layout não muda).
 3. **Linhas da área contadas de baixo para cima e colunas da esquerda para a direita, vistas de frente.** A direita de quem olha a tela é `facing.getCounterClockWise()` (tela virada para o norte: a direita é o oeste).
 4. **A aba Conteúdo é provisória:** escolhe uma rede e um tipo e aplica o modelo "Painel de rede" (Forma de fundo, Texto com o nome da rede, Valores de entra, sai e movendo). Ela some na etapa 2, quando o editor chega.

@@ -23,7 +23,7 @@ Um bloco que o jogador prende numa parede e expande no mundo até o tamanho que 
 13. **Temas:** um tema é uma paleta de 6 cores com nome (Fundo, Cartão, Texto, Apagado, Alta, Baixa). Uma peça usa uma cor do tema (acompanha a troca) ou uma cor fixa. Quatro temas de partida (Grafite, Fósforo, Âmbar, Porcelana) e os temas do jogador na biblioteca. O fundo da Tela é a cor do tema, um degradê ou uma pixel art em mosaico; linhas de varredura opcionais.
 14. **Pixel art:** editor com lápis, balde, borracha e conta-gotas, paleta de 16 cores, desenhos de até 64 × 64 na biblioteca do jogador, guardada no servidor (limite por jogador na config).
 15. **Quem edita:** quem colocou a Tela e os operadores. Os outros só olham; o clique deles mostra na action bar quem pode editar. Uma Tela sem dono (posta por comando) só é editada por operador.
-16. **Receita (proposta, o dono pode trocar):** `GGG / GLG / IRI`, G = `c:glass_panes`, L = `c:dusts/glowstone`, R = `c:dusts/redstone`, I = `c:ingots/iron`; resultado 1.
+16. **Receita (aprovada pelo dono em 27/10):** `KGK / GCG / KRK`, K = Carcaça do Ressonador, G = `c:glass_panes`, C = Circuito de Fase, R = `c:dusts/redstone`; resultado 1.
 
 ## Arquitetura e custo
 

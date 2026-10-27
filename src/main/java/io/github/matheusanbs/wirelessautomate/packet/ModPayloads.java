@@ -5,7 +5,9 @@ import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
 import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
+import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerOpen;
 import io.github.matheusanbs.wirelessautomate.menu.CardFilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.EditTargetRef;
@@ -114,6 +116,8 @@ public final class ModPayloads {
                 (payload, context) -> handleFilterEntries(serverPlayer(context), payload));
         registrar.playToServer(CycleConfiguratorTypePayload.TYPE, CycleConfiguratorTypePayload.STREAM_CODEC,
                 (payload, context) -> handleCycleConfiguratorType(serverPlayer(context), payload));
+        registrar.playToServer(CycleLinkerModePayload.TYPE, CycleLinkerModePayload.STREAM_CODEC,
+                (payload, context) -> handleCycleLinkerMode(serverPlayer(context), payload));
         registrar.playToServer(ConfiguratorWheelPayload.TYPE, ConfiguratorWheelPayload.STREAM_CODEC,
                 (payload, context) -> handleConfiguratorWheel(serverPlayer(context), payload));
         // Tela do Vinculador (handlers em LinkerActions e LinkerMenu).
@@ -520,6 +524,25 @@ public final class ModPayloads {
         ResourceType type = ConfiguratorItem.cycleType(stack, payload.direction());
         player.displayClientMessage(Component.translatable("item.wirelessautomate.configurator.type",
                 ConfiguratorItem.typeName(type)), true);
+        return true;
+    }
+
+    /**
+     * Shift + roda do mouse com o Vinculador na mão principal: passa ao outro modo (Vincular ↔ Abrir) e o mostra
+     * na action bar. Recusa direção 0 e outra coisa na mão principal.
+     */
+    public static boolean handleCycleLinkerMode(@Nullable ServerPlayer player, CycleLinkerModePayload payload) {
+        if (player == null || payload.direction() == 0) {
+            return false;
+        }
+        ItemStack stack = player.getMainHandItem();
+        if (!(stack.getItem() instanceof LinkerItem)) {
+            return false;
+        }
+        LinkerMode mode = LinkerItem.mode(stack).next();
+        LinkerItem.setMode(stack, mode);
+        player.displayClientMessage(Component.translatable("item.wirelessautomate.linker.mode",
+                LinkerItem.modeName(mode)), true);
         return true;
     }
 

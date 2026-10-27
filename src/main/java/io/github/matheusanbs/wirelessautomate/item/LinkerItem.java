@@ -26,7 +26,7 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Vinculador (controle), com dois modos ({@link LinkerMode}, componente
- * {@link ModDataComponents#LINKER_MODE}); Shift + clique no ar passa ao outro.
+ * {@link ModDataComponents#LINKER_MODE}); Shift + roda do mouse passa ao outro.
  *
  * <p><b>Vincular</b>: clique num roteador o escolhe ({@link ModDataComponents#LINKER_ROUTER}); clique em outro
  * bloco vincula ou desvincula essa máquina a ele ({@link RangeLinks}). Shift + clique em dois blocos marca os
@@ -83,7 +83,7 @@ public class LinkerItem extends Item {
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
-    /** Só chega aqui com Shift: vincular marca um canto; abrir só explica (o modo se troca no ar). */
+    /** Só chega aqui com Shift: vincular marca um canto; abrir só explica (o modo se troca com Shift + roda). */
     @Override
     public InteractionResult useOn(UseOnContext context) {
         if (!context.isSecondaryUseActive()) {
@@ -101,16 +101,15 @@ public class LinkerItem extends Item {
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
-    /** No ar: Shift + clique passa ao outro modo; clique abre a tela (Vincular) ou explica o gesto (Abrir). */
+    /**
+     * No ar, com ou sem Shift: abre a tela (Vincular) ou explica o gesto (Abrir). O modo se troca com Shift + roda
+     * do mouse ({@code client/HeldScrollHandler}).
+     */
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         if (player instanceof ServerPlayer serverPlayer) {
-            if (player.isSecondaryUseActive()) {
-                LinkerMode mode = mode(stack).next();
-                setMode(stack, mode);
-                serverPlayer.displayClientMessage(Component.translatable(KEY + "mode", modeName(mode)), true);
-            } else if (mode(stack) == LinkerMode.LINK) {
+            if (mode(stack) == LinkerMode.LINK) {
                 LinkerMenu.open(serverPlayer, hand);
             } else {
                 serverPlayer.displayClientMessage(Component.translatable(KEY + "open.hint"), true);

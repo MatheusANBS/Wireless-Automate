@@ -22,7 +22,7 @@ numa máquina.
 
 | | |
 | --- | --- |
-| **Modos** | **Vincular** (padrão) e **Abrir**. Shift + clique no ar troca de um para o outro. |
+| **Modos** | **Vincular** (padrão) e **Abrir**. Shift + roda do mouse troca de um para o outro. |
 | **Vincular** | Escolha um roteador com o Upgrade de Alcance e clique nas máquinas: cada clique vincula a máquina a ele (um clique numa já vinculada a desvincula). A tela vincula uma área inteira de uma vez. |
 | **Abrir** | Clique numa máquina: abre a tela do roteador que chega nela, já na máquina. Se chegam vários (o preso nela e os de alcance), uma lista curta deixa escolher. |
 | **Redes** | O Vinculador não mexe nelas: escolha a rede de cada face na linha **Rede** da tela do roteador ou pelo [Tablet](network-tablet.md). |
@@ -34,7 +34,7 @@ numa máquina.
 | Clique num roteador | Escolhe o roteador | — |
 | Clique numa máquina | Vincula ou desvincula a máquina | Abre o roteador que chega nela |
 | Clique no ar | Abre a tela | Mostra a dica do modo |
-| Shift + clique no ar | Passa para **Abrir** | Passa para **Vincular** |
+| Shift + roda do mouse | Passa para **Abrir** | Passa para **Vincular** |
 | Shift + clique em dois blocos | Marca os cantos da área | — |
 
 ## Na tela (modo Vincular)

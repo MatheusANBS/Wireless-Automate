@@ -41,13 +41,21 @@
 
 Custo: nada por tick sem Tela com armazenamento ligado; com ele, uma leitura por armazenamento carregado na volta da Tela.
 
-- [ ] `TvBinding` com `source` (`network` padrão, `storage`, `clock`), `pos`, `item` opcional e as métricas por fonte (`TvStorageMetric`: `stored`, `capacity`, `fill`, `in`, `out`, com o item opcional no Baú; `TvClockMetric`: `time`, `day`); NBT antigo lê igual (GameTest de ida e volta com layouts das etapas 1 e 2).
+- [ ] `TvBinding` com `source` (`network` padrão, `storage`, `clock`), `pos`, `item` opcional e as métricas por fonte (`TvStorageMetric`: `stored`, `capacity`, `fill`, `in`, `out`, `balance`, com o item opcional no Baú; `TvClockMetric`: `time`, `day`); NBT antigo lê igual (GameTest de ida e volta com layouts das etapas 1 e 2).
 - [ ] `TvBlockEntity.links` (lista de `GlobalPos`, até `tv.maxLinks`), NBT e update tag; config `tv.maxLinks`.
 - [ ] Vinculador: componente `linker_tv`; no modo Vincular, clique na Tela a escolhe (esquece o roteador; escolher roteador esquece a Tela); clique num armazenamento do mod com Tela escolhida liga ou desliga, com as recusas (teto, sem permissão, não é armazenamento do mod; sem limite de distância nem de dimensão) na action bar; tooltip com a Tela. As regras em `tv/TvLinks` (puro onde der, com JUnit).
 - [ ] `TvManager`: lê `stored`, `capacity` e `fill` dos ligados carregados em qualquer dimensão (`server.getLevel` + `isLoaded`, nunca forçando o chunk); descarregado mostra o último número marcado como antigo (o cliente pinta em Apagado); removido ou desligado, "—". GameTest com um Baú em outra dimensão e com o chunk descarregado.
 - [ ] Contadores: entra e sai do total em todo armazenamento (`ScalarStore` e `KeyedStorage`, dois `long` somados só com o armazenamento vigiado) e por item no Baú (`KeyedStorage` com o conjunto de vigiados e o contador na entrada); só `insert`/`extract` reais; o `TvManager` registra e solta a vigia pelo critério de "alguém perto"; `in`/`out` por segundo numa janela de 5 s.
 - [ ] Bench antes e depois do Baú com e sem vigia (`./scripts/bench.sh` num cenário de Baú; números no relatório).
 - [ ] GameTests (`TvLinkGameTests`, `TvStorageFeedGameTests`): ligar e desligar, recusas, leitura, vigia ligando e soltando, contador exato com inserção e extração reais e nenhuma conta nas simuladas. Commit "Tela de Sinal: armazenamentos ligados pelo Vinculador".
+
+### Task 1b: Guardado na rede e um item pela rede
+
+Custo: sem Tela pedindo, zero; com Tela, a leitura do guardado uma vez por volta do amostrador pelos caches das portas, e no caminho de itens uma consulta num conjunto pequeno por transferência real só com algum item vigiado. **Bench antes e depois obrigatório** (`./scripts/bench.sh` nos cenários de itens; nenhuma piora acima do ruído sem vigia).
+
+- [ ] `held`, `held_capacity` e `held_fill` (spec, decisão 12): o `FlowSampler` soma o conteúdo e a capacidade das portas em Armazém da rede × tipo pedida, só para as redes × tipos que alguma Tela pede (o `TvManager` registra o pedido pela volta, como a vigia do Baú).
+- [ ] Item pela rede (decisão 13): o `item` opcional na ligação de rede; o conjunto de vigiados por rede; os contadores na porta pelas transferências reais de `ItemTransfer`, `ItemBulkTransfer`, `FluidTransfer` e `ChemicalTransfer`; as métricas lidas na amostra.
+- [ ] GameTests (o guardado com uma Bateria e um Baú em Armazém; o item vigiado contado exato e um não vigiado ignorado; sem vigia, nenhum contador mexe). Commit "Tela de Sinal: guardado na rede e um item pela rede".
 
 ### Task 2: As peças novas no desenho e no editor
 

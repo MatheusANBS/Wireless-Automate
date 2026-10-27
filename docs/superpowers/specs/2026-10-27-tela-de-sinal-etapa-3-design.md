@@ -23,14 +23,14 @@
 10. **Seta:** ▲, ▼ ou ▬ pelo sinal do dado (com zona morta configurável, padrão 0), cores próprias para subir, descer e parado (do tema por padrão: Alta, Baixa, Apagado).
 11. **Relógio:** `time` (hora do dia do mundo, 00:00 a 23:59, como no relógio do jogo) e `day` (dia do mundo); lido no cliente, sem pacote; a Tela com relógio redesenha quando o minuto do jogo muda e ela está à vista.
 12. **Guardado na rede** (pedido do dono em 27/10): as métricas novas de rede `held` e `held_capacity` (e a fração `held_fill`) somam o conteúdo e a capacidade de todas as máquinas em modo **Armazém** daquela rede e tipo (uma Bateria, um Baú, um tanque de outro mod, qualquer máquina presa ou vinculada em Armazém). Lidas pelo `FlowSampler` na amostra que ele já faz, uma vez por volta, pelos caches de capability das portas (sem busca nova), e só quando alguma Tela pede essa métrica daquela rede (sem Tela, a amostra não lê nada a mais). Máquina em chunk descarregado fica de fora da soma.
-13. **Um item pela rede** (pedido do dono em 27/10): uma ligação de rede de Itens (ou de Fluidos, Químicos) pode escolher um item (ou fluido, químico); as métricas `in`, `out`, `stored`, `released` e `balance` passam a contar só ele. O motor conta só os itens que alguma Tela vigia: o conjunto de vigiados por rede é consultado no fim de cada transferência real (uma consulta num conjunto pequeno, só com o conjunto não vazio; vazio, nenhuma), somando em contadores da porta como os Fluxos. Bench antes e depois obrigatório (o caminho de itens é o mais quente do mod).
+13. *(Removida pelo dono em 27/10: "um item pela rede" fica fora; mexeria no caminho quente de itens.)*
 14. **Acesso na hora de mostrar:** armazenamento ligado vale para quem olha (foi ligado por quem edita, que estava perto e tinha permissão); o servidor só confere que a ligação ainda existe e o bloco é um armazenamento do mod.
 
 ## Modelo e chaves
 
 - `TvPieceType`: `icon`, `bar`, `gauge`, `graph`, `arrow` (as três de antes não mudam).
-- Métricas novas de rede: `held`, `held_capacity`, `held_fill`; e a ligação de rede com o `item` opcional (decisão 13).
-- `TvBinding`: campo opcional `source` (`network` padrão, `storage`, `clock`), `pos` (storage), `item` (opcional, o `ItemStack` sem contagem, pelo codec do vanilla), e as métricas novas num enum próprio por fonte (`TvStorageMetric`, `TvClockMetric`).
+- Métricas novas de rede: `held`, `held_capacity`, `held_fill`.
+- `TvBinding`: campo opcional `source` (`network` padrão, `storage`, `clock`), `pos` (storage), `item` (opcional, só de armazenamento: o `ItemStack` sem contagem, pelo codec do vanilla), e as métricas novas num enum próprio por fonte (`TvStorageMetric`, `TvClockMetric`).
 - `TvStyle`/peça: os campos das peças novas, todos opcionais: `direction`, `reverse`, `min`, `max`, `track`, `sweep`, `thickness`, `window`, `graphMode`, `area`, `deadZone`, `upColor`, `downColor`, `flatColor`, `item` (do Ícone).
 - `TvBlockEntity`: `links` (lista de `GlobalPos`).
 - Componente novo `linker_tv` (`GlobalPos`).
@@ -45,4 +45,4 @@
 
 ## Fora
 
-Storages de outros mods (Sophisticated, AE2); itens por tag; fórmulas entre dados; dados do Ressonador.
+Um item (ou fluido) pela rede; storages de outros mods (Sophisticated, AE2); itens por tag; fórmulas entre dados; dados do Ressonador.

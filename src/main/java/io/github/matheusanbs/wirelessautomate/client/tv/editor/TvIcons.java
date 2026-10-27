@@ -13,6 +13,11 @@ import net.minecraft.resources.ResourceLocation;
  */
 public final class TvIcons {
     public static final int SIZE = 16;
+    /** A margem antes do ícone e o vão entre ele e o rótulo, iguais em todo botão com ícone e texto. */
+    public static final int PAD = 2;
+    public static final int LABEL_GAP = 4;
+    /** Onde começa o rótulo de um botão com ícone que começa em {@code x}. */
+    public static final int LABEL_OFFSET = PAD + SIZE + LABEL_GAP;
     private static final float DISABLED_ALPHA = 0.4f;
 
     /** Os ícones e onde aparecem. */
@@ -45,6 +50,10 @@ public final class TvIcons {
         SAVE_COMPONENT("save_component"),
         /** Caber: o botão do zoom da miniatura. */
         FIT("fit"),
+        /** Trazer para frente: menu da miniatura. */
+        TO_FRONT("to_front"),
+        /** Enviar para trás: menu da miniatura. */
+        TO_BACK("to_back"),
         /** Peça à vista: Camadas. */
         EYE("eye"),
         /** Peça escondida: Camadas e menu da miniatura. */

@@ -37,7 +37,7 @@ final class TvPalettePanel {
         this.font = font;
         this.layout = layout;
         for (int i = 0; i < names.length; i++) {
-            names[i] = GuiText.fit(font, TvEditorText.typeName(TYPES.get(i)), layout.pieceButtons()[i].w() - TvIcons.SIZE - 6);
+            names[i] = GuiText.fit(font, TvEditorText.typeName(TYPES.get(i)), layout.pieceButtons()[i].w() - TvIcons.LABEL_OFFSET - 2);
         }
         defaultText = TvEditorText.key("default_text").getString();
     }
@@ -47,8 +47,8 @@ final class TvPalettePanel {
             TvRect r = layout.pieceButtons()[i];
             GuiPaint.box(g, r.x(), r.y(), r.w(), r.h(), GuiPaint.BUTTON,
                     r.contains(mouseX, mouseY) ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
-            TvIcons.draw(g, TvIcons.of(TYPES.get(i)), r.x() + 2, r.y());
-            GuiText.draw(g, font, names[i], r.x() + TvIcons.SIZE + 4, r.y() + 4, GuiPaint.FG);
+            TvIcons.draw(g, TvIcons.of(TYPES.get(i)), r.x() + TvIcons.PAD, r.y() + (r.h() - TvIcons.SIZE) / 2);
+            GuiText.draw(g, font, names[i], r.x() + TvIcons.LABEL_OFFSET, r.y() + (r.h() - 8) / 2, GuiPaint.FG);
         }
     }
 

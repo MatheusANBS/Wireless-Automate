@@ -39,8 +39,8 @@ final class TvButtons {
         if (selected) {
             g.fill(x + 1, y + 1, x + r.w() - 1, y + r.h() - 1, GuiPaint.alpha(GuiPaint.ACCENT, 0x40));
         }
-        TvIcons.draw(g, icon, x + 2, y + (r.h() - TvIcons.SIZE) / 2);
-        GuiText.draw(g, font, text.text(), x + 2 + TvIcons.SIZE + 3, y + (r.h() - 8) / 2, GuiPaint.FG);
+        TvIcons.draw(g, icon, x + TvIcons.PAD, y + (r.h() - TvIcons.SIZE) / 2);
+        GuiText.draw(g, font, text.text(), x + TvIcons.LABEL_OFFSET, y + (r.h() - 8) / 2, GuiPaint.FG);
     }
 
     /** O botão principal (Aplicar), na cor {@code color}; desligado, afundado e apagado. */

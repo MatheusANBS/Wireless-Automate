@@ -13,7 +13,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
@@ -41,8 +40,6 @@ public final class TvManager {
     private static @Nullable FlowSampler.Report forced;
     private static int mapBuilds;
     private static long packets;
-    /** Só os testes ligam: o jogador falso não negocia canais e o envio derrubaria o servidor. */
-    private static boolean dropSends;
     private static int loaded;
     private static int watched;
     private static int cycleWatched;
@@ -62,25 +59,28 @@ public final class TvManager {
 
     /** Chamado a cada tick do servidor. */
     public static void tick(MinecraftServer server) {
-        Set<TvBlockEntity> screens = TvLoaded.of(server.overworld());
-        loaded = screens.size();
-        if (screens.isEmpty()) {
+        loaded = TvLoaded.serverCount();
+        if (loaded == 0) {
             return;
         }
         long start = System.nanoTime();
         int phase = Math.floorMod(server.getTickCount(), PHASES);
         double maxSq = (double) Config.tvViewDistance() * Config.tvViewDistance();
-        for (TvBlockEntity tv : screens) {
-            if (Math.floorMod(tv.getBlockPos().hashCode(), PHASES) != phase
-                    || !(tv.getLevel() instanceof ServerLevel level)) {
+        List<TvBlockEntity> bucket = TvLoaded.serverBucket(phase);
+        for (int s = 0; s < bucket.size(); s++) {
+            TvBlockEntity tv = bucket.get(s);
+            if (!(tv.getLevel() instanceof ServerLevel level)) {
                 continue;
             }
             List<ServerPlayer> players = level.players();
             NEAR.clear();
             BlockPos pos = tv.getBlockPos();
+            int chunkX = pos.getX() >> 4;
+            int chunkZ = pos.getZ() >> 4;
             for (int i = 0; i < players.size(); i++) {
                 ServerPlayer player = players.get(i);
-                if (pos.distToCenterSqr(player.getX(), player.getY(), player.getZ()) <= maxSq) {
+                if (isNear(pos.distToCenterSqr(player.getX(), player.getY(), player.getZ()), maxSq,
+                        player.getChunkTrackingView().contains(chunkX, chunkZ))) {
                     NEAR.add(player);
                 }
             }
@@ -115,9 +115,13 @@ public final class TvManager {
         for (int i = 0; i < near.size(); i++) {
             ServerPlayer player = near.get(i);
             if (feed.seen.getInt(player.getUUID()) != feed.valuesVersion) {
-                if (!dropSends) {
-                    PacketDistributor.sendToPlayer(player,
-                            new TvValuesPayload(tv.getBlockPos(), feed.readRevision, feed.values));
+                TvValuesPayload payload = new TvValuesPayload(tv.getBlockPos(), feed.readRevision, feed.values);
+                if (forced == null) {
+                    // Sem o canal negociado (ou sem conexão) não recebe e não entra no seen: recebe quando passar a ter.
+                    if (player.connection == null || !player.connection.hasChannel(payload)) {
+                        continue;
+                    }
+                    PacketDistributor.sendToPlayer(player, payload);
                 }
                 feed.seen.put(player.getUUID(), feed.valuesVersion);
                 feed.packets++;
@@ -125,11 +129,16 @@ public final class TvManager {
             }
         }
         if (feed.seen.size() > near.size()) {
-            feed.seen.keySet().removeIf(id -> !isNear(near, id));
+            feed.seen.keySet().removeIf(id -> !contains(near, id));
         }
     }
 
-    private static boolean isNear(List<ServerPlayer> near, UUID id) {
+    /** Perto: dentro da distância de visão e com o chunk da Tela no cliente (senão o pacote chegaria sem a Tela). */
+    public static boolean isNear(double distanceSq, double maxSq, boolean chunkTracked) {
+        return chunkTracked && distanceSq <= maxSq;
+    }
+
+    private static boolean contains(List<ServerPlayer> near, UUID id) {
         for (int i = 0; i < near.size(); i++) {
             if (near.get(i).getUUID().equals(id)) {
                 return true;
@@ -195,7 +204,6 @@ public final class TvManager {
         STATS.clear();
         mapReport = null;
         forced = null;
-        dropSends = false;
         mapBuilds = 0;
         packets = 0;
         loaded = 0;
@@ -213,11 +221,6 @@ public final class TvManager {
         } finally {
             forced = null;
         }
-    }
-
-    /** Os pacotes são contados e marcados como entregues, mas não saem; vale até a parada do servidor. */
-    public static void dropSendsForTests() {
-        dropSends = true;
     }
 
     public static long packetsForTests() {

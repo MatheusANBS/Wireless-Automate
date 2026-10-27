@@ -11,6 +11,7 @@ import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
+import io.github.matheusanbs.wirelessautomate.packet.TvValuesPayload;
 import io.github.matheusanbs.wirelessautomate.tv.TvBinding;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlock;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlockEntity;
@@ -22,6 +23,7 @@ import io.github.matheusanbs.wirelessautomate.tv.TvMetric;
 import io.github.matheusanbs.wirelessautomate.tv.TvPiece;
 import io.github.matheusanbs.wirelessautomate.tv.TvPieceType;
 import io.github.matheusanbs.wirelessautomate.tv.TvStyle;
+import io.netty.buffer.Unpooled;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -29,6 +31,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -95,7 +98,6 @@ public final class TvFeedGameTests {
     }
 
     private static ServerPlayer nearPlayer(GameTestHelper helper) {
-        TvManager.dropSendsForTests();
         ServerPlayer player = TestPlayers.menuOpener(helper);
         player.moveTo(Vec3.atCenterOf(helper.absolutePos(A)).add(0, 0, 10));
         return player;
@@ -175,6 +177,50 @@ public final class TvFeedGameTests {
     }
 
     @GameTest(template = "empty", timeoutTicks = 100)
+    public static void layoutNovoSobeAVersaoEManda(GameTestHelper helper) {
+        UUID owner = UUID.randomUUID();
+        UUID net = network(helper, owner, false);
+        TvBinding binding = new TvBinding(net, ResourceType.ENERGY, TvMetric.IN);
+        TvBlockEntity tv = tv(helper, owner, binding);
+        List<ServerPlayer> near = List.of(nearPlayer(helper));
+        FlowSampler.Report report = report(100, energy(net, 2_000, 5, FlowStats.States.NONE));
+
+        TvManager.sampleForTests(tv, report, near);
+        int version = tv.feed().valuesVersion();
+        tv.setLayout(TvLayout.of(List.of(value(30, binding))));
+        TvManager.sampleForTests(tv, report, near);
+        helper.assertTrue(tv.feed().valuesVersion() > version, "a versão sobe com a revisão nova do layout");
+        helper.assertValueEqual(packets(tv), 2L, "o layout novo manda de novo, com os mesmos números");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void jogadorSemOChunkNaoEPerto(GameTestHelper helper) {
+        helper.assertTrue(TvManager.isNear(100.0, 400.0, true), "perto e com o chunk");
+        helper.assertFalse(TvManager.isNear(100.0, 400.0, false), "perto mas sem o chunk no cliente");
+        helper.assertFalse(TvManager.isNear(500.0, 400.0, true), "com o chunk mas longe");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void codecDoPayloadIdaEVolta(GameTestHelper helper) {
+        BlockPos pos = helper.absolutePos(A);
+        double[][] cases = {{}, {1.5, Double.NaN, -3.0E9}};
+        for (double[] values : cases) {
+            RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(),
+                    helper.getLevel().getServer().registryAccess());
+            TvValuesPayload.STREAM_CODEC.encode(buf, new TvValuesPayload(pos, 7, values));
+            TvValuesPayload back = TvValuesPayload.STREAM_CODEC.decode(buf);
+            helper.assertTrue(back.pos().equals(pos) && back.revision() == 7, "posição e revisão");
+            helper.assertValueEqual(back.values().length, values.length, "tamanho");
+            for (int i = 0; i < values.length; i++) {
+                helper.assertTrue(Double.compare(back.values()[i], values[i]) == 0, "valor " + i);
+            }
+        }
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 100)
     public static void semAcessoViraNaN(GameTestHelper helper) {
         UUID owner = UUID.randomUUID();
         UUID stranger = UUID.randomUUID();
@@ -225,7 +271,7 @@ public final class TvFeedGameTests {
         TvManager.sampleForTests(tv, report(100), List.of(nearPlayer(helper)));
         helper.assertTrue(tv.feed() == null, "nenhum TvFeed criado");
         helper.assertValueEqual(packets(tv), 0L, "nenhum pacote");
-        helper.assertTrue(TvManager.packetsForTests() >= before, "o contador global só cresce");
+        helper.assertValueEqual(TvManager.packetsForTests(), before, "nenhum pacote no contador global");
         helper.succeed();
     }
 
@@ -297,7 +343,6 @@ public final class TvFeedGameTests {
                     TvFeed feed = tv.feed();
                     helper.assertTrue(feed != null && feed.values().length == 1 && feed.values()[0] > 0,
                             "a Tela ainda não recebeu o fluxo");
-                    helper.assertTrue(feed.packets() >= 1, "nenhum pacote para o jogador perto");
                     helper.assertTrue(player.isAlive(), "jogador");
                 })
                 .thenSucceed();

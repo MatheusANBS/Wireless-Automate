@@ -14,6 +14,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -405,6 +406,16 @@ public final class TvEditorTab {
 
     public boolean fits() {
         return fits;
+    }
+
+    /** O retângulo onde o JEI pode largar um item (x, y, largura, altura), ou {@code null}. */
+    public int @Nullable [] ghostBounds() {
+        return props.ghostBounds();
+    }
+
+    /** Escolhe o item largado pelo JEI. */
+    public void acceptGhost(ResourceLocation id) {
+        props.acceptGhost(id);
     }
 
     /** Os ganchos do e2e e das capturas. */

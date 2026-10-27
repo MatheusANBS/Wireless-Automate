@@ -36,6 +36,7 @@ final class TvBasePanel {
 
     static void build(TvForm form, TvPropsCtx ctx) {
         form.hint("base.hint", TvPropsCtx.key("base.hint"));
+        TvLayoutPicker.add(form, ctx);
         form.label("base.theme.title", TvPropsCtx.key("base.theme"));
         form.wideCycle("base.theme", () -> themeName(ctx.theme()), delta -> stepTheme(ctx, delta));
         form.label("base.bg.title", TvPropsCtx.key("base.background"));

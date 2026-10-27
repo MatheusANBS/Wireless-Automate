@@ -5,10 +5,12 @@ import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.menu.TvMenu;
 import io.github.matheusanbs.wirelessautomate.tv.TvPiece;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -341,6 +343,38 @@ final class TvPropsPanel {
             }
         }
         return null;
+    }
+
+    /**
+     * Onde o JEI pode largar um item: a grade de itens do Baú (do dado ou do Ícone) ou, no Ícone sem Baú ligado, o
+     * campo do id. {@code null} quando a aba aberta não tem nenhum dos dois. Só olha a lista de controles montada.
+     */
+    int @Nullable [] ghostBounds() {
+        TvControl target = ghostTarget();
+        return target == null ? null : new int[] {target.ax, target.ay, target.w, target.h};
+    }
+
+    /** Escolhe o item largado pelo JEI no alvo de {@link #ghostBounds()}. */
+    void acceptGhost(ResourceLocation id) {
+        TvControl target = ghostTarget();
+        if (target instanceof TvItemGrid grid) {
+            grid.accept(id);
+        } else if (target != null) {
+            TvDataTab.setIconItem(ctx, Optional.of(id));
+        }
+    }
+
+    private @Nullable TvControl ghostTarget() {
+        TvControl field = null;
+        for (TvControl control : controls) {
+            if (control instanceof TvItemGrid) {
+                return control;
+            }
+            if (control.id.equals("data.icon.id")) {
+                field = control;
+            }
+        }
+        return field;
     }
 
     int @Nullable [] networkCenter(String id, UUID network) {

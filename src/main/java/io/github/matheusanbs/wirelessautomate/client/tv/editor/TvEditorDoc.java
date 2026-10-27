@@ -410,6 +410,17 @@ final class TvEditorDoc {
         return TvEditOps.anyGrouped(A, pieces(), selection());
     }
 
+    private int layoutKind;
+
+    /** O layout pronto escolhido no seletor da base (índice de {@code TvLayouts.Kind}). */
+    int layoutKind() {
+        return layoutKind;
+    }
+
+    void layoutKind(int kind) {
+        layoutKind = kind;
+    }
+
     boolean hasSelection() {
         return !selection().isEmpty();
     }

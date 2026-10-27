@@ -3259,7 +3259,7 @@ couber, diminua a escala da interface.
   abreviar (k, M, G), sinal, prefixo, sufixo e unidade; **Estilo** muda posição, tamanho, cores, borda, cantos,
   opacidade e fonte; **Regras** muda a cor, esconde ou pisca quando o número passa de um valor.
 - **Salvar:** nada vai para a parede até clicar em **Salvar** (ou **Ctrl+S**). Fechar com mudanças pede dois cliques
-  no ✕ (**Descartar?**). Os números de uma ligação nova só aparecem depois de salvar.
+  no ✕ (**Descartar?**). A miniatura mostra os números de uma ligação nova antes de salvar.
 
 | Atalho | O que faz |
 | --- | --- |
@@ -3346,7 +3346,7 @@ doesn't fit, lower the interface scale.
   decimals, abbreviating (k, M, G), sign, prefix, suffix and unit; **Style** changes position, size, colors, border,
   corners, opacity and font; **Rules** changes the color, hides or blinks when the number crosses a value.
 - **Saving:** nothing reaches the wall until you click **Save** (or **Ctrl+S**). Closing with changes takes two clicks
-  on the ✕ (**Discard?**). The numbers of a new link only show up after saving.
+  on the ✕ (**Discard?**). The thumbnail shows the numbers of a new link before saving.
 
 | Shortcut | What it does |
 | --- | --- |

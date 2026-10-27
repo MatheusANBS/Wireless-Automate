@@ -106,6 +106,7 @@ public final class TvEditorTab {
     /** Uma vez por tick: a Tela no cliente e o aviso de tamanho, que some com a próxima mudança. */
     public void tick() {
         doc.tick();
+        actions.previewBindings(doc.draft().bindings());
         if (tooBigVersion >= 0 && tooBigVersion != doc.model().version()) {
             tooBigVersion = -1;
             base.showTooBig(false);
@@ -387,8 +388,9 @@ public final class TvEditorTab {
         return doc.model().dirty();
     }
 
-    /** Ao fechar a tela: solta a textura da miniatura e a biblioteca. */
+    /** Ao fechar a tela: para a prévia dos números e solta a textura da miniatura e a biblioteca. */
     public void release() {
+        actions.stopPreview();
         TvEditorImage.release();
         TvLibraryClient.clear();
     }

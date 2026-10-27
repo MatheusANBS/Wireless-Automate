@@ -202,6 +202,15 @@ class TvEditOpsTest {
     }
 
     @Test
+    void agruparNaoPartePeloMeioOutroGrupo() {
+        List<P> pieces = List.of(new P("a", 0, 0, 4, 4, 0), new P("b", 0, 0, 4, 4, 1), new P("c", 0, 0, 4, 4, 1),
+                new P("d", 0, 0, 4, 4, 1), new P("e", 0, 0, 4, 4, 0));
+        TvEditOps.Edit<P> edit = TvEditOps.group(A, pieces, TvSelection.of(0, 2));
+        assertEquals(List.of("a", "c", "b", "d", "e"), ids(edit.pieces()));
+        assertEquals(TvSelection.of(0, 1), edit.selection());
+    }
+
+    @Test
     void agruparJuntaNaCamadaDaMaisAlta() {
         List<P> pieces = List.of(new P("a", 0, 0, 4, 4, 0), new P("b", 0, 0, 4, 4, 0), new P("c", 0, 0, 4, 4, 1),
                 new P("d", 0, 0, 4, 4, 0));

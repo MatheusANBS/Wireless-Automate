@@ -370,7 +370,16 @@ public final class TvEditOps {
         int first = group == 0 ? -1 : indexOfGroup(a, rest, group, false);
         if (first >= 0) {
             at = Math.max(first, Math.min(indexOfGroup(a, rest, group, true) + 1, at));
-        } else if (at > 0 && at < rest.size() && a.group(rest.get(at)) != 0
+        } else {
+            at = outsideGroup(a, rest, at);
+        }
+        rest.addAll(at, moved);
+        return new Edit<>(rest, TvSelection.range(at, at + moved.size()));
+    }
+
+    /** O lugar de inserção {@code at}, levado à ponta mais perto do grupo que ele partiria no meio (senão o mesmo). */
+    private static <T> int outsideGroup(Access<T> a, List<T> rest, int at) {
+        if (at > 0 && at < rest.size() && a.group(rest.get(at)) != 0
                 && a.group(rest.get(at - 1)) == a.group(rest.get(at))) {
             int g = a.group(rest.get(at));
             int start = at;
@@ -381,10 +390,9 @@ public final class TvEditOps {
             while (end < rest.size() && a.group(rest.get(end)) == g) {
                 end++;
             }
-            at = at - start <= end - at ? start : end;
+            return at - start <= end - at ? start : end;
         }
-        rest.addAll(at, moved);
-        return new Edit<>(rest, TvSelection.range(at, at + moved.size()));
+        return at;
     }
 
     /** O grupo que todas as peças têm, ou 0 se são soltas ou de grupos diferentes. */
@@ -480,7 +488,7 @@ public final class TvEditOps {
                 rest.add(pieces.get(i));
             }
         }
-        int at = Math.min(selection.last() - selection.size() + 1, rest.size());
+        int at = outsideGroup(a, rest, Math.min(selection.last() - selection.size() + 1, rest.size()));
         rest.addAll(at, moved);
         return new Edit<>(rest, TvSelection.range(at, at + moved.size()));
     }

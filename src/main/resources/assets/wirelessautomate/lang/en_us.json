@@ -1328,5 +1328,13 @@
   "message.wirelessautomate.tv.problem.blocked": "Something is in the way at %s",
   "message.wirelessautomate.tv.problem.overlap": "Another Screen is in the way at %s",
   "message.wirelessautomate.tv.template_denied": "You cannot use that network or type",
-  "message.wirelessautomate.tv.template_too_big": "The template does not fit the server limits"
+  "message.wirelessautomate.tv.template_too_big": "The template does not fit the server limits",
+  "screen.wirelessautomate.tv.unit.item": "",
+  "screen.wirelessautomate.tv.unit.fluid": "mB",
+  "screen.wirelessautomate.tv.unit.energy": "FE",
+  "screen.wirelessautomate.tv.unit.chemical": "mB",
+  "screen.wirelessautomate.tv.unit.source": "",
+  "screen.wirelessautomate.tv.per.second": "/s",
+  "screen.wirelessautomate.tv.per.tick": "/t",
+  "screen.wirelessautomate.tv.per.minute": "/min"
 }

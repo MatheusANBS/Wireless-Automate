@@ -30,6 +30,10 @@ public class TvBlockEntity extends BlockEntity {
     private int revision;
     /** Só no servidor, criado quando alguém perto precisa dos números; não vai ao NBT. */
     private @Nullable TvFeed feed;
+    /** A caixa do {@link #renderBox()} e a área e o facing com que foi feita; o renderer a pede a cada quadro. */
+    private @Nullable AABB renderBox;
+    private @Nullable TvArea renderBoxArea;
+    private @Nullable Direction renderBoxFacing;
 
     public TvBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.SIGNAL_SCREEN.get(), pos, state);
@@ -117,9 +121,15 @@ public class TvBlockEntity extends BlockEntity {
         return worldPosition.relative(TvBlock.rightOf(facing), area.rightOf(cell)).above(area.upOf(cell));
     }
 
-    /** A caixa de todas as células da área, para o culling do renderer. */
+    /** A caixa de todas as células da área, para o culling do renderer; guardada até a área ou o facing mudarem. */
     public AABB renderBox() {
-        return box(worldPosition, getBlockState().getValue(TvBlock.FACING), area);
+        Direction facing = getBlockState().getValue(TvBlock.FACING);
+        if (renderBox == null || renderBoxArea != area || renderBoxFacing != facing) {
+            renderBox = box(worldPosition, facing, area);
+            renderBoxArea = area;
+            renderBoxFacing = facing;
+        }
+        return renderBox;
     }
 
     /** A caixa das células de uma área com o bloco colocado em {@code pos}, sem precisar de um block entity. */

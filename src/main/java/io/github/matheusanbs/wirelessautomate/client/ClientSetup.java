@@ -13,6 +13,9 @@ import io.github.matheusanbs.wirelessautomate.client.router.RouterScreen;
 import io.github.matheusanbs.wirelessautomate.client.storage.StorageListScreen;
 import io.github.matheusanbs.wirelessautomate.client.storage.StorageScalarScreen;
 import io.github.matheusanbs.wirelessautomate.client.tablet.TabletScreen;
+import io.github.matheusanbs.wirelessautomate.client.tv.TvClientValues;
+import io.github.matheusanbs.wirelessautomate.client.tv.render.TvCanvases;
+import io.github.matheusanbs.wirelessautomate.client.tv.render.TvRenderer;
 import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
@@ -31,6 +34,7 @@ import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreItem;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
+import io.github.matheusanbs.wirelessautomate.tv.TvClientHooks;
 import io.github.matheusanbs.wirelessautomate.client.resonator.render.CrystalShader;
 import io.github.matheusanbs.wirelessautomate.client.resonator.render.PlasmaShader;
 import io.github.matheusanbs.wirelessautomate.client.resonator.render.RibbonShader;
@@ -61,7 +65,8 @@ public final class ClientSetup {
      * posição no {@code RouterTier}: 0 = Básico ... 7 = Ultimate): os overrides dos modelos de item trocam o ícone pelo modelo do tier.
      * Os cristais (o de Sinal, o Lapidado e os Afinados) ganham {@code wirelessautomate:dull} (1 quando Opacos) e
      * {@code wirelessautomate:cracked} (1 quando rachados), que trocam o modelo. Liga também o clique no
-     * Núcleo de Ressonância à projeção da estrutura.
+     * Núcleo de Ressonância à projeção da estrutura e as Telas de Sinal à imagem delas (layout novo e números novos
+     * marcam a imagem suja).
      */
     @SubscribeEvent
     static void clientSetup(FMLClientSetupEvent event) {
@@ -84,6 +89,8 @@ public final class ClientSetup {
                         (stack, level, entity, seed) -> SignalCrystalItem.isCracked(stack) ? 1F : 0F);
             }
             ResonanceCoreBlock.projectionHook = ResonatorProjection::toggle;
+            TvClientHooks.changed = tv -> TvCanvases.markDirty(tv.getBlockPos().asLong());
+            TvClientHooks.values = TvClientValues::receive;
         });
     }
 
@@ -109,11 +116,12 @@ public final class ClientSetup {
                 (RepairerMenu menu, Inventory inventory, Component title) -> new RepairerScreen(menu, inventory, title));
     }
 
-    /** A câmara animada do Núcleo montado e a animação do Reparador de Cristais. */
+    /** A câmara animada do Núcleo montado, a animação do Reparador de Cristais e a Tela de Sinal. */
     @SubscribeEvent
     static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(ModBlockEntities.RESONANCE_CORE.get(), ResonatorRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.CRYSTAL_REPAIRER.get(), RepairerRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.SIGNAL_SCREEN.get(), TvRenderer::new);
     }
 
     /** Os core shaders da câmara: o Núcleo de plasma, as fitas e o cristal. */

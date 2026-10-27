@@ -291,6 +291,8 @@ Gerador multibloco (estrutura 5×5×5 de Carcaça e Vidro com o Núcleo de Resso
 
 Um painel que o jogador prende na lateral de um bloco sólido e estica pela parede, de 1 × 1 a 32 × 32 blocos, desenhado sobre a parede sem blocos extras. Mostra o que o jogador montar com peças soltas (Valor, Texto, Forma e, nas etapas seguintes, Ícone de item, Barra, Medidor, Gráfico, Seta e Imagem), ligadas às redes que quem edita pode usar e aos armazenamentos do mod ligados à Tela pelo Vinculador. Spec: `docs/superpowers/specs/2026-10-27-tela-de-sinal-design.md` (decisões, custo e etapas). Etapa 1: bloco, tamanho, canal de dados e o modelo "Painel de rede"; etapa 2: o editor de peças; etapa 3: mais peças e os armazenamentos; etapa 4: pixel art.
 
+**Etapa 2, o editor** (spec `docs/superpowers/specs/2026-10-27-tela-de-sinal-etapa-2-design.md`): a tela do bloco ganha a aba Editar, que ocupa a janela e monta o layout com peças soltas numa miniatura fiel (o mesmo desenho da parede). O rascunho vive só no cliente e vai inteiro ao servidor no Salvar (até 64 KB; o servidor valida tudo e tira a ligação a uma rede que quem salva não pode usar). Escolher, arrastar, redimensionar, grupos, camadas, desfazer (100 estados), copiar e colar entre Telas e atalhos de teclado; a coluna da direita tem as abas Dado, Formato, Estilo e Regras (cores do tema ou fixas, borda, cantos, opacidade, cinco fontes, regras de cor, fundo, piscar e esconder). Com nada escolhido, a coluna mostra a base: Tema (quatro prontos, os do jogador e as seis cores editáveis), Fundo (do tema, fixo ou degradê), linhas e grade. A Tela guarda a paleta inteira, não uma referência. A biblioteca do jogador (`TvLibrary`, por UUID, com tetos `tv.maxComponents` e `tv.maxThemes`) guarda componentes e temas, vai ao cliente só com o editor aberto e as ações passam pelo `TvLibraryActionPayload`; os componentes prontos são o Painel de rede, o Cartão de número e o Título. Custo: nada novo por tick; salvar e a biblioteca são eventos; no mundo, regras, tema, fontes, cantos e opacidade só no redesenho da textura (o piscar redesenha só a Tela com regra de piscar valendo e à vista, duas vezes por segundo); protocolo 36.
+
 **Custo.** Sem tick: o `TvManager` visita uma Tela por segundo pela fase da posição, e só com jogador perto; os números vêm do amostrador dos Fluxos, uma vez por volta, e vão só a quem não os tem. No cliente, cada Tela é uma textura redesenhada só quando muda; por quadro, o BER desenha a moldura e um quadrilátero. A resolução segue o tamanho em que a Tela aparece, com um orçamento de memória de vídeo na config do cliente (o dono prioriza a beleza dentro desse teto).
 
 ## Arquitetura de performance
@@ -384,7 +386,7 @@ O v1 entrega o motor de transferência e a configuração essencial; o v2 comple
 - [x] Configurador colando em área (mesma máquina) e Vinculador modo Área (saíram em 22/10/2026: o Configurador ficou só com o Pincel)
 - [ ] Atalhos para AE2 e Refined Storage 2
 - [x] Upgrade de chunk loading
-- [ ] Tela de Sinal: etapa 1 (bloco, tamanho, canal de dados, Painel de rede) pronta no ramo `tela-de-sinal`; etapas 2 a 4 (editor, peças e armazenamentos, pixel art) a fazer
+- [ ] Tela de Sinal: etapas 1 (bloco, tamanho, canal de dados, Painel de rede) e 2 (editor, temas, componentes e biblioteca) prontas no ramo `tela-de-sinal`; etapas 3 e 4 (mais peças e armazenamentos, pixel art) a fazer
 - [x] Texturas finais (geradas por `scripts/textures/gerar_texturas.py`)
 - [x] Livro-guia no GuideME (opcional)
 - [ ] Balanceamento das receitas

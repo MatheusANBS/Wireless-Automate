@@ -199,38 +199,11 @@ final class TvDataTab {
     // ------------------------------------------------------------------ ícone
 
     private static void icon(TvForm form, TvPropsCtx ctx) {
-        TvDataState state = ctx.data();
         form.label("data.icon.title", TvPropsCtx.key("data.icon"));
-        form.text("data.icon.id", TvPropsCtx.key("data.icon.id"), 80, null, TvPropsCtx.key("data.icon.id.hint"),
-                () -> ctx.piece().style().part().item().map(ResourceLocation::toString).orElse(""),
-                text -> setIcon(ctx, text));
-        if (!state.links().isEmpty()) {
-            form.label("data.icon.chest.title", TvPropsCtx.key("data.icon.chest"));
-            TvLinkList list = form.add(new TvLinkList(form.font, "data.icon.chest", 0, form.y(), state.links(), state,
-                    state::browse, pos -> {
-                        state.browse(pos);
-                        ctx.actions().requestStorageContents(pos, state.query());
-                        state.shouldRequest(pos);
-                    }));
-            form.skip(list.h + TvForm.GAP);
-            form.add(new TvItemGrid(form.font, "data.icon.items", 0, form.y(), state::browse,
-                    () -> ctx.piece().style().part().item(), item -> setIconItem(ctx, item), state::query,
-                    text -> searchItems(ctx, state.browse(), text)));
-            form.skip(TvItemGrid.HEIGHT + TvForm.GAP);
-        }
+        form.add(new TvItemSlot(form.font, "data.icon.slot", 0, form.y(),
+                () -> ctx.piece().style().part().item(), () -> setIconItem(ctx, Optional.empty())));
+        form.skip(26);
         form.hint("data.icon.hint", TvPropsCtx.key("data.icon.hint"));
-    }
-
-    /** O texto do campo do id: só vale se é um item que existe; vazio tira o item. */
-    private static void setIcon(TvPropsCtx ctx, String text) {
-        if (text.isBlank()) {
-            setIconItem(ctx, Optional.empty());
-            return;
-        }
-        ResourceLocation id = ResourceLocation.tryParse(text.trim());
-        if (id != null && BuiltInRegistries.ITEM.containsKey(id) && BuiltInRegistries.ITEM.get(id) != Items.AIR) {
-            setIconItem(ctx, Optional.of(id));
-        }
     }
 
     /** Troca o item do Ícone; a grade e o campo de id compartilham a chave, para o desfazer juntar as mudanças. */

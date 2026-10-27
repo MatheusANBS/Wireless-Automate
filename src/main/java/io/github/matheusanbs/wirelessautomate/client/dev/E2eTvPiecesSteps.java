@@ -194,7 +194,7 @@ final class E2eTvPiecesSteps {
             var probe = E2eTvSteps.screen().editor().probe();
             click(E2eTvSteps.screen(), probe.layerCenter(stockPiece - 1)[0], probe.layerCenter(stockPiece - 1)[1]);
         }, () -> E2eTvSteps.screen().editor().selection().size() == 1
-                && E2eTvSteps.screen().editor().probe().propCenter("data.icon.id") != null && stepTicks >= 10,
+                && E2eTvSteps.screen().editor().probe().propCenter("data.icon.slot") != null && stepTicks >= 10,
                 () -> "escolha " + E2eTvSteps.screen().editor().selection()));
         list.add(new Step("Peças: soltar um item do JEI no Ícone", STEP_TIMEOUT_MS, () -> {
             if (E2eTvSteps.screen().ghostBounds() == null) {

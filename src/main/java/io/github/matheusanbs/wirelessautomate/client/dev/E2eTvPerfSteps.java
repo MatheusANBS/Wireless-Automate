@@ -63,6 +63,8 @@ final class E2eTvPerfSteps {
         list.add(wall(true));
         list.add(E2eTvSteps.view("tela-perf-sem-tela", playerId, E2eTvPerfSteps::eye, E2eTvPerfSteps::target));
         list.add(measure("tela nenhuma"));
+        list.add(new Step("Tela desempenho: zerar antes das Telas", STEP_TIMEOUT_MS, E2eTvPerfSteps::resetPaints,
+                () -> true, () -> ""));
         list.add(screens(playerId));
         list.add(new Step("Tela desempenho: as 8 imagens desenhadas", STEP_TIMEOUT_MS, () -> {
         }, () -> TvCanvases.paintsForTests >= COLS * ROWS && stepTicks >= 40, () -> {
@@ -94,13 +96,19 @@ final class E2eTvPerfSteps {
         TvCanvases.paintsForTests = 0;
         TvCanvases.paintNanosForTests = 0;
         TvCanvases.maxPaintNanosForTests = 0;
+        TvCanvases.maxFrameNanosForTests = 0;
+        TvCanvases.maxFrameWorkNanosForTests = 0;
     }
 
     private static String paints() {
         long n = TvCanvases.paintsForTests;
         double avg = n == 0 ? 0 : TvCanvases.paintNanosForTests / (double) n / 1_000_000.0;
-        return String.format(Locale.ROOT, "%d redesenho(s), média %.3f ms, maior %.3f ms", n, avg,
-                TvCanvases.maxPaintNanosForTests / 1_000_000.0);
+        return String.format(Locale.ROOT,
+                "%d redesenho(s), média %.3f ms, maior %.3f ms; maior trabalho num quadro %.3f ms; maior quadro %.3f ms;"
+                        + " memória de vídeo %.1f MB",
+                n, avg, TvCanvases.maxPaintNanosForTests / 1_000_000.0,
+                TvCanvases.maxFrameWorkNanosForTests / 1_000_000.0, TvCanvases.maxFrameNanosForTests / 1_000_000.0,
+                TvCanvases.allocatedBytesForTests() / (1024.0 * 1024.0));
     }
 
     private static Vec3 target() {
@@ -127,6 +135,7 @@ final class E2eTvPerfSteps {
                 return null;
             });
             resetPaints();
+            TvCanvases.measureFramesForTests = true;
         }, () -> Minecraft.getInstance().options.fov().get() == PERF_FOV, () -> "campo de visão");
     }
 
@@ -195,6 +204,7 @@ final class E2eTvPerfSteps {
     private static Step end(UUID playerId) {
         return new Step("Tela desempenho: tudo de volta", STEP_TIMEOUT_MS, () -> {
             Minecraft minecraft = Minecraft.getInstance();
+            TvCanvases.measureFramesForTests = false;
             minecraft.options.hideGui = SAVED[0];
             minecraft.options.fov().set(savedFov);
             onServer(server -> {

@@ -17,7 +17,13 @@ import io.github.matheusanbs.wirelessautomate.tv.TvAreaCheck;
 import io.github.matheusanbs.wirelessautomate.tv.TvBinding;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlock;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlockEntity;
+import io.github.matheusanbs.wirelessautomate.tv.TvFormat;
+import io.github.matheusanbs.wirelessautomate.tv.TvLayout;
+import io.github.matheusanbs.wirelessautomate.tv.TvPiece;
+import io.github.matheusanbs.wirelessautomate.tv.TvPieceType;
+import io.github.matheusanbs.wirelessautomate.tv.TvStyle;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
@@ -36,7 +42,8 @@ import org.lwjgl.glfw.GLFW;
  * A Tela de Sinal no e2e: uma parede atrás do jogador com a Tela (para o norte), uma tocha na parede e, ao lado, uma
  * Tela 1 × 1 vazia junto de um Reparador. As máquinas e a rede são as dos Fluxos ({@link E2eFlowsSteps#machines}).
  * Pede 4 × 2 com ↗ e aplica (o servidor confere), mostra o problema da tocha com 6 × 2, aplica o Painel da rede em
- * Itens, espera um número maior que zero chegar e fotografa a Tela no mundo de frente e a pequena em 3/4.
+ * Itens, espera um número maior que zero chegar e fotografa a Tela no mundo de frente, de longe e de lado, a pequena
+ * em 3/4 e, com um layout de branco opaco, branco a 50% e cinza 50% opaco, a transparência de perto.
  */
 final class E2eTvSteps {
     /** O olho a 4 blocos da frente da Tela; a frente fica a 13/16 do bloco, como a forma do bloco. */
@@ -77,8 +84,11 @@ final class E2eTvSteps {
         list.add(close("Tela: fechar"));
         list.add(values());
         list.add(hideGui(playerId, true));
-        list.add(view("tela-mundo", playerId, E2eTvSteps::worldEye, E2eTvSteps::worldTarget));
         list.add(view("tela-bloco", playerId, () -> blockTarget().add(-1.6, 1.0, -2.3), E2eTvSteps::blockTarget));
+        list.add(view("tela-mundo-lado", playerId, () -> worldTarget().add(-4.5, 0.3, -1.2), E2eTvSteps::worldTarget));
+        list.add(view("tela-mundo-longe", playerId, () -> worldTarget().add(0, 2, -16), E2eTvSteps::worldTarget));
+        // a última foto deixa o jogador de frente para a Tela, ao alcance do clique que a abre em pt
+        list.add(view("tela-mundo", playerId, E2eTvSteps::worldEye, E2eTvSteps::worldTarget));
         list.add(hideGui(playerId, false));
         E2eVariants.pt(list, () -> {
             list.add(language("pt_br"));
@@ -97,6 +107,10 @@ final class E2eTvSteps {
             list.add(hideGui(playerId, false));
             list.add(language("en_us"));
         });
+        list.add(halfAlpha());
+        list.add(hideGui(playerId, true));
+        list.add(view("tela-transparencia", playerId, () -> smallTarget().add(0, 0, -1.3), E2eTvSteps::smallTarget));
+        list.add(hideGui(playerId, false));
         list.add(cleanUp(playerId));
         list.add(E2eFlowsSteps.machines("Tela: tirar os roteadores dos Fluxos", false));
     }
@@ -285,6 +299,26 @@ final class E2eTvSteps {
         }, () -> TvClientValues.maxForTests(tv.asLong()) > 0, () -> "maior número " + TvClientValues.maxForTests(tv.asLong()));
     }
 
+    /**
+     * Na Tela pequena, em cima o branco opaco, embaixo à esquerda o branco a 50% e à direita o cinza {@code 0x80}
+     * opaco: com o alfa certo, o branco a 50% sobre o vidro escuro fica perto do cinza, não mais escuro que ele.
+     */
+    private static Step halfAlpha() {
+        return new Step("Tela: layout de transparência na Tela pequena", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            TvBlockEntity entity = (TvBlockEntity) server.overworld().getBlockEntity(small);
+            entity.setLayout(TvLayout.of(List.of(shape(0, 0, 32, 10, 0xFFFFFFFF), shape(0, 10, 16, 22, 0x80FFFFFF),
+                    shape(16, 10, 16, 22, 0xFF808080))));
+            return null;
+        }), () -> Minecraft.getInstance().level.getBlockEntity(small) instanceof TvBlockEntity entity
+                && entity.layout().pieces().size() == 3, () -> "layout no cliente");
+    }
+
+    private static TvPiece shape(int x, int y, int w, int h, int background) {
+        return new TvPiece(TvPieceType.SHAPE, x, y, w, h, 0, "", Optional.empty(), TvFormat.DEFAULT,
+                new TvStyle(TvStyle.DEFAULT.color(), background, 0, 0, TvStyle.DEFAULT.size(), TvStyle.DEFAULT.align(),
+                        true, ""));
+    }
+
     /** Liga ({@code hide}) ou desliga a interface e o voo das fotos do mundo, guardando o que havia. */
     private static Step hideGui(UUID playerId, boolean hide) {
         return new Step(hide ? "Tela: sem interface" : "Tela: interface de volta", STEP_TIMEOUT_MS, () -> {
@@ -311,6 +345,11 @@ final class E2eTvSteps {
 
     private static Vec3 worldEye() {
         return worldTarget().add(0, 0, -WORLD_DISTANCE);
+    }
+
+    /** O centro da frente da Tela pequena. */
+    private static Vec3 smallTarget() {
+        return new Vec3(small.getX() + 0.5, small.getY() + 0.5, small.getZ() + FRONT);
     }
 
     /** Entre a Tela pequena e o Reparador, na metade da altura. */

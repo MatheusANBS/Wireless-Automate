@@ -20,9 +20,9 @@ import net.minecraft.world.phys.AABB;
  * A Tela de Sinal no mundo. Na Tela 1 × 1 o modelo do bloco já é a moldura com o vidro, e aqui fica só a imagem, no
  * retângulo do vidro, logo atrás dele; na maior ({@code EXPANDED}) o modelo some e aqui fica a moldura inteira
  * ({@link TvFrameMesh}, em {@code entitySolid} com o atlas do modelo) e a imagem no retângulo de dentro. A imagem é
- * a textura da {@link TvCanvases}, desenhada só quando muda; aqui ela é um quadrilátero com luz cheia, na escala
- * uniforme que cabe no retângulo e centrada (a sobra mostra o miolo apagado). Por quadro: nada alocado, a moldura e
- * um quadrilátero.
+ * a textura da {@link TvCanvases}, desenhada só quando muda; aqui ela é um quadrilátero com luz cheia e alfa
+ * pré-multiplicado ({@link TvRenderTypes}), na escala uniforme que cabe no retângulo e centrada (a sobra mostra o
+ * miolo apagado). Por quadro: nada alocado, a moldura e um quadrilátero.
  */
 public final class TvRenderer implements BlockEntityRenderer<TvBlockEntity> {
     private static final int VIEW_DISTANCE = 64;
@@ -52,8 +52,8 @@ public final class TvRenderer implements BlockEntityRenderer<TvBlockEntity> {
         if (tv.layout().pieces().isEmpty() || level == null) {
             return;
         }
-        ResourceLocation texture = TvCanvases.texture(tv, level.getGameTime());
-        if (texture == null) {
+        RenderType image = TvCanvases.image(tv, level.getGameTime());
+        if (image == null) {
             return;
         }
         float innerW = w - 2 * TvFrame.BAND;
@@ -64,7 +64,7 @@ public final class TvRenderer implements BlockEntityRenderer<TvBlockEntity> {
         float x0 = TvFrame.BAND + (innerW - imageW) / 2;
         float y0 = TvFrame.BAND_BOTTOM + (innerH - imageH) / 2;
         TvQuads.front(x0, y0, x0 + imageW, y0 + imageH, TvFrame.IMAGE_Z, 0, 1, 1, 0);
-        TvQuads.text(buffer.getBuffer(RenderType.text(texture)), pose, LightTexture.FULL_BRIGHT);
+        TvQuads.text(buffer.getBuffer(image), pose, LightTexture.FULL_BRIGHT);
     }
 
     @Override

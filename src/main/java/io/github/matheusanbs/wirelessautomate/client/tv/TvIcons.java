@@ -10,15 +10,19 @@ import java.util.Optional;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
+import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
+import net.neoforged.neoforge.client.model.data.ModelData;
 import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.Nullable;
 
@@ -145,6 +149,18 @@ public final class TvIcons {
         var sprite = Minecraft.getInstance().getItemRenderer().getModel(stack, null, null, 0)
                 .getParticleIcon(net.neoforged.neoforge.client.model.data.ModelData.EMPTY);
         return sprite.contents().getUniqueFrames().count() > 1;
+    }
+
+    /** A textura que o Ícone mostra (a do item no modelo, a do fluido parado), ou {@code null} sem uma (químico, vazio). */
+    public static @Nullable TextureAtlasSprite sprite(TvPartStyle part) {
+        if (part.iconKind() == IconKind.FLUID) {
+            Fluid fluid = fluid(part);
+            return fluid == null ? null : Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
+                    .apply(IClientFluidTypeExtensions.of(fluid).getStillTexture());
+        }
+        ItemStack stack = stack(part);
+        return stack.isEmpty() ? null : Minecraft.getInstance().getItemRenderer().getModel(stack, null, null, 0)
+                .getParticleIcon(ModelData.EMPTY);
     }
 
     /** O nome para o espaço do editor e a dica. */

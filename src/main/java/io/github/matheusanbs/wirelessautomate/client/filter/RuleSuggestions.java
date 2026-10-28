@@ -39,7 +39,6 @@ final class RuleSuggestions {
     private List<String> tags;
     private List<DataComponentType<?>> componentTypes;
     private List<ItemStack> creative;
-    private List<ItemStack> catalog;
     private Map<String, Form> forms;
     private final Map<String, List<Object>> samples = new HashMap<>();
 
@@ -205,8 +204,9 @@ final class RuleSuggestions {
     private Map<String, Form> forms() {
         if (forms == null) {
             Map<String, Form> map = new HashMap<>();
-            List<ItemStack> all = sources();
-            int budget = 20000;
+            List<ItemStack> all = new ArrayList<>(inventoryStacks());
+            all.addAll(creative());
+            int budget = 8000;
             for (ItemStack stack : all) {
                 if (budget-- <= 0) {
                     break;
@@ -239,7 +239,9 @@ final class RuleSuggestions {
                 return List.of();
             }
             List<Object> out = new ArrayList<>();
-            for (ItemStack stack : sources()) {
+            List<ItemStack> all = new ArrayList<>(inventoryStacks());
+            all.addAll(creative());
+            for (ItemStack stack : all) {
                 Object value = stack.get(type);
                 Object tree = value == null ? null : ComponentCondition.tree(type, value);
                 if (tree != null) {
@@ -317,40 +319,6 @@ final class RuleSuggestions {
         }
         return ids;
     }
-
-    /** De onde vêm as amostras, sem o jogador precisar ter o item: inventário, abas do criativo e o catálogo. */
-    private List<ItemStack> sources() {
-        List<ItemStack> all = new ArrayList<>(inventoryStacks());
-        all.addAll(creative());
-        all.addAll(catalog());
-        return all;
-    }
-
-    /**
-     * Os itens que o jogo e o JEI (quando instalado) conhecem: o item padrão de todo registro e, do JEI, as
-     * pilhas com dados (variações que só ele lista). Lido uma vez.
-     */
-    private List<ItemStack> catalog() {
-        if (catalog == null) {
-            List<ItemStack> list = new ArrayList<>();
-            for (var item : BuiltInRegistries.ITEM) {
-                ItemStack stack = item.getDefaultInstance();
-                if (!stack.isEmpty() && !stack.getComponents().isEmpty()) {
-                    list.add(stack);
-                }
-            }
-            try {
-                list.addAll(extraStacks.get());
-            } catch (RuntimeException ignored) {
-                // sem o catálogo do JEI, ficam os itens do registro
-            }
-            catalog = list;
-        }
-        return catalog;
-    }
-
-    /** As pilhas que outra fonte oferece (o plugin do JEI a troca quando o JEI liga); sem tipos do JEI aqui. */
-    static volatile java.util.function.Supplier<List<ItemStack>> extraStacks = List::of;
 
     /** As pilhas das abas do modo criativo, lidas uma vez; vazia se o jogo não as monta. */
     private List<ItemStack> creative() {

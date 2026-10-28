@@ -77,11 +77,6 @@ import org.lwjgl.glfw.GLFW;
  * slot do inspetor (aba Tags) mostra as tags dele. Esta classe não conhece nenhuma classe do JEI.
  */
 public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
-    /** O JEI oferece as pilhas dele às sugestões de componente, para configurar a regra sem ter o item. */
-    public static void setExtraStacks(java.util.function.Supplier<java.util.List<net.minecraft.world.item.ItemStack>> source) {
-        RuleSuggestions.extraStacks = source;
-    }
-
     public enum Tab {
         ENTRY,
         TAGS,

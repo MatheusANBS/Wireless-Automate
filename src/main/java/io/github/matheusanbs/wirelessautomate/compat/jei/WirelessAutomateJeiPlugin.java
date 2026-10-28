@@ -241,6 +241,8 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
     @Override
     public void onRuntimeAvailable(IJeiRuntime runtime) {
         UnloadedTiers.hide(runtime.getIngredientManager());
+        IIngredientManager ingredients = runtime.getIngredientManager();
+        FilterScreen.setExtraStacks(() -> List.copyOf(ingredients.getAllItemStacks()));
     }
 
     @Override

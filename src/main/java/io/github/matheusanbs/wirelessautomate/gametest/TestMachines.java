@@ -51,6 +51,9 @@ public final class TestMachines {
     /** Lixeira que diz não ter limite e guarda a pilha recebida como veio, como a do Trash Cans ({@link VoidSink}). */
     public static final Block VOID_SINK = Blocks.BONE_BLOCK;
 
+    /** Uma célula de energia que muda sem avisar ninguém, como uma máquina que gera ou consome FE por tick ({@link SilentCell}). */
+    public static final Block SILENT_CELL = Blocks.RAW_COPPER_BLOCK;
+
     private static final boolean ENABLED = Boolean.getBoolean("wirelessautomate.gameTests");
     private static final Map<BlockPos, BigSlot> BIG_SLOTS = new ConcurrentHashMap<>();
     private static final Map<BlockPos, ManyTanks> TANKS = new ConcurrentHashMap<>();
@@ -59,6 +62,7 @@ public final class TestMachines {
     private static final Map<BlockPos, TypedSlot> TYPED = new ConcurrentHashMap<>();
     private static final Map<BlockPos, Furnace> FURNACES = new ConcurrentHashMap<>();
     private static final Map<BlockPos, VoidSink> VOID_SINKS = new ConcurrentHashMap<>();
+    private static final Map<BlockPos, SilentCell> SILENT_CELLS = new ConcurrentHashMap<>();
 
     public static boolean enabled() {
         return ENABLED;
@@ -80,6 +84,7 @@ public final class TestMachines {
         event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) -> furnace(pos), FURNACE);
         event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) -> LyingSink.INSTANCE, LYING_SINK);
         event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) -> voidSink(pos), VOID_SINK);
+        event.registerBlock(Capabilities.EnergyStorage.BLOCK, (level, pos, state, be, side) -> silentCell(pos), SILENT_CELL);
     }
 
     /** O slot da posição absoluta {@code pos} (criado vazio na primeira consulta). */
@@ -107,6 +112,10 @@ public final class TestMachines {
         return FURNACES.computeIfAbsent(pos.immutable(), key -> new Furnace());
     }
 
+    static SilentCell silentCell(BlockPos pos) {
+        return SILENT_CELLS.computeIfAbsent(pos.immutable(), key -> new SilentCell());
+    }
+
     static VoidSink voidSink(BlockPos pos) {
         return VOID_SINKS.computeIfAbsent(pos.immutable(), key -> new VoidSink());
     }
@@ -120,6 +129,7 @@ public final class TestMachines {
         TYPED.remove(pos.immutable());
         FURNACES.remove(pos.immutable());
         VOID_SINKS.remove(pos.immutable());
+        SILENT_CELLS.remove(pos.immutable());
     }
 
     /**
@@ -599,6 +609,59 @@ public final class TestMachines {
                 stored.shrink(taken);
             }
             return out;
+        }
+    }
+
+    /** Energia que o teste põe e tira direto, sem {@code setChanged}: a máquina muda e nenhum vizinho é avisado. */
+    static final class SilentCell implements net.neoforged.neoforge.energy.IEnergyStorage {
+        static final int CAPACITY = 1_000;
+        private int stored;
+
+        int stored() {
+            return stored;
+        }
+
+        /** Põe ou tira sem passar pela capability (o que a própria máquina faz no tick dela). */
+        void setStored(int value) {
+            stored = Math.max(0, Math.min(CAPACITY, value));
+        }
+
+        @Override
+        public int receiveEnergy(int toReceive, boolean simulate) {
+            int taken = Math.max(0, Math.min(toReceive, CAPACITY - stored));
+            if (!simulate) {
+                stored += taken;
+            }
+            return taken;
+        }
+
+        @Override
+        public int extractEnergy(int toExtract, boolean simulate) {
+            int taken = Math.max(0, Math.min(toExtract, stored));
+            if (!simulate) {
+                stored -= taken;
+            }
+            return taken;
+        }
+
+        @Override
+        public int getEnergyStored() {
+            return stored;
+        }
+
+        @Override
+        public int getMaxEnergyStored() {
+            return CAPACITY;
+        }
+
+        @Override
+        public boolean canExtract() {
+            return true;
+        }
+
+        @Override
+        public boolean canReceive() {
+            return true;
         }
     }
 

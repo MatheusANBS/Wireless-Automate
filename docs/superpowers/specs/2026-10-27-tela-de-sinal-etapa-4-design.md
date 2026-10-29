@@ -15,17 +15,17 @@
 2. **Onde fica:** uma aba "Pixel art" na coluna da esquerda do editor (ao lado de Peças, Componentes e Camadas) lista as artes da biblioteca com miniatura; "Nova", "Editar", "Duplicar" e "Remover" (dois cliques). Editar abre o editor de pixel art por cima do editor da Tela (uma tela própria, redimensionável como o editor), que volta para ele ao salvar ou cancelar. A paleta usa o seletor de cor da etapa 2 (Tarefa 12).
 3. **Biblioteca:** as artes ficam no `TvLibrary` do jogador (`arts`), até `tv.maxArts` (padrão 32), cada uma até 64 × 64; nome até 32 caracteres; vão ao cliente com a biblioteca (só com o editor aberto).
 4. **A Tela guarda uma cópia da arte, não a referência.** Inserir uma Imagem copia a arte para o layout (`images`, por id, sem repetir a mesma arte), porque a Tela é vista por todos e não pode depender da biblioteca de quem a fez: apagar ou mudar a arte na biblioteca não muda a Tela (como os temas). "Atualizar da biblioteca" na aba da Imagem troca a cópia pela versão atual, se o jogador ainda tiver a arte.
-5. **Teto por Tela:** até `tv.maxImagePixels` pixels somados nas imagens distintas de um layout (padrão 16.384, quatro de 64 × 64), para o layout continuar abaixo dos 64 KB do salvar.
+5. **Teto por Tela:** até `tv.maxImagePixels` pixels somados nas imagens distintas de um layout (padrão 16.384, quatro de 64 × 64). Os pixels vão em meio byte cada (dois por byte, a paleta tem 16 cores), então o teto padrão dá 8 KB, e as imagens contam no `tv.maxLayoutBytes` (padrão 16 KB) como o resto do layout: o teto do pacote do chunk não muda e a config existente fica como está.
 6. **Peça Imagem:** qualquer tamanho e posição; a escala é inteira (1×, 2×, 3×...) por padrão, para não borrar, ou "esticar" livre; alinhamento dentro da caixa (9 posições, como o `TvAlign` já faz em duas direções); opacidade; as regras podem escondê-la ou piscar.
 7. **Fundo em mosaico:** `TvBackground` ganha o tipo `tiled`: uma imagem do layout repetida pela Tela inteira, com escala inteira (1× a 8×) e opacidade, por baixo das peças (as linhas de varredura continuam por cima).
 8. **Desenho na Tela:** a imagem é pintada na textura da Tela no redesenho, por faixas horizontais da mesma cor (um retângulo por faixa, não um por pixel); o mosaico repete as faixas. O e2e mede o redesenho de uma Tela 32 × 32 com mosaico; se passar de 4 ms, a imagem vira uma textura pequena própria (uma por arte distinta no cliente, liberada com a Tela), desenhada com repetição.
 
 ## Modelo e chaves
 
-- `TvPixelArt` (record: `id` UUID, `name`, `width`, `height`, `palette` int[16], `pixels` byte[] com o índice por pixel), codec compacto (os pixels em `byte[]`).
+- `TvPixelArt` (record: `id` UUID, `name`, `width`, `height`, `palette` int[16], `pixels` byte[] com o índice por pixel na memória), codec compacto: os pixels gravados dois por byte (`byte[]` de `ceil(w × h / 2)`), a paleta como `int[]`.
 - `TvLayout`: `images` (lista de `TvPixelArt`, opcional, vazia por padrão).
-- `TvPieceType`: `image`; peça com `image` (o id), `scale` (0 = esticar), `align`.
-- `TvBackground`: kind `tiled`, `image` (id), `scale`, `opacity`.
+- `TvPieceType`: `image` (não `bindable()`); os campos da Imagem no `TvPartStyle`, só gravados quando diferem do padrão: `image` (o id), `scale` (0 = esticar, padrão 1) e `valign` (em cima, meio, embaixo; padrão meio); o alinhamento horizontal é o `align` do `TvStyle` e a opacidade é a `opacity` do `TvStyle`.
+- `TvBackground`: kind `tiled`, `image` (id), `scale` (1 a 8, padrão 2), `opacity` (0 a 100, padrão 100). Ao aplicar o layout, as imagens que nenhuma peça nem o fundo usam saem, e uma peça ou um fundo que aponta para imagem que não existe sai (o fundo volta ao do tema).
 - `TvLibrary`: `arts` por jogador.
 - Config do servidor `tv`: `maxArts` (padrão 32), `maxImagePixels` (padrão 16.384).
 - Ações novas no `TvLibraryActionPayload` (`SAVE_ART`, `REMOVE_ART`, `RENAME_ART`). `ModPayloads.VERSION` sobe para `"38"`.

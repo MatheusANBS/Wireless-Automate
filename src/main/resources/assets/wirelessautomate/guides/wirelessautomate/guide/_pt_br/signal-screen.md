@@ -22,8 +22,8 @@ números das suas [redes](networks.md) ao vivo: o que entra, o que sai e quantas
 
 1. Clique com a Tela na **lateral de um bloco sólido**: ela fica rente à parede, virada para você. Não dá para pôr no
    chão nem no teto, e ela cai se a parede atrás dela sair.
-2. Clique nela com a **mão vazia** para abrir a tela de configuração. Só quem a colocou (e os operadores) pode
-   configurar; os outros só olham.
+2. Clique nela com a **mão vazia** para abrir a tela de configuração. Só quem a colocou, os operadores e quem está na
+   aba **Acesso** podem configurar; os outros só olham.
 
 ## Escolher o tamanho
 
@@ -55,6 +55,7 @@ couber, diminua a escala da interface.
 | **Medidor** | Um mostrador em arco com um ponteiro. |
 | **Gráfico** | O histórico de um número, em linha ou colunas, dos últimos minutos. |
 | **Seta** | Sobe, desce ou fica parada conforme o número cresce, cai ou se mantém. |
+| **Imagem** | Uma pixel art sua, desenhada na aba **Pixel art** (mais abaixo). |
 
 - **Escolher e mexer:** clique numa peça para escolhê-la (numa peça de grupo, o grupo inteiro; dois cliques entram no
   grupo). **Shift** + clique soma ou tira da escolha; clique no vazio solta. Arraste para mover e puxe a alça do canto
@@ -103,6 +104,121 @@ Para mostrar o conteúdo de um Baú, Bateria ou Tanque, ligue-o à Tela com o [V
 
 Os números chegam uma vez por segundo enquanto há alguém perto. Uma rede privada da qual quem colocou a Tela perdeu o
 acesso mostra **—**.
+
+## Pixel art
+
+Desenhe suas artes na aba **Pixel art**, na coluna da esquerda do editor. Elas ficam na sua biblioteca e valem em
+qualquer Tela sua.
+
+1. Clique em **Nova** (ou escolha uma arte e clique em **Editar**). O editor de pixel art abre por cima do editor.
+2. Escreva o nome e o **Tamanho**: de 8 a 128 pixels de largura e de altura. Mudar o tamanho mantém o canto de cima à
+   esquerda.
+3. Desenhe e clique em **Salvar** (ou **Ctrl+S**). **Cancelar** volta sem salvar; com mudanças, pede dois cliques.
+
+Cada arte tem até **16 cores** e no máximo **128 × 128** pixels. **Duplicar** faz uma cópia e **Remover** apaga, em
+dois cliques.
+
+### Ferramentas
+
+O clique esquerdo usa a ferramenta e o **direito apaga** (no clarear, escurece). **Ctrl** + clique pega a cor de um
+pixel com qualquer ferramenta.
+
+| Tecla | Ferramenta |
+| --- | --- |
+| **B** | Lápis. |
+| **E** | Borracha. |
+| **G** | Balde: pinta a área da mesma cor. Com **Shift**, troca a cor na arte inteira. |
+| **I** | Conta-gotas. |
+| **L** | Linha. **Shift** trava em 0°, 45° e 90°. |
+| **R** | Retângulo. **R** de novo alterna contorno e cheio; **Shift** faz quadrado. |
+| **O** | Elipse. **O** de novo alterna contorno e cheia; **Shift** faz círculo. |
+| **D** | Clarear (esquerdo) e escurecer (direito), pela rampa da cor. |
+| **T** | Pontilhado: pinta um pixel sim e um não, em xadrez. |
+| **S** | Seleção. |
+
+| Tecla | Ajuda |
+| --- | --- |
+| **[** e **]** | Pincel menor e maior, de 1 a 8 px. O botão do rodapé troca quadrado e redondo (redondo a partir de 3 px). |
+| **M** e **Shift+M** | Espelho esquerda e direita, e em cima e embaixo. Valem juntos. |
+| **P** | Pixel perfect: tira os cantos em L do lápis de 1 px. |
+| **X** | Volta para a cor anterior. |
+| **Ctrl+G** | Liga e desliga a grade. |
+| **Ctrl+Z**, **Ctrl+Y** | Desfaz e refaz, até 100 passos. |
+
+### Paleta e rampas
+
+A paleta tem 16 cores em 4 linhas, e a cor 0 é sempre transparente. Cada linha é uma **rampa**, do tom escuro à
+esquerda ao claro à direita: o clarear e o escurecer andam por ela.
+
+- Dois cliques numa cor (ou **Editar cor**) abrem o seletor. Trocar uma cor muda todos os pixels dela.
+- **Criar rampa** refaz a linha da cor escolhida como uma rampa dela: mais escura e azulada à esquerda, mais clara e
+  amarelada à direita.
+
+### Seleção, virar e girar
+
+- Com **S**, arraste para marcar um retângulo. Arraste de dentro dele para mover o pedaço.
+- As **setas** movem 1 px (com **Shift**, 8 px). **Enter** assenta e **Esc** desfaz o mover e tira a seleção.
+- **Ctrl+A** seleciona tudo e **Ctrl+D** tira. **Ctrl+C**, **Ctrl+X** e **Ctrl+V** copiam, recortam e colam;
+  **Delete** apaga.
+- Com uma seleção, as ferramentas só pintam dentro dela.
+- **Shift+H** e **Shift+V** viram na horizontal e na vertical, e o botão de girar gira 90° no sentido horário. Com
+  uma seleção, só o pedaço.
+- **Limpar** apaga a arte inteira, em dois cliques.
+
+### Navegar no quadro
+
+| Gesto | O que faz |
+| --- | --- |
+| Roda do mouse | Zoom no ponto do mouse. |
+| **Alt**, **Espaço** ou botão do meio + arrastar | Move a vista. |
+| **Setas**, sem seleção | Movem a vista. |
+| **0** | Enquadra a arte. |
+| **+** e **−** | Zoom no centro. |
+| Clique na prévia | Leva a vista até aquele ponto. |
+
+O rodapé mostra a posição e a cor sob o mouse. A coluna da direita mostra a arte em 1×, 2× e repetida, como no
+mosaico. **Esc** sem seleção faz o mesmo que **Cancelar**.
+
+### Pôr a arte na Tela
+
+- **Imagem:** clique em **Imagem** na lista de **Peças** (ou arraste-a até a miniatura). Ela nasce com a arte escolhida
+  na aba **Pixel art**; sem arte escolhida, nasce vazia, com **Escolha a arte**.
+- **Escolher a arte:** na aba **Estilo**, seção **Peça**, clique numa miniatura da grade. As marcadas **Da Tela**
+  vieram com a Tela, de outro jogador ou de um código. Arrastar uma arte da aba **Pixel art** até a miniatura também
+  serve.
+- Na mesma seção: **Escala** (1× a 16×, ou **Esticar**), **Alinhar** (9 posições) e **Opacidade**.
+- A Tela guarda uma **cópia** da arte: mudar ou apagar a arte depois não muda a Tela. **Atualizar da biblioteca**
+  traz a versão atual.
+- **Fundo em mosaico:** com nada escolhido, mude o **Fundo** para **Pixel art em mosaico** e escolha a arte na grade.
+  Ela se repete pela Tela inteira, por baixo das peças, com **Escala** (1× a 8×) e **Opacidade**.
+- A linha **Pixels** da base mostra quanto as artes da Tela somam e o teto.
+
+### Exportar e importar por código
+
+Leve um layout ou uma arte para outro mundo, ou para um amigo, como texto.
+
+| Botão | O que faz |
+| --- | --- |
+| **Exportar** | Copia o código: na base (embaixo de **Aplicar layout**), do layout; na aba **Pixel art**, da arte escolhida. |
+| **Importar** | Lê o código copiado. Na base, aplica o layout no rascunho (**Ctrl+Z** desfaz); na aba **Pixel art**, cria uma arte nova. |
+| **Copiar como texto** | Copia numa forma legível, para editar à mão ou pedir a uma IA. **Importar** lê as duas formas. |
+
+- O layout leva as artes junto. As ligações a redes ou armazenamentos que você não tem saem: ligue de novo na aba
+  **Dado**.
+- Um código inválido mostra o aviso na barra de baixo, e nada muda.
+- Para gerar artes e Telas com uma IA, há um guia no GitHub do mod: `docs/guia-pixel-art-com-ia.md`.
+
+## Acesso
+
+Na aba **Acesso** (só o dono e os operadores a veem), dê a outros jogadores o direito de editar a Tela.
+
+1. Escreva o nome em **Convidar jogador…** e escolha uma sugestão, ou aperte **Enter**. Só vale quem já entrou no
+   servidor.
+2. Com o FTB Teams instalado, adicione um time em **Adicionar time…**.
+3. Para tirar alguém, clique duas vezes no **✕** da linha.
+
+Quem está na lista edita como o dono: tamanho, layout e ligações, dentro das redes que cada um pode usar. Ver a Tela
+continua liberado para todos.
 
 ## Receita
 

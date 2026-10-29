@@ -59,8 +59,8 @@ public class TvMenu extends AbstractContainerMenu {
     }
 
     /** O que o buffer de abertura leva. */
-    private record Data(BlockPos pos, TvArea area, int maxWidth, int maxHeight, int maxLayoutBytes,
-            @Nullable UUID currentNetwork,
+    private record Data(BlockPos pos, TvArea area, int maxWidth, int maxHeight, int maxLayoutBytes, int maxArts,
+            int maxImagePixels, @Nullable UUID currentNetwork,
             String currentType, List<NetworkChoice> networks, List<LinkChoice> links) {
         static Data read(RegistryFriendlyByteBuf buf) {
             BlockPos pos = BlockPos.STREAM_CODEC.decode(buf);
@@ -68,6 +68,8 @@ public class TvMenu extends AbstractContainerMenu {
             int maxWidth = buf.readVarInt();
             int maxHeight = buf.readVarInt();
             int maxLayoutBytes = buf.readVarInt();
+            int maxArts = buf.readVarInt();
+            int maxImagePixels = buf.readVarInt();
             UUID network = buf.readBoolean() ? UUIDUtil.STREAM_CODEC.decode(buf) : null;
             String type = buf.readUtf(32);
             int size = Math.min(buf.readVarInt(), MAX_NETWORKS);
@@ -80,14 +82,16 @@ public class TvMenu extends AbstractContainerMenu {
             for (int i = 0; i < linkCount; i++) {
                 links.add(LinkChoice.STREAM_CODEC.decode(buf));
             }
-            return new Data(pos, area, maxWidth, maxHeight, maxLayoutBytes, network, type, list, links);
+            return new Data(pos, area, maxWidth, maxHeight, maxLayoutBytes, maxArts, maxImagePixels, network, type,
+                    list, links);
         }
 
         void write(RegistryFriendlyByteBuf buf) {
             BlockPos.STREAM_CODEC.encode(buf, pos);
             buf.writeVarInt(area.width()).writeVarInt(area.height()).writeVarInt(area.anchorCol())
                     .writeVarInt(area.anchorRow());
-            buf.writeVarInt(maxWidth).writeVarInt(maxHeight).writeVarInt(maxLayoutBytes);
+            buf.writeVarInt(maxWidth).writeVarInt(maxHeight).writeVarInt(maxLayoutBytes).writeVarInt(maxArts)
+                    .writeVarInt(maxImagePixels);
             buf.writeBoolean(currentNetwork != null);
             if (currentNetwork != null) {
                 UUIDUtil.STREAM_CODEC.encode(buf, currentNetwork);
@@ -140,7 +144,8 @@ public class TvMenu extends AbstractContainerMenu {
         }
         TvBinding first = tv.layout().bindings().isEmpty() ? null : tv.layout().bindings().get(0);
         Data data = new Data(tv.getBlockPos(), tv.area(), Config.tvMaxWidth(), Config.tvMaxHeight(),
-                Config.tvMaxLayoutBytes(), first == null ? null : first.network(),
+                Config.tvMaxLayoutBytes(), Config.tvMaxArts(), Config.tvMaxImagePixels(),
+                first == null ? null : first.network(),
                 first == null ? "" : first.type().key(), networks, links);
         player.openMenu(new SimpleMenuProvider((containerId, inventory, p) -> new TvMenu(containerId, data, tv),
                 Component.translatable("container.wirelessautomate.signal_screen")), data::write);
@@ -173,6 +178,16 @@ public class TvMenu extends AbstractContainerMenu {
     /** O teto, em bytes, do layout salvo: o editor confere antes de mandar. */
     public int maxLayoutBytes() {
         return data.maxLayoutBytes;
+    }
+
+    /** O teto de pixel arts na biblioteca do jogador ({@code tv.maxArts}), para a aba Pixel art mostrar. */
+    public int maxArts() {
+        return data.maxArts;
+    }
+
+    /** O teto de pixels somados nas imagens de uma Tela ({@code tv.maxImagePixels}). */
+    public int maxImagePixels() {
+        return data.maxImagePixels;
     }
 
     /** As redes que o jogador pode usar, ordenadas pelo nome. */

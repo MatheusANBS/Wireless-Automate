@@ -21,7 +21,8 @@ import org.lwjgl.opengl.GL11;
  * depois de subir.
  * <p>
  * Criada no redesenho que a pede. A varredura ({@link #sweep}) solta as que nenhuma Tela com imagem
- * ({@link TvCanvases#keepArts}) nem o rascunho do editor ({@link TvEditorImage#keepArts}) usa mais: a cada
+ * ({@link TvCanvases#keepArts}), nem o rascunho do editor ({@link TvEditorImage#keepArts}), nem as miniaturas da
+ * biblioteca ({@link TvArtThumbs#keepArts}) usam mais: a cada
  * {@link #SWEEP_TICKS} ticks enquanto há textura, logo que passam de {@link #SWEEP_SIZE}, ao soltar todas as Telas e
  * ao fechar o editor. Sem textura, o tick é a checagem do mapa vazio. Só na thread de render.
  */
@@ -99,10 +100,15 @@ final class TvArtTextures {
     static void keep(TvLayout layout) {
         List<TvPixelArt> images = layout.images();
         for (int i = 0; i < images.size(); i++) {
-            Art entry = TEXTURES.get(images.get(i));
-            if (entry != null) {
-                entry.generation = generation;
-            }
+            keep(images.get(i));
+        }
+    }
+
+    /** Marca como em uso a textura de uma arte (chamado durante a {@link #sweep}). */
+    static void keep(TvPixelArt art) {
+        Art entry = TEXTURES.get(art);
+        if (entry != null) {
+            entry.generation = generation;
         }
     }
 
@@ -115,6 +121,7 @@ final class TvArtTextures {
         generation++;
         TvCanvases.keepArts();
         TvEditorImage.keepArts();
+        TvArtThumbs.keepArts();
         Iterator<Art> it = TEXTURES.values().iterator();
         while (it.hasNext()) {
             Art entry = it.next();

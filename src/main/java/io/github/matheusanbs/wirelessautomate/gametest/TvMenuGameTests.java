@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.gametest;
 
+import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.menu.TvMenu;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
@@ -147,6 +148,9 @@ public final class TvMenuGameTests {
                 helper.assertFalse(ids.contains(foreign.id()), "veio a rede privada de outro");
                 helper.assertValueEqual(client.area(), TvArea.SINGLE, "área na abertura");
                 helper.assertValueEqual(client.pos(), helper.absolutePos(A), "posição na abertura");
+                helper.assertValueEqual(client.maxArts(), Config.tvMaxArts(), "teto de artes na abertura");
+                helper.assertValueEqual(client.maxImagePixels(), Config.tvMaxImagePixels(),
+                        "teto de pixels na abertura");
             } finally {
                 data.remove(own.id());
                 data.remove(foreignPublic.id());

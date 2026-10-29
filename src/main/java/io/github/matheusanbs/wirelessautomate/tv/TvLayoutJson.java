@@ -30,10 +30,13 @@ import org.jetbrains.annotations.Nullable;
  * <li>em {@code images}, a arte legível ({@code id}, {@code nome}, {@code tamanho}, {@code paleta} e {@code linhas},
  * como no {@link TvArtText}), além da empacotada; os ids (da arte, da Imagem, do fundo e da rede) podem ser texto, e
  * um texto que não é UUID vira sempre o mesmo id, para a Imagem apontar a arte pelo nome que quem escreveu deu;</li>
- * <li>uma ligação que não lê sai da peça (e é contada), em vez de derrubar a peça inteira.</li>
+ * <li>uma ligação que não lê sai da peça (e é contada), em vez de derrubar a peça inteira;</li>
+ * <li>o tema com chaves faltando é completado pelo Grafite ({@link TvTheme#GRAPHITE}), em vez de cair inteiro nele.</li>
  * </ul>
- * Uma peça que não lê é erro, com o número dela: à mão é melhor saber do que perder a peça calada. Exportar faz o
- * caminho de volta: JSON indentado com as cores e os papéis por nome, os ids em texto e as artes legíveis.
+ * Uma peça que não lê é erro, com o número dela, e uma arte que não lê também, com o nome dela e a fileira (o texto
+ * colado não guarda a linha de cada valor do JSON): à mão é melhor saber do que perder a peça calada. As cores do tema
+ * são sempre fixas: um papel do tema nelas é erro. Exportar faz o caminho de volta: JSON indentado com as cores e os
+ * papéis por nome, os ids em texto e as artes legíveis.
  */
 public final class TvLayoutJson {
     public static final String HEADER = "WA-TELA1";
@@ -47,6 +50,11 @@ public final class TvLayoutJson {
             "downColor", "flatColor");
     private static final Set<String> RULE_COLORS = Set.of("color", "background");
     private static final Set<String> THEME_COLORS = Set.of("bg", "card", "text", "muted", "high", "low");
+    /** As chaves de cor do tema na ordem dos papéis (1 a 6), para completar o tema com as do Grafite. */
+    private static final List<String> THEME_KEYS = List.of("bg", "card", "text", "muted", "high", "low");
+    /** Os erros da arte que trazem a linha do texto como primeiro argumento; no JSON ela não diz nada e sai. */
+    private static final Set<String> ART_LINE_ERRORS = Set.of("code.art.size", "code.art.palette_long",
+            "code.art.color");
     private static final Set<String> BACKGROUND_COLORS = Set.of("top", "bottom");
     private static final List<String> PIECE_ORDER = List.of("type", "name", "x", "y", "w", "h", "group",
             "hidden", "bind", "format", "style", "rules");
@@ -234,14 +242,17 @@ public final class TvLayoutJson {
 
     /** Aplica as ajudas no JSON lido; devolve quantas ligações não leram e saíram. */
     private static int fix(JsonObject root) throws Bad {
-        colorsIn(object(root, "theme"), THEME_COLORS);
+        JsonObject theme = object(root, "theme");
+        themeIn(theme);
+        colorsIn(theme, THEME_COLORS);
+        noRoles(theme, THEME_COLORS);
         JsonObject background = object(root, "background");
         colorsIn(background, BACKGROUND_COLORS);
         idIn(background, "image");
         JsonArray images = root.get("images") instanceof JsonArray array ? array : null;
         for (int i = 0; images != null && i < images.size(); i++) {
             if (images.get(i) instanceof JsonObject art) {
-                images.set(i, artIn(art));
+                images.set(i, artIn(art, i + 1));
             }
         }
         int dropped = 0;
@@ -276,6 +287,37 @@ public final class TvLayoutJson {
     private static int remove(JsonObject owner) {
         owner.remove("bind");
         return 1;
+    }
+
+    /**
+     * O tema com chave faltando: o nome vazio e cada cor que falta vêm do Grafite. Sem isso, o codec (que pede as
+     * sete) largaria o tema inteiro e a Tela cairia calada no Grafite.
+     */
+    private static void themeIn(@Nullable JsonObject theme) {
+        if (theme == null) {
+            return;
+        }
+        if (!theme.has("name")) {
+            theme.addProperty("name", "");
+        }
+        for (int i = 0; i < THEME_KEYS.size(); i++) {
+            if (!theme.has(THEME_KEYS.get(i))) {
+                theme.addProperty(THEME_KEYS.get(i), TvTheme.GRAPHITE.color(i + 1));
+            }
+        }
+    }
+
+    /** As cores do tema são fixas: um papel ({@code "tema:texto"} ou o número de 1 a 6) não vale ali. */
+    private static void noRoles(@Nullable JsonObject object, Set<String> keys) throws Bad {
+        if (object == null) {
+            return;
+        }
+        for (String key : keys) {
+            if (object.get(key) instanceof JsonPrimitive primitive && primitive.isNumber()
+                    && TvColor.isTheme(primitive.getAsInt())) {
+                throw new Bad("code.layout.theme_role", key);
+            }
+        }
     }
 
     private static void colorsIn(@Nullable JsonObject object, Set<String> keys) throws Bad {
@@ -336,8 +378,11 @@ public final class TvLayoutJson {
         }
     }
 
-    /** A arte legível vira a empacotada, que o codec lê; a empacotada só ganha o id em texto convertido. */
-    private static JsonElement artIn(JsonObject art) throws Bad {
+    /**
+     * A arte legível vira a empacotada, que o codec lê; a empacotada só ganha o id em texto convertido. Um erro da
+     * arte legível diz qual arte ({@link #artError}); {@code number} é a posição dela em {@code images}, de 1 em diante.
+     */
+    private static JsonElement artIn(JsonObject art, int number) throws Bad {
         JsonElement rows = first(art, "linhas", "rows");
         if (rows == null) {
             idIn(art, "id");
@@ -347,7 +392,7 @@ public final class TvLayoutJson {
         TvArtText.Parsed parsed = TvArtText.build(name, nullableText(first(art, "tamanho", "size")), 0,
                 list(first(art, "paleta", "palette"), true), 0, rows(rows));
         if (parsed.art() == null) {
-            throw new Bad(parsed.error(), parsed.args());
+            throw artError(parsed, artLabel(art, name, number));
         }
         JsonElement idText = art.get("id");
         UUID id = idText instanceof JsonPrimitive p && p.isString() ? id(p.getAsString()) : id(name);
@@ -355,6 +400,33 @@ public final class TvLayoutJson {
         TvPixelArt full = new TvPixelArt(id, plain.name(), plain.width(), plain.height(), plain.palette(),
                 plain.pixels());
         return TvPixelArt.CODEC.encodeStart(JsonOps.INSTANCE, full).getOrThrow();
+    }
+
+    /** O nome da arte para o erro: o nome, ou o id em texto, ou "#N" pela posição. */
+    private static String artLabel(JsonObject art, String name, int number) {
+        if (!name.isBlank()) {
+            return name.strip();
+        }
+        String id = nullableText(art.get("id"));
+        return id != null && !id.isBlank() ? id.strip() : "#" + number;
+    }
+
+    /**
+     * O erro da arte dentro do JSON: a chave {@code code.layout.art.*} com o nome da arte primeiro. A linha que o
+     * {@link TvArtText} põe no erro do texto solto sai (no JSON ela é 0); a fileira fica, contada nas {@code linhas}
+     * da arte.
+     */
+    private static Bad artError(TvArtText.Parsed parsed, String label) {
+        String key = parsed.error() == null ? "code.invalid" : parsed.error();
+        if (!key.startsWith("code.art.")) {
+            return new Bad(key, parsed.args());
+        }
+        Object[] args = parsed.args();
+        int skip = ART_LINE_ERRORS.contains(key) && args.length > 0 ? 1 : 0;
+        Object[] out = new Object[args.length - skip + 1];
+        out[0] = label;
+        System.arraycopy(args, skip, out, 1, args.length - skip);
+        return new Bad("code.layout.art." + key.substring("code.art.".length()), out);
     }
 
     private static List<TvArtText.Row> rows(JsonElement element) {

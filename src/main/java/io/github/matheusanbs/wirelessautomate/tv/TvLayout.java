@@ -25,7 +25,10 @@ import org.jetbrains.annotations.Nullable;
 public record TvLayout(List<TvPiece> pieces, TvTheme theme, TvBackground background, boolean scanlines,
         List<TvPixelArt> images, List<TvBinding> bindings, Map<UUID, TvPixelArt> imagesById) {
     public static final int HARD_CAP = 512;
-    /** O teto de artes lidas de um layout; o que vale de verdade é o {@code tv.maxImagePixels} ao salvar. */
+    /**
+     * O teto de artes distintas de um layout: a leitura não passa dele, e o salvar recusa o layout que aponta mais
+     * ({@link #referencedImageCount}). O {@code tv.maxImagePixels} costuma pesar antes.
+     */
     public static final int MAX_IMAGES = 256;
 
     /** Lê cada arte à parte: uma que não decodifica (tamanho, paleta ou pixels inválidos) é largada. */
@@ -172,6 +175,14 @@ public record TvLayout(List<TvPiece> pieces, TvTheme theme, TvBackground backgro
         return ids;
     }
 
+    /**
+     * Quantas artes distintas as Imagens e o fundo apontam, existam no layout ou não; acima de {@link #MAX_IMAGES} o
+     * salvar recusa (a leitura cortaria as artes a mais e as Imagens delas ficariam sem arte, caladas).
+     */
+    public int referencedImageCount() {
+        return referencedImages().size();
+    }
+
     /** Os ids das artes que as Imagens e o fundo em mosaico apontam e que o layout não tem. */
     public Set<UUID> missingImages() {
         Set<UUID> missing = referencedImages();
@@ -221,25 +232,33 @@ public record TvLayout(List<TvPiece> pieces, TvTheme theme, TvBackground backgro
     }
 
     /**
-     * O layout com as imagens resolvidas: a Imagem que aponta uma arte que o layout não tem sai (a Imagem sem arte,
-     * que o editor cria pela paleta antes de escolher a arte, fica e não desenha), o fundo em mosaico sem arte
-     * existente volta ao do tema, e as artes que nenhuma peça nem o fundo usam saem. Devolve o próprio layout quando
-     * nada muda.
+     * O layout com as imagens resolvidas: a Imagem que aponta uma arte que o layout não tem perde o id e vira a Imagem
+     * sem arte (a mesma que o editor cria pela paleta antes de escolher a arte: fica e não desenha), o fundo em
+     * mosaico sem arte existente volta ao do tema, e as artes que nenhuma peça nem o fundo usam saem. Nenhuma peça sai.
+     * Devolve o próprio layout quando nada muda.
      */
     public TvLayout prunedImages() {
         Set<UUID> used = new HashSet<>();
-        List<TvPiece> kept = new ArrayList<>(pieces.size());
-        for (TvPiece piece : pieces) {
-            if (piece.type() == TvPieceType.IMAGE) {
-                Optional<UUID> id = piece.style().part().image();
-                if (id.isPresent()) {
-                    if (!imagesById.containsKey(id.get())) {
-                        continue;
-                    }
-                    used.add(id.get());
-                }
+        List<TvPiece> kept = null;
+        for (int i = 0; i < pieces.size(); i++) {
+            TvPiece piece = pieces.get(i);
+            if (piece.type() != TvPieceType.IMAGE) {
+                continue;
             }
-            kept.add(piece);
+            Optional<UUID> id = piece.style().part().image();
+            if (id.isEmpty()) {
+                continue;
+            }
+            if (imagesById.containsKey(id.get())) {
+                used.add(id.get());
+                continue;
+            }
+            if (kept == null) {
+                kept = new ArrayList<>(pieces);
+            }
+            TvPartStyle part = piece.style().part();
+            kept.set(i, piece.withStyle(piece.style().withPart(part.withImage(Optional.empty(), part.scale(),
+                    part.valign()))));
         }
         TvBackground bg = background;
         if (bg.kind() == TvBackground.Kind.TILED) {
@@ -255,10 +274,10 @@ public record TvLayout(List<TvPiece> pieces, TvTheme theme, TvBackground backgro
                 usedImages.add(image);
             }
         }
-        if (kept.size() == pieces.size() && bg == background && usedImages.size() == images.size()) {
+        if (kept == null && bg == background && usedImages.size() == images.size()) {
             return this;
         }
-        return of(kept, theme, bg, scanlines, usedImages);
+        return of(kept == null ? pieces : kept, theme, bg, scanlines, usedImages);
     }
 
     /**

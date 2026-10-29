@@ -44,6 +44,12 @@ public final class TvArtSender {
     /** Nos testes: sem conexão de verdade, conta o envio em vez de mandar e não confere o canal nem o chunk. */
     private static boolean forced;
 
+    /** Para o {@code /wa profile}: os bytes mandados desde a partida, os da janela de um segundo e os da anterior. */
+    private static long totalBytes;
+    private static long windowBytes;
+    private static long windowStart;
+    private static long lastSecondBytes;
+
     private TvArtSender() {
     }
 
@@ -209,9 +215,39 @@ public final class TvArtSender {
         Feed feed = feedOf(tv);
         TvArtsPayload payload = feed.payload(tv);
         feed.sends++;
+        count(payload.encodedSize(), player.getServer().getTickCount());
         if (!forced) {
             PacketDistributor.sendToPlayer(player, payload);
         }
+    }
+
+    /** Soma um envio às contas do {@code /wa profile}; a janela fecha a cada 20 ticks. */
+    private static void count(int bytes, long now) {
+        roll(now);
+        windowBytes += bytes;
+        totalBytes += bytes;
+    }
+
+    private static void roll(long now) {
+        if (now - windowStart >= 20) {
+            lastSecondBytes = now - windowStart >= 40 ? 0 : windowBytes;
+            windowBytes = 0;
+            windowStart = now;
+        }
+    }
+
+    /** O envio para o {@code /wa profile}: o que espera na fila, de quantos jogadores, e os bytes já mandados. */
+    public record Cost(int queued, int players, long lastSecondBytes, long totalBytes) {
+    }
+
+    /** As contas de agora; percorre as filas (uma por jogador com envio pendente), só no comando. */
+    public static Cost cost(long now) {
+        roll(now);
+        int queued = 0;
+        for (TvSendQueue<Pending> queue : QUEUES.values()) {
+            queued += queue.size();
+        }
+        return new Cost(queued, QUEUES.size(), lastSecondBytes, totalBytes);
     }
 
     /**
@@ -248,6 +284,10 @@ public final class TvArtSender {
         QUEUES.clear();
         CHUNKS_SENT.clear();
         forced = false;
+        totalBytes = 0;
+        windowBytes = 0;
+        windowStart = 0;
+        lastSecondBytes = 0;
     }
 
     /** O caminho da volta com os jogadores perto dados, sem conexão: põe na fila e manda o que cabe num tick. */

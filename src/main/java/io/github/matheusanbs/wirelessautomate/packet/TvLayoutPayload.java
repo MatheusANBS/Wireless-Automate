@@ -10,6 +10,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.List;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
@@ -47,7 +48,12 @@ public record TvLayoutPayload(int containerId, TvLayout layout) implements Custo
      * ({@link TvArtRef#clientTag}): o que o {@code tv.maxLayoutBytes} mede. Calcula o resumo de cada arte.
      */
     public static int clientSize(TvLayout layout) {
-        return bytes(TvArtRef.clientTag(layout, TvArtRef.of(layout))).length;
+        return clientSize(layout, TvArtRef.of(layout));
+    }
+
+    /** O mesmo com as referências das artes já calculadas ({@link TvArtRef#of(TvLayout)}, o SHA-256 de cada uma). */
+    public static int clientSize(TvLayout layout, List<TvArtRef> refs) {
+        return bytes(TvArtRef.clientTag(layout, refs)).length;
     }
 
     private static byte[] encode(TvLayout layout) {

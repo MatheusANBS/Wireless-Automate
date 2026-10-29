@@ -48,6 +48,23 @@ public record TvArtRef(UUID id, String name, int width, int height, long hash) {
     }
 
     /**
+     * As referências das artes do layout com os resumos gravados no disco ({@code hashes}, na ordem das artes), sem
+     * calcular o SHA-256; {@code null} se os resumos não batem com as artes (um layout gravado sem eles).
+     */
+    public static @Nullable List<TvArtRef> of(TvLayout layout, long[] hashes) {
+        List<TvPixelArt> images = layout.images();
+        if (images.isEmpty() || hashes.length != images.size()) {
+            return null;
+        }
+        List<TvArtRef> refs = new ArrayList<>(images.size());
+        for (int i = 0; i < hashes.length; i++) {
+            TvPixelArt art = images.get(i);
+            refs.add(new TvArtRef(art.id(), art.name(), art.width(), art.height(), hashes[i]));
+        }
+        return List.copyOf(refs);
+    }
+
+    /**
      * A chave do conteúdo de uma lista de referências: muda quando alguma arte muda de pixels, de paleta ou de
      * tamanho, ou entra ou sai, e não muda com o resto do layout nem com o nome. 0 só sem artes.
      */

@@ -195,6 +195,34 @@ public final class TvArtGameTests {
     }
 
     @GameTest(template = "empty", timeoutTicks = 100)
+    public static void resumosDasArtesGravadosNoDisco(GameTestHelper helper) {
+        HolderLookup.Provider registries = helper.getLevel().registryAccess();
+        TvPixelArt first = art(UUID.randomUUID(), "Um", 16, 16, 4);
+        TvPixelArt second = art(UUID.randomUUID(), "Dois", 32, 8, 5);
+        TvBlockEntity tv = new TvBlockEntity(helper.absolutePos(A), screen());
+        tv.setLayout(withArts("resumos", List.of(first, second)));
+        List<TvArtRef> refs = tv.artRefs();
+        CompoundTag saved = tv.saveWithoutMetadata(registries);
+        long[] hashes = saved.getLongArray("art_hashes");
+        helper.assertTrue(hashes.length == 2 && hashes[0] == refs.get(0).hash() && hashes[1] == refs.get(1).hash(),
+                "os resumos não foram ao disco");
+        CompoundTag marked = saved.copy();
+        marked.putLongArray("art_hashes", new long[] {42, 43});
+        TvBlockEntity loaded = new TvBlockEntity(helper.absolutePos(A), screen());
+        loaded.loadWithComponents(marked, registries);
+        helper.assertTrue(loaded.artRefs().get(0).hash() == 42 && loaded.artRefs().get(1).hash() == 43,
+                "a Tela carregada recalculou os resumos em vez de ler os gravados");
+        helper.assertValueEqual(loaded.artRefs().get(1).name(), "Dois", "a referência montada com o nome da arte");
+        CompoundTag wrong = saved.copy();
+        wrong.putLongArray("art_hashes", new long[] {42});
+        TvBlockEntity recalculated = new TvBlockEntity(helper.absolutePos(A), screen());
+        recalculated.loadWithComponents(wrong, registries);
+        helper.assertValueEqual(recalculated.artRefs(), refs, "resumos que não batem com as artes são recalculados");
+        helper.assertTrue(tv.onlyOpCanSetNbt(), "os dados de bloco de um item entram sem ser operador");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 100)
     public static void pacoteDeArtesVaiPertoUmaVezPorMudanca(GameTestHelper helper) {
         ServerPlayer near = TestPlayers.inLevel(helper);
         near.moveTo(Vec3.atCenterOf(helper.absolutePos(A)).add(0, 0, -3));

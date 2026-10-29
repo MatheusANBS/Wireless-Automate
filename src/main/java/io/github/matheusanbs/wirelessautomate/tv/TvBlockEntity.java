@@ -29,7 +29,8 @@ import org.jetbrains.annotations.Nullable;
  * Os dados de uma Tela de Sinal: dono, lista de acesso, área e layout. Não faz tick. O update tag sai só quando a área
  * ou o layout mudam e não leva o dono, a lista de acesso nem os pixels das artes: no lugar delas vão as referências
  * ({@link TvArtRef}), e os pixels seguem à parte pelo {@link TvArtSender} só a quem está perto. O NBT do disco guarda
- * o layout inteiro e a lista de acesso (a chave {@code access}, opcional).
+ * o layout inteiro, a lista de acesso (a chave {@code access}, opcional) e o resumo de cada arte ({@code art_hashes},
+ * na ordem das artes do layout): a Tela carregada monta as referências sem calcular o SHA-256 de novo.
  */
 public class TvBlockEntity extends BlockEntity {
     private @Nullable UUID owner;
@@ -39,10 +40,12 @@ public class TvBlockEntity extends BlockEntity {
     private TvLayout layout = TvLayout.EMPTY;
     private int revision;
     /**
-     * As referências das artes do layout: no servidor, calculadas na primeira vez que alguém as pede depois de o
-     * layout mudar ({@code null} até lá); no cliente, as que o update tag trouxe.
+     * As referências das artes do layout: no servidor, as do salvar ({@link #setLayout(TvLayout, List)}), as montadas
+     * dos resumos gravados ao carregar, ou calculadas na primeira vez que alguém as pede ({@code null} até lá: um
+     * layout gravado sem os resumos); no cliente, as que o update tag trouxe.
      */
     private @Nullable List<TvArtRef> artRefs;
+    private static final String HASHES_KEY = "art_hashes";
     private long artKey;
     /** Só no cliente: sobe a cada vez que as artes chegam e entram no layout ({@link #resolveArts}). */
     private int artsVersion;
@@ -108,6 +111,10 @@ public class TvBlockEntity extends BlockEntity {
     public List<TvArtRef> artRefs() {
         if (artRefs == null) {
             setArtRefs(TvArtRef.of(layout));
+            if (level != null && !level.isClientSide && !artRefs.isEmpty()) {
+                // Um layout gravado sem os resumos: o próximo save do chunk os grava, e a carga seguinte não recalcula.
+                level.blockEntityChanged(worldPosition);
+            }
         }
         return artRefs;
     }
@@ -227,17 +234,30 @@ public class TvBlockEntity extends BlockEntity {
     }
 
     public void setLayout(TvLayout layout) {
+        setLayout(layout, null);
+    }
+
+    /**
+     * Troca o layout; {@code refs} são as referências das artes dele já calculadas (as do salvar, que mediu o layout
+     * com elas), ou {@code null} para calcular quando alguém pedir. Artes iguais às de antes mantêm as referências.
+     */
+    public void setLayout(TvLayout layout, @Nullable List<TvArtRef> refs) {
         TvLayout clamped = layout.clampedTo(area);
         if (clamped.equals(this.layout)) {
             return;
         }
+        boolean sameArts = clamped.images().equals(this.layout.images());
         this.layout = clamped;
+        if (refs != null) {
+            setArtRefs(refs);
+        } else if (!sameArts) {
+            artRefs = null;
+        }
         changed();
     }
 
     private void changed() {
         revision++;
-        artRefs = null;
         setChanged();
         if (level != null) {
             BlockState state = getBlockState();
@@ -300,6 +320,13 @@ public class TvBlockEntity extends BlockEntity {
             tag.put("layout", TvArtRef.clientTag(layout, artRefs()));
         } else {
             TvLayout.CODEC.encodeStart(NbtOps.INSTANCE, layout).result().ifPresent(value -> tag.put("layout", value));
+            if (artRefs != null && !artRefs.isEmpty() && artRefs.size() == layout.images().size()) {
+                long[] hashes = new long[artRefs.size()];
+                for (int i = 0; i < hashes.length; i++) {
+                    hashes[i] = artRefs.get(i).hash();
+                }
+                tag.putLongArray(HASHES_KEY, hashes);
+            }
         }
         if (!links.isEmpty()) {
             ListTag list = new ListTag();
@@ -333,6 +360,9 @@ public class TvBlockEntity extends BlockEntity {
         }
         layout = loaded;
         List<TvArtRef> refs = TvArtRef.read(stored);
+        if (refs == null) {
+            refs = TvArtRef.of(loaded, tag.getLongArray(HASHES_KEY));
+        }
         if (refs != null) {
             setArtRefs(refs);
         } else {
@@ -366,6 +396,15 @@ public class TvBlockEntity extends BlockEntity {
         readShared(tag);
         owner = tag.hasUUID("owner") ? tag.getUUID("owner") : null;
         access = TvAccess.load(tag.get("access"));
+    }
+
+    /**
+     * Os dados de bloco de um item só entram pela mão de um operador: o NBT gravado traz o dono e os resumos das artes,
+     * em que o servidor confia sem recalcular (um resumo forjado faria o cliente mostrar outra arte que tem guardada).
+     */
+    @Override
+    public boolean onlyOpCanSetNbt() {
+        return true;
     }
 
     @Override

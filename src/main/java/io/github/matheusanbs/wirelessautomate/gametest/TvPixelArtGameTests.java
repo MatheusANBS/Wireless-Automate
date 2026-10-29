@@ -191,7 +191,7 @@ public final class TvPixelArtGameTests {
     }
 
     @GameTest(template = "empty", timeoutTicks = 100)
-    public static void salvarLargaArteOrfaEImagemComArteQueNaoExiste(GameTestHelper helper) {
+    public static void salvarLargaArteOrfaEImagemComArteQueNaoExisteFicaSemArte(GameTestHelper helper) {
         TestPlayers.MenuPlayer player = TestPlayers.menuOpener(helper);
         withScreen(helper, player.getUUID(), tv -> {
             TvPixelArt used = art(UUID.randomUUID(), "usada", 8, 8, 5);
@@ -206,12 +206,36 @@ public final class TvPixelArtGameTests {
             helper.assertTrue(result.ok(), "recusou");
             TvLayout saved = tv.layout();
             helper.assertValueEqual(saved.images(), List.of(used), "a arte que ninguém usa saiu");
-            helper.assertValueEqual(saved.pieces().size(), 3, "a Imagem com arte que não existe saiu");
-            helper.assertValueEqual(saved.pieces().get(0).type(), TvPieceType.IMAGE, "a Imagem com arte ficou");
-            TvPiece kept = saved.pieces().get(2);
+            helper.assertValueEqual(saved.pieces().size(), 4, "uma peça saiu");
+            helper.assertValueEqual(saved.pieces().get(0).style().part().image(), Optional.of(used.id()),
+                    "a Imagem com arte ficou");
+            TvPiece lost = saved.pieces().get(1);
+            helper.assertTrue(lost.type() == TvPieceType.IMAGE && lost.style().part().image().isEmpty()
+                    && lost.width() == 16, "a Imagem com arte que não existe virou a Imagem sem arte, no lugar dela");
+            TvPiece kept = saved.pieces().get(3);
             helper.assertTrue(kept.type() == TvPieceType.IMAGE && kept.style().part().image().isEmpty(),
                     "a Imagem sem arte (nascida da paleta) ficou, sem arte");
             helper.assertValueEqual(saved.background(), TvBackground.DEFAULT, "o mosaico sem arte volta ao tema");
+        });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 100, batch = "wirelessautomate_config_tv")
+    public static void layoutQueApontaMaisArtesQueOTetoERecusado(GameTestHelper helper) {
+        TestPlayers.MenuPlayer player = TestPlayers.menuOpener(helper);
+        withScreen(helper, player.getUUID(), tv -> {
+            int before = Config.tvMaxElements();
+            try {
+                Config.TV_MAX_ELEMENTS.set(TvLayout.HARD_CAP);
+                List<TvPiece> pieces = new ArrayList<>();
+                for (int i = 0; i <= TvLayout.MAX_IMAGES; i++) {
+                    pieces.add(image(UUID.randomUUID(), 0, 0, 8, 8, 1));
+                }
+                TvEditing.LayoutResult result = TvEditing.applyLayout(player, tv, TvLayout.of(pieces));
+                helper.assertFalse(result.ok(), "aceitou " + pieces.size() + " artes apontadas");
+                helper.assertTrue(tv.layout().pieces().isEmpty(), "o layout mudou");
+            } finally {
+                Config.TV_MAX_ELEMENTS.set(before);
+            }
         });
     }
 

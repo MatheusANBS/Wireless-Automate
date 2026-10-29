@@ -58,7 +58,14 @@ Importar PNG do computador; animação e camadas; paletas maiores que 16; paleta
 - **Pixel art:** "Copiar código" na aba Pixel art (a arte escolhida) dá `WA-ARTE1:` + o NBT da arte comprimido; "Colar código" cria uma arte nova na biblioteca (`SAVE_ART` com id novo; o nome vem do código, cortado em 32), dentro do `tv.maxArts`.
 - Sem pacote novo: o código é só cliente; o que vai ao servidor é o salvar e o `SAVE_ART` de sempre. A área de transferência é a do Minecraft (`KeyboardHandler`).
 
-- **Forma legível (pedido do dono, para IAs e pessoas escreverem):** o "Colar código" também aceita a arte como texto (`WA-ARTE1` numa linha, depois nome, tamanho, paleta de até 16 cores `RRGGBB[AA]` e uma linha por fileira de pixels com um caractere `0`–`f` por pixel) e o layout como `WA-TELA1` seguido de JSON do `TvLayout`. O JSON aceita cores em `#RRGGBB` ou por papel do tema e as artes na forma legível; as ligações que não existem saem. "Copiar como texto" exporta nessa forma. Os tetos e a validação são os mesmos do código comprimido. Um guia no GitHub (`docs/guia-pixel-art-com-ia.md`, em pt e en) ensina o formato a quem for gerar artes e layouts com uma IA; ele entra na Task 3.
+- **Forma legível (pedido do dono, para IAs e pessoas escreverem):** o "Colar código" também aceita a arte como texto (`WA-ARTE1` numa linha, depois nome, tamanho, paleta de até 16 cores `RRGGBB[AA]` e uma linha por fileira de pixels com um caractere `0`–`f` por pixel) e o layout como `WA-TELA1` seguido de JSON do `TvLayout`. O JSON aceita cores em `#RRGGBB` ou `#RRGGBBAA` (o alfa no fim, como no campo de cor do editor e na paleta) ou por papel do tema e as artes na forma legível; as ligações que não existem saem. "Copiar como texto" exporta nessa forma. Os tetos e a validação são os mesmos do código comprimido. Um guia no GitHub (`docs/guia-pixel-art-com-ia.md`, em pt e en) ensina o formato a quem for gerar artes e layouts com uma IA; ele entra na Task 3.
+
+### A Imagem se escolhe como o Ícone (pedido do dono, 29/10)
+
+- **Imagem na paleta de Peças**, ao lado do Ícone: um clique (ou arrastar) cria a peça, com a arte escolhida na aba Pixel art; se não houver arte escolhida, nasce sem arte e com a dica "Escolha a arte".
+- **Na aba Estilo, seção Peça:** uma grade com as miniaturas das artes da biblioteca, como a grade de itens do Ícone. Um clique escolhe ou troca a arte da Imagem, copiando-a para o layout (teto de pixels e aviso como hoje). As artes que só existem no layout, porque foram copiadas de outro jogador ou vieram de código, aparecem na grade marcadas como "da Tela".
+- **O fundo em mosaico** usa a mesma grade, no lugar do ‹ ›.
+- **Arrastar da aba Pixel art para a miniatura continua** como atalho.
 
 ### Acesso à Tela, igual às redes
 

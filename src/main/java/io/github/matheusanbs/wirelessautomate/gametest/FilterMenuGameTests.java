@@ -10,6 +10,7 @@ import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.menu.CardFilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
+import io.github.matheusanbs.wirelessautomate.menu.StorageFilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.FilterView;
 import io.github.matheusanbs.wirelessautomate.menu.EditTargetRef;
 import io.github.matheusanbs.wirelessautomate.menu.FilterOrigin;
@@ -166,6 +167,36 @@ public final class FilterMenuGameTests {
         helper.succeed();
     }
 
+    /** Limite por tipo do armazenamento: só o filtro de um armazenamento aceita, e a visão nova chega. */
+    @GameTest(template = "empty")
+    public static void typeLimitEditsOnlyStorage(GameTestHelper helper) {
+        RouterBlockEntity router = chestWithRouter(helper);
+        ServerPlayer player = playerNear(helper, router);
+        FilterMenu faceMenu = openFace(player, router, ResourceType.ITEM);
+        try {
+            helper.assertFalse(edit(player, faceMenu, Op.SET_TYPE_LIMIT, 0, 500, ""), "a face aceitou o limite por tipo");
+        } finally {
+            close(player);
+        }
+        helper.setBlock(CHEST.east(), ModBlocks.STORAGE_CHEST.get().defaultBlockState());
+        io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockEntity chest = helper.getBlockEntity(CHEST.east());
+        StorageFilterTarget target = new StorageFilterTarget(chest);
+        FilterMenu menu = new FilterMenu(CONTAINER_ID, player.getInventory(), target, target.view(player));
+        player.containerMenu = menu;
+        try {
+            helper.assertTrue(menu.pollView() == null, "visão sem mudança");
+            helper.assertTrue(edit(player, menu, Op.SET_TYPE_LIMIT, 0, 500, ""), "recusou o limite por tipo");
+            helper.assertFalse(edit(player, menu, Op.SET_TYPE_LIMIT, 0, -1, ""), "aceitou limite negativo");
+            helper.assertValueEqual(chest.filter().typeLimit(), 500L, "limite no armazenamento");
+            FilterView view = menu.pollView();
+            helper.assertTrue(view != null && view.filter().typeLimit() == 500L && view.isStorage(),
+                    "a visão nova não trouxe o limite");
+        } finally {
+            close(player);
+        }
+        helper.succeed();
+    }
+
     @GameTest(template = "empty")
     public static void editsChangeTheFaceFilter(GameTestHelper helper) {
         RouterBlockEntity router = chestWithRouter(helper);
@@ -194,9 +225,14 @@ public final class FilterMenuGameTests {
             helper.assertFalse(edit(player, menu, Op.SET_STOCK, 5, 1, ""), "aceitou índice fora");
             helper.assertValueEqual(router.face(ResourceType.ITEM, Direction.UP).filter().entries().get(1).stock(), 64L,
                     "estoque");
+            helper.assertTrue(edit(player, menu, Op.SET_KEEP, 1, 32, ""), "recusou o manter");
+            helper.assertFalse(edit(player, menu, Op.SET_KEEP, 1, -1, ""), "aceitou manter negativo");
+            helper.assertValueEqual(router.face(ResourceType.ITEM, Direction.UP).filter().entries().get(1).keep(), 32L,
+                    "manter");
+            helper.assertTrue(edit(player, menu, Op.SET_KEEP, 1, 0, ""), "recusou zerar o manter");
 
             helper.assertTrue(edit(player, menu, Op.SET_LIST_MODE, 0, 1, ""), "recusou lista negra");
-            helper.assertFalse(edit(player, menu, Op.SET_LIST_MODE, 0, 2, ""), "aceitou modo inválido");
+            helper.assertFalse(edit(player, menu, Op.SET_LIST_MODE, 0, 3, ""), "aceitou modo inválido");
             helper.assertTrue(edit(player, menu, Op.SET_COMPONENTS, 0, 1, ""), "recusou componentes");
             filter = router.face(ResourceType.ITEM, Direction.UP).filter();
             helper.assertValueEqual(filter.listMode(), Filter.ListMode.BLACKLIST, "modo");

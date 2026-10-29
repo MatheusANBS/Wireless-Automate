@@ -20,6 +20,11 @@ import net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs;
  */
 public record FilterView(ResourceType type, Optional<BlockPos> router, Optional<Direction> face, Filter filter,
         boolean hasCard) {
+    /** Filtro de um armazenamento: a posição dele, sem face. */
+    public boolean isStorage() {
+        return router.isPresent() && face.isEmpty();
+    }
+
     public boolean isCard() {
         return router.isEmpty();
     }

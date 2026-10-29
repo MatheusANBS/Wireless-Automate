@@ -1,7 +1,5 @@
 package io.github.matheusanbs.wirelessautomate.storage;
 
-import io.github.matheusanbs.wirelessautomate.filter.Filter;
-import io.github.matheusanbs.wirelessautomate.filter.FilterSet;
 import io.github.matheusanbs.wirelessautomate.filter.StockLimit;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
 import net.minecraft.core.BlockPos;
@@ -35,20 +33,12 @@ public class StorageChemicalTankBlockEntity extends KeyedStorageBlockEntity<Reso
         return "chemicals";
     }
 
-    /** O filtro de entrada: nada se recusa; com estoque, só até o Tanque ter N mB do químico. */
+    /** Só até o Tanque ter N mB do químico: o limite da entrada que casa, ou o limite por tipo do Tanque. */
     private long admit(ResourceLocation id, long amount) {
-        FilterSet set = filter().asSet();
-        if (set.isEmpty()) {
+        long limit = filter().chemicalTypeLimit(id);
+        if (limit <= 0) {
             return amount;
         }
-        if (!set.testChemical(id)) {
-            return 0;
-        }
-        Filter rule = set.chemicalStockFilter(id);
-        long stock = rule == null ? 0 : rule.chemicalStock(id);
-        if (stock > 0) {
-            return StockLimit.acceptable(storage.count(id), stock, amount);
-        }
-        return amount;
+        return StockLimit.acceptable(storage.count(id), limit, amount);
     }
 }

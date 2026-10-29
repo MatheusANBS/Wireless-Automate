@@ -1,7 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.storage;
 
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
-import io.github.matheusanbs.wirelessautomate.filter.FilterSet;
 import io.github.matheusanbs.wirelessautomate.filter.StockLimit;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
 import net.minecraft.core.BlockPos;
@@ -40,21 +39,14 @@ public class StorageTankBlockEntity extends KeyedStorageBlockEntity<FluidStack> 
         return "fluids";
     }
 
-    /** O filtro de entrada: nada se recusa; com estoque, só até o Tanque ter N mB do fluido. */
+    /** Só até o Tanque ter N mB do fluido: o limite da entrada que casa, ou o limite por tipo do Tanque. */
     private long admit(FluidStack key, long amount) {
-        FilterSet set = filter().asSet();
-        if (set.isEmpty()) {
+        Filter filter = filter();
+        long limit = filter.fluidTypeLimit(key);
+        if (limit <= 0) {
             return amount;
         }
-        if (!set.testFluid(key)) {
-            return 0;
-        }
-        Filter rule = set.fluidStockFilter(key);
-        long stock = rule == null ? 0 : rule.fluidStock(key);
-        if (stock > 0) {
-            long present = rule.matchComponents() ? storage.count(key) : storage.countFluid(key);
-            return StockLimit.acceptable(present, stock, amount);
-        }
-        return amount;
+        long present = filter.matchComponents() ? storage.count(key) : storage.countFluid(key);
+        return StockLimit.acceptable(present, limit, amount);
     }
 }

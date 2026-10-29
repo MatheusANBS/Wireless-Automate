@@ -58,6 +58,8 @@ Importar PNG do computador; animação e camadas; paletas maiores que 16; paleta
 - **Pixel art:** "Copiar código" na aba Pixel art (a arte escolhida) dá `WA-ARTE1:` + o NBT da arte comprimido; "Colar código" cria uma arte nova na biblioteca (`SAVE_ART` com id novo; o nome vem do código, cortado em 32), dentro do `tv.maxArts`.
 - Sem pacote novo: o código é só cliente; o que vai ao servidor é o salvar e o `SAVE_ART` de sempre. A área de transferência é a do Minecraft (`KeyboardHandler`).
 
+- **Forma legível (pedido do dono, para IAs e pessoas escreverem):** o "Colar código" também aceita a arte como texto (`WA-ARTE1` numa linha, depois nome, tamanho, paleta de até 16 cores `RRGGBB[AA]` e uma linha por fileira de pixels com um caractere `0`–`f` por pixel) e o layout como `WA-TELA1` seguido de JSON do `TvLayout`. O JSON aceita cores em `#RRGGBB` ou por papel do tema e as artes na forma legível; as ligações que não existem saem. "Copiar como texto" exporta nessa forma. Os tetos e a validação são os mesmos do código comprimido. Um guia no GitHub (`docs/guia-pixel-art-com-ia.md`, em pt e en) ensina o formato a quem for gerar artes e layouts com uma IA; ele entra na Task 3.
+
 ### Acesso à Tela, igual às redes
 
 - A Tela ganha uma lista de acesso: jogadores convidados (UUID) e times do FTB Teams (UUID, só com o FTB instalado, pela ponte `TeamAccess`). Quem está na lista edita a Tela como o dono (tamanho, layout, ligações dentro do que cada um acessa); ver a Tela continua liberado para todos.

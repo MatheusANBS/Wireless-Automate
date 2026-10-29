@@ -115,7 +115,8 @@ public final class TvEditorImage {
                 TvPaintMath.blinkOff(gameTime), scale, height, true);
         blinking = (flags & TvPainter.FLAG_BLINK) != 0;
         TvTimed.editor((flags & TvPainter.FLAG_GRAPH) != 0, (flags & TvPainter.FLAG_CLOCK) != 0,
-                (flags & TvPainter.FLAG_ICON) != 0, (flags & TvPainter.FLAG_GIF) != 0);
+                (flags & TvPainter.FLAG_ICON) != 0, (flags & TvPainter.FLAG_GIF) != 0,
+                (flags & TvPainter.FLAG_ART) != 0 ? TvPaintImage.artNext : Long.MAX_VALUE);
         TvTargets.end(graphics);
         RenderSystem.setProjectionMatrix(projection, sorting);
         minecraft.getMainRenderTarget().bindWrite(true);

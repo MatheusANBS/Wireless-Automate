@@ -136,8 +136,7 @@ public final class TvArtCache {
             return null;
         }
         TvPixelArt art = entry.art;
-        return ref.matches(art) ? art
-                : new TvPixelArt(ref.id(), ref.name(), art.width(), art.height(), art.palette(), art.pixels());
+        return ref.matches(art) ? art : art.copy(ref.id(), ref.name());
     }
 
     /**

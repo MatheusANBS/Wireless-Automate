@@ -122,7 +122,14 @@ public final class TvIcons {
         PIXEL_PERFECT("pixel_perfect"),
         PIXEL_FLIP_H("virar_h"),
         PIXEL_FLIP_V("virar_v"),
-        PIXEL_ROTATE("girar");
+        PIXEL_ROTATE("girar"),
+        /** Quadro novo: a faixa de quadros do editor de pixel art. */
+        ADD("add"),
+        /** Tocar e pausar a prévia da animação: a faixa de quadros. */
+        FRAME_PLAY("quadro_tocar"),
+        FRAME_PAUSE("quadro_pausar"),
+        /** O papel vegetal (o quadro anterior por baixo): a faixa de quadros. */
+        ONION("papel_vegetal");
 
         private final ResourceLocation light;
         private final ResourceLocation dark;

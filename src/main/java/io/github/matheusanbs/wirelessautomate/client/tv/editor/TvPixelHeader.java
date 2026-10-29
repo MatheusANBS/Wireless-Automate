@@ -155,13 +155,20 @@ final class TvPixelHeader {
         applyIfIdle();
     }
 
-    /** O tamanho pedido vira o da arte, se nenhum campo está no meio de uma mudança. */
+    /**
+     * O tamanho pedido vira o da arte, se nenhum campo está no meio de uma mudança; o que os quadros somados não
+     * deixam (o teto da Tela) volta ao tamanho de agora.
+     */
     private void applyIfIdle() {
         if (pressed || widthField.wantsKeys() || heightField.wantsKeys()) {
             return;
         }
         if (wantedW != session.canvas().width() || wantedH != session.canvas().height()) {
             session.resize(wantedW, wantedH);
+            wantedW = session.canvas().width();
+            wantedH = session.canvas().height();
+            widthField.refresh();
+            heightField.refresh();
         }
     }
 

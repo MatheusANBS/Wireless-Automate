@@ -5,11 +5,12 @@ package io.github.matheusanbs.wirelessautomate.client.tv.editor;
  * mesma do editor da Tela (no mínimo {@link TvEditorLayout#MIN_W} × {@link TvEditorLayout#MIN_H}): o cabeçalho com o
  * título, o nome e o tamanho (até antes do botão do tema); as ferramentas em duas colunas à esquerda, com o Limpar
  * tudo no pé delas (um botão de texto curto: ali sobra altura até na janela mínima, e a prévia da coluna da direita
- * fica com ela); a coluna da paleta, da cor, da prévia e de Cancelar e Salvar à direita; e no centro o quadro, com as
- * duas linhas do rodapé embaixo. Toda a sobra vai para o quadro. Pura, com JUnit; refeita só quando a janela muda.
+ * fica com ela); a coluna da paleta, da cor, da prévia e de Cancelar e Salvar à direita; e no centro o quadro, com a
+ * faixa de quadros da animação ({@link TvPixelStrip}) e as duas linhas do rodapé embaixo. Toda a sobra vai para o
+ * quadro. Pura, com JUnit; refeita só quando a janela muda.
  */
-record TvPixelLayout(TvRect header, TvRect tools, TvRect board, TvRect footer, TvRect status, TvRect side,
-        TvRect clear) {
+record TvPixelLayout(TvRect header, TvRect tools, TvRect board, TvRect strip, TvRect footer, TvRect status,
+        TvRect side, TvRect clear) {
     static final int PAD = TvEditorLayout.PAD;
     static final int GAP = TvEditorLayout.GAP;
     /** Um botão de ferramenta: o ícone de 16 px com 1 px de borda. */
@@ -19,6 +20,7 @@ record TvPixelLayout(TvRect header, TvRect tools, TvRect board, TvRect footer, T
     static final int FOOTER_H = TvIcons.SIZE;
     static final int STATUS_H = 10;
     static final int CLEAR_H = 14;
+    static final int STRIP_H = TvPixelStrip.HEIGHT;
     /** O botão do tema do cabeçalho (o {@code ThemeToggle}, 11 px) e a margem dele até a borda. */
     private static final int THEME_ROOM = 8 + 11 + 6;
 
@@ -33,7 +35,8 @@ record TvPixelLayout(TvRect header, TvRect tools, TvRect board, TvRect footer, T
         int centerW = Math.max(0, side.x() - GAP - centerX);
         TvRect status = new TvRect(centerX, bottom - STATUS_H, centerW, STATUS_H);
         TvRect footer = new TvRect(centerX, status.y() - 2 - FOOTER_H, centerW, FOOTER_H);
-        TvRect board = new TvRect(centerX, top, centerW, Math.max(0, footer.y() - 3 - top));
-        return new TvPixelLayout(header, tools, board, footer, status, side, clear);
+        TvRect strip = new TvRect(centerX, footer.y() - 3 - STRIP_H, centerW, STRIP_H);
+        TvRect board = new TvRect(centerX, top, centerW, Math.max(0, strip.y() - 3 - top));
+        return new TvPixelLayout(header, tools, board, strip, footer, status, side, clear);
     }
 }

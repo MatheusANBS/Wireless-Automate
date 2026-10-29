@@ -175,8 +175,19 @@ public final class TvCodes {
 
     /** O código legível da arte, com as linhas de pixels. */
     public static String artText(TvPixelArt art, boolean english) {
-        return TvArtText.format(new TvArtText.Art(art.name(), art.width(), art.height(), art.palette(),
-                art.pixels()), english);
+        return TvArtText.format(plain(art), english);
+    }
+
+    /** A arte na forma do {@link TvArtText}, com os quadros. */
+    static TvArtText.Art plain(TvPixelArt art) {
+        return new TvArtText.Art(art.name(), art.width(), art.height(), art.palette(), art.pixels(), art.frames(),
+                art.fps(), art.mode());
+    }
+
+    /** A arte lida do {@link TvArtText} com o id {@code id}. */
+    static TvPixelArt full(UUID id, TvArtText.Art art) {
+        return new TvPixelArt(id, art.name(), art.width(), art.height(), art.palette(), art.pixels(), art.frames(),
+                art.fps(), art.mode());
     }
 
     private static @Nullable String code(String prefix, Tag tag) {
@@ -220,8 +231,7 @@ public final class TvCodes {
         if (readable(TvArtText.HEADER, text) >= 0) {
             TvArtText.Parsed parsed = TvArtText.parse(text);
             TvArtText.Art art = parsed.art();
-            return art == null ? Read.fail(parsed.error(), parsed.args()) : Read.ok(new TvPixelArt(UUID.randomUUID(),
-                    art.name(), art.width(), art.height(), art.palette(), art.pixels()));
+            return art == null ? Read.fail(parsed.error(), parsed.args()) : Read.ok(full(UUID.randomUUID(), art));
         }
         CompoundTag tag = read(ART_PREFIX, text, TvLayoutPayload.MAX_BYTES);
         Optional<TvPixelArt> art = tag == null ? Optional.empty()

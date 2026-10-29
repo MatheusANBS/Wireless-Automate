@@ -12,7 +12,8 @@ import net.minecraft.client.gui.GuiGraphics;
  * janela pequena), a área se divide em duas: o 1× à esquerda e o 3 × 3 inteiro, reduzido, à direita, sem o 2×, para
  * as emendas do mosaico continuarem à vista; e se o 1× não cabe inteiro na metade, só o 3 × 3 fica, reduzido na área
  * toda (um 1× cortado não mostra o tamanho de verdade). O rótulo acompanha o que aparece ({@link #labelKey}). Clicar
- * numa leva a vista do quadro até aquele pixel. As caixas são refeitas só quando o tamanho da arte muda.
+ * numa leva a vista do quadro até aquele pixel. As caixas são refeitas só quando o tamanho da arte muda. A arte
+ * animada toca nas três ({@link io.github.matheusanbs.wirelessautomate.client.tv.pixel.TvPixelFrames#previewFrame}).
  */
 final class TvPixelPreview {
     private static final int GAP = 4;
@@ -100,7 +101,8 @@ final class TvPixelPreview {
         return labelKey;
     }
 
-    void render(GuiGraphics g, TvPixelCanvas canvas) {
+    /** Desenha as prévias com o quadro {@code frame} da arte. */
+    void render(GuiGraphics g, TvPixelCanvas canvas, int frame) {
         int aw = canvas.width();
         int ah = canvas.height();
         if (aw != builtW || ah != builtH) {
@@ -117,8 +119,8 @@ final class TvPixelPreview {
             float fullH = ah * scales[i] * TILES[i];
             float u0 = (fullW - r.w()) / 2f / (aw * scales[i]);
             float v0 = (fullH - r.h()) / 2f / (ah * scales[i]);
-            texture.drawArt(g, r.x(), r.y(), r.right(), r.bottom(), u0, v0, u0 + r.w() / (aw * scales[i]),
-                    v0 + r.h() / (ah * scales[i]));
+            texture.drawFrame(g, canvas, frame, 1, r.x(), r.y(), r.right(), r.bottom(), u0, v0,
+                    u0 + r.w() / (aw * scales[i]), v0 + r.h() / (ah * scales[i]));
         }
     }
 

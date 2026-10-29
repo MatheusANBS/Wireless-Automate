@@ -225,7 +225,8 @@ final class TvArtGrid extends TvControl {
                 g.fill(cx, cy, cx + CELL, cy + CELL, GuiPaint.ROW_HOVER);
             }
             items[i].drawFitted(g, cx + 1, cy + 1, THUMB);
-            if (items[i].picture() != null && items[i].picture().animated()) {
+            if (items[i].picture() != null && items[i].picture().animated()
+                    || items[i].art() != null && items[i].art().animated()) {
                 TvArtThumbs.end(g);
                 TvEditorPaint.playMark(g, cx + CELL - 5, cy + CELL - 6);
             }

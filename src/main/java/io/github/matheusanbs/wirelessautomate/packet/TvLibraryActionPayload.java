@@ -22,7 +22,11 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
  */
 public record TvLibraryActionPayload(int containerId, Action action, Kind kind, String name, String newName,
         byte[] content) implements CustomPacketPayload {
-    public static final int MAX_BYTES = 64 * 1024;
+    /**
+     * O conteúdo de uma ação: cabe a maior arte que o modelo aceita (64 quadros de 128 × 128 em meio byte, 512 KB, e
+     * as chaves). O componente tem o teto dele no servidor, e a biblioteca inteira o do {@link TvLibraryPayload}.
+     */
+    public static final int MAX_BYTES = 520 * 1024;
     public static final int MAX_NAME = 64;
     public static final Type<TvLibraryActionPayload> TYPE = new Type<>(WirelessAutomate.id("tv_library_action"));
 

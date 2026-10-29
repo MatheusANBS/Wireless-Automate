@@ -53,6 +53,12 @@ final class TvImageOps {
         return layout.withImages(images);
     }
 
+    /**
+     * Quantos pixels o último layout recusado pelo teto somaria, com os quadros das artes animadas: o aviso da base
+     * mostra esse número e o teto ({@link TvBaseLine}).
+     */
+    static int refusedPixels;
+
     /** Os pixels que contam no teto: os das artes que alguma peça ou o fundo usam (as soltas saem ao salvar). */
     static int usedPixels(TvLayout layout) {
         return layout.prunedImages().imagePixels();
@@ -110,6 +116,7 @@ final class TvImageOps {
 
     /** O aviso de quando {@code next} não coube: o das imagens enviadas ou o dos pixels das artes. */
     private static void failFor(TvEditorDoc doc, TvLayout now, TvLayout next) {
+        refusedPixels = usedPixels(next);
         doc.fail(picturesFit(now, next) ? TvEditorDoc.Failure.IMAGES_FULL : TvEditorDoc.Failure.PICTURES_FULL);
     }
 

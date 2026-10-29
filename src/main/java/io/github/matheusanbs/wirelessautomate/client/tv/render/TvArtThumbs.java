@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import io.github.matheusanbs.wirelessautomate.client.tv.editor.TvLibraryClient;
 import io.github.matheusanbs.wirelessautomate.tv.TvPixelArt;
 import java.util.List;
+import net.minecraft.Util;
 import net.minecraft.client.gui.GuiGraphics;
 import org.joml.Matrix4f;
 
@@ -12,7 +13,8 @@ import org.joml.Matrix4f;
  * arte do {@link TvArtTextures}, a mesma que a Tela usa, sem nada pintado pixel a pixel. Uma lista de miniaturas
  * desenha entre {@link #begin} e {@link #end}, que fecham o lote da GUI uma vez antes da primeira e outra depois da
  * última (o tipo de desenho de cada arte já fecha o anterior ao trocar). Enquanto a biblioteca está no cliente (só com
- * o editor aberto, {@link TvLibraryClient}), as texturas dela ficam na varredura.
+ * o editor aberto, {@link TvLibraryClient}), as texturas dela ficam na varredura. A arte animada toca: cada miniatura
+ * mostra o quadro do relógio, o mesmo da Tela.
  */
 public final class TvArtThumbs {
     private static final int WHITE = 0xFFFFFFFF;
@@ -51,7 +53,8 @@ public final class TvArtThumbs {
 
     private static void quad(GuiGraphics g, TvPixelArt art, int x, int y, int w, int h) {
         Matrix4f matrix = g.pose().last().pose();
-        VertexConsumer buffer = g.bufferSource().getBuffer(TvArtTextures.renderType(art));
+        int frame = art.animated() ? art.frameAt(Util.getMillis()) : 0;
+        VertexConsumer buffer = g.bufferSource().getBuffer(TvArtTextures.renderType(art, frame));
         buffer.addVertex(matrix, x + w, y + h, 0).setUv(1, 1).setColor(WHITE);
         buffer.addVertex(matrix, x + w, y, 0).setUv(1, 0).setColor(WHITE);
         buffer.addVertex(matrix, x, y, 0).setUv(0, 0).setColor(WHITE);

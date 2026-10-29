@@ -48,7 +48,7 @@ O corpo abaixo descreve a etapa como foi feita; as seções de "Acréscimos" no 
 
 ## Fora
 
-Importar PNG do computador; animação e camadas; paletas maiores que 16; paletas prontas; contorno automático; seleção à mão livre ou por cor; deslocar a arte com volta; compartilhar artes entre jogadores.
+Importar PNG do computador; camadas; paletas maiores que 16; paletas prontas; contorno automático; seleção à mão livre ou por cor; deslocar a arte com volta; compartilhar artes entre jogadores.
 
 ## Acréscimos aprovados em 29/10 (depois do mockup v4)
 
@@ -98,7 +98,7 @@ O dono quer a Tela com mais espaço para crescer e aceita um pouco mais de custo
   - `vramBudgetMb` padrão de 400 para **1024**;
   - o teto de pixels redesenhados por quadro (`TvCanvases.FRAME_PIXELS`) e de Telas por quadro dobram;
   - o editor de pixel art aceita 128 × 128 (os níveis de zoom e o enquadrar já são genéricos).
-- **A animação de pixel art fica para a etapa 5**, depois do lançamento. Os quadros entram como lista opcional na arte, sem quebrar nada do que existe.
+- A animação de pixel art entrou nesta etapa, a pedido do dono (seção "Pixel art animada (Task 5)", no fim). Os quadros são uma lista opcional na arte, sem quebrar nada do que existe.
 
 ### Cor livre e arte até 256 × 256 (aprovado em 29/10)
 
@@ -187,3 +187,17 @@ O dono quer reproduzir imagens reais com fidelidade, não só pixel art. A pixel
   - O texto escolhido aparece no controle fechado, com um ▾.
 - **A roda do mouse nunca troca valor:** em cima de qualquer controle fechado, ela rola o painel. Os números com passo mantêm os botões ‹ › e o campo, sem a roda.
 - **Moderação de imagens:** quem bate no limite por minuto 3 vezes em 10 minutos fica 1 hora sem enviar (`tv.images.abuseCooldownMinutes`, 0 desliga). Os operadores online recebem um aviso no chat, o log do servidor ganha uma linha, e a lista `/wa tela imagens` mostra as recusas por jogador. Nunca expulsa nem bane a conta.
+
+### Pixel art animada (Task 5)
+
+Mockup aprovado: `docs/preview/tela-de-sinal-animacao.html`. O formato do código é o que os guias de IA já publicaram (`docs/guia-pixel-art-com-ia.md` e `docs/pixel-art-ai-guide.md`, seções "Pixel art animada" e "As artes dentro do JSON"), sem mudança.
+
+- **Modelo:** a `TvPixelArt` ganha `frames` (1 a 64), `fps` (1 a 20, padrão 6) e `mode` (loop ou vai e volta), com os quadros um depois do outro nos pixels, todos do mesmo tamanho e com a mesma paleta. As chaves de NBT são opcionais e só gravadas fora do padrão: a arte parada grava, resume (SHA-256) e desenha como antes, e um quadro só fica sempre com a velocidade e o modo padrão. O resumo de uma arte animada cobre os quadros, a velocidade e o modo.
+- **Tetos:** o `tv.maxImagePixels` da Tela soma os quadros (131.072: 32 × 32 com 128 quadros, 128 × 128 com 8); o editor não deixa passar dele (Quadro novo, Duplicar e o tamanho). O aviso de pixel art demais diz quanto somaria e o teto, e que os quadros somam ("98.304 de 16.384 pixels"), porque um mundo com a config antiga (16.384) recusa uma arte de 128 × 128 com 6 quadros que o padrão de hoje aceita. A biblioteca segue no teto do pacote; o conteúdo de uma ação da biblioteca sobe para 520 KB, onde cabe a maior arte do modelo (64 quadros de 128 × 128).
+- **Código:** `quadros`/`frames`, `velocidade`/`speed`, `modo`/`mode` (`loop`, `vaivem`/`pingpong`) e os blocos `quadro N:`/`frame N:`; no JSON, `quadros`/`frames` é uma lista de quadros de fileiras, com `velocidade` e `modo`. O "Copiar como texto" de uma arte animada gera essa forma, nas chaves do idioma do jogo. Erros com aviso: quadros fora de 1 a 64, quadros que não batem com a chave, quadro fora de ordem, linhas ou fileiras a mais ou a menos num quadro, velocidade e modo fora do aceito. Leniências: os blocos sem a chave `quadros` são contados, e `quadros: 1` com as linhas direto vale.
+- **Editor:** a faixa de quadros embaixo do quadro de desenho (Quadro novo, Duplicar, Remover, as miniaturas, arrastar para mudar a ordem), o papel vegetal (o anterior a 35%, liga e desliga), a velocidade com ‹ › e campo sem a roda, o modo num dropdown, Tocar/Pausar a prévia (1×, 2× e mosaico tocam; pausada, mostram o quadro escolhido), os atalhos `,` `.` Alt+N Alt+D Alt+O Alt+P, e Ctrl+C/V entre quadros. Tudo o que muda a arte entra no desfazer; escolher um quadro não. O Remover é um clique (desfaz com Ctrl+Z), porque o quadro removido volta pelo desfazer, ao contrário da arte removida da biblioteca.
+- **Ferramentas da arte inteira (decisão):** como o Aseprite, que tem o "Sprite > Rotate/Flip Canvas" para todos os quadros e só no quadro escolhido as ferramentas de pintura: virar e girar sem seleção valem para todos os quadros (girar troca o tamanho, e os quadros têm de ficar do mesmo tamanho); com seleção, só o pedaço no quadro escolhido. O tamanho muda todos os quadros. A paleta é uma só, então trocar uma cor e Criar rampa valem para todos. O Limpar e o balde (inclusive o Shift, que troca a cor no quadro inteiro) ficam no quadro escolhido.
+- **Na Tela:** o quadro vem do relógio do cliente (`Util.getMillis`, o mesmo zero do GIF), então duas Telas com a mesma arte tocam juntas e nenhuma guarda estado. O desenho guarda quando o próximo quadro começa; as Telas com arte animada ficam num mapa do `TvTimed`, e a cada quadro do jogo só as que passaram desse instante e estão à vista redesenham. Longe ou fora da tela, param; sem arte animada, é a checagem de um mapa vazio. As listas e as grades do editor tocam a arte com a marca ▶ do GIF.
+- **Texturas (decisão, com a medida):** uma textura por quadro, criada quando o quadro é pedido. O mosaico usa `GL_REPEAT`: uma tira com todos os quadros vazaria para o vizinho, e subir o quadro da vez por `glTexSubImage2D` refaria os mipmaps a cada troca e brigaria com quem mostra outro quadro da mesma arte ao mesmo tempo (a prévia pausada, as miniaturas). A memória é a mesma da tira: 128 × 128 com 8 quadros, 8 × 85 KB com os mipmaps (680 KB); 32 × 32 com 64, 64 × 5,3 KB (340 KB). Trocar de quadro é escolher outra textura, sem subir nada; o custo é o redesenho da Tela, o mesmo de qualquer mudança. As medidas do e2e estão no relatório da Task 5.
+- **Servidor:** nada de tick novo. Os quadros vão no mesmo pacote de artes, só a quem está perto, uma vez por mudança.
+

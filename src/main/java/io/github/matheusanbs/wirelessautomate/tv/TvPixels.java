@@ -10,6 +10,10 @@ import java.security.NoSuchAlgorithmException;
  * por pixel (um {@code byte} de 0 a 15); gravada, dois pixels por byte: o pixel par no meio byte de baixo e o ímpar
  * no de cima, e com um número ímpar de pixels o último meio byte fica 0. O {@link #hash} é o resumo do conteúdo que
  * o update tag da Tela leva no lugar dos pixels.
+ * <p>
+ * Uma arte animada tem de 1 a {@link #MAX_FRAMES} quadros do mesmo tamanho, um depois do outro no mesmo array, que
+ * tocam a {@link #MIN_FPS}–{@link #MAX_FPS} quadros por segundo em {@link Mode#LOOP} ou {@link Mode#PINGPONG}; o
+ * quadro da vez sai do relógio ({@link #frameAt}), o mesmo zero para todas as Telas.
  */
 public final class TvPixels {
     public static final int MIN_SIDE = 8;
@@ -17,6 +21,22 @@ public final class TvPixels {
     public static final int COLORS = 16;
     /** O índice transparente: a cor 0 da paleta nunca pinta. */
     public static final int TRANSPARENT = 0;
+    public static final int MAX_FRAMES = 64;
+    public static final int MIN_FPS = 1;
+    public static final int MAX_FPS = 20;
+    public static final int DEFAULT_FPS = 6;
+
+    /** Como a animação recomeça: do primeiro quadro, ou voltando pelo caminho (vai e volta). */
+    public enum Mode {
+        LOOP, PINGPONG;
+
+        private static final Mode[] ALL = values();
+
+        /** O modo gravado ({@link #ordinal}), ou {@code null} fora da lista. */
+        public static Mode of(int stored) {
+            return stored >= 0 && stored < ALL.length ? ALL[stored] : null;
+        }
+    }
 
     private TvPixels() {
     }
@@ -61,6 +81,14 @@ public final class TvPixels {
      * Calculado só quando o layout muda, nunca por tick.
      */
     public static long hash(int width, int height, int[] palette, byte[] pixels) {
+        return hash(width, height, palette, pixels, 1, DEFAULT_FPS, Mode.LOOP);
+    }
+
+    /**
+     * O {@link #hash} de uma arte com quadros: os pixels já trazem todos; o número de quadros, a velocidade e o modo
+     * entram no fim só numa arte animada, então o resumo de uma arte parada é o mesmo de antes dos quadros.
+     */
+    public static long hash(int width, int height, int[] palette, byte[] pixels, int frames, int fps, Mode mode) {
         MessageDigest sha;
         try {
             sha = MessageDigest.getInstance("SHA-256");
@@ -74,7 +102,34 @@ public final class TvPixels {
         }
         sha.update(head.array());
         sha.update(pixels);
+        if (frames > 1) {
+            sha.update(ByteBuffer.allocate(12).putInt(frames).putInt(fps).putInt(mode.ordinal()).array());
+        }
         return ByteBuffer.wrap(sha.digest()).getLong();
+    }
+
+    /**
+     * O quadro da vez no instante {@code nowMs} do relógio do cliente: um passo a cada {@code 1000 / fps} ms; no
+     * {@link Mode#LOOP} volta ao primeiro, no {@link Mode#PINGPONG} volta pelo caminho sem repetir as pontas
+     * (0 1 2 1 0 1 2...).
+     */
+    public static int frameAt(long nowMs, int frames, int fps, Mode mode) {
+        if (frames <= 1) {
+            return 0;
+        }
+        long step = Math.floorDiv(nowMs * fps, 1000L);
+        if (mode == Mode.LOOP) {
+            return (int) Math.floorMod(step, (long) frames);
+        }
+        int period = 2 * frames - 2;
+        int k = (int) Math.floorMod(step, (long) period);
+        return k < frames ? k : period - k;
+    }
+
+    /** O instante, em ms, em que o quadro de uma animação a {@code fps} muda depois de {@code nowMs}. */
+    public static long nextChange(long nowMs, int fps) {
+        long step = Math.floorDiv(nowMs * fps, 1000L) + 1;
+        return Math.floorDiv(step * 1000L + fps - 1, (long) fps);
     }
 
     /**
@@ -82,13 +137,27 @@ public final class TvPixels {
      * um índice de 0 a 15 por pixel.
      */
     public static String problem(int width, int height, int[] palette, byte[] pixels) {
+        return problem(width, height, palette, pixels, 1, DEFAULT_FPS);
+    }
+
+    /**
+     * O {@link #problem} de uma arte com {@code frames} quadros a {@code fps}: de 1 a {@link #MAX_FRAMES} quadros, de
+     * {@link #MIN_FPS} a {@link #MAX_FPS} por segundo e os pixels de todos os quadros, um depois do outro.
+     */
+    public static String problem(int width, int height, int[] palette, byte[] pixels, int frames, int fps) {
+        if (frames < 1 || frames > MAX_FRAMES) {
+            return "quadros fora de 1 a " + MAX_FRAMES + ": " + frames;
+        }
+        if (fps < MIN_FPS || fps > MAX_FPS) {
+            return "velocidade fora de " + MIN_FPS + " a " + MAX_FPS + ": " + fps;
+        }
         if (!validSize(width, height)) {
             return "tamanho fora de " + MIN_SIDE + " a " + MAX_SIDE + ": " + width + " × " + height;
         }
         if (palette == null || palette.length != COLORS) {
             return "a paleta precisa de " + COLORS + " cores";
         }
-        if (pixels == null || pixels.length != width * height) {
+        if (pixels == null || pixels.length != width * height * frames) {
             return "pixels a mais ou a menos";
         }
         for (byte pixel : pixels) {

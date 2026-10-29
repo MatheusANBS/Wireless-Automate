@@ -17,6 +17,8 @@ class TvPixelLayoutTest {
         assertEquals(TvPixelLayout.TOOLS_W, l.clear().w());
         assertEquals(l.side().bottom(), l.clear().bottom(), "alinhado com Cancelar e Salvar");
         assertTrue(l.clear().right() < l.board().x());
+        assertTrue(l.board().h() >= 120, "a faixa de quadros deixa o quadro usável: " + l.board().h());
+        assertTrue(l.strip().w() >= TvPixelStrip.MIN_W, "a faixa cabe inteira: " + l.strip().w());
     }
 
     @Test
@@ -24,7 +26,10 @@ class TvPixelLayoutTest {
         TvPixelLayout l = TvPixelLayout.of(10, 20, 640, 400);
         assertTrue(l.tools().right() < l.board().x());
         assertTrue(l.board().right() < l.side().x());
-        assertTrue(l.board().bottom() < l.footer().y());
+        assertTrue(l.board().bottom() < l.strip().y());
+        assertTrue(l.strip().bottom() < l.footer().y());
+        assertEquals(l.board().x(), l.strip().x());
+        assertEquals(l.board().w(), l.strip().w());
         assertTrue(l.footer().bottom() < l.status().y());
         assertEquals(20 + 400 - TvPixelLayout.PAD, l.status().bottom());
         assertTrue(l.tools().bottom() < l.clear().y());

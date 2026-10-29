@@ -164,8 +164,8 @@ esquerda ao claro à direita: o clarear e o escurecer andam por ela.
   **Delete** apaga.
 - Com uma seleção, as ferramentas só pintam dentro dela.
 - **Shift+H** e **Shift+V** viram na horizontal e na vertical, e o botão de girar gira 90° no sentido horário. Com
-  uma seleção, só o pedaço.
-- **Limpar** apaga a arte inteira, em dois cliques.
+  uma seleção, só o pedaço; sem ela, todos os quadros de uma arte animada.
+- **Limpar** apaga o quadro escolhido inteiro, em dois cliques.
 
 ### Navegar no quadro
 
@@ -181,6 +181,30 @@ esquerda ao claro à direita: o clarear e o escurecer andam por ela.
 O rodapé mostra a posição e a cor sob o mouse. A coluna da direita mostra a arte em 1×, 2× e repetida, como no
 mosaico (com pouco espaço ou numa arte grande, só o que cabe inteiro). **Esc** sem seleção faz o mesmo que
 **Cancelar**.
+
+### Animação (quadros)
+
+Uma arte pode ter vários quadros, que tocam na Imagem e no mosaico. Todas as Telas com a mesma arte tocam juntas, e a
+Tela só troca de quadro quando está à vista.
+
+- A **faixa de quadros**, embaixo do quadro de desenho, mostra as miniaturas; a escolhida é a que você desenha. Clique
+  para escolher e arraste para mudar a ordem.
+- **+** põe um quadro vazio depois do escolhido, o botão de duplicar copia o escolhido e o de remover o tira.
+- **Papel vegetal:** o quadro anterior aparece apagado por baixo, para desenhar o próximo.
+- **Velocidade:** de 1 a 20 quadros por segundo, pelo **‹ ›** ou digitando. **Modo:** **Loop** (volta ao primeiro) ou
+  **Vai e volta**. O botão de tocar pausa e toca a prévia (pausada, ela mostra o quadro escolhido).
+- Até 64 quadros, do mesmo tamanho e com a mesma paleta. Os quadros contam no teto de pixels da Tela: uma arte de
+  32 × 32 com 10 quadros conta 10.240.
+- Tudo entra no **Ctrl+Z**. A paleta vale para todos os quadros; o **Limpar** e as ferramentas, para o escolhido.
+
+| Tecla | O que faz |
+| --- | --- |
+| **,** e **.** | Quadro anterior e seguinte. |
+| **Alt+N** | Quadro novo vazio, depois do escolhido. |
+| **Alt+D** | Duplica o quadro escolhido. |
+| **Alt+O** | Liga e desliga o papel vegetal. |
+| **Alt+P** | Toca e pausa a prévia. |
+| **Ctrl+C** e **Ctrl+V** | Copiam um pedaço de um quadro e colam em outro. |
 
 ### Pôr a arte na Tela
 

@@ -7,6 +7,7 @@ import io.github.matheusanbs.wirelessautomate.client.tv.pixel.TvPixelCanvas;
 import io.github.matheusanbs.wirelessautomate.client.tv.pixel.TvPixelSession;
 import io.github.matheusanbs.wirelessautomate.tv.TvColor;
 import io.github.matheusanbs.wirelessautomate.tv.TvPixels;
+import net.minecraft.Util;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -148,7 +149,7 @@ final class TvPixelSide {
             previewLabel = GuiText.fit(font, TvEditorText.key(key), previewW);
         }
         GuiText.draw(g, font, previewLabel, swatches[0].x(), previewY, GuiPaint.MUTED);
-        preview.render(g, canvas);
+        preview.render(g, canvas, session.frames().previewFrame(Util.getMillis()));
         TvRect clear = buttons[Button.CLEAR.ordinal()];
         if (clearClick.armed(System.currentTimeMillis())) {
             TvEditorPaint.danger(g, font, clear, clearLabel);

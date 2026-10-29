@@ -83,6 +83,7 @@ final class E2eTvSteps {
         E2eTvEditorSteps.editorSteps(list, () -> tv);
         E2eTvPixelSteps.pixelSteps(list);
         E2eTvArtSteps.artSteps(list, playerId, () -> tv);
+        E2eTvAnimSteps.animSteps(list, playerId, () -> tv);
         E2eVariants.escuro(list, () -> {
             list.add(E2eDarkSteps.themeClick("Tela: escuro", GuiTheme.DARK));
             list.add(tab("Tela: aba Tamanho no escuro", TvScreen.Tab.SIZE));

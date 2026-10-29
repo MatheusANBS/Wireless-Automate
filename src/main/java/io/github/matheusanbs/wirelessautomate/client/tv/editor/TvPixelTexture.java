@@ -11,6 +11,8 @@ import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiThemes;
 import io.github.matheusanbs.wirelessautomate.client.tv.pixel.TvPixelCanvas;
 import io.github.matheusanbs.wirelessautomate.client.tv.pixel.TvPixelSelection;
+import io.github.matheusanbs.wirelessautomate.tv.TvPixels;
+import java.util.Arrays;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.texture.DynamicTexture;
@@ -23,6 +25,10 @@ import org.joml.Matrix4f;
  * refeita e subida só quando um pixel, uma cor ou o pedaço muda, nunca por quadro; e a do xadrez do transparente, 2 × 2
  * nas cores do tema da GUI. As duas são {@code NEAREST} e repetem nas bordas ({@code NativeImage.upload} sem
  * {@code clamp}), então a prévia em mosaico e o xadrez são um quadrilátero só cada. Soltas ao fechar o editor.
+ * <p>
+ * Os outros quadros da animação (a faixa, o papel vegetal e a prévia tocando) têm uma textura cada, refeita só quando
+ * o array do quadro troca (os quadros que não estão escolhidos nunca mudam no lugar) ou a paleta muda; o quadro
+ * escolhido usa a textura da arte.
  */
 final class TvPixelTexture {
     private @Nullable DynamicTexture art;
@@ -32,6 +38,14 @@ final class TvPixelTexture {
     private int builtSelection = -1;
     private @Nullable DynamicTexture checker;
     private int checkerTheme = -1;
+    private int builtFrame = -1;
+    private DynamicTexture[] frames = new DynamicTexture[0];
+    /** O array de pixels de que cada textura de quadro foi feita, e a paleta da vez dela. */
+    private byte[][] framePixels = new byte[0][];
+    private int[] framePalette = new int[0];
+    private final int[] palette = new int[TvPixels.COLORS];
+    private int paletteSerial;
+    private int paletteChecked = -1;
 
     /** Refaz a textura da arte se algo mudou desde a última vez (o tamanho muda: uma textura nova). */
     void sync(TvPixelCanvas canvas, TvPixelSelection selection) {
@@ -44,11 +58,13 @@ final class TvPixelTexture {
             art = new DynamicTexture(artW, artH, false);
             builtCanvas = -1;
         }
-        if (builtCanvas == canvas.version() && builtSelection == selection.version()) {
+        if (builtCanvas == canvas.version() && builtSelection == selection.version()
+                && builtFrame == canvas.current()) {
             return;
         }
         builtCanvas = canvas.version();
         builtSelection = selection.version();
+        builtFrame = canvas.current();
         NativeImage image = art.getPixels();
         int[] palette = canvas.palette();
         for (int y = 0; y < artH; y++) {
@@ -76,6 +92,65 @@ final class TvPixelTexture {
         if (art != null) {
             quad(g, art.getId(), x0, y0, x1, y1, u0, v0, u1, v1);
         }
+    }
+
+    /**
+     * O quadro {@code index} da arte como a {@link #drawArt}, com a opacidade {@code alpha} (o papel vegetal); o
+     * escolhido sai da textura da arte, que o quadro de desenho já sincronizou.
+     */
+    void drawFrame(GuiGraphics g, TvPixelCanvas canvas, int index, float alpha, float x0, float y0, float x1,
+            float y1, float u0, float v0, float u1, float v1) {
+        int texture = index == canvas.current() ? art == null ? 0 : art.getId() : frameTexture(canvas, index);
+        if (texture == 0) {
+            return;
+        }
+        if (alpha < 1) {
+            RenderSystem.setShaderColor(1, 1, 1, alpha);
+        }
+        quad(g, texture, x0, y0, x1, y1, u0, v0, u1, v1);
+        if (alpha < 1) {
+            RenderSystem.setShaderColor(1, 1, 1, 1);
+        }
+    }
+
+    /** A textura de um quadro que não é o escolhido, refeita se o array dele ou a paleta mudaram. */
+    private int frameTexture(TvPixelCanvas canvas, int index) {
+        if (frames.length < canvas.frames()) {
+            frames = Arrays.copyOf(frames, canvas.frames());
+            framePixels = Arrays.copyOf(framePixels, canvas.frames());
+            framePalette = Arrays.copyOf(framePalette, canvas.frames());
+        }
+        if (paletteChecked != canvas.version()) {
+            paletteChecked = canvas.version();
+            if (!Arrays.equals(palette, canvas.palette())) {
+                System.arraycopy(canvas.palette(), 0, palette, 0, palette.length);
+                paletteSerial++;
+            }
+        }
+        byte[] content = canvas.frame(index);
+        DynamicTexture texture = frames[index];
+        int w = canvas.width();
+        int h = canvas.height();
+        if (texture == null || texture.getPixels().getWidth() != w || texture.getPixels().getHeight() != h) {
+            if (texture != null) {
+                texture.close();
+            }
+            texture = new DynamicTexture(w, h, false);
+            frames[index] = texture;
+            framePixels[index] = null;
+        }
+        if (framePixels[index] != content || framePalette[index] != paletteSerial) {
+            framePixels[index] = content;
+            framePalette[index] = paletteSerial;
+            NativeImage image = texture.getPixels();
+            for (int y = 0; y < h; y++) {
+                for (int x = 0; x < w; x++) {
+                    image.setPixelRGBA(x, y, FastColor.ABGR32.fromArgb32(palette[content[y * w + x]]));
+                }
+            }
+            texture.upload();
+        }
+        return texture.getId();
     }
 
     /** O xadrez com casas de {@code cell} px, alinhado em ({@code originX}, {@code originY}). */
@@ -125,7 +200,16 @@ final class TvPixelTexture {
             checker.close();
             checker = null;
         }
+        for (DynamicTexture frame : frames) {
+            if (frame != null) {
+                frame.close();
+            }
+        }
+        frames = new DynamicTexture[0];
+        framePixels = new byte[0][];
+        framePalette = new int[0];
         builtCanvas = -1;
         checkerTheme = -1;
+        paletteChecked = -1;
     }
 }

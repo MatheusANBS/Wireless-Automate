@@ -6,6 +6,18 @@ Este guia ensina a uma IA de chat (Claude, ChatGPT e outras) o texto que a **Tel
 Com ele, a IA desenha uma pixel art (parada ou animada), prepara uma imagem ou um GIF de verdade, ou monta uma Tela
 inteira, e você cola o resultado no jogo.
 
+## Qual formato usar
+
+| Você quer | Use | Cores | Tamanho |
+| --- | --- | --- | --- |
+| Um logo, um ícone, um desenho de pixels nítidos, que você ainda vai editar no jogo | **Pixel art** (`WA-ARTE1`) | Até 16 por arte, escolhidas à vontade | Até 128 × 128 |
+| Uma pixel art que se mexe | **Pixel art animada** (`WA-ARTE1` com quadros) | Até 16 por arte | Até 128 × 128, até 64 quadros |
+| Uma foto, uma pintura, qualquer imagem com todas as cores, ou um GIF | **Imagem** (`WA-IMAGEM1`) | **Todas** (cor livre) | Até 1024 × 1024, GIF até 240 quadros |
+| Uma Tela inteira, com textos, números e imagens | **Layout** (`WA-TELA1`) | As cores do tema ou quaisquer | A área da Tela |
+
+O limite de 16 cores vale **só para a pixel art**: é o que deixa ela nítida e editável no jogo, com as rampas. Para
+fidelidade total (a Mona Lisa como ela é, uma foto), use a **imagem**.
+
 ## Como usar
 
 1. Copie este arquivo inteiro e cole na conversa com a IA, antes do pedido.
@@ -303,7 +315,7 @@ Cada arte é um objeto com as mesmas partes da forma `WA-ARTE1`:
 
 | O quê | Teto (padrão do servidor) |
 | --- | --- |
-| Arte | De 8 × 8 a 128 × 128 pixels, 16 cores. |
+| Pixel art | De 8 × 8 a 128 × 128 pixels, 16 cores por arte. |
 | Pixels das artes de uma Tela | 131.072 somados, contando cada arte distinta uma vez e cada quadro (oito artes de 128 × 128). |
 | Quadros por arte | 64, de 1 a 20 por segundo. |
 | Imagem enviada | PNG, JPG ou GIF, até 1024 × 1024, 8 MB e 240 quadros. |
@@ -322,7 +334,7 @@ Acima de um teto, o editor avisa "Não cabe nesta Tela" e nada muda (os tetos de
 
 **Na arte:**
 
-- **Poucas cores.** 4 a 8 já dão uma arte bonita; 16 é o máximo.
+- **Poucas cores.** 4 a 8 já dão uma pixel art bonita; 16 é o máximo da pixel art (para mais cores, use a imagem).
 - **Rampas de 4 tons.** Organize a paleta em linhas de 4 cores, do escuro ao claro: as cores 0 a 3, 4 a 7, 8 a 11 e 12
   a 15 (a primeira linha começa no transparente). É como o editor do jogo organiza a paleta, e o clarear e o escurecer
   andam por essas linhas.

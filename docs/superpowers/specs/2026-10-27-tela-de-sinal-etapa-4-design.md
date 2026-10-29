@@ -54,7 +54,7 @@ Importar PNG do computador; animação e camadas; paletas maiores que 16; paleta
 
 ### Exportar e importar por código de texto
 
-- **Layout:** "Copiar código" (o layout atual do rascunho, ou um layout salvo na lista) põe na área de transferência do sistema um texto `WA-TELA1:` seguido do NBT do layout comprimido (deflate) em base64 sem quebra de linha; as imagens vão junto, como cópia. "Colar código" lê a área de transferência, decodifica no cliente (até 64 KB de texto, até `TvLayoutPayload.MAX_BYTES` de NBT, com o leitor leniente de sempre) e aplica no rascunho como uma mudança desfazível (`layout.import`); o servidor valida no Salvar, como qualquer layout (ligações a redes que o jogador não acessa saem com o aviso de sempre; tetos de peças, bytes e pixels). Código inválido: aviso no editor, nada muda.
+- **Layout:** "Copiar código" (o layout atual do rascunho, ou um layout salvo na lista) põe na área de transferência do sistema um texto `WA-TELA1:` seguido do NBT do layout comprimido (deflate) em base64 sem quebra de linha; as imagens vão junto, como cópia. "Colar código" lê a área de transferência, decodifica no cliente (até 512 KB de texto, até `TvLayoutPayload.MAX_BYTES` de NBT, com o leitor leniente de sempre) e aplica no rascunho como uma mudança desfazível (`layout.import`); o servidor valida no Salvar, como qualquer layout (ligações a redes que o jogador não acessa saem com o aviso de sempre; tetos de peças, bytes e pixels). Código inválido: aviso no editor, nada muda.
 - **Pixel art:** "Copiar código" na aba Pixel art (a arte escolhida) dá `WA-ARTE1:` + o NBT da arte comprimido; "Colar código" cria uma arte nova na biblioteca (`SAVE_ART` com id novo; o nome vem do código, cortado em 32), dentro do `tv.maxArts`.
 - Sem pacote novo: o código é só cliente; o que vai ao servidor é o salvar e o `SAVE_ART` de sempre. A área de transferência é a do Minecraft (`KeyboardHandler`).
 
@@ -64,3 +64,25 @@ Importar PNG do computador; animação e camadas; paletas maiores que 16; paleta
 - Só o dono (ou um operador) mexe na lista. Tetos: os mesmos da rede, `maxMembersPerNetwork` e `maxTeamsPerNetwork` (não há config nova).
 - Na tela do bloco, uma terceira aba **Acesso** (ao lado de Tamanho e Editar), só para o dono e operadores, no mesmo desenho da seção de acesso da central da rede (`client/tablet/AccessSection`): campo de nome com sugestões dos jogadores online, a lista de convidados com remover, e a lista de times.
 - Chave nova no `TvBlockEntity`: `access` (opcional; uma Tela antiga lê como lista vazia). Um pacote novo de ações de acesso, só com o menu aberto e com o limite de ações por segundo; `ModPayloads.VERSION` continua `"38"` (a 38 ainda não saiu em versão nenhuma).
+
+### Orçamento maior (aprovado em 29/10)
+
+O dono quer a Tela com mais espaço para crescer e aceita um pouco mais de custo no cliente. Para isso, **as artes saem do pacote do chunk**:
+
+- **No servidor e no disco nada muda:** o layout salvo guarda as artes inteiras, como hoje.
+- **O update tag e o pacote do chunk levam o layout sem os pixels:** só as referências (id, largura, altura e um resumo do conteúdo). O `tv.maxLayoutBytes` (16 KB, no máximo 24 KB) continua valendo para essa parte, então o risco de um chunk lotado desconectar quem chega perto não muda.
+- **Os pixels vão num pacote próprio de artes** (servidor → cliente), mandado pelo `TvManager` só a quem está a até `tv.viewDistance` e não tem as artes da revisão atual daquela Tela, uma vez por mudança. Também vai na abertura do menu, para o editor ter as artes.
+- **O envio tem orçamento por tick por jogador** (por exemplo 256 KB), com fila, para uma área cheia de Telas não dar pico.
+- **No cliente:** as artes ficam guardadas pelo resumo do conteúdo, e uma arte igual em várias Telas é uma só. Até elas chegarem, a Imagem e o mosaico não aparecem (o resto da Tela desenha normalmente).
+- **Tetos novos:**
+  - `tv.maxImagePixels`: de 16.384 para **131.072** por Tela (faixa até 262.144), somando as artes distintas;
+  - a arte vai de 8 × 8 até **128 × 128** (antes 64 × 64);
+  - o pacote de salvar do editor (`TvLayoutPayload.MAX_BYTES`): de 64 KB para **256 KB**;
+  - o código de exportar (Task 2c): até **512 KB** de texto.
+  
+  O pacote da biblioteca (900 KB) continua cabendo: 32 artes de 128 × 128 dão 256 KB. Se `tv.maxArts` em 64 com artes grandes passar do teto, a biblioteca recusa salvar além dele (aviso).
+- **Cliente com mais folga:**
+  - `vramBudgetMb` padrão de 400 para **1024**;
+  - o teto de pixels redesenhados por quadro (`TvCanvases.FRAME_PIXELS`) e de Telas por quadro dobram;
+  - o editor de pixel art aceita 128 × 128 (os níveis de zoom e o enquadrar já são genéricos).
+- **A animação de pixel art fica para a etapa 5**, depois do lançamento. Os quadros entram como lista opcional na arte, sem quebrar nada do que existe.

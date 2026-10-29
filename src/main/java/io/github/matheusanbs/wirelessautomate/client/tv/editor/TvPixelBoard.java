@@ -14,7 +14,8 @@ import net.minecraft.client.gui.GuiGraphics;
  * grade à vista (a cada pixel a partir do zoom {@link #GRID_FROM}, mais forte a cada 8), as linhas dos espelhos, a
  * seleção tracejada e o pincel sob o cursor (um retângulo por linha do pincel). O mouse vira pixel da arte pela
  * {@link TvPixelView}; arrastar com o botão do meio, com Alt ou com Espaço move a vista, e a roda dá zoom no ponto do
- * mouse. Uma arte de outro tamanho (abrir, mudar o tamanho, girar) é enquadrada de novo.
+ * mouse. Uma arte de outro tamanho (abrir, mudar o tamanho, girar) é enquadrada de novo. Com o papel vegetal ligado,
+ * o quadro anterior da animação aparece por baixo, a {@link #ONION_ALPHA}.
  */
 final class TvPixelBoard {
     private static final int GRID_FROM = 6;
@@ -23,6 +24,7 @@ final class TvPixelBoard {
     private static final int GRID = 0x2E000000;
     private static final int CURSOR = 0x66FFFFFF;
     private static final int CURSOR_EDGE = 0x99000000;
+    private static final float ONION_ALPHA = 0.35f;
 
     private final TvPixelSession session;
     private final TvPixelTexture texture;
@@ -101,8 +103,15 @@ final class TvPixelBoard {
         int y1 = Math.min(ay + ah, box.bottom() - 1);
         if (x0 < x1 && y0 < y1) {
             texture.drawChecker(g, x0, y0, x1, y1, ax, ay, CHECKER);
-            texture.drawArt(g, x0, y0, x1, y1, (x0 - ax) / (float) aw, (y0 - ay) / (float) ah, (x1 - ax) / (float) aw,
-                    (y1 - ay) / (float) ah);
+            float u0 = (x0 - ax) / (float) aw;
+            float v0 = (y0 - ay) / (float) ah;
+            float u1 = (x1 - ax) / (float) aw;
+            float v1 = (y1 - ay) / (float) ah;
+            int onion = session.frames().onionFrame();
+            if (onion >= 0) {
+                texture.drawFrame(g, canvas, onion, ONION_ALPHA, x0, y0, x1, y1, u0, v0, u1, v1);
+            }
+            texture.drawArt(g, x0, y0, x1, y1, u0, v0, u1, v1);
         }
         g.enableScissor(box.x() + 1, box.y() + 1, box.right() - 1, box.bottom() - 1);
         if (session.grid() && zoom >= GRID_FROM && x0 < x1 && y0 < y1) {

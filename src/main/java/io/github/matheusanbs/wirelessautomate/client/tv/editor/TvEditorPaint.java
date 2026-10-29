@@ -82,8 +82,8 @@ final class TvEditorPaint {
 
     /** Um contorno tracejado de traços de 2 px (a Imagem que ainda não tem arte, na miniatura). */
     /**
-     * A marca de GIF animado no canto de uma miniatura: um triângulo de play de 4 × 5 px no coral, com o contorno
-     * escuro para aparecer em cima de qualquer imagem.
+     * A marca de GIF ou de pixel art animados no canto de uma miniatura: um triângulo de play de 4 × 5 px no coral,
+     * com o contorno escuro para aparecer em cima de qualquer imagem.
      */
     static void playMark(GuiGraphics g, int x, int y) {
         g.fill(x - 1, y - 1, x + 4, y + 6, 0xC0101216);

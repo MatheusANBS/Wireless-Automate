@@ -7,6 +7,12 @@ package io.github.matheusanbs.wirelessautomate.client.tv.pixel;
  * métodos daqui; tudo o que muda a arte guarda um passo do desfazer antes (decisões 1a a 1g da spec da etapa 4).
  * Antes de um passo novo, um pedaço solto assenta, para o Esc só desfazer o mover que ainda está no ar. Lógica pura,
  * com JUnit.
+ * <p>
+ * Os quadros da animação: escolher um quadro não é um passo (o pedaço solto assenta no quadro de antes, e a área de
+ * cópia vale entre quadros); adicionar, duplicar, remover, mudar a ordem, a velocidade e o modo são. Virar, girar e
+ * mudar o tamanho sem seleção valem para todos os quadros (como o "Sprite > Flip/Rotate Canvas" do Aseprite: os
+ * quadros têm sempre o mesmo tamanho), a paleta é uma só, e o Limpar e as ferramentas de pintar ficam no quadro
+ * escolhido ({@link TvPixelFrames}).
  */
 public final class TvPixelSession {
     private enum Drag { NONE, STROKE, MARK, MOVE }
@@ -36,6 +42,7 @@ public final class TvPixelSession {
     private int dragY;
     private int pieceX;
     private int pieceY;
+    private final TvPixelFrames frames = new TvPixelFrames(this);
 
     public TvPixelSession(TvPixelCanvas canvas) {
         this.canvas = canvas;
@@ -58,6 +65,11 @@ public final class TvPixelSession {
 
     public TvPixelHistory history() {
         return history;
+    }
+
+    /** Os quadros da animação e o que a prévia mostra. */
+    public TvPixelFrames frames() {
+        return frames;
     }
 
     // ------------------------------------------------------------------ o mouse no quadro
@@ -141,7 +153,7 @@ public final class TvPixelSession {
     }
 
     /** Um passo novo do desfazer: o pedaço solto assenta antes, e a arte de agora fica guardada. */
-    private void beginStep() {
+    void beginStep() {
         selection.commit(canvas);
         history.push(canvas.snapshot());
     }
@@ -307,7 +319,10 @@ public final class TvPixelSession {
         return history.redo(canvas);
     }
 
-    /** Virar ou girar: só o pedaço, se há seleção (levantado antes); senão a arte inteira, num passo. */
+    /**
+     * Virar ou girar: só o pedaço no quadro escolhido, se há seleção (levantado antes); senão a arte inteira, todos os
+     * quadros, num passo.
+     */
     public void transform(TvPixelTransform kind) {
         if (selection.active()) {
             liftIfMarked();
@@ -315,13 +330,10 @@ public final class TvPixelSession {
             return;
         }
         beginStep();
-        boolean rotate = kind == TvPixelTransform.ROTATE;
-        int w = canvas.width();
-        int h = canvas.height();
-        canvas.replace(rotate ? h : w, rotate ? w : h, kind.apply(canvas.pixels(), w, h));
+        canvas.transformAll(kind);
     }
 
-    /** Limpar tudo: a arte inteira transparente, num passo. */
+    /** Limpar tudo: o quadro escolhido inteiro transparente, num passo. */
     public void clearAll() {
         selection.clear();
         beginStep();
@@ -329,9 +341,13 @@ public final class TvPixelSession {
         history.dropIfUnchanged(canvas);
     }
 
-    /** Muda o tamanho mantendo o canto de cima à esquerda, num passo; a seleção sai. */
+    /**
+     * Muda o tamanho de todos os quadros mantendo o canto de cima à esquerda, num passo; a seleção sai. Nada muda se
+     * os quadros nesse tamanho passam do teto ({@link TvPixelFrames#maxPixels}).
+     */
     public void resize(int width, int height) {
-        if (width == canvas.width() && height == canvas.height()) {
+        if (width == canvas.width() && height == canvas.height()
+                || (long) width * height * canvas.frames() > frames.maxPixels()) {
             return;
         }
         beginStep();

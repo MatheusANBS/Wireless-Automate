@@ -8,6 +8,7 @@ import io.github.matheusanbs.wirelessautomate.tv.TvPartStyle;
 import io.github.matheusanbs.wirelessautomate.tv.TvPicture;
 import io.github.matheusanbs.wirelessautomate.tv.TvPiece;
 import io.github.matheusanbs.wirelessautomate.tv.TvPixelArt;
+import io.github.matheusanbs.wirelessautomate.tv.TvPixels;
 import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.client.Minecraft;
@@ -23,8 +24,10 @@ import org.joml.Matrix4f;
  * vértice. A imagem enviada que ainda não está pronta (não chegou, está subindo, não abre, ou o servidor desligou as
  * imagens) vira o quadro neutro no mesmo lugar, do tamanho que ela terá; a de outro jogador também, com a opção do
  * cliente "Mostrar imagens de outros jogadores" desligada ({@link #showOthers}), e essa nem é carregada. Um GIF
- * animado desenhado marca {@link #animated}, que o {@link TvPainter} devolve como {@code FLAG_GIF}. Só a thread de
- * render desenha.
+ * animado desenhado marca {@link #animated}, que o {@link TvPainter} devolve como {@code FLAG_GIF}. A pixel art
+ * animada desenha o quadro do relógio ({@link TvPixelArt#frameAt}, o mesmo zero para todas as Telas) e guarda em
+ * {@link #artNext} quando o próximo quadro de alguma arte do desenho começa, para o {@link TvTimed} redesenhar a Tela
+ * à vista só então. Só a thread de render desenha.
  */
 final class TvPaintImage {
     /** O quadro neutro: um cinza escuro com a borda mais clara, nas cores de nenhum tema. */
@@ -32,6 +35,15 @@ final class TvPaintImage {
     private static final int NEUTRAL_EDGE = 0xFF3C424B;
     /** Se o último desenho teve um GIF animado; o {@link TvPainter} zera antes de cada desenho. */
     static boolean animated;
+    /**
+     * O instante (ms, {@code Util.getMillis}) em que o quadro de alguma pixel art animada do último desenho muda, ou
+     * {@link Long#MAX_VALUE} sem nenhuma; o {@link TvPainter} zera antes de cada desenho.
+     */
+    static long artNext = Long.MAX_VALUE;
+    /** O relógio do desenho da vez, lido uma vez pelo {@link TvPainter}: todas as artes do desenho usam o mesmo. */
+    static long nowMs;
+    /** O quadro da última pixel art animada desenhada (gancho do e2e, {@link TvTimed#artFrameForTests}). */
+    static int lastArtFrame = -1;
     /** A opção do cliente lida no tick ({@link TvCanvases}): falsa, as imagens de outros jogadores ficam neutras. */
     static boolean showOthers = true;
 
@@ -49,7 +61,12 @@ final class TvPaintImage {
         }
         TvPixelArt art = layout.image(id.get());
         if (art != null) {
-            return new Source(art.width(), art.height(), TvArtTextures.renderType(art));
+            if (!art.animated()) {
+                return new Source(art.width(), art.height(), TvArtTextures.renderType(art));
+            }
+            artNext = Math.min(artNext, TvPixels.nextChange(nowMs, art.fps()));
+            lastArtFrame = art.frameAt(nowMs);
+            return new Source(art.width(), art.height(), TvArtTextures.renderType(art, lastArtFrame));
         }
         TvPicture picture = layout.picture(id.get());
         if (picture == null) {

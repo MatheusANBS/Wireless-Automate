@@ -3376,8 +3376,8 @@ esquerda ao claro à direita: o clarear e o escurecer andam por ela.
   **Delete** apaga.
 - Com uma seleção, as ferramentas só pintam dentro dela.
 - **Shift+H** e **Shift+V** viram na horizontal e na vertical, e o botão de girar gira 90° no sentido horário. Com
-  uma seleção, só o pedaço.
-- **Limpar** apaga a arte inteira, em dois cliques.
+  uma seleção, só o pedaço; sem ela, todos os quadros de uma arte animada.
+- **Limpar** apaga o quadro escolhido inteiro, em dois cliques.
 
 ### Navegar no quadro
 
@@ -3393,6 +3393,30 @@ esquerda ao claro à direita: o clarear e o escurecer andam por ela.
 O rodapé mostra a posição e a cor sob o mouse. A coluna da direita mostra a arte em 1×, 2× e repetida, como no
 mosaico (com pouco espaço ou numa arte grande, só o que cabe inteiro). **Esc** sem seleção faz o mesmo que
 **Cancelar**.
+
+### Animação (quadros)
+
+Uma arte pode ter vários quadros, que tocam na Imagem e no mosaico. Todas as Telas com a mesma arte tocam juntas, e a
+Tela só troca de quadro quando está à vista.
+
+- A **faixa de quadros**, embaixo do quadro de desenho, mostra as miniaturas; a escolhida é a que você desenha. Clique
+  para escolher e arraste para mudar a ordem.
+- **+** põe um quadro vazio depois do escolhido, o botão de duplicar copia o escolhido e o de remover o tira.
+- **Papel vegetal:** o quadro anterior aparece apagado por baixo, para desenhar o próximo.
+- **Velocidade:** de 1 a 20 quadros por segundo, pelo **‹ ›** ou digitando. **Modo:** **Loop** (volta ao primeiro) ou
+  **Vai e volta**. O botão de tocar pausa e toca a prévia (pausada, ela mostra o quadro escolhido).
+- Até 64 quadros, do mesmo tamanho e com a mesma paleta. Os quadros contam no teto de pixels da Tela: uma arte de
+  32 × 32 com 10 quadros conta 10.240.
+- Tudo entra no **Ctrl+Z**. A paleta vale para todos os quadros; o **Limpar** e as ferramentas, para o escolhido.
+
+| Tecla | O que faz |
+| --- | --- |
+| **,** e **.** | Quadro anterior e seguinte. |
+| **Alt+N** | Quadro novo vazio, depois do escolhido. |
+| **Alt+D** | Duplica o quadro escolhido. |
+| **Alt+O** | Liga e desliga o papel vegetal. |
+| **Alt+P** | Toca e pausa a prévia. |
+| **Ctrl+C** e **Ctrl+V** | Copiam um pedaço de um quadro e colam em outro. |
 
 ### Pôr a arte na Tela
 
@@ -3626,8 +3650,8 @@ the left to the light one on the right: lighten and darken walk along it.
   **Delete** erases.
 - With a selection, tools only paint inside it.
 - **Shift+H** and **Shift+V** flip horizontally and vertically, and the rotate button turns 90° clockwise. With a
-  selection, only the piece.
-- **Clear** erases the whole art, in two clicks.
+  selection, only the piece; without one, every frame of an animated art.
+- **Clear** erases the whole chosen frame, in two clicks.
 
 ### Moving around the canvas
 
@@ -3642,6 +3666,31 @@ the left to the light one on the right: lighten and darken walk along it.
 
 The footer shows the position and color under the mouse. The right column shows the art at 1×, 2× and tiled, as in the
 mosaic (with little room or a large art, only what fits whole). **Esc** with no selection does the same as **Cancel**.
+
+### Animation (frames)
+
+An art can have several frames, which play in the Image and the tiled background. Every Screen with the same art plays
+in step, and a Screen only changes frame while it is in view.
+
+- The **frame strip**, under the canvas, shows the thumbnails; the chosen one is the one you draw on. Click to choose
+  and drag to reorder.
+- **+** adds an empty frame after the chosen one, the duplicate button copies the chosen one and the remove button takes
+  it out.
+- **Onion skin:** the previous frame shows faded underneath, to draw the next one.
+- **Speed:** 1 to 20 frames per second, with **‹ ›** or by typing. **Mode:** **Loop** (back to the first) or
+  **Ping-pong**. The play button pauses and plays the preview (paused, it shows the chosen frame).
+- Up to 64 frames, all the same size and with the same palette. Frames count toward the Screen's pixel limit: a
+  32 × 32 art with 10 frames counts 10,240.
+- Everything goes into **Ctrl+Z**. The palette applies to every frame; **Clear** and the tools, to the chosen one.
+
+| Key | What it does |
+| --- | --- |
+| **,** and **.** | Previous and next frame. |
+| **Alt+N** | New empty frame, after the chosen one. |
+| **Alt+D** | Duplicates the chosen frame. |
+| **Alt+O** | Turns the onion skin on and off. |
+| **Alt+P** | Plays and pauses the preview. |
+| **Ctrl+C** and **Ctrl+V** | Copy a piece of one frame and paste it into another. |
 
 ### Putting the art on the Screen
 

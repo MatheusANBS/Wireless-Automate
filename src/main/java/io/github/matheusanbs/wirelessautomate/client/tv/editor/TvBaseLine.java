@@ -3,6 +3,9 @@ package io.github.matheusanbs.wirelessautomate.client.tv.editor;
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.tv.TvArea;
+import java.text.NumberFormat;
+import java.util.Locale;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 
@@ -11,7 +14,8 @@ import net.minecraft.client.gui.GuiGraphics;
  * rascunho difere do salvo. No lugar dela, os avisos: o salvar que não valeu (grande demais, sem permissão, rápido
  * demais ou sem resposta), a pixel art que passaria do teto de pixels da Tela e a Tela que mudou no servidor, este com
  * o Recarregar; e, por uns segundos, o aviso do copiar e colar código ({@link TvCodeNotice}). Os textos são medidos no
- * {@link #layout} e o do tamanho quando a área muda.
+ * {@link #layout}, o do tamanho quando a área muda e o da pixel art demais quando o número recusado muda (ele diz
+ * quanto as artes somariam e o teto, e que os quadros das animadas somam).
  */
 final class TvBaseLine {
     private static final int RELOAD_PAD = 10;
@@ -32,6 +36,8 @@ final class TvBaseLine {
     private GuiText.Fitted notice;
     private int noticeVersion = -1;
     private TvEditorPaint.Label reloadLabel;
+    private int shownRefused = -1;
+    private GuiText.Fitted refused;
 
     TvBaseLine(TvEditorDoc doc, int maxKb, int maxImagePixels) {
         this.doc = doc;
@@ -63,6 +69,7 @@ final class TvBaseLine {
             failures[failure.ordinal()] = GuiText.fit(font, TvEditorText.key(key, limit), rect.w());
         }
         noticeVersion = -1;
+        shownRefused = -1;
     }
 
     void render(GuiGraphics g, int mouseX, int mouseY) {
@@ -86,6 +93,15 @@ final class TvBaseLine {
             return;
         }
         TvEditorDoc.Failure failure = doc.failure();
+        if (failure == TvEditorDoc.Failure.IMAGES_FULL && TvImageOps.refusedPixels > 0) {
+            if (shownRefused != TvImageOps.refusedPixels) {
+                shownRefused = TvImageOps.refusedPixels;
+                refused = GuiText.fit(font, TvEditorText.key("images_full.count", grouped(shownRefused),
+                        grouped(maxImagePixels)), rect.w());
+            }
+            GuiText.draw(g, font, refused, rect.x(), rect.y() + 2, GuiPaint.DANGER);
+            return;
+        }
         if (failure != null) {
             GuiText.draw(g, font, failures[failure.ordinal()], rect.x(), rect.y() + 2, GuiPaint.DANGER);
             return;
@@ -110,5 +126,11 @@ final class TvBaseLine {
             return true;
         }
         return false;
+    }
+
+    /** O número com o separador de milhar do idioma do jogo ("98.304", "98,304"). */
+    private static String grouped(int value) {
+        String code = Minecraft.getInstance().getLanguageManager().getSelected();
+        return NumberFormat.getIntegerInstance(Locale.forLanguageTag(code.replace('_', '-'))).format(value);
     }
 }

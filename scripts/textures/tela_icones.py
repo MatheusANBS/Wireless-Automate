@@ -1002,6 +1002,66 @@ PIXEL_ART["imagem"] = (
 )
 
 
+# A faixa de quadros da pixel art animada: tocar e pausar a prévia e o papel vegetal (o quadro anterior tracejado por
+# baixo do atual).
+PIXEL_ART["quadro_tocar"] = (
+    "................",
+    "................",
+    ".....K..........",
+    ".....KK.........",
+    ".....KAK........",
+    ".....KAAK.......",
+    ".....KAAAK......",
+    ".....KAAAAK.....",
+    ".....KAAAAK.....",
+    ".....KAAAK......",
+    ".....KAAK.......",
+    ".....KAK........",
+    ".....KK.........",
+    ".....K..........",
+    "................",
+    "................",
+)
+
+PIXEL_ART["quadro_pausar"] = (
+    "................",
+    "................",
+    "................",
+    "....KKK..KKK....",
+    "....KAK..KAK....",
+    "....KAK..KAK....",
+    "....KAK..KAK....",
+    "....KAK..KAK....",
+    "....KAK..KAK....",
+    "....KAK..KAK....",
+    "....KAK..KAK....",
+    "....KAK..KAK....",
+    "....KKK..KKK....",
+    "................",
+    "................",
+    "................",
+)
+
+PIXEL_ART["papel_vegetal"] = (
+    "................",
+    "................",
+    "..K.K.K.K.......",
+    ".........K......",
+    "..K.............",
+    ".........K......",
+    "..K...KKKKKKKK..",
+    "......KPPPPPPK..",
+    "..K...KPPPPPPK..",
+    "...K.KKPPAAPPK..",
+    "......KPPAAPPK..",
+    "......KPPPPPPK..",
+    "......KPPPPPPK..",
+    "......KKKKKKKK..",
+    "................",
+    "................",
+)
+
+
 def _grade(linhas: tuple[str, ...]) -> Callable[[], Quadro]:
     assert len(linhas) == 16 and all(len(l) == 16 for l in linhas)
 

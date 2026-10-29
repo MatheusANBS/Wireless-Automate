@@ -94,9 +94,16 @@ final class TvArtsPanel {
         builtLibrary = TvLibraryClient.version();
         List<TvPixelArt> arts = TvLibraryClient.arts();
         List<Row> out = new ArrayList<>(arts.size());
+        int room = list.w() - THUMB - 14;
         for (TvPixelArt art : arts) {
             Component size = TvEditorText.key("arts.size", art.width(), art.height());
-            out.add(new Row(art, GuiText.fit(font, Component.literal(art.name()), list.w() - THUMB - 14), size));
+            if (art.animated()) {
+                size = TvEditorText.key("arts.size.frames", art.width(), art.height(), art.frames());
+                if (font.width(size) > room) {
+                    size = TvEditorText.key("arts.size.frames.short", art.width(), art.height(), art.frames());
+                }
+            }
+            out.add(new Row(art, GuiText.fit(font, Component.literal(art.name()), room), size));
         }
         rows = out;
         count = TvEditorText.key("arts.count", arts.size(), actions.maxArts());
@@ -184,6 +191,10 @@ final class TvArtsPanel {
     private static void thumb(GuiGraphics g, TvPixelArt art, int x, int y) {
         GuiPaint.outline(g, x - 1, y - 1, THUMB + 2, THUMB + 2, GuiPaint.BUTTON_BORDER);
         TvArtThumbs.drawFitted(g, art, x, y, THUMB);
+        if (art.animated()) {
+            TvArtThumbs.end(g);
+            TvEditorPaint.playMark(g, x + THUMB - 4, y + THUMB - 5);
+        }
     }
 
     private int rowAt(double mouseX, double mouseY) {
@@ -232,8 +243,7 @@ final class TvArtsPanel {
         switch (button) {
             case NEW -> pixel.open(null);
             case EDIT -> pixel.open(art);
-            case DUPLICATE -> actions.saveArt(new TvPixelArt(UUID.randomUUID(), copyName(art.name()), art.width(),
-                    art.height(), art.palette(), art.pixels()));
+            case DUPLICATE -> actions.saveArt(art.copy(UUID.randomUUID(), copyName(art.name())));
             case REMOVE -> {
                 if (removeClick.click(System.currentTimeMillis())) {
                     actions.removeArt(art.id());

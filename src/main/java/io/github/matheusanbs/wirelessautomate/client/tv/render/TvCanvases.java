@@ -152,6 +152,7 @@ public final class TvCanvases {
         if (SodiumSprites.AVAILABLE && Minecraft.getInstance().level != null) {
             TvTimed.markIconSprites(Minecraft.getInstance().level.getGameTime());
         }
+        TvTimed.animateArts();
         if (DIRTY.isEmpty()) {
             return;
         }
@@ -202,7 +203,7 @@ public final class TvCanvases {
             } else {
                 BLINKING.remove(pos);
             }
-            TvTimed.track(pos, canvas.graphing, canvas.clocking, canvas.iconing, canvas.gifing);
+            TvTimed.track(pos, canvas.graphing, canvas.clocking, canvas.iconing, canvas.gifing, canvas.artNext);
             paintsForTests++;
             paintNanosForTests += spent;
             maxPaintNanosForTests = Math.max(maxPaintNanosForTests, spent);

@@ -57,7 +57,7 @@ public final class TvLayoutJson {
     private static final List<String> THEME_KEYS = List.of("bg", "card", "text", "muted", "high", "low");
     /** Os erros da arte que trazem a linha do texto como primeiro argumento; no JSON ela não diz nada e sai. */
     private static final Set<String> ART_LINE_ERRORS = Set.of("code.art.size", "code.art.palette_long",
-            "code.art.color");
+            "code.art.color", "code.art.frames", "code.art.speed", "code.art.mode");
     private static final Set<String> BACKGROUND_COLORS = Set.of("top", "bottom");
     private static final List<String> PIECE_ORDER = List.of("type", "name", "x", "y", "w", "h", "group",
             "hidden", "bind", "format", "style", "rules");
@@ -156,13 +156,23 @@ public final class TvLayoutJson {
     }
 
     private static JsonObject readableArt(TvPixelArt art, boolean english) {
-        TvArtText.Art plain = new TvArtText.Art(art.name(), art.width(), art.height(), art.palette(), art.pixels());
+        TvArtText.Art plain = TvCodes.plain(art);
         JsonObject out = new JsonObject();
         out.addProperty("id", art.id().toString());
         out.addProperty(english ? "name" : "nome", art.name());
         out.addProperty(english ? "size" : "tamanho", art.width() + "x" + art.height());
         out.add(english ? "palette" : "paleta", strings(TvArtText.paletteEntries(art.palette())));
-        out.add(english ? "rows" : "linhas", strings(TvArtText.rows(plain)));
+        if (!art.animated()) {
+            out.add(english ? "rows" : "linhas", strings(TvArtText.rows(plain)));
+            return out;
+        }
+        out.addProperty(english ? "speed" : "velocidade", art.fps());
+        out.addProperty(english ? "mode" : "modo", TvArtText.modeName(art.mode(), english));
+        JsonArray frames = new JsonArray(art.frames());
+        for (int f = 0; f < art.frames(); f++) {
+            frames.add(strings(TvArtText.rows(plain, f)));
+        }
+        out.add(english ? "frames" : "quadros", frames);
         return out;
     }
 
@@ -423,22 +433,36 @@ public final class TvLayoutJson {
      */
     private static JsonElement artIn(JsonObject art, int number) throws Bad {
         JsonElement rows = first(art, "linhas", "rows");
-        if (rows == null) {
+        JsonElement frames = first(art, "quadros", "frames");
+        if (rows == null && !(frames instanceof JsonArray)) {
             idIn(art, "id");
             return art;
         }
         String name = text(first(art, "nome", "name"));
+        String label = artLabel(art, name, number);
+        TvArtText.Motion motion = TvArtText.motion(nullableText(first(art, "velocidade", "speed")), 0,
+                nullableText(first(art, "modo", "mode")), 0);
+        if (motion.error() != null) {
+            throw artError(motion.error(), label);
+        }
         TvArtText.Parsed parsed = TvArtText.build(name, nullableText(first(art, "tamanho", "size")), 0,
-                list(first(art, "paleta", "palette"), true), 0, rows(rows));
+                list(first(art, "paleta", "palette"), true), 0, rows != null ? List.of(rows(rows, 0))
+                        : frameRows(frames.getAsJsonArray()), motion.fps(), motion.mode());
         if (parsed.art() == null) {
-            throw artError(parsed, artLabel(art, name, number));
+            throw artError(parsed, label);
         }
         JsonElement idText = art.get("id");
         UUID id = idText instanceof JsonPrimitive p && p.isString() ? id(p.getAsString()) : id(name);
-        TvArtText.Art plain = parsed.art();
-        TvPixelArt full = new TvPixelArt(id, plain.name(), plain.width(), plain.height(), plain.palette(),
-                plain.pixels());
-        return TvPixelArt.CODEC.encodeStart(JsonOps.INSTANCE, full).getOrThrow();
+        return TvPixelArt.CODEC.encodeStart(JsonOps.INSTANCE, TvCodes.full(id, parsed.art())).getOrThrow();
+    }
+
+    /** As linhas de cada quadro de {@code quadros}: uma lista de quadros, cada um uma lista de fileiras. */
+    private static List<List<TvArtText.Row>> frameRows(JsonArray frames) {
+        List<List<TvArtText.Row>> out = new ArrayList<>(frames.size());
+        for (int f = 0; f < frames.size() && f <= TvPixels.MAX_FRAMES; f++) {
+            out.add(rows(frames.get(f), frames.size() > 1 ? f + 1 : 0));
+        }
+        return out;
     }
 
     /** O nome da arte para o erro: o nome, ou o id em texto, ou "#N" pela posição. */
@@ -468,11 +492,12 @@ public final class TvLayoutJson {
         return new Bad("code.layout.art." + key.substring("code.art.".length()), out);
     }
 
-    private static List<TvArtText.Row> rows(JsonElement element) {
+    /** As fileiras de uma lista, numeradas de 1; {@code frame} é o quadro delas (0 numa arte parada). */
+    private static List<TvArtText.Row> rows(JsonElement element, int frame) {
         List<String> lines = list(element, false);
         List<TvArtText.Row> rows = new ArrayList<>(lines.size());
         for (int i = 0; i < lines.size(); i++) {
-            rows.add(new TvArtText.Row(lines.get(i), i + 1));
+            rows.add(new TvArtText.Row(lines.get(i), i + 1, frame));
         }
         return rows;
     }

@@ -18,8 +18,9 @@ import org.lwjgl.glfw.GLFW;
  * editor da Tela, por cima dele, e volta para ele ao salvar ou cancelar. Assim o rascunho da Tela, o desfazer dela e o
  * menu aberto no servidor (que as ações da biblioteca exigem) continuam como estavam. Esta classe é a anfitriã: guarda
  * a {@link TvPixelSession} da arte aberta e repassa o desenho, o mouse e o teclado às partes ({@link TvPixelHeader},
- * {@link TvPixelToolbar}, {@link TvPixelBoard}, {@link TvPixelFooter}, {@link TvPixelSide} e os atalhos do
- * {@link TvPixelKeys}), com a janela solta do seletor de cor por cima de tudo. Salvar manda a arte pelo
+ * {@link TvPixelToolbar}, {@link TvPixelBoard}, a faixa de quadros {@link TvPixelStrip}, {@link TvPixelFooter},
+ * {@link TvPixelSide} e os atalhos do {@link TvPixelKeys}), com a janela solta do seletor de cor ou da lista do modo
+ * por cima de tudo. Salvar manda a arte pelo
  * {@link TvEditorActions} e fecha só quando a biblioteca volta com ela: a recusa do servidor (biblioteca cheia, grande
  * demais, o limite de ações) deixa o desenho aberto, com o aviso. O Esc tira primeiro a seleção e, sem ela, é o
  * Cancelar (dois cliques com mudança).
@@ -36,13 +37,13 @@ public final class TvPixelEditor {
     private TvPixelHeader header;
     private TvPixelToolbar toolbar;
     private TvPixelBoard board;
+    private TvPixelStrip strip;
     private TvPixelFooter footer;
     private TvPixelSide side;
     private TvPixelKeys keys;
     private @Nullable Font font;
     private TvRect window = TvRect.NONE;
     private boolean fits;
-    private boolean spaceDown;
     private boolean painting;
     /** A arte mandada a salvar, até a biblioteca voltar com ela ou o prazo passar. */
     private final TvPendingSave<TvPixelArt> saving = new TvPendingSave<>();
@@ -65,18 +66,20 @@ public final class TvPixelEditor {
     /** Abre a arte para editar, ou uma nova de 16 × 16 com a paleta padrão ({@code art} nulo). */
     void open(@Nullable TvPixelArt art) {
         TvPixelCanvas canvas = art == null ? TvPixelCanvas.blank(TvPixelCanvas.NEW_SIDE, TvPixelCanvas.NEW_SIDE)
-                : new TvPixelCanvas(art.width(), art.height(), art.palette(), art.pixels());
+                : new TvPixelCanvas(art.width(), art.height(), art.palette(), art.pixels(), art.frames(), art.fps(),
+                        art.mode());
         TvPixelSession opened = new TvPixelSession(canvas);
+        opened.frames().maxPixels(actions.maxImagePixels());
         session = opened;
         artId = art == null ? UUID.randomUUID() : art.id();
         name[0] = art == null ? TvEditorText.key("pixel.new_name").getString() : art.name();
         header = new TvPixelHeader(opened, name);
         toolbar = new TvPixelToolbar(opened);
         board = new TvPixelBoard(opened, texture);
+        strip = new TvPixelStrip(opened, texture, popups);
         footer = new TvPixelFooter(opened);
         side = new TvPixelSide(opened, texture);
-        keys = new TvPixelKeys(opened, board, toolbar, this::save);
-        spaceDown = false;
+        keys = new TvPixelKeys(opened, board, toolbar, strip, header, popups, this::save, this::cancel);
         painting = false;
         layoutParts();
     }
@@ -100,6 +103,7 @@ public final class TvPixelEditor {
         header.layout(font, layout.header());
         toolbar.layout(layout.tools());
         board.layout(layout.board());
+        strip.layout(font, layout.strip());
         footer.layout(font, layout.footer(), layout.status());
         side.layout(font, layout.side(), layout.clear());
     }
@@ -157,7 +161,7 @@ public final class TvPixelEditor {
             chosen = TvEditorText.key("pixel.new_name").getString();
         }
         TvPixelArt art = new TvPixelArt(artId, chosen, canvas.width(), canvas.height(), canvas.palette(),
-                canvas.pixels());
+                canvas.allFrames(), canvas.frames(), canvas.fps(), canvas.mode());
         actions.saveArt(art);
         if (actions.preview()) {
             close();
@@ -187,6 +191,7 @@ public final class TvPixelEditor {
         header.render(g, mouseX, mouseY);
         toolbar.render(g, mouseX, mouseY);
         board.render(g, mouseX, mouseY);
+        strip.render(g, mouseX, mouseY);
         boolean over = board.box().contains(mouseX, mouseY);
         footer.render(g, mouseX, mouseY, over ? board.cellX(mouseX) : -1, over ? board.cellY(mouseY) : -1);
         side.render(g, mouseX, mouseY);
@@ -205,6 +210,9 @@ public final class TvPixelEditor {
             return popup.tooltip(mouseX, mouseY);
         }
         Component tip = toolbar.tooltip(mouseX, mouseY);
+        if (tip == null) {
+            tip = strip.tooltip(mouseX, mouseY);
+        }
         if (tip == null) {
             tip = footer.tooltip(mouseX, mouseY);
         }
@@ -229,8 +237,11 @@ public final class TvPixelEditor {
             return true;
         }
         header.blur();
+        if (strip.mouseClicked(mouseX, mouseY, button)) {
+            return true;
+        }
         if (board.box().contains(mouseX, mouseY)) {
-            if (button == 2 || Screen.hasAltDown() || spaceDown) {
+            if (button == 2 || Screen.hasAltDown() || keys.spaceDown()) {
                 board.beginPan(mouseX, mouseY);
             } else if (button == 0 || button == 1) {
                 session.press(board.cellX(mouseX), board.cellY(mouseY), button == 1, shift(),
@@ -317,7 +328,8 @@ public final class TvPixelEditor {
         if (popup != null) {
             return popup.mouseDragged(mouseX, mouseY);
         }
-        if (header.mouseDragged(mouseX, mouseY) || board.dragPan(mouseX, mouseY)) {
+        if (header.mouseDragged(mouseX, mouseY) || strip.mouseDragged(mouseX, mouseY)
+                || board.dragPan(mouseX, mouseY)) {
             return true;
         }
         if (painting) {
@@ -334,7 +346,8 @@ public final class TvPixelEditor {
         if (popup != null) {
             return popup.mouseReleased(mouseX, mouseY);
         }
-        boolean used = header.mouseReleased(mouseX, mouseY) | board.endPan() | painting;
+        boolean used = header.mouseReleased(mouseX, mouseY) | strip.mouseReleased(mouseX, mouseY) | board.endPan()
+                | painting;
         if (painting) {
             painting = false;
             session.release();
@@ -350,62 +363,22 @@ public final class TvPixelEditor {
         if (popup != null) {
             return popup.mouseScrolled(mouseX, mouseY, delta);
         }
-        return board.scrolled(mouseX, mouseY, delta);
+        return strip.mouseScrolled(mouseX, mouseY, delta) || board.scrolled(mouseX, mouseY, delta);
     }
 
     // ------------------------------------------------------------------ teclado
 
-    /** Uma tecla com o editor aberto: o seletor, depois o campo com o foco, o Esc, o Espaço e os atalhos. */
+    /** Uma tecla com o editor aberto ({@link TvPixelKeys}). */
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (session == null) {
-            return false;
-        }
-        TvPopup popup = popups.current();
-        if (popup != null) {
-            if (keyCode == GLFW.GLFW_KEY_ESCAPE && !popup.wantsKeys()) {
-                popups.close();
-                return true;
-            }
-            popup.keyPressed(keyCode, scanCode, modifiers);
-            return true;
-        }
-        if (header.textFocused()) {
-            header.keyPressed(keyCode, scanCode, modifiers);
-            return true;
-        }
-        if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-            if (!session.escape()) {
-                cancel();
-            }
-            return true;
-        }
-        if (keyCode == GLFW.GLFW_KEY_SPACE) {
-            spaceDown = true;
-            return true;
-        }
-        return fits && keys.keyPressed(keyCode, modifiers);
+        return session != null && keys.key(keyCode, scanCode, modifiers, fits);
     }
 
     public boolean keyReleased(int keyCode) {
-        if (keyCode == GLFW.GLFW_KEY_SPACE && spaceDown) {
-            spaceDown = false;
-            return true;
-        }
-        return false;
+        return session != null && keys.released(keyCode);
     }
 
     public boolean charTyped(char c, int modifiers) {
-        if (session == null) {
-            return false;
-        }
-        TvPopup popup = popups.current();
-        if (popup != null) {
-            return popup.charTyped(c, modifiers);
-        }
-        if (header.textFocused()) {
-            return header.charTyped(c, modifiers);
-        }
-        return fits && c != ' ' && keys.charTyped(c);
+        return session != null && keys.typed(c, modifiers, fits);
     }
 
     // ------------------------------------------------------------------ ganchos do e2e
@@ -432,11 +405,27 @@ public final class TvPixelEditor {
                 return footer.center(each);
             }
         }
+        if (upper.startsWith("FRAME_")) {
+            return strip.center(TvPixelStrip.Button.valueOf(upper.substring("FRAME_".length())));
+        }
         return side.center(TvPixelSide.Button.valueOf(upper));
     }
 
     public int[] cellCenter(int x, int y) {
         return board.cellCenter(x, y);
+    }
+
+    /** O centro da miniatura do quadro {@code index} na faixa, do ‹ ou › da velocidade ou da lista do modo. */
+    public int[] frameCenter(int index) {
+        return strip.thumbCenter(index);
+    }
+
+    public int[] speedArrow(boolean right) {
+        return strip.speedArrow(right);
+    }
+
+    public int[] modeCenter() {
+        return strip.modeCenter();
     }
 
     public int[] swatchCenter(int index) {

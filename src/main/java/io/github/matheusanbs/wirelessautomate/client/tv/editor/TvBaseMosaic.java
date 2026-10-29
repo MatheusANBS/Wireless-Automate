@@ -75,6 +75,8 @@ final class TvBaseMosaic {
                 return;
             }
         }
+        TvImageOps.refusedPixels = TvImageOps.usedPixels(with(now, choices.get(0), TvBackground.DEFAULT.scale(),
+                TvBackground.DEFAULT.opacity()));
         ctx.doc().fail(TvEditorDoc.Failure.IMAGES_FULL);
     }
 

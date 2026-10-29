@@ -164,8 +164,8 @@ the left to the light one on the right: lighten and darken walk along it.
   **Delete** erases.
 - With a selection, tools only paint inside it.
 - **Shift+H** and **Shift+V** flip horizontally and vertically, and the rotate button turns 90° clockwise. With a
-  selection, only the piece.
-- **Clear** erases the whole art, in two clicks.
+  selection, only the piece; without one, every frame of an animated art.
+- **Clear** erases the whole chosen frame, in two clicks.
 
 ### Moving around the canvas
 
@@ -180,6 +180,31 @@ the left to the light one on the right: lighten and darken walk along it.
 
 The footer shows the position and color under the mouse. The right column shows the art at 1×, 2× and tiled, as in the
 mosaic (with little room or a large art, only what fits whole). **Esc** with no selection does the same as **Cancel**.
+
+### Animation (frames)
+
+An art can have several frames, which play in the Image and the tiled background. Every Screen with the same art plays
+in step, and a Screen only changes frame while it is in view.
+
+- The **frame strip**, under the canvas, shows the thumbnails; the chosen one is the one you draw on. Click to choose
+  and drag to reorder.
+- **+** adds an empty frame after the chosen one, the duplicate button copies the chosen one and the remove button takes
+  it out.
+- **Onion skin:** the previous frame shows faded underneath, to draw the next one.
+- **Speed:** 1 to 20 frames per second, with **‹ ›** or by typing. **Mode:** **Loop** (back to the first) or
+  **Ping-pong**. The play button pauses and plays the preview (paused, it shows the chosen frame).
+- Up to 64 frames, all the same size and with the same palette. Frames count toward the Screen's pixel limit: a
+  32 × 32 art with 10 frames counts 10,240.
+- Everything goes into **Ctrl+Z**. The palette applies to every frame; **Clear** and the tools, to the chosen one.
+
+| Key | What it does |
+| --- | --- |
+| **,** and **.** | Previous and next frame. |
+| **Alt+N** | New empty frame, after the chosen one. |
+| **Alt+D** | Duplicates the chosen frame. |
+| **Alt+O** | Turns the onion skin on and off. |
+| **Alt+P** | Plays and pauses the preview. |
+| **Ctrl+C** and **Ctrl+V** | Copy a piece of one frame and paste it into another. |
 
 ### Putting the art on the Screen
 

@@ -405,9 +405,19 @@ public final class TvPixelEditor {
         return board.box().center();
     }
 
+    /** Se o ponto da janela cai no quadro. */
+    public boolean onBoard(int[] point) {
+        return board.box().contains(point[0], point[1]);
+    }
+
     /** Dá o foco ao campo do nome (o e2e digita depois). */
     public void focusName() {
         header.focusName();
+    }
+
+    /** Dá o foco ao campo da largura ({@code width}) ou da altura (o e2e digita depois). */
+    public void focusSize(boolean width) {
+        header.focusSize(width);
     }
 
     /** O centro de um botão da aba Pixel art ({@code NEW}, {@code EDIT}...); a aba precisa estar aberta. */

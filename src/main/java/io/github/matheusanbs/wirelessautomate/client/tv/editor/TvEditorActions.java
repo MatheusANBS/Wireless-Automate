@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.client.tv.editor;
 
 import io.github.matheusanbs.wirelessautomate.client.tv.TvPreviewValues;
+import io.github.matheusanbs.wirelessautomate.client.tv.render.TvArtCache;
 import io.github.matheusanbs.wirelessautomate.packet.TvLayoutPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TvLibraryActionPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TvStorageContentsRequestPayload;
@@ -16,7 +17,8 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * Tudo o que o editor manda ao servidor: salvar o rascunho inteiro pelo {@link TvLayoutPayload} (o tamanho é
- * conferido antes: acima do teto do servidor, o {@code maxLayoutBytes}, nada sai e o editor avisa) e as ações na biblioteca
+ * conferido antes: acima do teto do servidor, o {@code maxLayoutBytes} do layout sem os pixels, ou do teto do pacote
+ * com eles, nada sai e o editor avisa) e as ações na biblioteca
  * pelo {@link TvLibraryActionPayload} (pedir, salvar, renomear e remover componentes, temas e pixel arts; a resposta
  * volta pelo {@link TvLibraryClient}). Leva também os tetos do servidor que vieram na abertura (artes na biblioteca e
  * pixels nas imagens da Tela). Na prévia de desenvolvimento ({@code preview}), nada sai e o rascunho vira a base na hora.
@@ -34,7 +36,7 @@ public final class TvEditorActions {
     public TvEditorActions(int containerId, boolean preview, int maxLayoutBytes, int maxArts, int maxImagePixels) {
         this.containerId = containerId;
         this.preview = preview;
-        this.maxLayoutBytes = Math.min(maxLayoutBytes, TvLayoutPayload.MAX_BYTES);
+        this.maxLayoutBytes = maxLayoutBytes;
         this.maxArts = maxArts;
         this.maxImagePixels = maxImagePixels;
     }
@@ -43,7 +45,7 @@ public final class TvEditorActions {
         return containerId;
     }
 
-    /** O teto de bytes do layout salvo: o do servidor, que veio na abertura, e nunca mais que o do pacote. */
+    /** O teto de bytes do layout como vai ao cliente, sem os pixels das artes: o do servidor, que veio na abertura. */
     int maxLayoutBytes() {
         return maxLayoutBytes;
     }
@@ -59,17 +61,21 @@ public final class TvEditorActions {
     }
 
     /**
-     * Salva o rascunho sem as pixel arts que nenhuma peça nem o fundo usam mais ({@link TvLayout#prunedImages}, o que o
-     * servidor faria), para uma cópia solta não pesar no teto de bytes.
+     * Salva o rascunho sem as pixel arts que nenhuma peça nem o fundo apontam ({@link TvLayout#withoutUnusedImages}),
+     * para uma cópia solta não pesar nos tetos. A peça cuja arte o cliente ainda não tem vai assim mesmo: o servidor a
+     * completa com a cópia da Tela. As artes mandadas ficam no {@link TvArtCache}, para o update tag da resposta, que
+     * as traz só como referência, já as achar.
      */
     Saved save(TvLayout draft) {
-        TvLayout layout = draft.prunedImages();
-        if (TvLayoutPayload.encodedSize(layout) > maxLayoutBytes) {
+        TvLayout layout = draft.withoutUnusedImages();
+        if (TvLayoutPayload.clientSize(layout) > maxLayoutBytes
+                || TvLayoutPayload.encodedSize(layout) > TvLayoutPayload.MAX_BYTES) {
             return Saved.TOO_BIG;
         }
         if (preview) {
             return Saved.LOCAL;
         }
+        TvArtCache.offer(layout.images());
         PacketDistributor.sendToServer(new TvLayoutPayload(containerId, layout));
         return Saved.SENT;
     }

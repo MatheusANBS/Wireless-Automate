@@ -35,6 +35,7 @@ final class TvEditorDoc {
     private final TvEditorModel<TvLayout> model;
     private TvArea area;
     private int revision;
+    private int artsVersion;
     private final TvPendingSave<TvLayout> pending = new TvPendingSave<>();
     private @Nullable Failure failure;
     private int failureVersion;
@@ -50,6 +51,7 @@ final class TvEditorDoc {
         if (tv != null) {
             this.area = tv.area();
             this.revision = tv.revision();
+            this.artsVersion = tv.artsVersion();
         }
         this.model = new TvEditorModel<>(start);
     }
@@ -65,10 +67,18 @@ final class TvEditorDoc {
             fail(Failure.TIMEOUT);
         }
         TvBlockEntity tv = tv();
-        if (tv == null || tv.revision() == revision) {
+        if (tv == null) {
+            return;
+        }
+        if (tv.revision() == revision) {
+            if (tv.artsVersion() != artsVersion) {
+                artsVersion = tv.artsVersion();
+                artsArrived(tv.layout());
+            }
             return;
         }
         revision = tv.revision();
+        artsVersion = tv.artsVersion();
         TvArea newArea = tv.area();
         TvLayout server = tv.layout();
         boolean areaChanged = !newArea.equals(area);
@@ -93,6 +103,18 @@ final class TvEditorDoc {
             }
         } else {
             changedOnServer = server;
+        }
+    }
+
+    /**
+     * Os pixels de artes da Tela chegaram depois do layout (o update tag as traz só como referência): sem mudança
+     * local nem salvar pendente, o rascunho passa a tê-las. Com mudança local fica como está; ao salvar, o servidor
+     * completa a arte que falta com a cópia da Tela.
+     */
+    private void artsArrived(TvLayout server) {
+        if (!pending.pending() && changedOnServer == null && !model.dirty()) {
+            model.rebase(server);
+            model.adopt(server, model.selection().below(server.pieces().size()));
         }
     }
 

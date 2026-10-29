@@ -7,7 +7,8 @@ package io.github.matheusanbs.wirelessautomate.client.tv.pixel;
  * que a arte cabe com {@link #FIT_MARGIN} px de folga e a centra. Lógica pura, com JUnit.
  */
 public final class TvPixelView {
-    static final int[] ZOOMS = {2, 3, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48};
+    /** O 1 é para a arte de 128 × 128 caber inteira no quadro da janela mínima. */
+    static final int[] ZOOMS = {1, 2, 3, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48};
     public static final int MIN_ZOOM = ZOOMS[0];
     public static final int MAX_ZOOM = ZOOMS[ZOOMS.length - 1];
     static final int FIT_MARGIN = 24;

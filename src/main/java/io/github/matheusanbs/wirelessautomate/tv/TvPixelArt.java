@@ -11,9 +11,10 @@ import java.util.stream.IntStream;
 import net.minecraft.core.UUIDUtil;
 
 /**
- * Uma pixel art da Tela de Sinal: de 8 × 8 a 64 × 64, paleta de 16 cores ARGB (a cor 0 é sempre transparente) e um
- * índice da paleta por pixel, linha a linha a partir de cima à esquerda. Fica na biblioteca do jogador e, copiada,
- * no layout da Tela que a usa ({@link TvLayout#images()}). Gravada, os pixels vão em meio byte cada
+ * Uma pixel art da Tela de Sinal: de 8 × 8 a 128 × 128 ({@link TvPixels#MIN_SIDE} e {@link TvPixels#MAX_SIDE}),
+ * paleta de 16 cores ARGB (a cor 0 é sempre transparente) e um índice da paleta por pixel, linha a linha a partir de
+ * cima à esquerda. Fica na biblioteca do jogador e, copiada, no layout da Tela que a usa ({@link TvLayout#images()});
+ * o update tag da Tela leva só a referência dela ({@link TvArtRef}). Gravada, os pixels vão em meio byte cada
  * ({@link TvPixels#pack}) e a paleta como {@code int[]}; uma arte gravada que não vale (tamanho, paleta ou pixels) não
  * decodifica, e quem lê uma lista a larga sem derrubar as outras.
  *
@@ -77,6 +78,11 @@ public record TvPixelArt(UUID id, String name, int width, int height, int[] pale
 
     public int pixelCount() {
         return width * height;
+    }
+
+    /** O resumo do conteúdo ({@link TvPixels#hash}), calculado a cada chamada: guarde-o quando for usá-lo de novo. */
+    public long contentHash() {
+        return TvPixels.hash(width, height, palette, pixels);
     }
 
     public TvPixelArt withName(String name) {

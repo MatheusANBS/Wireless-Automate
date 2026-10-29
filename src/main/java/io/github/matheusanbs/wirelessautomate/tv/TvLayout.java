@@ -158,6 +158,61 @@ public record TvLayout(List<TvPiece> pieces, TvTheme theme, TvBackground backgro
         return sum;
     }
 
+    /** Os ids das artes que as Imagens e o fundo em mosaico apontam, existam no layout ou não. */
+    private Set<UUID> referencedImages() {
+        Set<UUID> ids = new HashSet<>();
+        for (TvPiece piece : pieces) {
+            if (piece.type() == TvPieceType.IMAGE) {
+                piece.style().part().image().ifPresent(ids::add);
+            }
+        }
+        if (background.kind() == TvBackground.Kind.TILED) {
+            background.image().ifPresent(ids::add);
+        }
+        return ids;
+    }
+
+    /**
+     * O layout com as artes que as peças e o fundo apontam e que ele não tem, tiradas de {@code from} (o layout que a
+     * Tela já tem, ao salvar: o editor pode mandar uma Imagem cuja arte ainda não chegou a ele, e a cópia da Tela
+     * fica). Devolve o próprio layout quando nada falta ou {@code from} não tem o que falta.
+     */
+    public TvLayout withMissingImagesFrom(TvLayout from) {
+        if (from.images.isEmpty()) {
+            return this;
+        }
+        List<TvPixelArt> added = null;
+        for (UUID id : referencedImages()) {
+            TvPixelArt art = from.imagesById.get(id);
+            if (art != null && !imagesById.containsKey(id)) {
+                if (added == null) {
+                    added = new ArrayList<>(images);
+                }
+                added.add(art);
+            }
+        }
+        return added == null ? this : withImages(added);
+    }
+
+    /**
+     * O layout sem as artes que nenhuma Imagem nem o fundo apontam; diferente do {@link #prunedImages}, as peças e o
+     * fundo ficam mesmo sem a arte (o servidor a completa pela Tela antes de resolver). Devolve o próprio layout
+     * quando nada sai.
+     */
+    public TvLayout withoutUnusedImages() {
+        if (images.isEmpty()) {
+            return this;
+        }
+        Set<UUID> referenced = referencedImages();
+        List<TvPixelArt> kept = new ArrayList<>(images.size());
+        for (TvPixelArt image : images) {
+            if (referenced.contains(image.id())) {
+                kept.add(image);
+            }
+        }
+        return kept.size() == images.size() ? this : withImages(kept);
+    }
+
     /**
      * O layout com as imagens resolvidas: a Imagem sem arte ou com uma arte que o layout não tem sai, o fundo em
      * mosaico sem arte existente volta ao do tema, e as artes que nenhuma peça nem o fundo usam saem. Devolve o

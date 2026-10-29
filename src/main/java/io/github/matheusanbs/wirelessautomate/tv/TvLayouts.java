@@ -234,7 +234,7 @@ public final class TvLayouts {
             TvStorageMetric metric, int role, boolean reverse) {
         int size = Math.max(6, h * 7 / 10);
         return piece(TvPieceType.VALUE, x + h, y, w - h, h, bound(storage, metric),
-                new TvFormat(1, true, false, "", type.ratePerTick() ? "/t" : "/s", TvUnit.NONE),
+                new TvFormat(1, true, false, "", "", type.ratePerTick() ? TvUnit.TICK : TvUnit.SECOND),
                 base(role, 0, size, TvAlign.LEFT));
     }
 

@@ -51,7 +51,8 @@ import io.github.matheusanbs.wirelessautomate.client.ConfiguratorWheelScreen;
 final class E2eShowcase {
     /**
      * Com {@code WA_SHOWCASE_ONLY=ressonador}, a vitrine monta a casa e grava só o Ressonador (GIF e fotos); com
-     * {@code cascata}, só a foto da cascata, e com {@code reparador}, só as fotos do Reparador de Cristais.
+     * {@code cascata}, só a foto da cascata, com {@code reparador}, só as fotos do Reparador de Cristais, e com
+     * {@code tela}, só a parede das Telas de Sinal (fotos e GIF).
      */
     private static final String ONLY = System.getenv("WA_SHOWCASE_ONLY");
 
@@ -63,7 +64,7 @@ final class E2eShowcase {
      * (oeste), a galeria dos cinco armazenamentos com fluxo de verdade para um cofre sob o piso
      * (centro-norte), o salão dos oito tiers (fundo), a vitrine dos itens do mod em pedestais (centro)
      * e o laboratório do Ars Nouveau com quatro tiers do Tanque de Source (leste); no jardim, a cascata do Ressonador
-     * (oeste) e a Vitrine do Ressonador (leste). Fotografa a casa inteira, cada ala e as telas. As
+     * (oeste), a Vitrine do Ressonador (leste) e, no fim do caminho, a parede das Telas de Sinal. Fotografa a casa inteira, cada ala e as telas. As
      * imagens finais saem de scripts/curseforge/gerar_imagens.py.
      */
     static List<Step> showcase() {
@@ -78,6 +79,11 @@ final class E2eShowcase {
             E2eShowcaseRepairer.steps(list);
             return list;
         }
+        if ("tela".equals(ONLY)) {
+            list.add(mountWorld());
+            E2eShowcaseTv.steps(list);
+            return list;
+        }
         if ("cascata".equals(ONLY)) {
             list.add(mountWorld());
             showcaseCascadeShots(list);
@@ -89,6 +95,7 @@ final class E2eShowcase {
         showcaseTierAndRangeShots(list);
         showcaseStorageShots(list);
         showcaseTabletShots(list);
+        E2eShowcaseTv.steps(list);
         E2eShowcaseRepairer.steps(list);
         // por último: o GIF congela o tempo enquanto grava
         E2eShowcaseResonator.steps(list);

@@ -145,12 +145,33 @@ Energy and items go in from any side, so a router can keep it fed. The cracks cl
 
 A wall display that shows **live numbers from your networks and storages**. Stick it on the side of a solid block and stretch it from **1 × 1 to 32 × 32 blocks** in the Size tab: no extra blocks, the picture spans the whole wall.
 
+![Signal Screen](ENVIAR:feature-30-screen-wall.png)
+
 - **A full editor in the game:** drag, resize, group and layer pieces, copy and paste between Screens, undo up to 100 steps. Pieces: **Value, Text, Shape, Icon, Bar, Gauge, Graph and Arrow**, each fed by a **network**, a **linked storage** or the **in-game clock**.
 - **Rules** change a piece's color, background, blink or hide it when a number is below, above or equal to a value. Five fonts, four ready themes (Graphite, Phosphor, Amber, Porcelain) plus your own, backgrounds, scanlines.
 - **Ready layouts** for the whole Screen (Energy, Storage, Network, Clock) that fit any size, **layouts you save yourself** and ready or custom **components**, picked from a list with a click.
 - **Icon** shows **any item, fluid or Mekanism chemical** dragged from JEI, even items with data (Apotheosis gems, enchanted gear), in 3D with animated icons.
 - **Link storages with the Linker** (Screen mode): click the Screen, then a Wireless Chest, Battery or Tank, at any distance and in any dimension. A storage in an unloaded chunk shows its last number marked as stale; chunks are never force-loaded.
 - **Cheap:** nothing runs while nobody is near; the client redraws a Screen only when a number or the layout changes, within a video memory budget.
+
+**Pixel art, animations, images and GIFs.**
+
+- **A pixel art editor in the game**, from 8 × 8 to **128 × 128** with a **16-color palette**: pen, eraser, fill, line, rectangle, ellipse, shade, dither and selection, brushes up to 8 px, mirrors, flip and rotate, **Create ramp** from any color and 100 undo steps. Your arts stay in your library (32 by default) and go on a Screen as an **Image** piece, at any whole scale, or as a tiled background.
+
+![Draw pixel art in the game](ENVIAR:feature-27-screen-pixel-art.png)
+
+- **Animate it frame by frame:** up to **64 frames** per art, **1 to 20 frames per second**, looping or back and forth, with a frame strip and onion skin. Two Screens with the same art play in step.
+
+![Animate it frame by frame](ENVIAR:feature-28-screen-animation.png)
+
+![A wall of Screens playing](ENVIAR:tela.gif)
+
+- **Real images and GIFs:** **Upload file** sends a **PNG, JPG or GIF** from your computer (never a link), up to **1024 px** and **8 MB** per file and 240 frames per GIF by default, and animated GIFs play on the Screen. Server owners can turn images off, let only operators upload, change every limit, and with `/wa tela` remove an image from every Screen or stop a player from uploading; each player can hide the images uploaded by others in the client config (`showOthersImages`).
+
+![Real images and GIFs](ENVIAR:feature-29-screen-images.png)
+
+- **Export and import as text:** arts, images and whole layouts copy as a short code or as readable text, so you can share a Screen or let a chat AI draw for you: paste the [pixel art guide for AIs](https://github.com/MatheusANBS/Wireless-Automate/blob/main/docs/pixel-art-ai-guide.md) into the chat, ask for a drawing and import the answer.
+- **Access:** on the Access tab, invite players or, with FTB Teams, whole teams to edit a Screen like its owner (size, layout and links). Anyone can still look at it.
 
 ### Tools for big builds
 

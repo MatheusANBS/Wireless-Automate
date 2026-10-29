@@ -95,3 +95,36 @@ O dono quer a Tela com mais espaço para crescer e aceita um pouco mais de custo
   - o teto de pixels redesenhados por quadro (`TvCanvases.FRAME_PIXELS`) e de Telas por quadro dobram;
   - o editor de pixel art aceita 128 × 128 (os níveis de zoom e o enquadrar já são genéricos).
 - **A animação de pixel art fica para a etapa 5**, depois do lançamento. Os quadros entram como lista opcional na arte, sem quebrar nada do que existe.
+
+### Cor livre e arte até 256 × 256 (aprovado em 29/10)
+
+O dono quer reproduzir imagens com fidelidade total, como a Mona Lisa feita por uma IA. Com 16 cores e 128 px, ela sai granulada e pequena.
+
+- **Dois tipos de arte:**
+  - **Paleta**, a de hoje: até 16 cores, meio byte por pixel, com as rampas e o "Criar rampa". Toda arte salva até agora é dessa.
+  - **Cor livre:** cada pixel é um ARGB qualquer, guardado comprimido sem perda (deflate). Converter de paleta para livre é um botão; de livre para paleta reduz as cores, com aviso e desfazer.
+- **Tamanho:** de 8 × 8 até **256 × 256**. O teto por Tela, `tv.maxImagePixels`, sobe o padrão para **262.144** (quatro artes de 256 × 256), com faixa até 1.048.576.
+- **Config do servidor (padrão liberado):**
+  - `tv.maxArtColors`: 0 é livre (o padrão), 256, ou 16 (só paleta);
+  - `tv.maxArtSize`: de 8 a 256, padrão 256.
+  
+  O servidor confere ao salvar, contando as cores distintas, e recusa com aviso. O cliente sabe os limites pelo menu e esconde o que não vale.
+- **Rede (as artes já saem do pacote do chunk, Task 1c):**
+  - **Pacote de artes:** uma arte por pacote, para nenhum passar do teto de pacote; o orçamento por tick por jogador continua.
+  - **Salvar o layout não leva pixels:** leva as referências (id e resumo). O servidor acha os pixels na biblioteca de quem salva ou na cópia que a Tela já tem. Uma arte que só existe no cliente (vinda de código) é salva antes na biblioteca, num pacote de envio de arte (`SAVE_ART`, até ~300 KB, com o limite de ações por segundo).
+  - **Biblioteca:** vai ao cliente em partes, uma arte por pacote, ao abrir o editor. O teto passa a ser de bytes por jogador, `tv.maxLibraryBytes`, padrão 4 MB, além do `tv.maxArts`.
+- **Editor numa arte de cor livre:**
+  - a paleta vira "cores da arte" (as usadas, até 64 à vista, com rolagem) mais o seletor livre;
+  - lápis, balde, linha, formas, seleção e o resto funcionam igual, por cor exata;
+  - o balde com Shift troca a cor exata;
+  - o conta-gotas pega o ARGB;
+  - o **clarear e escurecer** ajusta o brilho do pixel em 8% por passada, uma vez por traço, no lugar de andar na rampa;
+  - o pontilhado alterna a cor com transparente.
+- **Código:**
+  - a forma comprimida leva o ARGB comprimido;
+  - a forma legível aceita paleta de até 256 entradas (com mais de 16, dois caracteres por pixel, `00`–`ff`);
+  - um formato `png:` aceita a imagem em PNG em base64. O leitor confere largura e altura no cabeçalho antes de decodificar e recusa acima de `tv.maxArtSize`, para não haver bomba de descompressão.
+  
+  O guia de IA ganha a receita do script (reduzir, gerar PNG, base64).
+- **Desenho na Tela:** a mesma textura de hoje (NEAREST, tira por arte). Só muda o que vai dentro dela.
+- **Custo aceito pelo dono:** mais rede e mais memória só de quem está perto. Uma arte livre de 256 × 256 tem até 256 KB sem compressão.

@@ -12,6 +12,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Os controles simples da coluna de propriedades (desenhados, sem widget): o rótulo, o texto de ajuda de várias
@@ -22,6 +23,9 @@ final class TvControls {
     static final int ROW = 12;
     private static final Component LEFT = Component.literal("‹");
     private static final Component RIGHT = Component.literal("›");
+    /** As cores dos rótulos, lidas a cada desenho: o tema pode trocar sem o formulário ser refeito. */
+    static final IntSupplier MUTED = () -> GuiPaint.MUTED;
+    static final IntSupplier FG = () -> GuiPaint.FG;
 
     private TvControls() {
     }
@@ -30,11 +34,11 @@ final class TvControls {
     static final class Label extends TvControl {
         private final Font font;
         private final Supplier<Component> text;
-        private final int color;
+        private final IntSupplier color;
         private Component last;
         private GuiText.Fitted fitted;
 
-        Label(Font font, String id, int x, int y, int w, int color, Supplier<Component> text) {
+        Label(Font font, String id, int x, int y, int w, IntSupplier color, Supplier<Component> text) {
             super(id, x, y, w, 9);
             this.font = font;
             this.text = text;
@@ -53,7 +57,7 @@ final class TvControls {
 
         @Override
         void render(GuiGraphics g, int mouseX, int mouseY) {
-            GuiText.draw(g, font, fitted, ax, ay, color);
+            GuiText.draw(g, font, fitted, ax, ay, color.getAsInt());
         }
     }
 
@@ -237,20 +241,22 @@ final class TvControls {
             return true;
         }
 
-        /** O centro da ficha {@code index} (ganchos do e2e). */
+        @Override
         int[] chipCenter(int index) {
             int each = chip(names.length);
             return new int[] {ax + index * (each + 1) + each / 2, centerY()};
         }
     }
 
-    /** Um botão com texto (ou símbolo), que roda {@code action}; desligado, não responde. */
+    /** Um botão com texto (ou símbolo), que roda {@code action}; desligado, não responde e mostra o porquê na dica. */
     static final class Button extends TvControl {
         private final Font font;
         private final TvEditorPaint.Label label;
         private final Runnable action;
         private BooleanSupplier enabled = () -> true;
+        private Supplier<Component> offTip = () -> null;
         private boolean on = true;
+        private @Nullable Component tip;
 
         Button(Font font, String id, int x, int y, int w, Component text, Runnable action) {
             super(id, x, y, w, ROW - 1);
@@ -266,9 +272,22 @@ final class TvControls {
             return this;
         }
 
+        /** A dica do botão desligado (o porquê), lida no refresh; nula, sem dica. */
+        Button offTip(Supplier<Component> why) {
+            this.offTip = why;
+            this.tip = on ? null : why.get();
+            return this;
+        }
+
         @Override
         void refresh() {
             on = enabled.getAsBoolean();
+            tip = on ? null : offTip.get();
+        }
+
+        @Override
+        @Nullable Component tooltip(double mouseX, double mouseY) {
+            return contains(mouseX, mouseY) ? tip : null;
         }
 
         @Override

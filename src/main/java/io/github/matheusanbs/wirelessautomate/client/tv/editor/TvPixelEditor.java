@@ -42,9 +42,9 @@ public final class TvPixelEditor {
     private boolean spaceDown;
     private boolean painting;
 
-    TvPixelEditor(TvEditorActions actions) {
+    TvPixelEditor(TvEditorActions actions, TvArtDrag drag) {
         this.actions = actions;
-        this.arts = new TvArtsPanel(actions, this);
+        this.arts = new TvArtsPanel(actions, this, drag);
     }
 
     /** A aba Pixel art da coluna da esquerda do editor da Tela, que abre este editor. */
@@ -95,7 +95,7 @@ public final class TvPixelEditor {
         toolbar.layout(layout.tools());
         board.layout(layout.board());
         footer.layout(font, layout.footer(), layout.status());
-        side.layout(font, layout.side());
+        side.layout(font, layout.side(), layout.clear());
     }
 
     /** Fecha sem salvar e solta as texturas do quadro. */

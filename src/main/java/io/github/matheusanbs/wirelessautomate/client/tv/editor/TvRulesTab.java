@@ -58,7 +58,7 @@ final class TvRulesTab {
         String id = "rule" + i;
         TvRule rule = ctx.piece().rules().get(i);
         int y = form.y();
-        form.add(new TvControls.Label(form.font, id + ".if", 0, y + 4, TvForm.W - 3 * SMALL - 6, GuiPaint.MUTED,
+        form.add(new TvControls.Label(form.font, id + ".if", 0, y + 4, TvForm.W - 3 * SMALL - 6, TvControls.MUTED,
                 () -> TvPropsCtx.key(value ? "rules.if.value" : "rules.if.own")));
         form.add(new TvIconControls.IconButton(id + ".up", TvForm.W - 3 * SMALL - 2, y, SMALL, TvIcons.Icon.MOVE_UP,
                 TvPropsCtx.key("rules.up"), () -> ctx.change("rules.move", p -> p.withRules(swap(p.rules(), i, i - 1))))
@@ -92,7 +92,7 @@ final class TvRulesTab {
         Effect effect = effect(rule);
         boolean colored = effect == Effect.COLOR || effect == Effect.BACKGROUND;
         y = form.y();
-        form.add(new TvControls.Label(form.font, id + ".then", 0, y + 2, 9, GuiPaint.MUTED,
+        form.add(new TvControls.Label(form.font, id + ".then", 0, y + 2, 9, TvControls.MUTED,
                 () -> TvPropsCtx.key("rules.then")));
         form.add(new TvControls.Cycle(form.font, id + ".effect", 10, y, TvForm.W - 10 - (colored ? 30 : 0),
                 () -> effectName(effect(rule(ctx, i))), delta -> edit(ctx, i, r -> withEffect(r,

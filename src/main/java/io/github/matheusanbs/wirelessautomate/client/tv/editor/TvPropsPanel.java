@@ -409,10 +409,7 @@ final class TvPropsPanel {
 
     int @Nullable [] chipCenter(String id, int index) {
         TvControl control = find(id);
-        if (control instanceof TvIconControls.IconSegment icons) {
-            return icons.chipCenter(index);
-        }
-        return control instanceof TvControls.Segment segment ? segment.chipCenter(index) : null;
+        return control == null ? null : control.chipCenter(index);
     }
 
     int @Nullable [] center(String id) {

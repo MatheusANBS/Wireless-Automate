@@ -11,8 +11,8 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * A coluna de ferramentas do editor de pixel art, em duas colunas de botões com ícone: as dez ferramentas, as ajudas
- * (espelho horizontal, vertical e pixel perfect) e a arte inteira (virar e girar; o Limpar tudo é um botão de texto da
- * {@link TvPixelSide}). O retângulo e a elipse mostram o ícone cheio quando estão no modo cheio. O nome e a tecla de
+ * (espelho horizontal, vertical e pixel perfect) e a arte inteira (virar e girar; o Limpar tudo é um botão de texto no
+ * pé desta coluna, da {@link TvPixelSide}). O retângulo e a elipse mostram o ícone cheio quando estão no modo cheio. O nome e a tecla de
  * cada um ficam na dica.
  */
 final class TvPixelToolbar {

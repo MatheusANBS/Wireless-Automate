@@ -82,6 +82,11 @@ abstract class TvControl {
     void refresh() {
     }
 
+    /** O centro da ficha {@code index} de um grupo de fichas (ganchos do e2e), ou {@code null} se não é um. */
+    int @Nullable [] chipCenter(int index) {
+        return null;
+    }
+
     int centerX() {
         return ax + w / 2;
     }

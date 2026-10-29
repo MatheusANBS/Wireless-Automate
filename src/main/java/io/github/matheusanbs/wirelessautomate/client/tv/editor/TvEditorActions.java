@@ -10,6 +10,7 @@ import io.github.matheusanbs.wirelessautomate.tv.TvLayout;
 import io.github.matheusanbs.wirelessautomate.tv.TvPixelArt;
 import io.github.matheusanbs.wirelessautomate.tv.TvTheme;
 import java.util.List;
+import java.util.UUID;
 import net.minecraft.core.GlobalPos;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -57,7 +58,12 @@ public final class TvEditorActions {
         return maxImagePixels;
     }
 
-    Saved save(TvLayout layout) {
+    /**
+     * Salva o rascunho sem as pixel arts que nenhuma peça nem o fundo usam mais ({@link TvLayout#prunedImages}, o que o
+     * servidor faria), para uma cópia solta não pesar no teto de bytes.
+     */
+    Saved save(TvLayout draft) {
+        TvLayout layout = draft.prunedImages();
         if (TvLayoutPayload.encodedSize(layout) > maxLayoutBytes) {
             return Saved.TOO_BIG;
         }
@@ -115,6 +121,11 @@ public final class TvEditorActions {
     /** Salva a pixel art na biblioteca: cria ou troca a de mesmo id. */
     void saveArt(TvPixelArt art) {
         send(TvLibraryActionPayload.saveArt(containerId, art));
+    }
+
+    /** Remove a pixel art da biblioteca (as Telas que a usam guardam a cópia delas). */
+    void removeArt(UUID id) {
+        send(TvLibraryActionPayload.removeArt(containerId, id));
     }
 
     private void send(TvLibraryActionPayload payload) {

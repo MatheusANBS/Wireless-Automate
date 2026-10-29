@@ -22,12 +22,12 @@ import org.lwjgl.glfw.GLFW;
  * O editor de pixel art no e2e, tudo pelo mouse e pelo teclado, com o editor da Tela aberto: a aba Pixel art, Nova
  * (16 × 16), um retângulo, o balde por dentro, uma elipse cheia, uma linha, o lápis, o clarear numa faixa da elipse,
  * desfazer e refazer, o zoom no ponto do mouse, arrastar a vista com o botão do meio e enquadrar com 0; a foto
- * {@code tela-pixel-editor}; o nome e o Salvar, conferido na biblioteca do cliente e do servidor (a foto da aba,
- * {@code tela-pixel-aba}); e Editar, que abre a arte salva de volta (no escuro, a foto
- * {@code tela-pixel-editor-escuro}), e o Esc sem mudança, que volta ao editor da Tela.
+ * {@code tela-pixel-editor}; o nome e o Salvar, conferido na biblioteca do cliente e do servidor; e Editar, que abre
+ * a arte salva de volta (no escuro, a foto {@code tela-pixel-editor-escuro}), e o Esc sem mudança, que volta ao
+ * editor da Tela. O resto da aba, a Imagem e o mosaico ficam no {@link E2eTvArtSteps}.
  */
 final class E2eTvPixelSteps {
-    private static final String NAME = "Logo e2e";
+    private static final String NAME = "Logo";
     private static final int CTRL = GLFW.GLFW_MOD_CONTROL;
     private static int zoomBefore;
     private static int panBefore;
@@ -128,7 +128,6 @@ final class E2eTvPixelSteps {
         list.add(step("Pixel: Salvar volta ao editor da Tela e a arte chega à biblioteca", () -> clickAt(
                 pixel().buttonCenter("SAVE")), () -> !pixel().isOpen() && inClient() != null && inServer(),
                 () -> "aberto " + pixel().isOpen() + ", no cliente " + (inClient() != null)));
-        E2eTvSteps.shot(list, "tela-pixel-aba");
         list.add(step("Pixel: Editar abre a arte salva", () -> {
             clickAt(pixel().artRowCenter(NAME));
             clickAt(pixel().artsButtonCenter("EDIT"));

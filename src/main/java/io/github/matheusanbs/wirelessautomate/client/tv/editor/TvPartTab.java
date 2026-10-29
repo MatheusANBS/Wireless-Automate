@@ -8,8 +8,8 @@ import java.util.function.UnaryOperator;
 /**
  * A seção "Peça" da aba Estilo para as peças da etapa 3 (os campos de {@link TvPartStyle}): a Barra (deitada ou em
  * pé, invertida, mínimo, máximo e trilha), o Medidor (abertura, espessura, mínimo, máximo e trilha), o Gráfico (linha
- * ou colunas, janela, área e a escala fixa) e a Seta (invertida, zona morta e as três cores). Os números são inteiros
- * na tela; zero no máximo é "do dado". O Ícone escolhe o item na aba Dado.
+ * ou colunas, janela, área e a escala fixa) e a Seta (invertida, zona morta e as três cores); a da Imagem fica no
+ * {@link TvImageTab}. Os números são inteiros na tela; zero no máximo é "do dado". O Ícone escolhe o item na aba Dado.
  */
 final class TvPartTab {
     private TvPartTab() {
@@ -18,7 +18,7 @@ final class TvPartTab {
     /** Se a peça tem controles nesta seção. */
     static boolean has(TvPieceType type) {
         return switch (type) {
-            case BAR, GAUGE, GRAPH, ARROW -> true;
+            case BAR, GAUGE, GRAPH, ARROW, IMAGE -> true;
             default -> false;
         };
     }
@@ -29,6 +29,7 @@ final class TvPartTab {
             case GAUGE -> gauge(form, ctx);
             case GRAPH -> graph(form, ctx);
             case ARROW -> arrow(form, ctx);
+            case IMAGE -> TvImageTab.build(form, ctx);
             default -> {
             }
         }

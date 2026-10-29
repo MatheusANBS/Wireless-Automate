@@ -20,8 +20,9 @@ import net.minecraft.util.Mth;
 /**
  * A aba Estilo (decisão 12 da spec) em seções que recolhem (o estado fica na sessão, {@link TvSections}): Conteúdo (o
  * texto ou o resumo do dado), Texto (fonte, tamanho, caber no quadro e alinhamento), Cores (uma linha por cor, cada
- * uma abrindo o seletor), Caixa (borda, cantos e opacidade) e Posição e tamanho (recolhida por padrão). Com várias
- * peças só vale o que é de todas: a "Cor de tudo" e a opacidade.
+ * uma abrindo o seletor), Caixa (borda, cantos e opacidade; a da Imagem fica na seção Peça, com a escala e o
+ * alinhamento) e Posição e tamanho (recolhida por padrão). Com várias peças só vale o que é de todas: a "Cor de tudo"
+ * e a opacidade.
  */
 final class TvStyleTab {
     private static final List<TvIcons.Icon> ALIGN_ICONS = List.of(TvIcons.Icon.ALIGN_LEFT,
@@ -37,7 +38,7 @@ final class TvStyleTab {
         }
         TvPieceType type = ctx.piece().type();
         boolean texty = type == TvPieceType.VALUE || type == TvPieceType.TEXT;
-        boolean content = type != TvPieceType.SHAPE;
+        boolean content = type != TvPieceType.SHAPE && type != TvPieceType.IMAGE;
         form.text("style.name", TvPropsCtx.key("style.name"), TvPiece.MAX_NAME, null,
                 TvPropsCtx.key("style.name.hint"), () -> ctx.piece().name(),
                 text -> ctx.change("style.name", p -> p.withName(text)));
@@ -105,7 +106,7 @@ final class TvStyleTab {
                 () -> ctx.piece().style().font(), f -> style(ctx, "style.font", s -> s.withFont(f))));
         form.endRow(TvIcons.SIZE);
         form.add(new TvControls.Label(form.font, "style.size.label", 0, form.y() + 2, TvForm.LABEL_W - 2,
-                GuiPaint.MUTED, () -> TvPropsCtx.key(ctx.piece().style().fit() ? "style.size.max" : "style.size")));
+                TvControls.MUTED, () -> TvPropsCtx.key(ctx.piece().style().fit() ? "style.size.max" : "style.size")));
         form.add(new TvNumberField(form.font, "style.size", TvForm.LABEL_W, form.y(), TvForm.W - TvForm.LABEL_W, 1,
                 TvStyle.MAX_SIZE, 1, () -> ctx.piece().style().size(),
                 v -> style(ctx, "style.size", s -> s.withSize(v))));
@@ -145,7 +146,9 @@ final class TvStyleTab {
                 v -> style(ctx, "style.border_width", s -> s.withBorder(s.border(), v)));
         form.number("style.radius", TvPropsCtx.key("style.radius"), 0, TvStyle.MAX_RADIUS, 1,
                 () -> ctx.piece().style().radius(), v -> style(ctx, "style.radius", s -> s.withRadius(v)));
-        opacity(form, ctx);
+        if (ctx.piece().type() != TvPieceType.IMAGE) {
+            opacity(form, ctx);
+        }
     }
 
     /** X, Y, largura e altura em duas colunas: um rótulo curto e o número, dois por linha. */
@@ -174,10 +177,10 @@ final class TvStyleTab {
     private static void pair(TvForm form, int half, Cell a, Cell b) {
         int y = form.y();
         int fieldW = half - 10;
-        form.add(new TvControls.Label(form.font, a.id() + ".label", 0, y + 2, 9, GuiPaint.MUTED,
+        form.add(new TvControls.Label(form.font, a.id() + ".label", 0, y + 2, 9, TvControls.MUTED,
                 () -> TvPropsCtx.key("pos." + a.key())));
         form.add(new TvNumberField(form.font, a.id(), 10, y, fieldW, a.min(), a.max(), 1, a.get(), a.set()));
-        form.add(new TvControls.Label(form.font, b.id() + ".label", half + 4, y + 2, 9, GuiPaint.MUTED,
+        form.add(new TvControls.Label(form.font, b.id() + ".label", half + 4, y + 2, 9, TvControls.MUTED,
                 () -> TvPropsCtx.key("pos." + b.key())));
         form.add(new TvNumberField(form.font, b.id(), half + 14, y, fieldW, b.min(), b.max(), 1, b.get(), b.set()));
         form.endRow(TvTextField.H);
@@ -194,7 +197,7 @@ final class TvStyleTab {
         }
     }
 
-    private static void opacity(TvForm form, TvPropsCtx ctx) {
+    static void opacity(TvForm form, TvPropsCtx ctx) {
         int y = form.inline("style.opacity", TvPropsCtx.key("style.opacity"));
         form.add(new TvSlider(form.font, "style.opacity", TvForm.LABEL_W, y, TvForm.W - TvForm.LABEL_W, 0, 100, 5,
                 "%", () -> ctx.piece().style().opacity(), v -> style(ctx, "style.opacity", s -> s.withOpacity(v))));

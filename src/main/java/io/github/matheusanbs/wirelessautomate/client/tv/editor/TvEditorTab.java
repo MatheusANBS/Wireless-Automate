@@ -59,12 +59,12 @@ public final class TvEditorTab {
         this.components = new TvComponentsPanel(doc, actions);
         this.canvas = new TvEditorCanvas(doc);
         this.palette = new TvPalettePanel(doc, canvas);
-        this.base = new TvBaseLine(doc, actions.maxLayoutBytes() / 1024);
+        this.base = new TvBaseLine(doc, actions.maxLayoutBytes() / 1024, actions.maxImagePixels());
         this.bar = new TvEditorBar(doc);
         this.layers = new TvLayersPanel(doc);
         this.props = new TvPropsPanel(doc, networks, links, actions, popups);
         this.keys = new TvEditorKeys(doc, this::save);
-        this.pixel = new TvPixelEditor(actions);
+        this.pixel = new TvPixelEditor(actions, new TvArtDrag(doc, canvas, actions));
         this.probe = new TvEditorProbe(doc, leftTabs, palette, components, canvas, bar, layers, props, menu,
                 popups);
     }
@@ -117,6 +117,7 @@ public final class TvEditorTab {
         props.render(g, mouseX, mouseY);
         menu.render(g, mouseX, mouseY);
         palette.renderGhost(g, mouseX, mouseY);
+        pixel.arts().renderGhost(g, mouseX, mouseY);
         TvPopup popup = popups.current();
         if (popup != null) {
             popup.render(g, mouseX, mouseY);
@@ -252,7 +253,8 @@ public final class TvEditorTab {
             return popup.mouseDragged(mouseX, mouseY);
         }
         return props.mouseDragged(mouseX, mouseY) || palette.mouseDragged(mouseX, mouseY)
-                || canvas.mouseDragged(mouseX, mouseY) || layers.mouseDragged(mouseX, mouseY);
+                || pixel.arts().mouseDragged(mouseX, mouseY) || canvas.mouseDragged(mouseX, mouseY)
+                || layers.mouseDragged(mouseX, mouseY);
     }
 
     public boolean mouseReleased(double mouseX, double mouseY) {
@@ -260,11 +262,9 @@ public final class TvEditorTab {
         if (popup != null) {
             return popup.mouseReleased(mouseX, mouseY);
         }
-        boolean propsDrag = props.mouseReleased(mouseX, mouseY);
-        boolean paletteDrag = palette.mouseReleased(mouseX, mouseY);
-        boolean canvasDrag = canvas.mouseReleased();
-        boolean layersDrag = layers.mouseReleased();
-        return propsDrag || paletteDrag || canvasDrag || layersDrag;
+        // todos soltam (o | não para no primeiro que usou o botão)
+        return props.mouseReleased(mouseX, mouseY) | palette.mouseReleased(mouseX, mouseY)
+                | pixel.arts().mouseReleased(mouseX, mouseY) | canvas.mouseReleased() | layers.mouseReleased();
     }
 
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {

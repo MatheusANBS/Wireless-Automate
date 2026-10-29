@@ -38,6 +38,8 @@ public final class TvIcons {
         GRAPH("graph"),
         /** A peça Seta: paleta e Camadas. */
         ARROW("arrow"),
+        /** A peça Imagem: Camadas. */
+        IMAGE("imagem"),
         /** A aba Peças da coluna. */
         PIECES("pieces"),
         /** A aba Componentes da coluna. */
@@ -151,13 +153,14 @@ public final class TvIcons {
         }
     }
 
-    /** O ícone do tipo de peça, na paleta e nas Camadas (a Imagem usa o do Ícone até ganhar um próprio). */
+    /** O ícone do tipo de peça, na paleta e nas Camadas. */
     static Icon of(io.github.matheusanbs.wirelessautomate.tv.TvPieceType type) {
         return switch (type) {
             case VALUE -> Icon.VALUE;
             case TEXT -> Icon.TEXT;
             case SHAPE -> Icon.SHAPE;
-            case ICON, IMAGE -> Icon.ICON;
+            case ICON -> Icon.ICON;
+            case IMAGE -> Icon.IMAGE;
             case BAR -> Icon.BAR;
             case GAUGE -> Icon.GAUGE;
             case GRAPH -> Icon.GRAPH;

@@ -9,13 +9,15 @@ import net.minecraft.client.gui.GuiGraphics;
 /**
  * A barra da base, em cima da miniatura: o tamanho da Tela ("6×3 · 192×96 px") e, à direita, "Não salvo" enquanto o
  * rascunho difere do salvo. No lugar dela, os avisos: o salvar que não valeu (grande demais, sem permissão, rápido
- * demais ou sem resposta) e a Tela que mudou no servidor, este com o Recarregar. Os textos são medidos no {@link #layout} e o do tamanho quando a área muda.
+ * demais ou sem resposta), a pixel art que passaria do teto de pixels da Tela e a Tela que mudou no servidor, este com
+ * o Recarregar. Os textos são medidos no {@link #layout} e o do tamanho quando a área muda.
  */
 final class TvBaseLine {
     private static final int RELOAD_PAD = 10;
 
     private final TvEditorDoc doc;
     private final int maxKb;
+    private final int maxImagePixels;
     private TvRect rect = TvRect.NONE;
     private TvRect reload = TvRect.NONE;
     private Font font;
@@ -28,9 +30,10 @@ final class TvBaseLine {
     private final GuiText.Fitted[] failures = new GuiText.Fitted[TvEditorDoc.Failure.values().length];
     private TvEditorPaint.Label reloadLabel;
 
-    TvBaseLine(TvEditorDoc doc, int maxKb) {
+    TvBaseLine(TvEditorDoc doc, int maxKb, int maxImagePixels) {
         this.doc = doc;
         this.maxKb = maxKb;
+        this.maxImagePixels = maxImagePixels;
     }
 
     void layout(Font font, TvRect rect) {
@@ -49,9 +52,10 @@ final class TvBaseLine {
                 case DENIED -> "not_saved_denied";
                 case THROTTLED -> "not_saved_throttled";
                 case TIMEOUT -> "not_saved_timeout";
+                case IMAGES_FULL -> "images_full";
             };
-            failures[failure.ordinal()] = GuiText.fit(font, failure == TvEditorDoc.Failure.TOO_BIG
-                    ? TvEditorText.key(key, maxKb) : TvEditorText.key(key), rect.w());
+            Object limit = failure == TvEditorDoc.Failure.TOO_BIG ? maxKb : maxImagePixels;
+            failures[failure.ordinal()] = GuiText.fit(font, TvEditorText.key(key, limit), rect.w());
         }
     }
 

@@ -40,6 +40,8 @@ import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.tv.TvAccessActions;
 import io.github.matheusanbs.wirelessautomate.tv.TvClientHooks;
 import io.github.matheusanbs.wirelessautomate.tv.TvEditing;
+import io.github.matheusanbs.wirelessautomate.tv.TvImageUploads;
+import io.github.matheusanbs.wirelessautomate.tv.TvPictureSender;
 import io.github.matheusanbs.wirelessautomate.tv.TvLibraryActions;
 import io.github.matheusanbs.wirelessautomate.tv.TvPreview;
 import io.github.matheusanbs.wirelessautomate.tv.TvStorageContents;
@@ -77,7 +79,9 @@ public final class ModPayloads {
      * Versão do protocolo (38: as pixel arts no layout da Tela de Sinal ({@code images}, a peça Imagem e o fundo em
      * mosaico) e na biblioteca do jogador ({@code TvLibraryPayload.arts}, as ações {@code SAVE_ART}, {@code RENAME_ART}
      * e {@code REMOVE_ART}); o update tag da Tela leva as artes só como referência e os pixels vão no
-     * {@code TvArtsPayload}; 37: os payloads {@code TvStorageContentsRequestPayload} e {@code TvStorageContentsPayload} (os itens de um Baú ligado, só com o editor aberto); o {@code TvValuesPayload} leva os bits de dado antigo dos armazenamentos ligados, e a
+     * {@code TvArtsPayload}; as imagens enviadas, {@code TvImageUploadPayload}, {@code TvImageReplyPayload},
+     * {@code TvImageDataPayload} e {@code TvImageHavePayload}, a lista {@code pictures} do layout e da biblioteca e as
+     * regras das imagens na abertura da Tela; 37: os payloads {@code TvStorageContentsRequestPayload} e {@code TvStorageContentsPayload} (os itens de um Baú ligado, só com o editor aberto); o {@code TvValuesPayload} leva os bits de dado antigo dos armazenamentos ligados, e a
      * ligação de uma peça ganha as fontes de armazenamento e relógio; 36: os payloads do editor da Tela de Sinal, {@code TvLayoutPayload}, {@code TvLayoutAckPayload},
      * {@code TvLibraryPayload}, {@code TvLibraryActionPayload}, {@code TvPreviewPayload} e {@code TvPreviewValuesPayload},
      * e o teto de bytes do layout no buffer de abertura da Tela); mude quando um payload mudar de formato.
@@ -172,6 +176,16 @@ public final class ModPayloads {
         // Os pixels das artes das Telas, a quem está perto (TvArtSender).
         registrar.playToClient(TvArtsPayload.TYPE, TvArtsPayload.STREAM_CODEC,
                 (payload, context) -> TvClientHooks.arts.accept(payload));
+        // As imagens enviadas: o envio do jogador em partes (TvImageUploads), a resposta, a entrega aos clientes pela
+        // mesma fila das artes (TvPictureSender) e a lista do cache do cliente, uma vez por conexão.
+        registrar.playToServer(TvImageUploadPayload.TYPE, TvImageUploadPayload.STREAM_CODEC,
+                (payload, context) -> TvImageUploads.handle(serverPlayer(context), payload));
+        registrar.playToClient(TvImageReplyPayload.TYPE, TvImageReplyPayload.STREAM_CODEC,
+                (payload, context) -> TvClientHooks.imageReply.accept(payload));
+        registrar.playToClient(TvImageDataPayload.TYPE, TvImageDataPayload.STREAM_CODEC,
+                (payload, context) -> TvClientHooks.imageData.accept(payload));
+        registrar.playToServer(TvImageHavePayload.TYPE, TvImageHavePayload.STREAM_CODEC,
+                (payload, context) -> TvPictureSender.onHave(serverPlayer(context), payload));
         // Biblioteca de componentes e temas do jogador, com o editor aberto.
         registrar.playToClient(TvLibraryPayload.TYPE, TvLibraryPayload.STREAM_CODEC,
                 (payload, context) -> TvClientHooks.library.accept(payload));

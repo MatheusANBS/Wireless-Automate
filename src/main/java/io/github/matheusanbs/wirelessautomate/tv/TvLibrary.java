@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.tv;
 
 import io.github.matheusanbs.wirelessautomate.Config;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -15,7 +16,8 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.saveddata.SavedData;
 
 /**
- * A biblioteca de cada jogador: os componentes, os temas e as pixel arts que ele salvou, pelo UUID. Fica no data
+ * A biblioteca de cada jogador: os componentes, os temas, as pixel arts e as imagens enviadas (só o resumo e o nome,
+ * os bytes ficam no {@link TvImageStore}, até {@link #MAX_PICTURES}) que ele salvou, pelo UUID. Fica no data
  * storage do overworld e só é lida ao abrir o editor e nas ações; a Tela não depende dela para ser desenhada. Nome
  * repetido substitui um componente ou um tema; a arte é pelo id dela. Os tetos vêm da config
  * ({@code tv.maxComponents}, {@code tv.maxThemes}, {@code tv.maxArts}; cada arte já vem até 128 × 128, uns 8 KB
@@ -30,6 +32,13 @@ public final class TvLibrary extends SavedData {
     /** Quanto os componentes de um jogador podem ocupar juntos (a estimativa de memória do NBT de cada um). */
     public static final int MAX_COMPONENT_BYTES_PER_PLAYER = 256 * 1024;
 
+    /** Quantas imagens enviadas cada jogador guarda (cada uma é só o resumo e o nome aqui). */
+    public static final int MAX_PICTURES = 64;
+
+    /** Uma imagem enviada na biblioteca: o resumo e o nome. */
+    public record PictureEntry(String hash, String name) {
+    }
+
     /** O resultado de salvar, renomear ou remover. */
     public enum Result { OK, FULL, INVALID, TOO_BIG, MISSING, EXISTS }
 
@@ -41,9 +50,11 @@ public final class TvLibrary extends SavedData {
         int bytes;
         final Map<String, TvTheme> themes = new LinkedHashMap<>();
         final Map<UUID, TvPixelArt> arts = new LinkedHashMap<>();
+        /** Resumo → nome, em ordem de chegada. */
+        final Map<String, String> pictures = new LinkedHashMap<>();
 
         boolean isEmpty() {
-            return components.isEmpty() && themes.isEmpty() && arts.isEmpty();
+            return components.isEmpty() && themes.isEmpty() && arts.isEmpty() && pictures.isEmpty();
         }
     }
 
@@ -88,6 +99,108 @@ public final class TvLibrary extends SavedData {
     public List<TvPixelArt> arts(UUID player) {
         Shelf shelf = shelves.get(player);
         return shelf == null ? List.of() : List.copyOf(shelf.arts.values());
+    }
+
+    public List<PictureEntry> pictures(UUID player) {
+        Shelf shelf = shelves.get(player);
+        if (shelf == null || shelf.pictures.isEmpty()) {
+            return List.of();
+        }
+        List<PictureEntry> out = new ArrayList<>(shelf.pictures.size());
+        for (Map.Entry<String, String> entry : shelf.pictures.entrySet()) {
+            out.add(new PictureEntry(entry.getKey(), entry.getValue()));
+        }
+        return out;
+    }
+
+    /** Os resumos das imagens do jogador, na ordem de chegada. */
+    public List<String> pictureHashes(UUID player) {
+        Shelf shelf = shelves.get(player);
+        return shelf == null || shelf.pictures.isEmpty() ? List.of() : List.copyOf(shelf.pictures.keySet());
+    }
+
+    public boolean hasPicture(UUID player, String hash) {
+        Shelf shelf = shelves.get(player);
+        return shelf != null && shelf.pictures.containsKey(hash);
+    }
+
+    /**
+     * Guarda a imagem enviada pelo resumo; a que já está fica com o nome dela ({@code EXISTS}, nada muda). Recusa
+     * resumo inválido ou biblioteca cheia. O nome vazio vira "Imagem"; acima de {@link TvLibraryPicture#MAX_NAME}
+     * letras, é cortado.
+     */
+    public Result addPicture(UUID player, String hash, String name) {
+        if (!TvImageHash.valid(hash)) {
+            return Result.INVALID;
+        }
+        Shelf shelf = shelves.computeIfAbsent(player, id -> new Shelf());
+        if (shelf.pictures.containsKey(hash)) {
+            return Result.EXISTS;
+        }
+        if (shelf.pictures.size() >= MAX_PICTURES) {
+            drop(player, shelf);
+            return Result.FULL;
+        }
+        shelf.pictures.put(hash, pictureName(name));
+        setDirty();
+        return Result.OK;
+    }
+
+    /** O nome guardado: sem espaços nas pontas, até 32 letras, "Imagem" se vazio. */
+    static String pictureName(String name) {
+        String cut = TvText.cut(name.strip(), TvLibraryPicture.MAX_NAME);
+        return cut.isEmpty() ? "Imagem" : cut;
+    }
+
+    /** Renomeia uma imagem; recusa nome vazio. */
+    public Result renamePicture(UUID player, String hash, String to) {
+        Shelf shelf = shelves.get(player);
+        if (shelf == null || !shelf.pictures.containsKey(hash)) {
+            return Result.MISSING;
+        }
+        if (to.strip().isEmpty()) {
+            return Result.INVALID;
+        }
+        shelf.pictures.put(hash, pictureName(to));
+        setDirty();
+        return Result.OK;
+    }
+
+    /** Tira a imagem da biblioteca (a imagem só sai do mundo quando nada mais a usa). */
+    public Result removePicture(UUID player, String hash) {
+        Shelf shelf = shelves.get(player);
+        if (shelf == null || shelf.pictures.remove(hash) == null) {
+            return Result.MISSING;
+        }
+        drop(player, shelf);
+        setDirty();
+        return Result.OK;
+    }
+
+    /** Tira a imagem de todas as bibliotecas (o comando de remover); devolve de quem saiu. */
+    public List<UUID> removePictureEverywhere(String hash) {
+        List<UUID> affected = new ArrayList<>();
+        for (Map.Entry<UUID, Shelf> entry : new ArrayList<>(shelves.entrySet())) {
+            if (entry.getValue().pictures.remove(hash) != null) {
+                affected.add(entry.getKey());
+                drop(entry.getKey(), entry.getValue());
+            }
+        }
+        if (!affected.isEmpty()) {
+            setDirty();
+        }
+        return affected;
+    }
+
+    /** Os resumos das imagens de cada jogador que tem alguma: o armazém conta o uso das bibliotecas por aqui. */
+    public Map<UUID, List<String>> pictureRefs() {
+        Map<UUID, List<String>> out = new HashMap<>();
+        for (Map.Entry<UUID, Shelf> entry : shelves.entrySet()) {
+            if (!entry.getValue().pictures.isEmpty()) {
+                out.put(entry.getKey(), List.copyOf(entry.getValue().pictures.keySet()));
+            }
+        }
+        return out;
     }
 
     /** Guarda a arte pelo id (troca a de mesmo id, no mesmo lugar). Recusa nome vazio ou biblioteca cheia. */
@@ -275,6 +388,16 @@ public final class TvLibrary extends SavedData {
                 }
                 player.put("arts", arts);
             }
+            if (!entry.getValue().pictures.isEmpty()) {
+                ListTag pictures = new ListTag();
+                for (Map.Entry<String, String> picture : entry.getValue().pictures.entrySet()) {
+                    CompoundTag item = new CompoundTag();
+                    item.putString("hash", picture.getKey());
+                    item.putString("name", picture.getValue());
+                    pictures.add(item);
+                }
+                player.put("pictures", pictures);
+            }
             players.add(player);
         }
         tag.put("players", players);
@@ -306,6 +429,14 @@ public final class TvLibrary extends SavedData {
             for (int j = 0; j < arts.size(); j++) {
                 TvPixelArt.CODEC.parse(NbtOps.INSTANCE, arts.get(j)).result()
                         .ifPresent(art -> shelf.arts.putIfAbsent(art.id(), art));
+            }
+            ListTag pictures = player.getList("pictures", Tag.TAG_COMPOUND);
+            for (int j = 0; j < pictures.size() && shelf.pictures.size() < MAX_PICTURES; j++) {
+                CompoundTag item = pictures.getCompound(j);
+                String hash = item.getString("hash");
+                if (TvImageHash.valid(hash)) {
+                    shelf.pictures.putIfAbsent(hash, pictureName(item.getString("name")));
+                }
             }
             if (!shelf.isEmpty()) {
                 library.shelves.put(player.getUUID("player"), shelf);

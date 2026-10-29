@@ -53,8 +53,14 @@ public final class TvArtCache {
         }
     }
 
-    /** O update tag de uma Tela chegou: as artes que já estão aqui entram no layout, e a Tela fica suja. */
+    /**
+     * O update tag de uma Tela chegou: as artes que já estão aqui entram no layout, e a Tela fica suja. Uma Tela com
+     * imagem enviada diz também se o servidor desligou as imagens ({@link TvPictureTextures#setServerOff}).
+     */
     public static void updated(TvBlockEntity tv) {
+        if (!tv.layout().pictures().isEmpty()) {
+            TvPictureTextures.setServerOff(tv.picturesOff());
+        }
         resolve(tv);
         TvCanvases.markDirty(tv.getBlockPos().asLong());
     }

@@ -25,8 +25,11 @@ import org.jetbrains.annotations.Nullable;
  * O canal de dados das Telas de Sinal: a cada tick visita só as Telas do balde da vez (20 baldes pela posição, uma
  * volta por segundo, como o amostrador dos Fluxos). Uma Tela sem ligação ou sem jogador perto não lê nada e não manda
  * nada; com alguém perto, lê o relatório dos Fluxos só quando ele ou o layout mudaram e manda os números a quem ainda
- * não os tem, só se mudaram. Na mesma volta, os pixels das artes vão a quem está perto e não os tem
- * ({@link TvArtSender}). Sem Tela carregada o tick é uma checagem de conjunto vazio.
+ * não os tem, só se mudaram. Na mesma volta, os pixels das artes e as imagens enviadas vão a quem está perto e não
+ * os tem ({@link TvArtSender}, {@link TvPictureSender}), e a Tela que carregou apontando uma imagem que o armazém não
+ * tem mais a perde ({@link TvBlockEntity#dropMissingPictures}). O tick também roda o envio de imagens dos jogadores e a
+ * limpeza do armazém ({@link TvImageUploads}, {@link TvImageStore}), cada um uma checagem quando parado. Sem Tela
+ * carregada o tick é uma checagem de conjunto vazio.
  */
 public final class TvManager {
     private static final int PHASES = 20;
@@ -62,6 +65,9 @@ public final class TvManager {
 
     /** Chamado a cada tick do servidor. */
     public static void tick(MinecraftServer server) {
+        TvImageUploads.tick(server);
+        TvImageStore.tick();
+        TvPictureSender.tick(server);
         TvArtSender.tick(server);
         loaded = TvLoaded.serverCount();
         if (loaded == 0) {
@@ -83,6 +89,10 @@ public final class TvManager {
             collectNear(tv, level.players(), maxSq, true, NEAR);
             visit(tv, server, NEAR);
             TvArtSender.visit(tv, NEAR, server.getTickCount());
+            if (tv.picturesStale()) {
+                tv.dropMissingPictures(TvImageStore.get(server));
+            }
+            TvPictureSender.visit(tv, NEAR);
         }
         NEAR.clear();
         if (phase == PHASES - 1) {
@@ -270,6 +280,9 @@ public final class TvManager {
     public static void reset() {
         TvPreview.reset();
         TvArtSender.reset();
+        TvPictureSender.reset();
+        TvImageUploads.reset();
+        TvImageStore.reset();
         TvStorageFeed.releaseAll();
         NEAR.clear();
         STATS.clear();

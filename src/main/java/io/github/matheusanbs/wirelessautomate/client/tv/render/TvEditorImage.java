@@ -31,9 +31,9 @@ import org.lwjgl.system.MemoryStack;
  * A miniatura do editor: o rascunho desenhado pelo mesmo {@link TvPainter} da parede, num framebuffer só do editor
  * (há um editor aberto por vez), no tamanho em que a miniatura aparece na janela. O editor pede a cada quadro
  * ({@link #request}: comparação de referências e números); o redesenho só acontece no começo do quadro seguinte
- * ({@link #onFrame}) e só com o rascunho, a base dos números, os números, o tamanho ou a fase do piscar mudados. Os
- * números vêm da prévia do rascunho ({@link TvPreviewValues}) e, sem ela, das ligações do layout salvo
- * ({@code values}). Fechar o editor solta o framebuffer ({@link #release}). Só na thread de render.
+ * ({@link #onFrame}) e só com o rascunho, a base dos números, os números, o tamanho, a fase do piscar ou uma imagem
+ * enviada que ficou pronta ({@link TvPictureTextures#version}) mudados. Os números vêm da prévia do rascunho
+ * ({@link TvPreviewValues}) e, sem ela, das ligações do layout salvo ({@code values}). Fechar o editor solta o framebuffer ({@link #release}). Só na thread de render.
  */
 public final class TvEditorImage {
     private static final ResourceLocation ID = WirelessAutomate.id("tv/editor");
@@ -50,6 +50,7 @@ public final class TvEditorImage {
     private static long blinkSlot;
     private static boolean blinking;
     private static int timedVersion;
+    private static int picturesVersion;
     private static boolean dirty;
     private static boolean painted;
     private static String language = "";
@@ -74,6 +75,7 @@ public final class TvEditorImage {
                 || height != TvEditorImage.height || valuesVersion != TvClientValues.version()
                 || previewVersion != TvPreviewValues.version()
                 || timedVersion != TvTimed.editorVersion()
+                || picturesVersion != TvPictureTextures.version()
                 || blinking && slot != blinkSlot) {
             TvEditorImage.draft = draft;
             TvEditorImage.values = values;
@@ -86,6 +88,7 @@ public final class TvEditorImage {
             previewVersion = TvPreviewValues.version();
             blinkSlot = slot;
             timedVersion = TvTimed.editorVersion();
+            picturesVersion = TvPictureTextures.version();
             dirty = true;
         }
     }
@@ -197,6 +200,13 @@ public final class TvEditorImage {
     static void keepArts() {
         if (draft != null) {
             TvArtTextures.keep(draft);
+        }
+    }
+
+    /** Na varredura do {@link TvPictureTextures}: marca as imagens enviadas do rascunho. */
+    static void keepPictures() {
+        if (draft != null) {
+            TvPictureTextures.keep(draft);
         }
     }
 

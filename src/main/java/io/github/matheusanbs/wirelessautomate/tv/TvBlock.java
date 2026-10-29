@@ -123,6 +123,19 @@ public class TvBlock extends BaseEntityBlock {
         super.setPlacedBy(level, pos, state, placer, stack);
     }
 
+    /**
+     * O bloco saiu do mundo (quebrado, explodido, trocado por comando): as imagens que a Tela usava deixam de contar
+     * no armazém. Descarregar o chunk não passa por aqui.
+     */
+    @Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+        if (!state.is(newState.getBlock()) && level.getServer() != null
+                && level.getBlockEntity(pos) instanceof TvBlockEntity tv && !tv.layout().pictures().isEmpty()) {
+            TvImageStore.get(level.getServer()).screenRemoved(level, pos);
+        }
+        super.onRemove(state, level, pos, newState, movedByPiston);
+    }
+
     @Override
     protected BlockState rotate(BlockState state, Rotation rotation) {
         return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));

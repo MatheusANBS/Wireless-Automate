@@ -112,6 +112,7 @@ final class E2eTvSteps {
         list.add(hideGui(playerId, false));
         E2eTvPiecesSteps.piecesSteps(list, playerId, () -> tv, () -> origin);
         E2eTvImageSteps.imageSteps(list, playerId, () -> tv, () -> origin);
+        E2eTvPictureSteps.pictureSteps(list, playerId, () -> tv);
         E2eVariants.pt(list, () -> {
             list.add(language("pt_br"));
             list.add(open("Tela: abrir em pt"));

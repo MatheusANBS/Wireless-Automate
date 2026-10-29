@@ -83,6 +83,14 @@ public final class TvLibraryActions {
                 }
                 case RENAME_ART -> library.renameArt(player.getUUID(), payload.artId(), payload.newName());
                 case REMOVE_ART -> library.removeArt(player.getUUID(), payload.artId());
+                case RENAME_PICTURE -> library.renamePicture(player.getUUID(), payload.name(), payload.newName());
+                case REMOVE_PICTURE -> {
+                    TvLibrary.Result removed = library.removePicture(player.getUUID(), payload.name());
+                    if (removed == TvLibrary.Result.OK) {
+                        TvImageStore.syncLibrary(player.server, player.getUUID());
+                    }
+                    yield removed;
+                }
             };
         } catch (RuntimeException e) {
             // Conteúdo que não decodifica (ou um id de arte que não é UUID): a ação é recusada, sem derrubar nada.
@@ -124,7 +132,24 @@ public final class TvLibraryActions {
             arts.add(art);
         }
         return new TvLibraryPayload(containerId, library.components(player.getUUID()),
-                library.themes(player.getUUID()), arts);
+                library.themes(player.getUUID()), arts, pictures(player, library));
+    }
+
+    /** As imagens da biblioteca com o que o armazém sabe de cada uma; a que o armazém não tem fica de fora. */
+    private static List<TvLibraryPicture> pictures(ServerPlayer player, TvLibrary library) {
+        List<TvLibrary.PictureEntry> entries = library.pictures(player.getUUID());
+        if (entries.isEmpty()) {
+            return List.of();
+        }
+        TvImageStore store = TvImageStore.get(player.server);
+        List<TvLibraryPicture> out = new ArrayList<>(entries.size());
+        for (TvLibrary.PictureEntry entry : entries) {
+            TvPicture picture = store.picture(entry.hash());
+            if (picture != null) {
+                out.add(new TvLibraryPicture(picture, entry.name()));
+            }
+        }
+        return out;
     }
 
     /** Baixa o teto da biblioteca no pacote (só os testes; {@code -1} volta ao de verdade). */
@@ -135,7 +160,7 @@ public final class TvLibraryActions {
     /** A biblioteca do jogador como payload. */
     public static TvLibraryPayload payload(ServerPlayer player, int containerId, TvLibrary library) {
         return new TvLibraryPayload(containerId, library.components(player.getUUID()), library.themes(player.getUUID()),
-                library.arts(player.getUUID()));
+                library.arts(player.getUUID()), pictures(player, library));
     }
 
     /**

@@ -1,6 +1,8 @@
 package io.github.matheusanbs.wirelessautomate.tv;
 
 import io.github.matheusanbs.wirelessautomate.packet.TvArtsPayload;
+import io.github.matheusanbs.wirelessautomate.packet.TvImageDataPayload;
+import io.github.matheusanbs.wirelessautomate.packet.TvImageReplyPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TvLayoutAckPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TvLibraryPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TvPreviewValuesPayload;
@@ -23,6 +25,14 @@ public final class TvClientHooks {
 
     /** Chamado no cliente quando os pixels das artes de uma Tela chegam. */
     public static volatile Consumer<TvArtsPayload> arts = payload -> {
+    };
+
+    /** Chamado no cliente quando um pedaço de uma imagem enviada chega. */
+    public static volatile Consumer<TvImageDataPayload> imageData = payload -> {
+    };
+
+    /** Chamado no cliente quando a resposta a um envio de imagem chega. */
+    public static volatile Consumer<TvImageReplyPayload> imageReply = payload -> {
     };
 
     /** Chamado no cliente quando a resposta a um salvar do layout chega. */

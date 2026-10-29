@@ -14,15 +14,16 @@ With it, the AI draws a pixel art or builds a whole Screen, and you paste the re
 4. In the game, open the Screen, **Edit** tab:
    - **an art:** **Pixel art** tab, **Import** button. The art goes into your library.
    - **a layout:** with nothing picked, the **Import** button in the base, under **Apply layout**. The layout goes into
-     the draft (**Ctrl+Z** undoes) and only reaches the wall on **Save**.
-5. If the code has a mistake, the editor's bottom bar says which one and on what line, and nothing changes. Send the
-   warning back to the AI to fix.
+     the draft (**Ctrl+Z** undoes, one import at a time) and only reaches the wall on **Save**.
+5. If the code has a mistake, the editor's bottom bar says which one and where, and nothing changes: in a standalone
+   art, the line of the text; in an art inside the JSON, the art's name and the pixel row. Send the warning back to
+   the AI to fix.
 
 **Tip:** the **Copy as text** button exports your art or your Screen in this same form. Paste it into the chat so the
 AI starts from what you already have (with your networks already linked).
 
 The first line that isn't blank must be exactly `WA-ARTE1` or `WA-TELA1` (the headers are the same in every
-language). The text can be up to 512 KB.
+language). The text can be up to 524,288 characters (512 K).
 
 ## Pixel art (`WA-ARTE1`)
 
@@ -41,7 +42,7 @@ palette: - 1B1920 7A7366 ECE5D6
 
   | Key | In Portuguese | Value |
   | --- | --- | --- |
-  | `name` | `nome` | The art's name, up to 32 characters (the rest is cut). Always give one: the library doesn't keep an art without a name. |
+  | `name` | `nome` | The art's name, up to 32 characters (the rest is cut). Without a name, the imported art comes in as "New art". |
   | `size` | `tamanho` | `WIDTHxHEIGHT`, like `16x16` (also `16 x 16`, `16×16` or `16*16`). From **8 to 128** per side. Required. |
   | `palette` | `paleta` | Up to **16 colors**, separated by spaces. |
 
@@ -176,8 +177,8 @@ text** of your Screen, which already has the right ids.
 ### Theme and background
 
 - **`theme`:** `{"name": "My theme", "bg": "#0F1117", "card": "#1A1C24", "text": "#ECE5D6", "muted": "#8D8577",
-  "high": "#3DB56E", "low": "#F26A48"}`. It needs all seven keys; with one missing, the Graphite theme applies. The
-  name is up to 24 characters. The theme's colors are fixed colors (not roles).
+  "high": "#3DB56E", "low": "#F26A48"}`. A missing color comes from the Graphite theme. The name is up to 24
+  characters. The theme's colors are fixed colors: a theme role (`"theme:text"`) in a `theme` field is an error.
 - **`background`:** `{"kind": "theme"}` (the theme's background), `{"kind": "solid", "top": "#1B1920"}`,
   `{"kind": "gradient", "top": "...", "bottom": "..."}` or the mosaic,
   `{"kind": "tiled", "image": "<art id>", "scale": 2, "opacity": 100}`, with `scale` 1 to 8 and `opacity` 0 to 100.
@@ -199,7 +200,7 @@ Each art is an object with the same parts as the `WA-ARTE1` form:
   `rows`/`linhas` (a list with one row per text), with the same rules as the art.
 - The JSON rows have no comments: each text is a row.
 - An art that no piece and no background uses is dropped on import. An Image pointing to an `id` that isn't in
-  `images` is dropped too.
+  `images` stays without art (the dashed rectangle in the editor): pick its art in the **Style** tab.
 
 ### Caps
 
@@ -211,7 +212,8 @@ Each art is an object with the same parts as the `WA-ARTE1` form:
 | Distinct links per Screen | 64. |
 | Layout without the pixels | 16 KB of NBT. |
 | Rules per piece | 8. |
-| Code text | 512 KB. |
+| Distinct arts per Screen | 256. |
+| Code text | 524,288 characters (512 K). |
 
 Over a cap, the editor says "Too big for this screen" and nothing changes (the piece and link caps are checked on
 **Save**).

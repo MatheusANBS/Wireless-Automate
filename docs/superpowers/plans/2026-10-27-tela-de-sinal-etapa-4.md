@@ -58,6 +58,12 @@ Custo: só GUI; o quadro numa textura pequena refeita só quando um pixel muda; 
 - [ ] A aba "Pixel art" na coluna da esquerda do editor da Tela (Nova, Editar, Duplicar, Remover em dois cliques; arrastar para o canvas cria a Imagem); as opções da Imagem na aba Estilo ("Atualizar da biblioteca", escala, alinhamento em 9 posições, opacidade); o Fundo em mosaico na base.
 - [ ] e2e: desenhar uma arte pelo mouse, salvar, pôr como Imagem e como mosaico; capturas `tela-pixel-editor`, `tela-pixel-imagem`, `tela-pixel-mosaico`. Commit "Tela de Sinal: editor de pixel art".
 
+### Task 1c: Orçamento maior (artes fora do pacote do chunk)
+
+Custo: no servidor, o envio das artes é por evento (revisão nova ou jogador chegando perto), com orçamento por tick; no cliente, mais VRAM e mais redesenho por quadro, aceitos pelo dono.
+
+- [ ] Update tag sem os pixels; pacote de artes do `TvManager` para quem está perto e não tem a revisão, com fila e orçamento por tick; envio na abertura do menu; cache por resumo no cliente; tetos novos (131.072 pixels por Tela, arte até 128 × 128, salvar até 256 KB); `vramBudgetMb` 1024 e o redesenho por quadro dobrado. GameTests (o update tag sem pixels, o pacote vai a quem está perto, uma vez por revisão, tetos, NBT antigo) e e2e (a Imagem aparece depois do pacote; uma Tela com 128 × 128). Commit "Tela de Sinal: artes fora do pacote do chunk e orçamento maior".
+
 ### Task 2c: Exportar e importar por código
 
 Custo: só cliente, só no clique.

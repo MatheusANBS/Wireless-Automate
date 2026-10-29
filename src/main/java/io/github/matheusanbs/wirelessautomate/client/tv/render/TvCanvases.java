@@ -4,6 +4,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexSorting;
 import io.github.matheusanbs.wirelessautomate.ClientConfig;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.compat.sodium.SodiumSprites;
 import io.github.matheusanbs.wirelessautomate.tv.TvArea;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlock;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlockEntity;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Locale;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.state.BlockState;
@@ -143,6 +145,9 @@ public final class TvCanvases {
                 maxFrameNanosForTests = Math.max(maxFrameNanosForTests, now - lastFrameNanos);
             }
             lastFrameNanos = now;
+        }
+        if (SodiumSprites.AVAILABLE && Minecraft.getInstance().level != null) {
+            TvTimed.markIconSprites(Minecraft.getInstance().level.getGameTime());
         }
         if (DIRTY.isEmpty()) {
             return;
@@ -407,6 +412,16 @@ public final class TvCanvases {
             markDirty(pos);
         }
         return true;
+    }
+
+    /** Marca no Sodium as texturas animadas da Tela em {@code pos}, se o BER a pediu nos últimos {@link #SEEN_TICKS} ticks. */
+    static void markSpritesIfSeen(long pos, long now) {
+        TvCanvas canvas = CANVASES.get(pos);
+        if (canvas != null && now - canvas.lastWanted <= SEEN_TICKS) {
+            for (TextureAtlasSprite sprite : canvas.sprites) {
+                SodiumSprites.mark(sprite);
+            }
+        }
     }
 
     /** Quantas Telas têm uma regra de piscar valendo (gancho do e2e e dos testes). */

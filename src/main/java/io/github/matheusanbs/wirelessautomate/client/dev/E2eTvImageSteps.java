@@ -39,9 +39,10 @@ import net.minecraft.world.phys.Vec3;
 /**
  * A pixel art na Tela, montada direto no block entity (o editor de pixel art é da Task 2 da etapa 4): a peça Imagem
  * (em escala inteira alinhada, esticada e cortada pela caixa) e o fundo em mosaico na Tela 4 × 2, fotografados; e a
- * medida da decisão 8 da spec: uma Tela 32 × 32 no céu com o mosaico de uma arte 64 × 64 de pixels sorteados (o pior
- * caso, quase uma faixa por pixel) em escala 1, redesenhada algumas vezes, com o tempo de cada redesenho no
- * {@code result.txt}. No fim, o layout da Tela 4 × 2 volta e a parede e a Tela grande saem.
+ * medida da decisão 8 da spec: uma Tela 32 × 32 no céu com o mosaico de uma arte 64 × 64 de pixels sorteados em
+ * escala 1 (256 cópias da arte, um quadrilátero só com a textura dela repetida), redesenhada algumas vezes, com o
+ * tempo de cada redesenho no {@code result.txt}. No fim, o layout da Tela 4 × 2 volta, a parede e a Tela grande saem
+ * e as texturas das artes, sem ninguém que as use, também.
  */
 final class E2eTvImageSteps {
     private static final int SIZE = 32;
@@ -109,6 +110,9 @@ final class E2eTvImageSteps {
                             && entity(tv.get()).layout().equals(original)
                             && Minecraft.getInstance().player.position().distanceToSqr(savedPos) < 0.01;
                 }, () -> "Tela grande e jogador no cliente"));
+        list.add(new Step("Imagem: texturas das artes soltas", STEP_TIMEOUT_MS, () -> {
+        }, () -> TvCanvases.artTexturesForTests() == 0,
+                () -> TvCanvases.artTexturesForTests() + " textura(s) de arte"));
     }
 
     private static TvBlockEntity entity(BlockPos pos) {

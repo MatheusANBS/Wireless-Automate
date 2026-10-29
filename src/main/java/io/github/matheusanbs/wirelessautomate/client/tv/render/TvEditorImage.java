@@ -190,6 +190,14 @@ public final class TvEditorImage {
         painted = false;
         blinking = false;
         TvTimed.editorClosed();
+        TvArtTextures.sweep();
+    }
+
+    /** Na varredura do {@link TvArtTextures}: marca as artes do rascunho, com o editor aberto. */
+    static void keepArts() {
+        if (draft != null) {
+            TvArtTextures.keep(draft);
+        }
     }
 
     /** Os separadores do idioma atual, lidos de novo só quando ele muda. */

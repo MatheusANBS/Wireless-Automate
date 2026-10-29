@@ -191,20 +191,26 @@ public final class TvPixelArtGameTests {
     }
 
     @GameTest(template = "empty", timeoutTicks = 100)
-    public static void salvarLargaArteOrfaEImagemSemArte(GameTestHelper helper) {
+    public static void salvarLargaArteOrfaEImagemComArteQueNaoExiste(GameTestHelper helper) {
         TestPlayers.MenuPlayer player = TestPlayers.menuOpener(helper);
         withScreen(helper, player.getUUID(), tv -> {
             TvPixelArt used = art(UUID.randomUUID(), "usada", 8, 8, 5);
             TvPixelArt orphan = art(UUID.randomUUID(), "órfã", 8, 8, 6);
+            TvPiece blank = image(used.id(), 0, 16, 16, 16, 1);
+            blank = blank.withStyle(blank.style().withPart(blank.style().part().withImage(Optional.empty(), 1,
+                    TvPartStyle.VAlign.MIDDLE)));
             TvLayout layout = TvLayout.of(List.of(image(used.id(), 0, 0, 16, 16, 1),
-                    image(UUID.randomUUID(), 20, 0, 16, 16, 1), text(40)), TvTheme.DEFAULT,
+                    image(UUID.randomUUID(), 20, 0, 16, 16, 1), text(40), blank), TvTheme.DEFAULT,
                     TvBackground.tiled(UUID.randomUUID(), 2, 100), false, List.of(used, orphan));
             TvEditing.LayoutResult result = TvEditing.applyLayout(player, tv, layout);
             helper.assertTrue(result.ok(), "recusou");
             TvLayout saved = tv.layout();
             helper.assertValueEqual(saved.images(), List.of(used), "a arte que ninguém usa saiu");
-            helper.assertValueEqual(saved.pieces().size(), 2, "a Imagem sem arte saiu");
+            helper.assertValueEqual(saved.pieces().size(), 3, "a Imagem com arte que não existe saiu");
             helper.assertValueEqual(saved.pieces().get(0).type(), TvPieceType.IMAGE, "a Imagem com arte ficou");
+            TvPiece kept = saved.pieces().get(2);
+            helper.assertTrue(kept.type() == TvPieceType.IMAGE && kept.style().part().image().isEmpty(),
+                    "a Imagem sem arte (nascida da paleta) ficou, sem arte");
             helper.assertValueEqual(saved.background(), TvBackground.DEFAULT, "o mosaico sem arte volta ao tema");
         });
     }

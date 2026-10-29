@@ -112,7 +112,11 @@ final class TvArtsPanel {
         return Math.max(0, rows.size() * ROW_H - (list.h() - 4));
     }
 
-    private @Nullable TvPixelArt chosenArt() {
+    /** A arte escolhida na lista, ou {@code null}: a Imagem que a paleta de Peças cria nasce com ela. */
+    @Nullable TvPixelArt chosenArt() {
+        if (box != TvRect.NONE) {
+            rebuild();
+        }
         for (Row row : rows) {
             if (row.art.id().equals(chosen)) {
                 return row.art;
@@ -189,12 +193,8 @@ final class TvArtsPanel {
 
     /** A miniatura na maior escala que cabe em {@link #THUMB} px (inteira quando a arte é menor), centrada. */
     private static void thumb(GuiGraphics g, TvPixelArt art, int x, int y) {
-        int side = Math.max(art.width(), art.height());
-        float scale = side <= THUMB ? THUMB / side : THUMB / (float) side;
-        int w = Math.max(1, Math.round(art.width() * scale));
-        int h = Math.max(1, Math.round(art.height() * scale));
         GuiPaint.outline(g, x - 1, y - 1, THUMB + 2, THUMB + 2, GuiPaint.BUTTON_BORDER);
-        TvArtThumbs.draw(g, art, x + (THUMB - w) / 2, y + (THUMB - h) / 2, w, h);
+        TvArtThumbs.drawFitted(g, art, x, y, THUMB);
     }
 
     private int rowAt(double mouseX, double mouseY) {

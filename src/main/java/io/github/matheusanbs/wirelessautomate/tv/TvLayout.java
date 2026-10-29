@@ -221,9 +221,10 @@ public record TvLayout(List<TvPiece> pieces, TvTheme theme, TvBackground backgro
     }
 
     /**
-     * O layout com as imagens resolvidas: a Imagem sem arte ou com uma arte que o layout não tem sai, o fundo em
-     * mosaico sem arte existente volta ao do tema, e as artes que nenhuma peça nem o fundo usam saem. Devolve o
-     * próprio layout quando nada muda.
+     * O layout com as imagens resolvidas: a Imagem que aponta uma arte que o layout não tem sai (a Imagem sem arte,
+     * que o editor cria pela paleta antes de escolher a arte, fica e não desenha), o fundo em mosaico sem arte
+     * existente volta ao do tema, e as artes que nenhuma peça nem o fundo usam saem. Devolve o próprio layout quando
+     * nada muda.
      */
     public TvLayout prunedImages() {
         Set<UUID> used = new HashSet<>();
@@ -231,10 +232,12 @@ public record TvLayout(List<TvPiece> pieces, TvTheme theme, TvBackground backgro
         for (TvPiece piece : pieces) {
             if (piece.type() == TvPieceType.IMAGE) {
                 Optional<UUID> id = piece.style().part().image();
-                if (id.isEmpty() || !imagesById.containsKey(id.get())) {
-                    continue;
+                if (id.isPresent()) {
+                    if (!imagesById.containsKey(id.get())) {
+                        continue;
+                    }
+                    used.add(id.get());
                 }
-                used.add(id.get());
             }
             kept.add(piece);
         }

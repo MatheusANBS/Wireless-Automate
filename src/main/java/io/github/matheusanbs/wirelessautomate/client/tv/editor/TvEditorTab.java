@@ -58,13 +58,13 @@ public final class TvEditorTab {
         this.menu = new TvCanvasMenu(doc);
         this.components = new TvComponentsPanel(doc, actions);
         this.canvas = new TvEditorCanvas(doc);
-        this.palette = new TvPalettePanel(doc, canvas);
         this.base = new TvBaseLine(doc, actions.maxLayoutBytes() / 1024, actions.maxImagePixels());
         this.bar = new TvEditorBar(doc);
         this.layers = new TvLayersPanel(doc);
         this.props = new TvPropsPanel(doc, networks, links, actions, popups);
         this.keys = new TvEditorKeys(doc, this::save);
         this.pixel = new TvPixelEditor(actions, new TvArtDrag(doc, canvas, actions));
+        this.palette = new TvPalettePanel(doc, canvas, actions, pixel.arts()::chosenArt);
         this.probe = new TvEditorProbe(doc, leftTabs, palette, components, canvas, bar, layers, props, menu,
                 popups);
     }

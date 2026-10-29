@@ -3,15 +3,15 @@ package io.github.matheusanbs.wirelessautomate.client.tv.editor;
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.tv.TvAlign;
 import io.github.matheusanbs.wirelessautomate.tv.TvPartStyle;
-import io.github.matheusanbs.wirelessautomate.tv.TvPixelArt;
 import java.util.UUID;
 import java.util.function.UnaryOperator;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A seção "Peça" da aba Estilo para a Imagem (decisão 6 da spec da etapa 4): a arte (o nome e o tamanho da cópia que
- * a Tela guarda), "Atualizar da biblioteca" (troca a cópia pela versão de agora da biblioteca do jogador, pelo
+ * A seção "Peça" da aba Estilo para a Imagem (decisão 6 da spec da etapa 4): a arte, escolhida na {@link TvArtGrid}
+ * (a Imagem sem arte diz "Escolha a arte"; o clique copia a arte para o layout pelo {@link TvImageOps}), "Atualizar
+ * da biblioteca" (troca a cópia pela versão de agora da biblioteca do jogador, pelo
  * {@link TvImageOps}; desligado, com o porquê na dica, se a arte saiu da biblioteca ou a cópia já é igual), a escala
  * (‹ Esticar, 1×, 2×... ›), o alinhamento em 9 posições ({@link TvAlignGrid}) e a opacidade. A caixa da peça não muda
  * com a escala: a arte fica alinhada dentro dela e cortada pela borda.
@@ -21,10 +21,17 @@ final class TvImageTab {
     }
 
     static void build(TvForm form, TvPropsCtx ctx) {
-        form.label("image.art.title", TvPropsCtx.key("image.art"));
-        form.add(new TvControls.Label(form.font, "image.art", 0, form.y(), TvForm.W, TvControls.FG,
-                () -> artLine(ctx)));
-        form.endRow(8);
+        // sem arte o rótulo pede uma, em destaque; o estado é lido no refresh, junto do texto
+        boolean[] pick = new boolean[1];
+        form.add(new TvControls.Label(form.font, "image.art.title", 0, form.y(), TvForm.W,
+                () -> pick[0] ? GuiPaint.ACCENT : GuiPaint.MUTED, () -> {
+                    pick[0] = id(ctx) == null;
+                    return TvPropsCtx.key(pick[0] ? "image.art.pick" : "image.art");
+                }));
+        form.skip(10);
+        form.add(new TvArtGrid(form.font, "image.arts", 0, form.y(), ctx.doc(), () -> id(ctx),
+                art -> TvImageOps.choose(ctx.doc(), ctx.actions().maxImagePixels(), art)));
+        form.endRow(TvArtGrid.HEIGHT);
         form.add(new TvControls.Button(form.font, "image.refresh", 0, form.y(), TvForm.W,
                 TvPropsCtx.key("image.refresh"), () -> TvImageOps.refresh(ctx.doc(), ctx.actions().maxImagePixels(),
                         id(ctx))).enabledWhen(() -> TvImageOps.newer(ctx.doc().draft(), id(ctx)) != null)
@@ -57,17 +64,5 @@ final class TvImageTab {
 
     private static @Nullable UUID id(TvPropsCtx ctx) {
         return part(ctx).image().orElse(null);
-    }
-
-    /** A cópia que a Tela guarda, ou {@code null}. */
-    private static @Nullable TvPixelArt copy(TvPropsCtx ctx) {
-        UUID id = id(ctx);
-        return id == null ? null : ctx.doc().draft().image(id);
-    }
-
-    private static Component artLine(TvPropsCtx ctx) {
-        TvPixelArt copy = copy(ctx);
-        return copy == null ? Component.literal("—")
-                : TvPropsCtx.key("image.art.line", copy.name(), copy.width(), copy.height());
     }
 }

@@ -27,11 +27,12 @@ import org.lwjgl.glfw.GLFW;
 
 /**
  * A pixel art no editor da Tela, depois do {@link E2eTvPixelSteps} (que deixa a arte "Logo" na biblioteca): na aba
- * Pixel art, Duplicar (a foto {@code tela-pixel-aba}, com as duas) e Remover a cópia em dois cliques; arrastar a arte
- * até a miniatura, que cria a Imagem 2× escolhida; na aba Estilo, a escala pela roda e pelo clique e o alinhamento em 9
- * posições (a foto {@code tela-pixel-imagem}); sem escolha, o Fundo no mosaico da mesma arte, em 1× e mais apagado (a
- * foto {@code tela-pixel-mosaico}); editar a arte e "Atualizar da biblioteca", que troca a cópia da Tela; e o salvar,
- * conferido no servidor; o exportar e importar por código ({@link E2eTvCodeSteps}); e a foto da Tela no mundo
+ * Pixel art, Duplicar (a foto {@code tela-pixel-aba}, com as duas) e Remover a cópia em dois cliques; a Imagem pela
+ * paleta de Peças e a grade de artes ({@link E2eTvArtGridSteps}); arrastar a arte até a miniatura, que cria a Imagem
+ * 2× escolhida; na aba Estilo, a escala pela roda e pelo clique e o alinhamento em 9 posições (a foto
+ * {@code tela-pixel-imagem}); sem escolha, o Fundo no mosaico da mesma arte, com a troca da arte pela grade, em 1× e
+ * mais apagado (a foto {@code tela-pixel-mosaico}); editar a arte e "Atualizar da biblioteca", que troca a cópia da
+ * Tela; e o salvar, conferido no servidor; o exportar e importar por código ({@link E2eTvCodeSteps}); e a foto da Tela no mundo
  * ({@code tela-pixel-mundo}). No fim, o layout de antes volta e a tela abre de novo na aba Editar, como os passos
  * seguintes esperam.
  */
@@ -52,6 +53,7 @@ final class E2eTvArtSteps {
         list.add(step("Arte: guardar o layout da Tela", () -> original = onServer(server ->
                 ((TvBlockEntity) server.overworld().getBlockEntity(tv.get())).layout()), () -> true, () -> ""));
         libraryRows(list);
+        E2eTvArtGridSteps.pieceSteps(list);
         imageSteps(list);
         mosaicSteps(list);
         refreshSteps(list, tv);
@@ -119,6 +121,7 @@ final class E2eTvArtSteps {
             }
         }, () -> background().kind() == TvBackground.Kind.TILED
                 && background().image().orElseThrow().equals(art(NAME).id()), () -> "fundo " + background()));
+        E2eTvArtGridSteps.mosaicSteps(list);
         list.add(step("Arte: mosaico em 1× e a 40%", () -> {
             int[] scale = prop("base.mosaic.scale");
             screen().mouseScrolled(scale[0], scale[1], 0, 1);

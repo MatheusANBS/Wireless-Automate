@@ -41,7 +41,8 @@ class TvEditorLayoutTest {
         assertTrue(l.base().bottom() <= l.canvas().y());
         assertTrue(l.canvas().bottom() <= l.buttons().y());
         assertTrue(l.leftTabs().bottom() <= l.leftBody().y());
-        assertTrue(l.pieceButtons()[2].bottom() <= l.leftBody().bottom());
+        assertTrue(l.pieceButtons()[TvEditorLayout.PIECE_COUNT - 1].bottom() <= l.leftBody().bottom(),
+                "os botões da paleta de Peças cabem na janela mínima");
         assertTrue(l.leftBody().right() <= l.canvas().x());
         assertTrue(l.canvas().right() <= l.props().x());
         assertTrue(l.canvas().w() > 0 && l.canvas().h() > 0);

@@ -19,8 +19,8 @@ import org.lwjgl.glfw.GLFW;
  * A miniatura do editor: a imagem do rascunho ({@link TvEditorImage}, pintada pelo mesmo desenho da parede) na maior
  * escala que cabe (inteira quando passa de 1), com zoom de Ctrl + roda até 8 vezes e a vista movida pelo botão do meio
  * ou por Espaço + arrasto ({@link TvCanvasView}; o botão "Caber" volta), e por cima, na GUI, a grade de
- * {@link TvSnap#GRID} px, as linhas de bloco, a peça sob o mouse, as caixas da escolha e a alça. O clique escolhe pela
- * regra do mockup (Alt + clique, a peça de baixo na mesma posição, pelo {@link TvHitCycle}), arrastar move a escolha e
+ * {@link TvSnap#GRID} px, as linhas de bloco, o tracejado das Imagens sem arte, a peça sob o mouse, as caixas da
+ * escolha e a alça. O clique escolhe pela regra do mockup (Alt + clique, a peça de baixo na mesma posição, pelo {@link TvHitCycle}), arrastar move a escolha e
  * a alça redimensiona (uma peça, ou o grupo em proporção), tudo pelo {@link TvEditOps} a partir das peças de quando o
  * arrasto começou, com o encaixe da grade (1 px com o Alt). O clique direito escolhe a peça e quem usa abre o
  * {@link TvCanvasMenu}. A textura da imagem é pedida no tamanho em que ela aparece (até {@link #TEXTURE_CAP} px) e só refeita
@@ -59,6 +59,7 @@ final class TvEditorCanvas {
     private int[] selectionBox = new int[4];
     private int[] focusBox = new int[4];
     private boolean resizable;
+    private final TvBlankImages blankImages = new TvBlankImages();
     private int boxVersion = -1;
     private TvSelection boxSelection;
     private int boxFocus;
@@ -113,6 +114,7 @@ final class TvEditorCanvas {
         if (hover >= 0 && !doc.selection().contains(hover)) {
             outline(g, pieces.get(hover), GuiPaint.alpha(GuiPaint.FG, 0x90));
         }
+        blankImages.render(g, view, pieces);
         selection(g, pieces);
         if (resizable) {
             GuiPaint.box(g, handleX(), handleY(), HANDLE, HANDLE, GuiPaint.ACCENT, GuiPaint.ACCENT_DEEP);
@@ -175,6 +177,7 @@ final class TvEditorCanvas {
         selectionBox = valid ? TvEditOps.bounds(A, pieces, selection) : new int[4];
         focusBox = focus != 0 ? TvEditOps.bounds(A, pieces, TvEditOps.members(A, pieces, focus)) : new int[4];
         resizable = valid && TvEditOps.resizable(A, pieces, selection);
+        blankImages.refresh(doc.draft());
     }
 
     /**

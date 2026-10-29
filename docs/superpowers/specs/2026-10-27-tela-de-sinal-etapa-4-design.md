@@ -128,3 +128,48 @@ O dono quer reproduzir imagens com fidelidade total, como a Mona Lisa feita por 
   O guia de IA ganha a receita do script (reduzir, gerar PNG, base64).
 - **Desenho na Tela:** a mesma textura de hoje (NEAREST, tira por arte). Só muda o que vai dentro dela.
 - **Custo aceito pelo dono:** mais rede e mais memória só de quem está perto. Uma arte livre de 256 × 256 tem até 256 KB sem compressão.
+
+### Imagens e GIFs de verdade (aprovado em 29/10; **substitui a seção "Cor livre e arte até 256 × 256"**)
+
+O dono quer reproduzir imagens reais com fidelidade, não só pixel art. A pixel art continua como está: 16 cores, até 128 × 128, editável, com as rampas e a animação de quadros que vem depois. **A fidelidade vem de uma fonte nova, a imagem enviada.** As decisões de padrão foram delegadas ("o que for razoável").
+
+- **O que é:**
+  - um arquivo PNG, JPG ou GIF (animado ou não), escolhido pela caixa "Abrir arquivo" do sistema (`TinyFileDialogs` do LWJGL, que o Minecraft já traz), ou colado como código `png:`/`gif:` em base64;
+  - até **1024 × 1024** (config `tv.images.maxSize`, faixa até 2048);
+  - GIF até **240 quadros**;
+  - até **8 MB** por arquivo (config `tv.images.maxFileBytes`).
+  
+  A imagem não é editável no editor de pixel art; ela entra na peça Imagem e no mosaico pela mesma grade das artes, na aba "Imagens" da biblioteca.
+- **Nunca por link da internet.** A imagem é sempre um dado enviado pelo jogador e guardado no mundo: link vazaria o IP de quem olha e deixaria trocar a imagem depois.
+- **No servidor:**
+  - não decodifica nada: confere só o cabeçalho (formato, largura, altura, quadros, bytes) e guarda o arquivo como veio;
+  - guarda **pelo resumo do conteúdo** (SHA-256), uma cópia por imagem, num armazém do mundo (`TvImageStore`, arquivos em `data/wirelessautomate/images/` mais um índice);
+  - Telas e bibliotecas apontam o resumo, e cada imagem conta quantas a usam;
+  - **a limpeza automática apaga a que ninguém usa** (com um prazo de folga, para uma Tela quebrada e recolocada não perder a imagem).
+- **Envio do cliente:**
+  - em partes (o Minecraft corta pacotes de 1 MB), com o limite de ações e um **limite de bytes por minuto por jogador** (padrão 32 MB);
+  - um envio interrompido some;
+  - quem pode enviar: `tv.images.uploaders`, que é "todos" (o padrão) ou "operadores".
+- **Teto do mundo:** `tv.images.maxWorldBytes`, padrão 4 GB num servidor dedicado e sem teto no single-player e em LAN. Acima dele, envio novo é recusado com aviso e nada quebra. A **cota por jogador** (`tv.images.maxBytesPerPlayer`) existe mas vem **desligada** (0).
+- **Ligadas por padrão** em todo lugar; `tv.images.enabled` desliga, e desligado as Telas mostram um quadro neutro no lugar.
+- **Moderação:**
+  - o armazém guarda quem enviou cada imagem e quando;
+  - comandos de operador:
+    - `/wa tela imagens` lista, com o tamanho, quem enviou e quantas Telas usam;
+    - `/wa tela imagem remover <resumo>` tira a imagem de todas as Telas e bibliotecas e a apaga;
+    - `/wa tela imagem banir <jogador>` impede de enviar, e `desbanir` desfaz.
+- **No cliente:**
+  - as imagens chegam pelo pacote de artes da Task 1c (só a quem está perto, em partes, com orçamento por tick);
+  - ficam num **cache em disco** pelo resumo (`ClientConfig` `tv.imageCacheMb`, padrão 1024, apagando primeiro a mais antiga), então quem volta não baixa de novo;
+  - o leitor é o STB do Minecraft (`STBImage`, que lê GIF animado), com o cabeçalho conferido antes de decodificar;
+  - **opção do cliente "Mostrar imagens de outros jogadores"** (padrão ligada): desligada, as imagens que não são do próprio jogador viram um quadro neutro.
+- **Desenho:**
+  - textura da imagem com **mipmaps e filtro suave ao reduzir**, e pixel duro ao ampliar (a pixel art também passa a usar mipmaps ao reduzir);
+  - **GIF**: os quadros ficam na RAM, comprimidos ou como pixels, e só o quadro da vez vai para a textura; a Tela troca o quadro no ritmo do GIF, só à vista, como o Ícone animado.
+  - Custo de VRAM: uma textura por imagem à vista, cerca de 5,3 MB numa de 1024 com mipmaps, com GIF ou sem.
+- **Tetos por Tela:** até 8 imagens distintas por layout (config `tv.images.maxPerScreen`). O teto de pixels de arte (`tv.maxImagePixels`) continua só para a pixel art.
+- **Código:**
+  - o código de um layout leva as imagens dentro (no limite de 512 KB de texto) ou, quando não cabem, só os resumos, com o aviso "as imagens precisam estar no servidor";
+  - `png:` e `gif:` no "Importar" viram um envio de imagem;
+  - o guia de IA ganha a receita (gerar o PNG ou GIF num script e colar como `png:`).
+- **Pixel art de cor livre e de 256 × 256 não entra:** a imagem cobre a fidelidade, e a pixel art fica com as 16 cores e as rampas.

@@ -31,6 +31,11 @@ import org.jetbrains.annotations.Nullable;
  * ({@link TvArtRef}), e os pixels seguem à parte pelo {@link TvArtSender} só a quem está perto. O NBT do disco guarda
  * o layout inteiro, a lista de acesso (a chave {@code access}, opcional) e o resumo de cada arte ({@code art_hashes},
  * na ordem das artes do layout): a Tela carregada monta as referências sem calcular o SHA-256 de novo.
+ * <p>
+ * As imagens enviadas do layout ({@link TvLayout#pictures}) são anotadas no {@link TvImageStore} a cada mudança de
+ * layout e a cada carga (o uso conta sem varrer o mundo); a Tela que carrega apontando uma imagem que o armazém não tem
+ * mais (removida por um operador enquanto ela estava descarregada) a perde na volta seguinte do {@link TvManager}. O
+ * update tag leva {@code pictures_off} com {@code tv.images.enabled} desligado: o cliente desenha o quadro neutro.
  */
 public class TvBlockEntity extends BlockEntity {
     private @Nullable UUID owner;
@@ -49,6 +54,10 @@ public class TvBlockEntity extends BlockEntity {
     private long artKey;
     /** Só no cliente: sobe a cada vez que as artes chegam e entram no layout ({@link #resolveArts}). */
     private int artsVersion;
+    /** Só no servidor: carregou apontando uma imagem que o armazém não tem; a volta do {@link TvManager} a tira. */
+    private boolean picturesStale;
+    /** Só no cliente: o servidor está com as imagens desligadas ({@code pictures_off} do update tag). */
+    private boolean picturesOff;
     /** Só no servidor, criado quando a Tela tem arte e alguém perto: o que cada jogador já recebeu. */
     private TvArtSender.@Nullable Feed artFeed;
     /** Os armazenamentos do mod ligados pelo Vinculador (qualquer dimensão), na ordem em que foram ligados. */
@@ -142,6 +151,24 @@ public class TvBlockEntity extends BlockEntity {
     /** Só no cliente: quantas vezes as artes entraram no layout; o editor relê a Tela quando muda. */
     public int artsVersion() {
         return artsVersion;
+    }
+
+    /** Só no cliente: o servidor desligou as imagens enviadas, e a Tela as desenha como o quadro neutro. */
+    public boolean picturesOff() {
+        return picturesOff;
+    }
+
+    boolean picturesStale() {
+        return picturesStale;
+    }
+
+    /** Tira do layout as imagens que o armazém não tem mais (a peça fica, sem imagem; o mosaico volta ao tema). */
+    void dropMissingPictures(TvImageStore store) {
+        picturesStale = false;
+        TvLayout resolved = store.resolve(layout);
+        if (resolved != layout) {
+            setLayout(resolved.prunedImages());
+        }
     }
 
     TvArtSender.@Nullable Feed artFeed() {
@@ -247,11 +274,15 @@ public class TvBlockEntity extends BlockEntity {
             return;
         }
         boolean sameArts = clamped.images().equals(this.layout.images());
+        boolean samePictures = clamped.pictures().equals(this.layout.pictures());
         this.layout = clamped;
         if (refs != null) {
             setArtRefs(refs);
         } else if (!sameArts) {
             artRefs = null;
+        }
+        if (!samePictures && level != null && level.getServer() != null) {
+            TvImageStore.get(level.getServer()).screenChanged(this);
         }
         changed();
     }
@@ -295,6 +326,11 @@ public class TvBlockEntity extends BlockEntity {
     public void onLoad() {
         super.onLoad();
         TvLoaded.add(this);
+        if (level != null && !level.isClientSide && level.getServer() != null && !layout.pictures().isEmpty()) {
+            TvImageStore store = TvImageStore.get(level.getServer());
+            store.screenChanged(this);
+            picturesStale = !store.hasAll(layout);
+        }
     }
 
     @Override
@@ -318,6 +354,9 @@ public class TvBlockEntity extends BlockEntity {
         tag.putInt("revision", revision);
         if (client) {
             tag.put("layout", TvArtRef.clientTag(layout, artRefs()));
+            if (!layout.pictures().isEmpty() && !TvImageConfig.enabled()) {
+                tag.putBoolean("pictures_off", true);
+            }
         } else {
             TvLayout.CODEC.encodeStart(NbtOps.INSTANCE, layout).result().ifPresent(value -> tag.put("layout", value));
             if (artRefs != null && !artRefs.isEmpty() && artRefs.size() == layout.images().size()) {
@@ -348,6 +387,7 @@ public class TvBlockEntity extends BlockEntity {
         }
         area = read;
         revision = tag.getInt("revision");
+        picturesOff = tag.getBoolean("pictures_off");
         TvLayout loaded = TvLayout.EMPTY;
         Tag stored = tag.get("layout");
         if (stored != null) {

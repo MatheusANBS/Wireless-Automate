@@ -13,6 +13,10 @@ import io.github.matheusanbs.wirelessautomate.tv.TvArea;
 import io.github.matheusanbs.wirelessautomate.tv.TvArtSender;
 import io.github.matheusanbs.wirelessautomate.tv.TvBinding;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlockEntity;
+import io.github.matheusanbs.wirelessautomate.tv.TvImageConfig;
+import io.github.matheusanbs.wirelessautomate.tv.TvImageLimits;
+import io.github.matheusanbs.wirelessautomate.tv.TvImageStore;
+import io.github.matheusanbs.wirelessautomate.tv.TvPictureSender;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -64,9 +68,33 @@ public class TvMenu extends AbstractContainerMenu implements SuggestionsMenu {
                 LinkChoice::new);
     }
 
+    /**
+     * As regras das imagens enviadas para o editor: se estão ligadas, se este jogador pode enviar (ligadas, operador
+     * quando só operadores enviam, e fora da lista de banidos) e os tetos que o cliente confere antes de mandar.
+     */
+    public record ImageRules(boolean enabled, boolean canUpload, int maxFileBytes, int maxSize, int maxFrames,
+            int maxPerScreen) {
+        static final StreamCodec<RegistryFriendlyByteBuf, ImageRules> STREAM_CODEC = StreamCodec.of(
+                (buf, r) -> {
+                    buf.writeBoolean(r.enabled).writeBoolean(r.canUpload);
+                    buf.writeVarInt(r.maxFileBytes).writeVarInt(r.maxSize).writeVarInt(r.maxFrames)
+                            .writeVarInt(r.maxPerScreen);
+                },
+                buf -> new ImageRules(buf.readBoolean(), buf.readBoolean(), buf.readVarInt(), buf.readVarInt(),
+                        buf.readVarInt(), buf.readVarInt()));
+
+        static ImageRules of(ServerPlayer player) {
+            TvImageLimits limits = TvImageConfig.limits(player.server);
+            boolean canUpload = limits.enabled() && (!limits.opsOnly() || player.hasPermissions(2))
+                    && !TvImageStore.get(player.server).banned(player.getUUID());
+            return new ImageRules(limits.enabled(), canUpload, limits.maxFileBytes(), limits.maxSize(),
+                    limits.maxFrames(), limits.maxPerScreen());
+        }
+    }
+
     /** O que o buffer de abertura leva. */
     private record Data(BlockPos pos, TvArea area, int maxWidth, int maxHeight, int maxLayoutBytes, int maxArts,
-            int maxImagePixels, @Nullable UUID currentNetwork,
+            int maxImagePixels, ImageRules images, @Nullable UUID currentNetwork,
             String currentType, List<NetworkChoice> networks, List<LinkChoice> links, boolean manage,
             AccessView access) {
         static Data read(RegistryFriendlyByteBuf buf) {
@@ -77,6 +105,7 @@ public class TvMenu extends AbstractContainerMenu implements SuggestionsMenu {
             int maxLayoutBytes = buf.readVarInt();
             int maxArts = buf.readVarInt();
             int maxImagePixels = buf.readVarInt();
+            ImageRules images = ImageRules.STREAM_CODEC.decode(buf);
             UUID network = buf.readBoolean() ? UUIDUtil.STREAM_CODEC.decode(buf) : null;
             String type = buf.readUtf(32);
             int size = Math.min(buf.readVarInt(), MAX_NETWORKS);
@@ -91,8 +120,8 @@ public class TvMenu extends AbstractContainerMenu implements SuggestionsMenu {
             }
             boolean manage = buf.readBoolean();
             AccessView access = manage ? AccessView.read(buf) : AccessView.EMPTY;
-            return new Data(pos, area, maxWidth, maxHeight, maxLayoutBytes, maxArts, maxImagePixels, network, type,
-                    list, links, manage, access);
+            return new Data(pos, area, maxWidth, maxHeight, maxLayoutBytes, maxArts, maxImagePixels, images, network,
+                    type, list, links, manage, access);
         }
 
         void write(RegistryFriendlyByteBuf buf) {
@@ -101,6 +130,7 @@ public class TvMenu extends AbstractContainerMenu implements SuggestionsMenu {
                     .writeVarInt(area.anchorRow());
             buf.writeVarInt(maxWidth).writeVarInt(maxHeight).writeVarInt(maxLayoutBytes).writeVarInt(maxArts)
                     .writeVarInt(maxImagePixels);
+            ImageRules.STREAM_CODEC.encode(buf, images);
             buf.writeBoolean(currentNetwork != null);
             if (currentNetwork != null) {
                 UUIDUtil.STREAM_CODEC.encode(buf, currentNetwork);
@@ -145,7 +175,8 @@ public class TvMenu extends AbstractContainerMenu implements SuggestionsMenu {
 
     /**
      * Servidor: abre a tela da Tela de Sinal; a lista de redes é montada uma vez, na abertura, e as artes da Tela vão
-     * antes ({@link TvArtSender#sendOnOpen}) se o jogador ainda não as tem.
+     * antes ({@link TvArtSender#sendOnOpen}) se o jogador ainda não as tem. As imagens enviadas da Tela e da biblioteca
+     * do jogador entram na fila da entrega ({@link TvPictureSender#sendOnOpen}).
      */
     public static void open(ServerPlayer player, TvBlockEntity tv) {
         List<NetworkChoice> networks = new ArrayList<>();
@@ -169,12 +200,13 @@ public class TvMenu extends AbstractContainerMenu implements SuggestionsMenu {
         TvBinding first = tv.layout().bindings().isEmpty() ? null : tv.layout().bindings().get(0);
         boolean manage = tv.canManage(player);
         Data data = new Data(tv.getBlockPos(), tv.area(), Config.tvMaxWidth(), Config.tvMaxHeight(),
-                Config.tvMaxLayoutBytes(), Config.tvMaxArts(), Config.tvMaxImagePixels(),
+                Config.tvMaxLayoutBytes(), Config.tvMaxArts(), Config.tvMaxImagePixels(), ImageRules.of(player),
                 first == null ? null : first.network(),
                 first == null ? "" : first.type().key(), networks, links, manage,
                 manage ? TvAccessActions.view(player.server, tv) : AccessView.EMPTY);
         // As artes vão antes do menu, pela mesma conexão: o editor abre com o layout já inteiro.
         TvArtSender.sendOnOpen(player, tv);
+        TvPictureSender.sendOnOpen(player, tv);
         player.openMenu(new SimpleMenuProvider((containerId, inventory, p) -> new TvMenu(containerId, data, tv),
                 Component.translatable("container.wirelessautomate.signal_screen")), data::write);
     }
@@ -216,6 +248,11 @@ public class TvMenu extends AbstractContainerMenu implements SuggestionsMenu {
     /** O teto de pixels somados nas imagens de uma Tela ({@code tv.maxImagePixels}). */
     public int maxImagePixels() {
         return data.maxImagePixels;
+    }
+
+    /** As regras das imagens enviadas na abertura ({@code tv.images}). */
+    public ImageRules imageRules() {
+        return data.images;
     }
 
     /** As redes que o jogador pode usar, ordenadas pelo nome. */

@@ -307,6 +307,7 @@ public final class Config {
                         + "mosaico). Cada pixel ocupa meio byte no layout salvo e no pacote de artes, que vai só a quem "
                         + "está perto e não pesa no maxLayoutBytes: o padrão, 131072, são oito artes de 128 × 128 em 64 KB.")
                 .defineInRange("maxImagePixels", 131_072, 64, 262_144);
+        io.github.matheusanbs.wirelessautomate.tv.TvImageConfig.define(builder);
         builder.pop();
 
         builder.push("guide");

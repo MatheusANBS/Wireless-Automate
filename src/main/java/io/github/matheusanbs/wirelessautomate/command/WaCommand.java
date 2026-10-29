@@ -45,8 +45,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * {@code /wa}: profiler embutido ({@code profile}), gerência de redes ({@code network}) e
  * configuração de faces sem tela ({@code face}: modo e prioridade, ou a rede da face) e o
- * conteúdo dos armazenamentos do mod guardado no servidor ({@code storage}) e a sintonia de um Núcleo de
- * Ressonância ({@code resonator}).
+ * conteúdo dos armazenamentos do mod guardado no servidor ({@code storage}), a sintonia de um Núcleo de
+ * Ressonância ({@code resonator}) e a moderação das imagens enviadas às Telas de Sinal ({@code tela}).
  */
 public final class WaCommand {
     public static final int MAX_NAME_LENGTH = 32;
@@ -132,6 +132,7 @@ public final class WaCommand {
                         }))
                 .then(StorageCommand.node())
                 .then(ResonatorCommand.node())
+                .then(TvImageCommand.node())
                 .then(BenchCommand.node()));
     }
 

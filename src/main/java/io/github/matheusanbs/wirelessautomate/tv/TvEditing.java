@@ -82,7 +82,9 @@ public final class TvEditing {
      * o mosaico sem arte volta ao fundo do tema, a arte que ninguém usa sai (a inválida o codec já largou ao ler) e,
      * acima de {@code tv.maxImagePixels} somados, o layout é recusado como grande demais. O {@code tv.maxLayoutBytes}
      * mede o layout como vai ao cliente, sem os pixels ({@link TvLayoutPayload#clientSize}); as referências calculadas
-     * para medir vão à Tela, que não as calcula de novo. Avisa na barra de ação.
+     * para medir vão à Tela, que não as calcula de novo. As imagens enviadas vêm do armazém, não do que o cliente diz
+     * ({@link #pictures}), e acima de {@code tv.images.maxPerScreen} distintas o layout é recusado. Avisa na barra de
+     * ação.
      */
     public static LayoutResult applyLayout(ServerPlayer player, TvBlockEntity tv, TvLayout layout) {
         if (!tv.canEdit(player)) {
@@ -94,7 +96,12 @@ public final class TvEditing {
             player.displayClientMessage(Component.translatable("message.wirelessautomate.tv.layout_too_big"), true);
             return LayoutResult.TOO_BIG;
         }
-        TvLayout resolved = layout.withMissingImagesFrom(tv.layout()).prunedImages();
+        TvLayout resolved = pictures(player, tv, layout.withMissingImagesFrom(tv.layout())).prunedImages();
+        if (resolved.referencedPictureCount() > TvImageConfig.limits(player.server).maxPerScreen()) {
+            player.displayClientMessage(Component.translatable("message.wirelessautomate.tv.layout_pictures_too_many",
+                    TvImageConfig.limits(player.server).maxPerScreen()), true);
+            return LayoutResult.TOO_BIG;
+        }
         List<TvArtRef> refs = TvArtRef.of(resolved);
         if (TvLayoutPayload.clientSize(resolved, refs) > Config.tvMaxLayoutBytes()) {
             player.displayClientMessage(Component.translatable("message.wirelessautomate.tv.layout_too_big"), true);
@@ -135,6 +142,28 @@ public final class TvEditing {
         player.displayClientMessage(message, true);
         return new LayoutResult(true, dropped[0],
                 changed ? TvLayoutAckPayload.Result.SAVED : TvLayoutAckPayload.Result.UNCHANGED);
+    }
+
+    /**
+     * As imagens enviadas do layout pelo que o armazém sabe delas ({@link TvImageStore#resolve}: tamanho e autor do
+     * armazém; a que ele não tem sai, e a peça fica sem imagem). Com {@code tv.images.enabled} desligado, só ficam as
+     * que a Tela já tinha.
+     */
+    private static TvLayout pictures(ServerPlayer player, TvBlockEntity tv, TvLayout layout) {
+        if (layout.pictures().isEmpty()) {
+            return layout;
+        }
+        TvLayout resolved = TvImageStore.get(player.server).resolve(layout);
+        if (TvImageConfig.enabled()) {
+            return resolved;
+        }
+        List<TvPicture> kept = new ArrayList<>(resolved.pictures().size());
+        for (TvPicture picture : resolved.pictures()) {
+            if (tv.layout().picture(picture.id()) != null) {
+                kept.add(picture);
+            }
+        }
+        return kept.size() == resolved.pictures().size() ? resolved : resolved.withPictures(kept);
     }
 
     /**
@@ -184,6 +213,8 @@ public final class TvEditing {
         SAVE_GATE.forget(player);
         TvLibraryActions.forget(player);
         TvArtSender.forget(player);
+        TvPictureSender.forget(player);
+        TvImageUploads.forget(player);
         TvAccessActions.forget(player);
     }
 

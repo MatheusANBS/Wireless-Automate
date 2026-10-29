@@ -12,12 +12,13 @@ import java.util.List;
 import java.util.Map;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.util.FastColor;
-import org.lwjgl.opengl.GL11;
 
 /**
  * As texturas das pixel arts no cliente: uma por arte distinta, do tamanho dela, com a paleta em ARGB sem
- * pré-multiplicar e o índice 0 transparente, filtro {@code NEAREST} sem mipmap (nada borra) e {@code GL_REPEAT} (o
- * mosaico é um quadrilátero só). A chave é a arte inteira, id e conteúdo: a mesma arte em várias Telas divide a
+ * pré-multiplicar e o índice 0 transparente, {@code NEAREST} ao ampliar (o pixel duro, nada borra), mipmaps com
+ * {@code LINEAR_MIPMAP_LINEAR} ao reduzir (a miniatura e a arte esticada menor que ela não serrilham; o GL escolhe por
+ * pixel no redesenho, como nas imagens enviadas, {@link TvPictureTextures#mipmaps}) e {@code GL_REPEAT} (o mosaico é um
+ * quadrilátero só). A chave é a arte inteira, id e conteúdo: a mesma arte em várias Telas divide a
  * textura, e uma arte mudada ("Atualizar da biblioteca") ganha outra. Antes do mapa pelo conteúdo vem um pela
  * instância ({@link #BY_INSTANCE}): as artes da biblioteca e dos layouts não mudam de instância entre quadros, e as
  * miniaturas pedem a textura a cada quadro sem recalcular o {@code hashCode} da arte (até 16 KB de pixels). Só a
@@ -77,7 +78,7 @@ final class TvArtTextures {
         return entry.renderType;
     }
 
-    /** Sobe a arte numa textura nova: {@code NEAREST}, sem mipmap e repetida nos dois eixos. */
+    /** Sobe a arte numa textura nova: {@code NEAREST} ao ampliar, mipmaps ao reduzir, repetida nos dois eixos. */
     private static int upload(TvPixelArt art) {
         int w = art.width();
         int h = art.height();
@@ -92,10 +93,8 @@ final class TvArtTextures {
             }
         }
         image.upload(0, 0, 0, 0, 0, w, h, false, false, false, true);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL11.GL_REPEAT);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL11.GL_REPEAT);
+        GlStateManager._bindTexture(texture);
+        TvPictureTextures.mipmaps(w, h);
         return texture;
     }
 

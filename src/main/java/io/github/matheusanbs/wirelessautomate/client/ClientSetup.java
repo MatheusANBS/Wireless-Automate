@@ -94,6 +94,8 @@ public final class ClientSetup {
             ResonanceCoreBlock.projectionHook = ResonatorProjection::toggle;
             TvClientHooks.changed = TvArtCache::updated;
             TvClientHooks.arts = TvArtCache::receive;
+            TvClientHooks.imageData = io.github.matheusanbs.wirelessautomate.client.tv.image.TvImageReceiver::receive;
+            TvClientHooks.imageReply = io.github.matheusanbs.wirelessautomate.client.tv.image.TvImageUploader::onReply;
             TvClientHooks.values = TvClientValues::receive;
             TvClientHooks.library = TvLibraryClient::receive;
             TvClientHooks.storageContents = io.github.matheusanbs.wirelessautomate.client.tv.editor.TvStorageClient::receive;

@@ -8,6 +8,7 @@ import io.github.matheusanbs.wirelessautomate.compat.sodium.SodiumSprites;
 import io.github.matheusanbs.wirelessautomate.tv.TvArea;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlock;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlockEntity;
+import io.github.matheusanbs.wirelessautomate.tv.TvPicture;
 import it.unimi.dsi.fastutil.ints.IntArrayFIFOQueue;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -136,9 +137,11 @@ public final class TvCanvases {
 
     /**
      * No começo de cada quadro, antes do jogo desenhar: redesenha as Telas sujas da frente da fila enquanto couberem
-     * em {@link #FRAME_PIXELS} e {@link #MAX_PER_FRAME}; a primeira sempre passa.
+     * em {@link #FRAME_PIXELS} e {@link #MAX_PER_FRAME}; a primeira sempre passa. Antes, a faixa da vez de uma imagem
+     * enviada que está subindo ({@link TvPictureTextures#onFrame}).
      */
     public static void onFrame() {
+        TvPictureTextures.onFrame();
         if (measureFramesForTests) {
             long now = System.nanoTime();
             if (lastFrameNanos != 0) {
@@ -259,6 +262,7 @@ public final class TvCanvases {
      */
     public static void onClientTick() {
         TvArtTextures.onClientTick();
+        TvPictureTextures.onClientTick();
         TvArtCache.onClientTick();
         if (CANVASES.isEmpty()) {
             return;
@@ -452,6 +456,7 @@ public final class TvCanvases {
         allocatedBytes = 0;
         ticks = 0;
         TvArtTextures.sweep();
+        TvPictureTextures.sweep();
     }
 
     /** Na varredura do {@link TvArtTextures}: marca as artes dos layouts das Telas com imagem que ainda existem. */
@@ -459,6 +464,28 @@ public final class TvCanvases {
         for (TvCanvas canvas : CANVASES.values()) {
             if (!canvas.tv.isRemoved()) {
                 TvArtTextures.keep(canvas.tv.layout());
+            }
+        }
+    }
+
+    /** Na varredura do {@link TvPictureTextures}: marca as imagens enviadas dos layouts das Telas com imagem. */
+    static void keepPictures() {
+        for (TvCanvas canvas : CANVASES.values()) {
+            if (!canvas.tv.isRemoved()) {
+                TvPictureTextures.keep(canvas.tv.layout());
+            }
+        }
+    }
+
+    /** A imagem enviada ficou pronta: as Telas com imagem que a usam redesenham. Só quando uma imagem fica pronta. */
+    static void markPicture(String hash) {
+        for (TvCanvas canvas : CANVASES.values()) {
+            List<TvPicture> pictures = canvas.tv.layout().pictures();
+            for (int i = 0; i < pictures.size(); i++) {
+                if (pictures.get(i).hash().equals(hash)) {
+                    markDirty(canvas.tv.getBlockPos().asLong());
+                    break;
+                }
             }
         }
     }

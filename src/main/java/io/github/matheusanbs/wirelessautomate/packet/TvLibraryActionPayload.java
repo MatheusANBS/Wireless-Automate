@@ -17,7 +17,8 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
  * biblioteca; {@code SAVE_COMPONENT}, {@code SAVE_THEME} e {@code SAVE_ART} levam o conteúdo (NBT em bytes, até
  * {@link #MAX_BYTES}; a arte cria ou troca a de mesmo id); {@code RENAME} e {@code REMOVE} levam o tipo e o nome, e o
  * primeiro o nome novo; {@code RENAME_ART} e {@code REMOVE_ART} levam o id da arte no {@code name} e o primeiro o
- * nome novo. O servidor valida tudo.
+ * nome novo; {@code RENAME_PICTURE} e {@code REMOVE_PICTURE}, o resumo da imagem enviada no {@code name} (64 letras) e
+ * o primeiro o nome novo. O servidor valida tudo.
  */
 public record TvLibraryActionPayload(int containerId, Action action, Kind kind, String name, String newName,
         byte[] content) implements CustomPacketPayload {
@@ -25,7 +26,10 @@ public record TvLibraryActionPayload(int containerId, Action action, Kind kind, 
     public static final int MAX_NAME = 64;
     public static final Type<TvLibraryActionPayload> TYPE = new Type<>(WirelessAutomate.id("tv_library_action"));
 
-    public enum Action { OPEN, SAVE_COMPONENT, SAVE_THEME, RENAME, REMOVE, SAVE_ART, RENAME_ART, REMOVE_ART }
+    public enum Action {
+        OPEN, SAVE_COMPONENT, SAVE_THEME, RENAME, REMOVE, SAVE_ART, RENAME_ART, REMOVE_ART, RENAME_PICTURE,
+        REMOVE_PICTURE
+    }
 
     /** O que um {@code RENAME} ou {@code REMOVE} atinge. */
     public enum Kind { COMPONENT, THEME }
@@ -75,6 +79,15 @@ public record TvLibraryActionPayload(int containerId, Action action, Kind kind, 
 
     public static TvLibraryActionPayload removeArt(int containerId, UUID id) {
         return new TvLibraryActionPayload(containerId, Action.REMOVE_ART, Kind.COMPONENT, id.toString(), "", NONE);
+    }
+
+    public static TvLibraryActionPayload renamePicture(int containerId, String hash, String newName) {
+        return new TvLibraryActionPayload(containerId, Action.RENAME_PICTURE, Kind.COMPONENT, hash,
+                newName.length() > MAX_NAME ? newName.substring(0, MAX_NAME) : newName, NONE);
+    }
+
+    public static TvLibraryActionPayload removePicture(int containerId, String hash) {
+        return new TvLibraryActionPayload(containerId, Action.REMOVE_PICTURE, Kind.COMPONENT, hash, "", NONE);
     }
 
     public static TvLibraryActionPayload rename(int containerId, Kind kind, String name, String newName) {

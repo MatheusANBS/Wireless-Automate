@@ -29,13 +29,16 @@ import org.jetbrains.annotations.Nullable;
  * ({@link #onChunkSent}: saiu e voltou entre duas voltas, ou trocou de dimensão e voltou) faz elas irem de novo, porque
  * o cliente montou a Tela do zero e pode já ter soltado as artes.
  * <p>
+ * A mesma fila leva os pedaços das imagens enviadas ({@link TvPictureSender}), no mesmo orçamento: cada item da fila é
+ * um {@link Item}.
+ * <p>
  * Parado custa zero: uma Tela sem arte ou sem ninguém perto não guarda nada, e sem fila o tick é a checagem do mapa
  * vazio. Só na thread do servidor.
  */
 public final class TvArtSender {
     /** Quantos bytes de artes cada jogador recebe por tick, no máximo (o primeiro payload do tick sempre vai). */
     public static final int BUDGET_BYTES = 256 * 1024;
-    private static final Map<UUID, TvSendQueue<Pending>> QUEUES = new HashMap<>();
+    private static final Map<UUID, TvSendQueue<Item>> QUEUES = new HashMap<>();
     /** Jogador → chunk → o tick em que o chunk foi mandado a ele; guardado {@link #CHUNK_TICKS} ticks. */
     private static final Map<UUID, Long2LongOpenHashMap> CHUNKS_SENT = new HashMap<>();
     /** Duas voltas do {@link TvManager}: toda Tela do chunk foi visitada pelo menos uma vez depois do envio. */
@@ -79,7 +82,35 @@ public final class TvArtSender {
         }
     }
 
-    private record Pending(TvBlockEntity tv, long key) {
+    /** Um envio na fila de um jogador: as artes de uma Tela ou um pedaço de uma imagem enviada. */
+    interface Item {
+        /** Os bytes no orçamento do tick, ou -1 se o envio venceu (sai da fila sem ir). */
+        int size();
+
+        void send(ServerPlayer player);
+    }
+
+    /** As artes de uma Tela, na chave em que entraram na fila. */
+    private record Pending(TvBlockEntity tv, long key) implements Item {
+        @Override
+        public int size() {
+            return TvArtSender.size(this);
+        }
+
+        @Override
+        public void send(ServerPlayer player) {
+            TvArtSender.send(player, tv);
+        }
+    }
+
+    /** Põe um envio na fila do jogador. */
+    static void enqueue(UUID player, Item item) {
+        QUEUES.computeIfAbsent(player, unused -> new TvSendQueue<>()).add(item);
+    }
+
+    /** Se a volta roda nos testes, sem conexão: conta o envio sem mandar. */
+    static boolean forced() {
+        return forced;
     }
 
     private static Feed feedOf(TvBlockEntity tv) {
@@ -120,7 +151,7 @@ public final class TvArtSender {
             }
             feed.sent.put(id, key);
             feed.sentAt.put(id, now);
-            QUEUES.computeIfAbsent(id, unused -> new TvSendQueue<>()).add(new Pending(tv, key));
+            enqueue(id, new Pending(tv, key));
             queued = true;
         }
         if (!queued) {
@@ -180,9 +211,9 @@ public final class TvArtSender {
         if (QUEUES.isEmpty()) {
             return;
         }
-        Iterator<Map.Entry<UUID, TvSendQueue<Pending>>> it = QUEUES.entrySet().iterator();
+        Iterator<Map.Entry<UUID, TvSendQueue<Item>>> it = QUEUES.entrySet().iterator();
         while (it.hasNext()) {
-            Map.Entry<UUID, TvSendQueue<Pending>> entry = it.next();
+            Map.Entry<UUID, TvSendQueue<Item>> entry = it.next();
             ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
             if (player == null || drain(player, entry.getValue())) {
                 it.remove();
@@ -191,8 +222,8 @@ public final class TvArtSender {
     }
 
     /** Manda o que cabe no orçamento do tick; verdadeiro se a fila esvaziou. */
-    private static boolean drain(ServerPlayer player, TvSendQueue<Pending> queue) {
-        queue.drain(BUDGET_BYTES, TvArtSender::size, pending -> send(player, pending.tv));
+    private static boolean drain(ServerPlayer player, TvSendQueue<Item> queue) {
+        queue.drain(BUDGET_BYTES, Item::size, item -> item.send(player));
         return queue.isEmpty();
     }
 
@@ -222,7 +253,7 @@ public final class TvArtSender {
     }
 
     /** Soma um envio às contas do {@code /wa profile}; a janela fecha a cada 20 ticks. */
-    private static void count(int bytes, long now) {
+    static void count(int bytes, long now) {
         roll(now);
         windowBytes += bytes;
         totalBytes += bytes;
@@ -244,7 +275,7 @@ public final class TvArtSender {
     public static Cost cost(long now) {
         roll(now);
         int queued = 0;
-        for (TvSendQueue<Pending> queue : QUEUES.values()) {
+        for (TvSendQueue<Item> queue : QUEUES.values()) {
             queued += queue.size();
         }
         return new Cost(queued, QUEUES.size(), lastSecondBytes, totalBytes);
@@ -261,8 +292,8 @@ public final class TvArtSender {
         UUID id = player.getUUID();
         long key = tv.artKey();
         Feed feed = feedOf(tv);
-        TvSendQueue<Pending> queue = QUEUES.get(id);
-        boolean queued = queue != null && queue.removeIf(pending -> pending.tv == tv);
+        TvSendQueue<Item> queue = QUEUES.get(id);
+        boolean queued = queue != null && queue.removeIf(item -> item instanceof Pending pending && pending.tv == tv);
         if (!queued && feed.sent.getLong(id) == key) {
             return;
         }
@@ -296,11 +327,21 @@ public final class TvArtSender {
         try {
             visit(tv, near, near.isEmpty() ? 0 : near.get(0).getServer().getTickCount());
             for (ServerPlayer player : near) {
-                TvSendQueue<Pending> queue = QUEUES.get(player.getUUID());
+                TvSendQueue<Item> queue = QUEUES.get(player.getUUID());
                 if (queue != null && drain(player, queue)) {
                     QUEUES.remove(player.getUUID());
                 }
             }
+        } finally {
+            forced = false;
+        }
+    }
+
+    /** Roda {@code body} como nos testes, sem conexão: os envios contam e não vão. */
+    static void runForced(Runnable body) {
+        forced = true;
+        try {
+            body.run();
         } finally {
             forced = false;
         }

@@ -28,7 +28,7 @@ final class TvBlankImages {
             TvPiece piece = pieces.get(i);
             Optional<UUID> art = piece.style().part().image();
             if (piece.type() == TvPieceType.IMAGE && !piece.hidden()
-                    && (art.isEmpty() || layout.image(art.get()) == null)) {
+                    && (art.isEmpty() || layout.image(art.get()) == null && layout.picture(art.get()) == null)) {
                 found[count++] = i;
             }
         }

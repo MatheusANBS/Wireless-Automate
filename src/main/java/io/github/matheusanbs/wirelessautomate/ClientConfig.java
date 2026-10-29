@@ -12,6 +12,7 @@ public final class ClientConfig {
     public static final ModConfigSpec.EnumValue<GuiTheme> THEME;
     public static final ModConfigSpec.ConfigValue<Integer> TV_PIXELS_PER_BLOCK;
     public static final ModConfigSpec.IntValue TV_VRAM_BUDGET_MB;
+    public static final ModConfigSpec.IntValue TV_IMAGE_CACHE_MB;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -31,6 +32,11 @@ public final class ClientConfig {
                         "Quando as Telas à vista pedem mais que isso, as que aparecem menores na janela perdem",
                         "resolução primeiro.")
                 .defineInRange("vramBudgetMb", 1024, 64, 4096);
+        TV_IMAGE_CACHE_MB = builder
+                .comment("Espaço em disco, em MB, das imagens enviadas às Telas de Sinal guardadas no seu computador",
+                        "(<pasta do jogo>/wirelessautomate/image-cache), para não baixar de novo quem você já viu.",
+                        "Acima disso, sai primeiro a usada há mais tempo.")
+                .defineInRange("imageCacheMb", 1024, 64, 65_536);
         builder.pop();
         SPEC = builder.build();
     }

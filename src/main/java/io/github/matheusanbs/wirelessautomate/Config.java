@@ -72,6 +72,8 @@ public final class Config {
     public static final ModConfigSpec.IntValue TV_MAX_COMPONENTS;
     public static final ModConfigSpec.IntValue TV_MAX_THEMES;
     public static final ModConfigSpec.IntValue TV_MAX_LINKS;
+    public static final ModConfigSpec.IntValue TV_MAX_ARTS;
+    public static final ModConfigSpec.IntValue TV_MAX_IMAGE_PIXELS;
     /** FE por tick que um cristal de rendimento 1 dá ao Núcleo de Ressonância, por tier. */
     public static final Map<RouterTier, ModConfigSpec.LongValue> RESONATOR_FE_PER_CRYSTAL = new EnumMap<>(RouterTier.class);
 
@@ -274,11 +276,12 @@ public final class Config {
                 .comment("Quantas ligações distintas (rede e tipo) uma Tela de Sinal lê.")
                 .defineInRange("maxBindings", 64, 1, 256);
         TV_MAX_LAYOUT_BYTES = builder
-                .comment("Tamanho máximo, em bytes de NBT, do layout de uma Tela de Sinal. O layout vai inteiro no pacote do "
-                        + "chunk de quem chega perto, e o cliente descarta um chunk que passa de 8 MiB e desconecta o "
-                        + "jogador: sem este teto, umas 130 Telas com o layout do tamanho máximo do pacote de salvar (64 KB) "
-                        + "num chunk só derrubariam quem o carregasse. O padrão de 16 KB deixa folga para centenas de Telas "
-                        + "por chunk; o máximo é 24 KB.")
+                .comment("Tamanho máximo, em bytes de NBT, do layout de uma Tela de Sinal como vai ao cliente: sem os pixels "
+                        + "das pixel arts, que seguem num pacote próprio só a quem está perto (cada arte vai só como "
+                        + "referência). Esse layout vai no pacote do chunk de quem chega perto, e o cliente descarta um "
+                        + "chunk que passa de 8 MiB e desconecta o jogador: sem este teto, umas 130 Telas com o layout do "
+                        + "tamanho do pacote de salvar num chunk só derrubariam quem o carregasse. O padrão de 16 KB deixa "
+                        + "folga para centenas de Telas por chunk; o máximo é 24 KB.")
                 .defineInRange("maxLayoutBytes", 16 * 1024, 1024, 24 * 1024);
         TV_VIEW_DISTANCE = builder
                 .comment("Distância, em blocos, até onde a Tela de Sinal é desenhada e recebe números novos.")
@@ -294,6 +297,17 @@ public final class Config {
                 .comment("Quantos armazenamentos do mod (Baús, Baterias e Tanques) uma Tela de Sinal pode ter ligados pelo "
                         + "Vinculador, em qualquer distância e dimensão.")
                 .defineInRange("maxLinks", 32, 1, 256);
+        TV_MAX_ARTS = builder
+                .comment("Quantas pixel arts cada jogador guarda na biblioteca do editor da Tela de Sinal (cada uma até 128 × 128 "
+                        + "pixels, uns 8 KB). O máximo é 64 porque a biblioteca inteira vai num só pacote de até 900 KB; "
+                        + "salvar uma arte que o passaria é recusado.")
+                .defineInRange("maxArts", 32, 1, 64);
+        TV_MAX_IMAGE_PIXELS = builder
+                .comment("Quantos pixels as imagens de uma Tela de Sinal somam (as artes distintas da peça Imagem e do fundo em "
+                        + "mosaico). Cada pixel ocupa meio byte no layout salvo e no pacote de artes, que vai só a quem "
+                        + "está perto e não pesa no maxLayoutBytes: o padrão, 131072, são oito artes de 128 × 128 em 64 KB.")
+                .defineInRange("maxImagePixels", 131_072, 64, 262_144);
+        io.github.matheusanbs.wirelessautomate.tv.TvImageConfig.define(builder);
         builder.pop();
 
         builder.push("guide");
@@ -578,6 +592,16 @@ public final class Config {
     /** Máximo de armazenamentos ligados a uma Tela de Sinal. */
     public static int tvMaxLinks() {
         return read(TV_MAX_LINKS);
+    }
+
+    /** Máximo de pixel arts na biblioteca de um jogador. */
+    public static int tvMaxArts() {
+        return read(TV_MAX_ARTS);
+    }
+
+    /** Máximo de pixels somados nas imagens de uma Tela de Sinal. */
+    public static int tvMaxImagePixels() {
+        return read(TV_MAX_IMAGE_PIXELS);
     }
 
     /** Distância de desenho e de envio da Tela de Sinal, em blocos. */

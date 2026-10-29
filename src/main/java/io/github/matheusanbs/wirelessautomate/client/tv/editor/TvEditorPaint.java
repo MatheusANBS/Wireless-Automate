@@ -70,7 +70,38 @@ final class TvEditorPaint {
         centered(g, font, r, label, active ? GuiPaint.DARK_TEXT : GuiPaint.DISABLED);
     }
 
+    /** Um botão armado, esperando o segundo clique (Remover, Limpar tudo, Descartar): vermelho, com a pergunta. */
+    static void danger(GuiGraphics g, Font font, TvRect r, Label label) {
+        GuiPaint.box(g, r.x(), r.y(), r.w(), r.h(), GuiPaint.DANGER, GuiPaint.mix(GuiPaint.DANGER, GuiPaint.RING, 0.3f));
+        centered(g, font, r, label, GuiPaint.DARK_TEXT);
+    }
+
     static void centered(GuiGraphics g, Font font, TvRect r, Label label, int color) {
         GuiText.draw(g, font, label.text(), r.x() + (r.w() - label.width()) / 2, r.y() + (r.h() - 8) / 2, color);
+    }
+
+    /** Um contorno tracejado de traços de 2 px (a Imagem que ainda não tem arte, na miniatura). */
+    /**
+     * A marca de GIF ou de pixel art animados no canto de uma miniatura: um triângulo de play de 4 × 5 px no coral,
+     * com o contorno escuro para aparecer em cima de qualquer imagem.
+     */
+    static void playMark(GuiGraphics g, int x, int y) {
+        g.fill(x - 1, y - 1, x + 4, y + 6, 0xC0101216);
+        for (int col = 0; col < 3; col++) {
+            g.fill(x + col, y + col, x + col + 1, y + 5 - col, GuiPaint.ACCENT);
+        }
+    }
+
+    static void dashed(GuiGraphics g, int x, int y, int w, int h, int color) {
+        for (int px = x; px < x + w; px += 4) {
+            int end = Math.min(px + 2, x + w);
+            g.fill(px, y, end, y + 1, color);
+            g.fill(px, y + h - 1, end, y + h, color);
+        }
+        for (int py = y; py < y + h; py += 4) {
+            int end = Math.min(py + 2, y + h);
+            g.fill(x, py, x + 1, end, color);
+            g.fill(x + w - 1, py, x + w, end, color);
+        }
     }
 }

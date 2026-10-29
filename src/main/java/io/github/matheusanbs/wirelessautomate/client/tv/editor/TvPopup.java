@@ -5,8 +5,8 @@ import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Uma janela solta do editor (o seletor de cor, a lista de fontes), desenhada por cima de tudo e aberta uma por vez
- * pelo {@link TvPopups}. Quem a abriu entrega o que ela precisa; ela devolve o valor por um callback.
+ * Uma janela solta do editor (o seletor de cor, a lista aberta de um {@link TvDropdown}), desenhada por cima de tudo
+ * e aberta uma por vez pelo {@link TvPopups}. Quem a abriu entrega o que ela precisa; ela devolve o valor por um callback.
  */
 interface TvPopup {
     void render(GuiGraphics g, int mouseX, int mouseY);

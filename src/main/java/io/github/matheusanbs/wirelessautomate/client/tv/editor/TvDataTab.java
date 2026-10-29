@@ -22,7 +22,7 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * A aba Dado (decisão 10 da spec; fontes na decisão 2 da etapa 3). Para o Valor e as peças de dado (Barra, Medidor,
- * Gráfico, Seta), um seletor ‹ › de fonte (Rede, Armazenamento, Relógio) e os controles da fonte: a rede (lista com
+ * Gráfico, Seta), a lista da fonte (Rede, Armazenamento, Relógio) e os controles da fonte: a rede (lista com
  * busca, tipo de recurso e métrica), o armazenamento ligado à Tela (a lista dos ligados, a métrica e, no Baú, a grade
  * de itens) ou o relógio do jogo (hora ou dia). O Ícone escolhe o item (pelo id, pela grade do Baú ou arrastando do
  * JEI); Texto e Forma não usam dado. Sem ligação o Valor mostra "—", e uma ligação nova só ganha números depois de
@@ -30,6 +30,9 @@ import org.jetbrains.annotations.Nullable;
  */
 final class TvDataTab {
     private static final List<TvBinding.Source> SOURCES = List.of(TvBinding.Source.values());
+    static final List<TvMetric> METRICS = List.of(TvMetric.values());
+    private static final List<TvStorageMetric> STORAGE_METRICS = List.of(TvStorageMetric.values());
+    private static final List<TvClockMetric> CLOCK_METRICS = List.of(TvClockMetric.values());
 
     private TvDataTab() {
     }
@@ -46,9 +49,9 @@ final class TvDataTab {
         }
         TvDataState state = ctx.data();
         form.label("data.source.title", TvPropsCtx.key("data.source"));
-        form.wideCycle("data.source", () -> TvPropsCtx.key("data.source."
-                + state.source(ctx.piece().binding().orElse(null)).getSerializedName()),
-                delta -> chooseSource(ctx, step(SOURCES, state.source(ctx.piece().binding().orElse(null)), delta)));
+        form.wideDropdown("data.source", () -> SOURCES, source -> TvPropsCtx.key("data.source."
+                + source.getSerializedName()), () -> state.source(ctx.piece().binding().orElse(null)),
+                source -> chooseSource(ctx, source));
         switch (state.source(ctx.piece().binding().orElse(null))) {
             case NETWORK -> network(form, ctx);
             case STORAGE -> storage(form, ctx);
@@ -77,20 +80,18 @@ final class TvDataTab {
                         network))))));
         form.skip(TvNetworkList.HEIGHT + TvForm.GAP);
         form.label("data.type.title", TvPropsCtx.key("data.type"));
-        form.wideCycle("data.type",
-                () -> ctx.piece().binding().map(b -> ResourceStyle.name(b.type())).orElse(NO_LINK),
-                delta -> ctx.change("bind", p -> p.binding().map(b -> p.withBinding(Optional.of(
-                        new TvBinding(b.network(), step(LoadedTypes.LIST, b.type(), delta), b.metric()))))
-                        .orElse(p)));
+        form.wideDropdown("data.type", () -> LoadedTypes.LIST, ResourceStyle::name,
+                () -> ctx.piece().binding().map(TvBinding::type).orElse(null),
+                type -> ctx.change("bind", p -> p.binding().map(b -> p.withBinding(Optional.of(
+                        new TvBinding(b.network(), type, b.metric())))).orElse(p)))
+                .enabledWhen(() -> ctx.piece().binding().isPresent());
         form.label("data.metric.title", TvPropsCtx.key("data.metric"));
-        form.wideCycle("data.metric",
-                () -> ctx.piece().binding().map(b -> metricName(b.metric())).orElse(NO_LINK),
-                delta -> ctx.change("bind", p -> p.binding().map(b -> p.withBinding(Optional.of(
-                        new TvBinding(b.network(), b.type(), step(List.of(TvMetric.values()), b.metric(), delta)))))
-                        .orElse(p)));
+        form.wideDropdown("data.metric", () -> METRICS, TvDataTab::metricName,
+                () -> ctx.piece().binding().map(TvBinding::metric).orElse(null),
+                metric -> ctx.change("bind", p -> p.binding().map(b -> p.withBinding(Optional.of(
+                        new TvBinding(b.network(), b.type(), metric)))).orElse(p)))
+                .enabledWhen(() -> ctx.piece().binding().isPresent());
     }
-
-    private static final Component NO_LINK = Component.literal("—");
 
     /** A rede da ligação da peça escolhida, ou {@code null}. */
     private static @Nullable UUID bound(TvPropsCtx ctx) {
@@ -121,10 +122,11 @@ final class TvDataTab {
             return;
         }
         form.label("data.storage.metric.title", TvPropsCtx.key("data.storage.metric"));
-        form.wideCycle("data.storage.metric", () -> ctx.piece().binding().map(TvDataTab::storageMetricName)
-                .orElse(NO_LINK), delta -> ctx.change("bind", p -> p.binding().map(b -> p.withBinding(Optional.of(
-                        withStorageMetric(b, step(List.of(TvStorageMetric.values()), b.storage().metric(), delta)))))
-                        .orElse(p)));
+        form.wideDropdown("data.storage.metric", () -> STORAGE_METRICS, TvDataTab::storageMetricName,
+                () -> ctx.piece().binding()
+                        .map(b -> b.storage() == null ? null : b.storage().metric()).orElse(null),
+                metric -> ctx.change("bind", p -> p.binding().filter(b -> b.storage() != null)
+                        .map(b -> p.withBinding(Optional.of(withStorageMetric(b, metric)))).orElse(p)));
         GlobalPos pos = storagePos(ctx);
         if (pos != null && state.kindOf(pos) == StorageKind.CHEST) {
             requestOnce(ctx, pos);
@@ -184,18 +186,22 @@ final class TvDataTab {
     }
 
     static Component storageMetricName(TvBinding binding) {
-        return TvPropsCtx.key("data.storage.metric." + binding.storage().metric().getSerializedName());
+        return storageMetricName(binding.storage().metric());
+    }
+
+    private static Component storageMetricName(TvStorageMetric metric) {
+        return TvPropsCtx.key("data.storage.metric." + metric.getSerializedName());
     }
 
     // ------------------------------------------------------------------ relógio
 
     private static void clock(TvForm form, TvPropsCtx ctx) {
         form.label("data.clock.title", TvPropsCtx.key("data.clock"));
-        form.wideCycle("data.clock.metric", () -> ctx.piece().binding().filter(b -> b.clock() != null)
-                .map(b -> TvPropsCtx.key("data.clock.metric." + b.clock().getSerializedName())).orElse(NO_LINK),
-                delta -> ctx.change("bind", p -> Optional.ofNullable(p.binding().orElse(null))
-                        .filter(b -> b.clock() != null).map(b -> p.withBinding(Optional.of(TvBinding.clock(
-                                step(List.of(TvClockMetric.values()), b.clock(), delta))))).orElse(p)));
+        form.wideDropdown("data.clock.metric", () -> CLOCK_METRICS, metric -> TvPropsCtx.key("data.clock.metric."
+                + metric.getSerializedName()), () -> ctx.piece().binding().map(TvBinding::clock).orElse(null),
+                metric -> ctx.change("bind", p -> p.binding().filter(b -> b.clock() != null)
+                        .map(b -> p.withBinding(Optional.of(TvBinding.clock(metric)))).orElse(p)))
+                .enabledWhen(() -> ctx.piece().binding().map(b -> b.clock() != null).orElse(false));
     }
 
     // ------------------------------------------------------------------ ícone
@@ -222,12 +228,6 @@ final class TvDataTab {
     }
 
     // ------------------------------------------------------------------ comuns
-
-    /** O elemento {@code delta} passos depois de {@code current} na lista, dando a volta. */
-    static <T> T step(List<T> list, T current, int delta) {
-        int at = list.indexOf(current);
-        return list.get(Math.floorMod((at < 0 ? 0 : at) + delta, list.size()));
-    }
 
     static Component metricName(TvMetric metric) {
         return TvPropsCtx.key("metric." + metric.getSerializedName());

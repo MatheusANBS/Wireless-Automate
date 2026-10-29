@@ -13,10 +13,11 @@ public final class TvSavedLayouts {
     private TvSavedLayouts() {
     }
 
-    /** O layout salvo com o nome, as peças e o que a Tela tem além delas. */
+    /** O layout salvo com o nome, as peças, as imagens enviadas que elas usam e o que a Tela tem além delas. */
     public static TvComponent of(String name, TvLayout layout, TvArea area) {
         return new TvComponent(name, layout.pieces(), Optional.of(new TvComponent.Layout(area.pixelWidth(),
-                area.pixelHeight(), layout.background(), layout.scanlines())));
+                area.pixelHeight(), layout.background(), layout.scanlines())),
+                TvComponent.picturesOf(layout.pieces(), layout.background().image(), layout.pictures()));
     }
 
     /** As peças do layout salvo escaladas para a área; sem layout (um componente comum), as mesmas peças. */
@@ -46,13 +47,30 @@ public final class TvSavedLayouts {
         return out;
     }
 
-    /** O layout da Tela com as peças do layout salvo escaladas, o fundo e as linhas dele; o tema da Tela fica. */
+    /**
+     * O layout da Tela com as peças do layout salvo escaladas, o fundo, as linhas e as imagens enviadas dele; o tema
+     * da Tela fica.
+     */
     public static TvLayout apply(TvComponent saved, TvLayout current, TvArea area) {
-        TvLayout next = current.withPieces(scale(saved, area));
+        TvLayout next = withPictures(current.withPieces(scale(saved, area)), saved.pictures());
         if (saved.layout().isPresent()) {
             next = next.withBackground(saved.layout().get().background())
                     .withScanlines(saved.layout().get().scanlines());
         }
         return next.clampedTo(area);
+    }
+
+    /** O layout com as imagens de {@code pictures} que ele ainda não tem (as que sobrarem saem ao salvar). */
+    public static TvLayout withPictures(TvLayout layout, List<TvPicture> pictures) {
+        if (pictures.isEmpty()) {
+            return layout;
+        }
+        List<TvPicture> merged = new ArrayList<>(layout.pictures());
+        for (TvPicture picture : pictures) {
+            if (layout.picture(picture.id()) == null) {
+                merged.add(picture);
+            }
+        }
+        return merged.size() == layout.pictures().size() ? layout : layout.withPictures(merged);
     }
 }

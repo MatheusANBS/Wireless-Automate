@@ -8,17 +8,20 @@ import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.client.ResizeGrip;
 import io.github.matheusanbs.wirelessautomate.client.ResizeHandle;
 import io.github.matheusanbs.wirelessautomate.client.ThemeToggle;
+import io.github.matheusanbs.wirelessautomate.client.access.AccessPanel;
 import io.github.matheusanbs.wirelessautomate.client.tv.TvButtons.Label;
 import io.github.matheusanbs.wirelessautomate.client.tv.editor.TvEditorActions;
 import io.github.matheusanbs.wirelessautomate.client.tv.editor.TvEditorLayout;
 import io.github.matheusanbs.wirelessautomate.client.tv.editor.TvEditorSize;
 import io.github.matheusanbs.wirelessautomate.client.tv.editor.TvEditorTab;
+import io.github.matheusanbs.wirelessautomate.client.tv.editor.TvPixelEditor;
 import io.github.matheusanbs.wirelessautomate.menu.TvMenu;
 import io.github.matheusanbs.wirelessautomate.tv.TvArea;
 import io.github.matheusanbs.wirelessautomate.tv.TvAreaCheck;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -26,17 +29,22 @@ import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * A tela da Tela de Sinal: o cabeçalho com o nome, as abas Tamanho e Editar, o ✕ e o botão do tema. A aba Tamanho
- * tem 320 × 220 fixos; a Editar é redimensionável pela borda e pela alça do canto como a tela do roteador (mínimo
- * 400 × 240, máximo a janela menos {@link #EDITOR_MARGIN} px, o tamanho lembrado na sessão pelo {@link TvEditorSize}).
- * Esta
- * classe só junta as partes ({@link TvSizeTab}, {@link TvEditorTab}) e repassa o desenho, o mouse, a roda, o teclado
- * e as dicas à aba aberta; os ganchos do e2e ficam aqui. Fechar com mudança não salva no editor pede dois cliques no ✕
- * ("Descartar?"); o Esc faz o mesmo. Sem slots: só existe aberta, e nada vem do servidor enquanto isso.
+ * A tela da Tela de Sinal: o cabeçalho com o nome, as abas Tamanho, Editar e Acesso (esta só para o dono e os
+ * operadores), o ✕ e o botão do tema. As abas Tamanho e Acesso têm 320 × 220 fixos; a Editar é redimensionável pela
+ * borda e pela alça do canto como a tela do roteador (mínimo 400 × 240, máximo a janela menos {@link #EDITOR_MARGIN}
+ * px, o tamanho lembrado na sessão pelo {@link TvEditorSize}). Esta classe só junta as partes ({@link TvScreenTabs},
+ * {@link TvSizeTab}, {@link TvEditorTab}, {@link TvAccessTab}) e repassa o desenho, o mouse, a roda, o teclado e as
+ * dicas à aba aberta; os ganchos do e2e ficam aqui. Fechar com mudança não salva no editor pede dois cliques no ✕
+ * ("Descartar?"); o Esc faz o mesmo. Com o editor de pixel art aberto ({@link TvPixelEditor}), ele ocupa o painel
+ * inteiro no lugar do título, das abas e do ✕ e recebe o mouse e o teclado (o Esc e a tecla do inventário não fecham a
+ * tela); o tema e o redimensionar continuam. Sem slots: só existe aberta, e do servidor só vem a resposta ao que ela
+ * pede.
  */
 public class TvScreen extends AbstractContainerScreen<TvMenu> {
     /** As abas da tela. */
-    public enum Tab { SIZE, EDIT }
+    public enum Tab { SIZE, EDIT, ACCESS }
+
+    static final Tab[] TABS = Tab.values();
 
     /** A aba Editar cresce no máximo até a janela menos esta margem (metade de cada lado). */
     public static final int EDITOR_MARGIN = 8;
@@ -46,35 +54,42 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
     private static final List<Component> RESIZE_TIP = List.of(
             Component.translatable("gui.wirelessautomate.resize.tooltip"));
 
+    private final TvScreenTabs tabs;
     private final TvSizeTab sizeTab;
     private final TvEditorTab editorTab;
+    /** Só para quem gerencia a Tela ({@link TvMenu#manage}). */
+    private final @Nullable TvAccessTab accessTab;
     private final ArmedClick closeClick = new ArmedClick();
     private final ResizeHandle resizeHandle = new ResizeHandle(GRIP, EDGE);
     private Tab tab = Tab.SIZE;
-    private @Nullable GuiText.Fitted titleText;
-    private @Nullable Label sizeLabel;
-    private @Nullable Label editLabel;
     private @Nullable Label discardLabel;
 
     public TvScreen(TvMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
         this.imageWidth = W;
         this.imageHeight = H;
-        this.sizeTab = new TvSizeTab(menu, new TvScreenActions(menu.containerId, false));
+        this.tabs = new TvScreenTabs(menu.manage());
+        TvScreenActions actions = new TvScreenActions(menu.containerId, false);
+        this.sizeTab = new TvSizeTab(menu, actions);
+        this.accessTab = menu.manage() ? new TvAccessTab(menu, actions) : null;
         this.editorTab = new TvEditorTab(menu.pos(), menu.area(), menu.networks(), menu.links(),
-                new TvEditorActions(menu.containerId, false, menu.maxLayoutBytes()));
+                new TvEditorActions(menu.containerId, false, menu.maxLayoutBytes(), menu.maxArts(),
+                        menu.maxImagePixels(), menu.imageRules()));
     }
 
     @Override
     protected void init() {
         size();
         super.init();
-        titleText = GuiText.fit(font, title, TITLE.w());
-        sizeLabel = TvButtons.label(font, TvScreenText.key("tab.size"), SIZE_TAB.w() - 6);
-        editLabel = TvButtons.label(font, TvScreenText.key("tab.edit"), EDIT_TAB.w() - 6);
+        tabs.layout(font, title);
         discardLabel = TvButtons.label(font, TvScreenText.key("discard"), DISCARD_W - 6);
         sizeTab.layout(font);
         editorTab.layout(font, leftPos, topPos, imageWidth, imageHeight);
+        if (accessTab != null) {
+            accessTab.layout(font, leftPos, topPos);
+            accessTab.createBoxes(font).forEach(this::addRenderableWidget);
+            accessTab.refresh(tab == Tab.ACCESS);
+        }
     }
 
     /** O tamanho do painel pela aba aberta; o {@code super.init} centra. */
@@ -100,6 +115,11 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
         return themeX() - 4 - ThemeToggle.SIZE;
     }
 
+    /** O editor de pixel art está aberto por cima da aba Editar. */
+    private boolean pixelOpen() {
+        return tab == Tab.EDIT && editorTab.pixel().isOpen();
+    }
+
     private boolean closeArmed() {
         return closeClick.armed(System.currentTimeMillis());
     }
@@ -114,11 +134,14 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         GuiText.beginFrame();
         super.render(g, mouseX, mouseY, partialTick);
+        if (tab == Tab.ACCESS && accessTab != null) {
+            accessTab.renderOverlay(g, font);
+        }
         if (ThemeToggle.hovered(themeX(), themeY(), mouseX, mouseY)) {
             g.renderComponentTooltip(font, ThemeToggle.tooltip(), mouseX, mouseY);
             return;
         }
-        if (tab == Tab.EDIT && closeHovered(mouseX, mouseY) && !closeArmed()) {
+        if (tab == Tab.EDIT && !pixelOpen() && closeHovered(mouseX, mouseY) && !closeArmed()) {
             g.renderComponentTooltip(font, List.of(TvScreenText.key("close")), mouseX, mouseY);
             return;
         }
@@ -127,7 +150,9 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
             g.renderComponentTooltip(font, RESIZE_TIP, mouseX, mouseY);
             return;
         }
-        Component editorTip = tab == Tab.EDIT ? editorTab.tooltip(mouseX, mouseY) : null;
+        Component editorTip = pixelOpen() ? editorTab.pixel().tooltip(mouseX, mouseY)
+                : tab == Tab.EDIT ? editorTab.tooltip(mouseX, mouseY)
+                : tab == Tab.ACCESS && accessTab != null ? accessTab.tooltip(mouseX, mouseY) : null;
         if (editorTip != null) {
             g.renderComponentTooltip(font, List.of(editorTip), mouseX, mouseY);
             return;
@@ -146,9 +171,15 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
     @Override
     protected void renderBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
         GuiPaint.panel(g, leftPos, topPos, imageWidth, imageHeight, GuiPaint.ACCENT);
-        GuiText.draw(g, font, titleText, leftPos + TITLE.x(), topPos + TITLE.y(), GuiPaint.FG);
-        renderTab(g, SIZE_TAB, sizeLabel, tab == Tab.SIZE, mouseX, mouseY);
-        renderTab(g, EDIT_TAB, editLabel, tab == Tab.EDIT, mouseX, mouseY);
+        if (pixelOpen()) {
+            ThemeToggle.render(g, themeX(), themeY(), mouseX, mouseY);
+            g.fill(leftPos + 8, topPos + RULE_Y, leftPos + imageWidth - 8, topPos + RULE_Y + 1, GuiPaint.LINE);
+            ResizeGrip.renderDotted(g, leftPos, topPos, imageWidth, imageHeight,
+                    resizeHandle.hover(mouseX, mouseY, leftPos, topPos, imageWidth, imageHeight), GuiPaint.ACCENT);
+            editorTab.pixel().render(g, mouseX, mouseY);
+            return;
+        }
+        tabs.render(g, font, leftPos, topPos, tab, mouseX, mouseY);
         ThemeToggle.render(g, themeX(), themeY(), mouseX, mouseY);
         if (tab == Tab.EDIT) {
             renderClose(g, mouseX, mouseY);
@@ -156,20 +187,14 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
         g.fill(leftPos + 8, topPos + RULE_Y, leftPos + imageWidth - 8, topPos + RULE_Y + 1, GuiPaint.LINE);
         if (tab == Tab.SIZE) {
             sizeTab.render(g, leftPos, topPos, mouseX, mouseY);
+        } else if (tab == Tab.ACCESS && accessTab != null) {
+            accessTab.render(g, font, mouseX, mouseY);
         } else {
             ResizeHandle.Edge hover = editorTab.probe().menuOpen() ? null
                     : resizeHandle.hover(mouseX, mouseY, leftPos, topPos, imageWidth, imageHeight);
             ResizeGrip.renderDotted(g, leftPos, topPos, imageWidth, imageHeight, hover, GuiPaint.ACCENT);
             editorTab.render(g, mouseX, mouseY);
         }
-    }
-
-    private void renderTab(GuiGraphics g, Rect r, Label label, boolean active, int mouseX, int mouseY) {
-        boolean hovered = r.contains(leftPos, topPos, mouseX, mouseY);
-        int x = leftPos + r.x();
-        int y = topPos + r.y();
-        GuiPaint.tab(g, x, y, r.w(), r.h(), active, hovered);
-        GuiText.draw(g, font, label.text(), x + (r.w() - label.width()) / 2, y + 3, GuiPaint.tabText(active, hovered));
     }
 
     /** O ✕; armado, cresce para a esquerda com o "Descartar?" em vermelho. */
@@ -208,6 +233,12 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
         if (ThemeToggle.mouseClicked(themeX(), themeY(), mouseX, mouseY, button)) {
             return true;
         }
+        if (pixelOpen()) {
+            if (button != 0 || !resizeHandle.begin(mouseX, mouseY, leftPos, topPos, imageWidth, imageHeight)) {
+                editorTab.pixel().mouseClicked(mouseX, mouseY, button);
+            }
+            return true;
+        }
         if (tab == Tab.EDIT && (button == 1 || button == 2)) {
             return editorTab.mouseClicked(mouseX, mouseY, button) || super.mouseClicked(mouseX, mouseY, button);
         }
@@ -221,15 +252,13 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
                     && resizeHandle.begin(mouseX, mouseY, leftPos, topPos, imageWidth, imageHeight)) {
                 return true;
             }
-            if (SIZE_TAB.contains(leftPos, topPos, mouseX, mouseY)) {
-                select(Tab.SIZE);
-                return true;
-            }
-            if (EDIT_TAB.contains(leftPos, topPos, mouseX, mouseY)) {
-                select(Tab.EDIT);
+            Tab clicked = tabs.at(leftPos, topPos, mouseX, mouseY);
+            if (clicked != null) {
+                select(clicked);
                 return true;
             }
             boolean used = tab == Tab.SIZE ? sizeTab.mouseClicked(leftPos, topPos, mouseX, mouseY)
+                    : tab == Tab.ACCESS ? accessTab != null && accessTab.mouseClicked(mouseX, mouseY)
                     : editorTab.mouseClicked(mouseX, mouseY, button);
             if (used) {
                 return true;
@@ -243,6 +272,9 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
         if (resizeHandle.dragging()) {
             dragResize(mouseX, mouseY);
             return true;
+        }
+        if (pixelOpen()) {
+            return editorTab.pixel().mouseDragged(mouseX, mouseY);
         }
         if (tab == Tab.EDIT && (button == 0 || button == 2) && editorTab.mouseDragged(mouseX, mouseY)) {
             return true;
@@ -283,6 +315,9 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
             resizeHandle.end();
             return true;
         }
+        if (pixelOpen()) {
+            return editorTab.pixel().mouseReleased(mouseX, mouseY) || super.mouseReleased(mouseX, mouseY, button);
+        }
         if ((button == 0 || button == 2) && editorTab.mouseReleased(mouseX, mouseY)) {
             return true;
         }
@@ -291,7 +326,14 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (pixelOpen()) {
+            return editorTab.pixel().mouseScrolled(mouseX, mouseY, scrollY) || true;
+        }
         if (tab == Tab.EDIT && editorTab.mouseScrolled(mouseX, mouseY, scrollY)) {
+            return true;
+        }
+        if (tab == Tab.ACCESS && accessTab != null) {
+            accessTab.mouseScrolled(mouseY, scrollY);
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
@@ -304,7 +346,16 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
      */
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (pixelOpen()) {
+            return editorTab.pixel().keyPressed(keyCode, scanCode, modifiers) || minecraft != null
+                    && minecraft.options.keyInventory.matches(keyCode, scanCode)
+                    || super.keyPressed(keyCode, scanCode, modifiers);
+        }
         if (tab == Tab.EDIT && editorTab.keyPressed(keyCode, scanCode, modifiers)) {
+            return true;
+        }
+        if (tab == Tab.ACCESS && accessTab != null && accessTab.keyPressed(getFocused() instanceof EditBox box
+                ? box : null, keyCode, scanCode, modifiers, () -> setFocused(null))) {
             return true;
         }
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
@@ -325,7 +376,15 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
     }
 
     @Override
+    public boolean keyReleased(int keyCode, int scanCode, int modifiers) {
+        return pixelOpen() && editorTab.pixel().keyReleased(keyCode) || super.keyReleased(keyCode, scanCode, modifiers);
+    }
+
+    @Override
     public boolean charTyped(char codePoint, int modifiers) {
+        if (pixelOpen()) {
+            return editorTab.pixel().charTyped(codePoint, modifiers) || super.charTyped(codePoint, modifiers);
+        }
         if (tab == Tab.EDIT && editorTab.charTyped(codePoint, modifiers)) {
             return true;
         }
@@ -357,8 +416,13 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
 
     /** O centro do botão de uma aba (gancho do e2e). */
     public int[] tabCenter(Tab wanted) {
-        Rect r = wanted == Tab.SIZE ? SIZE_TAB : EDIT_TAB;
+        Rect r = TvScreenTabs.rect(wanted);
         return new int[] {r.centerX(leftPos), r.centerY(topPos)};
+    }
+
+    /** A lista de acesso da aba Acesso (gancho do e2e); {@code null} para quem não gerencia a Tela. */
+    public @Nullable AccessPanel access() {
+        return accessTab == null ? null : accessTab.panel();
     }
 
     /** O centro do ✕ (gancho do e2e). */
@@ -372,7 +436,7 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
 
     /** O retângulo onde o JEI pode largar um item, só com a aba Editar aberta; {@code null} sem alvo. */
     public int @Nullable [] ghostBounds() {
-        return tab == Tab.EDIT ? editorTab.ghostBounds() : null;
+        return tab == Tab.EDIT && !pixelOpen() ? editorTab.ghostBounds() : null;
     }
 
     /** O ponto da alça do canto da aba Editar (gancho do e2e). */

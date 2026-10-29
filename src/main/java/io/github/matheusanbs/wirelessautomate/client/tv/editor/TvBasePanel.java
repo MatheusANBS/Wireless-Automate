@@ -14,7 +14,8 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * A base da Tela, na coluna da direita enquanto nada está escolhido (como no mockup): o Tema (os quatro de partida e os
- * do jogador, trocados por ‹ ›), o Fundo (do tema, cor fixa ou degradê vertical), as linhas de varredura, a grade da
+ * do jogador, numa lista), o Fundo (do tema, cor fixa, degradê vertical ou pixel art em mosaico, este no
+ * {@link TvBaseMosaic}, com o uso do teto de pixels), as linhas de varredura, a grade da
  * miniatura, as seis cores do tema (campos {@code #RRGGBB}), "Salvar tema" (grava a paleta atual na biblioteca com um
  * nome) e o remover do tema do jogador, em dois cliques. A Tela guarda a paleta inteira, não uma referência: trocar
  * ou apagar um tema da biblioteca nunca muda outra Tela. Tema, fundo e linhas vão pelo {@link TvEditorDoc#changeLayout}
@@ -38,10 +39,13 @@ final class TvBasePanel {
         form.hint("base.hint", TvPropsCtx.key("base.hint"));
         TvLayoutPicker.add(form, ctx);
         form.label("base.theme.title", TvPropsCtx.key("base.theme"));
-        form.wideCycle("base.theme", () -> themeName(ctx.theme()), delta -> stepTheme(ctx, delta));
+        form.wideDropdown("base.theme", TvBasePanel::themes, TvBasePanel::themeName, () -> current(ctx),
+                chosen -> ctx.doc().changeLayout(l -> l.withTheme(chosen), "theme"))
+                .none(TvPropsCtx.key("base.custom"));
         form.label("base.bg.title", TvPropsCtx.key("base.background"));
-        form.wideCycle("base.bg.kind", () -> TvPropsCtx.key("base.bg." + ctx.doc().draft().background().kind()
-                .getSerializedName()), delta -> stepBackground(ctx, delta));
+        form.wideDropdown("base.bg.kind", () -> backgrounds(ctx), kind -> TvPropsCtx.key("base.bg."
+                + kind.getSerializedName()), () -> ctx.doc().draft().background().kind(),
+                kind -> chooseBackground(ctx, kind));
         TvBackground background = ctx.doc().draft().background();
         switch (background.kind()) {
             case SOLID -> TvColorPicker.add(form, ctx, "base.bg.top", TvPropsCtx.key("base.bg.fill"),
@@ -52,9 +56,11 @@ final class TvBasePanel {
                 TvColorPicker.add(form, ctx, "base.bg.bottom", TvPropsCtx.key("base.bg.bottom"),
                         () -> ctx.doc().draft().background().bottom(), v -> setBottom(ctx, v), false, true);
             }
+            case TILED -> TvBaseMosaic.build(form, ctx);
             default -> {
             }
         }
+        TvBaseMosaic.usage(form, ctx);
         form.toggle("base.scanlines", TvPropsCtx.key("base.scanlines"), () -> ctx.doc().draft().scanlines(),
                 on -> ctx.doc().changeLayout(l -> l.withScanlines(on), "scanlines"));
         form.toggle("base.grid", TvPropsCtx.key("base.grid"), () -> ctx.doc().gridVisible(),
@@ -85,47 +91,42 @@ final class TvBasePanel {
         form.endRow(TvControls.ROW - 1);
     }
 
-    /** Os temas da lista, na ordem do ‹ ›: os quatro prontos e os do jogador. */
+    /** Os temas da lista: os quatro prontos e os do jogador. */
     private static List<TvTheme> themes() {
         List<TvTheme> all = new ArrayList<>(TvTheme.PRESETS);
         all.addAll(TvLibraryClient.themes());
         return all;
     }
 
-    /** A posição na lista do tema com a paleta dada, ou -1 se a paleta é outra (editada à mão). */
-    private static int indexOf(List<TvTheme> all, TvTheme theme) {
-        for (int i = 0; i < all.size(); i++) {
-            if (all.get(i).sameColors(theme)) {
-                return i;
+    /** O tema da lista com a paleta de agora, ou {@code null} se a paleta é outra (editada à mão). */
+    private static @Nullable TvTheme current(TvPropsCtx ctx) {
+        for (TvTheme theme : themes()) {
+            if (theme.sameColors(ctx.theme())) {
+                return theme;
             }
         }
-        return -1;
+        return null;
     }
 
     private static Component themeName(TvTheme theme) {
-        List<TvTheme> all = themes();
-        int at = indexOf(all, theme);
-        if (at < 0) {
-            return TvPropsCtx.key("base.custom");
+        return TvTheme.PRESETS.contains(theme) ? TvEditorText.readyName(theme.name()) : Component.literal(theme.name());
+    }
+
+    /** Os fundos da lista; o mosaico precisa de uma arte, e sem nenhuma (no layout ou na biblioteca) não aparece. */
+    private static List<TvBackground.Kind> backgrounds(TvPropsCtx ctx) {
+        return TvBaseMosaic.available(ctx.doc().draft()) ? KINDS : KINDS.subList(0, KINDS.size() - 1);
+    }
+
+    private static final List<TvBackground.Kind> KINDS = List.of(TvBackground.Kind.THEME, TvBackground.Kind.SOLID,
+            TvBackground.Kind.GRADIENT, TvBackground.Kind.TILED);
+
+    private static void chooseBackground(TvPropsCtx ctx, TvBackground.Kind kind) {
+        if (kind == TvBackground.Kind.TILED) {
+            TvBaseMosaic.start(ctx);
+            return;
         }
-        return at < TvTheme.PRESETS.size() ? TvEditorText.readyName(all.get(at).name())
-                : Component.literal(all.get(at).name());
-    }
-
-    private static void stepTheme(TvPropsCtx ctx, int delta) {
-        List<TvTheme> all = themes();
-        int at = indexOf(all, ctx.theme());
-        int next = Math.floorMod((at < 0 ? (delta > 0 ? -1 : 0) : at) + delta, all.size());
-        TvTheme chosen = all.get(next);
-        ctx.doc().changeLayout(l -> l.withTheme(chosen), "theme");
-    }
-
-    private static void stepBackground(TvPropsCtx ctx, int delta) {
-        TvBackground.Kind[] kinds = TvBackground.Kind.values();
-        TvBackground.Kind kind = kinds[Math.floorMod(ctx.doc().draft().background().kind().ordinal() + delta,
-                kinds.length)];
         TvBackground next = switch (kind) {
-            case THEME -> TvBackground.DEFAULT;
+            case THEME, TILED -> TvBackground.DEFAULT;
             case SOLID -> new TvBackground(kind, TvColor.theme(TvColor.CARD), 0);
             case GRADIENT -> new TvBackground(kind, TvColor.theme(TvColor.BG), TvColor.theme(TvColor.CARD));
         };

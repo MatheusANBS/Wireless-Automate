@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.packet;
 
 import io.github.matheusanbs.wirelessautomate.menu.TabletAccess;
+import io.github.matheusanbs.wirelessautomate.menu.SuggestionsMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import java.util.List;
 import net.minecraft.server.level.ServerPlayer;
@@ -12,8 +13,9 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Pacotes do Tablet de rede e os handlers, registrados por {@link ModPayloads#register}. Código
- * comum: o handler do cliente só mexe no {@link TabletMenu}. Os do servidor só agem com o Tablet
- * daquele {@code containerId} aberto e ainda válido; a validação de cada ação fica no menu.
+ * comum: o handler do cliente só mexe no {@link TabletMenu} (as sugestões do acesso também na Tela de Sinal, pelo
+ * {@link SuggestionsMenu}). Os do servidor só agem com o Tablet daquele {@code containerId} aberto e ainda válido; a
+ * validação de cada ação fica no menu.
  */
 public final class TabletPayloads {
     private TabletPayloads() {
@@ -66,7 +68,7 @@ public final class TabletPayloads {
 
     private static void onSuggestions(NetworkSuggestionsPayload payload, IPayloadContext context) {
         Player player = context.player();
-        if (player != null && player.containerMenu instanceof TabletMenu menu) {
+        if (player != null && player.containerMenu instanceof SuggestionsMenu menu) {
             menu.applySuggestions(payload);
         }
     }

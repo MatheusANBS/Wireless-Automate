@@ -12,7 +12,7 @@ Químicos do Mekanism (só a API dele). O resto do mod passa pela ponte `Chemica
 
 ## `compat/ftbteams/`, `network/TeamAccess.java`
 
-Times do FTB Teams (mod opcional, id `ftbteams`; só times de grupo valem, não o time pessoal de cada jogador). O resto do mod passa pela ponte `TeamAccess` (`LOADED`, `isMember(time, jogador)`, `info(time)` com `gone` para o time desfeito, `teams()` para as sugestões); só `FtbTeams` toca na API dele (`FTBTeamsAPI.api().getManager()`, `getTeamByID`, `getTeams`, `Team.getMembers`, conferidos no ramo `1.21.1/main` do FTB Teams; o `main` dele usa nomes de outra versão) e só carrega com o mod presente. `FtbTeamsDev` cria um time para o e2e. A rede guarda o id do time, não os membros: quem entra ou sai do time ganha ou perde o acesso sozinho
+Times do FTB Teams (mod opcional, id `ftbteams`; só times de grupo valem, não o time pessoal de cada jogador). O resto do mod passa pela ponte `TeamAccess` (`LOADED`, `isMember(time, jogador)`, `members(time)`, `info(time)` com `gone` para o time desfeito, `teams()` para as sugestões); só `FtbTeams` toca na API dele (`FTBTeamsAPI.api().getManager()`, `getTeamByID`, `getTeams`, `Team.getMembers`, conferidos no ramo `1.21.1/main` do FTB Teams; o `main` dele usa nomes de outra versão) e só carrega com o mod presente. `FtbTeamsDev` cria um time para o e2e. A rede e a Tela de Sinal (`tv/TvAccess`) guardam o id do time, não os membros: quem entra ou sai do time ganha ou perde o acesso sozinho
 
 ## `compat/arsnouveau/`, `network/Sources.java`
 

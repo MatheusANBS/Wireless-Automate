@@ -26,14 +26,40 @@ import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Os dados de uma Tela de Sinal: dono, área e layout. Não faz tick. O update tag sai só quando a área ou o layout
- * mudam e não leva o dono.
+ * Os dados de uma Tela de Sinal: dono, lista de acesso, área e layout. Não faz tick. O update tag sai só quando a área
+ * ou o layout mudam e não leva o dono, a lista de acesso nem os pixels das artes: no lugar delas vão as referências
+ * ({@link TvArtRef}), e os pixels seguem à parte pelo {@link TvArtSender} só a quem está perto. O NBT do disco guarda
+ * o layout inteiro, a lista de acesso (a chave {@code access}, opcional) e o resumo de cada arte ({@code art_hashes},
+ * na ordem das artes do layout): a Tela carregada monta as referências sem calcular o SHA-256 de novo.
+ * <p>
+ * As imagens enviadas do layout ({@link TvLayout#pictures}) são anotadas no {@link TvImageStore} a cada mudança de
+ * layout e a cada carga (o uso conta sem varrer o mundo); a Tela que carrega apontando uma imagem que o armazém não tem
+ * mais (removida por um operador enquanto ela estava descarregada) a perde na volta seguinte do {@link TvManager}. O
+ * update tag leva {@code pictures_off} com {@code tv.images.enabled} desligado: o cliente desenha o quadro neutro.
  */
 public class TvBlockEntity extends BlockEntity {
     private @Nullable UUID owner;
+    /** Quem edita além do dono; só no servidor (vai ao disco, não ao update tag). */
+    private TvAccess access = TvAccess.EMPTY;
     private TvArea area = TvArea.SINGLE;
     private TvLayout layout = TvLayout.EMPTY;
     private int revision;
+    /**
+     * As referências das artes do layout: no servidor, as do salvar ({@link #setLayout(TvLayout, List)}), as montadas
+     * dos resumos gravados ao carregar, ou calculadas na primeira vez que alguém as pede ({@code null} até lá: um
+     * layout gravado sem os resumos); no cliente, as que o update tag trouxe.
+     */
+    private @Nullable List<TvArtRef> artRefs;
+    private static final String HASHES_KEY = "art_hashes";
+    private long artKey;
+    /** Só no cliente: sobe a cada vez que as artes chegam e entram no layout ({@link #resolveArts}). */
+    private int artsVersion;
+    /** Só no servidor: carregou apontando uma imagem que o armazém não tem; a volta do {@link TvManager} a tira. */
+    private boolean picturesStale;
+    /** Só no cliente: o servidor está com as imagens desligadas ({@code pictures_off} do update tag). */
+    private boolean picturesOff;
+    /** Só no servidor, criado quando a Tela tem arte e alguém perto: o que cada jogador já recebeu. */
+    private TvArtSender.@Nullable Feed artFeed;
     /** Os armazenamentos do mod ligados pelo Vinculador (qualquer dimensão), na ordem em que foram ligados. */
     private static final int HARD_LINKS = 256;
     private final List<GlobalPos> links = new ArrayList<>();
@@ -58,6 +84,21 @@ public class TvBlockEntity extends BlockEntity {
         setChanged();
     }
 
+    public TvAccess access() {
+        return access;
+    }
+
+    /** Troca a lista de acesso: só marca o chunk, porque nada do que a Tela desenha muda. */
+    public void setAccess(TvAccess access) {
+        if (access.equals(this.access)) {
+            return;
+        }
+        this.access = access;
+        if (level != null) {
+            level.blockEntityChanged(worldPosition);
+        }
+    }
+
     public TvArea area() {
         return area;
     }
@@ -69,6 +110,73 @@ public class TvBlockEntity extends BlockEntity {
     /** Sobe a cada mudança de área ou de layout; o cliente a usa para saber se a imagem está velha. */
     public int revision() {
         return revision;
+    }
+
+    /**
+     * As referências das artes do layout (vazia sem artes): no servidor, calculadas do layout na primeira vez depois
+     * de ele mudar (o resumo de cada arte); no cliente, as do update tag, que continuam valendo enquanto as artes
+     * não chegam.
+     */
+    public List<TvArtRef> artRefs() {
+        if (artRefs == null) {
+            setArtRefs(TvArtRef.of(layout));
+            if (level != null && !level.isClientSide && !artRefs.isEmpty()) {
+                // Um layout gravado sem os resumos: o próximo save do chunk os grava, e a carga seguinte não recalcula.
+                level.blockEntityChanged(worldPosition);
+            }
+        }
+        return artRefs;
+    }
+
+    /** A chave do conteúdo das artes ({@link TvArtRef#key}): 0 sem artes. */
+    public long artKey() {
+        artRefs();
+        return artKey;
+    }
+
+    private void setArtRefs(List<TvArtRef> refs) {
+        artRefs = refs;
+        artKey = TvArtRef.key(refs);
+    }
+
+    /**
+     * Só no cliente: as artes das referências que já chegaram entram no layout (as que faltam, a Imagem e o mosaico
+     * não desenham até chegarem). Não muda a revisão: quem desenha marca a Tela suja.
+     */
+    public void resolveArts(List<TvPixelArt> arts) {
+        layout = layout.withImages(arts);
+        artsVersion++;
+    }
+
+    /** Só no cliente: quantas vezes as artes entraram no layout; o editor relê a Tela quando muda. */
+    public int artsVersion() {
+        return artsVersion;
+    }
+
+    /** Só no cliente: o servidor desligou as imagens enviadas, e a Tela as desenha como o quadro neutro. */
+    public boolean picturesOff() {
+        return picturesOff;
+    }
+
+    boolean picturesStale() {
+        return picturesStale;
+    }
+
+    /** Tira do layout as imagens que o armazém não tem mais (a peça fica, sem imagem; o mosaico volta ao tema). */
+    void dropMissingPictures(TvImageStore store) {
+        picturesStale = false;
+        TvLayout resolved = store.resolve(layout);
+        if (resolved != layout) {
+            setLayout(resolved.prunedImages());
+        }
+    }
+
+    TvArtSender.@Nullable Feed artFeed() {
+        return artFeed;
+    }
+
+    void setArtFeed(TvArtSender.@Nullable Feed feed) {
+        artFeed = feed;
     }
 
     /** Os armazenamentos ligados; só leitura. */
@@ -120,8 +228,16 @@ public class TvBlockEntity extends BlockEntity {
         return feed;
     }
 
-    /** O dono ou um operador; sem dono, só o operador. */
+    /**
+     * Edita a Tela (tamanho, layout e ligações): quem gerencia, um convidado ou um membro de um time liberado.
+     * Sem dono, só o operador e a lista.
+     */
     public boolean canEdit(ServerPlayer player) {
+        return canManage(player) || access.includes(player.getUUID());
+    }
+
+    /** Mexe na lista de acesso: o dono ou um operador; sem dono, só o operador. */
+    public boolean canManage(ServerPlayer player) {
         return player.hasPermissions(2) || (owner != null && owner.equals(player.getUUID()));
     }
 
@@ -145,11 +261,29 @@ public class TvBlockEntity extends BlockEntity {
     }
 
     public void setLayout(TvLayout layout) {
+        setLayout(layout, null);
+    }
+
+    /**
+     * Troca o layout; {@code refs} são as referências das artes dele já calculadas (as do salvar, que mediu o layout
+     * com elas), ou {@code null} para calcular quando alguém pedir. Artes iguais às de antes mantêm as referências.
+     */
+    public void setLayout(TvLayout layout, @Nullable List<TvArtRef> refs) {
         TvLayout clamped = layout.clampedTo(area);
         if (clamped.equals(this.layout)) {
             return;
         }
+        boolean sameArts = clamped.images().equals(this.layout.images());
+        boolean samePictures = clamped.pictures().equals(this.layout.pictures());
         this.layout = clamped;
+        if (refs != null) {
+            setArtRefs(refs);
+        } else if (!sameArts) {
+            artRefs = null;
+        }
+        if (!samePictures && level != null && level.getServer() != null) {
+            TvImageStore.get(level.getServer()).screenChanged(this);
+        }
         changed();
     }
 
@@ -192,6 +326,11 @@ public class TvBlockEntity extends BlockEntity {
     public void onLoad() {
         super.onLoad();
         TvLoaded.add(this);
+        if (level != null && !level.isClientSide && level.getServer() != null && !layout.pictures().isEmpty()) {
+            TvImageStore store = TvImageStore.get(level.getServer());
+            store.screenChanged(this);
+            picturesStale = !store.hasAll(layout);
+        }
     }
 
     @Override
@@ -206,13 +345,28 @@ public class TvBlockEntity extends BlockEntity {
         super.onChunkUnloaded();
     }
 
-    private void writeShared(CompoundTag tag) {
+    /** A parte que vai ao disco e ao cliente; ao cliente ({@code client}), o layout sem os pixels das artes. */
+    private void writeShared(CompoundTag tag, boolean client) {
         tag.putInt("width", area.width());
         tag.putInt("height", area.height());
         tag.putInt("anchor_col", area.anchorCol());
         tag.putInt("anchor_row", area.anchorRow());
         tag.putInt("revision", revision);
-        TvLayout.CODEC.encodeStart(NbtOps.INSTANCE, layout).result().ifPresent(value -> tag.put("layout", value));
+        if (client) {
+            tag.put("layout", TvArtRef.clientTag(layout, artRefs()));
+            if (!layout.pictures().isEmpty() && !TvImageConfig.enabled()) {
+                tag.putBoolean("pictures_off", true);
+            }
+        } else {
+            TvLayout.CODEC.encodeStart(NbtOps.INSTANCE, layout).result().ifPresent(value -> tag.put("layout", value));
+            if (artRefs != null && !artRefs.isEmpty() && artRefs.size() == layout.images().size()) {
+                long[] hashes = new long[artRefs.size()];
+                for (int i = 0; i < hashes.length; i++) {
+                    hashes[i] = artRefs.get(i).hash();
+                }
+                tag.putLongArray(HASHES_KEY, hashes);
+            }
+        }
         if (!links.isEmpty()) {
             ListTag list = new ListTag();
             for (GlobalPos link : links) {
@@ -233,6 +387,7 @@ public class TvBlockEntity extends BlockEntity {
         }
         area = read;
         revision = tag.getInt("revision");
+        picturesOff = tag.getBoolean("pictures_off");
         TvLayout loaded = TvLayout.EMPTY;
         Tag stored = tag.get("layout");
         if (stored != null) {
@@ -244,6 +399,15 @@ public class TvBlockEntity extends BlockEntity {
             }
         }
         layout = loaded;
+        List<TvArtRef> refs = TvArtRef.read(stored);
+        if (refs == null) {
+            refs = TvArtRef.of(loaded, tag.getLongArray(HASHES_KEY));
+        }
+        if (refs != null) {
+            setArtRefs(refs);
+        } else {
+            artRefs = null;
+        }
         links.clear();
         if (tag.get("links") instanceof ListTag list) {
             for (int i = 0; i < list.size() && links.size() < HARD_LINKS; i++) {
@@ -256,23 +420,49 @@ public class TvBlockEntity extends BlockEntity {
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
-        writeShared(tag);
+        writeShared(tag, false);
         if (owner != null) {
             tag.putUUID("owner", owner);
         }
+        CompoundTag saved = access.save();
+        if (saved != null) {
+            tag.put("access", saved);
+        }
     }
 
+    /**
+     * Na carga do chunk o {@code level} ainda não existe e o {@link #onLoad} anota as imagens; numa Tela já no mundo
+     * (um {@code /data merge block}, uma ferramenta que cola NBT), as imagens que mudaram são anotadas aqui, senão a
+     * limpeza do armazém poderia apagá-las em uso.
+     */
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
+        List<TvPicture> before = layout.pictures();
         readShared(tag);
         owner = tag.hasUUID("owner") ? tag.getUUID("owner") : null;
+        access = TvAccess.load(tag.get("access"));
+        if (level != null && !level.isClientSide && level.getServer() != null
+                && !layout.pictures().equals(before)) {
+            TvImageStore store = TvImageStore.get(level.getServer());
+            store.screenChanged(this);
+            picturesStale = !store.hasAll(layout);
+        }
+    }
+
+    /**
+     * Os dados de bloco de um item só entram pela mão de um operador: o NBT gravado traz o dono e os resumos das artes,
+     * em que o servidor confia sem recalcular (um resumo forjado faria o cliente mostrar outra arte que tem guardada).
+     */
+    @Override
+    public boolean onlyOpCanSetNbt() {
+        return true;
     }
 
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         CompoundTag tag = new CompoundTag();
-        writeShared(tag);
+        writeShared(tag, true);
         return tag;
     }
 

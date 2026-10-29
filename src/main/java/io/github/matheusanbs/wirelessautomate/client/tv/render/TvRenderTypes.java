@@ -7,6 +7,7 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import java.util.function.Function;
 import net.minecraft.Util;
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 
@@ -17,6 +18,8 @@ import net.minecraft.resources.ResourceLocation;
  * alfa) sobre o transparente preto, e a textura sai com a cor já multiplicada pelo alfa; o {@code RenderType.text}
  * multiplicaria de novo e escureceria os fundos semitransparentes. Um por nome de textura, e os nomes são
  * reaproveitados pela {@link TvCanvases}.
+ * <p>
+ * Também o tipo de uma pixel art desenhada no redesenho ({@link #art}).
  */
 final class TvRenderTypes extends RenderType {
     private static final TransparencyStateShard PREMULTIPLIED = new TransparencyStateShard(
@@ -37,6 +40,9 @@ final class TvRenderTypes extends RenderType {
                     .setLightmapState(LIGHTMAP)
                     .createCompositeState(false)));
 
+    private static final ShaderStateShard POSITION_TEX_COLOR = new ShaderStateShard(
+            GameRenderer::getPositionTexColorShader);
+
     private TvRenderTypes(String name, VertexFormat format, VertexFormat.Mode mode, int bufferSize, boolean crumbling,
             boolean sort, Runnable setup, Runnable clear) {
         super(name, format, mode, bufferSize, crumbling, sort, setup, clear);
@@ -44,5 +50,27 @@ final class TvRenderTypes extends RenderType {
 
     static RenderType image(ResourceLocation id) {
         return IMAGE.apply(id);
+    }
+
+    /**
+     * Uma pixel art ou uma imagem enviada pintada na textura da Tela ({@link TvArtTextures},
+     * {@link TvPictureTextures}) ou numa miniatura da GUI: o mesmo teste de profundidade do {@code RenderType.gui()}
+     * que pinta o resto e a mistura de alfa pré-multiplicado ({@code ONE, ONE_MINUS_SRC_ALPHA}), porque as texturas
+     * delas guardam a cor já multiplicada pelo alfa: assim os mipmaps somam a cor só na proporção do alfa, e a borda de
+     * uma imagem transparente reduzida não escurece. A cor do vértice é a opacidade nos quatro canais. O resultado sai
+     * na textura da Tela pré-multiplicado como o resto dela, e o texel transparente é descartado pelo shader. Um por
+     * textura, guardado com ela.
+     */
+    static RenderType art(int texture) {
+        return create(WirelessAutomate.MODID + "_tv_art", DefaultVertexFormat.POSITION_TEX_COLOR,
+                VertexFormat.Mode.QUADS, 256, false, false,
+                CompositeState.builder()
+                        .setShaderState(POSITION_TEX_COLOR)
+                        .setTextureState(new EmptyTextureStateShard(() -> RenderSystem.setShaderTexture(0, texture),
+                                () -> {
+                                }))
+                        .setTransparencyState(PREMULTIPLIED)
+                        .setDepthTestState(LEQUAL_DEPTH_TEST)
+                        .createCompositeState(false));
     }
 }

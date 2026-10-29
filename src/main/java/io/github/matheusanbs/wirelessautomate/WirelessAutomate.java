@@ -72,9 +72,12 @@ public final class WirelessAutomate {
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onServerTick);
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onServerStopped);
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onPlayerLoggedOut);
+        NeoForge.EVENT_BUS.addListener(WirelessAutomate::onPlayerLoggedIn);
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onRegisterCommands);
         // Carga de chunk: acorda as máquinas remotas vinculadas nele e tira do índice de nós os roteadores que sumiram.
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onChunkLoad);
+        // Chunk mandado a um jogador: as artes das Telas dele vão de novo (o cliente montou a Tela do zero).
+        NeoForge.EVENT_BUS.addListener(io.github.matheusanbs.wirelessautomate.tv.TvArtSender::onChunkSent);
         // Fim de toda recarga (botão do editor ou /reload): zera as pendências do editor de receitas.
         NeoForge.EVENT_BUS.addListener(RecipeEditor::onDatapackSync);
         // Subida do servidor: avisa no log os overrides do editor de receitas sem padrão editável.
@@ -105,6 +108,12 @@ public final class WirelessAutomate {
         TvEditing.forget(event.getEntity().getUUID());
         TvPreview.forget(event.getEntity().getUUID());
         NetworkManager.get().flows().unwatch(event.getEntity().getUUID());
+    }
+
+    private static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer player) {
+            io.github.matheusanbs.wirelessautomate.tv.TvImageState.onLogin(player);
+        }
     }
 
     private static void onServerStarted(ServerStartedEvent event) {

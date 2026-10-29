@@ -26,7 +26,7 @@ final class E2eGuideSteps {
             "networks", "filters", "filter-card", "linker", "configurator", "network-tablet", "chunk-loading",
             "wireless-chest", "wireless-tank", "wireless-battery", "wireless-chemical-tank", "chemicals", "source",
             "wireless-source-tank", "troubleshooting", "recipe-editor", "recipes", "signal-quartz", "signal-resonator",
-            "crystal-repairer");
+            "crystal-repairer", "signal-screen");
 
     /**
      * Livro-guia (só com o GuideME): abre cada página pelo comando de cliente {@code /guidemec open}

@@ -25,7 +25,11 @@ import org.jetbrains.annotations.Nullable;
  * O canal de dados das Telas de Sinal: a cada tick visita só as Telas do balde da vez (20 baldes pela posição, uma
  * volta por segundo, como o amostrador dos Fluxos). Uma Tela sem ligação ou sem jogador perto não lê nada e não manda
  * nada; com alguém perto, lê o relatório dos Fluxos só quando ele ou o layout mudaram e manda os números a quem ainda
- * não os tem, só se mudaram. Sem Tela carregada o tick é uma checagem de conjunto vazio.
+ * não os tem, só se mudaram. Na mesma volta, os pixels das artes e as imagens enviadas vão a quem está perto e não
+ * os tem ({@link TvArtSender}, {@link TvPictureSender}), e a Tela que carregou apontando uma imagem que o armazém não
+ * tem mais a perde ({@link TvBlockEntity#dropMissingPictures}). O tick também roda o envio de imagens dos jogadores e a
+ * limpeza do armazém ({@link TvImageUploads}, {@link TvImageStore}), cada um uma checagem quando parado. Sem Tela
+ * carregada o tick é uma checagem de conjunto vazio.
  */
 public final class TvManager {
     private static final int PHASES = 20;
@@ -61,6 +65,11 @@ public final class TvManager {
 
     /** Chamado a cada tick do servidor. */
     public static void tick(MinecraftServer server) {
+        TvImageUploads.tick(server);
+        TvImageStore.tick();
+        TvImageState.tick(server);
+        TvPictureSender.tick(server);
+        TvArtSender.tick(server);
         loaded = TvLoaded.serverCount();
         if (loaded == 0) {
             TvPreview.dropIdle();
@@ -77,23 +86,19 @@ public final class TvManager {
             if (!(tv.getLevel() instanceof ServerLevel level)) {
                 continue;
             }
-            List<ServerPlayer> players = level.players();
             NEAR.clear();
-            BlockPos pos = tv.getBlockPos();
-            int chunkX = pos.getX() >> 4;
-            int chunkZ = pos.getZ() >> 4;
-            for (int i = 0; i < players.size(); i++) {
-                ServerPlayer player = players.get(i);
-                if (isNear(pos.distToCenterSqr(player.getX(), player.getY(), player.getZ()), maxSq,
-                        player.getChunkTrackingView().contains(chunkX, chunkZ))) {
-                    NEAR.add(player);
-                }
-            }
+            collectNear(tv, level.players(), maxSq, true, NEAR);
             visit(tv, server, NEAR);
+            TvArtSender.visit(tv, NEAR, server.getTickCount());
+            if (tv.picturesStale()) {
+                tv.dropMissingPictures(TvImageStore.get(server));
+            }
+            TvPictureSender.visit(tv, NEAR);
         }
         NEAR.clear();
         if (phase == PHASES - 1) {
             TvStorageFeed.sweep(server.getTickCount());
+            TvArtSender.sweep(server.getTickCount());
             watched = cycleWatched;
             cycleWatched = 0;
         }
@@ -140,12 +145,37 @@ public final class TvManager {
         }
     }
 
+    /** Os jogadores perto da Tela, em {@code out}; {@code tracked} exige o chunk dela no cliente ({@link #isNear}). */
+    private static void collectNear(TvBlockEntity tv, List<? extends ServerPlayer> players, double maxSq,
+            boolean tracked, List<ServerPlayer> out) {
+        BlockPos pos = tv.getBlockPos();
+        int chunkX = pos.getX() >> 4;
+        int chunkZ = pos.getZ() >> 4;
+        for (int i = 0; i < players.size(); i++) {
+            ServerPlayer player = players.get(i);
+            if (isNear(pos.distToCenterSqr(player.getX(), player.getY(), player.getZ()), maxSq,
+                    !tracked || player.getChunkTrackingView().contains(chunkX, chunkZ))) {
+                out.add(player);
+            }
+        }
+    }
+
+    /**
+     * Quem dos {@code players} está perto da Tela pela distância de {@code tv.viewDistance}, sem conferir o chunk
+     * (os jogadores dos testes não acompanham chunks).
+     */
+    public static List<ServerPlayer> nearForTests(TvBlockEntity tv, List<? extends ServerPlayer> players) {
+        List<ServerPlayer> out = new ArrayList<>();
+        collectNear(tv, players, (double) Config.tvViewDistance() * Config.tvViewDistance(), false, out);
+        return out;
+    }
+
     /** Perto: dentro da distância de visão e com o chunk da Tela no cliente (senão o pacote chegaria sem a Tela). */
     public static boolean isNear(double distanceSq, double maxSq, boolean chunkTracked) {
         return chunkTracked && distanceSq <= maxSq;
     }
 
-    private static boolean contains(List<ServerPlayer> near, UUID id) {
+    static boolean contains(List<ServerPlayer> near, UUID id) {
         for (int i = 0; i < near.size(); i++) {
             if (near.get(i).getUUID().equals(id)) {
                 return true;
@@ -166,7 +196,7 @@ public final class TvManager {
         boolean anyStale = false;
         for (int i = 0; i < count; i++) {
             TvBinding binding = bindings.get(i);
-            SCRATCH[i] = number(binding, data, tv.owner(), server, tv, feed);
+            SCRATCH[i] = number(binding, data, tv.owner(), tv.access(), server, tv, feed);
             if (binding.storage() != null && TvStorageFeed.wasStale()) {
                 STALE_SCRATCH[i >> 6] |= 1L << (i & 63);
                 anyStale = true;
@@ -195,14 +225,18 @@ public final class TvManager {
         if (binding.storage() != null && tv == null) {
             return Double.NaN;
         }
-        return number(binding, data, who, server, tv, tv == null ? null : tv.feedOrCreate());
+        return number(binding, data, who, TvAccess.EMPTY, server, tv, tv == null ? null : tv.feedOrCreate());
     }
 
-    /** O número de uma ligação por fonte: a rede pelo relatório, o armazenamento ligado à Tela, o relógio no cliente. */
-    private static double number(TvBinding binding, NetworkSavedData data, @Nullable UUID who, MinecraftServer server,
-            @Nullable TvBlockEntity tv, @Nullable TvFeed feed) {
+    /**
+     * O número de uma ligação por fonte: a rede pelo relatório, o armazenamento ligado à Tela, o relógio no cliente.
+     * A rede vale se {@code who} pode usá-la ou, na Tela do mundo, alguém da lista de acesso ({@code access}).
+     */
+    private static double number(TvBinding binding, NetworkSavedData data, @Nullable UUID who, TvAccess access,
+            MinecraftServer server, @Nullable TvBlockEntity tv, @Nullable TvFeed feed) {
         return switch (binding.source()) {
-            case NETWORK -> canRead(data, who, binding.network()) ? networkNumber(binding, server) : Double.NaN;
+            case NETWORK -> canRead(data, who, access, binding.network()) ? networkNumber(binding, server)
+                    : Double.NaN;
             case STORAGE -> TvStorageFeed.read(server, tv, feed, binding);
             case CLOCK -> Double.NaN;
         };
@@ -219,13 +253,10 @@ public final class TvManager {
         return metric.readHeld(sampler.held(binding.network(), binding.type()));
     }
 
-    /** A rede existe e o dono da Tela pode usá-la; sem dono, não. */
-    private static boolean canRead(NetworkSavedData data, @Nullable UUID owner, UUID network) {
-        if (owner == null) {
-            return false;
-        }
+    /** A rede existe e o dono da Tela (ou o jogador da prévia) pode usá-la, ou alguém da lista de acesso. */
+    private static boolean canRead(NetworkSavedData data, @Nullable UUID owner, TvAccess access, UUID network) {
         WaNetwork found = data.network(network);
-        return found != null && found.canUse(owner, false);
+        return found != null && access.canRead(found, owner);
     }
 
     private static @Nullable FlowStats statsOf(TvBinding binding) {
@@ -249,6 +280,11 @@ public final class TvManager {
     /** Parada do servidor: o próximo mundo começa sem estado. */
     public static void reset() {
         TvPreview.reset();
+        TvArtSender.reset();
+        TvPictureSender.reset();
+        TvImageUploads.reset();
+        TvImageStore.reset();
+        TvImageState.reset();
         TvStorageFeed.releaseAll();
         NEAR.clear();
         STATS.clear();

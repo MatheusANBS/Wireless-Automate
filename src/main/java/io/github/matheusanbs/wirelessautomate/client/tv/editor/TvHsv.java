@@ -4,12 +4,12 @@ package io.github.matheusanbs.wirelessautomate.client.tv.editor;
  * A conversão entre HSV (matiz, saturação e brilho, de 0 a 1) e RGB do seletor de cor. Lógica pura, com JUnit; só
  * roda em evento do seletor, nunca por quadro.
  */
-final class TvHsv {
+public final class TvHsv {
     private TvHsv() {
     }
 
     /** O RGB ({@code 0xRRGGBB}) de um matiz {@code h} (volta em 1), uma saturação {@code s} e um brilho {@code v}. */
-    static int toRgb(float h, float s, float v) {
+    public static int toRgb(float h, float s, float v) {
         float hue = (h - (float) Math.floor(h)) * 6f;
         int sector = (int) hue;
         float f = hue - sector;
@@ -31,7 +31,7 @@ final class TvHsv {
     }
 
     /** O matiz, a saturação e o brilho de um RGB, nessa ordem. */
-    static float[] fromRgb(int rgb) {
+    public static float[] fromRgb(int rgb) {
         float r = (rgb >> 16 & 0xFF) / 255f;
         float g = (rgb >> 8 & 0xFF) / 255f;
         float b = (rgb & 0xFF) / 255f;

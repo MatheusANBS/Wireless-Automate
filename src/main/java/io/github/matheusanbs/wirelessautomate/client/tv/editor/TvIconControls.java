@@ -133,7 +133,7 @@ final class TvIconControls {
             return contains(mouseX, mouseY) ? tips.get(indexAt(mouseX)) : null;
         }
 
-        /** O centro da ficha {@code index} (ganchos do e2e). */
+        @Override
         int[] chipCenter(int index) {
             int each = chip();
             return new int[] {ax + index * (each + 1) + each / 2, centerY()};

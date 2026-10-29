@@ -93,6 +93,8 @@ final class FilterHeader {
         backButton.setMessage(back);
         whiteButton.setPosition(x + X0, y + ROW2_Y);
         blackButton.setPosition(x + X0 + whiteButton.getWidth() + 2, y + ROW2_Y);
+        boolean storage = screen.view().isStorage();
+        whiteButton.visible = blackButton.visible = !storage;
 
         // abas, só as que valem para o tipo
         List<Tab> tabs = new ArrayList<>();
@@ -131,13 +133,14 @@ final class FilterHeader {
         if (screen.view().isCard()) {
             screen.onClose();
         } else if (!actions.preview()) {
+            screen.commitEdits();
             actions.send(Op.BACK, 0, 0, "");
         }
     }
 
     private void setListMode(Filter.ListMode mode) {
         if (filter().listMode() != mode) {
-            actions.send(Op.SET_LIST_MODE, 0, mode == Filter.ListMode.WHITELIST ? 0 : 1, "");
+            actions.send(Op.SET_LIST_MODE, 0, mode.ordinal(), "");
         }
     }
 

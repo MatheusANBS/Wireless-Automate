@@ -191,16 +191,6 @@ final class TvSizeTab {
         return true;
     }
 
-    /** A dica dos ‹ ›, ou {@code null}. */
-    @Nullable List<Component> tooltip(int left, int top, double mouseX, double mouseY) {
-        return onStep(left, top + WIDTH_ROW, mouseX, mouseY) || onStep(left, top + HEIGHT_ROW, mouseX, mouseY)
-                ? List.of(TvScreenText.key("step.tooltip")) : null;
-    }
-
-    private static boolean onStep(int left, int y, double mouseX, double mouseY) {
-        return inside(left + MINUS_X, y, mouseX, mouseY) || inside(left + PLUS_X, y, mouseX, mouseY);
-    }
-
     int[] minusCenter(int left, int top, boolean widthRow) {
         return new int[] {left + MINUS_X + STEP / 2, top + (widthRow ? WIDTH_ROW : HEIGHT_ROW) + STEP / 2};
     }

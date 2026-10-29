@@ -478,33 +478,33 @@ public final class StorageGameTests {
         helper.succeed();
     }
 
-    /** Filtro de entrada: só entra o que ele aceita, e o estoque de uma entrada é "guardar até N". */
+    /** Limite por tipo: o global vale para todo tipo, a entrada é a exceção do tipo dela, e sem limite tudo entra. */
     @GameTest(template = "empty")
-    public static void inputFilterLimitsWhatEnters(GameTestHelper helper) {
+    public static void typeLimitLimitsWhatEnters(GameTestHelper helper) {
         StorageChestBlockEntity chest = storageChest(helper, A, RouterTier.ULTIMATE);
         chest.setFilter(new Filter(Filter.ListMode.WHITELIST, false,
-                List.of(new FilterEntry.ItemEntry(new ItemStack(Items.COBBLESTONE), 100))));
+                List.of(new FilterEntry.ItemEntry(new ItemStack(Items.COBBLESTONE), 100))).withTypeLimit(20));
         ItemStorage storage = chest.storage();
-        helper.assertValueEqual(storage.insert(new ItemStack(Items.DIRT), 10, false), 0L, "terra recusada");
+        helper.assertValueEqual(storage.insert(new ItemStack(Items.DIRT), 30, false), 20L, "terra só até o global");
         helper.assertValueEqual(storage.insert(new ItemStack(Items.COBBLESTONE), 64, false), 64L, "primeira pilha");
         helper.assertValueEqual(storage.insert(new ItemStack(Items.COBBLESTONE), 64, false), 36L, "só até 100");
         helper.assertTrue(chest.handler().insertItem(1, new ItemStack(Items.DIRT), false).getCount() == 1,
-                "o funil também passa pelo filtro");
+                "o funil também passa pelo limite");
         chest.setFilter(Filter.EMPTY);
-        helper.assertValueEqual(storage.insert(new ItemStack(Items.DIRT), 10, false), 10L, "sem filtro, tudo entra");
+        helper.assertValueEqual(storage.insert(new ItemStack(Items.DIRT), 10, false), 10L, "sem limite, tudo entra");
         helper.succeed();
     }
 
-    /** Roteador para um Baú com filtro: o que o filtro recusa fica na origem. */
+    /** Roteador para um Baú com limite por tipo: o que passa do limite fica na origem. */
     @GameTest(template = "empty", timeoutTicks = 200)
-    public static void routerRespectsTheInputFilter(GameTestHelper helper) {
+    public static void routerRespectsTheTypeLimit(GameTestHelper helper) {
         UUID network = newNetwork(helper, "teste-bau-filtro");
         helper.setBlock(A, Blocks.CHEST);
         ChestBlockEntity source = helper.getBlockEntity(A);
         source.setItem(0, new ItemStack(Items.DIAMOND, 10));
         source.setItem(1, new ItemStack(Items.DIRT, 20));
         storageChest(helper, B, RouterTier.BASIC).setFilter(new Filter(Filter.ListMode.WHITELIST, false,
-                List.of(new FilterEntry.ItemEntry(new ItemStack(Items.DIAMOND), 0))));
+                List.of(new FilterEntry.ItemEntry(new ItemStack(Items.DIAMOND), 0))).withTypeLimit(5));
         RouterBlockEntity from = router(helper, A, RouterTier.ELITE, network, PortMode.EXTRACT);
         RouterBlockEntity to = router(helper, B, RouterTier.ELITE, network, PortMode.INSERT);
         helper.startSequence()
@@ -512,8 +512,8 @@ public final class StorageGameTests {
                 .thenWaitUntil(() -> helper.assertValueEqual(stored(helper, B, Items.DIAMOND), 10L, "diamantes no Baú"))
                 .thenIdle(10)
                 .thenExecute(() -> {
-                    helper.assertValueEqual(stored(helper, B, Items.DIRT), 0L, "terra recusada");
-                    helper.assertValueEqual(vanilla(helper, A, Items.DIRT), 20, "terra na origem");
+                    helper.assertValueEqual(stored(helper, B, Items.DIRT), 5L, "terra só até o limite");
+                    helper.assertValueEqual(vanilla(helper, A, Items.DIRT), 15, "terra que passou do limite na origem");
                 })
                 .thenSucceed();
     }
@@ -883,14 +883,14 @@ public final class StorageGameTests {
         helper.succeed();
     }
 
-    /** Filtro de entrada no Tanque: só a lava entra, por qualquer caminho. */
+    /** Limite por tipo no Tanque: a água só até o global, a lava (entrada sem limite) sem teto, por qualquer caminho. */
     @GameTest(template = "empty")
-    public static void tankInputFilter(GameTestHelper helper) {
+    public static void tankTypeLimit(GameTestHelper helper) {
         StorageTankBlockEntity tank = storageTank(helper, A, RouterTier.BASIC);
         tank.setFilter(new Filter(Filter.ListMode.WHITELIST, false,
-                List.of(new FilterEntry.FluidEntry(new FluidStack(Fluids.LAVA, 1), 0))));
-        helper.assertValueEqual(tank.handler().fill(new FluidStack(Fluids.WATER, 1_000), FluidAction.EXECUTE), 0, "água recusada");
-        helper.assertValueEqual(tank.handler().fill(new FluidStack(Fluids.LAVA, 1_000), FluidAction.EXECUTE), 1_000, "lava aceita");
+                List.of(new FilterEntry.FluidEntry(new FluidStack(Fluids.LAVA, 1), 0))).withTypeLimit(500));
+        helper.assertValueEqual(tank.handler().fill(new FluidStack(Fluids.WATER, 1_000), FluidAction.EXECUTE), 500, "água só até 500");
+        helper.assertValueEqual(tank.handler().fill(new FluidStack(Fluids.LAVA, 1_000), FluidAction.EXECUTE), 1_000, "lava sem limite");
         helper.succeed();
     }
 

@@ -139,10 +139,10 @@ final class ItemTransfer {
                 if (!filter.evaluateItem(inSlot, rule)) {
                     continue;
                 }
-                if (rule.stock > 0) {
+                if (rule.keep > 0) {
                     stocked = true;
                     max = (int) StockLimit.extractable(tally.lookup(handler, filter, rule.matchComponents, inSlot),
-                            rule.stock, max);
+                            rule.keep, max);
                     if (max <= 0) {
                         continue;
                     }

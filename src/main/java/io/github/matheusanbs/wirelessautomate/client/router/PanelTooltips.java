@@ -49,7 +49,8 @@ final class PanelTooltips {
             case NETWORK -> readOnly != null ? readOnly : networkTooltip(v);
             case FILTER -> v.filterSize() == 0 ? null : tr(v.blacklist() ? "filter.black" : "filter.white");
             case EDIT -> readOnly != null ? readOnly : tr("filter.edit.tooltip");
-            case PRIO_MINUS, PRIO_PLUS -> model.editable(v) ? tr("priority.tooltip") : disabled;
+            // os − e + da prioridade não têm dica (ela tapava o número); só o porquê, sem poder editar
+            case PRIO_MINUS, PRIO_PLUS -> model.editable(v) ? null : disabled;
             case REDSTONE -> model.editable(v)
                     ? tr("redstone.narration", PanelModel.redstoneName(v.redstone())).copy().append("\n")
                             .append(panelTr("redstone.hint").copy().withColor(GuiPaint.TOOLTIP_MUTED))

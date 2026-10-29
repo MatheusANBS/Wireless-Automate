@@ -28,7 +28,7 @@ abstract class CompiledMatcher<K> {
     static final int NONE = -1;
 
     final List<FilterEntry> entries;
-    /** Alguma entrada que vale para este tipo tem estoque. */
+    /** Alguma entrada que vale para este tipo tem estoque ou "manter". */
     boolean usesStock;
     private final Reference2IntOpenHashMap<K> byKey = new Reference2IntOpenHashMap<>();
     /** O índice da entrada de cada tag, pelo ordinal dela na lista do filtro. */
@@ -78,7 +78,7 @@ abstract class CompiledMatcher<K> {
                     }
                 }
             }
-            stock |= applies && entry.stock() > 0;
+            stock |= applies && (entry.stock() > 0 || entry.keep() > 0);
         }
         usesStock = stock;
         if (!tagKeys.isEmpty()) {

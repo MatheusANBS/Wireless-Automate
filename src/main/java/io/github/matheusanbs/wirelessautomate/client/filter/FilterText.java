@@ -130,6 +130,11 @@ final class FilterText {
                     : Component.literal(Long.toString(entry.stock()));
             lines.add(tr("stock.line", amount).copy().withStyle(ChatFormatting.GRAY).getVisualOrderText());
         }
+        if (entry.keep() > 0) {
+            Component amount = screen.inMb() ? Component.literal(entry.keep() + " ").append(tr("unit.mb"))
+                    : Component.literal(Long.toString(entry.keep()));
+            lines.add(tr("keep.line", amount).copy().withStyle(ChatFormatting.GRAY).getVisualOrderText());
+        }
         return lines;
     }
 

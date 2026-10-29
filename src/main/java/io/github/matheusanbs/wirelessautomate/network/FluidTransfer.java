@@ -85,9 +85,9 @@ final class FluidTransfer {
             }
             long max = bulk != null ? Math.min(tokens, bulk.count(current)) : Math.min(tokens, Integer.MAX_VALUE);
             Filter rule = filter.fluidStockFilter(inTank);
-            long stock = rule == null ? 0 : rule.fluidStock(inTank);
-            if (stock > 0) {
-                max = StockLimit.extractable(amountIn(bulk, handler, inTank, rule.matchComponents()), stock, max);
+            long keep = rule == null ? 0 : rule.fluidKeep(inTank);
+            if (keep > 0) {
+                max = StockLimit.extractable(amountIn(bulk, handler, inTank, rule.matchComponents()), keep, max);
                 if (max <= 0) {
                     continue;
                 }

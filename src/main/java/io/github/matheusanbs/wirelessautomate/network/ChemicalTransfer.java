@@ -71,9 +71,9 @@ final class ChemicalTransfer {
             }
             long max = tokens;
             Filter rule = filter.chemicalStockFilter(id);
-            long stock = rule == null ? 0 : rule.chemicalStock(id);
-            if (stock > 0) {
-                max = StockLimit.extractable(amountIn(handler, inTank), stock, max);
+            long keep = rule == null ? 0 : rule.chemicalKeep(id);
+            if (keep > 0) {
+                max = StockLimit.extractable(amountIn(handler, inTank), keep, max);
                 if (max <= 0) {
                     continue;
                 }

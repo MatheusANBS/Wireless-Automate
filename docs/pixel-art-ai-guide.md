@@ -3,16 +3,19 @@
 *[Versão em português](guia-pixel-art-com-ia.md)*
 
 This guide teaches a chat AI (Claude, ChatGPT and others) the text that Wireless Automate's **Signal Screen** reads.
-With it, the AI draws a pixel art or builds a whole Screen, and you paste the result into the game.
+With it, the AI draws a pixel art (still or animated), prepares a real image or GIF, or builds a whole Screen, and you
+paste the result into the game.
 
 ## How to use it
 
 1. Copy this whole file and paste it into the chat with the AI, before your request.
 2. Ask for what you want: "a 32 × 32 sword" or "a 4 × 2 block Screen titled Base with a clock".
-3. Copy **only the code text** from the answer, from the `WA-ARTE1` or `WA-TELA1` line to the end. Without the
+3. Copy **only the code text** from the answer, from the `WA-ARTE1`, `WA-IMAGEM1` or `WA-TELA1` line to the end. Without the
    backticks (```) and without the text around it.
 4. In the game, open the Screen, **Edit** tab:
    - **an art:** **Pixel art** tab, **Import** button. The art goes into your library.
+   - **an image or a GIF:** **Images** tab, **Import** button. The image is uploaded to the server and goes into your
+     library. (An image you already have on your computer is easier through the **Upload file** button, same tab.)
    - **a layout:** with nothing picked, the **Import** button in the base, under **Apply layout**. The layout goes into
      the draft (**Ctrl+Z** undoes, one import at a time) and only reaches the wall on **Save**.
 5. If the code has a mistake, the editor's bottom bar says which one and where, and nothing changes: in a standalone
@@ -22,8 +25,9 @@ With it, the AI draws a pixel art or builds a whole Screen, and you paste the re
 **Tip:** the **Copy as text** button exports your art or your Screen in this same form. Paste it into the chat so the
 AI starts from what you already have (with your networks already linked).
 
-The first line that isn't blank must be exactly `WA-ARTE1` or `WA-TELA1` (the headers are the same in every
-language). The text can be up to 524,288 characters (512 K).
+The first line that isn't blank must be exactly `WA-ARTE1`, `WA-IMAGEM1` or `WA-TELA1` (the headers are the same in
+every language). The text of an art or a layout can be up to 524,288 characters (512 K); an image's, up to the allowed
+file size.
 
 ## Pixel art (`WA-ARTE1`)
 
@@ -64,6 +68,101 @@ palette: - 1B1920 7A7366 ECE5D6
   in a pixel line.
 
 On import, the art gets a new id and goes into your library (which has a limit of arts; 32 by default).
+
+## Animated pixel art (frames)
+
+An art can have several **frames**, all the same size and with the same palette. It plays in a loop on the Screen (in
+the Image piece and the tiled background). An art without frames is a still image, as above.
+
+```
+WA-ARTE1
+name: Blinking signal
+size: 16x16
+palette: - 1B1920 7A7366 ECE5D6 8E2A35 C2442A F0603E FFB08A
+frames: 2
+speed: 4
+mode: loop
+frame 1:
+(16 lines of 16 characters)
+frame 2:
+(16 lines of 16 characters)
+```
+
+- **Extra keys** (before the first frame):
+
+  | Key | In Portuguese | Value |
+  | --- | --- | --- |
+  | `frames` | `quadros` | How many frames, **1 to 64**. Must match the blocks below. |
+  | `speed` | `velocidade` | Frames per second, **1 to 20** (default 6). |
+  | `mode` | `modo` | `loop` (back to the first) or `pingpong` (`vaivem`: back and forth). Default `loop`. |
+
+- **Each frame** starts with a `frame N:` line (`quadro N:`), N from 1, in order, followed by that frame's pixel lines,
+  with the same rules as a still art.
+- Without the `frames` key, the pixel lines come straight away, with no `frame 1:`: it's a still art.
+- **Limit:** frames count toward the Screen's pixel limit. A 32 × 32 art with 10 frames counts 10,240 pixels.
+- **Tips:** change little from one frame to the next; 2 to 8 frames already animate an icon well; 6 to 12 frames per
+  second is the classic pixel art pace; for a blink, repeat the still frame and put the blink in 1 or 2 frames.
+- **In the JSON (`images`)**, an animated art swaps `rows` for `frames` (`quadros`), a list of frames where each frame is
+  a list of rows, and may have `speed` and `mode`.
+
+## Images and GIFs (`WA-IMAGEM1`)
+
+For a photo, a drawing with many colors or an animated GIF, use a **real image** instead of pixel art: PNG, JPG or GIF,
+up to **1024 × 1024** pixels, up to **8 MB** and, for a GIF, up to **240 frames** (the server may change these limits
+or turn images off).
+
+```
+WA-IMAGEM1
+name: Mona Lisa
+format: png
+iVBORw0KGgoAAAANSUhEUgAAA...
+(the whole file in base64, on one line or many)
+```
+
+- **Keys:** `name` (`nome`), up to 32 characters (without a name it comes in as "New image"), and `format` (`formato`):
+  `png`, `jpg` (or `jpeg`) or `gif`, which must match the file.
+- **After the keys**, the file in **base64** (standard or "URL-safe", with or without the trailing `=`). Line breaks and
+  spaces don't count; lines starting with `#` are comments.
+- **Only an AI that runs code** (like ChatGPT with data analysis or Claude with code execution) can do this: the base64
+  comes from a script, not from memory. A text-only AI should make a pixel art instead.
+
+**Python recipe (with Pillow), for an image:**
+
+```python
+from PIL import Image
+import base64, io
+
+img = Image.open("input.jpg").convert("RGB")     # use "RGBA" if the image has transparency
+img.thumbnail((1024, 1024))                      # shrinks keeping the aspect ratio, up to 1024 on the longer side
+buf = io.BytesIO()
+img.save(buf, "JPEG", quality=90)                # photo: JPG is smaller; drawing or transparency: "PNG"
+data = base64.b64encode(buf.getvalue()).decode()
+with open("image.txt", "w") as f:
+    f.write("WA-IMAGEM1\nname: My image\nformat: jpg\n")
+    for i in range(0, len(data), 120):
+        f.write(data[i:i + 120] + "\n")
+```
+
+**For an animated GIF:**
+
+```python
+from PIL import Image
+import base64, io
+
+frames = [Image.open(f"frame_{i}.png").convert("RGBA") for i in range(12)]
+frames = [f.resize((256, 256)) for f in frames]
+buf = io.BytesIO()
+frames[0].save(buf, "GIF", save_all=True, append_images=frames[1:], duration=100, loop=0, disposal=2)
+data = base64.b64encode(buf.getvalue()).decode()
+# write it as above, with "format: gif"
+```
+
+- The text is too big to copy from the chat: ask the AI for the `image.txt` file, open it and copy everything.
+- **Size on the Screen:** the Screen has 32 drawing pixels per block but draws the image at high resolution; a
+  1024 × 1024 image looks sharp on a Screen of up to 8 × 8 blocks. Smaller than that, it's scaled down smoothly.
+- **GIF:** fewer frames and fewer colors keep the file small; 10 to 15 frames per second is enough. The GIF plays on the
+  Screen at its own pace.
+- **Respect the server:** images are seen by everyone passing by; the server owner can remove them or turn them off.
 
 ## Screen (`WA-TELA1`)
 
@@ -145,7 +244,7 @@ with its number in the list, counting from 1.
 | `gauge` | An arc gauge. | `sweep`: 90 to 360 degrees (270); `thickness`: 1 to 32 (5); `min`, `max` and `track`, as on the bar. |
 | `graph` | The number's history. | `window`: 1 to 10 minutes (1); `graphMode`: `line` or `columns`; `area`: the area under the line (`true`). |
 | `arrow` | Points up, down or stays flat. | `upColor` (`theme:high`), `downColor` (`theme:low`), `flatColor` (`theme:muted`); `deadZone`; `reverse`. |
-| `image` | A pixel art. | `image`: the art's `id` in `images`; `scale`: 1 to 16, or 0 to stretch to the box (1); `valign`: `top`, `middle` or `bottom` (`middle`). |
+| `image` | A pixel art or an image. | `image`: the art's `id` in `images`; `scale`: 1 to 16, or 0 to stretch to the box (1); `valign`: `top`, `middle` or `bottom` (`middle`). |
 
 On the Image, the art shows at its size times `scale`, aligned by `align` and `valign` and cut by the box. A 16 × 16
 art at `scale` 2 needs a 32 × 32 box.
@@ -207,7 +306,10 @@ Each art is an object with the same parts as the `WA-ARTE1` form:
 | What | Cap (server default) |
 | --- | --- |
 | Art | From 8 × 8 to 128 × 128 pixels, 16 colors. |
-| Pixels of a Screen's arts | 131,072 in total, counting each distinct art once (eight 128 × 128 arts). |
+| Pixels of a Screen's arts | 131,072 in total, counting each distinct art once and every frame (eight 128 × 128 arts). |
+| Frames per art | 64, 1 to 20 per second. |
+| Uploaded image | PNG, JPG or GIF, up to 1024 × 1024, 8 MB and 240 frames. |
+| Distinct images per Screen | 8. |
 | Pieces per Screen | 128. |
 | Distinct links per Screen | 64. |
 | Layout without the pixels | 16 KB of NBT. |
@@ -333,4 +435,13 @@ For a Screen:
 > show]**. Use theme-role colors, align to the 32 px grid and leave the data pieces without `bind` (I'll link them in
 > the game). Answer only with the code, in a code block.
 
-Animated pixel art comes in a future version of the mod; this format has no frames yet.
+For an animation:
+
+> Using the format above, make an animated `WA-ARTE1` pixel art of **[size]** with **[how many]** frames of
+> **[what happens]**, at **[6]** frames per second in a loop, changing little from one frame to the next. Check the
+> lines and columns of every frame. Answer with the code only, in a code block.
+
+For an image (AI that runs code):
+
+> Take the image **[attached / described]**, shrink it to fit 1024 × 1024 keeping the aspect ratio and generate the
+> `WA-IMAGEM1` code with this guide's Python recipe, in an `image.txt` file for me to download.

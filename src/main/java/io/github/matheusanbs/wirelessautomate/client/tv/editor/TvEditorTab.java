@@ -337,7 +337,11 @@ public final class TvEditorTab {
         if (tabTip != null) {
             return tabTip;
         }
-        return leftTabs.tab() == TvLeftTabs.Tab.COMPONENTS ? components.tooltip(mouseX, mouseY) : null;
+        return switch (leftTabs.tab()) {
+            case COMPONENTS -> components.tooltip(mouseX, mouseY);
+            case ARTS -> pixel.arts().tooltip(mouseX, mouseY);
+            default -> null;
+        };
     }
 
     /** A aba Editar abriu: pede a biblioteca do jogador, uma vez por tela. */

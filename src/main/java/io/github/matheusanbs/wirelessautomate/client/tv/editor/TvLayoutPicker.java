@@ -23,8 +23,9 @@ import org.jetbrains.annotations.Nullable;
  * e, depois deles, os do jogador (as Telas que ele salvou), o botão "Aplicar layout" (troca as peças; o tema fica,
  * numa mudança só que o desfazer volta), o campo do nome com "Salvar layout atual" (grava as peças, o fundo e as
  * linhas da Tela como um componente com layout, que vale para qualquer tamanho de Tela) e "Remover layout" em dois
- * cliques, só num do jogador. Os prontos saem ligados à primeira rede que o jogador usa e ao primeiro armazenamento
- * ligado à Tela, quando há; sem eles, ficam sem dado para ligar na aba Dado.
+ * cliques, só num do jogador; embaixo do Aplicar, Exportar, Importar e Copiar como texto ({@link TvLayoutCode}).
+ * Os prontos saem ligados à primeira rede que o jogador usa e ao primeiro armazenamento ligado à Tela, quando há;
+ * sem eles, ficam sem dado para ligar na aba Dado.
  */
 final class TvLayoutPicker {
     private TvLayoutPicker() {
@@ -37,6 +38,7 @@ final class TvLayoutPicker {
         form.add(new TvControls.Button(form.font, "base.layout.apply", 0, form.y(), TvForm.W,
                 TvPropsCtx.key("base.layout.apply"), () -> apply(ctx)));
         form.endRow(TvControls.ROW - 1);
+        TvLayoutCode.add(form, ctx);
         form.text("base.layout.name", TvPropsCtx.key("base.layout.name"), TvComponent.MAX_NAME, null,
                 TvPropsCtx.key("base.layout.name.hint"), () -> ctx.doc().layoutName(),
                 text -> ctx.doc().layoutName(text));
@@ -61,7 +63,8 @@ final class TvLayoutPicker {
         return Math.min(ctx.doc().layoutKind(), count() - 1);
     }
 
-    private static @Nullable TvComponent mine(TvPropsCtx ctx) {
+    /** O layout do jogador escolhido na lista, ou {@code null} com um pronto escolhido. */
+    static @Nullable TvComponent mine(TvPropsCtx ctx) {
         int at = index(ctx) - builtin();
         return at >= 0 ? TvLibraryClient.layouts().get(at) : null;
     }

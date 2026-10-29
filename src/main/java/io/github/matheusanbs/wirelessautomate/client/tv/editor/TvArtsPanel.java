@@ -19,17 +19,19 @@ import org.jetbrains.annotations.Nullable;
  * lista que rola, com a miniatura (a textura da arte, {@link TvArtThumbs}), o nome e o tamanho, e o uso {@code n /
  * tv.maxArts} em cima. Um clique escolhe, dois abrem o editor de pixel art e arrastar uma linha até a miniatura cria a
  * peça Imagem ({@link TvArtDrag}); embaixo, Nova (16 × 16 com a paleta padrão) e Duplicar (uma cópia "… (cópia)" com
- * id novo), desligadas com a biblioteca cheia, Editar e Remover (dois cliques). Duplicar e Remover saem pelo
- * {@link TvEditorActions}. As linhas e os textos são refeitos quando a biblioteca ou a janela mudam, nunca por quadro;
- * só as linhas à vista são desenhadas.
+ * id novo), desligadas com a biblioteca cheia, Editar e Remover (dois cliques), e Exportar, Importar e Copiar como
+ * texto por código ({@link TvArtCode}). Duplicar, Remover e Importar saem pelo {@link TvEditorActions}. As linhas e
+ * os textos são refeitos quando a biblioteca ou a janela mudam, nunca por quadro; só as linhas à vista são
+ * desenhadas.
  */
 final class TvArtsPanel {
     /** Um botão embaixo da lista. */
-    enum Button { NEW, EDIT, DUPLICATE, REMOVE }
+    enum Button { NEW, EDIT, DUPLICATE, REMOVE, EXPORT, IMPORT, TEXT }
 
     private static final int ROW_H = TvIcons.SIZE + 2;
     private static final int THUMB = TvIcons.SIZE;
     private static final int BUTTON_H = 14;
+    private static final int BUTTON_ROWS = 4;
     private static final int HEAD_H = 12;
     private static final long DOUBLE_CLICK_MS = 400;
 
@@ -45,6 +47,9 @@ final class TvArtsPanel {
     private final TvRect[] buttons = new TvRect[Button.values().length];
     private final TvEditorPaint.Label[] labels = new TvEditorPaint.Label[Button.values().length];
     private final Component empty = TvEditorText.key("arts.empty");
+    private final Component exportTip = TvEditorText.key("arts.export.tip");
+    private final Component importTip = TvEditorText.key("arts.import.tip");
+    private final Component textTip = TvEditorText.key("arts.text.tip");
     private Font font;
     private TvRect box = TvRect.NONE;
     private TvRect list = TvRect.NONE;
@@ -68,16 +73,17 @@ final class TvArtsPanel {
         this.box = box;
         int half = (box.w() - 2) / 2;
         int bottom = box.bottom();
-        buttons[Button.NEW.ordinal()] = new TvRect(box.x(), bottom - 2 * BUTTON_H - 2, half, BUTTON_H);
-        buttons[Button.EDIT.ordinal()] = new TvRect(box.right() - half, bottom - 2 * BUTTON_H - 2, half, BUTTON_H);
-        buttons[Button.DUPLICATE.ordinal()] = new TvRect(box.x(), bottom - BUTTON_H, half, BUTTON_H);
-        buttons[Button.REMOVE.ordinal()] = new TvRect(box.right() - half, bottom - BUTTON_H, half, BUTTON_H);
+        int buttonsTop = bottom - BUTTON_ROWS * (BUTTON_H + 2) + 2;
         for (Button button : Button.values()) {
+            int row = button.ordinal() / 2;
+            int w = button == Button.TEXT ? box.w() : half;
+            buttons[button.ordinal()] = new TvRect(button.ordinal() % 2 == 0 ? box.x() : box.right() - half,
+                    buttonsTop + row * (BUTTON_H + 2), w, BUTTON_H);
             labels[button.ordinal()] = TvEditorPaint.label(font, TvEditorText.key("arts." + button.name()
-                    .toLowerCase(Locale.ROOT)), half - 4);
+                    .toLowerCase(Locale.ROOT)), w - 4);
         }
         removeConfirm = TvEditorPaint.label(font, TvEditorText.key("arts.remove.confirm"), half - 4);
-        list = new TvRect(box.x(), box.y() + HEAD_H, box.w(), Math.max(0, bottom - 2 * BUTTON_H - 5 - box.y() - HEAD_H));
+        list = new TvRect(box.x(), box.y() + HEAD_H, box.w(), Math.max(0, buttonsTop - 3 - box.y() - HEAD_H));
         builtLibrary = -1;
     }
 
@@ -119,7 +125,8 @@ final class TvArtsPanel {
         return switch (button) {
             case NEW -> rows.size() < actions.maxArts();
             case DUPLICATE -> chosenArt() != null && rows.size() < actions.maxArts();
-            case EDIT, REMOVE -> chosenArt() != null;
+            case EDIT, REMOVE, EXPORT, TEXT -> chosenArt() != null;
+            case IMPORT -> true;
         };
     }
 
@@ -243,7 +250,17 @@ final class TvArtsPanel {
                     actions.removeArt(art.id());
                 }
             }
+            case EXPORT -> TvArtCode.copy(art, false);
+            case TEXT -> TvArtCode.copy(art, true);
+            case IMPORT -> TvArtCode.paste(actions, rows.size());
         }
+    }
+
+    /** A dica de Exportar, Importar e Copiar como texto, que dizem o que fazem com o código. */
+    @Nullable Component tooltip(double mouseX, double mouseY) {
+        return buttons[Button.EXPORT.ordinal()].contains(mouseX, mouseY) ? exportTip
+                : buttons[Button.IMPORT.ordinal()].contains(mouseX, mouseY) ? importTip
+                : buttons[Button.TEXT.ordinal()].contains(mouseX, mouseY) ? textTip : null;
     }
 
     /** "Nome (cópia)" em até {@link TvPixelArt#MAX_NAME} caracteres: o nome é cortado para o sufixo caber. */
@@ -274,14 +291,29 @@ final class TvArtsPanel {
         rebuild();
         for (int i = 0; i < rows.size(); i++) {
             if (rows.get(i).art.name().equals(name)) {
-                int y = i * ROW_H;
-                int view = list.h() - 4;
-                if (y < scroll || y + ROW_H > scroll + view) {
-                    scroll = Math.max(0, Math.min(maxScroll(), y - 2));
-                }
-                return new int[] {list.centerX(), list.y() + 2 + y - scroll + ROW_H / 2};
+                return rowCenter(i);
             }
         }
         return null;
+    }
+
+    /** O centro da linha da arte de id {@code id} (rolada até aparecer), ou {@code null}. */
+    int @Nullable [] rowCenter(UUID id) {
+        rebuild();
+        for (int i = 0; i < rows.size(); i++) {
+            if (rows.get(i).art.id().equals(id)) {
+                return rowCenter(i);
+            }
+        }
+        return null;
+    }
+
+    private int[] rowCenter(int i) {
+        int y = i * ROW_H;
+        int view = list.h() - 4;
+        if (y < scroll || y + ROW_H > scroll + view) {
+            scroll = Math.max(0, Math.min(maxScroll(), y - 2));
+        }
+        return new int[] {list.centerX(), list.y() + 2 + y - scroll + ROW_H / 2};
     }
 }

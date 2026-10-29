@@ -26,12 +26,15 @@ import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Os dados de uma Tela de Sinal: dono, área e layout. Não faz tick. O update tag sai só quando a área ou o layout
- * mudam e não leva o dono nem os pixels das artes: no lugar delas vão as referências ({@link TvArtRef}), e os pixels
- * seguem à parte pelo {@link TvArtSender} só a quem está perto. O NBT do disco guarda o layout inteiro.
+ * Os dados de uma Tela de Sinal: dono, lista de acesso, área e layout. Não faz tick. O update tag sai só quando a área
+ * ou o layout mudam e não leva o dono, a lista de acesso nem os pixels das artes: no lugar delas vão as referências
+ * ({@link TvArtRef}), e os pixels seguem à parte pelo {@link TvArtSender} só a quem está perto. O NBT do disco guarda
+ * o layout inteiro e a lista de acesso (a chave {@code access}, opcional).
  */
 public class TvBlockEntity extends BlockEntity {
     private @Nullable UUID owner;
+    /** Quem edita além do dono; só no servidor (vai ao disco, não ao update tag). */
+    private TvAccess access = TvAccess.EMPTY;
     private TvArea area = TvArea.SINGLE;
     private TvLayout layout = TvLayout.EMPTY;
     private int revision;
@@ -67,6 +70,21 @@ public class TvBlockEntity extends BlockEntity {
     public void setOwner(UUID owner) {
         this.owner = owner;
         setChanged();
+    }
+
+    public TvAccess access() {
+        return access;
+    }
+
+    /** Troca a lista de acesso: só marca o chunk, porque nada do que a Tela desenha muda. */
+    public void setAccess(TvAccess access) {
+        if (access.equals(this.access)) {
+            return;
+        }
+        this.access = access;
+        if (level != null) {
+            level.blockEntityChanged(worldPosition);
+        }
     }
 
     public TvArea area() {
@@ -176,8 +194,16 @@ public class TvBlockEntity extends BlockEntity {
         return feed;
     }
 
-    /** O dono ou um operador; sem dono, só o operador. */
+    /**
+     * Edita a Tela (tamanho, layout e ligações): quem gerencia, um convidado ou um membro de um time liberado.
+     * Sem dono, só o operador e a lista.
+     */
     public boolean canEdit(ServerPlayer player) {
+        return canManage(player) || access.includes(player.getUUID());
+    }
+
+    /** Mexe na lista de acesso: o dono ou um operador; sem dono, só o operador. */
+    public boolean canManage(ServerPlayer player) {
         return player.hasPermissions(2) || (owner != null && owner.equals(player.getUUID()));
     }
 
@@ -328,6 +354,10 @@ public class TvBlockEntity extends BlockEntity {
         if (owner != null) {
             tag.putUUID("owner", owner);
         }
+        CompoundTag saved = access.save();
+        if (saved != null) {
+            tag.put("access", saved);
+        }
     }
 
     @Override
@@ -335,6 +365,7 @@ public class TvBlockEntity extends BlockEntity {
         super.loadAdditional(tag, registries);
         readShared(tag);
         owner = tag.hasUUID("owner") ? tag.getUUID("owner") : null;
+        access = TvAccess.load(tag.get("access"));
     }
 
     @Override

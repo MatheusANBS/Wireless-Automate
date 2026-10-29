@@ -65,9 +65,9 @@ public final class TvEditing {
     }
 
     /**
-     * Salva o layout do editor: só dono ou operador; peças e ligações dentro dos tetos da config (senão recusa);
-     * cada caixa cortada à área; ligação a rede que o jogador não pode usar ou a tipo não carregado sai, a peça
-     * fica. As imagens: a arte que uma peça ou o fundo aponta e o layout mandado não traz vem da cópia que a Tela já
+     * Salva o layout do editor: só quem edita a Tela ({@link TvBlockEntity#canEdit}: o dono, um operador ou alguém da
+     * lista de acesso); peças e ligações dentro dos tetos da config (senão recusa); cada caixa cortada à área;
+     * ligação a rede que o jogador não pode usar ou a tipo não carregado sai, a peça fica. As imagens: a arte que uma peça ou o fundo aponta e o layout mandado não traz vem da cópia que a Tela já
      * tem ({@link TvLayout#withMissingImagesFrom}: o editor pode não ter recebido a arte ainda); depois
      * ({@link TvLayout#prunedImages}) a Imagem que aponta uma arte que não existe sai (a sem arte nenhuma fica e não
      * desenha), o mosaico sem arte volta ao fundo do tema, a arte que ninguém usa sai (a inválida o codec já largou
@@ -169,6 +169,7 @@ public final class TvEditing {
         SAVE_GATE.forget(player);
         TvLibraryActions.forget(player);
         TvArtSender.forget(player);
+        TvAccessActions.forget(player);
     }
 
     /** Esquece todas as janelas (parada do servidor). */
@@ -176,6 +177,7 @@ public final class TvEditing {
         GATE.clear();
         SAVE_GATE.clear();
         TvLibraryActions.reset();
+        TvAccessActions.reset();
     }
 
     /**

@@ -106,14 +106,27 @@ public final class NetworkSavedData extends SavedData {
 
     /** A rede já tem os convidados que a config permite (operador não tem teto; 0 = sem limite). */
     public boolean memberLimitReached(ServerPlayer player, WaNetwork network) {
-        int max = Config.MAX_MEMBERS_PER_NETWORK.get();
-        return max > 0 && !player.hasPermissions(2) && network.members().size() >= max;
+        return memberCapReached(player, network.members().size());
     }
 
     /** O mesmo para os times. */
     public boolean teamLimitReached(ServerPlayer player, WaNetwork network) {
+        return teamCapReached(player, network.teams().size());
+    }
+
+    /**
+     * Uma lista de acesso com {@code count} convidados chegou ao {@code maxMembersPerNetwork} (operador não tem teto;
+     * 0 = sem limite). Vale para as redes e para a lista de acesso da Tela de Sinal.
+     */
+    public static boolean memberCapReached(ServerPlayer player, int count) {
+        int max = Config.MAX_MEMBERS_PER_NETWORK.get();
+        return max > 0 && !player.hasPermissions(2) && count >= max;
+    }
+
+    /** O mesmo para os times, pelo {@code maxTeamsPerNetwork}. */
+    public static boolean teamCapReached(ServerPlayer player, int count) {
         int max = Config.MAX_TEAMS_PER_NETWORK.get();
-        return max > 0 && !player.hasPermissions(2) && network.teams().size() >= max;
+        return max > 0 && !player.hasPermissions(2) && count >= max;
     }
 
     private int ownedNetworks(UUID owner) {

@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.client.tablet;
 
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiThemes;
+import io.github.matheusanbs.wirelessautomate.client.access.AccessPanel;
 import io.github.matheusanbs.wirelessautomate.client.tablet.TabletScreen.Tab;
 import java.util.function.Supplier;
 import net.minecraft.client.gui.components.EditBox;
@@ -18,13 +19,13 @@ final class TabletKeys {
     private final Screen screen;
     private final TabletList list;
     private final NameFields names;
-    private final AccessSection access;
+    private final AccessPanel access;
     private final Supplier<Tab> tab;
     private @Nullable EditBox searchBox;
     /** Versão do tema com que os campos foram pintados ({@link GuiThemes#version()}). */
     private int inkVersion = -1;
 
-    TabletKeys(Screen screen, TabletList list, NameFields names, AccessSection access, Supplier<Tab> tab) {
+    TabletKeys(Screen screen, TabletList list, NameFields names, AccessPanel access, Supplier<Tab> tab) {
         this.screen = screen;
         this.list = list;
         this.names = names;

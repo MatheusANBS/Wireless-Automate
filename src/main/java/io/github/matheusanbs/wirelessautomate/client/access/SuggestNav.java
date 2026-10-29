@@ -1,4 +1,4 @@
-package io.github.matheusanbs.wirelessautomate.client.tablet;
+package io.github.matheusanbs.wirelessautomate.client.access;
 
 /**
  * A linha escolhida na lista de sugestões de um campo: as setas andam, dando a volta; sem linha escolhida

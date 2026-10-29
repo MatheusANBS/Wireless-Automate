@@ -78,7 +78,7 @@ import org.jetbrains.annotations.Nullable;
  * ({@link TabletProfile}), as ações ({@link TabletMenuActions}), os Fluxos ({@link TabletFlows}), a árvore da Lista
  * ({@link TabletTree}), a visão por máquinas ({@link TabletMachines}) e o estado por jogador ({@link TabletPlayers}).
  */
-public class TabletMenu extends AbstractContainerMenu implements RouterEditHost {
+public class TabletMenu extends AbstractContainerMenu implements RouterEditHost, SuggestionsMenu {
     /** Janela da amostra de vazão e estado, em ticks. */
     public static final int SAMPLE_TICKS = 20;
     /** Intervalo mínimo entre remontagens provocadas por mudanças no mundo. */
@@ -480,17 +480,20 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost 
     }
 
     /** Cliente: as sugestões novas do campo de acesso ({@code NetworkSuggestionsPayload}). */
+    @Override
     public void applySuggestions(NetworkSuggestionsPayload payload) {
         this.suggestions = payload;
         suggestionsVersion++;
     }
 
     /** Cliente: as últimas sugestões recebidas, ou {@code null}. */
+    @Override
     public @Nullable NetworkSuggestionsPayload suggestions() {
         return suggestions;
     }
 
     /** Cliente: muda a cada resposta de sugestões, para o campo saber que há uma nova. */
+    @Override
     public int suggestionsVersion() {
         return suggestionsVersion;
     }

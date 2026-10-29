@@ -1,18 +1,20 @@
 package io.github.matheusanbs.wirelessautomate.client.tv;
 
 /**
- * As medidas da tela da Tela de Sinal em pixels de interface a partir do canto da tela: o cabeçalho, comum às duas
- * abas, e a aba Tamanho, 320 × 220 de tamanho fixo, que segue o mockup aprovado ({@code docs/preview/tela-de-sinal.html},
- * "Escolher o tamanho"): os controles à esquerda e a prévia da parede à direita. A aba Editar tem as medidas dela no
- * {@code TvEditorLayout}.
+ * As medidas da tela da Tela de Sinal em pixels de interface a partir do canto da tela: o cabeçalho, comum às abas, a
+ * aba Tamanho, 320 × 220 de tamanho fixo, que segue o mockup aprovado ({@code docs/preview/tela-de-sinal.html},
+ * "Escolher o tamanho"): os controles à esquerda e a prévia da parede à direita, e a aba Acesso, do mesmo tamanho. A
+ * aba Editar tem as medidas dela no {@code TvEditorLayout}.
  */
 final class TvScreenLayout {
     static final int W = 320;
     static final int H = 220;
 
-    static final Rect TITLE = new Rect(8, 8, 96, 9);
-    static final Rect SIZE_TAB = new Rect(108, 5, 76, 14);
-    static final Rect EDIT_TAB = new Rect(188, 5, 76, 14);
+    static final Rect TITLE = new Rect(8, 8, 80, 9);
+    static final Rect SIZE_TAB = new Rect(92, 5, 64, 14);
+    static final Rect EDIT_TAB = new Rect(160, 5, 64, 14);
+    /** Só para o dono e os operadores; termina antes do botão do tema, que fica a 8 px da borda na aba de 320. */
+    static final Rect ACCESS_TAB = new Rect(228, 5, 64, 14);
     static final int THEME_Y = 6;
     /** A largura do "Descartar?" que o ✕ armado ganha à esquerda. */
     static final int DISCARD_W = 64;
@@ -42,6 +44,12 @@ final class TvScreenLayout {
     static final Rect MESSAGE = new Rect(8, 192, 304, 9);
     /** A prévia da parede, afundada. */
     static final Rect PREVIEW = new Rect(158, 28, 154, 154);
+
+    /** Aba Acesso: o que a lista dá, em até duas linhas, e o aviso da última ação. */
+    static final Rect ACCESS_HINT = new Rect(8, 28, 304, 20);
+    static final Rect ACCESS_NOTICE = new Rect(8, 50, 304, 9);
+    /** O rótulo dos convidados; o painel de acesso segue dali até o fim da aba. */
+    static final int ACCESS_LABEL_Y = 62;
 
     private TvScreenLayout() {
     }

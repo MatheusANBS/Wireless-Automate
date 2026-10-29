@@ -4,32 +4,44 @@ import io.github.matheusanbs.wirelessautomate.menu.TabletAccess;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu.Action;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NetworkView;
+import io.github.matheusanbs.wirelessautomate.menu.TvMenu;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.TeamAccess;
 import io.github.matheusanbs.wirelessautomate.network.TeamAccess.TeamInfo;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.packet.NetworkSuggestPayload;
+import io.github.matheusanbs.wirelessautomate.packet.NetworkSuggestionsPayload;
 import io.github.matheusanbs.wirelessautomate.packet.NetworkSuggestionsPayload.Suggestion;
 import io.github.matheusanbs.wirelessautomate.packet.TabletActionPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPayloads;
+import io.github.matheusanbs.wirelessautomate.packet.TvAccessActionPayload;
+import io.github.matheusanbs.wirelessautomate.packet.TvAccessPayload;
+import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
+import io.github.matheusanbs.wirelessautomate.tv.TvAccessActions;
+import io.github.matheusanbs.wirelessautomate.tv.TvBlock;
+import io.github.matheusanbs.wirelessautomate.tv.TvBlockEntity;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
- * Os times do FTB Teams como acesso a uma rede privada. Rodam só na run {@code runGameTestServerTeams}, que tem o
- * FTB Teams na pasta mods e liga o namespace {@value #NAMESPACE} (o template é
- * {@code data/wirelessautomate_teams/structure/empty.nbt}). Sem o FTB, só passam.
+ * Os times do FTB Teams como acesso a uma rede privada e a uma Tela de Sinal. Rodam só na run
+ * {@code runGameTestServerTeams}, que tem o FTB Teams na pasta mods e liga o namespace {@value #NAMESPACE} (o template
+ * é {@code data/wirelessautomate_teams/structure/empty.nbt}). Sem o FTB, só passam.
  *
  * <p>Nenhum tipo do FTB nas assinaturas: o que usa a API fica em {@link TeamTestSupport}.
  */
@@ -192,6 +204,63 @@ public final class TeamGameTests {
         } finally {
             manager.containerMenu = manager.inventoryMenu;
             data.remove(network.id());
+            if (TeamAccess.info(team) != null && !TeamAccess.info(team).gone()) {
+                TeamTestSupport.disband(helper.getLevel().getServer(), team);
+            }
+        }
+    }
+
+    /** Uma Tela de Sinal virada para o norte, de {@code owner}, aberta pelo clique dele. */
+    private static TvBlockEntity screenOpenedBy(GameTestHelper helper, TestPlayers.MenuPlayer owner) {
+        BlockPos at = new BlockPos(1, 1, 1);
+        helper.setBlock(at.south(), Blocks.STONE);
+        helper.setBlock(at, ModBlocks.SIGNAL_SCREEN.get().defaultBlockState().setValue(TvBlock.FACING, Direction.NORTH));
+        TvBlockEntity tv = helper.getBlockEntity(at);
+        tv.setOwner(owner.getUUID());
+        BlockPos pos = helper.absolutePos(at);
+        owner.setPos(Vec3.atCenterOf(pos));
+        helper.getLevel().getBlockState(pos).useWithoutItem(helper.getLevel(), owner,
+                new BlockHitResult(Vec3.atCenterOf(pos), Direction.NORTH, pos, false));
+        return tv;
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void aTeamMemberEditsTheScreenAndLosesItWhenLeaving(GameTestHelper helper) throws Exception {
+        if (!enabled()) {
+            helper.succeed();
+            return;
+        }
+        TestPlayers.MenuPlayer owner = TestPlayers.menuOpener(helper);
+        TestPlayers.MenuPlayer leader = TestPlayers.menuOpener(helper);
+        TestPlayers.MenuPlayer friend = TestPlayers.menuOpener(helper);
+        UUID team = TeamTestSupport.createParty(leader, "tela-teste");
+        try {
+            TvBlockEntity tv = screenOpenedBy(helper, owner);
+            helper.assertTrue(owner.containerMenu instanceof TvMenu, "o dono não abriu a Tela");
+            TvMenu menu = (TvMenu) owner.containerMenu;
+            CustomPacketPayload reply = TvAccessActions.handle(owner, new TvAccessActionPayload(menu.containerId,
+                    TvAccessActionPayload.Action.ADD_TEAM, Optional.empty(), "TELA-teste"));
+            helper.assertTrue(reply instanceof TvAccessPayload added && added.notice().equals("team.added")
+                    && added.access().teams().size() == 1 && added.access().teams().get(0).id().equals(team)
+                    && added.access().teams().get(0).members() >= 1, "o time não entrou pelo nome: " + reply);
+            helper.assertTrue(tv.access().teams().equals(List.of(team)), "o time não ficou na lista da Tela");
+            helper.assertTrue(tv.canEdit(leader), "o líder do time não edita a Tela");
+            helper.assertFalse(tv.canManage(leader), "membro de time mexe na lista da Tela");
+            helper.assertFalse(tv.canEdit(friend), "o amigo edita antes de entrar no time");
+
+            TeamTestSupport.join(team, friend.getUUID(), friend.getGameProfile().getName());
+            helper.assertTrue(tv.canEdit(friend), "quem entrou no time não edita a Tela");
+            TeamTestSupport.leave(team, friend.getUUID());
+            helper.assertFalse(tv.canEdit(friend), "quem saiu do time continuou editando a Tela");
+
+            CustomPacketPayload suggestions = TvAccessActions.handle(owner, new TvAccessActionPayload(menu.containerId,
+                    TvAccessActionPayload.Action.SUGGEST_TEAM, Optional.empty(), "tela"));
+            helper.assertTrue(suggestions instanceof NetworkSuggestionsPayload found
+                    && found.suggestions().stream().anyMatch(s -> s.id().equals(team) && s.taken()),
+                    "a sugestão do time não veio marcada");
+            helper.succeed();
+        } finally {
+            owner.containerMenu = owner.inventoryMenu;
             if (TeamAccess.info(team) != null && !TeamAccess.info(team).gone()) {
                 TeamTestSupport.disband(helper.getLevel().getServer(), team);
             }

@@ -1,4 +1,4 @@
-package io.github.matheusanbs.wirelessautomate.client.tablet;
+package io.github.matheusanbs.wirelessautomate.client.access;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

@@ -1,18 +1,17 @@
-package io.github.matheusanbs.wirelessautomate.client.tablet;
+package io.github.matheusanbs.wirelessautomate.client.access;
 
-import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletText.plural;
-import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletText.tr;
+import static io.github.matheusanbs.wirelessautomate.client.access.AccessPanel.plural;
+import static io.github.matheusanbs.wirelessautomate.client.access.AccessPanel.tr;
 
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
-import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.packet.NetworkSuggestPayload;
 import io.github.matheusanbs.wirelessautomate.packet.NetworkSuggestionsPayload;
 import io.github.matheusanbs.wirelessautomate.packet.NetworkSuggestionsPayload.Suggestion;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Supplier;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
@@ -31,15 +30,13 @@ final class SuggestField {
     static final int ROW_H = 12;
     private static final long DELAY_MS = 150;
 
-    /** Uma linha da lista: o id para o servidor, o nome, o detalhe à direita e se já está na rede. */
+    /** Uma linha da lista: o id para o servidor, o nome, o detalhe à direita e se já está na lista. */
     private record Line(UUID id, String text, Component name, @Nullable Component detail, int detailW,
             boolean taken) {
     }
 
     private final NetworkSuggestPayload.Kind kind;
-    private final TabletMenu menu;
-    private final TabletActions actions;
-    private final Supplier<@Nullable UUID> network;
+    private final AccessHost host;
     private final Component hint;
     private final SuggestNav nav = new SuggestNav();
     private EditBox box;
@@ -56,14 +53,11 @@ final class SuggestField {
     /** Onde a lista foi desenhada no último quadro: x, y, largura e altura (para o clique). */
     private final int[] rect = new int[4];
 
-    SuggestField(NetworkSuggestPayload.Kind kind, TabletMenu menu, TabletActions actions,
-            Supplier<@Nullable UUID> network, Component hint) {
+    SuggestField(NetworkSuggestPayload.Kind kind, AccessHost host, Component hint) {
         this.kind = kind;
-        this.menu = menu;
-        this.actions = actions;
-        this.network = network;
+        this.host = host;
         this.hint = hint;
-        this.seenVersion = menu.suggestionsVersion();
+        this.seenVersion = host.menu().suggestionsVersion();
     }
 
     /** O campo, refeito a cada {@code init} da tela, que o põe entre os widgets dela. */
@@ -106,7 +100,7 @@ final class SuggestField {
         dirtyAt = System.currentTimeMillis() - DELAY_MS;
     }
 
-    /** Larga o texto, a lista e a consulta pendente (outra rede escolhida, tela refeita, ação mandada). */
+    /** Larga o texto, a lista e a consulta pendente (outra lista escolhida, tela refeita, ação mandada). */
     void clear() {
         quiet = true;
         try {
@@ -125,18 +119,17 @@ final class SuggestField {
 
     /** Manda a consulta pendente (se o prazo passou) e pega a resposta nova; chamado a cada quadro com o campo à vista. */
     void update() {
-        UUID net = network.get();
-        if (box == null || !box.visible || net == null) {
+        if (box == null || !box.visible || host.access() == null) {
             return;
         }
         if (dirtyAt != 0 && box.isFocused() && System.currentTimeMillis() - dirtyAt >= DELAY_MS) {
             asked = box.getValue();
             dirtyAt = 0;
-            actions.suggest(kind, asked, net);
+            host.suggest(kind, asked);
         }
-        if (menu.suggestionsVersion() != seenVersion) {
-            seenVersion = menu.suggestionsVersion();
-            NetworkSuggestionsPayload reply = menu.suggestions();
+        if (host.menu().suggestionsVersion() != seenVersion) {
+            seenVersion = host.menu().suggestionsVersion();
+            NetworkSuggestionsPayload reply = host.menu().suggestions();
             if (reply != null && reply.kind() == kind && reply.text().equals(asked)) {
                 build(reply.suggestions());
             }
@@ -145,7 +138,7 @@ final class SuggestField {
 
     private void build(List<Suggestion> suggestions) {
         List<Line> built = new ArrayList<>(suggestions.size());
-        Font font = TabletList.font();
+        Font font = Minecraft.getInstance().font;
         for (Suggestion s : suggestions) {
             Component detail;
             if (s.taken()) {
@@ -203,26 +196,24 @@ final class SuggestField {
             return;
         }
         String text = box.getValue().strip();
-        UUID net = network.get();
-        if (!text.isEmpty() && net != null) {
-            send(net, null, text);
+        if (!text.isEmpty() && host.access() != null) {
+            send(null, text);
             clear();
         }
     }
 
     private void choose(int index) {
-        UUID net = network.get();
-        if (net != null && index >= 0 && index < lines.size() && !lines.get(index).taken()) {
-            send(net, lines.get(index).id(), "");
+        if (host.access() != null && index >= 0 && index < lines.size() && !lines.get(index).taken()) {
+            send(lines.get(index).id(), "");
             clear();
         }
     }
 
-    private void send(UUID net, @Nullable UUID id, String text) {
+    private void send(@Nullable UUID id, String text) {
         if (kind == NetworkSuggestPayload.Kind.PLAYER) {
-            actions.member(net, id, text, true);
+            host.member(id, text, true);
         } else {
-            actions.team(net, id, text, true);
+            host.team(id, text, true);
         }
     }
 

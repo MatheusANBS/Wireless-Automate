@@ -44,10 +44,11 @@ import org.lwjgl.glfw.GLFW;
 /**
  * A Tela de Sinal no e2e: uma parede atrás do jogador com a Tela (para o norte), uma tocha na parede e, ao lado, uma
  * Tela 1 × 1 vazia junto de um Reparador. As máquinas e a rede são as dos Fluxos ({@link E2eFlowsSteps#machines}).
- * Pede 4 × 2 com ↗ e aplica (o servidor confere), mostra o problema da tocha com 6 × 2, monta e salva um layout no
- * editor ({@link E2eTvEditorSteps}) e o fotografa na parede, põe o Painel da rede em Itens pelo servidor, espera um
- * número maior que zero chegar e fotografa a Tela no mundo de frente, de longe e de lado, a pequena em 3/4 e, com um
- * layout de branco opaco, branco a 50% e cinza 50% opaco, a transparência de perto.
+ * Pede 4 × 2 com ↗ e aplica (o servidor confere), mostra o problema da tocha com 6 × 2, convida na aba Acesso
+ * ({@link E2eTvAccessSteps}), monta e salva um layout no editor ({@link E2eTvEditorSteps}) e o fotografa na parede,
+ * põe o Painel da rede em Itens pelo servidor, espera um número maior que zero chegar e fotografa a Tela no mundo de
+ * frente, de longe e de lado, a pequena em 3/4 e, com um layout de branco opaco, branco a 50% e cinza 50% opaco, a
+ * transparência de perto.
  */
 final class E2eTvSteps {
     /** O olho a 4 blocos da frente da Tela; a frente fica a 13/16 do bloco, como a forma do bloco. */
@@ -74,6 +75,7 @@ final class E2eTvSteps {
         list.add(build(playerId));
         list.add(open("Tela: abrir"));
         sizeSteps(list, "");
+        E2eTvAccessSteps.accessSteps(list, () -> tv);
         E2eTvEditorSteps.editorSteps(list, () -> tv);
         E2eTvPixelSteps.pixelSteps(list);
         E2eTvArtSteps.artSteps(list, playerId, () -> tv);

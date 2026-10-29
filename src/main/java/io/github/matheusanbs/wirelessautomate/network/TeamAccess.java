@@ -64,6 +64,11 @@ public final class TeamAccess {
                 : open.computeIfAbsent(team, FtbTeams::members).contains(player);
     }
 
+    /** Os membros do time de grupo; vazio sem o FTB ou se o time sumiu. O conjunto é do FTB: só leitura. */
+    public static Set<UUID> members(UUID team) {
+        return LOADED ? FtbTeams.members(team) : Set.of();
+    }
+
     /** O time para mostrar; {@code null} sem o FTB. Um time que sumiu volta com {@code gone}. */
     public static @Nullable TeamInfo info(UUID team) {
         return LOADED ? FtbTeams.info(team) : null;

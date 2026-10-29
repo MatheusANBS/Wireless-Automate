@@ -26,6 +26,7 @@ import io.github.matheusanbs.wirelessautomate.menu.StorageFilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
 import io.github.matheusanbs.wirelessautomate.menu.StorageScalarMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
+import io.github.matheusanbs.wirelessautomate.menu.TvMenu;
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
@@ -36,6 +37,7 @@ import io.github.matheusanbs.wirelessautomate.range.IdleNetworkFace;
 import io.github.matheusanbs.wirelessautomate.range.MachineGroup;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
+import io.github.matheusanbs.wirelessautomate.tv.TvAccessActions;
 import io.github.matheusanbs.wirelessautomate.tv.TvClientHooks;
 import io.github.matheusanbs.wirelessautomate.tv.TvEditing;
 import io.github.matheusanbs.wirelessautomate.tv.TvLibraryActions;
@@ -185,6 +187,11 @@ public final class ModPayloads {
                 (payload, context) -> TvStorageContents.handle(serverPlayer(context), payload));
         registrar.playToClient(TvStorageContentsPayload.TYPE, TvStorageContentsPayload.STREAM_CODEC,
                 (payload, context) -> TvClientHooks.storageContents.accept(payload));
+        // A lista de acesso da Tela (aba Acesso, só o dono ou um operador); as sugestões voltam no
+        // NetworkSuggestionsPayload, que o handler do Tablet entrega a qualquer SuggestionsMenu.
+        registrar.playToServer(TvAccessActionPayload.TYPE, TvAccessActionPayload.STREAM_CODEC,
+                (payload, context) -> TvAccessActions.handle(serverPlayer(context), payload));
+        registrar.playToClient(TvAccessPayload.TYPE, TvAccessPayload.STREAM_CODEC, ModPayloads::onTvAccess);
     }
 
     private static @Nullable ServerPlayer serverPlayer(IPayloadContext context) {
@@ -192,6 +199,13 @@ public final class ModPayloads {
     }
 
     // Cliente.
+
+    private static void onTvAccess(TvAccessPayload payload, IPayloadContext context) {
+        if (context.player() != null && context.player().containerMenu instanceof TvMenu menu
+                && menu.containerId == payload.containerId()) {
+            menu.applyAccess(payload);
+        }
+    }
 
     private static void onSnapshot(RouterSnapshotPayload payload, IPayloadContext context) {
         RouterMenu menu = openMenu(context.player(), payload.containerId());

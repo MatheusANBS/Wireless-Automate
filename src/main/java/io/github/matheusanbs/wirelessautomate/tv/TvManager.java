@@ -185,7 +185,7 @@ public final class TvManager {
         boolean anyStale = false;
         for (int i = 0; i < count; i++) {
             TvBinding binding = bindings.get(i);
-            SCRATCH[i] = number(binding, data, tv.owner(), server, tv, feed);
+            SCRATCH[i] = number(binding, data, tv.owner(), tv.access(), server, tv, feed);
             if (binding.storage() != null && TvStorageFeed.wasStale()) {
                 STALE_SCRATCH[i >> 6] |= 1L << (i & 63);
                 anyStale = true;
@@ -214,14 +214,18 @@ public final class TvManager {
         if (binding.storage() != null && tv == null) {
             return Double.NaN;
         }
-        return number(binding, data, who, server, tv, tv == null ? null : tv.feedOrCreate());
+        return number(binding, data, who, TvAccess.EMPTY, server, tv, tv == null ? null : tv.feedOrCreate());
     }
 
-    /** O número de uma ligação por fonte: a rede pelo relatório, o armazenamento ligado à Tela, o relógio no cliente. */
-    private static double number(TvBinding binding, NetworkSavedData data, @Nullable UUID who, MinecraftServer server,
-            @Nullable TvBlockEntity tv, @Nullable TvFeed feed) {
+    /**
+     * O número de uma ligação por fonte: a rede pelo relatório, o armazenamento ligado à Tela, o relógio no cliente.
+     * A rede vale se {@code who} pode usá-la ou, na Tela do mundo, alguém da lista de acesso ({@code access}).
+     */
+    private static double number(TvBinding binding, NetworkSavedData data, @Nullable UUID who, TvAccess access,
+            MinecraftServer server, @Nullable TvBlockEntity tv, @Nullable TvFeed feed) {
         return switch (binding.source()) {
-            case NETWORK -> canRead(data, who, binding.network()) ? networkNumber(binding, server) : Double.NaN;
+            case NETWORK -> canRead(data, who, access, binding.network()) ? networkNumber(binding, server)
+                    : Double.NaN;
             case STORAGE -> TvStorageFeed.read(server, tv, feed, binding);
             case CLOCK -> Double.NaN;
         };
@@ -238,13 +242,10 @@ public final class TvManager {
         return metric.readHeld(sampler.held(binding.network(), binding.type()));
     }
 
-    /** A rede existe e o dono da Tela pode usá-la; sem dono, não. */
-    private static boolean canRead(NetworkSavedData data, @Nullable UUID owner, UUID network) {
-        if (owner == null) {
-            return false;
-        }
+    /** A rede existe e o dono da Tela (ou o jogador da prévia) pode usá-la, ou alguém da lista de acesso. */
+    private static boolean canRead(NetworkSavedData data, @Nullable UUID owner, TvAccess access, UUID network) {
         WaNetwork found = data.network(network);
-        return found != null && found.canUse(owner, false);
+        return found != null && access.canRead(found, owner);
     }
 
     private static @Nullable FlowStats statsOf(TvBinding binding) {

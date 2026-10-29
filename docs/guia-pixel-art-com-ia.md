@@ -137,13 +137,9 @@ buf = io.BytesIO()
 img.save(buf, "JPEG", quality=90)                # foto: JPG fica menor; desenho ou transparência: "PNG"
 dados = base64.b64encode(buf.getvalue()).decode()
 with open("imagem.txt", "w") as f:
-    f.write("WA-IMAGEM1
-nome: Minha imagem
-formato: jpg
-")
+    f.write("WA-IMAGEM1\nnome: Minha imagem\nformato: jpg\n")
     for i in range(0, len(dados), 120):
-        f.write(dados[i:i + 120] + "
-")
+        f.write(dados[i:i + 120] + "\n")
 ```
 
 **Para um GIF animado:**

@@ -25,8 +25,11 @@ import org.jetbrains.annotations.Nullable;
 final class TvEditorDoc {
     private static final TvEditOps.Access<TvPiece> A = TvPieceAccess.INSTANCE;
 
-    /** Por que o último salvar não valeu; o aviso fica até o rascunho mudar. */
-    enum Failure { TOO_BIG, DENIED, THROTTLED, TIMEOUT }
+    /**
+     * Por que o último salvar (ou a última pixel art posta na Tela, {@code IMAGES_FULL}: passaria do
+     * {@code tv.maxImagePixels}) não valeu; o aviso fica até o rascunho mudar.
+     */
+    enum Failure { TOO_BIG, DENIED, THROTTLED, TIMEOUT, IMAGES_FULL }
 
     private final BlockPos pos;
     private final TvEditorModel<TvLayout> model;
@@ -358,6 +361,12 @@ final class TvEditorDoc {
 
     void setGrid(boolean visible) {
         grid = visible;
+    }
+
+    /** Troca o layout inteiro e a escolha numa mudança só (a Imagem nova solta na miniatura). */
+    void replace(TvLayout next, TvSelection selection) {
+        model.edit(next, selection);
+        model.select(model.selection(), 0);
     }
 
     /** Muda o layout inteiro (tema, fundo, linhas); a {@code key} junta mudanças seguidas de um controle. */

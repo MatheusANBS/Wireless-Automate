@@ -16,8 +16,9 @@ import org.jetbrains.annotations.Nullable;
  * A coluna da direita do editor de pixel art: a paleta de 16 em 4 × 4, com um vão entre as linhas que mostra as
  * rampas (decisão 1c da spec da etapa 4) e a cor 0 em xadrez; a cor escolhida com o hexadecimal; "Editar cor" (ou dois
  * cliques numa cor), que abre o {@link TvColorPopup} sem a linha do tema, e "Criar rampa"; a {@link TvPixelPreview};
- * e embaixo Limpar tudo, Cancelar e Salvar. Limpar tudo e o Cancelar com mudança não salva pedem dois cliques. A
- * amostra de cada cor é o xadrez da {@link TvPixelTexture} com a cor por cima.
+ * e embaixo Cancelar e Salvar. Também cuida do Limpar tudo, que fica no pé da coluna de ferramentas
+ * ({@link TvPixelLayout#clear}). Limpar tudo e o Cancelar com mudança não salva pedem dois cliques. A amostra de cada
+ * cor é o xadrez da {@link TvPixelTexture} com a cor por cima.
  */
 final class TvPixelSide {
     /** Um botão da coluna. */
@@ -45,11 +46,12 @@ final class TvPixelSide {
     private TvEditorPaint.Label editLabel;
     private TvEditorPaint.Label rampLabel;
     private TvEditorPaint.Label clearLabel;
-    private TvEditorPaint.Label clearConfirmLabel;
     private TvEditorPaint.Label cancelLabel;
     private TvEditorPaint.Label discardLabel;
     private TvEditorPaint.Label saveLabel;
     private Component rampTip = Component.empty();
+    private Component clearTip = Component.empty();
+    private Component clearConfirmTip = Component.empty();
     private int shownIndex = -1;
     private int shownColor;
     private GuiText.Fitted hexText;
@@ -62,7 +64,7 @@ final class TvPixelSide {
         this.preview = new TvPixelPreview(texture);
     }
 
-    void layout(Font font, TvRect side) {
+    void layout(Font font, TvRect side, TvRect clear) {
         this.font = font;
         int x = side.x();
         int w = side.w();
@@ -89,14 +91,15 @@ final class TvPixelSide {
         previewY = y;
         y += 11;
         int actionsY = side.bottom() - BUTTON_H;
-        buttons[Button.CLEAR.ordinal()] = new TvRect(x, actionsY - BUTTON_H - 3, w, BUTTON_H);
+        buttons[Button.CLEAR.ordinal()] = clear;
         buttons[Button.CANCEL.ordinal()] = new TvRect(x, actionsY, half, BUTTON_H);
         buttons[Button.SAVE.ordinal()] = new TvRect(x + w - half, actionsY, half, BUTTON_H);
-        preview.layout(new TvRect(x + 1, y + 1, w - 2, Math.max(0, actionsY - BUTTON_H - 8 - y)));
+        preview.layout(new TvRect(x + 1, y + 1, w - 2, Math.max(0, actionsY - 5 - y)));
         editLabel = TvEditorPaint.label(font, edit, editW - 4);
         rampLabel = TvEditorPaint.label(font, ramp, w - editW - 8);
-        clearLabel = TvEditorPaint.label(font, TvEditorText.key("pixel.clear"), w - 4);
-        clearConfirmLabel = TvEditorPaint.label(font, TvEditorText.key("pixel.clear.confirm"), w - 4);
+        clearLabel = TvEditorPaint.label(font, TvEditorText.key("pixel.clear"), clear.w() - 4);
+        clearTip = TvEditorText.key("pixel.clear.tip");
+        clearConfirmTip = TvEditorText.key("pixel.clear.confirm");
         cancelLabel = TvEditorPaint.label(font, TvEditorText.key("pixel.cancel"), half - 4);
         discardLabel = TvEditorPaint.label(font, TvEditorText.key("pixel.discard"), half - 4);
         saveLabel = TvEditorPaint.label(font, TvEditorText.key("pixel.save"), half - 4);
@@ -139,24 +142,18 @@ final class TvPixelSide {
         preview.render(g, canvas);
         TvRect clear = buttons[Button.CLEAR.ordinal()];
         if (clearClick.armed(System.currentTimeMillis())) {
-            danger(g, clear, clearConfirmLabel);
+            TvEditorPaint.danger(g, font, clear, clearLabel);
         } else {
             TvEditorPaint.button(g, font, clear, clearLabel, clear.contains(mouseX, mouseY), true);
         }
         TvRect cancel = buttons[Button.CANCEL.ordinal()];
         if (cancelArmed()) {
-            danger(g, cancel, discardLabel);
+            TvEditorPaint.danger(g, font, cancel, discardLabel);
         } else {
             TvEditorPaint.button(g, font, cancel, cancelLabel, cancel.contains(mouseX, mouseY), true);
         }
         TvRect save = buttons[Button.SAVE.ordinal()];
         TvEditorPaint.primary(g, font, save, saveLabel, save.contains(mouseX, mouseY), true, GuiPaint.ACCENT);
-    }
-
-    /** Um botão armado, esperando o segundo clique: vermelho, com a pergunta. */
-    private void danger(GuiGraphics g, TvRect r, TvEditorPaint.Label label) {
-        GuiPaint.box(g, r.x(), r.y(), r.w(), r.h(), GuiPaint.DANGER, GuiPaint.mix(GuiPaint.DANGER, GuiPaint.RING, 0.3f));
-        TvEditorPaint.centered(g, font, r, label, GuiPaint.DARK_TEXT);
     }
 
     /** Limpar tudo: o primeiro clique arma e o segundo, dentro do prazo, devolve que pode limpar. */
@@ -226,6 +223,9 @@ final class TvPixelSide {
     @Nullable Component tooltip(double mouseX, double mouseY) {
         if (buttons[Button.RAMP.ordinal()].contains(mouseX, mouseY)) {
             return rampTip;
+        }
+        if (buttons[Button.CLEAR.ordinal()].contains(mouseX, mouseY)) {
+            return clearClick.armed(System.currentTimeMillis()) ? clearConfirmTip : clearTip;
         }
         return null;
     }

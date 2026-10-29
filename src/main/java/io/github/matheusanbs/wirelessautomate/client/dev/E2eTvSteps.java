@@ -76,6 +76,7 @@ final class E2eTvSteps {
         sizeSteps(list, "");
         E2eTvEditorSteps.editorSteps(list, () -> tv);
         E2eTvPixelSteps.pixelSteps(list);
+        E2eTvArtSteps.artSteps(list, playerId, () -> tv);
         E2eVariants.escuro(list, () -> {
             list.add(E2eDarkSteps.themeClick("Tela: escuro", GuiTheme.DARK));
             list.add(tab("Tela: aba Tamanho no escuro", TvScreen.Tab.SIZE));
@@ -253,7 +254,7 @@ final class E2eTvSteps {
         }
     }
 
-    private static Step open(String name) {
+    static Step open(String name) {
         return new Step(name, STEP_TIMEOUT_MS, () -> {
             if (Minecraft.getInstance().screen != null) {
                 throw new StepFailure("ainda há uma tela aberta: " + describe(Minecraft.getInstance().screen));

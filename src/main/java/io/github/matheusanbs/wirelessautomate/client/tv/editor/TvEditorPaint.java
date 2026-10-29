@@ -70,6 +70,12 @@ final class TvEditorPaint {
         centered(g, font, r, label, active ? GuiPaint.DARK_TEXT : GuiPaint.DISABLED);
     }
 
+    /** Um botão armado, esperando o segundo clique (Remover, Limpar tudo, Descartar): vermelho, com a pergunta. */
+    static void danger(GuiGraphics g, Font font, TvRect r, Label label) {
+        GuiPaint.box(g, r.x(), r.y(), r.w(), r.h(), GuiPaint.DANGER, GuiPaint.mix(GuiPaint.DANGER, GuiPaint.RING, 0.3f));
+        centered(g, font, r, label, GuiPaint.DARK_TEXT);
+    }
+
     static void centered(GuiGraphics g, Font font, TvRect r, Label label, int color) {
         GuiText.draw(g, font, label.text(), r.x() + (r.w() - label.width()) / 2, r.y() + (r.h() - 8) / 2, color);
     }

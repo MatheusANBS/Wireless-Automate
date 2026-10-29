@@ -14,7 +14,8 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * A base da Tela, na coluna da direita enquanto nada está escolhido (como no mockup): o Tema (os quatro de partida e os
- * do jogador, trocados por ‹ ›), o Fundo (do tema, cor fixa ou degradê vertical), as linhas de varredura, a grade da
+ * do jogador, trocados por ‹ ›), o Fundo (do tema, cor fixa, degradê vertical ou pixel art em mosaico, este no
+ * {@link TvBaseMosaic}, com o uso do teto de pixels), as linhas de varredura, a grade da
  * miniatura, as seis cores do tema (campos {@code #RRGGBB}), "Salvar tema" (grava a paleta atual na biblioteca com um
  * nome) e o remover do tema do jogador, em dois cliques. A Tela guarda a paleta inteira, não uma referência: trocar
  * ou apagar um tema da biblioteca nunca muda outra Tela. Tema, fundo e linhas vão pelo {@link TvEditorDoc#changeLayout}
@@ -52,9 +53,11 @@ final class TvBasePanel {
                 TvColorPicker.add(form, ctx, "base.bg.bottom", TvPropsCtx.key("base.bg.bottom"),
                         () -> ctx.doc().draft().background().bottom(), v -> setBottom(ctx, v), false, true);
             }
+            case TILED -> TvBaseMosaic.build(form, ctx);
             default -> {
             }
         }
+        TvBaseMosaic.usage(form, ctx);
         form.toggle("base.scanlines", TvPropsCtx.key("base.scanlines"), () -> ctx.doc().draft().scanlines(),
                 on -> ctx.doc().changeLayout(l -> l.withScanlines(on), "scanlines"));
         form.toggle("base.grid", TvPropsCtx.key("base.grid"), () -> ctx.doc().gridVisible(),
@@ -120,9 +123,9 @@ final class TvBasePanel {
         ctx.doc().changeLayout(l -> l.withTheme(chosen), "theme");
     }
 
-    /** Os fundos do ‹ ›: o mosaico fica fora, porque precisa de uma arte (ele nasce da aba Pixel art). */
+    /** Os fundos do ‹ ›; o mosaico precisa de uma arte, e sem nenhuma (no layout ou na biblioteca) é pulado. */
     private static final TvBackground.Kind[] CYCLE = {TvBackground.Kind.THEME, TvBackground.Kind.SOLID,
-            TvBackground.Kind.GRADIENT};
+            TvBackground.Kind.GRADIENT, TvBackground.Kind.TILED};
 
     private static void stepBackground(TvPropsCtx ctx, int delta) {
         TvBackground.Kind current = ctx.doc().draft().background().kind();
@@ -133,6 +136,10 @@ final class TvBasePanel {
             }
         }
         TvBackground.Kind kind = CYCLE[Math.floorMod(at + delta, CYCLE.length)];
+        if (kind == TvBackground.Kind.TILED && TvBaseMosaic.start(ctx)) {
+            return;
+        }
+        kind = kind == TvBackground.Kind.TILED ? CYCLE[Math.floorMod(at + 2 * delta, CYCLE.length)] : kind;
         TvBackground next = switch (kind) {
             case THEME, TILED -> TvBackground.DEFAULT;
             case SOLID -> new TvBackground(kind, TvColor.theme(TvColor.CARD), 0);

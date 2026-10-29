@@ -56,7 +56,7 @@ final class TvForm {
 
     /** Um rótulo apagado numa linha de 10 px. */
     void label(String id, Supplier<Component> text) {
-        controls.add(new TvControls.Label(font, id, 0, y, W, GuiPaint.MUTED, text));
+        controls.add(new TvControls.Label(font, id, 0, y, W, TvControls.MUTED, text));
         y += 10;
     }
 
@@ -86,7 +86,7 @@ final class TvForm {
 
     /** O mesmo, com o rótulo {@code dy} px abaixo do topo da linha (4 numa linha de ícones de 16 px). */
     int inline(String id, Component label, int dy) {
-        controls.add(new TvControls.Label(font, id + ".label", 0, y + dy, LABEL_W - 2, GuiPaint.MUTED, () -> label));
+        controls.add(new TvControls.Label(font, id + ".label", 0, y + dy, LABEL_W - 2, TvControls.MUTED, () -> label));
         return y;
     }
 

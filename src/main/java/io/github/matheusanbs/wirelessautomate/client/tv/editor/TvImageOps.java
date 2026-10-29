@@ -1,0 +1,128 @@
+package io.github.matheusanbs.wirelessautomate.client.tv.editor;
+
+import io.github.matheusanbs.wirelessautomate.tv.TvAlign;
+import io.github.matheusanbs.wirelessautomate.tv.TvLayout;
+import io.github.matheusanbs.wirelessautomate.tv.TvPartStyle;
+import io.github.matheusanbs.wirelessautomate.tv.TvPiece;
+import io.github.matheusanbs.wirelessautomate.tv.TvPieceType;
+import io.github.matheusanbs.wirelessautomate.tv.TvPixelArt;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.function.UnaryOperator;
+import net.minecraft.network.chat.Component;
+import org.jetbrains.annotations.Nullable;
+
+/**
+ * As pixel arts no rascunho do editor (decisões 4 a 7 da spec da etapa 4): a Tela guarda uma cópia de cada arte que
+ * usa ({@link TvLayout#images()}, sem repetir o id), feita quando a arte vira Imagem ou mosaico e trocada só pelo
+ * "Atualizar da biblioteca". Toda mudança passa pelo teto {@code tv.maxImagePixels}: o que contaria acima dele não
+ * entra, e o editor avisa ({@link TvEditorDoc.Failure#IMAGES_FULL}); nada vai ao servidor. Só no clique, nunca por
+ * quadro.
+ */
+final class TvImageOps {
+    private TvImageOps() {
+    }
+
+    /**
+     * O layout com a cópia da arte. Se ele já tem uma do mesmo id, ela fica quando alguma peça ou o fundo a usa (a
+     * Tela só muda pelo Atualizar); a que ninguém usa mais é trocada pela versão de agora.
+     */
+    static TvLayout withArt(TvLayout layout, TvPixelArt art) {
+        TvPixelArt copy = layout.image(art.id());
+        if (copy == null) {
+            List<TvPixelArt> images = new ArrayList<>(layout.images());
+            images.add(art);
+            return layout.withImages(images);
+        }
+        return copy.equals(art) || layout.prunedImages().image(art.id()) != null ? layout : refreshed(layout, art);
+    }
+
+    /** O layout com a cópia de mesmo id trocada por {@code art}. */
+    static TvLayout refreshed(TvLayout layout, TvPixelArt art) {
+        List<TvPixelArt> images = new ArrayList<>(layout.images());
+        images.replaceAll(image -> image.id().equals(art.id()) ? art : image);
+        return layout.withImages(images);
+    }
+
+    /** Os pixels que contam no teto: os das artes que alguma peça ou o fundo usam (as soltas saem ao salvar). */
+    static int usedPixels(TvLayout layout) {
+        return layout.prunedImages().imagePixels();
+    }
+
+    /** A arte da biblioteca do jogador com o id, ou {@code null}. */
+    static @Nullable TvPixelArt inLibrary(UUID id) {
+        for (TvPixelArt art : TvLibraryClient.arts()) {
+            if (art.id().equals(id)) {
+                return art;
+            }
+        }
+        return null;
+    }
+
+    /** A versão da biblioteca da arte {@code id} quando ela difere da cópia do layout, ou {@code null}. */
+    static @Nullable TvPixelArt newer(TvLayout layout, @Nullable UUID id) {
+        TvPixelArt library = id == null ? null : inLibrary(id);
+        return library == null || library.equals(layout.image(id)) ? null : library;
+    }
+
+    /** A dica do "Atualizar da biblioteca" desligado: a arte saiu da biblioteca ou a cópia já é igual. */
+    static Component whyNoRefresh(@Nullable UUID id) {
+        return TvEditorText.key(id != null && inLibrary(id) != null ? "image.refresh.same" : "image.refresh.gone");
+    }
+
+    /** "Atualizar da biblioteca": troca a cópia da arte {@code id} pela versão da biblioteca, se há uma mais nova. */
+    static void refresh(TvEditorDoc doc, int max, @Nullable UUID id) {
+        TvPixelArt library = newer(doc.draft(), id);
+        if (library != null) {
+            change(doc, max, layout -> refreshed(layout, library), "image.refresh");
+        }
+    }
+
+    /** Se o layout {@code next} cabe no teto; um que não aumenta o uso sempre vale (o teto pode ter baixado). */
+    static boolean fits(TvLayout now, TvLayout next, int max) {
+        int used = usedPixels(next);
+        return used <= max || used <= usedPixels(now);
+    }
+
+    /**
+     * Muda o rascunho por {@code change} (o fundo em mosaico, o Atualizar), mantendo a escolha; acima do teto, nada
+     * muda e o aviso aparece. Devolve se mudou.
+     */
+    static boolean change(TvEditorDoc doc, int max, UnaryOperator<TvLayout> change, Object key) {
+        TvLayout now = doc.draft();
+        TvLayout next = change.apply(now);
+        if (!fits(now, next, max)) {
+            doc.fail(TvEditorDoc.Failure.IMAGES_FULL);
+            return false;
+        }
+        doc.changeLayout(layout -> next, key);
+        return true;
+    }
+
+    /**
+     * A arte solta na miniatura vira uma Imagem nova, por cima das outras peças, com a escala inteira que cabe
+     * ({@link TvImageFit}) e o centro em ({@code cx}, {@code cy}); fica escolhida. Acima do teto, nada muda e o aviso
+     * aparece.
+     */
+    static boolean insert(TvEditorDoc doc, int max, TvPixelArt art, int cx, int cy) {
+        int areaW = doc.area().pixelWidth();
+        int areaH = doc.area().pixelHeight();
+        int scale = TvImageFit.scale(art.width(), art.height(), areaW, areaH);
+        int[] box = TvImageFit.box(art.width(), art.height(), scale, areaW, areaH, cx, cy);
+        TvPiece piece = TvPieceAccess.create(TvPieceType.IMAGE, "");
+        piece = piece.withBox(box[0], box[1], box[2], box[3]).withStyle(piece.style().withAlign(TvAlign.CENTER)
+                .withPart(piece.style().part().withImage(Optional.of(art.id()), scale, TvPartStyle.VAlign.MIDDLE)));
+        TvLayout now = doc.draft();
+        List<TvPiece> pieces = new ArrayList<>(now.pieces());
+        pieces.add(piece);
+        TvLayout next = withArt(now, art).withPieces(pieces);
+        if (!fits(now, next, max)) {
+            doc.fail(TvEditorDoc.Failure.IMAGES_FULL);
+            return false;
+        }
+        doc.replace(next, TvSelection.of(pieces.size() - 1));
+        return true;
+    }
+}

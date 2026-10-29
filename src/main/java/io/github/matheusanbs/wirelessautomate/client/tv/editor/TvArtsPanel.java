@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client.tv.editor;
 
+import io.github.matheusanbs.wirelessautomate.client.ArmedClick;
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.client.tv.render.TvArtThumbs;
@@ -16,9 +17,11 @@ import org.jetbrains.annotations.Nullable;
 /**
  * A aba Pixel art da coluna da esquerda do editor: as artes da biblioteca do jogador ({@link TvLibraryClient}) numa
  * lista que rola, com a miniatura (a textura da arte, {@link TvArtThumbs}), o nome e o tamanho, e o uso {@code n /
- * tv.maxArts} em cima. Um clique escolhe e dois abrem o editor de pixel art; embaixo, Nova (16 × 16 com a paleta
- * padrão; desligada com a biblioteca cheia), Editar, Duplicar e Remover. As linhas e os textos são refeitos quando a
- * biblioteca ou a janela mudam, nunca por quadro; só as linhas à vista são desenhadas.
+ * tv.maxArts} em cima. Um clique escolhe, dois abrem o editor de pixel art e arrastar uma linha até a miniatura cria a
+ * peça Imagem ({@link TvArtDrag}); embaixo, Nova (16 × 16 com a paleta padrão) e Duplicar (uma cópia "… (cópia)" com
+ * id novo), desligadas com a biblioteca cheia, Editar e Remover (dois cliques). Duplicar e Remover saem pelo
+ * {@link TvEditorActions}. As linhas e os textos são refeitos quando a biblioteca ou a janela mudam, nunca por quadro;
+ * só as linhas à vista são desenhadas.
  */
 final class TvArtsPanel {
     /** Um botão embaixo da lista. */
@@ -30,12 +33,15 @@ final class TvArtsPanel {
     private static final int HEAD_H = 12;
     private static final long DOUBLE_CLICK_MS = 400;
 
-    /** Uma linha: a arte, o nome medido e o tamanho. */
-    private record Row(TvPixelArt art, GuiText.Fitted name, Component size, int sizeWidth) {
+    /** Uma linha: a arte, o nome medido e, embaixo dele, o tamanho. */
+    private record Row(TvPixelArt art, GuiText.Fitted name, Component size) {
     }
 
     private final TvEditorActions actions;
     private final TvPixelEditor pixel;
+    private final TvArtDrag drag;
+    private final ArmedClick removeClick = new ArmedClick();
+    private TvEditorPaint.Label removeConfirm;
     private final TvRect[] buttons = new TvRect[Button.values().length];
     private final TvEditorPaint.Label[] labels = new TvEditorPaint.Label[Button.values().length];
     private final Component empty = TvEditorText.key("arts.empty");
@@ -51,9 +57,10 @@ final class TvArtsPanel {
     private @Nullable UUID chosen;
     private long lastClickAt;
 
-    TvArtsPanel(TvEditorActions actions, TvPixelEditor pixel) {
+    TvArtsPanel(TvEditorActions actions, TvPixelEditor pixel, TvArtDrag drag) {
         this.actions = actions;
         this.pixel = pixel;
+        this.drag = drag;
     }
 
     void layout(Font font, TvRect box) {
@@ -69,6 +76,7 @@ final class TvArtsPanel {
             labels[button.ordinal()] = TvEditorPaint.label(font, TvEditorText.key("arts." + button.name()
                     .toLowerCase(Locale.ROOT)), half - 4);
         }
+        removeConfirm = TvEditorPaint.label(font, TvEditorText.key("arts.remove.confirm"), half - 4);
         list = new TvRect(box.x(), box.y() + HEAD_H, box.w(), Math.max(0, bottom - 2 * BUTTON_H - 5 - box.y() - HEAD_H));
         builtLibrary = -1;
     }
@@ -82,9 +90,7 @@ final class TvArtsPanel {
         List<Row> out = new ArrayList<>(arts.size());
         for (TvPixelArt art : arts) {
             Component size = TvEditorText.key("arts.size", art.width(), art.height());
-            int sizeWidth = font.width(size);
-            out.add(new Row(art, GuiText.fit(font, Component.literal(art.name()), list.w() - THUMB - 14 - sizeWidth),
-                    size, sizeWidth));
+            out.add(new Row(art, GuiText.fit(font, Component.literal(art.name()), list.w() - THUMB - 14), size));
         }
         rows = out;
         count = TvEditorText.key("arts.count", arts.size(), actions.maxArts());
@@ -112,8 +118,8 @@ final class TvArtsPanel {
     private boolean enabled(Button button) {
         return switch (button) {
             case NEW -> rows.size() < actions.maxArts();
-            case EDIT -> chosenArt() != null;
-            case DUPLICATE, REMOVE -> false;
+            case DUPLICATE -> chosenArt() != null && rows.size() < actions.maxArts();
+            case EDIT, REMOVE -> chosenArt() != null;
         };
     }
 
@@ -142,8 +148,8 @@ final class TvArtsPanel {
                 g.fill(x, y, x + w, y + ROW_H, GuiPaint.alpha(GuiPaint.ACCENT, 0x20));
             }
             thumb(g, row.art, x + 4, y + 1);
-            GuiText.draw(g, font, row.name, x + THUMB + 8, y + 5, GuiPaint.FG);
-            GuiPaint.text(g, font, row.size, x + w - row.sizeWidth - 3, y + 5, GuiPaint.MUTED);
+            GuiText.draw(g, font, row.name, x + THUMB + 8, y + 1, GuiPaint.FG);
+            GuiPaint.text(g, font, row.size, x + THUMB + 8, y + 10, GuiPaint.MUTED);
         }
         g.disableScissor();
         if (rows.isEmpty()) {
@@ -152,8 +158,26 @@ final class TvArtsPanel {
         }
         for (Button button : Button.values()) {
             TvRect r = buttons[button.ordinal()];
-            TvEditorPaint.button(g, font, r, labels[button.ordinal()], r.contains(mouseX, mouseY), enabled(button));
+            if (button == Button.REMOVE && removeClick.armed(System.currentTimeMillis()) && enabled(button)) {
+                TvEditorPaint.danger(g, font, r, removeConfirm);
+            } else {
+                TvEditorPaint.button(g, font, r, labels[button.ordinal()], r.contains(mouseX, mouseY),
+                        enabled(button));
+            }
         }
+    }
+
+    /** A arte arrastada até a miniatura, por cima de tudo. */
+    void renderGhost(GuiGraphics g, int mouseX, int mouseY) {
+        drag.renderGhost(g, mouseX, mouseY);
+    }
+
+    boolean mouseDragged(double mouseX, double mouseY) {
+        return drag.mouseDragged(mouseX, mouseY);
+    }
+
+    boolean mouseReleased(double mouseX, double mouseY) {
+        return drag.mouseReleased(mouseX, mouseY);
     }
 
     /** A miniatura na maior escala que cabe em {@link #THUMB} px (inteira quando a arte é menor), centrada. */
@@ -181,26 +205,54 @@ final class TvArtsPanel {
         rebuild();
         int i = rowAt(mouseX, mouseY);
         if (i >= 0) {
-            UUID id = rows.get(i).art.id();
+            TvPixelArt art = rows.get(i).art;
             long now = System.currentTimeMillis();
-            boolean twice = id.equals(chosen) && now - lastClickAt < DOUBLE_CLICK_MS;
-            chosen = id;
+            boolean twice = art.id().equals(chosen) && now - lastClickAt < DOUBLE_CLICK_MS;
+            if (!art.id().equals(chosen)) {
+                removeClick.disarm();
+            }
+            chosen = art.id();
             lastClickAt = now;
             if (twice) {
-                pixel.open(rows.get(i).art);
+                pixel.open(art);
+            } else {
+                drag.press(art, mouseX, mouseY);
             }
             return true;
         }
         for (Button button : Button.values()) {
             if (buttons[button.ordinal()].contains(mouseX, mouseY) && enabled(button)) {
-                if (button == Button.NEW) {
-                    pixel.open(null);
-                } else if (button == Button.EDIT) {
-                    pixel.open(chosenArt());
-                }
+                run(button);
             }
         }
         return true;
+    }
+
+    private void run(Button button) {
+        TvPixelArt art = chosenArt();
+        if (button != Button.REMOVE) {
+            removeClick.disarm();
+        }
+        switch (button) {
+            case NEW -> pixel.open(null);
+            case EDIT -> pixel.open(art);
+            case DUPLICATE -> actions.saveArt(new TvPixelArt(UUID.randomUUID(), copyName(art.name()), art.width(),
+                    art.height(), art.palette(), art.pixels()));
+            case REMOVE -> {
+                if (removeClick.click(System.currentTimeMillis())) {
+                    actions.removeArt(art.id());
+                }
+            }
+        }
+    }
+
+    /** "Nome (cópia)" em até {@link TvPixelArt#MAX_NAME} caracteres: o nome é cortado para o sufixo caber. */
+    private static String copyName(String name) {
+        String suffix = TvEditorText.key("arts.copy_name", "").getString();
+        int room = Math.max(1, TvPixelArt.MAX_NAME - suffix.codePointCount(0, suffix.length()));
+        String base = name.codePointCount(0, name.length()) <= room ? name
+                : name.substring(0, name.offsetByCodePoints(0, room)).strip();
+        return TvEditorText.key("arts.copy_name", base).getString();
     }
 
     boolean mouseScrolled(double mouseX, double mouseY, double delta) {

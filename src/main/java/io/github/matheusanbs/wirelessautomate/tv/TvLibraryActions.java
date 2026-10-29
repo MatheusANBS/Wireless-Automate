@@ -67,9 +67,12 @@ public final class TvLibraryActions {
                 case REMOVE -> payload.kind() == TvLibraryActionPayload.Kind.COMPONENT
                         ? library.removeComponent(player.getUUID(), payload.name())
                         : library.removeTheme(player.getUUID(), payload.name());
+                case SAVE_ART -> library.saveArt(player.getUUID(), payload.art());
+                case RENAME_ART -> library.renameArt(player.getUUID(), payload.artId(), payload.newName());
+                case REMOVE_ART -> library.removeArt(player.getUUID(), payload.artId());
             };
         } catch (RuntimeException e) {
-            // Conteúdo que não decodifica: a ação é recusada, sem derrubar nada.
+            // Conteúdo que não decodifica (ou um id de arte que não é UUID): a ação é recusada, sem derrubar nada.
             result = TvLibrary.Result.INVALID;
         }
         String key = switch (result) {
@@ -91,7 +94,8 @@ public final class TvLibraryActions {
 
     /** A biblioteca do jogador como payload. */
     public static TvLibraryPayload payload(ServerPlayer player, int containerId, TvLibrary library) {
-        return new TvLibraryPayload(containerId, library.components(player.getUUID()), library.themes(player.getUUID()));
+        return new TvLibraryPayload(containerId, library.components(player.getUUID()), library.themes(player.getUUID()),
+                library.arts(player.getUUID()));
     }
 
     /**

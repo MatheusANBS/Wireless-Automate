@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.client.tv.editor;
 
 import io.github.matheusanbs.wirelessautomate.packet.TvLibraryPayload;
 import io.github.matheusanbs.wirelessautomate.tv.TvComponent;
+import io.github.matheusanbs.wirelessautomate.tv.TvPixelArt;
 import io.github.matheusanbs.wirelessautomate.tv.TvTheme;
 import java.util.List;
 
@@ -14,6 +15,7 @@ public final class TvLibraryClient {
     private static List<TvComponent> components = List.of();
     private static List<TvComponent> layouts = List.of();
     private static List<TvTheme> themes = List.of();
+    private static List<TvPixelArt> arts = List.of();
     private static int version;
 
     private TvLibraryClient() {
@@ -27,15 +29,17 @@ public final class TvLibraryClient {
         components = payload.components().stream().filter(c -> !c.isLayout()).toList();
         layouts = payload.components().stream().filter(TvComponent::isLayout).toList();
         themes = payload.themes();
+        arts = payload.arts();
         version++;
     }
 
     /** Solta a biblioteca (o editor fechou ou o jogador saiu do mundo). */
     public static void clear() {
-        if (!components.isEmpty() || !layouts.isEmpty() || !themes.isEmpty()) {
+        if (!components.isEmpty() || !layouts.isEmpty() || !themes.isEmpty() || !arts.isEmpty()) {
             components = List.of();
             layouts = List.of();
             themes = List.of();
+            arts = List.of();
         }
         version++;
     }
@@ -51,6 +55,11 @@ public final class TvLibraryClient {
 
     public static List<TvTheme> themes() {
         return themes;
+    }
+
+    /** As pixel arts do jogador, na ordem de criação. */
+    public static List<TvPixelArt> arts() {
+        return arts;
     }
 
     /** Sobe a cada payload recebido e a cada {@link #clear}; 0 antes do primeiro. */

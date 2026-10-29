@@ -107,6 +107,7 @@ public final class TvPainter {
             case ICON -> {
                 return TvPaintIcon.paint(g, piece, part) ? FLAG_ICON : 0;
             }
+            case IMAGE -> TvPaintImage.piece(g, piece, layout);
             case BAR -> TvPaintBar.paint(g, piece, part, piece.style().radius(),
                     TvPaintFill.fraction(piece, part, resolved.value, values, pos, revision, preview, gameTime),
                     resolved.color, TvPaintMath.withOpacity(TvColor.resolve(part.track(), theme), opacity));

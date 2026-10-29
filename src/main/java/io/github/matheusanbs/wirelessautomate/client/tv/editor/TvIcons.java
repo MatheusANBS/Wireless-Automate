@@ -126,13 +126,13 @@ public final class TvIcons {
         }
     }
 
-    /** O ícone do tipo de peça, na paleta e nas Camadas. */
+    /** O ícone do tipo de peça, na paleta e nas Camadas (a Imagem usa o do Ícone até ganhar um próprio). */
     static Icon of(io.github.matheusanbs.wirelessautomate.tv.TvPieceType type) {
         return switch (type) {
             case VALUE -> Icon.VALUE;
             case TEXT -> Icon.TEXT;
             case SHAPE -> Icon.SHAPE;
-            case ICON -> Icon.ICON;
+            case ICON, IMAGE -> Icon.ICON;
             case BAR -> Icon.BAR;
             case GAUGE -> Icon.GAUGE;
             case GRAPH -> Icon.GRAPH;

@@ -15,9 +15,11 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.saveddata.SavedData;
 
 /**
- * A biblioteca de cada jogador: os componentes e os temas que ele salvou, pelo UUID. Fica no data storage do
- * overworld e só é lida ao abrir o editor e nas ações; a Tela não depende dela para ser desenhada. Nome repetido
- * substitui; os tetos vêm da config ({@code tv.maxComponents}, {@code tv.maxThemes}) e os componentes de um jogador
+ * A biblioteca de cada jogador: os componentes, os temas e as pixel arts que ele salvou, pelo UUID. Fica no data
+ * storage do overworld e só é lida ao abrir o editor e nas ações; a Tela não depende dela para ser desenhada. Nome
+ * repetido substitui um componente ou um tema; a arte é pelo id dela. Os tetos vêm da config
+ * ({@code tv.maxComponents}, {@code tv.maxThemes}, {@code tv.maxArts}; cada arte já vem até 64 × 64, uns 2 KB
+ * gravada) e os componentes de um jogador
  * somam no máximo {@link #MAX_COMPONENT_BYTES_PER_PLAYER}: o arquivo fica todo na memória e é regravado inteiro a cada
  * autosave, então sem esse teto dezenas de jogadores com a biblioteca cheia chegariam a dezenas de MB.
  */
@@ -31,16 +33,17 @@ public final class TvLibrary extends SavedData {
     /** O resultado de salvar, renomear ou remover. */
     public enum Result { OK, FULL, INVALID, TOO_BIG, MISSING, EXISTS }
 
-    /** Os dois conjuntos de um jogador, em ordem de criação. */
+    /** Os conjuntos de um jogador, em ordem de criação. */
     private static final class Shelf {
         final Map<String, TvComponent> components = new LinkedHashMap<>();
         /** O tamanho estimado de cada componente, pelo nome (a soma é a cota do jogador). */
         final Map<String, Integer> sizes = new HashMap<>();
         int bytes;
         final Map<String, TvTheme> themes = new LinkedHashMap<>();
+        final Map<UUID, TvPixelArt> arts = new LinkedHashMap<>();
 
         boolean isEmpty() {
-            return components.isEmpty() && themes.isEmpty();
+            return components.isEmpty() && themes.isEmpty() && arts.isEmpty();
         }
     }
 
@@ -80,6 +83,52 @@ public final class TvLibrary extends SavedData {
     public List<TvTheme> themes(UUID player) {
         Shelf shelf = shelves.get(player);
         return shelf == null ? List.of() : List.copyOf(shelf.themes.values());
+    }
+
+    public List<TvPixelArt> arts(UUID player) {
+        Shelf shelf = shelves.get(player);
+        return shelf == null ? List.of() : List.copyOf(shelf.arts.values());
+    }
+
+    /** Guarda a arte pelo id (troca a de mesmo id, no mesmo lugar). Recusa nome vazio ou biblioteca cheia. */
+    public Result saveArt(UUID player, TvPixelArt art) {
+        String name = art.name().strip();
+        if (name.isEmpty()) {
+            return Result.INVALID;
+        }
+        Shelf shelf = shelves.computeIfAbsent(player, id -> new Shelf());
+        if (!shelf.arts.containsKey(art.id()) && shelf.arts.size() >= Config.tvMaxArts()) {
+            drop(player, shelf);
+            return Result.FULL;
+        }
+        shelf.arts.put(art.id(), name.equals(art.name()) ? art : art.withName(name));
+        setDirty();
+        return Result.OK;
+    }
+
+    /** Renomeia uma arte; recusa nome vazio. Nomes repetidos valem: a arte é pelo id. */
+    public Result renameArt(UUID player, UUID id, String to) {
+        Shelf shelf = shelves.get(player);
+        if (shelf == null || !shelf.arts.containsKey(id)) {
+            return Result.MISSING;
+        }
+        String name = to.strip();
+        if (name.isEmpty()) {
+            return Result.INVALID;
+        }
+        shelf.arts.put(id, shelf.arts.get(id).withName(name));
+        setDirty();
+        return Result.OK;
+    }
+
+    public Result removeArt(UUID player, UUID id) {
+        Shelf shelf = shelves.get(player);
+        if (shelf == null || shelf.arts.remove(id) == null) {
+            return Result.MISSING;
+        }
+        drop(player, shelf);
+        setDirty();
+        return Result.OK;
     }
 
     /** Guarda o componente pelo nome (substitui o de mesmo nome). Recusa nome vazio, peças demais ou biblioteca cheia. */
@@ -219,6 +268,13 @@ public final class TvLibrary extends SavedData {
             }
             player.put("components", components);
             player.put("themes", themes);
+            if (!entry.getValue().arts.isEmpty()) {
+                ListTag arts = new ListTag();
+                for (TvPixelArt art : entry.getValue().arts.values()) {
+                    arts.add(TvPixelArt.CODEC.encodeStart(NbtOps.INSTANCE, art).getOrThrow());
+                }
+                player.put("arts", arts);
+            }
             players.add(player);
         }
         tag.put("players", players);
@@ -245,6 +301,11 @@ public final class TvLibrary extends SavedData {
             for (int j = 0; j < themes.size(); j++) {
                 TvCodecs.THEME.parse(NbtOps.INSTANCE, themes.get(j)).result()
                         .ifPresent(theme -> shelf.themes.put(theme.name(), theme));
+            }
+            ListTag arts = player.getList("arts", Tag.TAG_COMPOUND);
+            for (int j = 0; j < arts.size(); j++) {
+                TvPixelArt.CODEC.parse(NbtOps.INSTANCE, arts.get(j)).result()
+                        .ifPresent(art -> shelf.arts.putIfAbsent(art.id(), art));
             }
             if (!shelf.isEmpty()) {
                 library.shelves.put(player.getUUID("player"), shelf);

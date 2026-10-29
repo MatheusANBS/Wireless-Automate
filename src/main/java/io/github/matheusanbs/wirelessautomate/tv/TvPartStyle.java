@@ -4,13 +4,16 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.Optional;
+import java.util.UUID;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.StringRepresentable;
 
 /**
- * Os campos de estilo das peças Ícone, Barra, Medidor, Gráfico e Seta (etapa 3), todos opcionais com padrão e só
- * gravados quando diferem dele: um layout das etapas 1 e 2 lê igual, e uma peça que não usa um campo não o leva no NBT.
+ * Os campos de estilo das peças Ícone, Barra, Medidor, Gráfico e Seta (etapa 3) e da Imagem (etapa 4), todos opcionais
+ * com padrão e só gravados quando diferem dele: um layout das etapas anteriores lê igual, e uma peça que não usa um
+ * campo não o leva no NBT.
  * As cores são ARGB ou papéis do tema ({@link TvColor}).
  *
  * @param orientation a Barra deitada ou em pé (chave {@code direction})
@@ -29,15 +32,21 @@ import net.minecraft.util.StringRepresentable;
  * @param flatColor   a cor da Seta parada
  * @param item        o id do que o Ícone mostra (item, fluido ou químico, conforme {@code icon.kind()})
  * @param icon        o tipo do que o Ícone mostra e, num item com componentes (as gemas do Apotheosis), o item inteiro
+ * @param image       o id da pixel art que a Imagem mostra, uma das {@link TvLayout#images()}
+ * @param scale       a escala inteira da Imagem (1 a {@link #MAX_SCALE}); 0 estica a arte até a caixa
+ * @param valign      o alinhamento vertical da Imagem na caixa; o horizontal é o {@code align} do {@link TvStyle}
  */
 public record TvPartStyle(Orientation orientation, boolean reverse, double min, double max, int track, int sweep,
         int thickness, int window, GraphMode mode, boolean area, double deadZone, int upColor, int downColor,
-        int flatColor, Optional<ResourceLocation> item, IconExtra icon) {
+        int flatColor, Optional<ResourceLocation> item, IconExtra icon, Optional<UUID> image, int scale,
+        VAlign valign) {
     public static final int MIN_SWEEP = 90;
     public static final int MAX_SWEEP = 360;
     public static final int MAX_THICKNESS = 32;
     public static final int MIN_WINDOW = 1;
     public static final int MAX_WINDOW = 10;
+    /** A maior escala da Imagem: 16 vezes uma arte de 8 px dá 4 blocos de 32 px de desenho. */
+    public static final int MAX_SCALE = 16;
 
     /** A Barra deitada ou em pé. */
     public enum Orientation implements StringRepresentable {
@@ -110,14 +119,52 @@ public record TvPartStyle(Orientation orientation, boolean reverse, double min, 
         }
     }
 
+    /** O alinhamento vertical da Imagem na caixa. */
+    public enum VAlign implements StringRepresentable {
+        TOP("top"),
+        MIDDLE("middle"),
+        BOTTOM("bottom");
+
+        public static final Codec<VAlign> CODEC = StringRepresentable.fromEnum(VAlign::values);
+
+        private final String id;
+
+        VAlign(String id) {
+            this.id = id;
+        }
+
+        @Override
+        public String getSerializedName() {
+            return id;
+        }
+    }
+
     public static final TvPartStyle DEFAULT = new TvPartStyle(Orientation.HORIZONTAL, false, 0, 0, 0x66808090, 270, 5,
             1, GraphMode.LINE, true, 0, TvColor.theme(TvColor.HIGH), TvColor.theme(TvColor.LOW),
-            TvColor.theme(TvColor.MUTED), Optional.empty(), IconExtra.NONE);
+            TvColor.theme(TvColor.MUTED), Optional.empty(), IconExtra.NONE, Optional.empty(), 1, VAlign.MIDDLE);
 
     /** Lê o campo se há, grava só se difere do padrão; um valor ilegível cai no padrão, sem derrubar a peça. */
     private static <T> MapCodec<T> field(Codec<T> codec, String name, T fallback) {
         return codec.lenientOptionalFieldOf(name).xmap(read -> read.orElse(fallback),
                 value -> value.equals(fallback) ? Optional.empty() : Optional.of(value));
+    }
+
+    /**
+     * Os campos do Ícone e da Imagem num bloco à parte, no mesmo nível do NBT: o {@code RecordCodecBuilder} aceita no
+     * máximo 16 campos num grupo.
+     */
+    private record Tail(Optional<ResourceLocation> item, IconExtra icon, Optional<UUID> image, int scale,
+            VAlign valign) {
+        static final MapCodec<Tail> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+                ResourceLocation.CODEC.lenientOptionalFieldOf("item").forGetter(Tail::item),
+                field(IconExtra.CODEC, "icon", IconExtra.NONE).forGetter(Tail::icon),
+                UUIDUtil.CODEC.lenientOptionalFieldOf("image").forGetter(Tail::image),
+                field(Codec.INT, "scale", DEFAULT.scale).forGetter(Tail::scale),
+                field(VAlign.CODEC, "valign", DEFAULT.valign).forGetter(Tail::valign)).apply(i, Tail::new));
+
+        static Tail of(TvPartStyle style) {
+            return new Tail(style.item, style.icon, style.image, style.scale, style.valign);
+        }
     }
 
     public static final MapCodec<TvPartStyle> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -135,9 +182,11 @@ public record TvPartStyle(Orientation orientation, boolean reverse, double min, 
             field(Codec.INT, "upColor", DEFAULT.upColor).forGetter(TvPartStyle::upColor),
             field(Codec.INT, "downColor", DEFAULT.downColor).forGetter(TvPartStyle::downColor),
             field(Codec.INT, "flatColor", DEFAULT.flatColor).forGetter(TvPartStyle::flatColor),
-            ResourceLocation.CODEC.lenientOptionalFieldOf("item").forGetter(TvPartStyle::item),
-            field(IconExtra.CODEC, "icon", IconExtra.NONE).forGetter(TvPartStyle::icon))
-            .apply(i, TvPartStyle::new));
+            Tail.MAP_CODEC.forGetter(Tail::of))
+            .apply(i, (orientation, reverse, min, max, track, sweep, thickness, window, mode, area, deadZone, up,
+                    down, flat, tail) -> new TvPartStyle(orientation, reverse, min, max, track, sweep, thickness,
+                    window, mode, area, deadZone, up, down, flat, tail.item, tail.icon, tail.image, tail.scale,
+                    tail.valign)));
 
     public TvPartStyle {
         if (!Double.isFinite(min)) {
@@ -152,67 +201,68 @@ public record TvPartStyle(Orientation orientation, boolean reverse, double min, 
         sweep = TvText.clamp(sweep, MIN_SWEEP, MAX_SWEEP);
         thickness = TvText.clamp(thickness, 1, MAX_THICKNESS);
         window = TvText.clamp(window, MIN_WINDOW, MAX_WINDOW);
+        scale = TvText.clamp(scale, 0, MAX_SCALE);
     }
 
     public TvPartStyle withOrientation(Orientation orientation) {
         return new TvPartStyle(orientation, reverse, min, max, track, sweep, thickness, window, mode, area, deadZone,
-                upColor, downColor, flatColor, item, icon);
+                upColor, downColor, flatColor, item, icon, image, scale, valign);
     }
 
     public TvPartStyle withReverse(boolean reverse) {
         return new TvPartStyle(orientation, reverse, min, max, track, sweep, thickness, window, mode, area, deadZone,
-                upColor, downColor, flatColor, item, icon);
+                upColor, downColor, flatColor, item, icon, image, scale, valign);
     }
 
     public TvPartStyle withRange(double min, double max) {
         return new TvPartStyle(orientation, reverse, min, max, track, sweep, thickness, window, mode, area, deadZone,
-                upColor, downColor, flatColor, item, icon);
+                upColor, downColor, flatColor, item, icon, image, scale, valign);
     }
 
     public TvPartStyle withTrack(int track) {
         return new TvPartStyle(orientation, reverse, min, max, track, sweep, thickness, window, mode, area, deadZone,
-                upColor, downColor, flatColor, item, icon);
+                upColor, downColor, flatColor, item, icon, image, scale, valign);
     }
 
     public TvPartStyle withSweep(int sweep) {
         return new TvPartStyle(orientation, reverse, min, max, track, sweep, thickness, window, mode, area, deadZone,
-                upColor, downColor, flatColor, item, icon);
+                upColor, downColor, flatColor, item, icon, image, scale, valign);
     }
 
     public TvPartStyle withThickness(int thickness) {
         return new TvPartStyle(orientation, reverse, min, max, track, sweep, thickness, window, mode, area, deadZone,
-                upColor, downColor, flatColor, item, icon);
+                upColor, downColor, flatColor, item, icon, image, scale, valign);
     }
 
     public TvPartStyle withWindow(int window) {
         return new TvPartStyle(orientation, reverse, min, max, track, sweep, thickness, window, mode, area, deadZone,
-                upColor, downColor, flatColor, item, icon);
+                upColor, downColor, flatColor, item, icon, image, scale, valign);
     }
 
     public TvPartStyle withMode(GraphMode mode) {
         return new TvPartStyle(orientation, reverse, min, max, track, sweep, thickness, window, mode, area, deadZone,
-                upColor, downColor, flatColor, item, icon);
+                upColor, downColor, flatColor, item, icon, image, scale, valign);
     }
 
     public TvPartStyle withArea(boolean area) {
         return new TvPartStyle(orientation, reverse, min, max, track, sweep, thickness, window, mode, area, deadZone,
-                upColor, downColor, flatColor, item, icon);
+                upColor, downColor, flatColor, item, icon, image, scale, valign);
     }
 
     public TvPartStyle withDeadZone(double deadZone) {
         return new TvPartStyle(orientation, reverse, min, max, track, sweep, thickness, window, mode, area, deadZone,
-                upColor, downColor, flatColor, item, icon);
+                upColor, downColor, flatColor, item, icon, image, scale, valign);
     }
 
     public TvPartStyle withArrowColors(int up, int down, int flat) {
         return new TvPartStyle(orientation, reverse, min, max, track, sweep, thickness, window, mode, area, deadZone,
-                up, down, flat, item, icon);
+                up, down, flat, item, icon, image, scale, valign);
     }
 
     /** O que o Ícone mostra: o id, o tipo e, num item com componentes, o item codificado. */
     public TvPartStyle withIcon(Optional<ResourceLocation> item, IconExtra icon) {
         return new TvPartStyle(orientation, reverse, min, max, track, sweep, thickness, window, mode, area, deadZone,
-                upColor, downColor, flatColor, item, icon);
+                upColor, downColor, flatColor, item, icon, image, scale, valign);
     }
 
     public IconKind iconKind() {
@@ -221,6 +271,12 @@ public record TvPartStyle(Orientation orientation, boolean reverse, double min, 
 
     public TvPartStyle withItem(Optional<ResourceLocation> item) {
         return new TvPartStyle(orientation, reverse, min, max, track, sweep, thickness, window, mode, area, deadZone,
-                upColor, downColor, flatColor, item, IconExtra.NONE);
+                upColor, downColor, flatColor, item, IconExtra.NONE, image, scale, valign);
+    }
+
+    /** A Imagem: a arte, a escala (0 estica) e o alinhamento vertical. */
+    public TvPartStyle withImage(Optional<UUID> image, int scale, VAlign valign) {
+        return new TvPartStyle(orientation, reverse, min, max, track, sweep, thickness, window, mode, area, deadZone,
+                upColor, downColor, flatColor, item, icon, image, scale, valign);
     }
 }

@@ -67,7 +67,9 @@ public final class TvEditing {
     /**
      * Salva o layout do editor: só dono ou operador; peças e ligações dentro dos tetos da config (senão recusa);
      * cada caixa cortada à área; ligação a rede que o jogador não pode usar ou a tipo não carregado sai, a peça
-     * fica. Avisa na barra de ação.
+     * fica. As imagens ({@link TvLayout#prunedImages}): a Imagem sem arte no layout sai, o mosaico sem arte volta ao
+     * fundo do tema, a arte que ninguém usa sai (a inválida o codec já largou ao ler) e, acima de
+     * {@code tv.maxImagePixels} somados, o layout é recusado como grande demais. Avisa na barra de ação.
      */
     public static LayoutResult applyLayout(ServerPlayer player, TvBlockEntity tv, TvLayout layout) {
         if (!tv.canEdit(player)) {
@@ -79,10 +81,16 @@ public final class TvEditing {
             player.displayClientMessage(Component.translatable("message.wirelessautomate.tv.layout_too_big"), true);
             return LayoutResult.TOO_BIG;
         }
+        TvLayout resolved = layout.prunedImages();
+        if (resolved.imagePixels() > Config.tvMaxImagePixels()) {
+            player.displayClientMessage(Component.translatable("message.wirelessautomate.tv.layout_images_too_big",
+                    Config.tvMaxImagePixels()), true);
+            return LayoutResult.TOO_BIG;
+        }
         NetworkSavedData data = NetworkSavedData.get(player.server);
         int[] dropped = {0};
-        List<TvPiece> pieces = new ArrayList<>(layout.pieces().size());
-        for (TvPiece piece : layout.pieces()) {
+        List<TvPiece> pieces = new ArrayList<>(resolved.pieces().size());
+        for (TvPiece piece : resolved.pieces()) {
             Optional<TvBinding> own = allowed(data, player, tv, piece.binding(), dropped);
             List<TvRule> rules = new ArrayList<>(piece.rules().size());
             boolean rulesChanged = false;
@@ -99,7 +107,7 @@ public final class TvEditing {
             pieces.add(rulesChanged ? fixed.withRules(rules) : fixed);
         }
         int before = tv.revision();
-        tv.setLayout(layout.withPieces(pieces));
+        tv.setLayout(resolved.withPieces(pieces));
         boolean changed = tv.revision() != before;
         Component message = dropped[0] == 0
                 ? Component.translatable("message.wirelessautomate.tv.layout_saved")

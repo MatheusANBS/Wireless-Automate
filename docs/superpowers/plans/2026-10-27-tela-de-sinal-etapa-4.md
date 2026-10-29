@@ -45,13 +45,17 @@ Custo: só eventos no servidor; só redesenho no cliente.
 - [ ] Pintura por faixas (`TvPaintImage`, a varredura das faixas pura com JUnit) e o mosaico; e2e com a medida do redesenho de uma Tela 32 × 32 com mosaico (decisão 8 da spec).
 - [ ] GameTests (ida e volta, tetos, biblioteca). Commit "Tela de Sinal: pixel art no modelo, na biblioteca e no desenho".
 
+### Task 1b: A arte vira textura própria (feita, `9b5b7833`)
+
+O redesenho por faixas mediu ~21 ms; a decisão 8 da spec troca por uma textura por arte (`TvArtTextures`), ~0,17 ms.
+
 ### Task 2: O editor de pixel art
 
-Custo: só GUI; o quadro numa textura pequena refeita só quando um pixel muda.
+Custo: só GUI; o quadro numa textura pequena refeita só quando um pixel muda; por quadro, poucos retângulos (grade, seleção, pincel sob o cursor).
 
-- [ ] Lógica pura (JUnit): `TvPixelTools` (lápis, borracha, balde de vizinhança 4, linha, retângulo, espelho), `TvPixelHistory` (100 passos, um por traço).
-- [ ] A tela `TvPixelEditorScreen` em partes (`wa-modular`): quadro com grade e zoom (Ctrl + roda), ferramentas com os ícones do `tela_icones.py` (novos no mesmo estilo: lápis, balde, borracha, linha, retângulo, espelho), paleta de 16 pelo seletor de cor da etapa 2, nome, tamanho, salvar e cancelar; atalhos (Ctrl+Z, Ctrl+Y, B lápis, E borracha, G balde, I conta-gotas, L linha, R retângulo e de novo alterna cheio, M espelho); clique direito apaga; prévia em 1× e 2× na coluna da direita.
-- [ ] A aba "Pixel art" na coluna da esquerda do editor da Tela (Nova, Editar, Duplicar, Remover em dois cliques; arrastar para o canvas cria a Imagem); "Atualizar da biblioteca" na aba da Imagem; o Fundo em mosaico na base.
+- [ ] Lógica pura (JUnit): as ferramentas da spec (decisões 1 a 1f), o histórico de 100 passos e a vista (zoom no ponto, arrastar, enquadrar).
+- [ ] A tela do editor de pixel art em partes (`wa-modular`): quadro, ferramentas com ícones novos no `tela_icones.py`, paleta em 4 rampas com o seletor de cor da etapa 2, prévia em 1×, 2× e 3 × 3, pincel, nome, tamanho, salvar e cancelar; todos os atalhos e a navegação da decisão 1g.
+- [ ] A aba "Pixel art" na coluna da esquerda do editor da Tela (Nova, Editar, Duplicar, Remover em dois cliques; arrastar para o canvas cria a Imagem); as opções da Imagem na aba Estilo ("Atualizar da biblioteca", escala, alinhamento em 9 posições, opacidade); o Fundo em mosaico na base.
 - [ ] e2e: desenhar uma arte pelo mouse, salvar, pôr como Imagem e como mosaico; capturas `tela-pixel-editor`, `tela-pixel-imagem`, `tela-pixel-mosaico`. Commit "Tela de Sinal: editor de pixel art".
 
 ### Task 3: Guia, docs e verificação

@@ -3,10 +3,12 @@ package io.github.matheusanbs.wirelessautomate.gametest;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.tv.TvArea;
+import io.github.matheusanbs.wirelessautomate.tv.TvBinding;
 import io.github.matheusanbs.wirelessautomate.tv.TvLayout;
 import io.github.matheusanbs.wirelessautomate.tv.TvLayouts;
 import io.github.matheusanbs.wirelessautomate.tv.TvPiece;
 import io.github.matheusanbs.wirelessautomate.tv.TvPieceType;
+import io.github.matheusanbs.wirelessautomate.tv.TvUnit;
 import java.util.List;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
@@ -78,6 +80,28 @@ public final class TvLayoutsGameTests {
                 || TvLayout.of(build(TvLayouts.Kind.NETWORK, AREAS[2], true)).bindings().isEmpty()
                 || TvLayout.of(build(TvLayouts.Kind.CLOCK, AREAS[2], false)).bindings().isEmpty()) {
             helper.fail("com dado, as peças de valor deviam ter ligação");
+        }
+        helper.succeed();
+    }
+
+    /**
+     * A vazão de um armazenamento chega por segundo: o layout Armazenamento a mostra pela unidade (por tick na
+     * energia, por segundo nos outros), nunca com o sufixo "/t" fixo sobre o número por segundo.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void layoutArmazenamentoMostraAVazaoNaUnidadeCerta(GameTestHelper helper) {
+        for (ResourceType type : TYPES) {
+            TvLayouts.Storage storage = new TvLayouts.Storage(STORAGE.pos(), type);
+            List<TvPiece> pieces = TvLayouts.build(TvLayouts.Kind.STORAGE, AREAS[3], key -> key, NETWORK, storage,
+                    TYPES);
+            TvUnit expected = type.ratePerTick() ? TvUnit.TICK : TvUnit.SECOND;
+            for (TvPiece piece : pieces) {
+                boolean rate = piece.type() == TvPieceType.VALUE && piece.binding().map(TvBinding::rate).orElse(false);
+                if (rate && (piece.format().unit() != expected || !piece.format().suffix().isEmpty())) {
+                    helper.fail(type + ": vazão com unidade " + piece.format().unit() + " e sufixo \""
+                            + piece.format().suffix() + "\"");
+                }
+            }
         }
         helper.succeed();
     }

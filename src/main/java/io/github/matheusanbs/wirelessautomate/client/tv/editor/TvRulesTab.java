@@ -6,13 +6,14 @@ import io.github.matheusanbs.wirelessautomate.menu.TvMenu;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.tv.TvBinding;
 import io.github.matheusanbs.wirelessautomate.tv.TvColor;
-import io.github.matheusanbs.wirelessautomate.tv.TvMetric;
 import io.github.matheusanbs.wirelessautomate.tv.TvPieceType;
 import io.github.matheusanbs.wirelessautomate.tv.TvRule;
 import io.github.matheusanbs.wirelessautomate.tv.TvRuleOp;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.UnaryOperator;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
@@ -29,6 +30,8 @@ final class TvRulesTab {
     /** O efeito que a ficha da regra mostra. */
     enum Effect { COLOR, BACKGROUND, BLINK, HIDE }
 
+    private static final List<TvRuleOp> OPS = List.of(TvRuleOp.values());
+    private static final List<Effect> EFFECTS = List.of(Effect.values());
     /** A largura dos botões da regra: o sprite de 16 px tem 2 px de folga de cada lado. */
     private static final int SMALL = 14;
 
@@ -58,7 +61,7 @@ final class TvRulesTab {
         String id = "rule" + i;
         TvRule rule = ctx.piece().rules().get(i);
         int y = form.y();
-        form.add(new TvControls.Label(form.font, id + ".if", 0, y + 4, TvForm.W - 3 * SMALL - 6, GuiPaint.MUTED,
+        form.add(new TvControls.Label(form.font, id + ".if", 0, y + 4, TvForm.W - 3 * SMALL - 6, TvControls.MUTED,
                 () -> TvPropsCtx.key(value ? "rules.if.value" : "rules.if.own")));
         form.add(new TvIconControls.IconButton(id + ".up", TvForm.W - 3 * SMALL - 2, y, SMALL, TvIcons.Icon.MOVE_UP,
                 TvPropsCtx.key("rules.up"), () -> ctx.change("rules.move", p -> p.withRules(swap(p.rules(), i, i - 1))))
@@ -75,10 +78,9 @@ final class TvRulesTab {
             form.label(id + ".for", TvPropsCtx.key("rules.for"));
         }
         y = form.y();
-        form.add(new TvControls.Cycle(form.font, id + ".op", 0, y, 84, () -> TvPropsCtx.key("rules.op."
-                + rule(ctx, i).op().name().toLowerCase(java.util.Locale.ROOT)), delta -> edit(ctx, i,
-                        r -> copy(r, TvDataTab.step(List.of(TvRuleOp.values()), r.op(), delta), null, null, null,
-                                null, null, null))));
+        form.add(new TvDropdown<>(form.font, id + ".op", 0, y, 84, form.popups, () -> OPS,
+                op -> TvPropsCtx.key("rules.op." + op.name().toLowerCase(Locale.ROOT)), () -> rule(ctx, i).op(),
+                op -> edit(ctx, i, r -> copy(r, op, null, null, null, null, null, null))));
         form.add(new TvTextField(form.font, id + ".value", 88, y, TvForm.W - 88, 12,
                 text -> text.matches("-?[0-9]*\\.?[0-9]*"), Component.literal("0"),
                 () -> number(rule(ctx, i).value()), text -> {
@@ -92,11 +94,11 @@ final class TvRulesTab {
         Effect effect = effect(rule);
         boolean colored = effect == Effect.COLOR || effect == Effect.BACKGROUND;
         y = form.y();
-        form.add(new TvControls.Label(form.font, id + ".then", 0, y + 2, 9, GuiPaint.MUTED,
+        form.add(new TvControls.Label(form.font, id + ".then", 0, y + 2, 9, TvControls.MUTED,
                 () -> TvPropsCtx.key("rules.then")));
-        form.add(new TvControls.Cycle(form.font, id + ".effect", 10, y, TvForm.W - 10 - (colored ? 30 : 0),
-                () -> effectName(effect(rule(ctx, i))), delta -> edit(ctx, i, r -> withEffect(r,
-                        TvDataTab.step(List.of(Effect.values()), effect(r), delta)))));
+        form.add(new TvDropdown<>(form.font, id + ".effect", 10, y, TvForm.W - 10 - (colored ? 30 : 0), form.popups,
+                () -> EFFECTS, TvRulesTab::effectName, () -> effect(rule(ctx, i)),
+                chosen -> edit(ctx, i, r -> withEffect(r, chosen))));
         if (effect == Effect.COLOR) {
             TvColorPicker.chip(form, ctx, id + ".color", TvForm.W - 28, y, 28, () -> rule(ctx, i).color().orElse(0),
                     c -> edit(ctx, i, r -> copy(r, null, null, null, Optional.of(c), null, null, null)));
@@ -118,20 +120,21 @@ final class TvRulesTab {
     /** A ligação própria da regra: a rede (ou "Sem dado") e, com ela, o tipo e a métrica. */
     private static void own(TvForm form, TvPropsCtx ctx, int i, TvRule rule) {
         String id = "rule" + i;
-        form.wideCycle(id + ".network", () -> networkName(ctx, rule(ctx, i)),
-                delta -> edit(ctx, i, r -> copy(r, null, null, Optional.ofNullable(nextNetwork(ctx, r, delta)), null,
-                        null, null, null)));
+        form.wideDropdown(id + ".network", () -> networks(ctx), network -> networkName(ctx, network),
+                () -> rule(ctx, i).bind().map(TvBinding::network), network -> edit(ctx, i, r -> copy(r, null, null,
+                        network.map(n -> TvDataTab.withNetwork(r.bind().orElse(null), n)), null, null, null, null)))
+                .none(Component.literal("?"));
         if (rule.bind().isEmpty()) {
             return;
         }
-        form.wideCycle(id + ".type",
-                () -> rule(ctx, i).bind().map(b -> ResourceStyle.name(b.type())).orElse(Component.empty()),
-                delta -> edit(ctx, i, r -> copy(r, null, null, r.bind().map(b -> new TvBinding(b.network(),
-                        TvDataTab.step(LoadedTypes.LIST, b.type(), delta), b.metric())), null, null, null, null)));
-        form.wideCycle(id + ".metric",
-                () -> rule(ctx, i).bind().map(b -> TvDataTab.metricName(b.metric())).orElse(Component.empty()),
-                delta -> edit(ctx, i, r -> copy(r, null, null, r.bind().map(b -> new TvBinding(b.network(), b.type(),
-                        TvDataTab.step(List.of(TvMetric.values()), b.metric(), delta))), null, null, null, null)));
+        form.wideDropdown(id + ".type", () -> LoadedTypes.LIST, ResourceStyle::name,
+                () -> rule(ctx, i).bind().map(TvBinding::type).orElse(null), type -> edit(ctx, i, r -> copy(r, null,
+                        null, r.bind().map(b -> new TvBinding(b.network(), type, b.metric())), null, null, null,
+                        null)));
+        form.wideDropdown(id + ".metric", () -> TvDataTab.METRICS, TvDataTab::metricName,
+                () -> rule(ctx, i).bind().map(TvBinding::metric).orElse(null), metric -> edit(ctx, i, r -> copy(r,
+                        null, null, r.bind().map(b -> new TvBinding(b.network(), b.type(), metric)), null, null, null,
+                        null)));
     }
 
     /** O resumo da estrutura das regras da peça: muda quando uma regra entra, sai, troca de efeito ou de ligação. */
@@ -169,7 +172,7 @@ final class TvRulesTab {
     }
 
     static Component effectName(Effect effect) {
-        return TvPropsCtx.key("rules.effect." + effect.name().toLowerCase(java.util.Locale.ROOT));
+        return TvPropsCtx.key("rules.effect." + effect.name().toLowerCase(Locale.ROOT));
     }
 
     /** A regra {@code i} da peça escolhida agora (a lista pode ter mudado desde que a aba foi montada). */
@@ -227,35 +230,26 @@ final class TvRulesTab {
                 : Double.toString(value);
     }
 
-    /** O nome da rede da ligação da regra, ou "Sem dado". */
-    private static Component networkName(TvPropsCtx ctx, TvRule rule) {
-        if (rule.bind().isEmpty()) {
+    /** As escolhas de rede da ligação da regra: "Sem dado" (vazio) e as redes do jogador. */
+    private static List<Optional<UUID>> networks(TvPropsCtx ctx) {
+        List<Optional<UUID>> out = new ArrayList<>(ctx.networks().size() + 1);
+        out.add(Optional.empty());
+        for (TvMenu.NetworkChoice choice : ctx.networks()) {
+            out.add(Optional.of(choice.id()));
+        }
+        return out;
+    }
+
+    /** O nome de uma escolha de rede: "Sem dado" ou o nome da rede. */
+    private static Component networkName(TvPropsCtx ctx, Optional<UUID> network) {
+        if (network.isEmpty()) {
             return TvPropsCtx.key("rules.nodata");
         }
         for (TvMenu.NetworkChoice choice : ctx.networks()) {
-            if (choice.id().equals(rule.bind().get().network())) {
+            if (choice.id().equals(network.get())) {
                 return Component.literal(choice.name());
             }
         }
         return Component.literal("?");
-    }
-
-    /**
-     * A ligação depois de {@code delta} passos na lista "Sem dado" e as redes: da posição da rede de agora; "Sem dado"
-     * dá {@code null} (sem ligação).
-     */
-    private static @Nullable TvBinding nextNetwork(TvPropsCtx ctx, TvRule rule, int delta) {
-        List<TvMenu.NetworkChoice> networks = ctx.networks();
-        int at = -1;
-        for (int k = 0; k < networks.size(); k++) {
-            if (rule.bind().isPresent() && networks.get(k).id().equals(rule.bind().get().network())) {
-                at = k;
-            }
-        }
-        int next = Math.floorMod(at + 1 + delta, networks.size() + 1) - 1;
-        if (next < 0) {
-            return null;
-        }
-        return TvDataTab.withNetwork(rule.bind().orElse(null), networks.get(next).id());
     }
 }

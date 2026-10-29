@@ -5,6 +5,7 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eUi.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
+import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.GuiTheme;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.client.tv.TvClientValues;
@@ -44,10 +45,11 @@ import org.lwjgl.glfw.GLFW;
 /**
  * A Tela de Sinal no e2e: uma parede atrás do jogador com a Tela (para o norte), uma tocha na parede e, ao lado, uma
  * Tela 1 × 1 vazia junto de um Reparador. As máquinas e a rede são as dos Fluxos ({@link E2eFlowsSteps#machines}).
- * Pede 4 × 2 com ↗ e aplica (o servidor confere), mostra o problema da tocha com 6 × 2, monta e salva um layout no
- * editor ({@link E2eTvEditorSteps}) e o fotografa na parede, põe o Painel da rede em Itens pelo servidor, espera um
- * número maior que zero chegar e fotografa a Tela no mundo de frente, de longe e de lado, a pequena em 3/4 e, com um
- * layout de branco opaco, branco a 50% e cinza 50% opaco, a transparência de perto.
+ * Pede 4 × 2 com ↗ e aplica (o servidor confere), mostra o problema da tocha com 6 × 2, convida na aba Acesso
+ * ({@link E2eTvAccessSteps}), monta e salva um layout no editor ({@link E2eTvEditorSteps}) e o fotografa na parede,
+ * põe o Painel da rede em Itens pelo servidor, espera um número maior que zero chegar e fotografa a Tela no mundo de
+ * frente, de longe e de lado, a pequena em 3/4 e, com um layout de branco opaco, branco a 50% e cinza 50% opaco, a
+ * transparência de perto.
  */
 final class E2eTvSteps {
     /** O olho a 4 blocos da frente da Tela; a frente fica a 13/16 do bloco, como a forma do bloco. */
@@ -63,6 +65,8 @@ final class E2eTvSteps {
     private static BlockPos torch = BlockPos.ZERO;
     private static final boolean[] SAVED = new boolean[2];
     private static Vec3 savedPos = Vec3.ZERO;
+    /** O {@code tv.maxImagePixels} de antes da suíte, devolvido no fim; {@code null} sem nada a devolver. */
+    private static Integer savedImagePixels;
 
     private E2eTvSteps() {
     }
@@ -70,11 +74,16 @@ final class E2eTvSteps {
     static void tvSteps(List<Step> list) {
         UUID playerId = Minecraft.getInstance().player.getUUID();
         list.add(close("Tela: fechar a tela de antes"));
+        list.add(defaultCaps());
         list.add(E2eFlowsSteps.machines("Tela: máquinas e roteadores dos Fluxos", true));
         list.add(build(playerId));
         list.add(open("Tela: abrir"));
         sizeSteps(list, "");
+        E2eTvAccessSteps.accessSteps(list, () -> tv);
         E2eTvEditorSteps.editorSteps(list, () -> tv);
+        E2eTvPixelSteps.pixelSteps(list);
+        E2eTvArtSteps.artSteps(list, playerId, () -> tv);
+        E2eTvAnimSteps.animSteps(list, playerId, () -> tv);
         E2eVariants.escuro(list, () -> {
             list.add(E2eDarkSteps.themeClick("Tela: escuro", GuiTheme.DARK));
             list.add(tab("Tela: aba Tamanho no escuro", TvScreen.Tab.SIZE));
@@ -103,6 +112,9 @@ final class E2eTvSteps {
         E2eTvDrawSteps.drawSteps(list, playerId, () -> tv);
         list.add(hideGui(playerId, false));
         E2eTvPiecesSteps.piecesSteps(list, playerId, () -> tv, () -> origin);
+        E2eTvImageSteps.imageSteps(list, playerId, () -> tv, () -> origin);
+        E2eTvPictureSteps.pictureSteps(list, playerId, () -> tv);
+        E2eTvGifSteps.gifSteps(list, playerId, () -> tv);
         E2eVariants.pt(list, () -> {
             list.add(language("pt_br"));
             list.add(open("Tela: abrir em pt"));
@@ -225,8 +237,27 @@ final class E2eTvSteps {
     }
 
     /** Tira o que a suíte pôs (sem largar itens) e devolve o jogador ao lugar de antes. */
+    /**
+     * O teto de pixels das artes no padrão durante a suíte: o arquivo da config do {@code run/} guarda o valor que
+     * estava quando ele foi criado (um padrão antigo fica lá), e as capturas mostram o de um mundo novo. Só na
+     * memória, devolvido no fim ({@link #cleanUp}).
+     */
+    private static Step defaultCaps() {
+        return new Step("Tela: teto de pixels no padrão", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            if (savedImagePixels == null) {
+                savedImagePixels = Config.TV_MAX_IMAGE_PIXELS.get();
+            }
+            Config.TV_MAX_IMAGE_PIXELS.set(Config.TV_MAX_IMAGE_PIXELS.getDefault());
+            return null;
+        }), () -> Config.tvMaxImagePixels() == Config.TV_MAX_IMAGE_PIXELS.getDefault(), () -> "config");
+    }
+
     private static Step cleanUp(UUID playerId) {
         return new Step("Tela: tirar a parede e voltar", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            if (savedImagePixels != null) {
+                Config.TV_MAX_IMAGE_PIXELS.set(savedImagePixels);
+                savedImagePixels = null;
+            }
             ServerPlayer player = server.getPlayerList().getPlayer(playerId);
             ServerLevel level = player.serverLevel();
             E2eRepairerSteps.remove(level, repairer);
@@ -251,7 +282,7 @@ final class E2eTvSteps {
         }
     }
 
-    private static Step open(String name) {
+    static Step open(String name) {
         return new Step(name, STEP_TIMEOUT_MS, () -> {
             if (Minecraft.getInstance().screen != null) {
                 throw new StepFailure("ainda há uma tela aberta: " + describe(Minecraft.getInstance().screen));

@@ -17,7 +17,7 @@ import org.jetbrains.annotations.Nullable;
  * as últimas cores usadas ({@link TvRecentColors}). O quadrado é pintado por colunas de degradê vertical (o brilho é
  * linear, então cada coluna vai da cor cheia ao preto), sem textura; as cores das colunas só são refeitas quando o
  * matiz muda. Só existe aberta; cada mudança vai ao {@code set} na hora, e ao fechar a cor fixa escolhida entra nas
- * recentes.
+ * recentes. Sem tema (o editor de pixel art, cuja paleta guarda ARGB fixo), a linha "do tema" some e o resto sobe.
  */
 final class TvColorPopup implements TvPopup {
     static final int W = 124;
@@ -42,6 +42,8 @@ final class TvColorPopup implements TvPopup {
     private final int y;
     private final boolean allowNone;
     private final boolean alpha;
+    /** Quanto o conteúdo sobe sem a linha das cores do tema. */
+    private final int shift;
     private final int[] themeColors = new int[6];
     private final IntConsumer set;
     private final int initial;
@@ -59,24 +61,26 @@ final class TvColorPopup implements TvPopup {
     private Drag drag = Drag.NONE;
     private boolean picking;
 
-    TvColorPopup(Font font, TvRect anchor, TvRect bounds, int value, boolean allowNone, boolean alpha, TvTheme theme,
-            IntConsumer set) {
+    /** Com {@code theme} nulo, sem a linha das cores do tema. */
+    TvColorPopup(Font font, TvRect anchor, TvRect bounds, int value, boolean allowNone, boolean alpha,
+            @Nullable TvTheme theme, IntConsumer set) {
         this.font = font;
         this.allowNone = allowNone;
         this.alpha = alpha;
         this.set = set;
         this.initial = value;
+        this.shift = theme == null ? SV_Y - THEME_Y : 0;
         int left = anchor.x() - W - 4;
         if (left < bounds.x()) {
             left = anchor.right() + 4;
         }
         this.x = Mth.clamp(left, bounds.x(), Math.max(bounds.x(), bounds.right() - W));
-        this.y = Mth.clamp(anchor.y(), bounds.y(), Math.max(bounds.y(), bounds.bottom() - H));
-        for (int i = 0; i < 6; i++) {
+        this.y = Mth.clamp(anchor.y(), bounds.y(), Math.max(bounds.y(), bounds.bottom() - height()));
+        for (int i = 0; theme != null && i < 6; i++) {
             themeColors[i] = theme.color(i + 1) | 0xFF000000;
         }
         take(value);
-        hex = new TvTextField(font, "color.hex", PAD, ROW2_Y, 70, 9, text -> text.matches("#?[0-9a-fA-F]*"),
+        hex = new TvTextField(font, "color.hex", PAD, ROW2_Y - shift, 70, 9, text -> text.matches("#?[0-9a-fA-F]*"),
                 Component.literal("#RRGGBB"), () -> TvColor.hex(this.value), this::typed);
         hex.place(x, y);
         themeLabel = GuiText.fit(font, TvEditorText.key("color.from_theme"), W - 2 * PAD);
@@ -128,7 +132,16 @@ final class TvColorPopup implements TvPopup {
     }
 
     private int svY() {
-        return y + SV_Y;
+        return y + SV_Y - shift;
+    }
+
+    private int height() {
+        return H - shift;
+    }
+
+    /** Uma linha fixa da janela (a do campo, a do conta-gotas, as recentes), já subida sem a linha do tema. */
+    private int row(int offset) {
+        return y + offset - shift;
     }
 
     private int hueX() {
@@ -155,7 +168,7 @@ final class TvColorPopup implements TvPopup {
 
     @Override
     public boolean contains(double mouseX, double mouseY) {
-        return in(mouseX, mouseY, x, y, W, H);
+        return in(mouseX, mouseY, x, y, W, height());
     }
 
     private void refreshColumns() {
@@ -173,9 +186,11 @@ final class TvColorPopup implements TvPopup {
         refreshColumns();
         g.pose().pushPose();
         g.pose().translate(0, 0, 400);
-        GuiPaint.box(g, x, y, W, H, GuiPaint.BUTTON, GuiPaint.BUTTON_BORDER);
-        GuiText.draw(g, font, themeLabel, x + PAD, y + 4, GuiPaint.MUTED);
-        for (int i = 0; i < 6; i++) {
+        GuiPaint.box(g, x, y, W, height(), GuiPaint.BUTTON, GuiPaint.BUTTON_BORDER);
+        if (shift == 0) {
+            GuiText.draw(g, font, themeLabel, x + PAD, y + 4, GuiPaint.MUTED);
+        }
+        for (int i = 0; shift == 0 && i < 6; i++) {
             int left = x + PAD + i * (SWATCH + 3);
             fillSwatch(g, left, y + THEME_Y, SWATCH, 11, themeColors[i], value == i + 1, mouseX, mouseY);
         }
@@ -193,19 +208,19 @@ final class TvColorPopup implements TvPopup {
             alphaStrip(g);
         }
         hex.render(g, mouseX, mouseY);
-        boolean eyeOver = in(mouseX, mouseY, eyeX(), y + EYE_Y, TvIcons.SIZE, TvIcons.SIZE);
-        GuiPaint.box(g, eyeX(), y + EYE_Y, TvIcons.SIZE, TvIcons.SIZE, picking ? GuiPaint.SELECTED : GuiPaint.BUTTON,
+        boolean eyeOver = in(mouseX, mouseY, eyeX(), row(EYE_Y), TvIcons.SIZE, TvIcons.SIZE);
+        GuiPaint.box(g, eyeX(), row(EYE_Y), TvIcons.SIZE, TvIcons.SIZE, picking ? GuiPaint.SELECTED : GuiPaint.BUTTON,
                 picking ? GuiPaint.ACCENT : eyeOver ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
-        TvIcons.draw(g, TvIcons.Icon.EYEDROPPER, eyeX(), y + EYE_Y);
+        TvIcons.draw(g, TvIcons.Icon.EYEDROPPER, eyeX(), row(EYE_Y));
         if (allowNone) {
-            fillSwatch(g, noneX(), y + ROW2_Y, 11, 11, 0, value == 0, mouseX, mouseY);
+            fillSwatch(g, noneX(), row(ROW2_Y), 11, 11, 0, value == 0, mouseX, mouseY);
         }
         if (TvRecentColors.size() > 0) {
-            GuiText.draw(g, font, recentLabel, x + PAD, y + RECENT_Y - 10, GuiPaint.MUTED);
+            GuiText.draw(g, font, recentLabel, x + PAD, row(RECENT_Y) - 10, GuiPaint.MUTED);
         }
         for (int i = 0; i < TvRecentColors.size(); i++) {
             int color = TvRecentColors.get(i);
-            fillSwatch(g, x + PAD + i * (RECENT + 2), y + RECENT_Y, RECENT, RECENT, color, color == value, mouseX,
+            fillSwatch(g, x + PAD + i * (RECENT + 2), row(RECENT_Y), RECENT, RECENT, color, color == value, mouseX,
                     mouseY);
         }
         g.pose().popPose();
@@ -270,7 +285,7 @@ final class TvColorPopup implements TvPopup {
             return;
         }
         hex.blur();
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; shift == 0 && i < 6; i++) {
             if (in(mx, my, x + PAD + i * (SWATCH + 3), y + THEME_Y, SWATCH, 11)) {
                 value = i + 1;
                 set.accept(value);
@@ -287,15 +302,15 @@ final class TvColorPopup implements TvPopup {
         } else if (alpha && in(mx, my, alphaX(), svY(), STRIP, SV_H)) {
             drag = Drag.ALPHA;
             dragTo(mx, my);
-        } else if (in(mx, my, eyeX(), y + EYE_Y, TvIcons.SIZE, TvIcons.SIZE)) {
+        } else if (in(mx, my, eyeX(), row(EYE_Y), TvIcons.SIZE, TvIcons.SIZE)) {
             picking = !picking;
-        } else if (allowNone && in(mx, my, noneX(), y + ROW2_Y, 11, 11)) {
+        } else if (allowNone && in(mx, my, noneX(), row(ROW2_Y), 11, 11)) {
             value = 0;
             set.accept(0);
             hex.refresh();
         } else {
             for (int i = 0; i < TvRecentColors.size(); i++) {
-                if (in(mx, my, x + PAD + i * (RECENT + 2), y + RECENT_Y, RECENT, RECENT)) {
+                if (in(mx, my, x + PAD + i * (RECENT + 2), row(RECENT_Y), RECENT, RECENT)) {
                     applyColor(TvRecentColors.get(i));
                     return;
                 }
@@ -365,7 +380,7 @@ final class TvColorPopup implements TvPopup {
 
     @Override
     public @Nullable Component tooltip(double mx, double my) {
-        return in(mx, my, eyeX(), y + EYE_Y, TvIcons.SIZE, TvIcons.SIZE) ? eyeTip : null;
+        return in(mx, my, eyeX(), row(EYE_Y), TvIcons.SIZE, TvIcons.SIZE) ? eyeTip : null;
     }
 
     @Override
@@ -396,7 +411,7 @@ final class TvColorPopup implements TvPopup {
     }
 
     int[] eyeCenter() {
-        return new int[] {eyeX() + TvIcons.SIZE / 2, y + EYE_Y + TvIcons.SIZE / 2};
+        return new int[] {eyeX() + TvIcons.SIZE / 2, row(EYE_Y) + TvIcons.SIZE / 2};
     }
 
     int value() {

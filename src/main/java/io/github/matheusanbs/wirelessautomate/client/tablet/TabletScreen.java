@@ -13,6 +13,7 @@ import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.client.ResizeGrip;
 import io.github.matheusanbs.wirelessautomate.client.ThemeToggle;
+import io.github.matheusanbs.wirelessautomate.client.access.AccessPanel;
 import io.github.matheusanbs.wirelessautomate.client.router.NodePanel;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
@@ -225,7 +226,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     }
 
     /** O acesso à rede escolhida (convidados e times), para os ganchos do e2e e das capturas. */
-    public AccessSection access() {
+    public AccessPanel access() {
         return networks.access();
     }
 

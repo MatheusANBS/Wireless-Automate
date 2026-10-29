@@ -20,6 +20,7 @@ import io.github.matheusanbs.wirelessautomate.tv.TvLayout;
 import io.github.matheusanbs.wirelessautomate.tv.TvMetric;
 import io.github.matheusanbs.wirelessautomate.tv.TvPiece;
 import io.github.matheusanbs.wirelessautomate.tv.TvPieceType;
+import io.github.matheusanbs.wirelessautomate.tv.TvPixelArt;
 import io.github.matheusanbs.wirelessautomate.tv.TvRule;
 import io.github.matheusanbs.wirelessautomate.tv.TvRuleOp;
 import io.github.matheusanbs.wirelessautomate.tv.TvStyle;
@@ -29,6 +30,7 @@ import io.netty.buffer.Unpooled;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 import java.util.UUID;
 import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
@@ -371,13 +373,23 @@ public final class TvEditGameTests {
     }
 
     @GameTest(template = "empty", timeoutTicks = 100)
-    public static void layoutAcimaDe64KbNaoCabeNoPacote(GameTestHelper helper) {
+    public static void layoutAcimaDe256KbNaoCabeNoPacote(GameTestHelper helper) {
         List<TvPiece> pieces = new ArrayList<>();
         for (int i = 0; i < TvLayout.HARD_CAP; i++) {
             pieces.add(text(0, 0, 30, 10, "x".repeat(TvStyle.MAX_TEXT)));
         }
-        TvLayout huge = TvLayout.of(pieces);
-        helper.assertTrue(TvLayoutPayload.encodedSize(huge) > TvLayoutPayload.MAX_BYTES, "o teste deveria passar de 64 KB");
+        // As peças dão uns 100 KB; 24 artes de 128 × 128 (8 KB cada em meio byte) passam dos 256 KB.
+        List<TvPixelArt> arts = new ArrayList<>();
+        Random random = new Random(3);
+        for (int i = 0; i < 24; i++) {
+            byte[] pixels = new byte[128 * 128];
+            for (int p = 0; p < pixels.length; p++) {
+                pixels[p] = (byte) random.nextInt(16);
+            }
+            arts.add(new TvPixelArt(UUID.randomUUID(), "a" + i, 128, 128, new int[16], pixels));
+        }
+        TvLayout huge = TvLayout.of(pieces, TvTheme.DEFAULT, TvBackground.DEFAULT, false, arts);
+        helper.assertTrue(TvLayoutPayload.encodedSize(huge) > TvLayoutPayload.MAX_BYTES, "o teste deveria passar de 256 KB");
         RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), helper.getLevel().registryAccess());
         boolean refused = false;
         try {
@@ -385,7 +397,7 @@ public final class TvEditGameTests {
         } catch (RuntimeException e) {
             refused = true;
         }
-        helper.assertTrue(refused, "o codec deve recusar acima de 64 KB");
+        helper.assertTrue(refused, "o codec deve recusar acima de 256 KB");
         helper.succeed();
     }
 }

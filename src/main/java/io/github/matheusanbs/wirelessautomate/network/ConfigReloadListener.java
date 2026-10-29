@@ -4,6 +4,7 @@ import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorManager;
 import io.github.matheusanbs.wirelessautomate.storage.SourceTankLevels;
+import io.github.matheusanbs.wirelessautomate.tv.TvImageState;
 import java.util.concurrent.atomic.AtomicInteger;
 import net.minecraft.server.MinecraftServer;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -47,6 +48,7 @@ public final class ConfigReloadListener {
             NetworkManager.configChanged();
             SourceTankLevels.configChanged(); // os níveis dos Tanques de Source seguem a capacidade da config
             ResonatorManager.configChanged(); // a interferência guardada segue o raio, a penalidade e o teto
+            TvImageState.configChanged(); // as Telas à vista seguem o tv.images.enabled na hora
             MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
             if (server == null || !server.isSameThread()) {
                 FILE_RELOADS.incrementAndGet();

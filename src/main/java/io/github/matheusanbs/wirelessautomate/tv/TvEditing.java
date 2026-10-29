@@ -9,8 +9,10 @@ import io.github.matheusanbs.wirelessautomate.packet.TvLayoutAckPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TvLayoutPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TvSizePayload;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -65,9 +67,24 @@ public final class TvEditing {
     }
 
     /**
-     * Salva o layout do editor: só dono ou operador; peças e ligações dentro dos tetos da config (senão recusa);
-     * cada caixa cortada à área; ligação a rede que o jogador não pode usar ou a tipo não carregado sai, a peça
-     * fica. Avisa na barra de ação.
+     * Salva o layout do editor: só quem edita a Tela ({@link TvBlockEntity#canEdit}: o dono, um operador ou alguém da
+     * lista de acesso); peças, ligações e artes apontadas ({@link TvLayout#MAX_IMAGES}) dentro dos tetos (senão
+     * recusa); cada caixa cortada à área.
+     * <p>
+     * As ligações: uma que a Tela já tem fica, seja quem for que salva (a Tela já a lê pela lista de acesso,
+     * {@link TvAccess#canRead}; assim o salvar de um convidado não larga a ligação do dono à rede privada dele, nem o
+     * do dono a de um convidado). Uma nova ou mudada vale só se quem salva pode usar a rede; a de tipo não carregado
+     * ou de armazenamento desligado sai, e a peça fica.
+     * <p>
+     * As imagens: a arte que uma peça ou o fundo aponta e o layout mandado não traz vem da cópia que a Tela já tem
+     * ({@link TvLayout#withMissingImagesFrom}: o editor pode não ter recebido a arte ainda); depois
+     * ({@link TvLayout#prunedImages}) a Imagem que aponta uma arte que não existe perde o id e vira a Imagem sem arte,
+     * o mosaico sem arte volta ao fundo do tema, a arte que ninguém usa sai (a inválida o codec já largou ao ler) e,
+     * acima de {@code tv.maxImagePixels} somados, o layout é recusado como grande demais. O {@code tv.maxLayoutBytes}
+     * mede o layout como vai ao cliente, sem os pixels ({@link TvLayoutPayload#clientSize}); as referências calculadas
+     * para medir vão à Tela, que não as calcula de novo. As imagens enviadas vêm do armazém, não do que o cliente diz
+     * ({@link #pictures}), e acima de {@code tv.images.maxPerScreen} distintas o layout é recusado. Avisa na barra de
+     * ação.
      */
     public static LayoutResult applyLayout(ServerPlayer player, TvBlockEntity tv, TvLayout layout) {
         if (!tv.canEdit(player)) {
@@ -75,19 +92,36 @@ public final class TvEditing {
             return LayoutResult.DENIED;
         }
         if (layout.pieces().size() > Config.tvMaxElements() || layout.bindings().size() > Config.tvMaxBindings()
-                || TvLayoutPayload.encodedSize(layout) > Config.tvMaxLayoutBytes()) {
+                || layout.referencedImageCount() > TvLayout.MAX_IMAGES) {
             player.displayClientMessage(Component.translatable("message.wirelessautomate.tv.layout_too_big"), true);
             return LayoutResult.TOO_BIG;
         }
+        TvLayout resolved = pictures(player, tv, layout.withMissingImagesFrom(tv.layout())).prunedImages();
+        if (resolved.referencedPictureCount() > TvImageConfig.limits(player.server).maxPerScreen()) {
+            player.displayClientMessage(Component.translatable("message.wirelessautomate.tv.layout_pictures_too_many",
+                    TvImageConfig.limits(player.server).maxPerScreen()), true);
+            return LayoutResult.TOO_BIG;
+        }
+        List<TvArtRef> refs = TvArtRef.of(resolved);
+        if (TvLayoutPayload.clientSize(resolved, refs) > Config.tvMaxLayoutBytes()) {
+            player.displayClientMessage(Component.translatable("message.wirelessautomate.tv.layout_too_big"), true);
+            return LayoutResult.TOO_BIG;
+        }
+        if (resolved.imagePixels() > Config.tvMaxImagePixels()) {
+            player.displayClientMessage(Component.translatable("message.wirelessautomate.tv.layout_images_too_big",
+                    Config.tvMaxImagePixels()), true);
+            return LayoutResult.TOO_BIG;
+        }
         NetworkSavedData data = NetworkSavedData.get(player.server);
+        Set<TvBinding> kept = new HashSet<>(tv.layout().bindings());
         int[] dropped = {0};
-        List<TvPiece> pieces = new ArrayList<>(layout.pieces().size());
-        for (TvPiece piece : layout.pieces()) {
-            Optional<TvBinding> own = allowed(data, player, tv, piece.binding(), dropped);
+        List<TvPiece> pieces = new ArrayList<>(resolved.pieces().size());
+        for (TvPiece piece : resolved.pieces()) {
+            Optional<TvBinding> own = allowed(data, player, tv, kept, piece.binding(), dropped);
             List<TvRule> rules = new ArrayList<>(piece.rules().size());
             boolean rulesChanged = false;
             for (TvRule rule : piece.rules()) {
-                Optional<TvBinding> bind = allowed(data, player, tv, rule.bind(), dropped);
+                Optional<TvBinding> bind = allowed(data, player, tv, kept, rule.bind(), dropped);
                 if (bind.equals(rule.bind())) {
                     rules.add(rule);
                 } else {
@@ -99,7 +133,7 @@ public final class TvEditing {
             pieces.add(rulesChanged ? fixed.withRules(rules) : fixed);
         }
         int before = tv.revision();
-        tv.setLayout(layout.withPieces(pieces));
+        tv.setLayout(resolved.withPieces(pieces), refs);
         boolean changed = tv.revision() != before;
         Component message = dropped[0] == 0
                 ? Component.translatable("message.wirelessautomate.tv.layout_saved")
@@ -111,11 +145,34 @@ public final class TvEditing {
     }
 
     /**
-     * A ligação se vale: numa rede, o jogador pode usá-la e o tipo está carregado; num armazenamento, ele está ligado
-     * à Tela e o tipo está carregado; o relógio sempre vale. Senão vazia, contando uma saída.
+     * As imagens enviadas do layout pelo que o armazém sabe delas ({@link TvImageStore#resolve}: tamanho e autor do
+     * armazém; a que ele não tem sai, e a peça fica sem imagem). Com {@code tv.images.enabled} desligado, só ficam as
+     * que a Tela já tinha.
+     */
+    private static TvLayout pictures(ServerPlayer player, TvBlockEntity tv, TvLayout layout) {
+        if (layout.pictures().isEmpty()) {
+            return layout;
+        }
+        TvLayout resolved = TvImageStore.get(player.server).resolve(layout);
+        if (TvImageConfig.enabled()) {
+            return resolved;
+        }
+        List<TvPicture> kept = new ArrayList<>(resolved.pictures().size());
+        for (TvPicture picture : resolved.pictures()) {
+            if (tv.layout().picture(picture.id()) != null) {
+                kept.add(picture);
+            }
+        }
+        return kept.size() == resolved.pictures().size() ? resolved : resolved.withPictures(kept);
+    }
+
+    /**
+     * A ligação se vale: numa rede, a Tela já tem esta ligação ({@code kept}) ou o jogador pode usar a rede, e o tipo
+     * está carregado; num armazenamento, ele está ligado à Tela e o tipo está carregado; o relógio sempre vale. Senão
+     * vazia, contando uma saída.
      */
     private static Optional<TvBinding> allowed(NetworkSavedData data, ServerPlayer player, TvBlockEntity tv,
-            Optional<TvBinding> binding, int[] dropped) {
+            Set<TvBinding> kept, Optional<TvBinding> binding, int[] dropped) {
         if (binding.isEmpty()) {
             return binding;
         }
@@ -123,7 +180,8 @@ public final class TvEditing {
         boolean valid = switch (value.source()) {
             case NETWORK -> {
                 WaNetwork found = data.network(value.network());
-                yield found != null && found.canUse(player.getUUID(), false) && LoadedTypes.contains(value.type());
+                yield found != null && (kept.contains(value) || found.canUse(player.getUUID(), false))
+                        && LoadedTypes.contains(value.type());
             }
             case STORAGE -> tv.hasLink(value.storage().pos()) && LoadedTypes.contains(value.type());
             case CLOCK -> true;
@@ -154,6 +212,10 @@ public final class TvEditing {
         GATE.forget(player);
         SAVE_GATE.forget(player);
         TvLibraryActions.forget(player);
+        TvArtSender.forget(player);
+        TvPictureSender.forget(player);
+        TvImageUploads.forget(player);
+        TvAccessActions.forget(player);
     }
 
     /** Esquece todas as janelas (parada do servidor). */
@@ -161,6 +223,7 @@ public final class TvEditing {
         GATE.clear();
         SAVE_GATE.clear();
         TvLibraryActions.reset();
+        TvAccessActions.reset();
     }
 
     /**

@@ -1,6 +1,8 @@
 package io.github.matheusanbs.wirelessautomate.client.tv.editor;
 
 import io.github.matheusanbs.wirelessautomate.client.ResourceStyle;
+import io.github.matheusanbs.wirelessautomate.tv.TvLibraryPicture;
+import io.github.matheusanbs.wirelessautomate.tv.TvPicture;
 import io.github.matheusanbs.wirelessautomate.tv.TvPiece;
 import io.github.matheusanbs.wirelessautomate.tv.TvPieceType;
 import net.minecraft.network.chat.Component;
@@ -22,6 +24,28 @@ final class TvEditorText {
      */
     static Component readyName(String stored) {
         return Component.translatable("gui.wirelessautomate." + stored);
+    }
+
+    /** O tamanho de uma imagem enviada, com "GIF" na animada (a lista, que tem pouco espaço). */
+    static Component pictureSize(TvPicture picture) {
+        return picture.animated() ? key("pictures.size.gif", picture.width(), picture.height())
+                : key("pictures.size", picture.width(), picture.height());
+    }
+
+    /** O mesmo com o número de quadros do GIF (as dicas). */
+    static Component pictureSizeLong(TvPicture picture) {
+        return picture.animated() ? key("pictures.size.gif.long", picture.width(), picture.height(), picture.frames())
+                : key("pictures.size", picture.width(), picture.height());
+    }
+
+    /** O nome que o jogador deu à imagem na biblioteca, ou o padrão se ela não está lá. */
+    static String pictureName(TvPicture picture) {
+        for (TvLibraryPicture entry : TvLibraryClient.pictures()) {
+            if (entry.picture().hash().equals(picture.hash())) {
+                return entry.name();
+            }
+        }
+        return key("pictures.unnamed").getString();
     }
 
     static Component typeName(TvPieceType type) {

@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.tv;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -37,6 +38,11 @@ public final class TvLoaded {
     /** Quantas Telas do servidor estão carregadas. */
     public static int serverCount() {
         return SERVER.size();
+    }
+
+    /** Todas as Telas carregadas do servidor; só leitura, não mexa durante a iteração. */
+    public static Collection<TvBlockEntity> serverScreens() {
+        return Collections.unmodifiableSet(SERVER);
     }
 
     /** As Telas do servidor da fase; não mexa durante a iteração. */

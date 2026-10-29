@@ -8,6 +8,7 @@ import io.github.matheusanbs.wirelessautomate.compat.sodium.SodiumSprites;
 import io.github.matheusanbs.wirelessautomate.tv.TvArea;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlock;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlockEntity;
+import io.github.matheusanbs.wirelessautomate.tv.TvPicture;
 import it.unimi.dsi.fastutil.ints.IntArrayFIFOQueue;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -47,8 +48,8 @@ import org.joml.Matrix4f;
  * reaproveitados, para o tipo de render memorizado por nome não crescer sem limite. Só na thread do cliente.
  */
 public final class TvCanvases {
-    private static final int MAX_PER_FRAME = 4;
-    private static final long FRAME_PIXELS = 4_000_000L;
+    private static final int MAX_PER_FRAME = 8;
+    private static final long FRAME_PIXELS = 8_000_000L;
     private static final int ALLOC_WEIGHT = 2;
     private static final int EVAL_TICKS = 10;
     private static final int SEEN_TICKS = 20;
@@ -136,9 +137,11 @@ public final class TvCanvases {
 
     /**
      * No começo de cada quadro, antes do jogo desenhar: redesenha as Telas sujas da frente da fila enquanto couberem
-     * em {@link #FRAME_PIXELS} e {@link #MAX_PER_FRAME}; a primeira sempre passa.
+     * em {@link #FRAME_PIXELS} e {@link #MAX_PER_FRAME}; a primeira sempre passa. Antes, a faixa da vez de uma imagem
+     * enviada que está subindo ({@link TvPictureTextures#onFrame}).
      */
     public static void onFrame() {
+        TvPictureTextures.onFrame();
         if (measureFramesForTests) {
             long now = System.nanoTime();
             if (lastFrameNanos != 0) {
@@ -149,6 +152,7 @@ public final class TvCanvases {
         if (SodiumSprites.AVAILABLE && Minecraft.getInstance().level != null) {
             TvTimed.markIconSprites(Minecraft.getInstance().level.getGameTime());
         }
+        TvTimed.animateArts();
         if (DIRTY.isEmpty()) {
             return;
         }
@@ -199,7 +203,7 @@ public final class TvCanvases {
             } else {
                 BLINKING.remove(pos);
             }
-            TvTimed.track(pos, canvas.graphing, canvas.clocking, canvas.iconing);
+            TvTimed.track(pos, canvas.graphing, canvas.clocking, canvas.iconing, canvas.gifing, canvas.artNext);
             paintsForTests++;
             paintNanosForTests += spent;
             maxPaintNanosForTests = Math.max(maxPaintNanosForTests, spent);
@@ -252,11 +256,21 @@ public final class TvCanvases {
     }
 
     /**
-     * A cada tick do cliente, com alguma imagem: confere a qualidade e o idioma (mudados, tudo fica sujo e a
+     * A cada tick do cliente (antes, as varreduras das texturas e das artes, {@link TvArtTextures} e
+     * {@link TvArtCache}), com alguma imagem: confere a qualidade e o idioma (mudados, tudo fica sujo e a
      * qualidade nova escolhe a resolução de novo), a cada {@link #EVAL_TICKS} avalia a resolução das Telas à vista
      * e a cada {@link #SWEEP_TICKS} solta as imagens que o BER não pede há {@link #IDLE_TICKS}.
      */
     public static void onClientTick() {
+        TvArtTextures.onClientTick();
+        TvPictureTextures.onClientTick();
+        TvArtCache.onClientTick();
+        boolean showOthers = ClientConfig.TV_SHOW_OTHERS_IMAGES.get();
+        if (showOthers != TvPaintImage.showOthers) {
+            TvPaintImage.showOthers = showOthers;
+            TvPictureTextures.changed();
+            markAllPictures();
+        }
         if (CANVASES.isEmpty()) {
             return;
         }
@@ -448,5 +462,82 @@ public final class TvCanvases {
         blinkSlot = Long.MIN_VALUE;
         allocatedBytes = 0;
         ticks = 0;
+        TvArtTextures.sweep();
+        TvPictureTextures.sweep();
+    }
+
+    /** Na varredura do {@link TvArtTextures}: marca as artes dos layouts das Telas com imagem que ainda existem. */
+    static void keepArts() {
+        for (TvCanvas canvas : CANVASES.values()) {
+            if (!canvas.tv.isRemoved()) {
+                TvArtTextures.keep(canvas.tv.layout());
+            }
+        }
+    }
+
+    /** Na varredura do {@link TvPictureTextures}: marca as imagens enviadas dos layouts das Telas com imagem. */
+    static void keepPictures() {
+        for (TvCanvas canvas : CANVASES.values()) {
+            if (!canvas.tv.isRemoved()) {
+                TvPictureTextures.keep(canvas.tv.layout());
+            }
+        }
+    }
+
+    /** A imagem enviada ficou pronta: as Telas com imagem que a usam redesenham. Só quando uma imagem fica pronta. */
+    static void markPicture(String hash) {
+        for (TvCanvas canvas : CANVASES.values()) {
+            List<TvPicture> pictures = canvas.tv.layout().pictures();
+            for (int i = 0; i < pictures.size(); i++) {
+                if (pictures.get(i).hash().equals(hash)) {
+                    markDirty(canvas.tv.getBlockPos().asLong());
+                    break;
+                }
+            }
+        }
+    }
+
+    /** Todas as Telas com imagem enviada redesenham (o servidor ligou ou desligou as imagens, ou a opção mudou). */
+    static void markAllPictures() {
+        for (TvCanvas canvas : CANVASES.values()) {
+            if (!canvas.tv.layout().pictures().isEmpty()) {
+                markDirty(canvas.tv.getBlockPos().asLong());
+            }
+        }
+    }
+
+    /**
+     * A Tela com GIF em {@code pos}, se foi vista há pouco, mantém os GIFs dela tocando; falso se a imagem não existe
+     * mais, e o conjunto do {@link TvTimed} a esquece.
+     */
+    static boolean seenGif(long pos, long now) {
+        TvCanvas canvas = CANVASES.get(pos);
+        if (canvas == null) {
+            return false;
+        }
+        if (now - canvas.lastWanted <= SEEN_TICKS) {
+            TvPictureTextures.seen(canvas.tv.layout());
+        }
+        return true;
+    }
+
+    /** O quadro do GIF {@code hash} mudou: a Tela em {@code pos} redesenha se foi vista há pouco e o mostra. */
+    static void refreshIfShows(long pos, String hash, long now) {
+        TvCanvas canvas = CANVASES.get(pos);
+        if (canvas == null || now - canvas.lastWanted > SEEN_TICKS) {
+            return;
+        }
+        List<TvPicture> pictures = canvas.tv.layout().pictures();
+        for (int i = 0; i < pictures.size(); i++) {
+            if (pictures.get(i).hash().equals(hash)) {
+                markDirty(pos);
+                return;
+            }
+        }
+    }
+
+    /** Quantas texturas de pixel art existem no cliente (o e2e confere que saem quando ninguém as usa). */
+    public static int artTexturesForTests() {
+        return TvArtTextures.countForTests();
     }
 }

@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
@@ -285,6 +286,38 @@ public record TabletSnapshot(
         public boolean isEmpty() {
             return guests.isEmpty() && teams.isEmpty();
         }
+
+        /** No buffer: os convidados (id, nome, online) e os times (id, nome, membros, desfeito). */
+        public void write(FriendlyByteBuf buf) {
+            buf.writeVarInt(guests.size());
+            for (Guest guest : guests) {
+                buf.writeUUID(guest.id());
+                buf.writeUtf(guest.name(), 64);
+                buf.writeBoolean(guest.online());
+            }
+            buf.writeVarInt(teams.size());
+            for (TeamAccess.TeamInfo team : teams) {
+                buf.writeUUID(team.id());
+                buf.writeUtf(team.name(), 64);
+                buf.writeVarInt(team.members());
+                buf.writeBoolean(team.gone());
+            }
+        }
+
+        public static AccessView read(FriendlyByteBuf buf) {
+            int guestCount = buf.readVarInt();
+            List<Guest> guests = new ArrayList<>(guestCount);
+            for (int j = 0; j < guestCount; j++) {
+                guests.add(new Guest(buf.readUUID(), buf.readUtf(64), buf.readBoolean()));
+            }
+            int teamCount = buf.readVarInt();
+            List<TeamAccess.TeamInfo> teams = new ArrayList<>(teamCount);
+            for (int j = 0; j < teamCount; j++) {
+                teams.add(new TeamAccess.TeamInfo(buf.readUUID(), buf.readUtf(64), buf.readVarInt(),
+                        buf.readBoolean()));
+            }
+            return guests.isEmpty() && teams.isEmpty() ? EMPTY : new AccessView(guests, teams);
+        }
     }
 
     /** Um convidado: o id, o nome que o servidor conhece e se está no jogo agora. */
@@ -475,19 +508,7 @@ public record TabletSnapshot(
             buf.writeBoolean(n.paused);
             buf.writeVarInt(n.nodes);
             buf.writeVarInt(n.unloaded);
-            buf.writeVarInt(n.access.guests().size());
-            for (Guest guest : n.access.guests()) {
-                buf.writeUUID(guest.id());
-                buf.writeUtf(guest.name(), 64);
-                buf.writeBoolean(guest.online());
-            }
-            buf.writeVarInt(n.access.teams().size());
-            for (TeamAccess.TeamInfo team : n.access.teams()) {
-                buf.writeUUID(team.id());
-                buf.writeUtf(team.name(), 64);
-                buf.writeVarInt(team.members());
-                buf.writeBoolean(team.gone());
-            }
+            n.access.write(buf);
         }
         buf.writeVarInt(s.groups.size());
         for (GroupView g : s.groups) {
@@ -544,19 +565,8 @@ public record TabletSnapshot(
             boolean paused = buf.readBoolean();
             int nodes = buf.readVarInt();
             int unloaded = buf.readVarInt();
-            int guestCount = buf.readVarInt();
-            List<Guest> guests = new ArrayList<>(guestCount);
-            for (int j = 0; j < guestCount; j++) {
-                guests.add(new Guest(buf.readUUID(), buf.readUtf(64), buf.readBoolean()));
-            }
-            int teamCount = buf.readVarInt();
-            List<TeamAccess.TeamInfo> teams = new ArrayList<>(teamCount);
-            for (int j = 0; j < teamCount; j++) {
-                teams.add(new TeamAccess.TeamInfo(buf.readUUID(), buf.readUtf(64), buf.readVarInt(),
-                        buf.readBoolean()));
-            }
             networks.add(new NetworkView(id, name, color, owner, owned, manageable, isPublic, paused, nodes,
-                    unloaded, new AccessView(guests, teams)));
+                    unloaded, AccessView.read(buf)));
         }
         int groupCount = buf.readVarInt();
         List<GroupView> groups = new ArrayList<>(groupCount);

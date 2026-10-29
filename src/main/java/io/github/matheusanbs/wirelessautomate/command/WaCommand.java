@@ -22,6 +22,7 @@ import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.TickBudget;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorProfile;
+import io.github.matheusanbs.wirelessautomate.tv.TvArtSender;
 import io.github.matheusanbs.wirelessautomate.tv.TvManager;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -44,8 +45,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * {@code /wa}: profiler embutido ({@code profile}), gerência de redes ({@code network}) e
  * configuração de faces sem tela ({@code face}: modo e prioridade, ou a rede da face) e o
- * conteúdo dos armazenamentos do mod guardado no servidor ({@code storage}) e a sintonia de um Núcleo de
- * Ressonância ({@code resonator}).
+ * conteúdo dos armazenamentos do mod guardado no servidor ({@code storage}), a sintonia de um Núcleo de
+ * Ressonância ({@code resonator}) e a moderação das imagens enviadas às Telas de Sinal ({@code tela}).
  */
 public final class WaCommand {
     public static final int MAX_NAME_LENGTH = 32;
@@ -131,6 +132,7 @@ public final class WaCommand {
                         }))
                 .then(StorageCommand.node())
                 .then(ResonatorCommand.node())
+                .then(TvImageCommand.node())
                 .then(BenchCommand.node()));
     }
 
@@ -192,6 +194,12 @@ public final class WaCommand {
                 screens.packets(),
                 micros(screens.averageNanos()),
                 micros(screens.peakNanos())), false);
+        TvArtSender.Cost arts = TvArtSender.cost(source.getServer().getTickCount());
+        source.sendSuccess(() -> Component.translatable("command.wirelessautomate.profile.tv_arts",
+                arts.queued(),
+                arts.players(),
+                kilobytes(arts.lastSecondBytes()),
+                kilobytes(arts.totalBytes())), false);
         return manager.nodeCount();
     }
 
@@ -349,6 +357,10 @@ public final class WaCommand {
 
     private static String micros(double nanos) {
         return String.format("%.1f", nanos / 1_000.0);
+    }
+
+    private static String kilobytes(long bytes) {
+        return String.format("%.1f", bytes / 1024.0);
     }
 
     private static String ms(double nanos) {

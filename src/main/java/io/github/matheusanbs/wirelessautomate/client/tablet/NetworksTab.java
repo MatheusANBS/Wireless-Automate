@@ -9,6 +9,7 @@ import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletText.tr
 import io.github.matheusanbs.wirelessautomate.client.FlatButton;
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
+import io.github.matheusanbs.wirelessautomate.client.access.AccessPanel;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu.Action;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
@@ -44,7 +45,7 @@ final class NetworksTab {
     private final NameFields names;
     private final NetworkList list;
     private final GroupDetail groups;
-    private final AccessSection access;
+    private final AccessPanel access;
     private @Nullable UUID selectedNetwork;
     /** O que foi pedido e ainda não chegou: um grupo ({@code true}) ou uma rede; os ids que já existiam. */
     private @Nullable Boolean awaitingGroup;
@@ -63,10 +64,10 @@ final class NetworksTab {
         this.names = names;
         this.list = new NetworkList(snapshot, side, actions);
         this.groups = new GroupDetail(layout, snapshot, actions, names);
-        this.access = new AccessSection(layout, menu, actions, this::selectedNetworkView);
+        this.access = AccessSection.create(layout, menu, actions, this::selectedNetworkView);
     }
 
-    AccessSection access() {
+    AccessPanel access() {
         return access;
     }
 

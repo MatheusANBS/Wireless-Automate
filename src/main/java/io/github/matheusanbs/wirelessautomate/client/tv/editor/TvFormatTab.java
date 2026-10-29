@@ -11,6 +11,8 @@ import net.minecraft.network.chat.Component;
  * a unidade ({@link TvUnit}), como o modelo da etapa 1. As outras peças não têm formato.
  */
 final class TvFormatTab {
+    private static final List<TvUnit> UNITS = List.of(TvUnit.values());
+
     private TvFormatTab() {
     }
 
@@ -47,12 +49,9 @@ final class TvFormatTab {
                 text -> ctx.change("format.suffix", p -> p.withFormat(with(p.format(), null, null, null, null, text,
                         null)))));
         form.endRow(TvTextField.H);
-        y = form.inline("format.unit", TvPropsCtx.key("format.unit"));
-        form.add(new TvControls.Cycle(form.font, "format.unit", TvForm.LABEL_W, y, TvForm.W - TvForm.LABEL_W,
-                () -> unitName(ctx.piece().format().unit()),
-                delta -> ctx.change("format.unit", p -> p.withFormat(with(p.format(), null, null, null, null, null,
-                        TvDataTab.step(List.of(TvUnit.values()), p.format().unit(), delta))))));
-        form.endRow(TvControls.ROW - 1);
+        form.dropdown("format.unit", TvPropsCtx.key("format.unit"), () -> UNITS, TvFormatTab::unitName,
+                () -> ctx.piece().format().unit(), unit -> ctx.change("format.unit", p -> p.withFormat(with(
+                        p.format(), null, null, null, null, null, unit))));
     }
 
     static Component unitName(TvUnit unit) {

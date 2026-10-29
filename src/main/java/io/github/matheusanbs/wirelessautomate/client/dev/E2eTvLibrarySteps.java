@@ -4,6 +4,7 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.DevEndToEnd.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eUi.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
+import io.github.matheusanbs.wirelessautomate.GuiTheme;
 import io.github.matheusanbs.wirelessautomate.client.tv.TvScreen;
 import io.github.matheusanbs.wirelessautomate.client.tv.editor.TvEditorTab;
 import io.github.matheusanbs.wirelessautomate.client.tv.editor.TvLibraryClient;
@@ -26,8 +27,8 @@ import org.lwjgl.glfw.GLFW;
  * Os componentes e os temas da biblioteca no editor da Tela de Sinal, no e2e. Na primeira Tela (4 × 2, com o Valor
  * ligado e o Texto salvos): salva a escolha como componente "Meu cartao", insere o Cartão de número pronto (o texto de
  * exemplo vem no idioma de quem insere) e desfaz. Na segunda (1 × 1, aberta pelo colar): insere o componente do jogador
- * (a ligação vai junto), põe a base (tema Fósforo, uma cor da paleta editada, "Salvar tema" com o nome, trocar o tema
- * de ida e volta, fundo em degradê e linhas) e salva a Tela; a foto na parede ({@code tela-tema-proprio}) é do
+ * (a ligação vai junto), põe a base (o tema Fósforo pela lista aberta, com a foto dela nos dois temas da interface, uma cor
+ * da paleta editada, "Salvar tema" com o nome, trocar o tema de ida e volta, fundo em degradê e linhas) e salva a Tela; a foto na parede ({@code tela-tema-proprio}) é do
  * {@link E2eTvSteps}. Tudo pelo mouse e pelo teclado.
  */
 final class E2eTvLibrarySteps {
@@ -76,9 +77,20 @@ final class E2eTvLibrarySteps {
         list.add(step("Base: soltar a escolha mostra o tema e o fundo", () -> editor().escape(),
                 () -> editor().selection().isEmpty() && editor().probe().propCenter("base.theme") != null,
                 () -> "escolha " + editor().selection()));
-        list.add(step("Tema: o seguinte é o Fósforo", () -> clickAt(editor().probe().propCenter("base.theme")),
-                () -> editor().draft().theme().sameColors(TvTheme.PHOSPHOR),
-                () -> "tema " + editor().draft().theme()));
+        list.add(E2eTvDropdown.openStep("Tema: abrir a lista", "base.theme"));
+        E2eTvSteps.shot(list, "tela-dropdown");
+        list.add(step("Tema: escolher o Fósforo pelo mouse", () -> clickAt(editor().probe().dropdownRowCenter(
+                TvTheme.PRESETS.indexOf(TvTheme.PHOSPHOR))), () -> editor().draft().theme().sameColors(TvTheme.PHOSPHOR)
+                        && !editor().probe().popupOpen(), () -> "tema " + editor().draft().theme()));
+        E2eVariants.escuro(list, () -> {
+            list.add(E2eDarkSteps.themeClick("Tema: escuro", GuiTheme.DARK));
+            list.add(E2eTvDropdown.openStep("Tema: abrir a lista no escuro", "base.theme"));
+            E2eTvSteps.shot(list, "tela-dropdown-escuro");
+            list.add(step("Tema: Esc fecha a lista sem mudar", () -> editor().escape(),
+                    () -> !editor().probe().popupOpen() && editor().draft().theme().sameColors(TvTheme.PHOSPHOR),
+                    () -> "tema " + editor().draft().theme()));
+            list.add(E2eDarkSteps.themeClick("Tema: claro de novo", GuiTheme.LIGHT));
+        });
         list.add(step("Tema: editar a cor Alta pelo hexadecimal", () -> {
             if (!editor().probe().focusProp("base.color" + 5)) {
                 throw new StepFailure("o campo da cor Alta não abriu");
@@ -101,20 +113,16 @@ final class E2eTvLibrarySteps {
         }, () -> themeInClient() != null && themeInServer(),
                 () -> "no cliente " + (themeInClient() != null) + ", no servidor " + themeInServer()));
         list.add(step("Tema: fundo em degradê e linhas de varredura", () -> {
-            clickAt(editor().probe().propCenter("base.bg.kind"));
-            clickAt(editor().probe().propCenter("base.bg.kind"));
+            E2eTvDropdown.pick("base.bg.kind", TvBackground.Kind.GRADIENT.ordinal());
             clickAt(editor().probe().propCenter("base.scanlines"));
         }, () -> editor().draft().background().kind() == TvBackground.Kind.GRADIENT && editor().draft().scanlines(),
                 () -> "fundo " + editor().draft().background() + ", linhas " + editor().draft().scanlines()));
         list.add(step("Tema: voltar ao topo da base", () -> editor().probe().propCenter("base.theme"), () -> true, () -> ""));
         E2eTvSteps.shot(list, "tela-editor-tema");
-        list.add(step("Tema: trocar para o seguinte (Grafite)", () -> clickAt(editor().probe().propCenter("base.theme")),
-                () -> editor().draft().theme().sameColors(TvTheme.GRAPHITE), () -> "tema " + editor().draft().theme()));
-        list.add(step("Tema: quatro passos de volta ao do jogador", () -> {
-            for (int i = 0; i < 4; i++) {
-                clickAt(editor().probe().propCenter("base.theme"));
-            }
-        }, () -> {
+        list.add(step("Tema: trocar para o Grafite", () -> E2eTvDropdown.pick("base.theme",
+                TvTheme.PRESETS.indexOf(TvTheme.GRAPHITE)), () -> editor().draft().theme().sameColors(TvTheme.GRAPHITE),
+                () -> "tema " + editor().draft().theme()));
+        list.add(step("Tema: de volta ao do jogador pela lista", () -> E2eTvDropdown.pick("base.theme", THEME), () -> {
             TvTheme mine = themeInClient();
             return mine != null && editor().draft().theme().sameColors(mine) && mine.high() == PINK;
         }, () -> "tema " + editor().draft().theme()));

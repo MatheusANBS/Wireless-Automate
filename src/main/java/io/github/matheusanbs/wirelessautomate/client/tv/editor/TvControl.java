@@ -57,6 +57,10 @@ abstract class TvControl {
         return null;
     }
 
+    /**
+     * A roda sobre o controle; {@code true} se ele a usou. Só as listas e as grades que rolam a usam: a roda nunca troca
+     * um valor, e o que nenhum controle usa rola o painel.
+     */
     boolean mouseScrolled(double mouseX, double mouseY, double delta) {
         return false;
     }
@@ -80,6 +84,11 @@ abstract class TvControl {
 
     /** O rascunho mudou: lê os valores de novo. */
     void refresh() {
+    }
+
+    /** O centro da ficha {@code index} de um grupo de fichas (ganchos do e2e), ou {@code null} se não é um. */
+    int @Nullable [] chipCenter(int index) {
+        return null;
     }
 
     int centerX() {

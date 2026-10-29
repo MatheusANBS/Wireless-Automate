@@ -5,7 +5,10 @@ import io.github.matheusanbs.wirelessautomate.tv.TvColor;
 import io.github.matheusanbs.wirelessautomate.tv.TvLayout;
 import net.minecraft.client.gui.GuiGraphics;
 
-/** O fundo da Tela inteira (do tema, fixo ou em degradê vertical) e as linhas de varredura por cima de tudo. */
+/**
+ * O fundo da Tela inteira (do tema, fixo, em degradê vertical ou o mosaico de uma pixel art por cima do fundo do
+ * tema, pelo {@link TvPaintImage}) e as linhas de varredura por cima de tudo.
+ */
 final class TvPaintBackground {
     /** Preto a 20%, como o {@code .scanl} do mockup. */
     private static final int SCANLINE = 0x33000000;
@@ -18,6 +21,10 @@ final class TvPaintBackground {
         TvBackground background = layout.background();
         switch (background.kind()) {
             case THEME -> g.fill(0, 0, width, height, layout.theme().bg());
+            case TILED -> {
+                g.fill(0, 0, width, height, layout.theme().bg());
+                TvPaintImage.tiled(g, layout, width, height);
+            }
             case SOLID -> g.fill(0, 0, width, height, TvColor.resolve(background.top(), layout.theme()));
             case GRADIENT -> g.fillGradient(0, 0, width, height, TvColor.resolve(background.top(), layout.theme()),
                     TvColor.resolve(background.bottom(), layout.theme()));

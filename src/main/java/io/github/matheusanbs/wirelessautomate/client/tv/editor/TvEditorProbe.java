@@ -1,6 +1,5 @@
 package io.github.matheusanbs.wirelessautomate.client.tv.editor;
 
-import io.github.matheusanbs.wirelessautomate.tv.TvFont;
 import io.github.matheusanbs.wirelessautomate.tv.TvPieceType;
 import java.util.UUID;
 import org.jetbrains.annotations.Nullable;
@@ -21,10 +20,12 @@ public final class TvEditorProbe {
     private final TvPropsPanel props;
     private final TvCanvasMenu menu;
     private final TvPopups popups;
+    private final TvLibraryTab library;
 
     TvEditorProbe(TvEditorDoc doc, TvLeftTabs leftTabs, TvPalettePanel palette, TvComponentsPanel components,
             TvEditorCanvas canvas, TvEditorBar bar, TvLayersPanel layers, TvPropsPanel props, TvCanvasMenu menu,
-            TvPopups popups) {
+            TvPopups popups, TvLibraryTab library) {
+        this.library = library;
         this.doc = doc;
         this.leftTabs = leftTabs;
         this.palette = palette;
@@ -35,6 +36,32 @@ public final class TvEditorProbe {
         this.props = props;
         this.menu = menu;
         this.popups = popups;
+    }
+
+    /** O centro de uma parte da aba Artes ({@code ARTS} ou {@code PICTURES}), com a aba aberta. */
+    public int[] librarySegmentCenter(String part) {
+        leftTabs.select(TvLeftTabs.Tab.ARTS);
+        return library.segmentCenter(TvLibraryTab.Part.valueOf(part));
+    }
+
+    /** A parte aberta da aba Artes. */
+    public String libraryPart() {
+        return library.part().name();
+    }
+
+    /** O centro da linha da imagem de nome {@code name} na parte Imagens, ou {@code null}. */
+    public int @Nullable [] pictureRowCenter(String name) {
+        return library.pictures().rowCenter(name);
+    }
+
+    /** O centro de um botão da parte Imagens ({@code SEND}, {@code RENAME}, {@code REMOVE}, {@code COPY}...). */
+    public int[] picturesButtonCenter(String button) {
+        return library.pictures().buttonCenter(TvPicturesPanel.Button.valueOf(button));
+    }
+
+    /** Se o campo do nome de uma imagem está aberto. */
+    public boolean pictureNaming() {
+        return library.pictures().textFocused();
     }
 
     public int[] paletteCenter(TvPieceType type) {
@@ -82,8 +109,31 @@ public final class TvEditorProbe {
         return props.find("data.storage.items") instanceof TvItemGrid grid ? grid.searchCenter() : null;
     }
 
+    /** O centro da célula da arte {@code art} na grade de artes {@code id} (rolada até aparecer), ou {@code null}. */
+    public int @Nullable [] artCellCenter(String id, UUID art) {
+        return props.find(id) instanceof TvArtGrid grid ? grid.centerOf(art) : null;
+    }
+
+    /** Se a grade de artes {@code id} mostra a arte {@code art} entre as "Da Tela". */
+    public boolean artOnScreenOnly(String id, UUID art) {
+        return props.find(id) instanceof TvArtGrid grid && grid.onScreenOnly(art);
+    }
+
     public int @Nullable [] propNetworkCenter(String id, UUID network) {
         return props.networkCenter(id, network);
+    }
+
+    /**
+     * O centro do controle de {@code id}, com a coluna rolada para ele ficar o mais embaixo que der (a lista que abre
+     * perto da borda); {@code null} se a aba não o tem.
+     */
+    public int @Nullable [] propCenterLow(String id) {
+        return props.centerLow(id);
+    }
+
+    /** O quanto a coluna de propriedades está rolada, em pixels. */
+    public int propsScroll() {
+        return props.scroll();
     }
 
     public int @Nullable [] propArrowCenter(String id, boolean right) {
@@ -156,7 +206,7 @@ public final class TvEditorProbe {
 
     // ------------------------------------------------------------------ janelas soltas
 
-    /** Se o seletor de cor ou a lista de fontes está aberta. */
+    /** Se uma janela solta (o seletor de cor, uma lista) está aberta. */
     public boolean popupOpen() {
         return popups.isOpen();
     }
@@ -198,8 +248,57 @@ public final class TvEditorProbe {
         return c == null ? -1 : c.value();
     }
 
-    /** O centro da linha de uma fonte na lista de fontes aberta, ou {@code null}. */
-    public int @Nullable [] fontRowCenter(TvFont font) {
-        return popups.current() instanceof TvFontMenu.Popup p ? p.center(font) : null;
+    private @Nullable TvDropdownPopup dropdown() {
+        return popups.current() instanceof TvDropdownPopup d ? d : null;
+    }
+
+    /** O id do controle cuja lista está aberta, ou {@code null}. */
+    public @Nullable String dropdownOwner() {
+        TvDropdownPopup d = dropdown();
+        return d == null ? null : d.owner().id;
+    }
+
+    /** O centro da linha {@code index} da lista aberta, rolando a lista até ela; {@code null} sem lista ou fora dela. */
+    public int @Nullable [] dropdownRowCenter(int index) {
+        TvDropdownPopup d = dropdown();
+        return d == null || index < 0 || index >= d.size() ? null : d.rowCenter(index);
+    }
+
+    /** O centro da linha com o texto {@code text} na lista aberta; {@code null} sem lista ou sem a linha. */
+    public int @Nullable [] dropdownRowCenter(String text) {
+        TvDropdownPopup d = dropdown();
+        return d == null ? null : dropdownRowCenter(d.indexOf(text));
+    }
+
+    /** A opção marcada (a que vale) na lista aberta, ou -1. */
+    public int dropdownSelected() {
+        TvDropdownPopup d = dropdown();
+        return d == null ? -1 : d.selected();
+    }
+
+    /** A linha realçada (pelo mouse ou pelas setas) na lista aberta, ou -1. */
+    public int dropdownActive() {
+        TvDropdownPopup d = dropdown();
+        return d == null ? -1 : d.active();
+    }
+
+    /** Quantas opções a lista aberta tem, ou 0. */
+    public int dropdownSize() {
+        TvDropdownPopup d = dropdown();
+        return d == null ? 0 : d.size();
+    }
+
+    /**
+     * Onde a lista aberta está: x, y, largura, altura, linhas à vista, 1 se abriu para cima, e o retângulo em que as
+     * janelas soltas podem aparecer (x, y, largura, altura); {@code null} sem lista.
+     */
+    public int @Nullable [] dropdownGeometry() {
+        TvDropdownPopup d = dropdown();
+        if (d == null) {
+            return null;
+        }
+        TvDropdownPlace p = d.place();
+        TvRect b = popups.bounds();
+        return new int[] {p.x(), p.y(), p.w(), p.h(), p.rows(), p.above() ? 1 : 0, b.x(), b.y(), b.w(), b.h()};
     }
 }

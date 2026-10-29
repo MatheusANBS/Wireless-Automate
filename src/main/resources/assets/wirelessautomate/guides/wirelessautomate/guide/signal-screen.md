@@ -22,8 +22,8 @@ A panel you attach to a wall and stretch to any size, from **1 × 1 up to 32 × 
 
 1. Click with the Screen on the **side of a solid block**: it sits flush against the wall, facing you. It can't go on
    the floor or the ceiling, and it drops if the wall behind it goes away.
-2. Click it with an **empty hand** to open its settings. Only whoever placed it (and operators) can configure it;
-   everyone else just watches.
+2. Click it with an **empty hand** to open its settings. Only whoever placed it, operators and those in the **Access**
+   tab can configure it; everyone else just watches.
 
 ## Choosing the size
 
@@ -55,6 +55,7 @@ doesn't fit, lower the interface scale.
 | **Gauge** | An arc dial with a needle. |
 | **Graph** | A number's history over the last minutes, as a line or columns. |
 | **Arrow** | Points up, down or stays flat as the number rises, falls or holds. |
+| **Image** | A pixel art of yours or an uploaded image (PNG, JPG or GIF), from the **Art** tab (see below). |
 
 - **Picking and moving:** click a piece to pick it (on a grouped piece, the whole group; two clicks enter the group).
   **Shift** + click adds or removes from the pick; click the empty space to let go. Drag to move and pull the corner
@@ -73,7 +74,7 @@ doesn't fit, lower the interface scale.
 | Shortcut | What it does |
 | --- | --- |
 | **Ctrl+Z**, **Ctrl+Y** (or **Ctrl+Shift+Z**) | Undo and redo. |
-| **Ctrl+C**, **Ctrl+X**, **Ctrl+V** | Copy, cut and paste, even from one Screen to another. |
+| **Ctrl+C**, **Ctrl+X**, **Ctrl+V** | Copy, cut and paste, even from one Screen to another (the Images' arts come along). |
 | **Ctrl+D**, **Delete** | Duplicate and remove. |
 | **Ctrl+A**, **Ctrl+G**, **Ctrl+Shift+G** | Pick all, group and ungroup. |
 | **Arrow keys** | Move 4 px; with **Shift**, 32 px; with **Alt**, 1 px. |
@@ -103,6 +104,181 @@ To show the contents of a Chest, Battery or Tank, link it to the Screen with the
 
 The numbers arrive once a second while someone is nearby. A private network that whoever placed the Screen lost access
 to shows **—**.
+
+## Pixel art
+
+Draw your art in the **Art** tab, **Pixel art** part, in the editor's left column. It lives in your library and works on any Screen
+of yours.
+
+1. Click **New** (or pick an art and click **Edit**). The pixel art editor opens over the Screen editor.
+2. Type the name and the **Size**: 8 to 128 pixels wide and tall. Changing the size keeps the top left corner.
+3. Draw and click **Save** (or **Ctrl+S**). The editor closes once the art reaches your library; if it doesn't fit
+   (library full or too big), the drawing stays open, with the warning. **Cancel** goes back without saving; with
+   changes, it takes two clicks.
+
+Each art has up to **16 colors** and at most **128 × 128** pixels. **Duplicate** makes a copy and **Remove** deletes,
+in two clicks.
+
+### Tools
+
+Left click uses the tool and **right click erases** (on lighten, it darkens). **Ctrl** + click picks a pixel's color
+with any tool.
+
+| Key | Tool |
+| --- | --- |
+| **B** | Pencil. |
+| **E** | Eraser. |
+| **G** | Bucket: fills the area of the same color. With **Shift**, swaps the color in the whole art. |
+| **I** | Eyedropper. |
+| **L** | Line. **Shift** locks to 0°, 45° and 90°. |
+| **R** | Rectangle. **R** again toggles outline and filled; **Shift** makes a square. |
+| **O** | Ellipse. **O** again toggles outline and filled; **Shift** makes a circle. |
+| **D** | Lighten (left) and darken (right), along the color's ramp. |
+| **T** | Dither: paints every other pixel, in a checkerboard. |
+| **S** | Selection. |
+
+| Key | Helper |
+| --- | --- |
+| **[** and **]** | Smaller and larger brush, 1 to 8 px. The footer button swaps square and round (round from 3 px). |
+| **M** and **Shift+M** | Mirror left and right, and top and bottom. They work together. |
+| **P** | Pixel perfect: removes the L corners of the 1 px pencil. |
+| **X** | Back to the previous color. |
+| **Ctrl+G** | Turns the grid on and off. |
+| **Ctrl+Z**, **Ctrl+Y** | Undo and redo, up to 100 steps. |
+
+### Palette and ramps
+
+The palette has 16 colors in 4 rows, and color 0 is always transparent. Each row is a **ramp**, from the dark shade on
+the left to the light one on the right: lighten and darken walk along it.
+
+- Two clicks on a color (or **Edit color**) open the picker. Changing a color changes all its pixels.
+- **Make ramp** redoes the chosen color's row as its own ramp: darker and bluer to the left, lighter and yellower to
+  the right.
+
+### Selection, flip and rotate
+
+- With **S**, drag to mark a rectangle. Drag from inside it to move the piece.
+- **Arrow keys** move 1 px (with **Shift**, 8 px). **Enter** settles and **Esc** undoes the move and drops the
+  selection.
+- **Ctrl+A** selects all and **Ctrl+D** drops it. **Ctrl+C**, **Ctrl+X** and **Ctrl+V** copy, cut and paste;
+  **Delete** erases.
+- With a selection, tools only paint inside it.
+- **Shift+H** and **Shift+V** flip horizontally and vertically, and the rotate button turns 90° clockwise. With a
+  selection, only the piece; without one, every frame of an animated art.
+- **Clear** erases the whole chosen frame, in two clicks.
+
+### Moving around the canvas
+
+| Gesture | What it does |
+| --- | --- |
+| Mouse wheel | Zoom at the mouse. |
+| **Alt**, **Space** or middle button + drag | Moves the view. |
+| **Arrow keys**, with no selection | Move the view. |
+| **0** | Fits the art. |
+| **+** and **−** | Zoom at the center. |
+| Click on the preview | Takes the view to that spot. |
+
+The footer shows the position and color under the mouse. The right column shows the art at 1×, 2× and tiled, as in the
+mosaic (with little room or a large art, only what fits whole). **Esc** with no selection does the same as **Cancel**.
+
+### Animation (frames)
+
+An art can have several frames, which play in the Image and the tiled background. Every Screen with the same art plays
+in step, and a Screen only changes frame while it is in view.
+
+- The **frame strip**, under the canvas, shows the thumbnails; the chosen one is the one you draw on. Click to choose
+  and drag to reorder.
+- **+** adds an empty frame after the chosen one, the duplicate button copies the chosen one and the remove button takes
+  it out.
+- **Onion skin:** the previous frame shows faded underneath, to draw the next one.
+- **Speed:** 1 to 20 frames per second, with **‹ ›** or by typing. **Mode:** **Loop** (back to the first) or
+  **Ping-pong**. The play button pauses and plays the preview (paused, it shows the chosen frame).
+- Up to 64 frames, all the same size and with the same palette. Frames count toward the Screen's pixel limit: a
+  32 × 32 art with 10 frames counts 10,240.
+- Everything goes into **Ctrl+Z**. The palette applies to every frame; **Clear** and the tools, to the chosen one.
+
+| Key | What it does |
+| --- | --- |
+| **,** and **.** | Previous and next frame. |
+| **Alt+N** | New empty frame, after the chosen one. |
+| **Alt+D** | Duplicates the chosen frame. |
+| **Alt+O** | Turns the onion skin on and off. |
+| **Alt+P** | Plays and pauses the preview. |
+| **Ctrl+C** and **Ctrl+V** | Copy a piece of one frame and paste it into another. |
+
+### Putting the art on the Screen
+
+- **Image:** click **Image** in the **Pieces** list (or drag it onto the preview). It starts with the art picked in
+  the **Art** tab (a pixel art or an image); with none picked, it starts empty, with **Pick the art or image**.
+- **Picking the art:** in the **Style** tab, **Piece** section, click a thumbnail in the grid. The ones marked **On
+  this screen** came with the Screen, from another player or from a code. Dragging an art from the **Art** tab
+  onto the preview works too.
+- In the same section: **Scale** (1× to 16×, or **Stretch**), **Align** (9 spots) and **Opacity**.
+- The Screen keeps a **copy** of the art: changing or deleting the art later doesn't change the Screen. **Update from
+  library** brings the current version.
+- **Tiled background:** with nothing picked, set the **Background** to **Tiled pixel art** and pick the art in the
+  grid. It repeats over the whole Screen, under the pieces, with **Scale** (1× to 8×) and **Opacity**.
+- The **Pixels** line in the base shows how much the Screen's art adds up to, and the cap.
+
+### Export and import by code
+
+Take a layout or an art to another world, or to a friend, as text.
+
+| Button | What it does |
+| --- | --- |
+| **Export** | Copies the code: in the base (under **Apply layout**), of the layout; in the **Art** tab, of the picked art. |
+| **Import** | Reads the copied code. In the base, applies the layout to the draft (**Ctrl+Z** undoes); in the **Art** tab, makes a new art. An image code (**WA-IMAGEM1**) becomes an image upload. |
+| **Copy as text** | Copies in a readable form, to edit by hand or ask an AI. **Import** reads both forms. |
+
+- The layout takes its art along. Links to networks or storages you don't have are dropped: link them again in the
+  **Data** tab.
+- An invalid code shows a warning in the bottom bar, and nothing changes.
+- To make art and Screens with an AI, there is a guide on the mod's GitHub: `docs/pixel-art-ai-guide.md`.
+
+## Images and GIFs
+
+Besides pixel art, the Screen shows real photos and animated GIFs, in the **Images** part of the **Art** tab.
+
+1. Click **Upload file** and pick a PNG, JPG or GIF on your computer. Or copy a **WA-IMAGEM1** code and click
+   **Import**.
+2. The image goes to the server and into your library with the file's name. **Rename** (or double-click the row)
+   changes the name, and **Remove**, with two clicks, takes it out of the library.
+3. Drag the image onto the preview to make an **Image**, or pick it in the grid of the **Style** tab: images come
+   after the art, under the **Images** label, and a GIF has the ▶ mark. The **Tiled background** takes images too.
+
+| Limit | Default |
+| --- | --- |
+| File | Up to **8 MB** |
+| Size | Up to **1024 × 1024** pixels |
+| GIF | Up to **240** frames |
+| Per Screen | Up to **8** different images |
+
+The server can change these numbers. An image is always a file uploaded and kept in the world, never a link to the
+internet.
+
+- **GIF:** plays at the file's pace, only while someone looks at the Screen. Two Screens with the same GIF play
+  together.
+- **Copy code:** puts the image on the clipboard as **WA-IMAGEM1**, to take it to another world. A layout's code takes
+  its images along when they fit; otherwise only the references, which work on the same server.
+- **Hide other players' images:** in the client config (`config/wirelessautomate-client.toml`, `tv` section),
+  `showOthersImages = false` swaps the images other players uploaded for a gray box. Yours stay.
+- **Operators:** `/wa tela imagens` lists the world's images, with the size, who uploaded and how many Screens use
+  them. `/wa tela imagem remover <hash>` takes an image off every Screen, and `/wa tela imagem banir <player>` stops
+  someone from uploading (`desbanir` undoes it). The `tv.images` section of the server config turns images off and
+  limits who uploads and the space.
+
+## Access
+
+In the **Access** tab (only the owner and operators see it), give other players the right to edit the Screen.
+
+1. Type the name in **Invite player…** and pick a suggestion, or press **Enter**. Only players who have joined the
+   server count.
+2. With FTB Teams installed, add a team in **Add team…**.
+3. To remove someone, click the row's **✕** twice.
+
+Whoever is on the list edits like the owner: size, layout and links, within the networks each one can use. The links
+the Screen already has stay when anyone saves, even to a network they can't use; a new link only works to a network
+of whoever makes it. Watching the Screen stays open to everyone.
 
 ## Recipe
 

@@ -21,7 +21,7 @@ public record TvEditorLayout(TvRect leftTabs, TvRect leftBody, TvRect[] pieceBut
     public static final int BUTTONS_H = TvIcons.SIZE;
     public static final int TABS_H = TvIcons.SIZE;
     public static final int PIECE_H = TvIcons.SIZE;
-    public static final int PIECE_COUNT = 8;
+    public static final int PIECE_COUNT = 9;
 
     /** Se a janela cabe no mínimo do editor; abaixo disso a aba só mostra o pedido de uma escala menor. */
     public static boolean fits(int w, int h) {

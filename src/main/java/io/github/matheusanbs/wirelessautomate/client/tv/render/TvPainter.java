@@ -16,6 +16,7 @@ import io.github.matheusanbs.wirelessautomate.tv.TvPiece;
 import io.github.matheusanbs.wirelessautomate.tv.TvStyle;
 import io.github.matheusanbs.wirelessautomate.tv.TvTheme;
 import io.github.matheusanbs.wirelessautomate.tv.TvUnit;
+import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -35,6 +36,13 @@ public final class TvPainter {
     public static final int FLAG_GRAPH = 2;
     public static final int FLAG_CLOCK = 4;
     public static final int FLAG_ICON = 8;
+    /** O desenho teve um GIF animado: a Tela à vista redesenha quando o quadro dele muda. */
+    public static final int FLAG_GIF = 16;
+    /**
+     * O desenho teve uma pixel art animada: a Tela à vista redesenha quando o quadro dela muda, no instante guardado
+     * em {@link TvPaintImage#artNext}.
+     */
+    public static final int FLAG_ART = 32;
     private static final float LINE = 9f;
     /** A altura das letras sem a folga de baixo da linha, para centrar na caixa. */
     private static final float GLYPH = 8f;
@@ -63,6 +71,10 @@ public final class TvPainter {
     public static int paint(GuiGraphics g, Font font, TvLayout layout, TvLayout values, TvArea area, long pos,
             int revision,
             char decimalSep, char groupSep, boolean blinkOff, float scale, int targetHeight, boolean preview) {
+        // O fundo em mosaico também desenha arte e GIF: as marcas e o relógio zeram antes dele.
+        TvPaintImage.animated = false;
+        TvPaintImage.artNext = Long.MAX_VALUE;
+        TvPaintImage.nowMs = Util.getMillis();
         TvPaintBackground.fill(g, layout, area.pixelWidth(), area.pixelHeight());
         TvPaintStyle resolved = STYLE;
         int flags = 0;
@@ -94,6 +106,12 @@ public final class TvPainter {
             }
         }
         TvPaintBackground.scanlines(g, layout, area.pixelWidth(), area.pixelHeight());
+        if (TvPaintImage.animated) {
+            flags |= FLAG_GIF;
+        }
+        if (TvPaintImage.artNext != Long.MAX_VALUE) {
+            flags |= FLAG_ART;
+        }
         return TvPaintNumbers.clockRead ? flags | FLAG_CLOCK : flags;
     }
 
@@ -107,6 +125,7 @@ public final class TvPainter {
             case ICON -> {
                 return TvPaintIcon.paint(g, piece, part) ? FLAG_ICON : 0;
             }
+            case IMAGE -> TvPaintImage.piece(g, piece, layout);
             case BAR -> TvPaintBar.paint(g, piece, part, piece.style().radius(),
                     TvPaintFill.fraction(piece, part, resolved.value, values, pos, revision, preview, gameTime),
                     resolved.color, TvPaintMath.withOpacity(TvColor.resolve(part.track(), theme), opacity));

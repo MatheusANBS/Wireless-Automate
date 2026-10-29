@@ -1,19 +1,15 @@
 package io.github.matheusanbs.wirelessautomate.client.tv.editor;
 
-import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.tv.render.TvEditorImage;
 import io.github.matheusanbs.wirelessautomate.menu.TvMenu;
 import io.github.matheusanbs.wirelessautomate.tv.TvArea;
 import io.github.matheusanbs.wirelessautomate.tv.TvLayout;
-import io.github.matheusanbs.wirelessautomate.tv.TvPieceType;
 import java.util.List;
-import java.util.UUID;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
@@ -24,8 +20,10 @@ import org.jetbrains.annotations.Nullable;
  * {@link TvCanvasMenu} do clique direito) e {@link TvEditorBar}; na direita, as propriedades ({@link TvPropsPanel}).
  * Repassa o desenho, o mouse, a roda e o teclado ({@link TvEditorKeys}, com o campo de texto focado tendo a vez) e faz
  * o salvar pelo {@link TvEditorActions}; o rascunho só vai ao servidor no Salvar. Numa janela abaixo do mínimo, só a
- * mensagem pedindo uma escala menor. As janelas soltas (o seletor de cor e a lista de fontes, {@link TvPopups}) ficam por cima de tudo e têm a vez
- * do mouse e do teclado. Os ganchos do e2e ficam no {@link TvEditorProbe}.
+ * mensagem pedindo uma escala menor ({@link TvTooSmall}). As janelas soltas (o seletor de cor e a lista de fontes,
+ * {@link TvPopups}) ficam por cima de tudo e têm a vez do mouse e do teclado. A quarta aba da esquerda, Pixel art
+ * ({@link TvArtsPanel}), abre o {@link TvPixelEditor}, que a {@code TvScreen} desenha no lugar desta aba enquanto
+ * está aberto. Os ganchos do e2e ficam no {@link TvEditorProbe}.
  */
 public final class TvEditorTab {
     /** O Shift do e2e (a janela de teste não tem teclado de verdade). */
@@ -47,15 +45,10 @@ public final class TvEditorTab {
     private final TvEditorKeys keys;
     private final TvPopups popups = new TvPopups();
     private final TvEditorProbe probe;
+    private final TvPixelEditor pixel;
+    private final TvTooSmall tooSmall = new TvTooSmall();
     private boolean fits;
     private boolean libraryRequested;
-    private int x;
-    private int y;
-    private int w;
-    private int h;
-    private List<FormattedCharSequence> tooSmall = List.of();
-    private int[] tooSmallWidths = new int[0];
-    private Font font;
 
     public TvEditorTab(BlockPos pos, TvArea area, List<TvMenu.NetworkChoice> networks, List<TvMenu.LinkChoice> links,
             TvEditorActions actions) {
@@ -71,37 +64,32 @@ public final class TvEditorTab {
         this.layers = new TvLayersPanel(doc);
         this.props = new TvPropsPanel(doc, networks, links, actions, popups);
         this.keys = new TvEditorKeys(doc, this::save);
+        this.pixel = new TvPixelEditor(actions);
         this.probe = new TvEditorProbe(doc, leftTabs, palette, components, canvas, bar, layers, props, menu,
                 popups);
     }
 
     /** Dispõe as partes na janela ({@code x}, {@code y}, {@code w} × {@code h}), já com o cabeçalho incluso. */
     public void layout(Font font, int x, int y, int w, int h) {
-        this.font = font;
-        this.x = x;
-        this.y = y;
-        this.w = w;
-        this.h = h;
         fits = TvEditorLayout.fits(w, h);
+        pixel.layout(font, x, y, w, h);
+        TvRect window = new TvRect(x, y, w, h);
+        tooSmall.layout(font, window);
         if (!fits) {
-            tooSmall = font.split(TvEditorText.key("too_small"), Math.max(40, w - 24));
-            tooSmallWidths = new int[tooSmall.size()];
-            for (int i = 0; i < tooSmallWidths.length; i++) {
-                tooSmallWidths[i] = font.width(tooSmall.get(i));
-            }
             return;
         }
         TvEditorLayout layout = TvEditorLayout.of(x, y, w, h);
         popups.close();
-        popups.bounds(new TvRect(x, y, w, h));
+        popups.bounds(window);
         leftTabs.layout(font, layout.leftTabs());
-        menu.layout(font, new TvRect(x, y, w, h));
+        menu.layout(font, window);
         palette.layout(font, layout);
         components.layout(font, layout);
         canvas.layout(font, layout.canvas());
         base.layout(font, layout.base());
         bar.layout(font, layout.buttons());
         layers.layout(font, layout.layers());
+        pixel.arts().layout(font, layout.leftBody());
         props.layout(font, layout.props());
     }
 
@@ -113,11 +101,7 @@ public final class TvEditorTab {
 
     public void render(GuiGraphics g, int mouseX, int mouseY) {
         if (!fits) {
-            int lineY = y + (h - tooSmall.size() * 10) / 2;
-            for (int i = 0; i < tooSmall.size(); i++) {
-                GuiPaint.text(g, font, tooSmall.get(i), x + (w - tooSmallWidths[i]) / 2, lineY + i * 10,
-                        GuiPaint.MUTED);
-            }
+            tooSmall.render(g);
             return;
         }
         leftTabs.render(g, mouseX, mouseY);
@@ -125,6 +109,7 @@ public final class TvEditorTab {
             case PIECES -> palette.render(g, mouseX, mouseY);
             case COMPONENTS -> components.render(g, mouseX, mouseY);
             case LAYERS -> layers.render(g, mouseX, mouseY);
+            case ARTS -> pixel.arts().render(g, mouseX, mouseY);
         }
         base.render(g, mouseX, mouseY);
         canvas.render(g, mouseX, mouseY);
@@ -216,6 +201,7 @@ public final class TvEditorTab {
             case PIECES -> palette.mouseClicked(mouseX, mouseY);
             case LAYERS -> layers.mouseClicked(mouseX, mouseY);
             case COMPONENTS -> false;
+            case ARTS -> pixel.arts().mouseClicked(mouseX, mouseY);
         };
     }
 
@@ -295,7 +281,8 @@ public final class TvEditorTab {
         }
         return props.mouseScrolled(mouseX, mouseY, delta)
                 || leftTabs.tab() == TvLeftTabs.Tab.COMPONENTS && components.mouseScrolled(mouseX, mouseY, delta)
-                || leftTabs.tab() == TvLeftTabs.Tab.LAYERS && layers.mouseScrolled(mouseX, mouseY, delta);
+                || leftTabs.tab() == TvLeftTabs.Tab.LAYERS && layers.mouseScrolled(mouseX, mouseY, delta)
+                || leftTabs.tab() == TvLeftTabs.Tab.ARTS && pixel.arts().mouseScrolled(mouseX, mouseY, delta);
     }
 
     /** Uma tecla: o campo de texto com o foco primeiro, depois os atalhos; {@code true} se foi usada. */
@@ -386,9 +373,10 @@ public final class TvEditorTab {
     /** Ao fechar a tela: para a prévia dos números e solta a textura da miniatura e a biblioteca. */
     public void release() {
         actions.stopPreview();
-        TvEditorImage.release();
+        pixel.close();
         TvEditorAck.stop();
         TvLibraryClient.clear();
+        TvEditorImage.release();
         TvStorageClient.clear();
     }
 
@@ -426,6 +414,11 @@ public final class TvEditorTab {
     /** Escolhe o ingrediente largado pelo JEI. */
     public void acceptGhostIngredient(Object ingredient) {
         props.acceptGhostIngredient(ingredient);
+    }
+
+    /** O editor de pixel art, aberto pela aba Pixel art por cima deste. */
+    public TvPixelEditor pixel() {
+        return pixel;
     }
 
     /** Os ganchos do e2e e das capturas. */

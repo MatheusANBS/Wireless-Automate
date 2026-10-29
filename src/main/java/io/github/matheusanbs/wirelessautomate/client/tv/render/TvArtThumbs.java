@@ -1,0 +1,40 @@
+package io.github.matheusanbs.wirelessautomate.client.tv.render;
+
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import io.github.matheusanbs.wirelessautomate.client.tv.editor.TvLibraryClient;
+import io.github.matheusanbs.wirelessautomate.tv.TvPixelArt;
+import java.util.List;
+import net.minecraft.client.gui.GuiGraphics;
+import org.joml.Matrix4f;
+
+/**
+ * As miniaturas das pixel arts da biblioteca na GUI do editor (a aba Pixel art): um quadrilátero com a textura da
+ * arte do {@link TvArtTextures}, a mesma que a Tela usa, sem nada pintado pixel a pixel. Enquanto a biblioteca está no
+ * cliente (só com o editor aberto, {@link TvLibraryClient}), as texturas dela ficam na varredura.
+ */
+public final class TvArtThumbs {
+    private static final int WHITE = 0xFFFFFFFF;
+
+    private TvArtThumbs() {
+    }
+
+    /** A arte esticada em ({@code x}, {@code y}), {@code w} × {@code h} (a escala inteira é de quem chama). */
+    public static void draw(GuiGraphics g, TvPixelArt art, int x, int y, int w, int h) {
+        g.flush();
+        Matrix4f matrix = g.pose().last().pose();
+        VertexConsumer buffer = g.bufferSource().getBuffer(TvArtTextures.renderType(art));
+        buffer.addVertex(matrix, x + w, y + h, 0).setUv(1, 1).setColor(WHITE);
+        buffer.addVertex(matrix, x + w, y, 0).setUv(1, 0).setColor(WHITE);
+        buffer.addVertex(matrix, x, y, 0).setUv(0, 0).setColor(WHITE);
+        buffer.addVertex(matrix, x, y + h, 0).setUv(0, 1).setColor(WHITE);
+        g.flush();
+    }
+
+    /** Na varredura do {@link TvArtTextures}: marca as artes da biblioteca que está no cliente. */
+    static void keepArts() {
+        List<TvPixelArt> arts = TvLibraryClient.arts();
+        for (int i = 0; i < arts.size(); i++) {
+            TvArtTextures.keep(arts.get(i));
+        }
+    }
+}

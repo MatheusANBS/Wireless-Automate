@@ -95,7 +95,32 @@ public final class TvIcons {
         /** Passo para menos: os campos de número do editor e a Largura e a Altura da aba Tamanho. */
         STEP_LEFT("step_left"),
         /** Passo para mais: os campos de número do editor e a Largura e a Altura da aba Tamanho. */
-        STEP_RIGHT("step_right");
+        STEP_RIGHT("step_right"),
+        /** A aba Pixel art da coluna. */
+        PIXEL_ART("aba_pixel_art"),
+        /** As ferramentas do editor de pixel art, na coluna da esquerda dele. */
+        PIXEL_PEN("lapis"),
+        PIXEL_ERASE("borracha"),
+        PIXEL_FILL("balde"),
+        PIXEL_PICK("conta_gotas"),
+        PIXEL_LINE("linha"),
+        PIXEL_RECT("retangulo"),
+        PIXEL_RECT_FILLED("retangulo_cheio"),
+        PIXEL_ELLIPSE("elipse"),
+        PIXEL_ELLIPSE_FILLED("elipse_cheia"),
+        PIXEL_SHADE("clarear"),
+        PIXEL_DITHER("pontilhado"),
+        PIXEL_SELECT("selecao"),
+        /** A forma do pincel do editor de pixel art: o rodapé do quadro. */
+        PIXEL_BRUSH_SQUARE("pincel_quadrado"),
+        PIXEL_BRUSH_ROUND("pincel_redondo"),
+        /** As ajudas e a arte inteira do editor de pixel art. */
+        PIXEL_MIRROR_H("espelho_h"),
+        PIXEL_MIRROR_V("espelho_v"),
+        PIXEL_PERFECT("pixel_perfect"),
+        PIXEL_FLIP_H("virar_h"),
+        PIXEL_FLIP_V("virar_v"),
+        PIXEL_ROTATE("girar");
 
         private final ResourceLocation light;
         private final ResourceLocation dark;

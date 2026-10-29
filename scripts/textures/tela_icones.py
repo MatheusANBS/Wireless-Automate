@@ -576,6 +576,75 @@ def _step_left(q: Quadro) -> None:
 ICONES["step_right"] = lambda: ICONES["step_left"]().espelho()
 
 
+# ---------------------------------------------------------------- editor de pixel art (marcadores)
+
+# Marcadores provisórios do editor de pixel art: uma caixa com a letra da ferramenta (a tecla, quando há), até o
+# desenho definitivo. Os nomes são os finais: trocar o desenho de um deles não mexe no código.
+LETRAS = {
+    "B": ("110", "101", "110", "101", "110"),
+    "C": ("011", "100", "100", "100", "011"),
+    "D": ("110", "101", "101", "101", "110"),
+    "E": ("111", "100", "110", "100", "111"),
+    "F": ("111", "100", "110", "100", "100"),
+    "G": ("011", "100", "101", "101", "011"),
+    "H": ("101", "101", "111", "101", "101"),
+    "I": ("111", "010", "010", "010", "111"),
+    "L": ("100", "100", "100", "100", "111"),
+    "M": ("101", "111", "111", "101", "101"),
+    "O": ("010", "101", "101", "101", "010"),
+    "P": ("110", "101", "110", "100", "100"),
+    "Q": ("010", "101", "101", "010", "001"),
+    "R": ("110", "101", "110", "101", "101"),
+    "S": ("011", "100", "010", "001", "110"),
+    "T": ("111", "010", "010", "010", "010"),
+    "V": ("101", "101", "101", "101", "010"),
+    "W": ("101", "101", "111", "111", "101"),
+}
+
+MARCADORES = {
+    "lapis": ("B", False, False),
+    "borracha": ("E", False, False),
+    "balde": ("G", False, False),
+    "conta_gotas": ("I", False, False),
+    "linha": ("L", False, False),
+    "retangulo": ("R", False, False),
+    "retangulo_cheio": ("R", False, True),
+    "elipse": ("O", True, False),
+    "elipse_cheia": ("O", True, True),
+    "clarear": ("D", False, False),
+    "pontilhado": ("T", False, False),
+    "selecao": ("S", False, False),
+    "espelho_h": ("M", False, False),
+    "espelho_v": ("W", False, False),
+    "pixel_perfect": ("P", False, False),
+    "virar_h": ("H", False, False),
+    "virar_v": ("V", False, False),
+    "girar": ("C", False, False),
+    "pincel_quadrado": ("Q", False, False),
+    "pincel_redondo": ("Q", True, False),
+    "aba_pixel_art": ("F", True, False),
+    "imagem": ("F", False, True),
+}
+
+
+def _marcador(letra: str, redonda: bool, cheio: bool) -> Callable[[], Quadro]:
+    def monta() -> Quadro:
+        q = Quadro()
+        if cheio:
+            q.cheio(3, 3, 12, 12, "L")
+        q.caixa(2, 2, 13, 13, redonda=redonda)
+        for dy, linha in enumerate(LETRAS[letra]):
+            for dx, c in enumerate(linha):
+                if c == "1":
+                    q.p(6 + dx, 5 + dy, "K" if cheio else "A")
+        return q
+    return monta
+
+
+for _nome, (_letra, _redonda, _cheio) in MARCADORES.items():
+    ICONES[_nome] = _marcador(_letra, _redonda, _cheio)
+
+
 # ---------------------------------------------------------------- saída
 
 def imagem(nome: str, tema: str) -> Image.Image:

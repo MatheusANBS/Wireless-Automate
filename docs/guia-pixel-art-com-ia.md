@@ -3,16 +3,19 @@
 *[English version](pixel-art-ai-guide.md)*
 
 Este guia ensina a uma IA de chat (Claude, ChatGPT e outras) o texto que a **Tela de Sinal** do Wireless Automate lê.
-Com ele, a IA desenha uma pixel art ou monta uma Tela inteira, e você cola o resultado no jogo.
+Com ele, a IA desenha uma pixel art (parada ou animada), prepara uma imagem ou um GIF de verdade, ou monta uma Tela
+inteira, e você cola o resultado no jogo.
 
 ## Como usar
 
 1. Copie este arquivo inteiro e cole na conversa com a IA, antes do pedido.
 2. Peça o que quer: "uma espada de 32 × 32" ou "uma Tela de 4 × 2 blocos com o título Base e um relógio".
-3. Copie **só o texto do código** da resposta, da linha `WA-ARTE1` ou `WA-TELA1` até o fim. Sem as crases (```) e sem
+3. Copie **só o texto do código** da resposta, da linha `WA-ARTE1`, `WA-IMAGEM1` ou `WA-TELA1` até o fim. Sem as crases (```) e sem
    o texto em volta.
 4. No jogo, abra a Tela, aba **Editar**:
    - **uma arte:** aba **Pixel art**, botão **Importar**. A arte entra na sua biblioteca.
+   - **uma imagem ou um GIF:** aba **Imagens**, botão **Importar**. A imagem é enviada ao servidor e entra na sua
+     biblioteca. (Uma imagem que você já tem no computador vai mais fácil pelo botão **Enviar arquivo**, na mesma aba.)
    - **um layout:** com nada escolhido, botão **Importar** na base, embaixo de **Aplicar layout**. O layout entra no
      rascunho (**Ctrl+Z** desfaz, um importar de cada vez) e só vai para a parede no **Salvar**.
 5. Se o código tiver um erro, a barra de baixo do editor diz qual e onde, e nada muda: numa arte solta, a linha do
@@ -21,8 +24,8 @@ Com ele, a IA desenha uma pixel art ou monta uma Tela inteira, e você cola o re
 **Dica:** o botão **Copiar como texto** exporta a sua arte ou a sua Tela nesta mesma forma. Cole isso na conversa para a
 IA partir do que você já tem (com as suas redes já ligadas).
 
-A primeira linha que não está em branco precisa ser exatamente `WA-ARTE1` ou `WA-TELA1`. O texto pode ter até 524.288
-caracteres (512 K).
+A primeira linha que não está em branco precisa ser exatamente `WA-ARTE1`, `WA-IMAGEM1` ou `WA-TELA1`. O texto de uma
+arte ou de um layout pode ter até 524.288 caracteres (512 K); o de uma imagem, até o tamanho do arquivo permitido.
 
 ## Pixel art (`WA-ARTE1`)
 
@@ -64,6 +67,105 @@ paleta: - 1B1920 7A7366 ECE5D6
   ponha `#` nem `:` numa linha de pixels.
 
 Ao importar, a arte ganha um id novo e entra na sua biblioteca (que tem um limite de artes; 32 por padrão).
+
+## Pixel art animada (quadros)
+
+Uma arte pode ter vários **quadros**, todos do mesmo tamanho e com a mesma paleta. Ela toca em loop na Tela (na peça
+Imagem e no fundo em mosaico). Uma arte sem quadros é uma imagem parada, como acima.
+
+```
+WA-ARTE1
+nome: Sinal piscando
+tamanho: 16x16
+paleta: - 1B1920 7A7366 ECE5D6 8E2A35 C2442A F0603E FFB08A
+quadros: 2
+velocidade: 4
+modo: loop
+quadro 1:
+(16 linhas de 16 caracteres)
+quadro 2:
+(16 linhas de 16 caracteres)
+```
+
+- **Chaves a mais** (antes do primeiro quadro):
+
+  | Chave | Em inglês | Valor |
+  | --- | --- | --- |
+  | `quadros` | `frames` | Quantos quadros, de **1 a 64**. Precisa bater com os blocos abaixo. |
+  | `velocidade` | `speed` | Quadros por segundo, de **1 a 20** (padrão 6). |
+  | `modo` | `mode` | `loop` (volta ao primeiro) ou `vaivem` (`pingpong`: vai e volta). Padrão `loop`. |
+
+- **Cada quadro** começa com uma linha `quadro N:` (`frame N:`), N de 1 em diante, em ordem, seguida das linhas de
+  pixels daquele quadro, com as mesmas regras de uma arte parada.
+- Sem a chave `quadros`, as linhas de pixels vêm direto, sem `quadro 1:`: é a arte parada.
+- **Teto:** os quadros contam no teto de pixels da Tela. Uma arte de 32 × 32 com 10 quadros conta 10.240 pixels.
+- **Dicas:** mude pouco de um quadro para o outro; 2 a 8 quadros já animam bem um ícone; 6 a 12 quadros por segundo é o
+  ritmo clássico de pixel art; para um piscar, repita o quadro parado e ponha o piscar em 1 ou 2 quadros.
+- **No JSON (`images`)**, a arte animada troca `linhas` por `quadros` (`frames`), uma lista de quadros em que cada quadro
+  é uma lista de fileiras, e pode ter `velocidade` e `modo`.
+
+## Imagens e GIFs (`WA-IMAGEM1`)
+
+Para uma foto, um desenho com muitas cores ou um GIF animado, use uma **imagem de verdade**, em vez de pixel art: PNG,
+JPG ou GIF, até **1024 × 1024** pixels, até **8 MB** e, no GIF, até **240 quadros** (o servidor pode mudar esses
+limites, ou desligar as imagens).
+
+```
+WA-IMAGEM1
+nome: Mona Lisa
+formato: png
+iVBORw0KGgoAAAANSUhEUgAAA...
+(o arquivo inteiro em base64, numa linha ou em várias)
+```
+
+- **Chaves:** `nome` (`name`), até 32 caracteres (sem nome, entra como "Nova imagem"), e `formato` (`format`): `png`,
+  `jpg` (ou `jpeg`) ou `gif`, que precisa bater com o arquivo.
+- **Depois das chaves**, o arquivo em **base64** (o padrão ou o "URL-safe", com ou sem `=` no fim). Quebras de linha e
+  espaços não contam; linhas que começam com `#` são comentários.
+- **Só uma IA que roda código** (como o ChatGPT com análise de dados ou o Claude com execução de código) consegue fazer
+  isso: o base64 sai de um script, não de cabeça. Uma IA só de texto deve fazer uma pixel art.
+
+**Receita em Python (com Pillow), para uma imagem:**
+
+```python
+from PIL import Image
+import base64, io
+
+img = Image.open("entrada.jpg").convert("RGB")   # use "RGBA" se a imagem tiver transparência
+img.thumbnail((1024, 1024))                      # reduz mantendo a proporção, até 1024 no lado maior
+buf = io.BytesIO()
+img.save(buf, "JPEG", quality=90)                # foto: JPG fica menor; desenho ou transparência: "PNG"
+dados = base64.b64encode(buf.getvalue()).decode()
+with open("imagem.txt", "w") as f:
+    f.write("WA-IMAGEM1
+nome: Minha imagem
+formato: jpg
+")
+    for i in range(0, len(dados), 120):
+        f.write(dados[i:i + 120] + "
+")
+```
+
+**Para um GIF animado:**
+
+```python
+from PIL import Image
+import base64, io
+
+quadros = [Image.open(f"quadro_{i}.png").convert("RGBA") for i in range(12)]
+quadros = [q.resize((256, 256)) for q in quadros]
+buf = io.BytesIO()
+quadros[0].save(buf, "GIF", save_all=True, append_images=quadros[1:], duration=100, loop=0, disposal=2)
+dados = base64.b64encode(buf.getvalue()).decode()
+# grave como acima, com "formato: gif"
+```
+
+- O texto fica grande demais para copiar da conversa: peça à IA o arquivo `imagem.txt`, abra-o e copie tudo.
+- **Tamanho na Tela:** a Tela tem 32 pixels de desenho por bloco, mas desenha a imagem em alta resolução; uma imagem de
+  1024 × 1024 aparece nítida numa Tela de até 8 × 8 blocos. Menor que isso, ela é reduzida com suavidade.
+- **GIF:** menos quadros e menos cores deixam o arquivo pequeno; 10 a 15 quadros por segundo bastam. O GIF toca na Tela
+  no ritmo dele.
+- **Respeite o servidor:** imagens são vistas por todos que passam; o dono do servidor pode removê-las ou desligá-las.
 
 ## Tela (`WA-TELA1`)
 
@@ -145,7 +247,7 @@ lista, a partir de 1.
 | `gauge` | Um medidor em arco. | `sweep`: de 90 a 360 graus (270); `thickness`: de 1 a 32 (5); `min`, `max` e `track`, como na barra. |
 | `graph` | O histórico do número. | `window`: de 1 a 10 minutos (1); `graphMode`: `line` ou `columns`; `area`: a área sob a linha (`true`). |
 | `arrow` | Sobe, desce ou fica parada. | `upColor` (`tema:alta`), `downColor` (`tema:baixa`), `flatColor` (`tema:apagado`); `deadZone`; `reverse`. |
-| `image` | Uma pixel art. | `image`: o `id` da arte em `images`; `scale`: de 1 a 16, ou 0 para esticar até a caixa (1); `valign`: `top`, `middle` ou `bottom` (`middle`). |
+| `image` | Uma pixel art ou uma imagem. | `image`: o `id` da arte em `images`; `scale`: de 1 a 16, ou 0 para esticar até a caixa (1); `valign`: `top`, `middle` ou `bottom` (`middle`). |
 
 Na Imagem, a arte aparece no tamanho dela vezes a `scale`, alinhada por `align` e `valign` e cortada pela caixa. Uma
 arte de 16 × 16 em `scale` 2 pede uma caixa de 32 × 32.
@@ -206,7 +308,10 @@ Cada arte é um objeto com as mesmas partes da forma `WA-ARTE1`:
 | O quê | Teto (padrão do servidor) |
 | --- | --- |
 | Arte | De 8 × 8 a 128 × 128 pixels, 16 cores. |
-| Pixels das artes de uma Tela | 131.072 somados, contando cada arte distinta uma vez (oito artes de 128 × 128). |
+| Pixels das artes de uma Tela | 131.072 somados, contando cada arte distinta uma vez e cada quadro (oito artes de 128 × 128). |
+| Quadros por arte | 64, de 1 a 20 por segundo. |
+| Imagem enviada | PNG, JPG ou GIF, até 1024 × 1024, 8 MB e 240 quadros. |
+| Imagens distintas por Tela | 8. |
 | Peças por Tela | 128. |
 | Ligações distintas por Tela | 64. |
 | Layout sem os pixels | 16 KB de NBT. |
@@ -327,4 +432,13 @@ Para uma Tela:
 > **[o que mostrar]**. Use as cores por papel do tema, alinhe na grade de 32 px e deixe as peças de dado sem `bind`
 > (eu ligo no jogo). Responda só com o código, num bloco de código.
 
-A pixel art animada vem numa versão futura do mod; este formato ainda não tem quadros.
+Para uma animação:
+
+> Usando o formato acima, faça uma pixel art animada `WA-ARTE1` de **[tamanho]** com **[quantos]** quadros de
+> **[o que acontece]**, a **[6]** quadros por segundo em loop, mudando pouco de um quadro para o outro. Confira as
+> linhas e as colunas de cada quadro. Responda só com o código, num bloco de código.
+
+Para uma imagem (IA que roda código):
+
+> Pegue a imagem **[anexada / descrita]**, reduza até 1024 × 1024 mantendo a proporção e gere o código `WA-IMAGEM1`
+> com a receita em Python deste guia, num arquivo `imagem.txt` para eu baixar.

@@ -72,6 +72,7 @@ public final class WirelessAutomate {
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onServerTick);
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onServerStopped);
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onPlayerLoggedOut);
+        NeoForge.EVENT_BUS.addListener(WirelessAutomate::onPlayerLoggedIn);
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onRegisterCommands);
         // Carga de chunk: acorda as máquinas remotas vinculadas nele e tira do índice de nós os roteadores que sumiram.
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onChunkLoad);
@@ -107,6 +108,12 @@ public final class WirelessAutomate {
         TvEditing.forget(event.getEntity().getUUID());
         TvPreview.forget(event.getEntity().getUUID());
         NetworkManager.get().flows().unwatch(event.getEntity().getUUID());
+    }
+
+    private static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer player) {
+            io.github.matheusanbs.wirelessautomate.tv.TvImageState.onLogin(player);
+        }
     }
 
     private static void onServerStarted(ServerStartedEvent event) {

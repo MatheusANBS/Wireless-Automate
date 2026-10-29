@@ -113,10 +113,25 @@ public final class TvLibrary extends SavedData {
         return out;
     }
 
-    /** Os resumos das imagens do jogador, na ordem de chegada. */
+    /**
+     * Os resumos das imagens que a biblioteca do jogador segura: as da aba Imagens, na ordem de chegada, e as dos
+     * componentes e layouts salvos (o armazém conta todas como uso).
+     */
     public List<String> pictureHashes(UUID player) {
         Shelf shelf = shelves.get(player);
-        return shelf == null || shelf.pictures.isEmpty() ? List.of() : List.copyOf(shelf.pictures.keySet());
+        return shelf == null ? List.of() : held(shelf);
+    }
+
+    private static List<String> held(Shelf shelf) {
+        List<String> out = new ArrayList<>(shelf.pictures.keySet());
+        for (TvComponent component : shelf.components.values()) {
+            for (TvPicture picture : component.pictures()) {
+                if (!out.contains(picture.hash())) {
+                    out.add(picture.hash());
+                }
+            }
+        }
+        return out;
     }
 
     public boolean hasPicture(UUID player, String hash) {
@@ -192,12 +207,16 @@ public final class TvLibrary extends SavedData {
         return affected;
     }
 
-    /** Os resumos das imagens de cada jogador que tem alguma: o armazém conta o uso das bibliotecas por aqui. */
+    /**
+     * Os resumos das imagens de cada jogador que segura alguma (na aba Imagens, num componente ou num layout salvo): o
+     * armazém conta o uso das bibliotecas por aqui.
+     */
     public Map<UUID, List<String>> pictureRefs() {
         Map<UUID, List<String>> out = new HashMap<>();
         for (Map.Entry<UUID, Shelf> entry : shelves.entrySet()) {
-            if (!entry.getValue().pictures.isEmpty()) {
-                out.put(entry.getKey(), List.copyOf(entry.getValue().pictures.keySet()));
+            List<String> held = held(entry.getValue());
+            if (!held.isEmpty()) {
+                out.put(entry.getKey(), held);
             }
         }
         return out;
@@ -255,7 +274,7 @@ public final class TvLibrary extends SavedData {
             drop(player, shelf);
             return Result.FULL;
         }
-        TvComponent stored = new TvComponent(name, component.pieces(), component.layout());
+        TvComponent stored = new TvComponent(name, component.pieces(), component.layout(), component.pictures());
         int size = sizeOf(stored);
         int others = shelf.bytes - shelf.sizes.getOrDefault(name, 0);
         if (others + size > MAX_COMPONENT_BYTES_PER_PLAYER) {

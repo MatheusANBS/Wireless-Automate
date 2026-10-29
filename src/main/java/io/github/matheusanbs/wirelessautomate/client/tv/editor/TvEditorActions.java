@@ -1,7 +1,9 @@
 package io.github.matheusanbs.wirelessautomate.client.tv.editor;
 
 import io.github.matheusanbs.wirelessautomate.client.tv.TvPreviewValues;
+import io.github.matheusanbs.wirelessautomate.client.tv.image.TvImageUploader;
 import io.github.matheusanbs.wirelessautomate.client.tv.render.TvArtCache;
+import io.github.matheusanbs.wirelessautomate.menu.TvMenu;
 import io.github.matheusanbs.wirelessautomate.packet.TvLayoutPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TvLibraryActionPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TvStorageContentsRequestPayload;
@@ -12,6 +14,7 @@ import io.github.matheusanbs.wirelessautomate.tv.TvPixelArt;
 import io.github.matheusanbs.wirelessautomate.tv.TvTheme;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Consumer;
 import net.minecraft.core.GlobalPos;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -20,8 +23,10 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * conferido antes: acima do teto do servidor, o {@code maxLayoutBytes} do layout sem os pixels, ou do teto do pacote
  * com eles, nada sai e o editor avisa) e as ações na biblioteca
  * pelo {@link TvLibraryActionPayload} (pedir, salvar, renomear e remover componentes, temas e pixel arts; a resposta
- * volta pelo {@link TvLibraryClient}). Leva também os tetos do servidor que vieram na abertura (artes na biblioteca e
- * pixels nas imagens da Tela). Na prévia de desenvolvimento ({@code preview}), nada sai e o rascunho vira a base na hora.
+ * volta pelo {@link TvLibraryClient}), além do envio de imagens pelo {@link TvImageUploader} e de renomear e remover
+ * as da biblioteca. Leva também os tetos do servidor que vieram na abertura (artes na biblioteca, pixels nas imagens
+ * da Tela e as regras das imagens enviadas, {@link TvMenu.ImageRules}). Na prévia de desenvolvimento
+ * ({@code preview}), nada sai e o rascunho vira a base na hora.
  */
 public final class TvEditorActions {
     /** O resultado de pedir para salvar. */
@@ -32,13 +37,22 @@ public final class TvEditorActions {
     private final int maxLayoutBytes;
     private final int maxArts;
     private final int maxImagePixels;
+    private final TvMenu.ImageRules images;
 
-    public TvEditorActions(int containerId, boolean preview, int maxLayoutBytes, int maxArts, int maxImagePixels) {
+    public TvEditorActions(int containerId, boolean preview, int maxLayoutBytes, int maxArts, int maxImagePixels,
+            TvMenu.ImageRules images) {
         this.containerId = containerId;
         this.preview = preview;
         this.maxLayoutBytes = maxLayoutBytes;
         this.maxArts = maxArts;
         this.maxImagePixels = maxImagePixels;
+        this.images = images;
+        TvImageOps.pictureLimit = images.maxPerScreen();
+    }
+
+    /** As regras das imagens enviadas neste servidor: ligadas, se este jogador envia e os tetos. */
+    TvMenu.ImageRules images() {
+        return images;
     }
 
     int containerId() {
@@ -137,6 +151,25 @@ public final class TvEditorActions {
     /** Remove a pixel art da biblioteca (as Telas que a usam guardam a cópia delas). */
     void removeArt(UUID id) {
         send(TvLibraryActionPayload.removeArt(containerId, id));
+    }
+
+    /**
+     * Envia a imagem ao servidor com o nome que ela terá na biblioteca; {@code done} roda com o resultado. A
+     * biblioteca nova vem do servidor depois do aceite.
+     */
+    void uploadPicture(byte[] data, String name, Consumer<TvImageUploader.Outcome> done) {
+        if (!preview) {
+            TvImageUploader.upload(data, name, done);
+        }
+    }
+
+    void renamePicture(String hash, String newName) {
+        send(TvLibraryActionPayload.renamePicture(containerId, hash, newName));
+    }
+
+    /** Tira a imagem da biblioteca; ela só sai do mundo quando nada mais a usa. */
+    void removePicture(String hash) {
+        send(TvLibraryActionPayload.removePicture(containerId, hash));
     }
 
     private void send(TvLibraryActionPayload payload) {

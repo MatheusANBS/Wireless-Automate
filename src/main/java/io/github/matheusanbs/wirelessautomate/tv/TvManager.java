@@ -67,6 +67,7 @@ public final class TvManager {
     public static void tick(MinecraftServer server) {
         TvImageUploads.tick(server);
         TvImageStore.tick();
+        TvImageState.tick(server);
         TvPictureSender.tick(server);
         TvArtSender.tick(server);
         loaded = TvLoaded.serverCount();
@@ -283,6 +284,7 @@ public final class TvManager {
         TvPictureSender.reset();
         TvImageUploads.reset();
         TvImageStore.reset();
+        TvImageState.reset();
         TvStorageFeed.releaseAll();
         NEAR.clear();
         STATS.clear();

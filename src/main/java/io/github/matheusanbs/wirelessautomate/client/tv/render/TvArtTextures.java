@@ -14,8 +14,9 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.util.FastColor;
 
 /**
- * As texturas das pixel arts no cliente: uma por arte distinta, do tamanho dela, com a paleta em ARGB sem
- * pré-multiplicar e o índice 0 transparente, {@code NEAREST} ao ampliar (o pixel duro, nada borra), mipmaps com
+ * As texturas das pixel arts no cliente: uma por arte distinta, do tamanho dela, com a paleta com o alfa
+ * pré-multiplicado ({@link TvPremultiply}, o que a mistura do {@link TvRenderTypes#art} espera) e o índice 0
+ * transparente, {@code NEAREST} ao ampliar (o pixel duro, nada borra), mipmaps com
  * {@code LINEAR_MIPMAP_LINEAR} ao reduzir (a miniatura e a arte esticada menor que ela não serrilham; o GL escolhe por
  * pixel no redesenho, como nas imagens enviadas, {@link TvPictureTextures#mipmaps}) e {@code GL_REPEAT} (o mosaico é um
  * quadrilátero só). A chave é a arte inteira, id e conteúdo: a mesma arte em várias Telas divide a
@@ -86,10 +87,14 @@ final class TvArtTextures {
         byte[] pixels = art.pixels();
         int texture = TextureUtil.generateTextureId();
         TextureUtil.prepareImage(texture, w, h);
+        int[] premultiplied = new int[palette.length];
+        for (int i = 0; i < palette.length; i++) {
+            premultiplied[i] = FastColor.ABGR32.fromArgb32(TvPremultiply.color(palette[i]));
+        }
         NativeImage image = new NativeImage(NativeImage.Format.RGBA, w, h, false);
         for (int y = 0; y < h; y++) {
             for (int x = 0; x < w; x++) {
-                image.setPixelRGBA(x, y, FastColor.ABGR32.fromArgb32(palette[pixels[y * w + x]]));
+                image.setPixelRGBA(x, y, premultiplied[pixels[y * w + x]]);
             }
         }
         image.upload(0, 0, 0, 0, 0, w, h, false, false, false, true);

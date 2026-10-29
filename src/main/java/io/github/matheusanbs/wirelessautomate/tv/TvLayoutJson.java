@@ -11,8 +11,11 @@ import com.google.gson.JsonPrimitive;
 import com.mojang.serialization.JsonOps;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -78,6 +81,12 @@ public final class TvLayoutJson {
 
     /** O código legível do layout feito numa área de {@code width} × {@code height} pixels de desenho. */
     public static String write(TvLayout layout, int width, int height, boolean keepTheme, boolean english) {
+        return write(layout, width, height, keepTheme, english, Map.of());
+    }
+
+    /** O mesmo com os bytes das imagens enviadas em base64 ({@link TvCodes#PICTURE_DATA}). */
+    public static String write(TvLayout layout, int width, int height, boolean keepTheme, boolean english,
+            Map<String, byte[]> data) {
         JsonObject encoded = TvLayout.CODEC.encodeStart(JsonOps.INSTANCE, layout).getOrThrow().getAsJsonObject();
         JsonObject root = new JsonObject();
         root.addProperty("area_w", width);
@@ -95,6 +104,16 @@ public final class TvLayoutJson {
                 images.add(readableArt(art, english));
             }
             root.add("images", images);
+        }
+        if (!data.isEmpty()) {
+            JsonArray pictures = new JsonArray();
+            for (Map.Entry<String, byte[]> entry : data.entrySet()) {
+                JsonObject item = new JsonObject();
+                item.addProperty("hash", entry.getKey());
+                item.addProperty("data", Base64.getEncoder().encodeToString(entry.getValue()));
+                pictures.add(item);
+            }
+            root.add(TvCodes.PICTURE_DATA, pictures);
         }
         helpersOut(root, english);
         return HEADER + "\n" + GSON.toJson(root) + "\n";
@@ -223,6 +242,7 @@ public final class TvLayoutJson {
         if (!(parsed instanceof JsonObject root)) {
             return TvCodes.Read.fail("code.invalid");
         }
+        Map<String, byte[]> data = pictureData(root);
         int dropped;
         try {
             dropped = fix(root);
@@ -237,7 +257,26 @@ public final class TvLayoutJson {
         int h = integer(root.get("area_h"));
         boolean keepTheme = root.get("keep_theme") instanceof JsonPrimitive keep && keep.isBoolean()
                 && keep.getAsBoolean();
-        return TvCodes.Read.ok(TvCodes.Layout.of(layout.get(), w, h, keepTheme, dropped));
+        return TvCodes.Read.ok(TvCodes.Layout.of(layout.get(), w, h, keepTheme, dropped, data));
+    }
+
+    /** Tira do JSON os bytes das imagens ({@link TvCodes#PICTURE_DATA}); um item que não lê fica de fora. */
+    private static Map<String, byte[]> pictureData(JsonObject root) {
+        if (!(root.remove(TvCodes.PICTURE_DATA) instanceof JsonArray list)) {
+            return Map.of();
+        }
+        Map<String, byte[]> out = new LinkedHashMap<>();
+        for (int i = 0; i < list.size() && out.size() < TvLayout.MAX_PICTURES; i++) {
+            if (list.get(i) instanceof JsonObject item && item.get("hash") instanceof JsonPrimitive hash
+                    && item.get("data") instanceof JsonPrimitive bytes) {
+                try {
+                    out.put(hash.getAsString(), Base64.getMimeDecoder().decode(bytes.getAsString()));
+                } catch (IllegalArgumentException e) {
+                    // Base64 estragado: a imagem fica só como referência.
+                }
+            }
+        }
+        return out;
     }
 
     /** Aplica as ajudas no JSON lido; devolve quantas ligações não leram e saíram. */

@@ -202,7 +202,7 @@ public final class TvCanvases {
             } else {
                 BLINKING.remove(pos);
             }
-            TvTimed.track(pos, canvas.graphing, canvas.clocking, canvas.iconing);
+            TvTimed.track(pos, canvas.graphing, canvas.clocking, canvas.iconing, canvas.gifing);
             paintsForTests++;
             paintNanosForTests += spent;
             maxPaintNanosForTests = Math.max(maxPaintNanosForTests, spent);
@@ -264,6 +264,12 @@ public final class TvCanvases {
         TvArtTextures.onClientTick();
         TvPictureTextures.onClientTick();
         TvArtCache.onClientTick();
+        boolean showOthers = ClientConfig.TV_SHOW_OTHERS_IMAGES.get();
+        if (showOthers != TvPaintImage.showOthers) {
+            TvPaintImage.showOthers = showOthers;
+            TvPictureTextures.changed();
+            markAllPictures();
+        }
         if (CANVASES.isEmpty()) {
             return;
         }
@@ -486,6 +492,45 @@ public final class TvCanvases {
                     markDirty(canvas.tv.getBlockPos().asLong());
                     break;
                 }
+            }
+        }
+    }
+
+    /** Todas as Telas com imagem enviada redesenham (o servidor ligou ou desligou as imagens, ou a opção mudou). */
+    static void markAllPictures() {
+        for (TvCanvas canvas : CANVASES.values()) {
+            if (!canvas.tv.layout().pictures().isEmpty()) {
+                markDirty(canvas.tv.getBlockPos().asLong());
+            }
+        }
+    }
+
+    /**
+     * A Tela com GIF em {@code pos}, se foi vista há pouco, mantém os GIFs dela tocando; falso se a imagem não existe
+     * mais, e o conjunto do {@link TvTimed} a esquece.
+     */
+    static boolean seenGif(long pos, long now) {
+        TvCanvas canvas = CANVASES.get(pos);
+        if (canvas == null) {
+            return false;
+        }
+        if (now - canvas.lastWanted <= SEEN_TICKS) {
+            TvPictureTextures.seen(canvas.tv.layout());
+        }
+        return true;
+    }
+
+    /** O quadro do GIF {@code hash} mudou: a Tela em {@code pos} redesenha se foi vista há pouco e o mostra. */
+    static void refreshIfShows(long pos, String hash, long now) {
+        TvCanvas canvas = CANVASES.get(pos);
+        if (canvas == null || now - canvas.lastWanted > SEEN_TICKS) {
+            return;
+        }
+        List<TvPicture> pictures = canvas.tv.layout().pictures();
+        for (int i = 0; i < pictures.size(); i++) {
+            if (pictures.get(i).hash().equals(hash)) {
+                markDirty(pos);
+                return;
             }
         }
     }

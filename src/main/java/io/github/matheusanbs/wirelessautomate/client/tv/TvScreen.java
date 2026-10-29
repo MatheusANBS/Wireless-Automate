@@ -74,7 +74,7 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
         this.accessTab = menu.manage() ? new TvAccessTab(menu, actions) : null;
         this.editorTab = new TvEditorTab(menu.pos(), menu.area(), menu.networks(), menu.links(),
                 new TvEditorActions(menu.containerId, false, menu.maxLayoutBytes(), menu.maxArts(),
-                        menu.maxImagePixels()));
+                        menu.maxImagePixels(), menu.imageRules()));
     }
 
     @Override

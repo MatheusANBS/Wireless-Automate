@@ -35,6 +35,8 @@ public final class TvPainter {
     public static final int FLAG_GRAPH = 2;
     public static final int FLAG_CLOCK = 4;
     public static final int FLAG_ICON = 8;
+    /** O desenho teve um GIF animado: a Tela à vista redesenha quando o quadro dele muda. */
+    public static final int FLAG_GIF = 16;
     private static final float LINE = 9f;
     /** A altura das letras sem a folga de baixo da linha, para centrar na caixa. */
     private static final float GLYPH = 8f;
@@ -68,6 +70,7 @@ public final class TvPainter {
         int flags = 0;
         long gameTime = Minecraft.getInstance().level == null ? 0 : Minecraft.getInstance().level.getGameTime();
         TvPaintNumbers.clockRead = false;
+        TvPaintImage.animated = false;
         for (TvPiece piece : layout.pieces()) {
             if (piece.hidden()) {
                 continue;
@@ -94,6 +97,9 @@ public final class TvPainter {
             }
         }
         TvPaintBackground.scanlines(g, layout, area.pixelWidth(), area.pixelHeight());
+        if (TvPaintImage.animated) {
+            flags |= FLAG_GIF;
+        }
         return TvPaintNumbers.clockRead ? flags | FLAG_CLOCK : flags;
     }
 

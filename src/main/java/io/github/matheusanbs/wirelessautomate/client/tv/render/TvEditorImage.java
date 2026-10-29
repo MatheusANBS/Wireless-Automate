@@ -115,7 +115,7 @@ public final class TvEditorImage {
                 TvPaintMath.blinkOff(gameTime), scale, height, true);
         blinking = (flags & TvPainter.FLAG_BLINK) != 0;
         TvTimed.editor((flags & TvPainter.FLAG_GRAPH) != 0, (flags & TvPainter.FLAG_CLOCK) != 0,
-                (flags & TvPainter.FLAG_ICON) != 0);
+                (flags & TvPainter.FLAG_ICON) != 0, (flags & TvPainter.FLAG_GIF) != 0);
         TvTargets.end(graphics);
         RenderSystem.setProjectionMatrix(projection, sorting);
         minecraft.getMainRenderTarget().bindWrite(true);
@@ -207,6 +207,13 @@ public final class TvEditorImage {
     static void keepPictures() {
         if (draft != null) {
             TvPictureTextures.keep(draft);
+        }
+    }
+
+    /** A cada tick com um GIF no rascunho ({@link TvTimed}): ele continua tocando na miniatura. */
+    static void seenPictures() {
+        if (draft != null) {
+            TvPictureTextures.seen(draft);
         }
     }
 

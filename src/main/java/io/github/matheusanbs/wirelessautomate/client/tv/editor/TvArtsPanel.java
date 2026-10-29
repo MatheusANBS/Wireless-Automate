@@ -15,10 +15,10 @@ import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A aba Pixel art da coluna da esquerda do editor: as artes da biblioteca do jogador ({@link TvLibraryClient}) numa
- * lista que rola, com a miniatura (a textura da arte, {@link TvArtThumbs}), o nome e o tamanho, e o uso {@code n /
- * tv.maxArts} em cima. Um clique escolhe, dois abrem o editor de pixel art e arrastar uma linha até a miniatura cria a
- * peça Imagem ({@link TvArtDrag}); embaixo, Nova (16 × 16 com a paleta padrão) e Duplicar (uma cópia "… (cópia)" com
+ * A parte Pixel art da aba Artes da coluna da esquerda do editor ({@link TvLibraryTab}): as artes da biblioteca do
+ * jogador ({@link TvLibraryClient}) numa lista que rola, com a miniatura (a textura da arte, {@link TvArtThumbs}), o
+ * nome e o tamanho, e o uso {@code n / tv.maxArts} em cima. Um clique escolhe, dois abrem o editor de pixel art e
+ * arrastar uma linha até a miniatura cria a peça Imagem ({@link TvArtDrag}, o mesmo da parte Imagens); embaixo, Nova (16 × 16 com a paleta padrão) e Duplicar (uma cópia "… (cópia)" com
  * id novo), desligadas com a biblioteca cheia, Editar e Remover (dois cliques), e Exportar, Importar e Copiar como
  * texto por código ({@link TvArtCode}). Duplicar, Remover e Importar saem pelo {@link TvEditorActions}. As linhas e
  * os textos são refeitos quando a biblioteca ou a janela mudam, nunca por quadro; só as linhas à vista são
@@ -180,19 +180,6 @@ final class TvArtsPanel {
         }
     }
 
-    /** A arte arrastada até a miniatura, por cima de tudo. */
-    void renderGhost(GuiGraphics g, int mouseX, int mouseY) {
-        drag.renderGhost(g, mouseX, mouseY);
-    }
-
-    boolean mouseDragged(double mouseX, double mouseY) {
-        return drag.mouseDragged(mouseX, mouseY);
-    }
-
-    boolean mouseReleased(double mouseX, double mouseY) {
-        return drag.mouseReleased(mouseX, mouseY);
-    }
-
     /** A miniatura na maior escala que cabe em {@link #THUMB} px (inteira quando a arte é menor), centrada. */
     private static void thumb(GuiGraphics g, TvPixelArt art, int x, int y) {
         GuiPaint.outline(g, x - 1, y - 1, THUMB + 2, THUMB + 2, GuiPaint.BUTTON_BORDER);
@@ -225,7 +212,7 @@ final class TvArtsPanel {
             if (twice) {
                 pixel.open(art);
             } else {
-                drag.press(art, mouseX, mouseY);
+                drag.press(TvImageSource.of(art), mouseX, mouseY);
             }
             return true;
         }

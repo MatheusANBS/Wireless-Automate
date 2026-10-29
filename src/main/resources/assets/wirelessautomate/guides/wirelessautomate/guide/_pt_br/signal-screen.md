@@ -55,7 +55,7 @@ couber, diminua a escala da interface.
 | **Medidor** | Um mostrador em arco com um ponteiro. |
 | **Gráfico** | O histórico de um número, em linha ou colunas, dos últimos minutos. |
 | **Seta** | Sobe, desce ou fica parada conforme o número cresce, cai ou se mantém. |
-| **Imagem** | Uma pixel art sua, desenhada na aba **Pixel art** (mais abaixo). |
+| **Imagem** | Uma pixel art sua ou uma imagem enviada (PNG, JPG ou GIF), da aba **Artes** (mais abaixo). |
 
 - **Escolher e mexer:** clique numa peça para escolhê-la (numa peça de grupo, o grupo inteiro; dois cliques entram no
   grupo). **Shift** + clique soma ou tira da escolha; clique no vazio solta. Arraste para mover e puxe a alça do canto
@@ -107,7 +107,7 @@ acesso mostra **—**.
 
 ## Pixel art
 
-Desenhe suas artes na aba **Pixel art**, na coluna da esquerda do editor. Elas ficam na sua biblioteca e valem em
+Desenhe suas artes na aba **Artes**, parte **Pixel art**, na coluna da esquerda do editor. Elas ficam na sua biblioteca e valem em
 qualquer Tela sua.
 
 1. Clique em **Nova** (ou escolha uma arte e clique em **Editar**). O editor de pixel art abre por cima do editor.
@@ -185,9 +185,9 @@ mosaico (com pouco espaço ou numa arte grande, só o que cabe inteiro). **Esc**
 ### Pôr a arte na Tela
 
 - **Imagem:** clique em **Imagem** na lista de **Peças** (ou arraste-a até a miniatura). Ela nasce com a arte escolhida
-  na aba **Pixel art**; sem arte escolhida, nasce vazia, com **Escolha a arte**.
+  na aba **Artes** (uma pixel art ou uma imagem); sem nada escolhido, nasce vazia, com **Escolha a arte ou a imagem**.
 - **Escolher a arte:** na aba **Estilo**, seção **Peça**, clique numa miniatura da grade. As marcadas **Da Tela**
-  vieram com a Tela, de outro jogador ou de um código. Arrastar uma arte da aba **Pixel art** até a miniatura também
+  vieram com a Tela, de outro jogador ou de um código. Arrastar uma arte da aba **Artes** até a miniatura também
   serve.
 - Na mesma seção: **Escala** (1× a 16×, ou **Esticar**), **Alinhar** (9 posições) e **Opacidade**.
 - A Tela guarda uma **cópia** da arte: mudar ou apagar a arte depois não muda a Tela. **Atualizar da biblioteca**
@@ -202,14 +202,44 @@ Leve um layout ou uma arte para outro mundo, ou para um amigo, como texto.
 
 | Botão | O que faz |
 | --- | --- |
-| **Exportar** | Copia o código: na base (embaixo de **Aplicar layout**), do layout; na aba **Pixel art**, da arte escolhida. |
-| **Importar** | Lê o código copiado. Na base, aplica o layout no rascunho (**Ctrl+Z** desfaz); na aba **Pixel art**, cria uma arte nova. |
+| **Exportar** | Copia o código: na base (embaixo de **Aplicar layout**), do layout; na aba **Artes**, da arte escolhida. |
+| **Importar** | Lê o código copiado. Na base, aplica o layout no rascunho (**Ctrl+Z** desfaz); na aba **Artes**, cria uma arte nova. Um código de imagem (**WA-IMAGEM1**) vira um envio de imagem. |
 | **Copiar como texto** | Copia numa forma legível, para editar à mão ou pedir a uma IA. **Importar** lê as duas formas. |
 
 - O layout leva as artes junto. As ligações a redes ou armazenamentos que você não tem saem: ligue de novo na aba
   **Dado**.
 - Um código inválido mostra o aviso na barra de baixo, e nada muda.
 - Para gerar artes e Telas com uma IA, há um guia no GitHub do mod: `docs/guia-pixel-art-com-ia.md`.
+
+## Imagens e GIFs
+
+Além da pixel art, a Tela mostra fotos e GIFs animados de verdade, na parte **Imagens** da aba **Artes**.
+
+1. Clique em **Enviar arquivo** e escolha um PNG, JPG ou GIF no computador. Ou copie um código **WA-IMAGEM1** e
+   clique em **Importar**.
+2. A imagem vai ao servidor e entra na sua biblioteca com o nome do arquivo. **Renomear** (ou dois cliques na linha)
+   muda o nome, e **Remover**, em dois cliques, tira da biblioteca.
+3. Arraste a imagem até a miniatura para criar uma **Imagem**, ou escolha-a na grade da aba **Estilo**: as imagens vêm
+   depois das artes, com o rótulo **Imagens**, e o GIF tem a marca ▶. O **Fundo em mosaico** também aceita imagens.
+
+| Limite | Padrão |
+| --- | --- |
+| Arquivo | Até **8 MB** |
+| Tamanho | Até **1024 × 1024** pixels |
+| GIF | Até **240** quadros |
+| Por Tela | Até **8** imagens diferentes |
+
+O servidor pode mudar esses números. A imagem é sempre um arquivo enviado e guardado no mundo, nunca um link da internet.
+
+- **GIF:** toca no ritmo do arquivo, só quando alguém olha para a Tela. Duas Telas com o mesmo GIF tocam juntas.
+- **Copiar código:** põe a imagem na área de transferência como **WA-IMAGEM1**, para levar a outro mundo. O código de
+  um layout leva as imagens junto quando cabem; senão leva só as referências, que funcionam no mesmo servidor.
+- **Esconder as imagens dos outros:** na config do cliente (`config/wirelessautomate-client.toml`, seção `tv`),
+  `showOthersImages = false` troca as imagens enviadas por outros jogadores por um quadro cinza. As suas continuam.
+- **Operadores:** `/wa tela imagens` lista as imagens do mundo, com o tamanho, quem enviou e quantas Telas usam.
+  `/wa tela imagem remover <resumo>` tira uma imagem de todas as Telas, e `/wa tela imagem banir <jogador>` impede
+  alguém de enviar (`desbanir` desfaz). A seção `tv.images` da config do servidor desliga as imagens e limita quem envia
+  e o espaço.
 
 ## Acesso
 

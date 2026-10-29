@@ -13,7 +13,15 @@ public final class TvCodeNotice {
     /** O tipo do aviso; o texto padrão de cada um, na ordem dos {@code lang}. */
     public enum Kind {
         COPIED("code.copied"), INVALID("code.invalid"), TOO_BIG("code.too_big"), LIBRARY_FULL("code.library_full"),
-        MISSING_ART("code.missing_art"), BINDINGS_DROPPED("code.bindings_dropped");
+        MISSING_ART("code.missing_art"), BINDINGS_DROPPED("code.bindings_dropped"),
+        /** O envio de uma imagem: saiu, foi aceito ou recusado (com o motivo do servidor). */
+        PICTURE_SENDING("pictures.sending"), PICTURE_SENT("pictures.sent"), PICTURE_REFUSED("pictures.refused"),
+        /** A imagem ainda não chegou a este cliente (o copiar não tem os bytes). */
+        MISSING_PICTURE("code.image.missing"),
+        /** O layout foi copiado só com os resumos das imagens, que não couberam no texto. */
+        PICTURES_BY_REFERENCE("code.pictures_by_reference"),
+        /** A caixa de abrir arquivo não existe neste sistema, ou o arquivo não leu. */
+        NO_DIALOG("pictures.no_dialog"), FILE_FAILED("pictures.file_failed");
 
         final String key;
 
@@ -36,6 +44,14 @@ public final class TvCodeNotice {
         show(what, what.key, args);
     }
 
+    /** Um aviso com o texto pronto (a recusa de um envio, que já vem com a chave do servidor). */
+    static void show(Kind what, Component message) {
+        kind = what;
+        text = message;
+        shownAt = System.currentTimeMillis();
+        version++;
+    }
+
     /** O erro de um código: o texto que ele trouxe ({@code code.*}), com a linha quando há. */
     static void failed(TvCodes.Read<?> read) {
         show(Kind.INVALID, read.error() == null ? Kind.INVALID.key : read.error(), read.args());
@@ -50,10 +66,15 @@ public final class TvCodeNotice {
 
     /** O aviso à vista, ou {@code null} quando não há nenhum ou o último já passou. */
     public static @Nullable Kind current() {
-        if (kind != null && System.currentTimeMillis() - shownAt > (kind == Kind.COPIED ? SHOW_MS : ERROR_MS)) {
+        if (kind != null && System.currentTimeMillis() - shownAt > (quick(kind) ? SHOW_MS : ERROR_MS)) {
             kind = null;
         }
         return kind;
+    }
+
+    /** Os avisos que não são erro e somem antes. */
+    private static boolean quick(Kind what) {
+        return what == Kind.COPIED || what == Kind.PICTURE_SENT || what == Kind.PICTURE_SENDING;
     }
 
     static Component text() {

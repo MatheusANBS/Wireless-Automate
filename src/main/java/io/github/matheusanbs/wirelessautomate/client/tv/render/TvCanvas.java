@@ -48,6 +48,8 @@ final class TvCanvas {
     boolean clocking;
     /** A última vez que foi desenhada, tinha um Ícone que se mexe (redesenha a ~10 Hz). */
     boolean iconing;
+    /** A última vez que foi desenhada, tinha um GIF animado (redesenha quando o quadro dele muda). */
+    boolean gifing;
     /** As texturas animadas do último desenho, que o Sodium quer marcadas a cada quadro (vazio sem o Sodium). */
     TextureAtlasSprite[] sprites = TvPaintIcon.NO_SPRITES;
     /** O último tick do mundo em que o BER a pediu. */
@@ -91,6 +93,7 @@ final class TvCanvas {
         graphing = (flags & TvPainter.FLAG_GRAPH) != 0;
         clocking = (flags & TvPainter.FLAG_CLOCK) != 0;
         iconing = (flags & TvPainter.FLAG_ICON) != 0;
+        gifing = (flags & TvPainter.FLAG_GIF) != 0;
         sprites = iconing ? TvPaintIcon.collected() : TvPaintIcon.NO_SPRITES;
         TvTargets.end(graphics);
         mipmaps(target.getColorTextureId());
@@ -144,6 +147,7 @@ final class TvCanvas {
         graphing = false;
         clocking = false;
         iconing = false;
+        gifing = false;
         sprites = TvPaintIcon.NO_SPRITES;
         ppb = 0;
         bytes = 0;

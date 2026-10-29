@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client.tv.editor;
 
+import io.github.matheusanbs.wirelessautomate.client.tv.image.TvImageDisk;
 import io.github.matheusanbs.wirelessautomate.client.tv.render.TvArtCache;
 import io.github.matheusanbs.wirelessautomate.packet.TvLayoutPayload;
 import io.github.matheusanbs.wirelessautomate.tv.TvArea;
@@ -9,14 +10,19 @@ import io.github.matheusanbs.wirelessautomate.tv.TvBlockEntity;
 import io.github.matheusanbs.wirelessautomate.tv.TvCodes;
 import io.github.matheusanbs.wirelessautomate.tv.TvComponent;
 import io.github.matheusanbs.wirelessautomate.tv.TvLayout;
+import io.github.matheusanbs.wirelessautomate.tv.TvLibraryPicture;
+import io.github.matheusanbs.wirelessautomate.tv.TvPicture;
 import io.github.matheusanbs.wirelessautomate.tv.TvPiece;
 import io.github.matheusanbs.wirelessautomate.tv.TvPixelArt;
 import io.github.matheusanbs.wirelessautomate.tv.TvSavedLayouts;
 import io.github.matheusanbs.wirelessautomate.tv.TvTheme;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -27,8 +33,11 @@ import org.jetbrains.annotations.Nullable;
  * Exportar e importar layouts por código de texto ({@link TvCodes}), na base, embaixo da lista de layouts. Exportar
  * (o código comprimido) e Copiar como texto (o legível, em JSON) põem na área de transferência o layout do jogador
  * escolhido na lista ou, com um pronto escolhido, o desta Tela, com as pixel arts que ele usa: as do rascunho, as que
- * já chegaram ao {@link TvArtCache} e as da biblioteca, nessa ordem; se falta alguma, avisa e não copia. Importar lê
- * a área de transferência (as duas formas) e aplica o layout no rascunho como uma mudança desfazível
+ * já chegaram ao {@link TvArtCache} e as da biblioteca, nessa ordem; se falta alguma, avisa e não copia. As imagens
+ * enviadas vão com os bytes do cache em disco (lidos fora da thread de render) se couberem no teto do texto; senão só
+ * com os resumos, e o aviso diz que o layout só funciona onde as imagens já existem. Importar lê a área de
+ * transferência (as duas formas; um código {@code WA-IMAGEM1} vira um envio de imagem, {@link TvPictureSend}), envia
+ * as imagens que vieram com bytes e não estão na biblioteca, e aplica o layout no rascunho como uma mudança desfazível
  * ({@code layout.import}), com as peças escaladas da área de origem para esta e sem as ligações a redes e
  * armazenamentos que este jogador e esta Tela não têm (com o aviso de quantas saíram), só se ele cabe nos tetos que o
  * cliente conhece ({@code maxLayoutBytes} e {@code maxImagePixels}); o servidor valida no Salvar, como sempre. Tudo
@@ -61,7 +70,8 @@ final class TvLayoutCode {
         int h = doc.area().pixelHeight();
         if (fromSaved) {
             TvComponent.Layout from = saved.layout().get();
-            layout = TvLayout.of(saved.pieces(), TvTheme.DEFAULT, from.background(), from.scanlines());
+            layout = TvLayout.of(saved.pieces(), TvTheme.DEFAULT, from.background(), from.scanlines(), List.of(),
+                    saved.pictures());
             w = from.width();
             h = from.height();
         }
@@ -70,14 +80,49 @@ final class TvLayoutCode {
             TvCodeNotice.show(TvCodeNotice.Kind.MISSING_ART);
             return;
         }
-        String code = text ? TvCodes.layoutText(full, w, h, fromSaved, english())
-                : TvCodes.layout(full, w, h, fromSaved);
+        int fw = w;
+        int fh = h;
+        if (full.pictures().isEmpty()) {
+            finishCopy(full, fw, fh, fromSaved, text, Map.of(), false);
+            return;
+        }
+        List<TvPicture> pictures = full.pictures();
+        List<CompletableFuture<byte[]>> reads = new ArrayList<>(pictures.size());
+        for (TvPicture picture : pictures) {
+            reads.add(TvImageDisk.read(picture.hash()));
+        }
+        CompletableFuture.allOf(reads.toArray(new CompletableFuture<?>[0])).whenComplete((done, error) ->
+                Minecraft.getInstance().execute(() -> {
+                    Map<String, byte[]> data = new LinkedHashMap<>();
+                    for (int i = 0; i < pictures.size(); i++) {
+                        byte[] bytes = reads.get(i).getNow(null);
+                        if (bytes != null) {
+                            data.put(pictures.get(i).hash(), bytes);
+                        }
+                    }
+                    finishCopy(full, fw, fh, fromSaved, text, data, data.size() < pictures.size());
+                }));
+    }
+
+    /**
+     * Põe o código na área de transferência: com os bytes das imagens se todas estão aqui e cabem; senão só com os
+     * resumos, avisando.
+     */
+    private static void finishCopy(TvLayout layout, int w, int h, boolean fromSaved, boolean text,
+            Map<String, byte[]> data, boolean missing) {
+        String code = missing ? null : text ? TvCodes.layoutText(layout, w, h, fromSaved, english(), data)
+                : TvCodes.layout(layout, w, h, fromSaved, data);
+        boolean byReference = code == null && !layout.pictures().isEmpty();
+        if (code == null) {
+            code = text ? TvCodes.layoutText(layout, w, h, fromSaved, english()) : TvCodes.layout(layout, w, h,
+                    fromSaved);
+        }
         if (code == null) {
             TvCodeNotice.show(TvCodeNotice.Kind.TOO_BIG);
             return;
         }
         Minecraft.getInstance().keyboardHandler.setClipboard(code);
-        TvCodeNotice.show(TvCodeNotice.Kind.COPIED);
+        TvCodeNotice.show(byReference ? TvCodeNotice.Kind.PICTURES_BY_REFERENCE : TvCodeNotice.Kind.COPIED);
     }
 
     /** O layout com as artes que ele aponta e não tem, achadas no rascunho, no cache ou na biblioteca; ou nulo. */
@@ -109,8 +154,11 @@ final class TvLayoutCode {
     }
 
     private static void paste(TvPropsCtx ctx) {
-        TvCodes.Read<TvCodes.Layout> result = TvCodes.readLayout(Minecraft.getInstance().keyboardHandler
-                .getClipboard());
+        String clipboard = Minecraft.getInstance().keyboardHandler.getClipboard();
+        if (TvPictureSend.pasteIfImage(ctx.actions(), clipboard)) {
+            return;
+        }
+        TvCodes.Read<TvCodes.Layout> result = TvCodes.readLayout(clipboard);
         TvCodes.Layout code = result.value();
         if (code == null) {
             TvCodeNotice.failed(result);
@@ -125,7 +173,7 @@ final class TvLayoutCode {
                 : read.pieces();
         TvTheme theme = code.keepTheme() ? doc.draft().theme() : read.theme();
         TvCodes.Pruned pruned = TvCodes.withoutBindings(TvLayout.of(pieces, theme, read.background(),
-                read.scanlines(), read.images()), binding -> available(binding, ctx));
+                read.scanlines(), read.images(), read.pictures()), binding -> available(binding, ctx));
         TvLayout next = pruned.layout().clampedTo(area).prunedImages();
         if (!fits(next, ctx.actions())) {
             TvCodeNotice.show(TvCodeNotice.Kind.TOO_BIG);
@@ -134,9 +182,29 @@ final class TvLayoutCode {
         // Cada importar é uma mudança própria no desfazer: importar de novo depois do erro e desfazer volta ao primeiro.
         doc.changeLayout(layout -> next, null);
         doc.select(TvSelection.EMPTY, 0);
+        sendPictures(ctx.actions(), code.pictureData());
         int dropped = code.dropped() + pruned.removed();
         if (dropped > 0) {
             TvCodeNotice.show(TvCodeNotice.Kind.BINDINGS_DROPPED, dropped);
+        }
+    }
+
+    /**
+     * As imagens que vieram com bytes no código e não estão na biblioteca do jogador vão ao servidor (o que já tem o
+     * resumo só registra o uso), para o layout colado funcionar aqui.
+     */
+    private static void sendPictures(TvEditorActions actions, Map<String, byte[]> data) {
+        if (data.isEmpty() || !actions.images().canUpload()) {
+            return;
+        }
+        for (Map.Entry<String, byte[]> entry : data.entrySet()) {
+            boolean have = false;
+            for (TvLibraryPicture picture : TvLibraryClient.pictures()) {
+                have |= picture.picture().hash().equals(entry.getKey());
+            }
+            if (!have) {
+                TvPictureSend.send(actions, entry.getValue(), "");
+            }
         }
     }
 
@@ -153,6 +221,7 @@ final class TvLayoutCode {
     private static boolean fits(TvLayout layout, TvEditorActions actions) {
         return layout.imagePixels() <= actions.maxImagePixels()
                 && layout.referencedImageCount() <= TvLayout.MAX_IMAGES
+                && layout.referencedPictureCount() <= actions.images().maxPerScreen()
                 && TvLayoutPayload.clientSize(layout) <= actions.maxLayoutBytes()
                 && TvLayoutPayload.encodedSize(layout) <= TvLayoutPayload.MAX_BYTES;
     }

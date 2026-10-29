@@ -192,6 +192,18 @@ public final class TvImageStore extends SavedData {
         if (pictures.isEmpty()) {
             return layout;
         }
+        List<TvPicture> resolved = resolve(pictures);
+        return resolved.equals(pictures) ? layout : layout.withPictures(resolved);
+    }
+
+    /**
+     * As imagens trocadas pelo que o armazém sabe delas (o cliente não decide tamanho nem autor); as que o armazém não
+     * tem saem. Para os componentes e layouts salvos da biblioteca.
+     */
+    public List<TvPicture> resolve(List<TvPicture> pictures) {
+        if (pictures.isEmpty()) {
+            return pictures;
+        }
         List<TvPicture> resolved = new ArrayList<>(pictures.size());
         for (TvPicture picture : pictures) {
             TvPicture stored = picture(picture.hash());
@@ -199,7 +211,7 @@ public final class TvImageStore extends SavedData {
                 resolved.add(stored);
             }
         }
-        return resolved.equals(pictures) ? layout : layout.withPictures(resolved);
+        return resolved;
     }
 
     /** Se o armazém tem todas as imagens do layout. */

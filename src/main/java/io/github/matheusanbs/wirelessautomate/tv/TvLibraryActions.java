@@ -67,13 +67,14 @@ public final class TvLibraryActions {
             result = switch (payload.action()) {
                 case OPEN -> TvLibrary.Result.OK;
                 case SAVE_COMPONENT -> payload.content().length > MAX_COMPONENT_BYTES ? TvLibrary.Result.TOO_BIG
-                        : library.saveComponent(player.getUUID(), payload.component());
+                        : synced(player, library.saveComponent(player.getUUID(),
+                                resolved(player, payload.component())));
                 case SAVE_THEME -> library.saveTheme(player.getUUID(), payload.theme());
                 case RENAME -> payload.kind() == TvLibraryActionPayload.Kind.COMPONENT
                         ? library.renameComponent(player.getUUID(), payload.name(), payload.newName())
                         : library.renameTheme(player.getUUID(), payload.name(), payload.newName());
                 case REMOVE -> payload.kind() == TvLibraryActionPayload.Kind.COMPONENT
-                        ? library.removeComponent(player.getUUID(), payload.name())
+                        ? synced(player, library.removeComponent(player.getUUID(), payload.name()))
                         : library.removeTheme(player.getUUID(), payload.name());
                 case SAVE_ART -> {
                     TvPixelArt art = payload.art();
@@ -84,13 +85,7 @@ public final class TvLibraryActions {
                 case RENAME_ART -> library.renameArt(player.getUUID(), payload.artId(), payload.newName());
                 case REMOVE_ART -> library.removeArt(player.getUUID(), payload.artId());
                 case RENAME_PICTURE -> library.renamePicture(player.getUUID(), payload.name(), payload.newName());
-                case REMOVE_PICTURE -> {
-                    TvLibrary.Result removed = library.removePicture(player.getUUID(), payload.name());
-                    if (removed == TvLibrary.Result.OK) {
-                        TvImageStore.syncLibrary(player.server, player.getUUID());
-                    }
-                    yield removed;
-                }
+                case REMOVE_PICTURE -> synced(player, library.removePicture(player.getUUID(), payload.name()));
             };
         } catch (RuntimeException e) {
             // Conteúdo que não decodifica (ou um id de arte que não é UUID): a ação é recusada, sem derrubar nada.
@@ -116,6 +111,23 @@ public final class TvLibraryActions {
             send(player, payload.containerId(), library);
         }
         return true;
+    }
+
+    /**
+     * O componente com as imagens trocadas pelo que o armazém sabe delas (a que ele não tem sai): o cliente não decide
+     * tamanho nem autor, e o componente segura no armazém só o que existe.
+     */
+    private static TvComponent resolved(ServerPlayer player, TvComponent component) {
+        return component.pictures().isEmpty() ? component
+                : component.withPictures(TvImageStore.get(player.server).resolve(component.pictures()));
+    }
+
+    /** Depois de uma mudança que deu certo, o armazém conta de novo as imagens que a biblioteca do jogador segura. */
+    private static TvLibrary.Result synced(ServerPlayer player, TvLibrary.Result result) {
+        if (result == TvLibrary.Result.OK) {
+            TvImageStore.syncLibrary(player.server, player.getUUID());
+        }
+        return result;
     }
 
     /** A biblioteca como ficaria com a arte (no lugar da de mesmo id, ou no fim): medida antes de salvar. */

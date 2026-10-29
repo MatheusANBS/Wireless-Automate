@@ -26,9 +26,16 @@ final class TvArtCode {
         TvCodeNotice.show(TvCodeNotice.Kind.COPIED);
     }
 
-    /** Cria a arte do código na biblioteca, que tem {@code count} artes agora. */
+    /**
+     * Cria a arte do código na biblioteca, que tem {@code count} artes agora; um código de imagem ({@code WA-IMAGEM1})
+     * vira um envio de imagem ({@link TvPictureSend}).
+     */
     static void paste(TvEditorActions actions, int count) {
-        TvCodes.Read<TvPixelArt> result = TvCodes.readArt(Minecraft.getInstance().keyboardHandler.getClipboard());
+        String text = Minecraft.getInstance().keyboardHandler.getClipboard();
+        if (TvPictureSend.pasteIfImage(actions, text)) {
+            return;
+        }
+        TvCodes.Read<TvPixelArt> result = TvCodes.readArt(text);
         TvPixelArt read = result.value();
         if (read == null) {
             TvCodeNotice.failed(result);

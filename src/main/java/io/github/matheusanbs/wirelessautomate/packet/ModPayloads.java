@@ -80,7 +80,7 @@ public final class ModPayloads {
      * mosaico) e na biblioteca do jogador ({@code TvLibraryPayload.arts}, as ações {@code SAVE_ART}, {@code RENAME_ART}
      * e {@code REMOVE_ART}); o update tag da Tela leva as artes só como referência e os pixels vão no
      * {@code TvArtsPayload}; as imagens enviadas, {@code TvImageUploadPayload}, {@code TvImageReplyPayload},
-     * {@code TvImageDataPayload} e {@code TvImageHavePayload}, a lista {@code pictures} do layout e da biblioteca e as
+     * {@code TvImageDataPayload}, {@code TvImageHavePayload} e {@code TvImageStatePayload}, a lista {@code pictures} do layout e da biblioteca e as
      * regras das imagens na abertura da Tela; 37: os payloads {@code TvStorageContentsRequestPayload} e {@code TvStorageContentsPayload} (os itens de um Baú ligado, só com o editor aberto); o {@code TvValuesPayload} leva os bits de dado antigo dos armazenamentos ligados, e a
      * ligação de uma peça ganha as fontes de armazenamento e relógio; 36: os payloads do editor da Tela de Sinal, {@code TvLayoutPayload}, {@code TvLayoutAckPayload},
      * {@code TvLibraryPayload}, {@code TvLibraryActionPayload}, {@code TvPreviewPayload} e {@code TvPreviewValuesPayload},
@@ -176,16 +176,7 @@ public final class ModPayloads {
         // Os pixels das artes das Telas, a quem está perto (TvArtSender).
         registrar.playToClient(TvArtsPayload.TYPE, TvArtsPayload.STREAM_CODEC,
                 (payload, context) -> TvClientHooks.arts.accept(payload));
-        // As imagens enviadas: o envio do jogador em partes (TvImageUploads), a resposta, a entrega aos clientes pela
-        // mesma fila das artes (TvPictureSender) e a lista do cache do cliente, uma vez por conexão.
-        registrar.playToServer(TvImageUploadPayload.TYPE, TvImageUploadPayload.STREAM_CODEC,
-                (payload, context) -> TvImageUploads.handle(serverPlayer(context), payload));
-        registrar.playToClient(TvImageReplyPayload.TYPE, TvImageReplyPayload.STREAM_CODEC,
-                (payload, context) -> TvClientHooks.imageReply.accept(payload));
-        registrar.playToClient(TvImageDataPayload.TYPE, TvImageDataPayload.STREAM_CODEC,
-                (payload, context) -> TvClientHooks.imageData.accept(payload));
-        registrar.playToServer(TvImageHavePayload.TYPE, TvImageHavePayload.STREAM_CODEC,
-                (payload, context) -> TvPictureSender.onHave(serverPlayer(context), payload));
+        registerTvImages(registrar);
         // Biblioteca de componentes e temas do jogador, com o editor aberto.
         registrar.playToClient(TvLibraryPayload.TYPE, TvLibraryPayload.STREAM_CODEC,
                 (payload, context) -> TvClientHooks.library.accept(payload));
@@ -206,6 +197,24 @@ public final class ModPayloads {
         registrar.playToServer(TvAccessActionPayload.TYPE, TvAccessActionPayload.STREAM_CODEC,
                 (payload, context) -> TvAccessActions.handle(serverPlayer(context), payload));
         registrar.playToClient(TvAccessPayload.TYPE, TvAccessPayload.STREAM_CODEC, ModPayloads::onTvAccess);
+    }
+
+    /**
+     * As imagens enviadas da Tela de Sinal: o envio do jogador em partes ({@code TvImageUploads}), a resposta, a
+     * entrega aos clientes pela mesma fila das artes ({@code TvPictureSender}), a lista do cache do cliente (uma vez
+     * por conexão) e o aviso de ligadas ou desligadas pela config ({@code TvImageState}).
+     */
+    private static void registerTvImages(PayloadRegistrar registrar) {
+        registrar.playToServer(TvImageUploadPayload.TYPE, TvImageUploadPayload.STREAM_CODEC,
+                (payload, context) -> TvImageUploads.handle(serverPlayer(context), payload));
+        registrar.playToClient(TvImageReplyPayload.TYPE, TvImageReplyPayload.STREAM_CODEC,
+                (payload, context) -> TvClientHooks.imageReply.accept(payload));
+        registrar.playToClient(TvImageDataPayload.TYPE, TvImageDataPayload.STREAM_CODEC,
+                (payload, context) -> TvClientHooks.imageData.accept(payload));
+        registrar.playToServer(TvImageHavePayload.TYPE, TvImageHavePayload.STREAM_CODEC,
+                (payload, context) -> TvPictureSender.onHave(serverPlayer(context), payload));
+        registrar.playToClient(TvImageStatePayload.TYPE, TvImageStatePayload.STREAM_CODEC,
+                (payload, context) -> TvClientHooks.imageState.accept(payload));
     }
 
     private static @Nullable ServerPlayer serverPlayer(IPayloadContext context) {

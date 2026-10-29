@@ -8,6 +8,7 @@ import io.github.matheusanbs.wirelessautomate.client.tv.image.TvImageDisk;
 import io.github.matheusanbs.wirelessautomate.tv.TvLayout;
 import io.github.matheusanbs.wirelessautomate.tv.TvPicture;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -35,9 +36,16 @@ import org.lwjgl.opengl.GL30;
  * depois) ou não abre, a Tela desenha o quadro neutro. Com as imagens desligadas no servidor ({@link #serverOff}),
  * sempre o quadro neutro.
  * <p>
+ * O GIF animado ({@link TvGifAnimation}) também é uma textura só, do tamanho dele, com o quadro da vez: a cada
+ * quadro do jogo ({@link #animate}), os GIFs vistos no último tick (por uma Tela à vista, {@link TvTimed}, pelo
+ * rascunho do editor ou por uma miniatura da biblioteca, {@link #seen}) conferem o quadro pelo relógio do cliente e,
+ * quando ele muda, sobem o quadro novo com os mipmaps e marcam sujas as Telas à vista que o mostram. O GIF que ninguém
+ * vê para no quadro em que está.
+ * <p>
  * A varredura, a cada {@link #SWEEP_TICKS} ticks com alguma imagem, solta as que nenhuma Tela com imagem
- * ({@link TvCanvases#keepPictures}) nem o rascunho do editor ({@link TvEditorImage#keepPictures}) usa. Sem imagem, o
- * tick e o quadro são a checagem de um mapa e de uma fila vazios. Só na thread de render.
+ * ({@link TvCanvases#keepPictures}), nem o rascunho do editor ({@link TvEditorImage#keepPictures}), nem as miniaturas
+ * da biblioteca ({@link TvPictureThumbs#keepPictures}) usam. Sem imagem, o tick e o quadro são a checagem de um mapa e
+ * de duas listas vazias. Só na thread de render.
  */
 public final class TvPictureTextures {
     private static final int SWEEP_TICKS = 100;
@@ -45,8 +53,14 @@ public final class TvPictureTextures {
     private static final int BAND_PIXELS = 1 << 19;
     private static final Map<String, Picture> PICTURES = new HashMap<>();
     private static final ArrayDeque<Picture> UPLOADS = new ArrayDeque<>();
+    /** As imagens prontas que são GIF animado. */
+    private static final List<Picture> ANIMATED = new ArrayList<>();
+    /** Por quantos ticks um GIF continua tocando depois da última vez que alguém o mostrou. */
+    private static final int SEEN_TICKS = 2;
     private static int generation;
     private static int ticks;
+    /** Os ticks do cliente desde o começo, para o "visto há pouco" dos GIFs. */
+    private static int clientTicks;
     private static int version;
     private static boolean serverOff;
     /** O tempo da última decodificação e da última subida, para o e2e medir. */
@@ -65,6 +79,7 @@ public final class TvPictureTextures {
         int texture = -1;
         @Nullable RenderType renderType;
         TvImageDecoder.@Nullable Decoded decoded;
+        @Nullable TvGifAnimation animation;
         int rows;
         long uploadNanos;
         int generation;
@@ -96,11 +111,15 @@ public final class TvPictureTextures {
         return entry.state == State.READY ? entry.renderType : null;
     }
 
-    /** Lê (do disco ou dos bytes que chegaram) e decodifica num executor; a volta é na thread de render. */
+    /**
+     * Lê (do disco ou dos bytes que chegaram) e decodifica num executor; a volta é na thread de render. O GIF animado
+     * vem com todos os quadros se ainda cabem no teto dos GIFs ({@link TvGifAnimation#ramRoom}), medido agora.
+     */
     private static void load(Picture entry, CompletableFuture<byte @Nullable []> bytes) {
         entry.state = State.LOADING;
+        long room = TvGifAnimation.ramRoom();
         bytes.thenApplyAsync(data -> data == null ? new Loaded(null, true)
-                        : new Loaded(TvImageDecoder.decode(data), false), Util.backgroundExecutor())
+                        : new Loaded(TvImageDecoder.decode(data, room), false), Util.backgroundExecutor())
                 .whenComplete((loaded, error) -> Minecraft.getInstance().execute(() -> loaded(entry,
                         loaded == null ? new Loaded(null, false) : loaded)));
     }
@@ -119,6 +138,7 @@ public final class TvPictureTextures {
         }
         TvImageDecoder.Decoded decoded = loaded.decoded;
         lastDecodeNanosForTests = decoded.nanos;
+        entry.animation = decoded.animated() ? new TvGifAnimation(decoded) : null;
         entry.texture = TextureUtil.generateTextureId();
         // Só o nível 0: o glGenerateMipmap cria os outros com o tamanho certo (o prepareImage daria 0 de altura ao
         // último nível de uma imagem que não é quadrada).
@@ -142,10 +162,14 @@ public final class TvPictureTextures {
     }
 
     /**
-     * No começo do quadro, só com subida pendente: sobe uma faixa da imagem da frente; inteira, gera os mipmaps, solta
-     * os pixels da memória e marca sujas as Telas que a usam.
+     * No começo do quadro: os GIFs à vista trocam de quadro ({@link #animate}) e, só com subida pendente, sobe uma
+     * faixa da imagem da frente; inteira, gera os mipmaps, solta os pixels da memória e marca sujas as Telas que a
+     * usam.
      */
     static void onFrame() {
+        if (!ANIMATED.isEmpty()) {
+            animate();
+        }
         Picture entry = UPLOADS.peekFirst();
         if (entry == null) {
             return;
@@ -164,11 +188,16 @@ public final class TvPictureTextures {
         entry.rows += rows;
         if (entry.rows >= decoded.height) {
             mipmaps(w, decoded.height);
-            decoded.close();
+            if (entry.animation == null || !entry.animation.ownsDecoded()) {
+                decoded.close();
+            }
             entry.decoded = null;
             entry.renderType = TvRenderTypes.art(entry.texture);
             entry.state = State.READY;
             UPLOADS.pollFirst();
+            if (entry.animation != null) {
+                ANIMATED.add(entry);
+            }
             version++;
             TvCanvases.markPicture(entry.hash);
         }
@@ -193,16 +222,73 @@ public final class TvPictureTextures {
         GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL11.GL_REPEAT);
     }
 
-    /** O servidor ligou ou desligou as imagens (o {@code pictures_off} do update tag de uma Tela com imagem). */
+    /**
+     * Os GIFs vistos há pouco: o quadro da vez pelo relógio do cliente; quando muda e já está aberto, sobe com os
+     * mipmaps e as Telas à vista que o mostram redesenham ({@link TvTimed#gifChanged}).
+     */
+    private static void animate() {
+        long now = Util.getMillis();
+        for (int i = 0; i < ANIMATED.size(); i++) {
+            Picture entry = ANIMATED.get(i);
+            TvGifAnimation animation = entry.animation;
+            if (clientTicks - animation.seenTick > SEEN_TICKS) {
+                continue;
+            }
+            int index = animation.clock.frameAt(now);
+            if (index == animation.shown) {
+                continue;
+            }
+            long address = animation.pixels(index);
+            if (address == 0) {
+                continue;
+            }
+            GlStateManager._bindTexture(entry.texture);
+            GlStateManager._pixelStore(GL11.GL_UNPACK_ROW_LENGTH, 0);
+            GlStateManager._pixelStore(GL11.GL_UNPACK_SKIP_PIXELS, 0);
+            GlStateManager._pixelStore(GL11.GL_UNPACK_SKIP_ROWS, 0);
+            GlStateManager._pixelStore(GL11.GL_UNPACK_ALIGNMENT, 4);
+            GlStateManager._texSubImage2D(GL11.GL_TEXTURE_2D, 0, 0, 0, animation.width, animation.height,
+                    GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, address);
+            GL30.glGenerateMipmap(GL11.GL_TEXTURE_2D);
+            animation.shown(index);
+            TvTimed.gifChanged(entry.hash);
+        }
+    }
+
+    /** Uma Tela à vista, o rascunho do editor ou uma miniatura mostrou o GIF agora: ele toca por mais um pouco. */
+    static void seen(String hash) {
+        Picture entry = PICTURES.get(hash);
+        if (entry != null && entry.animation != null) {
+            entry.animation.seenTick = clientTicks;
+        }
+    }
+
+    /** O mesmo para as imagens do layout. */
+    static void seen(TvLayout layout) {
+        List<TvPicture> pictures = layout.pictures();
+        for (int i = 0; i < pictures.size(); i++) {
+            if (pictures.get(i).animated()) {
+                seen(pictures.get(i).hash());
+            }
+        }
+    }
+
+    /** O servidor ligou ou desligou as imagens: as Telas com imagem redesenham na hora, com o quadro neutro ou não. */
     public static void setServerOff(boolean off) {
         if (off != serverOff) {
             serverOff = off;
             version++;
+            TvCanvases.markAllPictures();
         }
     }
 
+    /** Algo mudou o que as imagens mostram (a opção dos outros jogadores): o rascunho do editor se redesenha. */
+    static void changed() {
+        version++;
+    }
+
     /** Se o servidor desligou as imagens: o quadro neutro no lugar de todas. */
-    static boolean serverOff() {
+    public static boolean serverOff() {
         return serverOff;
     }
 
@@ -213,6 +299,7 @@ public final class TvPictureTextures {
 
     /** A cada tick do cliente: a varredura a cada {@link #SWEEP_TICKS}, só com alguma imagem. */
     static void onClientTick() {
+        clientTicks++;
         if (PICTURES.isEmpty()) {
             return;
         }
@@ -225,10 +312,15 @@ public final class TvPictureTextures {
     static void keep(TvLayout layout) {
         List<TvPicture> pictures = layout.pictures();
         for (int i = 0; i < pictures.size(); i++) {
-            Picture entry = PICTURES.get(pictures.get(i).hash());
-            if (entry != null) {
-                entry.generation = generation;
-            }
+            keep(pictures.get(i));
+        }
+    }
+
+    /** Marca como em uso uma imagem (chamado durante a {@link #sweep}). */
+    static void keep(TvPicture picture) {
+        Picture entry = PICTURES.get(picture.hash());
+        if (entry != null) {
+            entry.generation = generation;
         }
     }
 
@@ -241,6 +333,7 @@ public final class TvPictureTextures {
         generation++;
         TvCanvases.keepPictures();
         TvEditorImage.keepPictures();
+        TvPictureThumbs.keepPictures();
         Iterator<Picture> it = PICTURES.values().iterator();
         while (it.hasNext()) {
             Picture entry = it.next();
@@ -256,6 +349,15 @@ public final class TvPictureTextures {
             TextureUtil.releaseTextureId(entry.texture);
             entry.texture = -1;
         }
+        if (entry.animation != null) {
+            if (entry.animation.ownsDecoded()) {
+                // A animação solta os quadros dela, que são os mesmos da subida que talvez nem terminou.
+                entry.decoded = null;
+            }
+            entry.animation.close();
+            entry.animation = null;
+            ANIMATED.remove(entry);
+        }
         if (entry.decoded != null) {
             entry.decoded.close();
             entry.decoded = null;
@@ -270,6 +372,7 @@ public final class TvPictureTextures {
         }
         PICTURES.clear();
         UPLOADS.clear();
+        ANIMATED.clear();
         serverOff = false;
         ticks = 0;
     }
@@ -289,5 +392,16 @@ public final class TvPictureTextures {
     public static boolean readyForTests(String hash) {
         Picture entry = PICTURES.get(hash);
         return entry != null && entry.state == State.READY;
+    }
+
+    /** O quadro do GIF que está na textura, ou -1 se a imagem não é um GIF animado pronto (o e2e confere que troca). */
+    public static int shownFrameForTests(String hash) {
+        Picture entry = PICTURES.get(hash);
+        return entry == null || entry.animation == null || entry.state != State.READY ? -1 : entry.animation.shown;
+    }
+
+    /** A memória dos GIFs abertos inteiros (o e2e confere que volta a 0 quando eles saem). */
+    public static long gifRamForTests() {
+        return TvGifAnimation.ramUsedForTests();
     }
 }

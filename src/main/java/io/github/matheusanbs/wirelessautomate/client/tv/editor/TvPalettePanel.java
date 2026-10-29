@@ -2,9 +2,7 @@ package io.github.matheusanbs.wirelessautomate.client.tv.editor;
 
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
-import io.github.matheusanbs.wirelessautomate.client.tv.render.TvArtThumbs;
 import io.github.matheusanbs.wirelessautomate.tv.TvPieceType;
-import io.github.matheusanbs.wirelessautomate.tv.TvPixelArt;
 import java.util.List;
 import java.util.function.Supplier;
 import net.minecraft.client.gui.Font;
@@ -27,14 +25,14 @@ final class TvPalettePanel {
     private final TvEditorDoc doc;
     private final TvEditorCanvas canvas;
     private final TvEditorActions actions;
-    private final Supplier<TvPixelArt> chosenArt;
+    private final Supplier<TvImageSource> chosenArt;
     private TvEditorLayout layout;
     private Font font;
     private final GuiText.Fitted[] names = new GuiText.Fitted[TYPES.size()];
     private String defaultText = "";
     private @Nullable TvPieceType pressed;
     /** A arte da Imagem apertada, ou {@code null} (outra peça, ou nenhuma arte escolhida). */
-    private @Nullable TvPixelArt pressedArt;
+    private @Nullable TvImageSource pressedArt;
     /** O tamanho da peça apertada, em px de desenho. */
     private int pressedW;
     private int pressedH;
@@ -42,7 +40,8 @@ final class TvPalettePanel {
     private double pressY;
     private boolean dragging;
 
-    TvPalettePanel(TvEditorDoc doc, TvEditorCanvas canvas, TvEditorActions actions, Supplier<TvPixelArt> chosenArt) {
+    TvPalettePanel(TvEditorDoc doc, TvEditorCanvas canvas, TvEditorActions actions,
+            Supplier<TvImageSource> chosenArt) {
         this.doc = doc;
         this.canvas = canvas;
         this.actions = actions;
@@ -81,7 +80,7 @@ final class TvPalettePanel {
         g.pose().pushPose();
         g.pose().translate(0, 0, 400);
         if (pressedArt != null) {
-            TvArtThumbs.draw(g, pressedArt, mouseX - w / 2, mouseY - h / 2, w, h);
+            pressedArt.draw(g, mouseX - w / 2, mouseY - h / 2, w, h);
         } else {
             g.fill(mouseX - w / 2, mouseY - h / 2, mouseX - w / 2 + w, mouseY - h / 2 + h,
                     GuiPaint.alpha(color, 0x50));
@@ -134,7 +133,7 @@ final class TvPalettePanel {
         if (type == null) {
             return false;
         }
-        TvPixelArt art = pressedArt;
+        TvImageSource art = pressedArt;
         pressed = null;
         pressedArt = null;
         int[] spot = dragging ? canvas.imagePoint(mouseX, mouseY) : null;

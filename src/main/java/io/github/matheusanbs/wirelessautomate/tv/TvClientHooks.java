@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.tv;
 import io.github.matheusanbs.wirelessautomate.packet.TvArtsPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TvImageDataPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TvImageReplyPayload;
+import io.github.matheusanbs.wirelessautomate.packet.TvImageStatePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TvLayoutAckPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TvLibraryPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TvPreviewValuesPayload;
@@ -33,6 +34,10 @@ public final class TvClientHooks {
 
     /** Chamado no cliente quando a resposta a um envio de imagem chega. */
     public static volatile Consumer<TvImageReplyPayload> imageReply = payload -> {
+    };
+
+    /** Chamado no cliente quando o servidor liga ou desliga as imagens enviadas. */
+    public static volatile Consumer<TvImageStatePayload> imageState = payload -> {
     };
 
     /** Chamado no cliente quando a resposta a um salvar do layout chega. */

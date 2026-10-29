@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client.tv.image;
 
+import io.github.matheusanbs.wirelessautomate.client.tv.render.TvPictureTextures;
 import io.github.matheusanbs.wirelessautomate.packet.TvImageReplyPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TvImageUploadPayload;
 import io.github.matheusanbs.wirelessautomate.tv.TvImageHash;
@@ -102,6 +103,8 @@ public final class TvImageUploader {
             case SEND -> job.sending = true;
             case OK -> {
                 TvImageDisk.store(job.hash, job.data);
+                // A Tela que já pediu a imagem (e não a achou no disco, que grava depois) a recebe dos bytes daqui.
+                TvPictureTextures.arrived(job.hash, job.data);
                 finish(new Outcome(job.hash, true, null));
             }
             case REFUSED -> {

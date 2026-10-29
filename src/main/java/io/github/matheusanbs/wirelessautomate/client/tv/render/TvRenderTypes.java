@@ -53,10 +53,13 @@ final class TvRenderTypes extends RenderType {
     }
 
     /**
-     * Uma pixel art pintada na textura da Tela ({@link TvArtTextures}): a mesma mistura e o mesmo teste de profundidade
-     * do {@code RenderType.gui()} que pinta o resto, com a cor do texel (sem pré-multiplicar) vezes a do vértice, a
-     * opacidade da peça. Assim a arte sai na textura da Tela pré-multiplicada como o resto dela, e o texel
-     * transparente é descartado pelo shader. Um por textura, guardado com ela.
+     * Uma pixel art ou uma imagem enviada pintada na textura da Tela ({@link TvArtTextures},
+     * {@link TvPictureTextures}) ou numa miniatura da GUI: o mesmo teste de profundidade do {@code RenderType.gui()}
+     * que pinta o resto e a mistura de alfa pré-multiplicado ({@code ONE, ONE_MINUS_SRC_ALPHA}), porque as texturas
+     * delas guardam a cor já multiplicada pelo alfa: assim os mipmaps somam a cor só na proporção do alfa, e a borda de
+     * uma imagem transparente reduzida não escurece. A cor do vértice é a opacidade nos quatro canais. O resultado sai
+     * na textura da Tela pré-multiplicado como o resto dela, e o texel transparente é descartado pelo shader. Um por
+     * textura, guardado com ela.
      */
     static RenderType art(int texture) {
         return create(WirelessAutomate.MODID + "_tv_art", DefaultVertexFormat.POSITION_TEX_COLOR,
@@ -66,7 +69,7 @@ final class TvRenderTypes extends RenderType {
                         .setTextureState(new EmptyTextureStateShard(() -> RenderSystem.setShaderTexture(0, texture),
                                 () -> {
                                 }))
-                        .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                        .setTransparencyState(PREMULTIPLIED)
                         .setDepthTestState(LEQUAL_DEPTH_TEST)
                         .createCompositeState(false));
     }

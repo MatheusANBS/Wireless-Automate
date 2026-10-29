@@ -13,6 +13,7 @@ public final class ClientConfig {
     public static final ModConfigSpec.ConfigValue<Integer> TV_PIXELS_PER_BLOCK;
     public static final ModConfigSpec.IntValue TV_VRAM_BUDGET_MB;
     public static final ModConfigSpec.IntValue TV_IMAGE_CACHE_MB;
+    public static final ModConfigSpec.BooleanValue TV_SHOW_OTHERS_IMAGES;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -37,6 +38,11 @@ public final class ClientConfig {
                         "(<pasta do jogo>/wirelessautomate/image-cache), para não baixar de novo quem você já viu.",
                         "Acima disso, sai primeiro a usada há mais tempo.")
                 .defineInRange("imageCacheMb", 1024, 64, 65_536);
+        TV_SHOW_OTHERS_IMAGES = builder
+                .comment("Mostrar imagens de outros jogadores nas Telas de Sinal. Desligado, as imagens e GIFs que outro",
+                        "jogador enviou aparecem como um quadro cinza (nem são baixados para a memória de vídeo); as",
+                        "suas continuam. A pixel art não muda.")
+                .define("showOthersImages", true);
         builder.pop();
         SPEC = builder.build();
     }

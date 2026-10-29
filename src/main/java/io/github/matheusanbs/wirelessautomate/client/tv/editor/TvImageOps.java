@@ -17,13 +17,18 @@ import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * As pixel arts no rascunho do editor (decisões 4 a 7 da spec da etapa 4): a Tela guarda uma cópia de cada arte que
- * usa ({@link TvLayout#images()}, sem repetir o id), feita quando a arte vira Imagem ou mosaico e trocada só pelo
- * "Atualizar da biblioteca". Toda mudança passa pelo teto {@code tv.maxImagePixels}: o que contaria acima dele não
- * entra, e o editor avisa ({@link TvEditorDoc.Failure#IMAGES_FULL}); nada vai ao servidor. Só no clique, nunca por
- * quadro.
+ * As pixel arts e as imagens enviadas no rascunho do editor (decisões 4 a 7 da spec da etapa 4): a Tela guarda uma
+ * cópia de cada arte que usa ({@link TvLayout#images()}, sem repetir o id), feita quando a arte vira Imagem ou mosaico
+ * e trocada só pelo "Atualizar da biblioteca", e a referência de cada imagem enviada ({@link TvLayout#pictures()}).
+ * Toda mudança passa pelo teto {@code tv.maxImagePixels} das artes e pelo de imagens distintas por Tela
+ * ({@code tv.images.maxPerScreen}, {@link #pictureLimit}): o que contaria acima deles não entra, e o editor avisa
+ * ({@link TvEditorDoc.Failure#IMAGES_FULL}, {@link TvEditorDoc.Failure#PICTURES_FULL}); nada vai ao servidor. Só no
+ * clique, nunca por quadro. A arte e a imagem chegam aqui como {@link TvImageSource}.
  */
 final class TvImageOps {
+    /** O teto de imagens enviadas distintas por Tela, do servidor ({@code tv.images.maxPerScreen}), posto ao abrir. */
+    static int pictureLimit = 8;
+
     private TvImageOps() {
     }
 
@@ -71,6 +76,10 @@ final class TvImageOps {
 
     /** A dica do "Atualizar da biblioteca" desligado: a arte saiu da biblioteca ou a cópia já é igual. */
     static Component whyNoRefresh(@Nullable UUID id) {
+        if (id != null && id.version() == 8) {
+            // O id de uma imagem enviada (TvImageHash.idOf): ela não muda, não há o que atualizar.
+            return TvEditorText.key("image.refresh.picture");
+        }
         return TvEditorText.key(id != null && inLibrary(id) != null ? "image.refresh.same" : "image.refresh.gone");
     }
 
@@ -90,7 +99,18 @@ final class TvImageOps {
         int used = usedPixels(next);
         int arts = next.referencedImageCount();
         return (used <= max || used <= usedPixels(now))
-                && (arts <= TvLayout.MAX_IMAGES || arts <= now.referencedImageCount());
+                && (arts <= TvLayout.MAX_IMAGES || arts <= now.referencedImageCount()) && picturesFit(now, next);
+    }
+
+    /** Se o layout {@code next} cabe no teto de imagens enviadas; um que não aumenta o número sempre vale. */
+    static boolean picturesFit(TvLayout now, TvLayout next) {
+        int pictures = next.referencedPictureCount();
+        return pictures <= pictureLimit || pictures <= now.referencedPictureCount();
+    }
+
+    /** O aviso de quando {@code next} não coube: o das imagens enviadas ou o dos pixels das artes. */
+    private static void failFor(TvEditorDoc doc, TvLayout now, TvLayout next) {
+        doc.fail(picturesFit(now, next) ? TvEditorDoc.Failure.IMAGES_FULL : TvEditorDoc.Failure.PICTURES_FULL);
     }
 
     /** As cópias das artes que as Imagens de {@code pieces} apontam e que {@code layout} tem (o copiar as leva). */
@@ -159,7 +179,7 @@ final class TvImageOps {
         TvLayout now = doc.draft();
         TvLayout next = change.apply(now);
         if (!fits(now, next, max)) {
-            doc.fail(TvEditorDoc.Failure.IMAGES_FULL);
+            failFor(doc, now, next);
             return false;
         }
         doc.changeLayout(layout -> next, key);
@@ -171,24 +191,27 @@ final class TvImageOps {
      * peças, com a escala inteira que cabe ({@link TvImageFit}) e o centro em ({@code cx}, {@code cy}); fica
      * escolhida. Acima do teto, nada muda e o aviso aparece.
      */
-    static boolean insert(TvEditorDoc doc, int max, TvPixelArt art, int cx, int cy) {
+    static boolean insert(TvEditorDoc doc, int max, TvImageSource art, int cx, int cy) {
         TvPiece piece = imagePiece(doc, art, cx, cy);
         TvLayout now = doc.draft();
         List<TvPiece> pieces = new ArrayList<>(now.pieces());
         pieces.add(piece);
-        return commit(doc, max, now, withArt(now, art).withPieces(pieces), TvSelection.of(pieces.size() - 1));
+        return commit(doc, max, now, art.addTo(now).withPieces(pieces), TvSelection.of(pieces.size() - 1));
     }
 
     /** O clique no botão Imagem da paleta com uma arte escolhida: a Imagem nova no primeiro lugar livre. */
-    static boolean insertFree(TvEditorDoc doc, int max, TvPixelArt art) {
+    static boolean insertFree(TvEditorDoc doc, int max, TvImageSource art) {
         TvLayout now = doc.draft();
         TvEditOps.Edit<TvPiece> edit = TvEditOps.insert(TvPieceAccess.INSTANCE, now.pieces(),
                 imagePiece(doc, art, 0, 0), doc.area().pixelWidth(), doc.area().pixelHeight());
-        return commit(doc, max, now, withArt(now, art).withPieces(edit.pieces()), edit.selection());
+        return commit(doc, max, now, art.addTo(now).withPieces(edit.pieces()), edit.selection());
     }
 
-    /** A Imagem da arte na escala do {@link TvImageFit}, alinhada ao meio, com a caixa centrada em ({@code cx}, {@code cy}). */
-    private static TvPiece imagePiece(TvEditorDoc doc, TvPixelArt art, int cx, int cy) {
+    /**
+     * A Imagem da arte (ou da imagem enviada) na escala do {@link TvImageFit}, alinhada ao meio, com a caixa centrada
+     * em ({@code cx}, {@code cy}).
+     */
+    private static TvPiece imagePiece(TvEditorDoc doc, TvImageSource art, int cx, int cy) {
         int areaW = doc.area().pixelWidth();
         int areaH = doc.area().pixelHeight();
         int scale = TvImageFit.scale(art.width(), art.height(), areaW, areaH);
@@ -203,7 +226,7 @@ final class TvImageOps {
      * cópia antiga que nada mais usa sai. Uma Imagem que estava sem arte ganha a escala que cabe na caixa dela; as
      * outras ficam com a escala que tinham. Uma mudança do desfazer; acima do teto, nada muda e o aviso aparece.
      */
-    static boolean choose(TvEditorDoc doc, int max, TvPixelArt art) {
+    static boolean choose(TvEditorDoc doc, int max, TvImageSource art) {
         TvLayout now = doc.draft();
         TvSelection selection = doc.selection();
         List<TvPiece> pieces = new ArrayList<>(now.pieces());
@@ -222,18 +245,18 @@ final class TvImageOps {
                     part.valign()))));
             changed = true;
         }
-        return changed && commit(doc, max, now, withArt(now, art).withPieces(pieces).withoutUnusedImages(),
+        return changed && commit(doc, max, now, art.addTo(now).withPieces(pieces).withoutUnusedImages(),
                 selection);
     }
 
     /** A grade de artes do fundo em mosaico: troca a arte, mantendo a escala e a opacidade; a cópia antiga que nada mais usa sai. */
-    static boolean chooseMosaic(TvEditorDoc doc, int max, TvPixelArt art) {
+    static boolean chooseMosaic(TvEditorDoc doc, int max, TvImageSource art) {
         TvLayout now = doc.draft();
         TvBackground bg = now.background();
         if (bg.image().filter(art.id()::equals).isPresent()) {
             return false;
         }
-        TvLayout next = withArt(now, art).withBackground(TvBackground.tiled(art.id(), bg.scale(), bg.opacity()))
+        TvLayout next = art.addTo(now).withBackground(TvBackground.tiled(art.id(), bg.scale(), bg.opacity()))
                 .withoutUnusedImages();
         return commit(doc, max, now, next, doc.selection());
     }
@@ -241,7 +264,7 @@ final class TvImageOps {
     /** Troca o rascunho por {@code next} numa mudança só do desfazer, se cabe no teto; senão avisa. */
     private static boolean commit(TvEditorDoc doc, int max, TvLayout now, TvLayout next, TvSelection selection) {
         if (!fits(now, next, max)) {
-            doc.fail(TvEditorDoc.Failure.IMAGES_FULL);
+            failFor(doc, now, next);
             return false;
         }
         doc.replace(next, selection);

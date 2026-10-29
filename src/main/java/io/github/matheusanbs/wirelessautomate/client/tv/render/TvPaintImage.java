@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.client.tv.render;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import io.github.matheusanbs.wirelessautomate.client.tv.image.TvImageReceiver;
 import io.github.matheusanbs.wirelessautomate.tv.TvBackground;
 import io.github.matheusanbs.wirelessautomate.tv.TvLayout;
 import io.github.matheusanbs.wirelessautomate.tv.TvPartStyle;
@@ -9,6 +10,7 @@ import io.github.matheusanbs.wirelessautomate.tv.TvPiece;
 import io.github.matheusanbs.wirelessautomate.tv.TvPixelArt;
 import java.util.Optional;
 import java.util.UUID;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
 import org.jetbrains.annotations.Nullable;
@@ -19,12 +21,19 @@ import org.joml.Matrix4f;
  * um quadrilátero só com a textura ({@link TvArtTextures} ou {@link TvPictureTextures}): na Imagem, só a parte que cabe
  * na caixa; no mosaico, a Tela inteira, com a textura repetida pelas coordenadas além de 1. A opacidade vai na cor do
  * vértice. A imagem enviada que ainda não está pronta (não chegou, está subindo, não abre, ou o servidor desligou as
- * imagens) vira o quadro neutro no mesmo lugar, do tamanho que ela terá. Só a thread de render desenha.
+ * imagens) vira o quadro neutro no mesmo lugar, do tamanho que ela terá; a de outro jogador também, com a opção do
+ * cliente "Mostrar imagens de outros jogadores" desligada ({@link #showOthers}), e essa nem é carregada. Um GIF
+ * animado desenhado marca {@link #animated}, que o {@link TvPainter} devolve como {@code FLAG_GIF}. Só a thread de
+ * render desenha.
  */
 final class TvPaintImage {
     /** O quadro neutro: um cinza escuro com a borda mais clara, nas cores de nenhum tema. */
     private static final int NEUTRAL = 0xFF24272C;
     private static final int NEUTRAL_EDGE = 0xFF3C424B;
+    /** Se o último desenho teve um GIF animado; o {@link TvPainter} zera antes de cada desenho. */
+    static boolean animated;
+    /** A opção do cliente lida no tick ({@link TvCanvases}): falsa, as imagens de outros jogadores ficam neutras. */
+    static boolean showOthers = true;
 
     private TvPaintImage() {
     }
@@ -43,8 +52,24 @@ final class TvPaintImage {
             return new Source(art.width(), art.height(), TvArtTextures.renderType(art));
         }
         TvPicture picture = layout.picture(id.get());
-        return picture == null ? null
-                : new Source(picture.width(), picture.height(), TvPictureTextures.renderType(picture));
+        if (picture == null) {
+            return null;
+        }
+        if (!showOthers && !mine(picture)) {
+            return new Source(picture.width(), picture.height(), null);
+        }
+        animated |= picture.animated();
+        return new Source(picture.width(), picture.height(), TvPictureTextures.renderType(picture));
+    }
+
+    /**
+     * Se a imagem foi enviada por este jogador (pelo autor do layout ou, sem ele, pelo que veio com os bytes); sem
+     * autor conhecido, conta como de outro.
+     */
+    static boolean mine(TvPicture picture) {
+        UUID author = picture.author().orElseGet(() -> TvImageReceiver.author(picture.hash()));
+        Minecraft minecraft = Minecraft.getInstance();
+        return author != null && minecraft.player != null && author.equals(minecraft.player.getUUID());
     }
 
     /**
@@ -114,13 +139,15 @@ final class TvPaintImage {
 
     /**
      * Um quadrilátero com a textura de ({@code u0}, {@code v0}) a ({@code u1}, {@code v1}), na ordem de vértices do
-     * {@code GuiGraphics.fill} (a mesma face para o descarte de faces). A cor do vértice é o branco com o alfa do
-     * {@link TvPaintMath#withOpacity}, o mesmo que a opacidade dá a uma cor opaca. O lote antes e o deste quadrilátero
-     * vão ao GL na hora, para a ordem das peças valer.
+     * {@code GuiGraphics.fill} (a mesma face para o descarte de faces). A textura tem o alfa pré-multiplicado
+     * ({@link TvRenderTypes#art}), então a cor do vértice é a opacidade nos quatro canais: o alfa do
+     * {@link TvPaintMath#withOpacity} repetido no vermelho, no verde e no azul. O lote antes e o deste quadrilátero vão
+     * ao GL na hora, para a ordem das peças valer.
      */
     private static void quad(GuiGraphics g, RenderType type, int opacity, int x0, int y0, int x1, int y1, float u0,
             float v0, float u1, float v1) {
-        int color = TvPaintMath.withOpacity(0xFFFFFFFF, opacity);
+        int alpha = TvPaintMath.withOpacity(0xFFFFFFFF, opacity) >>> 24;
+        int color = alpha << 24 | alpha << 16 | alpha << 8 | alpha;
         g.flush();
         Matrix4f matrix = g.pose().last().pose();
         VertexConsumer buffer = g.bufferSource().getBuffer(type);

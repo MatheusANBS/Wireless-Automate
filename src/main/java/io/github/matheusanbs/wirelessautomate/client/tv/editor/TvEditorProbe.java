@@ -20,10 +20,12 @@ public final class TvEditorProbe {
     private final TvPropsPanel props;
     private final TvCanvasMenu menu;
     private final TvPopups popups;
+    private final TvLibraryTab library;
 
     TvEditorProbe(TvEditorDoc doc, TvLeftTabs leftTabs, TvPalettePanel palette, TvComponentsPanel components,
             TvEditorCanvas canvas, TvEditorBar bar, TvLayersPanel layers, TvPropsPanel props, TvCanvasMenu menu,
-            TvPopups popups) {
+            TvPopups popups, TvLibraryTab library) {
+        this.library = library;
         this.doc = doc;
         this.leftTabs = leftTabs;
         this.palette = palette;
@@ -34,6 +36,32 @@ public final class TvEditorProbe {
         this.props = props;
         this.menu = menu;
         this.popups = popups;
+    }
+
+    /** O centro de uma parte da aba Artes ({@code ARTS} ou {@code PICTURES}), com a aba aberta. */
+    public int[] librarySegmentCenter(String part) {
+        leftTabs.select(TvLeftTabs.Tab.ARTS);
+        return library.segmentCenter(TvLibraryTab.Part.valueOf(part));
+    }
+
+    /** A parte aberta da aba Artes. */
+    public String libraryPart() {
+        return library.part().name();
+    }
+
+    /** O centro da linha da imagem de nome {@code name} na parte Imagens, ou {@code null}. */
+    public int @Nullable [] pictureRowCenter(String name) {
+        return library.pictures().rowCenter(name);
+    }
+
+    /** O centro de um botão da parte Imagens ({@code SEND}, {@code RENAME}, {@code REMOVE}, {@code COPY}...). */
+    public int[] picturesButtonCenter(String button) {
+        return library.pictures().buttonCenter(TvPicturesPanel.Button.valueOf(button));
+    }
+
+    /** Se o campo do nome de uma imagem está aberto. */
+    public boolean pictureNaming() {
+        return library.pictures().textFocused();
     }
 
     public int[] paletteCenter(TvPieceType type) {

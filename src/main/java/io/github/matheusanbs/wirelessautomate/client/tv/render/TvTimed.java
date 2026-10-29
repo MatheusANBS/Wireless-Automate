@@ -8,15 +8,18 @@ import net.minecraft.client.multiplayer.ClientLevel;
 
 /**
  * O redesenho por tempo, no mesmo esquema do piscar: as Telas cuja última imagem tinha um Gráfico (redesenha a cada
- * segundo) ou um número do relógio (redesenha quando o minuto do jogo muda) ou um Ícone animado (a cada 2 ticks) ficam em três conjuntos, atualizados a
- * cada desenho pela {@link TvCanvases}; na virada do segundo ou do minuto só essas, e só se estão à vista, são
- * marcadas sujas. Também entrega o segundo aos {@link TvHistories} e avisa a miniatura do editor
- * ({@link #editorVersion}). Sem Gráfico nem relógio, o tick é duas divisões e duas comparações.
+ * segundo), um número do relógio (redesenha quando o minuto do jogo muda), um Ícone animado (a cada 2 ticks) ou um GIF
+ * animado (quando o quadro dele muda, {@link #gifChanged}) ficam em quatro conjuntos, atualizados a cada desenho pela
+ * {@link TvCanvases}; na virada do segundo, do minuto ou do quadro só essas, e só se estão à vista, são marcadas
+ * sujas. As Telas com GIF à vista também mantêm os GIFs delas tocando, a cada tick ({@link TvPictureTextures#seen}).
+ * Também entrega o segundo aos {@link TvHistories} e avisa a miniatura do editor ({@link #editorVersion}). Sem Gráfico
+ * nem relógio, o tick é duas divisões e duas comparações.
  */
 public final class TvTimed {
     private static final LongOpenHashSet GRAPHING = new LongOpenHashSet();
     private static final LongOpenHashSet CLOCKING = new LongOpenHashSet();
     private static final LongOpenHashSet ICONING = new LongOpenHashSet();
+    private static final LongOpenHashSet GIFING = new LongOpenHashSet();
     /** Os ticks entre dois redesenhos de um Ícone animado: 2, ou 10 vezes por segundo. */
     private static final int ICON_TICKS = 2;
     private static long second = Long.MIN_VALUE;
@@ -25,13 +28,19 @@ public final class TvTimed {
     private static boolean editorGraph;
     private static boolean editorClock;
     private static boolean editorIcon;
+    private static boolean editorGif;
     private static int editorVersion;
 
     private TvTimed() {
     }
 
-    /** O que a última imagem da Tela em {@code pos} tinha: Gráfico e número do relógio. */
-    static void track(long pos, boolean graph, boolean clock, boolean icon) {
+    /** O que a última imagem da Tela em {@code pos} tinha: Gráfico, número do relógio, Ícone animado e GIF. */
+    static void track(long pos, boolean graph, boolean clock, boolean icon, boolean gif) {
+        if (gif) {
+            GIFING.add(pos);
+        } else {
+            GIFING.remove(pos);
+        }
         if (icon) {
             ICONING.add(pos);
         } else {
@@ -53,13 +62,30 @@ public final class TvTimed {
         GRAPHING.remove(pos);
         CLOCKING.remove(pos);
         ICONING.remove(pos);
+        GIFING.remove(pos);
     }
 
-    /** A miniatura do editor tem um Gráfico ou um número do relógio no que desenhou. */
-    static void editor(boolean graph, boolean clock, boolean icon) {
+    /** A miniatura do editor tem um Gráfico, um número do relógio, um Ícone animado ou um GIF no que desenhou. */
+    static void editor(boolean graph, boolean clock, boolean icon, boolean gif) {
         editorGraph = graph;
         editorClock = clock;
         editorIcon = icon;
+        editorGif = gif;
+    }
+
+    /** O quadro do GIF {@code hash} mudou na textura: as Telas à vista que o mostram e a miniatura redesenham. */
+    static void gifChanged(String hash) {
+        if (editorGif) {
+            editorVersion++;
+        }
+        if (GIFING.isEmpty() || Minecraft.getInstance().level == null) {
+            return;
+        }
+        long now = Minecraft.getInstance().level.getGameTime();
+        LongIterator it = GIFING.iterator();
+        while (it.hasNext()) {
+            TvCanvases.refreshIfShows(it.nextLong(), hash, now);
+        }
     }
 
     /** Sobe quando a miniatura precisa de um redesenho por tempo (o segundo ou o minuto virou). */
@@ -88,6 +114,17 @@ public final class TvTimed {
             return;
         }
         long now = level.getGameTime();
+        if (!GIFING.isEmpty()) {
+            LongIterator it = GIFING.iterator();
+            while (it.hasNext()) {
+                if (!TvCanvases.seenGif(it.nextLong(), now)) {
+                    it.remove();
+                }
+            }
+        }
+        if (editorGif) {
+            TvEditorImage.seenPictures();
+        }
         long nowSecond = Math.floorDiv(now, 20L);
         if (nowSecond != second) {
             second = nowSecond;
@@ -132,6 +169,7 @@ public final class TvTimed {
         editorGraph = false;
         editorClock = false;
         editorIcon = false;
+        editorGif = false;
         TvHistories.dropPreview();
     }
 
@@ -140,6 +178,7 @@ public final class TvTimed {
         GRAPHING.clear();
         CLOCKING.clear();
         ICONING.clear();
+        GIFING.clear();
         iconStep = Long.MIN_VALUE;
         TvHistories.clear();
         second = Long.MIN_VALUE;

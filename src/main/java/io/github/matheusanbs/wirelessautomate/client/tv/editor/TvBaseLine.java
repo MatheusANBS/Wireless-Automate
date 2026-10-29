@@ -56,8 +56,10 @@ final class TvBaseLine {
                 case THROTTLED -> "not_saved_throttled";
                 case TIMEOUT -> "not_saved_timeout";
                 case IMAGES_FULL -> "images_full";
+                case PICTURES_FULL -> "pictures_full";
             };
-            Object limit = failure == TvEditorDoc.Failure.TOO_BIG ? maxKb : maxImagePixels;
+            Object limit = failure == TvEditorDoc.Failure.TOO_BIG ? maxKb
+                    : failure == TvEditorDoc.Failure.PICTURES_FULL ? TvImageOps.pictureLimit : maxImagePixels;
             failures[failure.ordinal()] = GuiText.fit(font, TvEditorText.key(key, limit), rect.w());
         }
         noticeVersion = -1;
@@ -75,8 +77,12 @@ final class TvBaseLine {
                 noticeVersion = TvCodeNotice.version();
                 notice = GuiText.fit(font, TvCodeNotice.text(), rect.w());
             }
-            GuiText.draw(g, font, notice, rect.x(), rect.y() + 2, kind == TvCodeNotice.Kind.COPIED ? GuiPaint.OK
-                    : kind == TvCodeNotice.Kind.BINDINGS_DROPPED ? GuiPaint.WARN : GuiPaint.DANGER);
+            GuiText.draw(g, font, notice, rect.x(), rect.y() + 2, switch (kind) {
+                case COPIED, PICTURE_SENT -> GuiPaint.OK;
+                case PICTURE_SENDING -> GuiPaint.MUTED;
+                case BINDINGS_DROPPED, PICTURES_BY_REFERENCE -> GuiPaint.WARN;
+                default -> GuiPaint.DANGER;
+            });
             return;
         }
         TvEditorDoc.Failure failure = doc.failure();

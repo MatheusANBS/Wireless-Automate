@@ -7,11 +7,15 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Predicate;
+import net.minecraft.nbt.ByteArrayTag;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.NbtOps;
@@ -33,7 +37,11 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>O código do layout leva, além das chaves do layout, a área de origem em pixels de desenho ({@code area_w},
  * {@code area_h}), para as peças escalarem como num layout salvo, e {@code keep_theme} quando vem de um layout salvo
- * (que não guarda tema: quem cola fica com o seu).
+ * (que não guarda tema: quem cola fica com o seu). As imagens enviadas vão como referência (a lista {@code pictures}
+ * do layout) e, quando cabem no teto do texto, com os bytes em {@link #PICTURE_DATA} (o resumo e o arquivo de cada
+ * uma): quem cola as envia de novo e o layout funciona em outro servidor. Sem os bytes, só onde as imagens já existem.
+ * Por causa deles, o código do layout descomprime até {@link #MAX_LAYOUT_CODE_BYTES}; o layout sem eles continua no
+ * teto do pacote de salvar, que o colar confere.
  */
 public final class TvCodes {
     public static final String LAYOUT_PREFIX = TvLayoutJson.HEADER + ":";
@@ -41,6 +49,10 @@ public final class TvCodes {
     private static final String AREA_W = "area_w";
     private static final String AREA_H = "area_h";
     private static final String KEEP_THEME = "keep_theme";
+    /** A chave dos bytes das imagens no código do layout (comprimido e legível). */
+    public static final String PICTURE_DATA = "picture_data";
+    /** Quanto o código de um layout com imagens pode ter descomprimido (o texto de 512 K não comprime fotos). */
+    public static final int MAX_LAYOUT_CODE_BYTES = 1 << 20;
     /** A maior área de origem aceita, em pixels de desenho por lado; fora disso, as peças não escalam. */
     private static final int MAX_AREA = 4096;
 
@@ -62,10 +74,13 @@ public final class TvCodes {
      * Um layout lido de um código: a área de origem é 0 quando o código não a tem; {@code dropped} conta as ligações
      * que não leram e saíram (só na forma legível).
      */
-    public record Layout(TvLayout layout, int width, int height, boolean keepTheme, int dropped) {
-        static Layout of(TvLayout layout, int width, int height, boolean keepTheme, int dropped) {
+    public record Layout(TvLayout layout, int width, int height, boolean keepTheme, int dropped,
+            Map<String, byte[]> pictureData) {
+        static Layout of(TvLayout layout, int width, int height, boolean keepTheme, int dropped,
+                Map<String, byte[]> pictureData) {
             boolean known = width > 0 && height > 0 && width <= MAX_AREA && height <= MAX_AREA;
-            return new Layout(layout, known ? width : 0, known ? height : 0, keepTheme, dropped);
+            return new Layout(layout, known ? width : 0, known ? height : 0, keepTheme, dropped,
+                    TvCodes.pictureData(layout, pictureData));
         }
 
         /** Se as peças vieram de uma área conhecida e diferente de {@code w} × {@code h}. */
@@ -84,20 +99,73 @@ public final class TvCodes {
      * {@link TvCodeText#MAX_TEXT}).
      */
     public static @Nullable String layout(TvLayout layout, int width, int height, boolean keepTheme) {
+        return layout(layout, width, height, keepTheme, Map.of());
+    }
+
+    /**
+     * O mesmo com os bytes das imagens ({@code data}, pelo resumo); {@code null} também se eles não couberem no teto
+     * do texto (quem chama tenta de novo sem eles).
+     */
+    public static @Nullable String layout(TvLayout layout, int width, int height, boolean keepTheme,
+            Map<String, byte[]> data) {
         CompoundTag tag = (CompoundTag) TvLayout.CODEC.encodeStart(NbtOps.INSTANCE, layout).getOrThrow();
         tag.putInt(AREA_W, width);
         tag.putInt(AREA_H, height);
         if (keepTheme) {
             tag.putBoolean(KEEP_THEME, true);
         }
-        return code(LAYOUT_PREFIX, tag);
+        if (bytes(tag).length > TvLayoutPayload.MAX_BYTES) {
+            return null;
+        }
+        if (data.isEmpty()) {
+            return code(LAYOUT_PREFIX, tag);
+        }
+        ListTag list = new ListTag();
+        for (Map.Entry<String, byte[]> entry : data.entrySet()) {
+            CompoundTag item = new CompoundTag();
+            item.putString("hash", entry.getKey());
+            item.put("data", new ByteArrayTag(entry.getValue()));
+            list.add(item);
+        }
+        tag.put(PICTURE_DATA, list);
+        byte[] raw = bytes(tag);
+        if (raw.length > MAX_LAYOUT_CODE_BYTES) {
+            return null;
+        }
+        String code = TvCodeText.encode(LAYOUT_PREFIX, raw);
+        return code.length() > TvCodeText.MAX_TEXT ? null : code;
     }
 
     /** O código legível do layout (JSON), ou {@code null} acima do teto do texto. */
     public static @Nullable String layoutText(TvLayout layout, int width, int height, boolean keepTheme,
             boolean english) {
-        String text = TvLayoutJson.write(layout, width, height, keepTheme, english);
+        return layoutText(layout, width, height, keepTheme, english, Map.of());
+    }
+
+    /** O mesmo com os bytes das imagens em base64; {@code null} acima do teto do texto. */
+    public static @Nullable String layoutText(TvLayout layout, int width, int height, boolean keepTheme,
+            boolean english, Map<String, byte[]> data) {
+        String text = TvLayoutJson.write(layout, width, height, keepTheme, english, data);
         return text.length() > TvCodeText.MAX_TEXT ? null : text;
+    }
+
+    /**
+     * Os bytes que valem: os das imagens que o layout aponta, com o resumo que bate com o conteúdo e o cabeçalho que
+     * lê nos tetos de qualquer imagem. Um arquivo trocado no caminho é largado (e a imagem fica só como referência).
+     */
+    static Map<String, byte[]> pictureData(TvLayout layout, Map<String, byte[]> data) {
+        if (data.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, byte[]> out = new LinkedHashMap<>();
+        for (TvPicture picture : layout.pictures()) {
+            byte[] bytes = data.get(picture.hash());
+            if (bytes != null && TvImageHash.of(bytes).equals(picture.hash())
+                    && TvImageHeader.read(bytes, TvPicture.HARD_SIZE, TvPicture.HARD_FRAMES).ok()) {
+                out.put(picture.hash(), bytes);
+            }
+        }
+        return Map.copyOf(out);
     }
 
     /** O código da arte (uma arte no teto de tamanho fica bem abaixo dos tetos). */
@@ -126,13 +194,23 @@ public final class TvCodes {
         if (body >= 0) {
             return TvLayoutJson.read(text.substring(body), lineOf(text, body));
         }
-        CompoundTag tag = read(LAYOUT_PREFIX, text);
-        Optional<TvLayout> layout = tag == null ? Optional.empty()
+        CompoundTag tag = read(LAYOUT_PREFIX, text, MAX_LAYOUT_CODE_BYTES);
+        Map<String, byte[]> data = new LinkedHashMap<>();
+        if (tag != null) {
+            ListTag list = tag.getList(PICTURE_DATA, Tag.TAG_COMPOUND);
+            for (int i = 0; i < list.size() && i < TvLayout.MAX_PICTURES; i++) {
+                CompoundTag item = list.getCompound(i);
+                data.put(item.getString("hash"), item.getByteArray("data"));
+            }
+            tag.remove(PICTURE_DATA);
+        }
+        Optional<TvLayout> layout = tag == null || bytes(tag).length > TvLayoutPayload.MAX_BYTES ? Optional.empty()
                 : TvLayout.CODEC.parse(NbtOps.INSTANCE, tag).result();
         if (layout.isEmpty()) {
             return Read.fail("code.invalid");
         }
-        return Read.ok(Layout.of(layout.get(), tag.getInt(AREA_W), tag.getInt(AREA_H), tag.getBoolean(KEEP_THEME), 0));
+        return Read.ok(Layout.of(layout.get(), tag.getInt(AREA_W), tag.getInt(AREA_H), tag.getBoolean(KEEP_THEME), 0,
+                data));
     }
 
     /**
@@ -145,7 +223,7 @@ public final class TvCodes {
             return art == null ? Read.fail(parsed.error(), parsed.args()) : Read.ok(new TvPixelArt(UUID.randomUUID(),
                     art.name(), art.width(), art.height(), art.palette(), art.pixels()));
         }
-        CompoundTag tag = read(ART_PREFIX, text);
+        CompoundTag tag = read(ART_PREFIX, text, TvLayoutPayload.MAX_BYTES);
         Optional<TvPixelArt> art = tag == null ? Optional.empty()
                 : TvPixelArt.CODEC.parse(NbtOps.INSTANCE, tag).result();
         return art.isPresent() ? Read.ok(art.get()) : Read.fail("code.invalid");
@@ -210,13 +288,13 @@ public final class TvCodes {
         return removed == 0 ? new Pruned(layout, 0) : new Pruned(layout.withPieces(pieces), removed);
     }
 
-    private static @Nullable CompoundTag read(String prefix, @Nullable String text) {
-        byte[] raw = TvCodeText.decode(prefix, text, TvLayoutPayload.MAX_BYTES);
+    private static @Nullable CompoundTag read(String prefix, @Nullable String text, int maxBytes) {
+        byte[] raw = TvCodeText.decode(prefix, text, maxBytes);
         if (raw == null) {
             return null;
         }
         try (DataInputStream data = new DataInputStream(new ByteArrayInputStream(raw))) {
-            Tag tag = NbtIo.readAnyTag(data, NbtAccounter.create(TvLayoutPayload.MAX_BYTES * 4L));
+            Tag tag = NbtIo.readAnyTag(data, NbtAccounter.create(maxBytes * 4L));
             return tag instanceof CompoundTag compound ? compound : null;
         } catch (IOException | RuntimeException e) {
             return null;

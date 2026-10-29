@@ -21,9 +21,10 @@ import org.jetbrains.annotations.Nullable;
  * Repassa o desenho, o mouse, a roda e o teclado ({@link TvEditorKeys}, com o campo de texto focado tendo a vez) e faz
  * o salvar pelo {@link TvEditorActions}; o rascunho só vai ao servidor no Salvar. Numa janela abaixo do mínimo, só a
  * mensagem pedindo uma escala menor ({@link TvTooSmall}). As janelas soltas (o seletor de cor e as listas abertas,
- * {@link TvPopups}) ficam por cima de tudo e têm a vez do mouse, da roda e do teclado. A quarta aba da esquerda, Pixel art
- * ({@link TvArtsPanel}), abre o {@link TvPixelEditor}, que a {@code TvScreen} desenha no lugar desta aba enquanto
- * está aberto. Os ganchos do e2e ficam no {@link TvEditorProbe}.
+ * {@link TvPopups}) ficam por cima de tudo e têm a vez do mouse, da roda e do teclado. A quarta aba da esquerda, Artes
+ * ({@link TvLibraryTab}), tem as pixel arts ({@link TvArtsPanel}, que abre o {@link TvPixelEditor}, desenhado pela
+ * {@code TvScreen} no lugar desta aba enquanto está aberto) e as imagens enviadas ({@link TvPicturesPanel}). Os
+ * ganchos do e2e ficam no {@link TvEditorProbe}.
  */
 public final class TvEditorTab {
     /** O Shift do e2e (a janela de teste não tem teclado de verdade). */
@@ -46,6 +47,7 @@ public final class TvEditorTab {
     private final TvPopups popups = new TvPopups();
     private final TvEditorProbe probe;
     private final TvPixelEditor pixel;
+    private final TvLibraryTab library;
     private final TvTooSmall tooSmall = new TvTooSmall();
     private boolean fits;
     private boolean libraryRequested;
@@ -63,10 +65,12 @@ public final class TvEditorTab {
         this.layers = new TvLayersPanel(doc);
         this.props = new TvPropsPanel(doc, networks, links, actions, popups);
         this.keys = new TvEditorKeys(doc, this::save);
-        this.pixel = new TvPixelEditor(actions, new TvArtDrag(doc, canvas, actions));
-        this.palette = new TvPalettePanel(doc, canvas, actions, pixel.arts()::chosenArt);
+        TvArtDrag drag = new TvArtDrag(doc, canvas, actions);
+        this.pixel = new TvPixelEditor(actions, drag);
+        this.library = new TvLibraryTab(pixel.arts(), new TvPicturesPanel(actions, drag), drag);
+        this.palette = new TvPalettePanel(doc, canvas, actions, library::chosen);
         this.probe = new TvEditorProbe(doc, leftTabs, palette, components, canvas, bar, layers, props, menu,
-                popups);
+                popups, library);
     }
 
     /** Dispõe as partes na janela ({@code x}, {@code y}, {@code w} × {@code h}), já com o cabeçalho incluso. */
@@ -89,7 +93,7 @@ public final class TvEditorTab {
         base.layout(font, layout.base());
         bar.layout(font, layout.buttons());
         layers.layout(font, layout.layers());
-        pixel.arts().layout(font, layout.leftBody());
+        library.layout(font, layout.leftBody());
         props.layout(font, layout.props());
     }
 
@@ -110,7 +114,7 @@ public final class TvEditorTab {
             case PIECES -> palette.render(g, mouseX, mouseY);
             case COMPONENTS -> components.render(g, mouseX, mouseY);
             case LAYERS -> layers.render(g, mouseX, mouseY);
-            case ARTS -> pixel.arts().render(g, mouseX, mouseY);
+            case ARTS -> library.render(g, mouseX, mouseY);
         }
         base.render(g, mouseX, mouseY);
         canvas.render(g, mouseX, mouseY);
@@ -118,7 +122,7 @@ public final class TvEditorTab {
         props.render(g, mouseX, mouseY);
         menu.render(g, mouseX, mouseY);
         palette.renderGhost(g, mouseX, mouseY);
-        pixel.arts().renderGhost(g, mouseX, mouseY);
+        library.renderGhost(g, mouseX, mouseY);
         TvPopup popup = popups.current();
         if (popup != null) {
             popup.render(g, mouseX, mouseY);
@@ -203,7 +207,7 @@ public final class TvEditorTab {
             case PIECES -> palette.mouseClicked(mouseX, mouseY);
             case LAYERS -> layers.mouseClicked(mouseX, mouseY);
             case COMPONENTS -> false;
-            case ARTS -> pixel.arts().mouseClicked(mouseX, mouseY);
+            case ARTS -> library.mouseClicked(mouseX, mouseY);
         };
     }
 
@@ -254,7 +258,7 @@ public final class TvEditorTab {
             return popup.mouseDragged(mouseX, mouseY);
         }
         return props.mouseDragged(mouseX, mouseY) || palette.mouseDragged(mouseX, mouseY)
-                || pixel.arts().mouseDragged(mouseX, mouseY) || canvas.mouseDragged(mouseX, mouseY)
+                || library.mouseDragged(mouseX, mouseY) || canvas.mouseDragged(mouseX, mouseY)
                 || layers.mouseDragged(mouseX, mouseY);
     }
 
@@ -265,7 +269,7 @@ public final class TvEditorTab {
         }
         // todos soltam (o | não para no primeiro que usou o botão)
         return props.mouseReleased(mouseX, mouseY) | palette.mouseReleased(mouseX, mouseY)
-                | pixel.arts().mouseReleased(mouseX, mouseY) | canvas.mouseReleased() | layers.mouseReleased();
+                | library.mouseReleased(mouseX, mouseY) | canvas.mouseReleased() | layers.mouseReleased();
     }
 
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
@@ -283,7 +287,7 @@ public final class TvEditorTab {
         return props.mouseScrolled(mouseX, mouseY, delta)
                 || leftTabs.tab() == TvLeftTabs.Tab.COMPONENTS && components.mouseScrolled(mouseX, mouseY, delta)
                 || leftTabs.tab() == TvLeftTabs.Tab.LAYERS && layers.mouseScrolled(mouseX, mouseY, delta)
-                || leftTabs.tab() == TvLeftTabs.Tab.ARTS && pixel.arts().mouseScrolled(mouseX, mouseY, delta);
+                || leftTabs.tab() == TvLeftTabs.Tab.ARTS && library.mouseScrolled(mouseX, mouseY, delta);
     }
 
     /** Uma tecla: o campo de texto com o foco primeiro, depois os atalhos; {@code true} se foi usada. */
@@ -295,8 +299,8 @@ public final class TvEditorTab {
         if (popup != null) {
             return popup.keyPressed(keyCode, scanCode, modifiers);
         }
-        return components.keyPressed(keyCode) || props.keyPressed(keyCode, scanCode, modifiers)
-                || keys.keyPressed(keyCode, modifiers);
+        return components.keyPressed(keyCode) || library.keyPressed(keyCode)
+                || props.keyPressed(keyCode, scanCode, modifiers) || keys.keyPressed(keyCode, modifiers);
     }
 
     /** Uma letra: vai ao campo de texto com o foco; sem campo, {@code [} e {@code ]} mudam a camada. */
@@ -308,14 +312,15 @@ public final class TvEditorTab {
         if (popup != null) {
             return popup.charTyped(c, modifiers);
         }
-        return components.charTyped(c, modifiers) || props.charTyped(c, modifiers)
+        return components.charTyped(c, modifiers) || library.charTyped(c, modifiers) || props.charTyped(c, modifiers)
                 || (!textFocused() && keys.charTyped(c));
     }
 
     /** Um campo de texto (da coluna de propriedades ou o nome de um componente) está com o teclado. */
     public boolean textFocused() {
         TvPopup popup = popups.current();
-        return popup != null && popup.wantsKeys() || props.textFocused() || components.textFocused();
+        return popup != null && popup.wantsKeys() || props.textFocused() || components.textFocused()
+                || library.textFocused();
     }
 
     public @Nullable Component tooltip(double mouseX, double mouseY) {
@@ -340,7 +345,7 @@ public final class TvEditorTab {
         }
         return switch (leftTabs.tab()) {
             case COMPONENTS -> components.tooltip(mouseX, mouseY);
-            case ARTS -> pixel.arts().tooltip(mouseX, mouseY);
+            case ARTS -> library.tooltip(mouseX, mouseY);
             default -> null;
         };
     }

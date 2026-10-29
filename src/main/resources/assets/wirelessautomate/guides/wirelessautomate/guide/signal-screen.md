@@ -55,7 +55,7 @@ doesn't fit, lower the interface scale.
 | **Gauge** | An arc dial with a needle. |
 | **Graph** | A number's history over the last minutes, as a line or columns. |
 | **Arrow** | Points up, down or stays flat as the number rises, falls or holds. |
-| **Image** | A pixel art of yours, drawn in the **Pixel art** tab (see below). |
+| **Image** | A pixel art of yours or an uploaded image (PNG, JPG or GIF), from the **Art** tab (see below). |
 
 - **Picking and moving:** click a piece to pick it (on a grouped piece, the whole group; two clicks enter the group).
   **Shift** + click adds or removes from the pick; click the empty space to let go. Drag to move and pull the corner
@@ -107,7 +107,7 @@ to shows **—**.
 
 ## Pixel art
 
-Draw your art in the **Pixel art** tab, in the editor's left column. It lives in your library and works on any Screen
+Draw your art in the **Art** tab, **Pixel art** part, in the editor's left column. It lives in your library and works on any Screen
 of yours.
 
 1. Click **New** (or pick an art and click **Edit**). The pixel art editor opens over the Screen editor.
@@ -184,9 +184,9 @@ mosaic (with little room or a large art, only what fits whole). **Esc** with no 
 ### Putting the art on the Screen
 
 - **Image:** click **Image** in the **Pieces** list (or drag it onto the preview). It starts with the art picked in
-  the **Pixel art** tab; with none picked, it starts empty, with **Pick the art**.
+  the **Art** tab (a pixel art or an image); with none picked, it starts empty, with **Pick the art or image**.
 - **Picking the art:** in the **Style** tab, **Piece** section, click a thumbnail in the grid. The ones marked **On
-  this screen** came with the Screen, from another player or from a code. Dragging an art from the **Pixel art** tab
+  this screen** came with the Screen, from another player or from a code. Dragging an art from the **Art** tab
   onto the preview works too.
 - In the same section: **Scale** (1× to 16×, or **Stretch**), **Align** (9 spots) and **Opacity**.
 - The Screen keeps a **copy** of the art: changing or deleting the art later doesn't change the Screen. **Update from
@@ -201,14 +201,46 @@ Take a layout or an art to another world, or to a friend, as text.
 
 | Button | What it does |
 | --- | --- |
-| **Export** | Copies the code: in the base (under **Apply layout**), of the layout; in the **Pixel art** tab, of the picked art. |
-| **Import** | Reads the copied code. In the base, applies the layout to the draft (**Ctrl+Z** undoes); in the **Pixel art** tab, makes a new art. |
+| **Export** | Copies the code: in the base (under **Apply layout**), of the layout; in the **Art** tab, of the picked art. |
+| **Import** | Reads the copied code. In the base, applies the layout to the draft (**Ctrl+Z** undoes); in the **Art** tab, makes a new art. An image code (**WA-IMAGEM1**) becomes an image upload. |
 | **Copy as text** | Copies in a readable form, to edit by hand or ask an AI. **Import** reads both forms. |
 
 - The layout takes its art along. Links to networks or storages you don't have are dropped: link them again in the
   **Data** tab.
 - An invalid code shows a warning in the bottom bar, and nothing changes.
 - To make art and Screens with an AI, there is a guide on the mod's GitHub: `docs/pixel-art-ai-guide.md`.
+
+## Images and GIFs
+
+Besides pixel art, the Screen shows real photos and animated GIFs, in the **Images** part of the **Art** tab.
+
+1. Click **Upload file** and pick a PNG, JPG or GIF on your computer. Or copy a **WA-IMAGEM1** code and click
+   **Import**.
+2. The image goes to the server and into your library with the file's name. **Rename** (or double-click the row)
+   changes the name, and **Remove**, with two clicks, takes it out of the library.
+3. Drag the image onto the preview to make an **Image**, or pick it in the grid of the **Style** tab: images come
+   after the art, under the **Images** label, and a GIF has the ▶ mark. The **Tiled background** takes images too.
+
+| Limit | Default |
+| --- | --- |
+| File | Up to **8 MB** |
+| Size | Up to **1024 × 1024** pixels |
+| GIF | Up to **240** frames |
+| Per Screen | Up to **8** different images |
+
+The server can change these numbers. An image is always a file uploaded and kept in the world, never a link to the
+internet.
+
+- **GIF:** plays at the file's pace, only while someone looks at the Screen. Two Screens with the same GIF play
+  together.
+- **Copy code:** puts the image on the clipboard as **WA-IMAGEM1**, to take it to another world. A layout's code takes
+  its images along when they fit; otherwise only the references, which work on the same server.
+- **Hide other players' images:** in the client config (`config/wirelessautomate-client.toml`, `tv` section),
+  `showOthersImages = false` swaps the images other players uploaded for a gray box. Yours stay.
+- **Operators:** `/wa tela imagens` lists the world's images, with the size, who uploaded and how many Screens use
+  them. `/wa tela imagem remover <hash>` takes an image off every Screen, and `/wa tela imagem banir <player>` stops
+  someone from uploading (`desbanir` undoes it). The `tv.images` section of the server config turns images off and
+  limits who uploads and the space.
 
 ## Access
 

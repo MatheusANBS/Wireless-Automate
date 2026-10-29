@@ -7,8 +7,10 @@ import io.github.matheusanbs.wirelessautomate.tv.TvComponent;
 import io.github.matheusanbs.wirelessautomate.tv.TvLayout;
 import io.github.matheusanbs.wirelessautomate.tv.TvPiece;
 import io.github.matheusanbs.wirelessautomate.tv.TvPieceType;
+import io.github.matheusanbs.wirelessautomate.tv.TvSavedLayouts;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.UnaryOperator;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -29,7 +31,7 @@ final class TvEditorDoc {
      * Por que o último salvar (ou a última pixel art posta na Tela, {@code IMAGES_FULL}: passaria do
      * {@code tv.maxImagePixels}) não valeu; o aviso fica até o rascunho mudar.
      */
-    enum Failure { TOO_BIG, DENIED, THROTTLED, TIMEOUT, IMAGES_FULL }
+    enum Failure { TOO_BIG, DENIED, THROTTLED, TIMEOUT, IMAGES_FULL, PICTURES_FULL }
 
     private final BlockPos pos;
     /** O teto de pixels das artes da Tela ({@code tv.maxImagePixels}), que o colar e o inserir componente respeitam. */
@@ -408,9 +410,14 @@ final class TvEditorDoc {
         }
     }
 
-    /** A escolha como componente de nome {@code name}: posições relativas ao canto e grupos renumerados. */
+    /**
+     * A escolha como componente de nome {@code name}: posições relativas ao canto, grupos renumerados e as imagens
+     * enviadas que as Imagens dela mostram.
+     */
     TvComponent selectionAsComponent(String name) {
-        return new TvComponent(name, TvEditOps.copy(A, pieces(), selection()).pieces());
+        List<TvPiece> parts = TvEditOps.copy(A, pieces(), selection()).pieces();
+        return new TvComponent(name, parts, Optional.empty(),
+                TvComponent.picturesOf(parts, Optional.empty(), draft().pictures()));
     }
 
     /**
@@ -429,8 +436,8 @@ final class TvEditorDoc {
         int[] b = TvEditOps.bounds(A, parts, TvSelection.range(0, parts.size()));
         TvEditOps.Edit<TvPiece> edit = TvEditOps.paste(A, pieces(), new TvEditOps.Clip<>(parts, 0, 0, b[2], b[3]),
                 area.pixelWidth(), area.pixelHeight());
-        if (TvImageOps.commitWithArts(this, maxImagePixels, draft().withPieces(edit.pieces()), List.of(),
-                edit.selection())) {
+        TvLayout next = TvSavedLayouts.withPictures(draft().withPieces(edit.pieces()), component.pictures());
+        if (TvImageOps.commitWithArts(this, maxImagePixels, next, List.of(), edit.selection())) {
             model.select(model.selection(), 0);
         }
     }

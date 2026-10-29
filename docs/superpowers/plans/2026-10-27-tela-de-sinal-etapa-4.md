@@ -82,6 +82,18 @@ Custo: só eventos (as ações da lista); a conferência de acesso no salvar é 
 
 - [ ] `TvBlockEntity.access` (jogadores e times, chave opcional), `canEdit` com a lista (e o `TeamAccess`), o pacote das ações (só o dono ou operador), tetos da rede; a aba Acesso no desenho da `AccessSection` da central. GameTests (convidado edita, removido não edita, time, tetos, NBT antigo) e o de times na run `gameTestServerTeams`. e2e: a aba Acesso. Commit "Tela de Sinal: acesso à Tela por jogador e por time".
 
+### Task 4: Imagens e GIFs de verdade
+
+Custo: no servidor, só eventos (envio em partes com limite por minuto, limpeza periódica rara, sem decodificar); na rede, só quem está perto, uma vez, com cache em disco no cliente; no cliente, uma textura por imagem à vista e, no GIF, uma subida de quadro por troca.
+
+- [ ] `TvImageStore` (por resumo, contagem de uso, limpeza, teto do mundo, autor), envio em partes com limite, config, comandos de moderação; pacote de imagens no envio da 1c; cache em disco e leitor STB no cliente com o cabeçalho conferido; textura com mipmaps; GIF por quadro; a aba Imagens na biblioteca e na grade; "Abrir arquivo"; a opção do cliente; o código `png:`/`gif:`; guia. GameTests, JUnit (cabeçalhos PNG, JPG e GIF; contagem e limpeza; limites) e e2e (enviar um PNG e um GIF pequenos do disco de teste, mostrar na Tela). Commits por parte.
+
+### Task 5: Pixel art animada
+
+Custo: só cliente no desenho (tira de textura, troca à vista); no servidor, nada novo.
+
+- [ ] Quadros na arte (até 64, 1 a 20 q/s, loop ou vai e volta), a faixa de quadros, o papel vegetal, o código com quadros, a Tela tocando sincronizada pelo relógio do jogo. Mockup `docs/preview/tela-de-sinal-animacao.html` (aprovado).
+
 ### Task 3: Guia, docs e verificação
 
 - [ ] Guia (pt e en), `CLAUDE.md`, `docs/especificacao.md`, `docs/progresso.md`.

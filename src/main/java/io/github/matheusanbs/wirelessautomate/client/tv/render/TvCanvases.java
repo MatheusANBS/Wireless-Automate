@@ -252,6 +252,7 @@ public final class TvCanvases {
      * e a cada {@link #SWEEP_TICKS} solta as imagens que o BER não pede há {@link #IDLE_TICKS}.
      */
     public static void onClientTick() {
+        TvArtTextures.onClientTick();
         if (CANVASES.isEmpty()) {
             return;
         }
@@ -433,5 +434,20 @@ public final class TvCanvases {
         blinkSlot = Long.MIN_VALUE;
         allocatedBytes = 0;
         ticks = 0;
+        TvArtTextures.sweep();
+    }
+
+    /** Na varredura do {@link TvArtTextures}: marca as artes dos layouts das Telas com imagem que ainda existem. */
+    static void keepArts() {
+        for (TvCanvas canvas : CANVASES.values()) {
+            if (!canvas.tv.isRemoved()) {
+                TvArtTextures.keep(canvas.tv.layout());
+            }
+        }
+    }
+
+    /** Quantas texturas de pixel art existem no cliente (o e2e confere que saem quando ninguém as usa). */
+    public static int artTexturesForTests() {
+        return TvArtTextures.countForTests();
     }
 }

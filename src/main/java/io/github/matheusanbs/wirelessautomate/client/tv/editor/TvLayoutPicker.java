@@ -50,6 +50,11 @@ final class TvLayoutPicker {
         form.skip(2);
     }
 
+    /** O centro da linha do layout salvo {@code name} na lista da base ({@code control}), para o e2e clicar. */
+    static int @Nullable [] rowCenter(@Nullable TvControl control, String name) {
+        return control instanceof LayoutList list ? list.rowCenter(name) : null;
+    }
+
     private static int builtin() {
         return TvLayouts.Kind.values().length;
     }
@@ -71,13 +76,14 @@ final class TvLayoutPicker {
 
     private static void apply(TvPropsCtx ctx) {
         TvComponent saved = mine(ctx);
+        // Cada Aplicar é uma mudança própria no desfazer: dois seguidos voltam um de cada vez.
         if (saved != null) {
-            ctx.doc().changeLayout(l -> TvSavedLayouts.apply(saved, l, ctx.doc().area()), "layout.preset");
+            ctx.doc().applyLayout(TvSavedLayouts.apply(saved, ctx.doc().draft(), ctx.doc().area()));
             return;
         }
         List<TvPiece> pieces = TvLayouts.build(TvLayouts.Kind.values()[index(ctx)], ctx.doc().area(),
                 TvLayoutPicker::text, network(ctx), storage(ctx), LoadedTypes.LIST);
-        ctx.doc().changeLayout(l -> l.withPieces(pieces), "layout.preset");
+        ctx.doc().changeLayout(l -> l.withPieces(pieces), null);
     }
 
     private static boolean canSave(TvPropsCtx ctx) {
@@ -204,6 +210,20 @@ final class TvLayoutPicker {
             lastRow = row;
             lastClick = now;
             return true;
+        }
+
+        /** O centro da linha do layout do jogador com o nome, rolando a lista até ela; {@code null} se não há (o e2e). */
+        int @Nullable [] rowCenter(String name) {
+            fit();
+            List<TvComponent> mine = TvLibraryClient.layouts();
+            for (int k = 0; k < mine.size(); k++) {
+                if (mine.get(k).name().equals(name)) {
+                    int i = builtin() + k;
+                    top = Math.max(0, Math.min(Math.max(0, fitted.length - ROWS), i - ROWS + 1));
+                    return new int[] {ax + w / 2, ay + 1 + (i - top) * ROW_H + ROW_H / 2};
+                }
+            }
+            return null;
         }
 
         @Override

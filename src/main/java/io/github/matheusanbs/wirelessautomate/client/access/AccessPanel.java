@@ -375,6 +375,11 @@ public final class AccessPanel {
         GuiPaint.box(g, x + rw - PLUS_W, boxY, PLUS_W, FIELD_H, GuiPaint.BUTTON,
                 hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
         GuiPaint.text(g, Minecraft.getInstance().font, PLUS, x + rw - PLUS_W + 4, boxY + 3, GuiPaint.FG);
+        EditBox box = field.box();
+        if (box.isFocused() && box.getValue().isEmpty()) {
+            // O campo do jogo esconde a dica com o foco; aqui ela fica, depois do cursor, até a primeira letra.
+            GuiPaint.text(g, Minecraft.getInstance().font, field.hint(), box.getX() + 6, box.getY(), GuiPaint.DISABLED);
+        }
     }
 
     /** As listas de sugestões, por cima de tudo (a tela chama depois de desenhar os widgets). */

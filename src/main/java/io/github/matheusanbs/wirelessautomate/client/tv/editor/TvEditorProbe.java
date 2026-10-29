@@ -96,6 +96,11 @@ public final class TvEditorProbe {
         return props.networkCenter(id, network);
     }
 
+    /** O centro da linha do layout salvo do jogador com o nome, no seletor da base; {@code null} se não está lá. */
+    public int @Nullable [] savedLayoutCenter(String name) {
+        return TvLayoutPicker.rowCenter(props.find("base.layout.list"), name);
+    }
+
     public int @Nullable [] propArrowCenter(String id, boolean right) {
         return props.arrowCenter(id, right);
     }

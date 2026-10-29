@@ -55,8 +55,8 @@ final class TvRenderTypes extends RenderType {
     /**
      * Uma pixel art pintada na textura da Tela ({@link TvArtTextures}): a mesma mistura e o mesmo teste de profundidade
      * do {@code RenderType.gui()} que pinta o resto, com a cor do texel (sem pré-multiplicar) vezes a do vértice, a
-     * opacidade da peça. Assim a textura da Tela sai pré-multiplicada como antes, e o texel transparente é descartado
-     * pelo shader. Um por textura, guardado com ela.
+     * opacidade da peça. Assim a arte sai na textura da Tela pré-multiplicada como o resto dela, e o texel
+     * transparente é descartado pelo shader. Um por textura, guardado com ela.
      */
     static RenderType art(int texture) {
         return create(WirelessAutomate.MODID + "_tv_art", DefaultVertexFormat.POSITION_TEX_COLOR,

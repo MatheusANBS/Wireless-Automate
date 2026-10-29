@@ -6,6 +6,7 @@ import com.mojang.blaze3d.platform.TextureUtil;
 import io.github.matheusanbs.wirelessautomate.tv.TvLayout;
 import io.github.matheusanbs.wirelessautomate.tv.TvPixelArt;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -17,8 +18,10 @@ import org.lwjgl.opengl.GL11;
  * As texturas das pixel arts no cliente: uma por arte distinta, do tamanho dela, com a paleta em ARGB sem
  * pré-multiplicar e o índice 0 transparente, filtro {@code NEAREST} sem mipmap (nada borra) e {@code GL_REPEAT} (o
  * mosaico é um quadrilátero só). A chave é a arte inteira, id e conteúdo: a mesma arte em várias Telas divide a
- * textura, e uma arte mudada ("Atualizar da biblioteca") ganha outra. Só a imagem na GPU fica; a cópia na memória sai
- * depois de subir.
+ * textura, e uma arte mudada ("Atualizar da biblioteca") ganha outra. Antes do mapa pelo conteúdo vem um pela
+ * instância ({@link #BY_INSTANCE}): as artes da biblioteca e dos layouts não mudam de instância entre quadros, e as
+ * miniaturas pedem a textura a cada quadro sem recalcular o {@code hashCode} da arte (até 16 KB de pixels). Só a
+ * imagem na GPU fica; a cópia na memória sai depois de subir.
  * <p>
  * Criada no redesenho que a pede. A varredura ({@link #sweep}) solta as que nenhuma Tela com imagem
  * ({@link TvCanvases#keepArts}), nem o rascunho do editor ({@link TvEditorImage#keepArts}), nem as miniaturas da
@@ -28,9 +31,14 @@ import org.lwjgl.opengl.GL11;
  */
 final class TvArtTextures {
     private static final int SWEEP_TICKS = 100;
-    /** Acima de tantas texturas, a varredura vem no tick seguinte (o editor de pixel art cria uma por traço). */
+    /**
+     * Acima de tantas texturas, a varredura vem no tick seguinte: muitas artes distintas à vista (uma biblioteca
+     * grande, várias Telas com arte por perto) não esperam os {@link #SWEEP_TICKS} para soltar as que saíram.
+     */
     private static final int SWEEP_SIZE = 64;
     private static final Map<TvPixelArt, Art> TEXTURES = new HashMap<>();
+    /** A textura pela instância da arte; esvaziado a cada varredura (as instâncias velhas não ficam presas). */
+    private static final Map<TvPixelArt, Art> BY_INSTANCE = new IdentityHashMap<>();
     /** A volta da varredura; a textura marcada com outra volta não foi usada e sai. */
     private static int generation;
     private static int ticks;
@@ -52,7 +60,11 @@ final class TvArtTextures {
 
     /** O tipo de desenho da textura da arte, criada agora se ainda não existe. */
     static RenderType renderType(TvPixelArt art) {
-        Art entry = TEXTURES.get(art);
+        Art entry = BY_INSTANCE.get(art);
+        if (entry != null) {
+            return entry.renderType;
+        }
+        entry = TEXTURES.get(art);
         if (entry == null) {
             entry = new Art(upload(art));
             entry.generation = generation;
@@ -61,6 +73,7 @@ final class TvArtTextures {
                 ticks = SWEEP_TICKS;
             }
         }
+        BY_INSTANCE.put(art, entry);
         return entry.renderType;
     }
 
@@ -115,6 +128,7 @@ final class TvArtTextures {
     /** Solta as texturas que nenhuma Tela com imagem nem o rascunho do editor usa. */
     static void sweep() {
         ticks = 0;
+        BY_INSTANCE.clear();
         if (TEXTURES.isEmpty()) {
             return;
         }

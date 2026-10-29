@@ -13,6 +13,7 @@ import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import net.minecraft.client.Minecraft;
 import org.jetbrains.annotations.Nullable;
 
@@ -133,9 +134,25 @@ public final class TvArtCache {
                 : new TvPixelArt(ref.id(), ref.name(), art.width(), art.height(), art.palette(), art.pixels());
     }
 
-    /** A cada tick do cliente: a varredura a cada {@link #SWEEP_TICKS}, só com alguma arte. */
+    /**
+     * A arte guardada com o id, ou {@code null}: o editor completa as artes das peças coladas de outra Tela. Percorre
+     * o cache, só no clique.
+     */
+    public static @Nullable TvPixelArt byId(UUID id) {
+        for (Entry entry : ARTS.values()) {
+            if (entry.art.id().equals(id)) {
+                return entry.art;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * A cada tick do cliente: a varredura a cada {@link #SWEEP_TICKS}, só com alguma arte ou Tela esperando uma (a
+     * Tela removida sai das pendentes mesmo com o cache vazio).
+     */
     static void onClientTick() {
-        if (ARTS.isEmpty() || ++ticks < SWEEP_TICKS) {
+        if (ARTS.isEmpty() && PENDING.isEmpty() || ++ticks < SWEEP_TICKS) {
             return;
         }
         ticks = 0;

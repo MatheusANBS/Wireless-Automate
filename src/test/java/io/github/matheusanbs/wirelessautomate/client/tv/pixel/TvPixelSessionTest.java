@@ -143,6 +143,38 @@ class TvPixelSessionTest {
     }
 
     @Test
+    void refazerDepoisDeDesfazerOMoverDeUmPedacoSolto() {
+        TvPixelSession s = session();
+        stroke(s, 0, 0, 1, 0);
+        s.selectAll();
+        s.nudge(3, 2);
+        assertTrue(s.selection().floating());
+        assertTrue(s.undo());
+        assertEquals("11", corner(s.canvas(), 2, 1), "o desfazer volta a arte de antes do mover");
+        assertTrue(s.redo());
+        assertEquals(1, s.canvas().get(3, 2), "o refazer traz o pedaço movido");
+        assertEquals(1, s.canvas().get(4, 2));
+        assertEquals(0, s.canvas().get(0, 0), "sem o pedaço no lugar antigo");
+        assertTrue(s.undo());
+        assertEquals("11", corner(s.canvas(), 2, 1));
+    }
+
+    @Test
+    void passoSemMudancaNaoApagaORefazer() {
+        TvPixelSession s = session();
+        stroke(s, 0, 0);
+        stroke(s, 1, 0);
+        assertTrue(s.undo());
+        stroke(s, 0, 0);
+        assertTrue(s.history().canRedo(), "o lápis na mesma cor não mudou nada");
+        assertTrue(s.redo());
+        assertEquals("11", corner(s.canvas(), 2, 1));
+        assertTrue(s.undo());
+        stroke(s, 2, 0);
+        assertFalse(s.history().canRedo(), "um passo que muda apaga o refazer");
+    }
+
+    @Test
     void escDesfazOMoverETiraASelecao() {
         TvPixelSession s = session();
         stroke(s, 0, 0);

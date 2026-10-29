@@ -129,6 +129,11 @@ public final class TvEditorActions {
         send(TvLibraryActionPayload.saveArt(containerId, art));
     }
 
+    /** Na prévia de desenvolvimento nada vai ao servidor, e nenhuma resposta vem. */
+    boolean preview() {
+        return preview;
+    }
+
     /** Remove a pixel art da biblioteca (as Telas que a usam guardam a cópia delas). */
     void removeArt(UUID id) {
         send(TvLibraryActionPayload.removeArt(containerId, id));

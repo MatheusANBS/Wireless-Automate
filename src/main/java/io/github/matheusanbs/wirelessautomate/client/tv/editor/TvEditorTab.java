@@ -52,7 +52,7 @@ public final class TvEditorTab {
 
     public TvEditorTab(BlockPos pos, TvArea area, List<TvMenu.NetworkChoice> networks, List<TvMenu.LinkChoice> links,
             TvEditorActions actions) {
-        this.doc = new TvEditorDoc(pos, area);
+        this.doc = new TvEditorDoc(pos, area, actions.maxImagePixels());
         this.actions = actions;
         TvEditorAck.listen(actions.containerId(), doc::acked);
         this.menu = new TvCanvasMenu(doc);
@@ -96,6 +96,7 @@ public final class TvEditorTab {
     /** Uma vez por tick: a Tela no cliente e o aviso de tamanho, que some com a próxima mudança. */
     public void tick() {
         doc.tick();
+        pixel.tick();
         actions.previewBindings(doc.draft().bindings());
     }
 

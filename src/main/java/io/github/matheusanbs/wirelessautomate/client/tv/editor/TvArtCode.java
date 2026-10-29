@@ -35,7 +35,9 @@ final class TvArtCode {
         } else if (count >= actions.maxArts()) {
             TvCodeNotice.show(TvCodeNotice.Kind.LIBRARY_FULL);
         } else {
-            actions.saveArt(new TvPixelArt(UUID.randomUUID(), read.name(), read.width(), read.height(),
+            // A biblioteca não guarda arte sem nome: a que veio sem nome ganha o padrão do editor.
+            String name = read.name().isBlank() ? TvEditorText.key("pixel.new_name").getString() : read.name();
+            actions.saveArt(new TvPixelArt(UUID.randomUUID(), name, read.width(), read.height(),
                     read.palette(), read.pixels()));
         }
     }

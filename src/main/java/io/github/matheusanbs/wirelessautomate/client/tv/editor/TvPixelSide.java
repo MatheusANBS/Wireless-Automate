@@ -40,6 +40,9 @@ final class TvPixelSide {
     private Font font;
     private GuiText.Fitted paletteLabel;
     private GuiText.Fitted previewLabel;
+    /** A chave do rótulo da prévia já medido, e a largura dele; a prévia troca a chave com o tamanho da arte. */
+    private @Nullable String previewKey;
+    private int previewW;
     private int paletteY;
     private int previewY;
     private TvRect current = TvRect.NONE;
@@ -87,7 +90,8 @@ final class TvPixelSide {
         buttons[Button.EDIT_COLOR.ordinal()] = new TvRect(x, y, editW, BUTTON_H);
         buttons[Button.RAMP.ordinal()] = new TvRect(x + editW + 4, y, w - editW - 4, BUTTON_H);
         y += BUTTON_H + 5;
-        previewLabel = GuiText.fit(font, TvEditorText.key("pixel.preview"), w);
+        previewKey = null;
+        previewW = w;
         previewY = y;
         y += 11;
         int actionsY = side.bottom() - BUTTON_H;
@@ -138,6 +142,11 @@ final class TvPixelSide {
         TvEditorPaint.button(g, font, edit, editLabel, edit.contains(mouseX, mouseY), index != 0);
         TvRect ramp = buttons[Button.RAMP.ordinal()];
         TvEditorPaint.button(g, font, ramp, rampLabel, ramp.contains(mouseX, mouseY), index != 0);
+        String key = preview.labelKey(canvas);
+        if (!key.equals(previewKey)) {
+            previewKey = key;
+            previewLabel = GuiText.fit(font, TvEditorText.key(key), previewW);
+        }
         GuiText.draw(g, font, previewLabel, swatches[0].x(), previewY, GuiPaint.MUTED);
         preview.render(g, canvas);
         TvRect clear = buttons[Button.CLEAR.ordinal()];

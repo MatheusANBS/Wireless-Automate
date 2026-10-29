@@ -10,12 +10,16 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * pode vir da thread que observa o arquivo) só marca {@link #configChanged}, e o tick seguinte do servidor compara o
  * {@code tv.images.enabled} com o último que os clientes receberam; mudou, o {@link TvImageStatePayload} vai a todos,
  * e as Telas à vista trocam a imagem pelo quadro neutro (ou voltam) na hora. Quem entra com as imagens desligadas
- * recebe o mesmo aviso ({@link #onLogin}). Parado, o tick é a leitura de um campo.
+ * recebe o mesmo aviso ({@link #onLogin}). O primeiro tick depois da subida do servidor anota o que valia nela (quem
+ * entrou já recebeu isso pelo {@link #onLogin}), para ligar depois de subir desligado também avisar. Parado, o tick é a
+ * leitura de dois campos.
  */
 public final class TvImageState {
     private static volatile boolean configChanged;
     /** O que os clientes receberam por último (ligadas, o padrão de quem entra sem aviso). */
     private static boolean sent = true;
+    /** Se o primeiro tick desde a subida já anotou o {@link #sent}. */
+    private static boolean primed;
     private static int broadcasts;
 
     private TvImageState() {
@@ -28,6 +32,10 @@ public final class TvImageState {
 
     /** A cada tick do servidor (pelo {@link TvManager}). */
     public static void tick(MinecraftServer server) {
+        if (!primed) {
+            primed = true;
+            sent = TvImageConfig.enabled();
+        }
         if (!configChanged) {
             return;
         }
@@ -61,6 +69,7 @@ public final class TvImageState {
     public static void reset() {
         configChanged = false;
         sent = true;
+        primed = false;
     }
 
     /** O que os clientes receberam por último e quantas vezes o aviso foi a todos (os GameTests leem). */

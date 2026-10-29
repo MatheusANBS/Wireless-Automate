@@ -83,6 +83,12 @@ public final class TvPictureTextures {
         int rows;
         long uploadNanos;
         int generation;
+        /** O tamanho do GIF aberto inteiro, pelo que o layout diz dele (0 se não é GIF animado). */
+        long gifBytes;
+        /** A memória reservada no teto dos GIFs para a decodificação em curso, devolvida na volta dela. */
+        long reserved;
+        /** Os bytes que chegaram do servidor enquanto a leitura do disco corria: usados se o disco não os tinha. */
+        byte @Nullable [] arrived;
 
         Picture(String hash) {
             this.hash = hash;
@@ -105,6 +111,8 @@ public final class TvPictureTextures {
         if (entry == null) {
             entry = new Picture(picture.hash());
             entry.generation = generation;
+            entry.gifBytes = picture.animated() ? (long) picture.width() * picture.height() * 4 * picture.frames()
+                    : 0;
             PICTURES.put(picture.hash(), entry);
             load(entry, TvImageDisk.read(picture.hash()));
         }
@@ -113,11 +121,13 @@ public final class TvPictureTextures {
 
     /**
      * Lê (do disco ou dos bytes que chegaram) e decodifica num executor; a volta é na thread de render. O GIF animado
-     * vem com todos os quadros se ainda cabem no teto dos GIFs ({@link TvGifAnimation#ramRoom}), medido agora.
+     * vem com todos os quadros se eles cabem no teto dos GIFs ({@link TvGifAnimation#RAM}), reservados agora: vários
+     * GIFs pedidos juntos não veem todos o mesmo espaço livre.
      */
     private static void load(Picture entry, CompletableFuture<byte @Nullable []> bytes) {
         entry.state = State.LOADING;
-        long room = TvGifAnimation.ramRoom();
+        entry.reserved = TvGifAnimation.RAM.reserve(entry.gifBytes);
+        long room = entry.reserved;
         bytes.thenApplyAsync(data -> data == null ? new Loaded(null, true)
                         : new Loaded(TvImageDecoder.decode(data, room), false), Util.backgroundExecutor())
                 .whenComplete((loaded, error) -> Minecraft.getInstance().execute(() -> loaded(entry,
@@ -125,6 +135,11 @@ public final class TvPictureTextures {
     }
 
     private static void loaded(Picture entry, Loaded loaded) {
+        // A reserva sai sempre; a animação aberta inteira passa a contar pelo tamanho de verdade.
+        TvGifAnimation.RAM.release(entry.reserved);
+        entry.reserved = 0;
+        byte[] arrived = entry.arrived;
+        entry.arrived = null;
         if (PICTURES.get(entry.hash) != entry) {
             // Solta pela varredura enquanto carregava.
             if (loaded.decoded != null) {
@@ -133,6 +148,10 @@ public final class TvPictureTextures {
             return;
         }
         if (loaded.decoded == null) {
+            if (loaded.missing && arrived != null) {
+                load(entry, CompletableFuture.completedFuture(arrived));
+                return;
+            }
             entry.state = loaded.missing ? State.MISSING : State.FAILED;
             return;
         }
@@ -152,12 +171,18 @@ public final class TvPictureTextures {
 
     /**
      * Os bytes de uma imagem chegaram do servidor (já conferidos e guardados no disco): a que esperava por eles é
-     * decodificada agora.
+     * decodificada agora. Com a leitura do disco ainda em curso, ficam guardados para o caso de o disco não ter a
+     * imagem, que é o mais provável (o servidor só manda o que o cliente não tem).
      */
     public static void arrived(String hash, byte[] data) {
         Picture entry = PICTURES.get(hash);
-        if (entry != null && (entry.state == State.MISSING || entry.state == State.FAILED)) {
+        if (entry == null) {
+            return;
+        }
+        if (entry.state == State.MISSING || entry.state == State.FAILED) {
             load(entry, CompletableFuture.completedFuture(data));
+        } else if (entry.state == State.LOADING) {
+            entry.arrived = data;
         }
     }
 

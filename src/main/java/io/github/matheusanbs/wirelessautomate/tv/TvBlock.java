@@ -125,7 +125,10 @@ public class TvBlock extends BaseEntityBlock {
 
     /**
      * O bloco saiu do mundo (quebrado, explodido, trocado por comando): as imagens que a Tela usava deixam de contar
-     * no armazém. Descarregar o chunk não passa por aqui.
+     * no armazém. Descarregar o chunk não passa por aqui. Uma Tela que sai do mundo por um tempo com os dados dela (a
+     * contraption do Create, um item com os dados do bloco) também conta como quebrada: se ficar fora mais que a folga
+     * da limpeza ({@link TvImageStore#GRACE_MS}) e nada mais usar a imagem, volta sem ela. Aceito: anotar o uso
+     * fora do mundo pediria seguir o NBT por onde ele anda.
      */
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {

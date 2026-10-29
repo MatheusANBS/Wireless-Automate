@@ -7,8 +7,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -67,8 +69,7 @@ public final class TvLibraryActions {
             result = switch (payload.action()) {
                 case OPEN -> TvLibrary.Result.OK;
                 case SAVE_COMPONENT -> payload.content().length > MAX_COMPONENT_BYTES ? TvLibrary.Result.TOO_BIG
-                        : synced(player, library.saveComponent(player.getUUID(),
-                                resolved(player, payload.component())));
+                        : saveComponent(player, library, payload.component());
                 case SAVE_THEME -> library.saveTheme(player.getUUID(), payload.theme());
                 case RENAME -> payload.kind() == TvLibraryActionPayload.Kind.COMPONENT
                         ? library.renameComponent(player.getUUID(), payload.name(), payload.newName())
@@ -97,10 +98,14 @@ public final class TvLibraryActions {
             case INVALID -> "library_invalid";
             case TOO_BIG -> payload.action() == TvLibraryActionPayload.Action.SAVE_ART ? "library_art_too_big"
                     : "library_component_too_big";
+            case TOO_MANY_PICTURES -> "library_pictures_too_many";
             default -> null;
         };
         if (key != null) {
-            player.displayClientMessage(Component.translatable("message.wirelessautomate.tv." + key), true);
+            String full = "message.wirelessautomate.tv." + key;
+            player.displayClientMessage(result == TvLibrary.Result.TOO_MANY_PICTURES
+                    ? Component.translatable(full, TvImageConfig.limits(player.server).maxPerScreen())
+                    : Component.translatable(full), true);
         }
         if (result != TvLibrary.Result.OK) {
             return false;
@@ -114,12 +119,25 @@ public final class TvLibraryActions {
     }
 
     /**
-     * O componente com as imagens trocadas pelo que o armazém sabe delas (a que ele não tem sai): o cliente não decide
-     * tamanho nem autor, e o componente segura no armazém só o que existe.
+     * O componente (ou layout salvo) com só as imagens que as peças e o fundo dele apontam, trocadas pelo que o
+     * armazém sabe delas (a que ele não tem sai): o cliente não decide tamanho nem autor, e o componente segura no
+     * armazém só o que existe e o que usa. {@code null} se passa de {@code tv.images.maxPerScreen}, como na Tela.
      */
-    private static TvComponent resolved(ServerPlayer player, TvComponent component) {
-        return component.pictures().isEmpty() ? component
-                : component.withPictures(TvImageStore.get(player.server).resolve(component.pictures()));
+    static @Nullable TvComponent resolved(MinecraftServer server, TvComponent component) {
+        if (component.pictures().isEmpty()) {
+            return component;
+        }
+        Optional<UUID> background = component.layout().flatMap(layout -> layout.background().image());
+        List<TvPicture> used = TvComponent.picturesOf(component.pieces(), background,
+                TvImageStore.get(server).resolve(component.pictures()));
+        return used.size() > TvImageConfig.limits(server).maxPerScreen() ? null : component.withPictures(used);
+    }
+
+    /** Guarda o componente com as imagens conferidas ({@link #resolved}); acima do teto de imagens, recusa. */
+    private static TvLibrary.Result saveComponent(ServerPlayer player, TvLibrary library, TvComponent component) {
+        TvComponent checked = resolved(player.server, component);
+        return checked == null ? TvLibrary.Result.TOO_MANY_PICTURES
+                : synced(player, library.saveComponent(player.getUUID(), checked));
     }
 
     /** Depois de uma mudança que deu certo, o armazém conta de novo as imagens que a biblioteca do jogador segura. */

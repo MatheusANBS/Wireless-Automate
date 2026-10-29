@@ -27,9 +27,9 @@ import org.jetbrains.annotations.Nullable;
  * na ordem, até o tamanho declarado; no {@code END}, o resumo e o cabeçalho de verdade são conferidos contra os bytes
  * e o arquivo é gravado, os dois fora da thread do servidor, e a imagem entra no armazém e na biblioteca.
  * <p>
- * Um envio por jogador (um novo descarta o anterior); o que fica {@link #TIMEOUT_MS} sem pedaço, ou cujo jogador sai,
- * é descartado. Toda recusa avisa na barra de ação e responde ao cliente com o motivo. Sem envio em curso, o tick é a
- * checagem do mapa vazio.
+ * Um envio por jogador (um novo descarta o anterior, a não ser o que já está no fim, que recusa o novo com
+ * {@code BUSY}); o que fica {@link #TIMEOUT_MS} sem pedaço, ou cujo jogador sai, é descartado. Toda recusa avisa na
+ * barra de ação e responde ao cliente com o motivo. Sem envio em curso, o tick é a checagem do mapa vazio.
  */
 public final class TvImageUploads {
     static final long TIMEOUT_MS = 30_000L;
@@ -127,6 +127,11 @@ public final class TvImageUploads {
         TvLibrary library = TvLibrary.get(server);
         if (!library.hasPicture(id, p.hash()) && library.pictures(id).size() >= TvLibrary.MAX_PICTURES) {
             return refuse(player, p.hash(), TvImageRefusal.LIBRARY_FULL);
+        }
+        Upload current = UPLOADS.get(id);
+        if (current != null && current.finishing) {
+            // O fim do anterior ainda roda no executor com o arquivo: descartá-lo tiraria os bytes do inFlight cedo.
+            return refuse(player, p.hash(), TvImageRefusal.BUSY);
         }
         drop(id);
         if (store.contains(p.hash())) {
@@ -322,11 +327,15 @@ public final class TvImageUploads {
     }
 
     /**
-     * O jogador que saiu: o envio dele some. O que ele gastou no minuto fica (sair e voltar não zera o limite), e a
-     * janela de todos anda, para quem não volta não ficar no mapa.
+     * O jogador que saiu: o envio dele some (o que já está no fim termina antes). O que ele gastou no minuto fica
+     * (sair e voltar não zera o limite), e a janela de todos anda, para quem não volta não ficar no mapa.
      */
     public static void forget(UUID player) {
-        drop(player);
+        Upload upload = UPLOADS.get(player);
+        if (upload == null || !upload.finishing) {
+            // O que está no fim sai sozinho quando o executor volta (finish), com os bytes contados até lá.
+            drop(player);
+        }
         START_GATE.forget(player);
         RATE.sweep(clock.getAsLong());
     }

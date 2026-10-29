@@ -10,6 +10,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -48,9 +49,10 @@ import org.jetbrains.annotations.Nullable;
  * ({@link #screenChanged}), quando ela carrega (o {@code onLoad} anota de novo, o que conserta uma anotação perdida) e
  * sai quando o bloco é quebrado ({@link #screenRemoved}, no {@code onRemove} do {@link TvBlock}); a anotação vai ao
  * disco com o índice. As bibliotecas são recontadas da própria {@link TvLibrary} a cada carga do mundo
- * ({@link #attach}) e anotadas a cada mudança. Um índice que não lê (apagado ou corrompido) com arquivos na pasta é
- * refeito deles pelo cabeçalho ({@link #recover}); essas imagens não saem pela limpeza até alguém voltar a usá-las,
- * porque as Telas descarregadas que as apontam só se anotam quando carregam.
+ * ({@link #attach}) e anotadas a cada mudança. Os arquivos da pasta que faltam no índice (um índice que não lê, ou um
+ * servidor que caiu entre a gravação do arquivo e o salvamento do mundo) voltam a ele pelo cabeçalho na carga
+ * ({@link #recover}); essas imagens não saem pela limpeza até alguém voltar a usá-las, porque as Telas descarregadas
+ * que as apontam só se anotam quando carregam.
  * <p>
  * <b>A limpeza</b> passa a cada {@link #CLEANUP_MS} e apaga, no máximo {@link #CLEANUP_BATCH} por tick, as imagens
  * sem uso há mais de {@link #GRACE_MS} (folga para quebrar e recolocar uma Tela, ou desfazer). Parado, o tick é a
@@ -65,6 +67,14 @@ public final class TvImageStore extends SavedData {
     static final long CLEANUP_MS = 5 * 60_000L;
     private static final int CLEANUP_BATCH = 8;
     private static final long CACHE_BYTES = 64L << 20;
+    /**
+     * As leituras em curso, no máximo, em número e em bytes (a não ser uma só, maior que o teto): o que chega entre
+     * dois ticks cabe no cache sem despejar outra leitura que acabou de chegar e ainda não foi usada.
+     */
+    private static final int MAX_LOADING = 4;
+    /** O fim do nome do arquivo temporário de uma gravação. */
+    private static final String TEMP_EXT = ".tmp";
+    private static final long MAX_LOADING_BYTES = CACHE_BYTES / 2;
 
     /** Nos testes: o servidor de GameTest é tratado como dedicado (o teto do mundo vale). */
     public static boolean dedicatedForTests;
@@ -82,7 +92,9 @@ public final class TvImageStore extends SavedData {
     /** Os bytes lidos para a entrega, do menos ao mais usado. */
     private final LinkedHashMap<String, byte[]> cache = new LinkedHashMap<>(16, 0.75f, true);
     private long cacheBytes;
-    private final Set<String> loading = new HashSet<>();
+    /** As leituras em curso, com os bytes que o índice diz de cada uma. */
+    private final Map<String, Long> loading = new HashMap<>();
+    private long loadingBytes;
     /** As que não leram do disco (o arquivo sumiu ou quebrou): a entrega desiste delas. */
     private final Set<String> unreadable = new HashSet<>();
 
@@ -108,9 +120,7 @@ public final class TvImageStore extends SavedData {
         this.server = server;
         dir = server.getWorldPath(LevelResource.ROOT).resolve("data").resolve(WirelessAutomate.MODID)
                 .resolve("images");
-        if (!fromDisk) {
-            recover();
-        }
+        recover();
         long now = now();
         for (Map.Entry<UUID, List<String>> entry : TvLibrary.get(server).pictureRefs().entrySet()) {
             index.setLibrary(entry.getKey(), entry.getValue(), now);
@@ -119,8 +129,10 @@ public final class TvImageStore extends SavedData {
     }
 
     /**
-     * Sem índice no disco (mundo novo, ou o arquivo apagado ou corrompido): as imagens da pasta voltam ao índice pelo
-     * cabeçalho, como recuperadas. Raro, e só na carga do mundo.
+     * Na carga do mundo, só pelos nomes da pasta (sem ler os que o índice já tem): os arquivos que faltam no índice
+     * voltam a ele pelo cabeçalho, como recuperados, e os temporários que sobraram de uma gravação interrompida saem.
+     * Sem índice no disco (mundo novo, ou o arquivo apagado ou corrompido), são todos; com índice, só os gravados
+     * depois do último salvamento de um servidor que caiu.
      */
     private void recover() {
         if (dir == null || !Files.isDirectory(dir)) {
@@ -130,10 +142,14 @@ public final class TvImageStore extends SavedData {
         try (DirectoryStream<Path> files = Files.newDirectoryStream(dir)) {
             for (Path file : files) {
                 String name = file.getFileName().toString();
+                if (name.endsWith(TEMP_EXT)) {
+                    Files.deleteIfExists(file);
+                    continue;
+                }
                 int dot = name.lastIndexOf('.');
                 TvImageFormat format = dot < 0 ? null : TvImageFormat.byExt(name.substring(dot + 1));
                 String hash = dot < 0 ? "" : name.substring(0, dot);
-                if (format == null || !TvImageHash.valid(hash)) {
+                if (format == null || !TvImageHash.valid(hash) || index.contains(hash)) {
                     continue;
                 }
                 byte[] data = Files.readAllBytes(file);
@@ -150,8 +166,9 @@ public final class TvImageStore extends SavedData {
             WirelessAutomate.LOGGER.warn("Tela de Sinal: não deu para ler a pasta de imagens {}", dir, e);
         }
         if (found > 0) {
-            WirelessAutomate.LOGGER.warn("Tela de Sinal: o índice das imagens não leu; {} imagens recuperadas da pasta "
-                    + "(não saem pela limpeza até voltarem a ser usadas)", found);
+            WirelessAutomate.LOGGER.warn("Tela de Sinal: {}; {} imagens recuperadas da pasta (não saem pela limpeza "
+                    + "até voltarem a ser usadas)", fromDisk ? "arquivos de imagem fora do índice"
+                    : "o índice das imagens não leu", found);
             setDirty();
         }
     }
@@ -294,14 +311,23 @@ public final class TvImageStore extends SavedData {
      * saída) num arquivo temporário trocado de uma vez pelo definitivo. Falso se não gravou.
      */
     boolean writeFile(String hash, TvImageFormat format, byte[] data) {
+        Path temp = null;
         try {
             Files.createDirectories(dir);
             Path target = file(hash, format);
-            Path temp = dir.resolve(hash + ".tmp");
+            // Um temporário por gravação: dois jogadores enviando o mesmo arquivo ao mesmo tempo não se atropelam.
+            temp = dir.resolve(hash + "." + UUID.randomUUID() + TEMP_EXT);
             Files.write(temp, data);
             Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
             return true;
         } catch (IOException e) {
+            if (temp != null) {
+                try {
+                    Files.deleteIfExists(temp);
+                } catch (IOException ignored) {
+                    // O temporário que sobrar sai na próxima carga do mundo (attach).
+                }
+            }
             WirelessAutomate.LOGGER.warn("Tela de Sinal: não deu para gravar a imagem {}", hash, e);
             return false;
         }
@@ -311,6 +337,7 @@ public final class TvImageStore extends SavedData {
     void added(String hash, TvImageHeader.Info info, int bytes, UUID author) {
         index.add(new TvImageIndex.Entry(hash, info.format(), info.width(), info.height(), info.frames(), bytes, author,
                 now()), false, now());
+        unreadable.remove(hash);
         setDirty();
     }
 
@@ -327,6 +354,7 @@ public final class TvImageStore extends SavedData {
         if (cached != null) {
             cacheBytes -= cached.length;
         }
+        unreadable.remove(hash);
         setDirty();
         Path target = file(hash, entry.format);
         Util.ioPool().execute(() -> {
@@ -340,8 +368,9 @@ public final class TvImageStore extends SavedData {
     }
 
     /**
-     * Os bytes da imagem para a entrega, se já estão na memória; senão começa a lê-los no executor (uma vez) e devolve
-     * {@code null}: quem pede tenta de novo depois. Um arquivo que sumiu da pasta deixa a imagem sem entrega.
+     * Os bytes da imagem para a entrega, se já estão na memória; senão começa a lê-los no executor (uma vez, e só com
+     * vaga entre as leituras em curso, {@link #MAX_LOADING}) e devolve {@code null}: quem pede tenta de novo depois. Um
+     * arquivo que sumiu da pasta deixa a imagem sem entrega.
      */
     public byte @Nullable [] loaded(String hash) {
         byte[] data = cache.get(hash);
@@ -349,9 +378,15 @@ public final class TvImageStore extends SavedData {
             return data;
         }
         TvImageIndex.Entry entry = index.get(hash);
-        if (entry == null || server == null || unreadable.contains(hash) || !loading.add(hash)) {
+        if (entry == null || server == null || unreadable.contains(hash) || loading.containsKey(hash)) {
             return null;
         }
+        if (!loading.isEmpty() && (loading.size() >= MAX_LOADING
+                || loadingBytes + entry.bytes > MAX_LOADING_BYTES)) {
+            return null;
+        }
+        loading.put(hash, entry.bytes);
+        loadingBytes += entry.bytes;
         Path source = file(hash, entry.format);
         MinecraftServer owner = server;
         Util.ioPool().execute(() -> {
@@ -369,7 +404,10 @@ public final class TvImageStore extends SavedData {
     }
 
     private void cached(String hash, byte @Nullable [] data) {
-        loading.remove(hash);
+        Long reserved = loading.remove(hash);
+        if (reserved != null) {
+            loadingBytes -= reserved;
+        }
         if (data == null) {
             unreadable.add(hash);
             return;
@@ -388,6 +426,11 @@ public final class TvImageStore extends SavedData {
             cacheBytes -= oldest.getValue().length;
             it.remove();
         }
+    }
+
+    /** Quantas leituras de arquivo estão em curso agora. */
+    public int loadingForTests() {
+        return loading.size();
     }
 
     /** Se o arquivo da imagem não leu do disco: a entrega não espera por ele. */

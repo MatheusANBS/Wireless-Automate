@@ -19,7 +19,7 @@ import org.lwjgl.system.MemoryUtil;
  * pré-multiplicado ({@link TvPremultiply}, para os mipmaps não escurecerem a borda transparente). Roda fora da thread
  * de render (quem chama usa um executor).
  * <p>
- * O GIF animado sai de um de dois jeitos, conforme {@code ramRoom}, a memória que ainda cabe no teto dos GIFs do
+ * O GIF animado sai de um de dois jeitos, conforme {@code ramRoom}, a memória reservada para ele no teto dos GIFs do
  * cliente: com todos os quadros montados por {@code stbi_load_gif_from_memory}, um atrás do outro e com os atrasos,
  * se couberem; senão só o primeiro quadro e um {@link TvGifReader}, que guarda o arquivo comprimido e abre os próximos
  * quadros um de cada vez.

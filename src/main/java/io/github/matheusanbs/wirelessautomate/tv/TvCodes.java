@@ -173,9 +173,13 @@ public final class TvCodes {
         return code(ART_PREFIX, TvPixelArt.CODEC.encodeStart(NbtOps.INSTANCE, art).getOrThrow());
     }
 
-    /** O código legível da arte, com as linhas de pixels. */
-    public static String artText(TvPixelArt art, boolean english) {
-        return TvArtText.format(plain(art), english);
+    /**
+     * O código legível da arte, com as linhas de pixels; {@code null} acima de {@link TvCodeText#MAX_TEXT} caracteres,
+     * que o Importar recusaria (uma arte animada grande, com o {@code tv.maxImagePixels} aumentado).
+     */
+    public static @Nullable String artText(TvPixelArt art, boolean english) {
+        String text = TvArtText.format(plain(art), english);
+        return text.length() > TvCodeText.MAX_TEXT ? null : text;
     }
 
     /** A arte na forma do {@link TvArtText}, com os quadros. */

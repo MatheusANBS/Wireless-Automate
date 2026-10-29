@@ -150,6 +150,7 @@ final class TvArtGrid extends TvControl {
             }
         }
         boolean hoverable = inView(mouseX, mouseY);
+        TvArtThumbs.begin(g);
         for (int i = 0; i < arts.length; i++) {
             int cy = top + cellY[i];
             if (cy + CELL <= ay + 1 || cy >= ay + VIEW_H - 1) {
@@ -164,6 +165,7 @@ final class TvArtGrid extends TvControl {
             }
             TvArtThumbs.drawFitted(g, arts[i], cx + 1, cy + 1, THUMB);
         }
+        TvArtThumbs.end(g);
         g.disableScissor();
         if (maxScroll() > 0) {
             int track = VIEW_H - 2;

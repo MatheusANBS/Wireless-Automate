@@ -143,6 +143,7 @@ final class TvArtsPanel {
         int bottom = list.bottom() - 2;
         g.enableScissor(list.x() + 1, top, list.right() - 1, bottom);
         int w = list.w() - 2 - (maxScroll() > 0 ? 3 : 0);
+        TvArtThumbs.begin(g);
         for (int i = 0; i < rows.size(); i++) {
             int y = top + i * ROW_H - scroll;
             if (y + ROW_H <= top || y >= bottom) {
@@ -162,6 +163,7 @@ final class TvArtsPanel {
             GuiText.draw(g, font, row.name, x + THUMB + 8, y + 1, GuiPaint.FG);
             GuiPaint.text(g, font, row.size, x + THUMB + 8, y + 10, GuiPaint.MUTED);
         }
+        TvArtThumbs.end(g);
         g.disableScissor();
         if (rows.isEmpty()) {
             GuiText.wrapCentered(g, font, empty, list.centerX(), list.y() + 8, list.w() - 8,

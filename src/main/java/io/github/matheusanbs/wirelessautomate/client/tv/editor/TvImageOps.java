@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client.tv.editor;
 
+import io.github.matheusanbs.wirelessautomate.client.tv.render.TvArtCache;
 import io.github.matheusanbs.wirelessautomate.tv.TvBackground;
 import io.github.matheusanbs.wirelessautomate.tv.TvLayout;
 import io.github.matheusanbs.wirelessautomate.tv.TvPartStyle;
@@ -9,6 +10,7 @@ import io.github.matheusanbs.wirelessautomate.tv.TvPixelArt;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.UnaryOperator;
 import net.minecraft.network.chat.Component;
@@ -80,10 +82,73 @@ final class TvImageOps {
         }
     }
 
-    /** Se o layout {@code next} cabe no teto; um que não aumenta o uso sempre vale (o teto pode ter baixado). */
+    /**
+     * Se o layout {@code next} cabe no teto de pixels e no de artes distintas ({@link TvLayout#MAX_IMAGES}); um que
+     * não aumenta o uso sempre vale (o teto pode ter baixado).
+     */
     static boolean fits(TvLayout now, TvLayout next, int max) {
         int used = usedPixels(next);
-        return used <= max || used <= usedPixels(now);
+        int arts = next.referencedImageCount();
+        return (used <= max || used <= usedPixels(now))
+                && (arts <= TvLayout.MAX_IMAGES || arts <= now.referencedImageCount());
+    }
+
+    /** As cópias das artes que as Imagens de {@code pieces} apontam e que {@code layout} tem (o copiar as leva). */
+    static List<TvPixelArt> artsOf(TvLayout layout, List<TvPiece> pieces) {
+        List<TvPixelArt> out = new ArrayList<>();
+        for (TvPiece piece : pieces) {
+            if (piece.type() != TvPieceType.IMAGE || piece.style().part().image().isEmpty()) {
+                continue;
+            }
+            TvPixelArt art = layout.image(piece.style().part().image().get());
+            if (art != null && !out.contains(art)) {
+                out.add(art);
+            }
+        }
+        return out;
+    }
+
+    /**
+     * O layout com as artes que as Imagens e o mosaico apontam e que ele não tem (peças coladas de outra Tela, um
+     * componente, um layout salvo), achadas nesta ordem: {@code from} (as cópias que vieram com as peças), as artes
+     * das Telas por perto ({@link TvArtCache}) e a biblioteca do jogador. A que não está em lugar nenhum fica
+     * faltando: a Imagem aparece sem arte e o servidor tira o id dela ao salvar. Devolve o próprio layout quando nada
+     * falta.
+     */
+    static TvLayout withMissingArts(TvLayout layout, List<TvPixelArt> from) {
+        Set<UUID> missing = layout.missingImages();
+        if (missing.isEmpty()) {
+            return layout;
+        }
+        List<TvPixelArt> images = new ArrayList<>(layout.images());
+        for (UUID id : missing) {
+            TvPixelArt art = null;
+            for (TvPixelArt copy : from) {
+                if (copy.id().equals(id)) {
+                    art = copy;
+                    break;
+                }
+            }
+            if (art == null) {
+                art = TvArtCache.byId(id);
+            }
+            if (art == null) {
+                art = inLibrary(id);
+            }
+            if (art != null) {
+                images.add(art);
+            }
+        }
+        return images.size() == layout.images().size() ? layout : layout.withImages(images);
+    }
+
+    /**
+     * Troca o rascunho por {@code next} com as artes que faltam completadas ({@link #withMissingArts}), numa mudança
+     * só do desfazer; acima do teto nada muda e o aviso aparece. Devolve se mudou.
+     */
+    static boolean commitWithArts(TvEditorDoc doc, int max, TvLayout next, List<TvPixelArt> from,
+            TvSelection selection) {
+        return commit(doc, max, doc.draft(), withMissingArts(next, from), selection);
     }
 
     /**

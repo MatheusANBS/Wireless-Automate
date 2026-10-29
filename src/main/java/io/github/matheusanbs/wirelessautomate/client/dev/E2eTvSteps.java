@@ -5,6 +5,7 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eUi.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
+import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.GuiTheme;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.client.tv.TvClientValues;
@@ -64,6 +65,8 @@ final class E2eTvSteps {
     private static BlockPos torch = BlockPos.ZERO;
     private static final boolean[] SAVED = new boolean[2];
     private static Vec3 savedPos = Vec3.ZERO;
+    /** O {@code tv.maxImagePixels} de antes da suíte, devolvido no fim; {@code null} sem nada a devolver. */
+    private static Integer savedImagePixels;
 
     private E2eTvSteps() {
     }
@@ -71,6 +74,7 @@ final class E2eTvSteps {
     static void tvSteps(List<Step> list) {
         UUID playerId = Minecraft.getInstance().player.getUUID();
         list.add(close("Tela: fechar a tela de antes"));
+        list.add(defaultCaps());
         list.add(E2eFlowsSteps.machines("Tela: máquinas e roteadores dos Fluxos", true));
         list.add(build(playerId));
         list.add(open("Tela: abrir"));
@@ -230,8 +234,27 @@ final class E2eTvSteps {
     }
 
     /** Tira o que a suíte pôs (sem largar itens) e devolve o jogador ao lugar de antes. */
+    /**
+     * O teto de pixels das artes no padrão durante a suíte: o arquivo da config do {@code run/} guarda o valor que
+     * estava quando ele foi criado (um padrão antigo fica lá), e as capturas mostram o de um mundo novo. Só na
+     * memória, devolvido no fim ({@link #cleanUp}).
+     */
+    private static Step defaultCaps() {
+        return new Step("Tela: teto de pixels no padrão", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            if (savedImagePixels == null) {
+                savedImagePixels = Config.TV_MAX_IMAGE_PIXELS.get();
+            }
+            Config.TV_MAX_IMAGE_PIXELS.set(Config.TV_MAX_IMAGE_PIXELS.getDefault());
+            return null;
+        }), () -> Config.tvMaxImagePixels() == Config.TV_MAX_IMAGE_PIXELS.getDefault(), () -> "config");
+    }
+
     private static Step cleanUp(UUID playerId) {
         return new Step("Tela: tirar a parede e voltar", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            if (savedImagePixels != null) {
+                Config.TV_MAX_IMAGE_PIXELS.set(savedImagePixels);
+                savedImagePixels = null;
+            }
             ServerPlayer player = server.getPlayerList().getPlayer(playerId);
             ServerLevel level = player.serverLevel();
             E2eRepairerSteps.remove(level, repairer);

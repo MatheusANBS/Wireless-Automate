@@ -10,8 +10,9 @@ import net.minecraft.client.gui.GuiGraphics;
  * (o mosaico pela repetição da textura). Quando uma não cabe inteira, mostra o meio dela; o 3 × 3 vai para baixo das
  * outras se não sobrar largura ao lado. Se nem assim o 3 × 3 cabe inteiro (uma arte grande, até 128 × 128, ou a
  * janela pequena), a área se divide em duas: o 1× à esquerda e o 3 × 3 inteiro, reduzido, à direita, sem o 2×, para
- * as emendas do mosaico continuarem à vista. Clicar numa leva a vista do quadro até aquele pixel. As caixas são
- * refeitas só quando o tamanho da arte muda.
+ * as emendas do mosaico continuarem à vista; e se o 1× não cabe inteiro na metade, só o 3 × 3 fica, reduzido na área
+ * toda (um 1× cortado não mostra o tamanho de verdade). O rótulo acompanha o que aparece ({@link #labelKey}). Clicar
+ * numa leva a vista do quadro até aquele pixel. As caixas são refeitas só quando o tamanho da arte muda.
  */
 final class TvPixelPreview {
     private static final int GAP = 4;
@@ -20,12 +21,16 @@ final class TvPixelPreview {
     /** Os três: 1×, 2× e o mosaico; a escala do mosaico cai abaixo de 1 quando ele é reduzido para caber. */
     private final float[] scales = {1, 2, 1};
     private static final int[] TILES = {1, 1, 3};
+    private static final String LABEL_ALL = "pixel.preview";
+    private static final String LABEL_NO_DOUBLE = "pixel.preview.no_double";
+    private static final String LABEL_TILED = "pixel.preview.tiled";
 
     private final TvPixelTexture texture;
     private final TvRect[] slots = new TvRect[3];
     private TvRect area = TvRect.NONE;
     private int builtW = -1;
     private int builtH = -1;
+    private String labelKey = LABEL_ALL;
 
     TvPixelPreview(TvPixelTexture texture) {
         this.texture = texture;
@@ -57,17 +62,42 @@ final class TvPixelPreview {
         if (slots[2].w() < 3 * aw || slots[2].h() < 3 * ah) {
             split(aw, ah);
         }
+        labelKey = !visible(slots[0]) ? LABEL_TILED : visible(slots[1]) ? LABEL_ALL : LABEL_NO_DOUBLE;
     }
 
-    /** O 1× na metade da esquerda e o 3 × 3 inteiro, reduzido, na da direita; o 2× fica de fora. */
+    private static boolean visible(TvRect r) {
+        return r.w() > 0 && r.h() > 0;
+    }
+
+    /**
+     * O 1× na metade da esquerda e o 3 × 3 inteiro, reduzido, na da direita; o 2× fica de fora. Um 1× que não cabe
+     * inteiro na metade sai também, e o 3 × 3 ocupa a área toda.
+     */
     private void split(int aw, int ah) {
         int half = (area.w() - GAP) / 2;
-        slots[0] = new TvRect(area.x(), area.y(), Math.min(aw, half), Math.min(ah, area.h()));
         slots[1] = TvRect.NONE;
-        float scale = Math.min(1f, Math.min(half / (3f * aw), area.h() / (3f * ah)));
+        if (aw <= half && ah <= area.h()) {
+            slots[0] = new TvRect(area.x(), area.y(), aw, ah);
+            mosaic(area.x() + half + GAP, half, aw, ah);
+        } else {
+            slots[0] = TvRect.NONE;
+            mosaic(area.x(), area.w(), aw, ah);
+        }
+    }
+
+    /** O 3 × 3 inteiro em ({@code x}, topo da área), reduzido para caber em {@code w} de largura e na altura. */
+    private void mosaic(int x, int w, int aw, int ah) {
+        float scale = Math.min(1f, Math.min(w / (3f * aw), area.h() / (3f * ah)));
         scales[2] = scale;
-        slots[2] = new TvRect(area.x() + half + GAP, area.y(), Math.max(0, (int) (3 * aw * scale)),
-                Math.max(0, (int) (3 * ah * scale)));
+        slots[2] = new TvRect(x, area.y(), Math.max(0, (int) (3 * aw * scale)), Math.max(0, (int) (3 * ah * scale)));
+    }
+
+    /** A chave do rótulo para o que aparece com a arte deste tamanho: os três, sem o 2×, ou só o mosaico. */
+    String labelKey(TvPixelCanvas canvas) {
+        if (canvas.width() != builtW || canvas.height() != builtH) {
+            place(canvas.width(), canvas.height());
+        }
+        return labelKey;
     }
 
     void render(GuiGraphics g, TvPixelCanvas canvas) {
@@ -112,6 +142,6 @@ final class TvPixelPreview {
 
     /** O centro de uma prévia (0 a 1×, 1 a 2×, 2 o mosaico), gancho do e2e. */
     int[] center(int which) {
-        return slots[which].center();
+        return slots[which] == null ? TvRect.NONE.center() : slots[which].center();
     }
 }

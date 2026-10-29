@@ -32,6 +32,8 @@ final class TvEditorDoc {
     enum Failure { TOO_BIG, DENIED, THROTTLED, TIMEOUT, IMAGES_FULL }
 
     private final BlockPos pos;
+    /** O teto de pixels das artes da Tela ({@code tv.maxImagePixels}), que o colar e o inserir componente respeitam. */
+    private final int maxImagePixels;
     private final TvEditorModel<TvLayout> model;
     private TvArea area;
     private int revision;
@@ -43,9 +45,10 @@ final class TvEditorDoc {
     private boolean grid = true;
     private String themeName = "";
 
-    TvEditorDoc(BlockPos pos, TvArea area) {
+    TvEditorDoc(BlockPos pos, TvArea area, int maxImagePixels) {
         this.pos = pos;
         this.area = area;
+        this.maxImagePixels = maxImagePixels;
         TvBlockEntity tv = tv();
         TvLayout start = tv == null ? TvLayout.EMPTY : tv.layout();
         if (tv != null) {
@@ -262,7 +265,8 @@ final class TvEditorDoc {
 
     void copy() {
         if (hasSelection()) {
-            TvClipboard.put(TvEditOps.copy(A, pieces(), selection()));
+            TvEditOps.Clip<TvPiece> clip = TvEditOps.copy(A, pieces(), selection());
+            TvClipboard.put(clip, TvImageOps.artsOf(draft(), clip.pieces()));
         }
     }
 
@@ -273,11 +277,15 @@ final class TvEditorDoc {
         }
     }
 
+    /** Cola as peças copiadas, com as artes delas (as que vieram junto, as das Telas por perto ou da biblioteca). */
     void paste() {
         TvEditOps.Clip<TvPiece> clip = TvClipboard.get();
         if (clip != null && !clip.pieces().isEmpty()) {
-            apply(TvEditOps.paste(A, pieces(), clip, area.pixelWidth(), area.pixelHeight()));
-            model.select(model.selection(), 0);
+            TvEditOps.Edit<TvPiece> edit = TvEditOps.paste(A, pieces(), clip, area.pixelWidth(), area.pixelHeight());
+            if (TvImageOps.commitWithArts(this, maxImagePixels, draft().withPieces(edit.pieces()),
+                    TvClipboard.arts(), edit.selection())) {
+                model.select(model.selection(), 0);
+            }
         }
     }
 
@@ -407,7 +415,8 @@ final class TvEditorDoc {
 
     /**
      * Insere o componente como peças soltas num grupo novo, no primeiro lugar livre (o mesmo do colar). Um componente
-     * de peças soltas ganha um grupo só; um que já tem grupos os mantém, renumerados.
+     * de peças soltas ganha um grupo só; um que já tem grupos os mantém, renumerados. As artes das Imagens dele vêm
+     * das Telas por perto ou da biblioteca.
      */
     void insertComponent(TvComponent component) {
         List<TvPiece> parts = new ArrayList<>(component.pieces());
@@ -418,9 +427,20 @@ final class TvEditorDoc {
             parts.replaceAll(p -> p.withGroup(1));
         }
         int[] b = TvEditOps.bounds(A, parts, TvSelection.range(0, parts.size()));
-        apply(TvEditOps.paste(A, pieces(), new TvEditOps.Clip<>(parts, 0, 0, b[2], b[3]), area.pixelWidth(),
-                area.pixelHeight()));
-        model.select(model.selection(), 0);
+        TvEditOps.Edit<TvPiece> edit = TvEditOps.paste(A, pieces(), new TvEditOps.Clip<>(parts, 0, 0, b[2], b[3]),
+                area.pixelWidth(), area.pixelHeight());
+        if (TvImageOps.commitWithArts(this, maxImagePixels, draft().withPieces(edit.pieces()), List.of(),
+                edit.selection())) {
+            model.select(model.selection(), 0);
+        }
+    }
+
+    /** Aplica um layout salvo (ou pronto) inteiro: uma mudança só do desfazer, com as artes que faltam completadas. */
+    void applyLayout(TvLayout next) {
+        if (next.equals(draft())) {
+            return;
+        }
+        TvImageOps.commitWithArts(this, maxImagePixels, next, List.of(), selection().below(next.pieces().size()));
     }
 
     void moveTo(TvSelection block, int before) {

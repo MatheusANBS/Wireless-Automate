@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.client.tv.pixel.TvPixelSession;
 import io.github.matheusanbs.wirelessautomate.tv.TvPixelArt;
 import java.util.Locale;
 import java.util.UUID;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -19,7 +20,9 @@ import org.lwjgl.glfw.GLFW;
  * a {@link TvPixelSession} da arte aberta e repassa o desenho, o mouse e o teclado às partes ({@link TvPixelHeader},
  * {@link TvPixelToolbar}, {@link TvPixelBoard}, {@link TvPixelFooter}, {@link TvPixelSide} e os atalhos do
  * {@link TvPixelKeys}), com a janela solta do seletor de cor por cima de tudo. Salvar manda a arte pelo
- * {@link TvEditorActions}; o Esc tira primeiro a seleção e, sem ela, é o Cancelar (dois cliques com mudança).
+ * {@link TvEditorActions} e fecha só quando a biblioteca volta com ela: a recusa do servidor (biblioteca cheia, grande
+ * demais, o limite de ações) deixa o desenho aberto, com o aviso. O Esc tira primeiro a seleção e, sem ela, é o
+ * Cancelar (dois cliques com mudança).
  */
 public final class TvPixelEditor {
     private final TvEditorActions actions;
@@ -41,6 +44,9 @@ public final class TvPixelEditor {
     private boolean fits;
     private boolean spaceDown;
     private boolean painting;
+    /** A arte mandada a salvar, até a biblioteca voltar com ela ou o prazo passar. */
+    private final TvPendingSave<TvPixelArt> saving = new TvPendingSave<>();
+    private int savingLibrary;
 
     TvPixelEditor(TvEditorActions actions, TvArtDrag drag) {
         this.actions = actions;
@@ -101,8 +107,41 @@ public final class TvPixelEditor {
     /** Fecha sem salvar e solta as texturas do quadro. */
     void close() {
         popups.close();
+        saving.release();
         session = null;
         texture.release();
+    }
+
+    /**
+     * Uma vez por tick, só com um salvar esperando: a biblioteca voltou com a arte (fecha, se nada mudou desde o
+     * Salvar) ou o prazo passou sem ela (fica aberto e avisa; a recusa do servidor já disse o motivo na barra de ação).
+     */
+    void tick() {
+        TvPixelArt sent = saving.sent();
+        if (sent == null) {
+            return;
+        }
+        if (TvLibraryClient.version() != savingLibrary) {
+            savingLibrary = TvLibraryClient.version();
+            if (TvLibraryClient.arts().contains(sent)) {
+                saving.release();
+                if (session != null && !session.dirty()) {
+                    close();
+                }
+                return;
+            }
+        }
+        if (saving.tick()) {
+            Minecraft minecraft = Minecraft.getInstance();
+            if (minecraft.player != null) {
+                minecraft.player.displayClientMessage(TvEditorText.key("pixel.save_failed"), true);
+            }
+        }
+    }
+
+    /** O Salvar espera a resposta da biblioteca. */
+    public boolean saving() {
+        return saving.pending();
     }
 
     private void save() {
@@ -117,9 +156,16 @@ public final class TvPixelEditor {
         if (chosen.isEmpty()) {
             chosen = TvEditorText.key("pixel.new_name").getString();
         }
-        actions.saveArt(new TvPixelArt(artId, chosen, canvas.width(), canvas.height(), canvas.palette(),
-                canvas.pixels()));
-        close();
+        TvPixelArt art = new TvPixelArt(artId, chosen, canvas.width(), canvas.height(), canvas.palette(),
+                canvas.pixels());
+        actions.saveArt(art);
+        if (actions.preview()) {
+            close();
+            return;
+        }
+        current.markClean();
+        savingLibrary = TvLibraryClient.version();
+        saving.begin(art);
     }
 
     private void cancel() {

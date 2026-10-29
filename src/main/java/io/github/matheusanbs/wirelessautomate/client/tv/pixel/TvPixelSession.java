@@ -291,12 +291,18 @@ public final class TvPixelSession {
 
     // ------------------------------------------------------------------ a arte inteira e o desfazer
 
+    /**
+     * O pedaço solto assenta antes (ele já saiu da arte ao ser levantado): sem isso, o estado que vai para o refazer
+     * seria a arte com o buraco e sem o pedaço.
+     */
     public boolean undo() {
+        selection.commit(canvas);
         selection.clear();
         return history.undo(canvas);
     }
 
     public boolean redo() {
+        selection.commit(canvas);
         selection.clear();
         return history.redo(canvas);
     }

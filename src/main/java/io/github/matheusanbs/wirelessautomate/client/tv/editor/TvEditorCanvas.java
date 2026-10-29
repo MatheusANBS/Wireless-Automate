@@ -114,7 +114,7 @@ final class TvEditorCanvas {
         if (hover >= 0 && !doc.selection().contains(hover)) {
             outline(g, pieces.get(hover), GuiPaint.alpha(GuiPaint.FG, 0x90));
         }
-        blankImages.render(g, view, pieces);
+        blankImages.render(g, view, pieces, doc.selection());
         selection(g, pieces);
         if (resizable) {
             GuiPaint.box(g, handleX(), handleY(), HANDLE, HANDLE, GuiPaint.ACCENT, GuiPaint.ACCENT_DEEP);

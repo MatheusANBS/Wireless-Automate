@@ -131,7 +131,8 @@ final class TvLayoutCode {
             TvCodeNotice.show(TvCodeNotice.Kind.TOO_BIG);
             return;
         }
-        doc.changeLayout(layout -> next, "layout.import");
+        // Cada importar é uma mudança própria no desfazer: importar de novo depois do erro e desfazer volta ao primeiro.
+        doc.changeLayout(layout -> next, null);
         doc.select(TvSelection.EMPTY, 0);
         int dropped = code.dropped() + pruned.removed();
         if (dropped > 0) {
@@ -151,6 +152,7 @@ final class TvLayoutCode {
     /** Se o layout cabe nos tetos que o cliente conhece: pixels das artes, bytes sem os pixels e o pacote de salvar. */
     private static boolean fits(TvLayout layout, TvEditorActions actions) {
         return layout.imagePixels() <= actions.maxImagePixels()
+                && layout.referencedImageCount() <= TvLayout.MAX_IMAGES
                 && TvLayoutPayload.clientSize(layout) <= actions.maxLayoutBytes()
                 && TvLayoutPayload.encodedSize(layout) <= TvLayoutPayload.MAX_BYTES;
     }

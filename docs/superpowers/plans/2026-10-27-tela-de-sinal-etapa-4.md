@@ -70,6 +70,12 @@ Custo: só cliente, só no clique.
 
 - [ ] Codec puro do código (`WA-TELA1:` e `WA-ARTE1:`, deflate e base64, tetos de tamanho) com JUnit; botões "Copiar código" e "Colar código" na lista de layouts e na aba Pixel art; a importação do layout como mudança desfazível; avisos de código inválido. e2e: exportar e importar um layout com imagem e uma arte. Commit "Tela de Sinal: exportar e importar layouts e pixel arts por código".
 
+### Task 2e: A Imagem se escolhe como o Ícone
+
+Custo: só GUI; as miniaturas da grade reaproveitam as texturas das artes.
+
+- [ ] Imagem na paleta de Peças; a grade de artes na seção Peça da Imagem e no mosaico da base; e2e e capturas. Commit "Tela de Sinal: a Imagem escolhe a arte numa grade, como o Ícone".
+
 ### Task 2d: Acesso à Tela
 
 Custo: só eventos (as ações da lista); a conferência de acesso no salvar é uma busca num conjunto pequeno.

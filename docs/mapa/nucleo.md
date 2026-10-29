@@ -28,5 +28,5 @@ Upgrade de chunk loading: tickets do NeoForge (`RouterChunkLoader`), eventos de 
 
 ## `command/WaCommand.java`
 
-`/wa profile` (com a linha do Ressonador), `/wa network ...` (`list`, `create`, `use`, `remove` e, no `NetworkAccessCommand`, `invite` e `uninvite <jogador> <rede>` e `team add|remove "<time>" <rede>`, para o dono e operadores), `/wa face ...` (os tipos são os do registro, inclusive `chemical` com o Mekanism; `/wa face <pos> <tipo> <face> network <nome|none>` põe ou tira a rede da face), `/wa bench ...` e `/wa recipes` (abre o editor de receitas; permissão 2), `/wa storage list` e `recover` (`StorageCommand`: devolve como item o conteúdo de um armazenamento que sumiu, no tier gravado)
+`/wa profile` (com as linhas do Ressonador, dos Fluxos, das Telas e do envio das artes das Telas), `/wa network ...` (`list`, `create`, `use`, `remove` e, no `NetworkAccessCommand`, `invite` e `uninvite <jogador> <rede>` e `team add|remove "<time>" <rede>`, para o dono e operadores), `/wa face ...` (os tipos são os do registro, inclusive `chemical` com o Mekanism; `/wa face <pos> <tipo> <face> network <nome|none>` põe ou tira a rede da face), `/wa bench ...` e `/wa recipes` (abre o editor de receitas; permissão 2), `/wa storage list` e `recover` (`StorageCommand`: devolve como item o conteúdo de um armazenamento que sumiu, no tier gravado)
 

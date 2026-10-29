@@ -14,14 +14,15 @@ Com ele, a IA desenha uma pixel art ou monta uma Tela inteira, e você cola o re
 4. No jogo, abra a Tela, aba **Editar**:
    - **uma arte:** aba **Pixel art**, botão **Importar**. A arte entra na sua biblioteca.
    - **um layout:** com nada escolhido, botão **Importar** na base, embaixo de **Aplicar layout**. O layout entra no
-     rascunho (**Ctrl+Z** desfaz) e só vai para a parede no **Salvar**.
-5. Se o código tiver um erro, a barra de baixo do editor diz qual e em que linha, e nada muda. Mande o aviso para a IA
-   corrigir.
+     rascunho (**Ctrl+Z** desfaz, um importar de cada vez) e só vai para a parede no **Salvar**.
+5. Se o código tiver um erro, a barra de baixo do editor diz qual e onde, e nada muda: numa arte solta, a linha do
+   texto; numa arte dentro do JSON, o nome da arte e a fileira de pixels. Mande o aviso para a IA corrigir.
 
 **Dica:** o botão **Copiar como texto** exporta a sua arte ou a sua Tela nesta mesma forma. Cole isso na conversa para a
 IA partir do que você já tem (com as suas redes já ligadas).
 
-A primeira linha que não está em branco precisa ser exatamente `WA-ARTE1` ou `WA-TELA1`. O texto pode ter até 512 KB.
+A primeira linha que não está em branco precisa ser exatamente `WA-ARTE1` ou `WA-TELA1`. O texto pode ter até 524.288
+caracteres (512 K).
 
 ## Pixel art (`WA-ARTE1`)
 
@@ -41,7 +42,7 @@ paleta: - 1B1920 7A7366 ECE5D6
 
   | Chave | Em inglês | Valor |
   | --- | --- | --- |
-  | `nome` | `name` | O nome da arte, até 32 caracteres (o resto é cortado). Sempre dê um: a biblioteca não guarda arte sem nome. |
+  | `nome` | `name` | O nome da arte, até 32 caracteres (o resto é cortado). Sem nome, a arte importada entra como "Nova arte". |
   | `tamanho` | `size` | `LARGURAxALTURA`, como `16x16` (também `16 x 16`, `16×16` ou `16*16`). De **8 a 128** por lado. Obrigatório. |
   | `paleta` | `palette` | Até **16 cores**, separadas por espaço. |
 
@@ -175,8 +176,8 @@ da sua Tela, que já traz os ids certos.
 ### O tema e o fundo
 
 - **`theme`:** `{"name": "Meu tema", "bg": "#0F1117", "card": "#1A1C24", "text": "#ECE5D6", "muted": "#8D8577",
-  "high": "#3DB56E", "low": "#F26A48"}`. Precisa das sete chaves; faltando uma, vale o tema Grafite. O nome tem até 24
-  caracteres. As cores do tema são cores fixas (não papéis).
+  "high": "#3DB56E", "low": "#F26A48"}`. Uma cor que falta vem do tema Grafite. O nome tem até 24 caracteres. As cores
+  do tema são cores fixas: um papel do tema (`"tema:texto"`) num campo do `theme` é erro.
 - **`background`:** `{"kind": "theme"}` (o fundo do tema), `{"kind": "solid", "top": "#1B1920"}`,
   `{"kind": "gradient", "top": "...", "bottom": "..."}` ou o mosaico,
   `{"kind": "tiled", "image": "<id da arte>", "scale": 2, "opacity": 100}`, com `scale` de 1 a 8 e `opacity` de 0
@@ -198,7 +199,7 @@ Cada arte é um objeto com as mesmas partes da forma `WA-ARTE1`:
   `linhas`/`rows` (uma lista com uma fileira por texto), com as mesmas regras da arte.
 - Nas linhas do JSON não há comentário: cada texto é uma fileira.
 - Uma arte que nenhuma peça nem o fundo usa sai ao importar. Uma Imagem que aponta um `id` que não está em `images`
-  também sai.
+  fica sem arte (o retângulo tracejado no editor): escolha a arte dela na aba **Estilo**.
 
 ### Os tetos
 
@@ -210,7 +211,8 @@ Cada arte é um objeto com as mesmas partes da forma `WA-ARTE1`:
 | Ligações distintas por Tela | 64. |
 | Layout sem os pixels | 16 KB de NBT. |
 | Regras por peça | 8. |
-| Texto do código | 512 KB. |
+| Artes distintas por Tela | 256. |
+| Texto do código | 524.288 caracteres (512 K). |
 
 Acima de um teto, o editor avisa "Não cabe nesta Tela" e nada muda (os tetos de peças e ligações são conferidos no
 **Salvar**).

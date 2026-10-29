@@ -74,7 +74,7 @@ couber, diminua a escala da interface.
 | Atalho | O que faz |
 | --- | --- |
 | **Ctrl+Z**, **Ctrl+Y** (ou **Ctrl+Shift+Z**) | Desfaz e refaz. |
-| **Ctrl+C**, **Ctrl+X**, **Ctrl+V** | Copia, recorta e cola, inclusive de uma Tela para outra. |
+| **Ctrl+C**, **Ctrl+X**, **Ctrl+V** | Copia, recorta e cola, inclusive de uma Tela para outra (as artes das Imagens vão junto). |
 | **Ctrl+D**, **Delete** | Duplica e remove. |
 | **Ctrl+A**, **Ctrl+G**, **Ctrl+Shift+G** | Escolhe tudo, agrupa e desagrupa. |
 | **Setas** | Movem 4 px; com **Shift**, 32 px; com **Alt**, 1 px. |
@@ -113,7 +113,9 @@ qualquer Tela sua.
 1. Clique em **Nova** (ou escolha uma arte e clique em **Editar**). O editor de pixel art abre por cima do editor.
 2. Escreva o nome e o **Tamanho**: de 8 a 128 pixels de largura e de altura. Mudar o tamanho mantém o canto de cima à
    esquerda.
-3. Desenhe e clique em **Salvar** (ou **Ctrl+S**). **Cancelar** volta sem salvar; com mudanças, pede dois cliques.
+3. Desenhe e clique em **Salvar** (ou **Ctrl+S**). O editor fecha quando a arte chega à biblioteca; se ela não couber
+   (biblioteca cheia ou grande demais), o desenho continua aberto, com o aviso. **Cancelar** volta sem salvar; com
+   mudanças, pede dois cliques.
 
 Cada arte tem até **16 cores** e no máximo **128 × 128** pixels. **Duplicar** faz uma cópia e **Remover** apaga, em
 dois cliques.
@@ -177,7 +179,8 @@ esquerda ao claro à direita: o clarear e o escurecer andam por ela.
 | Clique na prévia | Leva a vista até aquele ponto. |
 
 O rodapé mostra a posição e a cor sob o mouse. A coluna da direita mostra a arte em 1×, 2× e repetida, como no
-mosaico. **Esc** sem seleção faz o mesmo que **Cancelar**.
+mosaico (com pouco espaço ou numa arte grande, só o que cabe inteiro). **Esc** sem seleção faz o mesmo que
+**Cancelar**.
 
 ### Pôr a arte na Tela
 
@@ -217,8 +220,9 @@ Na aba **Acesso** (só o dono e os operadores a veem), dê a outros jogadores o 
 2. Com o FTB Teams instalado, adicione um time em **Adicionar time…**.
 3. Para tirar alguém, clique duas vezes no **✕** da linha.
 
-Quem está na lista edita como o dono: tamanho, layout e ligações, dentro das redes que cada um pode usar. Ver a Tela
-continua liberado para todos.
+Quem está na lista edita como o dono: tamanho, layout e ligações, dentro das redes que cada um pode usar. As ligações
+que a Tela já tem ficam quando qualquer um salva, mesmo a uma rede que ele não usa; uma ligação nova só vale a uma rede
+de quem a faz. Ver a Tela continua liberado para todos.
 
 ## Receita
 

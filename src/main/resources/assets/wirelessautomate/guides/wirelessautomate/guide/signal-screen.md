@@ -74,7 +74,7 @@ doesn't fit, lower the interface scale.
 | Shortcut | What it does |
 | --- | --- |
 | **Ctrl+Z**, **Ctrl+Y** (or **Ctrl+Shift+Z**) | Undo and redo. |
-| **Ctrl+C**, **Ctrl+X**, **Ctrl+V** | Copy, cut and paste, even from one Screen to another. |
+| **Ctrl+C**, **Ctrl+X**, **Ctrl+V** | Copy, cut and paste, even from one Screen to another (the Images' arts come along). |
 | **Ctrl+D**, **Delete** | Duplicate and remove. |
 | **Ctrl+A**, **Ctrl+G**, **Ctrl+Shift+G** | Pick all, group and ungroup. |
 | **Arrow keys** | Move 4 px; with **Shift**, 32 px; with **Alt**, 1 px. |
@@ -112,7 +112,9 @@ of yours.
 
 1. Click **New** (or pick an art and click **Edit**). The pixel art editor opens over the Screen editor.
 2. Type the name and the **Size**: 8 to 128 pixels wide and tall. Changing the size keeps the top left corner.
-3. Draw and click **Save** (or **Ctrl+S**). **Cancel** goes back without saving; with changes, it takes two clicks.
+3. Draw and click **Save** (or **Ctrl+S**). The editor closes once the art reaches your library; if it doesn't fit
+   (library full or too big), the drawing stays open, with the warning. **Cancel** goes back without saving; with
+   changes, it takes two clicks.
 
 Each art has up to **16 colors** and at most **128 × 128** pixels. **Duplicate** makes a copy and **Remove** deletes,
 in two clicks.
@@ -177,7 +179,7 @@ the left to the light one on the right: lighten and darken walk along it.
 | Click on the preview | Takes the view to that spot. |
 
 The footer shows the position and color under the mouse. The right column shows the art at 1×, 2× and tiled, as in the
-mosaic. **Esc** with no selection does the same as **Cancel**.
+mosaic (with little room or a large art, only what fits whole). **Esc** with no selection does the same as **Cancel**.
 
 ### Putting the art on the Screen
 
@@ -217,8 +219,9 @@ In the **Access** tab (only the owner and operators see it), give other players 
 2. With FTB Teams installed, add a team in **Add team…**.
 3. To remove someone, click the row's **✕** twice.
 
-Whoever is on the list edits like the owner: size, layout and links, within the networks each one can use. Watching
-the Screen stays open to everyone.
+Whoever is on the list edits like the owner: size, layout and links, within the networks each one can use. The links
+the Screen already has stay when anyone saves, even to a network they can't use; a new link only works to a network
+of whoever makes it. Watching the Screen stays open to everyone.
 
 ## Recipe
 

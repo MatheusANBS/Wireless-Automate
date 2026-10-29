@@ -196,6 +196,33 @@ public final class TvCodeGameTests {
     }
 
     @GameTest(template = "empty", timeoutTicks = 100)
+    public static void temaIncompletoPapelNoTemaEErroDaArteNoJson(GameTestHelper helper) {
+        TvCodes.Layout partial = TvCodes.readLayout("WA-TELA1\n{\"area_w\": 96, \"area_h\": 64, "
+                + "\"theme\": {\"name\": \"Meu\", \"bg\": \"#101010\"}}").value();
+        helper.assertTrue(partial != null && partial.layout().theme().bg() == 0xFF101010
+                && partial.layout().theme().card() == TvTheme.GRAPHITE.card()
+                && partial.layout().theme().low() == TvTheme.GRAPHITE.low(),
+                "o tema incompleto não foi completado pelo Grafite");
+
+        TvCodes.Read<TvCodes.Layout> role = TvCodes.readLayout("WA-TELA1\n{\"theme\": {\"name\": \"x\", "
+                + "\"bg\": \"tema:texto\"}}");
+        helper.assertTrue("code.layout.theme_role".equals(role.error()), "papel no tema leu: " + role.error());
+
+        String rows = "\"........\", ".repeat(7);
+        TvCodes.Read<TvCodes.Layout> color = TvCodes.readLayout("WA-TELA1\n{\"images\": [{\"nome\": \"Logo\", "
+                + "\"tamanho\": \"8x8\", \"paleta\": [\"-\", \"GG1920\"], \"linhas\": [" + rows
+                + "\"........\"]}]}");
+        helper.assertTrue("code.layout.art.color".equals(color.error()) && "Logo".equals(color.args()[0])
+                && "GG1920".equals(color.args()[1]), "o erro da cor não diz a arte: " + color.error());
+        TvCodes.Read<TvCodes.Layout> row = TvCodes.readLayout("WA-TELA1\n{\"images\": [{\"tamanho\": \"8x8\", "
+                + "\"linhas\": [\"........\", \"........\", \".......\", " + rows + "]}]}");
+        helper.assertTrue("code.layout.art.row".equals(row.error()) && "#1".equals(row.args()[0])
+                && Integer.valueOf(3).equals(row.args()[1]), "o erro da fileira não diz a arte e a fileira: "
+                + row.error() + " " + Arrays.toString(row.args()));
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 100)
     public static void layoutLegivelDeIdaEVolta(GameTestHelper helper) {
         TvPixelArt logo = art("Logo", 16, 4);
         TvRule rule = new TvRule(TvRuleOp.LT, 10, Optional.empty(), Optional.of(TvColor.theme(TvColor.LOW)),

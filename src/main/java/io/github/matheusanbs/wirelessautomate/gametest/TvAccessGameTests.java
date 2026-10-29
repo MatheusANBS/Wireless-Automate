@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.menu.TvMenu;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
+import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.packet.NetworkSuggestionsPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TvAccessActionPayload;
@@ -18,11 +19,13 @@ import io.github.matheusanbs.wirelessautomate.tv.TvAccess;
 import io.github.matheusanbs.wirelessautomate.tv.TvAccessActions;
 import io.github.matheusanbs.wirelessautomate.tv.TvArea;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlock;
+import io.github.matheusanbs.wirelessautomate.tv.TvBinding;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlockEntity;
 import io.github.matheusanbs.wirelessautomate.tv.TvEditing;
 import io.github.matheusanbs.wirelessautomate.tv.TvFormat;
 import io.github.matheusanbs.wirelessautomate.tv.TvLayout;
 import io.github.matheusanbs.wirelessautomate.tv.TvLinks;
+import io.github.matheusanbs.wirelessautomate.tv.TvMetric;
 import io.github.matheusanbs.wirelessautomate.tv.TvPiece;
 import io.github.matheusanbs.wirelessautomate.tv.TvPieceType;
 import io.github.matheusanbs.wirelessautomate.tv.TvStyle;
@@ -51,7 +54,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * A lista de acesso da Tela de Sinal: o convidado edita (menu, tamanho, layout e Vinculador), o removido e o não
  * convidado não, só o dono mexe na lista pela aba Acesso, os tetos da rede, a lista na abertura do menu, a leitura de
- * uma rede do convidado na Tela do mundo e o NBT antigo sem a chave. Os times ficam no {@code TeamGameTests}, na run
+ * uma rede do convidado na Tela do mundo, o salvar de um convidado que mantém as ligações que a Tela já tem e o NBT
+ * antigo sem a chave. Os times ficam no {@code TeamGameTests}, na run
  * com o FTB Teams.
  */
 @GameTestHolder(WirelessAutomate.MODID)
@@ -246,6 +250,39 @@ public final class TvAccessGameTests {
             } finally {
                 Config.MAX_MEMBERS_PER_NETWORK.set(members);
                 Config.MAX_TEAMS_PER_NETWORK.set(teams);
+            }
+        });
+    }
+
+    private static TvPiece valueOf(TvBinding binding, int x) {
+        return new TvPiece(TvPieceType.VALUE, x, 0, 12, 10, 0, "", Optional.of(binding), TvFormat.DEFAULT,
+                TvStyle.DEFAULT, false, List.of());
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void salvarDoConvidadoMantemALigacaoDoDonoARedePrivada(GameTestHelper helper) {
+        TestPlayers.MenuPlayer owner = TestPlayers.menuOpener(helper);
+        TestPlayers.MenuPlayer guest = TestPlayers.menuOpener(helper);
+        NetworkSavedData data = NetworkSavedData.get(helper.getLevel().getServer());
+        WaNetwork base = data.create(owner.getUUID(), "teste-tv-acesso-base-do-dono");
+        withScreen(helper, owner.getUUID(), tv -> {
+            try {
+                tv.setAccess(tv.access().withPlayer(guest.getUUID(), "Convidado"));
+                TvBinding in = new TvBinding(base.id(), ResourceType.ITEM, TvMetric.IN);
+                tv.setLayout(TvLayout.of(List.of(valueOf(in, 0))));
+                TvEditing.LayoutResult moved = TvEditing.applyLayout(guest, tv, TvLayout.of(List.of(valueOf(in, 4))));
+                helper.assertTrue(moved.ok() && moved.dropped() == 0, "o salvar do convidado largou a ligação");
+                helper.assertTrue(tv.layout().pieces().get(0).x() == 4
+                        && tv.layout().pieces().get(0).binding().equals(Optional.of(in)), "a ligação do dono saiu");
+                TvBinding out = new TvBinding(base.id(), ResourceType.ITEM, TvMetric.OUT);
+                TvEditing.LayoutResult added = TvEditing.applyLayout(guest, tv,
+                        TvLayout.of(List.of(valueOf(in, 4), valueOf(out, 16))));
+                helper.assertValueEqual(added.dropped(), 1, "a ligação nova do convidado à rede do dono");
+                helper.assertTrue(tv.layout().pieces().get(0).binding().equals(Optional.of(in))
+                        && tv.layout().pieces().get(1).binding().isEmpty(),
+                        "o convidado ligou uma rede que não usa");
+            } finally {
+                data.remove(base.id());
             }
         });
     }

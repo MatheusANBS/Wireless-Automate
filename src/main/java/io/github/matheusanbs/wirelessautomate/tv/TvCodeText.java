@@ -18,7 +18,10 @@ import org.jetbrains.annotations.Nullable;
  * bytes, para um código pequeno não virar uma bomba de memória.
  */
 public final class TvCodeText {
-    /** O teto do texto colado, em caracteres (o código de um layout no teto fica bem abaixo). */
+    /**
+     * O teto do texto colado: 524.288 caracteres (512 K), contados como caracteres e não como bytes, antes de olhar o
+     * resto; o código de um layout no teto fica bem abaixo. Os guias dizem o mesmo número.
+     */
     public static final int MAX_TEXT = 512 * 1024;
     private static final int CHUNK = 8192;
 

@@ -5,12 +5,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import net.minecraft.client.gui.Font;
 import net.minecraft.network.chat.Component;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * O construtor de uma aba de propriedades: guarda os controles na ordem e o {@code y} onde vai o próximo (no
@@ -25,11 +27,14 @@ final class TvForm {
     static final int GAP = 3;
 
     final Font font;
+    /** As janelas soltas do editor, onde as listas abrem. */
+    final TvPopups popups;
     private final List<TvControl> controls = new ArrayList<>();
     private int y;
 
-    TvForm(Font font) {
+    TvForm(Font font, TvPopups popups) {
         this.font = font;
+        this.popups = popups;
     }
 
     List<TvControl> controls() {
@@ -112,12 +117,14 @@ final class TvForm {
         return field;
     }
 
-    /** Uma linha "rótulo + seletor ‹ ›". */
-    TvControls.Cycle cycle(String id, Component label, Supplier<Component> shown, IntConsumer step) {
+    /** Uma linha "rótulo + lista" ({@link TvDropdown}). */
+    <T> TvDropdown<T> dropdown(String id, Component label, Supplier<? extends List<T>> values,
+            Function<T, Component> name, Supplier<@Nullable T> current, Consumer<T> pick) {
         int y = inline(id, label);
-        TvControls.Cycle cycle = add(new TvControls.Cycle(font, id, LABEL_W, y, W - LABEL_W, shown, step));
+        TvDropdown<T> dropdown = add(new TvDropdown<>(font, id, LABEL_W, y, W - LABEL_W, popups, values, name,
+                current, pick));
         endRow(TvControls.ROW - 1);
-        return cycle;
+        return dropdown;
     }
 
     /** Uma caixa de marcar na largura toda. */
@@ -127,10 +134,11 @@ final class TvForm {
         return toggle;
     }
 
-    /** Um seletor ‹ › na largura toda, sem rótulo ao lado (nomes compridos). */
-    TvControls.Cycle wideCycle(String id, Supplier<Component> shown, IntConsumer step) {
-        TvControls.Cycle cycle = add(new TvControls.Cycle(font, id, 0, y, W, shown, step));
+    /** Uma lista na largura toda, sem rótulo ao lado (nomes compridos). */
+    <T> TvDropdown<T> wideDropdown(String id, Supplier<? extends List<T>> values, Function<T, Component> name,
+            Supplier<@Nullable T> current, Consumer<T> pick) {
+        TvDropdown<T> dropdown = add(new TvDropdown<>(font, id, 0, y, W, popups, values, name, current, pick));
         endRow(TvControls.ROW - 1);
-        return cycle;
+        return dropdown;
     }
 }

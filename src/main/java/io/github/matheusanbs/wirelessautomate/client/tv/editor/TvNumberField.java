@@ -11,8 +11,8 @@ import net.minecraft.util.Mth;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * Um campo numérico com limites: ‹ e › passam o valor de {@code step} em {@code step} (com Shift, quatro vezes), a
- * roda do mouse sobre o campo também, e dá para digitar (só dígitos, e o sinal quando o mínimo é negativo). O valor
+ * Um campo numérico com limites: ‹ e › passam o valor de {@code step} em {@code step} (com Shift, quatro vezes) e dá
+ * para digitar (só dígitos, e o sinal quando o mínimo é negativo). O valor
  * digitado é limitado a {@code min}..{@code max} e já vai para o rascunho a cada letra; soltar o foco refaz o texto.
  * Arrastar sobre o número muda o valor ({@link TvNumberDrag}) e o clique sem arrastar dá o foco para digitar. O número
  * vem do {@code get}, lido só no {@link #refresh}.
@@ -139,15 +139,6 @@ final class TvNumberField extends TvControl {
             text.mouseClicked(mouseX, mouseY, 0);
         }
         return click;
-    }
-
-    @Override
-    boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-        if (!contains(mouseX, mouseY)) {
-            return false;
-        }
-        change(delta > 0 ? 1 : -1, Screen.hasShiftDown());
-        return true;
     }
 
     @Override

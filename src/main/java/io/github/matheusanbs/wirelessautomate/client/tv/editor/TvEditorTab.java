@@ -20,8 +20,8 @@ import org.jetbrains.annotations.Nullable;
  * {@link TvCanvasMenu} do clique direito) e {@link TvEditorBar}; na direita, as propriedades ({@link TvPropsPanel}).
  * Repassa o desenho, o mouse, a roda e o teclado ({@link TvEditorKeys}, com o campo de texto focado tendo a vez) e faz
  * o salvar pelo {@link TvEditorActions}; o rascunho só vai ao servidor no Salvar. Numa janela abaixo do mínimo, só a
- * mensagem pedindo uma escala menor ({@link TvTooSmall}). As janelas soltas (o seletor de cor e a lista de fontes,
- * {@link TvPopups}) ficam por cima de tudo e têm a vez do mouse e do teclado. A quarta aba da esquerda, Pixel art
+ * mensagem pedindo uma escala menor ({@link TvTooSmall}). As janelas soltas (o seletor de cor e as listas abertas,
+ * {@link TvPopups}) ficam por cima de tudo e têm a vez do mouse, da roda e do teclado. A quarta aba da esquerda, Pixel art
  * ({@link TvArtsPanel}), abre o {@link TvPixelEditor}, que a {@code TvScreen} desenha no lugar desta aba enquanto
  * está aberto. Os ganchos do e2e ficam no {@link TvEditorProbe}.
  */

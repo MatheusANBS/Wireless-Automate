@@ -9,8 +9,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 
 /**
- * Um controle deslizante inteiro de {@code min} a {@code max} em passos: clicar ou arrastar põe o valor, a roda anda
- * um passo. O número aparece sobre a barra (ex.: {@code 85%}); o texto é refeito só quando o valor muda.
+ * Um controle deslizante inteiro de {@code min} a {@code max} em passos: clicar ou arrastar põe o valor; a roda não
+ * muda nada (rola o painel). O número aparece sobre a barra (ex.: {@code 85%}); o texto é refeito só quando o valor muda.
  */
 final class TvSlider extends TvControl {
     private final Font font;
@@ -77,17 +77,5 @@ final class TvSlider extends TvControl {
     @Override
     void mouseDragged(double mouseX, double mouseY) {
         pick(mouseX);
-    }
-
-    @Override
-    boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-        if (!contains(mouseX, mouseY)) {
-            return false;
-        }
-        int value = Mth.clamp(current + (delta > 0 ? step : -step), min, max);
-        if (value != current) {
-            set.accept(value);
-        }
-        return true;
     }
 }

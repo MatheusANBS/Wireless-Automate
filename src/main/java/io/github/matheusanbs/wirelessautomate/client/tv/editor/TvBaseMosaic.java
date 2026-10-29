@@ -7,15 +7,20 @@ import io.github.matheusanbs.wirelessautomate.tv.TvPixelArt;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.IntStream;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * O fundo em mosaico na base da Tela (decisão 7 da spec da etapa 4) e o uso do teto de pixels: com "Mosaico" no ‹ ›
+ * O fundo em mosaico na base da Tela (decisão 7 da spec da etapa 4) e o uso do teto de pixels: com "Mosaico" na lista
  * do Fundo, a Arte (na {@link TvArtGrid}: as da biblioteca e as que só a Tela tem; escolher uma a copia para o
  * layout), "Atualizar da biblioteca", a Escala (1× a 8×) e a Opacidade. Toda troca passa
  * pelo teto {@code tv.maxImagePixels} do {@link TvImageOps}; a linha "n / teto px" mostra o que as artes usadas somam.
  */
 final class TvBaseMosaic {
+    /** As escalas da lista, as que o {@link TvBackground} aceita (1× a 8×). */
+    private static final List<Integer> SCALES = IntStream.rangeClosed(TvBackground.MIN_SCALE, TvBackground.MAX_SCALE)
+            .boxed().toList();
+
     private TvBaseMosaic() {
     }
 
@@ -37,9 +42,9 @@ final class TvBaseMosaic {
                         id(ctx))).enabledWhen(() -> TvImageOps.newer(ctx.doc().draft(), id(ctx)) != null)
                 .offTip(() -> TvImageOps.whyNoRefresh(id(ctx))));
         form.endRow(TvControls.ROW - 1);
-        form.cycle("base.mosaic.scale", TvPropsCtx.key("image.scale"), () -> TvPropsCtx.key("image.scale.times",
-                background(ctx).scale()), delta -> set(ctx, "base.mosaic.scale", background(ctx).scale() + delta,
-                        background(ctx).opacity()));
+        form.dropdown("base.mosaic.scale", TvPropsCtx.key("image.scale"), () -> SCALES,
+                scale -> TvPropsCtx.key("image.scale.times", scale), () -> background(ctx).scale(),
+                scale -> set(ctx, "base.mosaic.scale", scale, background(ctx).opacity()));
         int y = form.inline("base.mosaic.opacity", TvPropsCtx.key("style.opacity"));
         form.add(new TvSlider(form.font, "base.mosaic.opacity", TvForm.LABEL_W, y, TvForm.W - TvForm.LABEL_W, 0, 100,
                 5, "%", () -> background(ctx).opacity(), v -> set(ctx, "base.mosaic.opacity", background(ctx).scale(),
@@ -47,29 +52,33 @@ final class TvBaseMosaic {
         form.endRow(TvTextField.H);
     }
 
+    /** Se o Fundo pode ser o mosaico: há ao menos uma arte, no layout ou na biblioteca. */
+    static boolean available(TvLayout layout) {
+        return !layout.images().isEmpty() || !TvLibraryClient.arts().isEmpty();
+    }
+
     /**
-     * O ‹ › do Fundo chegou ao mosaico: põe a primeira arte que cabe no teto, na escala e na opacidade de padrão.
-     * Devolve {@code false} sem nenhuma arte (o ‹ › pula o mosaico); sem nenhuma que caiba, avisa e nada muda.
+     * O mosaico escolhido na lista do Fundo: põe a primeira arte que cabe no teto, na escala e na opacidade de padrão.
+     * Sem nenhuma arte, ou sem nenhuma que caiba (aí com o aviso), nada muda.
      */
-    static boolean start(TvPropsCtx ctx) {
+    static void start(TvPropsCtx ctx) {
         TvLayout now = ctx.doc().draft();
         List<TvPixelArt> choices = choices(now);
         if (choices.isEmpty()) {
-            return false;
+            return;
         }
         int max = ctx.actions().maxImagePixels();
         for (TvPixelArt art : choices) {
             TvLayout next = with(now, art, TvBackground.DEFAULT.scale(), TvBackground.DEFAULT.opacity());
             if (TvImageOps.fits(now, next, max)) {
                 ctx.doc().changeLayout(layout -> next, "background");
-                return true;
+                return;
             }
         }
         ctx.doc().fail(TvEditorDoc.Failure.IMAGES_FULL);
-        return true;
     }
 
-    /** As artes do ‹ ›: as cópias do layout e as da biblioteca que ele não tem, nessa ordem. */
+    /** As artes que o mosaico pode pegar: as cópias do layout e as da biblioteca que ele não tem, nessa ordem. */
     private static List<TvPixelArt> choices(TvLayout layout) {
         List<TvPixelArt> library = TvLibraryClient.arts();
         List<TvPixelArt> out = new ArrayList<>(layout.images().size() + library.size());

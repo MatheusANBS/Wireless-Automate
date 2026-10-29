@@ -350,7 +350,7 @@ public final class TvPixelEditor {
         if (popup != null) {
             return popup.mouseScrolled(mouseX, mouseY, delta);
         }
-        return header.mouseScrolled(mouseX, mouseY, delta) || board.scrolled(mouseX, mouseY, delta);
+        return board.scrolled(mouseX, mouseY, delta);
     }
 
     // ------------------------------------------------------------------ teclado

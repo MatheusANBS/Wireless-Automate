@@ -654,12 +654,25 @@ public final class ModPayloads {
                 }
                 target.setFilter(filter.withStock(payload.index(), payload.value()));
             }
-            case SET_LIST_MODE -> {
-                if (payload.value() != 0 && payload.value() != 1) {
+            case SET_KEEP -> {
+                if (!validIndex(filter, payload.index()) || payload.value() < 0
+                        || payload.value() > Integer.MAX_VALUE) {
                     return false;
                 }
-                target.setFilter(filter.withListMode(payload.value() == 0
-                        ? Filter.ListMode.WHITELIST : Filter.ListMode.BLACKLIST));
+                target.setFilter(filter.withKeep(payload.index(), payload.value()));
+            }
+            case SET_TYPE_LIMIT -> {
+                if (!(target instanceof StorageFilterTarget) || payload.value() < 0
+                        || payload.value() > Integer.MAX_VALUE) {
+                    return false;
+                }
+                target.setFilter(filter.withTypeLimit(payload.value()));
+            }
+            case SET_LIST_MODE -> {
+                if (payload.value() < 0 || payload.value() >= Filter.ListMode.values().length) {
+                    return false;
+                }
+                target.setFilter(filter.withListMode(Filter.ListMode.values()[(int) payload.value()]));
             }
             case SET_COMPONENTS -> {
                 // Componentes só fazem sentido para itens.

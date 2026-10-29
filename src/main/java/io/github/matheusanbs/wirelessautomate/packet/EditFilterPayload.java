@@ -12,7 +12,9 @@ import net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs;
  * <ul>
  *   <li>{@code ADD_TAG} / {@code ADD_MOD}: {@code text} sem o prefixo ({@code c:ingots}, {@code mekanism})</li>
  *   <li>{@code REMOVE}: {@code index} da entrada</li>
- *   <li>{@code SET_STOCK}: {@code index} e {@code value} (0 = sem estoque)</li>
+ *   <li>{@code SET_STOCK}: {@code index} e {@code value} (0 = sem limite): "Aceitar até"</li>
+ *   <li>{@code SET_KEEP}: {@code index} e {@code value} (0 = sem limite): "Manter na origem"</li>
+ *   <li>{@code SET_TYPE_LIMIT}: {@code value} (0 = sem limite): o limite por tipo do armazenamento</li>
  *   <li>{@code SET_LIST_MODE}: {@code value} 0 = lista branca, 1 = negra</li>
  *   <li>{@code SET_COMPONENTS}: {@code value} 0 = ignorar, 1 = exigir iguais</li>
  *   <li>{@code CLEAR}, {@code IMPORT_CARD}, {@code EXPORT_CARD}, {@code BACK}: nenhum
@@ -30,6 +32,8 @@ public record EditFilterPayload(int containerId, Op op, int index, long value, S
         ADD_MOD,
         REMOVE,
         SET_STOCK,
+        SET_KEEP,
+        SET_TYPE_LIMIT,
         SET_LIST_MODE,
         SET_COMPONENTS,
         CLEAR,

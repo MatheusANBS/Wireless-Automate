@@ -20,6 +20,7 @@ import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.util.List;
 import java.util.UUID;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -201,6 +202,17 @@ final class E2eStorageSteps {
                 () -> "grade " + chestScreen().cols() + "x" + chestScreen().rows()));
     }
 
+    /** A rolagem do texto do campo (o primeiro caractere à vista); só no e2e, por reflexão. */
+    private static int displayPos(EditBox box) {
+        try {
+            java.lang.reflect.Field field = EditBox.class.getDeclaredField("displayPos");
+            field.setAccessible(true);
+            return field.getInt(box);
+        } catch (ReflectiveOperationException e) {
+            return -1;
+        }
+    }
+
     /** Baú: o filtro de entrada e Voltar, e o Shift que trava a ordem da lista. */
     private static void chestFilterSteps(List<Step> list) {
         list.add(new Step("Baú: abrir o filtro de entrada", STEP_TIMEOUT_MS, () -> {
@@ -210,7 +222,135 @@ final class E2eStorageSteps {
                 () -> Minecraft.getInstance().screen instanceof FilterScreen,
                 () -> "tela " + describe(Minecraft.getInstance().screen)));
         list.add(capture("bau-3-filtro"));
+        list.add(new Step("Baú: filtro, escolher a linha fixa", STEP_TIMEOUT_MS, () -> {
+            int[] global = E2eFilterSteps.filterScreen().previewEntryCenter(FilterScreen.GLOBAL_ROW);
+            click(Minecraft.getInstance().screen, global[0], global[1]);
+        }, () -> E2eFilterSteps.filterScreen().typeLimitBox().isVisible(), () -> "campo do limite por tipo escondido"));
+        list.add(new Step("Baú: filtro, limite por tipo digitado", STEP_TIMEOUT_MS, () -> {
+            EditBox box = E2eFilterSteps.filterScreen().typeLimitBox();
+            click(Minecraft.getInstance().screen, box.getX() + 2, box.getY() + 2);
+            type("500");
+            E2eFilterSteps.filterScreen().keyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER, 0, 0);
+        }, () -> onServer(server -> storageChest(server, storageB).filter().typeLimit() == 500L)
+                && E2eFilterSteps.filterScreen().typeLimitBox().getValue().equals("500"),
+                () -> "no servidor " + onServer(server -> storageChest(server, storageB).filter().typeLimit())
+                        + ", no campo '" + E2eFilterSteps.filterScreen().typeLimitBox().getValue() + "'"));
+        list.add(new Step("Baú: filtro, aba Tags", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.filter.tab.tags")), "aba Tags")),
+                () -> E2eFilterSteps.filterScreen().tab() == FilterScreen.Tab.TAGS && E2eFilterSteps.filterScreen().tagSearchBox().isFocused()
+                        && E2eFilterSteps.filterScreen().tagSearchBox().isVisible(),
+                () -> "aba " + E2eFilterSteps.filterScreen().tab()));
+        list.add(new Step("Baú: filtro, buscar a tag", STEP_TIMEOUT_MS, () -> type("stones"),
+                () -> E2eFilterSteps.filterScreen().candidateLabels().contains("#c:stones"),
+                () -> "linhas " + E2eFilterSteps.filterScreen().candidateLabels()));
+        list.add(new Step("Baú: filtro, marcar a tag", STEP_TIMEOUT_MS, () -> {
+            int[] row = E2eFilterSteps.filterScreen().candidateCenter(E2eFilterSteps.filterScreen().candidateLabels().indexOf("#c:stones"));
+            click(Minecraft.getInstance().screen, row[0], row[1]);
+        }, () -> E2eFilterSteps.filterScreen().checkedLabels().equals(java.util.List.of("#c:stones")),
+                () -> "marcadas " + E2eFilterSteps.filterScreen().checkedLabels()));
+        list.add(new Step("Baú: filtro, adicionar a tag", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.filter.tags.add.action")), "Adicionar")),
+                () -> onServer(server -> storageChest(server, storageB).filter().entries().size() == 1)
+                        && E2eFilterSteps.filterScreen().getMenu().view().filter().entries().size() == 1,
+                () -> "no servidor " + onServer(server -> storageChest(server, storageB).filter().entries().toString())));
+        list.add(new Step("Baú: filtro, aba Entrada", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.filter.tab.entry")), "aba Entrada")),
+                () -> E2eFilterSteps.filterScreen().tab() == FilterScreen.Tab.ENTRY,
+                () -> "aba " + E2eFilterSteps.filterScreen().tab()));
+        list.add(new Step("Baú: filtro, escolher a entrada", STEP_TIMEOUT_MS, () -> {
+            int[] row = E2eFilterSteps.filterScreen().previewEntryCenter(0);
+            click(Minecraft.getInstance().screen, row[0], row[1]);
+        }, () -> true, () -> ""));
+        list.add(capture("bau-3b-filtro-entrada"));
+        // o caso do dono: clicar no campo, digitar sem Enter e clicar em Voltar
+        list.add(new Step("Baú: filtro, digitar o limite da entrada sem Enter", STEP_TIMEOUT_MS, () -> {
+            EditBox box = E2eFilterSteps.filterScreen().stockBox();
+            click(Minecraft.getInstance().screen, box.getX() + 2, box.getY() + 2);
+            type("64");
+        }, () -> E2eFilterSteps.filterScreen().stockBox().getValue().equals("64"),
+                () -> "campo '" + E2eFilterSteps.filterScreen().stockBox().getValue() + "'"));
+        list.add(new Step("Baú: filtro, escolher a linha fixa", STEP_TIMEOUT_MS, () -> {
+            int[] global = E2eFilterSteps.filterScreen().previewEntryCenter(FilterScreen.GLOBAL_ROW);
+            click(Minecraft.getInstance().screen, global[0], global[1]);
+        }, () -> E2eFilterSteps.filterScreen().typeLimitBox().isVisible(), () -> "campo do limite por tipo escondido"));
+        list.add(new Step("Baú: filtro, digitar o limite por tipo sem Enter", STEP_TIMEOUT_MS, () -> {
+            EditBox box = E2eFilterSteps.filterScreen().typeLimitBox();
+            click(Minecraft.getInstance().screen, box.getX() + 2, box.getY() + 2);
+            E2eFilterSteps.filterScreen().keyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_END, 0, 0);
+            for (int i = 0; i < 3; i++) {
+                E2eFilterSteps.filterScreen().keyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_BACKSPACE, 0, 0);
+            }
+            type("777");
+        }, () -> E2eFilterSteps.filterScreen().typeLimitBox().getValue().equals("777"),
+                () -> "campo '" + E2eFilterSteps.filterScreen().typeLimitBox().getValue() + "'"));
         list.add(new Step("Baú: voltar do filtro", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.filter.back")), "Voltar")),
+                () -> Minecraft.getInstance().screen instanceof StorageListScreen,
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(new Step("Baú: o Voltar salvou o que foi digitado sem Enter", STEP_TIMEOUT_MS, () -> { },
+                () -> onServer(server -> storageChest(server, storageB).filter().typeLimit() == 777L
+                        && storageChest(server, storageB).filter().entries().getFirst().stock() == 64L),
+                () -> "no servidor " + onServer(server -> storageChest(server, storageB).filter().typeLimit() + " "
+                        + storageChest(server, storageB).filter().entries())));
+        list.add(new Step("Baú: reabrir o filtro mostra o que foi salvo", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.storage.filter")), "botão Filtro")),
+                () -> Minecraft.getInstance().screen instanceof FilterScreen
+                        && E2eFilterSteps.filterScreen().typeLimitBox().getValue().equals("777"),
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(new Step("Baú: a entrada mostra o limite salvo", STEP_TIMEOUT_MS, () -> {
+            int[] row = E2eFilterSteps.filterScreen().previewEntryCenter(0);
+            click(Minecraft.getInstance().screen, row[0], row[1]);
+        }, () -> E2eFilterSteps.filterScreen().stockBox().getValue().equals("64"),
+                () -> "campo '" + E2eFilterSteps.filterScreen().stockBox().getValue() + "'"));
+        list.add(new Step("Baú: voltar do filtro de novo", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.filter.back")), "Voltar")),
+                () -> Minecraft.getInstance().screen instanceof StorageListScreen,
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        // o caso do dono: com um valor salvo, reabrir, acrescentar um dígito no fim e sair pelo Voltar
+        list.add(new Step("Baú: reabrir e acrescentar um dígito ao limite por tipo", STEP_TIMEOUT_MS, () -> {
+            click(widget(byMessage(Component.translatable("gui.wirelessautomate.storage.filter")), "botão Filtro"));
+        }, () -> Minecraft.getInstance().screen instanceof FilterScreen
+                && E2eFilterSteps.filterScreen().typeLimitBox().getValue().equals("777"),
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(new Step("Baú: filtro, escolher a linha fixa", STEP_TIMEOUT_MS, () -> {
+            int[] global = E2eFilterSteps.filterScreen().previewEntryCenter(FilterScreen.GLOBAL_ROW);
+            click(Minecraft.getInstance().screen, global[0], global[1]);
+        }, () -> E2eFilterSteps.filterScreen().typeLimitBox().isVisible(), () -> "campo do limite por tipo escondido"));
+        list.add(new Step("Baú: digitar 2 no fim do campo", STEP_TIMEOUT_MS, () -> {
+            EditBox box = E2eFilterSteps.filterScreen().typeLimitBox();
+            click(Minecraft.getInstance().screen, box.getX() + box.getWidth() - 2, box.getY() + 2);
+            E2eFilterSteps.filterScreen().keyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_END, 0, 0);
+            type("2");
+        }, () -> E2eFilterSteps.filterScreen().typeLimitBox().getValue().equals("7772"),
+                () -> "campo '" + E2eFilterSteps.filterScreen().typeLimitBox().getValue() + "'"));
+        list.add(new Step("Baú: Voltar com o dígito acrescentado", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.filter.back")), "Voltar")),
+                () -> Minecraft.getInstance().screen instanceof StorageListScreen
+                        && onServer(server -> storageChest(server, storageB).filter().typeLimit() == 7772L),
+                () -> "no servidor " + onServer(server -> storageChest(server, storageB).filter().typeLimit())));
+        list.add(new Step("Baú: reabrir mostra o número inteiro, sem rolagem", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.storage.filter")), "botão Filtro")),
+                () -> Minecraft.getInstance().screen instanceof FilterScreen
+                        && E2eFilterSteps.filterScreen().typeLimitBox().getValue().equals("7772")
+                        && displayPos(E2eFilterSteps.filterScreen().typeLimitBox()) == 0,
+                () -> "campo '" + E2eFilterSteps.filterScreen().typeLimitBox().getValue() + "', rolagem "
+                        + displayPos(E2eFilterSteps.filterScreen().typeLimitBox())));
+        list.add(capture("bau-3c-filtro-reaberto"));
+        list.add(new Step("Baú: filtro, escolher a linha fixa para a roda", STEP_TIMEOUT_MS, () -> {
+            int[] global = E2eFilterSteps.filterScreen().previewEntryCenter(FilterScreen.GLOBAL_ROW);
+            click(Minecraft.getInstance().screen, global[0], global[1]);
+        }, () -> E2eFilterSteps.filterScreen().typeLimitBox().isVisible(), () -> "campo do limite por tipo escondido"));
+        list.add(new Step("Baú: a roda sobre o campo sobe três e desce um", STEP_TIMEOUT_MS, () -> {
+            EditBox box = E2eFilterSteps.filterScreen().typeLimitBox();
+            for (int i = 0; i < 3; i++) {
+                E2eFilterSteps.filterScreen().mouseScrolled(box.getX() + 4, box.getY() + 2, 0, 1);
+            }
+            E2eFilterSteps.filterScreen().mouseScrolled(box.getX() + 4, box.getY() + 2, 0, -1);
+        }, () -> onServer(server -> storageChest(server, storageB).filter().typeLimit() == 7774L)
+                && E2eFilterSteps.filterScreen().typeLimitBox().getValue().equals("7774"),
+                () -> "no servidor " + onServer(server -> storageChest(server, storageB).filter().typeLimit())
+                        + ", no campo '" + E2eFilterSteps.filterScreen().typeLimitBox().getValue() + "'"));
+        list.add(new Step("Baú: voltar do filtro pela terceira vez", STEP_TIMEOUT_MS,
                 () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.filter.back")), "Voltar")),
                 () -> Minecraft.getInstance().screen instanceof StorageListScreen,
                 () -> "tela " + describe(Minecraft.getInstance().screen)));

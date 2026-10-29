@@ -124,7 +124,7 @@ final class ItemStockTally {
             if (stack.isEmpty()) {
                 continue;
             }
-            if (!byItemOnly && (!filters.evaluateItem(stack, rule) || rule.stock <= 0)) {
+            if (!byItemOnly && (!filters.evaluateItem(stack, rule) || rule.keep <= 0)) {
                 continue;
             }
             Item item = stack.getItem();

@@ -315,7 +315,7 @@ public final class FilterGameTests {
     public static void sourceStockKeepsN(GameTestHelper helper) {
         UUID network = newNetwork(helper, "filtro-estoque-origem");
         RouterBlockEntity source = chest(helper, A, network, PortMode.EXTRACT,
-                whitelist(item(new ItemStack(Items.DIAMOND), 4)));
+                whitelist(item(new ItemStack(Items.DIAMOND), 0).withKeep(4)));
         RouterBlockEntity target = chest(helper, B, network, PortMode.INSERT, Filter.EMPTY);
         chestAt(helper, A).setItem(0, new ItemStack(Items.DIAMOND, 6));
         chestAt(helper, A).setItem(3, new ItemStack(Items.DIAMOND, 4));
@@ -334,6 +334,50 @@ public final class FilterGameTests {
                 .thenIdle(10)
                 .thenExecute(() -> assertCount(helper, A, Items.DIAMOND, 4))
                 .thenSucceed();
+    }
+
+    /** "Aceitar até" é só do destino: na origem não segura nada (o que segura é o "Manter"). */
+    @GameTest(template = "empty")
+    public static void sourceAcceptUpToDoesNotKeep(GameTestHelper helper) {
+        UUID network = newNetwork(helper, "filtro-aceitar-origem");
+        RouterBlockEntity source = chest(helper, A, network, PortMode.EXTRACT,
+                whitelist(item(new ItemStack(Items.DIAMOND), 4)));
+        RouterBlockEntity target = chest(helper, B, network, PortMode.INSERT, Filter.EMPTY);
+        chestAt(helper, A).setItem(0, new ItemStack(Items.DIAMOND, 6));
+
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, source, target))
+                .thenWaitUntil(() -> assertCount(helper, B, Items.DIAMOND, 6))
+                .thenSucceed();
+    }
+
+    /** Dado salvo antes do "Manter" (só "stock") continua se comportando igual: o número vale nos dois. */
+    @GameTest(template = "empty")
+    public static void legacyStockBecomesKeepToo(GameTestHelper helper) {
+        com.google.gson.JsonObject json = com.google.gson.JsonParser.parseString(
+                "{\"list\":\"WHITELIST\",\"entries\":[{\"kind\":\"tag\",\"tag\":\"c:ingots\",\"stock\":64}]}")
+                .getAsJsonObject();
+        Filter parsed = Filter.CODEC.parse(com.mojang.serialization.JsonOps.INSTANCE, json).getOrThrow();
+        helper.assertValueEqual(parsed.entries().getFirst().stock(), 64L, "aceitar até");
+        helper.assertValueEqual(parsed.entries().getFirst().keep(), 64L, "manter");
+        com.google.gson.JsonObject written = Filter.CODEC.encodeStart(com.mojang.serialization.JsonOps.INSTANCE,
+                parsed.withKeep(0, 8)).getOrThrow().getAsJsonObject();
+        Filter again = Filter.CODEC.parse(com.mojang.serialization.JsonOps.INSTANCE, written).getOrThrow();
+        helper.assertValueEqual(again.entries().getFirst().keep(), 8L, "manter regravado");
+        helper.succeed();
+    }
+
+    /** Armazenamento: o limite da entrada vence o global; tipo sem entrada usa o global; 0 = sem limite. */
+    @GameTest(template = "empty")
+    public static void storageTypeLimitGlobalAndPerItem(GameTestHelper helper) {
+        Filter limits = filter(Filter.ListMode.WHITELIST, false, item(new ItemStack(Items.DIAMOND), 10),
+                item(new ItemStack(Items.GOLD_INGOT), 0)).withTypeLimit(500);
+        helper.assertValueEqual(limits.itemTypeLimit(new ItemStack(Items.DIAMOND)), 10L, "limite da entrada");
+        helper.assertValueEqual(limits.itemTypeLimit(new ItemStack(Items.STONE)), 500L, "limite global");
+        helper.assertValueEqual(limits.itemTypeLimit(new ItemStack(Items.GOLD_INGOT)), 0L, "exceção sem limite");
+        helper.assertTrue(!limits.isEmpty(), "filtro com limite global contou como vazio");
+        helper.assertTrue(Filter.EMPTY.withTypeLimit(5).withTypeLimit(0).isEmpty(), "zerar o global não esvaziou");
+        helper.succeed();
     }
 
     @GameTest(template = "empty")

@@ -24,11 +24,11 @@ final class ChemicalMatcher {
             switch (entries.get(i)) {
                 case FilterEntry.ChemicalEntry e -> {
                     exact.putIfAbsent(e.chemical(), i);
-                    stock |= e.stock() > 0;
+                    stock |= e.stock() > 0 || e.keep() > 0;
                 }
                 case FilterEntry.ModEntry e -> {
                     mods.putIfAbsent(e.modId(), i);
-                    stock |= e.stock() > 0;
+                    stock |= e.stock() > 0 || e.keep() > 0;
                 }
                 default -> {
                 }

@@ -78,9 +78,9 @@ final class ItemBulkTransfer {
                 if (!filter.evaluateItem(key, rule)) {
                     continue;
                 }
-                if (rule.stock > 0 && tally != null && view != null) {
+                if (rule.keep > 0 && tally != null && view != null) {
                     stocked = true;
-                    max = StockLimit.extractable(tally.lookup(view, filter, rule.matchComponents, key), rule.stock, max);
+                    max = StockLimit.extractable(tally.lookup(view, filter, rule.matchComponents, key), rule.keep, max);
                     if (max <= 0) {
                         continue;
                     }

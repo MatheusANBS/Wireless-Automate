@@ -1,6 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.storage;
 
-import io.github.matheusanbs.wirelessautomate.filter.FilterSet;
+import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.StockLimit;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
 import net.minecraft.core.BlockPos;
@@ -14,7 +14,6 @@ import net.minecraft.world.level.block.state.BlockState;
 public class StorageChestBlockEntity extends KeyedStorageBlockEntity<ItemStack> {
     private final ItemStorage storage = new ItemStorage(this::markContentsChanged, this::capacity);
     private final ItemStorageHandler handler = new ItemStorageHandler(storage);
-    private final FilterSet.ItemRule rule = new FilterSet.ItemRule();
 
     public StorageChestBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.CHEST.get(), StorageKind.CHEST, pos, state);
@@ -40,21 +39,16 @@ public class StorageChestBlockEntity extends KeyedStorageBlockEntity<ItemStack> 
     }
 
     /**
-     * Quanto do tipo o filtro deixa entrar: nada se ele recusa; com estoque na entrada, só até o
-     * Baú ter N do item (com componentes iguais se a entrada exigir).
+     * Quanto do tipo cabe: só até o limite dele (o da entrada que casa, ou o limite por tipo do Baú),
+     * contando só o mesmo item ou, se o filtro exige componentes, o mesmo item com os mesmos componentes.
      */
     private long admit(ItemStack key, long amount) {
-        FilterSet set = filter().asSet();
-        if (set.isEmpty()) {
+        Filter filter = filter();
+        long limit = filter.itemTypeLimit(key);
+        if (limit <= 0) {
             return amount;
         }
-        if (!set.evaluateItem(key, rule)) {
-            return 0;
-        }
-        if (rule.stock > 0) {
-            long present = rule.matchComponents ? storage.count(key) : storage.countItem(key);
-            return StockLimit.acceptable(present, rule.stock, amount);
-        }
-        return amount;
+        long present = filter.matchComponents() ? storage.count(key) : storage.countItem(key);
+        return StockLimit.acceptable(present, limit, amount);
     }
 }

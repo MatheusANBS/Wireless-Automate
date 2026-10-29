@@ -127,10 +127,9 @@ public class TvScreen extends AbstractContainerScreen<TvMenu> {
             g.renderComponentTooltip(font, RESIZE_TIP, mouseX, mouseY);
             return;
         }
-        List<Component> tip = tab == Tab.SIZE ? sizeTab.tooltip(leftPos, topPos, mouseX, mouseY) : null;
         Component editorTip = tab == Tab.EDIT ? editorTab.tooltip(mouseX, mouseY) : null;
-        if (tip != null || editorTip != null) {
-            g.renderComponentTooltip(font, tip != null ? tip : List.of(editorTip), mouseX, mouseY);
+        if (editorTip != null) {
+            g.renderComponentTooltip(font, List.of(editorTip), mouseX, mouseY);
             return;
         }
         Component clipped = GuiText.clipAt(mouseX, mouseY);

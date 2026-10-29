@@ -57,25 +57,42 @@ section{display:flex;flex-direction:column;gap:14px}
 kbd{font:11px var(--f-mono);padding:0 5px;background:var(--panel);color:var(--fg);border:1px solid var(--bevel-d);box-shadow:inset 0 -2px 0 var(--bevel-d)}
 
 /* editor de pixel art */
-.pix{display:grid;grid-template-columns:44px minmax(0,1fr) 210px;gap:10px;min-width:780px}
-.tools{display:flex;flex-direction:column;gap:4px}
+.pix{display:grid;grid-template-columns:84px minmax(0,1fr) 210px;gap:10px;min-width:820px}
+.tools{display:grid;grid-template-columns:repeat(2,40px);gap:4px;align-content:start}
+.tools .full{grid-column:1/-1}
 .tool{width:40px;height:34px;border:1px solid var(--line);background:var(--hover);color:var(--fg);cursor:pointer;display:grid;place-items:center;padding:0;position:relative}
 .tool svg{width:18px;height:18px}
 .tool[aria-pressed="true"]{background:var(--accent);color:#fff}
 .tool .k{position:absolute;right:2px;bottom:0;font:9px var(--f-mono);opacity:.7}
-.tsep{height:6px}
-.board{position:relative;height:420px;overflow:auto;display:grid;place-items:center;background:var(--inset);
+.tsep{grid-column:1/-1;height:4px}
+.board.grab{cursor:grab}.board.panning{cursor:grabbing}
+.status{font:11px var(--f-mono);color:var(--fg);min-width:150px}
+.keys{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px 28px}
+.keys h3{font-family:var(--f-pix);font-weight:400;font-size:12px;margin:0 0 6px;color:var(--accent)}
+.keys dl{margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:5px 10px;font-size:13.5px;align-items:baseline}
+.keys dt{white-space:nowrap}.keys dd{margin:0;color:var(--page-muted)}
+.brush{display:flex;align-items:center;gap:3px}
+.brush output{font:11px var(--f-mono);color:var(--fg);min-width:34px;text-align:center}
+.cur{width:24px;height:24px;border:1px solid var(--line);flex:none;background:conic-gradient(#aaa 25%,#fff 0 50%,#aaa 0 75%,#fff 0) 0 0/10px 10px;position:relative}
+.cur i{position:absolute;inset:0}
+.picker{position:absolute;right:0;top:30px;z-index:20;width:190px;background:var(--panel);border:2px solid var(--line);padding:8px;display:flex;flex-direction:column;gap:6px;box-shadow:0 6px 18px rgba(0,0,0,.3)}
+.picker[hidden]{display:none}
+.pkrow{display:flex;gap:6px}
+.pkrow canvas{border:1px solid var(--line);cursor:crosshair;touch-action:none}
+.recent{display:grid;grid-template-columns:repeat(8,1fr);gap:3px;margin-top:3px}
+.recent button{aspect-ratio:1;border:1px solid var(--line);padding:0;cursor:pointer}
+.board{position:relative;height:440px;overflow:hidden;background:var(--inset);cursor:crosshair;touch-action:none;
   box-shadow:inset 2px 2px 0 var(--bevel-d),inset -2px -2px 0 var(--bevel-l)}
-#art{display:block;image-rendering:pixelated;cursor:crosshair;touch-action:none;
+#art{position:absolute;left:0;top:0;display:block;image-rendering:pixelated;pointer-events:none;
   background:conic-gradient(var(--chk1) 25%,var(--chk2) 0 50%,var(--chk1) 0 75%,var(--chk2) 0) 0 0/16px 16px}
 .bfoot{display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap;font:11px var(--f-mono);color:var(--muted)}
 .bfoot .sp{flex:1}
 .side{display:flex;flex-direction:column;gap:10px;min-width:0}
-.pal{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.pal{display:grid;grid-template-columns:repeat(4,1fr);gap:7px 2px}
 .sw{aspect-ratio:1;border:1px solid var(--line);cursor:pointer;padding:0;position:relative}
 .sw[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:1px}
 .sw.t{background:conic-gradient(#aaa 25%,#fff 0 50%,#aaa 0 75%,#fff 0) 0 0/10px 10px}
-.edit{display:flex;gap:6px;align-items:center}
+.edit{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .edit input[type=color]{width:26px;height:24px;padding:0;border:1px solid var(--line);background:none;cursor:pointer}
 .edit .field{width:84px;font-family:var(--f-mono)}
 .prev{display:flex;gap:10px;align-items:flex-end}
@@ -142,25 +159,31 @@ input[type=range]{accent-color:var(--accent);width:100%}
 <header style="display:flex;flex-direction:column;gap:10px">
   <span class="eyebrow">Tela de Sinal · etapa 4</span>
   <h1>Pixel art na Tela</h1>
-  <p class="lede">Você desenha pequenas artes (de 8×8 a 64×64) num editor próprio, guarda na sua biblioteca e usa na Tela como a peça Imagem ou como o fundo em mosaico. Tudo abaixo funciona: desenhe, salve e veja a Tela mudar.</p>
+  <p class="lede">Versão 3: ferramentas, seleção e navegação no quadro sem rolagem. Você desenha pequenas artes (de 8×8 a 64×64) num editor próprio, guarda na sua biblioteca e usa na Tela como a peça Imagem ou como o fundo em mosaico. Tudo abaixo funciona: desenhe, salve e veja a Tela mudar.</p>
 </header>
 
 <!-- 1. editor de pixel art -->
 <section>
   <span class="eyebrow">1 · O editor de pixel art</span>
   <h2>Uma tela própria, aberta do editor da Tela</h2>
-  <p class="note">Abre por cima do editor ao clicar em Nova ou Editar e volta para ele ao salvar ou cancelar. Redimensiona com a janela, como o editor. O quadro é uma textura pequena, refeita só quando um pixel muda.</p>
+  <p class="note">Abre por cima do editor ao clicar em Nova ou Editar e volta para ele ao salvar ou cancelar. A roda dá zoom no mouse; Alt, Espaço ou o botão do meio arrastam a vista. O quadro é uma textura pequena, refeita só quando um pixel muda.</p>
   <div class="scroll"><div class="gui pix" id="pixGui">
     <div class="tools" role="toolbar" aria-label="Ferramentas">
-      <div style="height:30px"></div>
+      <div class="full" style="height:30px"></div>
       <button class="tool" data-tool="pen" title="Lápis (B)" aria-pressed="true"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M11 1h2v2h2v2h-2v2h-2v2H9v2H7v2H5v2H1v-4h2V9h2V7h2V5h2V3h2z"/></svg><span class="k">B</span></button>
       <button class="tool" data-tool="erase" title="Borracha (E)" aria-pressed="false"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M9 2h2v2h2v2h2v2h-2v2h-2v2H9v2H3v-2H1v-2h2V8h2V6h2V4h2zM5 10v2h4v-2H7V8H5z"/></svg><span class="k">E</span></button>
       <button class="tool" data-tool="fill" title="Balde (G)" aria-pressed="false"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M6 1h2v2h2v2h2v2h2v2h-2v2h-2v2H8v2H6v-2H4v-2H2V9H0V7h2V5h2V3h2zm8 9h2v4h-2z"/></svg><span class="k">G</span></button>
       <button class="tool" data-tool="pick" title="Conta-gotas (I)" aria-pressed="false"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M11 1h3v1h1v3h-1v1h-2v2h-1v1H9v1H8v1H7v1H6v1H5v1H3v1H1v-2h1v-2h1v-1h1v-1h1V9h1V8h1V7h1V5h2V2h1z"/></svg><span class="k">I</span></button>
       <button class="tool" data-tool="line" title="Linha (L)" aria-pressed="false"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M13 1h2v2h-2v2h-2v2H9v2H7v2H5v2H3v2H1v-2h2v-2h2V9h2V7h2V5h2V3h2z"/></svg><span class="k">L</span></button>
-      <button class="tool" data-tool="rect" title="Retângulo (R, de novo alterna cheio)" aria-pressed="false"><svg viewBox="0 0 16 16" fill="currentColor" id="rectIcon"><path d="M1 3h14v10H1zm2 2v6h10V5z"/></svg><span class="k">R</span></button>
+      <button class="tool" data-tool="rect" title="Retângulo (R; de novo alterna cheio; Shift faz quadrado)" aria-pressed="false"><svg viewBox="0 0 16 16" fill="currentColor" id="rectIcon"><path d="M1 3h14v10H1zm2 2v6h10V5z"/></svg><span class="k">R</span></button>
+      <button class="tool" data-tool="ellipse" title="Elipse (O; de novo alterna cheia; Shift faz círculo)" aria-pressed="false"><svg viewBox="0 0 16 16" fill="currentColor" id="ellIcon"><path d="M5 2h6v1h2v2h1v6h-1v2h-2v1H5v-1H3v-2H2V5h1V3h2zm0 2v1H4v6h1v1h6v-1h1V5h-1V4z"/></svg><span class="k">O</span></button>
+      <button class="tool" data-tool="shade" title="Clarear e escurecer (D): esquerdo clareia, direito escurece" aria-pressed="false"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 1 1 0 14zm0 2v10A5 5 0 0 0 8 3zM1 8a7 7 0 0 1 7-7v2a5 5 0 0 0 0 10v2a7 7 0 0 1-7-7z"/></svg><span class="k">D</span></button>
+      <button class="tool" data-tool="dither" title="Pontilhado (T): pinta em xadrez, um pixel sim e um não" aria-pressed="false"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 1h3v3H1zm6 0h3v3H7zm6 0h2v3h-2zM4 4h3v3H4zm6 0h3v3h-3zM1 7h3v3H1zm6 0h3v3H7zm6 0h2v3h-2zM4 10h3v3H4zm6 0h3v3h-3zM1 13h3v2H1zm6 0h3v2H7zm6 0h2v2h-2z"/></svg><span class="k">T</span></button>
+      <button class="tool" data-tool="select" title="Seleção (S): marque um retângulo; arraste de dentro para mover" aria-pressed="false"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 1h3v2H3v1H1zm5 0h4v2H6zm6 0h3v3h-2V3h-1zM1 6h2v4H1zm12 0h2v4h-2zM1 12h2v1h1v2H1zm5 1h4v2H6zm7-1h2v3h-3v-2h1z"/></svg><span class="k">S</span></button>
       <div class="tsep"></div>
-      <button class="tool" id="mirror" title="Espelho horizontal (M)" aria-pressed="false"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M7 0h2v16H7zM5 3v10H1zm6 0 4 10h-4z"/></svg><span class="k">M</span></button>
+      <button class="tool" id="mirrorH" title="Espelho horizontal, esquerda e direita (M)" aria-pressed="false"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M7 0h2v16H7zM5 3v10H1zm6 0 4 10h-4z"/></svg><span class="k">M</span></button>
+      <button class="tool" id="mirrorV" title="Espelho vertical, em cima e embaixo (Shift+M)" aria-pressed="false"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M0 7h16v2H0zm3-2h10L3 1zm0 6h10l-10 4z"/></svg><span class="k">⇧M</span></button>
+      <button class="tool" id="perfect" title="Pixel perfect: tira os cantos em L do lápis de 1 px (P)" aria-pressed="false"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 13h2v2H1zm2-2h2v2H3zm2-2h2v2H5zm2-2h2v2H7zm2-2h2v2H9zm2-2h2v2h-2zm2-2h2v2h-2z"/></svg><span class="k">P</span></button>
     </div>
     <div>
       <div class="gui-h"><span>Pixel art</span><input class="field" id="artName" value="Logo da base" maxlength="32" aria-label="Nome da arte" style="width:180px;font-family:var(--f-body)"><span class="sp"></span>
@@ -168,21 +191,78 @@ input[type=range]{accent-color:var(--accent);width:100%}
       <div class="board" id="board"><canvas id="art" aria-label="Quadro de desenho"></canvas></div>
       <div class="bfoot">
         <button class="btn" id="undo" title="Desfazer (Ctrl+Z)">↶</button><button class="btn" id="redo" title="Refazer (Ctrl+Y)">↷</button>
+        <span class="brush" title="Tamanho do pincel ([ e ])"><span class="lbl">Pincel</span><button class="btn" id="bsDown" aria-label="Pincel menor">−</button><output id="bsOut">1 px</output><button class="btn" id="bsUp" aria-label="Pincel maior">+</button>
+          <button class="btn" id="bsShape" title="Forma do pincel">■</button></span>
         <label class="chk"><input type="checkbox" id="gridOn" checked> Grade</label>
         <span class="sp"></span>
-        <span id="zoomOut">zoom 20×</span><span>· Ctrl + roda</span><span id="hist">0 / 100</span>
+        <button class="btn" id="flipH" title="Virar na horizontal (Shift+H)">⇋</button><button class="btn" id="flipV" title="Virar na vertical (Shift+V)">⇵</button><button class="btn" id="rot" title="Girar 90° no sentido horário">⟳</button>
+        <button class="btn warn" id="clearAll" title="Apaga a arte inteira (dois cliques; dá para desfazer)">Limpar tudo</button>
       </div>
+      <div class="bfoot" style="margin-top:4px"><span class="status" id="status">—</span><span id="toolHint"></span><span class="sp"></span><button class="btn" id="fit" title="Enquadrar a arte (0)">Enquadrar</button><span id="zoomOut">zoom 20×</span><span id="hist">0 / 100</span></div>
     </div>
     <div class="side">
-      <div><div class="gui-h" style="padding-bottom:6px"><span>Paleta</span><span class="sp"></span><span class="pill">16</span></div>
+      <div><div class="gui-h" style="padding-bottom:6px"><span>Paleta</span><span class="sp"></span><span class="pill">4 rampas · escuro → claro</span></div>
         <div class="pal" id="pal"></div></div>
-      <div class="edit"><input type="color" id="colIn" aria-label="Editar a cor escolhida"><input class="field" id="hexIn" aria-label="Cor em hexadecimal"><span class="hint">a cor 0 é sempre transparente</span></div>
-      <div><div class="lbl" style="margin-bottom:4px">Prévia em 1× e 2×</div>
-        <div class="prev"><canvas id="p1"></canvas><canvas id="p2"></canvas></div></div>
-      <p class="hint">Clique esquerdo pinta, direito apaga. Cada traço é um passo do desfazer.</p>
+      <div class="edit" style="position:relative"><span class="cur" id="curSw"></span><span class="field" id="hexOut" style="width:auto;flex:1;font-family:var(--f-mono)"></span><button class="btn" id="editCol">Editar cor</button><button class="btn" id="rampBtn" title="Refaz a linha desta cor como uma rampa dela: à esquerda mais escuras, à direita mais claras, com desvio de matiz">Criar rampa</button>
+        <div class="picker" id="picker" hidden>
+          <div class="gui-h" style="padding:0 0 6px"><span>Cor <span id="pkIdx"></span></span><span class="sp"></span><button class="btn" id="pkClose" aria-label="Fechar o seletor">✕</button></div>
+          <div class="pkrow"><canvas id="sv" width="120" height="84" aria-label="Saturação e brilho"></canvas><canvas id="hue" width="12" height="84" aria-label="Matiz"></canvas><canvas id="alpha" width="12" height="84" aria-label="Transparência"></canvas></div>
+          <div class="pkrow" style="align-items:center"><span class="cur" id="pkSw"></span><input class="field" id="pkHex" aria-label="Cor em hexadecimal, com alfa" style="flex:1;font-family:var(--f-mono)"></div>
+          <div><div class="lbl">Recentes</div><div class="recent" id="recent"></div></div>
+        </div></div>
+      <p class="hint" id="rampMsg" style="color:var(--accent-deep)"></p>
+      <p class="hint">Cada uma das 16 cores pode ser qualquer cor, com transparência, pelo mesmo seletor do editor da Tela. A cor 0 é sempre o transparente. Trocar uma cor muda todos os pixels dela.</p>
+      <div><div class="lbl" style="margin-bottom:4px">Prévia em 1×, 2× e em mosaico</div>
+        <div class="prev"><canvas id="p1"></canvas><canvas id="p2"></canvas></div>
+        <canvas id="pTile" style="margin-top:6px;image-rendering:pixelated;background:#0f1117;border:1px solid var(--line);max-width:100%"></canvas></div>
       <div class="actions"><button class="btn" id="cancel">Cancelar</button><button class="btn primary" id="save">Salvar</button></div>
     </div>
   </div></div>
+</section>
+
+<!-- 1b. atalhos -->
+<section>
+  <span class="eyebrow">Atalhos e navegação</span>
+  <h2>Tudo pelo teclado e pelo mouse</h2>
+  <p class="note">O quadro não tem barra de rolagem: a roda dá zoom onde está o mouse e você arrasta a vista. Experimente no editor acima.</p>
+  <div class="keys">
+    <div><h3>Navegar no quadro</h3><dl>
+      <dt>Roda</dt><dd>Zoom no ponto do mouse (Ctrl + roda também, como no editor da Tela)</dd>
+      <dt><kbd>Alt</kbd> + arrastar</dt><dd>Mover a vista</dd>
+      <dt><kbd>Espaço</kbd> + arrastar</dt><dd>Mover a vista</dd>
+      <dt>Botão do meio</dt><dd>Mover a vista, arrastando</dd>
+      <dt>Setas</dt><dd>Mover a vista (com seleção, movem o pedaço 1 px; com Shift, 8 px)</dd>
+      <dt><kbd>0</kbd></dt><dd>Enquadrar a arte inteira</dd>
+      <dt><kbd>+</kbd> <kbd>−</kbd></dt><dd>Zoom no centro</dd>
+      <dt>Clique na prévia</dt><dd>Leva a vista para aquele ponto</dd>
+    </dl></div>
+    <div><h3>Ferramentas</h3><dl>
+      <dt><kbd>B</kbd></dt><dd>Lápis</dd><dt><kbd>E</kbd></dt><dd>Borracha</dd><dt><kbd>G</kbd></dt><dd>Balde (Shift: troca a cor na arte inteira)</dd>
+      <dt><kbd>I</kbd></dt><dd>Conta-gotas (ou Ctrl + clique com qualquer ferramenta)</dd><dt><kbd>L</kbd></dt><dd>Linha</dd>
+      <dt><kbd>R</kbd> <kbd>O</kbd></dt><dd>Retângulo e elipse (de novo alterna contorno e cheio)</dd>
+      <dt><kbd>D</kbd></dt><dd>Clarear e escurecer</dd><dt><kbd>T</kbd></dt><dd>Pontilhado</dd><dt><kbd>S</kbd></dt><dd>Seleção</dd>
+    </dl></div>
+    <div><h3>Pincel e cor</h3><dl>
+      <dt>Clique esquerdo</dt><dd>Usa a ferramenta com a cor escolhida</dd>
+      <dt>Clique direito</dt><dd>Apaga (no clarear, escurece)</dd>
+      <dt><kbd>[</kbd> <kbd>]</kbd></dt><dd>Pincel menor e maior (1 a 8 px)</dd>
+      <dt><kbd>X</kbd></dt><dd>Volta para a cor anterior</dd>
+      <dt><kbd>Shift</kbd></dt><dd>Linha em 0°, 45° e 90°; quadrado; círculo</dd>
+      <dt><kbd>M</kbd> <kbd>Shift</kbd>+<kbd>M</kbd></dt><dd>Espelho horizontal e vertical</dd>
+      <dt><kbd>P</kbd></dt><dd>Pixel perfect no lápis de 1 px</dd>
+      <dt><kbd>Ctrl</kbd>+<kbd>G</kbd></dt><dd>Liga e desliga a grade</dd>
+    </dl></div>
+    <div><h3>Seleção, arte e histórico</h3><dl>
+      <dt><kbd>Ctrl</kbd>+<kbd>A</kbd> / <kbd>D</kbd></dt><dd>Selecionar tudo e tirar a seleção</dd>
+      <dt><kbd>Ctrl</kbd>+<kbd>C</kbd> <kbd>X</kbd> <kbd>V</kbd></dt><dd>Copiar, recortar e colar (cola como pedaço solto, que você arrasta)</dd>
+      <dt><kbd>Delete</kbd></dt><dd>Apaga a seleção</dd>
+      <dt><kbd>Enter</kbd> / <kbd>Esc</kbd></dt><dd>Assenta o pedaço solto / desfaz o mover e tira a seleção</dd>
+      <dt><kbd>Shift</kbd>+<kbd>H</kbd> <kbd>V</kbd></dt><dd>Virar na horizontal e na vertical (só a seleção, se houver)</dd>
+      <dt>⟳</dt><dd>Girar 90° (só a seleção, se houver)</dd>
+      <dt><kbd>Ctrl</kbd>+<kbd>Z</kbd> <kbd>Y</kbd></dt><dd>Desfazer e refazer (até 100 passos)</dd>
+    </dl></div>
+  </div>
+  <p class="note">No jogo, o E (inventário) não fecha o editor e o Esc primeiro tira a seleção; com nada selecionado, volta para o editor da Tela.</p>
 </section>
 
 <!-- 2. editor da Tela -->
@@ -228,16 +308,20 @@ input[type=range]{accent-color:var(--accent);width:100%}
   <span class="eyebrow">4 · Decisões</span>
   <h2>O que fica decidido</h2>
   <ol class="dec">
-    <li><div><b>Arte de 8×8 a 64×64</b>Largura e altura livres. Paleta de 16 cores por arte, a cor 0 sempre transparente; cada pixel guarda o índice da cor.</div></li>
-    <li><div><b>Ferramentas</b>Lápis, borracha, balde (vizinhança de 4), conta-gotas, linha e retângulo (contorno ou cheio), espelho horizontal. Desfazer e refazer até 100 passos, grade e zoom com Ctrl + roda.</div></li>
+    <li><div><b>Arte de 8×8 a 64×64</b>Largura e altura livres. Paleta de 16 cores por arte, cada uma qualquer cor (com transparência) pelo mesmo seletor do editor da Tela; a cor 0 é sempre o transparente. Cada pixel guarda o índice da cor.</div></li>
+    <li><div><b>Ferramentas</b>Lápis, borracha, balde, conta-gotas, linha, retângulo e elipse (contorno ou cheios), clarear e escurecer, pontilhado e seleção. Clique direito apaga (e, no clarear, escurece).</div></li>
+    <li><div><b>Seleção</b>Marcar um retângulo, mover arrastando ou pelas setas, copiar, recortar, colar e apagar. As ferramentas só pintam dentro da seleção; virar e girar agem nela.</div></li>
+    <li><div><b>Navegação</b>Zoom no ponto do mouse, arrastar a vista com Alt, Espaço ou o botão do meio, enquadrar com 0, clicar na prévia para ir até ali, coordenada e cor sob o mouse no rodapé, o pincel desenhado sob o cursor.</div></li>
+    <li><div><b>Pincel de 1 a 8 px</b>Quadrado ou redondo, no lápis, na borracha, na linha, nos contornos e no clarear. Teclas [ e ].</div></li>
+    <li><div><b>Clarear e escurecer por rampa</b>Cada linha da paleta é uma rampa, do escuro à esquerda ao claro à direita (como as rampas do Aseprite). O clarear anda uma casa para a direita na linha da cor do pixel, o escurecer uma para a esquerda, uma vez por traço; nunca troca de linha. "Criar rampa" refaz a linha da cor escolhida com desvio de matiz: o escuro puxa para o azul e satura, o claro puxa para o amarelo e desatura.</div></li>
+    <li><div><b>Ajudas</b>Espelho horizontal, vertical ou os dois; pixel perfect no lápis de 1 px; Shift trava a linha em 0°, 45° e 90° e faz quadrado e círculo; Shift no balde troca a cor na arte inteira.</div></li>
+    <li><div><b>Arte inteira</b>Virar na horizontal e na vertical, girar 90°, Limpar tudo (dois cliques, desfazível). Desfazer e refazer até 100 passos, grade e zoom com Ctrl + roda.</div></li>
+    <li><div><b>Prévia</b>A arte em 1×, 2× e repetida 3 × 3, para ver como fica no mosaico.</div></li>
     <li><div><b>Biblioteca do jogador</b>Até 32 artes (<code>tv.maxArts</code>), nome até 32 letras, junto dos componentes e temas. Só vai ao cliente com o editor aberto.</div></li>
     <li><div><b>A Tela guarda uma cópia</b>Inserir a Imagem copia a arte para o layout, como os temas. "Atualizar da biblioteca" troca pela versão nova, se você ainda tiver a arte.</div></li>
     <li><div><b>Teto por Tela</b>Até 16.384 pixels somados nas artes distintas de um layout (<code>tv.maxImagePixels</code>, quatro de 64×64).</div></li>
-    <li><div><b>Peça Imagem</b>Qualquer tamanho e posição, escala inteira ou esticar, alinhamento em 9 posições, opacidade; as regras escondem ou fazem piscar.</div></li>
-    <li><div><b>Fundo em mosaico</b>Um tipo novo de Fundo: a arte repetida pela Tela inteira, escala de 1× a 8× e opacidade, por baixo das peças. As linhas de varredura continuam por cima.</div></li>
+    <li><div><b>Peça Imagem e mosaico</b>Imagem em qualquer tamanho e posição, escala inteira ou esticar, alinhamento em 9 posições, opacidade. Mosaico: a arte repetida pela Tela, escala de 1× a 8× e opacidade, por baixo das peças.</div></li>
     <li><div><b>Pintura por faixas</b>Um retângulo por faixa da mesma cor, só no redesenho. Se o e2e medir mais de 4 ms numa Tela 32×32 com mosaico, a arte vira uma textura pequena própria.</div></li>
-    <li><div><b class="q">Proposta: clique direito apaga</b>Não estava no rascunho. Poupa a troca de ferramenta, como em quase todo editor de pixel art.</div></li>
-    <li><div><b class="q">Proposta: prévia em 1× e 2×</b>Não estava no rascunho. Mostra como a arte fica no tamanho real da Tela enquanto você desenha.</div></li>
   </ol>
 </section>
 
@@ -255,16 +339,15 @@ input[type=range]{accent-color:var(--accent);width:100%}
 <section>
   <span class="eyebrow">6 · Fora desta etapa</span>
   <ul class="out">
-    <li>Importar PNG do computador</li><li>Animação (quadros)</li><li>Paletas com mais de 16 cores</li><li>Pincel maior que 1 px</li><li>Compartilhar artes entre jogadores</li>
+    <li>Importar PNG do computador</li><li>Animação (quadros) e camadas</li><li>Paletas com mais de 16 cores</li><li>Paletas prontas e contorno automático</li><li>Seleção à mão livre ou por cor</li><li>Deslocar a arte com volta</li><li>Compartilhar artes entre jogadores</li>
   </ul>
 </section>
 
 <section class="ask">
   <span class="eyebrow">O que preciso de você</span>
   <ol>
-    <li>O visual do editor de pixel art e da aba Pixel art está bom?</li>
-    <li>As duas propostas novas (clique direito apaga, prévia em 1× e 2×) entram?</li>
-    <li>Atalhos: B lápis, E borracha, G balde, I conta-gotas, L linha, R retângulo (de novo alterna cheio), M espelho. Pode ser?</li>
+    <li>Escolhi o que falta de mais importante nos editores de pixel art: seleção (mover, copiar, colar), pontilhado, voltar à cor anterior (X), conta-gotas com Ctrl + clique e a navegação sem rolagem. Está bom assim?</li>
+    <li>Os atalhos e a navegação da seção "Atalhos e navegação" estão como você quer?</li>
   </ol>
 </section>
 </div>
@@ -272,17 +355,17 @@ input[type=range]{accent-color:var(--accent);width:100%}
 <script>
 (()=>{
 const $=s=>document.querySelector(s);
-const DEF=["#00000000","#0f0e12","#ECE5D6","#F0603E","#C2442A","#FFB39E","#2F9D5C","#3DB56E","#D88A1A","#FFD58A","#6B6FD0","#8A8EE8","#4fd1c5","#B48E2E","#7A7366","#ffffff"];
+const DEF=["#00000000","#1B1920","#7A7366","#ECE5D6","#8E2A35","#C2442A","#F0603E","#FFB08A","#1E5E4A","#2F9D5C","#5CC97A","#B9EBA3","#2C2F7A","#4B4FB0","#7A80E0","#B8BEF5"];
 function mk(name,w,h,f,pal){const p=new Uint8Array(w*h);for(let y=0;y<h;y++)for(let x=0;x<w;x++)p[y*w+x]=f(x,y);return{id:Math.random().toString(36).slice(2),name,w,h,pal:(pal||DEF).slice(),px:p};}
 const logo=mk("Logo da base",16,16,(x,y)=>{const dx=x-7.5,dy=y-12.5,d=Math.hypot(dx,dy),up=dy<0&&Math.abs(dx)<-dy*1.25;
-  if(d<1.6)return 3;if(up&&((d>3.2&&d<4.6)||(d>6&&d<7.4)||(d>8.8&&d<10.2)))return d>8.8?5:3;if(y>=14&&Math.abs(dx)<3)return 14;return 0;});
-const brick=mk("Tijolo",8,8,(x,y)=>{const r=Math.floor(y/4),off=r%2?4:0;if(y%4===3)return 1;if((x+off)%8===7)return 1;return (x+y)%5?4:3;});
-const gem=mk("Diamante",16,16,(x,y)=>{const a=Math.abs(x-7.5)+Math.abs(y-7.5);if(a>7.5)return 0;if(a>6.5)return 1;return x+y<14?(x<7&&y<7?15:12):10;});
+  if(d<1.6)return 6;if(up&&((d>3.2&&d<4.6)||(d>6&&d<7.4)||(d>8.8&&d<10.2)))return d>8.8?7:(d>6?6:5);if(y>=14&&Math.abs(dx)<3)return 2;return 0;});
+const brick=mk("Tijolo",8,8,(x,y)=>{const r=Math.floor(y/4),off=r%2?4:0;if(y%4===3)return 1;if((x+off)%8===7)return 1;return (x+y)%5?5:4;});
+const gem=mk("Diamante",16,16,(x,y)=>{const a=Math.abs(x-7.5)+Math.abs(y-7.5);if(a>7.5)return 0;if(a>6.5)return 12;return x+y<14?(x<7&&y<7?15:14):13;});
 const lib=[logo,brick,gem];
 let libSel=0, editing=null;
 const tela={img:{art:copy(logo),x:6,y:6,w:36,h:36,scale:2,align:4,op:100},bg:{kind:"tiled",art:copy(brick),scale:2,op:35},sel:"img"};
 function copy(a){return{...a,pal:a.pal.slice(),px:a.px.slice()};}
-function rgba(h){if(h.length===9&&h.endsWith("00"))return null;return h.slice(0,7);}
+function rgba(h){const c=parseInt(h.slice(1,7),16),a=h.length===9?parseInt(h.slice(7),16):255;if(!a)return null;return`rgba(${c>>16},${c>>8&255},${c&255},${(a/255).toFixed(3)})`;}
 
 /* ---------- desenho de uma arte num contexto ---------- */
 function drawArt(c,a,ox,oy,s,alpha){c.globalAlpha=alpha;for(let y=0;y<a.h;y++){let x=0;while(x<a.w){const i=a.px[y*a.w+x];let e=x+1;while(e<a.w&&a.px[y*a.w+e]===i)e++;
@@ -290,57 +373,203 @@ function drawArt(c,a,ox,oy,s,alpha){c.globalAlpha=alpha;for(let y=0;y<a.h;y++){l
 function thumb(cv,a){const k=Math.max(1,Math.floor(48/Math.max(a.w,a.h)));cv.width=a.w*k;cv.height=a.h*k;const c=cv.getContext("2d");c.clearRect(0,0,cv.width,cv.height);drawArt(c,a,0,0,k,1);}
 
 /* ---------- editor de pixel art ---------- */
-const cv=$("#art"),ctx=cv.getContext("2d");
-let A=copy(logo),cur=3,tool="pen",rectFill=false,mirror=false,zoom=20,grid=true,hist=[],fut=[],stroke=null,start=null,base=null;
-function load(a){A=copy(a);hist=[];fut=[];$("#artName").value=A.name;$("#wIn").value=A.w;$("#hIn").value=A.h;zoom=Math.max(4,Math.min(24,Math.floor(400/Math.max(A.w,A.h))));buildPal();redraw();}
-function redraw(){cv.width=A.w*zoom;cv.height=A.h*zoom;ctx.clearRect(0,0,cv.width,cv.height);drawArt(ctx,A,0,0,zoom,1);
+const board=$("#board"),cv=$("#art"),ctx=cv.getContext("2d");
+const ZOOMS=[2,3,4,6,8,10,12,16,20,24,32,40,48];
+let A=copy(logo),cur=6,prevCol=1,tool="pen",rectFill=false,ellFill=false,mh=false,mv=false,perfect=false,bs=1,round=false,
+  zoom=20,panX=0,panY=0,grid=true,hist=[],fut=[],stroke=null,start=null,base=null,clearArm=false,
+  sel=null,flt=null,clip=null,hover=null,space=false,pan=null,move=null;
+const HINT={pen:"Lápis: esquerdo pinta, direito apaga.",erase:"Borracha: apaga com o tamanho do pincel.",fill:"Balde: preenche a área. Shift troca a cor na arte inteira.",
+  pick:"Conta-gotas: pega a cor do pixel.",line:"Linha: Shift trava em 0°, 45° e 90°.",rect:"Retângulo: Shift faz quadrado; R alterna cheio.",
+  ellipse:"Elipse: Shift faz círculo; O alterna cheia.",shade:"Esquerdo clareia, direito escurece: anda uma casa na linha da paleta.",dither:"Pontilhado: pinta em xadrez.",
+  select:"Seleção: arraste para marcar; de dentro, move. Enter assenta."};
+function load(a){A=copy(a);hist=[];fut=[];sel=flt=null;$("#artName").value=A.name;syncDims();fit();buildPal();}
+function fit(){const r=board.getBoundingClientRect();const z=Math.min((r.width-24)/A.w,(r.height-24)/A.h);zoom=ZOOMS.filter(v=>v<=z).pop()||2;
+  panX=Math.round((r.width-A.w*zoom)/2);panY=Math.round((r.height-A.h*zoom)/2);redraw();}
+function zoomAt(mx,my,dir){const i=ZOOMS.indexOf(zoom),n=ZOOMS[Math.max(0,Math.min(ZOOMS.length-1,i+dir))];if(n===zoom)return;
+  panX=Math.round(mx-(mx-panX)*n/zoom);panY=Math.round(my-(my-panY)*n/zoom);zoom=n;redraw();}
+function centerOn(x,y){const r=board.getBoundingClientRect();panX=Math.round(r.width/2-(x+.5)*zoom);panY=Math.round(r.height/2-(y+.5)*zoom);redraw();}
+
+function redraw(){cv.width=A.w*zoom;cv.height=A.h*zoom;cv.style.left=panX+"px";cv.style.top=panY+"px";
+  ctx.clearRect(0,0,cv.width,cv.height);drawArt(ctx,A,0,0,zoom,1);if(flt)drawArt(ctx,{w:flt.w,h:flt.h,px:flt.px,pal:A.pal},flt.x*zoom,flt.y*zoom,zoom,1);
   if(grid&&zoom>=6){ctx.fillStyle="rgba(0,0,0,.18)";for(let x=1;x<A.w;x++)ctx.fillRect(x*zoom,0,1,cv.height);for(let y=1;y<A.h;y++)ctx.fillRect(0,y*zoom,cv.width,1);
     ctx.fillStyle="rgba(240,96,62,.45)";for(let x=8;x<A.w;x+=8)ctx.fillRect(x*zoom,0,1,cv.height);for(let y=8;y<A.h;y+=8)ctx.fillRect(0,y*zoom,cv.width,1);}
-  if(mirror){ctx.fillStyle="rgba(240,96,62,.8)";ctx.fillRect(Math.round(A.w*zoom/2)-1,0,2,cv.height);}
-  const p1=$("#p1"),p2=$("#p2");[p1,p2].forEach((p,i)=>{const s=i+1;p.width=A.w*s;p.height=A.h*s;p.style.width=A.w*s+"px";p.style.height=A.h*s+"px";const c=p.getContext("2d");c.clearRect(0,0,p.width,p.height);drawArt(c,A,0,0,s,1);});
-  $("#zoomOut").textContent="zoom "+zoom+"×";$("#hist").textContent=hist.length+" / 100";$("#undo").disabled=!hist.length;$("#redo").disabled=!fut.length;}
-function buildPal(){const p=$("#pal");p.innerHTML="";A.pal.forEach((c,i)=>{const b=document.createElement("button");b.className="sw"+(i===0?" t":"");if(i)b.style.background=c;
-  b.setAttribute("aria-label",i===0?"Transparente":"Cor "+i+" "+c);b.setAttribute("aria-pressed",i===cur);b.onclick=()=>{cur=i;buildPal();};p.appendChild(b);});
-  const c=A.pal[cur];$("#colIn").value=cur?c.slice(0,7):"#000000";$("#hexIn").value=cur?c.toUpperCase():"transparente";$("#colIn").disabled=$("#hexIn").disabled=cur===0;}
-function setColor(h){if(!cur||!/^#[0-9a-fA-F]{6}$/.test(h))return;push();A.pal[cur]=h;buildPal();redraw();}
-$("#colIn").oninput=e=>setColor(e.target.value);$("#hexIn").onchange=e=>setColor(e.target.value.trim());
-function push(){hist.push({px:A.px.slice(),pal:A.pal.slice(),w:A.w,h:A.h});if(hist.length>100)hist.shift();fut=[];}
-function undo(){if(!hist.length)return;fut.push({px:A.px.slice(),pal:A.pal.slice(),w:A.w,h:A.h});Object.assign(A,hist.pop());syncDims();buildPal();redraw();}
-function redo(){if(!fut.length)return;hist.push({px:A.px.slice(),pal:A.pal.slice(),w:A.w,h:A.h});Object.assign(A,fut.pop());syncDims();buildPal();redraw();}
+  ctx.fillStyle="rgba(240,96,62,.85)";if(mh)ctx.fillRect(Math.round(A.w*zoom/2)-1,0,2,cv.height);if(mv)ctx.fillRect(0,Math.round(A.h*zoom/2)-1,cv.width,2);
+  const box=flt||sel;if(box){ctx.save();ctx.lineWidth=2;ctx.setLineDash([6,4]);ctx.strokeStyle="#fff";ctx.strokeRect(box.x*zoom+1,box.y*zoom+1,box.w*zoom-2,box.h*zoom-2);
+    ctx.strokeStyle="#F0603E";ctx.lineDashOffset=5;ctx.strokeRect(box.x*zoom+1,box.y*zoom+1,box.w*zoom-2,box.h*zoom-2);ctx.restore();}
+  if(hover&&!pan&&!stroke&&["pen","erase","shade","dither","line","rect","ellipse"].includes(tool)){ctx.fillStyle="rgba(255,255,255,.35)";ctx.strokeStyle="rgba(0,0,0,.6)";
+    for(const[dx,dy]of brush())for(const[a,b]of mirrors(hover[0]+dx,hover[1]+dy)){ctx.fillRect(a*zoom,b*zoom,zoom,zoom);}}
+  [["#p1",1],["#p2",2]].forEach(([id,s])=>{const p=$(id);p.width=A.w*s;p.height=A.h*s;p.style.width=A.w*s+"px";p.style.height=A.h*s+"px";const c=p.getContext("2d");c.clearRect(0,0,p.width,p.height);drawArt(c,A,0,0,s,1);});
+  const t=$("#pTile");t.width=A.w*3;t.height=A.h*3;const k=A.w*3<=96?2:1;t.style.width=A.w*3*k+"px";const tc=t.getContext("2d");tc.clearRect(0,0,t.width,t.height);for(let y=0;y<3;y++)for(let x=0;x<3;x++)drawArt(tc,A,x*A.w,y*A.h,1,1);
+  $("#zoomOut").textContent="zoom "+zoom+"×";$("#hist").textContent=hist.length+" / 100";$("#undo").disabled=!hist.length;$("#redo").disabled=!fut.length;
+  $("#bsOut").textContent=bs+" px";$("#bsShape").textContent=round?"●":"■";$("#perfect").disabled=bs>1;$("#toolHint").textContent=HINT[tool];
+  $("#clearAll").textContent=clearArm?"Confirmar":"Limpar tudo";
+  const st=[];if(hover&&hover[0]>=0&&hover[1]>=0&&hover[0]<A.w&&hover[1]<A.h)st.push("x "+hover[0]+" · y "+hover[1]+" · cor "+A.px[hover[1]*A.w+hover[0]]);if(box)st.push("seleção "+box.w+"×"+box.h);
+  $("#status").textContent=st.join(" · ")||"—";}
+function swatch(el,c){el.innerHTML="";if(c&&rgba(c)){const i=document.createElement("i");i.style.background=rgba(c);el.appendChild(i);}}
+function choose(i){if(i!==cur)prevCol=cur;cur=i;buildPal();}
+function buildPal(){const p=$("#pal");p.innerHTML="";A.pal.forEach((c,i)=>{const b=document.createElement("button");b.className="sw"+(i===0?" t":"");if(i&&rgba(c))b.style.background=`linear-gradient(${rgba(c)},${rgba(c)}),conic-gradient(#aaa 25%,#fff 0 50%,#aaa 0 75%,#fff 0) 0 0/10px 10px`;
+  b.setAttribute("aria-label",i===0?"Transparente":"Cor "+i+" "+c);b.setAttribute("aria-pressed",i===cur);b.onclick=()=>{choose(i);if(!$("#picker").hidden)openPicker();};b.ondblclick=()=>{choose(i);openPicker();};p.appendChild(b);});
+  swatch($("#curSw"),cur?A.pal[cur]:null);$("#hexOut").textContent=cur?A.pal[cur].toUpperCase():"transparente";$("#editCol").disabled=cur===0;}
+function snap(){return{px:A.px.slice(),pal:A.pal.slice(),w:A.w,h:A.h};}
+function push(){hist.push(snap());if(hist.length>100)hist.shift();fut=[];clearArm=false;}
+function undo(){if(!hist.length)return;flt=null;sel=null;fut.push(snap());Object.assign(A,hist.pop());syncDims();buildPal();redraw();}
+function redo(){if(!fut.length)return;flt=null;sel=null;hist.push(snap());Object.assign(A,fut.pop());syncDims();buildPal();redraw();}
 function syncDims(){$("#wIn").value=A.w;$("#hIn").value=A.h;}
 $("#undo").onclick=undo;$("#redo").onclick=redo;
-function set(x,y,i){if(x<0||y<0||x>=A.w||y>=A.h)return;A.px[y*A.w+x]=i;if(mirror){const m=A.w-1-x;A.px[y*A.w+m]=i;}}
-function line(x0,y0,x1,y1,i){const dx=Math.abs(x1-x0),dy=-Math.abs(y1-y0),sx=x0<x1?1:-1,sy=y0<y1?1:-1;let e=dx+dy;for(;;){set(x0,y0,i);if(x0===x1&&y0===y1)break;const e2=2*e;if(e2>=dy){e+=dy;x0+=sx;}if(e2<=dx){e+=dx;y0+=sy;}}}
-function rect(x0,y0,x1,y1,i){const a=Math.min(x0,x1),b=Math.max(x0,x1),c=Math.min(y0,y1),d=Math.max(y0,y1);for(let y=c;y<=d;y++)for(let x=a;x<=b;x++)if(rectFill||x===a||x===b||y===c||y===d)set(x,y,i);}
-function fill(x,y,to){const from=A.px[y*A.w+x];if(from===to)return;const st=[[x,y]];while(st.length){const[a,b]=st.pop();if(a<0||b<0||a>=A.w||b>=A.h||A.px[b*A.w+a]!==from)continue;A.px[b*A.w+a]=to;st.push([a+1,b],[a-1,b],[a,b+1],[a,b-1]);}
-  if(mirror){const m=A.w-1-x;if(A.px[y*A.w+m]!==to){const f2=A.px[y*A.w+m];const s2=[[m,y]];while(s2.length){const[a,b]=s2.pop();if(a<0||b<0||a>=A.w||b>=A.h||A.px[b*A.w+a]!==f2)continue;A.px[b*A.w+a]=to;s2.push([a+1,b],[a-1,b],[a,b+1],[a,b-1]);}}}}
-function cell(e){const r=cv.getBoundingClientRect();return[Math.floor((e.clientX-r.left)/r.width*A.w),Math.floor((e.clientY-r.top)/r.height*A.h)];}
-cv.addEventListener("contextmenu",e=>e.preventDefault());
-cv.addEventListener("pointerdown",e=>{const[x,y]=cell(e);const right=e.button===2;const t=right?"erase":tool;const i=right||t==="erase"?0:cur;
-  if(t==="pick"){cur=A.px[y*A.w+x];buildPal();return;}
-  push();cv.setPointerCapture(e.pointerId);stroke={t,i,lx:x,ly:y};start=[x,y];base=A.px.slice();
-  if(t==="fill"){fill(x,y,i);stroke=null;}else if(t==="pen"||t==="erase")set(x,y,i);else set(x,y,i);redraw();});
-cv.addEventListener("pointermove",e=>{if(!stroke)return;const[x,y]=cell(e);
-  if(stroke.t==="pen"||stroke.t==="erase"){line(stroke.lx,stroke.ly,x,y,stroke.i);stroke.lx=x;stroke.ly=y;}
-  else{A.px.set(base);(stroke.t==="line"?line:rect)(start[0],start[1],x,y,stroke.i);}redraw();});
-cv.addEventListener("pointerup",()=>{if(stroke&&hist.length&&hist[hist.length-1].px.every((v,i)=>v===A.px[i]))hist.pop();stroke=null;redraw();});
-$("#board").addEventListener("wheel",e=>{if(!e.ctrlKey)return;e.preventDefault();zoom=Math.max(4,Math.min(32,zoom+(e.deltaY<0?2:-2)));redraw();},{passive:false});
-function pickTool(t){if(t==="rect"&&tool==="rect"){rectFill=!rectFill;$("#rectIcon").innerHTML=rectFill?'<path d="M1 3h14v10H1z"/>':'<path d="M1 3h14v10H1zm2 2v6h10V5z"/>';}
-  tool=t;document.querySelectorAll("[data-tool]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.tool===t));}
+
+/* pontos com os espelhos e a seleção; pincel quadrado ou redondo */
+function mirrors(x,y){const o=[[x,y]];if(mh)o.push([A.w-1-x,y]);if(mv)o.push([x,A.h-1-y]);if(mh&&mv)o.push([A.w-1-x,A.h-1-y]);return o;}
+const inSel=(x,y)=>!sel||x>=sel.x&&y>=sel.y&&x<sel.x+sel.w&&y<sel.y+sel.h;
+function put(x,y,i){for(const[a,b]of mirrors(x,y))if(a>=0&&b>=0&&a<A.w&&b<A.h&&inSel(a,b))A.px[b*A.w+a]=i;}
+function brush(){const o=[],c=(bs-1)/2;for(let dy=0;dy<bs;dy++)for(let dx=0;dx<bs;dx++){if(round&&bs>2&&(dx-c)**2+(dy-c)**2>(bs/2)**2-.25)continue;o.push([dx-Math.floor(c),dy-Math.floor(c)]);}return o;}
+function stamp(x,y,i,dither){for(const[dx,dy]of brush()){const a=x+dx,b=y+dy;if(dither&&(a+b)%2)continue;put(a,b,i);}}
+function bres(x0,y0,x1,y1,f){const dx=Math.abs(x1-x0),dy=-Math.abs(y1-y0),sx=x0<x1?1:-1,sy=y0<y1?1:-1;let e=dx+dy;for(;;){f(x0,y0);if(x0===x1&&y0===y1)break;const e2=2*e;if(e2>=dy){e+=dy;x0+=sx;}if(e2<=dx){e+=dx;y0+=sy;}}}
+function rect(x0,y0,x1,y1,i){const a=Math.min(x0,x1),b=Math.max(x0,x1),c=Math.min(y0,y1),d=Math.max(y0,y1);
+  if(rectFill){for(let y=c;y<=d;y++)for(let x=a;x<=b;x++)put(x,y,i);}else{for(let x=a;x<=b;x++){stamp(x,c,i);stamp(x,d,i);}for(let y=c;y<=d;y++){stamp(a,y,i);stamp(b,y,i);}}}
+function ellipse(x0,y0,x1,y1,i){const a=Math.min(x0,x1),b=Math.max(x0,x1),c=Math.min(y0,y1),d=Math.max(y0,y1),cx=(a+b)/2,cy=(c+d)/2,rx=(b-a)/2+.5,ry=(d-c)/2+.5;
+  const ins=(x,y)=>((x-cx)/rx)**2+((y-cy)/ry)**2<=1;
+  for(let y=c;y<=d;y++)for(let x=a;x<=b;x++){if(!ins(x,y))continue;if(ellFill)put(x,y,i);else if(!ins(x-1,y)||!ins(x+1,y)||!ins(x,y-1)||!ins(x,y+1))stamp(x,y,i);}}
+function flood(x,y,to,global){const from=A.px[y*A.w+x];if(from===to)return;
+  if(global){for(let k=0;k<A.px.length;k++)if(A.px[k]===from&&inSel(k%A.w,Math.floor(k/A.w)))A.px[k]=to;return;}
+  for(const[sx,sy]of mirrors(x,y)){const f=A.px[sy*A.w+sx];if(f===to)continue;const st=[[sx,sy]];while(st.length){const[a,b]=st.pop();if(a<0||b<0||a>=A.w||b>=A.h||!inSel(a,b)||A.px[b*A.w+a]!==f)continue;A.px[b*A.w+a]=to;st.push([a+1,b],[a-1,b],[a,b+1],[a,b-1]);}}}
+/* clarear e escurecer: a cor vizinha na ordem de brilho da paleta, uma vez por pixel por traço */
+/* clarear e escurecer: cada linha da paleta é uma rampa, do escuro (esquerda) ao claro (direita); o pixel anda uma
+   casa na linha dele, uma vez por traço. Nunca sai da linha, então o laranja nunca pula para o verde. */
+function hsvOf(h){const c=parseInt(h.slice(1,7),16);return rgb2hsv(c>>16,c>>8&255,c&255);}
+function shadeAt(x,y,dir){for(const[dx,dy]of brush())for(const[a,b]of mirrors(x+dx,y+dy)){if(a<0||b<0||a>=A.w||b>=A.h||!inSel(a,b))continue;const k=b*A.w+a;if(stroke.seen.has(k))continue;stroke.seen.add(k);
+  const i=A.px[k];if(!i)continue;const n=i+dir;if(n>0&&Math.floor(n/4)===Math.floor(i/4))A.px[k]=n;}}
+/* criar rampa: a linha da cor escolhida vira uma rampa dela; à esquerda, mais escura e saturada, com o matiz puxando
+   para o azul; à direita, mais clara e menos saturada, puxando para o amarelo (o desvio de matiz da pixel art) */
+function makeRamp(){if(!cur)return;const[h,s,v]=hsvOf(A.pal[cur]),row=Math.floor(cur/4)*4;
+  const toward=(t,k)=>{const d=((t-h+540)%360)-180;return(h+Math.sign(d)*Math.min(Math.abs(d),14*Math.abs(k))+360)%360;};
+  push();for(let j=row;j<row+4;j++){const k=j-cur;if(!j||!k)continue;const[r,g,b]=hsv2rgb(toward(k<0?235:55,k),Math.max(0,Math.min(1,s-.08*k)),Math.max(.07,Math.min(1,v+.17*k)));A.pal[j]="#"+hx(r)+hx(g)+hx(b);}
+  $("#rampMsg").textContent="";buildPal();redraw();}
+function perfectFix(){const p=stroke.pts;if(p.length<3)return;const[a,b,c]=p.slice(-3);
+  if(Math.abs(a[0]-c[0])===1&&Math.abs(a[1]-c[1])===1&&(b[0]===a[0]||b[1]===a[1])&&(b[0]===c[0]||b[1]===c[1])){for(const[x,y]of mirrors(b[0],b[1]))if(x>=0&&y>=0&&x<A.w&&y<A.h)A.px[y*A.w+x]=base[y*A.w+x];p.splice(p.length-2,1);}}
+function penTo(x,y){bres(stroke.lx,stroke.ly,x,y,(px,py)=>{const l=stroke.pts[stroke.pts.length-1];if(l&&l[0]===px&&l[1]===py)return;
+  if(stroke.t==="shade")shadeAt(px,py,stroke.dir);else stamp(px,py,stroke.i,stroke.t==="dither");stroke.pts.push([px,py]);if(perfect&&bs===1&&stroke.t==="pen")perfectFix();});stroke.lx=x;stroke.ly=y;}
+function snap45(x,y){const dx=x-start[0],dy=y-start[1];if(Math.abs(dx)>2*Math.abs(dy))return[x,start[1]];if(Math.abs(dy)>2*Math.abs(dx))return[start[0],y];const m=Math.max(Math.abs(dx),Math.abs(dy));return[start[0]+Math.sign(dx)*m,start[1]+Math.sign(dy)*m];}
+function square(x,y){const dx=x-start[0],dy=y-start[1],m=Math.max(Math.abs(dx),Math.abs(dy));return[start[0]+Math.sign(dx||1)*m,start[1]+Math.sign(dy||1)*m];}
+
+/* seleção: o pedaço solto (flt) sai da arte ao mover e volta ao assentar; o transparente dele não cobre nada */
+function lift(){if(flt||!sel)return;push();flt={x:sel.x,y:sel.y,w:sel.w,h:sel.h,px:new Uint8Array(sel.w*sel.h)};
+  for(let y=0;y<sel.h;y++)for(let x=0;x<sel.w;x++){const k=(sel.y+y)*A.w+sel.x+x;flt.px[y*sel.w+x]=A.px[k];A.px[k]=0;}sel=null;}
+function commit(){if(!flt)return;for(let y=0;y<flt.h;y++)for(let x=0;x<flt.w;x++){const v=flt.px[y*flt.w+x],a=flt.x+x,b=flt.y+y;if(v&&a>=0&&b>=0&&a<A.w&&b<A.h)A.px[b*A.w+a]=v;}
+  const x0=Math.max(0,flt.x),y0=Math.max(0,flt.y),x1=Math.min(A.w,flt.x+flt.w),y1=Math.min(A.h,flt.y+flt.h);sel=x1>x0&&y1>y0?{x:x0,y:y0,w:x1-x0,h:y1-y0}:null;flt=null;}
+function grab(){const b=flt||sel;if(!b)return null;const o={w:b.w,h:b.h,px:new Uint8Array(b.w*b.h)};for(let y=0;y<b.h;y++)for(let x=0;x<b.w;x++)o.px[y*b.w+x]=flt?flt.px[y*b.w+x]:A.px[(b.y+y)*A.w+b.x+x];return o;}
+function clearSel(){if(flt){flt=null;return;}if(!sel)return;push();for(let y=0;y<sel.h;y++)for(let x=0;x<sel.w;x++)A.px[(sel.y+y)*A.w+sel.x+x]=0;}
+function nudge(dx,dy){lift();if(flt){flt.x+=dx;flt.y+=dy;}redraw();}
+function inBox(b,x,y){return b&&x>=b.x&&y>=b.y&&x<b.x+b.w&&y<b.y+b.h;}
+
+/* virar e girar: na seleção (como pedaço solto) ou na arte inteira */
+function xform(kind){if(sel||flt){lift();const o=flt.px.slice(),w=flt.w,h=flt.h;if(kind==="rot"){flt.w=h;flt.h=w;}
+    for(let y=0;y<flt.h;y++)for(let x=0;x<flt.w;x++)flt.px[y*flt.w+x]=kind==="h"?o[y*w+(w-1-x)]:kind==="v"?o[(h-1-y)*w+x]:o[(h-1-x)*w+y];redraw();return;}
+  const o=A.px.slice(),w=A.w,h=A.h;push();if(kind==="rot"){A.w=h;A.h=w;}const p=new Uint8Array(A.w*A.h);
+  for(let y=0;y<A.h;y++)for(let x=0;x<A.w;x++)p[y*A.w+x]=kind==="h"?o[y*w+(w-1-x)]:kind==="v"?o[(h-1-y)*w+x]:o[(h-1-x)*w+y];A.px=p;syncDims();if(kind==="rot")fit();else redraw();}
+
+/* mouse no quadro: Alt, Espaço ou o botão do meio arrastam a vista; a roda dá zoom no ponto do mouse */
+function local(e){const r=board.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top];}
+function cell(e){const[mx,my]=local(e);return[Math.floor((mx-panX)/zoom),Math.floor((my-panY)/zoom)];}
+board.addEventListener("contextmenu",e=>e.preventDefault());
+board.addEventListener("pointerdown",e=>{board.setPointerCapture(e.pointerId);board.focus({preventScroll:true});
+  if(e.button===1||e.altKey||space){e.preventDefault();pan={x:e.clientX,y:e.clientY,px:panX,py:panY};board.classList.add("panning");return;}
+  const[x,y]=cell(e);const right=e.button===2;
+  if((tool==="pick"||e.ctrlKey)&&!right){if(x>=0&&y>=0&&x<A.w&&y<A.h)choose(A.px[y*A.w+x]);redraw();return;}
+  if(tool==="select"){if(inBox(flt,x,y)||inBox(sel,x,y)){lift();move={x,y,fx:flt.x,fy:flt.y};}else{commit();sel=null;start=[x,y];stroke={t:"select"};}redraw();return;}
+  if(x<0||y<0||x>=A.w||y>=A.h)return;commit();
+  const t=right&&tool!=="shade"?(["line","rect","ellipse","dither"].includes(tool)?tool:"erase"):tool;const i=right||t==="erase"?0:cur;
+  push();base=A.px.slice();start=[x,y];
+  if(t==="fill"){flood(x,y,i,e.shiftKey);redraw();return;}
+  stroke={t,i,lx:x,ly:y,pts:[],seen:new Set(),dir:right?-1:1};
+  if(["pen","erase","shade","dither"].includes(t))penTo(x,y);else put(x,y,i);redraw();});
+board.addEventListener("pointermove",e=>{hover=cell(e);
+  if(pan){panX=pan.px+e.clientX-pan.x;panY=pan.py+e.clientY-pan.y;redraw();return;}
+  if(move){flt.x=move.fx+hover[0]-move.x;flt.y=move.fy+hover[1]-move.y;redraw();return;}
+  if(!stroke){redraw();return;}let[x,y]=hover;
+  if(stroke.t==="select"){x=Math.max(0,Math.min(A.w-1,x));y=Math.max(0,Math.min(A.h-1,y));const sx=Math.max(0,Math.min(A.w-1,start[0])),sy=Math.max(0,Math.min(A.h-1,start[1]));
+    sel={x:Math.min(sx,x),y:Math.min(sy,y),w:Math.abs(x-sx)+1,h:Math.abs(y-sy)+1};}
+  else if(["pen","erase","shade","dither"].includes(stroke.t))penTo(x,y);
+  else{A.px.set(base);if(e.shiftKey)[x,y]=stroke.t==="line"?snap45(x,y):square(x,y);
+    if(stroke.t==="line")bres(start[0],start[1],x,y,(a,b)=>stamp(a,b,stroke.i));else(stroke.t==="rect"?rect:ellipse)(start[0],start[1],x,y,stroke.i);}redraw();});
+board.addEventListener("pointerup",()=>{if(pan){pan=null;board.classList.remove("panning");}move=null;
+  if(stroke&&stroke.t!=="select"&&hist.length&&hist[hist.length-1].px.every((v,k)=>v===A.px[k]))hist.pop();stroke=null;redraw();});
+board.addEventListener("pointerleave",()=>{hover=null;redraw();});
+board.addEventListener("wheel",e=>{e.preventDefault();const[mx,my]=local(e);zoomAt(mx,my,e.deltaY<0?1:-1);},{passive:false});
+board.tabIndex=0;
+[["#p1",1],["#p2",2],["#pTile",0]].forEach(([id,s])=>$(id).addEventListener("click",e=>{const r=$(id).getBoundingClientRect();
+  let x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;if(!s){x=(x*3)%1;y=(y*3)%1;}centerOn(Math.floor(x*A.w),Math.floor(y*A.h));}));
+$("#fit").onclick=fit;
+
+const FILLED={rect:'<path d="M1 3h14v10H1z"/>',ellipse:'<path d="M5 2h6v1h2v2h1v6h-1v2h-2v1H5v-1H3v-2H2V5h1V3h2z"/>'};
+const OUTLINE={rect:'<path d="M1 3h14v10H1zm2 2v6h10V5z"/>',ellipse:'<path d="M5 2h6v1h2v2h1v6h-1v2h-2v1H5v-1H3v-2H2V5h1V3h2zm0 2v1H4v6h1v1h6v-1h1V5h-1V4z"/>'};
+function pickTool(t){if(t===tool&&t==="rect")rectFill=!rectFill;if(t===tool&&t==="ellipse")ellFill=!ellFill;if(t!=="select")commit();
+  $("#rectIcon").innerHTML=(rectFill?FILLED:OUTLINE).rect;$("#ellIcon").innerHTML=(ellFill?FILLED:OUTLINE).ellipse;
+  tool=t;document.querySelectorAll("[data-tool]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.tool===t));redraw();}
 document.querySelectorAll("[data-tool]").forEach(b=>b.onclick=()=>pickTool(b.dataset.tool));
-$("#mirror").onclick=()=>{mirror=!mirror;$("#mirror").setAttribute("aria-pressed",mirror);redraw();};
+$("#mirrorH").onclick=()=>{mh=!mh;$("#mirrorH").setAttribute("aria-pressed",mh);redraw();};
+$("#mirrorV").onclick=()=>{mv=!mv;$("#mirrorV").setAttribute("aria-pressed",mv);redraw();};
+$("#perfect").onclick=()=>{perfect=!perfect;$("#perfect").setAttribute("aria-pressed",perfect);};
+$("#bsDown").onclick=()=>{bs=Math.max(1,bs-1);redraw();};$("#bsUp").onclick=()=>{bs=Math.min(8,bs+1);redraw();};$("#bsShape").onclick=()=>{round=!round;redraw();};
 $("#gridOn").onchange=e=>{grid=e.target.checked;redraw();};
+$("#flipH").onclick=()=>xform("h");$("#flipV").onclick=()=>xform("v");$("#rot").onclick=()=>xform("rot");
+$("#clearAll").onclick=()=>{if(!clearArm){clearArm=true;redraw();return;}push();flt=null;sel=null;A.px.fill(0);redraw();};
 function resize(){const w=Math.max(8,Math.min(64,+$("#wIn").value||8)),h=Math.max(8,Math.min(64,+$("#hIn").value||8));if(w===A.w&&h===A.h)return syncDims();
-  push();const p=new Uint8Array(w*h);for(let y=0;y<Math.min(h,A.h);y++)for(let x=0;x<Math.min(w,A.w);x++)p[y*w+x]=A.px[y*A.w+x];A.w=w;A.h=h;A.px=p;syncDims();zoom=Math.max(4,Math.min(24,Math.floor(400/Math.max(w,h))));redraw();}
+  commit();sel=null;push();const o=A.px.slice(),ow=A.w,oh=A.h;A.w=w;A.h=h;A.px=new Uint8Array(w*h);for(let y=0;y<Math.min(h,oh);y++)for(let x=0;x<Math.min(w,ow);x++)A.px[y*w+x]=o[y*ow+x];syncDims();fit();}
 $("#wIn").onchange=resize;$("#hIn").onchange=resize;
-$("#pixGui").addEventListener("keydown",e=>{if(e.target.tagName==="INPUT")return;const k=e.key.toLowerCase();
-  if(e.ctrlKey&&k==="z"){e.preventDefault();undo();}else if(e.ctrlKey&&k==="y"){e.preventDefault();redo();}
-  else if(!e.ctrlKey){const m={b:"pen",e:"erase",g:"fill",i:"pick",l:"line",r:"rect"}[k];if(m)pickTool(m);else if(k==="m")$("#mirror").click();}});
-$("#pixGui").tabIndex=0;
-$("#save").onclick=()=>{A.name=$("#artName").value.trim().slice(0,32)||"Sem nome";
+const gui=$("#pixGui");gui.tabIndex=0;
+gui.addEventListener("keyup",e=>{if(e.code==="Space"){space=false;board.classList.remove("grab");}});
+gui.addEventListener("keydown",e=>{if(e.target.tagName==="INPUT")return;const k=e.key.toLowerCase(),c=e.ctrlKey||e.metaKey,r=board.getBoundingClientRect();
+  if(e.code==="Space"){e.preventDefault();space=true;board.classList.add("grab");return;}
+  if(e.key.startsWith("Arrow")){e.preventDefault();const d={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];
+    if(sel||flt)nudge(d[0]*(e.shiftKey?8:1),d[1]*(e.shiftKey?8:1));else{panX-=d[0]*32;panY-=d[1]*32;redraw();}return;}
+  if(c&&k==="z"){e.preventDefault();undo();}else if(c&&k==="y"){e.preventDefault();redo();}
+  else if(c&&k==="a"){e.preventDefault();commit();sel={x:0,y:0,w:A.w,h:A.h};pickTool("select");}
+  else if(c&&k==="d"){e.preventDefault();commit();sel=null;redraw();}
+  else if(c&&k==="c"){e.preventDefault();clip=grab();}
+  else if(c&&k==="x"){e.preventDefault();clip=grab();clearSel();sel=null;redraw();}
+  else if(c&&k==="v"){e.preventDefault();if(!clip)return;commit();push();const ox=Math.max(0,Math.floor(-panX/zoom)),oy=Math.max(0,Math.floor(-panY/zoom));
+    flt={x:sel?sel.x:ox,y:sel?sel.y:oy,w:clip.w,h:clip.h,px:clip.px.slice()};sel=null;pickTool("select");}
+  else if(c&&k==="g"){e.preventDefault();$("#gridOn").click();}
+  else if(k==="delete"||k==="backspace"){clearSel();redraw();}
+  else if(k==="enter"){commit();redraw();}
+  else if(k==="escape"){if(flt){undo();}sel=null;redraw();}
+  else if(e.shiftKey&&k==="m")$("#mirrorV").click();else if(e.shiftKey&&k==="h")xform("h");else if(e.shiftKey&&k==="v")xform("v");
+  else if(k==="[")$("#bsDown").click();else if(k==="]")$("#bsUp").click();
+  else if(k==="0")fit();else if(k==="+"||k==="=")zoomAt(r.width/2,r.height/2,1);else if(k==="-")zoomAt(r.width/2,r.height/2,-1);
+  else if(k==="x"){const p=prevCol;prevCol=cur;cur=p;buildPal();}
+  else if(!c){const m={b:"pen",e:"erase",g:"fill",i:"pick",l:"line",r:"rect",o:"ellipse",d:"shade",t:"dither",s:"select"}[k];if(m)pickTool(m);else if(k==="m")$("#mirrorH").click();else if(k==="p")$("#perfect").click();}});
+
+/* seletor de cor: quadrado de saturação e brilho, matiz, alfa, hexadecimal e recentes (como o do editor da Tela) */
+let hsv=[0,1,1],alp=255,recent=["#F0603E","#3DB56E","#6B6FD0","#FFD58A","#0f0e12","#ECE5D6"],pkDirty=false;
+function hsv2rgb(h,s,v){const f=n=>{const k=(n+h/60)%6;return Math.round(255*(v-v*s*Math.max(0,Math.min(k,4-k,1))));};return[f(5),f(3),f(1)];}
+function rgb2hsv(r,g,b){r/=255;g/=255;b/=255;const M=Math.max(r,g,b),m=Math.min(r,g,b),d=M-m;let h=0;if(d){h=M===r?((g-b)/d)%6:M===g?(b-r)/d+2:(r-g)/d+4;h*=60;if(h<0)h+=360;}return[h,M?d/M:0,M];}
+function hx(n){return Math.round(n).toString(16).padStart(2,"0");}
+function pkColor(){const[r,g,b]=hsv2rgb(...hsv);return"#"+hx(r)+hx(g)+hx(b)+(alp<255?hx(alp):"");}
+function drawPicker(){const sv=$("#sv").getContext("2d"),W=120,H=84;for(let x=0;x<W;x++){const g=sv.createLinearGradient(0,0,0,H);const[r,gg,b]=hsv2rgb(hsv[0],x/(W-1),1);g.addColorStop(0,`rgb(${r},${gg},${b})`);g.addColorStop(1,"#000");sv.fillStyle=g;sv.fillRect(x,0,1,H);}
+  sv.strokeStyle="#fff";sv.lineWidth=2;sv.strokeRect(hsv[1]*(W-1)-3,(1-hsv[2])*(H-1)-3,6,6);
+  const hu=$("#hue").getContext("2d");for(let y=0;y<84;y++){const[r,g,b]=hsv2rgb(y/83*360,1,1);hu.fillStyle=`rgb(${r},${g},${b})`;hu.fillRect(0,y,12,1);}hu.fillStyle="#fff";hu.fillRect(0,hsv[0]/360*83-1,12,2);
+  const al=$("#alpha").getContext("2d");al.clearRect(0,0,12,84);for(let y=0;y<84;y+=6)for(let x=0;x<12;x+=6){al.fillStyle=((x+y)/6)%2?"#aaa":"#fff";al.fillRect(x,y,6,6);}
+  const[r,g,b]=hsv2rgb(...hsv),ag=al.createLinearGradient(0,0,0,84);ag.addColorStop(0,`rgba(${r},${g},${b},1)`);ag.addColorStop(1,`rgba(${r},${g},${b},0)`);al.fillStyle=ag;al.fillRect(0,0,12,84);al.fillStyle="#000";al.fillRect(0,(1-alp/255)*83-1,12,2);
+  swatch($("#pkSw"),pkColor());if(document.activeElement!==$("#pkHex"))$("#pkHex").value=pkColor().toUpperCase();
+  const rc=$("#recent");rc.innerHTML="";recent.forEach(c=>{const b=document.createElement("button");b.style.background=rgba(c)||"#fff";b.setAttribute("aria-label","Cor recente "+c);b.onclick=()=>fromHex(c);rc.appendChild(b);});}
+function fromHex(h){if(!/^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(h))return;const c=parseInt(h.slice(1,7),16);hsv=rgb2hsv(c>>16,c>>8&255,c&255);alp=h.length===9?parseInt(h.slice(7),16):255;apply();}
+function apply(){if(!cur)return;if(!pkDirty){push();pkDirty=true;}A.pal[cur]=pkColor();drawPicker();buildPal();redraw();}
+function openPicker(){if(!cur)return;const h=A.pal[cur];const c=parseInt(h.slice(1,7),16);hsv=rgb2hsv(c>>16,c>>8&255,c&255);alp=h.length===9?parseInt(h.slice(7),16):255;pkDirty=false;
+  $("#pkIdx").textContent=cur;$("#picker").hidden=false;drawPicker();}
+function closePicker(){if(pkDirty){const c=A.pal[cur];recent=[c,...recent.filter(x=>x!==c)].slice(0,8);}pkDirty=false;$("#picker").hidden=true;}
+$("#rampBtn").onclick=makeRamp;$("#editCol").onclick=()=>$("#picker").hidden?openPicker():closePicker();$("#pkClose").onclick=closePicker;
+$("#pkHex").onchange=e=>fromHex(e.target.value.trim());
+function drag(el,f){el.addEventListener("pointerdown",e=>{el.setPointerCapture(e.pointerId);f(e);const mv=ev=>f(ev),up=()=>{el.removeEventListener("pointermove",mv);el.removeEventListener("pointerup",up);};el.addEventListener("pointermove",mv);el.addEventListener("pointerup",up);});}
+const rel=(el,e)=>{const r=el.getBoundingClientRect();return[Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)),Math.max(0,Math.min(1,(e.clientY-r.top)/r.height))];};
+drag($("#sv"),e=>{const[x,y]=rel($("#sv"),e);hsv[1]=x;hsv[2]=1-y;apply();});
+drag($("#hue"),e=>{hsv[0]=rel($("#hue"),e)[1]*359;apply();});
+drag($("#alpha"),e=>{alp=Math.round((1-rel($("#alpha"),e)[1])*255);apply();});
+
+$("#save").onclick=()=>{closePicker();commit();A.name=$("#artName").value.trim().slice(0,32)||"Sem nome";
   const i=editing==null?-1:lib.findIndex(a=>a.id===editing);if(i>=0){lib[i]=copy(A);libSel=i;}else{if(lib.length>=32)return;A.id=Math.random().toString(36).slice(2);lib.push(copy(A));libSel=lib.length-1;}
   editing=lib[libSel].id;buildLib();};
-$("#cancel").onclick=()=>{const a=lib.find(x=>x.id===editing);load(a||logo);};
+$("#cancel").onclick=()=>{closePicker();const a=lib.find(x=>x.id===editing);load(a||logo);};
+new ResizeObserver(()=>redraw()).observe(board);
 
 /* ---------- biblioteca e editor da Tela ---------- */
 let delArm=false;

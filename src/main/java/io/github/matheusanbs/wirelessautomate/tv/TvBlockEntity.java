@@ -430,12 +430,24 @@ public class TvBlockEntity extends BlockEntity {
         }
     }
 
+    /**
+     * Na carga do chunk o {@code level} ainda não existe e o {@link #onLoad} anota as imagens; numa Tela já no mundo
+     * (um {@code /data merge block}, uma ferramenta que cola NBT), as imagens que mudaram são anotadas aqui, senão a
+     * limpeza do armazém poderia apagá-las em uso.
+     */
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
+        List<TvPicture> before = layout.pictures();
         readShared(tag);
         owner = tag.hasUUID("owner") ? tag.getUUID("owner") : null;
         access = TvAccess.load(tag.get("access"));
+        if (level != null && !level.isClientSide && level.getServer() != null
+                && !layout.pictures().equals(before)) {
+            TvImageStore store = TvImageStore.get(level.getServer());
+            store.screenChanged(this);
+            picturesStale = !store.hasAll(layout);
+        }
     }
 
     /**

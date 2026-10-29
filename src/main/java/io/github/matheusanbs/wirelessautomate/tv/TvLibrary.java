@@ -14,6 +14,7 @@ import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.saveddata.SavedData;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * A biblioteca de cada jogador: os componentes, os temas, as pixel arts e as imagens enviadas (só o resumo e o nome,
@@ -39,8 +40,8 @@ public final class TvLibrary extends SavedData {
     public record PictureEntry(String hash, String name) {
     }
 
-    /** O resultado de salvar, renomear ou remover. */
-    public enum Result { OK, FULL, INVALID, TOO_BIG, MISSING, EXISTS }
+    /** O resultado de salvar, renomear ou remover; {@code TOO_MANY_PICTURES} é o componente acima do maxPerScreen. */
+    public enum Result { OK, FULL, INVALID, TOO_BIG, MISSING, EXISTS, TOO_MANY_PICTURES }
 
     /** Os conjuntos de um jogador, em ordem de criação. */
     private static final class Shelf {
@@ -192,19 +193,44 @@ public final class TvLibrary extends SavedData {
         return Result.OK;
     }
 
-    /** Tira a imagem de todas as bibliotecas (o comando de remover); devolve de quem saiu. */
+    /**
+     * Tira a imagem de todas as bibliotecas (o comando de remover), da aba Imagens e das imagens dos componentes e
+     * layouts salvos (as peças que a apontavam ficam sem imagem); devolve de quem saiu.
+     */
     public List<UUID> removePictureEverywhere(String hash) {
         List<UUID> affected = new ArrayList<>();
         for (Map.Entry<UUID, Shelf> entry : new ArrayList<>(shelves.entrySet())) {
-            if (entry.getValue().pictures.remove(hash) != null) {
+            Shelf shelf = entry.getValue();
+            boolean removed = shelf.pictures.remove(hash) != null;
+            for (TvComponent component : new ArrayList<>(shelf.components.values())) {
+                List<TvPicture> kept = without(component.pictures(), hash);
+                if (kept != null) {
+                    TvComponent stored = component.withPictures(kept);
+                    putComponent(shelf, stored.name(), stored, sizeOf(stored));
+                    removed = true;
+                }
+            }
+            if (removed) {
                 affected.add(entry.getKey());
-                drop(entry.getKey(), entry.getValue());
+                drop(entry.getKey(), shelf);
             }
         }
         if (!affected.isEmpty()) {
             setDirty();
         }
         return affected;
+    }
+
+    /** As imagens sem a do resumo, ou {@code null} se ela não estava. */
+    private static @Nullable List<TvPicture> without(List<TvPicture> pictures, String hash) {
+        for (int i = 0; i < pictures.size(); i++) {
+            if (pictures.get(i).hash().equals(hash)) {
+                List<TvPicture> kept = new ArrayList<>(pictures);
+                kept.remove(i);
+                return kept;
+            }
+        }
+        return null;
     }
 
     /**

@@ -1352,6 +1352,7 @@
   "message.wirelessautomate.tv.library_exists": "Você já tem um com esse nome",
   "message.wirelessautomate.tv.library_invalid": "Esse nome ou conteúdo não vale",
   "message.wirelessautomate.tv.library_component_too_big": "Esse componente é grande demais para salvar: use menos peças",
+  "message.wirelessautomate.tv.library_pictures_too_many": "Imagens demais neste componente: no máximo %s distintas",
   "message.wirelessautomate.tv.library_art_too_big": "Não cabe esta pixel art: sua biblioteca ficaria grande demais para enviar. Remova artes ou componentes",
   "message.wirelessautomate.tv.image.disabled": "As imagens enviadas estão desligadas neste servidor",
   "message.wirelessautomate.tv.image.not_allowed": "Só operadores podem enviar imagens neste servidor",

@@ -12,7 +12,7 @@ import org.lwjgl.system.MemoryUtil;
 
 /**
  * Os quadros de um GIF animado no cliente, de um de dois jeitos, decididos na decodificação pelo teto
- * {@link #RAM_BUDGET} somado de todos os GIFs:
+ * {@link #RAM_BUDGET} somado de todos os GIFs ({@link #RAM}, reservado no pedido pelo {@link TvPictureTextures}):
  * <ul>
  * <li><b>na memória:</b> todos os quadros montados, um atrás do outro (o {@code stbi_load_gif_from_memory}); trocar
  * de quadro é só apontar para o próximo;</li>
@@ -27,7 +27,8 @@ import org.lwjgl.system.MemoryUtil;
 final class TvGifAnimation {
     /** O teto da memória dos GIFs com todos os quadros abertos, somados: acima dele, os próximos vão comprimidos. */
     static final long RAM_BUDGET = 256L << 20;
-    private static long ramUsed;
+    /** A memória dos GIFs abertos inteiros e as reservas das decodificações em curso. */
+    static final TvGifRam RAM = new TvGifRam(RAM_BUDGET);
 
     final TvGifClock clock;
     final int width;
@@ -47,11 +48,6 @@ final class TvGifAnimation {
     /** O último tick do cliente em que alguma Tela à vista, o editor ou uma miniatura mostrou o GIF. */
     int seenTick = Integer.MIN_VALUE;
 
-    /** A memória que ainda cabe no teto, para a próxima decodificação escolher o modo. */
-    static long ramRoom() {
-        return Math.max(0, RAM_BUDGET - ramUsed);
-    }
-
     /** Da decodificação de um GIF animado: fica com os quadros (modo na memória) ou com o leitor. */
     TvGifAnimation(TvImageDecoder.Decoded decoded) {
         clock = new TvGifClock(decoded.delays);
@@ -60,7 +56,7 @@ final class TvGifAnimation {
         frameBytes = (long) width * height * 4;
         if (decoded.stream == null) {
             all = decoded;
-            ramUsed += decoded.bytes();
+            RAM.use(decoded.bytes());
             stream = null;
         } else {
             stream = decoded.stream;
@@ -141,7 +137,7 @@ final class TvGifAnimation {
     /** Solta a memória; no modo comprimido com um quadro abrindo, solta quando ele terminar. */
     void close() {
         if (all != null) {
-            ramUsed -= all.bytes();
+            RAM.release(all.bytes());
             all.close();
             all = null;
         }
@@ -158,8 +154,8 @@ final class TvGifAnimation {
         }
     }
 
-    /** A memória dos GIFs abertos inteiros, somada (o e2e confere que volta a 0). */
+    /** A memória dos GIFs abertos inteiros e das reservas, somada (o e2e confere que volta a 0). */
     static long ramUsedForTests() {
-        return ramUsed;
+        return RAM.used();
     }
 }

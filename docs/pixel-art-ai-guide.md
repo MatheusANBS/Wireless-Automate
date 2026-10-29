@@ -6,6 +6,18 @@ This guide teaches a chat AI (Claude, ChatGPT and others) the text that Wireless
 With it, the AI draws a pixel art (still or animated), prepares a real image or GIF, or builds a whole Screen, and you
 paste the result into the game.
 
+## Which format to use
+
+| You want | Use | Colors | Size |
+| --- | --- | --- | --- |
+| A logo, an icon, a crisp pixel drawing you'll still edit in the game | **Pixel art** (`WA-ARTE1`) | Up to 16 per art, any you like | Up to 128 × 128 |
+| A pixel art that moves | **Animated pixel art** (`WA-ARTE1` with frames) | Up to 16 per art | Up to 128 × 128, up to 64 frames |
+| A photo, a painting, any image with every color, or a GIF | **Image** (`WA-IMAGEM1`) | **All** (free color) | Up to 1024 × 1024, GIF up to 240 frames |
+| A whole Screen, with texts, numbers and images | **Layout** (`WA-TELA1`) | Theme colors or any | The Screen's area |
+
+The 16-color limit applies **only to pixel art**: it's what keeps it crisp and editable in the game, with the ramps.
+For full fidelity (the Mona Lisa as it is, a photo), use an **image**.
+
 ## How to use it
 
 1. Copy this whole file and paste it into the chat with the AI, before your request.
@@ -305,7 +317,7 @@ Each art is an object with the same parts as the `WA-ARTE1` form:
 
 | What | Cap (server default) |
 | --- | --- |
-| Art | From 8 × 8 to 128 × 128 pixels, 16 colors. |
+| Pixel art | From 8 × 8 to 128 × 128 pixels, 16 colors per art. |
 | Pixels of a Screen's arts | 131,072 in total, counting each distinct art once and every frame (eight 128 × 128 arts). |
 | Frames per art | 64, 1 to 20 per second. |
 | Uploaded image | PNG, JPG or GIF, up to 1024 × 1024, 8 MB and 240 frames. |
@@ -324,7 +336,7 @@ Over a cap, the editor says "Too big for this screen" and nothing changes (the p
 
 **In the art:**
 
-- **Few colors.** 4 to 8 already make a nice art; 16 is the most.
+- **Few colors.** 4 to 8 already make a nice pixel art; 16 is the pixel art maximum (for more colors, use an image).
 - **4-shade ramps.** Arrange the palette in rows of 4 colors, dark to light: colors 0 to 3, 4 to 7, 8 to 11 and 12 to
   15 (the first row starts at transparent). That is how the game's editor arranges the palette, and lighten and darken
   walk along those rows.

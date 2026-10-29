@@ -79,4 +79,18 @@ final class TvEditorPaint {
     static void centered(GuiGraphics g, Font font, TvRect r, Label label, int color) {
         GuiText.draw(g, font, label.text(), r.x() + (r.w() - label.width()) / 2, r.y() + (r.h() - 8) / 2, color);
     }
+
+    /** Um contorno tracejado de traços de 2 px (a Imagem que ainda não tem arte, na miniatura). */
+    static void dashed(GuiGraphics g, int x, int y, int w, int h, int color) {
+        for (int px = x; px < x + w; px += 4) {
+            int end = Math.min(px + 2, x + w);
+            g.fill(px, y, end, y + 1, color);
+            g.fill(px, y + h - 1, end, y + h, color);
+        }
+        for (int py = y; py < y + h; py += 4) {
+            int end = Math.min(py + 2, y + h);
+            g.fill(x, py, x + 1, end, color);
+            g.fill(x + w - 1, py, x + w, end, color);
+        }
+    }
 }

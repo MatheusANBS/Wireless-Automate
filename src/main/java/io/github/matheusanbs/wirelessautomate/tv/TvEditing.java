@@ -69,9 +69,9 @@ public final class TvEditing {
      * cada caixa cortada à área; ligação a rede que o jogador não pode usar ou a tipo não carregado sai, a peça
      * fica. As imagens: a arte que uma peça ou o fundo aponta e o layout mandado não traz vem da cópia que a Tela já
      * tem ({@link TvLayout#withMissingImagesFrom}: o editor pode não ter recebido a arte ainda); depois
-     * ({@link TvLayout#prunedImages}) a Imagem sem arte sai, o mosaico sem arte volta ao fundo do tema, a arte que
-     * ninguém usa sai (a inválida o codec já largou ao ler) e, acima de {@code tv.maxImagePixels} somados, o layout é
-     * recusado como grande demais. O {@code tv.maxLayoutBytes} mede o layout como vai ao cliente, sem os pixels
+     * ({@link TvLayout#prunedImages}) a Imagem que aponta uma arte que não existe sai (a sem arte nenhuma fica e não
+     * desenha), o mosaico sem arte volta ao fundo do tema, a arte que ninguém usa sai (a inválida o codec já largou
+     * ao ler) e, acima de {@code tv.maxImagePixels} somados, o layout é recusado como grande demais. O {@code tv.maxLayoutBytes} mede o layout como vai ao cliente, sem os pixels
      * ({@link TvLayoutPayload#clientSize}). Avisa na barra de ação.
      */
     public static LayoutResult applyLayout(ServerPlayer player, TvBlockEntity tv, TvLayout layout) {

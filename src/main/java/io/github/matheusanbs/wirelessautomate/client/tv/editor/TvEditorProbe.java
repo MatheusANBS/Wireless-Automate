@@ -82,6 +82,16 @@ public final class TvEditorProbe {
         return props.find("data.storage.items") instanceof TvItemGrid grid ? grid.searchCenter() : null;
     }
 
+    /** O centro da célula da arte {@code art} na grade de artes {@code id} (rolada até aparecer), ou {@code null}. */
+    public int @Nullable [] artCellCenter(String id, UUID art) {
+        return props.find(id) instanceof TvArtGrid grid ? grid.centerOf(art) : null;
+    }
+
+    /** Se a grade de artes {@code id} mostra a arte {@code art} entre as "Da Tela". */
+    public boolean artOnScreenOnly(String id, UUID art) {
+        return props.find(id) instanceof TvArtGrid grid && grid.onScreenOnly(art);
+    }
+
     public int @Nullable [] propNetworkCenter(String id, UUID network) {
         return props.networkCenter(id, network);
     }

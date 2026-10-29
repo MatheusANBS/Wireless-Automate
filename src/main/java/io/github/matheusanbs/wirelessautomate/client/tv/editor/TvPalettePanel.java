@@ -2,36 +2,51 @@ package io.github.matheusanbs.wirelessautomate.client.tv.editor;
 
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
+import io.github.matheusanbs.wirelessautomate.client.tv.render.TvArtThumbs;
 import io.github.matheusanbs.wirelessautomate.tv.TvPieceType;
+import io.github.matheusanbs.wirelessautomate.tv.TvPixelArt;
 import java.util.List;
+import java.util.function.Supplier;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A aba Peças da coluna da esquerda: Valor, Texto, Forma, Ícone, Barra, Medidor, Gráfico e Seta. O clique insere uma nova no primeiro lugar livre e a
- * escolhe; arrastar o botão até a miniatura mostra um fantasma do tamanho da peça e soltar põe a peça ali, com o
- * centro no ponto (soltar fora da miniatura cancela). Os textos são medidos no {@link #layout}.
+ * A aba Peças da coluna da esquerda: Valor, Texto, Forma, Ícone, Imagem, Barra, Medidor, Gráfico e Seta. O clique
+ * insere uma nova no primeiro lugar livre e a escolhe; arrastar o botão até a miniatura mostra um fantasma do tamanho
+ * da peça e soltar põe a peça ali, com o centro no ponto (soltar fora da miniatura cancela). A Imagem nasce com a arte
+ * escolhida na aba Pixel art, na escala que cabe ({@link TvImageOps}, e o fantasma é a própria arte); sem arte
+ * escolhida, nasce vazia e a seção Peça pede uma. Os textos são medidos no {@link #layout}; o tamanho do fantasma, ao
+ * apertar.
  */
 final class TvPalettePanel {
     private static final List<TvPieceType> TYPES = List.of(TvPieceType.VALUE, TvPieceType.TEXT, TvPieceType.SHAPE,
-            TvPieceType.ICON, TvPieceType.BAR, TvPieceType.GAUGE, TvPieceType.GRAPH, TvPieceType.ARROW);
+            TvPieceType.ICON, TvPieceType.IMAGE, TvPieceType.BAR, TvPieceType.GAUGE, TvPieceType.GRAPH, TvPieceType.ARROW);
     private static final int DRAG_START = 4;
 
     private final TvEditorDoc doc;
     private final TvEditorCanvas canvas;
+    private final TvEditorActions actions;
+    private final Supplier<TvPixelArt> chosenArt;
     private TvEditorLayout layout;
     private Font font;
     private final GuiText.Fitted[] names = new GuiText.Fitted[TYPES.size()];
     private String defaultText = "";
     private @Nullable TvPieceType pressed;
+    /** A arte da Imagem apertada, ou {@code null} (outra peça, ou nenhuma arte escolhida). */
+    private @Nullable TvPixelArt pressedArt;
+    /** O tamanho da peça apertada, em px de desenho. */
+    private int pressedW;
+    private int pressedH;
     private double pressX;
     private double pressY;
     private boolean dragging;
 
-    TvPalettePanel(TvEditorDoc doc, TvEditorCanvas canvas) {
+    TvPalettePanel(TvEditorDoc doc, TvEditorCanvas canvas, TvEditorActions actions, Supplier<TvPixelArt> chosenArt) {
         this.doc = doc;
         this.canvas = canvas;
+        this.actions = actions;
+        this.chosenArt = chosenArt;
     }
 
     void layout(Font font, TvEditorLayout layout) {
@@ -59,14 +74,18 @@ final class TvPalettePanel {
             return;
         }
         int[] spot = canvas.imagePoint(mouseX, mouseY);
-        int[] size = TvPieceAccess.defaultSize(pressed);
         float scale = canvas.guiScale();
-        int w = Math.max(4, Math.round(size[0] * scale));
-        int h = Math.max(4, Math.round(size[1] * scale));
+        int w = Math.max(4, Math.round(pressedW * scale));
+        int h = Math.max(4, Math.round(pressedH * scale));
         int color = spot == null ? GuiPaint.DISABLED : GuiPaint.ACCENT;
         g.pose().pushPose();
         g.pose().translate(0, 0, 400);
-        g.fill(mouseX - w / 2, mouseY - h / 2, mouseX - w / 2 + w, mouseY - h / 2 + h, GuiPaint.alpha(color, 0x50));
+        if (pressedArt != null) {
+            TvArtThumbs.draw(g, pressedArt, mouseX - w / 2, mouseY - h / 2, w, h);
+        } else {
+            g.fill(mouseX - w / 2, mouseY - h / 2, mouseX - w / 2 + w, mouseY - h / 2 + h,
+                    GuiPaint.alpha(color, 0x50));
+        }
         GuiPaint.outline(g, mouseX - w / 2, mouseY - h / 2, w, h, color);
         g.pose().popPose();
     }
@@ -75,7 +94,7 @@ final class TvPalettePanel {
     boolean mouseClicked(double mouseX, double mouseY) {
         for (int i = 0; i < TYPES.size(); i++) {
             if (layout.pieceButtons()[i].contains(mouseX, mouseY)) {
-                pressed = TYPES.get(i);
+                press(TYPES.get(i));
                 pressX = mouseX;
                 pressY = mouseY;
                 dragging = false;
@@ -83,6 +102,22 @@ final class TvPalettePanel {
             }
         }
         return false;
+    }
+
+    /** Guarda o tipo, a arte (só da Imagem) e o tamanho da peça que vai nascer. */
+    private void press(TvPieceType type) {
+        pressed = type;
+        pressedArt = type == TvPieceType.IMAGE ? chosenArt.get() : null;
+        int[] size = TvPieceAccess.defaultSize(type);
+        if (pressedArt != null) {
+            int areaW = doc.area().pixelWidth();
+            int areaH = doc.area().pixelHeight();
+            size = TvImageFit.box(pressedArt.width(), pressedArt.height(), TvImageFit.scale(pressedArt.width(),
+                    pressedArt.height(), areaW, areaH), areaW, areaH, 0, 0);
+            size = new int[] {size[2], size[3]};
+        }
+        pressedW = size[0];
+        pressedH = size[1];
     }
 
     boolean mouseDragged(double mouseX, double mouseY) {
@@ -99,14 +134,18 @@ final class TvPalettePanel {
         if (type == null) {
             return false;
         }
+        TvPixelArt art = pressedArt;
         pressed = null;
-        if (!dragging) {
+        pressedArt = null;
+        int[] spot = dragging ? canvas.imagePoint(mouseX, mouseY) : null;
+        if (art != null && !dragging) {
+            TvImageOps.insertFree(doc, actions.maxImagePixels(), art);
+        } else if (art != null && spot != null) {
+            TvImageOps.insert(doc, actions.maxImagePixels(), art, spot[0], spot[1]);
+        } else if (!dragging) {
             doc.insert(type, defaultText);
-        } else {
-            int[] spot = canvas.imagePoint(mouseX, mouseY);
-            if (spot != null) {
-                doc.insertAt(type, defaultText, spot[0], spot[1]);
-            }
+        } else if (spot != null) {
+            doc.insertAt(type, defaultText, spot[0], spot[1]);
         }
         dragging = false;
         return true;

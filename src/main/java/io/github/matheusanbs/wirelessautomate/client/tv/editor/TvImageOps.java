@@ -1,6 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client.tv.editor;
 
-import io.github.matheusanbs.wirelessautomate.tv.TvAlign;
+import io.github.matheusanbs.wirelessautomate.tv.TvBackground;
 import io.github.matheusanbs.wirelessautomate.tv.TvLayout;
 import io.github.matheusanbs.wirelessautomate.tv.TvPartStyle;
 import io.github.matheusanbs.wirelessautomate.tv.TvPiece;
@@ -102,27 +102,84 @@ final class TvImageOps {
     }
 
     /**
-     * A arte solta na miniatura vira uma Imagem nova, por cima das outras peças, com a escala inteira que cabe
-     * ({@link TvImageFit}) e o centro em ({@code cx}, {@code cy}); fica escolhida. Acima do teto, nada muda e o aviso
-     * aparece.
+     * A arte solta na miniatura (ou o botão da paleta de Peças arrastado) vira uma Imagem nova, por cima das outras
+     * peças, com a escala inteira que cabe ({@link TvImageFit}) e o centro em ({@code cx}, {@code cy}); fica
+     * escolhida. Acima do teto, nada muda e o aviso aparece.
      */
     static boolean insert(TvEditorDoc doc, int max, TvPixelArt art, int cx, int cy) {
+        TvPiece piece = imagePiece(doc, art, cx, cy);
+        TvLayout now = doc.draft();
+        List<TvPiece> pieces = new ArrayList<>(now.pieces());
+        pieces.add(piece);
+        return commit(doc, max, now, withArt(now, art).withPieces(pieces), TvSelection.of(pieces.size() - 1));
+    }
+
+    /** O clique no botão Imagem da paleta com uma arte escolhida: a Imagem nova no primeiro lugar livre. */
+    static boolean insertFree(TvEditorDoc doc, int max, TvPixelArt art) {
+        TvLayout now = doc.draft();
+        TvEditOps.Edit<TvPiece> edit = TvEditOps.insert(TvPieceAccess.INSTANCE, now.pieces(),
+                imagePiece(doc, art, 0, 0), doc.area().pixelWidth(), doc.area().pixelHeight());
+        return commit(doc, max, now, withArt(now, art).withPieces(edit.pieces()), edit.selection());
+    }
+
+    /** A Imagem da arte na escala do {@link TvImageFit}, alinhada ao meio, com a caixa centrada em ({@code cx}, {@code cy}). */
+    private static TvPiece imagePiece(TvEditorDoc doc, TvPixelArt art, int cx, int cy) {
         int areaW = doc.area().pixelWidth();
         int areaH = doc.area().pixelHeight();
         int scale = TvImageFit.scale(art.width(), art.height(), areaW, areaH);
         int[] box = TvImageFit.box(art.width(), art.height(), scale, areaW, areaH, cx, cy);
         TvPiece piece = TvPieceAccess.create(TvPieceType.IMAGE, "");
-        piece = piece.withBox(box[0], box[1], box[2], box[3]).withStyle(piece.style().withAlign(TvAlign.CENTER)
-                .withPart(piece.style().part().withImage(Optional.of(art.id()), scale, TvPartStyle.VAlign.MIDDLE)));
+        return piece.withBox(box[0], box[1], box[2], box[3]).withStyle(piece.style().withPart(piece.style().part()
+                .withImage(Optional.of(art.id()), scale, TvPartStyle.VAlign.MIDDLE)));
+    }
+
+    /**
+     * A grade de artes da seção Peça: as Imagens escolhidas passam a mostrar {@code art}, copiada para o layout; a
+     * cópia antiga que nada mais usa sai. Uma Imagem que estava sem arte ganha a escala que cabe na caixa dela; as
+     * outras ficam com a escala que tinham. Uma mudança do desfazer; acima do teto, nada muda e o aviso aparece.
+     */
+    static boolean choose(TvEditorDoc doc, int max, TvPixelArt art) {
         TvLayout now = doc.draft();
+        TvSelection selection = doc.selection();
         List<TvPiece> pieces = new ArrayList<>(now.pieces());
-        pieces.add(piece);
-        TvLayout next = withArt(now, art).withPieces(pieces);
+        boolean changed = false;
+        for (int k = 0; k < selection.size(); k++) {
+            int i = selection.get(k);
+            TvPiece piece = i < pieces.size() ? pieces.get(i) : null;
+            if (piece == null || piece.type() != TvPieceType.IMAGE
+                    || piece.style().part().image().filter(art.id()::equals).isPresent()) {
+                continue;
+            }
+            TvPartStyle part = piece.style().part();
+            int scale = part.image().isPresent() ? part.scale()
+                    : TvImageFit.scale(art.width(), art.height(), piece.width(), piece.height());
+            pieces.set(i, piece.withStyle(piece.style().withPart(part.withImage(Optional.of(art.id()), scale,
+                    part.valign()))));
+            changed = true;
+        }
+        return changed && commit(doc, max, now, withArt(now, art).withPieces(pieces).withoutUnusedImages(),
+                selection);
+    }
+
+    /** A grade de artes do fundo em mosaico: troca a arte, mantendo a escala e a opacidade; a cópia antiga que nada mais usa sai. */
+    static boolean chooseMosaic(TvEditorDoc doc, int max, TvPixelArt art) {
+        TvLayout now = doc.draft();
+        TvBackground bg = now.background();
+        if (bg.image().filter(art.id()::equals).isPresent()) {
+            return false;
+        }
+        TvLayout next = withArt(now, art).withBackground(TvBackground.tiled(art.id(), bg.scale(), bg.opacity()))
+                .withoutUnusedImages();
+        return commit(doc, max, now, next, doc.selection());
+    }
+
+    /** Troca o rascunho por {@code next} numa mudança só do desfazer, se cabe no teto; senão avisa. */
+    private static boolean commit(TvEditorDoc doc, int max, TvLayout now, TvLayout next, TvSelection selection) {
         if (!fits(now, next, max)) {
             doc.fail(TvEditorDoc.Failure.IMAGES_FULL);
             return false;
         }
-        doc.replace(next, TvSelection.of(pieces.size() - 1));
+        doc.replace(next, selection);
         return true;
     }
 }

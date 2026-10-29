@@ -7,13 +7,12 @@ import io.github.matheusanbs.wirelessautomate.tv.TvPixelArt;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * O fundo em mosaico na base da Tela (decisão 7 da spec da etapa 4) e o uso do teto de pixels: com "Mosaico" no ‹ ›
- * do Fundo, a Arte (‹ as artes que o layout já guarda e depois as da biblioteca que ele não tem ›; escolher uma da
- * biblioteca a copia para o layout), "Atualizar da biblioteca", a Escala (1× a 8×) e a Opacidade. Toda troca passa
+ * do Fundo, a Arte (na {@link TvArtGrid}: as da biblioteca e as que só a Tela tem; escolher uma a copia para o
+ * layout), "Atualizar da biblioteca", a Escala (1× a 8×) e a Opacidade. Toda troca passa
  * pelo teto {@code tv.maxImagePixels} do {@link TvImageOps}; a linha "n / teto px" mostra o que as artes usadas somam.
  */
 final class TvBaseMosaic {
@@ -30,7 +29,9 @@ final class TvBaseMosaic {
 
     static void build(TvForm form, TvPropsCtx ctx) {
         form.label("base.mosaic.art.title", TvPropsCtx.key("base.mosaic.art"));
-        form.wideCycle("base.mosaic.art", () -> artName(ctx), delta -> stepArt(ctx, delta));
+        form.add(new TvArtGrid(form.font, "base.mosaic.arts", 0, form.y(), ctx.doc(), () -> id(ctx),
+                art -> TvImageOps.chooseMosaic(ctx.doc(), ctx.actions().maxImagePixels(), art)));
+        form.endRow(TvArtGrid.HEIGHT);
         form.add(new TvControls.Button(form.font, "base.mosaic.refresh", 0, form.y(), TvForm.W,
                 TvPropsCtx.key("image.refresh"), () -> TvImageOps.refresh(ctx.doc(), ctx.actions().maxImagePixels(),
                         id(ctx))).enabledWhen(() -> TvImageOps.newer(ctx.doc().draft(), id(ctx)) != null)
@@ -91,32 +92,6 @@ final class TvBaseMosaic {
 
     private static @Nullable UUID id(TvPropsCtx ctx) {
         return background(ctx).image().orElse(null);
-    }
-
-    private static Component artName(TvPropsCtx ctx) {
-        UUID id = id(ctx);
-        TvPixelArt art = id == null ? null : ctx.doc().draft().image(id);
-        return art == null ? Component.literal("—")
-                : TvPropsCtx.key("image.art.line", art.name(), art.width(), art.height());
-    }
-
-    private static void stepArt(TvPropsCtx ctx, int delta) {
-        TvLayout now = ctx.doc().draft();
-        List<TvPixelArt> choices = choices(now);
-        if (choices.isEmpty()) {
-            return;
-        }
-        UUID id = id(ctx);
-        int at = -1;
-        for (int i = 0; i < choices.size(); i++) {
-            if (choices.get(i).id().equals(id)) {
-                at = i;
-            }
-        }
-        TvPixelArt art = choices.get(Math.floorMod(at + delta, choices.size()));
-        TvBackground bg = now.background();
-        TvImageOps.change(ctx.doc(), ctx.actions().maxImagePixels(), layout -> with(layout, art, bg.scale(),
-                bg.opacity()), "background.art");
     }
 
     /** A escala (presa de 1 a 8 pelo {@link TvBackground}) e a opacidade do mosaico. */

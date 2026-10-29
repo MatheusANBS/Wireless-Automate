@@ -30,6 +30,18 @@ public final class TvArtThumbs {
         g.flush();
     }
 
+    /**
+     * A arte na maior escala que cabe num quadrado de {@code side} px (inteira quando ela é menor), centrada nele: a
+     * miniatura da aba Pixel art e da grade de artes.
+     */
+    public static void drawFitted(GuiGraphics g, TvPixelArt art, int x, int y, int side) {
+        int longest = Math.max(art.width(), art.height());
+        float scale = longest <= side ? side / longest : side / (float) longest;
+        int w = Math.max(1, Math.round(art.width() * scale));
+        int h = Math.max(1, Math.round(art.height() * scale));
+        draw(g, art, x + (side - w) / 2, y + (side - h) / 2, w, h);
+    }
+
     /** Na varredura do {@link TvArtTextures}: marca as artes da biblioteca que está no cliente. */
     static void keepArts() {
         List<TvPixelArt> arts = TvLibraryClient.arts();

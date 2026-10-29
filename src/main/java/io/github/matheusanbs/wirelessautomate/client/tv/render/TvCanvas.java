@@ -8,6 +8,7 @@ import io.github.matheusanbs.wirelessautomate.tv.TvBlockEntity;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.EXTTextureFilterAnisotropic;
@@ -47,6 +48,8 @@ final class TvCanvas {
     boolean clocking;
     /** A última vez que foi desenhada, tinha um Ícone que se mexe (redesenha a ~10 Hz). */
     boolean iconing;
+    /** As texturas animadas do último desenho, que o Sodium quer marcadas a cada quadro (vazio sem o Sodium). */
+    TextureAtlasSprite[] sprites = TvPaintIcon.NO_SPRITES;
     /** O último tick do mundo em que o BER a pediu. */
     long lastWanted;
 
@@ -80,6 +83,7 @@ final class TvCanvas {
         float scale = effective / (float) TvArea.PIXELS_PER_BLOCK;
         long gameTime = minecraft.level == null ? 0 : minecraft.level.getGameTime();
         GuiGraphics graphics = TvTargets.begin(minecraft, target, width, height, scale);
+        TvPaintIcon.beginCollect();
         int flags = TvPainter.paint(graphics, minecraft.font, tv.layout(), tv.layout(), area,
                 tv.getBlockPos().asLong(), tv.revision(), decimalSep, groupSep, TvPaintMath.blinkOff(gameTime), scale,
                 height, false);
@@ -87,6 +91,7 @@ final class TvCanvas {
         graphing = (flags & TvPainter.FLAG_GRAPH) != 0;
         clocking = (flags & TvPainter.FLAG_CLOCK) != 0;
         iconing = (flags & TvPainter.FLAG_ICON) != 0;
+        sprites = iconing ? TvPaintIcon.collected() : TvPaintIcon.NO_SPRITES;
         TvTargets.end(graphics);
         mipmaps(target.getColorTextureId());
         revision = tv.revision();
@@ -139,6 +144,7 @@ final class TvCanvas {
         graphing = false;
         clocking = false;
         iconing = false;
+        sprites = TvPaintIcon.NO_SPRITES;
         ppb = 0;
         bytes = 0;
     }

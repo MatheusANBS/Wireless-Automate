@@ -59,6 +59,17 @@ import org.jetbrains.annotations.Nullable;
 public final class NetworkManager {
     /** Teto do sono de origens e destinos, em ticks. */
     static final int MAX_SLEEP_TICKS = 100;
+    /**
+     * Teto do sono de energia, fluido, químico e Source: essas máquinas gastam e geram sem avisar os vizinhos
+     * (um {@code setChanged} por tick seria caro), então só o sono curto as reencontra. Os itens avisam, e ficam
+     * com {@link #MAX_SLEEP_TICKS}.
+     */
+    static final int SCALAR_MAX_SLEEP_TICKS = 20;
+
+    /** O teto do sono das origens e dos destinos de {@code type}. */
+    static int maxSleepTicks(ResourceType type) {
+        return type == ResourceType.ITEM ? MAX_SLEEP_TICKS : SCALAR_MAX_SLEEP_TICKS;
+    }
     private static final ResourceType[] TYPES = ResourceType.values();
     /** Máscara com todos os tipos, para {@link #nodeChanged(RouterBlockEntity, int)}. */
     public static final int ALL_TYPES = (1 << TYPES.length) - 1;

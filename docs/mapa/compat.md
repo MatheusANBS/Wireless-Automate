@@ -1,6 +1,6 @@
 # Integrações opcionais
 
-JEI, Mekanism, FTB Teams e Ars Nouveau. Parte do mapa do código (pacote base `src/main/java/io/github/matheusanbs/wirelessautomate/`). Índice em [CLAUDE.md](../../CLAUDE.md).
+JEI, Mekanism, FTB Teams, Ars Nouveau e Sodium. Parte do mapa do código (pacote base `src/main/java/io/github/matheusanbs/wirelessautomate/`). Índice em [CLAUDE.md](../../CLAUDE.md).
 
 ## `compat/jei/`
 
@@ -18,3 +18,6 @@ Times do FTB Teams (mod opcional, id `ftbteams`; só times de grupo valem, não 
 
 Source do Ars Nouveau (só a API dele, em `ArsSources`: a capability `ars_nouveau:source` e o `ScalarAccess` da Source). O resto do mod passa pela ponte `Sources` (`Sources.LOADED`), sem tipos do Ars. `ArsStorage` dá ao Tanque de Source a capability `ISourceCap` (roteador e Relays) e o provider no `SourceManager` do Ars (Sourcelinks a 5 blocos depositam, máquinas do Ars tiram); a visão `int` é limitada a `Integer.MAX_VALUE`
 
+## `compat/sodium/`
+
+`SodiumSprites`: ponte por reflexão (sem `compileOnly`) para o `SpriteUtil` público do Sodium (0.6.9 ou mais novo). O Sodium só anima a textura marcada como ativa no quadro; a Tela de Sinal desenha o Ícone animado só a cada 2 ticks num framebuffer, então `TvCanvases.onFrame` marca a cada quadro as texturas dos Ícones animados à vista (`TvCanvas.sprites`, juntadas pelo `TvPaintIcon`). `AVAILABLE` é falso sem o Sodium ou sem a API, e nada roda

@@ -31,9 +31,9 @@ final class Port {
     /** Vazão desta porta como origem. */
     final RateLimiter limiter = new RateLimiter();
     /** Origem sem nada para mover. Separado do destino: uma face Ambos pode estar cheia e ter o que dar. */
-    final Backoff sourceBackoff = new Backoff(NetworkManager.MAX_SLEEP_TICKS);
+    final Backoff sourceBackoff;
     /** Destino que recusou. */
-    final Backoff destinationBackoff = new Backoff(NetworkManager.MAX_SLEEP_TICKS);
+    final Backoff destinationBackoff;
     /**
      * As mudanças das portas do nó, em {@code [0]} (o mesmo arranjo em todas as portas dele, {@link NodePorts#flowChanges}):
      * sobe quando um contador desta porta sai do zero e a cada mudança de estado dos dois {@link Backoff}. O amostrador
@@ -152,6 +152,9 @@ final class Port {
         this.face = face;
         this.type = type;
         this.flowChanges = flowChanges;
+        int maxSleep = NetworkManager.maxSleepTicks(type);
+        this.sourceBackoff = new Backoff(maxSleep);
+        this.destinationBackoff = new Backoff(maxSleep);
         sourceBackoff.countChangesIn(flowChanges);
         destinationBackoff.countChangesIn(flowChanges);
     }

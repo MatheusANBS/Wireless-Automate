@@ -67,6 +67,20 @@ public final class TvTimed {
         return editorVersion;
     }
 
+    /**
+     * A cada quadro, com o Sodium e algum Ícone animado à vista: marca as texturas dele como ativas, porque o Sodium só
+     * anima a que foi usada no quadro e o desenho da Tela acontece só a cada {@link #ICON_TICKS} ticks.
+     */
+    static void markIconSprites(long now) {
+        if (ICONING.isEmpty()) {
+            return;
+        }
+        LongIterator it = ICONING.iterator();
+        while (it.hasNext()) {
+            TvCanvases.markSpritesIfSeen(it.nextLong(), now);
+        }
+    }
+
     /** A cada tick do cliente. */
     public static void onClientTick() {
         ClientLevel level = Minecraft.getInstance().level;

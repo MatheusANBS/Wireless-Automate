@@ -184,34 +184,24 @@ public final class NodePanel {
     /** A última aba escolhida (vale para qualquer roteador). */
     private static @Nullable ResourceType lastType;
 
-    /** A última face escolhida de cada roteador (os mais recentes), para reabrir a tela ou o nó na mesma face. */
-    private static final java.util.LinkedHashMap<Spot, Direction> lastFaces =
-            new java.util.LinkedHashMap<>(16, 0.75f, true) {
-                @Override
-                protected boolean removeEldestEntry(java.util.Map.Entry<Spot, Direction> eldest) {
-                    return size() > REMEMBERED_FACES;
-                }
-            };
+    /** A última face escolhida de cada alvo de cada roteador, para reabrir a tela ou o nó na mesma face. */
+    private static final FaceMemory<Spot, Direction> lastFaces = new FaceMemory<>(REMEMBERED_FACES);
 
-    /** Escolha do jogador: lembra a aba e, na presa, a face do roteador. Mostrar um painel sem escolha não passa por aqui. */
+    /** Escolha do jogador: lembra a aba e a face do alvo no roteador. Mostrar um painel sem escolha não passa por aqui. */
     private void rememberChoice() {
         RouterSnapshot s = model.snapshot();
         lastType = model.type();
-        if (s.target().attached()) {
-            lastFaces.put(new Spot(s.dimension(), s.pos()), model.face());
-        }
+        lastFaces.put(new Spot(s.dimension(), s.pos()), s.target(), model.face());
     }
 
-    /** A aba vale para qualquer roteador; a face só na presa do mesmo roteador (nas remotas o quadro é outro). */
+    /** A aba vale para qualquer roteador; a face, no mesmo roteador e alvo (no alcance, a face canônica dele). */
     private void recallChoice(RouterSnapshot snapshot) {
         if (lastType != null && LoadedTypes.LIST.contains(lastType)) {
             model.setType(lastType);
         }
-        if (snapshot.target().attached()) {
-            Direction face = lastFaces.get(new Spot(snapshot.dimension(), snapshot.pos()));
-            if (face != null) {
-                model.setFace(face);
-            }
+        Direction face = lastFaces.get(new Spot(snapshot.dimension(), snapshot.pos()), snapshot.target());
+        if (face != null) {
+            model.setFace(face);
         }
     }
 

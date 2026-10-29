@@ -6,6 +6,7 @@ import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlockEntity;
 import io.github.matheusanbs.wirelessautomate.tv.TvArea;
+import io.github.matheusanbs.wirelessautomate.tv.TvArtSender;
 import io.github.matheusanbs.wirelessautomate.tv.TvBinding;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlockEntity;
 import java.util.ArrayList;
@@ -122,7 +123,10 @@ public class TvMenu extends AbstractContainerMenu {
         this.tv = tv;
     }
 
-    /** Servidor: abre a tela da Tela de Sinal; a lista de redes é montada uma vez, na abertura. */
+    /**
+     * Servidor: abre a tela da Tela de Sinal; a lista de redes é montada uma vez, na abertura, e as artes da Tela vão
+     * antes ({@link TvArtSender#sendOnOpen}) se o jogador ainda não as tem.
+     */
     public static void open(ServerPlayer player, TvBlockEntity tv) {
         List<NetworkChoice> networks = new ArrayList<>();
         for (WaNetwork network : NetworkSavedData.get(player.server).networks()) {
@@ -147,6 +151,8 @@ public class TvMenu extends AbstractContainerMenu {
                 Config.tvMaxLayoutBytes(), Config.tvMaxArts(), Config.tvMaxImagePixels(),
                 first == null ? null : first.network(),
                 first == null ? "" : first.type().key(), networks, links);
+        // As artes vão antes do menu, pela mesma conexão: o editor abre com o layout já inteiro.
+        TvArtSender.sendOnOpen(player, tv);
         player.openMenu(new SimpleMenuProvider((containerId, inventory, p) -> new TvMenu(containerId, data, tv),
                 Component.translatable("container.wirelessautomate.signal_screen")), data::write);
     }

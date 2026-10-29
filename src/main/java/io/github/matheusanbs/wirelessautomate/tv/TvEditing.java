@@ -67,21 +67,27 @@ public final class TvEditing {
     /**
      * Salva o layout do editor: só dono ou operador; peças e ligações dentro dos tetos da config (senão recusa);
      * cada caixa cortada à área; ligação a rede que o jogador não pode usar ou a tipo não carregado sai, a peça
-     * fica. As imagens ({@link TvLayout#prunedImages}): a Imagem sem arte no layout sai, o mosaico sem arte volta ao
-     * fundo do tema, a arte que ninguém usa sai (a inválida o codec já largou ao ler) e, acima de
-     * {@code tv.maxImagePixels} somados, o layout é recusado como grande demais. Avisa na barra de ação.
+     * fica. As imagens: a arte que uma peça ou o fundo aponta e o layout mandado não traz vem da cópia que a Tela já
+     * tem ({@link TvLayout#withMissingImagesFrom}: o editor pode não ter recebido a arte ainda); depois
+     * ({@link TvLayout#prunedImages}) a Imagem sem arte sai, o mosaico sem arte volta ao fundo do tema, a arte que
+     * ninguém usa sai (a inválida o codec já largou ao ler) e, acima de {@code tv.maxImagePixels} somados, o layout é
+     * recusado como grande demais. O {@code tv.maxLayoutBytes} mede o layout como vai ao cliente, sem os pixels
+     * ({@link TvLayoutPayload#clientSize}). Avisa na barra de ação.
      */
     public static LayoutResult applyLayout(ServerPlayer player, TvBlockEntity tv, TvLayout layout) {
         if (!tv.canEdit(player)) {
             player.displayClientMessage(Component.translatable("message.wirelessautomate.tv.layout_denied"), true);
             return LayoutResult.DENIED;
         }
-        if (layout.pieces().size() > Config.tvMaxElements() || layout.bindings().size() > Config.tvMaxBindings()
-                || TvLayoutPayload.encodedSize(layout) > Config.tvMaxLayoutBytes()) {
+        if (layout.pieces().size() > Config.tvMaxElements() || layout.bindings().size() > Config.tvMaxBindings()) {
             player.displayClientMessage(Component.translatable("message.wirelessautomate.tv.layout_too_big"), true);
             return LayoutResult.TOO_BIG;
         }
-        TvLayout resolved = layout.prunedImages();
+        TvLayout resolved = layout.withMissingImagesFrom(tv.layout()).prunedImages();
+        if (TvLayoutPayload.clientSize(resolved) > Config.tvMaxLayoutBytes()) {
+            player.displayClientMessage(Component.translatable("message.wirelessautomate.tv.layout_too_big"), true);
+            return LayoutResult.TOO_BIG;
+        }
         if (resolved.imagePixels() > Config.tvMaxImagePixels()) {
             player.displayClientMessage(Component.translatable("message.wirelessautomate.tv.layout_images_too_big",
                     Config.tvMaxImagePixels()), true);
@@ -162,6 +168,7 @@ public final class TvEditing {
         GATE.forget(player);
         SAVE_GATE.forget(player);
         TvLibraryActions.forget(player);
+        TvArtSender.forget(player);
     }
 
     /** Esquece todas as janelas (parada do servidor). */

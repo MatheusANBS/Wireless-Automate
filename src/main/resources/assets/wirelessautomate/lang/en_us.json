@@ -1345,6 +1345,7 @@
   "message.wirelessautomate.tv.library_exists": "You already have one with that name",
   "message.wirelessautomate.tv.library_invalid": "That name or content is not valid",
   "message.wirelessautomate.tv.library_component_too_big": "That component is too big to save: use fewer pieces",
+  "message.wirelessautomate.tv.library_art_too_big": "No room for this pixel art: your library would be too big to send. Remove arts or components",
   "message.wirelessautomate.tv.library_too_big": "Your library is too big to send: remove something",
   "gui.wirelessautomate.tv.component.network_panel": "Network panel",
   "gui.wirelessautomate.tv.component.number_card": "Number card",

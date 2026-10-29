@@ -8,7 +8,7 @@ Classe `@Mod`: registra os DeferredRegisters e a config, e escuta os eventos de 
 
 ## `GuiTheme.java`, `ClientConfig.java`
 
-O tema das telas (`GuiTheme`: `LIGHT`, `DARK`, `other()`) e a config do cliente (`ClientConfig`, `config/wirelessautomate-client.toml`: seção `gui`, chave `theme`, padrão `LIGHT`; seção `tv`, `pixelsPerBlock` 16, 32 ou 64 e `vramBudgetMb` 400). Os dois ficam no pacote base e não importam nada de `client/`, porque o servidor dedicado carrega a classe da config. A config do servidor é a `Config`
+O tema das telas (`GuiTheme`: `LIGHT`, `DARK`, `other()`) e a config do cliente (`ClientConfig`, `config/wirelessautomate-client.toml`: seção `gui`, chave `theme`, padrão `LIGHT`; seção `tv`, `pixelsPerBlock` 16, 32 ou 64 e `vramBudgetMb` 1024). Os dois ficam no pacote base e não importam nada de `client/`, porque o servidor dedicado carrega a classe da config. A config do servidor é a `Config`
 
 ## `Config.java`
 

@@ -16,7 +16,8 @@ import net.minecraft.network.chat.Component;
  * passaria por "3", que corta a arte. Cada mudança de tamanho é um passo do desfazer.
  */
 final class TvPixelHeader {
-    private static final int NUMBER_W = 40;
+    /** Largo o bastante para "128" entre o ‹ e o ›. */
+    private static final int NUMBER_W = 46;
     private static final int TIMES_W = 9;
     private static final Component TIMES = Component.literal("×");
 
@@ -175,6 +176,11 @@ final class TvPixelHeader {
 
     void focusName() {
         nameField.focus();
+    }
+
+    /** Dá o foco ao campo da largura ({@code width}) ou da altura. */
+    void focusSize(boolean width) {
+        (width ? widthField : heightField).focus();
     }
 
     int[] widthArrow(boolean right) {

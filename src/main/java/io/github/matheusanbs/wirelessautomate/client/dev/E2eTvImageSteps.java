@@ -4,6 +4,7 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.DevEndToEnd.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
+import io.github.matheusanbs.wirelessautomate.client.tv.render.TvArtCache;
 import io.github.matheusanbs.wirelessautomate.client.tv.render.TvCanvases;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.tv.TvAlign;
@@ -37,12 +38,14 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * A pixel art na Tela, montada direto no block entity (o editor de pixel art é da Task 2 da etapa 4): a peça Imagem
- * (em escala inteira alinhada, esticada e cortada pela caixa) e o fundo em mosaico na Tela 4 × 2, fotografados; e a
- * medida da decisão 8 da spec: uma Tela 32 × 32 no céu com o mosaico de uma arte 64 × 64 de pixels sorteados em
- * escala 1 (256 cópias da arte, um quadrilátero só com a textura dela repetida), redesenhada algumas vezes, com o
- * tempo de cada redesenho no {@code result.txt}. No fim, o layout da Tela 4 × 2 volta, a parede e a Tela grande saem
- * e as texturas das artes, sem ninguém que as use, também.
+ * A pixel art na Tela, montada direto no block entity no servidor: a peça Imagem (em escala inteira alinhada,
+ * esticada e cortada pela caixa) e o fundo em mosaico na Tela 4 × 2, fotografados, cada passo esperando a arte chegar
+ * ao cliente pelo pacote de artes (o update tag só a referencia); e a medida da decisão 8 da spec: uma Tela 32 × 32
+ * no céu com o mosaico de uma arte 128 × 128 de pixels sorteados em escala 1 (64 cópias da arte, um quadrilátero só
+ * com a textura dela repetida), redesenhada algumas vezes, com o tempo de cada redesenho no {@code result.txt}.
+ * Depois o jogador vai longe (o chunk da Tela grande sai do cliente), o cliente esquece as artes e, de volta, a arte
+ * chega de novo pelo pacote e a Tela redesenha. No fim, o layout da Tela 4 × 2 volta, a parede e a Tela grande saem e
+ * as texturas das artes, sem ninguém que as use, também.
  */
 final class E2eTvImageSteps {
     private static final int SIZE = 32;
@@ -51,6 +54,8 @@ final class E2eTvImageSteps {
     private static final double CAMERA_DISTANCE = 30;
     private static final double FRONT = 13.0 / 16.0;
     private static final int REPAINTS = 3;
+    /** Longe o bastante para o chunk da Tela grande sair do cliente com qualquer distância de renderização. */
+    private static final int AWAY = 1024;
     private static final float[] LOOK = {0f, 0f};
 
     private static TvLayout original = TvLayout.EMPTY;
@@ -58,6 +63,7 @@ final class E2eTvImageSteps {
     private static Vec3 savedPos = Vec3.ZERO;
     private static final float[] savedLook = new float[2];
     private static final StringBuilder MEASURED = new StringBuilder();
+    private static int receivedBefore;
 
     private E2eTvImageSteps() {
     }
@@ -91,9 +97,10 @@ final class E2eTvImageSteps {
         for (int i = 1; i <= REPAINTS; i++) {
             list.add(repaint(i, noise));
         }
-        list.add(new Step("Imagem: redesenho da Tela 32 × 32 com mosaico 64 × 64 em escala 1", STEP_TIMEOUT_MS,
+        list.add(new Step("Imagem: redesenho da Tela 32 × 32 com mosaico 128 × 128 em escala 1", STEP_TIMEOUT_MS,
                 () -> {
                 }, () -> true, () -> "redesenhos " + MEASURED));
+        reloadSteps(list, playerId, noise);
         list.add(E2eTvSteps.hideGui(playerId, false));
         list.add(new Step("Imagem: parede e Tela grande fora, layout de volta", STEP_TIMEOUT_MS,
                 () -> onServer(server -> {
@@ -115,6 +122,43 @@ final class E2eTvImageSteps {
                 () -> TvCanvases.artTexturesForTests() + " textura(s) de arte"));
     }
 
+    /**
+     * Longe da Tela grande até o chunk dela sair do cliente; o cliente esquece as artes; de volta, a arte chega pelo
+     * pacote (o contador do {@link TvArtCache} sobe), entra no layout e a Tela redesenha com o mosaico.
+     */
+    private static void reloadSteps(List<Step> list, UUID playerId, TvPixelArt noise) {
+        list.add(new Step("Imagem: longe, o chunk da Tela grande sai do cliente", STEP_TIMEOUT_MS,
+                () -> teleport(playerId, eye().add(AWAY, 0, 0)),
+                () -> Minecraft.getInstance().level.getBlockEntity(anchor()) == null, () -> "a Tela grande no cliente"));
+        list.add(new Step("Imagem: o cliente esquece as artes", STEP_TIMEOUT_MS, () -> {
+            TvArtCache.clear();
+            receivedBefore = TvArtCache.receivedForTests;
+        }, () -> TvArtCache.sizeForTests() == 0, () -> TvArtCache.sizeForTests() + " arte(s)"));
+        list.add(new Step("Imagem: de volta, a arte chega pelo pacote e o mosaico aparece", STEP_TIMEOUT_MS, () -> {
+            TvCanvases.paintsForTests = 0;
+            teleport(playerId, eye());
+        }, () -> {
+            E2eRepairerSteps.look(LOOK);
+            return Minecraft.getInstance().level.getBlockEntity(anchor()) instanceof TvBlockEntity big
+                    && big.layout().image(noise.id()) != null && TvArtCache.receivedForTests > receivedBefore
+                    && TvCanvases.paintsForTests >= 1 && stepTicks >= 10;
+        }, () -> "pacotes " + (TvArtCache.receivedForTests - receivedBefore) + ", redesenhos "
+                + TvCanvases.paintsForTests));
+        list.add(E2eTvSteps.view("tela-mosaico-recarregado", playerId, E2eTvImageSteps::eye, E2eTvImageSteps::target));
+    }
+
+    /** Leva o jogador (voando) com os olhos em {@code eye}, olhando para o sul. */
+    private static void teleport(UUID playerId, Vec3 eye) throws Exception {
+        Vec3 feet = eye.subtract(0, E2eRepairerSteps.EYE_HEIGHT, 0);
+        onServer(server -> {
+            ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+            player.getAbilities().flying = true;
+            player.onUpdateAbilities();
+            player.teleportTo(server.overworld(), feet.x, feet.y, feet.z, LOOK[0], LOOK[1]);
+            return null;
+        });
+    }
+
     private static TvBlockEntity entity(BlockPos pos) {
         return (TvBlockEntity) Minecraft.getInstance().level.getBlockEntity(pos);
     }
@@ -134,7 +178,7 @@ final class E2eTvImageSteps {
      * ruído em escala 1 e um Texto por cima, que muda a cada redesenho medido.
      */
     private static Step big(UUID playerId, Supplier<BlockPos> origin, TvPixelArt noise) {
-        return new Step("Imagem: Tela 32 × 32 com o mosaico do ruído 64 × 64", STEP_TIMEOUT_MS, () -> onServer(server -> {
+        return new Step("Imagem: Tela 32 × 32 com o mosaico do ruído 128 × 128", STEP_TIMEOUT_MS, () -> onServer(server -> {
             ServerLevel level = server.overworld();
             base = origin.get().offset(0, LIFT, SOUTH);
             wall(level, Blocks.STONE.defaultBlockState());
@@ -258,18 +302,18 @@ final class E2eTvImageSteps {
         return fromRows(UUID.nameUUIDFromBytes("e2e-tile".getBytes()), "Ladrilho", rows, palette);
     }
 
-    /** A arte 64 × 64 de pixels sorteados de 1 a 15: quase uma faixa por pixel, o pior caso do desenho. */
+    /** A arte 128 × 128 (o maior tamanho) de pixels sorteados de 1 a 15. */
     private static TvPixelArt noise() {
         int[] palette = new int[16];
         for (int i = 1; i < 16; i++) {
             palette[i] = 0xFF000000 | (i * 37 & 0xFF) << 16 | (i * 91 & 0xFF) << 8 | (i * 53 & 0xFF);
         }
-        byte[] pixels = new byte[64 * 64];
-        Random random = new Random(64);
+        byte[] pixels = new byte[128 * 128];
+        Random random = new Random(128);
         for (int i = 0; i < pixels.length; i++) {
             pixels[i] = (byte) (1 + random.nextInt(15));
         }
-        return new TvPixelArt(UUID.nameUUIDFromBytes("e2e-noise".getBytes()), "Ruído", 64, 64, palette, pixels);
+        return new TvPixelArt(UUID.nameUUIDFromBytes("e2e-noise".getBytes()), "Ruído", 128, 128, palette, pixels);
     }
 
     /** Uma arte pelas linhas: {@code .} e espaço são transparentes, os dígitos são o índice da paleta. */

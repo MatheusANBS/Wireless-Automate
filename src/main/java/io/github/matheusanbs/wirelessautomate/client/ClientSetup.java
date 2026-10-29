@@ -16,7 +16,7 @@ import io.github.matheusanbs.wirelessautomate.client.tablet.TabletScreen;
 import io.github.matheusanbs.wirelessautomate.client.tv.TvClientValues;
 import io.github.matheusanbs.wirelessautomate.client.tv.TvScreen;
 import io.github.matheusanbs.wirelessautomate.client.tv.editor.TvLibraryClient;
-import io.github.matheusanbs.wirelessautomate.client.tv.render.TvCanvases;
+import io.github.matheusanbs.wirelessautomate.client.tv.render.TvArtCache;
 import io.github.matheusanbs.wirelessautomate.client.tv.render.TvRenderer;
 import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
@@ -92,7 +92,8 @@ public final class ClientSetup {
                         (stack, level, entity, seed) -> SignalCrystalItem.isCracked(stack) ? 1F : 0F);
             }
             ResonanceCoreBlock.projectionHook = ResonatorProjection::toggle;
-            TvClientHooks.changed = tv -> TvCanvases.markDirty(tv.getBlockPos().asLong());
+            TvClientHooks.changed = TvArtCache::updated;
+            TvClientHooks.arts = TvArtCache::receive;
             TvClientHooks.values = TvClientValues::receive;
             TvClientHooks.library = TvLibraryClient::receive;
             TvClientHooks.storageContents = io.github.matheusanbs.wirelessautomate.client.tv.editor.TvStorageClient::receive;

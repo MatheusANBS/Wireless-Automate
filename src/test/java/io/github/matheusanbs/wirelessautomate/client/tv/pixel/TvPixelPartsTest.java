@@ -189,6 +189,9 @@ class TvPixelPartsTest {
         assertEquals(21, view.panY());
         view.fit(100, 100, 64, 64);
         assertEquals(TvPixelView.MIN_ZOOM, view.zoom(), "nunca abaixo do menor nível");
+        view.fit(210, 160, 128, 128);
+        assertEquals(1, view.zoom(), "a arte de 128 × 128 cabe inteira no quadro da janela mínima");
+        assertTrue(view.panX() >= 0 && view.panY() >= 0, "centrada, sem sair do quadro");
     }
 
     @Test

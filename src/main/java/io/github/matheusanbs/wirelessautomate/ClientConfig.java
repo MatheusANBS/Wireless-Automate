@@ -30,7 +30,7 @@ public final class ClientConfig {
                 .comment("Memória de vídeo máxima das imagens das Telas de Sinal, em MB (64 a 4096).",
                         "Quando as Telas à vista pedem mais que isso, as que aparecem menores na janela perdem",
                         "resolução primeiro.")
-                .defineInRange("vramBudgetMb", 400, 64, 4096);
+                .defineInRange("vramBudgetMb", 1024, 64, 4096);
         builder.pop();
         SPEC = builder.build();
     }

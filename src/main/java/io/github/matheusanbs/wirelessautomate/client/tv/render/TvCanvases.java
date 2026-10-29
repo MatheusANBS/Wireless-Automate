@@ -47,8 +47,8 @@ import org.joml.Matrix4f;
  * reaproveitados, para o tipo de render memorizado por nome não crescer sem limite. Só na thread do cliente.
  */
 public final class TvCanvases {
-    private static final int MAX_PER_FRAME = 4;
-    private static final long FRAME_PIXELS = 4_000_000L;
+    private static final int MAX_PER_FRAME = 8;
+    private static final long FRAME_PIXELS = 8_000_000L;
     private static final int ALLOC_WEIGHT = 2;
     private static final int EVAL_TICKS = 10;
     private static final int SEEN_TICKS = 20;
@@ -252,12 +252,14 @@ public final class TvCanvases {
     }
 
     /**
-     * A cada tick do cliente, com alguma imagem: confere a qualidade e o idioma (mudados, tudo fica sujo e a
+     * A cada tick do cliente (antes, as varreduras das texturas e das artes, {@link TvArtTextures} e
+     * {@link TvArtCache}), com alguma imagem: confere a qualidade e o idioma (mudados, tudo fica sujo e a
      * qualidade nova escolhe a resolução de novo), a cada {@link #EVAL_TICKS} avalia a resolução das Telas à vista
      * e a cada {@link #SWEEP_TICKS} solta as imagens que o BER não pede há {@link #IDLE_TICKS}.
      */
     public static void onClientTick() {
         TvArtTextures.onClientTick();
+        TvArtCache.onClientTick();
         if (CANVASES.isEmpty()) {
             return;
         }

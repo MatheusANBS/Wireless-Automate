@@ -319,7 +319,7 @@ public final class TvPixelArtGameTests {
         int maxThemes = (Integer) Config.TV_MAX_THEMES.getSpec().getRange().getMax();
         List<TvPixelArt> arts = new ArrayList<>();
         for (int i = 0; i < maxArts; i++) {
-            arts.add(art(UUID.randomUUID(), "n".repeat(TvPixelArt.MAX_NAME), 64, 64, i));
+            arts.add(art(UUID.randomUUID(), "n".repeat(TvPixelArt.MAX_NAME), 128, 128, i));
         }
         List<TvTheme> themes = new ArrayList<>();
         for (int i = 0; i < maxThemes; i++) {

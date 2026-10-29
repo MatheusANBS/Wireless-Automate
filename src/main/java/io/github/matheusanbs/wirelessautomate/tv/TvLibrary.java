@@ -18,9 +18,9 @@ import net.minecraft.world.level.saveddata.SavedData;
  * A biblioteca de cada jogador: os componentes, os temas e as pixel arts que ele salvou, pelo UUID. Fica no data
  * storage do overworld e só é lida ao abrir o editor e nas ações; a Tela não depende dela para ser desenhada. Nome
  * repetido substitui um componente ou um tema; a arte é pelo id dela. Os tetos vêm da config
- * ({@code tv.maxComponents}, {@code tv.maxThemes}, {@code tv.maxArts}; cada arte já vem até 64 × 64, uns 2 KB
- * gravada) e os componentes de um jogador
- * somam no máximo {@link #MAX_COMPONENT_BYTES_PER_PLAYER}: o arquivo fica todo na memória e é regravado inteiro a cada
+ * ({@code tv.maxComponents}, {@code tv.maxThemes}, {@code tv.maxArts}; cada arte já vem até 128 × 128, uns 8 KB
+ * gravada, e o {@link TvLibraryActions} recusa a que faria a biblioteca passar do pacote) e os componentes de um
+ * jogador somam no máximo {@link #MAX_COMPONENT_BYTES_PER_PLAYER}: o arquivo fica todo na memória e é regravado inteiro a cada
  * autosave, então sem esse teto dezenas de jogadores com a biblioteca cheia chegariam a dezenas de MB.
  */
 public final class TvLibrary extends SavedData {

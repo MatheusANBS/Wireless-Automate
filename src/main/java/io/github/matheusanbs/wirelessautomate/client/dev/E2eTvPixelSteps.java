@@ -24,7 +24,9 @@ import org.lwjgl.glfw.GLFW;
  * desfazer e refazer, o zoom no ponto do mouse, arrastar a vista com o botão do meio e enquadrar com 0; a foto
  * {@code tela-pixel-editor}; o nome e o Salvar, conferido na biblioteca do cliente e do servidor; e Editar, que abre
  * a arte salva de volta (no escuro, a foto {@code tela-pixel-editor-escuro}), e o Esc sem mudança, que volta ao
- * editor da Tela. O resto da aba, a Imagem e o mosaico ficam no {@link E2eTvArtSteps}.
+ * editor da Tela; e uma arte de 128 × 128 (o maior tamanho) pelos campos do tamanho, enquadrada inteira, com um
+ * retângulo, uma elipse e uma linha de ponta a ponta (a foto {@code tela-pixel-128}), cancelada. O resto da aba, a
+ * Imagem e o mosaico ficam no {@link E2eTvArtSteps}.
  */
 final class E2eTvPixelSteps {
     private static final String NAME = "Logo";
@@ -141,8 +143,51 @@ final class E2eTvPixelSteps {
         list.add(step("Pixel: Esc sem mudança volta ao editor da Tela", () -> press(GLFW.GLFW_KEY_ESCAPE, 0),
                 () -> !pixel().isOpen() && Minecraft.getInstance().screen instanceof TvScreen,
                 () -> "aberto " + pixel().isOpen()));
+        bigSteps(list);
         list.add(step("Pixel: de volta à aba Peças", () -> clickAt(editor().probe().leftTabCenter("PIECES")),
                 () -> editor().probe().leftTab().equals("PIECES"), () -> editor().probe().leftTab()));
+    }
+
+    /** A arte de 128 × 128: Nova, o tamanho pelos campos, enquadrar, desenhar de ponta a ponta, a foto e Cancelar. */
+    private static void bigSteps(List<Step> list) {
+        list.add(step("Pixel 128: Nova", () -> clickAt(pixel().artsButtonCenter("NEW")),
+                () -> pixel().isOpen() && canvas().width() == 16, () -> "aberto " + pixel().isOpen()));
+        list.add(step("Pixel 128: 128 × 128 pelos campos do tamanho", () -> {
+            for (boolean width : new boolean[] {true, false}) {
+                pixel().focusSize(width);
+                for (int i = 0; i < 4; i++) {
+                    press(GLFW.GLFW_KEY_BACKSPACE, 0);
+                }
+                type("128");
+                press(GLFW.GLFW_KEY_ENTER, 0);
+            }
+        }, () -> canvas().width() == 128 && canvas().height() == 128,
+                () -> canvas().width() + " × " + canvas().height()));
+        list.add(step("Pixel 128: 0 enquadra a arte inteira", () -> type("0"),
+                () -> pixel().onBoard(pixel().cellCenter(0, 0)) && pixel().onBoard(pixel().cellCenter(127, 127)),
+                () -> "zoom " + session().view().zoom()));
+        list.add(step("Pixel 128: retângulo, elipse cheia e linha de ponta a ponta", () -> {
+            clickAt(pixel().swatchCenter(5));
+            type("r");
+            dragCells(2, 2, 125, 125);
+            clickAt(pixel().swatchCenter(10));
+            type("oo");
+            dragCells(16, 16, 111, 111);
+            clickAt(pixel().swatchCenter(14));
+            type("l");
+            dragCells(0, 127, 127, 0);
+        }, () -> canvas().get(2, 64) == 5 && canvas().get(125, 64) == 5 && canvas().get(64, 40) == 10
+                && canvas().get(0, 127) == 14 && canvas().get(127, 0) == 14 && canvas().get(1, 1) == 0,
+                () -> "cantos " + canvas().get(2, 64) + " " + canvas().get(64, 40) + " " + canvas().get(0, 127)));
+        list.add(step("Pixel 128: o mouse no meio", () -> {
+            int[] at = pixel().cellCenter(64, 64);
+            moveMouse(at[0], at[1]);
+        }, () -> true, () -> ""));
+        E2eTvSteps.shot(list, "tela-pixel-128");
+        list.add(step("Pixel 128: Cancelar em dois cliques", () -> {
+            clickAt(pixel().buttonCenter("CANCEL"));
+            clickAt(pixel().buttonCenter("CANCEL"));
+        }, () -> !pixel().isOpen(), () -> "aberto " + pixel().isOpen()));
     }
 
     private static void dragCells(int x0, int y0, int x1, int y1) throws StepFailure {

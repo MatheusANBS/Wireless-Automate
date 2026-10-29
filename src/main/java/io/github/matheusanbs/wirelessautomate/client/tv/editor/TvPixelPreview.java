@@ -7,16 +7,18 @@ import net.minecraft.client.gui.GuiGraphics;
 /**
  * A prévia do editor de pixel art (decisão 1h da spec da etapa 4): a arte em 1×, em 2× e repetida 3 × 3, como fica no
  * mosaico, lado a lado na área que sobra na coluna da direita. Cada uma é um quadrilátero da mesma textura do quadro
- * (o mosaico pela repetição da textura). Quando uma não cabe inteira, mostra o meio dela (no mosaico, as emendas
- * continuam à vista); o 3 × 3 vai para baixo das outras se não sobrar largura ao lado. Clicar numa leva a vista do
- * quadro até aquele pixel. As caixas são refeitas só quando o tamanho da arte muda.
+ * (o mosaico pela repetição da textura). Quando uma não cabe inteira, mostra o meio dela; o 3 × 3 vai para baixo das
+ * outras se não sobrar largura ao lado. Se nem assim o 3 × 3 cabe inteiro (uma arte grande, até 128 × 128, ou a
+ * janela pequena), a área se divide em duas: o 1× à esquerda e o 3 × 3 inteiro, reduzido, à direita, sem o 2×, para
+ * as emendas do mosaico continuarem à vista. Clicar numa leva a vista do quadro até aquele pixel. As caixas são
+ * refeitas só quando o tamanho da arte muda.
  */
 final class TvPixelPreview {
     private static final int GAP = 4;
     private static final int MIN_TILE = 16;
     private static final int CHECKER = 4;
-    /** Os três: 1×, 2× e o mosaico. */
-    private static final int[] SCALES = {1, 2, 1};
+    /** Os três: 1×, 2× e o mosaico; a escala do mosaico cai abaixo de 1 quando ele é reduzido para caber. */
+    private final float[] scales = {1, 2, 1};
     private static final int[] TILES = {1, 1, 3};
 
     private final TvPixelTexture texture;
@@ -43,6 +45,8 @@ final class TvPixelPreview {
         int x2 = slots[0].right() + GAP;
         slots[1] = new TvRect(x2, y, Math.max(0, Math.min(2 * aw, area.right() - x2)), Math.min(2 * ah, area.h()));
         int x3 = slots[1].right() + GAP;
+        scales[1] = 2;
+        scales[2] = 1;
         if (area.right() - x3 >= MIN_TILE) {
             slots[2] = new TvRect(x3, y, Math.min(3 * aw, area.right() - x3), Math.min(3 * ah, area.h()));
         } else {
@@ -50,6 +54,20 @@ final class TvPixelPreview {
             int h3 = Math.min(3 * ah, area.bottom() - y3);
             slots[2] = h3 >= MIN_TILE ? new TvRect(x, y3, Math.min(3 * aw, area.w()), h3) : TvRect.NONE;
         }
+        if (slots[2].w() < 3 * aw || slots[2].h() < 3 * ah) {
+            split(aw, ah);
+        }
+    }
+
+    /** O 1× na metade da esquerda e o 3 × 3 inteiro, reduzido, na da direita; o 2× fica de fora. */
+    private void split(int aw, int ah) {
+        int half = (area.w() - GAP) / 2;
+        slots[0] = new TvRect(area.x(), area.y(), Math.min(aw, half), Math.min(ah, area.h()));
+        slots[1] = TvRect.NONE;
+        float scale = Math.min(1f, Math.min(half / (3f * aw), area.h() / (3f * ah)));
+        scales[2] = scale;
+        slots[2] = new TvRect(area.x() + half + GAP, area.y(), Math.max(0, (int) (3 * aw * scale)),
+                Math.max(0, (int) (3 * ah * scale)));
     }
 
     void render(GuiGraphics g, TvPixelCanvas canvas) {
@@ -65,12 +83,12 @@ final class TvPixelPreview {
             }
             GuiPaint.outline(g, r.x() - 1, r.y() - 1, r.w() + 2, r.h() + 2, GuiPaint.BUTTON_BORDER);
             texture.drawChecker(g, r.x(), r.y(), r.right(), r.bottom(), r.x(), r.y(), CHECKER);
-            float fullW = aw * SCALES[i] * TILES[i];
-            float fullH = ah * SCALES[i] * TILES[i];
-            float u0 = (fullW - r.w()) / 2f / (aw * SCALES[i]);
-            float v0 = (fullH - r.h()) / 2f / (ah * SCALES[i]);
-            texture.drawArt(g, r.x(), r.y(), r.right(), r.bottom(), u0, v0, u0 + r.w() / (float) (aw * SCALES[i]),
-                    v0 + r.h() / (float) (ah * SCALES[i]));
+            float fullW = aw * scales[i] * TILES[i];
+            float fullH = ah * scales[i] * TILES[i];
+            float u0 = (fullW - r.w()) / 2f / (aw * scales[i]);
+            float v0 = (fullH - r.h()) / 2f / (ah * scales[i]);
+            texture.drawArt(g, r.x(), r.y(), r.right(), r.bottom(), u0, v0, u0 + r.w() / (aw * scales[i]),
+                    v0 + r.h() / (ah * scales[i]));
         }
     }
 
@@ -80,13 +98,13 @@ final class TvPixelPreview {
         int ah = canvas.height();
         for (int i = 0; i < slots.length; i++) {
             TvRect r = slots[i];
-            if (r == null || !r.contains(mouseX, mouseY)) {
+            if (r == null || r.w() <= 0 || !r.contains(mouseX, mouseY)) {
                 continue;
             }
-            double fullW = aw * SCALES[i] * TILES[i];
-            double fullH = ah * SCALES[i] * TILES[i];
-            double px = ((fullW - r.w()) / 2 + mouseX - r.x()) / SCALES[i];
-            double py = ((fullH - r.h()) / 2 + mouseY - r.y()) / SCALES[i];
+            double fullW = aw * scales[i] * TILES[i];
+            double fullH = ah * scales[i] * TILES[i];
+            double px = ((fullW - r.w()) / 2 + mouseX - r.x()) / scales[i];
+            double py = ((fullH - r.h()) / 2 + mouseY - r.y()) / scales[i];
             return new int[] {Math.floorMod((int) Math.floor(px), aw), Math.floorMod((int) Math.floor(py), ah)};
         }
         return null;

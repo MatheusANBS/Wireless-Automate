@@ -276,11 +276,12 @@ public final class Config {
                 .comment("Quantas ligações distintas (rede e tipo) uma Tela de Sinal lê.")
                 .defineInRange("maxBindings", 64, 1, 256);
         TV_MAX_LAYOUT_BYTES = builder
-                .comment("Tamanho máximo, em bytes de NBT, do layout de uma Tela de Sinal. O layout vai inteiro no pacote do "
-                        + "chunk de quem chega perto, e o cliente descarta um chunk que passa de 8 MiB e desconecta o "
-                        + "jogador: sem este teto, umas 130 Telas com o layout do tamanho máximo do pacote de salvar (64 KB) "
-                        + "num chunk só derrubariam quem o carregasse. O padrão de 16 KB deixa folga para centenas de Telas "
-                        + "por chunk; o máximo é 24 KB.")
+                .comment("Tamanho máximo, em bytes de NBT, do layout de uma Tela de Sinal como vai ao cliente: sem os pixels "
+                        + "das pixel arts, que seguem num pacote próprio só a quem está perto (cada arte vai só como "
+                        + "referência). Esse layout vai no pacote do chunk de quem chega perto, e o cliente descarta um "
+                        + "chunk que passa de 8 MiB e desconecta o jogador: sem este teto, umas 130 Telas com o layout do "
+                        + "tamanho do pacote de salvar num chunk só derrubariam quem o carregasse. O padrão de 16 KB deixa "
+                        + "folga para centenas de Telas por chunk; o máximo é 24 KB.")
                 .defineInRange("maxLayoutBytes", 16 * 1024, 1024, 24 * 1024);
         TV_VIEW_DISTANCE = builder
                 .comment("Distância, em blocos, até onde a Tela de Sinal é desenhada e recebe números novos.")
@@ -297,14 +298,15 @@ public final class Config {
                         + "Vinculador, em qualquer distância e dimensão.")
                 .defineInRange("maxLinks", 32, 1, 256);
         TV_MAX_ARTS = builder
-                .comment("Quantas pixel arts cada jogador guarda na biblioteca do editor da Tela de Sinal (cada uma até 64 × 64 "
-                        + "pixels, uns 2 KB). O máximo é 64 para a biblioteca caber no pacote de até 900 KB.")
+                .comment("Quantas pixel arts cada jogador guarda na biblioteca do editor da Tela de Sinal (cada uma até 128 × 128 "
+                        + "pixels, uns 8 KB). O máximo é 64 porque a biblioteca inteira vai num só pacote de até 900 KB; "
+                        + "salvar uma arte que o passaria é recusado.")
                 .defineInRange("maxArts", 32, 1, 64);
         TV_MAX_IMAGE_PIXELS = builder
                 .comment("Quantos pixels as imagens de uma Tela de Sinal somam (as artes distintas da peça Imagem e do fundo em "
-                        + "mosaico). Cada pixel ocupa meio byte no layout, que também respeita o maxLayoutBytes: o padrão, "
-                        + "16384, são quatro artes de 64 × 64 em 8 KB.")
-                .defineInRange("maxImagePixels", 16_384, 64, 65_536);
+                        + "mosaico). Cada pixel ocupa meio byte no layout salvo e no pacote de artes, que vai só a quem "
+                        + "está perto e não pesa no maxLayoutBytes: o padrão, 131072, são oito artes de 128 × 128 em 64 KB.")
+                .defineInRange("maxImagePixels", 131_072, 64, 262_144);
         builder.pop();
 
         builder.push("guide");

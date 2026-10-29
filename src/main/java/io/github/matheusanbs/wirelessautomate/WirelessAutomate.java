@@ -75,6 +75,8 @@ public final class WirelessAutomate {
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onRegisterCommands);
         // Carga de chunk: acorda as máquinas remotas vinculadas nele e tira do índice de nós os roteadores que sumiram.
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onChunkLoad);
+        // Chunk mandado a um jogador: as artes das Telas dele vão de novo (o cliente montou a Tela do zero).
+        NeoForge.EVENT_BUS.addListener(io.github.matheusanbs.wirelessautomate.tv.TvArtSender::onChunkSent);
         // Fim de toda recarga (botão do editor ou /reload): zera as pendências do editor de receitas.
         NeoForge.EVENT_BUS.addListener(RecipeEditor::onDatapackSync);
         // Subida do servidor: avisa no log os overrides do editor de receitas sem padrão editável.

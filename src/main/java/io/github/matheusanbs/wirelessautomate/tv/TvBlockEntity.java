@@ -27,13 +27,24 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Os dados de uma Tela de Sinal: dono, área e layout. Não faz tick. O update tag sai só quando a área ou o layout
- * mudam e não leva o dono.
+ * mudam e não leva o dono nem os pixels das artes: no lugar delas vão as referências ({@link TvArtRef}), e os pixels
+ * seguem à parte pelo {@link TvArtSender} só a quem está perto. O NBT do disco guarda o layout inteiro.
  */
 public class TvBlockEntity extends BlockEntity {
     private @Nullable UUID owner;
     private TvArea area = TvArea.SINGLE;
     private TvLayout layout = TvLayout.EMPTY;
     private int revision;
+    /**
+     * As referências das artes do layout: no servidor, calculadas na primeira vez que alguém as pede depois de o
+     * layout mudar ({@code null} até lá); no cliente, as que o update tag trouxe.
+     */
+    private @Nullable List<TvArtRef> artRefs;
+    private long artKey;
+    /** Só no cliente: sobe a cada vez que as artes chegam e entram no layout ({@link #resolveArts}). */
+    private int artsVersion;
+    /** Só no servidor, criado quando a Tela tem arte e alguém perto: o que cada jogador já recebeu. */
+    private TvArtSender.@Nullable Feed artFeed;
     /** Os armazenamentos do mod ligados pelo Vinculador (qualquer dimensão), na ordem em que foram ligados. */
     private static final int HARD_LINKS = 256;
     private final List<GlobalPos> links = new ArrayList<>();
@@ -69,6 +80,51 @@ public class TvBlockEntity extends BlockEntity {
     /** Sobe a cada mudança de área ou de layout; o cliente a usa para saber se a imagem está velha. */
     public int revision() {
         return revision;
+    }
+
+    /**
+     * As referências das artes do layout (vazia sem artes): no servidor, calculadas do layout na primeira vez depois
+     * de ele mudar (o resumo de cada arte); no cliente, as do update tag, que continuam valendo enquanto as artes
+     * não chegam.
+     */
+    public List<TvArtRef> artRefs() {
+        if (artRefs == null) {
+            setArtRefs(TvArtRef.of(layout));
+        }
+        return artRefs;
+    }
+
+    /** A chave do conteúdo das artes ({@link TvArtRef#key}): 0 sem artes. */
+    public long artKey() {
+        artRefs();
+        return artKey;
+    }
+
+    private void setArtRefs(List<TvArtRef> refs) {
+        artRefs = refs;
+        artKey = TvArtRef.key(refs);
+    }
+
+    /**
+     * Só no cliente: as artes das referências que já chegaram entram no layout (as que faltam, a Imagem e o mosaico
+     * não desenham até chegarem). Não muda a revisão: quem desenha marca a Tela suja.
+     */
+    public void resolveArts(List<TvPixelArt> arts) {
+        layout = layout.withImages(arts);
+        artsVersion++;
+    }
+
+    /** Só no cliente: quantas vezes as artes entraram no layout; o editor relê a Tela quando muda. */
+    public int artsVersion() {
+        return artsVersion;
+    }
+
+    TvArtSender.@Nullable Feed artFeed() {
+        return artFeed;
+    }
+
+    void setArtFeed(TvArtSender.@Nullable Feed feed) {
+        artFeed = feed;
     }
 
     /** Os armazenamentos ligados; só leitura. */
@@ -155,6 +211,7 @@ public class TvBlockEntity extends BlockEntity {
 
     private void changed() {
         revision++;
+        artRefs = null;
         setChanged();
         if (level != null) {
             BlockState state = getBlockState();
@@ -206,13 +263,18 @@ public class TvBlockEntity extends BlockEntity {
         super.onChunkUnloaded();
     }
 
-    private void writeShared(CompoundTag tag) {
+    /** A parte que vai ao disco e ao cliente; ao cliente ({@code client}), o layout sem os pixels das artes. */
+    private void writeShared(CompoundTag tag, boolean client) {
         tag.putInt("width", area.width());
         tag.putInt("height", area.height());
         tag.putInt("anchor_col", area.anchorCol());
         tag.putInt("anchor_row", area.anchorRow());
         tag.putInt("revision", revision);
-        TvLayout.CODEC.encodeStart(NbtOps.INSTANCE, layout).result().ifPresent(value -> tag.put("layout", value));
+        if (client) {
+            tag.put("layout", TvArtRef.clientTag(layout, artRefs()));
+        } else {
+            TvLayout.CODEC.encodeStart(NbtOps.INSTANCE, layout).result().ifPresent(value -> tag.put("layout", value));
+        }
         if (!links.isEmpty()) {
             ListTag list = new ListTag();
             for (GlobalPos link : links) {
@@ -244,6 +306,12 @@ public class TvBlockEntity extends BlockEntity {
             }
         }
         layout = loaded;
+        List<TvArtRef> refs = TvArtRef.read(stored);
+        if (refs != null) {
+            setArtRefs(refs);
+        } else {
+            artRefs = null;
+        }
         links.clear();
         if (tag.get("links") instanceof ListTag list) {
             for (int i = 0; i < list.size() && links.size() < HARD_LINKS; i++) {
@@ -256,7 +324,7 @@ public class TvBlockEntity extends BlockEntity {
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
-        writeShared(tag);
+        writeShared(tag, false);
         if (owner != null) {
             tag.putUUID("owner", owner);
         }
@@ -272,7 +340,7 @@ public class TvBlockEntity extends BlockEntity {
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         CompoundTag tag = new CompoundTag();
-        writeShared(tag);
+        writeShared(tag, true);
         return tag;
     }
 

@@ -1,14 +1,19 @@
 package io.github.matheusanbs.wirelessautomate.tv;
 
+import java.nio.ByteBuffer;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+
 /**
  * As contas puras da pixel art da Tela de Sinal (sem classes do jogo, com JUnit): os tamanhos aceitos, a validação
  * da paleta e dos índices e o empacotamento dos pixels em meio byte cada. Na memória a arte tem um índice da paleta
  * por pixel (um {@code byte} de 0 a 15); gravada, dois pixels por byte: o pixel par no meio byte de baixo e o ímpar
- * no de cima, e com um número ímpar de pixels o último meio byte fica 0.
+ * no de cima, e com um número ímpar de pixels o último meio byte fica 0. O {@link #hash} é o resumo do conteúdo que
+ * o update tag da Tela leva no lugar dos pixels.
  */
 public final class TvPixels {
     public static final int MIN_SIDE = 8;
-    public static final int MAX_SIDE = 64;
+    public static final int MAX_SIDE = 128;
     public static final int COLORS = 16;
     /** O índice transparente: a cor 0 da paleta nunca pinta. */
     public static final int TRANSPARENT = 0;
@@ -47,6 +52,29 @@ public final class TvPixels {
             indices[i] = (byte) ((i & 1) == 0 ? b & 0x0F : b >> 4 & 0x0F);
         }
         return indices;
+    }
+
+    /**
+     * O resumo de 64 bits do conteúdo de uma arte (largura, altura, paleta e o índice de cada pixel; nem o id nem o
+     * nome): os 8 primeiros bytes do SHA-256. É a chave das artes no cliente, então uma arte igual em várias Telas é
+     * uma só; o SHA-256 (e não um hash rápido) para ninguém montar de propósito uma arte com o resumo de outra.
+     * Calculado só quando o layout muda, nunca por tick.
+     */
+    public static long hash(int width, int height, int[] palette, byte[] pixels) {
+        MessageDigest sha;
+        try {
+            sha = MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+        ByteBuffer head = ByteBuffer.allocate(8 + 4 * palette.length);
+        head.putInt(width).putInt(height);
+        for (int color : palette) {
+            head.putInt(color);
+        }
+        sha.update(head.array());
+        sha.update(pixels);
+        return ByteBuffer.wrap(sha.digest()).getLong();
     }
 
     /**

@@ -1,0 +1,42 @@
+package io.github.matheusanbs.wirelessautomate.client.tv.editor;
+
+import io.github.matheusanbs.wirelessautomate.tv.TvCodes;
+import io.github.matheusanbs.wirelessautomate.tv.TvPixelArt;
+import java.util.UUID;
+import net.minecraft.client.Minecraft;
+
+/**
+ * Exportar e importar uma pixel art por código de texto ({@link TvCodes}), na aba Pixel art: Exportar põe a arte
+ * escolhida na área de transferência, comprimida, e Copiar como texto, na forma legível (as linhas de pixels);
+ * Importar lê a área de transferência (as duas formas) e cria uma arte nova na biblioteca (id novo, o nome do código
+ * cortado em {@link TvPixelArt#MAX_NAME}) pelo {@link TvEditorActions}, dentro do {@code tv.maxArts}. Só no clique;
+ * os avisos vão pelo {@link TvCodeNotice}.
+ */
+final class TvArtCode {
+    private TvArtCode() {
+    }
+
+    static void copy(TvPixelArt art, boolean text) {
+        String code = text ? TvCodes.artText(art, TvLayoutCode.english()) : TvCodes.art(art);
+        if (code == null) {
+            TvCodeNotice.show(TvCodeNotice.Kind.TOO_BIG);
+            return;
+        }
+        Minecraft.getInstance().keyboardHandler.setClipboard(code);
+        TvCodeNotice.show(TvCodeNotice.Kind.COPIED);
+    }
+
+    /** Cria a arte do código na biblioteca, que tem {@code count} artes agora. */
+    static void paste(TvEditorActions actions, int count) {
+        TvCodes.Read<TvPixelArt> result = TvCodes.readArt(Minecraft.getInstance().keyboardHandler.getClipboard());
+        TvPixelArt read = result.value();
+        if (read == null) {
+            TvCodeNotice.failed(result);
+        } else if (count >= actions.maxArts()) {
+            TvCodeNotice.show(TvCodeNotice.Kind.LIBRARY_FULL);
+        } else {
+            actions.saveArt(new TvPixelArt(UUID.randomUUID(), read.name(), read.width(), read.height(),
+                    read.palette(), read.pixels()));
+        }
+    }
+}

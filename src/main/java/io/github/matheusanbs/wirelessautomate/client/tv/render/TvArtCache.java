@@ -14,6 +14,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import net.minecraft.client.Minecraft;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * As pixel arts das Telas no cliente, pelo resumo do conteúdo ({@link TvArtRef#hash}): o update tag da Tela traz só as
@@ -100,14 +101,10 @@ public final class TvArtCache {
         }
         List<TvPixelArt> found = new ArrayList<>(refs.size());
         for (int i = 0; i < refs.size(); i++) {
-            TvArtRef ref = refs.get(i);
-            Entry entry = ARTS.get(ref.hash());
-            if (entry == null || entry.art.width() != ref.width() || entry.art.height() != ref.height()) {
-                continue;
+            TvPixelArt art = find(refs.get(i));
+            if (art != null) {
+                found.add(art);
             }
-            TvPixelArt art = entry.art;
-            found.add(ref.matches(art) ? art
-                    : new TvPixelArt(ref.id(), ref.name(), art.width(), art.height(), art.palette(), art.pixels()));
         }
         boolean all = found.size() == refs.size();
         if (all) {
@@ -120,6 +117,20 @@ public final class TvArtCache {
             TvCanvases.markDirty(tv.getBlockPos().asLong());
         }
         return all;
+    }
+
+    /**
+     * A arte da referência, se ela está aqui: a mesma instância quando o id e o nome batem, senão uma com o id e o
+     * nome da referência; {@code null} se ainda não chegou.
+     */
+    public static @Nullable TvPixelArt find(TvArtRef ref) {
+        Entry entry = ARTS.get(ref.hash());
+        if (entry == null || entry.art.width() != ref.width() || entry.art.height() != ref.height()) {
+            return null;
+        }
+        TvPixelArt art = entry.art;
+        return ref.matches(art) ? art
+                : new TvPixelArt(ref.id(), ref.name(), art.width(), art.height(), art.palette(), art.pixels());
     }
 
     /** A cada tick do cliente: a varredura a cada {@link #SWEEP_TICKS}, só com alguma arte. */

@@ -430,6 +430,11 @@ public final class TvPixelEditor {
         return arts.rowCenter(name);
     }
 
+    /** O centro da linha da arte de id {@code id} na aba Pixel art, ou {@code null}. */
+    public int @Nullable [] artRowCenter(UUID id) {
+        return arts.rowCenter(id);
+    }
+
     public boolean colorOpen() {
         return popups.current() instanceof TvColorPopup;
     }

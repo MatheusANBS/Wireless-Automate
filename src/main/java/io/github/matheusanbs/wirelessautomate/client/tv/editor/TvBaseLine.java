@@ -10,7 +10,8 @@ import net.minecraft.client.gui.GuiGraphics;
  * A barra da base, em cima da miniatura: o tamanho da Tela ("6×3 · 192×96 px") e, à direita, "Não salvo" enquanto o
  * rascunho difere do salvo. No lugar dela, os avisos: o salvar que não valeu (grande demais, sem permissão, rápido
  * demais ou sem resposta), a pixel art que passaria do teto de pixels da Tela e a Tela que mudou no servidor, este com
- * o Recarregar. Os textos são medidos no {@link #layout} e o do tamanho quando a área muda.
+ * o Recarregar; e, por uns segundos, o aviso do copiar e colar código ({@link TvCodeNotice}). Os textos são medidos no
+ * {@link #layout} e o do tamanho quando a área muda.
  */
 final class TvBaseLine {
     private static final int RELOAD_PAD = 10;
@@ -28,6 +29,8 @@ final class TvBaseLine {
     private int unsavedWidth;
     private GuiText.Fitted changed;
     private final GuiText.Fitted[] failures = new GuiText.Fitted[TvEditorDoc.Failure.values().length];
+    private GuiText.Fitted notice;
+    private int noticeVersion = -1;
     private TvEditorPaint.Label reloadLabel;
 
     TvBaseLine(TvEditorDoc doc, int maxKb, int maxImagePixels) {
@@ -57,12 +60,23 @@ final class TvBaseLine {
             Object limit = failure == TvEditorDoc.Failure.TOO_BIG ? maxKb : maxImagePixels;
             failures[failure.ordinal()] = GuiText.fit(font, TvEditorText.key(key, limit), rect.w());
         }
+        noticeVersion = -1;
     }
 
     void render(GuiGraphics g, int mouseX, int mouseY) {
         if (doc.changedOnServer()) {
             GuiText.draw(g, font, changed, rect.x(), rect.y() + 2, GuiPaint.WARN);
             TvEditorPaint.button(g, font, reload, reloadLabel, reload.contains(mouseX, mouseY), true);
+            return;
+        }
+        TvCodeNotice.Kind kind = TvCodeNotice.current();
+        if (kind != null) {
+            if (noticeVersion != TvCodeNotice.version()) {
+                noticeVersion = TvCodeNotice.version();
+                notice = GuiText.fit(font, TvCodeNotice.text(), rect.w());
+            }
+            GuiText.draw(g, font, notice, rect.x(), rect.y() + 2, kind == TvCodeNotice.Kind.COPIED ? GuiPaint.OK
+                    : kind == TvCodeNotice.Kind.BINDINGS_DROPPED ? GuiPaint.WARN : GuiPaint.DANGER);
             return;
         }
         TvEditorDoc.Failure failure = doc.failure();

@@ -31,8 +31,9 @@ import org.lwjgl.glfw.GLFW;
  * até a miniatura, que cria a Imagem 2× escolhida; na aba Estilo, a escala pela roda e pelo clique e o alinhamento em 9
  * posições (a foto {@code tela-pixel-imagem}); sem escolha, o Fundo no mosaico da mesma arte, em 1× e mais apagado (a
  * foto {@code tela-pixel-mosaico}); editar a arte e "Atualizar da biblioteca", que troca a cópia da Tela; e o salvar,
- * conferido no servidor, com a foto da Tela no mundo ({@code tela-pixel-mundo}). No fim, o layout de antes volta e a
- * tela abre de novo na aba Editar, como os passos seguintes esperam.
+ * conferido no servidor; o exportar e importar por código ({@link E2eTvCodeSteps}); e a foto da Tela no mundo
+ * ({@code tela-pixel-mundo}). No fim, o layout de antes volta e a tela abre de novo na aba Editar, como os passos
+ * seguintes esperam.
  */
 final class E2eTvArtSteps {
     private static final String NAME = "Logo";
@@ -54,6 +55,7 @@ final class E2eTvArtSteps {
         imageSteps(list);
         mosaicSteps(list);
         refreshSteps(list, tv);
+        E2eTvCodeSteps.codeSteps(list, tv);
         worldSteps(list, playerId, tv);
     }
 

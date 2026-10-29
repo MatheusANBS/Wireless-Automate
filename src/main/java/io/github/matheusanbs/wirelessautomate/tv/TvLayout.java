@@ -172,6 +172,13 @@ public record TvLayout(List<TvPiece> pieces, TvTheme theme, TvBackground backgro
         return ids;
     }
 
+    /** Os ids das artes que as Imagens e o fundo em mosaico apontam e que o layout não tem. */
+    public Set<UUID> missingImages() {
+        Set<UUID> missing = referencedImages();
+        missing.removeAll(imagesById.keySet());
+        return missing;
+    }
+
     /**
      * O layout com as artes que as peças e o fundo apontam e que ele não tem, tiradas de {@code from} (o layout que a
      * Tela já tem, ao salvar: o editor pode mandar uma Imagem cuja arte ainda não chegou a ele, e a cópia da Tela

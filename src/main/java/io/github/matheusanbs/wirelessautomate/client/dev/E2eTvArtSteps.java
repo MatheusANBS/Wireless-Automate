@@ -29,9 +29,9 @@ import org.lwjgl.glfw.GLFW;
  * A pixel art no editor da Tela, depois do {@link E2eTvPixelSteps} (que deixa a arte "Logo" na biblioteca): na aba
  * Pixel art, Duplicar (a foto {@code tela-pixel-aba}, com as duas) e Remover a cópia em dois cliques; a Imagem pela
  * paleta de Peças e a grade de artes ({@link E2eTvArtGridSteps}); arrastar a arte até a miniatura, que cria a Imagem
- * 2× escolhida; na aba Estilo, a escala pela roda e pelo clique e o alinhamento em 9 posições (a foto
- * {@code tela-pixel-imagem}); sem escolha, o Fundo no mosaico da mesma arte, com a troca da arte pela grade, em 1× e
- * mais apagado (a foto {@code tela-pixel-mosaico}); editar a arte e "Atualizar da biblioteca", que troca a cópia da
+ * 2× escolhida; na aba Estilo, a escala pela lista e o alinhamento em 9 posições (a foto
+ * {@code tela-pixel-imagem}); sem escolha, o Fundo no mosaico da mesma arte, com a troca da arte pela grade, a lista
+ * da escala aberta perto da borda, em 1× e mais apagado (a foto {@code tela-pixel-mosaico}); editar a arte e "Atualizar da biblioteca", que troca a cópia da
  * Tela; e o salvar, conferido no servidor; o exportar e importar por código ({@link E2eTvCodeSteps}); e a foto da Tela no mundo
  * ({@code tela-pixel-mundo}). No fim, o layout de antes volta e a tela abre de novo na aba Editar, como os passos
  * seguintes esperam.
@@ -93,17 +93,15 @@ final class E2eTvArtSteps {
         }, () -> "rascunho " + editor().draft().pieces()));
         list.add(step("Arte: aba Estilo", () -> clickAt(editor().probe().propsTabCenter("STYLE")),
                 () -> editor().probe().propCenter("image.refresh") != null, () -> editor().probe().propsTab()));
-        list.add(step("Arte: a roda na Escala desce para 1×", () -> {
-            int[] at = prop("image.scale");
-            screen().mouseScrolled(at[0], at[1], 0, 1);
-        }, () -> image().style().part().scale() == 1, () -> "escala " + image().style().part().scale()));
+        list.add(step("Arte: a Escala 1× pela lista", () -> E2eTvDropdown.pick("image.scale", 1),
+                () -> image().style().part().scale() == 1, () -> "escala " + image().style().part().scale()));
         list.add(step("Arte: alinhar embaixo à direita", () -> clickAt(editor().probe().propChipCenter("image.align",
                 8)), () -> image().style().align() == TvAlign.RIGHT
                         && image().style().part().valign() == TvPartStyle.VAlign.BOTTOM,
                 () -> "alinhamento " + image().style().align() + " " + image().style().part().valign()));
         list.add(step("Arte: de volta ao meio e a 2×", () -> {
             clickAt(editor().probe().propChipCenter("image.align", 4));
-            clickAt(prop("image.scale"));
+            E2eTvDropdown.pick("image.scale", 2);
         }, () -> image().style().align() == TvAlign.CENTER && image().style().part().scale() == 2
                 && image().style().part().valign() == TvPartStyle.VAlign.MIDDLE,
                 () -> "escala " + image().style().part().scale()));
@@ -111,20 +109,17 @@ final class E2eTvArtSteps {
         dark(list, "tela-pixel-imagem-escuro");
     }
 
-    /** O Fundo em mosaico na base, a escala pela roda e a opacidade. */
+    /** O Fundo em mosaico na base, a lista da escala aberta perto da borda, a escala e a opacidade. */
     private static void mosaicSteps(List<Step> list) {
         list.add(step("Arte: Esc solta a Imagem", () -> press(GLFW.GLFW_KEY_ESCAPE),
                 () -> editor().selection().isEmpty(), () -> "escolha " + editor().selection()));
-        list.add(step("Arte: Fundo no mosaico", () -> {
-            for (int i = 0; i < 4 && background().kind() != TvBackground.Kind.TILED; i++) {
-                clickAt(prop("base.bg.kind"));
-            }
-        }, () -> background().kind() == TvBackground.Kind.TILED
+        list.add(step("Arte: Fundo no mosaico", () -> E2eTvDropdown.pick("base.bg.kind",
+                TvBackground.Kind.TILED.ordinal()), () -> background().kind() == TvBackground.Kind.TILED
                 && background().image().orElseThrow().equals(art(NAME).id()), () -> "fundo " + background()));
         E2eTvArtGridSteps.mosaicSteps(list);
+        E2eTvDropdown.edgeSteps(list, "base.mosaic.scale");
         list.add(step("Arte: mosaico em 1× e a 40%", () -> {
-            int[] scale = prop("base.mosaic.scale");
-            screen().mouseScrolled(scale[0], scale[1], 0, 1);
+            E2eTvDropdown.pick("base.mosaic.scale", 0);
             // o deslizante tem 64 px (a coluna menos o rótulo): 6 px à esquerda do meio é 25 / 62 dele, os 40%
             int[] opacity = prop("base.mosaic.opacity");
             clickAt(new int[] {opacity[0] - 6, opacity[1]});

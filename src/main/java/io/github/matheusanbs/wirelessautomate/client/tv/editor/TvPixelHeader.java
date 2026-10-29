@@ -129,13 +129,6 @@ final class TvPixelHeader {
         return true;
     }
 
-    boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-        boolean used = widthField.mouseScrolled(mouseX, mouseY, delta) || heightField.mouseScrolled(mouseX, mouseY,
-                delta);
-        applyIfIdle();
-        return used;
-    }
-
     /** Um campo com o teclado: a tecla é dele. */
     boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         boolean used = nameField.keyPressed(keyCode, scanCode, modifiers)

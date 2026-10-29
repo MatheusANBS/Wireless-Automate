@@ -52,6 +52,7 @@ final class TvPropsPanel {
     private int builtVersion = -1;
     private int builtLibrary = -1;
     private int builtStorage = -1;
+    private int builtLayoutKind = -1;
     private int builtStructure;
     private @Nullable Tab builtTab;
     private TvSelection builtSelection = TvSelection.EMPTY;
@@ -93,13 +94,15 @@ final class TvPropsPanel {
         boolean valid = !selection.isEmpty() && selection.last() < doc.pieces().size();
         int structure = (valid ? structure(selection) : TvBasePanel.structure(doc)) * 31 + TvSections.version();
         boolean rebuild = stale || tab != builtTab || !selection.equals(builtSelection) || structure != builtStructure;
+        // o layout escolhido na lista da base não muda o rascunho, mas muda o Remover layout
         if (!rebuild && builtVersion == doc.model().version() && builtLibrary == TvLibraryClient.version()
-                && builtStorage == TvStorageClient.version()) {
+                && builtStorage == TvStorageClient.version() && builtLayoutKind == doc.layoutKind()) {
             return;
         }
         builtVersion = doc.model().version();
         builtLibrary = TvLibraryClient.version();
         builtStorage = TvStorageClient.version();
+        builtLayoutKind = doc.layoutKind();
         if (rebuild) {
             build(selection, valid, structure);
         } else {
@@ -124,7 +127,7 @@ final class TvPropsPanel {
         builtTab = tab;
         builtSelection = selection;
         builtStructure = structure;
-        TvForm form = new TvForm(font);
+        TvForm form = new TvForm(font, ctx.popups());
         if (!valid) {
             TvBasePanel.build(form, ctx);
             install(form);
@@ -201,6 +204,8 @@ final class TvPropsPanel {
     }
 
     boolean mouseClicked(double mouseX, double mouseY, int button) {
+        // o soltar de um clique que abriu uma janela solta vai a ela: o controle desse clique não fica preso
+        pressed = null;
         if (!rect.contains(mouseX, mouseY)) {
             blurFocus();
             return false;
@@ -410,6 +415,21 @@ final class TvPropsPanel {
     int @Nullable [] chipCenter(String id, int index) {
         TvControl control = find(id);
         return control == null ? null : control.chipCenter(index);
+    }
+
+    /** O centro do controle de {@code id}, com a coluna rolada para ele ficar o mais embaixo que der. */
+    int @Nullable [] centerLow(String id) {
+        TvControl control = find(id);
+        if (control == null) {
+            return null;
+        }
+        scroll = Math.max(0, Math.min(maxScroll(), control.y + control.h + 2 - viewHeight()));
+        placeControls();
+        return new int[] {control.centerX(), control.centerY()};
+    }
+
+    int scroll() {
+        return scroll;
     }
 
     int @Nullable [] center(String id) {

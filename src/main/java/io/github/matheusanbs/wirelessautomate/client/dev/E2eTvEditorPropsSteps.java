@@ -92,7 +92,7 @@ final class E2eTvEditorPropsSteps {
         E2eTvSteps.shot(list, "tela-editor-previa-itens");
         list.add(step("Prévia: trocar o tipo do Valor pede os números da ligação nova", () -> {
             paints[0] = TvEditorImage.paintsForTests;
-            clickAt(editor().probe().propCenter("data.type"));
+            E2eTvDropdown.pick("data.type", 1);
         }, () -> editor().draft().pieces().get(0).binding().map(b -> b.type() != ResourceType.ITEM).orElse(false)
                 && previewNumber() >= 0 && TvEditorImage.paintsForTests > paints[0],
                 () -> "ligação " + editor().draft().pieces().get(0).binding() + ", número " + previewNumber()));
@@ -134,7 +134,7 @@ final class E2eTvEditorPropsSteps {
             clickAt(at);
         }, () -> editor().draft().pieces().get(0).binding().map(b -> b.network().equals(E2eFlowsSteps.flowsNetworkId()))
                 .orElse(false), () -> "ligação " + editor().draft().pieces().get(0).binding()));
-        list.add(step("Dado: a métrica avança para Sai", () -> clickAt(editor().probe().propCenter("data.metric")),
+        list.add(step("Dado: a métrica Sai pela lista", () -> E2eTvDropdown.pick("data.metric", TvMetric.OUT.ordinal()),
                 () -> editor().draft().pieces().get(0).binding().map(b -> b.metric() == TvMetric.OUT).orElse(false),
                 () -> "ligação " + editor().draft().pieces().get(0).binding()));
         previewSteps(list);
@@ -173,18 +173,18 @@ final class E2eTvEditorPropsSteps {
         E2eTvSteps.shot(list, "tela-editor-cor");
         list.add(step("Cor: Esc fecha o seletor", () -> editor().escape(), () -> !editor().probe().popupOpen(),
                 () -> "seletor " + editor().probe().popupOpen()));
-        list.add(step("Estilo: a fonte pela lista com prévia", () -> {
-            clickAt(editor().probe().propCenter("style.font"));
-            clickAt(editor().probe().fontRowCenter(TvFont.MONO));
-        }, () -> editor().draft().pieces().get(0).style().font() == TvFont.MONO && !editor().probe().popupOpen(),
+        list.add(step("Estilo: a fonte pela lista com prévia", () -> E2eTvDropdown.pick("style.font",
+                TvFont.MONO.ordinal()), () -> editor().draft().pieces().get(0).style().font() == TvFont.MONO
+                        && !editor().probe().popupOpen(),
                 () -> "fonte " + editor().draft().pieces().get(0).style().font()));
-        list.add(step("Estilo: o número arrasta e a roda muda", () -> {
+        E2eTvDropdown.edgeSteps(list, "style.font");
+        list.add(step("Estilo: o número arrasta", () -> {
             int[] at = editor().probe().propCenter("style.size");
             before[0] = editor().draft().pieces().get(0).style().size();
             drag(screen(), at[0], at[1], at[0] + 20, at[1]);
-            screen().mouseScrolled(at[0], at[1], 0, 1);
-        }, () -> editor().draft().pieces().get(0).style().size() == before[0] + 5 + 1,
+        }, () -> editor().draft().pieces().get(0).style().size() == before[0] + 5,
                 () -> "tamanho " + editor().draft().pieces().get(0).style().size() + " de " + before[0]));
+        wheelSteps(list);
         list.add(step("Estilo: recolher a Caixa e abrir a Posição", () -> {
             clickAt(editor().probe().propCenter("section.box"));
             clickAt(editor().probe().propCenter("section.position"));
@@ -202,7 +202,7 @@ final class E2eTvEditorPropsSteps {
         }, () -> editor().draft().pieces().get(0).rules().size() == 1,
                 () -> "regras " + editor().draft().pieces().get(0).rules()));
         list.add(step("Regras: maior que 5", () -> {
-            clickAt(editor().probe().propCenter("rule0.op"));
+            E2eTvDropdown.pick("rule0.op", TvRuleOp.GT.ordinal());
             if (!editor().probe().focusProp("rule0.value")) {
                 throw new StepFailure("o campo do valor não abriu");
             }
@@ -267,6 +267,35 @@ final class E2eTvEditorPropsSteps {
 
     private static TvScreen screen() throws StepFailure {
         return E2eTvSteps.screen();
+    }
+
+    /**
+     * A roda em cima da lista da fonte, do número do tamanho e do deslizante da opacidade só rola a coluna: nenhum
+     * valor muda e nada entra no desfazer.
+     */
+    private static void wheelSteps(List<Step> list) {
+        TvPiece[] piece = new TvPiece[1];
+        int[] undo = new int[1];
+        int[] moved = new int[1];
+        list.add(step("Roda: rola a coluna por cima da lista, do número e do deslizante sem mudar nada", () -> {
+            piece[0] = editor().draft().pieces().get(0);
+            undo[0] = editor().probe().undoSize();
+            moved[0] = 0;
+            String[] ids = {"style.font", "style.size", "style.opacity"};
+            double[] deltas = {-1, -1, 1};
+            for (int i = 0; i < ids.length; i++) {
+                int[] at = editor().probe().propCenter(ids[i]);
+                if (at == null) {
+                    throw new StepFailure("o controle " + ids[i] + " não está à vista");
+                }
+                int scroll = editor().probe().propsScroll();
+                screen().mouseScrolled(at[0], at[1], 0, deltas[i]);
+                moved[0] += editor().probe().propsScroll() != scroll ? 1 : 0;
+            }
+        }, () -> editor().draft().pieces().get(0).equals(piece[0]) && editor().probe().undoSize() == undo[0]
+                && moved[0] == 3 && !editor().probe().popupOpen(),
+                () -> "peça igual " + editor().draft().pieces().get(0).equals(piece[0]) + ", desfazer "
+                        + editor().probe().undoSize() + " de " + undo[0] + ", rolou " + moved[0] + " de 3"));
     }
 
     private static TvEditorTab editor() throws StepFailure {

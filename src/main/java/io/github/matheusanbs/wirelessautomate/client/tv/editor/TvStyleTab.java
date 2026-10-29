@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.client.tv.editor;
 
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.ResourceStyle;
+import io.github.matheusanbs.wirelessautomate.client.tv.render.TvFonts;
 import io.github.matheusanbs.wirelessautomate.menu.TvMenu;
 import io.github.matheusanbs.wirelessautomate.tv.TvAlign;
 import io.github.matheusanbs.wirelessautomate.tv.TvArea;
@@ -27,6 +28,7 @@ import net.minecraft.util.Mth;
 final class TvStyleTab {
     private static final List<TvIcons.Icon> ALIGN_ICONS = List.of(TvIcons.Icon.ALIGN_LEFT,
             TvIcons.Icon.ALIGN_CENTER, TvIcons.Icon.ALIGN_RIGHT);
+    private static final List<TvFont> FONTS = List.of(TvFont.values());
 
     private TvStyleTab() {
     }
@@ -101,10 +103,9 @@ final class TvStyleTab {
     }
 
     private static void text(TvForm form, TvPropsCtx ctx) {
-        int y = form.inline("style.font", TvPropsCtx.key("style.font"), 4);
-        form.add(new TvFontMenu.Field(form.font, "style.font", TvForm.LABEL_W, y, TvForm.W - TvForm.LABEL_W, ctx,
-                () -> ctx.piece().style().font(), f -> style(ctx, "style.font", s -> s.withFont(f))));
-        form.endRow(TvIcons.SIZE);
+        form.dropdown("style.font", TvPropsCtx.key("style.font"), () -> FONTS, TvStyleTab::fontName,
+                () -> ctx.piece().style().font(), f -> style(ctx, "style.font", s -> s.withFont(f)))
+                .detail(f -> TvFonts.text(f, "Aa 0123"));
         form.add(new TvControls.Label(form.font, "style.size.label", 0, form.y() + 2, TvForm.LABEL_W - 2,
                 TvControls.MUTED, () -> TvPropsCtx.key(ctx.piece().style().fit() ? "style.size.max" : "style.size")));
         form.add(new TvNumberField(form.font, "style.size", TvForm.LABEL_W, form.y(), TvForm.W - TvForm.LABEL_W, 1,

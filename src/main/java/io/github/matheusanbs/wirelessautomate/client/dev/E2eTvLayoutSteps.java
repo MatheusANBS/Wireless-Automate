@@ -7,6 +7,7 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
 import io.github.matheusanbs.wirelessautomate.client.ResourceStyle;
 import io.github.matheusanbs.wirelessautomate.client.tv.TvScreen;
+import io.github.matheusanbs.wirelessautomate.client.tv.editor.TvLibraryClient;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.tv.TvArea;
@@ -133,12 +134,12 @@ final class E2eTvLayoutSteps {
      */
     private static void savedWithImageSteps(List<Step> list, UUID playerId, Supplier<BlockPos> tv) {
         list.add(new Step("Layout salvo com Imagem: aparece na lista", STEP_TIMEOUT_MS, () -> {
-        }, () -> E2eTvSteps.screen().editor().probe().savedLayoutCenter(SAVED) != null,
+        }, () -> TvLibraryClient.layouts().stream().anyMatch(c -> c.name().equals(SAVED))
+                && E2eTvSteps.screen().editor().probe().propCenter("base.layout.list") != null,
                 () -> "sem o layout salvo na lista"));
-        list.add(new Step("Layout salvo com Imagem: escolher", STEP_TIMEOUT_MS, () -> {
-            int[] at = E2eTvSteps.screen().editor().probe().savedLayoutCenter(SAVED);
-            click(E2eTvSteps.screen(), at[0], at[1]);
-        }, () -> stepTicks >= 10, () -> "esperando"));
+        list.add(new Step("Layout salvo com Imagem: escolher na lista", STEP_TIMEOUT_MS,
+                () -> E2eTvDropdown.pick("base.layout.list", SAVED),
+                () -> !E2eTvSteps.screen().editor().probe().popupOpen() && stepTicks >= 10, () -> "esperando"));
         list.add(new Step("Layout salvo com Imagem: Aplicar traz a arte", STEP_TIMEOUT_MS, () -> {
             int[] at = E2eTvSteps.screen().editor().probe().propCenter("base.layout.apply");
             click(E2eTvSteps.screen(), at[0], at[1]);

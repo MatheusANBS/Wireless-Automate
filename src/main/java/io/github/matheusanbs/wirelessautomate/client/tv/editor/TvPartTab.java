@@ -12,6 +12,9 @@ import java.util.function.UnaryOperator;
  * {@link TvImageTab}. Os números são inteiros na tela; zero no máximo é "do dado". O Ícone escolhe o item na aba Dado.
  */
 final class TvPartTab {
+    private static final List<TvPartStyle.Orientation> ORIENTATIONS = List.of(TvPartStyle.Orientation.values());
+    private static final List<TvPartStyle.GraphMode> MODES = List.of(TvPartStyle.GraphMode.values());
+
     private TvPartTab() {
     }
 
@@ -36,13 +39,9 @@ final class TvPartTab {
     }
 
     private static void bar(TvForm form, TvPropsCtx ctx) {
-        int y = form.inline("part.direction", TvPropsCtx.key("part.direction"));
-        form.add(new TvControls.Segment(form.font, "part.direction", TvForm.LABEL_W, y, TvForm.W - TvForm.LABEL_W,
-                List.of(TvPropsCtx.key("part.direction.horizontal"), TvPropsCtx.key("part.direction.vertical")),
-                () -> part(ctx).orientation().ordinal(),
-                index -> change(ctx, "part.direction", s -> s.withOrientation(
-                        TvPartStyle.Orientation.values()[index]))));
-        form.endRow(TvControls.ROW - 1);
+        form.dropdown("part.direction", TvPropsCtx.key("part.direction"), () -> ORIENTATIONS,
+                o -> TvPropsCtx.key("part.direction." + o.getSerializedName()), () -> part(ctx).orientation(),
+                o -> change(ctx, "part.direction", s -> s.withOrientation(o)));
         form.toggle("part.reverse", TvPropsCtx.key("part.reverse.bar"), () -> part(ctx).reverse(),
                 on -> change(ctx, "part.reverse", s -> s.withReverse(on)));
         range(form, ctx);
@@ -59,12 +58,9 @@ final class TvPartTab {
     }
 
     private static void graph(TvForm form, TvPropsCtx ctx) {
-        int y = form.inline("part.mode", TvPropsCtx.key("part.mode"));
-        form.add(new TvControls.Segment(form.font, "part.mode", TvForm.LABEL_W, y, TvForm.W - TvForm.LABEL_W,
-                List.of(TvPropsCtx.key("part.mode.line"), TvPropsCtx.key("part.mode.columns")),
-                () -> part(ctx).mode().ordinal(),
-                index -> change(ctx, "part.mode", s -> s.withMode(TvPartStyle.GraphMode.values()[index]))));
-        form.endRow(TvControls.ROW - 1);
+        form.dropdown("part.mode", TvPropsCtx.key("part.mode"), () -> MODES,
+                m -> TvPropsCtx.key("part.mode." + m.getSerializedName()),
+                () -> part(ctx).mode(), m -> change(ctx, "part.mode", s -> s.withMode(m)));
         form.number("part.window", TvPropsCtx.key("part.window"), TvPartStyle.MIN_WINDOW, TvPartStyle.MAX_WINDOW, 1,
                 () -> part(ctx).window(), v -> change(ctx, "part.window", s -> s.withWindow(v)));
         form.toggle("part.area", TvPropsCtx.key("part.area"), () -> part(ctx).area(),

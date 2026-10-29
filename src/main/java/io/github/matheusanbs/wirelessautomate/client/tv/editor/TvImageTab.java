@@ -3,7 +3,9 @@ package io.github.matheusanbs.wirelessautomate.client.tv.editor;
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.tv.TvAlign;
 import io.github.matheusanbs.wirelessautomate.tv.TvPartStyle;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.IntStream;
 import java.util.function.UnaryOperator;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
@@ -13,10 +15,13 @@ import org.jetbrains.annotations.Nullable;
  * (a Imagem sem arte diz "Escolha a arte"; o clique copia a arte para o layout pelo {@link TvImageOps}), "Atualizar
  * da biblioteca" (troca a cópia pela versão de agora da biblioteca do jogador, pelo
  * {@link TvImageOps}; desligado, com o porquê na dica, se a arte saiu da biblioteca ou a cópia já é igual), a escala
- * (‹ Esticar, 1×, 2×... ›), o alinhamento em 9 posições ({@link TvAlignGrid}) e a opacidade. A caixa da peça não muda
+ * (a lista Esticar, 1×, 2×...), o alinhamento em 9 posições ({@link TvAlignGrid}) e a opacidade. A caixa da peça não muda
  * com a escala: a arte fica alinhada dentro dela e cortada pela borda.
  */
 final class TvImageTab {
+    /** As escalas da lista: 0 é Esticar, depois 1× a {@link TvPartStyle#MAX_SCALE}. */
+    private static final List<Integer> SCALES = IntStream.rangeClosed(0, TvPartStyle.MAX_SCALE).boxed().toList();
+
     private TvImageTab() {
     }
 
@@ -37,9 +42,9 @@ final class TvImageTab {
                         id(ctx))).enabledWhen(() -> TvImageOps.newer(ctx.doc().draft(), id(ctx)) != null)
                 .offTip(() -> TvImageOps.whyNoRefresh(id(ctx))));
         form.endRow(TvControls.ROW - 1);
-        form.cycle("image.scale", TvPropsCtx.key("image.scale"), () -> scaleName(part(ctx).scale()),
-                delta -> change(ctx, "image.scale", p -> p.withImage(p.image(),
-                        Math.max(0, Math.min(TvPartStyle.MAX_SCALE, p.scale() + delta)), p.valign())));
+        form.dropdown("image.scale", TvPropsCtx.key("image.scale"), () -> SCALES, TvImageTab::scaleName,
+                () -> part(ctx).scale(), scale -> change(ctx, "image.scale", p -> p.withImage(p.image(), scale,
+                        p.valign())));
         int y = form.inline("image.align", TvPropsCtx.key("image.align"), (TvAlignGrid.H - 8) / 2);
         form.add(new TvAlignGrid("image.align", TvForm.LABEL_W, y, TvPropsCtx.key("image.align.tip"),
                 () -> part(ctx).valign().ordinal() * 3 + ctx.piece().style().align().ordinal(), index -> ctx.change(

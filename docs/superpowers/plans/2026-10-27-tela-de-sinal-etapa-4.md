@@ -58,6 +58,18 @@ Custo: só GUI; o quadro numa textura pequena refeita só quando um pixel muda; 
 - [ ] A aba "Pixel art" na coluna da esquerda do editor da Tela (Nova, Editar, Duplicar, Remover em dois cliques; arrastar para o canvas cria a Imagem); as opções da Imagem na aba Estilo ("Atualizar da biblioteca", escala, alinhamento em 9 posições, opacidade); o Fundo em mosaico na base.
 - [ ] e2e: desenhar uma arte pelo mouse, salvar, pôr como Imagem e como mosaico; capturas `tela-pixel-editor`, `tela-pixel-imagem`, `tela-pixel-mosaico`. Commit "Tela de Sinal: editor de pixel art".
 
+### Task 2c: Exportar e importar por código
+
+Custo: só cliente, só no clique.
+
+- [ ] Codec puro do código (`WA-TELA1:` e `WA-ARTE1:`, deflate e base64, tetos de tamanho) com JUnit; botões "Copiar código" e "Colar código" na lista de layouts e na aba Pixel art; a importação do layout como mudança desfazível; avisos de código inválido. e2e: exportar e importar um layout com imagem e uma arte. Commit "Tela de Sinal: exportar e importar layouts e pixel arts por código".
+
+### Task 2d: Acesso à Tela
+
+Custo: só eventos (as ações da lista); a conferência de acesso no salvar é uma busca num conjunto pequeno.
+
+- [ ] `TvBlockEntity.access` (jogadores e times, chave opcional), `canEdit` com a lista (e o `TeamAccess`), o pacote das ações (só o dono ou operador), tetos da rede; a aba Acesso no desenho da `AccessSection` da central. GameTests (convidado edita, removido não edita, time, tetos, NBT antigo) e o de times na run `gameTestServerTeams`. e2e: a aba Acesso. Commit "Tela de Sinal: acesso à Tela por jogador e por time".
+
 ### Task 3: Guia, docs e verificação
 
 - [ ] Guia (pt e en), `CLAUDE.md`, `docs/especificacao.md`, `docs/progresso.md`.

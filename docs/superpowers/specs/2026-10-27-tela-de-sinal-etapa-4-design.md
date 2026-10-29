@@ -45,3 +45,22 @@
 ## Fora
 
 Importar PNG do computador; animação e camadas; paletas maiores que 16; paletas prontas; contorno automático; seleção à mão livre ou por cor; deslocar a arte com volta; compartilhar artes entre jogadores.
+
+## Acréscimos aprovados em 29/10 (depois do mockup v4)
+
+### Ícones do editor de pixel art
+
+Ícones nossos, em pixel art 16 × 16 no estilo do `tela_icones.py`, com o desenho no nível do Lucide (o dono comparou com o Lucide e quis algo "nosso", mas com o mesmo acabamento): traço de 1 px, retas e 45° puros, cantos chanfrados em 1 px, círculos de pixel arredondados, a forma no quadro de 12 × 12 (2 a 13), simetria conferida pelo script, coral só como acento (ou o miolo das versões cheias). Desenhos em `docs/preview/tela-pixel-icones.png`. "Limpar tudo", "Criar rampa" e "Editar cor" são botões de texto, sem ícone.
+
+### Exportar e importar por código de texto
+
+- **Layout:** "Copiar código" (o layout atual do rascunho, ou um layout salvo na lista) põe na área de transferência do sistema um texto `WA-TELA1:` seguido do NBT do layout comprimido (deflate) em base64 sem quebra de linha; as imagens vão junto, como cópia. "Colar código" lê a área de transferência, decodifica no cliente (até 64 KB de texto, até `TvLayoutPayload.MAX_BYTES` de NBT, com o leitor leniente de sempre) e aplica no rascunho como uma mudança desfazível (`layout.import`); o servidor valida no Salvar, como qualquer layout (ligações a redes que o jogador não acessa saem com o aviso de sempre; tetos de peças, bytes e pixels). Código inválido: aviso no editor, nada muda.
+- **Pixel art:** "Copiar código" na aba Pixel art (a arte escolhida) dá `WA-ARTE1:` + o NBT da arte comprimido; "Colar código" cria uma arte nova na biblioteca (`SAVE_ART` com id novo; o nome vem do código, cortado em 32), dentro do `tv.maxArts`.
+- Sem pacote novo: o código é só cliente; o que vai ao servidor é o salvar e o `SAVE_ART` de sempre. A área de transferência é a do Minecraft (`KeyboardHandler`).
+
+### Acesso à Tela, igual às redes
+
+- A Tela ganha uma lista de acesso: jogadores convidados (UUID) e times do FTB Teams (UUID, só com o FTB instalado, pela ponte `TeamAccess`). Quem está na lista edita a Tela como o dono (tamanho, layout, ligações dentro do que cada um acessa); ver a Tela continua liberado para todos.
+- Só o dono (ou um operador) mexe na lista. Tetos: os mesmos da rede, `maxMembersPerNetwork` e `maxTeamsPerNetwork` (não há config nova).
+- Na tela do bloco, uma terceira aba **Acesso** (ao lado de Tamanho e Editar), só para o dono e operadores, no mesmo desenho da seção de acesso da central da rede (`client/tablet/AccessSection`): campo de nome com sugestões dos jogadores online, a lista de convidados com remover, e a lista de times.
+- Chave nova no `TvBlockEntity`: `access` (opcional; uma Tela antiga lê como lista vazia). Um pacote novo de ações de acesso, só com o menu aberto e com o limite de ações por segundo; `ModPayloads.VERSION` continua `"38"` (a 38 ainda não saiu em versão nenhuma).

@@ -6,7 +6,7 @@
 
 **Objetivo:** o editor de pixel art, as artes na biblioteca do jogador, a peça Imagem e o fundo em mosaico.
 
-**Arquitetura:** a arte é um record compacto (`TvPixelArt`, paleta de 16 e um índice por pixel); a biblioteca do jogador ganha `arts`; o layout guarda cópias das artes que usa (`images`), com teto de pixels; a pintura é por faixas no redesenho; o editor de pixel art é uma tela própria, aberta do editor da Tela, com a lógica das ferramentas pura (JUnit).
+**Arquitetura:** a arte é um record compacto (`TvPixelArt`, paleta de 16 e um índice por pixel, até 128 × 128); a biblioteca do jogador ganha `arts`; o layout guarda cópias das artes que usa (`images`), com teto de pixels, e o update tag leva só as referências delas (os pixels vão à parte, só a quem está perto); cada arte é uma textura própria no cliente, desenhada num quadrilátero no redesenho; o editor de pixel art é um modo do editor da Tela (`TvScreen`), com a lógica das ferramentas pura (JUnit). A spec descreve o que foi feito; as decisões abaixo são as do começo do plano.
 
 **Stack:** Java 21, NeoForge 21.1 (Minecraft 1.21.1), JUnit 5, GameTests, e2e do cliente.
 
@@ -17,7 +17,7 @@
 ## Decisões deste plano (o dono pode trocar antes da tarefa em que entram)
 
 1. **Cópia da arte no layout** (spec, decisão 4), como os temas da etapa 2.
-2. **Pintura por faixas antes de textura própria** (spec, decisão 8): só vira textura se o e2e medir mais de 4 ms no redesenho com mosaico.
+2. **Pintura por faixas antes de textura própria** (spec, decisão 8): só viraria textura se o e2e medisse mais de 4 ms no redesenho com mosaico. Mediu ~21 ms, e a Task 1b trocou pela textura própria.
 
 ## Restrições globais
 
@@ -81,6 +81,12 @@ Custo: só GUI; as miniaturas da grade reaproveitam as texturas das artes.
 Custo: só eventos (as ações da lista); a conferência de acesso no salvar é uma busca num conjunto pequeno.
 
 - [ ] `TvBlockEntity.access` (jogadores e times, chave opcional), `canEdit` com a lista (e o `TeamAccess`), o pacote das ações (só o dono ou operador), tetos da rede; a aba Acesso no desenho da `AccessSection` da central. GameTests (convidado edita, removido não edita, time, tetos, NBT antigo) e o de times na run `gameTestServerTeams`. e2e: a aba Acesso. Commit "Tela de Sinal: acesso à Tela por jogador e por time".
+
+### Task 2f: Dropdowns e a roda que não troca valor
+
+Custo: só GUI.
+
+- [ ] Um controle de dropdown comum (popup com rolagem e teclado), no lugar de todos os ‹ › de escolha de lista dos dois editores; a roda nunca muda valor; e2e e capturas. Commit "Tela de Sinal: dropdowns no lugar dos ‹ › e a roda só rola".
 
 ### Task 4: Imagens e GIFs de verdade
 

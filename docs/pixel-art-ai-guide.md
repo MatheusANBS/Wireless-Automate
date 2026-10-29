@@ -25,9 +25,10 @@ For full fidelity (the Mona Lisa as it is, a photo), use an **image**.
 3. Copy **only the code text** from the answer, from the `WA-ARTE1`, `WA-IMAGEM1` or `WA-TELA1` line to the end. Without the
    backticks (```) and without the text around it.
 4. In the game, open the Screen, **Edit** tab:
-   - **an art:** **Pixel art** tab, **Import** button. The art goes into your library.
-   - **an image or a GIF:** **Images** tab, **Import** button. The image is uploaded to the server and goes into your
-     library. (An image you already have on your computer is easier through the **Upload file** button, same tab.)
+   - **an art:** **Art** tab, **Pixel art** section, **Import** button. The art goes into your library.
+   - **an image or a GIF:** **Art** tab, **Images** section, **Import** button. The image is uploaded to the server and
+     goes into your library. (An image you already have on your computer is easier through the **Upload file** button,
+     same place.)
    - **a layout:** with nothing picked, the **Import** button in the base, under **Apply layout**. The layout goes into
      the draft (**Ctrl+Z** undoes, one import at a time) and only reaches the wall on **Save**.
 5. If the code has a mistake, the editor's bottom bar says which one and where, and nothing changes: in a standalone
@@ -39,7 +40,7 @@ AI starts from what you already have (with your networks already linked).
 
 The first line that isn't blank must be exactly `WA-ARTE1`, `WA-IMAGEM1` or `WA-TELA1` (the headers are the same in
 every language). The text of an art or a layout can be up to 524,288 characters (512 K); an image's, up to the allowed
-file size.
+file size in base64 (11,483,244 characters with the default 8 MB).
 
 ## Pixel art (`WA-ARTE1`)
 

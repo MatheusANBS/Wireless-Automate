@@ -25,9 +25,10 @@ fidelidade total (a Mona Lisa como ela é, uma foto), use a **imagem**.
 3. Copie **só o texto do código** da resposta, da linha `WA-ARTE1`, `WA-IMAGEM1` ou `WA-TELA1` até o fim. Sem as crases (```) e sem
    o texto em volta.
 4. No jogo, abra a Tela, aba **Editar**:
-   - **uma arte:** aba **Pixel art**, botão **Importar**. A arte entra na sua biblioteca.
-   - **uma imagem ou um GIF:** aba **Imagens**, botão **Importar**. A imagem é enviada ao servidor e entra na sua
-     biblioteca. (Uma imagem que você já tem no computador vai mais fácil pelo botão **Enviar arquivo**, na mesma aba.)
+   - **uma arte:** aba **Artes**, divisão **Pixel art**, botão **Importar**. A arte entra na sua biblioteca.
+   - **uma imagem ou um GIF:** aba **Artes**, divisão **Imagens**, botão **Importar**. A imagem é enviada ao servidor
+     e entra na sua biblioteca. (Uma imagem que você já tem no computador vai mais fácil pelo botão **Enviar arquivo**,
+     no mesmo lugar.)
    - **um layout:** com nada escolhido, botão **Importar** na base, embaixo de **Aplicar layout**. O layout entra no
      rascunho (**Ctrl+Z** desfaz, um importar de cada vez) e só vai para a parede no **Salvar**.
 5. Se o código tiver um erro, a barra de baixo do editor diz qual e onde, e nada muda: numa arte solta, a linha do
@@ -37,7 +38,8 @@ fidelidade total (a Mona Lisa como ela é, uma foto), use a **imagem**.
 IA partir do que você já tem (com as suas redes já ligadas).
 
 A primeira linha que não está em branco precisa ser exatamente `WA-ARTE1`, `WA-IMAGEM1` ou `WA-TELA1`. O texto de uma
-arte ou de um layout pode ter até 524.288 caracteres (512 K); o de uma imagem, até o tamanho do arquivo permitido.
+arte ou de um layout pode ter até 524.288 caracteres (512 K); o de uma imagem, até o tamanho do arquivo permitido em
+base64 (11.483.244 caracteres com os 8 MB do padrão).
 
 ## Pixel art (`WA-ARTE1`)
 

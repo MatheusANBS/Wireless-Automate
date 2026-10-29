@@ -351,6 +351,15 @@ DESTAQUES = [
      "Mends up to eight cracked crystals at once, and you can watch the cracks close.",
      VITRINE / "s22c-reparador-convergencia.png", (250, 100, 1010, 740),
      (VITRINE / "s23-reparador-tela.png", (285, 140, 1000, 660), 470)),
+    ("feature-30-screen-wall", "Signal Screen",
+     "Live numbers, pixel art and GIFs on any wall, from 1 x 1 to 32 x 32 blocks.",
+     VITRINE / "s24-tela-parede.png", (140, 190, 1150, 540)),
+    ("feature-27-screen-pixel-art", "Draw pixel art in the game",
+     "Up to 128 x 128 with 16 colors, ramps, mirrors, selections and 100 undo steps.",
+     VITRINE / "s24e-tela-editor.png", (36, 52, 1244, 748)),
+    ("feature-28-screen-animation", "Animate it frame by frame",
+     "Up to 64 frames at 1 to 20 fps, looping or back and forth. Every Screen with it plays in step.",
+     VITRINE / "s24b-tela-arte.png", (300, 200, 980, 580)),
     ("feature-14-toolkit", "The toolkit",
      "Linker, Configurator, Tablet, Filter Card, Upgrade Cards and the guide book.",
      VITRINE / "s14-vitrine.png", (100, 120, 1180, 660)),
@@ -387,6 +396,10 @@ LADO_A_LADO = [
      "The router in the next tier's ring, or an Upgrade Card with an origin: the same cost.",
      [(VITRINE / "cartao-3-jei-direta.png", (395, 45, 845, 620)),
       (VITRINE / "cartao-1-tooltip.png", (514, 385, 1270, 722))]),
+    ("feature-29-screen-images", "Real images and GIFs",
+     "Upload a PNG, JPG or GIF from your computer, up to 1024 px and 8 MB by default.",
+     [(VITRINE / "s24d-tela-gif.png", (420, 190, 860, 610)),
+      (VITRINE / "s24f-tela-imagens.png", (40, 52, 900, 748))]),
 ]
 
 
@@ -414,7 +427,12 @@ def salva(img: Image.Image, nome: str) -> str:
 
 def main() -> None:
     SAIDA.mkdir(parents=True, exist_ok=True)
-    feitos = [salva(tiers(), "feature-4-tiers")]
+    feitos = []
+    # A tabela dos tiers precisa do salão (a vitrine inteira); uma rodada parcial (WA_SHOWCASE_ONLY) não o tem.
+    if (VITRINE / "s15-tiers.png").exists():
+        feitos.append(salva(tiers(), "feature-4-tiers"))
+    else:
+        print("pulando feature-4-tiers: falta run/showcase/s15-tiers.png")
     # O banner precisa dos renders da capa (WA_SCREENSHOT_ONLY=capa) e não muda a cada vitrine.
     if capa.RENDERS.exists():
         feitos.append(salva(banner(), "banner"))

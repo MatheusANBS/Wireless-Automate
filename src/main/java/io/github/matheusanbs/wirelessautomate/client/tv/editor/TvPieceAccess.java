@@ -88,6 +88,7 @@ final class TvPieceAccess implements TvEditOps.Access<TvPiece> {
             case GRAPH -> new TvPiece(type, 0, 0, 48, 20, 0, "", Optional.empty(), TvFormat.DEFAULT,
                     textStyle.withColor(TvColor.theme(TvColor.HIGH)));
             case ARROW -> new TvPiece(type, 0, 0, 8, 10, 0, "", Optional.empty(), TvFormat.DEFAULT, textStyle);
+            case IMAGE -> new TvPiece(type, 0, 0, 32, 32, 0, "", Optional.empty(), TvFormat.DEFAULT, textStyle);
         };
     }
 }

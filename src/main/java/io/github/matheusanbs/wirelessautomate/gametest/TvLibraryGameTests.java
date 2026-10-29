@@ -192,7 +192,8 @@ public final class TvLibraryGameTests {
     @GameTest(template = "empty", timeoutTicks = 100)
     public static void payloadsIdaEVolta(GameTestHelper helper) {
         RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), helper.getLevel().registryAccess());
-        TvLibraryPayload payload = new TvLibraryPayload(7, List.of(component("A", "um")), List.of(theme("T", 0xFF000000)));
+        TvLibraryPayload payload = new TvLibraryPayload(7, List.of(component("A", "um")), List.of(theme("T", 0xFF000000)),
+                List.of());
         TvLibraryPayload.STREAM_CODEC.encode(buf, payload);
         helper.assertValueEqual(TvLibraryPayload.STREAM_CODEC.decode(buf), payload, "biblioteca");
 

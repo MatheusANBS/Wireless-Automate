@@ -5,20 +5,49 @@ import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import net.minecraft.nbt.NbtOps;
+import org.jetbrains.annotations.Nullable;
 
 /**
- * O layout de uma Tela de Sinal: as peças na ordem de desenho, o tema, o fundo, as linhas de varredura e, derivadas
- * das peças, as ligações distintas: primeiro as das peças, depois as das regras, na ordem em que aparecem. As
- * ligações são calculadas uma vez no construtor, não por amostra; o NBT não as leva.
+ * O layout de uma Tela de Sinal: as peças na ordem de desenho, o tema, o fundo, as linhas de varredura, as pixel arts
+ * que a Imagem e o fundo em mosaico usam (cópias, sem repetir o id: a Tela não depende da biblioteca de quem a fez)
+ * e, derivadas, as ligações distintas (primeiro as das peças, depois as das regras, na ordem em que aparecem) e as
+ * artes pelo id. As duas são calculadas uma vez no construtor, não por amostra nem por desenho; o NBT não as leva.
  */
 public record TvLayout(List<TvPiece> pieces, TvTheme theme, TvBackground background, boolean scanlines,
-        List<TvBinding> bindings) {
+        List<TvPixelArt> images, List<TvBinding> bindings, Map<UUID, TvPixelArt> imagesById) {
     public static final int HARD_CAP = 512;
+    /** O teto de artes lidas de um layout; o que vale de verdade é o {@code tv.maxImagePixels} ao salvar. */
+    public static final int MAX_IMAGES = 256;
+
+    /** Lê cada arte à parte: uma que não decodifica (tamanho, paleta ou pixels inválidos) é largada. */
+    private static final Codec<List<TvPixelArt>> LENIENT_IMAGES = Codec.PASSTHROUGH.listOf().xmap(
+            dynamics -> {
+                List<TvPixelArt> read = new ArrayList<>(Math.min(dynamics.size(), MAX_IMAGES));
+                for (Dynamic<?> dynamic : dynamics) {
+                    if (read.size() >= MAX_IMAGES) {
+                        break;
+                    }
+                    TvPixelArt.CODEC.parse(dynamic).result().ifPresent(read::add);
+                }
+                return read;
+            },
+            images -> {
+                List<Dynamic<?>> out = new ArrayList<>(images.size());
+                for (TvPixelArt image : images) {
+                    out.add(new Dynamic<>(NbtOps.INSTANCE, TvPixelArt.CODEC.encodeStart(NbtOps.INSTANCE, image)
+                            .getOrThrow()));
+                }
+                return out;
+            });
 
     /** Lê cada peça à parte: uma que não decodifica é largada, e as que passam de {@link #HARD_CAP} também. */
     private static final Codec<List<TvPiece>> LENIENT_PIECES = Codec.PASSTHROUGH.listOf().xmap(
@@ -48,7 +77,9 @@ public record TvLayout(List<TvPiece> pieces, TvTheme theme, TvBackground backgro
             LENIENT_PIECES.optionalFieldOf("pieces", List.of()).forGetter(TvLayout::pieces),
             TvCodecs.THEME.lenientOptionalFieldOf("theme", TvTheme.DEFAULT).forGetter(TvLayout::theme),
             TvBackground.CODEC.lenientOptionalFieldOf("background", TvBackground.DEFAULT).forGetter(TvLayout::background),
-            Codec.BOOL.lenientOptionalFieldOf("scanlines", false).forGetter(TvLayout::scanlines)).apply(i, TvLayout::of));
+            Codec.BOOL.lenientOptionalFieldOf("scanlines", false).forGetter(TvLayout::scanlines),
+            LENIENT_IMAGES.lenientOptionalFieldOf("images", List.of()).forGetter(TvLayout::images))
+            .apply(i, TvLayout::of));
 
     public static final TvLayout EMPTY = of(List.of());
 
@@ -64,6 +95,12 @@ public record TvLayout(List<TvPiece> pieces, TvTheme theme, TvBackground backgro
             }
         }
         bindings = List.copyOf(distinct);
+        Map<UUID, TvPixelArt> byId = new LinkedHashMap<>();
+        for (TvPixelArt image : images) {
+            byId.putIfAbsent(image.id(), image);
+        }
+        images = List.copyOf(byId.values());
+        imagesById = Map.copyOf(byId);
     }
 
     private static List<Dynamic<?>> dynamics(List<TvPiece> pieces) {
@@ -79,23 +116,84 @@ public record TvLayout(List<TvPiece> pieces, TvTheme theme, TvBackground backgro
     }
 
     public static TvLayout of(List<TvPiece> pieces, TvTheme theme, TvBackground background, boolean scanlines) {
-        return new TvLayout(pieces, theme, background, scanlines, List.of());
+        return of(pieces, theme, background, scanlines, List.of());
+    }
+
+    public static TvLayout of(List<TvPiece> pieces, TvTheme theme, TvBackground background, boolean scanlines,
+            List<TvPixelArt> images) {
+        return new TvLayout(pieces, theme, background, scanlines, images, List.of(), Map.of());
     }
 
     public TvLayout withPieces(List<TvPiece> pieces) {
-        return of(pieces, theme, background, scanlines);
+        return of(pieces, theme, background, scanlines, images);
     }
 
     public TvLayout withTheme(TvTheme theme) {
-        return of(pieces, theme, background, scanlines);
+        return of(pieces, theme, background, scanlines, images);
     }
 
     public TvLayout withBackground(TvBackground background) {
-        return of(pieces, theme, background, scanlines);
+        return of(pieces, theme, background, scanlines, images);
     }
 
     public TvLayout withScanlines(boolean scanlines) {
-        return of(pieces, theme, background, scanlines);
+        return of(pieces, theme, background, scanlines, images);
+    }
+
+    public TvLayout withImages(List<TvPixelArt> images) {
+        return of(pieces, theme, background, scanlines, images);
+    }
+
+    /** A arte do id, ou {@code null} se o layout não a tem. */
+    public @Nullable TvPixelArt image(UUID id) {
+        return imagesById.get(id);
+    }
+
+    /** Os pixels somados das artes do layout (cada id uma vez), o que conta no {@code tv.maxImagePixels}. */
+    public int imagePixels() {
+        int sum = 0;
+        for (TvPixelArt image : images) {
+            sum += image.pixelCount();
+        }
+        return sum;
+    }
+
+    /**
+     * O layout com as imagens resolvidas: a Imagem sem arte ou com uma arte que o layout não tem sai, o fundo em
+     * mosaico sem arte existente volta ao do tema, e as artes que nenhuma peça nem o fundo usam saem. Devolve o
+     * próprio layout quando nada muda.
+     */
+    public TvLayout prunedImages() {
+        Set<UUID> used = new HashSet<>();
+        List<TvPiece> kept = new ArrayList<>(pieces.size());
+        for (TvPiece piece : pieces) {
+            if (piece.type() == TvPieceType.IMAGE) {
+                Optional<UUID> id = piece.style().part().image();
+                if (id.isEmpty() || !imagesById.containsKey(id.get())) {
+                    continue;
+                }
+                used.add(id.get());
+            }
+            kept.add(piece);
+        }
+        TvBackground bg = background;
+        if (bg.kind() == TvBackground.Kind.TILED) {
+            if (bg.image().isPresent() && imagesById.containsKey(bg.image().get())) {
+                used.add(bg.image().get());
+            } else {
+                bg = TvBackground.DEFAULT;
+            }
+        }
+        List<TvPixelArt> usedImages = new ArrayList<>(used.size());
+        for (TvPixelArt image : images) {
+            if (used.contains(image.id())) {
+                usedImages.add(image);
+            }
+        }
+        if (kept.size() == pieces.size() && bg == background && usedImages.size() == images.size()) {
+            return this;
+        }
+        return of(kept, theme, bg, scanlines, usedImages);
     }
 
     /**
@@ -123,6 +221,6 @@ public record TvLayout(List<TvPiece> pieces, TvTheme theme, TvBackground backgro
             int h = Math.min(piece.height(), maxH);
             clamped.add(piece.withBox(TvText.clamp(piece.x(), 0, maxW - w), TvText.clamp(piece.y(), 0, maxH - h), w, h));
         }
-        return of(clamped, theme, background, scanlines);
+        return of(clamped, theme, background, scanlines, images);
     }
 }

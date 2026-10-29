@@ -12,15 +12,19 @@ public enum TvPieceType implements StringRepresentable {
     BAR("bar"),
     GAUGE("gauge"),
     GRAPH("graph"),
-    ARROW("arrow");
+    ARROW("arrow"),
+    IMAGE("image");
 
     public static final Codec<TvPieceType> CODEC = StringRepresentable.fromEnum(TvPieceType::values);
 
     private final String id;
 
-    /** Se a peça lê um dado (a ligação): o Valor e as peças da etapa 3, menos o Ícone, que só mostra um item. */
+    /**
+     * Se a peça lê um dado (a ligação): o Valor e as peças da etapa 3, menos o Ícone, que só mostra um item, e a
+     * Imagem, que só mostra uma pixel art.
+     */
     public boolean bindable() {
-        return this != TEXT && this != SHAPE && this != ICON;
+        return this != TEXT && this != SHAPE && this != ICON && this != IMAGE;
     }
 
     TvPieceType(String id) {

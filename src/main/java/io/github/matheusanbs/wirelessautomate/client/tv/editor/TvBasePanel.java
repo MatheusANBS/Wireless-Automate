@@ -120,12 +120,21 @@ final class TvBasePanel {
         ctx.doc().changeLayout(l -> l.withTheme(chosen), "theme");
     }
 
+    /** Os fundos do ‹ ›: o mosaico fica fora, porque precisa de uma arte (ele nasce da aba Pixel art). */
+    private static final TvBackground.Kind[] CYCLE = {TvBackground.Kind.THEME, TvBackground.Kind.SOLID,
+            TvBackground.Kind.GRADIENT};
+
     private static void stepBackground(TvPropsCtx ctx, int delta) {
-        TvBackground.Kind[] kinds = TvBackground.Kind.values();
-        TvBackground.Kind kind = kinds[Math.floorMod(ctx.doc().draft().background().kind().ordinal() + delta,
-                kinds.length)];
+        TvBackground.Kind current = ctx.doc().draft().background().kind();
+        int at = 0;
+        for (int i = 0; i < CYCLE.length; i++) {
+            if (CYCLE[i] == current) {
+                at = i;
+            }
+        }
+        TvBackground.Kind kind = CYCLE[Math.floorMod(at + delta, CYCLE.length)];
         TvBackground next = switch (kind) {
-            case THEME -> TvBackground.DEFAULT;
+            case THEME, TILED -> TvBackground.DEFAULT;
             case SOLID -> new TvBackground(kind, TvColor.theme(TvColor.CARD), 0);
             case GRADIENT -> new TvBackground(kind, TvColor.theme(TvColor.BG), TvColor.theme(TvColor.CARD));
         };

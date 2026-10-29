@@ -1,0 +1,414 @@
+<title>Tela de Sinal · Pixel art</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: proposta em coluna; o editor de pixel art e o editor da Tela são as peças centrais, no estilo "Porcelana e Sinal" das telas do mod (o mesmo do mockup da etapa 1). */
+:root{
+  --bg:#ECE5D6; --page-fg:#2A2730; --page-muted:#6E675B; --rule:#CFC4AE;
+  --panel:#F2EBDD; --bevel-l:#FFFBF3; --inset:#DDD3BF; --bevel-d:#BDB19A; --hover:#F8F3E8;
+  --fg:#2A2730; --muted:#7A7366; --accent:#F0603E; --accent-deep:#C2442A; --line:#1B1920;
+  --wall:#7d7468; --wall2:#6c645a; --chk1:#d9d2c4; --chk2:#ece6da;
+  --f-pix:"Silkscreen",ui-monospace,monospace;
+  --f-body:"IBM Plex Sans",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#1E1C22; --page-fg:#ECE5D6; --page-muted:#A79F90; --rule:#3A3640;
+  --panel:#26232B; --bevel-l:#312D37; --inset:#1C1A20; --bevel-d:#4A4550; --hover:#3A3640;
+  --fg:#ECE5D6; --muted:#A79F90; --accent:#F26A48; --accent-deep:#C2442A; --line:#0c0b0e;
+  --wall:#4d4740; --wall2:#423d37; --chk1:#3a3640; --chk2:#2c2931; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1E1C22; --page-fg:#ECE5D6; --page-muted:#A79F90; --rule:#3A3640;
+  --panel:#26232B; --bevel-l:#312D37; --inset:#1C1A20; --bevel-d:#4A4550; --hover:#3A3640;
+  --fg:#ECE5D6; --muted:#A79F90; --accent:#F26A48; --accent-deep:#C2442A; --line:#0c0b0e;
+  --wall:#4d4740; --wall2:#423d37; --chk1:#3a3640; --chk2:#2c2931; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--page-fg);font-family:var(--f-body);font-size:15px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:32px 64px}
+.wrap{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:52px}
+h1,h2{font-family:var(--f-pix);font-weight:400;text-wrap:balance;margin:0;letter-spacing:.02em}
+h1{font-size:clamp(26px,5vw,40px);line-height:1.1}
+h2{font-size:21px}
+p{margin:0;max-width:72ch}
+.lede{color:var(--page-muted);font-size:17px}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+section{display:flex;flex-direction:column;gap:14px}
+.note{color:var(--page-muted);font-size:14px}
+.scroll{overflow-x:auto;padding-bottom:6px}
+
+/* telas do mod */
+.gui{background:var(--panel);color:var(--fg);border:2px solid var(--line);border-top:4px solid var(--accent);
+  box-shadow:inset 2px 2px 0 var(--bevel-l),inset -2px -2px 0 var(--bevel-d);padding:10px;font-size:13px}
+.gui-h{display:flex;align-items:center;gap:8px;padding:2px 2px 8px;font-family:var(--f-pix);font-size:12px;flex-wrap:wrap}
+.gui-h .sp{flex:1}
+.pill{font-family:var(--f-mono);font-size:11px;padding:1px 6px;border:1px solid var(--bevel-d);background:var(--hover);color:var(--muted)}
+.sunk{background:var(--inset);box-shadow:inset 2px 2px 0 var(--bevel-d),inset -2px -2px 0 var(--bevel-l);padding:8px}
+.btn{font:500 12px var(--f-body);color:var(--fg);background:var(--hover);border:1px solid var(--line);
+  box-shadow:inset 1px 1px 0 var(--bevel-l),inset -1px -1px 0 var(--bevel-d);padding:3px 9px;cursor:pointer;white-space:nowrap}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.primary{background:var(--accent);color:#fff;box-shadow:inset 1px 1px 0 #ff9a80,inset -1px -1px 0 var(--accent-deep)}
+.btn.warn{color:var(--accent)}
+.btn:focus-visible,.tool:focus-visible,.sw:focus-visible,.art:focus-visible,.ltab:focus-visible,.cyc button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.lbl{font-family:var(--f-mono);font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.field{font:12px var(--f-body);padding:3px 5px;background:var(--bevel-l);color:var(--fg);border:1px solid var(--bevel-d);min-width:0}
+.hint{font-size:11.5px;color:var(--muted);line-height:1.4}
+.chk{display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer}
+.chk input{accent-color:var(--accent)}
+kbd{font:11px var(--f-mono);padding:0 5px;background:var(--panel);color:var(--fg);border:1px solid var(--bevel-d);box-shadow:inset 0 -2px 0 var(--bevel-d)}
+
+/* editor de pixel art */
+.pix{display:grid;grid-template-columns:44px minmax(0,1fr) 210px;gap:10px;min-width:780px}
+.tools{display:flex;flex-direction:column;gap:4px}
+.tool{width:40px;height:34px;border:1px solid var(--line);background:var(--hover);color:var(--fg);cursor:pointer;display:grid;place-items:center;padding:0;position:relative}
+.tool svg{width:18px;height:18px}
+.tool[aria-pressed="true"]{background:var(--accent);color:#fff}
+.tool .k{position:absolute;right:2px;bottom:0;font:9px var(--f-mono);opacity:.7}
+.tsep{height:6px}
+.board{position:relative;height:420px;overflow:auto;display:grid;place-items:center;background:var(--inset);
+  box-shadow:inset 2px 2px 0 var(--bevel-d),inset -2px -2px 0 var(--bevel-l)}
+#art{display:block;image-rendering:pixelated;cursor:crosshair;touch-action:none;
+  background:conic-gradient(var(--chk1) 25%,var(--chk2) 0 50%,var(--chk1) 0 75%,var(--chk2) 0) 0 0/16px 16px}
+.bfoot{display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap;font:11px var(--f-mono);color:var(--muted)}
+.bfoot .sp{flex:1}
+.side{display:flex;flex-direction:column;gap:10px;min-width:0}
+.pal{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.sw{aspect-ratio:1;border:1px solid var(--line);cursor:pointer;padding:0;position:relative}
+.sw[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:1px}
+.sw.t{background:conic-gradient(#aaa 25%,#fff 0 50%,#aaa 0 75%,#fff 0) 0 0/10px 10px}
+.edit{display:flex;gap:6px;align-items:center}
+.edit input[type=color]{width:26px;height:24px;padding:0;border:1px solid var(--line);background:none;cursor:pointer}
+.edit .field{width:84px;font-family:var(--f-mono)}
+.prev{display:flex;gap:10px;align-items:flex-end}
+.prev canvas{image-rendering:pixelated;background:#0f1117;border:1px solid var(--line)}
+.dims{display:flex;gap:6px;align-items:center}
+.dims .field{width:52px;font-family:var(--f-mono)}
+.actions{display:flex;gap:6px;justify-content:flex-end;margin-top:auto}
+
+/* editor da Tela */
+.ed{display:grid;grid-template-columns:200px minmax(0,1fr) 240px;gap:10px;min-width:880px}
+.ltabs{display:flex;gap:2px;align-items:center}
+.ltab{height:28px;min-width:30px;border:1px solid var(--bevel-d);background:var(--hover);color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:6px;padding:0 6px;font:12px var(--f-body)}
+.ltab svg{width:15px;height:15px}
+.ltab[aria-selected="true"]{border-color:var(--line);color:var(--fg);box-shadow:inset 0 -3px 0 var(--accent)}
+.ltab .new{font:9px var(--f-mono);background:var(--accent);color:#fff;padding:0 3px}
+.arts{display:flex;flex-direction:column;gap:2px;margin-top:8px;min-height:200px}
+.art{display:flex;align-items:center;gap:8px;padding:3px 5px;background:var(--panel);border:1px solid transparent;cursor:grab;font:12px var(--f-body);color:var(--fg);text-align:left;width:100%}
+.art:hover{background:var(--hover)}
+.art[aria-selected="true"]{border-color:var(--line);box-shadow:inset 3px 0 0 var(--accent)}
+.art canvas{width:24px;height:24px;image-rendering:pixelated;background:#0f1117;flex:none;border:1px solid var(--bevel-d)}
+.art small{margin-left:auto;font:10px var(--f-mono);color:var(--muted)}
+.lfoot{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:8px}
+.stage{display:flex;flex-direction:column;gap:6px}
+.cv{position:relative;width:100%;aspect-ratio:2/1;background:#0f1117;cursor:default}
+.cv canvas{width:100%;height:100%;image-rendering:pixelated;display:block}
+.cv .sel{position:absolute;outline:2px solid var(--accent);pointer-events:none}
+.cv .hd{position:absolute;width:8px;height:8px;background:var(--accent);transform:translate(-50%,-50%);pointer-events:none}
+.props{border:1px solid var(--line);background:var(--panel);padding:10px;display:flex;flex-direction:column;gap:8px;min-height:330px}
+.ptabs{display:grid;grid-template-columns:1fr 1fr;gap:2px 8px;text-align:center;font-size:12px;color:var(--muted)}
+.ptabs span.on{color:var(--fg);box-shadow:inset 0 -2px 0 var(--accent)}
+.row{display:grid;grid-template-columns:72px minmax(0,1fr);gap:6px;align-items:center;font-size:12px}
+.cyc{display:grid;grid-template-columns:20px minmax(0,1fr) 20px;border:1px solid var(--line);background:var(--bevel-l)}
+.cyc button{border:0;background:none;color:var(--fg);cursor:pointer;font:12px var(--f-mono);padding:2px 0}
+.cyc output{text-align:center;font-size:12px;padding:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.al{display:grid;grid-template-columns:repeat(3,18px);gap:2px}
+.al button{width:18px;height:18px;border:1px solid var(--bevel-d);background:var(--hover);cursor:pointer;padding:0}
+.al button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent-deep)}
+input[type=range]{accent-color:var(--accent);width:100%}
+.sub{font-family:var(--f-pix);font-size:11px;margin-top:4px}
+
+/* parede */
+.world{padding:28px;overflow:hidden;display:grid;place-items:center;
+  background:repeating-linear-gradient(0deg,transparent 0 63px,rgba(0,0,0,.18) 63px 64px),
+   repeating-linear-gradient(90deg,transparent 0 63px,rgba(0,0,0,.18) 63px 64px),linear-gradient(var(--wall),var(--wall2))}
+.tvframe{width:min(100%,512px);aspect-ratio:2/1;border:5px solid #23242a;box-shadow:0 0 0 2px #0a0a0c,0 10px 30px rgba(0,0,0,.45);background:#0f1117}
+.tvframe canvas{width:100%;height:100%;display:block;image-rendering:pixelated}
+
+/* decisões */
+.dec{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px 28px;margin:0;padding:0;list-style:none;counter-reset:d}
+.dec li{counter-increment:d;display:grid;grid-template-columns:28px minmax(0,1fr);gap:4px;font-size:14px;min-width:0}
+.dec li::before{content:counter(d);font-family:var(--f-pix);color:var(--accent);font-size:13px;padding-top:1px}
+.dec b{display:block}
+.dec .q{color:var(--accent-deep)}
+.cost{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.cost div{border-top:2px solid var(--rule);padding-top:8px;font-size:14px;color:var(--page-muted)}
+.cost b{display:block;color:var(--page-fg);font-family:var(--f-pix);font-weight:400;font-size:12px;margin-bottom:2px}
+.out{columns:2 260px;font-size:14px;color:var(--page-muted);margin:0;padding-left:18px}
+.ask{border:2px solid var(--accent);padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.ask ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:14px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+<header style="display:flex;flex-direction:column;gap:10px">
+  <span class="eyebrow">Tela de Sinal · etapa 4</span>
+  <h1>Pixel art na Tela</h1>
+  <p class="lede">Você desenha pequenas artes (de 8×8 a 64×64) num editor próprio, guarda na sua biblioteca e usa na Tela como a peça Imagem ou como o fundo em mosaico. Tudo abaixo funciona: desenhe, salve e veja a Tela mudar.</p>
+</header>
+
+<!-- 1. editor de pixel art -->
+<section>
+  <span class="eyebrow">1 · O editor de pixel art</span>
+  <h2>Uma tela própria, aberta do editor da Tela</h2>
+  <p class="note">Abre por cima do editor ao clicar em Nova ou Editar e volta para ele ao salvar ou cancelar. Redimensiona com a janela, como o editor. O quadro é uma textura pequena, refeita só quando um pixel muda.</p>
+  <div class="scroll"><div class="gui pix" id="pixGui">
+    <div class="tools" role="toolbar" aria-label="Ferramentas">
+      <div style="height:30px"></div>
+      <button class="tool" data-tool="pen" title="Lápis (B)" aria-pressed="true"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M11 1h2v2h2v2h-2v2h-2v2H9v2H7v2H5v2H1v-4h2V9h2V7h2V5h2V3h2z"/></svg><span class="k">B</span></button>
+      <button class="tool" data-tool="erase" title="Borracha (E)" aria-pressed="false"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M9 2h2v2h2v2h2v2h-2v2h-2v2H9v2H3v-2H1v-2h2V8h2V6h2V4h2zM5 10v2h4v-2H7V8H5z"/></svg><span class="k">E</span></button>
+      <button class="tool" data-tool="fill" title="Balde (G)" aria-pressed="false"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M6 1h2v2h2v2h2v2h2v2h-2v2h-2v2H8v2H6v-2H4v-2H2V9H0V7h2V5h2V3h2zm8 9h2v4h-2z"/></svg><span class="k">G</span></button>
+      <button class="tool" data-tool="pick" title="Conta-gotas (I)" aria-pressed="false"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M11 1h3v1h1v3h-1v1h-2v2h-1v1H9v1H8v1H7v1H6v1H5v1H3v1H1v-2h1v-2h1v-1h1v-1h1V9h1V8h1V7h1V5h2V2h1z"/></svg><span class="k">I</span></button>
+      <button class="tool" data-tool="line" title="Linha (L)" aria-pressed="false"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M13 1h2v2h-2v2h-2v2H9v2H7v2H5v2H3v2H1v-2h2v-2h2V9h2V7h2V5h2V3h2z"/></svg><span class="k">L</span></button>
+      <button class="tool" data-tool="rect" title="Retângulo (R, de novo alterna cheio)" aria-pressed="false"><svg viewBox="0 0 16 16" fill="currentColor" id="rectIcon"><path d="M1 3h14v10H1zm2 2v6h10V5z"/></svg><span class="k">R</span></button>
+      <div class="tsep"></div>
+      <button class="tool" id="mirror" title="Espelho horizontal (M)" aria-pressed="false"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M7 0h2v16H7zM5 3v10H1zm6 0 4 10h-4z"/></svg><span class="k">M</span></button>
+    </div>
+    <div>
+      <div class="gui-h"><span>Pixel art</span><input class="field" id="artName" value="Logo da base" maxlength="32" aria-label="Nome da arte" style="width:180px;font-family:var(--f-body)"><span class="sp"></span>
+        <span class="dims"><span class="lbl">Tamanho</span><input class="field" id="wIn" type="number" min="8" max="64" value="16" aria-label="Largura"><span>×</span><input class="field" id="hIn" type="number" min="8" max="64" value="16" aria-label="Altura"></span></div>
+      <div class="board" id="board"><canvas id="art" aria-label="Quadro de desenho"></canvas></div>
+      <div class="bfoot">
+        <button class="btn" id="undo" title="Desfazer (Ctrl+Z)">↶</button><button class="btn" id="redo" title="Refazer (Ctrl+Y)">↷</button>
+        <label class="chk"><input type="checkbox" id="gridOn" checked> Grade</label>
+        <span class="sp"></span>
+        <span id="zoomOut">zoom 20×</span><span>· Ctrl + roda</span><span id="hist">0 / 100</span>
+      </div>
+    </div>
+    <div class="side">
+      <div><div class="gui-h" style="padding-bottom:6px"><span>Paleta</span><span class="sp"></span><span class="pill">16</span></div>
+        <div class="pal" id="pal"></div></div>
+      <div class="edit"><input type="color" id="colIn" aria-label="Editar a cor escolhida"><input class="field" id="hexIn" aria-label="Cor em hexadecimal"><span class="hint">a cor 0 é sempre transparente</span></div>
+      <div><div class="lbl" style="margin-bottom:4px">Prévia em 1× e 2×</div>
+        <div class="prev"><canvas id="p1"></canvas><canvas id="p2"></canvas></div></div>
+      <p class="hint">Clique esquerdo pinta, direito apaga. Cada traço é um passo do desfazer.</p>
+      <div class="actions"><button class="btn" id="cancel">Cancelar</button><button class="btn primary" id="save">Salvar</button></div>
+    </div>
+  </div></div>
+</section>
+
+<!-- 2. editor da Tela -->
+<section>
+  <span class="eyebrow">2 · No editor da Tela</span>
+  <h2>A aba Pixel art, a peça Imagem e o fundo em mosaico</h2>
+  <p class="note">Uma quarta aba na coluna da esquerda lista as suas artes. Arraste uma para a miniatura para criar a Imagem; clique na Imagem para ver as opções dela, ou fora para ver a base com o fundo.</p>
+  <div class="scroll"><div class="gui ed">
+    <div>
+      <div class="ltabs" role="tablist" aria-label="Coluna da esquerda">
+        <button class="ltab" role="tab" aria-selected="false" title="Peças"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 1h6v6H1zm8 0h6v6H9zM1 9h6v6H1zm8 0h6v6H9z" opacity=".8"/></svg></button>
+        <button class="ltab" role="tab" aria-selected="false" title="Componentes"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 1h10v10H1zm4 4h10v10H5z" opacity=".8"/></svg></button>
+        <button class="ltab" role="tab" aria-selected="false" title="Camadas"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l7 4-7 4-7-4zm-7 7 7 4 7-4v2l-7 4-7-4z" opacity=".8"/></svg></button>
+        <button class="ltab" role="tab" aria-selected="true" title="Pixel art"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 2h14v12H1zm2 2v8h10V4zm2 6 2-3 2 2 1-1 2 2v1H5zm5-5h2v2h-2z"/></svg>Pixel art<span class="new">NOVO</span></button>
+      </div>
+      <div class="gui-h" style="padding:8px 2px 0"><span style="font-family:var(--f-body);font-size:12px">Suas artes</span><span class="sp"></span><span class="pill" id="libCount">3 / 32</span></div>
+      <div class="arts" id="arts" role="listbox" aria-label="Biblioteca de pixel art"></div>
+      <div class="lfoot">
+        <button class="btn" id="bNew">Nova</button><button class="btn" id="bEdit">Editar</button>
+        <button class="btn" id="bDup">Duplicar</button><button class="btn warn" id="bDel">Remover</button>
+      </div>
+      <p class="hint" style="margin-top:6px" id="delHint">Remover pede dois cliques. A Tela guarda uma cópia: apagar a arte não muda a Tela.</p>
+    </div>
+    <div class="stage">
+      <div class="gui-h" style="padding:0"><span class="pill">4×2 · 128×64 px</span><span class="sp"></span><span class="pill" id="pxBudget">pixels nas imagens: 320 / 16.384</span></div>
+      <div class="sunk"><div class="cv" id="cv"><canvas id="tvEd" width="512" height="256"></canvas><div class="sel" id="sel" hidden></div><div class="hd" id="hd" hidden></div></div></div>
+      <p class="hint">Escala inteira por padrão (1×, 2×, 3×...) para a arte não borrar; "Esticar" preenche a caixa. A Imagem não usa dado, mas as regras de outra peça podem escondê-la ou fazê-la piscar.</p>
+    </div>
+    <div class="props" id="props"></div>
+  </div></div>
+</section>
+
+<!-- 3. parede -->
+<section>
+  <span class="eyebrow">3 · Na parede</span>
+  <h2>O que todo mundo vê</h2>
+  <p class="note">A arte é pintada na textura da Tela no redesenho, por faixas horizontais da mesma cor; o mosaico repete as faixas. Por quadro, nada muda em relação à etapa 3.</p>
+  <div class="world"><div class="tvframe"><canvas id="tvWall" width="512" height="256" aria-label="A Tela na parede"></canvas></div></div>
+</section>
+
+<!-- 4. decisões -->
+<section>
+  <span class="eyebrow">4 · Decisões</span>
+  <h2>O que fica decidido</h2>
+  <ol class="dec">
+    <li><div><b>Arte de 8×8 a 64×64</b>Largura e altura livres. Paleta de 16 cores por arte, a cor 0 sempre transparente; cada pixel guarda o índice da cor.</div></li>
+    <li><div><b>Ferramentas</b>Lápis, borracha, balde (vizinhança de 4), conta-gotas, linha e retângulo (contorno ou cheio), espelho horizontal. Desfazer e refazer até 100 passos, grade e zoom com Ctrl + roda.</div></li>
+    <li><div><b>Biblioteca do jogador</b>Até 32 artes (<code>tv.maxArts</code>), nome até 32 letras, junto dos componentes e temas. Só vai ao cliente com o editor aberto.</div></li>
+    <li><div><b>A Tela guarda uma cópia</b>Inserir a Imagem copia a arte para o layout, como os temas. "Atualizar da biblioteca" troca pela versão nova, se você ainda tiver a arte.</div></li>
+    <li><div><b>Teto por Tela</b>Até 16.384 pixels somados nas artes distintas de um layout (<code>tv.maxImagePixels</code>, quatro de 64×64).</div></li>
+    <li><div><b>Peça Imagem</b>Qualquer tamanho e posição, escala inteira ou esticar, alinhamento em 9 posições, opacidade; as regras escondem ou fazem piscar.</div></li>
+    <li><div><b>Fundo em mosaico</b>Um tipo novo de Fundo: a arte repetida pela Tela inteira, escala de 1× a 8× e opacidade, por baixo das peças. As linhas de varredura continuam por cima.</div></li>
+    <li><div><b>Pintura por faixas</b>Um retângulo por faixa da mesma cor, só no redesenho. Se o e2e medir mais de 4 ms numa Tela 32×32 com mosaico, a arte vira uma textura pequena própria.</div></li>
+    <li><div><b class="q">Proposta: clique direito apaga</b>Não estava no rascunho. Poupa a troca de ferramenta, como em quase todo editor de pixel art.</div></li>
+    <li><div><b class="q">Proposta: prévia em 1× e 2×</b>Não estava no rascunho. Mostra como a arte fica no tamanho real da Tela enquanto você desenha.</div></li>
+  </ol>
+</section>
+
+<section>
+  <span class="eyebrow">5 · Custo</span>
+  <h2>Por que não pesa</h2>
+  <div class="cost">
+    <div><b>Servidor</b>Nada por tick. A biblioteca só muda nas ações (salvar, renomear, remover), com o limite de ações por segundo que já existe.</div>
+    <div><b>Rede</b>O layout cresce até 16 KB de pixels, mas só vai no salvar e no update tag. A biblioteca só com o editor aberto.</div>
+    <div><b>Cliente na parede</b>A Imagem e o mosaico só no redesenho da textura, que já acontece quando um número muda. Por quadro, o mesmo retângulo de antes.</div>
+    <div><b>Editor</b>O quadro é uma textura pequena refeita só quando um pixel muda, nunca por quadro.</div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">6 · Fora desta etapa</span>
+  <ul class="out">
+    <li>Importar PNG do computador</li><li>Animação (quadros)</li><li>Paletas com mais de 16 cores</li><li>Pincel maior que 1 px</li><li>Compartilhar artes entre jogadores</li>
+  </ul>
+</section>
+
+<section class="ask">
+  <span class="eyebrow">O que preciso de você</span>
+  <ol>
+    <li>O visual do editor de pixel art e da aba Pixel art está bom?</li>
+    <li>As duas propostas novas (clique direito apaga, prévia em 1× e 2×) entram?</li>
+    <li>Atalhos: B lápis, E borracha, G balde, I conta-gotas, L linha, R retângulo (de novo alterna cheio), M espelho. Pode ser?</li>
+  </ol>
+</section>
+</div>
+
+<script>
+(()=>{
+const $=s=>document.querySelector(s);
+const DEF=["#00000000","#0f0e12","#ECE5D6","#F0603E","#C2442A","#FFB39E","#2F9D5C","#3DB56E","#D88A1A","#FFD58A","#6B6FD0","#8A8EE8","#4fd1c5","#B48E2E","#7A7366","#ffffff"];
+function mk(name,w,h,f,pal){const p=new Uint8Array(w*h);for(let y=0;y<h;y++)for(let x=0;x<w;x++)p[y*w+x]=f(x,y);return{id:Math.random().toString(36).slice(2),name,w,h,pal:(pal||DEF).slice(),px:p};}
+const logo=mk("Logo da base",16,16,(x,y)=>{const dx=x-7.5,dy=y-12.5,d=Math.hypot(dx,dy),up=dy<0&&Math.abs(dx)<-dy*1.25;
+  if(d<1.6)return 3;if(up&&((d>3.2&&d<4.6)||(d>6&&d<7.4)||(d>8.8&&d<10.2)))return d>8.8?5:3;if(y>=14&&Math.abs(dx)<3)return 14;return 0;});
+const brick=mk("Tijolo",8,8,(x,y)=>{const r=Math.floor(y/4),off=r%2?4:0;if(y%4===3)return 1;if((x+off)%8===7)return 1;return (x+y)%5?4:3;});
+const gem=mk("Diamante",16,16,(x,y)=>{const a=Math.abs(x-7.5)+Math.abs(y-7.5);if(a>7.5)return 0;if(a>6.5)return 1;return x+y<14?(x<7&&y<7?15:12):10;});
+const lib=[logo,brick,gem];
+let libSel=0, editing=null;
+const tela={img:{art:copy(logo),x:6,y:6,w:36,h:36,scale:2,align:4,op:100},bg:{kind:"tiled",art:copy(brick),scale:2,op:35},sel:"img"};
+function copy(a){return{...a,pal:a.pal.slice(),px:a.px.slice()};}
+function rgba(h){if(h.length===9&&h.endsWith("00"))return null;return h.slice(0,7);}
+
+/* ---------- desenho de uma arte num contexto ---------- */
+function drawArt(c,a,ox,oy,s,alpha){c.globalAlpha=alpha;for(let y=0;y<a.h;y++){let x=0;while(x<a.w){const i=a.px[y*a.w+x];let e=x+1;while(e<a.w&&a.px[y*a.w+e]===i)e++;
+  const col=rgba(a.pal[i]);if(col){c.fillStyle=col;c.fillRect(ox+x*s,oy+y*s,(e-x)*s,s);}x=e;}}c.globalAlpha=1;}
+function thumb(cv,a){const k=Math.max(1,Math.floor(48/Math.max(a.w,a.h)));cv.width=a.w*k;cv.height=a.h*k;const c=cv.getContext("2d");c.clearRect(0,0,cv.width,cv.height);drawArt(c,a,0,0,k,1);}
+
+/* ---------- editor de pixel art ---------- */
+const cv=$("#art"),ctx=cv.getContext("2d");
+let A=copy(logo),cur=3,tool="pen",rectFill=false,mirror=false,zoom=20,grid=true,hist=[],fut=[],stroke=null,start=null,base=null;
+function load(a){A=copy(a);hist=[];fut=[];$("#artName").value=A.name;$("#wIn").value=A.w;$("#hIn").value=A.h;zoom=Math.max(4,Math.min(24,Math.floor(400/Math.max(A.w,A.h))));buildPal();redraw();}
+function redraw(){cv.width=A.w*zoom;cv.height=A.h*zoom;ctx.clearRect(0,0,cv.width,cv.height);drawArt(ctx,A,0,0,zoom,1);
+  if(grid&&zoom>=6){ctx.fillStyle="rgba(0,0,0,.18)";for(let x=1;x<A.w;x++)ctx.fillRect(x*zoom,0,1,cv.height);for(let y=1;y<A.h;y++)ctx.fillRect(0,y*zoom,cv.width,1);
+    ctx.fillStyle="rgba(240,96,62,.45)";for(let x=8;x<A.w;x+=8)ctx.fillRect(x*zoom,0,1,cv.height);for(let y=8;y<A.h;y+=8)ctx.fillRect(0,y*zoom,cv.width,1);}
+  if(mirror){ctx.fillStyle="rgba(240,96,62,.8)";ctx.fillRect(Math.round(A.w*zoom/2)-1,0,2,cv.height);}
+  const p1=$("#p1"),p2=$("#p2");[p1,p2].forEach((p,i)=>{const s=i+1;p.width=A.w*s;p.height=A.h*s;p.style.width=A.w*s+"px";p.style.height=A.h*s+"px";const c=p.getContext("2d");c.clearRect(0,0,p.width,p.height);drawArt(c,A,0,0,s,1);});
+  $("#zoomOut").textContent="zoom "+zoom+"×";$("#hist").textContent=hist.length+" / 100";$("#undo").disabled=!hist.length;$("#redo").disabled=!fut.length;}
+function buildPal(){const p=$("#pal");p.innerHTML="";A.pal.forEach((c,i)=>{const b=document.createElement("button");b.className="sw"+(i===0?" t":"");if(i)b.style.background=c;
+  b.setAttribute("aria-label",i===0?"Transparente":"Cor "+i+" "+c);b.setAttribute("aria-pressed",i===cur);b.onclick=()=>{cur=i;buildPal();};p.appendChild(b);});
+  const c=A.pal[cur];$("#colIn").value=cur?c.slice(0,7):"#000000";$("#hexIn").value=cur?c.toUpperCase():"transparente";$("#colIn").disabled=$("#hexIn").disabled=cur===0;}
+function setColor(h){if(!cur||!/^#[0-9a-fA-F]{6}$/.test(h))return;push();A.pal[cur]=h;buildPal();redraw();}
+$("#colIn").oninput=e=>setColor(e.target.value);$("#hexIn").onchange=e=>setColor(e.target.value.trim());
+function push(){hist.push({px:A.px.slice(),pal:A.pal.slice(),w:A.w,h:A.h});if(hist.length>100)hist.shift();fut=[];}
+function undo(){if(!hist.length)return;fut.push({px:A.px.slice(),pal:A.pal.slice(),w:A.w,h:A.h});Object.assign(A,hist.pop());syncDims();buildPal();redraw();}
+function redo(){if(!fut.length)return;hist.push({px:A.px.slice(),pal:A.pal.slice(),w:A.w,h:A.h});Object.assign(A,fut.pop());syncDims();buildPal();redraw();}
+function syncDims(){$("#wIn").value=A.w;$("#hIn").value=A.h;}
+$("#undo").onclick=undo;$("#redo").onclick=redo;
+function set(x,y,i){if(x<0||y<0||x>=A.w||y>=A.h)return;A.px[y*A.w+x]=i;if(mirror){const m=A.w-1-x;A.px[y*A.w+m]=i;}}
+function line(x0,y0,x1,y1,i){const dx=Math.abs(x1-x0),dy=-Math.abs(y1-y0),sx=x0<x1?1:-1,sy=y0<y1?1:-1;let e=dx+dy;for(;;){set(x0,y0,i);if(x0===x1&&y0===y1)break;const e2=2*e;if(e2>=dy){e+=dy;x0+=sx;}if(e2<=dx){e+=dx;y0+=sy;}}}
+function rect(x0,y0,x1,y1,i){const a=Math.min(x0,x1),b=Math.max(x0,x1),c=Math.min(y0,y1),d=Math.max(y0,y1);for(let y=c;y<=d;y++)for(let x=a;x<=b;x++)if(rectFill||x===a||x===b||y===c||y===d)set(x,y,i);}
+function fill(x,y,to){const from=A.px[y*A.w+x];if(from===to)return;const st=[[x,y]];while(st.length){const[a,b]=st.pop();if(a<0||b<0||a>=A.w||b>=A.h||A.px[b*A.w+a]!==from)continue;A.px[b*A.w+a]=to;st.push([a+1,b],[a-1,b],[a,b+1],[a,b-1]);}
+  if(mirror){const m=A.w-1-x;if(A.px[y*A.w+m]!==to){const f2=A.px[y*A.w+m];const s2=[[m,y]];while(s2.length){const[a,b]=s2.pop();if(a<0||b<0||a>=A.w||b>=A.h||A.px[b*A.w+a]!==f2)continue;A.px[b*A.w+a]=to;s2.push([a+1,b],[a-1,b],[a,b+1],[a,b-1]);}}}}
+function cell(e){const r=cv.getBoundingClientRect();return[Math.floor((e.clientX-r.left)/r.width*A.w),Math.floor((e.clientY-r.top)/r.height*A.h)];}
+cv.addEventListener("contextmenu",e=>e.preventDefault());
+cv.addEventListener("pointerdown",e=>{const[x,y]=cell(e);const right=e.button===2;const t=right?"erase":tool;const i=right||t==="erase"?0:cur;
+  if(t==="pick"){cur=A.px[y*A.w+x];buildPal();return;}
+  push();cv.setPointerCapture(e.pointerId);stroke={t,i,lx:x,ly:y};start=[x,y];base=A.px.slice();
+  if(t==="fill"){fill(x,y,i);stroke=null;}else if(t==="pen"||t==="erase")set(x,y,i);else set(x,y,i);redraw();});
+cv.addEventListener("pointermove",e=>{if(!stroke)return;const[x,y]=cell(e);
+  if(stroke.t==="pen"||stroke.t==="erase"){line(stroke.lx,stroke.ly,x,y,stroke.i);stroke.lx=x;stroke.ly=y;}
+  else{A.px.set(base);(stroke.t==="line"?line:rect)(start[0],start[1],x,y,stroke.i);}redraw();});
+cv.addEventListener("pointerup",()=>{if(stroke&&hist.length&&hist[hist.length-1].px.every((v,i)=>v===A.px[i]))hist.pop();stroke=null;redraw();});
+$("#board").addEventListener("wheel",e=>{if(!e.ctrlKey)return;e.preventDefault();zoom=Math.max(4,Math.min(32,zoom+(e.deltaY<0?2:-2)));redraw();},{passive:false});
+function pickTool(t){if(t==="rect"&&tool==="rect"){rectFill=!rectFill;$("#rectIcon").innerHTML=rectFill?'<path d="M1 3h14v10H1z"/>':'<path d="M1 3h14v10H1zm2 2v6h10V5z"/>';}
+  tool=t;document.querySelectorAll("[data-tool]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.tool===t));}
+document.querySelectorAll("[data-tool]").forEach(b=>b.onclick=()=>pickTool(b.dataset.tool));
+$("#mirror").onclick=()=>{mirror=!mirror;$("#mirror").setAttribute("aria-pressed",mirror);redraw();};
+$("#gridOn").onchange=e=>{grid=e.target.checked;redraw();};
+function resize(){const w=Math.max(8,Math.min(64,+$("#wIn").value||8)),h=Math.max(8,Math.min(64,+$("#hIn").value||8));if(w===A.w&&h===A.h)return syncDims();
+  push();const p=new Uint8Array(w*h);for(let y=0;y<Math.min(h,A.h);y++)for(let x=0;x<Math.min(w,A.w);x++)p[y*w+x]=A.px[y*A.w+x];A.w=w;A.h=h;A.px=p;syncDims();zoom=Math.max(4,Math.min(24,Math.floor(400/Math.max(w,h))));redraw();}
+$("#wIn").onchange=resize;$("#hIn").onchange=resize;
+$("#pixGui").addEventListener("keydown",e=>{if(e.target.tagName==="INPUT")return;const k=e.key.toLowerCase();
+  if(e.ctrlKey&&k==="z"){e.preventDefault();undo();}else if(e.ctrlKey&&k==="y"){e.preventDefault();redo();}
+  else if(!e.ctrlKey){const m={b:"pen",e:"erase",g:"fill",i:"pick",l:"line",r:"rect"}[k];if(m)pickTool(m);else if(k==="m")$("#mirror").click();}});
+$("#pixGui").tabIndex=0;
+$("#save").onclick=()=>{A.name=$("#artName").value.trim().slice(0,32)||"Sem nome";
+  const i=editing==null?-1:lib.findIndex(a=>a.id===editing);if(i>=0){lib[i]=copy(A);libSel=i;}else{if(lib.length>=32)return;A.id=Math.random().toString(36).slice(2);lib.push(copy(A));libSel=lib.length-1;}
+  editing=lib[libSel].id;buildLib();};
+$("#cancel").onclick=()=>{const a=lib.find(x=>x.id===editing);load(a||logo);};
+
+/* ---------- biblioteca e editor da Tela ---------- */
+let delArm=false;
+function buildLib(){const l=$("#arts");l.innerHTML="";lib.forEach((a,i)=>{const b=document.createElement("button");b.className="art";b.setAttribute("role","option");b.setAttribute("aria-selected",i===libSel);b.draggable=true;
+  const c=document.createElement("canvas");thumb(c,a);b.append(c,document.createTextNode(a.name));const s=document.createElement("small");s.textContent=a.w+"×"+a.h;b.append(s);
+  b.onclick=()=>{libSel=i;delArm=false;buildLib();};b.ondblclick=()=>{libSel=i;editLib();};b.ondragstart=e=>e.dataTransfer.setData("text/plain",i);l.appendChild(b);});
+  $("#libCount").textContent=lib.length+" / 32";$("#bDel").textContent=delArm?"Confirmar":"Remover";props();}
+function editLib(){const a=lib[libSel];if(!a)return;editing=a.id;load(a);$("#pixGui").scrollIntoView({behavior:"smooth",block:"center"});}
+$("#bEdit").onclick=editLib;
+$("#bNew").onclick=()=>{editing=null;load(mk("Nova arte",16,16,()=>0));$("#pixGui").scrollIntoView({behavior:"smooth",block:"center"});};
+$("#bDup").onclick=()=>{const a=lib[libSel];if(!a||lib.length>=32)return;const d=copy(a);d.id=Math.random().toString(36).slice(2);d.name=(a.name+" (cópia)").slice(0,32);lib.splice(libSel+1,0,d);libSel++;buildLib();};
+$("#bDel").onclick=()=>{if(!lib[libSel])return;if(!delArm){delArm=true;buildLib();return;}lib.splice(libSel,1);libSel=Math.max(0,libSel-1);delArm=false;buildLib();};
+$("#cv").addEventListener("dragover",e=>e.preventDefault());
+$("#cv").addEventListener("drop",e=>{e.preventDefault();const a=lib[+e.dataTransfer.getData("text/plain")];if(!a)return;const r=$("#cv").getBoundingClientRect();
+  const s=Math.max(1,Math.min(4,Math.floor(48/Math.max(a.w,a.h))));tela.img={art:copy(a),x:Math.round((e.clientX-r.left)/r.width*128-a.w*s/2),y:Math.round((e.clientY-r.top)/r.height*64-a.h*s/2),w:a.w*s,h:a.h*s,scale:s,align:4,op:100};
+  tela.img.x=Math.max(0,Math.min(128-tela.img.w,tela.img.x));tela.img.y=Math.max(0,Math.min(64-tela.img.h,tela.img.y));tela.sel="img";render();props();});
+$("#cv").addEventListener("click",e=>{const r=$("#cv").getBoundingClientRect(),x=(e.clientX-r.left)/r.width*128,y=(e.clientY-r.top)/r.height*64,i=tela.img;
+  tela.sel=i&&x>=i.x&&x<i.x+i.w&&y>=i.y&&y<i.y+i.h?"img":"base";render();props();});
+
+function cyc(id,label,val){return`<div class="row"><span>${label}</span><div class="cyc"><button data-c="${id}" data-d="-1" aria-label="${label} anterior">‹</button><output>${val}</output><button data-c="${id}" data-d="1" aria-label="${label} seguinte">›</button></div></div>`;}
+function props(){const p=$("#props");const i=tela.img;let h;
+  if(tela.sel==="img"&&i){const has=lib.some(a=>a.id===i.art.id);
+    h=`<div class="gui-h" style="padding:0"><span style="font-family:var(--f-body);font-size:12px">Imagem · ${i.art.name}</span></div><div class="hint">${i.w}×${i.h} px · ${i.x}, ${i.y}</div>
+    <div class="ptabs"><span>Dado</span><span>Formato</span><span class="on">Estilo</span><span>Regras</span></div>
+    <div class="sub">Imagem</div>
+    <div class="row"><span>Arte</span><span style="font-size:12px">${i.art.name} <span class="hint">${i.art.w}×${i.art.h}</span></span></div>
+    <button class="btn" id="upd" ${has?"":"disabled"}>Atualizar da biblioteca</button>
+    ${has?"":'<p class="hint">Essa arte não está mais na sua biblioteca; a Tela segue com a cópia.</p>'}
+    ${cyc("scale","Escala",i.scale?i.scale+"×":"Esticar")}
+    <div class="row"><span>Alinhar</span><div class="al">${[...Array(9)].map((_,k)=>`<button data-al="${k}" aria-pressed="${k===i.align}" aria-label="Alinhamento ${k+1}"></button>`).join("")}</div></div>
+    <div class="row"><span>Opacidade</span><input type="range" id="op" min="0" max="100" value="${i.op}" aria-label="Opacidade da imagem"></div>`;}
+  else{const b=tela.bg;h=`<div class="gui-h" style="padding:0"><span style="font-family:var(--f-body);font-size:12px">Nada escolhido</span></div>
+    <div class="ptabs"><span>Dado</span><span>Formato</span><span>Estilo</span><span>Regras</span></div>
+    <p class="hint">Esta é a base da Tela.</p>
+    ${cyc("theme","Tema","Grafite")}
+    ${cyc("bg","Fundo",b.kind==="tiled"?"Mosaico":"Do tema")}
+    ${b.kind==="tiled"?`${cyc("bgart","Arte",b.art.name)}${cyc("bgscale","Escala",b.scale+"×")}<div class="row"><span>Opacidade</span><input type="range" id="bgop" min="0" max="100" value="${b.op}" aria-label="Opacidade do mosaico"></div>`:""}
+    <label class="chk"><input type="checkbox" checked disabled> Grade</label>`;}
+  p.innerHTML=h;
+  p.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{const d=+b.dataset.d;
+    if(b.dataset.c==="scale"){const o=[0,1,2,3,4,5,6,7,8];i.scale=o[(o.indexOf(i.scale)+d+o.length)%o.length];}
+    if(b.dataset.c==="bg")tela.bg.kind=tela.bg.kind==="tiled"?"theme":"tiled";
+    if(b.dataset.c==="bgscale")tela.bg.scale=Math.max(1,Math.min(8,tela.bg.scale+d));
+    if(b.dataset.c==="bgart"&&lib.length){const k=(Math.max(0,lib.findIndex(a=>a.id===tela.bg.art.id))+d+lib.length)%lib.length;tela.bg.art=copy(lib[k]);}
+    render();props();});
+  p.querySelectorAll("[data-al]").forEach(b=>b.onclick=()=>{i.align=+b.dataset.al;render();props();});
+  const op=p.querySelector("#op");if(op)op.oninput=e=>{i.op=+e.target.value;render();};
+  const bo=p.querySelector("#bgop");if(bo)bo.oninput=e=>{tela.bg.op=+e.target.value;render();};
+  const up=p.querySelector("#upd");if(up)up.onclick=()=>{const a=lib.find(x=>x.id===i.art.id);if(a){i.art=copy(a);render();props();}};}
+
+/* ---------- pintura da Tela (o mesmo desenho no editor e na parede) ---------- */
+function paint(c,k){c.setTransform(k,0,0,k,0,0);c.imageSmoothingEnabled=false;c.fillStyle="#0f1117";c.fillRect(0,0,128,64);
+  const b=tela.bg;if(b.kind==="tiled"){const a=b.art,s=b.scale;for(let y=0;y<64;y+=a.h*s)for(let x=0;x<128;x+=a.w*s)drawArt(c,a,x,y,s,b.op/100);}
+  c.fillStyle="#1A1C24";c.fillRect(50,8,72,48);c.fillStyle="#ECE5D6";c.font="16px Silkscreen, monospace";c.textBaseline="top";c.fillText("12,5k",56,18);
+  c.fillStyle="#3DB56E";c.font="8px Silkscreen, monospace";c.fillText("+840 FE/t",56,40);
+  const i=tela.img;if(i){c.save();c.beginPath();c.rect(i.x,i.y,i.w,i.h);c.clip();
+    if(i.scale===0){const sx=i.w/i.art.w,sy=i.h/i.art.h;c.translate(i.x,i.y);c.scale(sx,sy);drawArt(c,i.art,0,0,1,i.op/100);}
+    else{const W=i.art.w*i.scale,H=i.art.h*i.scale,ax=i.align%3,ay=Math.floor(i.align/3);const ox=i.x+Math.floor((i.w-W)*ax/2),oy=i.y+Math.floor((i.h-H)*ay/2);drawArt(c,i.art,ox,oy,i.scale,i.op/100);}
+    c.restore();}
+  c.setTransform(1,0,0,1,0,0);}
+function render(){paint($("#tvEd").getContext("2d"),4);paint($("#tvWall").getContext("2d"),4);
+  const g=$("#tvEd").getContext("2d");g.fillStyle="rgba(255,255,255,.05)";for(let x=32;x<512;x+=128/4*4)g.fillRect(x,0,1,256);
+  const i=tela.img,sel=$("#sel"),hd=$("#hd");if(tela.sel==="img"&&i){sel.hidden=hd.hidden=false;Object.assign(sel.style,{left:i.x/128*100+"%",top:i.y/64*100+"%",width:i.w/128*100+"%",height:i.h/64*100+"%"});
+    Object.assign(hd.style,{left:(i.x+i.w)/128*100+"%",top:(i.y+i.h)/64*100+"%"});}else sel.hidden=hd.hidden=true;
+  const px=new Map();if(i)px.set(i.art.id,i.art.w*i.art.h);if(tela.bg.kind==="tiled")px.set(tela.bg.art.id,tela.bg.art.w*tela.bg.art.h);
+  $("#pxBudget").textContent="pixels nas imagens: "+[...px.values()].reduce((a,b)=>a+b,0).toLocaleString("pt-BR")+" / 16.384";}
+
+editing=logo.id;load(logo);buildLib();render();
+document.fonts&&document.fonts.ready.then(render);
+})();
+</script>

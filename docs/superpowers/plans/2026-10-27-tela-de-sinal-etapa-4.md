@@ -2,7 +2,7 @@
 
 > **Para agentes:** SUB-SKILL OBRIGATÓRIA: use superpowers:subagent-driven-development (recomendado) ou superpowers:executing-plans para executar este plano tarefa por tarefa. Os passos usam caixas (`- [ ]`) para acompanhar.
 
-**Estado:** rascunho preparado durante a etapa 2 (27/10/2026); o dono aprova a spec antes de executar.
+**Estado:** spec e mockup (`docs/preview/tela-de-sinal-pixel-art.html`) aprovados pelo dono em 29/10/2026; executado no ramo `claude/tela-de-sinal-pixel-art-dff2bd`, cortado de `tela-de-sinal`.
 
 **Objetivo:** o editor de pixel art, as artes na biblioteca do jogador, a peça Imagem e o fundo em mosaico.
 
@@ -31,7 +31,7 @@
 - Componentes de tela não mandam payload direto: tudo sai por uma classe de ações (`TvEditorActions`), que na captura só mexe no estado local.
 - Tamanho (`wa-modular`): classe de tela até 500 linhas (alvo 300), servidor até 600; rode `python -I .claude/skills/wa-modular/scripts/medir.py` nos arquivos mudados. Comentários (`wa-comentarios`): `python -I .claude/skills/wa-comentarios/scripts/varrer.py` nos arquivos mudados.
 - Guia: edite `scripts/guide/gerar_guia.py`, nunca os `.md` gerados. Não rode o `gerar_texturas.py` (reescreve dezenas de PNGs).
-- Antes de cada commit: `./gradlew build runGameTestServer` (Git Bash, na raiz); tarefa só de lógica pura roda `./gradlew test --tests "..."`. As runs Chemicals, Source, Allthemodium e Teams ficam para a verificação final do ramo, antes do release (pedido do dono em 27/10, para poupar tempo). Compile antes (`./gradlew compileJava`); com `BUILD FAILED`, pare e conserte, nunca espere um resultado que não vem. Tarefas de tela e render rodam o e2e (`./scripts/e2e.sh --only tela --capture tela`; `run/e2e/result.txt` precisa dizer `OK`), olham as capturas e copiam as novas para `.superpowers/sdd/2026-10-27-tela-de-sinal-etapa-4/capturas/` (o e2e seguinte apaga as de `run/e2e/`). Nunca dois jogos ao mesmo tempo (~3 GB cada); não mexa em `run/options.txt`. Se o e2e de outra suíte falhar por algo fora da tarefa, pare e relate: não entre em loop.
+- Antes de cada commit: `./gradlew build runGameTestServer` (Git Bash, na raiz); tarefa só de lógica pura roda `./gradlew test --tests "..."`. As runs Chemicals, Source, Allthemodium e Teams ficam para a verificação final do ramo (pedido do dono em 27/10, para poupar tempo). Compile antes (`./gradlew compileJava`); com `BUILD FAILED`, pare e conserte, nunca espere um resultado que não vem. Tarefas de tela e render rodam o e2e (`./scripts/e2e.sh --only tela --capture tela`; `run/e2e/result.txt` precisa dizer `OK`), olham as capturas e copiam as novas para `.superpowers/sdd/2026-10-27-tela-de-sinal-etapa-4/capturas/` (o e2e seguinte apaga as de `run/e2e/`). Nunca dois jogos ao mesmo tempo (~3 GB cada); não mexa em `run/options.txt`. Se o e2e de outra suíte falhar por algo fora da tarefa, pare e relate: não entre em loop.
 - Commits sem linhas de atribuição (nada de `Co-Authored-By` nem `Claude-Session`), com o autor do dono; `git add` só dos arquivos da tarefa (nunca `run/`, nunca `.superpowers/`). Não faça push.
 
 ## Tarefas
@@ -50,7 +50,7 @@ Custo: só eventos no servidor; só redesenho no cliente.
 Custo: só GUI; o quadro numa textura pequena refeita só quando um pixel muda.
 
 - [ ] Lógica pura (JUnit): `TvPixelTools` (lápis, borracha, balde de vizinhança 4, linha, retângulo, espelho), `TvPixelHistory` (100 passos, um por traço).
-- [ ] A tela `TvPixelEditorScreen` em partes (`wa-modular`): quadro com grade e zoom (Ctrl + roda), ferramentas com os ícones do `tela_icones.py` (novos no mesmo estilo: lápis, balde, borracha, linha, retângulo, espelho), paleta de 16 pelo seletor de cor da etapa 2, nome, tamanho, salvar e cancelar; atalhos (Ctrl+Z, Ctrl+Y, B, E, G, I, L, R).
+- [ ] A tela `TvPixelEditorScreen` em partes (`wa-modular`): quadro com grade e zoom (Ctrl + roda), ferramentas com os ícones do `tela_icones.py` (novos no mesmo estilo: lápis, balde, borracha, linha, retângulo, espelho), paleta de 16 pelo seletor de cor da etapa 2, nome, tamanho, salvar e cancelar; atalhos (Ctrl+Z, Ctrl+Y, B lápis, E borracha, G balde, I conta-gotas, L linha, R retângulo e de novo alterna cheio, M espelho); clique direito apaga; prévia em 1× e 2× na coluna da direita.
 - [ ] A aba "Pixel art" na coluna da esquerda do editor da Tela (Nova, Editar, Duplicar, Remover em dois cliques; arrastar para o canvas cria a Imagem); "Atualizar da biblioteca" na aba da Imagem; o Fundo em mosaico na base.
 - [ ] e2e: desenhar uma arte pelo mouse, salvar, pôr como Imagem e como mosaico; capturas `tela-pixel-editor`, `tela-pixel-imagem`, `tela-pixel-mosaico`. Commit "Tela de Sinal: editor de pixel art".
 

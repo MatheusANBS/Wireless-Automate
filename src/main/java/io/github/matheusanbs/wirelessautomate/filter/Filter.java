@@ -37,11 +37,29 @@ public final class Filter {
     /** Itens e fluidos: exigir componentes iguais (senão picareta encantada = picareta). */
     private final boolean matchComponents;
     private final List<FilterEntry> entries;
+    /**
+     * Só nos armazenamentos (Baú, Tanques): quanto guardar de cada tipo que não tem entrada própria
+     * (0 = sem limite). As entradas viram exceções, cada uma com o limite do seu tipo.
+     */
+    private final long typeLimit;
 
     public Filter(ListMode listMode, boolean matchComponents, List<FilterEntry> entries) {
+        this(listMode, matchComponents, entries, 0);
+    }
+
+    public Filter(ListMode listMode, boolean matchComponents, List<FilterEntry> entries, long typeLimit) {
         this.listMode = Objects.requireNonNull(listMode);
         this.matchComponents = matchComponents;
         this.entries = List.copyOf(entries.size() > MAX_ENTRIES ? entries.subList(0, MAX_ENTRIES) : entries);
+        this.typeLimit = Math.max(0, typeLimit);
+    }
+
+    public long typeLimit() {
+        return typeLimit;
+    }
+
+    public Filter withTypeLimit(long typeLimit) {
+        return new Filter(listMode, matchComponents, entries, typeLimit);
     }
 
     public ListMode listMode() {
@@ -57,7 +75,7 @@ public final class Filter {
     }
 
     public boolean isEmpty() {
-        return entries.isEmpty();
+        return entries.isEmpty() && typeLimit == 0;
     }
 
     /** Sem entradas e nos valores padrão: igual a não ter filtro. */
@@ -66,11 +84,11 @@ public final class Filter {
     }
 
     public Filter withListMode(ListMode listMode) {
-        return new Filter(listMode, matchComponents, entries);
+        return new Filter(listMode, matchComponents, entries, typeLimit);
     }
 
     public Filter withMatchComponents(boolean matchComponents) {
-        return new Filter(listMode, matchComponents, entries);
+        return new Filter(listMode, matchComponents, entries, typeLimit);
     }
 
     /** Acrescenta no fim; duplicado (mesmo alvo) ou teto atingido devolve {@code this}. */
@@ -80,7 +98,7 @@ public final class Filter {
         }
         List<FilterEntry> list = new ArrayList<>(entries);
         list.add(entry);
-        return new Filter(listMode, matchComponents, list);
+        return new Filter(listMode, matchComponents, list, typeLimit);
     }
 
     /** Acrescenta várias no fim, na ordem; duplicados e o que passar do teto são ignorados. */
@@ -101,7 +119,7 @@ public final class Filter {
                 list.add(entry);
             }
         }
-        return list.size() == entries.size() ? this : new Filter(listMode, matchComponents, list);
+        return list.size() == entries.size() ? this : new Filter(listMode, matchComponents, list, typeLimit);
     }
 
     /**
@@ -117,8 +135,8 @@ public final class Filter {
             return this;
         }
         List<FilterEntry> list = new ArrayList<>(entries);
-        list.set(index, entry.withStock(entries.get(index).stock()));
-        return new Filter(listMode, matchComponents, list);
+        list.set(index, entry.withStock(entries.get(index).stock()).withKeep(entries.get(index).keep()));
+        return new Filter(listMode, matchComponents, list, typeLimit);
     }
 
     public Filter withoutEntry(int index) {
@@ -127,7 +145,7 @@ public final class Filter {
         }
         List<FilterEntry> list = new ArrayList<>(entries);
         list.remove(index);
-        return new Filter(listMode, matchComponents, list);
+        return new Filter(listMode, matchComponents, list, typeLimit);
     }
 
     public Filter withStock(int index, long stock) {
@@ -136,11 +154,20 @@ public final class Filter {
         }
         List<FilterEntry> list = new ArrayList<>(entries);
         list.set(index, list.get(index).withStock(stock));
-        return new Filter(listMode, matchComponents, list);
+        return new Filter(listMode, matchComponents, list, typeLimit);
+    }
+
+    public Filter withKeep(int index, long keep) {
+        if (index < 0 || index >= entries.size()) {
+            return this;
+        }
+        List<FilterEntry> list = new ArrayList<>(entries);
+        list.set(index, list.get(index).withKeep(keep));
+        return new Filter(listMode, matchComponents, list, typeLimit);
     }
 
     public Filter cleared() {
-        return new Filter(listMode, matchComponents, List.of());
+        return new Filter(listMode, matchComponents, List.of(), typeLimit);
     }
 
     /** Posição de uma entrada com o mesmo alvo, ou −1. */
@@ -279,7 +306,52 @@ public final class Filter {
         return index >= 0 ? entries.get(index).stock() : 0;
     }
 
-    /** Lista branca com alguma entrada de item (exata, tag ou mod) com estoque. Barato depois da primeira vez. */
+    /** "Manter na origem" da primeira entrada que casa com o item (lista branca), ou 0 se não houver. */
+    public long itemKeep(ItemStack stack) {
+        if (!usesItemStock()) {
+            return 0;
+        }
+        int index = items().index(stack);
+        return index >= 0 ? entries.get(index).keep() : 0;
+    }
+
+    /** "Manter na origem" da primeira entrada que casa com o fluido (lista branca), ou 0 se não houver. */
+    public long fluidKeep(FluidStack stack) {
+        if (!usesFluidStock()) {
+            return 0;
+        }
+        int index = fluids().index(stack);
+        return index >= 0 ? entries.get(index).keep() : 0;
+    }
+
+    /** "Manter na origem" da primeira entrada que casa com o químico (lista branca), ou 0 se não houver. */
+    public long chemicalKeep(ResourceLocation chemical) {
+        if (!usesChemicalStock()) {
+            return 0;
+        }
+        int index = chemicals().index(chemical);
+        return index >= 0 ? entries.get(index).keep() : 0;
+    }
+
+    /** Armazenamento: o limite do item, o da entrada que casa (0 = sem limite) ou, sem entrada, o global. */
+    public long itemTypeLimit(ItemStack stack) {
+        int index = entries.isEmpty() ? CompiledMatcher.NONE : items().index(stack);
+        return index >= 0 ? entries.get(index).stock() : typeLimit;
+    }
+
+    /** Como {@link #itemTypeLimit}, para fluidos. */
+    public long fluidTypeLimit(FluidStack stack) {
+        int index = entries.isEmpty() ? CompiledMatcher.NONE : fluids().index(stack);
+        return index >= 0 ? entries.get(index).stock() : typeLimit;
+    }
+
+    /** Como {@link #itemTypeLimit}, para químicos (pelo id). */
+    public long chemicalTypeLimit(ResourceLocation chemical) {
+        int index = entries.isEmpty() ? CompiledMatcher.NONE : chemicals().index(chemical);
+        return index >= 0 ? entries.get(index).stock() : typeLimit;
+    }
+
+    /** Lista branca com alguma entrada de item (exata, tag ou mod) com estoque ou "manter". Barato depois da primeira vez. */
     public boolean usesItemStock() {
         return listMode == ListMode.WHITELIST && !entries.isEmpty() && items().usesStock;
     }
@@ -308,7 +380,8 @@ public final class Filter {
             Codec.STRING.comapFlatMap(Filter::parseListMode, ListMode::name).optionalFieldOf("list", ListMode.WHITELIST)
                     .forGetter(Filter::listMode),
             Codec.BOOL.optionalFieldOf("components", false).forGetter(Filter::matchComponents),
-            FilterEntry.CODEC.listOf().optionalFieldOf("entries", List.of()).forGetter(Filter::entries))
+            FilterEntry.CODEC.listOf().optionalFieldOf("entries", List.of()).forGetter(Filter::entries),
+            Codec.LONG.optionalFieldOf("type_limit", 0L).forGetter(Filter::typeLimit))
             .apply(i, Filter::new));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, Filter> STREAM_CODEC =
@@ -321,6 +394,7 @@ public final class Filter {
         for (FilterEntry entry : filter.entries) {
             FilterEntry.STREAM_CODEC.encode(buf, entry);
         }
+        buf.writeVarLong(filter.typeLimit);
     }
 
     private static Filter decode(RegistryFriendlyByteBuf buf) {
@@ -334,18 +408,18 @@ public final class Filter {
         for (int i = 0; i < size; i++) {
             entries.add(FilterEntry.STREAM_CODEC.decode(buf));
         }
-        return new Filter(listMode, matchComponents, entries);
+        return new Filter(listMode, matchComponents, entries, buf.readVarLong());
     }
 
     @Override
     public boolean equals(Object o) {
         return o instanceof Filter other && listMode == other.listMode && matchComponents == other.matchComponents
-                && entries.equals(other.entries);
+                && typeLimit == other.typeLimit && entries.equals(other.entries);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(listMode, matchComponents, entries);
+        return Objects.hash(listMode, matchComponents, entries, typeLimit);
     }
 
     @Override

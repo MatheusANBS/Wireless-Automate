@@ -51,7 +51,8 @@ public final class FilterCodecs {
     public static final Codec<Filter> LENIENT = RecordCodecBuilder.create(i -> i.group(
             LIST_MODE.lenientOptionalFieldOf("list", Filter.ListMode.WHITELIST).forGetter(Filter::listMode),
             Codec.BOOL.lenientOptionalFieldOf("components", false).forGetter(Filter::matchComponents),
-            LENIENT_ENTRIES.lenientOptionalFieldOf("entries", List.of()).forGetter(Filter::entries))
+            LENIENT_ENTRIES.lenientOptionalFieldOf("entries", List.of()).forGetter(Filter::entries),
+            Codec.LONG.lenientOptionalFieldOf("type_limit", 0L).forGetter(Filter::typeLimit))
             .apply(i, Filter::new));
 
     private static Filter.ListMode parseListMode(String name) {

@@ -44,7 +44,10 @@ public final class FilterSet {
      * numa thread só).
      */
     public static final class ItemRule {
+        /** "Aceitar até" (destino). */
         public long stock;
+        /** "Manter na origem". */
+        public long keep;
         public boolean matchComponents;
     }
 
@@ -124,6 +127,7 @@ public final class FilterSet {
      */
     public boolean evaluateItem(ItemStack stack, ItemRule rule) {
         rule.stock = 0;
+        rule.keep = 0;
         rule.matchComponents = false;
         if (filters.length == 0) {
             return true;
@@ -139,9 +143,10 @@ public final class FilterSet {
             }
             if (!decided && whitelist && index >= 0) {
                 decided = true;
-                long stock = filter.entries().get(index).stock();
-                if (stock > 0) {
-                    rule.stock = stock;
+                FilterEntry entry = filter.entries().get(index);
+                if (entry.stock() > 0 || entry.keep() > 0) {
+                    rule.stock = entry.stock();
+                    rule.keep = entry.keep();
                     rule.matchComponents = filter.matchComponents();
                 }
             }
@@ -151,6 +156,7 @@ public final class FilterSet {
         }
         if (!passes) {
             rule.stock = 0;
+            rule.keep = 0;
             rule.matchComponents = false;
         }
         return passes;
@@ -201,7 +207,7 @@ public final class FilterSet {
 
     /**
      * O filtro cuja regra dá o estoque do item: o primeiro de lista branca com uma entrada que casa,
-     * se essa entrada tiver estoque; senão {@code null} (sem limite). O estoque é
+     * se essa entrada tiver estoque ou "manter"; senão {@code null} (sem limite). O estoque é
      * {@code filtro.itemStock(stack)} e a contagem segue o {@code matchComponents} dele.
      */
     public @Nullable Filter itemStockFilter(ItemStack stack) {
@@ -210,7 +216,7 @@ public final class FilterSet {
         }
         for (Filter filter : filters) {
             if (filter.listMode() == Filter.ListMode.WHITELIST && filter.matchesItem(stack)) {
-                return filter.itemStock(stack) > 0 ? filter : null;
+                return filter.itemStock(stack) > 0 || filter.itemKeep(stack) > 0 ? filter : null;
             }
         }
         return null;
@@ -223,7 +229,7 @@ public final class FilterSet {
         }
         for (Filter filter : filters) {
             if (filter.listMode() == Filter.ListMode.WHITELIST && filter.matchesFluid(stack)) {
-                return filter.fluidStock(stack) > 0 ? filter : null;
+                return filter.fluidStock(stack) > 0 || filter.fluidKeep(stack) > 0 ? filter : null;
             }
         }
         return null;
@@ -236,7 +242,7 @@ public final class FilterSet {
         }
         for (Filter filter : filters) {
             if (filter.listMode() == Filter.ListMode.WHITELIST && filter.matchesChemical(chemical)) {
-                return filter.chemicalStock(chemical) > 0 ? filter : null;
+                return filter.chemicalStock(chemical) > 0 || filter.chemicalKeep(chemical) > 0 ? filter : null;
             }
         }
         return null;

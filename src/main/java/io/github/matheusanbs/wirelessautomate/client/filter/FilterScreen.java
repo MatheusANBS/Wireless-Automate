@@ -98,6 +98,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     private final MoreTab more;
     private final EntrySelection selection = new EntrySelection(this);
 
+    private ItemStack storageIcon = ItemStack.EMPTY;
     private int lastVersion = -1;
     /** Cor do tier; nulo = sem tier, e vale o destaque do tema (lido na hora, para seguir o tema). */
     private @Nullable Integer trim;
@@ -160,6 +161,16 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     }
 
     /** Fluidos e químicos contam em mB (estoque, passos, unidade); itens em unidades. */
+    /** A unidade dos limites: mB para fluidos e químicos, itens para itens. */
+    Component unit() {
+        return inMb() ? tr("unit.mb") : tr("unit.items");
+    }
+
+    /** Manda os limites digitados que ainda não foram (o Voltar troca de tela, então vem antes). */
+    void commitEdits() {
+        entry.commitStock();
+    }
+
     boolean inMb() {
         return isFluid() || isChemical();
     }
@@ -193,16 +204,29 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         lastVersion = menu.version();
         Filter f = filter();
         selection.recover(f);
-        if (!entry.stockBox().isFocused()) {
-            entry.stockBox().setValue(entry.stockText());
-        }
+        entry.syncLimitBoxes();
         if (f.isEmpty()) {
             more.disarm();
         }
         rule.dropStaleEditing(f);
         trim = resolveTrim();
+        storageIcon = resolveStorageIcon();
         list.rebuildShown(true);
         selection.revealPending();
+    }
+
+    /** O bloco do armazenamento como item (o ícone da linha fixa), ou vazio fora do armazenamento. */
+    ItemStack storageIcon() {
+        return storageIcon;
+    }
+
+    private ItemStack resolveStorageIcon() {
+        Optional<BlockPos> pos = view().router();
+        if (view().isStorage() && pos.isPresent() && minecraft != null && minecraft.level != null
+                && minecraft.level.isLoaded(pos.get())) {
+            return new ItemStack(minecraft.level.getBlockState(pos.get()).getBlock());
+        }
+        return ItemStack.EMPTY;
     }
 
     int trim() {
@@ -244,6 +268,8 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         rule.addWidgets();
         more.addWidgets();
         layout();
+        // os campos ganham a largura de verdade antes do valor: o EditBox rola o texto pela largura que tem
+        refresh();
         syncView();
         refresh();
     }
@@ -251,6 +277,12 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     FlatButton add(FlatButton button) {
         buttons.add(button);
         return addRenderableWidget(button);
+    }
+
+    /** Um valor salvo num campo: do início, para nada ficar escondido pela rolagem do texto. */
+    static void show(EditBox box, String value) {
+        box.setValue(value);
+        box.moveCursorToStart(false);
     }
 
     /** Campo de texto sem borda (a moldura é desenhada pela tela). */
@@ -294,7 +326,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         if (!tabAvailable(t)) {
             return;
         }
-        entry.commitStock();
+        commitEdits();
         unfocus();
         tab = t;
         more.disarm();
@@ -355,7 +387,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         if (ThemeToggle.mouseClicked(themeX(), themeY(), mouseX, mouseY, button)) {
             return true;
         }
-        if (getFocused() == entry.stockBox() && !entry.stockBox().isMouseOver(mouseX, mouseY)) {
+        if (entry.isLimitBox(getFocused()) && !entry.overLimitBox(mouseX, mouseY)) {
             entry.commitStock();
             unfocus();
         }
@@ -423,6 +455,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         int step = (int) -Math.signum(scrollY);
         if (rule.picker().scrollSuggestions(mouseX, mouseY, step) || rule.scrollSuggestions(mouseX, mouseY, step)
+                || entry.mouseScrolled(mouseX, mouseY, -step)
                 || list.mouseScrolled(mouseX, mouseY, step)
                 || tags.mouseScrolled(mouseX, mouseY, step)
                 || rule.mouseScrolled(mouseX, mouseY, scrollX, scrollY, step)) {
@@ -439,11 +472,9 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
                 return true;
             }
             if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-                if (box == entry.stockBox()) {
-                    entry.stockBox().setValue(entry.stockText());
-                }
+                entry.resetLimitBox(box);
                 unfocus();
-            } else if (enter && box == entry.stockBox()) {
+            } else if (enter && entry.isLimitBox(box)) {
                 entry.commitStock();
                 unfocus();
             } else if (enter && box == tags.searchBox()) {
@@ -471,7 +502,7 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
 
     @Override
     public void removed() {
-        entry.commitStock();
+        commitEdits();
         super.removed();
     }
 
@@ -482,6 +513,8 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
         inkVersion = GuiThemes.version();
         GuiPaint.ink(list.searchBox(), tr("search.hint"));
         GuiPaint.ink(entry.stockBox(), tr("stock.none"));
+        GuiPaint.ink(entry.keepBox(), tr("stock.none"));
+        GuiPaint.ink(entry.globalBox(), tr("stock.none"));
         GuiPaint.ink(tags.searchBox(), tr(isChemical() ? "tags.search.chemical" : "tags.search.hint"));
         GuiPaint.ink(rule.picker().enchantBox(), tr("rule.enchantment.hint"));
         GuiPaint.ink(rule.scopeBox(), tr("rule.scope.hint"));
@@ -683,6 +716,18 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     public Tab tab() {
         return tab;
     }
+
+    public EditBox stockBox() {
+        return entry.stockBox();
+    }
+
+    /** O campo do limite por tipo (aparece com a linha fixa escolhida). */
+    public EditBox typeLimitBox() {
+        return entry.globalBox();
+    }
+
+    /** O índice da linha fixa do limite por tipo, para {@link #previewEntryCenter}. */
+    public static final int GLOBAL_ROW = EntrySelection.GLOBAL;
 
     public EditBox tagSearchBox() {
         return tags.searchBox();

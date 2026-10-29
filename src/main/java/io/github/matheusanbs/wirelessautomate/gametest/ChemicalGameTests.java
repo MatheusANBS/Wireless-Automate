@@ -154,7 +154,7 @@ public final class ChemicalGameTests {
                     helper.assertValueEqual(amount(helper, B, HYDROGEN), 0L, "o filtro deixou passar hidrogênio");
                     // Agora hidrogênio com estoque: a origem guarda 500 mB.
                     source.setFilter(ResourceType.CHEMICAL, Direction.UP, new Filter(Filter.ListMode.WHITELIST, false,
-                            List.of(new FilterEntry.ChemicalEntry(HYDROGEN, 500))));
+                            List.of(new FilterEntry.ChemicalEntry(HYDROGEN, 0, 500))));
                 })
                 .thenWaitUntil(() -> helper.assertValueEqual(amount(helper, B, HYDROGEN), 500L, "hidrogênio no destino"))
                 .thenIdle(20)
@@ -248,18 +248,19 @@ public final class ChemicalGameTests {
         helper.succeedWhen(() -> helper.assertValueEqual(amount(helper, B, HYDROGEN), 3_000_000_000L, "no destino"));
     }
 
-    /** Filtro de entrada do Tanque Químico: só o oxigênio entra, também pelo Mekanism. */
+    /** Limite por tipo do Tanque Químico: o hidrogênio só até o global, o oxigênio (entrada sem limite) sem teto, também pelo Mekanism. */
     @GameTest(template = "empty")
-    public static void chemicalTankInputFilter(GameTestHelper helper) {
+    public static void chemicalTankTypeLimit(GameTestHelper helper) {
         if (!Chemicals.LOADED) {
             helper.succeed();
             return;
         }
         UUID network = newNetwork(helper, "teste-tanque-quimico-filtro");
         StorageChemicalTankBlockEntity tank = chemicalTank(helper, A, RouterTier.BASIC, network, PortMode.INSERT);
-        tank.setFilter(new Filter(Filter.ListMode.WHITELIST, false, List.of(new FilterEntry.ChemicalEntry(OXYGEN, 0))));
+        tank.setFilter(new Filter(Filter.ListMode.WHITELIST, false,
+                List.of(new FilterEntry.ChemicalEntry(OXYGEN, 0))).withTypeLimit(400));
         long rest = ChemicalTestSupport.fill(helper.getLevel(), helper.absolutePos(A), HYDROGEN, 1_000);
-        helper.assertValueEqual(rest, 1_000L, "hidrogênio recusado");
+        helper.assertValueEqual(rest, 600L, "hidrogênio só até o limite");
         fill(helper, A, OXYGEN, 1_000);
         helper.assertValueEqual(tank.storage().count(OXYGEN), 1_000L, "oxigênio aceito");
         helper.succeed();

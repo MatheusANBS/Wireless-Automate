@@ -60,7 +60,9 @@ final class FilterActions {
             case ADD_MOD -> f.withEntry(new ModEntry(p.text(), 0));
             case REMOVE -> f.withoutEntry(p.index());
             case SET_STOCK -> f.withStock(p.index(), p.value());
-            case SET_LIST_MODE -> f.withListMode(p.value() == 0 ? Filter.ListMode.WHITELIST : Filter.ListMode.BLACKLIST);
+            case SET_KEEP -> f.withKeep(p.index(), p.value());
+            case SET_TYPE_LIMIT -> f.withTypeLimit(p.value());
+            case SET_LIST_MODE -> f.withListMode(Filter.ListMode.values()[(int) p.value()]);
             case SET_COMPONENTS -> f.withMatchComponents(p.value() != 0);
             case CLEAR -> f.cleared();
             case IMPORT_CARD, EXPORT_CARD, BACK -> f;

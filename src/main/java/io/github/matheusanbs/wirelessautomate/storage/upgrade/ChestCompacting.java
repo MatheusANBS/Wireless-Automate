@@ -253,8 +253,13 @@ public final class ChestCompacting implements ItemStorage.InsertListener {
                 if (put < moved) {
                     WirelessAutomate.LOGGER.warn("Compactação: a troca de {} por {} não coube; o resto volta como estava",
                             from[level].getItem(), into[level].getItem());
+                    // O total voltou ao de antes de tirar, que cabia; se ainda assim não couber, o aviso diz quanto.
                     storage.extractInternal(into[level], put);
-                    storage.insertInternal(from[level], moved);
+                    long back = storage.insertInternal(from[level], moved);
+                    if (back < moved) {
+                        WirelessAutomate.LOGGER.warn("Compactação: {} de {} não voltaram na troca desfeita",
+                                moved - back, from[level].getItem());
+                    }
                     return;
                 }
             }

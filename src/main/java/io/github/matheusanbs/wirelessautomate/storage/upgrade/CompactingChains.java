@@ -190,9 +190,14 @@ public final class CompactingChains {
                 built.size(), built.groupCount(), all.size(), (System.nanoTime() - start) / 1_000_000L, skipped);
     }
 
-    /** O grafo vazio na ordem dos ids da registry, a que torna o índice determinístico. */
+    /**
+     * O grafo vazio na ordem dos ids da registry, a que torna o índice determinístico; no empate, o maior do mesmo mod
+     * do menor (o mesmo namespace) vem primeiro.
+     */
     public static ChainGraph<Item> newGraph() {
-        return new ChainGraph<>(Comparator.comparing(item -> BuiltInRegistries.ITEM.getKey(item)));
+        return new ChainGraph<>(Comparator.comparing(item -> BuiltInRegistries.ITEM.getKey(item)),
+                (small, big) -> BuiltInRegistries.ITEM.getKey(small).getNamespace()
+                        .equals(BuiltInRegistries.ITEM.getKey(big).getNamespace()));
     }
 
     /**

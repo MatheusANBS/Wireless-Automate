@@ -8,11 +8,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.BiPredicate;
 
 /**
  * Monta as cadeias de compactação a partir dos pares conferidos (menor, maior, fator 4 ou 9). Cada forma
- * sobe por uma ligação só: a 3×3 antes da 2×2 e, no empate, o maior primeiro na ordem dada. Cada maior aceita
- * um menor só (o primeiro na ordem). Ciclos são cortados. A ordem dada torna o resultado determinístico.
+ * sobe por uma ligação só: a 3×3 antes da 2×2 e, no empate, o maior da mesma família do menor ({@code kin}, o mesmo
+ * mod) e depois o primeiro na ordem dada. Cada maior aceita um menor só: o da mesma família, senão o primeiro na
+ * ordem. Assim, quando as receitas de dois mods aceitam a tag nos dois sentidos, cada mod fica com a própria cadeia.
+ * Ciclos são cortados. A ordem dada torna o resultado determinístico.
  * Puro, com JUnit.
  */
 public final class ChainGraph<T> {
@@ -23,10 +26,17 @@ public final class ChainGraph<T> {
     }
 
     private final Comparator<T> order;
+    private final BiPredicate<T, T> kin;
     private final Map<T, Up<T>> up = new HashMap<>();
 
     public ChainGraph(Comparator<T> order) {
+        this(order, (a, b) -> false);
+    }
+
+    /** @param kin se o menor e o maior são da mesma família (o mesmo mod), a preferida no empate */
+    public ChainGraph(Comparator<T> order, BiPredicate<T, T> kin) {
         this.order = order;
+        this.kin = kin;
     }
 
     public void link(T small, T big, int factor) {
@@ -34,19 +44,31 @@ public final class ChainGraph<T> {
             return;
         }
         Up<T> current = up.get(small);
-        if (current == null || factor > current.factor()
-                || (factor == current.factor() && order.compare(big, current.big()) < 0)) {
+        if (current == null || factor > current.factor() || (factor == current.factor() && before(small, big, current.big()))) {
             up.put(small, new Up<>(big, factor));
         }
     }
 
+    /** No empate, {@code a} vem antes de {@code b} para {@code of}: a mesma família primeiro, depois a ordem. */
+    private boolean before(T of, T a, T b) {
+        boolean kinA = kin.test(of, a);
+        if (kinA != kin.test(of, b)) {
+            return kinA;
+        }
+        return order.compare(a, b) < 0;
+    }
+
     public List<Chain<T>> chains() {
-        // Cada maior fica com um menor só: o primeiro na ordem.
+        // Cada maior fica com um menor só: o da mesma família, senão o primeiro na ordem.
         Map<T, T> down = new HashMap<>();
         TreeSet<T> smalls = new TreeSet<>(order);
         smalls.addAll(up.keySet());
         for (T small : smalls) {
-            down.putIfAbsent(up.get(small).big(), small);
+            T big = up.get(small).big();
+            T current = down.get(big);
+            if (current == null || (!kin.test(current, big) && kin.test(small, big))) {
+                down.put(big, small);
+            }
         }
         List<Chain<T>> out = new ArrayList<>();
         Set<T> used = new HashSet<>();

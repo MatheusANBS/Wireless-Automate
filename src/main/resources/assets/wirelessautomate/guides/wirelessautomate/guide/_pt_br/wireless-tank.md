@@ -13,9 +13,8 @@ item_ids:
 
 <ItemImage id="wirelessautomate:storage_tank" scale="2" float="left" />
 
-Um tanque para **vários fluidos ao mesmo tempo**, quantos couberem na capacidade do tier. Cada
-fluido aparece numa lista, como os itens do [Baú Wireless](wireless-chest.md). Preso a um roteador,
-ele troca bilhões de mB de uma vez.
+Um tanque para **vários fluidos ao mesmo tempo**, numa lista como a do [Baú Wireless](wireless-chest.md).
+Preso a um roteador, troca bilhões de mB de uma vez.
 
 <br clear="all" />
 
@@ -49,19 +48,18 @@ Total em mB, todos os fluidos somados.
 
 ## Baldes e recipientes
 
-| Quero... | Como |
+| Gesto | O que faz |
 | --- | --- |
-| Esvaziar um balde | Clique no Tanque com o balde cheio na mão, ou Shift + clique nele no inventário da tela. |
-| Encher um balde | Clique no Tanque com o balde vazio (pega o primeiro fluido), ou, na tela, clique no fluido com o balde no cursor. |
-| Outros recipientes | Tanques e células de outros mods funcionam igual, pela tela. |
+| **Clique** no Tanque com balde cheio | Esvazia o balde (ou Shift + clique nele, na tela). |
+| **Clique** no Tanque com balde vazio | Enche com o primeiro fluido. |
+| Na tela, **clique** num fluido com recipiente no cursor | Enche o recipiente, ou o esvazia se já estiver cheio. Botão direito: esvazia um. |
 
-Na tela, com um recipiente no cursor: clique num fluido enche o recipiente com ele, ou o esvazia se
-ele já estiver cheio; o botão direito esvazia um. A busca, a ordem e o redimensionar são os do Baú.
+Tanques e células de outros mods funcionam igual, pela tela.
 
 ## Filtro de entrada
 
-O botão **Filtro** da tela abre a [tela de filtros](filters.md) de fluidos: só entra o que ele
-aceita, e o **estoque** de uma entrada vira "guardar até N mB".
+O botão **Filtro** abre a [tela de filtros](filters.md) de fluidos: só entra o que ele aceita, e o
+**estoque** vira "guardar até N mB".
 
 ## Em comum com o Baú
 

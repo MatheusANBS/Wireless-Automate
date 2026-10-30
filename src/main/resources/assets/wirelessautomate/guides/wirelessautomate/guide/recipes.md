@@ -9,12 +9,12 @@ navigation:
 
 # All recipes
 
-All of them with vanilla items, in a crafting table.
+All in a crafting table, with vanilla items.
 
 | Also in the crafting table | How |
 | --- | --- |
-| **Raise the tier** | Router or storage (Chest, Tank, Battery, Chemical Tank, Source Tank) + the card of any higher tier, in any slots. |
-| **Copy a Filter Card** | Configured card + blank cards: the original comes back. |
+| **Raise the tier** | Router or storage (Chest, Tank, Battery, Chemical Tank, Source Tank) + the card one tier up, in any slots. |
+| **Copy a Filter Card** | Configured card + blank cards. The original comes back. |
 | **This guide** | Book + redstone. |
 
 <RecipeFor id="wirelessautomate:router" />

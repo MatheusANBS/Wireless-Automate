@@ -9,9 +9,8 @@ navigation:
 
 # Redes
 
-Roteadores não se ligam uns aos outros: cada **face** de um roteador, em cada aba, entra numa
-**rede** (ou em nenhuma), e tudo do mesmo tipo na mesma rede troca entre si. Quem envia e quem
-recebe vem do modo das faces.
+Roteadores não se ligam uns aos outros: cada **face**, em cada aba, entra numa **rede**. Tudo do
+mesmo tipo na mesma rede troca entre si; o modo da face diz quem envia e quem recebe.
 
 <GameScene zoom="3" interactive={true}>
   <Block id="minecraft:furnace" x="0" y="0" z="0" />
@@ -49,30 +48,34 @@ recebe vem do modo das faces.
   <IsometricCamera yaw="210" pitch="35" />
 </GameScene>
 
-## Como funciona
+## Como usar
+
+1. Um roteador novo não está em rede nenhuma. Abra a tela dele e escolha a aba e a face.
+2. Na linha **Rede**, escolha a rede.
+3. Repita nas outras máquinas.
+
+## Regras
 
 | Regra | Explicação |
 | --- | --- |
-| **Sem rede ao colocar** | Um roteador novo não está em rede nenhuma: ponha as faces dele numa rede (abaixo) para ele trabalhar. |
-| **Rede ativa** | Cada jogador tem uma rede ativa, a que o [Tablet](network-tablet.md) usa como destino do **Mover**. |
-| **Rede por face** | Numa fornalha, a face de **Cima** (entrada) pode estar na rede "Mina" e a de **Baixo** (saída) na rede "Armazém": o minério chega pela Mina e o lingote sai pelo Armazém. Cada aba tem as suas: a energia pode ir para a rede "Base". |
-| **Ordem de entrega** | Prioridade maior primeiro; empates se revezam (round-robin). |
-| **Armazém** | Recebe de quem extrai e entrega para quem insere, sem ficar trocando com outro Armazém. |
-| **Quem usa** | Uma rede pública é de todos. Numa privada, o dono, os operadores e os **convidados** (e, com o FTB Teams, os membros dos times que você adicionar) podem pôr roteadores nela e tirá-los. Só o dono (ou um operador) gerencia: renomeia, convida e remove. |
+| **Rede por face** | A face de **Cima** da fornalha pode estar na rede "Mina" e a de **Baixo** na "Armazém". A energia pode ir para a "Base". |
+| **Ordem de entrega** | Prioridade maior primeiro; empates se revezam. |
+| **Rede ativa** | A que o [Tablet](network-tablet.md) usa como destino do **Mover**. Cada jogador tem a sua. |
+| **Quem usa** | Pública: todos. Privada: o dono, os operadores, os **convidados** e, com o FTB Teams, os times adicionados. Só o dono (ou um operador) renomeia, convida e remove. |
 
 ## Como mudar a rede
 
 | Jeito | Quantos de uma vez |
 | --- | --- |
-| Linha **Rede** da face, na tela do roteador | Uma face de um roteador, numa aba |
-| <ItemLink id="wirelessautomate:network_tablet" />, Selecionar | Os nós que você marcar na lista: todas as faces deles no tipo escolhido (ou em todos) |
-| <ItemLink id="wirelessautomate:configurator" /> | A rede de cada face vai junto com a configuração colada (todas as abas ou só um tipo) |
+| Linha **Rede** da face, na tela do roteador | Uma face, numa aba |
+| <ItemLink id="wirelessautomate:network_tablet" />, Selecionar | Todas as faces dos nós marcados, no tipo escolhido (ou em todos) |
+| <ItemLink id="wirelessautomate:configurator" /> | A rede vai junto com a configuração colada |
 
 ## Alcance e chunks
 
 | Situação | O que acontece |
 | --- | --- |
-| Destino longe demais | Fica de fora daquela origem. O alcance depende do tier de quem envia ([Roteador](router.md)). |
+| Destino longe demais | Fica de fora. O alcance depende do tier de quem envia ([Roteador](router.md)). |
 | Outra dimensão | Só com origem **Esmeralda** ou acima. |
 | Chunk descarregado | A rota pausa e volta sozinha quando o chunk carrega. |
-| Quer manter trabalhando longe | Use o [Upgrade de Chunk Loading](chunk-loading.md). |
+| Manter trabalhando longe | Use o [Upgrade de Chunk Loading](chunk-loading.md). |

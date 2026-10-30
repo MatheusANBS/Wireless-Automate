@@ -53,13 +53,18 @@ item_ids:
   <ItemImage id="wirelessautomate:resonance_dust" />
 </Row>
 
-Os cristais de quartzo são o combustível do [Ressonador de Sinal](signal-resonator.md), o gerador de energia do mod.
-Esta página mostra de onde eles vêm, como cuidar deles e as peças que o Ressonador pede para subir de tier.
+Os cristais são o combustível do [Ressonador de Sinal](signal-resonator.md), o gerador de energia do mod.
+
+## Como usar
+
+1. Minere o minério com picareta de ferro ou melhor.
+2. Ponha os cristais nas câmaras do Núcleo. Do Elite para cima, use o **Afinado** do tier.
+3. Cristal **Opaco** (sem carga): deixe na câmara e ponha catalisador no Núcleo.
+4. Cristal **rachado**: refaça na bancada com 4 Cristais de Sinal cheios.
 
 ## O minério
 
-O **Minério de Quartzo de Sinal** aparece no Overworld, em pedra e em ardósia (a versão de ardósia
-é mais dura). Fica em veios pequenos, mais comum perto de **y = −16**. Quebre com **picareta de ferro** ou melhor:
+No Overworld, em pedra e ardósia, em veios pequenos. Mais comum perto de **y = −16**.
 
 | Ferramenta | O que cai |
 | --- | --- |
@@ -74,7 +79,7 @@ O **Minério de Quartzo de Sinal** aparece no Overworld, em pedra e em ardósia 
 | <ItemImage id="wirelessautomate:cut_signal_crystal" /> **Cristal Lapidado** | Bancada: quatro Cristais de Sinal em cruz em volta de um Fragmento de Ametista. |
 | <ItemImage id="wirelessautomate:tuned_signal_crystal_elite" /> **Cristal Afinado** | Bancada: um Lapidado com o material do tier (mais abaixo). Um por tier, do Elite ao Ultimate. |
 
-Quanto cada um rende numa câmara depende do tier do Núcleo:
+Quanto cada um rende numa câmara:
 
 | Cristal | Núcleo Básico ou Avançado | Núcleo Elite ou acima |
 | --- | --- | --- |
@@ -83,10 +88,8 @@ Quanto cada um rende numa câmara depende do tier do Núcleo:
 | **Afinado** do tier do Núcleo ou acima | 2× | 2× |
 | **Afinado** de tier abaixo | 2× | 1/2× |
 
-O Lapidado e os Afinados duram o dobro do Cristal de Sinal. Quanto maior o tier do Núcleo, menos a carga dura: a
-tabela da página do [Ressonador de Sinal](signal-resonator.md) mostra o tempo de cada tier.
-
-As receitas dos cristais só aceitam cristais **cheios** e sem rachadura: cristais gastos não valem.
+Lapidado e Afinado duram o dobro. Quanto maior o Núcleo, menos a carga dura
+([Ressonador de Sinal](signal-resonator.md)). As receitas só aceitam cristais **cheios** e sem rachadura.
 
 <RecipeFor id="wirelessautomate:cut_signal_crystal" />
 
@@ -101,9 +104,7 @@ As receitas dos cristais só aceitam cristais **cheios** e sem rachadura: crista
   <ItemImage id="wirelessautomate:tuned_signal_crystal_ultimate" />
 </Row>
 
-Do **Núcleo Elite** para cima, só o **Cristal Afinado** do tier do Núcleo (ou de um tier acima) rende cheio. Para
-afinar, junte na bancada, em qualquer posição, um **Lapidado** (ou um Afinado de tier abaixo, para reafinar) e o
-material do tier:
+Na bancada, sem forma: um **Lapidado** (ou um Afinado de tier abaixo) e o material do tier.
 
 | Afinado | Material, além do cristal |
 | --- | --- |
@@ -116,40 +117,32 @@ material do tier:
 
 ¹ Só com o mod Allthemodium.
 
-O cristal afinado sai cheio, mas com a **integridade** que o cristal de entrada tinha: afinar não renova o cristal.
+Sai cheio, mas com a mesma **integridade**: afinar não renova o cristal.
 
 <RecipeFor id="wirelessautomate:tuned_signal_crystal_elite" />
 
 ## Carga e cristal Opaco
 
-A **barra do item** mostra quanto falta para o cristal acabar: ela só aparece depois que o cristal começa a
-gastar. Dentro do Núcleo, a carga cai enquanto ele gera energia.
+A barra do item mostra a carga. Sem carga, o cristal fica **Opaco** e não gera. Para recarregar, deixe-o na
+câmara e ponha o catalisador no Núcleo (na mão, pela tela ou pela Porta de Cristais):
 
-Sem carga, o cristal fica **Opaco**: é o mesmo item, só que apagado. Um Opaco não gera nada, mas dá para
-**recarregar**:
+| Núcleo | Catalisador |
+| --- | --- |
+| Básico e Avançado | Redstone ou Pó de Ressonância |
+| Elite e Esmeralda | Pó de Ressonância |
+| Allthemodium para cima | Pó Carregado do tier |
 
-1. Deixe o Opaco numa câmara do Núcleo.
-2. Ponha o **catalisador** do tier no Núcleo (clique com ele na mão, pela tela ou pela Porta de Cristais):
-   **redstone** ou **Pó de Ressonância** no Básico e no Avançado, só **Pó de Ressonância** no Elite e na Esmeralda,
-   e o **Pó Carregado** do tier do Allthemodium para cima.
-3. O Núcleo recarrega **todos os Opacos de uma vez**: leva 30 segundos, gasta 1 catalisador por cristal e cada um volta cheio. Com menos catalisador que Opacos, recarregam os primeiros e os outros esperam o próximo ciclo.
-
-O slot do catalisador guarda um tipo por vez: para trocar de catalisador, espere o que está lá acabar ou tire-o
-pela tela. A Porta de Cristais só devolve os Opacos quando o Núcleo está sem catalisador; com ele, o Opaco fica lá
-dentro esperando o catalisador e o ciclo de recarga.
+Todos os Opacos recarregam juntos em 30 segundos, com 1 catalisador cada. O slot guarda um tipo de catalisador
+por vez. A Porta de Cristais só devolve Opacos com o Núcleo sem catalisador.
 
 ## Integridade e cristal rachado
 
-Cada cristal aguenta **8 cargas**: a de fábrica e mais 7 recargas. Cada recarga gasta 1 de **integridade** (a dica
-do item mostra "Integridade 5 de 8", e a tela do Núcleo, uma barrinha sob cada câmara). Quando a integridade acaba,
-a recarga não enche o cristal: ele **racha**.
+Cada cristal aguenta **8 cargas** (a de fábrica e 7 recargas); a dica do item mostra quantas faltam. Depois,
+ele **racha**: não gera, não recarrega e não entra na câmara.
 
-Um **cristal rachado** não gera, não recarrega e não entra na câmara. A Porta de Cristais sempre o devolve. Para
-**refazer**, junte na bancada, em qualquer posição, o rachado e **4 Cristais de Sinal cheios**: sai o mesmo cristal,
-cheio e com a integridade inteira. Vale para os três tipos; num Afinado, o tier fica.
-
-No Núcleo Ultimate, um Afinado Ultimate rachado também pode ser queimado no **Eco**, como na página do
-[Ressonador de Sinal](signal-resonator.md).
+Para **refazer**: rachado + **4 Cristais de Sinal cheios** na bancada. Volta o mesmo cristal, cheio e inteiro (o
+Afinado mantém o tier). No Núcleo Ultimate, um Afinado Ultimate rachado também pode ser queimado no **Eco**
+([Ressonador de Sinal](signal-resonator.md)).
 
 ## Pó de Ressonância e Pó Carregado
 
@@ -161,13 +154,11 @@ No Núcleo Ultimate, um Afinado Ultimate rachado também pode ser queimado no **
   <ItemImage id="wirelessautomate:charged_dust_ultimate" />
 </Row>
 
-O **Pó de Ressonância** é o catalisador do Núcleo Elite e do Esmeralda (e vale também no Básico e no Avançado).
-Na bancada, sem forma: **1 redstone + 1 pó de glowstone + 1 Cristal de Sinal cheio** rendem 4.
+**Pó de Ressonância**, sem forma: **1 redstone + 1 pó de glowstone + 1 Cristal de Sinal cheio** rendem 4.
 
 <RecipeFor id="wirelessautomate:resonance_dust" />
 
-Do Allthemodium para cima, cada Núcleo pede o **Pó Carregado** do tier dele. Na bancada, sem forma:
-**8 Pós de Ressonância + 1 lingote do tier** rendem 8.
+**Pó Carregado**, sem forma: **8 Pós de Ressonância + 1 lingote do tier** rendem 8.
 
 | Pó Carregado | Lingote |
 | --- | --- |
@@ -180,8 +171,7 @@ Do Allthemodium para cima, cada Núcleo pede o **Pó Carregado** do tier dele. N
 
 ## As peças do Coração
 
-Para montar o Núcleo e para subir o tier dele, o Ressonador pede um **Coração do Ressonador** (mais abaixo). Os
-Corações saem desta cadeia de peças, feitas na ordem:
+Os **Corações do Ressonador** saem destas peças, na ordem. O JEI mostra a posição dos ingredientes.
 
 | Peça | Receita | Rende |
 | --- | --- | --- |
@@ -195,8 +185,6 @@ Corações saem desta cadeia de peças, feitas na ordem:
 | <ItemImage id="wirelessautomate:phase_matrix" /> **8. Matriz de Fase** | 1 Lente no centro, 4 Bobinas nos cantos, 2 Circuitos e 2 Placas | 1 |
 | <ItemImage id="wirelessautomate:field_stabilizer" /> **9. Estabilizador de Campo** | 4 Matrizes + 1 bloco de diamante + 2 obsidianas chorosas + 1 olho do ender | 1 |
 | <ItemImage id="wirelessautomate:condensed_core" /> **10. Núcleo Condensado** | 4 Estabilizadores + 4 blocos de netherite + 1 Nether Star no centro | 1 |
-
-O JEI mostra a posição de cada ingrediente.
 
 <RecipeFor id="wirelessautomate:signal_alloy_ingot" />
 <RecipeFor id="wirelessautomate:phase_matrix" />
@@ -214,9 +202,8 @@ O JEI mostra a posição de cada ingrediente.
   <ItemImage id="wirelessautomate:resonator_heart_ultimate" />
 </Row>
 
-Há um **Coração do Ressonador** por tier. O Básico vai na receita do Núcleo de Ressonância; os outros são gastos
-ao subir o Núcleo com o Cartão de Upgrade (veja o [Ressonador de Sinal](signal-resonator.md)). Todos são feitos na
-bancada, sem forma:
+Um por tier, sem forma. O Básico entra na receita do Núcleo de Ressonância; os outros são gastos ao subir o
+Núcleo com o Cartão de Upgrade ([Ressonador de Sinal](signal-resonator.md)).
 
 | Coração | Receita |
 | --- | --- |
@@ -231,12 +218,11 @@ bancada, sem forma:
 
 ¹ Só com o mod Allthemodium.
 
-A <ItemImage id="wirelessautomate:alloy_frame" /> **Moldura de Liga** do Coração Ultimate é um anel de 8 blocos em volta de
-1 Nether Star: com o Allthemodium, blocos de liga Unobtainium-Vibranium; sem ele, blocos de netherite.
+A <ItemImage id="wirelessautomate:alloy_frame" /> **Moldura de Liga** é um anel de 8 blocos em volta de 1 Nether Star: blocos de
+liga Unobtainium-Vibranium com o Allthemodium, blocos de netherite sem ele.
 
 <RecipeFor id="wirelessautomate:resonator_heart_basic" />
 <RecipeFor id="wirelessautomate:alloy_frame" />
 
-Os números são os padrões; o JEI mostra os do seu pack.
-
-Veja como montar o gerador em [Ressonador de Sinal](signal-resonator.md).
+Os números são os padrões; o JEI mostra os do seu pack. Para montar o gerador, veja o
+[Ressonador de Sinal](signal-resonator.md).

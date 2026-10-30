@@ -13,9 +13,7 @@ item_ids:
 
 <ItemImage id="wirelessautomate:storage_source_tank" scale="2" float="left" />
 
-Guarda **Source** do Ars Nouveau em grande quantidade, muito além de uma Source Jar. Só existe com o
-Ars Nouveau instalado. Preso a um roteador na aba **Source**, ele recebe e entrega Source como os
-outros armazenamentos.
+Guarda muito mais **Source** que uma Source Jar. Só existe com o Ars Nouveau.
 
 <br clear="all" />
 
@@ -25,26 +23,21 @@ outros armazenamentos.
   <Block id="wirelessautomate:storage_source_tank" x="4" y="0" z="0" p:tier="ultimate" />
   <Block id="wirelessautomate:router" x="4" y="1" z="0" p:facing="up" p:tier="ultimate" />
   <LineAnnotation from="0.5 1.5 0.5" to="4.5 1.5 0.5" color="#a46cff" thickness="0.08">
-    Source de um Tanque para outro pela aba Source
+    De um Tanque para outro pela aba Source
   </LineAnnotation>
   <IsometricCamera yaw="200" pitch="30" />
 </GameScene>
 
-## Para o Ars
+## Como usar
 
-- Os **Sourcelinks** num raio de 5 blocos depositam nele.
-- As máquinas do Ars por perto (Enchanting Apparatus, Imbuement Chamber, rituais, Spell Turrets e Relays de depósito) tiram dele, como de uma Source Jar.
+- **Sourcelinks** num raio de 5 blocos depositam nele.
+- **Máquinas do Ars** por perto (Enchanting Apparatus, Imbuement Chamber, rituais, Spell Turrets e Relays de
+  depósito) tiram dele como de uma Source Jar, sem encostar.
+- **Relays** e outros blocos do Ars ligam nele direto.
+- **Roteador:** na aba **Source**, funciona como qualquer face. Entre dois tanques, tudo passa de uma vez.
 
-## Com o roteador
-
-Na aba **Source** ele funciona como qualquer outra face. Entre dois tanques, tudo passa de uma
-vez.
-
-## A tela
-
-Clique no Tanque: a barra roxa mostra quanto ele tem, a porcentagem e a vazão em Source por
-segundo. A coluna de vidro do bloco também mostra o nível, de vazio a cheio. O Tanque não tem
-filtro: Source é uma só.
+Clique no Tanque para ver quanto ele tem e a vazão por segundo; a coluna de vidro do bloco também mostra o nível.
+Não tem filtro: Source é uma só.
 
 ## Capacidade
 
@@ -63,11 +56,10 @@ filtro: Source é uma só.
 
 ## Em comum com o Baú
 
-- **Tiers:** sobe com os mesmos [Cartões de Upgrade](upgrade-cards.md), no mundo ou na bancada, sem perder o conteúdo.
-- **Quebrar:** o item leva o conteúdo, e o tooltip mostra o total. Cheio, ele sempre vira item (no criativo, sem picareta ou numa explosão).
+- **Tiers:** sobe com os [Cartões de Upgrade](upgrade-cards.md), no mundo ou na bancada, sem perder o conteúdo.
+- **Quebrar:** o item leva o conteúdo. Cheio, sempre vira item (no criativo, sem picareta ou numa explosão).
 - **Comparador:** o sinal sobe com a ocupação.
-- **Outros blocos do Ars** que usam a Source, como os Relays, ligam nele direto.
-- **Faces:** as seis são iguais. Além do roteador, os Sourcelinks e as máquinas do Ars por perto o usam pelo alcance, sem precisar encostar nele.
+- **Faces:** as seis são iguais.
 
 ## Receita
 

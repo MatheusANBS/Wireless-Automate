@@ -13,30 +13,27 @@ item_ids:
 
 <ItemImage id="wirelessautomate:crystal_repairer" scale="2" float="left" />
 
-A block that **fixes the cracked crystals** of the [Signal Resonator](signal-resonator.md): the crystal comes back full,
-with full charge and integrity. It does the same as recasting the crystal at a crafting table, without standing at
-the table and with **up to eight repairs at the same time**. It has no tier and doesn't need to be near a Resonator.
+Fixes the cracked crystals of the [Signal Resonator](signal-resonator.md): the crystal comes back with full charge and
+integrity. It does the same as the crafting table, but with **up to eight repairs at the same time**. It has no tier and
+doesn't need to be near the Resonator.
 
 <br clear="all" />
 
 ## How to use
 
-1. Place the Repairer and give it **energy**. Energy enters through **any face**: a cable, a router in **Insert** mode
-   with a Battery or a generator on the other side, or a Wireless Battery. No router pulls energy out of it.
-2. Put the **cracked crystals** in the eight input slots (one per line) and the **full Signal Crystals** in the middle
-   slot. Use the screen (right click), a router attached to the block or a hopper: each slot only accepts what fits.
-3. Each line starts by itself when it has a cracked crystal, **4 full Signal Crystals** in the stock and the repair's
-   energy. A repair takes **7 seconds** and the eight lines run together.
-4. The fixed crystal goes to the output slots. Take them out from the screen, with a router or a hopper. If the output
-   is full, the line waits.
+1. Place the Repairer and give it **energy** through **any face** (a cable, a router on **Insert** or a Wireless
+   Battery). No router pulls energy out of it.
+2. Put the **cracked crystals** in the eight input slots and the **full Signal Crystals** in the middle slot. Use the
+   screen, a router or a hopper.
+3. Each line starts by itself when it has a cracked crystal, **4 full Signal Crystals** and the energy. A repair takes
+   **7 seconds**.
+4. Take the fixed crystals from the output. Output full: the line waits.
 
-The screen shows the block's energy, each line's progress and what is missing when nothing moves (**no energy**,
-**missing crystals** or **output full**).
+The screen shows each line's progress and what is missing (**no energy**, **missing crystals** or **output full**).
 
 ## The cost
 
-Each repair spends **4 full Signal Crystals** (the same as the crafting table) and an amount of **FE** that depends on
-the crystal type:
+Each repair spends **4 full Signal Crystals** and an amount of **FE** that depends on the crystal:
 
 | Crystal | FE per repair |
 | --- | --- |
@@ -49,8 +46,8 @@ the crystal type:
 | Tuned Unobtainium | 21,400,000 |
 | Tuned Ultimate | 536,870,912 |
 
-The numbers are the defaults; JEI shows your pack's. With little energy, a repair only starts when the buffer
-holds its whole cost. Breaking the block in the middle of a repair **loses the 4 crystals and the energy already spent** on it.
+The numbers are the defaults; JEI shows your pack's. A repair only starts once its whole cost is stored. Breaking the
+block in the middle of a repair **loses the 4 crystals and the energy** already spent on it.
 
 ## Recipe
 

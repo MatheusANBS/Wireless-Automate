@@ -13,23 +13,24 @@ item_ids:
 
 <ItemImage id="wirelessautomate:chunk_loader_upgrade" scale="2" float="left" />
 
-Keeps the router's chunk (and its machine) loaded, so it keeps working while you're away.
+Keeps the router's and the machine's chunk loaded. The router keeps working while you're away.
 
 <br clear="all" />
 
-## Spec sheet
+## How to use it
 
-| | |
-| --- | --- |
-| **Goes in** | The slot in the router screen's header. |
-| **Limit** | Each player keeps up to 16 chunks; several routers in one chunk count once. |
+1. Open the router's screen.
+2. Put the upgrade in the slot at the top of the screen.
+3. Check the state at the top of the screen.
+
+Each player keeps up to 16 chunks. Several routers in one chunk count once.
 
 ## States
 
-| State in the header | Meaning |
+| State | Meaning |
 | --- | --- |
-| **Active: chunks loaded** | The router and the machine keep working away from players. |
-| **Inactive: owner's chunk limit** | Whoever placed the upgrade already forces as many chunks as allowed. |
+| **Active: chunks loaded** | The router and the machine work away from players. |
+| **Inactive: owner's chunk limit** | Whoever placed the upgrade is already at the chunk limit. |
 | **Inactive: disabled on the server** | The server has turned this upgrade off. |
 
 ## Recipe

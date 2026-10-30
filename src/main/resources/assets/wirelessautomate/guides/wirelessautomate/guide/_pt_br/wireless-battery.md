@@ -13,9 +13,9 @@ item_ids:
 
 <ItemImage id="wirelessautomate:storage_battery" scale="2" float="left" />
 
-Guarda energia (FE) muito além de um `int`: no Ultimate, sem limite. Preso a um roteador na aba
-**Energia**, ela carrega e descarrega bilhões de FE por tick. A capacidade de cada tier é **uma hora** da
-geração cheia do [Ressonador](signal-resonator.md) do mesmo tier, e o roteador do tier escoa essa geração com 5% de folga.
+Guarda muita energia (FE); no Ultimate, sem limite. Presa a um roteador na aba **Energia**, carrega e
+descarrega bilhões de FE de uma vez. Cada tier guarda **uma hora** da geração cheia do
+[Ressonador](signal-resonator.md) do mesmo tier.
 
 <br clear="all" />
 
@@ -47,9 +47,8 @@ geração cheia do [Ressonador](signal-resonator.md) do mesmo tier, e o roteador
 
 ## A tela
 
-Clique na Bateria: a barra mostra a carga e a porcentagem, e embaixo a variação por tick
-(**carregando**, **descarregando** ou **estável**). Passe o mouse na barra para o valor exato.
-A Bateria não tem filtro: energia é uma só.
+Clique na Bateria: a barra mostra a carga e se ela está **carregando**, **descarregando** ou
+**estável**. Passe o mouse na barra para o valor exato. Não tem filtro: energia é uma só.
 
 ## Em comum com o Baú
 

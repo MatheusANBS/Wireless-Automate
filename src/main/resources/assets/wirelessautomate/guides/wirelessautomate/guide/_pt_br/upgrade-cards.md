@@ -27,26 +27,27 @@ item_ids:
   <ItemImage id="wirelessautomate:tier_core_ultimate" scale="2" />
 </Row>
 
-Todo roteador nasce **Básico**. A escada é Básico → Avançado → Elite → Esmeralda → Ultimate. Com
-o mod **Allthemodium**, entram três degraus entre a Esmeralda e o Ultimate: Allthemodium → Vibranium
-→ Unobtainium.
+Os cartões sobem o tier: Básico → Avançado → Elite → Esmeralda → Ultimate. Com o **Allthemodium**,
+entram Allthemodium → Vibranium → Unobtainium antes do Ultimate.
 
-Cada degrau tem um **anel**: oito itens em volta do centro da bancada. Subir um degrau custa o anel
-daquele tier, por qualquer um dos três caminhos:
+## Como usar
 
-| Centro do anel | Resultado |
+| Onde | Como |
 | --- | --- |
-| **Redstone** | O cartão de um degrau, por exemplo **Avançado → Elite**. |
-| **Um cartão** (por exemplo Básico → Avançado) | O cartão que pula: **Básico → Elite**. Junta os anéis dos degraus que ele pula. |
-| **O roteador ou o armazenamento** do degrau anterior | O mesmo bloco, já no tier novo (a receita direta). |
+| **No mundo** | Shift + clique com o cartão no roteador ou armazenamento. Toda a configuração continua. |
+| **Na bancada, com o cartão** | O bloco + o cartão, em qualquer posição. |
+| **Na bancada, sem cartão** | O bloco no centro do anel do tier seguinte. |
 
-O cartão tem **origem**: o nome diz de onde ele sobe ("Cartão de Upgrade: Básico → Elite"), e ele só
-vale num bloco daquele tier. Cartões antigos, sem origem, continuam subindo de qualquer tier abaixo.
+O cartão só vale no tier escrito no nome ("Básico → Elite"). Em outro tier, ele não é gasto e um
+aviso diz de qual tier ele sobe.
+
+Também sobem os armazenamentos ([Baú](wireless-chest.md), [Tanque](wireless-tank.md),
+[Bateria](wireless-battery.md), [Tanque Químico](wireless-chemical-tank.md) e
+[Tanque de Source](wireless-source-tank.md)) sem perder o conteúdo.
 
 ## O que cada cartão aumenta
 
-Por face e por tipo. O tooltip do cartão mostra os valores do seu servidor. Químicos usam o
-limite de fluido. Source só com o Ars Nouveau.
+Por face e por tipo. O tooltip do cartão mostra os valores do seu servidor.
 
 | Cartão | Itens/s | Fluido e químico (mB/s) | Energia (FE/t) | Source/s | Alcance |
 | --- | --- | --- | --- | --- | --- |
@@ -60,39 +61,25 @@ limite de fluido. Source só com o Ars Nouveau.
 
 ¹ Só com o mod Allthemodium. Sem ele, o Cartão Ultimate vem depois do Cartão Esmeralda (16.384 itens/s → sem limite).
 
-Cada passo multiplica a vazão por 8; só a energia do Unobtainium sobe 64 vezes sobre o Vibranium. Alcance e dimensões contam pelo tier de quem **envia**.
-
-## Como usar
-
-| Onde | Como |
-| --- | --- |
-| **No mundo** | Shift + clique com o cartão num roteador ou armazenamento já colocado, do tier da origem do cartão. Toda a configuração (faces, filtros, redes, cartões) continua. |
-| **Na bancada, com o cartão** | O bloco + o cartão, em qualquer posição. |
-| **Na bancada, sem cartão** | O bloco no centro do anel do tier seguinte. |
-
-Na bancada, o bloco sobe como item: o roteador mantém o nome, e o armazenamento, o nome e o conteúdo.
-Num bloco de outro tier, o cartão não é gasto e a barra acima do inventário avisa de qual tier ele sobe.
-
-Se o mod Allthemodium entrar no pack depois, um cartão feito antes dele (por exemplo Esmeralda →
-Ultimate) continua valendo e pula os degraus do Allthemodium.
-
-Os mesmos cartões sobem os armazenamentos ([Baú](wireless-chest.md), [Tanque](wireless-tank.md),
-[Bateria](wireless-battery.md), [Tanque Químico](wireless-chemical-tank.md) e
-[Tanque de Source](wireless-source-tank.md)), do mesmo jeito e sem
-perder o conteúdo. A capacidade de cada tier está na página de cada um.
+Cada passo multiplica a vazão por 8 (a energia do Unobtainium, por 64). Alcance e dimensões contam pelo tier de quem **envia**.
 
 ## Receitas
+
+Cada degrau tem um **anel** de oito itens na bancada. O centro decide o resultado:
+
+| Centro do anel | Resultado |
+| --- | --- |
+| **Redstone** | O cartão de um degrau, por exemplo **Avançado → Elite**. |
+| **Um cartão** (ex.: Básico → Avançado) | O cartão que pula: **Básico → Elite**. Junta os anéis dos degraus pulados. |
+| **O roteador ou armazenamento** do degrau anterior | O mesmo bloco, já no tier novo. |
 
 <RecipeFor id="wirelessautomate:tier_core_advanced" />
 <RecipeFor id="wirelessautomate:tier_core_elite" />
 <RecipeFor id="wirelessautomate:tier_core_emerald" />
 <RecipeFor id="wirelessautomate:tier_core_ultimate" />
 
-As receitas mostram o anel com a Redstone no centro. Troque a Redstone por um cartão ou pelo bloco
-do degrau anterior para os outros dois caminhos.
+As receitas mostram a Redstone no centro; o JEI mostra os três caminhos do seu pack.
 
-Com o Allthemodium, os anéis dele usam os materiais do próprio metal: lingotes e blocos de
-Allthemodium; lingotes, blocos e liga Vibranium-Allthemodium; lingotes, blocos e liga
-Unobtainium-Vibranium. O degrau antes do Ultimate passa a ser o Unobtainium e, no ATM10 (com o All
-The Tweaks), o anel do Ultimate leva fragmentos de ATM Star, ovo do dragão e blocos de liga
-Unobtainium-Allthemodium. O JEI mostra os três caminhos de cada anel do seu pack.
+Os anéis do Allthemodium usam o próprio metal. No ATM10, o do Ultimate leva fragmentos de ATM Star,
+ovo do dragão e blocos de liga Unobtainium-Allthemodium. Um cartão feito antes de o Allthemodium
+entrar no pack (ex.: Esmeralda → Ultimate) continua valendo e pula esses degraus.

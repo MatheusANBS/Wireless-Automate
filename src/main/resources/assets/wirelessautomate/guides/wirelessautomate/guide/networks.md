@@ -9,9 +9,8 @@ navigation:
 
 # Networks
 
-Routers don't link to each other: each **face** of a router, on each tab, joins a **network** (or
-none), and everything of the same type on the same network trades. Who sends and who receives comes
-from the face modes.
+Routers don't link to each other: each **face**, on each tab, joins a **network**. Everything of the
+same type on the same network trades; the face mode says who sends and who receives.
 
 <GameScene zoom="3" interactive={true}>
   <Block id="minecraft:furnace" x="0" y="0" z="0" />
@@ -49,30 +48,34 @@ from the face modes.
   <IsometricCamera yaw="210" pitch="35" />
 </GameScene>
 
-## How it works
+## How to use it
+
+1. A new router isn't in any network. Open its screen and pick the tab and the face.
+2. On the **Network** row, pick the network.
+3. Repeat on the other machines.
+
+## Rules
 
 | Rule | Explanation |
 | --- | --- |
-| **No network when placed** | A new router isn't in any network: put its faces in one (below) so it starts working. |
-| **Active network** | Every player has an active network, the one the [Tablet](network-tablet.md) uses as the target of **Move**. |
-| **Network per face** | On a furnace, the **Top** face (input) can be on the "Mine" network and the **Bottom** face (output) on the "Storage" network: ore comes in through Mine and ingots leave through Storage. Each tab has its own: the energy can go to the "Base" network. |
-| **Delivery order** | Higher priority first; ties take turns (round-robin). |
-| **Storage** | Receives from extractors and delivers to inserters, without bouncing between two Storage faces. |
-| **Who can use it** | A public network is open to everyone. On a private one, the owner, operators and **guests** (and, with FTB Teams, the members of the teams you add) can put routers in it and take them out. Only the owner (or an operator) manages it: rename, invite and remove. |
+| **Network per face** | A furnace's **Top** face can be on the "Mine" network and its **Bottom** face on "Storage". The energy can go to "Base". |
+| **Delivery order** | Higher priority first; ties take turns. |
+| **Active network** | The one the [Tablet](network-tablet.md) uses as the target of **Move**. Every player has their own. |
+| **Who can use it** | Public: everyone. Private: the owner, operators, **guests** and, with FTB Teams, the added teams. Only the owner (or an operator) renames, invites and removes. |
 
 ## Changing the network
 
 | Way | How many at once |
 | --- | --- |
-| The face's **Network** row, on the router screen | One face of one router, on one tab |
-| <ItemLink id="wirelessautomate:network_tablet" />, Select | The nodes you check in the list: all their faces of the chosen type (or of every type) |
-| <ItemLink id="wirelessautomate:configurator" /> | Each face's network goes with the pasted configuration (every tab or one type) |
+| The face's **Network** row, on the router screen | One face, on one tab |
+| <ItemLink id="wirelessautomate:network_tablet" />, Select | All faces of the checked nodes, in the chosen type (or every type) |
+| <ItemLink id="wirelessautomate:configurator" /> | The network goes with the pasted configuration |
 
 ## Range and chunks
 
 | Situation | What happens |
 | --- | --- |
-| Destination too far | Left out for that source. Range depends on the sender's tier ([Router](router.md)). |
+| Destination too far | Left out. Range depends on the sender's tier ([Router](router.md)). |
 | Another dimension | Only from an **Emerald** or higher source. |
 | Unloaded chunk | The route pauses and resumes on its own when the chunk loads. |
 | Keep it working far away | Use the [Chunk Loading Upgrade](chunk-loading.md). |

@@ -17,24 +17,21 @@ A full filter in an item, to reuse on many faces. Works for items or for fluids.
 
 <br clear="all" />
 
-## Spec sheet
+## How to use it
 
-| | |
+1. Right-click the air to edit the card's filter.
+2. Put the card in one of the face's two card slots, on the router screen.
+
+| Gesture | What it does |
 | --- | --- |
-| **Goes in** | The face's two card slots, on the router screen (per type: items or fluids). |
-| **Recipe** | Makes 2 cards. |
-
-## Actions
-
-| Action | What it does |
-| --- | --- |
-| Right-click the air | Edit the card's filter. |
 | Shift + right-click the air (empty card) | Switch between items and fluids. |
-| Face filter screen, under **More** | Export the face's filter to the card, or import from it. |
+| **More** tab of the face's filter | Export the face's filter to the card, or import from it. |
 | Crafting table: configured card + blank cards | Identical copies (the original comes back). |
+
+There is no chemical card: chemicals only use the face's built-in filter.
 
 ## Recipe
 
-<RecipeFor id="wirelessautomate:filter_card" />
+Makes 2 cards.
 
-Chemicals only use the face's built-in filter: there is no chemical card.
+<RecipeFor id="wirelessautomate:filter_card" />

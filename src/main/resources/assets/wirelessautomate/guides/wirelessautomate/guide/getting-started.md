@@ -9,7 +9,7 @@ navigation:
 
 # Getting started
 
-Let's move items from one chest to another, without pipes. It takes a minute.
+Items from one chest to another, without pipes, in a minute.
 
 <GameScene zoom="4" interactive={true}>
   <Block id="minecraft:chest" x="0" y="0" z="0" />
@@ -28,19 +28,18 @@ Let's move items from one chest to another, without pipes. It takes a minute.
   <IsometricCamera yaw="200" pitch="30" />
 </GameScene>
 
-| Step | What to do |
-| --- | --- |
-| **1** | Craft two routers (recipe below). |
-| **2** | Use a router on any face of chest A. It **attaches** to the chest, with **no network** yet. Do the same on chest B. |
-| **3** | On router A's screen, on the **Items** tab, pick the **Up** face and, in the **Network** row, create a network and pick it. Do the same on router B, picking the same network. |
-| **4** | On router A, **Up** face, **Extract** mode. |
-| **5** | On router B, same face, **Insert** mode. |
-| **6** | Put items in chest A: they show up in chest B. |
+## How to do it
 
-Once the first router of a line is set up, use the [Configurator](configurator.md) to copy its
-configuration (and networks) to the others.
+1. Craft two routers (recipe below).
+2. Use one router on chest A and the other on chest B. They attach, with no network yet.
+3. On router A, **Items** tab, **Up** face: on the **Network** row, create a network and pick it.
+4. On router B, same face, pick the same network.
+5. Set the **Up** face to **Extract** on A and to **Insert** on B.
+6. Put items in chest A: they show up in chest B.
 
-Every screen of the mod has a moon button in the top-right corner: it switches all of them to dark mode (the sun switches back).
+The [Configurator](configurator.md) copies the setup, networks included, to other routers.
+
+The moon button, in the top-right corner, switches the screens to dark mode.
 
 ## Recipes
 
@@ -50,8 +49,8 @@ Every screen of the mod has a moon button in the top-right corner: it switches a
 
 | I want to... | Read |
 | --- | --- |
-| Understand every part of the router screen | [Wireless Router](router.md) |
+| Understand the screen | [Wireless Router](router.md) |
 | Send only some items | [Filters](filters.md) |
-| Keep different factories apart | [Networks](networks.md) |
-| More throughput or more range | [Upgrade Cards](upgrade-cards.md) |
-| Find out why it didn't work | [Troubleshooting](troubleshooting.md) |
+| Keep factories apart | [Networks](networks.md) |
+| More throughput or range | [Upgrade Cards](upgrade-cards.md) |
+| It didn't work | [Troubleshooting](troubleshooting.md) |

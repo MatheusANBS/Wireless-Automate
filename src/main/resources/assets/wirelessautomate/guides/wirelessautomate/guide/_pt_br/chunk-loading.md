@@ -13,23 +13,24 @@ item_ids:
 
 <ItemImage id="wirelessautomate:chunk_loader_upgrade" scale="2" float="left" />
 
-Mantém o chunk do roteador (e da máquina) carregado, para ele continuar trabalhando com você longe.
+Mantém o chunk do roteador e da máquina carregado. O roteador continua trabalhando com você longe.
 
 <br clear="all" />
 
-## Ficha
+## Como usar
 
-| | |
-| --- | --- |
-| **Vai em** | O slot do cabeçalho da tela do roteador. |
-| **Limite** | Cada jogador mantém até 16 chunks; vários roteadores no mesmo chunk contam uma vez. |
+1. Abra a tela do roteador.
+2. Ponha o upgrade no slot do topo da tela.
+3. Confira o estado no topo da tela.
+
+Cada jogador mantém até 16 chunks. Vários roteadores no mesmo chunk contam uma vez.
 
 ## Estados
 
-| Estado no cabeçalho | Significa |
+| Estado | Significa |
 | --- | --- |
-| **Ativo: chunks carregados** | O roteador e a máquina continuam trabalhando longe dos jogadores. |
-| **Inativo: limite de chunks do dono** | Quem pôs o upgrade já força o máximo de chunks permitido. |
+| **Ativo: chunks carregados** | O roteador e a máquina trabalham longe dos jogadores. |
+| **Inativo: limite de chunks do dono** | Quem pôs o upgrade já está no limite de chunks. |
 | **Inativo: desligado no servidor** | O servidor desativou este upgrade. |
 
 ## Receita

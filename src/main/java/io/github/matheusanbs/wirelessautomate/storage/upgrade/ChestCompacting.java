@@ -1,0 +1,316 @@
+package io.github.matheusanbs.wirelessautomate.storage.upgrade;
+
+import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.storage.ItemStorage;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import java.util.Arrays;
+import java.util.function.LongSupplier;
+import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.Nullable;
+
+/**
+ * A Compactação de um Baú: cada inserção de fora de um item de cadeia (sem componentes) suja a cadeia, e no fim do
+ * tick ({@link #convertDirty}) cada cadeia suja vai para o alvo dela, O(formas) por cadeia. A conversão é movimento
+ * interno do {@link ItemStorage} ({@code insertInternal}/{@code extractInternal}): não passa pelo filtro de entrada,
+ * não conta no vigia e não suja a cadeia de novo.
+ *
+ * <p>Sem o upgrade as regras são nulas, o {@link ItemStorage} não tem ouvinte e nada aqui roda. O conjunto das
+ * cadeias sujas é criado na primeira inserção de cadeia. Os ids das cadeias só valem numa geração do
+ * {@link CompactingChains}: depois de um {@code /reload}, as sujas são descartadas e todas as presentes marcadas de
+ * novo, senão um id velho converteria outra cadeia.
+ */
+public final class ChestCompacting implements ItemStorage.InsertListener {
+    private final ItemStorage storage;
+    private final LongSupplier capacity;
+    private @Nullable CompactingRules rules;
+    private @Nullable IntOpenHashSet dirty;
+    /** A geração do índice em que os ids de {@link #dirty} e de {@link #present} valem. */
+    private int generation;
+    private int version;
+    /** As cadeias presentes, montadas sob demanda; nulo até alguém pedir. */
+    private @Nullable IntArrayList present;
+    /** A versão do conteúdo em que {@link #present} foi montada. */
+    private int presentContents;
+    /** As contagens das formas do {@link #stockCount}, uma por tamanho de cadeia, reusadas entre chamadas. */
+    private long[][] scratch = new long[0][];
+
+    /** @param capacity a capacidade do Baú ({@code <= 0} é sem limite) */
+    public ChestCompacting(ItemStorage storage, LongSupplier capacity) {
+        this.storage = storage;
+        this.capacity = capacity;
+        this.generation = CompactingChains.get().generation();
+    }
+
+    public @Nullable CompactingRules rules() {
+        return rules;
+    }
+
+    /**
+     * Troca as regras; {@code null} é sem o upgrade (o {@link ItemStorage} fica sem ouvinte). Não suja nada: quem
+     * troca chama {@link #markAll} quando o conteúdo tem de ser convertido de novo.
+     */
+    public void setRules(@Nullable CompactingRules next) {
+        if (next == null ? rules == null : next.equals(rules)) {
+            return;
+        }
+        rules = next;
+        version++;
+        storage.setInsertListener(next == null ? null : this);
+        if (next == null) {
+            dirty = null;
+            present = null;
+        }
+    }
+
+    /** Sobe quando as regras ou as cadeias presentes mudam. */
+    public int version() {
+        refreshPresent();
+        return version;
+    }
+
+    @Override
+    public void inserted(ItemStack key) {
+        if (rules == null || !key.isComponentsPatchEmpty()) {
+            return;
+        }
+        CompactingChains chains = CompactingChains.get();
+        if (newGeneration(chains)) {
+            markAll();
+        }
+        CompactingChain chain = chains.chainOf(key.getItem());
+        if (chain != null) {
+            dirty().add(chain.id());
+        }
+    }
+
+    private IntOpenHashSet dirty() {
+        if (dirty == null) {
+            dirty = new IntOpenHashSet();
+        }
+        return dirty;
+    }
+
+    /**
+     * Se o índice foi remontado, descarta os ids guardados (apontariam para outras cadeias) e passa à geração nova;
+     * quem chama marca tudo de novo.
+     */
+    private boolean newGeneration(CompactingChains chains) {
+        if (chains.generation() == generation) {
+            return false;
+        }
+        generation = chains.generation();
+        if (dirty != null) {
+            dirty.clear();
+        }
+        present = null;
+        version++;
+        return true;
+    }
+
+    /** Suja todas as cadeias presentes no Baú, numa passada pelos tipos. */
+    public void markAll() {
+        if (rules == null) {
+            return;
+        }
+        CompactingChains chains = CompactingChains.get();
+        newGeneration(chains);
+        for (int i = 0, n = storage.slots(); i < n; i++) {
+            ItemStack key = storage.key(i);
+            if (storage.count(i) > 0 && key.isComponentsPatchEmpty()) {
+                CompactingChain chain = chains.chainOf(key.getItem());
+                if (chain != null) {
+                    dirty().add(chain.id());
+                }
+            }
+        }
+    }
+
+    public void markChain(int chainId) {
+        if (rules != null) {
+            dirty().add(chainId);
+        }
+    }
+
+    /** Fim do tick: leva cada cadeia suja ao alvo dela. */
+    public void convertDirty() {
+        IntOpenHashSet pending = dirty;
+        if (pending == null || pending.isEmpty() || rules == null) {
+            return;
+        }
+        CompactingChains chains = CompactingChains.get();
+        if (newGeneration(chains)) {
+            markAll();
+        }
+        // Um iterador por Baú com cadeia suja, no fim do tick; nunca por inserção.
+        for (IntIterator it = pending.iterator(); it.hasNext(); ) {
+            CompactingChain chain = chains.byId(it.nextInt());
+            if (chain != null) {
+                convert(chain);
+            }
+        }
+        // Sem trim por tick: o conjunto volta a crescer na próxima inserção.
+        pending.clear();
+    }
+
+    private void convert(CompactingChain chain) {
+        int target = rules.targetLevel(chain);
+        if (target < 0) {
+            return;
+        }
+        long cap = capacity.getAsLong();
+        long total = storage.total();
+        // Acima da capacidade (o tier ou a config encolheu), tirar e pôr de volta poderia não caber: espera espaço.
+        if (cap > 0 && total > cap) {
+            return;
+        }
+        ItemStack[] keys = chain.keys();
+        long[] counts = new long[keys.length];
+        for (int i = 0; i < keys.length; i++) {
+            counts[i] = storage.count(keys[i]);
+        }
+        long room = cap <= 0 ? Long.MAX_VALUE : cap - total;
+        long[] next = CompactingMath.convert(counts, chain.factors(), target, room);
+        for (int i = 0; i < keys.length; i++) {
+            if (next[i] < counts[i]) {
+                storage.extractInternal(keys[i], counts[i] - next[i]);
+            }
+        }
+        for (int i = 0; i < keys.length; i++) {
+            if (next[i] > counts[i] && storage.insertInternal(keys[i], next[i] - counts[i]) < next[i] - counts[i]) {
+                WirelessAutomate.LOGGER.warn("Compactação: a cadeia de {} não coube na conversão; o conteúdo volta como estava",
+                        chain.base());
+                restore(keys, counts);
+                return;
+            }
+        }
+    }
+
+    /**
+     * Volta cada forma à contagem de antes: tira primeiro o que sobrou e depois devolve o que saiu, então o total
+     * nunca passa do de antes, que cabia.
+     */
+    private void restore(ItemStack[] keys, long[] counts) {
+        for (int i = 0; i < keys.length; i++) {
+            long now = storage.count(keys[i]);
+            if (now > counts[i]) {
+                storage.extractInternal(keys[i], now - counts[i]);
+            }
+        }
+        for (int i = 0; i < keys.length; i++) {
+            long now = storage.count(keys[i]);
+            if (now < counts[i]) {
+                storage.insertInternal(keys[i], counts[i] - now);
+            }
+        }
+    }
+
+    /**
+     * Quanto a cadeia da chave vale na unidade dela, para o limite de estoque; −1 se a chave não é de cadeia, tem
+     * componentes ou a cadeia não é convertida (sem alvo). O(formas), sem alocar.
+     */
+    public long stockCount(ItemStack key) {
+        if (rules == null || !key.isComponentsPatchEmpty()) {
+            return -1;
+        }
+        CompactingChain chain = CompactingChains.get().chainOf(key.getItem());
+        if (chain == null || rules.targetLevel(chain) < 0) {
+            return -1;
+        }
+        ItemStack[] keys = chain.keys();
+        long[] counts = scratch(keys.length);
+        for (int i = 0; i < keys.length; i++) {
+            counts[i] = storage.count(keys[i]);
+        }
+        return CompactingMath.equivalent(counts, chain.factors(), chain.levelOf(key.getItem()));
+    }
+
+    /** O vetor reusado do tamanho exato: o {@link CompactingMath#equivalent} lê o vetor inteiro. */
+    private long[] scratch(int length) {
+        if (scratch.length <= length) {
+            scratch = Arrays.copyOf(scratch, length + 1);
+        }
+        long[] counts = scratch[length];
+        if (counts == null) {
+            counts = new long[length];
+            scratch[length] = counts;
+        }
+        return counts;
+    }
+
+    /**
+     * Desce por dentro a forma mais próxima acima da chave, uma por vez, até haver {@code need} da chave (a Mesa e o
+     * JEI pegam dali). A sobra fica e não suja a cadeia: volta a ser compactada na próxima entrada dela.
+     *
+     * @return se há {@code need} da chave no fim
+     */
+    public boolean unpackFor(ItemStack key, long need) {
+        if (storage.count(key) >= need) {
+            return true;
+        }
+        if (rules == null || !key.isComponentsPatchEmpty()) {
+            return false;
+        }
+        CompactingChain chain = CompactingChains.get().chainOf(key.getItem());
+        if (chain == null) {
+            return false;
+        }
+        int level = chain.levelOf(key.getItem());
+        ItemStack[] keys = chain.keys();
+        int[] factors = chain.factors();
+        while (storage.count(key) < need) {
+            int from = level + 1;
+            while (from < keys.length && storage.count(keys[from]) <= 0) {
+                from++;
+            }
+            if (from >= keys.length) {
+                return false;
+            }
+            long cap = capacity.getAsLong();
+            if (cap > 0 && cap - storage.total() < factors[from] - 1) {
+                return false;
+            }
+            storage.extractInternal(keys[from], 1);
+            storage.insertInternal(keys[from - 1], factors[from]);
+        }
+        return true;
+    }
+
+    /** As cadeias com algum item no Baú, pelo id (a ordem do índice); remontada só quando o conteúdo mudou. */
+    public IntList presentChains() {
+        refreshPresent();
+        return present;
+    }
+
+    private void refreshPresent() {
+        CompactingChains chains = CompactingChains.get();
+        if (newGeneration(chains)) {
+            markAll();
+        }
+        int contents = storage.version();
+        if (present != null && presentContents == contents) {
+            return;
+        }
+        // Só com o painel aberto e o conteúdo mudado: alocar aqui não toca a inserção.
+        IntOpenHashSet seen = new IntOpenHashSet();
+        for (int i = 0, n = storage.slots(); i < n; i++) {
+            ItemStack key = storage.key(i);
+            if (storage.count(i) > 0 && key.isComponentsPatchEmpty()) {
+                CompactingChain chain = chains.chainOf(key.getItem());
+                if (chain != null) {
+                    seen.add(chain.id());
+                }
+            }
+        }
+        int[] ids = seen.toIntArray();
+        Arrays.sort(ids);
+        IntArrayList next = IntArrayList.wrap(ids);
+        if (!next.equals(present)) {
+            version++;
+            present = next;
+        }
+        presentContents = contents;
+    }
+}

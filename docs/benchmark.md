@@ -514,3 +514,18 @@ Ramo `central-etapa-3b`. Antes: `c69380e` (o main com a 3a), num worktree à par
 - O motor não muda nesta etapa (nada em `NetworkManager`, transferência ou rotas; só o índice no aviso de mudança), e a rodada 2 confirma: `range` igual (0,057 → 0,057) e `many` dentro do ± do antes (+0,014). A subida da rodada 1 no `many` (+0,09) e no `range` (+0,008) (e os +0,009 do mod no `tablet-range`, que não foi repetido) foi da máquina, que oscilou entre as rodadas (o mesmo commit da base deu 0,676 e 0,700 no `many`, 0,049 e 0,057 no `range`). A 1ª montagem do `range` varia muito entre repetições nos dois lados (± de 6 a 21 ms).
 - O Tablet não ficou mais caro: `tablet` e `tablet-range` iguais dentro do ±. Na visão por máquinas (`tablet-machines`), com 1.700 máquinas em quatro blocos recolhidos e o dos barris aberto, o Tablet custa 0,064 ms/tick e 0,1 KB/s: menos que a árvore do `tablet-range`, porque a página tem 40 linhas e só as máquinas à vista entram no "live". A ordem por bloco (`MachineOrder`) só é refeita quando o índice muda. O tempo do mod no `tablet-machines` (0,205) fica acima do `tablet-range` (0,188) pela cena, não pelo Tablet: são quatro grupos por roteador em vez de um, com fornalhas e altos-fornos que enchem e dormem (16,5% dos ticks com o orçamento esgotado, contra 14,3%; 9,96 µs/visita contra 8,95).
 - O índice cresce ~0,6 KB no disco (~21 KB sem compressão) com 200 roteadores, pelos papéis e redes da presa e do grupo de cada roteador (`attached_*`, `remote_group_*`); a cena não tem exceções. Abaixo dos ~29 KB que a spec previa para 2 grupos e 10 exceções por roteador.
+
+## Upgrades do Baú, Tarefa 4: a Compactação no caminho de inserção (30 de outubro de 2026)
+
+Ramo `bau-upgrades`. Antes: `dc0c239` (a Tarefa 3), num worktree à parte. Depois: a Tarefa 4 (o gancho `inserted` em todo `insert` do Baú, o `put`/`take` com o flag de movimento interno e o `stockCount` no `ItemTransfer.bulkAccepts` e na admissão do Baú). Sem upgrade nos Baús das cenas, que é o que tem de custar o mesmo. Uma rodada de `./scripts/bench.sh hub:250:3,chesttypes:20:3,many:500:3:wa` de cada lado, uma depois da outra; o relatório do depois é `run/bench/reports/20261030-075605.md`, fora do git (o do antes ficou no worktree, apagado).
+
+| Cenário | mod antes (ms/tick) | mod depois | Outra medida antes → depois |
+| --- | --- | --- | --- |
+| hub 250 (250 origens num Baú) | 0,2828 ± 0,0123 | 0,2735 ± 0,0124 | µs/visita 3,91 ± 0,24 → 3,73 ± 0,25; p99 1,022 → 1,015 |
+| chesttypes 20 (2.000 tipos, estoque) | 0,0189 ± 0,0021 | 0,0165 ± 0,0022 | µs/visita 6,15 ± 0,83 → 5,28 ± 0,87; p99 0,252 → 0,224 |
+| many 500, origens e destinos no Baú | 0,0397 ± 0,0035 | 0,0336 ± 0,0008 | µs/visita 0,53 ± 0,05 → 0,44 ± 0,02; p99 0,308 → 0,280 |
+
+### Leitura
+
+- Sem o upgrade, o gancho é um teste de campo nulo por inserção e o `stockCount` uma chamada a mais com um `instanceof` antes da contagem de sempre: nenhum cenário piorou; as diferenças ficam dentro do ± ou a favor do depois, que é ruído da máquina (o código do depois só acrescenta).
+- O custo com o upgrade (um `get` no índice e um `add` no conjunto sujo por inserção de cadeia, O(formas) por cadeia suja no fim do tick) não tem cenário de bench; os GameTests do `ChestCompactingGameTests` cobrem o comportamento.

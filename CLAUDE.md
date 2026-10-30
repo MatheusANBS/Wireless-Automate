@@ -23,6 +23,7 @@ Cada skill tem a descrição completa no próprio `SKILL.md`; aqui só quando us
 - `wa-release`: fechar uma versão (changelogs, tag, release com o jar).
 - `wa-porte`: portar o mod para outra versão de Minecraft (estado dos ramos em `docs/portes.md`).
 - `wa-curseforge-imagens`: imagens da página do CurseForge e os links da descrição.
+- `wa-higiene`: limpeza das docs e do repositório (planos e mockups de features mescladas, changelogs velhos, ramos absorvidos); `python -I .claude/skills/wa-higiene/scripts/varrer.py` lista, e só se apaga com o ok do dono.
 
 ## Mapa do código
 

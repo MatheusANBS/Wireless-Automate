@@ -91,3 +91,14 @@ Texturas: `scripts/textures/livro.py`, chamado pelo `gerar_texturas.py`, gera `t
 - Favoritos, marcar página e anotações do jogador.
 - Livro com tema escuro.
 - Qualquer integração com o GuideME (nem leitura do formato dele com ele instalado).
+
+## Etapa 2: as cenas interativas
+
+- **Girar:** arrastar com o botão esquerdo dentro da moldura gira a cena (yaw livre; pitch entre 0° e 90°). **Zoom:** a roda dentro da moldura aproxima e afasta (de 0,5× a 3× do enquadramento da página); fora da moldura a roda continua virando a folha. **Voltar:** clique duplo na cena volta ao ângulo e ao zoom da página. O estado de cada cena vale enquanto o livro está aberto (fechar e abrir volta ao da página).
+- **Anotações**, como as páginas já declaram:
+  - `BlockAnnotation x y z color`: o contorno do bloco na cor (`color`, padrão coral), por cima da cena;
+  - `LineAnnotation from to color thickness`: uma linha 3D entre os dois pontos (em blocos), na cor e espessura;
+  - o texto da anotação aparece como dica quando o mouse passa sobre ela (o bloco contornado ou perto da linha).
+- O enquadramento usa o `zoom` da `GameScene` da página (hoje ignorado) como o zoom inicial.
+- **Custo:** os blocos da cena continuam montados uma vez por cena; girar e dar zoom só mudam a matriz do quadro; as anotações são montadas uma vez (cores, caixas e linhas) e desenhadas no mesmo passo da cena; a dica é achada projetando as caixas e linhas só quando o mouse se mexe sobre a cena, e o `Component` de cada texto é feito uma vez.
+- **Gesto novo na tabela da spec:** "Arrastar dentro de uma cena: gira; roda dentro dela: zoom; clique duplo: volta ao ângulo da página."

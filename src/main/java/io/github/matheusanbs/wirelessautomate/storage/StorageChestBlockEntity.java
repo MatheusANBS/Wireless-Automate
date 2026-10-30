@@ -63,9 +63,9 @@ public class StorageChestBlockEntity extends KeyedStorageBlockEntity<ItemStack> 
     }
 
     /**
-     * O drop leva também os upgrades e a grade quando há algum. Antes o Baú vazio e sem filtro não levava
-     * componente nenhum e empilhava; com upgrades ou grade ele passa a levar os componentes (e deixa de empilhar). Os
-     * upgrades vão no próprio componente do item, não no {@link StorageSavedData}.
+     * O drop leva também os upgrades e a grade quando há algum. O Baú vazio, sem filtro e sem upgrades não leva
+     * componente nenhum e empilha; com upgrades ou grade leva os componentes e não empilha. Os upgrades vão no
+     * próprio componente do item, não no {@link StorageSavedData}.
      */
     @Override
     protected void collectImplicitComponents(DataComponentMap.Builder components) {

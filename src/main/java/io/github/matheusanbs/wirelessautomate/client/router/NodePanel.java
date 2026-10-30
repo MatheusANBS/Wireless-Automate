@@ -6,39 +6,23 @@ import io.github.matheusanbs.wirelessautomate.client.TabLayout;
 import io.github.matheusanbs.wirelessautomate.client.router.PanelLayout.Hot;
 import io.github.matheusanbs.wirelessautomate.client.router.PanelLayout.Kind;
 import io.github.matheusanbs.wirelessautomate.client.router.PanelLists.Popup;
-import io.github.matheusanbs.wirelessautomate.menu.RangeView;
-import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.FaceView;
-import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
-import io.github.matheusanbs.wirelessautomate.packet.FaceActionPayload;
-import io.github.matheusanbs.wirelessautomate.packet.OpenFilterPayload;
 import io.github.matheusanbs.wirelessautomate.packet.PanelNoticePayload;
 import io.github.matheusanbs.wirelessautomate.packet.PanelNotices;
-import io.github.matheusanbs.wirelessautomate.packet.RevertMachinePayload;
-import io.github.matheusanbs.wirelessautomate.packet.SetFacePayload;
-import io.github.matheusanbs.wirelessautomate.packet.SetNetworkPayload;
-import io.github.matheusanbs.wirelessautomate.packet.UnlinkMachinePayload;
-import io.github.matheusanbs.wirelessautomate.packet.UpdateMachinePayload;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
@@ -64,7 +48,8 @@ import org.lwjgl.glfw.GLFW;
  *
  * <p>O painel é a anfitriã das partes: o estado e as leituras no {@link PanelModel}, a geometria no
  * {@link PanelLayout}, o desenho no {@link PanelPainter} e no {@link FaceCube}, as listas abertas no
- * {@link PanelLists}, a linha Editando no {@link TargetLine} e as dicas no {@link PanelTooltips}. Fica no
+ * {@link PanelLists}, a linha Editando no {@link TargetLine}, as dicas no {@link PanelTooltips}, as ações dos
+ * controles no {@link PanelEdits} e a aba e a face lembradas no {@link PanelMemory}. Fica no
  * pacote da tela do roteador, público, porque a Lista do Tablet mostra o mesmo painel do mesmo nó.
  */
 public final class NodePanel {
@@ -100,36 +85,19 @@ public final class NodePanel {
     private final PanelTooltips tooltips;
     /** A caixa do nome do alvo, da linha Editando. */
     private final LabelEditor label;
-    private final PanelLists.Choice choice = new PanelLists.Choice() {
-        @Override
-        public void network(Optional<UUID> network) {
-            chooseNetwork(network);
-        }
-
-        @Override
-        public void redstone(RedstoneMode mode) {
-            FaceView v = model.view();
-            if (mode != v.redstone()) {
-                sendFace(v.mode(), v.priority(), mode);
-            }
-        }
-
-        @Override
-        public void target(EditTarget target) {
-            chooseTarget(target);
-        }
-    };
+    private final PanelEdits edits;
 
     public NodePanel(Actions actions, RouterSnapshot snapshot, Direction face) {
         this.actions = actions;
         this.model = new PanelModel(snapshot, face);
-        recallChoice(snapshot);
+        PanelMemory.recall(model, snapshot);
         this.targetLine = new TargetLine(model, layout, actions);
         this.label = targetLine.label();
         this.lists = new PanelLists(model, layout, targetLine);
         this.painter = new PanelPainter(model, layout, targetLine);
         this.cube = new FaceCube(model, layout);
         this.tooltips = new PanelTooltips(model, targetLine);
+        this.edits = new PanelEdits(model, actions, lists, targetLine);
     }
 
     // ------------------------------------------------------------------ estado
@@ -166,43 +134,14 @@ public final class NodePanel {
         arranged.invalidate();
         model.setType(type);
         lists.close();
-        rememberChoice();
+        PanelMemory.remember(model);
     }
 
     public void selectFace(Direction face) {
         arranged.invalidate();
         model.setFace(face);
         lists.close();
-        rememberChoice();
-    }
-
-    /** O roteador de uma face lembrada. */
-    private record Spot(ResourceKey<Level> dimension, BlockPos pos) {}
-
-    private static final int REMEMBERED_FACES = 64;
-
-    /** A última aba escolhida (vale para qualquer roteador). */
-    private static @Nullable ResourceType lastType;
-
-    /** A última face escolhida de cada alvo de cada roteador, para reabrir a tela ou o nó na mesma face. */
-    private static final FaceMemory<Spot, Direction> lastFaces = new FaceMemory<>(REMEMBERED_FACES);
-
-    /** Escolha do jogador: lembra a aba e a face do alvo no roteador. Mostrar um painel sem escolha não passa por aqui. */
-    private void rememberChoice() {
-        RouterSnapshot s = model.snapshot();
-        lastType = model.type();
-        lastFaces.put(new Spot(s.dimension(), s.pos()), s.target(), model.face());
-    }
-
-    /** A aba vale para qualquer roteador; a face, no mesmo roteador e alvo (no alcance, a face canônica dele). */
-    private void recallChoice(RouterSnapshot snapshot) {
-        if (lastType != null && LoadedTypes.LIST.contains(lastType)) {
-            model.setType(lastType);
-        }
-        Direction face = lastFaces.get(new Spot(snapshot.dimension(), snapshot.pos()), snapshot.target());
-        if (face != null) {
-            model.setFace(face);
-        }
+        PanelMemory.remember(model);
     }
 
     /** Põe o painel na aba, sem lembrar: quem abre o painel sozinho (o nó escolhido do Tablet) não é uma escolha do jogador. */
@@ -310,103 +249,16 @@ public final class NodePanel {
 
     // ------------------------------------------------------------------ ações
 
-    private void sendFace(PortMode mode, int priority, RedstoneMode redstone) {
-        if (!model.editable(model.view())) {
-            return;
-        }
-        actions.send(new SetFacePayload(actions.containerId(), model.type(), model.face(), mode, priority, redstone));
-    }
-
     /**
-     * O clique num botão do cubo: escolhe a face e troca o modo (o esquerdo avança, o direito volta, Shift põe em
-     * Nenhum); um painel só de leitura, ou uma face sem acesso, só escolhe.
+     * O clique num botão do cubo: escolhe a face e, se ela já era a escolhida, troca o modo ({@link
+     * PanelEdits#cycleMode}).
      */
     private void faceClick(Hot hot, int button) {
         Direction clicked = model.faceOf(FaceNet.SIDES[hot.arg()]);
         boolean alreadySelected = clicked == model.face();
         selectFace(clicked);
-        FaceView v = model.view();
-        if (!alreadySelected || !model.editable(v)) {
-            return;
-        }
-        PortMode next = Screen.hasShiftDown() ? PortMode.NONE
-                : button == GLFW.GLFW_MOUSE_BUTTON_RIGHT ? ModeCycle.previous(v.mode()) : ModeCycle.next(v.mode());
-        if (next != v.mode()) {
-            sendFace(next, v.priority(), v.redstone());
-        }
-    }
-
-    /** Limpar: dois cliques; com Shift no segundo, as faces de todos os tipos, senão só as do tipo aberto. */
-    private void clearFaces() {
-        if (model.readOnly() == null && model.clearArm().click(System.currentTimeMillis())) {
-            actions.send(FaceActionPayload.clear(actions.containerId(), model.type(), Screen.hasShiftDown()));
-        }
-    }
-
-    private void copyFace() {
-        if (model.canCopy()) {
-            model.setCopied(new PanelModel.Copied(model.type(), model.face()));
-        }
-    }
-
-    private void pasteFace() {
-        PanelModel.Copied copied = model.copied();
-        if (copied != null && model.canPaste()) {
-            actions.send(FaceActionPayload.paste(actions.containerId(), model.type(), copied.face(), model.face()));
-        }
-    }
-
-    private void stepRedstone(int direction) {
-        FaceView v = model.view();
-        if (!model.editable(v)) {
-            return;
-        }
-        RedstoneMode[] modes = RedstoneMode.values();
-        RedstoneMode next = modes[(v.redstone().ordinal() + direction + modes.length) % modes.length];
-        sendFace(v.mode(), v.priority(), next);
-    }
-
-    private void changePriority(int direction) {
-        FaceView v = model.view();
-        int step = Screen.hasShiftDown() ? 10 : 1;
-        int value = Math.max(RouterMenu.MIN_PRIORITY, Math.min(RouterMenu.MAX_PRIORITY, v.priority() + direction * step));
-        if (value != v.priority()) {
-            sendFace(v.mode(), value, v.redstone());
-        }
-    }
-
-    /**
-     * Põe a face na rede {@code network} (vazio = sem rede). "Sem rede" vai sempre ao servidor: uma face
-     * numa rede apagada chega como vazia no snapshot, mas guarda o UUID, e só assim sai dela.
-     */
-    private void chooseNetwork(Optional<UUID> network) {
-        lists.close();
-        if (network.isPresent() && network.equals(model.snapshot().network(model.type(), model.face()))) {
-            return;
-        }
-        actions.send(new SetNetworkPayload(actions.containerId(), model.type(), model.face(), network));
-    }
-
-    private void chooseTarget(EditTarget target) {
-        lists.close();
-        if (target.equals(model.snapshot().target())) {
-            return;
-        }
-        CustomPacketPayload payload = targetLine.select(actions.containerId(), target);
-        if (payload != null) {
-            actions.send(payload);
-        }
-    }
-
-    private void undo(PanelNoticePayload notice) {
-        PanelNotices.clear();
-        switch (notice.undo()) {
-            case CLEAR_FACE_NETWORK -> actions.send(new SetNetworkPayload(notice.containerId(), notice.resource(),
-                    notice.face(), Optional.empty()));
-            case UNDO_PASTE -> actions.undoPaste();
-            case RESTORE_IDLE_NETWORKS -> actions.clearIdleNetworks(true);
-            case NONE -> {
-            }
+        if (alreadySelected) {
+            edits.cycleMode(button);
         }
     }
 
@@ -423,7 +275,7 @@ public final class NodePanel {
         }
         arrange();
         if (lists.open()) {
-            lists.click(mx, my, choice);
+            lists.click(mx, my, edits.choice);
             return true;
         }
         if (layout.inNotice(mx, my)) {
@@ -431,7 +283,7 @@ public final class NodePanel {
             Hot undo = layout.hot(Kind.UNDO);
             PanelNoticePayload notice = PanelNotices.current();
             if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && undo != null && undo.contains(mx, my) && notice != null) {
-                undo(notice);
+                edits.undo(notice);
             }
             return true;
         }
@@ -454,78 +306,12 @@ public final class NodePanel {
         return true;
     }
 
-    /** O clique esquerdo numa área do painel, sem lista aberta. */
+    /** O clique esquerdo numa área do painel, sem lista aberta: a aba e a face aqui, os controles no {@link PanelEdits}. */
     private void click(Hot hot) {
-        FaceView v = model.view();
-        RangeView.MachineView machine = model.targetMachine();
-        boolean edit = model.readOnly() == null;
         switch (hot.kind()) {
             case TAB -> select(ResourceType.values()[hot.arg()]);
             case FACE -> faceClick(hot, GLFW.GLFW_MOUSE_BUTTON_LEFT);
-            case CLEAR -> clearFaces();
-            case COPY -> copyFace();
-            case PASTE -> pasteFace();
-            case REDSTONE_PREV -> stepRedstone(-1);
-            case REDSTONE_NEXT -> stepRedstone(1);
-            case NETWORK -> {
-                if (edit) {
-                    lists.open(Popup.NETWORK, 0);
-                }
-            }
-            case EDIT -> {
-                if (edit && model.hasFilter()) {
-                    actions.send(new OpenFilterPayload(actions.containerId(), model.type(), model.face()));
-                }
-            }
-            case PRIO_MINUS -> changePriority(-1);
-            case PRIO_PLUS -> changePriority(1);
-            case REDSTONE -> {
-                if (model.editable(v)) {
-                    lists.open(Popup.REDSTONE, 0);
-                }
-            }
-            case TARGET -> {
-                if (edit) {
-                    lists.open(Popup.TARGET, lists.targetScroll());
-                }
-            }
-            case RENAME -> {
-                if (edit) {
-                    targetLine.startRename();
-                }
-            }
-            case IDLE_NETWORKS -> {
-                if (edit) {
-                    actions.clearIdleNetworks(false);
-                }
-            }
-            case HIGHLIGHT -> targetLine.toggleHighlight();
-            case REVERT -> {
-                if (edit && machine != null) {
-                    actions.send(new RevertMachinePayload(actions.containerId(), model.snapshot().target().id(),
-                            machine.pos()));
-                }
-            }
-            case UPDATE -> {
-                if (edit && machine != null) {
-                    actions.send(UpdateMachinePayload.machine(actions.containerId(), model.snapshot().target().id(),
-                            machine.pos()));
-                }
-            }
-            case UNLINK -> {
-                if (edit && machine != null && model.unlinkArm().click(System.currentTimeMillis())) {
-                    actions.send(new UnlinkMachinePayload(actions.containerId(), model.snapshot().target().id(),
-                            machine.pos()));
-                }
-            }
-            case UNDO -> {
-                PanelNoticePayload notice = PanelNotices.current();
-                if (notice != null) {
-                    undo(notice);
-                }
-            }
-            case SUMMARY, FILTER, CARDS -> {
-            }
+            default -> edits.click(hot);
         }
     }
 
@@ -544,7 +330,7 @@ public final class NodePanel {
             if (!overPriority) {
                 return false;
             }
-            changePriority(scrollY > 0 ? 1 : -1);
+            edits.changePriority(scrollY > 0 ? 1 : -1);
             return true;
         }
         arrange();
@@ -556,7 +342,7 @@ public final class NodePanel {
         if (label.keyPressed(keyCode, scanCode, modifiers)) {
             return true;
         }
-        if (lists.keyPressed(keyCode, choice)) {
+        if (lists.keyPressed(keyCode, edits.choice)) {
             arranged.invalidate();
             return true;
         }
@@ -658,7 +444,7 @@ public final class NodePanel {
     /** Põe a face escolhida no modo {@code mode}, pelo mesmo pacote do clique no cubo (gancho do e2e). */
     public void chooseMode(PortMode mode) {
         FaceView v = model.view();
-        sendFace(mode, v.priority(), v.redstone());
+        edits.sendFace(mode, v.priority(), v.redstone());
     }
 
     /** O Limpar do quadro das faces. */

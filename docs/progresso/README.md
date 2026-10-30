@@ -10,8 +10,7 @@ Comece por aqui para continuar o trabalho. Este arquivo é curto de propósito: 
 
 ## Próximo passo
 
-1. Dividir o `NodePanel` (822 linhas), antes da próxima mudança no painel.
-2. A próxima funcionalidade, a escolher com o dono: a lixeira do mod, o fim do roteador de alcance (pausar grupo, perfis no Configurador, página no guia) ou os atalhos de AE2/RS2.
+1. A próxima funcionalidade, a escolher com o dono: a lixeira do mod, o fim do roteador de alcance (pausar grupo, perfis no Configurador, página no guia) ou os atalhos de AE2/RS2.
 
 ## Os arquivos
 

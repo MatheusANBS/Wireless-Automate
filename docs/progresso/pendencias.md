@@ -9,7 +9,7 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 
 ## Roteador, Vinculador e Configurador
 
-- Dividir o `NodePanel` (822 linhas, acima do limite de tela pelo `medir.py`). `RouterScreen` (644) e `PanelLayout` (636) estão em aviso. (30/10)
+- `RouterScreen` (644) e `PanelLayout` (636) estão em aviso de tamanho (tela: alvo 500, aviso 600). O `NodePanel` está em ~600, de propósito: o resto são os ganchos do e2e. (30/10)
 - `RouterBlockEntity` em 977 linhas: o próximo método exige dividir antes (`RouterRange`, `RouterTargets` ou uma parte nova). (16/10)
 
 ## Motor e redes

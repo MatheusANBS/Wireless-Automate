@@ -411,6 +411,122 @@ def rosa() -> Sprite:
     return animacao(quadros, 4)
 
 
+# Os upgrades do Baú (Mesa e Compactação): o casco de porcelana da família dos upgrades com uma janela escura 8×8
+# no centro (colunas e linhas 4..11), onde só um foco se mexe: o movimento é de cor, interpolado pelo jogo
+# (`interpolate`), e a forma fica parada. Bordas de cima e da esquerda da janela em grafite.0 (a sombra do rebaixo).
+CASCO = [
+    "................",
+    "................",
+    "..GgWWWWWWWWgG..",
+    "..gppppppppppg..",
+    "..Wpiiiiiiiiqr..",
+    "..Wpiiiiiiiiqr..",
+    "..Wpiiiiiiiiqr..",
+    "..Wpiiiiiiiiqr..",
+    "..Wpiiiiiiiiqr..",
+    "..Wpiiiiiiiiqr..",
+    "..Wpiiiiiiiiqr..",
+    "..Wpiiiiiiiiqr..",
+    "..gqqqqqqqqqqg..",
+    "..GgrrrrrrrrgG..",
+    "................",
+    "................",
+]
+
+
+def rampa(nome: str, t: float) -> Cor:
+    """Cor ao longo de uma rampa de brilho 0..1: do tom mais escuro do material ao branco."""
+    tons = {
+        "coral": ["grafite.1", "coral.0", "coral.1", "coral.2", "coral.3", "coral.4", "#FFFFFF"],
+        "latao": ["latao.0", "latao.1", "latao.2", "latao.3", "porcelana.4", "#FFFFFF"],
+    }[nome]
+    t = max(0.0, min(1.0, t)) * (len(tons) - 1)
+    i = min(int(t), len(tons) - 2)
+    return mistura(cor(tons[i]), cor(tons[i + 1]), t - i)
+
+
+def dentro_da_janela(x: int, y: int) -> bool:
+    return 4 <= x <= 11 and 4 <= y <= 11
+
+
+def reflexo(img: Image.Image, fase: float) -> None:
+    """Um reflexo de luz que atravessa o casco de porcelana na diagonal, uma vez por volta, fora da janela."""
+    d = -2 + fase * 34  # a diagonal x + y que acende; na maior parte da volta fica fora do item
+    for y in range(1, 15):
+        for x in range(1, 15):
+            px = img.getpixel((x, y))
+            if px[3] == 0 or dentro_da_janela(x, y):
+                continue
+            if px[:3] in (cor("grafite.0")[:3], cor("grafite.4")[:3], cor("grafite.3")[:3]):
+                continue
+            dist = abs((x + y) - d)
+            if dist < 1.5:
+                put(img, x, y, mistura(px, BRANCO_PURO, 0.7 if dist < 0.5 else 0.35))
+
+
+# Canto de cima à esquerda de cada casa 2×2 no miolo 8×8 da janela, com 1 px de grafite entre elas.
+CASAS_MESA = [(4, 4), (7, 4), (10, 4), (4, 7), (7, 7), (10, 7), (4, 10), (7, 10), (10, 10)]
+
+
+def mesa(n: int = 12) -> Sprite:
+    """Upgrade de Mesa de Trabalho: a grade 3×3 em neon coral na janela escura; uma onda de brilho corre na
+    diagonal pelas casas, como a receita sendo lida, e o reflexo passa pelo casco. 12 quadros, 3 ticks."""
+    quadros = []
+    for k in range(n):
+        t = k / n
+        img = corpo(CASCO)
+        for i, (x, y) in enumerate(CASAS_MESA):
+            col, lin = i % 3, i // 3
+            onda = 0.5 + 0.5 * math.cos(2 * math.pi * (t - (col + lin) / 6))
+            b = 0.35 + 0.55 * onda ** 2
+            put(img, x, y, rampa("coral", b + 0.12))
+            put(img, x + 1, y, rampa("coral", b))
+            put(img, x, y + 1, rampa("coral", b))
+            put(img, x + 1, y + 1, rampa("coral", b - 0.25))
+        reflexo(img, t)
+        quadros.append(img)
+    return animacao(quadros, 3, interpolar=True)
+
+
+# O centro da janela: o bloco da Compactação ocupa CX-m..CX+m-1 e CY-m..CY+m-1 (x e y 4..11 é a janela).
+CX, CY = 8, 8
+
+
+def compactacao(n: int = 16) -> Sprite:
+    """Upgrade de Compactação: na janela escura, um bloco de latão respira: aperta de 6×6 para 2×2 esquentando
+    até o miolo branco (compactar) e volta a crescer esfriando (descompactar). Quatro marcas coral nas bordas da
+    janela acendem no aperto. 16 quadros, 2 ticks; a interpolação faz a troca de tamanho virar um esmaecer."""
+    quadros = []
+    for k in range(n):
+        t = k / n
+        aperto = 0.5 - 0.5 * math.cos(2 * math.pi * t)  # 0 solto, 1 apertado
+        img = corpo(CASCO)
+        meio = 3 if aperto < 0.3 else (2 if aperto < 0.75 else 1)
+        lado = 2 * meio
+        for y in range(CY - meio, CY + meio):
+            for x in range(CX - meio, CX + meio):
+                dx, dy = x - (CX - meio), y - (CY - meio)
+                if dx == 0 or dy == 0:
+                    b = 0.7
+                elif dx == lado - 1 or dy == lado - 1:
+                    b = 0.2
+                elif lado == 6 and (dx in (1, 4) or dy in (1, 4)):
+                    b = 0.3  # a moldura de dentro, como nos blocos 1x…9x
+                else:
+                    b = 0.5
+                v = min(b + 0.4 * aperto, 0.82)
+                if dx == 0 and dy == 0 and aperto > 0.6:
+                    v = 1.0  # o ponto quente da gema
+                put(img, x, y, rampa("latao", v))
+        marca = rampa("coral", 0.25 + 0.55 * aperto)
+        for x, y in ((CX - 1, 4), (CX, 4), (CX - 1, 11), (CX, 11), (4, CY - 1), (4, CY), (11, CY - 1), (11, CY)):
+            if not (CX - meio <= x < CX + meio and CY - meio <= y < CY + meio):
+                put(img, x, y, marca)
+        reflexo(img, t)
+        quadros.append(img)
+    return animacao(quadros, 2, interpolar=True)
+
+
 # Guia: caderno de campo. Capa coral com o Olho em porcelana e uma etiqueta, páginas de porcelana
 # aparecendo à direita e embaixo, espiral de grafite na lombada.
 GUIA = [
@@ -1792,6 +1908,8 @@ def gerar_itens() -> dict[str, Sprite]:
         sprites[f"item/tier_core_{tier}"] = valvula(tier)
     sprites["item/chunk_loader_upgrade"] = lanterna()
     sprites["item/range_upgrade"] = rosa()
+    sprites["item/crafting_upgrade"] = mesa()
+    sprites["item/compacting_upgrade"] = compactacao()
     sprites["item/guide"] = guia()
     sprites["item/signal_crystal"] = cristal()
     sprites["item/cut_signal_crystal"] = lapidado()
@@ -1853,6 +1971,11 @@ def modelos_itens() -> None:
         "parent": "minecraft:item/generated",
         "textures": {"layer0": "wirelessautomate:item/range_upgrade"},
     })
+    for nome in ("crafting_upgrade", "compacting_upgrade"):
+        grava_json(MODELOS / f"models/item/{nome}.json", {
+            "parent": "minecraft:item/generated",
+            "textures": {"layer0": f"wirelessautomate:item/{nome}"},
+        })
     for tier in TIERS_CARTAO:
         grava_json(MODELOS / f"models/item/tier_core_{tier}.json", {
             "parent": "minecraft:item/generated",
@@ -1932,7 +2055,7 @@ def folha(itens: dict[str, Sprite], blocos_sprites: dict[str, Sprite] | None,
 
     titulo("Itens (quadros da animação a 6×, depois o item a 1× e 2×)")
     nomes_itens = ["configurator", "linker", "network_tablet", "filter_card"] + \
-                  [f"tier_core_{t}" for t in TIERS_CARTAO] + ["chunk_loader_upgrade", "range_upgrade", "guide",
+                  [f"tier_core_{t}" for t in TIERS_CARTAO] + ["chunk_loader_upgrade", "range_upgrade", "crafting_upgrade", "compacting_upgrade", "guide",
                                                 "signal_crystal", "cut_signal_crystal", "signal_crystal_dull",
                                                 "cut_signal_crystal_dull", "signal_crystal_cracked",
                                                 "cut_signal_crystal_cracked", "resonance_dust"] + \

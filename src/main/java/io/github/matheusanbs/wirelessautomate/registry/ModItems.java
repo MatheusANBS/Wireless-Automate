@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.registry;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.item.ChestUpgradeItem;
 import io.github.matheusanbs.wirelessautomate.item.ChunkLoaderUpgradeItem;
 import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
@@ -57,6 +58,12 @@ public final class ModItems {
 
     public static final DeferredItem<RangeUpgradeItem> RANGE_UPGRADE = ITEMS.registerItem(
             "range_upgrade", RangeUpgradeItem::new, new Item.Properties().stacksTo(1));
+
+    /** Os upgrades do Baú: um de cada tipo nos dois slots dele. */
+    public static final DeferredItem<ChestUpgradeItem> CRAFTING_UPGRADE = ITEMS.registerItem("crafting_upgrade",
+            props -> new ChestUpgradeItem(props, ChestUpgradeItem.Kind.CRAFTING), new Item.Properties().stacksTo(1));
+    public static final DeferredItem<ChestUpgradeItem> COMPACTING_UPGRADE = ITEMS.registerItem("compacting_upgrade",
+            props -> new ChestUpgradeItem(props, ChestUpgradeItem.Kind.COMPACTING), new Item.Properties().stacksTo(1));
 
     public static final DeferredItem<BlockItem> SIGNAL_QUARTZ_ORE = ITEMS.registerSimpleBlockItem(ModBlocks.SIGNAL_QUARTZ_ORE);
     public static final DeferredItem<BlockItem> DEEPSLATE_SIGNAL_QUARTZ_ORE =

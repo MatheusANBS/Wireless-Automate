@@ -96,6 +96,20 @@ Five storage blocks made for the router: the **Wireless Chest** (unlimited item 
 
 ![Wireless Chest](https://media.forgecdn.net/attachments/2085/334/feature-10-chest-png.png)
 
+### Chest upgrades
+
+The Wireless Chest has two upgrade slots, next to its list. Each upgrade opens its own panel beside the list.
+
+- **Crafting Upgrade:** a 3×3 crafting grid inside the Chest that refills itself from the Chest's stock. Shift + click the result to craft up to a stack; JEI's **+** fills the grid from the Chest first.
+
+![Crafting inside the Chest](ENVIAR:feature-31-chest-crafting.png)
+
+- **Compacting Upgrade:** packs and unpacks item chains on its own as they come in: nugget, ingot, block, or cobblestone up to AllTheCompressed's 9x. Pick one mode for every chain (**Compress** or **Decompress**) or a target form for a single chain. The same material from different mods is one row, and a button picks which mod's items it all goes to.
+
+![Compacting](ENVIAR:feature-32-chest-compacting.png)
+
+![Nuggets coming in, compressed and decompressed](ENVIAR:compactacao.gif)
+
 ### Ars Nouveau Source
 
 With Ars Nouveau installed, every router gets a **Source** tab. Source Jars, Relays and the Imbuement Chamber connect straight to a router, so Source travels wirelessly between them like any other resource, at the Source/s of the router's tier.
@@ -139,7 +153,7 @@ A cracked crystal no longer means a trip to the crafting table. Put it on one of
 
 ![Crystal Repairer](https://media.forgecdn.net/attachments/2109/602/feature-26-repairer-png.png)
 
-Energy and items go in from any side, so a router can keep it fed. The cracks close from the inside out, the crystals converge on the emitter and the mended one rises out. The Resonator's Core also got faster at the other end: it now recharges **every Dull crystal the catalyst pays for at once**. Recipe: Resonator Casing, Phase Circuit, Hopper, Harmonic Lens and a Redstone Block. The repair time and cost are in the config (`repairer.repairTicks` and `repairer.costFactor`).
+Energy and items go in from any side, so a router can keep it fed. The cracks close from the inside out, the crystals converge on the emitter and the mended one rises out. The Resonator's Core also got faster at the other end: it now recharges **every Dull crystal the catalyst pays for at once**. Recipe: Porcelain Casing, Phase Circuit, Hopper, Harmonic Lens and a Redstone Block. The repair time and cost are in the config (`repairer.repairTicks` and `repairer.costFactor`).
 
 ### Signal Screen
 

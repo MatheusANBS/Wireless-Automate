@@ -44,7 +44,7 @@ final class UsageLine {
 
     /** Quantidade abreviada com a unidade: "12.6M" nos itens, "12.6M mB" nos tanques. */
     private static String abbreviated(long value, boolean items) {
-        return items ? RateFormat.abbreviate(value) : RateFormat.abbreviate(value) + " mB";
+        return items ? RateFormat.abbreviateAmount(value) : RateFormat.abbreviateAmount(value) + " mB";
     }
 
     /** Cor da barra de ocupação pelo estado: ok até 60%, atenção até 90%, erro acima. */

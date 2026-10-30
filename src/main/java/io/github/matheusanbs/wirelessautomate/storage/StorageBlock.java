@@ -37,7 +37,7 @@ import org.jetbrains.annotations.Nullable;
  * com os mesmos Cartões de Upgrade, sem perder o conteúdo. Clique direito abre a tela; no Tanque, um
  * balde (ou outro recipiente de fluido) na mão enche ou esvazia direto.
  *
- * <p>Com conteúdo, o bloco nunca some sem virar item, como a caixa de shulker (ver
+ * <p>Com conteúdo (ou, no Baú, upgrades e grade), o bloco nunca some sem virar item, como a caixa de shulker (ver
  * {@link #playerWillDestroy}).
  */
 public class StorageBlock extends BaseEntityBlock {
@@ -158,15 +158,16 @@ public class StorageBlock extends BaseEntityBlock {
     }
 
     /**
-     * Com conteúdo, o bloco nunca some sem virar item, como a caixa de shulker: se a quebra não vai
-     * dropar nada (criativo, ou sem a ferramenta certa), o próprio bloco solta o item com o conteúdo.
-     * Com a picareta, no sobrevivência, quem dropa é a loot table, e aqui só se avisa o block entity de
-     * que o drop vem, para o conteúdo ir ao {@link StorageSavedData}.
+     * Com algo que só o item leva ({@link StorageBlockEntity#keepsOnBreak}: o conteúdo e, no Baú, os upgrades e a
+     * grade), o bloco nunca some sem virar item, como a caixa de shulker: se a quebra não vai dropar nada (criativo,
+     * ou sem a ferramenta certa), o próprio bloco solta o item com os componentes. Com a picareta, no sobrevivência,
+     * quem dropa é a loot table, e aqui só se avisa o block entity de que o drop vem, para o conteúdo ir ao
+     * {@link StorageSavedData}.
      */
     @Override
     public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         if (!level.isClientSide && level.getBlockEntity(pos) instanceof StorageBlockEntity storage
-                && !storage.isEmptyContents()) {
+                && storage.keepsOnBreak()) {
             if (lootWillDrop(player, state, level, pos)) {
                 // A loot table monta o item depois de o bloco sair (e de o conteúdo ir para o StorageSavedData).
                 storage.expectDrop();

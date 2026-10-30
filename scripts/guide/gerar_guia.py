@@ -1799,11 +1799,56 @@ decide o que pode **entrar** no Baú, por qualquer caminho: roteador, funil, out
 A bolinha do botão acende na cor do tier quando há um filtro. Cartões de Filtro também servem:
 importe e exporte pela tela do filtro.
 
+## Upgrades
+
+O Baú tem **dois slots de upgrade**, à esquerda da lista. Cada upgrade entra uma vez só. Clique
+num slot com o upgrade no cursor para pôr; clique na aba ao lado do slot ocupado para abrir o painel
+dele, à direita da lista. Clique de novo na aba do painel aberto para escondê-lo; ele fica escondido,
+mesmo em outros Baús, até você clicar numa aba.
+
+| Upgrade | Receita |
+| --- | --- |
+| ''' + item('crafting_upgrade') + ''' **Upgrade de Mesa de Trabalho** | Mesa de trabalho + Cristal de Sinal. |
+| ''' + item('compacting_upgrade') + ''' **Upgrade de Compactação** | Pistão + Cristal de Sinal + bloco de ferro (sem forma). |
+
+### Mesa de Trabalho
+
+Uma mesa 3×3 dentro do Baú. Monte a receita na grade e pegue o resultado.
+
+- A grade **se repõe sozinha** com o que o Baú tem.
+- **Shift** + clique no resultado: repete a receita até uma pilha e manda para o inventário.
+- **Devolver**: a grade volta para o Baú.
+- No **JEI**, o botão **+** monta a receita puxando do Baú e depois do inventário.
+
+### Compactação
+
+Junta e separa sozinha as cadeias de itens: pepita, lingote, bloco; ou pedregulho até o 9x do
+AllTheCompressed. Só entra a cadeia que a mesa de trabalho também desfaz. Itens com encantamento ou
+nome não compactam.
+
+1. Pôr o upgrade não muda nada: o modo começa **Desligada**.
+2. No painel, escolha o modo para todas as cadeias: **Compactar** (a forma mais alta) ou **Descompactar** (a base).
+3. Para uma cadeia só, use as setas ou a rodinha na linha dela; clique no ícone para escolher a forma numa lista. **Global** volta ao modo geral.
+
+O alvo vale para os dois lados: o que está **abaixo** dele é compactado até ele, e o que está **acima** é
+descompactado até ele. Com o alvo em lingote, pepitas viram lingotes e blocos viram lingotes.
+
+- A sobra que não fecha um fator fica na forma de baixo: 10 lingotes com alvo em bloco dão 1 bloco e 1 lingote.
+- Descompactar converte **só o que cabe** no Baú; o resto fica na forma alta, sem perder nada.
+- O roteador vê só a forma guardada: para tirar lingotes, deixe o alvo da cadeia em lingote.
+- O limite de **Estoque** de um item da cadeia conta a cadeia inteira (11 blocos e 1 lingote valem 100 lingotes).
+- O mesmo material de mods diferentes (a prata crua de dois mods) é uma linha só, com o nome do mod embaixo: clique nele para escolher em qual mod a Compactação junta tudo.
+- A linha de uma cadeia com regra própria (alvo ou mod escolhido) fica na lista, apagada, mesmo sem nenhum item no Baú: a regra continua valendo. Clique na etiqueta Própria para voltar a Global: a regra sai e a linha some.
+- Com a Compactação, a Mesa desce uma forma quando falta o item exato.
+
 ## Quebrar e levar
 
 Quebre o Baú: o item leva **todo o conteúdo e o filtro**, e o tooltip mostra o total e os tipos.
 Coloque de novo e está tudo lá. Cheio, ele sempre vira item: no criativo, sem picareta ou numa
 explosão, nada se perde.
+
+Os **upgrades e os itens da grade** da Mesa também vão no item, mesmo com o Baú vazio, e voltam quando
+ele é colocado. Se o bloco sumir sem virar item (um comando, outro mod), eles caem no chão.
 
 ## Com outros blocos
 
@@ -1874,11 +1919,57 @@ screen.
 The button's dot lights up in the tier color when there's a filter. Filter Cards work too: import
 and export them from the filter screen.
 
+## Upgrades
+
+The chest has **two upgrade slots**, to the left of the list. Each upgrade fits once. Click a slot
+with the upgrade on the cursor to place it; click the tab next to the filled slot to open its panel,
+to the right of the list. Click the open panel's tab again to hide it; it stays hidden, even in other
+chests, until you click a tab.
+
+| Upgrade | Recipe |
+| --- | --- |
+| ''' + item('crafting_upgrade') + ''' **Crafting Upgrade** | Crafting table + Signal Crystal. |
+| ''' + item('compacting_upgrade') + ''' **Compacting Upgrade** | Piston + Signal Crystal + iron block (shapeless). |
+
+### Crafting
+
+A 3×3 crafting table inside the chest. Set up the recipe in the grid and take the result.
+
+- The grid **refills itself** from what the chest has.
+- **Shift** + click the result: repeats the recipe up to one stack and sends it to your inventory.
+- **Return**: the grid goes back into the chest.
+- In **JEI**, the **+** button sets up the recipe from the chest first, then your inventory.
+
+### Compacting
+
+It packs and unpacks item chains by itself: nugget, ingot, block; or cobblestone up to
+AllTheCompressed's 9x. A chain only counts if the crafting table can also undo it. Enchanted or
+named items don't compact.
+
+1. Placing the upgrade changes nothing: the mode starts **Off**.
+2. In the panel, pick the mode for all chains: **Compress** (the highest form) or **Decompress** (the base).
+3. For a single chain, use the arrows or the wheel on its row; click the icon to pick the form from a list. **Global** goes back to the general mode.
+
+The target works both ways: what is **below** it is compressed up to it, and what is **above** it is
+decompressed down to it. With the target on ingot, nuggets become ingots and blocks become ingots.
+
+- The leftover that doesn't make a full factor stays in the lower form: 10 ingots with the target on block give 1 block and 1 ingot.
+- Decompressing converts **only what fits** in the chest; the rest stays in the high form, nothing is lost.
+- The router only sees the stored form: to pull ingots, leave the chain's target on ingot.
+- The **Stock** limit of a chain item counts the whole chain (11 blocks and 1 ingot are worth 100 ingots).
+- The same material from different mods (two mods' raw silver) is a single row, with the mod name under it: click it to choose which mod's items Compacting gathers everything into.
+- The row of a chain with its own rule (a target or a chosen mod) stays in the list, dimmed, even with no items in the chest: the rule still applies. Click the Custom tag to go back to Global: the rule is removed and the row disappears.
+- With Compacting, the crafting grid steps down one form when the exact item is missing.
+
 ## Break and carry
 
 Break the chest: the item takes **all the contents and the filter** with it, and the tooltip shows
 the total and the types. Place it again and everything is there. A full chest always becomes an
 item: in creative, without a pickaxe or in an explosion, nothing is lost.
+
+The **upgrades and the crafting grid items** also go in the item, even with an empty chest, and come
+back when it is placed. If the block disappears without becoming an item (a command, another mod),
+they drop on the ground.
 
 ## With other blocks
 

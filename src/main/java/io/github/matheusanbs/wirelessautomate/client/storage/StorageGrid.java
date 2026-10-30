@@ -312,7 +312,7 @@ final class StorageGrid {
         if (count <= 1 && screen.items()) {
             return;
         }
-        String text = RateFormat.abbreviate(count);
+        String text = RateFormat.abbreviateAmount(count);
         g.pose().pushPose();
         g.pose().translate(0, 0, 200);
         g.pose().scale(0.5f, 0.5f, 1f);

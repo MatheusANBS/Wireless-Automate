@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "minecraft:piston" },
+    { "item": "wirelessautomate:signal_crystal" },
+    { "item": "minecraft:iron_block" }
+  ],
+  "result": {
+    "id": "wirelessautomate:compacting_upgrade",
+    "count": 1
+  }
+}

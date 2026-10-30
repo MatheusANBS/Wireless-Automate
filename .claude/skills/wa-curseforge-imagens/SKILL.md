@@ -37,7 +37,7 @@ O dono não gosta de imagens montadas a partir de capturas soltas do e2e ("ficou
    rm -f run/showcase/*.png run/showcase/result.txt
    WA_SHOWCASE="$PWD/run/showcase" ./gradlew runClient     # uns 3 min; result.txt = OK
    ```
-   No Windows (Git Bash), passe o caminho com `$(pwd -W)` no lugar de `$PWD`. `WA_SHOWCASE_ONLY=tela` (ou `ressonador`, `reparador`, `cascata`) monta a casa e grava só aquela ala.
+   No Windows (Git Bash), passe o caminho com `$(pwd -W)` no lugar de `$PWD`. `WA_SHOWCASE_ONLY=tela` (ou `ressonador`, `reparador`, `cascata`, `bau`) monta a casa e grava só aquela ala.
    Rode em segundo plano e espere pelo `result.txt`. Não abra outro jogo enquanto isso. O Gradle já compila antes; se falhar a compilação, não há o que esperar.
 3. **Confira numa folha de contato.** Olhar 20 capturas uma a uma gasta muito.
    ```bash

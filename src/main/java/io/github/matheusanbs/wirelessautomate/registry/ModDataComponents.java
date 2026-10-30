@@ -17,6 +17,7 @@ import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
 import io.github.matheusanbs.wirelessautomate.preset.ProfileSource;
 import io.github.matheusanbs.wirelessautomate.resonator.CrystalCharge;
 import io.github.matheusanbs.wirelessautomate.storage.StorageContents;
+import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingRules;
 import java.util.function.Supplier;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.core.component.DataComponentType;
@@ -24,6 +25,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.ExtraCodecs;
+import net.minecraft.world.item.component.ItemContainerContents;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 public final class ModDataComponents {
@@ -48,6 +50,21 @@ public final class ModDataComponents {
     public static final Supplier<DataComponentType<Filter>> STORAGE_FILTER =
             DATA_COMPONENTS.registerComponentType("storage_filter", builder -> builder
                     .persistent(FilterCodecs.LENIENT).networkSynchronized(Filter.STREAM_CODEC));
+
+    /** Os dois upgrades de um Baú quebrado (voltam ao bloco quando ele é colocado); só existe com algum upgrade. */
+    public static final Supplier<DataComponentType<ItemContainerContents>> STORAGE_UPGRADES =
+            DATA_COMPONENTS.registerComponentType("storage_upgrades", builder -> builder
+                    .persistent(ItemContainerContents.CODEC).networkSynchronized(ItemContainerContents.STREAM_CODEC));
+
+    /** A grade 3×3 da Mesa de Trabalho de um Baú quebrado; só existe com algo na grade. */
+    public static final Supplier<DataComponentType<ItemContainerContents>> STORAGE_CRAFT_GRID =
+            DATA_COMPONENTS.registerComponentType("storage_craft_grid", builder -> builder
+                    .persistent(ItemContainerContents.CODEC).networkSynchronized(ItemContainerContents.STREAM_CODEC));
+
+    /** As regras de um Upgrade de Compactação (modo global e alvo por cadeia); sem o componente, as padrão. */
+    public static final Supplier<DataComponentType<CompactingRules>> COMPACTING_RULES =
+            DATA_COMPONENTS.registerComponentType("compacting_rules", builder -> builder
+                    .persistent(CompactingRules.CODEC).networkSynchronized(CompactingRules.STREAM_CODEC));
 
     /** Tipo e filtro do Cartão de Filtro. */
     public static final Supplier<DataComponentType<FilterCardItem.Contents>> CARD_FILTER =

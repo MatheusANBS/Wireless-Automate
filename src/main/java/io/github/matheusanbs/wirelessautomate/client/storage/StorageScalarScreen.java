@@ -152,8 +152,8 @@ public class StorageScalarScreen extends AbstractContainerScreen<StorageScalarMe
 
         // valor e porcentagem
         Component amount = !menu.received() ? tr("loading")
-                : capacity <= 0 ? tr("amount.unlimited", RateFormat.abbreviate(stored))
-                : tr("amount", RateFormat.abbreviate(stored), RateFormat.abbreviate(capacity));
+                : capacity <= 0 ? tr("amount.unlimited", RateFormat.abbreviateAmount(stored))
+                : tr("amount", RateFormat.abbreviateAmount(stored), RateFormat.abbreviateAmount(capacity));
         GuiText.draw(g, font, amount, barX, barY + BAR_H + 6, barW - 40, GuiPaint.FG);
         if (capacity > 0 && menu.received()) {
             GuiPaint.textRight(g, font, Component.literal(percent(stored, capacity)), barX + barW, barY + BAR_H + 6,

@@ -42,14 +42,14 @@ Ramo: `livro-proprio`. Uma tarefa por vez, um implementador por tarefa, revisão
 
 ---
 
-### Tarefa 1: as páginas no formato novo
+### Task 1: as páginas no formato novo
 
 O gerador escreve em `assets/wirelessautomate/guide/en_us/` e `.../pt_br/` (sai o `guides/wirelessautomate/guide/` e o `_pt_br/`), e as imagens das portas em `assets/wirelessautomate/guide/images/`. O `front()` ganha `group` (obrigatório, um dos sete da spec: `comecar`, `ferramentas`, `armazenamentos`, `energia`, `painel`, `integracoes`, `referencia`), e cada página diz o seu grupo. Apaga `assets/wirelessautomate/guideme_guides/`. Textos das páginas que citam o GuideME ou o `/guidemec` (a "Este guia" da `index`, o docstring do `guia_base.py`) passam a falar do livro (receita livro + redstone sempre). O `ResonatorGuideSceneTest` lê o caminho novo.
 
 - **Feito quando:** `python -I scripts/guide/gerar_guia.py` gera 25 páginas em cada idioma no lugar novo, com `group:` válido; JUnit verde; nada mais em `guides/` nem `guideme_guides/`.
 - **Custo:** nenhum no jogo (só arquivos).
 
-### Tarefa 2: o item, a receita, a entrega e as texturas
+### Task 2: o item, a receita, a entrega e as texturas
 
 - `GuideBookItem` (pilha de 1, raridade comum, tooltip da chave existente); no `use`, no cliente, `GuideClientHooks.open.accept(null)` e `InteractionResultHolder.success`; no servidor, `consume`. Registrado em `ModItems` como `guide`; vai na aba criativa (`ModCreativeTabs`, onde hoje entra o `GuideBook.create()`).
 - `GuideClientHooks`: `public static volatile Consumer<@Nullable String> open = p -> {};` (o nome da página, como `router.md`, ou `null` para onde parou).
@@ -60,21 +60,21 @@ O gerador escreve em `assets/wirelessautomate/guide/en_us/` e `.../pt_br/` (sai 
 - **Feito quando:** as cinco runs verdes; o item existe, com o ícone novo animado, e o uso no cliente chama o gancho (que ainda não faz nada).
 - **Custo:** login: uma leitura e uma escrita de marca no NBT persistente, uma vez por jogador. Nada por tick.
 
-### Tarefa 3: o parser (puro, com JUnit)
+### Task 3: o parser (puro, com JUnit)
 
 `client/guide/doc/`: `GuideDoc` (cabeçalho: título, ícone, pai, posição, grupo, `item_ids`; corpo: lista de blocos) e os blocos `Heading(nível, trechos)`, `Paragraph(trechos)`, `ListBlock(numerada, itens de trechos)`, `Table(cabeçalho, linhas de células de trechos)`, `ItemImage(id, escala, flutua)`, `BlockImage(id, propriedades, escala)`, `Row(filhos)`, `RecipeFor(id do item)`, `Recipe(id da receita)`, `Image(caminho)`, `Scene(blocos com posição e propriedades, anotações, câmera)`, `SubPages`, `Break`. Trechos: texto, negrito, código, link (página, texto), ícone de item em linha (o `item(...)` nas tabelas), item com link (`ItemLink`). `GuideParser.parse(String) → GuideDoc`, tolerante: tag desconhecida vira um aviso na lista `warnings()` do documento e é pulada.
 
 - JUnit: casos pequenos de cada bloco e trecho, e as 25 páginas reais dos dois idiomas (lidas de `src/main/resources`) sem nenhum aviso, com o título e o grupo certos.
 - **Custo:** roda uma vez por página e idioma; linear no tamanho do texto, sem regex por caractere.
 
-### Tarefa 4: a paginação (pura, com JUnit)
+### Task 4: a paginação (pura, com JUnit)
 
 `client/guide/layout/`: `TextMeasure` (`width(String, estilo)`, `lineHeight()`), `SheetOp` (operação de desenho posicionada: texto com estilo e cor, ícone de item, regra de tabela, link com área, imagem, moldura de receita, moldura de cena), `Sheet` (as operações de uma folha) e `GuideLayout.paginate(GuideDoc, largura, altura, TextMeasure) → List<Sheet>`. Quebra parágrafo e lista por linha (palavras), tabela entre linhas (com o cabeçalho repetido na folha seguinte), e nunca parte receita, imagem, cena ou linha de ícones (`Row`): vão inteiros para a folha seguinte. Título no topo da primeira folha; um título não fica sozinho no pé da folha. As medidas (largura e altura da folha, margens, tamanho de receita e cena) ficam numa classe de constantes, as mesmas da textura.
 
 - JUnit com uma `TextMeasure` falsa (6 px por caractere): quebra de linha, parágrafo partido entre folhas, tabela com cabeçalho repetido, bloco atômico empurrado, título que não fica órfão, e as 25 páginas reais paginando sem folha vazia nem operação fora da folha.
 - **Custo:** uma vez por página e idioma (o tamanho é fixo), guardado; nada por quadro.
 
-### Tarefa 5: a tela, as páginas e a navegação
+### Task 5: a tela, as páginas e a navegação
 
 - `GuidePages`: lê as páginas do idioma pelo `ResourceManager` (`guide/<idioma>/*.md`, com o `en_us` como reserva por página), parseia e pagina sob demanda (guardando), monta o índice por grupo (ordenado pela `position`) e o mapa item → página; registrado no recarregar de recursos do cliente (esquece tudo). Aviso de parser vai ao log uma vez por página.
 - `GuideScreen` (anfitriã, sem `AbstractContainerScreen`): o livro de 300 × 196 centrado (se não couber na escala do jogo, desenha numa escala menor que caiba), as fitas à direita (`GuideIndex` dá os grupos), a folha de rosto + índice como abertura, a página em pares de folhas, ◀ ▶ e números, "← Índice", o histórico (voltar) e a última página e folha lembradas na sessão (estáticas, soltas no logout). Teclado e mouse da spec (menos busca e G, que vêm depois).
@@ -85,14 +85,14 @@ O gerador escreve em `assets/wirelessautomate/guide/en_us/` e `.../pt_br/` (sai 
 - **Feito quando:** o livro abre pelo item, as 25 páginas aparecem e viram, e o e2e `guia` passa; capturas olhadas.
 - **Custo:** o medido na Tarefa 4; por quadro, só o laço das operações de duas folhas, sem alocação (reusar o `PoseStack`, nada de `Component` novo por quadro).
 
-### Tarefa 6: receitas e cenas paradas
+### Task 6: receitas e cenas paradas
 
 - `GuideRecipes`: acha a receita pelo id (`Recipe`) ou pelo item de saída (`RecipeFor`, a primeira de bancada do mod com aquele resultado) no `RecipeManager` do cliente; desenha a grade 3 × 3 (sem forma: em ordem), a seta e o resultado, com os ingredientes de várias opções alternando a cada segundo (pelo relógio, sem montar listas por quadro). A `TierUpgradeRecipe` (é uma `ShapedRecipe`) mostra o anel. Receita que não existe (editor de receitas mudou): a moldura diz "receita não encontrada".
 - `GuideScenes`: a cena parada no ângulo da `IsometricCamera` da página (ou um padrão), os blocos montados uma vez por cena (estado de bloco pelas propriedades), desenhada dentro da moldura com o `BlockRenderDispatcher`, como o visor 3D do roteador (`MachineView3D`), sem girar e sem anotações.
 - e2e: as capturas das páginas com receita e cena (roteador, Baú, Ressonador, Cartões) olhadas.
 - **Custo:** receita achada uma vez por página (guardada); cena com os blocos montados uma vez; por quadro, só desenhar a cena da folha à vista.
 
-### Tarefa 7: a busca
+### Task 7: a busca
 
 `GuideSearch` (puro, com JUnit): normaliza como a `NetworkSearch` (sem acento, sem maiúscula), procura nas palavras do título e do texto, ordena (título antes de corpo, depois a ordem do índice) e devolve o trecho com a posição da palavra. Na folha de rosto: o campo da busca (foco ao digitar ou Ctrl + F), resultados na folha direita, Enter abre o primeiro, ↑ ↓ andam, Esc limpa e depois fecha.
 
@@ -100,14 +100,14 @@ O gerador escreve em `assets/wirelessautomate/guide/en_us/` e `.../pt_br/` (sai 
 - e2e: busca por "bau" com captura.
 - **Custo:** o texto normalizado de cada página feito na primeira busca, guardado; cada tecla filtra 25 páginas.
 
-### Tarefa 8: a tecla G
+### Task 8: a tecla G
 
 `GuideKeys`: `KeyMapping` "Abrir no livro" (padrão G, categoria do mod). Com uma tela de contêiner aberta, o item sob o mouse (o slot), ou o do JEI (`compat/jei`, pelo `IJeiRuntime` da sobreposição de ingredientes), se tem página (o mapa item → página), abre o livro nela. A dica do item ganha a linha "Segure G para abrir no livro" (cinza), só para itens com página.
 
 - e2e: segurar G sobre o roteador no inventário abre a página `router.md`.
 - **Custo:** só quando a tecla é apertada com uma tela aberta; a linha da dica é um `Component` constante por item.
 
-### Tarefa 9: sai o GuideME e a documentação
+### Task 9: sai o GuideME e a documentação
 
 - Sai a dependência do `neoforge.mods.toml`, o `guideme` do `clientMods` e da lista de jars do `build.gradle`; a vitrine e o mundo da vitrine (`E2eShowcase`, `E2eShowcaseWorld`) passam a usar o nosso item e a nossa tela. `git grep -i guideme` fica só no histórico, nas specs e nos changelogs antigos.
 - Docs: `docs/mapa/livro.md` (área nova, com a linha no índice do `CLAUDE.md`), `docs/mapa/scripts-e-recursos.md`, `README.md` e `README.en.md` (a linha do GuideME nas integrações sai; o livro é do mod), `docs/curseforge/descricao.md`, `docs/especificacao.md` (receita do livro, integrações), `docs/e2e.md`, a skill `wa-porte` (o GuideME deixa de ser dependência), `docs/progresso/` (estado, histórico e pendências da etapa 2).

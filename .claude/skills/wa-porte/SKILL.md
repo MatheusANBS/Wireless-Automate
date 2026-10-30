@@ -115,4 +115,4 @@ Mostre o resumo ao dono e espere o ok antes de criar o ramo.
 
 ## Ao terminar
 
-Atualize `docs/portes.md` (estado do alvo, link do relatório, próximo passo) e o `docs/progresso.md`.
+Atualize `docs/portes.md` (estado do alvo, link do relatório, próximo passo) e o `docs/progresso/` (o próximo passo no `README.md` e uma linha no histórico do mês).

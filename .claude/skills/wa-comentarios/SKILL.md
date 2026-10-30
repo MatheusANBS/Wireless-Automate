@@ -13,9 +13,9 @@ O mod é comentado em português e com bastante explicação: o porquê de uma r
 | --- | --- | --- |
 | **Código comentado** | `// router.setNetwork(id);` | Apagar. O git guarda a versão antiga. |
 | **Desatualizado** | javadoc que cita um método renomeado, "protocolo 8" quando é 15, "165 GameTests", "quando o AE2 for usado" | Corrigir para o que o código faz hoje, ou apagar se não diz mais nada. |
-| **Histórico** | "antes era por aba, agora é por face", "mudou na 1.9.0" | Reescrever no presente ("a rede é de cada face"). A história vai no commit e no `docs/progresso.md`. |
+| **Histórico** | "antes era por aba, agora é por face", "mudou na 1.9.0" | Reescrever no presente ("a rede é de cada face"). A história vai no commit e no histórico do mês (`docs/progresso/historico/`). |
 | **Redundante** | `// incrementa o contador` acima de `count++`; "Retorna o nome." num `name()` | Apagar, ou trocar pelo porquê que faltava. |
-| **TODO esquecido** | `// TODO arrumar depois` | Fazer agora, ou virar uma linha em `docs/progresso.md` (o que falta), e sair do código. |
+| **TODO esquecido** | `// TODO arrumar depois` | Fazer agora, ou virar uma linha em `docs/progresso/pendencias.md`, e sair do código. |
 
 ## O que fica (não confundir com ruído)
 
@@ -29,7 +29,7 @@ O mod é comentado em português e com bastante explicação: o porquê de uma r
 
 1. Comentário no presente, dizendo o que é e por quê; nunca o que mudou.
 2. Ao renomear, mover ou mudar o comportamento de algo, procure o nome velho nos comentários do repositório inteiro (`grep -rn "nomeVelho" src scripts docs`) e atualize junto, no mesmo commit.
-3. Números que mudam (versão do protocolo, contagem de testes, tamanhos de tela) só onde são a fonte da verdade (`CLAUDE.md`, `docs/progresso.md`, a constante no código). No javadoc, prefira `{@link ModPayloads#VERSION}` a escrever o número.
+3. Números que mudam (versão do protocolo, contagem de testes, tamanhos de tela) só onde são a fonte da verdade (`CLAUDE.md`, `docs/progresso/`, a constante no código). No javadoc, prefira `{@link ModPayloads#VERSION}` a escrever o número.
 4. Nada de código comentado no commit. Se é para guardar, é para o git.
 5. Um `{@link}` aponta para algo que existe; o build não avisa quando o alvo some.
 

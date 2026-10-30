@@ -1,11 +1,11 @@
 ---
 name: wa-feature
-description: Fluxo completo para uma feature, tela, item ou bloco novo do Wireless Automate (mod NeoForge), da ideia ao commit - mockup em artifact para o dono aprovar, spec, plano em tarefas, um subagente por tarefa com revisão, GameTests nas três runs, e2e e progresso.md. Use sempre que o dono pedir algo novo ou uma mudança de comportamento no mod ("cria", "adiciona", "quero uma tela", "nova aba", "novo item", "etapa N", "faz o plano", "executa o plano", "subagente por tarefa"), mesmo que ele não fale em plano ou em subagentes. Não use para só rodar testes, só gerar imagens do CurseForge (wa-curseforge-imagens) ou só fechar versão (wa-release).
+description: Fluxo completo para uma feature, tela, item ou bloco novo do Wireless Automate (mod NeoForge), da ideia ao commit - mockup em artifact para o dono aprovar, spec, plano em tarefas, um subagente por tarefa com revisão, GameTests nas três runs, e2e e docs/progresso/. Use sempre que o dono pedir algo novo ou uma mudança de comportamento no mod ("cria", "adiciona", "quero uma tela", "nova aba", "novo item", "etapa N", "faz o plano", "executa o plano", "subagente por tarefa"), mesmo que ele não fale em plano ou em subagentes. Não use para só rodar testes, só gerar imagens do CurseForge (wa-curseforge-imagens) ou só fechar versão (wa-release).
 ---
 
 # Feature nova no Wireless Automate
 
-O dono quer ver e aprovar a ideia antes de qualquer código, e depois quer que o trabalho ande sozinho, com qualidade, sem ser interrompido a cada tarefa. Este fluxo concilia as duas coisas. Antes de começar, leia `CLAUDE.md` e `docs/progresso.md` (o estado e o próximo passo) e, se a feature tocar no design, `docs/especificacao.md`.
+O dono quer ver e aprovar a ideia antes de qualquer código, e depois quer que o trabalho ande sozinho, com qualidade, sem ser interrompido a cada tarefa. Este fluxo concilia as duas coisas. Antes de começar, leia `CLAUDE.md` e `docs/progresso/README.md` (o estado e o próximo passo) e, se a feature tocar no design, `docs/especificacao.md`.
 
 A conversa é em português, e também o código, os comentários, os commits e as docs.
 
@@ -52,7 +52,7 @@ Tamanho e divisão (skill `wa-modular`): no plano, cada tela ou componente novo 
 
 ## 5. Fechamento da etapa
 
-- `docs/progresso.md`: a tabela de estado, o próximo passo e uma linha no histórico (o que foi feito e os números de testes, por exemplo "157 + 7 + 15 GameTests, e2e OK").
+- `docs/progresso/` (regras no `README.md` de lá): uma linha no histórico do mês (o que foi feito e os números de testes, por exemplo "157 + 7 + 15 GameTests, e2e OK"), o que ficou para depois em `pendencias.md`, a linha da funcionalidade em `estado.md` e o próximo passo no `README.md`.
 - `docs/mapa/<área>.md` (o índice está no `CLAUDE.md`): atualize a linha da classe se surgiram arquivos ou papéis novos.
 - Guia do jogador: edite a página em `scripts/guide/paginas/<pagina>.py` (nunca os `.md` gerados; página nova entra na lista `PAGINAS` do `gerar_guia.py`), nos dois idiomas, só com "como operar": passos primeiro, frases curtas, sem jargão.
 - Texturas: edite as paletas em `scripts/textures/gerar_texturas.py`, nunca os PNGs.

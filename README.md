@@ -301,7 +301,7 @@ O CI (`.github/workflows/build.yml`) roda o `build` e as cinco runs de GameTest 
 O mapa do código-fonte fica no [`CLAUDE.md`](CLAUDE.md) ("Mapa do código").
 
 - `docs/especificacao.md`: especificação do mod (fonte da verdade do design).
-- `docs/progresso.md`: o que está pronto, o que falta e o próximo passo.
+- `docs/progresso/`: o que está pronto, o que falta, as decisões e o histórico.
 - `docs/benchmark.md`: como rodar o benchmark e os resultados.
 - `docs/curseforge/`: descrição do CurseForge, changelogs, banner e as imagens e GIFs usados aqui.
 - `scripts/`: `setup.sh`/`setup.ps1`, `e2e.sh`, `bench.sh`, `textures/` (gera as texturas), `guide/` (gera as páginas do guia) e `curseforge/` (gera as imagens do CurseForge).

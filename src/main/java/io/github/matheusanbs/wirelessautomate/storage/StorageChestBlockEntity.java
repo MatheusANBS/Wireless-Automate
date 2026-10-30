@@ -2,9 +2,13 @@ package io.github.matheusanbs.wirelessautomate.storage;
 
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.StockLimit;
+import io.github.matheusanbs.wirelessautomate.item.ChestUpgradeItem;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
+import io.github.matheusanbs.wirelessautomate.storage.upgrade.ChestCompacting;
 import io.github.matheusanbs.wirelessautomate.storage.upgrade.ChestUpgrades;
+import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingRules;
+import java.util.Objects;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponentMap;
@@ -12,15 +16,18 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.level.block.state.BlockState;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Baú: itens por tipo ({@link ItemStorage}), vistos pelos outros mods como um inventário comum
- * ({@link ItemStorageHandler}) e pelo roteador como {@link BulkItems}.
+ * ({@link ItemStorageHandler}) e pelo roteador como {@link BulkItems}. Com o Upgrade de Compactação, o
+ * {@link ChestCompacting} converte as cadeias sujas no fim do tick.
  */
 public class StorageChestBlockEntity extends KeyedStorageBlockEntity<ItemStack> {
     private final ItemStorage storage = new ItemStorage(this::markContentsChanged, this::capacity);
     private final ItemStorageHandler handler = new ItemStorageHandler(storage);
-    private final ChestUpgrades upgrades = new ChestUpgrades(this::setChanged);
+    private final ChestUpgrades upgrades = new ChestUpgrades(this::upgradesChanged);
+    private final ChestCompacting compacting = new ChestCompacting(storage, this::capacity);
 
     public StorageChestBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.CHEST.get(), StorageKind.CHEST, pos, state);
@@ -45,6 +52,44 @@ public class StorageChestBlockEntity extends KeyedStorageBlockEntity<ItemStack> 
         return upgrades;
     }
 
+    /** A Compactação do Baú; sem o upgrade, as regras são nulas e ela não faz nada. */
+    public ChestCompacting compacting() {
+        return compacting;
+    }
+
+    /**
+     * Um upgrade foi trocado ou a grade mudou: salva e, se as regras da Compactação mudaram de verdade (o upgrade
+     * entrou, saiu ou foi reconfigurado), aplica as novas e põe todas as cadeias presentes na fila do fim do tick.
+     */
+    private void upgradesChanged() {
+        setChanged();
+        CompactingRules next = slotRules();
+        if (!Objects.equals(next, compacting.rules())) {
+            compacting.setRules(next);
+            if (next != null) {
+                compacting.markAll();
+                markContentsChanged();
+            }
+        }
+    }
+
+    /** As regras do upgrade de Compactação dos slots, ou {@code null} sem ele. */
+    private @Nullable CompactingRules slotRules() {
+        ItemStack stack = upgrades.find(ChestUpgradeItem.Kind.COMPACTING);
+        return stack == null ? null : stack.getOrDefault(ModDataComponents.COMPACTING_RULES.get(), CompactingRules.DEFAULT);
+    }
+
+    /**
+     * Converte as cadeias sujas antes de fechar os buracos da lista. A conversão muda o conteúdo e põe o Baú de novo
+     * na fila do {@link StorageNeighbors} (a do tick seguinte, porque a lista foi trocada): um aviso a mais aos
+     * vizinhos, uma vez, sem conversão nova (a conversão não suja cadeia).
+     */
+    @Override
+    protected void compactContents() {
+        compacting.convertDirty();
+        super.compactContents();
+    }
+
     @Override
     protected String contentsKey() {
         return "items";
@@ -60,6 +105,8 @@ public class StorageChestBlockEntity extends KeyedStorageBlockEntity<ItemStack> 
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         upgrades.load(tag, registries);
+        // O conteúdo salvo já estava convertido: só as regras, sem sujar nada.
+        compacting.setRules(slotRules());
     }
 
     /**
@@ -78,6 +125,7 @@ public class StorageChestBlockEntity extends KeyedStorageBlockEntity<ItemStack> 
         super.applyImplicitComponents(input);
         upgrades.apply(input.getOrDefault(ModDataComponents.STORAGE_UPGRADES.get(), ItemContainerContents.EMPTY),
                 input.getOrDefault(ModDataComponents.STORAGE_CRAFT_GRID.get(), ItemContainerContents.EMPTY));
+        compacting.setRules(slotRules());
     }
 
     @Override
@@ -89,7 +137,8 @@ public class StorageChestBlockEntity extends KeyedStorageBlockEntity<ItemStack> 
 
     /**
      * Quanto do tipo cabe: só até o limite dele (o da entrada que casa, ou o limite por tipo do Baú),
-     * contando só o mesmo item ou, se o filtro exige componentes, o mesmo item com os mesmos componentes.
+     * contando só o mesmo item ou, se o filtro exige componentes, o mesmo item com os mesmos componentes; com a
+     * Compactação, a cadeia inteira na unidade do item ({@link ItemStorage#stockCount}).
      */
     private long admit(ItemStack key, long amount) {
         Filter filter = filter();
@@ -97,7 +146,7 @@ public class StorageChestBlockEntity extends KeyedStorageBlockEntity<ItemStack> 
         if (limit <= 0) {
             return amount;
         }
-        long present = filter.matchComponents() ? storage.count(key) : storage.countItem(key);
+        long present = storage.stockCount(key, filter.matchComponents());
         return StockLimit.acceptable(present, limit, amount);
     }
 }

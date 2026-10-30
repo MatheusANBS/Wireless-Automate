@@ -40,6 +40,14 @@ public interface BulkItems {
     /** Quanto há do item, com quaisquer componentes (O(1) no Baú: a soma por item é mantida). */
     long countItem(ItemStack key);
 
+    /**
+     * Quanto conta para o limite de estoque da chave: o mesmo item com os mesmos componentes ou, sem
+     * {@code components}, com quaisquer componentes. Num Baú com a Compactação, a cadeia inteira na unidade da chave.
+     */
+    default long stockCount(ItemStack key, boolean components) {
+        return components ? count(key) : countItem(key);
+    }
+
     /** Guarda até {@code amount} de {@code key}; devolve quanto coube. */
     long insert(ItemStack key, long amount, boolean simulate);
 

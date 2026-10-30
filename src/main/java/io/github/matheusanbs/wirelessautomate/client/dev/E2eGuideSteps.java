@@ -5,40 +5,44 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eUi.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
-import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.client.GuiText;
+import io.github.matheusanbs.wirelessautomate.client.guide.GuidePages;
+import io.github.matheusanbs.wirelessautomate.client.guide.GuideScreen;
 import io.github.matheusanbs.wirelessautomate.item.GuideBook;
+import io.github.matheusanbs.wirelessautomate.item.GuideClientHooks;
 import java.util.List;
+import java.util.Objects;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.components.AbstractWidget;
-import net.minecraft.client.gui.screens.Screen;
-import net.neoforged.neoforge.client.ClientCommandHandler;
+import org.lwjgl.glfw.GLFW;
 
 /**
- * O livro-guia no e2e (só com o GuideME): cada página aberta pelo comando, rolada até o fim e fotografada, em
- * inglês e em português.
+ * O livro-guia no e2e: abre pelo gancho do item, primeiro onde parou (a folha de rosto e o índice) e depois cada
+ * página, vira todas as folhas e captura cada par ({@code guia-<pagina>-<n>}), conferindo que nenhum texto foi
+ * cortado. Em inglês e, com a variante, em português.
  */
 final class E2eGuideSteps {
     private E2eGuideSteps() {
     }
 
-    /** Páginas do guia (assets/wirelessautomate/guides/wirelessautomate/guide), na ordem da navegação. */
-    private static final List<String> GUIDE_PAGES = List.of("index", "getting-started", "router", "upgrade-cards",
-            "networks", "filters", "filter-card", "linker", "configurator", "network-tablet", "chunk-loading",
-            "wireless-chest", "wireless-tank", "wireless-battery", "wireless-chemical-tank", "chemicals", "source",
-            "wireless-source-tank", "troubleshooting", "recipe-editor", "recipes", "signal-quartz", "signal-resonator",
-            "crystal-repairer", "signal-screen");
+    /** Teto de pares de folhas por página; os que passam do fim da página viram passos instantâneos. */
+    private static final int MAX_SPREADS = 16;
 
     /**
-     * Livro-guia (só com o GuideME): abre cada página pelo comando de cliente {@code /guidemec open}
-     * e salva uma captura, para conferir as cenas 3D, as receitas e o texto.
+     * As páginas na ordem do índice; lidas na hora (as páginas só existem depois de abrir o livro uma vez), por isso
+     * a lista de passos usa a fixa e confere contra a lida.
      */
+    private static final List<String> PAGES = List.of("index", "getting-started", "router", "upgrade-cards",
+            "networks", "filters", "filter-card", "linker", "configurator", "chunk-loading", "wireless-chest",
+            "wireless-tank", "wireless-battery", "wireless-chemical-tank", "wireless-source-tank", "signal-quartz",
+            "signal-resonator", "crystal-repairer", "network-tablet", "signal-screen", "chemicals", "source",
+            "troubleshooting", "recipe-editor", "recipes");
+
     static void guideSteps(List<Step> list) {
         list.add(new Step("livro-guia entregue no primeiro login", STEP_TIMEOUT_MS, () -> {
         }, () -> onServer(server -> GuideBook.given(server.getPlayerList()
                 .getPlayer(Minecraft.getInstance().player.getUUID()))),
                 () -> "o livro não foi entregue (a marca no jogador não está lá)"));
         guidePages(list, "");
-        // De novo em português (as páginas de _pt_br/), e de volta ao idioma de antes.
         E2eVariants.pt(list, () -> {
             list.add(language("pt_br"));
             guidePages(list, "-pt");
@@ -46,66 +50,89 @@ final class E2eGuideSteps {
         });
     }
 
-    /** Teto de capturas por página do guia (a primeira e as rolagens). */
-    private static final int GUIDE_MAX_PARTS = 16;
-    /** Se a última rolagem do guia andou; parada no fim, as capturas seguintes da página ficam de fora. */
-    private static boolean guideScrolled;
-
-    /**
-     * Rola o documento do guia uma tela para baixo pela barra de rolagem do GuideME (por reflexão: o
-     * GuideME é opcional) e diz se a rolagem mudou. A roda do mouse no meio da janela cai no menu da
-     * esquerda, conforme a escala, e não rolava a página.
-     */
-    private static boolean scrollGuide() {
-        Screen screen = Minecraft.getInstance().screen;
-        if (screen == null) {
-            return false;
-        }
-        for (var child : screen.children()) {
-            if (!child.getClass().getSimpleName().equals("GuideScrollbar")
-                    || !(child instanceof net.minecraft.client.gui.components.AbstractWidget bar)) {
-                continue;
-            }
-            try {
-                var get = child.getClass().getMethod("getScrollAmount");
-                var set = child.getClass().getMethod("setScrollAmount", int.class);
-                int before = (int) get.invoke(child);
-                set.invoke(child, before + Math.max(20, bar.getHeight() * 9 / 10));
-                return (int) get.invoke(child) != before;
-            } catch (ReflectiveOperationException e) {
-                WirelessAutomate.LOGGER.warn("E2E: não deu para rolar o guia", e);
-                return false;
-            }
-        }
-        return false;
+    private static GuideScreen book() {
+        return Minecraft.getInstance().screen instanceof GuideScreen s ? s : null;
     }
 
     private static void guidePages(List<Step> list, String suffix) {
-        for (String page : GUIDE_PAGES) {
+        list.add(new Step("guia" + suffix + ": abertura pelo item", STEP_TIMEOUT_MS,
+                () -> GuideClientHooks.open.accept(null), () -> book() != null,
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(new Step("guia" + suffix + ": folha de rosto", STEP_TIMEOUT_MS, GuideScreen::openIndex,
+                () -> book() != null && book().page() == null && book().spread() == 0,
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(new Step("guia" + suffix + ": as páginas lidas", STEP_TIMEOUT_MS, () -> {
+        }, () -> GuidePages.pageIds().containsAll(PAGES) && PAGES.containsAll(GuidePages.pageIds()),
+                () -> "páginas " + GuidePages.pageIds()));
+        spreads(list, null, "abertura" + suffix);
+        if (suffix.isEmpty()) {
+            navigationSteps(list);
+        }
+        for (String page : PAGES) {
             list.add(new Step("guia" + suffix + ": " + page, STEP_TIMEOUT_MS,
-                    () -> ClientCommandHandler.runCommand("guidemec wirelessautomate:guide open wirelessautomate:" + page + ".md"),
-                    () -> Minecraft.getInstance().screen != null
-                            && Minecraft.getInstance().screen.getClass().getName().startsWith("guideme"),
-                    () -> "tela " + describe(Minecraft.getInstance().screen)));
-            list.add(capture("guia-" + page + suffix));
-            // O resto da página: rola uma tela por vez e captura, até a rolagem não mudar mais (o fim).
-            for (int part = 2; part <= GUIDE_MAX_PARTS; part++) {
-                String file = "guia-" + page + suffix + "-" + part;
-                list.add(new Step("rolar " + page + suffix, STEP_TIMEOUT_MS, () -> guideScrolled = scrollGuide(),
-                        () -> true, () -> "tela " + describe(Minecraft.getInstance().screen)));
-                list.add(new Step("captura " + file, STEP_TIMEOUT_MS, () -> moveMouse(0, 0), () -> {
-                    if (!guideScrolled) {
-                        return true;
-                    }
-                    if (stepTicks < 6) {
-                        return false;
-                    }
-                    capture(Minecraft.getInstance(), file);
-                    return true;
-                }, () -> file + ".png"));
-            }
+                    () -> GuideClientHooks.open.accept(page + ".md"),
+                    () -> book() != null && page.equals(book().page()) && book().spread() == 0,
+                    () -> "tela " + describe(Minecraft.getInstance().screen)
+                            + (book() == null ? "" : ", página " + book().page())));
+            spreads(list, page, page + suffix);
         }
         list.add(new Step("fechar o guia" + suffix, STEP_TIMEOUT_MS, () -> Minecraft.getInstance().setScreen(null),
                 () -> Minecraft.getInstance().screen == null, () -> "tela " + describe(Minecraft.getInstance().screen)));
+    }
+
+    /** O clique num link do índice, o voltar (Backspace) e as setas do teclado, na folha de rosto. */
+    private static void navigationSteps(List<Step> list) {
+        list.add(new Step("guia: clique no link do roteador no índice", STEP_TIMEOUT_MS, () -> {
+            GuideScreen s = book();
+            if (s != null) {
+                s.turnTo(0);
+            }
+            int[] c = s == null ? null : s.linkCenter("router");
+            if (c == null) {
+                throw new StepFailure("o índice não tem o link do roteador à vista");
+            }
+            click(s, c[0], c[1]);
+        }, () -> book() != null && "router".equals(book().page()) && book().spread() == 0,
+                () -> book() == null ? "sem livro" : "página " + book().page()));
+        list.add(new Step("guia: Backspace volta ao índice", STEP_TIMEOUT_MS,
+                () -> book().keyPressed(GLFW.GLFW_KEY_BACKSPACE, 0, 0),
+                () -> book() != null && book().page() == null && book().spread() == 0,
+                () -> book() == null ? "sem livro" : "página " + book().page()));
+        list.add(new Step("guia: seta para a direita vira as folhas", STEP_TIMEOUT_MS,
+                () -> book().keyPressed(GLFW.GLFW_KEY_RIGHT, 0, 0),
+                () -> book() != null && book().page() == null && book().spread() == 1,
+                () -> book() == null ? "sem livro" : "par " + book().spread()));
+    }
+
+    /** Vira cada par de folhas da página aberta, confere o texto e captura; pares além do fim passam direto. */
+    private static void spreads(List<Step> list, String page, String name) {
+        for (int n = 0; n < MAX_SPREADS; n++) {
+            int spread = n;
+            String file = "guia-" + name + "-" + (n + 1);
+            list.add(new Step("folhas " + file, STEP_TIMEOUT_MS, () -> {
+                moveMouse(0, 0);
+                GuideScreen s = book();
+                if (s != null && spread < s.spreads()) {
+                    s.turnTo(spread);
+                }
+            }, () -> {
+                GuideScreen s = book();
+                if (s == null || !Objects.equals(page, s.page())) {
+                    return false;
+                }
+                if (spread >= s.spreads()) {
+                    return true;
+                }
+                if (stepTicks < 6 || s.spread() != spread || GuiText.clipCount() != 0) {
+                    return false;
+                }
+                capture(Minecraft.getInstance(), file);
+                return true;
+            }, () -> {
+                GuideScreen s = book();
+                return s == null ? "tela " + describe(Minecraft.getInstance().screen)
+                        : "par " + s.spread() + " de " + s.spreads() + ", " + GuiText.clipCount() + " texto(s) cortado(s)";
+            }));
+        }
     }
 }

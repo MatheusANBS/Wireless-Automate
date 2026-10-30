@@ -117,7 +117,10 @@ public final class GuideScreen extends Screen {
         }
         String ln = number(l, slots);
         String rn = number(r, slots);
-        chrome.update(font, spread > 0, spread < spreads - 1, page != null, ln, rn, group);
+        boolean pagedResults = showsResults() && search.pages() > 1;
+        boolean prev = pagedResults ? search.resultPage() > 0 : spread > 0;
+        boolean next = pagedResults ? search.resultPage() < search.pages() - 1 : spread < spreads - 1;
+        chrome.update(font, prev, next, page != null, ln, rn, group);
         note("em volta das folhas", chrome.problems());
     }
 
@@ -179,6 +182,16 @@ public final class GuideScreen extends Screen {
         refresh();
     }
 
+    /** Vira as folhas ({@code delta} ±1); com os resultados em mais de uma página, viram as páginas deles. */
+    private void turnBy(int delta) {
+        if (showsResults() && search.pages() > 1) {
+            search.turnResults(search.resultPage() + delta);
+            refresh();
+        } else {
+            turnTo(GuideNav.spread() + delta);
+        }
+    }
+
     private void back() {
         if (GuideNav.back()) {
             refresh();
@@ -198,6 +211,16 @@ public final class GuideScreen extends Screen {
     /** O texto da busca agora. */
     public String searchText() {
         return search.text();
+    }
+
+    /** Quantos resultados a busca achou, de todas as páginas de resultados. */
+    public int resultCount() {
+        return search.total();
+    }
+
+    /** A página marcada nos resultados (o e2e confere que o 9º está à vista e marcado). */
+    public @Nullable String markedResult() {
+        return showsResults() ? search.selectedPage() : null;
     }
 
     /** As páginas dos resultados à vista, na ordem em que aparecem (vazio se a folha mostra o índice). */
@@ -329,8 +352,8 @@ public final class GuideScreen extends Screen {
         GuideChrome.Hit hit = chrome.hit(tx, ty);
         if (hit != null) {
             switch (hit) {
-                case PREV -> turnTo(GuideNav.spread() - 1);
-                case NEXT -> turnTo(GuideNav.spread() + 1);
+                case PREV -> turnBy(-1);
+                case NEXT -> turnBy(1);
                 case BACK -> go(null, indexSpread(GuideIndex.groupOrder(GuidePages.group(page))));
                 case RIBBON -> go(null, indexSpread(chrome.hitGroup()));
             }
@@ -356,7 +379,7 @@ public final class GuideScreen extends Screen {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         if (scrollY != 0) {
-            turnTo(GuideNav.spread() + (scrollY > 0 ? -1 : 1));
+            turnBy(scrollY > 0 ? -1 : 1);
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
@@ -412,8 +435,8 @@ public final class GuideScreen extends Screen {
             return true;
         }
         switch (keyCode) {
-            case GLFW.GLFW_KEY_LEFT -> turnTo(GuideNav.spread() - 1);
-            case GLFW.GLFW_KEY_RIGHT -> turnTo(GuideNav.spread() + 1);
+            case GLFW.GLFW_KEY_LEFT -> turnBy(-1);
+            case GLFW.GLFW_KEY_RIGHT -> turnBy(1);
             case GLFW.GLFW_KEY_BACKSPACE -> back();
             default -> {
                 return super.keyPressed(keyCode, scanCode, modifiers);

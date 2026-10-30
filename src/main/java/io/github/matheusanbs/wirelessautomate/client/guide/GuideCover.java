@@ -118,6 +118,7 @@ final class GuideCover {
             }
         } else {
             g.drawString(font, box.count(), 0, HINT_Y, GuideInk.FAINT, false);
+            g.drawString(font, box.range(), 0, HINT_Y + HINT_STEP, GuideInk.FAINT, false);
         }
     }
 

@@ -28,7 +28,7 @@ Modo de face e controle por redstone
 
 ## `item/`
 
-`TierCoreItem` (o Cartão de Upgrade: destino pelo item, origem pelo componente `upgrade_from`, `card(to, from)`; nome "A → B", tooltip com origem, recusa e sucesso na action bar; sem origem = cartão antigo), `RouterBlockItem`, `LinkerItem`, `ConfiguratorItem`, `FilterCardItem`, `NetworkTabletItem` (com o `onItemUseFirst`, que vem antes da interface da máquina e abre a central pelo `TabletClick`), `ChunkLoaderUpgradeItem`, `RangeUpgradeItem` (o Upgrade de Alcance; o tooltip mostra raio e limite por tier) e `GuideBook` (o livro do GuideME: aba criativa e entrega no primeiro login, só pelos registros)
+`TierCoreItem` (o Cartão de Upgrade: destino pelo item, origem pelo componente `upgrade_from`, `card(to, from)`; nome "A → B", tooltip com origem, recusa e sucesso na action bar; sem origem = cartão antigo), `RouterBlockItem`, `LinkerItem`, `ConfiguratorItem`, `FilterCardItem`, `NetworkTabletItem` (com o `onItemUseFirst`, que vem antes da interface da máquina e abre a central pelo `TabletClick`), `ChunkLoaderUpgradeItem`, `RangeUpgradeItem` (o Upgrade de Alcance; o tooltip mostra raio e limite por tier) e `GuideBookItem` e `GuideBook` (o livro-guia do mod, ver [livro](livro.md): aba criativa e entrega no primeiro login, só pelos registros)
 
 ## `linker/`
 

@@ -41,6 +41,7 @@ Pacote base: `src/main/java/io/github/matheusanbs/wirelessautomate/`. O mapa det
 | Ressonador de Sinal | [ressonador](docs/mapa/ressonador.md) | `resonator/`, tela do Núcleo e câmara animada |
 | Reparador de Cristais | [reparador](docs/mapa/reparador.md) | `repairer/` |
 | Tela de Sinal | [tela-de-sinal](docs/mapa/tela-de-sinal.md) | `tv/`, `client/tv/` (editor, peças, layouts, biblioteca, desenho) |
+| Livro-guia | [livro](docs/mapa/livro.md) | `client/guide/` (`doc/`, `layout/`), `item/GuideBook*`, `GuideClientHooks`, as páginas e a tecla G |
 | Integrações opcionais | [compat](docs/mapa/compat.md) | JEI, Mekanism, FTB Teams, Ars Nouveau |
 | Receitas e o editor de receitas | [receitas](docs/mapa/receitas.md) | `recipe/`, `recipe/edit/`, `client/recipe/` |
 | Cliente geral, pacotes, ferramentas de dev | [cliente-e-pacotes](docs/mapa/cliente-e-pacotes.md) | `packet/`, `client/` (tema, `GuiText`, e2e, capturas) |
@@ -59,7 +60,7 @@ Pacote base: `src/main/java/io/github/matheusanbs/wirelessautomate/`. O mapa det
 ./gradlew runGameTestServerSource # GameTests de Source, num servidor com o Ars Nouveau (e GeckoLib e Curios) na pasta mods
 ./gradlew runGameTestServerAllthemodium # GameTests dos tiers do ATM, com o Allthemodium, o All The Tweaks e o GeckoLib (cursemaven)
 ./gradlew runGameTestServerTeams # GameTests de times, num servidor com o FTB Teams, o FTB Library e o Architectury na pasta mods (maven.ftb.dev)
-./gradlew runClient         # cliente de dev com JEI, Sophisticated Storage, Observable, Mekanism, Ars Nouveau (com GeckoLib e Curios), Allthemodium, All The Tweaks, Apotheosis (com as dependências dele), GuideME, Mouse Tweaks, AllTheCompressed, Occultism (com Modonomicon e SmartBrainLib) e Just Dire Things, para testar à mão
+./gradlew runClient         # cliente de dev com JEI, Sophisticated Storage, Observable, Mekanism, Ars Nouveau (com GeckoLib e Curios), Allthemodium, All The Tweaks, Apotheosis (com as dependências dele), Mouse Tweaks, AllTheCompressed, Occultism (com Modonomicon e SmartBrainLib) e Just Dire Things, para testar à mão
 ./gradlew runData           # datagen para src/generated/resources/
 WA_SCREENSHOT=run/shots xvfb-run -a -s "-screen 0 1280x800x24" ./gradlew runClient  # capturas das telas (roteador, visor 3D, filtro), sem monitor
 ./scripts/e2e.sh            # e2e num mundo real, rápido por padrão (sem capturas, sem pt_br e escuro, sem a comparação antigo × plasma): `--only a,b` (suítes), `--skip`, `--capture <prefixos|todas>`, `--variants pt,escuro`, `--completo` (tudo), `--lista`; no Windows abre uma janela de verdade (veja docs/e2e.md)

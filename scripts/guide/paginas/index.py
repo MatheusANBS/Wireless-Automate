@@ -52,9 +52,13 @@ entre si, sem canos.
 
 ## Este guia
 
-Você ganha o livro ao entrar no mundo pela primeira vez; ele também está na aba criativa. Para fazer
-outro: livro + redstone, na bancada. Com o mouse sobre um item do mod (inventário ou JEI), segure
-**G** para abrir a página dele.
+Você ganha o livro ao entrar no mundo pela primeira vez; ele também está na aba criativa. Clique
+com o botão direito segurando o livro para abri-lo. Para fazer outro: livro + redstone, na bancada.
+
+- **Buscar:** na folha de rosto, comece a digitar (ou aperte **Ctrl + F**). **Enter** abre o primeiro
+  resultado e as setas ↑ ↓ andam pelos outros.
+- **Tecla G:** com o mouse sobre um item do mod (no inventário, num baú ou no JEI), aperte **G**
+  (o nome padrão da tecla; dá para trocá-la nos Controles) e o livro abre na página dele.
 
 <Recipe id="wirelessautomate:guide" />
 
@@ -111,9 +115,13 @@ other, with no pipes.
 
 ## This guide
 
-You get this book the first time you join the world; it's also in the creative tab. To make
-another: book + redstone, in a crafting table. With the mouse over one of the mod's items (inventory
-or JEI), hold **G** to open its page.
+You get this book the first time you join the world; it's also in the creative tab. Right-click
+while holding the book to open it. To make another: book + redstone, in a crafting table.
+
+- **Search:** on the cover page, just start typing (or press **Ctrl + F**). **Enter** opens the
+  first result and the ↑ ↓ arrows move through the others.
+- **G key:** with the mouse over one of the mod's items (in the inventory, in a chest or in JEI),
+  press **G** (the default key; you can change it in Controls) and the book opens on its page.
 
 <Recipe id="wirelessautomate:guide" />
 

@@ -149,7 +149,7 @@ class GuideLayoutTest {
 
     @Test
     void blocoAtomicoVaiInteiroParaAFolhaSeguinte() {
-        // parágrafo de 9 + espaço de 4 + receita de 62 = 75; a folha de 70 não cabe os dois
+        // parágrafo de 9 + espaço de 4 + receita de 64 = 77; a folha de 70 não cabe os dois
         List<Sheet> sheets = GuideLayout.paginate(doc(para("oi"), new Block.RecipeFor("x:y")), 232, 70, FAKE);
         assertEquals(2, sheets.size());
         SheetOp.RecipeFrame f = assertInstanceOf(SheetOp.RecipeFrame.class, sheets.get(1).ops().get(0));

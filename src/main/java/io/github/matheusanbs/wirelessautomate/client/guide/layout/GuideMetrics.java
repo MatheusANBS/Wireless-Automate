@@ -30,9 +30,9 @@ public final class GuideMetrics {
     /** Espaço entre um ícone flutuante e o texto ao lado. */
     public static final int FLOAT_GAP = 4;
 
-    /** A moldura de receita de bancada: 3 × 3 slots de 18, seta e resultado, com a moldura. */
+    /** A moldura de receita de bancada: 3 × 3 slots de 18, seta e resultado, com a moldura e 1 de folga. */
     public static final int RECIPE_W = 120;
-    public static final int RECIPE_H = 62;
+    public static final int RECIPE_H = 64;
     /** A moldura de cena: a largura toda por esta altura. */
     public static final int SCENE_H = 110;
     /** O espaço reservado à lista de subpáginas (a tela decide o que desenhar dentro). */

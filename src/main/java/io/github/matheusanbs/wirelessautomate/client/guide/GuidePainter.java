@@ -20,6 +20,7 @@ final class GuidePainter {
     }
 
     static void draw(GuiGraphics g, Font font, List<Ink> inks) {
+        long second = GuideRecipes.second();
         for (int i = 0; i < inks.size(); i++) {
             switch (inks.get(i)) {
                 case GuideInk.Txt t -> text(g, font, t);
@@ -29,6 +30,11 @@ final class GuidePainter {
                 case GuideInk.Fill f -> g.fill(f.x(), f.y(), f.x() + f.w(), f.y() + f.h(), f.color());
                 case GuideInk.Ornament o -> ornament(g, o.x(), o.y() + (o.h() - 5) / 2, o.w());
                 case GuideInk.Frame f -> frame(g, font, f);
+                case GuideInk.Craft c -> {
+                    box(g, c.x(), c.y(), c.w(), c.h());
+                    GuideRecipes.draw(g, font, c, second);
+                }
+                case GuideInk.Scene s -> GuideScenes.draw(g, s);
                 case GuideInk.Link l -> {
                 }
             }
@@ -85,13 +91,8 @@ final class GuidePainter {
 
     /** A moldura: fio de porcelana por fora, latão por dentro, fundo claro, o ícone e o rótulo centrados. */
     private static void frame(GuiGraphics g, Font font, GuideInk.Frame f) {
+        box(g, f.x(), f.y(), f.w(), f.h());
         int x0 = f.x();
-        int y0 = f.y();
-        int x1 = x0 + f.w();
-        int y1 = y0 + f.h();
-        ring(g, x0, y0, x1, y1, 1, GuideInk.LEAF);
-        ring(g, x0 + 2, y0 + 2, x1 - 2, y1 - 2, 2, GuideInk.BRASS);
-        g.fill(x0 + 4, y0 + 4, x1 - 4, y1 - 4, GuideInk.FRAME_FILL);
         int y = f.contentY();
         if (!f.stack().isEmpty()) {
             item(g, f.stack(), x0 + (f.w() - GuideMetrics.ICON) / 2, y, GuideMetrics.ICON);
@@ -104,6 +105,15 @@ final class GuidePainter {
         }
     }
 
+    /** A moldura vazia: fio de porcelana por fora, latão por dentro e o fundo claro. */
+    static void box(GuiGraphics g, int x0, int y0, int w, int h) {
+        int x1 = x0 + w;
+        int y1 = y0 + h;
+        ring(g, x0, y0, x1, y1, 1, GuideInk.LEAF);
+        ring(g, x0 + 2, y0 + 2, x1 - 2, y1 - 2, 2, GuideInk.BRASS);
+        g.fill(x0 + 4, y0 + 4, x1 - 4, y1 - 4, GuideInk.FRAME_FILL);
+    }
+
     /** Um contorno de espessura {@code t} por dentro do retângulo. */
     static void ring(GuiGraphics g, int x0, int y0, int x1, int y1, int t, int color) {
         g.fill(x0, y0, x1, y0 + t, color);
@@ -112,7 +122,10 @@ final class GuidePainter {
         g.fill(x1 - t, y0 + t, x1, y1 - t, color);
     }
 
-    /** O link, o item ou a moldura de rótulo abreviado sob o ponto ({@code ux}, {@code uy}) em unidades de folha, ou {@code null}. */
+    /**
+     * O link, o item (também o de uma receita, o que está à vista) ou a moldura de rótulo abreviado sob o ponto
+     * ({@code ux}, {@code uy}) em unidades de folha, ou {@code null}.
+     */
     static @Nullable Ink hit(List<Ink> inks, double ux, double uy) {
         for (int i = 0; i < inks.size(); i++) {
             Ink ink = inks.get(i);
@@ -122,6 +135,9 @@ final class GuidePainter {
             if (ink instanceof GuideInk.Item it && !it.stack().isEmpty()
                     && inside(ux, uy, it.x(), it.y(), it.size(), it.size())) {
                 return it;
+            }
+            if (ink instanceof GuideInk.Craft c && inside(ux, uy, c.x(), c.y(), c.w(), c.h())) {
+                return GuideRecipes.hit(c, ux, uy);
             }
             if (ink instanceof GuideInk.Frame f && f.full() != null && inside(ux, uy, f.x(), f.y(), f.w(), f.h())) {
                 return f;

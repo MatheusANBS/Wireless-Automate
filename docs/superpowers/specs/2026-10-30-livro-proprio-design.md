@@ -13,6 +13,12 @@ Mockup aprovado: `docs/preview/livro-proprio.html` (artifact "Livro do Wireless 
 - As 10 cenas 3D entram **paradas na etapa 1** (ângulo fixo, sem girar) e **interativas na etapa 2**.
 - O livro não segue o tema claro e escuro das telas: é papel, com um visual só.
 
+## Escala e medidas
+
+O livro não usa a escala de interface do jogo: ele é desenhado com cada pixel da textura valendo `k` pixels de tela, com `k` o **maior número par** com que o livro inteiro (e as fitas) cabe na janela com margem; o mínimo é 2. O texto é desenhado com a fonte do jogo a `k / 2` pixels de tela por pixel da fonte, então a pixel art e o texto ficam nítidos.
+
+A paginação trabalha em **unidades de folha** = 2 por pixel da textura (um pixel da fonte vale uma unidade). A área de conteúdo de cada folha, em pixels da textura: esquerda de x = 23 a 139 e direita de x = 161 a 277, as duas de y = 24 a 164 (116 × 140 px, ou **232 × 280 unidades**: umas 38 letras por linha e 31 linhas de 9 unidades). O rodapé (◀, número, ▶) fica em y = 166. As fitas ficam à direita da capa, começando em y = 15, a cada 21 px.
+
 ## O que o jogador vê
 
 1. **Folha de rosto (esquerda) e índice (direita)** ao abrir pela primeira vez: o título, o selo com o roteador, a busca e a dica da tecla G; à direita, o índice em grupos com o ícone de cada página.

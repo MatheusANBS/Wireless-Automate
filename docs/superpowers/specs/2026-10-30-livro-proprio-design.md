@@ -60,7 +60,7 @@ Tudo de leitura e desenho é cliente (`client/guide/`); o comum só tem o item, 
 | `client/guide/GuidePages` | cliente | Lê as páginas do idioma pelo `ResourceManager` uma vez (recarrega no `/reload` de recursos), monta o índice por grupo e o mapa item → página. |
 | `client/guide/GuideScreen` | cliente | A anfitriã: o livro, as fitas, virar, voltar, folha de rosto, índice, busca, teclado e mouse; repassa o desenho. |
 | `client/guide/GuidePainter` | cliente | Desenha as operações de uma folha (texto, ícones, tabelas, links, molduras). |
-| `client/guide/GuideRecipes` | cliente | A receita de bancada do `RecipeManager` do cliente (pelo id ou pelo item de saída), com os ingredientes alternando a cada segundo. |
+| `client/guide/GuideRecipes` | cliente | A receita de bancada do `RecipeManager` do cliente (pelo id ou pelo item de saída), com os ingredientes alternando a cada segundo. Item sem receita de bancada cai para a de alto-forno ou fornalha (o ingrediente no meio, a estação embaixo), como o lingote de liga. |
 | `client/guide/GuideScenes` | cliente | A cena 3D parada (ângulo isométrico fixo) dentro da moldura; etapa 2 a torna interativa. |
 | `client/guide/GuideKeys` | cliente | A tecla G (`KeyMapping`, padrão G) e o item sob o mouse (tela de inventário e JEI). |
 | `compat/jei` | cliente | O item do JEI sob o mouse, para a tecla G (só com o JEI). |

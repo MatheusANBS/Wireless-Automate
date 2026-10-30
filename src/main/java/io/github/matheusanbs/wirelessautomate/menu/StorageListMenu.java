@@ -9,6 +9,7 @@ import io.github.matheusanbs.wirelessautomate.storage.FluidStorage;
 import io.github.matheusanbs.wirelessautomate.storage.KeyedStorage;
 import io.github.matheusanbs.wirelessautomate.storage.KeyedStorageBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageChemicalTankBlockEntity;
+import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import io.github.matheusanbs.wirelessautomate.storage.StorageMath;
 import io.github.matheusanbs.wirelessautomate.storage.StorageTankBlockEntity;
@@ -22,10 +23,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.Container;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -41,8 +44,9 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Menu da tela em lista dos armazenamentos por tipo (Baú, Tanque, Tanque Químico). Os únicos slots
- * são os do inventário do jogador; a lista não é de slots (os tipos são ilimitados): a tela desenha
+ * Menu da tela em lista dos armazenamentos por tipo (Baú, Tanque, Tanque Químico). Os slots são os do
+ * inventário do jogador e, no Baú, os dos upgrades e da Mesa ({@link ChestUpgradeSlots}); a lista não é
+ * de slots (os tipos são ilimitados): a tela desenha
  * a {@link StorageListView} e manda os cliques como {@link StorageActionPayload}, que o servidor
  * valida e aplica ({@link #handle}).
  *
@@ -58,10 +62,14 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
     /** Posição inicial do inventário do jogador (a tela o move ao redimensionar, {@link #placeInventory}). */
     public static final int INVENTORY_X = 14;
     public static final int INVENTORY_Y = 152;
+    /** Os slots do inventário do jogador vêm primeiro; no Baú, os dos upgrades vêm depois ({@link ChestUpgradeSlots}). */
+    public static final int INVENTORY_SLOTS = 36;
 
     private final ListKind<K> kind;
     private final StorageListView<K> view;
     private final BlockPos pos;
+    /** Os upgrades e a Mesa; só no Baú. */
+    private final @Nullable ChestUpgradeSlots upgradeSlots;
 
     // Só no servidor.
     private final @Nullable KeyedStorageBlockEntity<K> storage;
@@ -97,6 +105,8 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
         this.viewer = storage != null && inventory.player instanceof ServerPlayer player ? player : null;
         this.sent = new Object2LongOpenCustomHashMap<>(kind.strategy);
         addInventory(inventory);
+        this.upgradeSlots = kind.storage == StorageKind.CHEST ? new ChestUpgradeSlots(this, inventory.player,
+                storage instanceof StorageChestBlockEntity chest ? chest : null) : null;
     }
 
     public static void open(ServerPlayer player, KeyedStorageBlockEntity<?> storage) {
@@ -123,11 +133,11 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
     /**
      * Cliente: muda o inventário do jogador de lugar na tela (a tela é redimensionável). A posição
      * de um slot só serve para desenhar e clicar, e o {@link Slot} a guarda como {@code final}; então
-     * os 36 slots são trocados por iguais na posição nova, com o mesmo índice no menu e no
+     * os 36 slots do inventário são trocados por iguais na posição nova, com o mesmo índice no menu e no
      * inventário. O servidor não usa a posição, e nada muda para ele.
      */
     public void placeInventory(int x, int y) {
-        for (int i = 0; i < slots.size(); i++) {
+        for (int i = 0; i < INVENTORY_SLOTS; i++) {
             Slot old = slots.get(i);
             int containerSlot = old.getContainerSlot();
             int sx = x + (containerSlot % 9) * 18;
@@ -151,6 +161,51 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
 
     public BlockPos pos() {
         return pos;
+    }
+
+    /** Os slots dos upgrades e da Mesa, ou {@code null} fora do Baú. */
+    public @Nullable ChestUpgradeSlots upgradeSlots() {
+        return upgradeSlots;
+    }
+
+    Slot add(Slot slot) {
+        return addSlot(slot);
+    }
+
+    /** Move para o inventário (do fim para o começo, como o vanilla); devolve se algo entrou. */
+    boolean moveToInventory(ItemStack stack) {
+        return moveItemStackTo(stack, 0, INVENTORY_SLOTS, true);
+    }
+
+    /** O Shift + clique no resultado da Mesa tem caminho próprio; o resto, o comum. */
+    @Override
+    public void clicked(int slotId, int button, ClickType clickType, Player player) {
+        if (upgradeSlots != null && upgradeSlots.clicked(slotId, clickType)) {
+            return;
+        }
+        super.clicked(slotId, button, clickType, player);
+    }
+
+    /** O duplo clique não junta do resultado da Mesa, como no {@code CraftingMenu}. */
+    @Override
+    public boolean canTakeItemForPickAll(ItemStack stack, Slot slot) {
+        return (upgradeSlots == null || slot.index != ChestUpgradeSlots.RESULT) && super.canTakeItemForPickAll(stack, slot);
+    }
+
+    /** Quem mexe na grade por fora do slot e avisa o menu recalcula o resultado. */
+    @Override
+    public void slotsChanged(Container container) {
+        if (upgradeSlots != null) {
+            upgradeSlots.slotsChanged(container);
+        }
+    }
+
+    @Override
+    public void removed(Player player) {
+        super.removed(player);
+        if (upgradeSlots != null) {
+            upgradeSlots.removed();
+        }
     }
 
     /** O armazenamento; só existe no servidor. */
@@ -179,6 +234,9 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
     public ItemStack quickMoveStack(Player player, int index) {
         if (storage == null || index < 0 || index >= slots.size() || !stillValid(player)) {
             return ItemStack.EMPTY;
+        }
+        if (upgradeSlots != null && index >= ChestUpgradeSlots.UPGRADE_FIRST) {
+            return upgradeSlots.quickMove(index);
         }
         Slot slot = slots.get(index);
         ItemStack stack = slot.getItem();
@@ -329,6 +387,9 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
             new StorageFilterTarget(menu.storage).open(player);
             return true;
         }
+        if (payload.action() == StorageActionPayload.Action.RETURN_GRID) {
+            return menu.upgradeSlots != null && menu.upgradeSlots.returnGrid(player);
+        }
         Optional<Object> key = payload.key();
         return switch (menu.kind.storage) {
             case CHEST -> menu.handleItems(player, payload.action(), key.map(ItemStack.class::cast).orElse(ItemStack.EMPTY),
@@ -401,7 +462,8 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
             }
             case INSERT_ONE_FROM_INVENTORY -> {
                 Slot from = key.isEmpty() ? null : slots.stream()
-                        .filter(s -> s.mayPickup(player) && ItemStack.isSameItemSameComponents(s.getItem(), key))
+                        .filter(s -> s.index < INVENTORY_SLOTS && s.mayPickup(player)
+                                && ItemStack.isSameItemSameComponents(s.getItem(), key))
                         .findFirst().orElse(null);
                 if (from == null || items.insert(from.getItem(), 1, false) <= 0) {
                     return false;
@@ -410,7 +472,7 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
                 from.setChanged();
             }
             case INSERT_ONE_FROM_SLOT -> {
-                Slot from = slotIndex >= 0 && slotIndex < slots.size() ? slots.get(slotIndex) : null;
+                Slot from = slotIndex >= 0 && slotIndex < INVENTORY_SLOTS ? slots.get(slotIndex) : null;
                 if (from == null || from.getItem().isEmpty() || !from.mayPickup(player)
                         || items.insert(from.getItem(), 1, false) <= 0) {
                     return false;
@@ -419,7 +481,7 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
                 from.setChanged();
             }
             case TAKE_ONE_TO_SLOT -> {
-                Slot to = slotIndex >= 0 && slotIndex < slots.size() ? slots.get(slotIndex) : null;
+                Slot to = slotIndex >= 0 && slotIndex < INVENTORY_SLOTS ? slots.get(slotIndex) : null;
                 ItemStack there = to == null ? ItemStack.EMPTY : to.getItem();
                 if (there.isEmpty() || there.getCount() >= to.getMaxStackSize(there) || !to.mayPlace(there)
                         || items.count(there) <= 0) {

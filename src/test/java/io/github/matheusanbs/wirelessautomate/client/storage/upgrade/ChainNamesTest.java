@@ -44,6 +44,20 @@ class ChainNamesTest {
     }
 
     @Test
+    void quartzoVoltaComOsNomesInteiros() {
+        List<String> names = List.of("Nether Quartz", "Block of Quartz");
+        assertEquals("Quartz", ChainNames.chainName(names));
+        assertArrayEquals(new String[] {"Nether Quartz", "Block of Quartz"}, ChainNames.shortNames(names));
+    }
+
+    @Test
+    void argilaVoltaComOsNomesInteiros() {
+        List<String> names = List.of("Clay Ball", "Clay");
+        assertEquals("Clay", ChainNames.chainName(names));
+        assertArrayEquals(new String[] {"Clay Ball", "Clay"}, ChainNames.shortNames(names));
+    }
+
+    @Test
     void rotuloDoCanto() {
         assertEquals("3x", ChainNames.corner("cobblestone_3x"));
         assertEquals("9x", ChainNames.corner("compressed_dirt_9x"));

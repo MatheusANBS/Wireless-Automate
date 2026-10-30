@@ -54,8 +54,39 @@ final class ChainNames {
         return joined.isEmpty() ? names.getFirst() : joined;
     }
 
-    /** Cada nome sem as palavras que todas as formas têm, sem conectivo nas pontas; vazio quando nada sobra. */
+    /**
+     * Cada nome sem as palavras que todas as formas têm, sem conectivo nas pontas; vazio quando nada sobra. Os nomes
+     * voltam inteiros quando o corte tiraria o substantivo: uma forma acima da base fica sem nada ("Clay Ball" e
+     * "Clay"), ou na base a palavra que sobra vem colada antes das comuns, como um adjetivo ("Nether Quartz" e "Block
+     * of Quartz" dariam "Nether" e "Block"; "Pepita de Ferro" tem o conectivo no meio e "Iron Nugget" começa pelas
+     * comuns, e os dois cortam bem).
+     */
     static String[] shortNames(List<String> names) {
+        String[] out = cut(names);
+        boolean whole = modifierFirst(names);
+        for (int i = 1; i < out.length && !whole; i++) {
+            whole = out[i].isEmpty();
+        }
+        return whole ? names.toArray(new String[0]) : out;
+    }
+
+    /** Na base, a primeira palavra comum (fora os conectivos) vem logo depois de uma palavra que não é comum. */
+    private static boolean modifierFirst(List<String> names) {
+        List<String> base = words(names.getFirst());
+        for (int i = 0; i < base.size(); i++) {
+            String word = base.get(i);
+            if (!JOINERS.contains(word.toLowerCase(Locale.ROOT)) && inAll(word, names)) {
+                if (i == 0) {
+                    return false;
+                }
+                String before = base.get(i - 1);
+                return !JOINERS.contains(before.toLowerCase(Locale.ROOT)) && !inAll(before, names);
+            }
+        }
+        return false;
+    }
+
+    private static String[] cut(List<String> names) {
         String[] out = new String[names.size()];
         for (int i = 0; i < out.length; i++) {
             List<String> left = new ArrayList<>();

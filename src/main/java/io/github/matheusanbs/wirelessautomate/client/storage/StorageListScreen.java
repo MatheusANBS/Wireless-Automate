@@ -222,7 +222,8 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
      * para o tamanho atual.
      */
     private void layout() {
-        cols = Math.max(MIN_COLS, Math.min(cols, maxCols()));
+        // o tamanho escolhido pelo jogador, até onde o painel do upgrade deixa
+        cols = Math.max(MIN_COLS, Math.min(savedCols, maxCols()));
         imageWidth = panelW();
         imageHeight = panelH();
         // a janela inteira (coluna, painel e painel do upgrade) fica no centro

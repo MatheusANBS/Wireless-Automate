@@ -29,7 +29,7 @@ final class CompactingRow {
     static final int NEXT_X = SLOT_X + 18;
     static final int FORM_X = NEXT_X + 12;
     static final int FORM_W = 36;
-    static final int TAG_X = FORM_X + FORM_W + 2;
+    static final int TAG_X = FORM_X + FORM_W + 4;
     static final int TAG_W = 42;
     /** Onde a linha acaba e começa a barra de rolagem. */
     static final int END_X = TAG_X + TAG_W + 2;

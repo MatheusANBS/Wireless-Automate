@@ -16,6 +16,7 @@ import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.packet.CompactingStatePayload;
 import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingMode;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.Font;
@@ -101,8 +102,9 @@ final class CompactingPanelView {
         emptyLabel = GuiText.fit(font, UpgradePanels.tr("compacting.empty"), inner);
         labels = CompactingRow.Labels.measure(font);
         layoutModes(inner);
-        closePicker();
-        rebuild();
+        // Só reposiciona: as linhas (e o que o jogador já mudou nelas) ficam até o próximo estado.
+        scroll = Math.max(0, Math.min(scroll, maxScroll()));
+        reopenPicker(pickerRow);
     }
 
     /** Os três botões lado a lado, cada um com a largura do texto e a sobra repartida igual. */
@@ -135,6 +137,7 @@ final class CompactingPanelView {
     }
 
     private void rebuild() {
+        Item[] pickerForms = pickerRow >= 0 ? rows.get(pickerRow).forms : null;
         rows.clear();
         if (shown != null) {
             mode = shown.mode();
@@ -146,8 +149,28 @@ final class CompactingPanelView {
             }
         }
         scroll = Math.max(0, Math.min(scroll, maxScroll()));
-        if (pickerRow >= rows.size()) {
+        reopenPicker(pickerForms == null ? -1 : rowWithForms(pickerForms));
+    }
+
+    /** A linha com exatamente essas formas, ou −1 (a cadeia saiu ou mudou com um {@code /reload}). */
+    private int rowWithForms(Item[] forms) {
+        for (int i = 0; i < rows.size(); i++) {
+            if (Arrays.equals(rows.get(i).forms, forms)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /** O seletor aberto passa para a linha {@code index} (a mesma cadeia depois de um estado novo ou do layout). */
+    private void reopenPicker(int index) {
+        if (picker == null) {
+            return;
+        }
+        if (index < 0 || index < scroll || index >= scroll + visibleRows) {
             closePicker();
+        } else {
+            openPicker(index);
         }
     }
 
@@ -239,7 +262,7 @@ final class CompactingPanelView {
             boolean inside = picker.isInside(mouseX, mouseY);
             CompactingRow row = rows.get(pickerRow);
             closePicker();
-            if (level >= 0 && button == 0) {
+            if (level >= 0 && level < row.forms.length && button == 0) {
                 setTarget(row, level);
             }
             return inside || isInside(mouseX, mouseY);
@@ -379,7 +402,8 @@ final class CompactingPanelView {
     @Nullable List<Component> tooltip(double mouseX, double mouseY) {
         if (picker != null) {
             int level = picker.levelAt(mouseX, mouseY);
-            return level >= 0 ? List.of(rows.get(pickerRow).stacks[level].getHoverName()) : null;
+            CompactingRow row = rows.get(pickerRow);
+            return level >= 0 && level < row.stacks.length ? List.of(row.stacks[level].getHoverName()) : null;
         }
         int index = rowAt(mouseX, mouseY);
         if (index < 0) {
@@ -430,6 +454,11 @@ final class CompactingPanelView {
 
     boolean pickerOpen() {
         return picker != null;
+    }
+
+    /** A linha do seletor aberto, ou −1. */
+    int pickerRow() {
+        return pickerRow;
     }
 
     int[] pickerCellCenter(int level) {

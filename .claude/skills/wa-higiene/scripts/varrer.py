@@ -7,10 +7,10 @@ Lista os candidatos a sair, sem apagar nada:
 
 "Vivo" é o que o agente ou o dono ainda usa: CLAUDE.md, AGENTS.md, os READMEs, as skills,
 o código, os scripts, o build e os docs-raiz (RAIZES). Um arquivo citado por um vivo também
-é vivo. Citação só no histórico do progresso, num plano ou numa spec morta não conta, e um
-plano só fica vivo se um documento-raiz, uma skill, o mapa ou o "Próximo passo" o citam (a
-spec que o originou não segura o plano). O "Próximo passo" do progresso conta: é o que ainda
-falta fazer.
+é vivo. Citação só no histórico do progresso (docs/progresso/historico/), num plano ou numa
+spec morta não conta, e um plano só fica vivo se um documento-raiz, uma skill, o mapa ou o
+progresso (README, pendências, estado, decisões) o citam; a spec que o originou não segura o
+plano.
 
 Uso: python -I .claude/skills/wa-higiene/scripts/varrer.py [--raiz <repo>]
 """
@@ -27,8 +27,9 @@ RAIZES = (
     "docs/e2e.md", "docs/benchmark.md", "docs/benchmark-logistics-network.md",
     "docs/auditoria-performance.md", "docs/portes.md", "docs/curseforge/descricao.md",
 )
-PREFIXOS_VIVOS = (".claude/skills/", "docs/mapa/", "src/", "scripts/", ".github/")
+PREFIXOS_VIVOS = (".claude/skills/", "docs/mapa/", "docs/progresso/", "src/", "scripts/", ".github/")
 PLANOS = "docs/superpowers/plans/"
+HISTORICO = "docs/progresso/historico/"
 CHANGELOG = re.compile(r"docs/curseforge/changelog-\d[\d.]*\.md")
 BINARIOS = (".png", ".gif", ".jpg", ".jar", ".bbmodel", ".ogg", ".nbt", ".zip")
 
@@ -47,12 +48,8 @@ def ler(raiz, caminho):
 
 
 def texto_vivo(raiz, caminho):
-    t = ler(raiz, caminho)
-    if caminho == "docs/progresso.md":
-        # Só o que falta fazer; resumo de versões, decisões e histórico não seguram arquivo.
-        m = re.search(r"^## Próximo passo$(.*?)^## ", t, re.S | re.M)
-        return m.group(1) if m else ""
-    return t
+    # O histórico é o diário: cita arquivos que já saíram e não segura nenhum.
+    return "" if caminho.startswith(HISTORICO) else ler(raiz, caminho)
 
 
 def docs_mortos(raiz, arquivos):
@@ -63,7 +60,7 @@ def docs_mortos(raiz, arquivos):
     padrao = re.compile("|".join(re.escape(n) for n in sorted(nome_para_docs, key=len, reverse=True)))
 
     vivos = set()
-    fila = [a for a in arquivos if a in RAIZES or a.startswith(PREFIXOS_VIVOS)] + ["docs/progresso.md"]
+    fila = [a for a in arquivos if a in RAIZES or a.startswith(PREFIXOS_VIVOS)]
     vivos.update(fila)
     while fila:
         a = fila.pop()

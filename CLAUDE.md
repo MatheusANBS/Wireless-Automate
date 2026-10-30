@@ -4,11 +4,11 @@ Mod NeoForge 1.21.1 (Java 21) de transporte wireless de itens, fluidos, energia 
 
 ## Leia antes de começar
 
-1. **`docs/progresso.md`**: o que está pronto, o que falta e o **próximo passo**. Quando pedirem para "continuar de onde parou", comece por ali.
+1. **`docs/progresso/README.md`**: a versão atual, o que está em andamento e o **próximo passo**, com links para as pendências por área, o estado de cada funcionalidade, as decisões e o histórico do mês. Quando pedirem para "continuar de onde parou", comece por ali.
 2. **`docs/especificacao.md`**: a fonte da verdade do design (componentes, tiers, telas, filtros, redes, arquitetura de performance, roadmap).
 3. `docs/pacote-de-design.md`: convenções dos sprites e do modelo do roteador.
 
-Ao terminar uma sessão, **atualize `docs/progresso.md`**: a tabela de estado, o próximo passo e uma linha no histórico.
+Ao terminar uma sessão, **atualize `docs/progresso/`** pelas regras do `README.md` de lá: uma linha no histórico do mês, o que ficou em `pendencias.md` (e o que foi feito sai de lá), o `estado.md` se uma funcionalidade mudou e o próximo passo.
 
 ## Skills do projeto (`.claude/skills/`)
 

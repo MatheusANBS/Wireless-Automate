@@ -33,7 +33,7 @@ Se a release e os dois changelogs da versão atual já existem e o que mudou des
    Use o changelog separado da versão anterior como modelo e, depois de escrever o novo, tire o anterior com `git rm` (o unificado e as releases guardam todos; ver `wa-higiene`).
 3. **Changelog unificado:** `docs/curseforge/changelog-curseforge-<versão>.md`. Renomeie o da versão anterior com `git mv changelog-curseforge-<anterior>.md changelog-curseforge-<nova>.md` e acrescente no topo `## <versão>` com o mesmo texto do separado. Fica um arquivo só, com todas as versões, a mais nova em cima.
 4. **`docs/curseforge/descricao.md`, `README.md` e `README.en.md` (a versão em inglês, sempre igual à portuguesa):** o que a versão acrescenta (tabelas de tiers e capacidades, linha de compatibilidade). Confira cada número no código (`ResourceType`, `StorageKind`, `RouterTier`). Não invente.
-5. **`docs/progresso.md`:** estado, próximo passo e linha no histórico.
+5. **`docs/progresso/`:** a versão atual e o próximo passo no `README.md`, a versão nas linhas do `estado.md` e uma linha no histórico do mês.
 
 ## Verificação
 

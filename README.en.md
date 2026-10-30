@@ -301,7 +301,7 @@ CI (`.github/workflows/build.yml`) runs `build` and the five GameTest runs on ev
 The source code map is in [`CLAUDE.md`](CLAUDE.md) ("Mapa do código"). The project docs are in Portuguese.
 
 - `docs/especificacao.md`: the mod's specification (the source of truth for the design).
-- `docs/progresso.md`: what's done, what's left and the next step.
+- `docs/progresso/`: what's done, what's left, the decisions and the history.
 - `docs/benchmark.md`: how to run the benchmark, and the results.
 - `docs/curseforge/`: the CurseForge description, changelogs, banner, and the images and GIFs used here.
 - `scripts/`: `setup.sh`/`setup.ps1`, `e2e.sh`, `bench.sh`, `textures/` (generates the textures), `guide/` (generates the guide pages) and `curseforge/` (generates the CurseForge images).

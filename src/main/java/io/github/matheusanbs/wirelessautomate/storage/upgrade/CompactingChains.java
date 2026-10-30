@@ -5,8 +5,10 @@ import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nullable;
@@ -85,33 +87,40 @@ public final class CompactingChains {
         ServerLevel level = server.overworld();
         ChainGraph<Item> graph = new ChainGraph<>(Comparator.comparing(item -> BuiltInRegistries.ITEM.getKey(item)));
         Set<Pair> seen = new HashSet<>();
+        List<Pair> candidates = new ArrayList<>();
+        Map<Item, List<List<Ingredient>>> forward = new HashMap<>();
         List<RecipeHolder<CraftingRecipe>> all = manager.getAllRecipesFor(RecipeType.CRAFTING);
         for (RecipeHolder<CraftingRecipe> holder : all) {
             CraftingRecipe recipe = holder.value();
             if (recipe.isSpecial()) {
                 continue;
             }
-            Ingredient only = null;
-            int filled = 0;
+            List<Ingredient> filled = new ArrayList<>(9);
             for (Ingredient ingredient : recipe.getIngredients()) {
                 if (!ingredient.isEmpty()) {
-                    only = ingredient;
-                    filled++;
+                    filled.add(ingredient);
                 }
-            }
-            if (filled != 1) {
-                continue;
             }
             ItemStack result = recipe.getResultItem(server.registryAccess());
             int n = result.getCount();
-            if ((n != 4 && n != 9) || !result.isComponentsPatchEmpty()) {
+            if (!result.isComponentsPatchEmpty()) {
                 continue;
             }
-            for (ItemStack big : only.getItems()) {
-                if (big.isComponentsPatchEmpty() && seen.add(new Pair(result.getItem(), big.getItem(), n))
-                        && roundTrip(manager, level, result.getItem(), big.getItem(), n)) {
-                    graph.link(result.getItem(), big.getItem(), n);
+            if (n == 1 && (filled.size() == 4 || filled.size() == 9)) {
+                forward.computeIfAbsent(result.getItem(), k -> new ArrayList<>(2)).add(filled);
+            } else if ((n == 4 || n == 9) && filled.size() == 1) {
+                for (ItemStack big : filled.get(0).getItems()) {
+                    if (big.isComponentsPatchEmpty() && seen.add(new Pair(result.getItem(), big.getItem(), n))) {
+                        candidates.add(new Pair(result.getItem(), big.getItem(), n));
+                    }
                 }
+            }
+        }
+        for (Pair pair : candidates) {
+            ItemStack probe = new ItemStack(pair.small());
+            if (hasForward(forward.get(pair.big()), probe, pair.n())
+                    && roundTrip(manager, level, probe, pair.big(), pair.n())) {
+                graph.link(pair.small(), pair.big(), pair.n());
             }
         }
         Reference2ObjectOpenHashMap<Item, CompactingChain> index = new Reference2ObjectOpenHashMap<>();
@@ -133,14 +142,38 @@ public final class CompactingChains {
                 (System.nanoTime() - start) / 1_000_000L);
     }
 
-    private static boolean roundTrip(RecipeManager manager, ServerLevel level, Item small, Item big, int n) {
+    /** Pré-filtro barato: alguma receita do maior tem n ingredientes e todos aceitam o menor. */
+    private static boolean hasForward(@Nullable List<List<Ingredient>> recipes, ItemStack probe, int n) {
+        if (recipes == null) {
+            return false;
+        }
+        for (List<Ingredient> filled : recipes) {
+            if (filled.size() != n) {
+                continue;
+            }
+            boolean all = true;
+            for (Ingredient ingredient : filled) {
+                if (!ingredient.test(probe)) {
+                    all = false;
+                    break;
+                }
+            }
+            if (all) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean roundTrip(RecipeManager manager, ServerLevel level, ItemStack smallStack, Item big, int n) {
+        Item small = smallStack.getItem();
         CraftingInput down = CraftingInput.of(1, 1, List.of(new ItemStack(big)));
         Optional<RecipeHolder<CraftingRecipe>> back = manager.getRecipeFor(RecipeType.CRAFTING, down, level);
         if (back.isEmpty() || !gives(back.get().value(), down, level, small, n)) {
             return false;
         }
         int side = n == 9 ? 3 : 2;
-        CraftingInput up = CraftingInput.of(side, side, Collections.nCopies(n, new ItemStack(small)));
+        CraftingInput up = CraftingInput.of(side, side, Collections.nCopies(n, smallStack));
         Optional<RecipeHolder<CraftingRecipe>> forth = manager.getRecipeFor(RecipeType.CRAFTING, up, level);
         return forth.isPresent() && gives(forth.get().value(), up, level, big, 1);
     }

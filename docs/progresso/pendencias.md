@@ -13,7 +13,6 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 - Singular em "1 máquinas" no Vinculador (`LinkerText`, chaves `outcome.linked`, `outcome.unlinked` e `area.ready.with_linked`). (22/10)
 - Dividir o `NodePanel` (822 linhas, acima do limite de tela pelo `medir.py`). `RouterScreen` (644) e `PanelLayout` (636) estão em aviso. (30/10)
 - `RouterBlockEntity` em 977 linhas: o próximo método exige dividir antes (`RouterRange`, `RouterTargets` ou uma parte nova). (16/10)
-- **(dono)** Testar as três receitas do anel numa bancada de outro mod, o Shift + clique com cartão de outra origem e o aviso de override antigo de `tier_core_*`. A variante `tier_core_ultimate_atm` (ATM sem o All The Tweaks) não roda em nenhuma run. (12/10)
 
 ## Motor e redes
 
@@ -64,14 +63,9 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 - Capturas de conferência do Ícone no e2e (baú, vidro, relógio, espada encantada, slime, diamante). (27/10)
 - Para quando a biblioteca for reescrita: o `SAVE_ART` codifica a biblioteca inteira a cada pedido, e as artes fora da cota por jogador. (29/10)
 - Refazer as imagens antigas da vitrine, que podem mostrar a parede da Tela ao fundo. (29/10)
-- **(dono)** Testar o Ícone animado num modpack com o Sodium (`compat/sodium/SodiumSprites`). (28/10)
 
 ## Integrações
 
-- **(dono)** Testar à mão o arrastar e o "+" do JEI real na Tela, no Baú e na Mesa de Trabalho (os GameTests cobrem só o servidor). (30/10)
-- **(dono)** Testar os químicos com máquinas reais do Mekanism (faces ligadas pela ferramenta dele).
-- **(dono)** Testar num ATM10 real: receitas do ATM no JEI, tooltip dos cartões, cores e a migração da config num servidor que vinha da 1.1.
-- **(dono)** Testar o acesso às redes com dois jogadores reais (as sugestões dependem do `usercache.json`). (22/10)
 
 ## Testes, e2e e bench
 
@@ -83,9 +77,7 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 ## Docs, scripts e publicação
 
 - O `gerar_texturas.py` inteiro apaga `textures/gui/tv/*` (136 arquivos), porque a limpeza varre a pasta `gui` toda: tirar `gui/tv` da limpeza. (30/10)
-- **(dono)** Subir o jar e o changelog da 2.13.0 no CurseForge e no Modrinth. (30/10)
 - **(dono)** Quando o Modrinth aprovar, pôr o link no `README.md`, no `README.en.md` e na `descricao.md`. (30/10)
-- **(dono)** Ler o guia novo no jogo e dizer se algum corte foi longe demais (Tela de Sinal: nomes das cores do tema, girar e duplicar arte; Baú: Devolver da Mesa, rodinha na Compactação; Tablet: Tab que completa; Roteador: Tirar redes). (30/10)
 - **(dono)** Decidir o destino da worktree `C:/wab` (fora do repositório, com 2 arquivos mudados). (30/10)
 - Portes (`docs/portes.md`): investigar o 26.1 NeoForge (ATM11); o 1.20.1 Forge espera o ok do dono e a decisão do Mekanism (só gás ou os quatro químicos). (10/10)
 

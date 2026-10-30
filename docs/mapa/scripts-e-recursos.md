@@ -6,9 +6,14 @@ Geradores de texturas, guia e CurseForge, e as pastas de recursos. Parte do mapa
 
 Gera todas as texturas (PIL) e a folha `docs/preview/folha-de-sprites.png`; o modelo 3D do Reparador sai à parte, do `docs/preview/reparador-de-cristais.bbmodel` pelo `reparador_modelo.py` (chamado pelo `gerar_texturas.py`); edite as paletas ali, não os PNGs; gera também os modelos de bloco e de item e os blockstates do roteador (com os modelos `router_<tier>_spin1..3` por giro, pela transformação raiz do NeoForge), dos armazenamentos e dos cartões por tier (o `router_basic.json` é o molde escrito à mão) e os do Tanque de Source; gera também os cristais do Ressonador (com o Opaco e os overrides do predicado `dull`) e, pelo `blocos.py`, as texturas, modelos e blockstates do minério de Quartzo de Sinal e os seis blocos do Ressonador e, da etapa 3, o sprite `block/resonator_halo` da câmara e os seis blocos (Carcaça, Vidro, Núcleo, Portas de Energia e de Cristais e Sintonizador, com as texturas conectadas)
 
-## `scripts/guide/gerar_guia.py`
+## `scripts/guide/`
 
-Gera as páginas do livro-guia (GuideME) em inglês e português, lado a lado; edite ali, não os `.md`
+Gera as páginas do livro-guia (GuideME) em inglês e português; edite os `.py`, não os `.md` gerados.
+
+- `gerar_guia.py`: só o `main` e a lista `PAGINAS` (a ordem de escrita; a ordem no livro vem do `position` do `front`). Coloca a própria pasta no caminho de import, porque o `python -I` não coloca.
+- `guia_base.py`: o que mais de uma página usa: `front`, `fill`, `item`, `page`, `write`, os tiers (`TIERS`, `RATES`, `RANGE`, `CAPACITY`, `capacity_table`), a cena `SCENE_STORAGE_PAIR` e o texto `COMMON_PT`/`COMMON_EN` dos armazenamentos.
+- `paginas/<pagina>.py`: uma página por arquivo, com `PAGINA = page('<pagina>.md', pt, en)` (os dois idiomas lado a lado) e as cenas e tabelas que só ela usa. Página nova: um arquivo aqui e o nome dele em `PAGINAS`.
+- O texto segue o tom simples: "Como usar" em passos primeiro, frases curtas, gestos em tabela "Gesto | O que faz", sem jargão de config; detalhe fino de interface fica de fora.
 
 ## `scripts/curseforge/`
 

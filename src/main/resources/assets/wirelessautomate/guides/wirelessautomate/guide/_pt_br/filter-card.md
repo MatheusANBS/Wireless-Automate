@@ -17,24 +17,21 @@ Um filtro completo num item, para reaproveitar em várias faces. Vale para itens
 
 <br clear="all" />
 
-## Ficha
+## Como usar
 
-| | |
-| --- | --- |
-| **Vai em** | Os dois slots de cartão da face, na tela do roteador (por tipo: itens ou fluidos). |
-| **Receita** | Rende 2 cartões. |
-
-## Comandos
+1. Clique direito no ar para editar o filtro do cartão.
+2. Ponha o cartão num dos dois slots de cartão da face, na tela do roteador.
 
 | Gesto | O que faz |
 | --- | --- |
-| Clique direito no ar | Edita o filtro do cartão. |
 | Shift + clique direito no ar (cartão vazio) | Alterna entre itens e fluidos. |
-| Tela de filtro da face, na aba **Mais** | Exporta o filtro da face para o cartão, ou importa do cartão. |
+| Aba **Mais** do filtro da face | Exporta o filtro da face para o cartão, ou importa dele. |
 | Bancada: cartão configurado + cartões vazios | Cópias iguais (o original volta). |
+
+Não há cartão de químicos: eles usam só o filtro embutido da face.
 
 ## Receita
 
-<RecipeFor id="wirelessautomate:filter_card" />
+Rende 2 cartões.
 
-Químicos usam só o filtro embutido da face: não há cartão de químicos.
+<RecipeFor id="wirelessautomate:filter_card" />

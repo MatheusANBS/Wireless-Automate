@@ -17,48 +17,41 @@ Copies a router's configuration and pastes it on another.
 
 <br clear="all" />
 
-## Spec sheet
+## How to use it
 
-| | |
-| --- | --- |
-| **Copies** | Faces, filters, priorities, redstone and each face's network. |
-| **Holds** | A single copy, in the item itself. The tooltip shows what's copied and the actions. |
-| **Pasted type** | All (default), Items, Fluids, Energy, Chemicals (with Mekanism) or Source (with Ars Nouveau). |
+1. Shift + click the router that's already set up: copies faces, filters, priorities, redstone and
+   networks.
+2. Click another router: pastes on it.
 
-## Actions
+The item holds a single copy. The tooltip shows what's copied.
 
-| Action | What it does |
+| Gesture | What it does |
 | --- | --- |
 | Shift + click a router | Copy |
 | Click a router | Paste on it |
 | Shift + click a block without a router | Clear the wand |
 | Shift + mouse wheel | Change the pasted type |
-| Hold Left Alt | Open the wheel |
+| Hold Left Alt | Open the pasted type wheel |
 
-## The wheel
+## Pasted type
 
-With the Configurator in hand, **hold Left Alt** (change the key in Controls, under Wireless
-Automate): a wheel opens in the middle of the screen with the **pasted type**. The current choice has an
-orange border and the center tells what the slice under the mouse does.
+Copying always copies everything. The **pasted type** picks what goes to the router: **All**
+(default), Items, Fluids, Energy, Chemicals (with Mekanism) or Source (with Ars Nouveau). On a single
+type, the router's other tabs stay as they were.
 
-| | |
-| --- | --- |
-| **Release the key** | Picks the slice under the mouse and closes. |
-| **Click** | Picks without closing. |
-| **Release in the center or Esc** | Closes without changing anything. |
+Example: copy a fluids router, switch to **Fluids** and paste on the others without touching their
+items or energy.
 
-Copying always copies everything; the **pasted type** picks what goes to the router. On **All**,
-every tab. On a single type, only that tab's faces (with their networks): the router's other tabs stay as they
-were. For example, copy a router set up only for fluids, switch to **Fluids** and paste on the others
-without touching their items or energy.
+On the wheel (Left Alt; change the key in Controls), release the key over a slice to pick it.
+Releasing in the center or Esc closes without changing anything.
 
 ## Good to know
 
-| | |
-| --- | --- |
-| **Orientation** | The copy is relative to the router: it works with the router on any face. |
-| **Networks** | A face's network is only pasted if you can use it, and a face only leaves a network you manage (your own, or any if you are an operator); otherwise the face keeps its own. A face with no network in the copy leaves the target's network alone. The network applies to the attached machine's faces; Range Upgrade machines stay as they are. |
-| **Many at once** | To paste on several routers, use the [Tablet](network-tablet.md) selection. |
+- The copy is relative to the router: it works with the router on any face.
+- A network is only pasted if you can use it, and a face only leaves a network you manage (your own,
+  or any if you are an operator). Otherwise the face keeps its own. A face with no network in the copy leaves the target's network alone.
+- The network applies to the attached machine; Range Upgrade machines stay as they are.
+- To paste on many routers at once, use the [Tablet](network-tablet.md) selection.
 
 ## Recipe
 

@@ -9,27 +9,24 @@ navigation:
 
 # Source do Ars Nouveau
 
-Com o **Ars Nouveau** instalado, o roteador ganha a aba **Source**. Sem o Ars, a aba não aparece e
-o resto do mod funciona igual.
+Com o **Ars Nouveau**, o roteador ganha a aba **Source**. Sem ele, a aba some.
+
+## Como usar
+
+Exemplo: dos Sourcelinks até o Enchanting Apparatus.
+
+1. Perto dos Sourcelinks, uma **Source Jar** com roteador em **Extrair**, na aba **Source**.
+2. Perto da máquina do Ars, outra Source Jar com roteador em **Inserir**, na mesma rede.
+3. Os Sourcelinks enchem a primeira jarra; o roteador leva a Source para a segunda, e a máquina tira dela.
+
+O roteador também liga direto nos Relays e na Imbuement Chamber. Um
+[Tanque de Source Wireless](wireless-source-tank.md) guarda muito mais que as Source Jars e funciona igual.
 
 ## O que funciona
 
 | Recurso | Source |
 | --- | --- |
-| Modo, prioridade e redstone por face | Sim, como nas outras abas. |
-| Rede por face | Sim. |
+| Modo, prioridade, redstone e rede | Sim. |
 | Configurador | Sim: o tipo **Source** na roda e no atalho do mouse. |
-| Vazão | Por tier: Básico 100/s, Avançado 800/s, Elite 6.400/s, Esmeralda 51.200/s, Ultimate sem limite (tabela completa no [Roteador](router.md)). |
-| Filtro e Cartão de Filtro | Não: a Source não tem tipos, como a energia. |
-
-## Exemplo: Source dos Sourcelinks até o Enchanting Apparatus
-
-| Passo | O que fazer |
-| --- | --- |
-| **1** | Perto dos Sourcelinks, uma **Source Jar** com um roteador em cima, na aba **Source**, em **Extrair**. |
-| **2** | Perto do Enchanting Apparatus (ou de qualquer máquina do Ars), outra Source Jar com um roteador em **Inserir**, na mesma rede. |
-| **3** | Os Sourcelinks enchem a primeira jarra; o roteador leva a Source para a segunda, e a máquina tira dela. |
-
-O roteador também liga direto nos Relays do Ars e na Imbuement Chamber.
-
-No lugar das Source Jars, um [Tanque de Source Wireless](wireless-source-tank.md) guarda muito mais e as máquinas do Ars tiram dele do mesmo jeito.
+| Vazão | Básico 100/s, Avançado 800/s, Elite 6.400/s, Esmeralda 51.200/s, Ultimate sem limite ([Roteador](router.md)). |
+| Filtro e Cartão de Filtro | Não: a Source não tem tipos. |

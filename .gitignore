@@ -34,3 +34,6 @@ repo/
 
 ### Ferramentas locais instaladas pelo setup ###
 .tools/
+
+# Cache do Python (os scripts do guia importam módulos)
+__pycache__/

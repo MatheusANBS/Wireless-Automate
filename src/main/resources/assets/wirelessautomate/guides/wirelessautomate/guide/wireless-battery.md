@@ -13,9 +13,9 @@ item_ids:
 
 <ItemImage id="wirelessautomate:storage_battery" scale="2" float="left" />
 
-Stores energy (FE) far beyond an `int`: on Ultimate, unlimited. Attached to a router on the
-**Energy** tab, it charges and discharges billions of FE per tick. Each tier's capacity is **one hour** of the
-same tier's [Resonator](signal-resonator.md) at full output, and the tier's router carries that output with 5% to spare.
+Stores a lot of energy (FE); on Ultimate, unlimited. Attached to a router on the **Energy** tab, it
+charges and discharges billions of FE at once. Each tier holds **one hour** of the same tier's
+[Resonator](signal-resonator.md) at full output.
 
 <br clear="all" />
 
@@ -47,9 +47,8 @@ same tier's [Resonator](signal-resonator.md) at full output, and the tier's rout
 
 ## The screen
 
-Click the Battery: the bar shows the charge and the percentage, and below it the change per tick
-(**charging**, **draining** or **idle**). Hover the bar for the exact value. The Battery has no
-filter: energy is just one thing.
+Click the Battery: the bar shows the charge and whether it's **charging**, **draining** or **idle**.
+Hover the bar for the exact value. No filter: energy is just one thing.
 
 ## Shared with the Chest
 

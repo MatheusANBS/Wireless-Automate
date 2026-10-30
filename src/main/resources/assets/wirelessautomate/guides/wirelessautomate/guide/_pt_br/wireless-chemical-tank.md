@@ -13,9 +13,8 @@ item_ids:
 
 <ItemImage id="wirelessautomate:storage_chemical_tank" scale="2" float="left" />
 
-O [Tanque Wireless](wireless-tank.md) para os **químicos do Mekanism** (gases, líquidos de
-infusão, pigmentos, slurries): vários ao mesmo tempo, na capacidade do tier. Só existe com o
-Mekanism instalado. Preso a um roteador na aba **Químicos**, um tipo inteiro passa de uma vez.
+O [Tanque Wireless](wireless-tank.md) dos **químicos do Mekanism**, vários de uma vez. Só existe com o Mekanism.
+Na aba **Químicos** do roteador, um tipo inteiro passa de uma vez.
 
 <br clear="all" />
 
@@ -25,14 +24,14 @@ Mekanism instalado. Preso a um roteador na aba **Químicos**, um tipo inteiro pa
   <Block id="wirelessautomate:storage_chemical_tank" x="4" y="0" z="0" p:tier="ultimate" />
   <Block id="wirelessautomate:router" x="4" y="1" z="0" p:facing="up" p:tier="ultimate" />
   <LineAnnotation from="0.5 1.5 0.5" to="4.5 1.5 0.5" color="#a46cff" thickness="0.08">
-    Químico de um Tanque para outro pela aba Químicos
+    De um Tanque para outro pela aba Químicos
   </LineAnnotation>
   <IsometricCamera yaw="200" pitch="30" />
 </GameScene>
 
 ## Capacidade
 
-A mesma do [Tanque](wireless-tank.md), em mB, todos os químicos somados.
+A do [Tanque](wireless-tank.md), em mB, somando todos os químicos.
 
 | Tier | mB |
 | --- | --- |
@@ -49,14 +48,15 @@ A mesma do [Tanque](wireless-tank.md), em mB, todos os químicos somados.
 
 ## Recipientes do Mekanism
 
-Na tela, com um tanque ou cilindro de químico do Mekanism no cursor: clique num químico enche o
-recipiente com ele, ou o esvazia se ele já estiver cheio; o botão direito esvazia um. Shift +
-clique num recipiente do inventário esvazia ele no Tanque.
+| Gesto | O que faz |
+| --- | --- |
+| **Clique** num químico, com tanque ou cilindro no cursor | Enche o recipiente (ou esvazia, se cheio). |
+| **Clique direito** | Esvazia um. |
+| **Shift + clique** no recipiente do inventário | Esvazia no Tanque. |
 
 ## Filtro de entrada
 
-O botão **Filtro** abre a tela de filtros de químicos (por químico ou por mod); o **estoque** vira
-"guardar até N mB".
+**Filtro** abre o filtro de químicos (por químico ou por mod). O **estoque** vira "guardar até N mB".
 
 ## Em comum com o Baú
 

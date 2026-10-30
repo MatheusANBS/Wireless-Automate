@@ -53,13 +53,18 @@ item_ids:
   <ItemImage id="wirelessautomate:resonance_dust" />
 </Row>
 
-Quartz crystals are the fuel of the [Signal Resonator](signal-resonator.md), the mod's power generator. This page
-shows where they come from, how to look after them and the parts the Resonator needs to go up in tier.
+The crystals are the fuel of the [Signal Resonator](signal-resonator.md), the mod's power generator.
+
+## How to use them
+
+1. Mine the ore with an iron pickaxe or better.
+2. Put the crystals in the Core's chambers. From Elite up, use the tier's **Tuned** crystal.
+3. **Dull** crystal (no charge): leave it in the chamber and put catalyst in the Core.
+4. **Cracked** crystal: recast it on a crafting table with 4 full Signal Crystals.
 
 ## The ore
 
-**Signal Quartz Ore** generates in the Overworld, in stone and in deepslate (the deepslate version is
-harder to mine). It sits in small veins, most common near **y = −16**. Mine it with an **iron pickaxe** or better:
+In the Overworld, in stone and deepslate, in small veins. Most common near **y = −16**.
 
 | Tool | Drop |
 | --- | --- |
@@ -74,7 +79,7 @@ harder to mine). It sits in small veins, most common near **y = −16**. Mine it
 | <ItemImage id="wirelessautomate:cut_signal_crystal" /> **Cut Signal Crystal** | Crafting table: four Signal Crystals in a cross around an Amethyst Shard. |
 | <ItemImage id="wirelessautomate:tuned_signal_crystal_elite" /> **Tuned Signal Crystal** | Crafting table: a Cut crystal with the tier's material (below). One per tier, from Elite to Ultimate. |
 
-How much each one yields in a chamber depends on the Core's tier:
+How much each one yields in a chamber:
 
 | Crystal | Basic or Advanced Core | Elite Core or higher |
 | --- | --- | --- |
@@ -83,10 +88,8 @@ How much each one yields in a chamber depends on the Core's tier:
 | **Tuned** for the Core's tier or higher | 2× | 2× |
 | **Tuned** for a lower tier | 2× | 1/2× |
 
-Cut and Tuned crystals last twice as long as a Signal Crystal. The higher the Core's tier, the shorter a charge
-lasts: the table on the [Signal Resonator](signal-resonator.md) page shows the time for each tier.
-
-The crystal recipes only accept **full**, uncracked crystals: spent ones don't count.
+Cut and Tuned last twice as long. The higher the Core, the shorter a charge
+([Signal Resonator](signal-resonator.md)). Recipes only accept **full**, uncracked crystals.
 
 <RecipeFor id="wirelessautomate:cut_signal_crystal" />
 
@@ -101,9 +104,7 @@ The crystal recipes only accept **full**, uncracked crystals: spent ones don't c
   <ItemImage id="wirelessautomate:tuned_signal_crystal_ultimate" />
 </Row>
 
-From the **Elite Core** up, only the **Tuned Signal Crystal** for the Core's tier (or a tier above) yields in full.
-To tune one, put a **Cut** crystal (or a Tuned one of a lower tier, to retune it) and the tier's material anywhere on
-a crafting table:
+On a crafting table, shapeless: a **Cut** crystal (or a lower-tier Tuned one) and the tier's material.
 
 | Tuned | Material, besides the crystal |
 | --- | --- |
@@ -116,40 +117,32 @@ a crafting table:
 
 ¹ Only with the Allthemodium mod.
 
-The tuned crystal comes out full, but with the **integrity** the input crystal had: tuning doesn't renew the crystal.
+It comes out full, but with the same **integrity**: tuning doesn't renew it.
 
 <RecipeFor id="wirelessautomate:tuned_signal_crystal_elite" />
 
 ## Charge and Dull crystals
 
-The item's **durability bar** shows how much is left before the crystal runs out: it only appears once the
-crystal starts to wear. Inside the Core, the charge drops while it generates power.
+The item's bar shows the charge. With none left, the crystal turns **Dull** and generates nothing. To recharge
+it, leave it in the chamber and put the catalyst in the Core (by hand, through the screen or the Crystal Port):
 
-With no charge left, the crystal turns **Dull**: it's the same item, just dimmed. A Dull crystal generates
-nothing, but you can **recharge** it:
+| Core | Catalyst |
+| --- | --- |
+| Basic and Advanced | Redstone or Resonance Dust |
+| Elite and Emerald | Resonance Dust |
+| Allthemodium and up | The tier's Charged Dust |
 
-1. Leave the Dull crystal in a Core chamber.
-2. Put the tier's **catalyst** in the Core (click with it in hand, through the screen or through the Crystal Port):
-   **redstone** or **Resonance Dust** on Basic and Advanced, only **Resonance Dust** on Elite and Emerald, and the
-   tier's **Charged Dust** from Allthemodium up.
-3. The Core recharges **all Dull crystals at once**: it takes 30 seconds, uses 1 catalyst per crystal, and each one comes back full. With less catalyst than Dull crystals, the first ones recharge and the rest wait for the next cycle.
-
-The catalyst slot holds one kind at a time: to switch catalysts, wait for the current one to run out or take it out
-through the screen. The Crystal Port only hands the Dull crystals back when the Core has no catalyst; with catalyst
-in it, the Dull crystal stays inside, waiting for the catalyst and the recharge cycle.
+All Dull crystals recharge together in 30 seconds, 1 catalyst each. The slot holds one kind of catalyst at a
+time. The Crystal Port only hands Dull crystals back when the Core has no catalyst.
 
 ## Integrity and cracked crystals
 
-Each crystal takes **8 charges**: the one it is made with and 7 recharges. Each recharge uses 1 **integrity** (the
-item's tooltip shows "Integrity 5 of 8", and the Core's screen a small bar under each chamber). When integrity runs
-out, the recharge doesn't fill the crystal: it **cracks**.
+Each crystal takes **8 charges** (the first and 7 recharges); the tooltip shows how many are left. Then it
+**cracks**: it doesn't generate, doesn't recharge and doesn't go into a chamber.
 
-A **cracked crystal** doesn't generate, doesn't recharge and doesn't go into a chamber. The Crystal Port always hands
-it back. To **recast** it, put the cracked crystal and **4 full Signal Crystals** anywhere on a crafting table: out
-comes the same crystal, full and with its integrity restored. It works for all three kinds; a Tuned one keeps its tier.
-
-In an Ultimate Core, a cracked Tuned Ultimate crystal can also be burned in the **Echo**, as on the
-[Signal Resonator](signal-resonator.md) page.
+To **recast** it: cracked crystal + **4 full Signal Crystals** on a crafting table. The same crystal comes back,
+full and whole (a Tuned one keeps its tier). In an Ultimate Core, a cracked Tuned Ultimate can also be burned in
+the **Echo** ([Signal Resonator](signal-resonator.md)).
 
 ## Resonance Dust and Charged Dust
 
@@ -161,13 +154,11 @@ In an Ultimate Core, a cracked Tuned Ultimate crystal can also be burned in the 
   <ItemImage id="wirelessautomate:charged_dust_ultimate" />
 </Row>
 
-**Resonance Dust** is the catalyst of the Elite and Emerald Cores (and it works on Basic and Advanced too). On a
-crafting table, shapeless: **1 redstone + 1 glowstone dust + 1 full Signal Crystal** make 4.
+**Resonance Dust**, shapeless: **1 redstone + 1 glowstone dust + 1 full Signal Crystal** make 4.
 
 <RecipeFor id="wirelessautomate:resonance_dust" />
 
-From Allthemodium up, each Core takes the **Charged Dust** of its own tier. On a crafting table, shapeless:
-**8 Resonance Dust + 1 ingot of the tier** make 8.
+**Charged Dust**, shapeless: **8 Resonance Dust + 1 ingot of the tier** make 8.
 
 | Charged Dust | Ingot |
 | --- | --- |
@@ -180,8 +171,7 @@ From Allthemodium up, each Core takes the **Charged Dust** of its own tier. On a
 
 ## The Heart's parts
 
-To build the Core and to raise its tier, the Resonator takes a **Resonator Heart** (below). The Hearts come from
-this chain of parts, made in order:
+**Resonator Hearts** come from these parts, in order. JEI shows where the ingredients go.
 
 | Part | Recipe | Makes |
 | --- | --- | --- |
@@ -195,8 +185,6 @@ this chain of parts, made in order:
 | <ItemImage id="wirelessautomate:phase_matrix" /> **8. Phase Matrix** | 1 Lens in the center, 4 Coils in the corners, 2 Circuits and 2 Plates | 1 |
 | <ItemImage id="wirelessautomate:field_stabilizer" /> **9. Field Stabilizer** | 4 Matrices + 1 diamond block + 2 crying obsidian + 1 eye of ender | 1 |
 | <ItemImage id="wirelessautomate:condensed_core" /> **10. Condensed Core** | 4 Stabilizers + 4 netherite blocks + 1 Nether Star in the center | 1 |
-
-JEI shows where each ingredient goes.
 
 <RecipeFor id="wirelessautomate:signal_alloy_ingot" />
 <RecipeFor id="wirelessautomate:phase_matrix" />
@@ -214,9 +202,8 @@ JEI shows where each ingredient goes.
   <ItemImage id="wirelessautomate:resonator_heart_ultimate" />
 </Row>
 
-There is one **Resonator Heart** per tier. The Basic one goes into the Resonance Core's recipe; the others are used
-up when you raise the Core with an Upgrade Card (see the [Signal Resonator](signal-resonator.md)). All of them are
-made on a crafting table, shapeless:
+One per tier, shapeless. The Basic one goes into the Resonance Core's recipe; the others are used up raising the
+Core with an Upgrade Card ([Signal Resonator](signal-resonator.md)).
 
 | Heart | Recipe |
 | --- | --- |
@@ -231,12 +218,11 @@ made on a crafting table, shapeless:
 
 ¹ Only with the Allthemodium mod.
 
-The <ItemImage id="wirelessautomate:alloy_frame" /> **Alloy Frame** for the Ultimate Heart is a ring of 8 blocks around
-1 Nether Star: with Allthemodium, Unobtainium-Vibranium alloy blocks; without it, netherite blocks.
+The <ItemImage id="wirelessautomate:alloy_frame" /> **Alloy Frame** is a ring of 8 blocks around 1 Nether Star: Unobtainium-Vibranium
+alloy blocks with Allthemodium, netherite blocks without it.
 
 <RecipeFor id="wirelessautomate:resonator_heart_basic" />
 <RecipeFor id="wirelessautomate:alloy_frame" />
 
-The numbers are the defaults; JEI shows your pack's.
-
-See how to build the generator in [Signal Resonator](signal-resonator.md).
+The numbers are the defaults; JEI shows your pack's. To build the generator, see the
+[Signal Resonator](signal-resonator.md).

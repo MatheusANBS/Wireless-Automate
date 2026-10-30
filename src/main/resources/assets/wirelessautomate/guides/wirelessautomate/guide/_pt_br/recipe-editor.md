@@ -9,53 +9,33 @@ navigation:
 
 # Editor de receitas
 
-Troque os ingredientes e o resultado das receitas de bancada do mod sem sair do jogo e sem mexer em
-arquivos. Serve para ajustar o custo dos itens do Wireless Automate ao seu pack.
+Ajuste o custo das receitas de bancada do mod ao seu pack, sem sair do jogo.
 
-## Quem pode usar
+## Como usar
 
-Só operadores (permissão 2). Num mundo de um jogador só, é preciso ter os comandos ativados (cheats).
+1. Digite `/wa recipes`. Só operadores (permissão 2); num mundo de um jogador, com cheats.
+2. Escolha uma receita na lista. Bolinha **verde**: padrão; **coral**: editada; **cinza**: desativada.
+3. Edite a grade 3 × 3 e o resultado.
+4. **Salvar**, depois **Recarregar agora**: vale para todos na hora.
 
-## Abrir
-
-Digite `/wa recipes`. A tela mostra, à esquerda, as receitas de bancada do mod que estão carregadas,
-com uma busca no topo. A bolinha de cada receita diz o estado:
-
-| Bolinha | Estado |
-| --- | --- |
-| **Verde** | Receita padrão do mod. |
-| **Coral** | Receita editada por você. |
-| **Cinza** | Receita desativada. |
-
-## Editar uma receita
-
-Escolha uma receita na lista: a grade 3 × 3 e o resultado aparecem à direita.
+## Editar
 
 | Para... | Faça |
 | --- | --- |
-| Pôr um item num slot | Clique no slot e depois num item do seu inventário (o item não sai de lá), ou clique no slot com o item no cursor. Com o JEI, arraste o item para o slot. |
-| Esvaziar um slot | Clique com o botão direito nele. |
-| Aceitar qualquer item de uma tag | Escolha o slot e clique em **Tag**. As setas trocam entre as tags do item. **Item** volta para o item exato. |
-| Esvaziar o slot escolhido | **Limpar** (ou clique direito no slot). |
-| Mudar a quantidade do resultado | **−** e **+**, até o tamanho da pilha do item (no máximo 64). |
-| Mudar o anel de um Cartão de Upgrade | Troque os oito slots em volta. O centro fica travado: nele vai o roteador, o armazenamento, a Redstone ou o cartão, e o anel novo vale para todos esses. |
+| Pôr um item | Clique no slot e num item do inventário (ele fica lá), ou arraste do JEI. |
+| Esvaziar | Clique direito no slot, ou **Limpar**. |
+| Aceitar uma tag | **Tag**; as setas trocam a tag. **Item** volta ao item exato. |
+| Quantidade | **−** e **+**, até a pilha (no máximo 64). |
+| Anel de um Cartão de Upgrade | Troque os oito slots em volta. O centro é travado; o anel novo vale para tudo o que vai nele. |
 
-## Salvar e recarregar
-
-| Botão | O que faz |
-| --- | --- |
-| **Salvar** | Só grava a receita. Nada muda no jogo ainda. |
-| **Recarregar agora** | Aplica as mudanças salvas, para todos os jogadores, na hora. |
-| **Restaurar padrão** | Volta a receita ao que o mod traz. |
-| **Desativar** / **Reativar** | Tira a receita do jogo, ou a devolve. |
-
-Se você fechar a tela com mudanças salvas ainda não aplicadas, elas são recarregadas ao fechar.
+**Restaurar padrão** volta a receita do mod. **Desativar** / **Reativar** tira ou devolve a receita.
+Fechar a tela também aplica o que foi salvo.
 
 ## Bom saber
 
 | | |
 | --- | --- |
-| **Onde fica** | As edições ficam em `config/wirelessautomate/recipes/`, uma pasta só para a instância. Valem em todos os mundos dela e, num servidor, no servidor. Sobrevivem às atualizações do mod. |
-| **Outros datapacks e KubeJS** | Se outro datapack ou o KubeJS mexer na mesma receita, o dele vale, e a tela avisa que a receita é diferente do que está carregado. |
-| **O que não aparece** | Receitas de outros mods, a cópia de Cartão de Filtro e o upgrade de roteador na bancada. Também não dá para criar receitas novas. |
-| **Voltar tudo** | Apague a pasta `data` dentro de `config/wirelessautomate/recipes/` e recarregue (`/reload`). |
+| **Onde fica** | `config/wirelessautomate/recipes/`. Vale em todos os mundos da instância (ou no servidor) e sobrevive às atualizações. |
+| **Datapacks e KubeJS** | Se mexerem na mesma receita, eles vencem; a tela avisa. |
+| **Fora do editor** | Receitas de outros mods, a cópia de Cartão de Filtro e o upgrade de roteador na bancada. Não cria receitas novas. |
+| **Voltar tudo** | Apague `data` dentro de `config/wirelessautomate/recipes/` e use `/reload`. |

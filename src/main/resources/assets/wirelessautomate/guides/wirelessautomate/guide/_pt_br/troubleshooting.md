@@ -9,21 +9,19 @@ navigation:
 
 # Problemas comuns
 
-Algo não se move? Confira na ordem: quase sempre é uma destas.
+Algo não se move? Confira na ordem.
 
-| Sintoma | Causa provável | O que fazer |
-| --- | --- | --- |
-| Nada sai da origem | A face está em **Nenhum** ou **Insere**. | Na aba certa, ponha a face em **Extrai**. |
-| Nada sai da origem | As faces estão em redes diferentes, ou sem rede. | Confira a linha **Rede** da face nos dois roteadores (o ponto em cima de cada botão mostra a cor da rede). |
-| Nada chega no destino | O destino está longe demais para o tier de quem envia. | Suba o tier da origem com um [Cartão de Upgrade](upgrade-cards.md). |
-| Nada chega no destino | O destino está cheio. | Ele dorme até ter espaço e volta sozinho. |
-| Só alguns itens passam | Um [filtro](filters.md) ou estoque está barrando. | Veja o filtro da face nos dois lados; filtro vazio passa tudo. |
-| A face funciona e para | Redstone em **Com sinal** ou **Sem sinal**. | Ponha em **Ignorar** ou ajuste o sinal. |
-| Para quando você se afasta | O chunk descarregou. | Use o [Upgrade de Chunk Loading](chunk-loading.md). |
-| O modo aparece indisponível | A máquina não dá acesso àquele tipo por aquela face. | Escolha outra face no visor 3D, ou configure a máquina. |
-| Químicos não se movem | A face da máquina do Mekanism está desligada nos lados dela. | Ligue a face com a ferramenta de configuração do Mekanism. |
-| Não consigo pôr na rede | A rede é de outro jogador. | Peça ao dono, ou use uma rede sua. |
-| Vazão menor que a do tier | Muitas máquinas movendo ao mesmo tempo. | Normal: a vazão se divide entre elas, sem travar o jogo. |
+| Sintoma | Causa e solução |
+| --- | --- |
+| Nada sai da origem | A face não está em **Extrai**, ou os roteadores não estão na mesma **Rede** (o ponto sobre o botão tem a cor da rede). |
+| Nada chega no destino | Longe demais: suba a origem com um [Cartão de Upgrade](upgrade-cards.md). Ou cheio: volta sozinho quando tiver espaço. |
+| Só alguns itens passam | Um [filtro](filters.md) ou estoque barra. Filtro vazio passa tudo. |
+| Funciona e para | Redstone em **Com sinal** ou **Sem sinal**. Use **Ignorar**. |
+| Para quando você se afasta | O chunk descarregou: [Upgrade de Chunk Loading](chunk-loading.md). |
+| Modo indisponível | A máquina não abre esse tipo nessa face. Tente outra. |
+| Químicos não se movem | Ligue a face na configuração de lados do Mekanism. |
+| Não consigo pôr na rede | A rede é de outro jogador. |
+| Vazão menor que a do tier | Muitas máquinas dividem a vazão. É normal. |
 
-Ainda com dúvida? Abra o [Tablet de Rede](network-tablet.md): a aba **Fluxos** mostra o que
-cada rede está movendo, quais faces esperam destino e quais destinos estão cheios.
+Ainda com dúvida? A aba **Fluxos** do [Tablet de Rede](network-tablet.md) mostra o que cada rede
+move, quais faces esperam destino e quais destinos estão cheios.

@@ -13,9 +13,8 @@ item_ids:
 
 <ItemImage id="wirelessautomate:storage_tank" scale="2" float="left" />
 
-A tank for **many fluids at once**, as many as fit in the tier's capacity. Each fluid shows up in a
-list, like the items in the [Wireless Chest](wireless-chest.md). Attached to a router, it trades
-billions of mB at once.
+A tank for **many fluids at once**, in a list like the [Wireless Chest](wireless-chest.md)'s.
+Attached to a router, it trades billions of mB at once.
 
 <br clear="all" />
 
@@ -49,20 +48,18 @@ Total in mB, all fluids added up.
 
 ## Buckets and containers
 
-| I want to... | How |
+| Gesture | What it does |
 | --- | --- |
-| Empty a bucket | Click the Tank with the full bucket in hand, or Shift + click it in the screen's inventory. |
-| Fill a bucket | Click the Tank with an empty bucket (takes the first fluid), or, on the screen, click the fluid with the bucket on the cursor. |
-| Other containers | Tanks and cells from other mods work the same way, through the screen. |
+| **Click** the Tank with a full bucket | Empties the bucket (or Shift + click it, on the screen). |
+| **Click** the Tank with an empty bucket | Fills it with the first fluid. |
+| On the screen, **click** a fluid with a container on the cursor | Fills the container, or empties it if it's already full. Right click: empties one. |
 
-On the screen, with a container on the cursor: clicking a fluid fills the container with it, or
-empties it if it's already full; right click empties one. Search, order and resizing are the
-Chest's.
+Tanks and cells from other mods work the same way, through the screen.
 
 ## Input filter
 
-The screen's **Filter** button opens the fluid [filter screen](filters.md): only what it accepts
-gets in, and an entry's **stock** means "store up to N mB".
+The **Filter** button opens the fluid [filter screen](filters.md): only what it accepts gets in, and
+**stock** means "store up to N mB".
 
 ## Shared with the Chest
 

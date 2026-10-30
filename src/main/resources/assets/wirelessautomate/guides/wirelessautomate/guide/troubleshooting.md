@@ -9,21 +9,19 @@ navigation:
 
 # Troubleshooting
 
-Something not moving? Check in order: it's almost always one of these.
+Something not moving? Check in order.
 
-| Symptom | Likely cause | What to do |
-| --- | --- | --- |
-| Nothing leaves the source | The face is on **None** or **Insert**. | On the right tab, set the face to **Extract**. |
-| Nothing leaves the source | The faces are on different networks, or on none. | Check the face's **Network** row on both routers (the dot above each button shows the network's color). |
-| Nothing reaches the destination | It's too far for the sender's tier. | Raise the source's tier with an [Upgrade Card](upgrade-cards.md). |
-| Nothing reaches the destination | The destination is full. | It sleeps until there's room and comes back on its own. |
-| Only some items pass | A [filter](filters.md) or stock limit is blocking. | Check the face filter on both sides; an empty filter lets everything through. |
-| The face works, then stops | Redstone set to **With signal** or **No signal**. | Set it to **Ignore** or fix the signal. |
-| It stops when you walk away | The chunk unloaded. | Use the [Chunk Loading Upgrade](chunk-loading.md). |
-| The mode shows as unavailable | The machine gives no access to that type through that face. | Pick another face in the 3D viewer, or configure the machine. |
-| Chemicals don't move | The Mekanism machine's face is disabled in its side config. | Enable the face with Mekanism's configurator tool. |
-| Can't put it in a network | The network belongs to another player. | Ask the owner, or use one of yours. |
-| Less throughput than the tier | Many machines moving at once. | Normal: throughput is shared between them, without freezing the game. |
+| Symptom | Cause and fix |
+| --- | --- |
+| Nothing leaves the source | The face isn't on **Extract**, or the routers aren't on the same **Network** (the dot above the button has the network's color). |
+| Nothing reaches the destination | Too far: raise the source with an [Upgrade Card](upgrade-cards.md). Or full: it resumes on its own when there's room. |
+| Only some items pass | A [filter](filters.md) or stock limit blocks. An empty filter lets everything through. |
+| Works, then stops | Redstone on **With signal** or **No signal**. Use **Ignore**. |
+| Stops when you walk away | The chunk unloaded: [Chunk Loading Upgrade](chunk-loading.md). |
+| Mode unavailable | The machine doesn't open that type on that face. Try another. |
+| Chemicals don't move | Enable the face in Mekanism's side config. |
+| Can't put it in a network | The network belongs to another player. |
+| Less throughput than the tier | Many machines share the throughput. It's normal. |
 
-Still stuck? Open the [Network Tablet](network-tablet.md): the **Flows** tab shows what each
-network is moving, which faces are waiting for a destination and which destinations are full.
+Still stuck? The [Network Tablet](network-tablet.md)'s **Flows** tab shows what each network is
+moving, which faces are waiting for a destination and which destinations are full.

@@ -54,7 +54,7 @@ Tamanho e divisão (skill `wa-modular`): no plano, cada tela ou componente novo 
 
 - `docs/progresso.md`: a tabela de estado, o próximo passo e uma linha no histórico (o que foi feito e os números de testes, por exemplo "157 + 7 + 15 GameTests, e2e OK").
 - `docs/mapa/<área>.md` (o índice está no `CLAUDE.md`): atualize a linha da classe se surgiram arquivos ou papéis novos.
-- Guia do jogador: edite `scripts/guide/gerar_guia.py` (nunca os `.md` gerados), nos dois idiomas, só com "como operar".
+- Guia do jogador: edite a página em `scripts/guide/paginas/<pagina>.py` (nunca os `.md` gerados; página nova entra na lista `PAGINAS` do `gerar_guia.py`), nos dois idiomas, só com "como operar": passos primeiro, frases curtas, sem jargão.
 - Texturas: edite as paletas em `scripts/textures/gerar_texturas.py`, nunca os PNGs.
 - Commit e push só quando o dono pedir. A versão nova é com a skill `wa-release`.
 

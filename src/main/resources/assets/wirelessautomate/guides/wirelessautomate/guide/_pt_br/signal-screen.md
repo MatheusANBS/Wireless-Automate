@@ -13,238 +13,188 @@ item_ids:
 
 <ItemImage id="wirelessautomate:signal_screen" scale="2" float="left" />
 
-Um painel que você prende numa parede e estica pelo tamanho que quiser, de **1 × 1 até 32 × 32 blocos**. Ele mostra os
-números das suas [redes](networks.md) ao vivo: o que entra, o que sai e quantas faces estão movendo.
+Um painel de parede, de **1 × 1 até 32 × 32 blocos**, que mostra os números das suas [redes](networks.md) ao vivo: o
+que entra, o que sai e quantas faces estão movendo.
 
 <br clear="all" />
 
-## Como colocar
+## Como usar
 
-1. Clique com a Tela na **lateral de um bloco sólido**: ela fica rente à parede, virada para você. Não dá para pôr no
-   chão nem no teto, e ela cai se a parede atrás dela sair.
-2. Clique nela com a **mão vazia** para abrir a tela de configuração. Só quem a colocou, os operadores e quem está na
-   aba **Acesso** podem configurar; os outros só olham.
+1. Clique com a Tela na **lateral de um bloco sólido**. Não vai no chão nem no teto, e cai se a parede sair.
+2. Clique nela com a **mão vazia** para abrir a configuração.
+3. Na aba **Tamanho**, escolha a largura e a altura e clique em **Aplicar**.
+4. Na aba **Editar**, aplique um layout pronto ou monte o seu com peças.
+5. Clique em **Salvar** (ou **Ctrl+S**). Nada vai para a parede antes disso.
 
-## Escolher o tamanho
+Só quem colocou a Tela, os operadores e quem está na aba **Acesso** configuram; os outros só olham.
 
-Na aba **Tamanho**:
+## Tamanho
 
 | Parte | Como usar |
 | --- | --- |
 | **Largura** e **Altura** | ‹ e › mudam de 1 em 1 bloco; com **Shift**, de 4 em 4. |
-| **Cresce a partir do bloco para** | ↗ cima e direita, ↖ cima e esquerda ou ✥ centro: onde o bloco que você colocou fica dentro da tela. |
-| **Prévia** | A parede em volta, com a área da tela. A célula vermelha é a que impede o tamanho. |
-| **Aplicar** | Estica a tela. Fica desligado enquanto algo impede. |
+| **Cresce a partir do bloco para** | ↗, ↖ ou ✥: onde o bloco que você colocou fica dentro da tela. |
+| **Prévia** | A célula vermelha é a que impede o tamanho. |
 
-A tela grande **não ocupa blocos**: ela é desenhada sobre a parede. Para caber, cada bloco da área precisa de
-**parede sólida atrás** e de **espaço livre na frente** (ar ou grama, por exemplo; uma tocha impede), e a área não pode
-cruzar outra Tela.
+A tela grande **não ocupa blocos**: é desenhada sobre a parede. Cada bloco da área precisa de **parede sólida atrás**
+e **espaço livre na frente** (ar ou grama servem; uma tocha impede), e a área não pode cruzar outra Tela.
 
-## O que mostrar: o editor
+## O editor
 
-Na aba **Editar** você monta o que a Tela mostra, com **peças**. A janela cresce para ocupar a tela do jogo; se não
-couber, diminua a escala da interface.
+Na aba **Editar** você monta o que a Tela mostra com **peças**. Se a janela não couber, diminua a escala da interface.
 
 | Peça | Para quê |
 | --- | --- |
-| **Valor** | Um número ao vivo de uma [rede](networks.md): o que entra, o que sai, o que está guardado, quantas faces movem... |
+| **Valor** | Um número ao vivo: o que entra, sai ou está guardado, quantas faces movem... |
 | **Texto** | Uma frase fixa. |
-| **Forma** | Um retângulo com fundo, borda e cantos: cartão, moldura, divisória. |
-| **Ícone de item** | O desenho de um item, escolhido pelo id ou na lista de um baú ligado. |
-| **Barra** | Uma barra que enche conforme um número, deitada ou em pé. |
-| **Medidor** | Um mostrador em arco com um ponteiro. |
-| **Gráfico** | O histórico de um número, em linha ou colunas, dos últimos minutos. |
-| **Seta** | Sobe, desce ou fica parada conforme o número cresce, cai ou se mantém. |
-| **Imagem** | Uma pixel art sua ou uma imagem enviada (PNG, JPG ou GIF), da aba **Artes** (mais abaixo). |
+| **Forma** | Um retângulo: cartão, moldura, divisória. |
+| **Ícone de item** | O desenho de um item. |
+| **Barra** | Enche conforme um número. |
+| **Medidor** | Um mostrador em arco com ponteiro. |
+| **Gráfico** | O histórico de um número nos últimos minutos. |
+| **Seta** | Sobe, desce ou fica parada conforme o número. |
+| **Imagem** | Uma pixel art sua ou uma imagem enviada (PNG, JPG ou GIF). |
 
-- **Escolher e mexer:** clique numa peça para escolhê-la (numa peça de grupo, o grupo inteiro; dois cliques entram no
-  grupo). **Shift** + clique soma ou tira da escolha; clique no vazio solta. Arraste para mover e puxe a alça do canto
-  de baixo para redimensionar. Tudo encaixa numa grade de 4 px; segure **Alt** para ajustar de 1 em 1 px.
-- **Grupos e camadas:** **Agrupar** junta as peças escolhidas para mover e redimensionar juntas; **Desagrupar** solta.
-  Embaixo, as **Camadas** listam as peças de cima para baixo: arraste uma linha para trocar a ordem, use o olho para
-  esconder e **[** e **]** para subir e descer.
-- **Abas da direita:** **Dado** liga o Valor a uma rede (e escolhe o tipo e o que ler); **Formato** define casas,
-  abreviar (k, M, G), sinal, prefixo, sufixo e unidade; **Estilo** muda posição, tamanho, cores, borda, cantos,
-  opacidade e fonte; **Regras** muda a cor, esconde ou pisca quando o número passa de um valor.
-- **De onde vem o número:** na aba **Dado**, a **Fonte** é a **Rede** (o que entra, sai ou está guardado, e quantas faces movem), um **Armazém** ligado pelo [Vinculador](linker.md) (guardado, capacidade, enchimento e o que entra, sai ou sobra por segundo; num Baú, dá para ler um item só) ou o **Relógio** do jogo (hora do dia e dia). Na Rede, **Guardado** soma o que os Armazéns da rede guardam.
-- **Item de um Baú:** com um baú ligado, a aba **Dado** mostra a grade dos itens dele com um campo **Buscar itens...** e um clique escolhe o item. Com o JEI, também dá para **arrastar um item** do JEI para o campo do Ícone ou do filtro do Baú.
-- **Salvar:** nada vai para a parede até clicar em **Salvar** (ou **Ctrl+S**). Fechar com mudanças pede dois cliques
-  no ✕ (**Descartar?**). A miniatura mostra os números de uma ligação nova antes de salvar.
+| Gesto | O que faz |
+| --- | --- |
+| **Clique** | Escolhe a peça (num grupo, o grupo inteiro; dois cliques entram nele). |
+| **Shift + clique** | Soma ou tira da escolha. |
+| **Arrastar** | Move. A alça do canto redimensiona. |
+| **Alt** ao arrastar | Ajusta de 1 em 1 px (o normal é uma grade de 4 px). |
+| **Camadas** | Arraste uma linha para mudar a ordem; o olho esconde. |
 
 | Atalho | O que faz |
 | --- | --- |
-| **Ctrl+Z**, **Ctrl+Y** (ou **Ctrl+Shift+Z**) | Desfaz e refaz. |
-| **Ctrl+C**, **Ctrl+X**, **Ctrl+V** | Copia, recorta e cola, inclusive de uma Tela para outra (as artes das Imagens vão junto). |
+| **Ctrl+Z**, **Ctrl+Y** | Desfaz e refaz. |
+| **Ctrl+C**, **Ctrl+X**, **Ctrl+V** | Copia, recorta e cola, até de uma Tela para outra. |
 | **Ctrl+D**, **Delete** | Duplica e remove. |
 | **Ctrl+A**, **Ctrl+G**, **Ctrl+Shift+G** | Escolhe tudo, agrupa e desagrupa. |
+| **[** e **]** | Sobe e desce a camada. |
 | **Setas** | Movem 4 px; com **Shift**, 32 px; com **Alt**, 1 px. |
 
-### Temas e fundo
+As abas da direita ajustam a peça escolhida: **Dado** (de onde vem o número), **Formato** (casas, k/M/G, prefixo,
+unidade), **Estilo** (posição, cores, borda, fonte) e **Regras** (muda a cor, esconde ou pisca quando o número passa
+de um valor).
 
-Com **nada escolhido**, a coluna da direita mostra a **base** da Tela. O **Tema** é uma paleta de seis cores (fundo,
-cartão, texto, apagado, alta e baixa): há quatro prontos (Grafite, Fósforo, Âmbar e Porcelana) e os seus. As cores das
-peças marcadas como "do tema" (as bolinhas redondas) acompanham a troca; as quadradas são fixas. Edite as seis cores
-pelo código `#RRGGBB` e use **Salvar tema** para guardar a paleta com um nome. O **Fundo** pode ser o do tema, uma cor
-fixa ou um degradê, e dá para ligar as **linhas** de varredura e a **grade** da miniatura. A Tela guarda a paleta
-inteira: apagar um tema seu depois não muda nenhuma Tela.
+### De onde vem o número
 
-### Layouts prontos e o seu
+Na aba **Dado**, a **Fonte** pode ser:
 
-Com nada escolhido, **Layout pronto** na base oferece **Energia**, **Armazenamento**, **Rede** e **Relógio**: escolha um e clique em **Aplicar layout**; ele se ajusta ao tamanho da Tela e troca o que está nela (dá para desfazer com **Ctrl+Z** antes de salvar). Para guardar o seu, escreva um nome no campo e clique em **Salvar layout atual**; ele passa a aparecer na mesma lista, em qualquer Tela sua. **Remover layout** apaga o seu escolhido, em dois cliques.
+- a **Rede**: o que entra, sai ou está guardado, e quantas faces movem. **Guardado** soma os Armazéns da rede;
+- um **Armazém** (Baú, Bateria ou Tanque) ligado à Tela com o [Vinculador](linker.md): guardado, capacidade,
+  enchimento e o que entra, sai ou sobra por segundo. Num Baú, dá para ler um item só, escolhido na grade dele (ou
+  arrastado do JEI);
+- o **Relógio** do jogo: hora do dia e dia.
+
+Os números chegam uma vez por segundo enquanto há alguém perto. Uma rede privada a que quem colocou a Tela perdeu
+acesso mostra **—**.
+
+Fechar com mudanças pede dois cliques no ✕ (**Descartar?**).
+
+### Base, temas e layouts
+
+Com **nada escolhido**, a coluna da direita mostra a **base** da Tela:
+
+- **Tema:** uma paleta de seis cores. Há quatro prontos (Grafite, Fósforo, Âmbar e Porcelana) e você salva os seus.
+  As cores "do tema" (bolinhas redondas) acompanham a troca; as quadradas são fixas. A Tela guarda a paleta: apagar
+  um tema seu depois não muda nenhuma Tela.
+- **Fundo:** o do tema, uma cor, um degradê ou uma arte em mosaico.
+- **Layout pronto:** **Energia**, **Armazenamento**, **Rede** ou **Relógio**. **Aplicar layout** troca o que está na
+  Tela e se ajusta ao tamanho (**Ctrl+Z** desfaz antes de salvar). **Salvar layout atual** guarda o seu; **Remover
+  layout** apaga, em dois cliques.
 
 ### Componentes
 
-Na coluna da esquerda, **Componentes** são grupos de peças prontos para inserir: **Painel de rede**, **Cartão de
-número** e **Título** já vêm, e você guarda os seus. Clique num componente para inseri-lo, num grupo novo, no primeiro
-lugar livre. Para guardar o seu, escolha as peças, clique em **Salvar como componente** (⊕) e dê um nome; o ✎ renomeia
-e o ✕ remove, em dois cliques. Os componentes e os temas ficam na sua biblioteca e valem em qualquer Tela sua. Um
-componente ligado a uma rede que você não pode mais usar entra com **—**.
-
-Para mostrar o conteúdo de um Baú, Bateria ou Tanque, ligue-o à Tela com o [Vinculador](linker.md) antes de escolhê-lo na aba **Dado**.
-
-Os números chegam uma vez por segundo enquanto há alguém perto. Uma rede privada da qual quem colocou a Tela perdeu o
-acesso mostra **—**.
+Na coluna da esquerda, **Componentes** são grupos de peças prontos (**Painel de rede**, **Cartão de número**,
+**Título** e os seus). Clique para inserir. Para guardar o seu, escolha as peças e clique em **Salvar como
+componente** (⊕). Componentes, temas e layouts valem em qualquer Tela sua.
 
 ## Pixel art
 
-Desenhe suas artes na aba **Artes**, parte **Pixel art**, na coluna da esquerda do editor. Elas ficam na sua biblioteca e valem em
-qualquer Tela sua.
+Na aba **Artes**, parte **Pixel art**:
 
-1. Clique em **Nova** (ou escolha uma arte e clique em **Editar**). O editor de pixel art abre por cima do editor.
-2. Escreva o nome e o **Tamanho**: de 8 a 128 pixels de largura e de altura. Mudar o tamanho mantém o canto de cima à
-   esquerda.
-3. Desenhe e clique em **Salvar** (ou **Ctrl+S**). O editor fecha quando a arte chega à biblioteca; se ela não couber
-   (biblioteca cheia ou grande demais), o desenho continua aberto, com o aviso. **Cancelar** volta sem salvar; com
-   mudanças, pede dois cliques.
+1. Clique em **Nova** (ou escolha uma arte e clique em **Editar**).
+2. Dê o nome e o **Tamanho**, de 8 a 128 pixels de lado.
+3. Desenhe e clique em **Salvar** (ou **Ctrl+S**). Se a arte não couber na biblioteca, o desenho fica aberto com o
+   aviso.
 
-Cada arte tem até **16 cores** e no máximo **128 × 128** pixels. **Duplicar** faz uma cópia e **Remover** apaga, em
-dois cliques.
-
-### Ferramentas
-
-O clique esquerdo usa a ferramenta e o **direito apaga** (no clarear, escurece). **Ctrl** + clique pega a cor de um
-pixel com qualquer ferramenta.
+Cada arte tem até **16 cores** e **128 × 128** pixels. O clique esquerdo usa a ferramenta e o **direito apaga**.
+**Ctrl** + clique pega a cor de um pixel.
 
 | Tecla | Ferramenta |
 | --- | --- |
 | **B** | Lápis. |
 | **E** | Borracha. |
-| **G** | Balde: pinta a área da mesma cor. Com **Shift**, troca a cor na arte inteira. |
+| **G** | Balde. Com **Shift**, troca a cor na arte inteira. |
 | **I** | Conta-gotas. |
 | **L** | Linha. **Shift** trava em 0°, 45° e 90°. |
 | **R** | Retângulo. **R** de novo alterna contorno e cheio; **Shift** faz quadrado. |
 | **O** | Elipse. **O** de novo alterna contorno e cheia; **Shift** faz círculo. |
-| **D** | Clarear (esquerdo) e escurecer (direito), pela rampa da cor. |
-| **T** | Pontilhado: pinta um pixel sim e um não, em xadrez. |
+| **D** | Clarear (esquerdo) e escurecer (direito). |
+| **T** | Pontilhado em xadrez. |
 | **S** | Seleção. |
 
 | Tecla | Ajuda |
 | --- | --- |
-| **[** e **]** | Pincel menor e maior, de 1 a 8 px. O botão do rodapé troca quadrado e redondo (redondo a partir de 3 px). |
-| **M** e **Shift+M** | Espelho esquerda e direita, e em cima e embaixo. Valem juntos. |
-| **P** | Pixel perfect: tira os cantos em L do lápis de 1 px. |
+| **[** e **]** | Pincel de 1 a 8 px. |
+| **M** e **Shift+M** | Espelho horizontal e vertical. |
+| **P** | Pixel perfect no lápis de 1 px. |
 | **X** | Volta para a cor anterior. |
 | **Ctrl+G** | Liga e desliga a grade. |
 | **Ctrl+Z**, **Ctrl+Y** | Desfaz e refaz, até 100 passos. |
-
-### Paleta e rampas
-
-A paleta tem 16 cores em 4 linhas, e a cor 0 é sempre transparente. Cada linha é uma **rampa**, do tom escuro à
-esquerda ao claro à direita: o clarear e o escurecer andam por ela.
-
-- Dois cliques numa cor (ou **Editar cor**) abrem o seletor. Trocar uma cor muda todos os pixels dela.
-- **Criar rampa** refaz a linha da cor escolhida como uma rampa dela: mais escura e azulada à esquerda, mais clara e
-  amarelada à direita.
-
-### Seleção, virar e girar
-
-- Com **S**, arraste para marcar um retângulo. Arraste de dentro dele para mover o pedaço.
-- As **setas** movem 1 px (com **Shift**, 8 px). **Enter** assenta e **Esc** desfaz o mover e tira a seleção.
-- **Ctrl+A** seleciona tudo e **Ctrl+D** tira. **Ctrl+C**, **Ctrl+X** e **Ctrl+V** copiam, recortam e colam;
-  **Delete** apaga.
-- Com uma seleção, as ferramentas só pintam dentro dela.
-- **Shift+H** e **Shift+V** viram na horizontal e na vertical, e o botão de girar gira 90° no sentido horário. Com
-  uma seleção, só o pedaço; sem ela, todos os quadros de uma arte animada.
-- **Limpar** apaga o quadro escolhido inteiro, em dois cliques.
-
-### Navegar no quadro
-
-| Gesto | O que faz |
-| --- | --- |
-| Roda do mouse | Zoom no ponto do mouse. |
-| **Alt**, **Espaço** ou botão do meio + arrastar | Move a vista. |
-| **Setas**, sem seleção | Movem a vista. |
+| **Shift+H**, **Shift+V** | Vira na horizontal e na vertical. |
+| Roda do mouse | Zoom. |
+| **Espaço** + arrastar | Move a vista. |
 | **0** | Enquadra a arte. |
-| **+** e **−** | Zoom no centro. |
-| Clique na prévia | Leva a vista até aquele ponto. |
 
-O rodapé mostra a posição e a cor sob o mouse. A coluna da direita mostra a arte em 1×, 2× e repetida, como no
-mosaico (com pouco espaço ou numa arte grande, só o que cabe inteiro). **Esc** sem seleção faz o mesmo que
-**Cancelar**.
+- **Paleta:** 16 cores em 4 linhas; a cor 0 é sempre transparente. Cada linha é uma **rampa** do escuro ao claro, que
+  o clarear e o escurecer seguem. Trocar uma cor muda todos os pixels dela. **Criar rampa** gera a linha a partir da
+  cor escolhida.
+- **Seleção (S):** com ela, as ferramentas só pintam dentro. Arraste de dentro para mover; **Enter** assenta, **Esc**
+  desfaz.
 
-### Animação (quadros)
+### Animação
 
-Uma arte pode ter vários quadros, que tocam na Imagem e no mosaico. Todas as Telas com a mesma arte tocam juntas, e a
-Tela só troca de quadro quando está à vista.
+Uma arte pode ter **até 64 quadros**, do mesmo tamanho e com a mesma paleta. A faixa embaixo do desenho mostra os
+quadros: clique para escolher, arraste para reordenar.
 
-- A **faixa de quadros**, embaixo do quadro de desenho, mostra as miniaturas; a escolhida é a que você desenha. Clique
-  para escolher e arraste para mudar a ordem.
-- **+** põe um quadro vazio depois do escolhido, o botão de duplicar copia o escolhido e o de remover o tira.
-- **Papel vegetal:** o quadro anterior aparece apagado por baixo, para desenhar o próximo.
-- **Velocidade:** de 1 a 20 quadros por segundo, pelo **‹ ›** ou digitando. **Modo:** **Loop** (volta ao primeiro) ou
-  **Vai e volta**. O botão de tocar pausa e toca a prévia (pausada, ela mostra o quadro escolhido).
-- Até 64 quadros, do mesmo tamanho e com a mesma paleta. Os quadros contam no teto de pixels da Tela: uma arte de
-  32 × 32 com 10 quadros conta 10.240.
-- Tudo entra no **Ctrl+Z**. A paleta vale para todos os quadros; o **Limpar** e as ferramentas, para o escolhido.
+- **Velocidade** de 1 a 20 quadros por segundo; **Loop** ou **Vai e volta**.
+- **Papel vegetal:** o quadro anterior aparece apagado por baixo.
+- Os quadros contam no teto de pixels da Tela: uma arte de 32 × 32 com 10 quadros conta 10.240.
 
 | Tecla | O que faz |
 | --- | --- |
 | **,** e **.** | Quadro anterior e seguinte. |
-| **Alt+N** | Quadro novo vazio, depois do escolhido. |
-| **Alt+D** | Duplica o quadro escolhido. |
-| **Alt+O** | Liga e desliga o papel vegetal. |
+| **Alt+N**, **Alt+D** | Quadro novo e duplicar. |
+| **Alt+O** | Papel vegetal. |
 | **Alt+P** | Toca e pausa a prévia. |
-| **Ctrl+C** e **Ctrl+V** | Copiam um pedaço de um quadro e colam em outro. |
 
 ### Pôr a arte na Tela
 
-- **Imagem:** clique em **Imagem** na lista de **Peças** (ou arraste-a até a miniatura). Ela nasce com a arte escolhida
-  na aba **Artes** (uma pixel art ou uma imagem); sem nada escolhido, nasce vazia, com **Escolha a arte ou a imagem**.
-- **Escolher a arte:** na aba **Estilo**, seção **Peça**, clique numa miniatura da grade. As marcadas **Da Tela**
-  vieram com a Tela, de outro jogador ou de um código. Arrastar uma arte da aba **Artes** até a miniatura também
-  serve.
-- Na mesma seção: **Escala** (1× a 16×, ou **Esticar**), **Alinhar** (9 posições) e **Opacidade**.
-- A Tela guarda uma **cópia** da arte: mudar ou apagar a arte depois não muda a Tela. **Atualizar da biblioteca**
-  traz a versão atual.
-- **Fundo em mosaico:** com nada escolhido, mude o **Fundo** para **Pixel art em mosaico** e escolha a arte na grade.
-  Ela se repete pela Tela inteira, por baixo das peças, com **Escala** (1× a 8×) e **Opacidade**.
-- A linha **Pixels** da base mostra quanto as artes da Tela somam e o teto.
+1. Clique em **Imagem** na lista de **Peças**, ou arraste a arte da aba **Artes** até a miniatura.
+2. Na aba **Estilo**, ajuste **Escala** (1× a 16×, ou **Esticar**), **Alinhar** e **Opacidade**.
 
-### Exportar e importar por código
+A Tela guarda uma **cópia** da arte: mudar ou apagar a arte depois não muda a Tela. **Atualizar da biblioteca** traz
+a versão atual. A linha **Pixels** da base mostra quanto as artes da Tela somam e o teto.
 
-Leve um layout ou uma arte para outro mundo, ou para um amigo, como texto.
+### Exportar e importar
 
 | Botão | O que faz |
 | --- | --- |
-| **Exportar** | Copia o código: na base (embaixo de **Aplicar layout**), do layout; na aba **Artes**, da arte escolhida. |
-| **Importar** | Lê o código copiado. Na base, aplica o layout no rascunho (**Ctrl+Z** desfaz); na aba **Artes**, cria uma arte nova. Um código de imagem (**WA-IMAGEM1**) vira um envio de imagem. |
-| **Copiar como texto** | Copia numa forma legível, para editar à mão ou pedir a uma IA. **Importar** lê as duas formas. |
+| **Exportar** | Copia o código do layout (na base) ou da arte escolhida (na aba **Artes**). |
+| **Importar** | Lê o código: aplica o layout (**Ctrl+Z** desfaz) ou cria uma arte nova. |
+| **Copiar como texto** | Uma forma legível, para editar à mão ou pedir a uma IA. **Importar** lê as duas. |
 
-- O layout leva as artes junto. As ligações a redes ou armazenamentos que você não tem saem: ligue de novo na aba
-  **Dado**.
-- Um código inválido mostra o aviso na barra de baixo, e nada muda.
-- Para gerar artes e Telas com uma IA, há um guia no GitHub do mod: `docs/guia-pixel-art-com-ia.md`.
+O layout leva as artes junto. Ligações a redes ou armazenamentos que você não tem saem: ligue de novo na aba **Dado**.
+Há um guia para gerar artes e Telas com IA no GitHub do mod: `docs/guia-pixel-art-com-ia.md`.
 
 ## Imagens e GIFs
 
-Além da pixel art, a Tela mostra fotos e GIFs animados de verdade, na parte **Imagens** da aba **Artes**.
+Na aba **Artes**, parte **Imagens**:
 
-1. Clique em **Enviar arquivo** e escolha um PNG, JPG ou GIF no computador. Ou copie um código **WA-IMAGEM1** e
-   clique em **Importar**.
-2. A imagem vai ao servidor e entra na sua biblioteca com o nome do arquivo. **Renomear** (ou dois cliques na linha)
-   muda o nome, e **Remover**, em dois cliques, tira da biblioteca.
-3. Arraste a imagem até a miniatura para criar uma **Imagem**, ou escolha-a na grade da aba **Estilo**: as imagens vêm
-   depois das artes, com o rótulo **Imagens**, e o GIF tem a marca ▶. O **Fundo em mosaico** também aceita imagens.
+1. Clique em **Enviar arquivo** e escolha um PNG, JPG ou GIF (ou importe um código **WA-IMAGEM1**).
+2. A imagem vai para o servidor e entra na sua biblioteca.
+3. Arraste-a até a miniatura, ou escolha-a na grade da aba **Estilo** (o GIF tem a marca ▶).
 
 | Limite | Padrão |
 | --- | --- |
@@ -253,30 +203,24 @@ Além da pixel art, a Tela mostra fotos e GIFs animados de verdade, na parte **I
 | GIF | Até **240** quadros |
 | Por Tela | Até **8** imagens diferentes |
 
-O servidor pode mudar esses números. A imagem é sempre um arquivo enviado e guardado no mundo, nunca um link da internet.
+O servidor pode mudar esses números. A imagem fica guardada no mundo, nunca é um link da internet. O GIF só toca
+quando alguém olha para a Tela.
 
-- **GIF:** toca no ritmo do arquivo, só quando alguém olha para a Tela. Duas Telas com o mesmo GIF tocam juntas.
-- **Copiar código:** põe a imagem na área de transferência como **WA-IMAGEM1**, para levar a outro mundo. O código de
-  um layout leva as imagens junto quando cabem; senão leva só as referências, que funcionam no mesmo servidor.
-- **Esconder as imagens dos outros:** na config do cliente (`config/wirelessautomate-client.toml`, seção `tv`),
-  `showOthersImages = false` troca as imagens enviadas por outros jogadores por um quadro cinza. As suas continuam.
-- **Operadores:** `/wa tela imagens` lista as imagens do mundo, com o tamanho, quem enviou e quantas Telas usam.
-  `/wa tela imagem remover <resumo>` tira uma imagem de todas as Telas, e `/wa tela imagem banir <jogador>` impede
-  alguém de enviar (`desbanir` desfaz). A seção `tv.images` da config do servidor desliga as imagens e limita quem envia
-  e o espaço.
+- **Esconder as imagens dos outros:** na config do cliente, `showOthersImages = false` troca as imagens de outros
+  jogadores por um quadro cinza.
+- **Operadores:** `/wa tela imagens` lista as imagens do mundo; `/wa tela imagem remover <resumo>` tira uma de todas
+  as Telas; `/wa tela imagem banir <jogador>` impede alguém de enviar (`desbanir` desfaz).
 
 ## Acesso
 
-Na aba **Acesso** (só o dono e os operadores a veem), dê a outros jogadores o direito de editar a Tela.
+Na aba **Acesso** (só o dono e os operadores a veem):
 
-1. Escreva o nome em **Convidar jogador…** e escolha uma sugestão, ou aperte **Enter**. Só vale quem já entrou no
-   servidor.
-2. Com o FTB Teams instalado, adicione um time em **Adicionar time…**.
-3. Para tirar alguém, clique duas vezes no **✕** da linha.
+1. Escreva o nome em **Convidar jogador…** e aperte **Enter**. Só vale quem já entrou no servidor.
+2. Com o FTB Teams, adicione um time em **Adicionar time…**.
+3. Para tirar alguém, clique duas vezes no **✕**.
 
-Quem está na lista edita como o dono: tamanho, layout e ligações, dentro das redes que cada um pode usar. As ligações
-que a Tela já tem ficam quando qualquer um salva, mesmo a uma rede que ele não usa; uma ligação nova só vale a uma rede
-de quem a faz. Ver a Tela continua liberado para todos.
+Quem está na lista edita como o dono, mas uma ligação nova só vale a uma rede de quem a faz. As ligações que a Tela já
+tem ficam quando qualquer um salva.
 
 ## Receita
 

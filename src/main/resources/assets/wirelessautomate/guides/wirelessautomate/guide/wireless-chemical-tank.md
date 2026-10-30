@@ -13,9 +13,8 @@ item_ids:
 
 <ItemImage id="wirelessautomate:storage_chemical_tank" scale="2" float="left" />
 
-The [Wireless Tank](wireless-tank.md) for **Mekanism chemicals** (gases, infuse types, pigments,
-slurries): many at once, within the tier's capacity. It only exists with Mekanism installed.
-Attached to a router on the **Chemicals** tab, a whole type moves at once.
+The [Wireless Tank](wireless-tank.md) for **Mekanism chemicals**, many at once. It only exists with Mekanism. On
+the router's **Chemicals** tab, a whole type moves at once.
 
 <br clear="all" />
 
@@ -25,14 +24,14 @@ Attached to a router on the **Chemicals** tab, a whole type moves at once.
   <Block id="wirelessautomate:storage_chemical_tank" x="4" y="0" z="0" p:tier="ultimate" />
   <Block id="wirelessautomate:router" x="4" y="1" z="0" p:facing="up" p:tier="ultimate" />
   <LineAnnotation from="0.5 1.5 0.5" to="4.5 1.5 0.5" color="#a46cff" thickness="0.08">
-    Chemical from one Tank to another through the Chemicals tab
+    From one Tank to another through the Chemicals tab
   </LineAnnotation>
   <IsometricCamera yaw="200" pitch="30" />
 </GameScene>
 
 ## Capacity
 
-The same as the [Tank](wireless-tank.md), in mB, all chemicals added up.
+The [Tank](wireless-tank.md)'s, in mB, all chemicals added up.
 
 | Tier | mB |
 | --- | --- |
@@ -49,14 +48,15 @@ The same as the [Tank](wireless-tank.md), in mB, all chemicals added up.
 
 ## Mekanism containers
 
-On the screen, with a Mekanism chemical tank or canister on the cursor: clicking a chemical fills
-the container with it, or empties it if it's already full; right click empties one. Shift + click
-a container in the inventory empties it into the Tank.
+| Gesture | What it does |
+| --- | --- |
+| **Click** a chemical, with a tank or canister on the cursor | Fills the container (or empties it, if full). |
+| **Right-click** | Empties one. |
+| **Shift + click** the container in the inventory | Empties it into the Tank. |
 
 ## Input filter
 
-The **Filter** button opens the chemical filter screen (by chemical or by mod); the **stock** means
-"store up to N mB".
+**Filter** opens the chemical filter (by chemical or by mod). The **stock** means "store up to N mB".
 
 ## Shared with the Chest
 

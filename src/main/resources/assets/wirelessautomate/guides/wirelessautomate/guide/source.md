@@ -9,27 +9,24 @@ navigation:
 
 # Ars Nouveau Source
 
-With **Ars Nouveau** installed, the router gets a **Source** tab. Without Ars, the tab doesn't show
-and the rest of the mod works the same.
+With **Ars Nouveau**, the router gets a **Source** tab. Without it, the tab is hidden.
+
+## How to use it
+
+Example: from the Sourcelinks to the Enchanting Apparatus.
+
+1. Near the Sourcelinks, a **Source Jar** with a router set to **Extract**, on the **Source** tab.
+2. Near the Ars machine, another Source Jar with a router set to **Insert**, on the same network.
+3. The Sourcelinks fill the first jar; the router carries the Source to the second, and the machine draws from it.
+
+The router also connects straight to Relays and the Imbuement Chamber. A
+[Wireless Source Tank](wireless-source-tank.md) holds far more than Source Jars and works the same.
 
 ## What works
 
 | Feature | Source |
 | --- | --- |
-| Mode, priority and redstone per face | Yes, like the other tabs. |
-| Network per face | Yes. |
+| Mode, priority, redstone and network | Yes. |
 | Configurator | Yes: the **Source** type on the wheel and the mouse wheel shortcut. |
-| Throughput | Per tier: Basic 100/s, Advanced 800/s, Elite 6,400/s, Emerald 51,200/s, Ultimate unlimited (full table on the [Router](router.md) page). |
-| Filter and Filter Card | No: Source has no types, like energy. |
-
-## Example: Source from the Sourcelinks to the Enchanting Apparatus
-
-| Step | What to do |
-| --- | --- |
-| **1** | Near the Sourcelinks, a **Source Jar** with a router on it, on the **Source** tab, set to **Extract**. |
-| **2** | Near the Enchanting Apparatus (or any Ars machine), another Source Jar with a router set to **Insert**, on the same network. |
-| **3** | The Sourcelinks fill the first jar; the router carries the Source to the second, and the machine draws from it. |
-
-The router also connects straight to Ars Relays and the Imbuement Chamber.
-
-Instead of Source Jars, a [Wireless Source Tank](wireless-source-tank.md) holds far more and Ars machines draw from it the same way.
+| Throughput | Basic 100/s, Advanced 800/s, Elite 6,400/s, Emerald 51,200/s, Ultimate unlimited ([Router](router.md)). |
+| Filter and Filter Card | No: Source has no types. |

@@ -9,7 +9,7 @@ navigation:
 
 # Primeiros passos
 
-Vamos levar itens de um baú para outro, sem canos. Leva um minuto.
+Itens de um baú para outro, sem canos, em um minuto.
 
 <GameScene zoom="4" interactive={true}>
   <Block id="minecraft:chest" x="0" y="0" z="0" />
@@ -28,19 +28,18 @@ Vamos levar itens de um baú para outro, sem canos. Leva um minuto.
   <IsometricCamera yaw="200" pitch="30" />
 </GameScene>
 
-| Passo | O que fazer |
-| --- | --- |
-| **1** | Faça dois roteadores (receita abaixo). |
-| **2** | Clique com um roteador em qualquer face do baú A. Ele fica **preso** ao baú, ainda **sem rede**. Faça o mesmo no baú B. |
-| **3** | Na tela do roteador A, na aba **Itens**, escolha a face **Cima** e, na linha **Rede**, crie uma rede e escolha-a. Faça o mesmo no roteador B, escolhendo a mesma rede. |
-| **4** | No roteador A, na face **Cima**, modo **Extrai**. |
-| **5** | No roteador B, mesma face, modo **Insere**. |
-| **6** | Coloque itens no baú A: eles aparecem no baú B. |
+## Como fazer
 
-Depois de configurar o primeiro roteador de uma linha, use o [Configurador](configurator.md) para
-copiar a configuração (e as redes) para os outros.
+1. Faça dois roteadores (receita abaixo).
+2. Clique com um roteador no baú A e com o outro no baú B. Eles ficam presos, ainda sem rede.
+3. No roteador A, aba **Itens**, face **Cima**: na linha **Rede**, crie uma rede e escolha-a.
+4. No roteador B, mesma face, escolha a mesma rede.
+5. Ponha a face **Cima** em **Extrai** no A e em **Insere** no B.
+6. Ponha itens no baú A: eles aparecem no baú B.
 
-As telas do mod têm um botão com uma lua no canto de cima, à direita: ele troca todas para o modo escuro (e o sol volta ao claro).
+O [Configurador](configurator.md) copia a configuração, com as redes, para outros roteadores.
+
+O botão de lua, no canto de cima à direita, põe as telas no modo escuro.
 
 ## Receitas
 
@@ -50,8 +49,8 @@ As telas do mod têm um botão com uma lua no canto de cima, à direita: ele tro
 
 | Quero... | Leia |
 | --- | --- |
-| Entender cada parte da tela do roteador | [Roteador Wireless](router.md) |
+| Entender a tela | [Roteador Wireless](router.md) |
 | Mandar só alguns itens | [Filtros](filters.md) |
-| Separar fábricas diferentes | [Redes](networks.md) |
-| Mais vazão ou mais alcance | [Cartões de Upgrade](upgrade-cards.md) |
-| Saber por que não funcionou | [Problemas comuns](troubleshooting.md) |
+| Separar fábricas | [Redes](networks.md) |
+| Mais vazão ou alcance | [Cartões de Upgrade](upgrade-cards.md) |
+| Não funcionou | [Problemas comuns](troubleshooting.md) |

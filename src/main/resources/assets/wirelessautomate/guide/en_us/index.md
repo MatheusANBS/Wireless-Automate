@@ -55,9 +55,13 @@ other, with no pipes.
 
 ## This guide
 
-You get this book the first time you join the world; it's also in the creative tab. To make
-another: book + redstone, in a crafting table. With the mouse over one of the mod's items (inventory
-or JEI), hold **G** to open its page.
+You get this book the first time you join the world; it's also in the creative tab. Right-click
+while holding the book to open it. To make another: book + redstone, in a crafting table.
+
+- **Search:** on the cover page, just start typing (or press **Ctrl + F**). **Enter** opens the
+  first result and the ↑ ↓ arrows move through the others.
+- **G key:** with the mouse over one of the mod's items (in the inventory, in a chest or in JEI),
+  press **G** (the default key; you can change it in Controls) and the book opens on its page.
 
 <Recipe id="wirelessautomate:guide" />
 

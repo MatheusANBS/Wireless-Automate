@@ -7,6 +7,7 @@ import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import java.util.Arrays;
+import java.util.List;
 import java.util.function.LongSupplier;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
@@ -15,7 +16,8 @@ import org.jetbrains.annotations.Nullable;
  * A Compactação de um Baú: cada inserção de fora de um item de cadeia (sem componentes) suja a cadeia, e no fim do
  * tick ({@link #convertDirty}) cada cadeia suja vai para o alvo dela, O(formas) por cadeia. A conversão é movimento
  * interno do {@link ItemStorage} ({@code insertInternal}/{@code extractInternal}): não passa pelo filtro de entrada,
- * não conta no vigia e não suja a cadeia de novo.
+ * não conta no vigia e não suja a cadeia de novo. Uma cadeia com variantes ({@link VariantGroup}) leva o grupo
+ * inteiro: as outras variantes viram a preferida 1 por 1 antes da conversão, O(formas × variantes).
  *
  * <p>Sem o upgrade as regras são nulas, o {@link ItemStorage} não tem ouvinte e nada aqui roda. O conjunto das
  * cadeias sujas é criado na primeira inserção de cadeia. Os ids das cadeias só valem numa geração do
@@ -179,24 +181,33 @@ public final class ChestCompacting implements ItemStorage.InsertListener {
         for (IntIterator it = pending.iterator(); it.hasNext(); ) {
             CompactingChain chain = chains.byId(it.nextInt());
             if (chain != null) {
-                convert(chain);
+                convert(chains, chain);
             }
         }
         // Sem trim por tick: o conjunto volta a crescer na próxima inserção.
         pending.clear();
     }
 
-    private void convert(CompactingChain chain) {
+    /**
+     * Leva a cadeia ao alvo. Com variantes, a cadeia suja processa o grupo dela: primeiro as outras variantes viram a
+     * preferida, nível a nível e 1 por 1, e depois a preferida é convertida.
+     */
+    private void convert(CompactingChains chains, CompactingChain dirtyChain) {
+        VariantGroup group = chains.groupOf(dirtyChain);
+        CompactingChain chain = group == null ? dirtyChain : rules.preferredOf(group);
         int target = rules.targetLevel(chain);
         if (target < 0) {
             return;
         }
         long cap = capacity.getAsLong();
-        long total = storage.total();
         // Acima da capacidade (o tier ou a config encolheu), tirar e pôr de volta poderia não caber: espera espaço.
-        if (cap > 0 && total > cap) {
+        if (cap > 0 && storage.total() > cap) {
             return;
         }
+        if (group != null) {
+            swapInto(group, chain);
+        }
+        long total = storage.total();
         ItemStack[] keys = chain.keys();
         long[] counts = new long[keys.length];
         for (int i = 0; i < keys.length; i++) {
@@ -215,6 +226,37 @@ public final class ChestCompacting implements ItemStorage.InsertListener {
                         chain.base());
                 restore(keys, counts);
                 return;
+            }
+        }
+    }
+
+    /**
+     * Troca as outras variantes do grupo pela preferida, nível a nível e 1 por 1, por dentro (sem admissão nem vigia).
+     * O total não muda: tira e põe a mesma quantidade, então sempre cabe; se o pôr falhar, devolve o que tirou.
+     * O(formas × variantes), sem alocar.
+     */
+    private void swapInto(VariantGroup group, CompactingChain preferred) {
+        ItemStack[] into = preferred.keys();
+        List<CompactingChain> variants = group.chains();
+        for (int v = 0; v < variants.size(); v++) {
+            CompactingChain variant = variants.get(v);
+            if (variant == preferred) {
+                continue;
+            }
+            ItemStack[] from = variant.keys();
+            for (int level = 0; level < from.length; level++) {
+                long moved = storage.extractInternal(from[level], storage.count(from[level]));
+                if (moved <= 0) {
+                    continue;
+                }
+                long put = storage.insertInternal(into[level], moved);
+                if (put < moved) {
+                    WirelessAutomate.LOGGER.warn("Compactação: a troca de {} por {} não coube; o resto volta como estava",
+                            from[level].getItem(), into[level].getItem());
+                    storage.extractInternal(into[level], put);
+                    storage.insertInternal(from[level], moved);
+                    return;
+                }
             }
         }
     }
@@ -239,21 +281,40 @@ public final class ChestCompacting implements ItemStorage.InsertListener {
     }
 
     /**
-     * Quanto a cadeia da chave vale na unidade dela, para o limite de estoque; −1 se a chave não é de cadeia, tem
-     * componentes ou a cadeia não é convertida (sem alvo). O(formas), sem alocar.
+     * Quanto a cadeia da chave vale na unidade dela, para o limite de estoque, com as variantes do grupo dela somadas
+     * no mesmo nível; −1 se a chave não é de cadeia, tem componentes ou a cadeia não é convertida (sem alvo).
+     * O(formas × variantes), sem alocar.
      */
     public long stockCount(ItemStack key) {
         if (rules == null || !key.isComponentsPatchEmpty()) {
             return -1;
         }
-        CompactingChain chain = CompactingChains.get().chainOf(key.getItem());
-        if (chain == null || rules.targetLevel(chain) < 0) {
+        CompactingChains chains = CompactingChains.get();
+        CompactingChain chain = chains.chainOf(key.getItem());
+        if (chain == null) {
+            return -1;
+        }
+        VariantGroup group = chains.groupOf(chain);
+        if (rules.targetLevel(group == null ? chain : rules.preferredOf(group)) < 0) {
             return -1;
         }
         ItemStack[] keys = chain.keys();
         long[] counts = scratch(keys.length);
         for (int i = 0; i < keys.length; i++) {
             counts[i] = storage.count(keys[i]);
+        }
+        if (group != null) {
+            // As variantes têm as mesmas formas e fatores: o nível i de uma soma com o nível i da chave.
+            List<CompactingChain> variants = group.chains();
+            for (int v = 0; v < variants.size(); v++) {
+                ItemStack[] other = variants.get(v).keys();
+                if (other == keys) {
+                    continue;
+                }
+                for (int i = 0; i < keys.length; i++) {
+                    counts[i] += storage.count(other[i]);
+                }
+            }
         }
         return CompactingMath.equivalent(counts, chain.factors(), chain.levelOf(key.getItem()));
     }

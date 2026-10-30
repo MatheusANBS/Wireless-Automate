@@ -65,13 +65,13 @@ public final class ChestCompactingGameTests {
     private static final BlockPos B = new BlockPos(2, 1, 2);
     private static final CompactingRules COMPRESS = CompactingRules.DEFAULT.withMode(CompactingMode.COMPRESS);
 
-    private static StorageChestBlockEntity chest(GameTestHelper helper, BlockPos pos, RouterTier tier) {
+    static StorageChestBlockEntity chest(GameTestHelper helper, BlockPos pos, RouterTier tier) {
         helper.setBlock(pos, ModBlocks.STORAGE_CHEST.get().defaultBlockState().setValue(RouterBlock.TIER, tier));
         return helper.getBlockEntity(pos);
     }
 
     /** Põe o Upgrade de Compactação com as regras no primeiro slot, como a tela poria. */
-    private static void putUpgrade(StorageChestBlockEntity chest, CompactingRules rules) {
+    static void putUpgrade(StorageChestBlockEntity chest, CompactingRules rules) {
         ItemStack stack = new ItemStack(ModItems.COMPACTING_UPGRADE.get());
         stack.set(ModDataComponents.COMPACTING_RULES.get(), rules);
         chest.upgrades().setUpgrade(0, stack);
@@ -81,7 +81,7 @@ public final class ChestCompactingGameTests {
         return CompactingChains.get().chainOf(item);
     }
 
-    private static long count(StorageChestBlockEntity chest, Item item) {
+    static long count(StorageChestBlockEntity chest, Item item) {
         return chest.storage().count(new ItemStack(item));
     }
 

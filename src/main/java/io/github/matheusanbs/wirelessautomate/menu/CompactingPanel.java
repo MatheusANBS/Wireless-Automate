@@ -11,9 +11,12 @@ import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingChain;
 import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingChains;
 import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingMode;
 import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingRules;
+import io.github.matheusanbs.wirelessautomate.storage.upgrade.VariantGroup;
 import it.unimi.dsi.fastutil.ints.IntList;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -95,13 +98,18 @@ public final class CompactingPanel {
         CompactingRules rules = compacting.rules() == null ? CompactingRules.DEFAULT : compacting.rules();
         CompactingChains chains = CompactingChains.get();
         IntList present = compacting.presentChains();
-        int count = Math.min(present.size(), CompactingStatePayload.MAX_ROWS);
-        List<CompactingStatePayload.Row> rows = new ArrayList<>(count);
-        for (int i = 0; i < count; i++) {
+        List<CompactingStatePayload.Row> rows = new ArrayList<>(Math.min(present.size(), CompactingStatePayload.MAX_ROWS));
+        // Um grupo de variantes é uma linha só, a da preferida, na posição da primeira variante presente.
+        Set<CompactingChain> shown = new HashSet<>();
+        for (int i = 0; i < present.size() && rows.size() < CompactingStatePayload.MAX_ROWS; i++) {
             CompactingChain chain = chains.byId(present.getInt(i));
-            if (chain != null) {
-                rows.add(new CompactingStatePayload.Row(List.of(chain.forms()), rules.targetLevel(chain),
-                        rules.hasOwn(chain)));
+            if (chain == null) {
+                continue;
+            }
+            VariantGroup group = chains.groupOf(chain);
+            CompactingChain row = group == null ? chain : rules.preferredOf(group);
+            if (shown.add(row)) {
+                rows.add(new CompactingStatePayload.Row(List.of(row.forms()), rules.targetLevel(row), rules.hasOwn(row)));
             }
         }
         return new CompactingStatePayload(menu.containerId, rules.mode(), rows);
@@ -121,7 +129,7 @@ public final class CompactingPanel {
      * Servidor: aplica a mudança do cliente. Recusa (e não muda nada) sem o menu do Baú aberto com esse
      * {@code containerId}, com o menu fora de alcance, sem o Upgrade de Compactação, com o modo fora do alcance do
      * enum, com um item que não pertence a uma cadeia do índice atual ou com um alvo que passaria do
-     * {@link CompactingRules#MAX_TARGETS}.
+     * {@link CompactingRules#MAX_TARGETS} (somado às preferidas).
      *
      * @return se foi aceita
      */
@@ -170,7 +178,7 @@ public final class CompactingPanel {
                 return false;
             }
             next = rules.withTarget(chain, payload.kind() == CompactingRulePayload.Kind.TARGET ? item : null);
-            if (next.targets().size() > CompactingRules.MAX_TARGETS) {
+            if (next.entries() > CompactingRules.MAX_TARGETS) {
                 return false;
             }
         }

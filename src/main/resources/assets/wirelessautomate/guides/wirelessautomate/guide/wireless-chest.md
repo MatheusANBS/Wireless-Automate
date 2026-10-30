@@ -90,6 +90,41 @@ screen.
 The button's dot lights up in the tier color when there's a filter. Filter Cards work too: import
 and export them from the filter screen.
 
+## Upgrades
+
+The chest has **two upgrade slots**, to the left of the list. Each upgrade fits once. Click a slot
+with the upgrade on the cursor to place it; click the filled slot to open its panel, to the right
+of the list.
+
+| Upgrade | Recipe |
+| --- | --- |
+| <ItemImage id="wirelessautomate:crafting_upgrade" /> **Crafting Upgrade** | Crafting table + Signal Crystal. |
+| <ItemImage id="wirelessautomate:compacting_upgrade" /> **Compacting Upgrade** | Piston + Signal Crystal + iron block (shapeless). |
+
+### Crafting
+
+A 3×3 crafting table inside the chest. Set up the recipe in the grid and take the result.
+
+- The grid **refills itself** from what the chest has.
+- **Shift** + click the result: repeats the recipe up to one stack and sends it to your inventory.
+- **Return**: the grid goes back into the chest.
+- In **JEI**, the **+** button sets up the recipe from the chest first, then your inventory.
+
+### Compacting
+
+It packs and unpacks item chains by itself: nugget, ingot, block; or cobblestone up to
+AllTheCompressed's 9x. A chain only counts if the crafting table can also undo it. Enchanted or
+named items don't compact.
+
+1. Placing the upgrade changes nothing: the mode starts **Off**.
+2. In the panel, pick the mode for all chains: **Compress** (the highest form) or **Decompress** (the base).
+3. For a single chain, use the arrows or the wheel on its row; click the icon to pick the form from a list. **Global** goes back to the general mode.
+
+Decompressing converts **only what fits** in the chest; the rest stays in the high form, nothing is lost.
+The router only sees the stored form: to pull ingots, leave the chain's target on ingot. The **Stock**
+limit of a chain item counts the whole chain (11 blocks and 1 ingot are worth 100 ingots). With
+Compacting, the crafting grid steps down one form when the exact item is missing.
+
 ## Break and carry
 
 Break the chest: the item takes **all the contents and the filter** with it, and the tooltip shows

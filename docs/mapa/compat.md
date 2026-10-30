@@ -21,3 +21,7 @@ Source do Ars Nouveau (só a API dele, em `ArsSources`: a capability `ars_nouvea
 ## `compat/sodium/`
 
 `SodiumSprites`: ponte por reflexão (sem `compileOnly`) para o `SpriteUtil` público do Sodium (0.6.9 ou mais novo). O Sodium só anima a textura marcada como ativa no quadro; a Tela de Sinal desenha o Ícone animado só a cada 2 ticks num framebuffer, então `TvCanvases.onFrame` marca a cada quadro as texturas dos Ícones animados à vista (`TvCanvas.sprites`, juntadas pelo `TvPaintIcon`). `AVAILABLE` é falso sem o Sodium ou sem a API, e nada roda
+
+## `compat/jei/ChestCraftTransfer`
+
+O "+" do JEI numa receita de mesa monta a grade da Mesa do Baú (upgrade de Mesa) puxando do Baú e depois do inventário; o trabalho é no servidor (`ChestCraftFillPayload`, `menu/ChestCraftFill`). O arrastar e o clique do JEI real só se testam à mão.

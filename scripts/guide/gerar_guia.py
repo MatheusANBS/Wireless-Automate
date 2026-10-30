@@ -1799,6 +1799,41 @@ decide o que pode **entrar** no Baú, por qualquer caminho: roteador, funil, out
 A bolinha do botão acende na cor do tier quando há um filtro. Cartões de Filtro também servem:
 importe e exporte pela tela do filtro.
 
+## Upgrades
+
+O Baú tem **dois slots de upgrade**, à esquerda da lista. Cada upgrade entra uma vez só. Clique
+num slot com o upgrade no cursor para pôr; clique no slot ocupado para abrir o painel dele, à
+direita da lista.
+
+| Upgrade | Receita |
+| --- | --- |
+| ''' + item('crafting_upgrade') + ''' **Upgrade de Mesa de Trabalho** | Mesa de trabalho + Cristal de Sinal. |
+| ''' + item('compacting_upgrade') + ''' **Upgrade de Compactação** | Pistão + Cristal de Sinal + bloco de ferro (sem forma). |
+
+### Mesa de Trabalho
+
+Uma mesa 3×3 dentro do Baú. Monte a receita na grade e pegue o resultado.
+
+- A grade **se repõe sozinha** com o que o Baú tem.
+- **Shift** + clique no resultado: repete a receita até uma pilha e manda para o inventário.
+- **Devolver**: a grade volta para o Baú.
+- No **JEI**, o botão **+** monta a receita puxando do Baú e depois do inventário.
+
+### Compactação
+
+Junta e separa sozinha as cadeias de itens: pepita, lingote, bloco; ou pedregulho até o 9x do
+AllTheCompressed. Só entra a cadeia que a mesa de trabalho também desfaz. Itens com encantamento ou
+nome não compactam.
+
+1. Pôr o upgrade não muda nada: o modo começa **Desligada**.
+2. No painel, escolha o modo para todas as cadeias: **Compactar** (a forma mais alta) ou **Descompactar** (a base).
+3. Para uma cadeia só, use as setas ou a rodinha na linha dela; clique no ícone para escolher a forma numa lista. **Global** volta ao modo geral.
+
+Descompactar converte **só o que cabe** no Baú; o resto fica na forma alta, sem perder nada. O
+roteador vê só a forma guardada: para tirar lingotes, deixe o alvo da cadeia em lingote. O limite de
+**Estoque** de um item da cadeia conta a cadeia inteira (11 blocos e 1 lingote valem 100 lingotes).
+Com a Compactação, a Mesa desce uma forma quando falta o item exato.
+
 ## Quebrar e levar
 
 Quebre o Baú: o item leva **todo o conteúdo e o filtro**, e o tooltip mostra o total e os tipos.
@@ -1873,6 +1908,41 @@ screen.
 
 The button's dot lights up in the tier color when there's a filter. Filter Cards work too: import
 and export them from the filter screen.
+
+## Upgrades
+
+The chest has **two upgrade slots**, to the left of the list. Each upgrade fits once. Click a slot
+with the upgrade on the cursor to place it; click the filled slot to open its panel, to the right
+of the list.
+
+| Upgrade | Recipe |
+| --- | --- |
+| ''' + item('crafting_upgrade') + ''' **Crafting Upgrade** | Crafting table + Signal Crystal. |
+| ''' + item('compacting_upgrade') + ''' **Compacting Upgrade** | Piston + Signal Crystal + iron block (shapeless). |
+
+### Crafting
+
+A 3×3 crafting table inside the chest. Set up the recipe in the grid and take the result.
+
+- The grid **refills itself** from what the chest has.
+- **Shift** + click the result: repeats the recipe up to one stack and sends it to your inventory.
+- **Return**: the grid goes back into the chest.
+- In **JEI**, the **+** button sets up the recipe from the chest first, then your inventory.
+
+### Compacting
+
+It packs and unpacks item chains by itself: nugget, ingot, block; or cobblestone up to
+AllTheCompressed's 9x. A chain only counts if the crafting table can also undo it. Enchanted or
+named items don't compact.
+
+1. Placing the upgrade changes nothing: the mode starts **Off**.
+2. In the panel, pick the mode for all chains: **Compress** (the highest form) or **Decompress** (the base).
+3. For a single chain, use the arrows or the wheel on its row; click the icon to pick the form from a list. **Global** goes back to the general mode.
+
+Decompressing converts **only what fits** in the chest; the rest stays in the high form, nothing is lost.
+The router only sees the stored form: to pull ingots, leave the chain's target on ingot. The **Stock**
+limit of a chain item counts the whole chain (11 blocks and 1 ingot are worth 100 ingots). With
+Compacting, the crafting grid steps down one form when the exact item is missing.
 
 ## Break and carry
 

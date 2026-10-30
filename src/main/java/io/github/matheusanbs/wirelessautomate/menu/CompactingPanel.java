@@ -30,7 +30,7 @@ import org.jetbrains.annotations.Nullable;
  * com o painel aberto o {@link #broadcast()} monta e manda o {@link CompactingStatePayload}, e só quando a versão do
  * {@link ChestCompacting} muda (as regras ou as cadeias presentes). As mudanças do cliente chegam como
  * {@link CompactingRulePayload}, e o servidor as valida ({@link #handle}). Cliente: guarda o último estado recebido
- * ({@link #state()}), que some com o menu.
+ * ({@link #state()}), que some com o menu; o servidor guarda o último montado.
  */
 public final class CompactingPanel {
     /** Chave de envio de "sem Upgrade de Compactação": diferente de qualquer versão. */
@@ -59,7 +59,7 @@ public final class CompactingPanel {
         return sentStates;
     }
 
-    /** Cliente: o último estado recebido, ou {@code null}. */
+    /** Cliente: o último estado recebido; servidor: o último montado (para os GameTests); ou {@code null}. */
     public @Nullable CompactingStatePayload state() {
         return state;
     }
@@ -88,6 +88,7 @@ public final class CompactingPanel {
         sentStates++;
         CompactingStatePayload payload = active ? build(compacting)
                 : new CompactingStatePayload(menu.containerId, CompactingMode.OFF, List.of());
+        state = payload;
         // Jogadores falsos (GameTests, mods de automação) não negociam os canais do mod.
         if (viewer.connection != null && viewer.connection.hasChannel(payload)) {
             PacketDistributor.sendToPlayer(viewer, payload);
@@ -108,11 +109,33 @@ public final class CompactingPanel {
             }
             VariantGroup group = chains.groupOf(chain);
             CompactingChain row = group == null ? chain : rules.preferredOf(group);
-            if (shown.add(row)) {
-                rows.add(new CompactingStatePayload.Row(List.of(row.forms()), rules.targetLevel(row), rules.hasOwn(row)));
+            if (!shown.add(row)) {
+                continue;
             }
+            List<Item> variants = group == null ? List.of() : variantBases(group, row);
+            rows.add(new CompactingStatePayload.Row(List.of(row.forms()), rules.targetLevel(row), rules.hasOwn(row),
+                    variants, Math.max(0, variants.indexOf(row.base()))));
         }
         return new CompactingStatePayload(menu.containerId, rules.mode(), rows);
+    }
+
+    /**
+     * As bases das variantes do grupo, na ordem dele, até {@link CompactingStatePayload.Row#MAX_VARIANTS}; a preferida
+     * entra sempre, mesmo depois do teto (no lugar da última).
+     */
+    private static List<Item> variantBases(VariantGroup group, CompactingChain preferred) {
+        List<CompactingChain> chains = group.chains();
+        int max = CompactingStatePayload.Row.MAX_VARIANTS;
+        List<Item> bases = new ArrayList<>(Math.min(chains.size(), max));
+        boolean hasPreferred = false;
+        for (int i = 0; i < chains.size() && bases.size() < max; i++) {
+            CompactingChain chain = chains.get(i);
+            if (chain == preferred || hasPreferred || bases.size() < max - 1) {
+                bases.add(chain.base());
+                hasPreferred |= chain == preferred;
+            }
+        }
+        return bases;
     }
 
     /** Cliente: o pacote do servidor; vale só para o menu aberto com esse {@code containerId}. */
@@ -128,8 +151,9 @@ public final class CompactingPanel {
     /**
      * Servidor: aplica a mudança do cliente. Recusa (e não muda nada) sem o menu do Baú aberto com esse
      * {@code containerId}, com o menu fora de alcance, sem o Upgrade de Compactação, com o modo fora do alcance do
-     * enum, com um item que não pertence a uma cadeia do índice atual ou com um alvo que passaria do
-     * {@link CompactingRules#MAX_TARGETS} (somado às preferidas).
+     * enum, com um item que não pertence a uma cadeia do índice atual, com uma preferida que não é a forma base de uma
+     * cadeia com variantes ou com um alvo ou preferida que passaria do {@link CompactingRules#MAX_TARGETS} (os dois
+     * somados).
      *
      * @return se foi aceita
      */
@@ -171,6 +195,17 @@ public final class CompactingPanel {
                 return false;
             }
             next = rules.withMode(CompactingMode.ALL[payload.mode()]);
+        } else if (payload.kind() == CompactingRulePayload.Kind.PREFER) {
+            Item base = payload.item().orElse(null);
+            CompactingChain chain = base == null ? null : CompactingChains.get().chainOf(base);
+            VariantGroup group = chain == null || chain.base() != base ? null : CompactingChains.get().groupOf(chain);
+            if (group == null) {
+                return false;
+            }
+            next = rules.withPreferred(group, chain);
+            if (next.entries() > CompactingRules.MAX_TARGETS) {
+                return false;
+            }
         } else {
             Item item = payload.item().orElse(null);
             CompactingChain chain = item == null ? null : CompactingChains.get().chainOf(item);

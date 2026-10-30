@@ -67,6 +67,11 @@ public final class UpgradePanels {
             public void clear(Item anyForm) {
                 send(CompactingRulePayload.target(menu.containerId, CompactingRulePayload.Kind.CLEAR, anyForm));
             }
+
+            @Override
+            public void prefer(Item base) {
+                send(CompactingRulePayload.target(menu.containerId, CompactingRulePayload.Kind.PREFER, base));
+            }
         });
     }
 
@@ -287,6 +292,14 @@ public final class UpgradePanels {
 
     public int[] compactingTargetCenter(int row) {
         return compacting.targetCenter(row);
+    }
+
+    public int compactingVariants(int row) {
+        return compacting.variantCount(row);
+    }
+
+    public int[] compactingVariantCenter(int row) {
+        return compacting.variantCenter(row);
     }
 
     public boolean pickerOpen() {

@@ -6,6 +6,7 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eUi.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
 import io.github.matheusanbs.wirelessautomate.GuiTheme;
+import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
@@ -25,14 +26,18 @@ import io.github.matheusanbs.wirelessautomate.storage.upgrade.ChestUpgrades;
 import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingChain;
 import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingChains;
 import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingRules;
+import io.github.matheusanbs.wirelessautomate.storage.upgrade.VariantGroup;
 import java.util.List;
 import java.util.UUID;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
@@ -41,7 +46,9 @@ import net.minecraft.world.level.block.Blocks;
  * Os upgrades do Baú no e2e: um Baú com a Mesa de Trabalho e a Compactação, a coluna dos slots, o painel da Mesa com
  * uma picareta montada, o painel da Compactação com as cadeias vanilla (ferro, ouro e diamante; com o AllTheCompressed
  * no cliente de dev, também as do pedregulho e da terra) e o seletor de formas, que manda a regra ao servidor. Em
- * cada painel, nenhum texto cortado. Com as variantes, de novo no tema escuro e em português.
+ * cada painel, nenhum texto cortado. Com o Modern Industrialization e o Occultism no cliente de dev, a prata crua dos
+ * dois é uma linha só, e o botão do mod troca a variante preferida no servidor. Com as variantes, de novo no tema
+ * escuro e em português.
  */
 final class E2eChestUpgradeSteps {
     private E2eChestUpgradeSteps() {
@@ -49,6 +56,18 @@ final class E2eChestUpgradeSteps {
 
     private static BlockPos chestPos = BlockPos.ZERO;
     private static GuiTheme themeBefore = GuiTheme.LIGHT;
+    /** A prata crua de cada mod, ou {@link net.minecraft.world.item.Items#AIR} sem o mod no cliente de dev. */
+    private static final Item MI_SILVER = item("modern_industrialization:raw_silver");
+    private static final Item OCCULTISM_SILVER = item("occultism:raw_silver");
+
+    private static Item item(String id) {
+        return BuiltInRegistries.ITEM.get(ResourceLocation.parse(id));
+    }
+
+    /** Os dois mods estão no cliente de dev: a linha da prata tem variantes. */
+    private static boolean silverVariants() {
+        return MI_SILVER != Items.AIR && OCCULTISM_SILVER != Items.AIR;
+    }
 
     static void upgradeSteps(List<Step> list) {
         UUID playerId = Minecraft.getInstance().player.getUUID();
@@ -92,6 +111,10 @@ final class E2eChestUpgradeSteps {
             storage.insert(new ItemStack(Items.COBBLESTONE), 1_000, false);
             storage.insert(new ItemStack(Items.DIRT), 500, false);
             storage.insert(new ItemStack(Items.STICK), 64, false);
+            if (silverVariants()) {
+                storage.insert(new ItemStack(MI_SILVER), 40, false);
+                storage.insert(new ItemStack(OCCULTISM_SILVER), 40, false);
+            }
             ChestUpgrades upgrades = chest.upgrades();
             upgrades.setUpgrade(0, new ItemStack(ModItems.CRAFTING_UPGRADE.get()));
             upgrades.setUpgrade(1, new ItemStack(ModItems.COMPACTING_UPGRADE.get()));
@@ -157,7 +180,49 @@ final class E2eChestUpgradeSteps {
             return null;
         }), () -> panels().compactingTarget(panels().compactingRowOf(Items.IRON_INGOT)) < 0,
                 () -> "alvo do ferro na tela " + panels().compactingTarget(panels().compactingRowOf(Items.IRON_INGOT))));
+        if (silverVariants()) {
+            variantSteps(list, suffix);
+        } else {
+            WirelessAutomate.LOGGER.warn("E2E: sem o Modern Industrialization e o Occultism, a variante da prata fica de fora");
+        }
         list.add(close("Upgrades" + suffix + ": fechar"));
+    }
+
+    /**
+     * A prata crua dos dois mods é uma linha só, a do Modern Industrialization (a primeira base em ordem alfabética),
+     * com o botão do mod; o clique passa para a do Occultism, no servidor e na tela. Depois a regra volta ao padrão.
+     */
+    private static void variantSteps(List<Step> list, String suffix) {
+        list.add(new Step("Upgrades" + suffix + ": a prata crua é uma linha com o botão do mod", STEP_TIMEOUT_MS, () -> {
+            int row = panels().compactingRowOf(MI_SILVER);
+            if (row >= 0) {
+                int[] button = panels().compactingVariantCenter(row);
+                moveMouse(button[0], button[1]);
+            }
+        }, () -> stepTicks >= 4 && panels().compactingRowOf(MI_SILVER) >= 0 && panels().compactingRowOf(OCCULTISM_SILVER) < 0
+                && panels().compactingVariants(panels().compactingRowOf(MI_SILVER)) == 2,
+                () -> "MI na linha " + panels().compactingRowOf(MI_SILVER) + ", Occultism na "
+                        + panels().compactingRowOf(OCCULTISM_SILVER)));
+        list.add(noClip("Upgrades" + suffix + ": variante"));
+        list.add(capture("armazenamento-upgrade-variante" + suffix));
+        list.add(new Step("Upgrades" + suffix + ": o botão troca a variante", STEP_TIMEOUT_MS, () -> {
+            int[] button = panels().compactingVariantCenter(panels().compactingRowOf(MI_SILVER));
+            click(screen(), button[0], button[1]);
+        }, () -> panels().compactingRowOf(OCCULTISM_SILVER) >= 0 && panels().compactingRowOf(MI_SILVER) < 0
+                && onServer(server -> preferredSilver(server) == OCCULTISM_SILVER),
+                () -> "no servidor " + onServer(server -> String.valueOf(preferredSilver(server)))));
+        list.add(noClip("Upgrades" + suffix + ": variante trocada"));
+        list.add(new Step("Upgrades" + suffix + ": a variante volta ao padrão", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            chest(server).upgrades().setUpgrade(1, new ItemStack(ModItems.COMPACTING_UPGRADE.get()));
+            return null;
+        }), () -> panels().compactingRowOf(MI_SILVER) >= 0, () -> "MI na linha " + panels().compactingRowOf(MI_SILVER)));
+    }
+
+    /** Na thread do servidor: a base da variante preferida da prata crua. */
+    private static Item preferredSilver(MinecraftServer server) {
+        CompactingChain chain = CompactingChains.get().chainOf(MI_SILVER);
+        VariantGroup group = chain == null ? null : CompactingChains.get().groupOf(chain);
+        return group == null ? Items.AIR : rules(server).preferredOf(group).base();
     }
 
     /**

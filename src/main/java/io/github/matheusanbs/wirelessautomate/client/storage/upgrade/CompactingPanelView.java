@@ -18,7 +18,6 @@ import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingMode;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -27,8 +26,9 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * O painel da Compactação, à direita do Baú: o modo global (três botões) e a lista das cadeias que têm item no Baú,
- * uma {@link CompactingRow} de 20 por cadeia. Rodinha sobre a forma alvo anda uma forma; clique nela abre o
- * {@link ChainPicker}; a rodinha no resto da lista e a barra fina rolam. As linhas, os nomes e as medidas são
+ * uma {@link CompactingRow} de 20 por cadeia (um grupo de variantes é uma linha só, com o botão do mod que troca a
+ * preferida). Rodinha sobre a forma alvo anda uma forma; clique nela abre o {@link ChainPicker}; a rodinha no resto da
+ * lista e a barra fina rolam. As linhas, os nomes e as medidas são
  * montados quando o estado chega ({@link #sync}) ou a tela muda de tamanho, nunca no {@code render}; a lista desenha
  * só as linhas à vista. As mudanças vão ao anfitrião ({@link Actions}) e já aparecem na linha, até o estado novo do
  * servidor chegar.
@@ -41,6 +41,9 @@ final class CompactingPanelView {
         void target(Item form);
 
         void clear(Item anyForm);
+
+        /** A variante cuja forma base é {@code base} vira a preferida do grupo. */
+        void prefer(Item base);
     }
 
     /** A linha inteira ({@link CompactingRow#END_X}), a barra de rolagem e as margens. */
@@ -283,7 +286,9 @@ final class CompactingPanelView {
         }
         CompactingRow row = rows.get(index);
         int ry = rowY(index);
-        if (on(mouseX, mouseY, x, ry, PREV_X, 10)) {
+        if (row.onVariant(mouseX, mouseY, x, ry)) {
+            actions.prefer(row.nextVariant());
+        } else if (on(mouseX, mouseY, x, ry, PREV_X, 10)) {
             step(row, -1);
         } else if (on(mouseX, mouseY, x, ry, NEXT_X, 10)) {
             step(row, 1);
@@ -398,7 +403,7 @@ final class CompactingPanelView {
         }
     }
 
-    /** A dica sob o mouse (forma do seletor, forma alvo, ícone da base, etiqueta), ou {@code null}. */
+    /** A dica sob o mouse (forma do seletor ou a da linha: {@link CompactingRow#tooltip}), ou {@code null}. */
     @Nullable List<Component> tooltip(double mouseX, double mouseY) {
         if (picker != null) {
             int level = picker.levelAt(mouseX, mouseY);
@@ -409,20 +414,7 @@ final class CompactingPanelView {
         if (index < 0) {
             return null;
         }
-        CompactingRow row = rows.get(index);
-        int ry = rowY(index);
-        if (on(mouseX, mouseY, x, ry, SLOT_X, 18)) {
-            Component name = row.target >= 0 ? row.stacks[row.target].getHoverName()
-                    : UpgradePanels.tr("compacting.stopped");
-            return List.of(name, UpgradePanels.tr("compacting.target.hint").withStyle(ChatFormatting.GRAY));
-        }
-        if (on(mouseX, mouseY, x, ry, PAD, 16)) {
-            return List.of(row.stacks[0].getHoverName());
-        }
-        if (on(mouseX, mouseY, x, ry, TAG_X, TAG_W)) {
-            return List.of(UpgradePanels.tr(row.own ? "compacting.tag.own.tooltip" : "compacting.tag.global.tooltip"));
-        }
-        return null;
+        return rows.get(index).tooltip(mouseX, mouseY, x, rowY(index));
     }
 
     // ------------------------------------------------------------------ ganchos do e2e
@@ -445,6 +437,18 @@ final class CompactingPanelView {
 
     int targetOf(int index) {
         return rows.get(index).target;
+    }
+
+    /** Quantas variantes a linha tem (0 sem o botão do mod). */
+    int variantCount(int index) {
+        CompactingRow row = rows.get(index);
+        return row.hasVariants() ? row.variants.length : 0;
+    }
+
+    /** Rola a lista até a linha e devolve o centro do botão do mod dela, em coordenadas da tela. */
+    int[] variantCenter(int index) {
+        scroll = Math.max(0, Math.min(maxScroll(), Math.max(index - visibleRows + 1, Math.min(scroll, index))));
+        return new int[] {x + CompactingRow.NAME_X + 6, rowY(index) + CompactingRow.MOD_Y + CompactingRow.MOD_H / 2};
     }
 
     /** Centro da forma alvo da linha à vista, em coordenadas da tela. */

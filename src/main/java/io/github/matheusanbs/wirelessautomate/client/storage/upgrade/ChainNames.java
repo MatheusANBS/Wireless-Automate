@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.function.ToIntFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.jetbrains.annotations.Nullable;
@@ -12,7 +13,7 @@ import org.jetbrains.annotations.Nullable;
  * Os nomes do painel da Compactação a partir dos nomes e ids das formas de uma cadeia, sem classes do Minecraft: o
  * nome da cadeia (as palavras que todas as formas têm: "Ferro" de "Pepita de Ferro", "Lingote de Ferro" e "Bloco de
  * Ferro"), o nome curto de cada forma (o que sobra: "Pepita", "Lingote", "Bloco") e o rótulo do canto das escadas de
- * compressão ("3x" de um id que termina em {@code _3x}).
+ * compressão ("3x" de um id que termina em {@code _3x}). E o nome curto do mod de uma variante, no botão da linha.
  */
 final class ChainNames {
     /** Conectivos que não ficam sozinhos na ponta de um nome ("Bloco de", "Block of"). */
@@ -39,6 +40,32 @@ final class ChainNames {
             }
         }
         return true;
+    }
+
+    /**
+     * O nome do mod que cabe em {@code max} pela medida {@code width}: o nome inteiro; senão as iniciais das palavras
+     * ("Modern Industrialization" vira "MI"); senão o começo do nome, sem reticências (o nome inteiro vai na dica).
+     */
+    static String modShort(String name, ToIntFunction<String> width, int max) {
+        String trimmed = name.trim();
+        if (width.applyAsInt(trimmed) <= max) {
+            return trimmed;
+        }
+        List<String> words = words(trimmed);
+        if (words.size() > 1) {
+            StringBuilder initials = new StringBuilder();
+            for (String word : words) {
+                initials.appendCodePoint(Character.toUpperCase(word.codePointAt(0)));
+            }
+            if (width.applyAsInt(initials.toString()) <= max) {
+                return initials.toString();
+            }
+        }
+        int end = trimmed.length();
+        while (end > 0 && width.applyAsInt(trimmed.substring(0, end)) > max) {
+            end = trimmed.offsetByCodePoints(end, -1);
+        }
+        return trimmed.substring(0, end);
     }
 
     /** As palavras comuns a todas as formas, na ordem da base, sem conectivo nas pontas; sem nenhuma, o nome da base. */

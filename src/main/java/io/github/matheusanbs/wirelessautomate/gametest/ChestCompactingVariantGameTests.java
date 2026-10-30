@@ -2,12 +2,19 @@ package io.github.matheusanbs.wirelessautomate.gametest;
 
 import static io.github.matheusanbs.wirelessautomate.gametest.ChestCompactingGameTests.chest;
 import static io.github.matheusanbs.wirelessautomate.gametest.ChestCompactingGameTests.count;
+import static io.github.matheusanbs.wirelessautomate.gametest.ChestCompactingGameTests.open;
+import static io.github.matheusanbs.wirelessautomate.gametest.ChestCompactingGameTests.playerAt;
 import static io.github.matheusanbs.wirelessautomate.gametest.ChestCompactingGameTests.putUpgrade;
+import static io.github.matheusanbs.wirelessautomate.gametest.ChestCompactingGameTests.rulesOf;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
+import io.github.matheusanbs.wirelessautomate.menu.CompactingPanel;
+import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
+import io.github.matheusanbs.wirelessautomate.packet.CompactingRulePayload;
+import io.github.matheusanbs.wirelessautomate.packet.CompactingStatePayload;
 import io.github.matheusanbs.wirelessautomate.storage.ItemStorageHandler;
 import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingChain;
@@ -15,9 +22,13 @@ import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingChains;
 import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingMode;
 import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingRules;
 import io.github.matheusanbs.wirelessautomate.storage.upgrade.VariantGroup;
+import io.netty.buffer.Unpooled;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.gametest.framework.GameTest;
@@ -25,6 +36,9 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.gametest.framework.GameTestInfo;
 import net.minecraft.gametest.framework.GameTestListener;
 import net.minecraft.gametest.framework.GameTestRunner;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -271,6 +285,151 @@ public final class ChestCompactingVariantGameTests {
                 .thenExecute(() -> {
                     helper.assertValueEqual(nuggets(chest), before, "o valor em pepitas mudou");
                     helper.assertTrue(chest.storage().total() <= totalBefore, "o total cresceu");
+                })
+                .thenSucceed();
+    }
+
+    // ------------------------------------------------------------------ a escolha pelo painel (payload PREFER)
+
+    private static CompactingRulePayload prefer(int containerId, Item base) {
+        return CompactingRulePayload.target(containerId, CompactingRulePayload.Kind.PREFER, base);
+    }
+
+    /**
+     * A base de uma variante vira a preferida, e a troca seguinte substitui a anterior. Recusados sem mudar nada: uma
+     * forma que não é a base, a base de uma cadeia sem variante (o diamante), um item fora das cadeias e o pedido sem
+     * item.
+     */
+    @GameTest(template = "empty", batch = BATCH, timeoutTicks = 100)
+    public static void preferidaPeloPayload(GameTestHelper helper) {
+        VariantGroup group = linkIronAndGold(helper);
+        StorageChestBlockEntity chest = chest(helper, A, RouterTier.ELITE);
+        putUpgrade(chest, CompactingRules.DEFAULT);
+        ServerPlayer player = playerAt(helper, chest);
+        open(player, chest, 92);
+        helper.assertTrue(CompactingPanel.handle(player, prefer(92, Items.IRON_NUGGET)), "a base do ferro recusada");
+        helper.assertValueEqual(rulesOf(chest).preferredOf(group), chainOf(Items.IRON_INGOT), "o ferro não virou a preferida");
+        helper.assertTrue(CompactingPanel.handle(player, prefer(92, Items.GOLD_NUGGET)), "a base do ouro recusada");
+        CompactingRules gold = rulesOf(chest);
+        helper.assertValueEqual(gold.preferredOf(group), chainOf(Items.GOLD_INGOT), "o ouro não virou a preferida");
+        helper.assertValueEqual(gold.preferred().size(), 1, "a escolha do ferro ficou");
+
+        helper.assertTrue(!CompactingPanel.handle(player, prefer(92, Items.IRON_INGOT)), "uma forma acima da base aceita");
+        helper.assertTrue(!CompactingPanel.handle(player, prefer(92, Items.DIAMOND)), "cadeia sem variante aceita");
+        helper.assertTrue(!CompactingPanel.handle(player, prefer(92, Items.STONE)), "item fora das cadeias aceito");
+        helper.assertTrue(!CompactingPanel.handle(player, CompactingRulePayload.of(92, CompactingRulePayload.Kind.PREFER)),
+                "pedido sem item aceito");
+        helper.assertTrue(!CompactingPanel.handle(player, prefer(93, Items.IRON_NUGGET)), "outro containerId aceito");
+        helper.assertValueEqual(rulesOf(chest), gold, "um pedido recusado mudou as regras");
+        helper.succeed();
+    }
+
+    /**
+     * Escolher a variante de outro grupo (o ferro cru ~ o ouro cru, ligados só aqui) não mexe na escolha do grupo do
+     * ferro ~ ouro: cada grupo guarda a sua.
+     */
+    @GameTest(template = "empty", batch = BATCH, timeoutTicks = 100)
+    public static void preferidaDeOutroGrupoNaoMexeNaPrimeira(GameTestHelper helper) {
+        VariantGroup group = linkIronAndGold(helper);
+        CompactingChain rawIron = chainOf(Items.RAW_IRON);
+        CompactingChain rawGold = chainOf(Items.RAW_GOLD);
+        helper.assertTrue(rawIron != null && rawGold != null, "sem as cadeias do ferro e do ouro crus");
+        if (CompactingChains.get().groupOf(rawIron) == null) {
+            CompactingChains.linkVariantsForTest(rawIron, rawGold);
+        }
+        VariantGroup raw = CompactingChains.get().groupOf(rawIron);
+        helper.assertTrue(raw != null && raw != group, "o grupo dos crus");
+        StorageChestBlockEntity chest = chest(helper, A, RouterTier.ELITE);
+        putUpgrade(chest, CompactingRules.DEFAULT);
+        ServerPlayer player = playerAt(helper, chest);
+        open(player, chest, 94);
+        helper.assertTrue(CompactingPanel.handle(player, prefer(94, Items.IRON_NUGGET)), "a base do ferro recusada");
+        helper.assertTrue(CompactingPanel.handle(player, prefer(94, Items.RAW_GOLD)), "a base do ouro cru recusada");
+        CompactingRules rules = rulesOf(chest);
+        helper.assertValueEqual(rules.preferredOf(group), chainOf(Items.IRON_INGOT), "a escolha do ferro mudou");
+        helper.assertValueEqual(rules.preferredOf(raw), rawGold, "a escolha do ouro cru não valeu");
+        helper.assertValueEqual(rules.preferred().size(), 2, "uma preferida por grupo");
+        helper.succeed();
+    }
+
+    /**
+     * O teto vale para os alvos e as preferidas somados: com 256 alvos, a primeira preferida é recusada; com 255 ela
+     * entra, e trocar a variante do mesmo grupo no teto segue valendo.
+     */
+    @GameTest(template = "empty", batch = BATCH, timeoutTicks = 100)
+    public static void preferidaAlemDoTetoERecusada(GameTestHelper helper) {
+        linkIronAndGold(helper);
+        StorageChestBlockEntity chest = chest(helper, A, RouterTier.ELITE);
+        Set<ResourceLocation> filler = new HashSet<>();
+        for (int i = 0; i < CompactingRules.MAX_TARGETS; i++) {
+            filler.add(ResourceLocation.fromNamespaceAndPath("modsumido", "alvo_" + i));
+        }
+        putUpgrade(chest, new CompactingRules(CompactingMode.OFF, Set.copyOf(filler)));
+        ServerPlayer player = playerAt(helper, chest);
+        open(player, chest, 95);
+        CompactingRules full = rulesOf(chest);
+        helper.assertTrue(!CompactingPanel.handle(player, prefer(95, Items.IRON_NUGGET)), "a preferida além do teto aceita");
+        helper.assertValueEqual(rulesOf(chest), full, "as regras mudaram com a recusa");
+
+        filler.remove(ResourceLocation.fromNamespaceAndPath("modsumido", "alvo_0"));
+        putUpgrade(chest, new CompactingRules(CompactingMode.OFF, Set.copyOf(filler)));
+        open(player, chest, 96);
+        helper.assertTrue(CompactingPanel.handle(player, prefer(96, Items.IRON_NUGGET)), "a 256ª entrada recusada");
+        helper.assertValueEqual(rulesOf(chest).entries(), CompactingRules.MAX_TARGETS, "as entradas no teto");
+        helper.assertTrue(CompactingPanel.handle(player, prefer(96, Items.GOLD_NUGGET)), "trocar a variante no teto");
+        helper.assertValueEqual(rulesOf(chest).entries(), CompactingRules.MAX_TARGETS, "a troca passou do teto");
+        helper.succeed();
+    }
+
+    /**
+     * O estado leva as bases das variantes e a preferida: com o ferro e o ouro no Baú, uma linha só, a do ouro (a
+     * padrão), com as duas bases; e o codec recusa mais que {@link CompactingStatePayload.Row#MAX_VARIANTS}.
+     */
+    @GameTest(template = "empty", batch = BATCH, timeoutTicks = 100)
+    public static void estadoLevaAsVariantes(GameTestHelper helper) {
+        linkIronAndGold(helper);
+        CompactingStatePayload.Row row = new CompactingStatePayload.Row(List.of(Items.GOLD_NUGGET, Items.GOLD_INGOT,
+                Items.GOLD_BLOCK), 2, false, List.of(Items.GOLD_NUGGET, Items.IRON_NUGGET), 0);
+        CompactingStatePayload state = new CompactingStatePayload(5, CompactingMode.COMPRESS, List.of(row));
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), helper.getLevel().registryAccess());
+        CompactingStatePayload.STREAM_CODEC.encode(buf, state);
+        helper.assertValueEqual(CompactingStatePayload.STREAM_CODEC.decode(buf), state, "o estado depois do codec");
+
+        List<Item> tooMany = Collections.nCopies(CompactingStatePayload.Row.MAX_VARIANTS + 1, Items.IRON_NUGGET);
+        CompactingStatePayload forged = new CompactingStatePayload(5, CompactingMode.COMPRESS, List.of(
+                new CompactingStatePayload.Row(List.of(Items.IRON_NUGGET, Items.IRON_INGOT), 0, false, tooMany, 0)));
+        boolean refused;
+        try {
+            CompactingStatePayload.STREAM_CODEC.encode(new RegistryFriendlyByteBuf(Unpooled.buffer(),
+                    helper.getLevel().registryAccess()), forged);
+            refused = false;
+        } catch (RuntimeException expected) {
+            refused = true;
+        }
+        helper.assertTrue(refused, "o codec aceitou variantes além do teto");
+
+        StorageChestBlockEntity chest = chest(helper, A, RouterTier.ELITE);
+        putUpgrade(chest, CompactingRules.DEFAULT);
+        chest.storage().insert(new ItemStack(Items.IRON_INGOT), 3, false);
+        chest.storage().insert(new ItemStack(Items.GOLD_INGOT), 3, false);
+        ServerPlayer player = playerAt(helper, chest);
+        StorageListMenu<ItemStack> menu = open(player, chest, 97);
+        CompactingPanel panel = menu.upgradeSlots().compactingPanel();
+        helper.assertTrue(CompactingPanel.handle(player, CompactingRulePayload.of(97, CompactingRulePayload.Kind.WATCH)),
+                "WATCH recusado");
+        helper.startSequence()
+                .thenWaitUntil(() -> {
+                    menu.broadcastChanges();
+                    CompactingStatePayload sent = panel.state();
+                    helper.assertTrue(sent != null, "nenhum estado montado");
+                    List<CompactingStatePayload.Row> rows = sent.rows().stream()
+                            .filter(each -> each.forms().contains(Items.GOLD_INGOT) || each.forms().contains(Items.IRON_INGOT))
+                            .toList();
+                    helper.assertValueEqual(rows.size(), 1, "linhas do ferro e do ouro");
+                    helper.assertValueEqual(rows.get(0).forms().get(1), Items.GOLD_INGOT, "a linha não é a do ouro");
+                    helper.assertValueEqual(rows.get(0).variants(), List.of(Items.GOLD_NUGGET, Items.IRON_NUGGET),
+                            "as bases das variantes");
+                    helper.assertValueEqual(rows.get(0).chosen(), 0, "a preferida no estado");
                 })
                 .thenSucceed();
     }

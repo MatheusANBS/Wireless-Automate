@@ -519,6 +519,9 @@ public final class ModPayloads {
         if (leaving != null && !leaving.equals(id.orElse(null))) {
             WaNetwork from = NetworkSavedData.get(player.server).network(leaving);
             if (from != null && !from.canEdit(player)) {
+                // sem o aviso o clique parecia não fazer nada
+                player.displayClientMessage(Component.translatable("message.wirelessautomate.network.cant_leave",
+                        from.name()), true);
                 return false;
             }
         }
@@ -529,6 +532,10 @@ public final class ModPayloads {
         }
         WaNetwork network = NetworkSavedData.get(player.server).network(id.get());
         if (network == null || !canUse(player, network)) {
+            if (network != null) {
+                player.displayClientMessage(Component.translatable("message.wirelessautomate.network.cant_use",
+                        network.name()), true);
+            }
             return false;
         }
         router.setFaceNetwork(target, payload.resource(), payload.face(), network.id());

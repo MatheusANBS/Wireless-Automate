@@ -1365,6 +1365,8 @@
   "gui.wirelessautomate.filter.rule.suggest.items": "%s items",
   "gui.wirelessautomate.filter.rule.suggest.item": "%s item",
   "container.wirelessautomate.signal_screen": "Signal Screen",
+  "message.wirelessautomate.network.cant_leave": "Only those who edit the %s network can take faces out of it: the owner, a guest, an added team or an operator",
+  "message.wirelessautomate.network.cant_use": "You can't use the %s network",
   "message.wirelessautomate.tv.not_owner": "This Screen belongs to %s",
   "message.wirelessautomate.tv.operator": "an operator",
   "message.wirelessautomate.tv.problem.too_big": "Too big: at most %s x %s blocks",

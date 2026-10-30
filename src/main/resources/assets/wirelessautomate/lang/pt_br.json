@@ -1365,6 +1365,8 @@
   "gui.wirelessautomate.filter.rule.suggest.items": "%s itens",
   "gui.wirelessautomate.filter.rule.suggest.item": "%s item",
   "container.wirelessautomate.signal_screen": "Tela de Sinal",
+  "message.wirelessautomate.network.cant_leave": "Só quem edita a rede %s tira faces dela: o dono, um convidado, um time adicionado ou um operador",
+  "message.wirelessautomate.network.cant_use": "Você não pode usar a rede %s",
   "message.wirelessautomate.tv.not_owner": "Esta Tela é de %s",
   "message.wirelessautomate.tv.operator": "um operador",
   "message.wirelessautomate.tv.problem.too_big": "Grande demais: no máximo %s x %s blocos",

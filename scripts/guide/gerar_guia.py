@@ -1829,16 +1829,23 @@ nome não compactam.
 2. No painel, escolha o modo para todas as cadeias: **Compactar** (a forma mais alta) ou **Descompactar** (a base).
 3. Para uma cadeia só, use as setas ou a rodinha na linha dela; clique no ícone para escolher a forma numa lista. **Global** volta ao modo geral.
 
-Descompactar converte **só o que cabe** no Baú; o resto fica na forma alta, sem perder nada. O
-roteador vê só a forma guardada: para tirar lingotes, deixe o alvo da cadeia em lingote. O limite de
-**Estoque** de um item da cadeia conta a cadeia inteira (11 blocos e 1 lingote valem 100 lingotes).
-Com a Compactação, a Mesa desce uma forma quando falta o item exato.
+O alvo vale para os dois lados: o que está **abaixo** dele é compactado até ele, e o que está **acima** é
+descompactado até ele. Com o alvo em lingote, pepitas viram lingotes e blocos viram lingotes.
+
+- A sobra que não fecha um fator fica na forma de baixo: 10 lingotes com alvo em bloco dão 1 bloco e 1 lingote.
+- Descompactar converte **só o que cabe** no Baú; o resto fica na forma alta, sem perder nada.
+- O roteador vê só a forma guardada: para tirar lingotes, deixe o alvo da cadeia em lingote.
+- O limite de **Estoque** de um item da cadeia conta a cadeia inteira (11 blocos e 1 lingote valem 100 lingotes).
+- Com a Compactação, a Mesa desce uma forma quando falta o item exato.
 
 ## Quebrar e levar
 
 Quebre o Baú: o item leva **todo o conteúdo e o filtro**, e o tooltip mostra o total e os tipos.
 Coloque de novo e está tudo lá. Cheio, ele sempre vira item: no criativo, sem picareta ou numa
 explosão, nada se perde.
+
+Os **upgrades e os itens da grade** da Mesa também vão no item, mesmo com o Baú vazio, e voltam quando
+ele é colocado. Se o bloco sumir sem virar item (um comando, outro mod), eles caem no chão.
 
 ## Com outros blocos
 
@@ -1939,16 +1946,24 @@ named items don't compact.
 2. In the panel, pick the mode for all chains: **Compress** (the highest form) or **Decompress** (the base).
 3. For a single chain, use the arrows or the wheel on its row; click the icon to pick the form from a list. **Global** goes back to the general mode.
 
-Decompressing converts **only what fits** in the chest; the rest stays in the high form, nothing is lost.
-The router only sees the stored form: to pull ingots, leave the chain's target on ingot. The **Stock**
-limit of a chain item counts the whole chain (11 blocks and 1 ingot are worth 100 ingots). With
-Compacting, the crafting grid steps down one form when the exact item is missing.
+The target works both ways: what is **below** it is compressed up to it, and what is **above** it is
+decompressed down to it. With the target on ingot, nuggets become ingots and blocks become ingots.
+
+- The leftover that doesn't make a full factor stays in the lower form: 10 ingots with the target on block give 1 block and 1 ingot.
+- Decompressing converts **only what fits** in the chest; the rest stays in the high form, nothing is lost.
+- The router only sees the stored form: to pull ingots, leave the chain's target on ingot.
+- The **Stock** limit of a chain item counts the whole chain (11 blocks and 1 ingot are worth 100 ingots).
+- With Compacting, the crafting grid steps down one form when the exact item is missing.
 
 ## Break and carry
 
 Break the chest: the item takes **all the contents and the filter** with it, and the tooltip shows
 the total and the types. Place it again and everything is there. A full chest always becomes an
 item: in creative, without a pickaxe or in an explosion, nothing is lost.
+
+The **upgrades and the crafting grid items** also go in the item, even with an empty chest, and come
+back when it is placed. If the block disappears without becoming an item (a command, another mod),
+they drop on the ground.
 
 ## With other blocks
 

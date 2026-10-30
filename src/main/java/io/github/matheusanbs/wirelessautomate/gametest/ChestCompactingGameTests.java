@@ -1,5 +1,8 @@
 package io.github.matheusanbs.wirelessautomate.gametest;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.mojang.serialization.JsonOps;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
@@ -21,20 +24,25 @@ import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.storage.ItemStorageHandler;
 import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageWatch;
+import io.github.matheusanbs.wirelessautomate.storage.upgrade.ChainGraph;
 import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingChain;
 import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingChains;
 import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingMode;
 import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingRules;
 import io.netty.buffer.Unpooled;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -363,11 +371,13 @@ public final class ChestCompactingGameTests {
     }
 
     /**
-     * O índice remontado no meio do tick (um {@code /reload}) troca a geração: a cadeia suja do ferro é convertida
-     * pela geração nova, e o ouro, com alvo no lingote, fica como está.
+     * O índice remontado no meio do tick (um {@code /reload}) troca a geração, e a cadeia que ficou suja antes dela (o
+     * ferro que acabou de entrar) ainda é convertida pela geração nova. O ouro, com alvo próprio no lingote, fica como
+     * está. Não prova a troca de ids entre gerações: o índice vanilla remonta com os mesmos ids (o id velho
+     * descartado é o {@link #markChainDescartaIdDeGeracaoVelha}).
      */
     @GameTest(template = "empty", timeoutTicks = 100)
-    public static void recargaDoIndiceNaoConverteCadeiaErrada(GameTestHelper helper) {
+    public static void recargaDoIndiceConverteAsSujasNaGeracaoNova(GameTestHelper helper) {
         StorageChestBlockEntity chest = chest(helper, A, RouterTier.ELITE);
         chest.storage().insert(new ItemStack(Items.GOLD_INGOT), 9, false);
         putUpgrade(chest, COMPRESS.withTarget(chainOf(Items.GOLD_INGOT), Items.GOLD_INGOT));
@@ -385,6 +395,70 @@ public final class ChestCompactingGameTests {
                     helper.assertValueEqual(count(chest, Items.GOLD_BLOCK), 0L, "nenhum bloco de ouro");
                 })
                 .thenSucceed();
+    }
+
+    // ------------------------------------------------------------------ o índice protegido
+
+    /**
+     * A receita de outro mod que lança não derruba o índice: o par cujo conferidor lança (exceção comum ou
+     * {@link LinkageError}) fica de fora, e os outros pares formam as cadeias. O índice do servidor não é trocado.
+     */
+    @GameTest(template = "empty")
+    public static void parQueLancaEPuladoEORestoMonta(GameTestHelper helper) {
+        CompactingChains current = CompactingChains.get();
+        ChainGraph<Item> graph = CompactingChains.newGraph();
+        List<CompactingChains.Pair> pairs = List.of(
+                new CompactingChains.Pair(Items.IRON_NUGGET, Items.IRON_INGOT, 9),
+                new CompactingChains.Pair(Items.GOLD_NUGGET, Items.GOLD_INGOT, 9),
+                new CompactingChains.Pair(Items.IRON_INGOT, Items.IRON_BLOCK, 9),
+                new CompactingChains.Pair(Items.COPPER_INGOT, Items.COPPER_BLOCK, 9));
+        int skipped = CompactingChains.linkPairs(pairs, pair -> {
+            if (pair.small() == Items.GOLD_NUGGET) {
+                throw new IllegalStateException("receita quebrada do teste");
+            }
+            if (pair.small() == Items.COPPER_INGOT) {
+                throw new NoClassDefFoundError("classe sumida do teste");
+            }
+            return true;
+        }, graph);
+        helper.assertValueEqual(skipped, 2, "pares pulados");
+        CompactingChains built = CompactingChains.assemble(graph);
+        helper.assertTrue(built.chainOf(Items.GOLD_NUGGET) == null, "o par que lançou entrou");
+        helper.assertTrue(built.chainOf(Items.COPPER_BLOCK) == null, "o par do LinkageError entrou");
+        CompactingChain iron = built.chainOf(Items.IRON_INGOT);
+        helper.assertTrue(iron != null && iron.forms().length == 3, "a cadeia do ferro não montou inteira");
+        helper.assertTrue(CompactingChains.get() == current, "o índice do servidor foi trocado");
+        helper.succeed();
+    }
+
+    /**
+     * Uma cadeia com mais formas que o teto fica fora do índice (e, por isso, do estado do painel); a do teto
+     * exato entra, e o estado com ela vai e volta pelo codec.
+     */
+    @GameTest(template = "empty")
+    public static void cadeiaAcimaDoTetoDeFormasFicaDeFora(GameTestHelper helper) {
+        List<Item> items = BuiltInRegistries.ITEM.stream()
+                .filter(item -> item != Items.AIR && CompactingChains.get().chainOf(item) == null)
+                .limit(CompactingChain.MAX_FORMS * 2L + 1).toList();
+        List<Item> longer = items.subList(0, CompactingChain.MAX_FORMS + 1);
+        List<Item> exact = items.subList(CompactingChain.MAX_FORMS + 1, items.size());
+        ChainGraph<Item> graph = CompactingChains.newGraph();
+        for (List<Item> chain : List.of(longer, exact)) {
+            for (int i = 0; i + 1 < chain.size(); i++) {
+                graph.link(chain.get(i), chain.get(i + 1), 9);
+            }
+        }
+        CompactingChains built = CompactingChains.assemble(graph);
+        helper.assertTrue(built.chainOf(longer.get(0)) == null, "a cadeia acima do teto entrou");
+        CompactingChain kept = built.chainOf(exact.get(0));
+        helper.assertTrue(kept != null && kept.forms().length == CompactingChain.MAX_FORMS,
+                "a cadeia do teto ficou de fora");
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), helper.getLevel().registryAccess());
+        CompactingStatePayload state = new CompactingStatePayload(5, CompactingMode.COMPRESS,
+                List.of(new CompactingStatePayload.Row(List.of(kept.forms()), 0, false)));
+        CompactingStatePayload.STREAM_CODEC.encode(buf, state);
+        helper.assertValueEqual(CompactingStatePayload.STREAM_CODEC.decode(buf), state, "o estado depois do codec");
+        helper.succeed();
     }
 
     // ------------------------------------------------------------------ o estado e as regras na rede
@@ -469,6 +543,47 @@ public final class ChestCompactingGameTests {
         helper.assertTrue(!CompactingPanel.handle(player, CompactingRulePayload.target(78,
                 CompactingRulePayload.Kind.TARGET, Items.IRON_BLOCK)), "fora de alcance");
         helper.assertValueEqual(rulesOf(chest), before, "as regras depois do alcance");
+        helper.succeed();
+    }
+
+    /**
+     * Os alvos próprios param no teto do codec: com 255, o 256º entra e o 257º é recusado sem mudar nada; trocar o
+     * alvo de uma cadeia que já tem um segue valendo, e o item do upgrade continua codificável. A leitura de dados
+     * antigos também para no teto.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void alvoAlemDoTetoERecusado(GameTestHelper helper) {
+        StorageChestBlockEntity chest = chest(helper, A, RouterTier.ELITE);
+        Set<ResourceLocation> filler = new HashSet<>();
+        for (int i = 0; i < CompactingRules.MAX_TARGETS - 1; i++) {
+            filler.add(ResourceLocation.fromNamespaceAndPath("modsumido", "alvo_" + i));
+        }
+        putUpgrade(chest, new CompactingRules(CompactingMode.OFF, Set.copyOf(filler)));
+        ServerPlayer player = playerAt(helper, chest);
+        open(player, chest, 83);
+        helper.assertTrue(CompactingPanel.handle(player, CompactingRulePayload.target(83,
+                CompactingRulePayload.Kind.TARGET, Items.IRON_BLOCK)), "o 256º alvo recusado");
+        CompactingRules full = rulesOf(chest);
+        helper.assertValueEqual(full.targets().size(), CompactingRules.MAX_TARGETS, "alvos no teto");
+        helper.assertTrue(!CompactingPanel.handle(player, CompactingRulePayload.target(83,
+                CompactingRulePayload.Kind.TARGET, Items.GOLD_BLOCK)), "o 257º alvo aceito");
+        helper.assertValueEqual(rulesOf(chest), full, "as regras mudaram com a recusa");
+        helper.assertTrue(CompactingPanel.handle(player, CompactingRulePayload.target(83,
+                CompactingRulePayload.Kind.TARGET, Items.IRON_INGOT)), "trocar o alvo da mesma cadeia no teto");
+
+        ItemStack upgrade = chest.upgrades().upgrade(0);
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), helper.getLevel().registryAccess());
+        ItemStack.STREAM_CODEC.encode(buf, upgrade);
+        helper.assertTrue(ItemStack.matches(ItemStack.STREAM_CODEC.decode(buf), upgrade), "o item não voltou do codec");
+
+        JsonArray targets = new JsonArray();
+        for (int i = 0; i < CompactingRules.MAX_TARGETS + 44; i++) {
+            targets.add("modsumido:antigo_" + i);
+        }
+        JsonObject saved = new JsonObject();
+        saved.add("targets", targets);
+        CompactingRules capped = CompactingRules.CODEC.parse(JsonOps.INSTANCE, saved).getOrThrow();
+        helper.assertValueEqual(capped.targets().size(), CompactingRules.MAX_TARGETS, "a leitura passou do teto");
         helper.succeed();
     }
 

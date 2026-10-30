@@ -20,6 +20,12 @@ import org.jetbrains.annotations.Nullable;
  * tem é ignorado.
  */
 public record CompactingRules(CompactingMode mode, Set<ResourceLocation> targets) {
+    /**
+     * O teto de alvos próprios: o {@link #STREAM_CODEC} não codifica mais que isso, e um item que passasse dele
+     * derrubaria quem o recebe. O painel recusa a mudança que passaria do teto e a leitura para nele.
+     */
+    public static final int MAX_TARGETS = 256;
+
     /** O upgrade novo não muda nada até o jogador escolher. */
     public static final CompactingRules DEFAULT = new CompactingRules(CompactingMode.OFF, Set.of());
 
@@ -32,15 +38,21 @@ public record CompactingRules(CompactingMode mode, Set<ResourceLocation> targets
     public static final StreamCodec<ByteBuf, CompactingRules> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.idMapper(index -> CompactingMode.ALL[index], CompactingMode::ordinal),
             CompactingRules::mode,
-            ByteBufCodecs.collection(HashSet<ResourceLocation>::new, ResourceLocation.STREAM_CODEC, 256)
+            ByteBufCodecs.collection(HashSet<ResourceLocation>::new, ResourceLocation.STREAM_CODEC, MAX_TARGETS)
                     .map(Set::copyOf, HashSet::new),
             CompactingRules::targets,
             CompactingRules::new);
 
-    /** Os ids válidos; os de sintaxe inválida somem, para o componente nunca falhar ao ler. */
+    /**
+     * Os ids válidos, até {@link #MAX_TARGETS}; os de sintaxe inválida e os acima do teto (dados antigos, um
+     * {@code /give}) somem, para o componente nunca falhar ao ler nem ao mandar.
+     */
     private static Set<ResourceLocation> parseTargets(List<String> names) {
         Set<ResourceLocation> parsed = new HashSet<>();
         for (String name : names) {
+            if (parsed.size() >= MAX_TARGETS) {
+                break;
+            }
             ResourceLocation id = ResourceLocation.tryParse(name);
             if (id != null) {
                 parsed.add(id);

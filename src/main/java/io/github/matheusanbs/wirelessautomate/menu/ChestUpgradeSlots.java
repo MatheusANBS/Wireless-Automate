@@ -263,8 +263,9 @@ public final class ChestUpgradeSlots {
      * Shift + clique no resultado (servidor): repete o craft, repondo a grade a cada vez, enquanto o resultado for o
      * mesmo item e a soma não passar de uma pilha dele; para no primeiro que não couber inteiro no inventário. O
      * {@code onTake} vem antes de mover: se ele recusar (a receita deixou de casar), a pilha zera e nada entra. Os
-     * restos da receita que o {@code onTake} põe no inventário podem tomar o lugar conferido: o que não couber cai
-     * no chão, como no {@code CraftingMenu}, e o laço para.
+     * restos da receita que o {@code onTake} põe no inventário podem tomar o lugar conferido. Como a grade já foi
+     * consumida, o item feito não tem para onde voltar: o que não couber cai no chão aos pés do jogador (em vez de
+     * sumir) e o laço para.
      */
     private void quickCraft() {
         Slot slot = menu.slots.get(RESULT);

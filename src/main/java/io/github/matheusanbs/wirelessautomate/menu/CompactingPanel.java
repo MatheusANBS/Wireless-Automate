@@ -120,7 +120,8 @@ public final class CompactingPanel {
     /**
      * Servidor: aplica a mudança do cliente. Recusa (e não muda nada) sem o menu do Baú aberto com esse
      * {@code containerId}, com o menu fora de alcance, sem o Upgrade de Compactação, com o modo fora do alcance do
-     * enum ou com um item que não pertence a uma cadeia do índice atual.
+     * enum, com um item que não pertence a uma cadeia do índice atual ou com um alvo que passaria do
+     * {@link CompactingRules#MAX_TARGETS}.
      *
      * @return se foi aceita
      */
@@ -169,6 +170,9 @@ public final class CompactingPanel {
                 return false;
             }
             next = rules.withTarget(chain, payload.kind() == CompactingRulePayload.Kind.TARGET ? item : null);
+            if (next.targets().size() > CompactingRules.MAX_TARGETS) {
+                return false;
+            }
         }
         if (!next.equals(rules)) {
             // Uma pilha nova no slot: o aviso do Baú reaplica as regras e marca as cadeias.

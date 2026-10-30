@@ -176,6 +176,38 @@ public class StorageChestBlockEntity extends KeyedStorageBlockEntity<ItemStack> 
         compacting.setRules(slotRules());
     }
 
+    /** O Baú sem conteúdo mas com upgrades ou itens na grade também vira item na quebra: eles só existem nele. */
+    @Override
+    public boolean keepsOnBreak() {
+        return super.keepsOnBreak() || !upgrades.isEmpty();
+    }
+
+    /**
+     * Além do conteúdo, os upgrades e a grade: se o bloco sai do mundo sem que um item do Baú os leve
+     * ({@code /setblock}, a remoção de outro mod sem loot), eles caem no chão como itens, como o baú comum solta os
+     * dele. Com o item feito (a quebra pelo jogador, a loot table), ficam só no item.
+     */
+    @Override
+    void stash() {
+        super.stash();
+        if (dropExpected() || upgrades.isEmpty() || level == null || level.isClientSide) {
+            return;
+        }
+        for (int i = 0; i < ChestUpgrades.SLOTS; i++) {
+            dropOnTop(upgrades.upgrade(i));
+        }
+        for (ItemStack stack : upgrades.grid()) {
+            dropOnTop(stack);
+        }
+    }
+
+    private void dropOnTop(ItemStack stack) {
+        if (!stack.isEmpty()) {
+            Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 0.5,
+                    worldPosition.getZ() + 0.5, stack.copy());
+        }
+    }
+
     @Override
     public void removeComponentsFromTag(CompoundTag tag) {
         super.removeComponentsFromTag(tag);

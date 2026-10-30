@@ -252,6 +252,11 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
         IIngredientManager ingredients = registration.getJeiHelpers().getIngredientManager();
         registration.addGuiContainerHandler(StorageListScreen.class, new IGuiContainerHandler<StorageListScreen>() {
             @Override
+            public List<Rect2i> getGuiExtraAreas(StorageListScreen screen) {
+                return screen.upgradePanels().areas();
+            }
+
+            @Override
             public Optional<? extends IClickableIngredient<?>> getClickableIngredientUnderMouse(
                     IClickableIngredientFactory factory, StorageListScreen screen, double mouseX, double mouseY) {
                 StorageListScreen.Hovered hovered = screen.ingredientAt(mouseX, mouseY);

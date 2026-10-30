@@ -60,7 +60,8 @@ final class GuideCover {
         if (searchLines.size() > 1) {
             problems.add("o texto da busca \"" + searchText.getString() + "\" não cabe numa linha");
         }
-        Component hintText = Component.translatable("gui.wirelessautomate.guide.cover.hint");
+        Component hintText = Component.translatable("gui.wirelessautomate.guide.cover.hint",
+                GuideKeys.OPEN_GUIDE.getTranslatedKeyMessage());
         hint = font.split(hintText, W);
         if (HINT_Y + hint.size() * HINT_STEP > GuideMetrics.SHEET_H) {
             problems.add("a dica \"" + hintText.getString() + "\" passa do pé da folha de rosto (" + hint.size()

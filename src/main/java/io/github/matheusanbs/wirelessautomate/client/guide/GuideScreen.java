@@ -11,6 +11,7 @@ import java.util.Map;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
@@ -39,13 +40,25 @@ public final class GuideScreen extends Screen {
     private boolean leftIsCover;
     private List<Ink> left = List.of();
     private List<Ink> right = List.of();
+    /** A tela de onde a tecla abriu o livro (um baú, o JEI), para onde ele volta ao fechar; {@code null} = o mundo. */
+    private final @Nullable Screen parent;
 
-    private GuideScreen() {
+    private GuideScreen(@Nullable Screen parent) {
         super(Component.translatable("item.wirelessautomate.guide"));
+        this.parent = parent;
     }
 
     /** Abre o livro na página pedida ({@code router.md} ou {@code router}) ou, com {@code null}, onde parou. */
     public static void open(@Nullable String target) {
+        open(target, null);
+    }
+
+    /**
+     * Abre o livro por cima de {@code parent} e volta a ela ao fechar. Numa tela de contêiner, o menu continua aberto
+     * nos dois lados (o {@code setScreen} pula o {@code closeContainer}): voltar à tela o mantém válido, e o Esc nela o
+     * fecha do jeito normal, como a tela de receitas do JEI faz.
+     */
+    public static void open(@Nullable String target, @Nullable Screen parent) {
         GuidePages.ensure();
         if (target != null) {
             String id = GuidePages.resolve(target);
@@ -53,14 +66,28 @@ public final class GuideScreen extends Screen {
                 GuideNav.go(id, 0);
             }
         }
-        Minecraft.getInstance().setScreen(new GuideScreen());
+        Minecraft.getInstance().setScreen(new GuideScreen(parent));
     }
 
     /** Abre na folha de rosto e no começo do índice, guardando o lugar de antes no histórico. */
     public static void openIndex() {
         GuidePages.ensure();
         GuideNav.go(null, 0);
-        Minecraft.getInstance().setScreen(new GuideScreen());
+        Minecraft.getInstance().setScreen(new GuideScreen(null));
+    }
+
+    /** Volta à tela de onde veio; a de um contêiner só se o menu dela ainda é o aberto (o servidor pode tê-lo fechado). */
+    @Override
+    public void onClose() {
+        Minecraft mc = Minecraft.getInstance();
+        boolean stale = parent instanceof AbstractContainerScreen<?> c
+                && (mc.player == null || mc.player.containerMenu != c.getMenu());
+        mc.setScreen(stale ? null : parent);
+    }
+
+    /** A tela para onde o livro volta ao fechar (o e2e confere). */
+    public @Nullable Screen parent() {
+        return parent;
     }
 
     @Override
@@ -264,19 +291,30 @@ public final class GuideScreen extends Screen {
 
     /** O centro, em coordenadas de interface, do primeiro link à vista para a página, ou {@code null}. */
     public int @Nullable [] linkCenter(String target) {
-        int[] c = linkCenter(left, BookScale.LEFT_X, target);
-        return c != null ? c : linkCenter(right, BookScale.RIGHT_X, target);
+        int[] c = center(left, BookScale.LEFT_X, target, false);
+        return c != null ? c : center(right, BookScale.RIGHT_X, target, false);
     }
 
-    private int @Nullable [] linkCenter(List<Ink> inks, int originX, String target) {
+    /** O centro do primeiro ícone à vista que leva à página (no índice, o da linha dela), ou {@code null}. */
+    public int @Nullable [] iconCenter(String target) {
+        int[] c = center(left, BookScale.LEFT_X, target, true);
+        return c != null ? c : center(right, BookScale.RIGHT_X, target, true);
+    }
+
+    private int @Nullable [] center(List<Ink> inks, int originX, String target, boolean icon) {
         for (Ink ink : inks) {
-            if (ink instanceof GuideInk.Link l && l.page().equals(target)) {
-                double tx = originX + (l.x() + l.w() / 2.0) / 2;
-                double ty = BookScale.CONTENT_Y + (l.y() + l.h() / 2.0) / 2;
-                return new int[] {(int) scale.guiX(tx), (int) scale.guiY(ty)};
+            if (!icon && ink instanceof GuideInk.Link l && l.page().equals(target)) {
+                return gui(originX, l.x() + l.w() / 2.0, l.y() + l.h() / 2.0);
+            }
+            if (icon && ink instanceof GuideInk.Item it && target.equals(it.page())) {
+                return gui(originX, it.x() + it.size() / 2.0, it.y() + it.size() / 2.0);
             }
         }
         return null;
+    }
+
+    private int[] gui(int originX, double ux, double uy) {
+        return new int[] {(int) scale.guiX(originX + ux / 2), (int) scale.guiY(BookScale.CONTENT_Y + uy / 2)};
     }
 
     // ---- desenho

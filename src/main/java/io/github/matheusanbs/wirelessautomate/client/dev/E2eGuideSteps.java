@@ -5,21 +5,36 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eUi.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
+import com.mojang.blaze3d.platform.InputConstants;
+import io.github.matheusanbs.wirelessautomate.client.guide.GuideKeys;
 import io.github.matheusanbs.wirelessautomate.client.guide.GuidePages;
 import io.github.matheusanbs.wirelessautomate.client.guide.GuideScreen;
 import io.github.matheusanbs.wirelessautomate.item.GuideBook;
-import io.github.matheusanbs.wirelessautomate.client.guide.GuideKeys;
 import io.github.matheusanbs.wirelessautomate.item.GuideClientHooks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.KeyboardHandler;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.inventory.ContainerScreen;
+import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
+import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.level.GameType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import org.lwjgl.glfw.GLFW;
 
 /**
@@ -52,7 +67,7 @@ final class E2eGuideSteps {
         list.add(new Step("livro-guia entregue no primeiro login", STEP_TIMEOUT_MS, () -> {
         }, () -> onServer(server -> GuideBook.given(server.getPlayerList()
                 .getPlayer(Minecraft.getInstance().player.getUUID()))),
-                () -> "o livro não foi entregue (a marca no jogador não está lá)"));
+                () -> "a marca guide_v2_given no jogador"));
         guidePages(list, "");
         keySteps(list);
         E2eVariants.pt(list, () -> {
@@ -77,6 +92,7 @@ final class E2eGuideSteps {
         list.add(new Step("guia" + suffix + ": folha de rosto", STEP_TIMEOUT_MS, GuideScreen::openIndex,
                 () -> book() != null && book().page() == null && book().spread() == 0,
                 () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(longKeyStep(suffix));
         list.add(new Step("guia" + suffix + ": as páginas lidas", STEP_TIMEOUT_MS, () -> {
         }, () -> GuidePages.pageIds().containsAll(PAGES) && PAGES.containsAll(GuidePages.pageIds()),
                 () -> "páginas " + GuidePages.pageIds()));
@@ -102,9 +118,31 @@ final class E2eGuideSteps {
 
     /**
      * A tecla G: com um roteador no inventário e o mouse sobre ele, a dica traz a linha da tecla e apertar a tecla (pelo
-     * teclado de verdade, com o {@code KeyMapping}) abre o livro em {@code router.md}.
+     * teclado de verdade, com o {@code KeyMapping} e o caractere que o GLFW manda junto) abre o livro em
+     * {@code router.md} com a busca vazia; o Esc volta ao inventário. Depois o mesmo num baú, que continua aberto e
+     * sincronizado (um clique nele chega ao servidor), e a busca do criativo com foco, que fica com a letra.
      */
     private static void keySteps(List<Step> list) {
+        inventoryKeySteps(list);
+        chestSteps(list);
+        list.add(new Step("guia: tecla G, limpar o slot", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            var player = server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID());
+            player.getInventory().setItem(9, ItemStack.EMPTY);
+            player.inventoryMenu.broadcastFullState();
+            return null;
+        }), () -> Minecraft.getInstance().player.getInventory().getItem(9).isEmpty(),
+                () -> "slot 9 " + Minecraft.getInstance().player.getInventory().getItem(9) + ", servidor "
+                        + onServer(server -> server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID())
+                                .getInventory().getItem(9))));
+        list.add(new Step("guia: tecla G, voltar ao criativo", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID()).setGameMode(GameType.CREATIVE);
+            return null;
+        }), () -> Minecraft.getInstance().player.isCreative(), () -> "criativo"));
+        creativeSearchSteps(list);
+    }
+
+    /** No inventário: com um campo de texto focado não abre; com a dica, abre na página e o Esc volta ao inventário. */
+    private static void inventoryKeySteps(List<Step> list) {
         list.add(new Step("guia: tecla G, o roteador no inventário", STEP_TIMEOUT_MS, () -> onServer(server -> {
             var player = server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID());
             player.setGameMode(GameType.SURVIVAL);
@@ -124,17 +162,12 @@ final class E2eGuideSteps {
             }
             E2eUpgradeCardSteps.hoverSlot(inventory, 0);
             if (stepTicks == 6) {
-                var box = new net.minecraft.client.gui.components.EditBox(Minecraft.getInstance().font, 0, 0, 50, 12,
-                        net.minecraft.network.chat.Component.empty());
+                var box = new EditBox(Minecraft.getInstance().font, 0, 0, 50, 12, Component.empty());
                 box.setFocused(true);
                 inventory.setFocused(box);
             }
             if (stepTicks == 8) {
-                var keyboard = Minecraft.getInstance().keyboardHandler;
-                long window = Minecraft.getInstance().getWindow().getWindow();
-                int key = GuideKeys.OPEN_GUIDE.getKey().getValue();
-                keyboard.keyPress(window, key, 0, GLFW.GLFW_PRESS, 0);
-                keyboard.keyPress(window, key, 0, GLFW.GLFW_RELEASE, 0);
+                pressGuideKey();
             }
             if (stepTicks == 16) {
                 inventory.setFocused(null);
@@ -165,32 +198,247 @@ final class E2eGuideSteps {
                 if (!hint) {
                     throw new StepFailure("a dica do roteador não tem a linha da tecla G");
                 }
-                var keyboard = Minecraft.getInstance().keyboardHandler;
-                long window = Minecraft.getInstance().getWindow().getWindow();
-                int key = GuideKeys.OPEN_GUIDE.getKey().getValue();
-                keyboard.keyPress(window, key, 0, GLFW.GLFW_PRESS, 0);
-                keyboard.keyPress(window, key, 0, GLFW.GLFW_RELEASE, 0);
+                pressGuideKey();
             }
             return false;
         }, () -> "tela " + describe(Minecraft.getInstance().screen)));
-        list.add(new Step("guia: tecla G, abriu em router.md", STEP_TIMEOUT_MS, () -> {
-        }, () -> book() != null && "router".equals(book().page()) && book().spread() == 0,
-                () -> book() == null ? "sem livro" : "página " + book().page()));
-        list.add(new Step("guia: tecla G, fechar o livro", STEP_TIMEOUT_MS, () -> Minecraft.getInstance().setScreen(null),
+        list.add(new Step("guia: tecla G, abriu em router.md com a busca vazia", STEP_TIMEOUT_MS, () -> {
+        }, () -> book() != null && "router".equals(book().page()) && book().spread() == 0
+                && book().searchText().isEmpty() && book().parent() instanceof InventoryScreen, E2eGuideSteps::bookState));
+        list.add(new Step("guia: tecla G, o Esc volta ao inventário", STEP_TIMEOUT_MS,
+                () -> book().keyPressed(GLFW.GLFW_KEY_ESCAPE, 0, 0),
+                () -> Minecraft.getInstance().screen instanceof InventoryScreen,
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(new Step("guia: tecla G, fechar o inventário", STEP_TIMEOUT_MS,
+                () -> Minecraft.getInstance().screen.onClose(),
                 () -> Minecraft.getInstance().screen == null, () -> "tela " + describe(Minecraft.getInstance().screen)));
-        list.add(new Step("guia: tecla G, limpar o slot", STEP_TIMEOUT_MS, () -> onServer(server -> {
+    }
+
+    private static String bookState() {
+        GuideScreen s = book();
+        return s == null ? "tela " + describe(Minecraft.getInstance().screen)
+                : "página " + s.page() + ", busca \"" + s.searchText() + "\", volta para " + describe(s.parent());
+    }
+
+    /** Onde o passo do baú o põe (perto do jogador, num lugar vazio) e a tela dele. */
+    private static BlockPos chest;
+    private static ContainerScreen chestScreen;
+
+    private static int serverMenuId() throws Exception {
+        return onServer(server -> server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID())
+                .containerMenu.containerId);
+    }
+
+    /**
+     * G num baú: o livro abre por cima dele e o Esc volta à tela do baú, com o mesmo menu nos dois lados; um clique
+     * no slot do baú pega o roteador no servidor (com o menu dessincronizado, o clique seria descartado).
+     */
+    private static void chestSteps(List<Step> list) {
+        list.add(new Step("guia: tecla G num baú, abrir o baú", STEP_TIMEOUT_MS, () -> chest = onServer(server -> {
             var player = server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID());
-            player.getInventory().setItem(9, ItemStack.EMPTY);
-            player.inventoryMenu.broadcastFullState();
+            var level = player.serverLevel();
+            BlockPos pos = player.blockPosition().offset(2, 0, 0);
+            level.setBlockAndUpdate(pos, Blocks.CHEST.defaultBlockState());
+            ChestBlockEntity be = (ChestBlockEntity) level.getBlockEntity(pos);
+            be.setItem(0, ModItems.ROUTER.get().getDefaultInstance());
+            player.openMenu(be);
+            return pos;
+        }), () -> {
+            if (Minecraft.getInstance().screen instanceof ContainerScreen screen
+                    && screen.getMenu().getSlot(0).getItem().is(ModItems.ROUTER.get())) {
+                chestScreen = screen;
+                return true;
+            }
+            return false;
+        }, () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(new Step("guia: tecla G num baú abre o livro por cima", STEP_TIMEOUT_MS, () -> {
+        }, () -> {
+            if (book() != null) {
+                return "router".equals(book().page()) && book().searchText().isEmpty()
+                        && book().parent() == chestScreen;
+            }
+            if (Minecraft.getInstance().screen != chestScreen || stepTicks < 2) {
+                return false;
+            }
+            Slot slot = chestScreen.getMenu().getSlot(0);
+            moveMouse(chestScreen.getGuiLeft() + slot.x + 8, chestScreen.getGuiTop() + slot.y + 8);
+            if (stepTicks == 6) {
+                pressGuideKey();
+            }
+            return false;
+        }, E2eGuideSteps::bookState));
+        list.add(new Step("guia: tecla G num baú, o Esc volta ao baú aberto", STEP_TIMEOUT_MS,
+                () -> book().keyPressed(GLFW.GLFW_KEY_ESCAPE, 0, 0), () -> {
+            var player = Minecraft.getInstance().player;
+            int id = player.containerMenu.containerId;
+            return Minecraft.getInstance().screen == chestScreen && player.containerMenu == chestScreen.getMenu()
+                    && id != 0 && serverMenuId() == id;
+        }, () -> "tela " + describe(Minecraft.getInstance().screen) + ", menu do cliente "
+                + Minecraft.getInstance().player.containerMenu.containerId + ", do servidor " + serverMenuId()));
+        list.add(new Step("guia: tecla G num baú, um clique no baú chega ao servidor", STEP_TIMEOUT_MS, () -> {
+            var mc = Minecraft.getInstance();
+            mc.gameMode.handleInventoryMouseClick(chestScreen.getMenu().containerId, 0, 0, ClickType.PICKUP, mc.player);
+        }, () -> onServer(server -> {
+            var menu = server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID()).containerMenu;
+            return menu.getCarried().is(ModItems.ROUTER.get()) && menu.getSlot(0).getItem().isEmpty();
+        }), () -> "no servidor, na mão " + onServer(server -> server.getPlayerList()
+                .getPlayer(Minecraft.getInstance().player.getUUID()).containerMenu.getCarried())));
+        list.add(new Step("guia: tecla G num baú, devolver e fechar o baú", STEP_TIMEOUT_MS, () -> {
+            var mc = Minecraft.getInstance();
+            mc.gameMode.handleInventoryMouseClick(chestScreen.getMenu().containerId, 0, 0, ClickType.PICKUP, mc.player);
+            chestScreen.onClose();
+        }, () -> Minecraft.getInstance().screen == null && onServer(server -> {
+            var player = server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID());
+            return player.containerMenu == player.inventoryMenu
+                    && ((ChestBlockEntity) player.serverLevel().getBlockEntity(chest)).getItem(0)
+                            .is(ModItems.ROUTER.get());
+        }), () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(new Step("guia: tecla G num baú, tirar o baú", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            var level = server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID()).serverLevel();
+            ((ChestBlockEntity) level.getBlockEntity(chest)).clearContent();
+            level.setBlockAndUpdate(chest, Blocks.AIR.defaultBlockState());
+            chestScreen = null;
             return null;
-        }), () -> Minecraft.getInstance().player.getInventory().getItem(9).isEmpty(),
-                () -> "slot 9 " + Minecraft.getInstance().player.getInventory().getItem(9) + ", servidor "
-                        + onServer(server -> server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID())
-                                .getInventory().getItem(9))));
-        list.add(new Step("guia: tecla G, voltar ao criativo", STEP_TIMEOUT_MS, () -> onServer(server -> {
-            server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID()).setGameMode(GameType.CREATIVE);
-            return null;
-        }), () -> Minecraft.getInstance().player.isCreative(), () -> "criativo"));
+        }), () -> Minecraft.getInstance().level.getBlockState(chest).isAir(), () -> "bloco "
+                + Minecraft.getInstance().level.getBlockState(chest)));
+    }
+
+    /** A busca do criativo antes da tecla, para conferir que ela ficou com a letra. */
+    private static String searchBefore = "";
+
+    /**
+     * A busca do inventário criativo com foco (a caixa liga o foco dela sem virar o filho com foco da tela): com o
+     * mouse sobre um item do mod, G escreve a letra na busca e não abre o livro.
+     */
+    private static void creativeSearchSteps(List<Step> list) {
+        list.add(new Step("guia: tecla G na busca do criativo escreve e não abre", STEP_TIMEOUT_MS, () -> {
+            var mc = Minecraft.getInstance();
+            mc.setScreen(new CreativeModeInventoryScreen(mc.player, mc.player.connection.enabledFeatures(),
+                    mc.options.operatorItemsTab().get()));
+        }, () -> {
+            if (book() != null) {
+                return failNow("o livro abriu com a busca do criativo focada");
+            }
+            if (!(Minecraft.getInstance().screen instanceof CreativeModeInventoryScreen screen) || stepTicks < 2) {
+                return false;
+            }
+            EditBox box = creativeSearch(screen);
+            if (stepTicks == 3 && !box.isVisible()) {
+                // fora da aba de busca, a tecla do chat leva a ela (e o jogo descarta a letra)
+                int chat = Minecraft.getInstance().options.keyChat.getKey().getValue();
+                Minecraft.getInstance().keyboardHandler.keyPress(window(), chat, 0, GLFW.GLFW_PRESS, 0);
+                typeChar(Character.toLowerCase((char) chat));
+                Minecraft.getInstance().keyboardHandler.keyPress(window(), chat, 0, GLFW.GLFW_RELEASE, 0);
+            }
+            if (stepTicks == 4 && box.isVisible() && !box.isFocused()) {
+                // o All The Tweaks (no cliente de dev, e no ATM10) tira o foco automático da busca; o jogo puro o liga
+                // assim, só na caixa, sem que ela vire o filho com foco da tela: é o caso que a trava tem de pegar
+                box.setFocused(true);
+            }
+            if (stepTicks == 5) {
+                if (screen.getFocused() == box) {
+                    throw new StepFailure("a busca do criativo virou o filho com foco: o teste não cobre o caso");
+                }
+                if (!box.isVisible() || !box.isFocused()) {
+                    throw new StepFailure("a busca do criativo devia estar à vista e com foco (à vista " + box.isVisible()
+                            + ", foco " + box.isFocused() + ", foco da tela " + screen.getFocused() + ")");
+                }
+                box.setValue("");
+                type("wireless");
+                searchBefore = box.getValue();
+            }
+            if (stepTicks >= 6 && stepTicks < 9) {
+                for (Slot slot : screen.getMenu().slots) {
+                    if (hasPage(slot.getItem())) {
+                        moveMouse(screen.getGuiLeft() + slot.x + 8, screen.getGuiTop() + slot.y + 8);
+                        break;
+                    }
+                }
+            }
+            if (stepTicks == 9) {
+                Slot under = screen.getSlotUnderMouse();
+                if (under == null || !hasPage(under.getItem())) {
+                    throw new StepFailure("nenhum item com página sob o mouse na busca do criativo");
+                }
+                pressGuideKey();
+            }
+            return stepTicks >= 16 && box.getValue().equals(searchBefore + "g");
+        }, () -> Minecraft.getInstance().screen instanceof CreativeModeInventoryScreen screen
+                ? "busca \"" + creativeSearch(screen).getValue() + "\"" : "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(new Step("guia: tecla G, fechar o criativo", STEP_TIMEOUT_MS, () -> Minecraft.getInstance().setScreen(null),
+                () -> Minecraft.getInstance().screen == null, () -> "tela " + describe(Minecraft.getInstance().screen)));
+    }
+
+    private static boolean hasPage(ItemStack stack) {
+        return !stack.isEmpty() && GuidePages.pageForItem(BuiltInRegistries.ITEM.getKey(stack.getItem()).toString()) != null;
+    }
+
+    private static EditBox creativeSearch(CreativeModeInventoryScreen screen) {
+        for (var child : screen.children()) {
+            if (child instanceof EditBox box) {
+                return box;
+            }
+        }
+        throw new IllegalStateException("o inventário criativo sem a caixa de busca");
+    }
+
+    private static long window() {
+        return Minecraft.getInstance().getWindow().getWindow();
+    }
+
+    /**
+     * Aperta a tecla do livro como o jogo: o GLFW entrega a tecla e, na mesma rodada, o caractere dela para a tela
+     * que estiver aberta naquele momento; depois a soltura.
+     */
+    private static void pressGuideKey() throws StepFailure {
+        var keyboard = Minecraft.getInstance().keyboardHandler;
+        int key = GuideKeys.OPEN_GUIDE.getKey().getValue();
+        keyboard.keyPress(window(), key, 0, GLFW.GLFW_PRESS, 0);
+        typeChar(Character.toLowerCase((char) key));
+        keyboard.keyPress(window(), key, 0, GLFW.GLFW_RELEASE, 0);
+    }
+
+    /** O caractere pelo caminho do teclado ({@code KeyboardHandler.charTyped}, privado), com os eventos do NeoForge. */
+    private static void typeChar(char c) throws StepFailure {
+        try {
+            Method charTyped = KeyboardHandler.class.getDeclaredMethod("charTyped", long.class, int.class, int.class);
+            charTyped.setAccessible(true);
+            charTyped.invoke(Minecraft.getInstance().keyboardHandler, window(), (int) c, 0);
+        } catch (ReflectiveOperationException e) {
+            throw new StepFailure("sem o charTyped do teclado: " + e);
+        }
+    }
+
+    /**
+     * A dica da folha de rosto diz o nome real da tecla: com teclas de nome longo, ela continua cabendo (a conferência
+     * da própria folha de rosto, {@code problems()}). A tecla volta à de antes sem gravar as opções.
+     */
+    private static Step longKeyStep(String suffix) {
+        return new Step("guia" + suffix + ": dica da folha de rosto com teclas de nome longo", STEP_TIMEOUT_MS, () -> {
+            KeyMapping mapping = GuideKeys.OPEN_GUIDE;
+            InputConstants.Key before = mapping.getKey();
+            List<String> found = new ArrayList<>();
+            try {
+                for (int key : new int[] {GLFW.GLFW_KEY_NUM_LOCK, GLFW.GLFW_KEY_KP_ENTER, GLFW.GLFW_KEY_RIGHT_CONTROL,
+                        GLFW.GLFW_KEY_PRINT_SCREEN}) {
+                    mapping.setKey(InputConstants.Type.KEYSYM.getOrCreate(key));
+                    KeyMapping.resetMapping();
+                    GuideScreen.openIndex();
+                    if (book() == null || !book().problems().isEmpty()) {
+                        found.add(mapping.getTranslatedKeyMessage().getString() + ": "
+                                + (book() == null ? "sem livro" : String.join(" | ", book().problems())));
+                    }
+                }
+            } finally {
+                mapping.setKey(before);
+                KeyMapping.resetMapping();
+            }
+            if (!found.isEmpty()) {
+                throw new StepFailure("não coube: " + String.join("; ", found));
+            }
+            GuideScreen.openIndex();
+        }, () -> book() != null && book().page() == null && book().problems().isEmpty(), () -> "tecla "
+                + GuideKeys.OPEN_GUIDE.getTranslatedKeyMessage().getString());
     }
 
     private static boolean failNow(String message) throws StepFailure {
@@ -219,6 +467,25 @@ final class E2eGuideSteps {
                 () -> book().keyPressed(GLFW.GLFW_KEY_RIGHT, 0, 0),
                 () -> book() != null && book().page() == null && book().spread() == 1,
                 () -> book() == null ? "sem livro" : "par " + book().spread()));
+        // o ícone de cada linha do índice leva à página da linha (o de "Redes" é o Vinculador, o da abertura o roteador)
+        for (String target : List.of("index", "networks")) {
+            list.add(new Step("guia: o ícone da linha " + target + " no índice", STEP_TIMEOUT_MS, () -> {
+                GuideScreen.openIndex();
+                GuideScreen s = book();
+                for (int n = 0; n < s.spreads() && s.linkCenter(target) == null; n++) {
+                    s.turnTo(n);
+                }
+                if (s.linkCenter(target) == null) {
+                    throw new StepFailure("o índice não tem o link de " + target);
+                }
+                int[] c = s.iconCenter(target);
+                if (c == null) {
+                    throw new StepFailure("o ícone da linha de " + target + " leva a outra página");
+                }
+                click(s, c[0], c[1]);
+            }, () -> book() != null && target.equals(book().page()),
+                    () -> book() == null ? "sem livro" : "página " + book().page()));
+        }
     }
 
     /**

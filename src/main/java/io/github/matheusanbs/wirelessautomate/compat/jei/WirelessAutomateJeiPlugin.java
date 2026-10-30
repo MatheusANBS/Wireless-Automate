@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.compat.jei;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.client.filter.FilterScreen;
+import io.github.matheusanbs.wirelessautomate.client.guide.GuideKeys;
 import io.github.matheusanbs.wirelessautomate.client.recipe.RecipeEditorScreen;
 import io.github.matheusanbs.wirelessautomate.client.tv.TvScreen;
 import io.github.matheusanbs.wirelessautomate.client.storage.StorageListScreen;
@@ -17,7 +18,6 @@ import java.util.ArrayList;
 import java.util.List;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
-import io.github.matheusanbs.wirelessautomate.client.guide.GuideKeys;
 import mezz.jei.api.constants.RecipeTypes;
 import mezz.jei.api.constants.VanillaTypes;
 import mezz.jei.api.gui.handlers.IGuiContainerHandler;
@@ -246,6 +246,11 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
         UnloadedTiers.hide(runtime.getIngredientManager());
         GuideKeys.jeiHovered = () -> hoveredItem(runtime);
         GuideKeys.jeiTyping = () -> runtime.getIngredientListOverlay().hasKeyboardFocus();
+    }
+
+    @Override
+    public void onRuntimeUnavailable() {
+        GuideKeys.clearJei();
     }
 
     /** O item sob o mouse na lista, nos favoritos ou na tela de receitas do JEI; vazio se o foco está na busca dele. */

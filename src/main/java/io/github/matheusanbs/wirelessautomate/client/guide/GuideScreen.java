@@ -258,7 +258,7 @@ public final class GuideScreen extends Screen {
         }
         Ink ink = sheetHit(tx, ty);
         if (ink instanceof GuideInk.Item it) {
-            g.renderTooltip(font, it.name(), mouseX, mouseY);
+            g.renderComponentTooltip(font, it.tip(), mouseX, mouseY);
         } else if (ink instanceof GuideInk.Frame f) {
             g.renderTooltip(font, f.full(), mouseX, mouseY);
         } else if (ink instanceof GuideInk.Link l) {

@@ -12,6 +12,7 @@ import io.github.matheusanbs.wirelessautomate.client.guide.layout.TextStyle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.commands.arguments.item.ItemParser;
@@ -22,7 +23,10 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix4f;
+import org.joml.Vector3f;
 
 /**
  * Uma folha pronta para desenhar: as {@link SheetOp} da paginação viram tinta (o texto já com estilo, a pilha do item,
@@ -45,6 +49,8 @@ final class GuideInk {
 
     private static final Style BOLD = Style.EMPTY.withBold(true);
     private static final Style LINK = Style.EMPTY.withUnderlined(true);
+    private static final Component OPEN_PAGE = Component.translatable("gui.wirelessautomate.guide.open_page")
+            .withStyle(ChatFormatting.GRAY);
 
     /** O estilo da fonte de cada estilo de texto; a medida e o desenho usam o mesmo. */
     static Style style(TextStyle s) {
@@ -69,8 +75,11 @@ final class GuideInk {
     record Txt(int x, int y, FormattedCharSequence text, int color, float scale, int codeW) implements Ink {
     }
 
-    /** {@code page} é a página do item (nula se não tem, ou se é a própria página aberta). */
-    record Item(int x, int y, int size, ItemStack stack, Component name, @Nullable String page) implements Ink {
+    /**
+     * {@code page} é a página do item (nula se não tem, ou se é a própria página aberta); {@code tip} é a dica: o nome
+     * e, se tem página, a linha que diz que o clique a abre.
+     */
+    record Item(int x, int y, int size, ItemStack stack, List<Component> tip, @Nullable String page) implements Ink {
     }
 
     record Img(int x, int y, int w, int h, ResourceLocation texture, int texW, int texH) implements Ink {
@@ -89,6 +98,23 @@ final class GuideInk {
      */
     record Frame(int x, int y, int w, int h, int contentY, ItemStack stack, List<FormattedCharSequence> lines,
             int[] lineX, @Nullable Component full) implements Ink {
+    }
+
+    /**
+     * A receita de bancada na moldura ({@code x, y, w, h}): os fundos dos slots ({@code slotX}, {@code slotY}, 18
+     * unidades), as opções de cada casa (a que aparece alterna a cada segundo; cada opção já é um {@link Item} na
+     * posição dela), o resultado no slot grande ({@code bigX}, {@code bigY}) e a seta.
+     */
+    record Craft(int x, int y, int w, int h, int[] slotX, int[] slotY, Item[][] cells, Item result, int bigX,
+            int bigY, int arrowX, int arrowY) implements Ink {
+    }
+
+    /**
+     * A cena parada na moldura ({@code x, y, w, h}): os estados de bloco e as posições ({@code pos}, x, y, z em
+     * sequência), a vista já enquadrada (unidades de folha) e as duas luzes já giradas com ela.
+     */
+    record Scene(int x, int y, int w, int h, BlockState[] states, int[] pos, Matrix4f view, Vector3f light0,
+            Vector3f light1) implements Ink {
     }
 
     /** A área de clique de um link para outra página, com o título dela para a dica. */
@@ -123,14 +149,8 @@ final class GuideInk {
                     TextMeasure.Size s = measure.imageSize(i.path());
                     out.add(new Img(i.x(), i.y(), i.w(), i.h(), FontMeasure.image(i.path()), s.w(), s.h()));
                 }
-                case SheetOp.RecipeFrame r -> {
-                    String id = r.itemId() != null ? r.itemId() : r.recipeId();
-                    ItemStack stack = stack(id, "");
-                    Component what = stack.isEmpty() ? Component.literal(id) : stack.getHoverName();
-                    out.add(frame(r, stack, Component.translatable("gui.wirelessautomate.guide.recipe", what), font));
-                }
-                case SheetOp.SceneFrame s -> out.add(frame(s, ItemStack.EMPTY,
-                        Component.translatable("gui.wirelessautomate.guide.scene"), font));
+                case SheetOp.RecipeFrame r -> out.add(GuideRecipes.prepare(r, current, font));
+                case SheetOp.SceneFrame s -> out.add(GuideScenes.prepare(s));
                 case SheetOp.SubPagesMarker s -> out.add(frame(s, ItemStack.EMPTY,
                         Component.translatable("gui.wirelessautomate.guide.subpages"), font));
             }
@@ -169,19 +189,26 @@ final class GuideInk {
     }
 
     private static Item item(int x, int y, int size, String id, String components, @Nullable String current) {
-        ItemStack stack = stack(id, components);
-        String page = GuidePages.pageForItem(id);
+        return item(x, y, size, stack(id, components), current);
+    }
+
+    /** O item já com a página dele (pelo id do item) e a dica. */
+    static Item item(int x, int y, int size, ItemStack stack, @Nullable String current) {
+        String page = stack.isEmpty() ? null
+                : GuidePages.pageForItem(BuiltInRegistries.ITEM.getKey(stack.getItem()).toString());
         if (page != null && page.equals(current)) {
             page = null;
         }
-        return new Item(x, y, size, stack, stack.getHoverName(), page);
+        List<Component> tip = page == null ? List.of(stack.getHoverName())
+                : List.of(stack.getHoverName(), OPEN_PAGE);
+        return new Item(x, y, size, stack, tip, page);
     }
 
     /**
      * O rótulo dentro da moldura (4 unidades de borda): se não cabe com o ícone, o ícone sai; se nem assim cabe, a
      * última linha que cabe é abreviada e a dica da moldura mostra o rótulo inteiro.
      */
-    private static Frame frame(SheetOp op, ItemStack stack, Component label, Font font) {
+    static Frame frame(SheetOp op, ItemStack stack, Component label, Font font) {
         int width = Math.max(8, op.w() - 12);
         int inner = op.h() - 8;
         List<FormattedCharSequence> lines = new ArrayList<>(font.split(label, width));

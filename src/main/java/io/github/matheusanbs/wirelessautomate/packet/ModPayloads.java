@@ -10,6 +10,7 @@ import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerOpen;
 import io.github.matheusanbs.wirelessautomate.menu.CardFilterTarget;
+import io.github.matheusanbs.wirelessautomate.menu.CompactingPanel;
 import io.github.matheusanbs.wirelessautomate.menu.EditTargetRef;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.FilterTarget;
@@ -76,7 +77,8 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ModPayloads {
     /**
-     * Versão do protocolo (38: as pixel arts no layout da Tela de Sinal ({@code images}, a peça Imagem e o fundo em
+     * Versão do protocolo (39: os payloads {@code CompactingStatePayload} e {@code CompactingRulePayload}, o painel da
+     * Compactação do Baú; 38: as pixel arts no layout da Tela de Sinal ({@code images}, a peça Imagem e o fundo em
      * mosaico) e na biblioteca do jogador ({@code TvLibraryPayload.arts}, as ações {@code SAVE_ART}, {@code RENAME_ART}
      * e {@code REMOVE_ART}); o update tag da Tela leva as artes só como referência e os pixels vão no
      * {@code TvArtsPayload}; as imagens enviadas, {@code TvImageUploadPayload}, {@code TvImageReplyPayload},
@@ -86,7 +88,7 @@ public final class ModPayloads {
      * {@code TvLibraryPayload}, {@code TvLibraryActionPayload}, {@code TvPreviewPayload} e {@code TvPreviewValuesPayload},
      * e o teto de bytes do layout no buffer de abertura da Tela); mude quando um payload mudar de formato.
      */
-    public static final String VERSION = "38";
+    public static final String VERSION = "39";
 
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(VERSION);
@@ -149,6 +151,9 @@ public final class ModPayloads {
         registrar.playToClient(StorageEntriesPayload.TYPE, StorageEntriesPayload.STREAM_CODEC, StorageListMenu::onEntries);
         registrar.playToServer(StorageActionPayload.TYPE, StorageActionPayload.STREAM_CODEC,
                 (payload, context) -> StorageListMenu.handle(serverPlayer(context), payload));
+        registrar.playToClient(CompactingStatePayload.TYPE, CompactingStatePayload.STREAM_CODEC, CompactingPanel::onState);
+        registrar.playToServer(CompactingRulePayload.TYPE, CompactingRulePayload.STREAM_CODEC,
+                (payload, context) -> CompactingPanel.handle(serverPlayer(context), payload));
         registrar.playToClient(ScalarStatePayload.TYPE, ScalarStatePayload.STREAM_CODEC, StorageScalarMenu::onState);
         // Editor de receitas (/wa recipes): handlers no RecipeEditorMenu e no RecipeEditorActionPayload.
         registrar.playToClient(RecipeEditorStatePayload.TYPE, RecipeEditorStatePayload.STREAM_CODEC,

@@ -6,10 +6,15 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
+import io.github.matheusanbs.wirelessautomate.menu.ChestUpgradeSlots;
+import io.github.matheusanbs.wirelessautomate.menu.CompactingPanel;
+import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.packet.CompactingRulePayload;
+import io.github.matheusanbs.wirelessautomate.packet.CompactingStatePayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
@@ -20,6 +25,7 @@ import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingChain;
 import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingChains;
 import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingMode;
 import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingRules;
+import io.netty.buffer.Unpooled;
 import java.util.List;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
@@ -27,12 +33,15 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -373,6 +382,191 @@ public final class ChestCompactingGameTests {
                 .thenWaitUntil(() -> assertCounts(helper, chest, 1, 0))
                 .thenExecute(() -> {
                     helper.assertValueEqual(count(chest, Items.GOLD_INGOT), 9L, "o ouro intacto");
+                    helper.assertValueEqual(count(chest, Items.GOLD_BLOCK), 0L, "nenhum bloco de ouro");
+                })
+                .thenSucceed();
+    }
+
+    // ------------------------------------------------------------------ o estado e as regras na rede
+
+    private static ServerPlayer playerAt(GameTestHelper helper, StorageChestBlockEntity chest) {
+        ServerPlayer player = TestPlayers.inLevel(helper);
+        player.moveTo(Vec3.atCenterOf(chest.getBlockPos().above()));
+        player.getInventory().clearContent();
+        return player;
+    }
+
+    private static StorageListMenu<ItemStack> open(ServerPlayer player, StorageChestBlockEntity chest, int containerId) {
+        StorageListMenu<ItemStack> menu = new StorageListMenu<>(containerId, player.getInventory(), chest);
+        player.containerMenu = menu;
+        return menu;
+    }
+
+    private static CompactingRules rulesOf(StorageChestBlockEntity chest) {
+        return chest.upgrades().upgrade(0).getOrDefault(ModDataComponents.COMPACTING_RULES.get(), CompactingRules.DEFAULT);
+    }
+
+    /** O alvo e o modo mandados pelo cliente chegam ao Baú e convertem o conteúdo. */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void regraPeloPayloadMudaOAlvo(GameTestHelper helper) {
+        StorageChestBlockEntity chest = chest(helper, A, RouterTier.ELITE);
+        putUpgrade(chest, CompactingRules.DEFAULT);
+        chest.storage().insert(new ItemStack(Items.IRON_INGOT), 9, false);
+        chest.storage().insert(new ItemStack(Items.GOLD_INGOT), 9, false);
+        ServerPlayer player = playerAt(helper, chest);
+        open(player, chest, 77);
+        helper.startSequence()
+                .thenIdle(2)
+                .thenExecute(() -> {
+                    assertCounts(helper, chest, 0, 9);
+                    helper.assertTrue(CompactingPanel.handle(player, CompactingRulePayload.target(77,
+                            CompactingRulePayload.Kind.TARGET, Items.IRON_BLOCK)), "alvo aceito");
+                    helper.assertTrue(rulesOf(chest).hasOwn(chainOf(Items.IRON_INGOT)), "a regra própria no slot");
+                })
+                .thenWaitUntil(() -> assertCounts(helper, chest, 1, 0))
+                .thenExecute(() -> {
+                    helper.assertValueEqual(count(chest, Items.GOLD_INGOT), 9L, "o ouro intacto");
+                    helper.assertTrue(CompactingPanel.handle(player, CompactingRulePayload.mode(77,
+                            CompactingMode.COMPRESS.ordinal())), "modo aceito");
+                })
+                .thenWaitUntil(() -> helper.assertValueEqual(count(chest, Items.GOLD_BLOCK), 1L, "o ouro compactado"))
+                .thenExecute(() -> helper.assertTrue(CompactingPanel.handle(player, CompactingRulePayload.target(77,
+                        CompactingRulePayload.Kind.CLEAR, Items.IRON_NUGGET)), "limpar aceito por qualquer forma"))
+                .thenExecute(() -> helper.assertTrue(!rulesOf(chest).hasOwn(chainOf(Items.IRON_INGOT)), "sem alvo próprio"))
+                .thenSucceed();
+    }
+
+    /** Pedido fora das regras é recusado e não muda nada. */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void payloadInvalidoEIgnorado(GameTestHelper helper) {
+        StorageChestBlockEntity chest = chest(helper, A, RouterTier.ELITE);
+        StorageChestBlockEntity other = chest(helper, new BlockPos(6, 1, 6), RouterTier.ELITE);
+        putUpgrade(chest, COMPRESS);
+        CompactingRules before = rulesOf(chest);
+        ServerPlayer player = playerAt(helper, chest);
+        open(player, chest, 78);
+        helper.assertTrue(!CompactingPanel.handle(player, CompactingRulePayload.target(78,
+                CompactingRulePayload.Kind.TARGET, Items.STONE)), "item fora de qualquer cadeia");
+        helper.assertTrue(!CompactingPanel.handle(player, CompactingRulePayload.target(78,
+                CompactingRulePayload.Kind.CLEAR, Items.STONE)), "limpar fora de qualquer cadeia");
+        helper.assertTrue(!CompactingPanel.handle(player, CompactingRulePayload.of(78,
+                CompactingRulePayload.Kind.TARGET)), "alvo sem item");
+        helper.assertTrue(!CompactingPanel.handle(player, CompactingRulePayload.mode(78, 99)), "modo acima do enum");
+        helper.assertTrue(!CompactingPanel.handle(player, CompactingRulePayload.mode(78, -1)), "modo negativo");
+        helper.assertTrue(!CompactingPanel.handle(player, CompactingRulePayload.target(79,
+                CompactingRulePayload.Kind.TARGET, Items.IRON_BLOCK)), "outro containerId");
+        helper.assertTrue(!CompactingPanel.handle(null, CompactingRulePayload.of(78, CompactingRulePayload.Kind.WATCH)),
+                "sem jogador");
+        helper.assertValueEqual(rulesOf(chest), before, "as regras de antes");
+        // O menu de outro Baú, sem o upgrade.
+        ServerPlayer visitor = playerAt(helper, other);
+        open(visitor, other, 80);
+        helper.assertTrue(!CompactingPanel.handle(visitor, CompactingRulePayload.target(80,
+                CompactingRulePayload.Kind.TARGET, Items.IRON_BLOCK)), "Baú sem o upgrade");
+        helper.assertValueEqual(rulesOf(chest), before, "o primeiro Baú intacto");
+        // Fora de alcance.
+        player.moveTo(Vec3.atCenterOf(chest.getBlockPos().above(200)));
+        helper.assertTrue(!CompactingPanel.handle(player, CompactingRulePayload.target(78,
+                CompactingRulePayload.Kind.TARGET, Items.IRON_BLOCK)), "fora de alcance");
+        helper.assertValueEqual(rulesOf(chest), before, "as regras depois do alcance");
+        helper.succeed();
+    }
+
+    /** Sem o WATCH nada é montado; com ele, um estado por mudança e nenhum sem mudança. */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void semPainelNaoMandaEstado(GameTestHelper helper) {
+        StorageChestBlockEntity chest = chest(helper, A, RouterTier.ELITE);
+        putUpgrade(chest, CompactingRules.DEFAULT);
+        ServerPlayer player = playerAt(helper, chest);
+        StorageListMenu<ItemStack> menu = open(player, chest, 81);
+        // Tudo no mesmo instante: o contador é de todos os testes, e nenhum outro mexe nele no meio.
+        int base = ChestUpgradeSlots.sentStates();
+        chest.storage().insert(new ItemStack(Items.IRON_INGOT), 9, false);
+        menu.broadcastChanges();
+        chest.storage().insert(new ItemStack(Items.GOLD_INGOT), 9, false);
+        menu.broadcastChanges();
+        helper.assertValueEqual(ChestUpgradeSlots.sentStates(), base, "sem WATCH nada é montado");
+        helper.assertTrue(CompactingPanel.handle(player, CompactingRulePayload.of(81, CompactingRulePayload.Kind.WATCH)),
+                "WATCH aceito");
+        menu.broadcastChanges();
+        helper.assertValueEqual(ChestUpgradeSlots.sentStates(), base + 1, "o primeiro estado");
+        menu.broadcastChanges();
+        chest.storage().insert(new ItemStack(Items.IRON_INGOT), 5, false);
+        menu.broadcastChanges();
+        helper.assertValueEqual(ChestUpgradeSlots.sentStates(), base + 1, "mais do que já havia não muda o estado");
+        chest.storage().insert(new ItemStack(Items.COPPER_INGOT), 1, false);
+        menu.broadcastChanges();
+        helper.assertValueEqual(ChestUpgradeSlots.sentStates(), base + 2, "uma cadeia nova no Baú");
+        CompactingPanel.handle(player, CompactingRulePayload.of(81, CompactingRulePayload.Kind.UNWATCH));
+        chest.storage().insert(new ItemStack(Items.DIAMOND), 9, false);
+        chest.storage().insert(new ItemStack(Items.EMERALD), 9, false);
+        menu.broadcastChanges();
+        helper.assertValueEqual(ChestUpgradeSlots.sentStates(), base + 2, "fechado, nada mais");
+        helper.succeed();
+    }
+
+    /** Os dois payloads vão e voltam pelo codec, com a parada (-1). */
+    @GameTest(template = "empty")
+    public static void payloadsIdaEVoltaPeloCodec(GameTestHelper helper) {
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), helper.getLevel().registryAccess());
+        CompactingStatePayload state = new CompactingStatePayload(5, CompactingMode.COMPRESS, List.of(
+                new CompactingStatePayload.Row(List.of(Items.IRON_NUGGET, Items.IRON_INGOT, Items.IRON_BLOCK), 2, true),
+                new CompactingStatePayload.Row(List.of(Items.GOLD_INGOT, Items.GOLD_BLOCK), -1, false)));
+        CompactingStatePayload.STREAM_CODEC.encode(buf, state);
+        helper.assertValueEqual(CompactingStatePayload.STREAM_CODEC.decode(buf), state, "estado depois do codec");
+        helper.assertValueEqual(buf.readableBytes(), 0, "bytes sobrando do estado");
+        for (CompactingRulePayload rule : List.of(
+                CompactingRulePayload.of(5, CompactingRulePayload.Kind.WATCH),
+                CompactingRulePayload.mode(5, 2),
+                CompactingRulePayload.target(5, CompactingRulePayload.Kind.TARGET, Items.IRON_BLOCK))) {
+            CompactingRulePayload.STREAM_CODEC.encode(buf, rule);
+            helper.assertValueEqual(CompactingRulePayload.STREAM_CODEC.decode(buf), rule, "regra depois do codec");
+        }
+        helper.assertValueEqual(buf.readableBytes(), 0, "bytes sobrando das regras");
+        helper.succeed();
+    }
+
+    /**
+     * Com as regras e o conteúdo parados e o índice remontado, só quem olha o painel (a versão) percebe a troca de
+     * geração: o Baú vai sozinho para a fila do fim do tick e converte, sem esperar outra mudança de conteúdo.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void recargaPercebidaPeloPainelConverteSozinha(GameTestHelper helper) {
+        StorageChestBlockEntity chest = chest(helper, A, RouterTier.ELITE);
+        putUpgrade(chest, CompactingRules.DEFAULT);
+        chest.storage().insert(new ItemStack(Items.IRON_INGOT), 9, false);
+        helper.startSequence()
+                .thenIdle(2)
+                .thenExecute(() -> {
+                    assertCounts(helper, chest, 0, 9);
+                    // As regras entram sem marcar nada, como depois de carregar o Baú do disco.
+                    chest.compacting().setRules(COMPRESS);
+                    CompactingChains.rebuild(helper.getLevel().getServer());
+                    chest.compacting().version();
+                })
+                .thenWaitUntil(() -> assertCounts(helper, chest, 1, 0))
+                .thenSucceed();
+    }
+
+    /** Um id de cadeia lido antes do reload é descartado; as cadeias presentes são remarcadas pela geração nova. */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void markChainDescartaIdDeGeracaoVelha(GameTestHelper helper) {
+        StorageChestBlockEntity chest = chest(helper, A, RouterTier.ELITE);
+        putUpgrade(chest, CompactingRules.DEFAULT);
+        chest.storage().insert(new ItemStack(Items.IRON_INGOT), 9, false);
+        chest.storage().insert(new ItemStack(Items.GOLD_INGOT), 9, false);
+        helper.startSequence()
+                .thenIdle(2)
+                .thenExecute(() -> {
+                    int staleId = chainOf(Items.GOLD_INGOT).id();
+                    chest.compacting().setRules(COMPRESS.withTarget(chainOf(Items.GOLD_INGOT), Items.GOLD_INGOT));
+                    CompactingChains.rebuild(helper.getLevel().getServer());
+                    chest.compacting().markChain(staleId);
+                    chest.compacting().markChain(100_000);
+                })
+                .thenWaitUntil(() -> assertCounts(helper, chest, 1, 0))
+                .thenExecute(() -> {
+                    helper.assertValueEqual(count(chest, Items.GOLD_INGOT), 9L, "o ouro com alvo próprio fica");
                     helper.assertValueEqual(count(chest, Items.GOLD_BLOCK), 0L, "nenhum bloco de ouro");
                 })
                 .thenSucceed();

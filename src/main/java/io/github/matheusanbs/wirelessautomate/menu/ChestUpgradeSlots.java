@@ -46,11 +46,13 @@ public final class ChestUpgradeSlots {
     private final ChestCraftGrid grid;
     private final ResultContainer result = new ResultContainer();
     private final Runnable refresher = this::refreshAndSend;
+    private final CompactingPanel panel;
 
     ChestUpgradeSlots(StorageListMenu<?> menu, Player player, @Nullable StorageChestBlockEntity chest) {
         this.menu = menu;
         this.player = player;
         this.chest = chest;
+        this.panel = new CompactingPanel(menu, player, chest);
         if (chest != null) {
             ChestUpgrades chestUpgrades = chest.upgrades();
             this.upgrades = new UpgradeContainer(chestUpgrades);
@@ -110,6 +112,21 @@ public final class ChestUpgradeSlots {
         }
         moved.index = old.index;
         menu.slots.set(index, moved);
+    }
+
+    /** O painel da Compactação: o estado no cliente e o envio e as regras no servidor. */
+    public CompactingPanel compactingPanel() {
+        return panel;
+    }
+
+    /** Quantos estados da Compactação o servidor montou desde a subida; só para os testes. */
+    public static int sentStates() {
+        return CompactingPanel.sentStates();
+    }
+
+    /** Servidor, no {@code broadcastChanges} do menu. */
+    void broadcast() {
+        panel.broadcast();
     }
 
     /** Há um Upgrade de Mesa de Trabalho num dos slots. */

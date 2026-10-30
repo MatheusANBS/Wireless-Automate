@@ -70,6 +70,7 @@
   "item.wirelessautomate.chunk_loader_upgrade": "Upgrade de Chunk Loading",
   "item.wirelessautomate.range_upgrade": "Upgrade de Alcance",
   "item.wirelessautomate.crafting_upgrade": "Upgrade de Mesa de Trabalho",
+  "jei.wirelessautomate.chest_craft.needs_upgrade": "Precisa do Upgrade de Mesa de Trabalho",
   "item.wirelessautomate.compacting_upgrade": "Upgrade de Compactação",
   "item.wirelessautomate.signal_crystal": "Cristal de Sinal",
   "item.wirelessautomate.signal_crystal.dull": "Cristal de Sinal Opaco",

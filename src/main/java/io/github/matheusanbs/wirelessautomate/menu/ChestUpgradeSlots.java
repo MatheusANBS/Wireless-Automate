@@ -4,6 +4,8 @@ import io.github.matheusanbs.wirelessautomate.item.ChestUpgradeItem;
 import io.github.matheusanbs.wirelessautomate.storage.ItemStorage;
 import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.upgrade.ChestUpgrades;
+import io.github.matheusanbs.wirelessautomate.packet.ChestCraftFillPayload;
+import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.NonNullList;
 import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket;
@@ -355,6 +357,21 @@ public final class ChestUpgradeSlots {
         if (container == grid) {
             refresh(true);
         }
+    }
+
+    /**
+     * O "+" do JEI (servidor): devolve a grade e monta a receita pelas alternativas de cada slot, do Baú e depois do
+     * inventário de {@code who} ({@link ChestCraftFill}). Recusa sem a Mesa ou com listas fora da forma.
+     *
+     * @return se foi aceito
+     */
+    public boolean fill(ServerPlayer who, List<List<ItemStack>> alternatives, boolean max) {
+        return chest != null && ChestCraftFill.fill(who, chest, alternatives, max);
+    }
+
+    /** O pacote do "+" do JEI: valida o menu aberto e chama {@link #fill}. */
+    public static boolean handleFill(@Nullable ServerPlayer who, ChestCraftFillPayload payload) {
+        return ChestCraftFill.handle(who, payload);
     }
 
     /** O botão Devolver: a grade inteira para o Baú (servidor). */

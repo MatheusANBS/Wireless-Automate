@@ -25,6 +25,7 @@ import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
+import mezz.jei.api.registration.IRecipeTransferRegistration;
 import mezz.jei.api.registration.ISubtypeRegistration;
 import mezz.jei.api.gui.builder.IClickableIngredientFactory;
 import mezz.jei.api.runtime.IClickableIngredient;
@@ -243,6 +244,13 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
         UnloadedTiers.hide(runtime.getIngredientManager());
     }
 
+    /** O "+" nas receitas de crafting com o menu do Baú aberto ({@link ChestCraftTransfer}). */
+    @Override
+    public void registerRecipeTransferHandlers(IRecipeTransferRegistration registration) {
+        registration.addRecipeTransferHandler(new ChestCraftTransfer(registration.getTransferHelper()),
+                RecipeTypes.CRAFTING);
+    }
+
     @Override
     public void registerGuiHandlers(IGuiHandlerRegistration registration) {
         registration.addGhostIngredientHandler(FilterScreen.class, new FilterGhostHandler());
@@ -251,6 +259,11 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
         // Lista do Baú e dos Tanques: o tipo sob o mouse vale para os atalhos do JEI (R, U, A...).
         IIngredientManager ingredients = registration.getJeiHelpers().getIngredientManager();
         registration.addGuiContainerHandler(StorageListScreen.class, new IGuiContainerHandler<StorageListScreen>() {
+            @Override
+            public List<Rect2i> getGuiExtraAreas(StorageListScreen screen) {
+                return screen.upgradePanels().areas();
+            }
+
             @Override
             public Optional<? extends IClickableIngredient<?>> getClickableIngredientUnderMouse(
                     IClickableIngredientFactory factory, StorageListScreen screen, double mouseX, double mouseY) {

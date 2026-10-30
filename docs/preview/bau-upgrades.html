@@ -1,0 +1,394 @@
+<title>Upgrades do Baú</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;600;800&family=Chivo+Mono:wght@400;600&family=Pixelify+Sans:wght@400;600&display=swap">
+<style>
+/* Layout: uma coluna de leitura; os mockups de tela do jogo em painéis creme no estilo do GuiPaint, sobre um fundo de mundo escuro. */
+:root{
+  --bg:#FBF7EF; --paper:#FFFDF8; --ink:#2A2730; --muted:#6F6879; --line:#E3D9C6; --coral:#E0583A; --keep:#2F9D5C;
+  --world:#2B2A30;
+  --gui:#F3EBDD; --gui-ink:#2A2730; --slot:#E0D3BE; --slot-edge:#C9B99E; --gui-muted:#8C8173; --tier:#B84FD0; --accent:#2FA5A0;
+  --f-body:"Chivo",system-ui,sans-serif; --f-mono:"Chivo Mono",ui-monospace,monospace; --f-px:"Pixelify Sans","Chivo Mono",monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#1C1A20;--paper:#26232B;--ink:#ECE5D6;--muted:#A79F90;--line:#3A3640;--coral:#F26A48;--keep:#3DB56E;--world:#121116;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#1C1A20;--paper:#26232B;--ink:#ECE5D6;--muted:#A79F90;--line:#3A3640;--coral:#F26A48;--keep:#3DB56E;--world:#121116;color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font:16px/1.55 var(--f-body)}
+.wrap{max-width:980px;margin:0 auto;padding-block:32px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:36px}
+h1{font:800 2.1rem/1.15 var(--f-body);margin:0;text-wrap:balance}
+h2{font:800 1.35rem/1.2 var(--f-body);margin:0 0 10px;text-wrap:balance}
+h3{font:600 1.02rem/1.3 var(--f-body);margin:0 0 6px}
+p{margin:0 0 10px;max-width:68ch}
+.lede{color:var(--muted);font-size:1.05rem}
+.eyebrow{font:600 .72rem var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--coral)}
+code{font:.88em var(--f-mono);background:var(--paper);border:1px solid var(--line);padding:0 4px;border-radius:3px}
+ul{margin:0;padding-left:20px;max-width:70ch}
+li{margin-bottom:5px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px}
+.note{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:14px 16px}
+.cost{border-left:3px solid var(--keep);padding-left:12px}
+.out{border-left:3px solid var(--coral);padding-left:12px}
+.q{border:1px dashed var(--coral);border-radius:6px;padding:12px 14px}
+
+/* ===== mockup do jogo ===== */
+.world{background:var(--world);border-radius:6px;padding:22px 12px;overflow-x:auto}
+.scene{display:flex;gap:0;align-items:flex-start;width:max-content;margin:0 auto}
+.gui{background:var(--gui);color:var(--gui-ink);font-family:var(--f-px);border:2px solid #1d1b20;box-shadow:4px 4px 0 #CDBFA8;position:relative}
+.gui .trim{height:5px;background:var(--tier)}
+.gui .in{padding:8px 10px 10px}
+.head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.title{font-size:15px}
+.pill{border:2px solid var(--tier);border-radius:5px;padding:0 5px;font-size:13px}
+.btn{border:2px solid #1d1b20;background:#FFFDF8;padding:0 7px;font-size:13px;cursor:pointer;font-family:var(--f-px);color:var(--gui-ink)}
+.btn:hover,.btn:focus-visible{border-color:var(--accent);outline:none}
+.btn.on{background:var(--accent);color:#fff;border-color:#1d1b20}
+.search{background:var(--slot);border:2px solid var(--slot-edge);color:var(--gui-muted);font-size:13px;padding:1px 6px;flex:1}
+.grid{display:grid;gap:0;background:var(--slot-edge);border:1px solid var(--slot-edge)}
+.cell{width:30px;height:30px;background:var(--slot);border:1px solid var(--slot-edge);position:relative;display:flex;align-items:center;justify-content:center}
+.cell .n{position:absolute;right:1px;bottom:-1px;font-size:10px;color:#fff;text-shadow:1px 1px 0 #3a3a3a}
+.usage{font-size:13px;color:var(--gui-muted);display:flex;justify-content:space-between;margin:6px 0 2px}
+.bar{height:3px;background:var(--slot);margin-bottom:8px}.bar i{display:block;height:100%;width:4%;background:var(--keep)}
+.inv{margin:6px auto 0;width:max-content}
+/* ícones de item: blocos em pixel, desenhados com gradiente */
+.it{width:22px;height:22px;image-rendering:pixelated;border-radius:2px;box-shadow:inset -3px -3px 0 rgba(0,0,0,.22),inset 3px 3px 0 rgba(255,255,255,.25)}
+.it.small{width:16px;height:16px}
+.it.nug{width:12px;height:10px;border-radius:3px}
+.it.ing{width:22px;height:11px;transform:skewX(-14deg)}
+.it.raw{border-radius:45% 55% 40% 60%}
+.iron{background:#D8D8D8}.gold{background:#F4CF3A}.cop{background:#E07A4F}.cobble{background:#8A8A8A;background-image:radial-gradient(#6b6b6b 25%,transparent 26%);background-size:7px 7px}
+.diam{background:#5DE6DC}.oak{background:#B8935A}.stick{width:5px;height:22px;background:#8a6a3c;transform:rotate(40deg)}
+.dirt{background:#8B5E3C}.gravel{background:#8F8582;background-image:radial-gradient(#6d6461 30%,transparent 31%);background-size:6px 6px}.sand{background:#E3D59B}.nether{background:#7A2E2A}.log{background:#6B5233;box-shadow:inset 0 0 0 3px #4a3820}
+.rawiron{background:#C8A88A}.coal{background:#333}.red{background:#C2261B}.lapis{background:#2E57C8}
+.c1{outline:2px solid #F1E08A;outline-offset:-2px}.c2{outline:2px solid #F0B04A;outline-offset:-2px}.c3{outline:2px solid #E2633A;outline-offset:-2px}.c9{outline:2px solid #B84FD0;outline-offset:-2px}
+
+/* coluna de upgrades à esquerda do painel */
+.upcol{background:var(--gui);border:2px solid #1d1b20;border-right:0;padding:6px 5px;margin-top:40px;display:flex;flex-direction:column;gap:5px;box-shadow:0 4px 0 #CDBFA8}
+.upcol .lbl{font:10px var(--f-px);color:var(--gui-muted);text-align:center}
+.upslot{width:30px;height:30px;background:var(--slot);border:1px solid var(--slot-edge);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative}
+.upslot.sel{outline:2px solid var(--accent)}
+.upslot:focus-visible{outline:2px solid var(--coral)}
+.ico-craft{width:22px;height:22px;background:#B8935A;box-shadow:inset 0 0 0 2px #6e5130;background-image:linear-gradient(#6e5130 2px,transparent 2px),linear-gradient(90deg,#6e5130 2px,transparent 2px);background-size:7px 7px;background-position:1px 1px}
+.ico-comp{width:22px;height:22px;background:#7C7A86;box-shadow:inset 0 0 0 2px #3f3d46;position:relative}
+.ico-comp:before,.ico-comp:after{content:"";position:absolute;left:5px;width:12px;height:3px;background:#E8D35A}
+.ico-comp:before{top:5px}.ico-comp:after{bottom:5px}
+.side{border-left:0;margin-top:40px;min-width:200px}
+.side .in{padding:8px}
+.side h4{font:600 14px var(--f-px);margin:0 0 6px}
+.craft{display:flex;align-items:center;gap:8px}
+.arrow{font-size:20px;color:var(--gui-muted)}
+.res{width:38px;height:38px}
+.mini{font-size:11px;color:var(--gui-muted);margin-top:6px;line-height:1.3;max-width:200px}
+.row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+
+/* painel da compactação */
+.seg{display:flex;border:2px solid #1d1b20;width:max-content}
+.seg button{font:12px var(--f-px);border:0;border-right:2px solid #1d1b20;background:#FFFDF8;padding:1px 7px;cursor:pointer;color:var(--gui-ink)}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:#fff}
+.seg button:focus-visible{outline:2px solid var(--coral);outline-offset:-2px}
+.chains{margin-top:8px;display:flex;flex-direction:column;gap:4px;max-height:260px;overflow:auto}
+.chain{background:#EADFCB;padding:4px 5px;display:flex;flex-direction:column;gap:3px}
+.chain .nm{display:flex;justify-content:space-between;font-size:12px}
+.chain .nm span:last-child{color:var(--gui-muted)}
+.chain .lv{display:flex;gap:2px;align-items:center;flex-wrap:wrap}
+.lvb{width:24px;height:24px;background:var(--slot);border:1px solid var(--slot-edge);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;position:relative}
+.lvb .k{position:absolute;right:0;bottom:-2px;font:9px var(--f-px);color:#fff;text-shadow:1px 1px 0 #333}
+.lvb.tgt{outline:2px solid var(--accent);outline-offset:-1px;background:#d5efe9}
+.lvb:focus-visible{outline:2px solid var(--coral)}
+.chev{font-size:10px;color:var(--gui-muted)}
+.crow{display:flex;align-items:center;gap:5px}
+.crow .cn{flex:1;font-size:12px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pick{display:flex;align-items:center;gap:2px}
+.step{font:12px var(--f-px);width:14px;height:24px;border:1px solid var(--slot-edge);background:#FFFDF8;cursor:pointer;padding:0;color:var(--gui-ink)}
+.step:disabled{opacity:.35;cursor:default}
+.step:focus-visible{outline:2px solid var(--coral)}
+.flab{font-size:11px;width:44px;text-align:center;color:var(--gui-ink)}
+.pop{background:#FFFDF8;border:2px solid #1d1b20;padding:5px;margin-top:3px;display:grid;grid-template-columns:repeat(6,auto);gap:3px;justify-content:start}
+.pop .lvb{width:30px;height:30px}
+.pop .cap{grid-column:1/-1;font-size:10px;color:var(--gui-muted)}
+.tag{font:10px var(--f-px);padding:0 4px;border:1px solid var(--gui-muted);color:var(--gui-muted);cursor:pointer;background:transparent}
+.tag.own{border-color:var(--accent);color:var(--accent)}
+
+/* simulador */
+.sim{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;align-items:start}
+.sim table{border-collapse:collapse;font:14px var(--f-mono);width:100%;font-variant-numeric:tabular-nums}
+.sim td,.sim th{border-bottom:1px solid var(--line);padding:4px 6px;text-align:right}
+.sim th:first-child,.sim td:first-child{text-align:left}
+.sim th{font-weight:600;color:var(--muted);font-size:12px}
+.sim .ctrl{display:flex;flex-direction:column;gap:8px}
+.sim label{font-size:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sim select,.sim input{font:14px var(--f-mono);padding:3px 6px;background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:3px}
+.sim .act{font:600 14px var(--f-body);border:1px solid var(--ink);background:var(--paper);color:var(--ink);padding:5px 10px;border-radius:4px;cursor:pointer;width:max-content}
+.sim .act:focus-visible{outline:2px solid var(--coral)}
+.changed td{background:color-mix(in srgb,var(--keep) 14%,transparent)}
+@media (prefers-reduced-motion:no-preference){.changed td{transition:background .4s}}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Proposta · Baú · 2.13</div>
+  <h1>Upgrades do Baú: Mesa de Trabalho e Compactação</h1>
+  <p class="lede">O Baú ganha dois slots de upgrade. Cada slot aceita um dos dois upgrades, e cada um só uma vez. Clicar no upgrade abre o painel dele ao lado da lista. Nada disto existe no jogo ainda: é para aprovar antes do código.</p>
+</header>
+
+<section>
+  <h2>A tela</h2>
+  <p>Os dois slots ficam numa coluna à esquerda do painel, como nas mochilas do Sophisticated. O painel do upgrade selecionado abre à direita e a lista continua redimensionável. Clique nos dois slots para trocar o painel.</p>
+  <div class="world">
+    <div class="scene">
+      <div class="upcol" role="tablist" aria-label="Upgrades do Baú">
+        <div class="lbl">UP</div>
+        <div class="upslot sel" id="tab-craft" role="tab" tabindex="0" aria-selected="true" title="Upgrade de Mesa de Trabalho"><div class="ico-craft"></div></div>
+        <div class="upslot" id="tab-comp" role="tab" tabindex="0" aria-selected="false" title="Upgrade de Compactação"><div class="ico-comp"></div></div>
+      </div>
+      <div class="gui" style="width:430px">
+        <div class="trim"></div>
+        <div class="in">
+          <div class="head"><span class="title">Baú Sem Fio</span><span class="pill">Unobtainium</span><span style="flex:1"></span><span class="btn">● Filtro</span></div>
+          <div class="head"><span class="search">Buscar... @mod #tag</span><span class="btn">Qtd ↓</span></div>
+          <div class="grid" id="list" style="grid-template-columns:repeat(13,30px)"></div>
+          <div class="usage"><span>315M de 8,6G · 44 tipos</span><span>4%</span></div>
+          <div class="bar"><i></i></div>
+          <div class="inv"><div class="grid" id="inv" style="grid-template-columns:repeat(9,30px)"></div></div>
+        </div>
+      </div>
+      <div class="gui side" id="panel-craft">
+        <div class="trim"></div>
+        <div class="in">
+          <h4>Mesa de Trabalho</h4>
+          <div class="craft">
+            <div class="grid" style="grid-template-columns:repeat(3,30px)">
+              <div class="cell"><div class="it iron ing small"></div></div><div class="cell"><div class="it iron ing small"></div></div><div class="cell"><div class="it iron ing small"></div></div>
+              <div class="cell"></div><div class="cell"><div class="stick"></div></div><div class="cell"></div>
+              <div class="cell"></div><div class="cell"><div class="stick"></div></div><div class="cell"></div>
+            </div>
+            <span class="arrow">→</span>
+            <div class="cell res" style="width:40px;height:40px"><div class="it iron" style="width:26px;height:8px;margin-top:-10px"></div><span class="n">1</span></div>
+          </div>
+          <div class="row" style="margin-top:8px"><span class="btn">↺ Devolver</span><span class="btn">▦ Do Baú</span></div>
+          <div class="mini">Tirar o resultado repõe a grade com o que está no Baú. Shift + clique faz até uma pilha.</div>
+        </div>
+      </div>
+      <div class="gui side" id="panel-comp" hidden style="width:290px">
+        <div class="trim"></div>
+        <div class="in">
+          <h4>Compactação</h4>
+          <div style="font-size:12px;color:var(--gui-muted);margin-bottom:3px">Global</div>
+          <div class="seg" id="gseg">
+            <button data-g="off" type="button" class="on">Desligada</button>
+            <button data-g="max" type="button">Compactar</button>
+            <button data-g="min" type="button">Descompactar</button>
+          </div>
+          <div style="font-size:12px;color:var(--gui-muted);margin:8px 0 0">Cadeias no Baú · alvo de cada uma</div>
+          <div class="chains" id="chains"></div>
+          <div class="mini" style="max-width:none">‹ › ou a rodinha trocam a forma alvo; clicar no ícone abre todas as formas. "Global" segue o modo de cima; mexer vira regra só desta cadeia.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="cols">
+  <div>
+    <h3>Upgrade de Mesa de Trabalho</h3>
+    <ul>
+      <li>Grade 3×3 com slots de verdade e o resultado. Os itens da grade ficam guardados no Baú (não somem ao fechar a tela) e voltam para o estoque ao tirar o upgrade.</li>
+      <li>Ao tirar o resultado, a grade se repõe com o estoque do Baú, como no terminal de crafting do AE2. <b>Shift + clique</b> faz até uma pilha e manda para o inventário.</li>
+      <li><b>Devolver</b> joga a grade de volta no Baú. <b>+ do JEI</b> monta a receita puxando do Baú e do inventário.</li>
+      <li>Usa as receitas de mesa do jogo (vanilla e de outros mods), sem lista própria.</li>
+    </ul>
+  </div>
+  <div>
+    <h3>Upgrade de Compactação</h3>
+    <ul>
+      <li><b>Global:</b> Desligada (o padrão ao pôr o upgrade), Compactar (sobe tudo até a forma mais alta) ou Descompactar (desce tudo até a forma base).</li>
+      <li>Com o upgrade, o limite de estoque conta a cadeia inteira (11 blocos + 1 lingote = 100 lingotes), e a Mesa desce um bloco na hora se faltar lingote.</li>
+      <li><b>Por cadeia:</b> cada linha mostra só a forma alvo. As setas ‹ › (ou a rodinha) andam pela cadeia, e clicar no ícone abre todas as formas (pedregulho, 1x até 9x; pepita, lingote, bloco…) para escolher de uma vez. "Global" desfaz.</li>
+      <li>Vale para qualquer tipo de bloco ou item compactável: pedra, terra, areia, toras, metais, gemas, blocos de outros mods. Não há lista: o que tem receita de ida e volta entra.</li>
+      <li>Acima do alvo descompacta, abaixo compacta. A sobra que não fecha 9 fica na forma de baixo (10 pedregulhos → 1 pedregulho 1x + 1 pedregulho).</li>
+      <li>Age sozinha quando um item da cadeia entra (roteador, funil, tela). Fundir minério cru em lingote fica de fora: só compactar.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2>Como as cadeias são achadas</h2>
+  <p>Ao carregar as receitas (entrar no mundo ou <code>/reload</code>), o mod lê as receitas de mesa e monta um índice de cadeias uma vez. Um par entra quando existem as duas receitas: 9 (ou 4) de um item só formam 1 de outro, e esse 1 sozinho volta para os mesmos 9 (ou 4). Sem a volta, não é compactação: 4 lãs viram tapete, 4 areias viram arenito, e nenhum dos dois entra.</p>
+  <p>O AllTheCompressed do Infinity Legacy II é exatamente isso: 1795 receitas de compactar (3×3 do item, ou do <code>1x</code> anterior) e 1795 de descompactar (1 → 9), em 208 famílias, de pedregulho e toras a minérios e blocos de metal. Os pares se ligam em cadeia sozinhos: <b>pepita de ferro → lingote → bloco de ferro → bloco 1x → … → 9x</b>. Funciona igual para Compressium, Mekanism, Allthemodium e qualquer mod que siga o padrão, sem lista manual.</p>
+  <div class="note"><b>Casos de borda.</b> Item com cadeia 2×2 e 3×3 ao mesmo tempo usa a 3×3. Item que pertence a duas cadeias diferentes (um mesmo item que forma dois blocos) fica na primeira achada, e a regra específica escolhe. Itens com componentes (encantados, com nome) não compactam.</div>
+</section>
+
+<section>
+  <h2>Simule a regra</h2>
+  <p>A mesma regra vale para qualquer cadeia. Escolha uma, o alvo e o que entra: o Baú converte no fim do tick.</p>
+  <div class="sim">
+    <div class="ctrl">
+      <label for="s-chain">Cadeia
+        <select id="s-chain"></select>
+      </label>
+      <label for="s-target">Alvo
+        <select id="s-target"></select>
+      </label>
+      <label for="s-amt">Entram
+        <input id="s-amt" type="number" min="1" max="100000000" value="100000" style="width:120px">
+        <select id="s-form" aria-label="Forma que entra"></select>
+      </label>
+      <button class="act" id="s-go" type="button">Pôr no Baú</button>
+      <button class="act" id="s-reset" type="button">Esvaziar</button>
+    </div>
+    <table aria-live="polite">
+      <thead><tr><th>Forma</th><th>No Baú</th><th id="s-unit">Em unidades base</th></tr></thead>
+      <tbody id="s-body"></tbody>
+    </table>
+  </div>
+</section>
+
+<section class="cols">
+  <div class="note cost">
+    <h3>Custo (antes do visual)</h3>
+    <ul>
+      <li><b>Parado custa zero:</b> sem tick no Baú. Quando entra um item de cadeia com regra ativa, a cadeia entra numa fila e é convertida uma vez no fim do tick, com as que já existem para avisar vizinhos.</li>
+      <li><b>Conversão O(formas):</b> soma a cadeia em unidades base (<code>long</code>) e redistribui. No máximo 11 formas por cadeia.</li>
+      <li><b>Índice de cadeias:</b> montado uma vez por carga de receitas, um mapa item → cadeia. Consulta O(1) na inserção.</li>
+      <li><b>Mesa:</b> a receita da grade é procurada só quando a grade muda, com o cache de receita do vanilla. Repor a grade é O(9).</li>
+      <li><b>Rede:</b> a lista de cadeias e regras vai ao cliente só com o painel aberto, e só quando muda.</li>
+    </ul>
+  </div>
+  <div class="note out">
+    <h3>Fica de fora</h3>
+    <ul>
+      <li>Fundir (cru → lingote) e qualquer receita de fornalha.</li>
+      <li>Autocrafting e fila de pedidos: a mesa é manual.</li>
+      <li>Mostrar todas as formas ao mesmo tempo, como a gaveta compactadora do Functional Storage. O roteador vê a forma guardada: para tirar lingotes do Baú, o alvo da cadeia fica em lingote.</li>
+      <li>Upgrades nos Tanques e na Bateria.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="q">
+  <h3>Para você decidir</h3>
+  <ul>
+    <li><b>Capacidade:</b> descompactar pode estourar (um pedregulho 9x vira 387 milhões). Proposta: descompacta só o que cabe e o resto fica na forma alta, sem perder nada.</li>
+    <li><b>Filtro e limite de estoque:</b> a conversão interna ignora o filtro de entrada (o item já está dentro) e só respeita a capacidade. Ok?</li>
+    <li><b>Receita dos upgrades:</b> Mesa = mesa de trabalho + Cristal de Sinal; Compactação = pistão + Cristal de Sinal + bloco de ferro. Ou você prefere outra?</li>
+  </ul>
+</section>
+</div>
+
+<script>
+(function(){
+  const listItems=[['cobble','126M'],['dirt','48M'],['gravel','21M'],['nether','9,8M'],['sand','6,2M'],['iron ing','5,6M'],['log','762k'],['cobble c2','1,5k'],['cobble c1','59k'],['dirt c1','8k'],['diam','3,2k'],['gold ing','2,1k'],['iron c1','98']];
+  const list=document.getElementById('list');
+  for(let i=0;i<13*5;i++){const c=document.createElement('div');c.className='cell';const it=listItems[i];if(it){const d=document.createElement('div');d.className='it '+it[0];c.appendChild(d);const n=document.createElement('span');n.className='n';n.textContent=it[1];c.appendChild(n);}list.appendChild(c);}
+  const inv=document.getElementById('inv');for(let i=0;i<36;i++){const c=document.createElement('div');c.className='cell';inv.appendChild(c);}
+
+  const tabs={craft:document.getElementById('tab-craft'),comp:document.getElementById('tab-comp')};
+  const panels={craft:document.getElementById('panel-craft'),comp:document.getElementById('panel-comp')};
+  function show(k){for(const t in tabs){const on=t===k;tabs[t].classList.toggle('sel',on);tabs[t].setAttribute('aria-selected',on);panels[t].hidden=!on;}}
+  for(const t in tabs){tabs[t].addEventListener('click',()=>show(t));tabs[t].addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();show(t);}});}
+
+  // cada forma: [classes do ícone, rótulo no canto (1x..9x), nível de compactação 0..9 (cor do contorno), nome]
+  const ladder=(cls,name,head)=>[...head,[cls,'',0,name],...[1,2,3,4,5,6,7,8,9].map(k=>[cls,k+'x',k,k+'x'])];
+  const chains=[
+    {nm:'Pedregulho',lv:ladder('cobble','base',[])},
+    {nm:'Terra',lv:ladder('dirt','base',[])},
+    {nm:'Cascalho',lv:ladder('gravel','base',[]),own:3},
+    {nm:'Netherrack',lv:ladder('nether','base',[])},
+    {nm:'Tora de carvalho',lv:ladder('log','base',[]),own:0},
+    {nm:'Ferro',lv:ladder('iron','bloco',[['iron nug','',0,'pepita'],['iron ing','',0,'lingote']]),own:1},
+    {nm:'Diamante',lv:ladder('diam','bloco',[['diam small','',0,'gema']])}
+  ];
+  const ringColor=k=>'hsl('+((55-k*36)%360+360)%360+' 75% 55%)';
+  let gmode='off',openIdx=-1;
+  const box=document.getElementById('chains');
+  function icon(l,small){
+    const cls=l[0].split(' ');const it=document.createElement('div');it.className='it '+(small?'small ':'')+cls.join(' ');
+    if(cls.includes('nug'))it.classList.add('nug');
+    if(l[2])it.style.outline='2px solid '+ringColor(l[2]),it.style.outlineOffset='-2px';
+    return it;
+  }
+  function lvButton(ch,l,i,tgt,cls){
+    const b=document.createElement('button');b.type='button';b.className='lvb'+(i===tgt?' tgt':'');b.setAttribute('aria-label',ch.nm+' '+(l[1]||'base'));
+    b.appendChild(icon(l,true));if(l[1]){const k=document.createElement('span');k.className='k';k.textContent=l[1];b.appendChild(k);}
+    return b;
+  }
+  function render(){
+    box.textContent='';
+    chains.forEach((ch,ci)=>{
+      const w=document.createElement('div');w.className='chain';
+      const tgt=ch.own!==undefined?ch.own:(gmode==='max'?ch.lv.length-1:gmode==='min'?0:-1);
+      const row=document.createElement('div');row.className='crow';
+      row.appendChild(icon(ch.lv[0],true));
+      const cn=document.createElement('span');cn.className='cn';cn.textContent=ch.nm;row.appendChild(cn);
+      const pk=document.createElement('div');pk.className='pick';
+      const prev=document.createElement('button');prev.type='button';prev.className='step';prev.textContent='‹';prev.setAttribute('aria-label','Forma anterior');
+      const next=document.createElement('button');next.type='button';next.className='step';next.textContent='›';next.setAttribute('aria-label','Próxima forma');
+      const cur=tgt<0?null:ch.lv[tgt];
+      const mid=cur?lvButton(ch,cur,tgt,tgt):document.createElement('span');
+      if(!cur){mid.className='flab';mid.textContent='—';}
+      mid.title='Clique para ver todas as formas · rodinha troca';
+      mid.addEventListener('click',()=>{openIdx=openIdx===ci?-1:ci;render();});
+      mid.addEventListener('wheel',e=>{e.preventDefault();step(ch,tgt,e.deltaY>0?-1:1);},{passive:false});
+      prev.disabled=tgt<=0;next.disabled=tgt>=ch.lv.length-1;
+      prev.addEventListener('click',()=>step(ch,tgt,-1));next.addEventListener('click',()=>step(ch,tgt,1));
+      const lab=document.createElement('span');lab.className='flab';lab.textContent=cur?cur[3]:'parada';
+      pk.append(prev,mid,next,lab);row.appendChild(pk);
+      const tg=document.createElement('button');tg.type='button';tg.className='tag'+(ch.own!==undefined?' own':'');tg.textContent=ch.own!==undefined?'Própria':'Global';
+      tg.title='Voltar para o global';tg.addEventListener('click',()=>{delete ch.own;render();});
+      row.appendChild(tg);w.appendChild(row);
+      if(openIdx===ci){
+        const pop=document.createElement('div');pop.className='pop';
+        const cap=document.createElement('div');cap.className='cap';cap.textContent=ch.nm+' · '+ch.lv.length+' formas · escolha o alvo';pop.appendChild(cap);
+        ch.lv.forEach((l,i)=>{const b=lvButton(ch,l,i,tgt);b.addEventListener('click',()=>{ch.own=i;openIdx=-1;render();});pop.appendChild(b);});
+        w.appendChild(pop);
+      }
+      box.appendChild(w);
+    });
+  }
+  function step(ch,tgt,d){const s=tgt<0?0:tgt;const n=Math.max(0,Math.min(ch.lv.length-1,s+d));ch.own=n;render();}
+  document.querySelectorAll('#gseg button').forEach(b=>b.addEventListener('click',()=>{gmode=b.dataset.g;document.querySelectorAll('#gseg button').forEach(x=>x.classList.toggle('on',x===b));render();}));
+  render();
+
+  // simulador: cada cadeia em unidades base, fator 9 por degrau (o AllTheCompressed vai até o 9x)
+  const simLadder=b=>[b,...[1,2,3,4,5,6,7,8,9].map(k=>b+' '+k+'x')];
+  const simChains=[
+    {nm:'Pedregulho',base:'pedregulho',forms:simLadder('Pedregulho')},
+    {nm:'Terra',base:'terra',forms:simLadder('Terra')},
+    {nm:'Tora de carvalho',base:'toras',forms:simLadder('Tora')},
+    {nm:'Ferro',base:'pepitas',forms:['Pepita','Lingote',...simLadder('Bloco')]},
+    {nm:'Diamante',base:'diamantes',forms:['Diamante',...simLadder('Bloco')]}
+  ];
+  let names=[],unit=[],st=[],prev=null;
+  const selChain=document.getElementById('s-chain'),selT=document.getElementById('s-target'),selF=document.getElementById('s-form');
+  simChains.forEach((c,i)=>{const o=document.createElement('option');o.value=i;o.textContent=c.nm;selChain.appendChild(o);});
+  function opt(sel,v,t){const o=document.createElement('option');o.value=v;o.textContent=t;sel.appendChild(o);}
+  function pickChain(){
+    const c=simChains[+selChain.value];names=c.forms;unit=names.map((_,i)=>Math.pow(9,i));st=names.map(()=>0);prev=null;
+    selT.textContent='';opt(selT,'max','Global: Compactar');opt(selT,'min','Global: Descompactar');names.forEach((n,i)=>opt(selT,i,n));opt(selT,'off','Desligada');
+    selF.textContent='';names.slice(0,3).forEach((n,i)=>opt(selF,i,n));
+    document.getElementById('s-unit').textContent='Em '+c.base;
+    draw();
+  }
+  selChain.addEventListener('change',pickChain);
+  const body=document.getElementById('s-body');
+  function draw(){
+    body.textContent='';
+    names.forEach((n,i)=>{const tr=document.createElement('tr');if(prev&&prev[i]!==st[i])tr.className='changed';
+      [n,st[i].toLocaleString('pt-BR'),(st[i]*unit[i]).toLocaleString('pt-BR')].forEach(v=>{const td=document.createElement('td');td.textContent=v;tr.appendChild(td);});body.appendChild(tr);});
+    const tr=document.createElement('tr');const tot=st.reduce((s,v,i)=>s+v*unit[i],0);
+    ['Total','',tot.toLocaleString('pt-BR')].forEach(v=>{const td=document.createElement('td');td.textContent=v;td.style.fontWeight='600';tr.appendChild(td);});body.appendChild(tr);
+  }
+  function convert(){
+    const t=document.getElementById('s-target').value;if(t==='off')return;
+    const T=t==='max'?names.length-1:t==='min'?0:+t;
+    let B=st.reduce((s,v,i)=>s+v*unit[i],0);
+    const out=names.map(()=>0);
+    out[T]=Math.floor(B/unit[T]);B-=out[T]*unit[T];
+    for(let i=T-1;i>=0;i--){out[i]=Math.floor(B/unit[i]);B-=out[i]*unit[i];}
+    st=out;
+  }
+  document.getElementById('s-go').addEventListener('click',()=>{prev=st.slice();const a=Math.max(1,Math.min(100000000,+document.getElementById('s-amt').value||0));st[+selF.value]+=a;convert();draw();});
+  selT.addEventListener('change',()=>{prev=st.slice();convert();draw();});
+  document.getElementById('s-reset').addEventListener('click',()=>{prev=null;st=names.map(()=>0);draw();});
+  pickChain();
+})();
+</script>

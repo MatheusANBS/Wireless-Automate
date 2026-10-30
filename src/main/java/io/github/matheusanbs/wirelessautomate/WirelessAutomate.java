@@ -9,6 +9,8 @@ import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.packet.ModPayloads;
 import io.github.matheusanbs.wirelessautomate.range.RemoteIndex;
+import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeEditor;
+import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeOverridePack;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModCreativeTabs;
@@ -16,10 +18,8 @@ import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
 import io.github.matheusanbs.wirelessautomate.registry.ModRecipes;
-import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeEditor;
-import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeOverridePack;
-import io.github.matheusanbs.wirelessautomate.resonator.ResonatorCapabilities;
 import io.github.matheusanbs.wirelessautomate.repairer.RepairerManager;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorCapabilities;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorManager;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorMembers;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorPorts;
@@ -28,17 +28,20 @@ import io.github.matheusanbs.wirelessautomate.storage.SourceTankLevels;
 import io.github.matheusanbs.wirelessautomate.storage.StorageCapabilities;
 import io.github.matheusanbs.wirelessautomate.storage.StorageNeighbors;
 import io.github.matheusanbs.wirelessautomate.storage.StorageSavedData;
+import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingChains;
 import io.github.matheusanbs.wirelessautomate.tv.TvEditing;
 import io.github.matheusanbs.wirelessautomate.tv.TvLoaded;
 import io.github.matheusanbs.wirelessautomate.tv.TvManager;
 import io.github.matheusanbs.wirelessautomate.tv.TvPreview;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.OnDatapackSyncEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.level.ChunkEvent;
@@ -84,6 +87,8 @@ public final class WirelessAutomate {
         NeoForge.EVENT_BUS.addListener(RecipeEditor::onServerStarted);
         // Subida do servidor: o conteúdo de armazenamentos quebrados há mais tempo que o prazo sai do arquivo.
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onServerStarted);
+        // Recarga das receitas: remonta o índice das cadeias de compactação.
+        NeoForge.EVENT_BUS.addListener(WirelessAutomate::onDatapackSync);
         // Upgrade de chunk loading: controle de tickets, fila por tick e config.
         ChunkLoaderEvents.register(modEventBus);
     }
@@ -118,6 +123,25 @@ public final class WirelessAutomate {
 
     private static void onServerStarted(ServerStartedEvent event) {
         StorageSavedData.onServerStarted(event.getServer());
+        rebuildCompacting(event.getServer());
+    }
+
+    private static void onDatapackSync(OnDatapackSyncEvent event) {
+        if (event.getPlayer() == null) {
+            rebuildCompacting(event.getPlayerList().getServer());
+        }
+    }
+
+    /**
+     * Remonta o índice da Compactação sem nunca derrubar a subida nem o {@code /reload}: se a montagem falhar fora das
+     * receitas (que já são protegidas uma a uma), fica o índice anterior, porque ele só é trocado no fim.
+     */
+    private static void rebuildCompacting(MinecraftServer server) {
+        try {
+            CompactingChains.rebuild(server);
+        } catch (RuntimeException e) {
+            LOGGER.error("Compactação: o índice das cadeias não pôde ser remontado; fica o anterior", e);
+        }
     }
 
     private static void onServerStopped(ServerStoppedEvent event) {
@@ -134,6 +158,7 @@ public final class WirelessAutomate {
         ResonatorMembers.reset();
         ResonatorProfile.reset();
         RecipeEditor.reset();
+        CompactingChains.reset();
         TabletMenu.resetStates();
         IdleNetworkUndo.reset();
     }

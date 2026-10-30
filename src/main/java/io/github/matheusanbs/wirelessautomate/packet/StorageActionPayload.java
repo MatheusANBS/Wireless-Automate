@@ -39,7 +39,9 @@ public record StorageActionPayload(int containerId, StorageKind kind, Action act
         /** Baú, Shift + duplo clique com item no cursor: o máximo do tipo que couber no inventário (o cursor fica). */
         TAKE_ALL_TO_INVENTORY,
         /** Abre a tela do filtro de entrada. */
-        OPEN_FILTER
+        OPEN_FILTER,
+        /** Baú com a Mesa: devolve a grade ao Baú (o que não couber vai para o inventário e depois para o chão). */
+        RETURN_GRID
     }
 
     public static final Type<StorageActionPayload> TYPE = new Type<>(WirelessAutomate.id("storage_action"));

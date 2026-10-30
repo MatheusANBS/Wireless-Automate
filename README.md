@@ -1,63 +1,277 @@
-# Wireless Automate
+![Wireless Automate](docs/curseforge/banner.png)
 
-Transporte wireless de itens, fluidos, energia, químicos e Source para **NeoForge 1.21.1** (Java 21), feito para o ATM10. A meta é ser o transporte mais rápido do pack e o mais leve em TPS: um gerenciador central, sem tick por bloco, com teto de tempo por tick.
+*[Read in English](README.en.md)*
 
-> **[Read in English](README.en.md)**
+O **Wireless Automate** move itens, fluidos, energia, químicos do Mekanism e Source do Ars Nouveau entre máquinas **sem canos**. Prenda um roteador numa máquina, escolha o que cada face da máquina faz, e todos os roteadores da mesma rede trocam entre si, perto ou longe. Ele também traz **armazenamentos próprios** que movem bilhões por operação, filtros que pegam tags com um clique ou casam **qualquer item encantado**, e um gerador de cristal que você sintoniza como um rádio, o **Ressonador de Sinal**.
 
-**Estado:** versão 2.12 (a Tela de Sinal ganha pixel art desenhada e animada no jogo, imagens e GIFs enviados, códigos para compartilhar e gerar com IA e a aba Acesso; os filtros separam o "aceitar até" no destino do "manter na origem", e os armazenamentos têm um limite por tipo). Antes, 2.11 (a Tela de Sinal). Antes, 2.9 (o Reparador de Cristais conserta cristais rachados do Ressonador, até 8 em paralelo, e o Núcleo recarrega todos os Opacos pagos de uma vez). Antes, 2.8 (a energia do roteador e a capacidade da Bateria passam a seguir o Ressonador de Sinal do mesmo tier: o roteador escoa a geração cheia dele mais 5% e a Bateria guarda uma hora dela). Antes, 2.7 (acesso às redes privadas: convidados e times do FTB Teams, com sugestões ao digitar; o Mapa do Tablet arrastável e com todos os roteadores que você vê; o Vinculador com os modos Vincular e Abrir; o Configurador só com o Pincel). Antes, 2.6 (regras de componente nos filtros e sugestões ao digitar; o painel lembra a última face). Antes, 2.5 (telas redesenhadas em torno de um editor de faces mais limpo e o topo da escada do Ressonador rebalanceado). Antes, 2.4.1 (correção: escolher uma ação na face não atribui mais a rede ativa; a rede é escolhida explicitamente). Antes, 2.4 (o Ressonador de Sinal rebalanceado para ser o melhor gerador de cada tier: escada nova, Cristais Afinados, fadiga e refazer, Pó de Ressonância e Pó Carregado, interferência entre Núcleos, Eco Ressonante no Ultimate, a cascata de 11 itens e o Coração do Ressonador por tier; a câmara animada por core shader; a Lista do Tablet por roteador, com renomear). Antes, 2.3 (nomes para máquinas vinculadas e grupos, e o destaque da máquina no mundo, através dos blocos; a Lista do Tablet em árvore, com as máquinas de cada roteador, e a visão por máquinas; colar perfis em máquinas e em grupos inteiros; abas Lista, Fluxos, Mapa e Redes). Antes, 2.2 (aba Fluxos no Tablet, com o que entra e sai de cada rede; o Vinculador vincula máquinas sem rede e o Tirar redes, com Desfazer; uma rodada inteira de eficiência no servidor, na rede e no cliente). Antes, 2.1 (o Ressonador de Sinal, gerador multibloco de cristal sintonizável, e os botões da lista das máquinas do Upgrade de Alcance). Antes, 2.0 (2.0.1: o Tablet mostra os nós das redes públicas de outros jogadores; tema claro e escuro em todas as telas, pelo botão lua/sol do cabeçalho; painel do nó: as faces da máquina desdobradas como um cubo, na tela do roteador e no Tablet; a Lista do Tablet com busca única, etiquetas, filtros rápidos e grupos, edição do nó escolhido à distância e copiar e colar perfil com desfazer; o modo numa face sem rede põe a face na rede ativa; correção do crash com a lixeira do Trash Cans). Antes, 1.9 (Upgrade de Alcance: um roteador para várias máquinas no raio, por grupo e com exceção por máquina; rede por face da máquina, no lugar da rede da aba; subir tier pela bancada ou pelo Cartão de Upgrade com origem, pelo mesmo custo; máquina que recusa o item pelo tipo não faz mais o roteador dormir). Antes, 1.8 (correção do crash ao abrir o Baú, busca por `#` em tags e tooltip, Shift trava a ordem da lista como no AE2 e botão direito pega a metade do que há), 1.7 (1.7.1: o editor faz uma recarga por vez; editor de receitas para operadores: `/wa recipes` troca, desativa e restaura as receitas do mod dentro do jogo), 1.6 (roda do Configurador no Alt esquerdo e o modo Área em qualquer máquina) e 1.5 (1.5.0: controles no estilo do Mouse Tweaks no Baú, como Shift + arrastar, rodinha e Shift + duplo clique, e NeoForge 21.1.248; 1.5.1: o Baú enche slots de pilha grande de outros mods de uma vez; 1.5.2: identidade visual nova "Porcelana e Sinal", com itens animados, blocos 3D, telas claras e hitboxes justas). Baixe no [CurseForge](https://www.curseforge.com/minecraft/mc-mods/wireless-automate) ou na [release mais recente do GitHub](https://github.com/MatheusANBS/Wireless-Automate/releases/latest), as duas com o changelog. Requer NeoForge 21.1.248 ou mais novo (roda no ATM10).
+Foi feito para modpacks grandes: em vez de cada bloco ter o próprio tick, um gerenciador central move tudo dentro de um orçamento de tempo pequeno por tick, então centenas de máquinas não viram lag.
+
+**Estado:** versão 2.13. O Baú Wireless ganha dois slots de upgrade: o **Upgrade de Mesa de Trabalho** (uma grade 3×3 dentro do Baú, que se repõe pelo estoque dele) e o **Upgrade de Compactação** (cadeias de itens como pepita, lingote e bloco compactadas e descompactadas sozinhas). O que mudou em cada versão está no [changelog](docs/curseforge/changelog-curseforge-2.13.0.md) e na [página de releases](https://github.com/MatheusANBS/Wireless-Automate/releases).
+
+Baixe no [CurseForge](https://www.curseforge.com/minecraft/mc-mods/wireless-automate) ou na [release mais recente do GitHub](https://github.com/MatheusANBS/Wireless-Automate/releases/latest). Requer NeoForge 21.1.248 ou mais novo (roda no ATM10).
+
+![Tudo sem fio](docs/curseforge/feature-0-overview.png)
+
+---
 
 ## Recursos
 
-- **Roteador Wireless:** preso a qualquer face de uma máquina, acessa todas as faces dela; Shift + clique direito com as mãos vazias gira o roteador 90° (1.3), sem mudar a configuração das faces.
-- **Rede por face** (1.9): cada face da máquina, em cada tipo (Itens, Fluidos, Energia, Químicos e Source), entra na sua própria rede; tudo do mesmo tipo na mesma rede troca entre si. Numa fornalha com um roteador só, a face de cima tira da rede da mina e a de baixo manda para a do armazém. Mundos antigos migram sozinhos (a rede da aba vai para as seis faces).
-- **Upgrade de Alcance** (1.9): no segundo slot de upgrade, faz um roteador mover de e para várias máquinas no raio dele, vinculadas pelo Vinculador no modo Vincular (clique ou área; desvincular pela chave Desvincular da tela dele). As máquinas do mesmo bloco formam um grupo com um perfil, com exceção por máquina, e os lados seguem a frente de cada uma. Raio e limite por tier na config (`machineRadius` e `maxMachines`): de 6 blocos e 8 máquinas no Avançado a 64 blocos e 128 máquinas no Ultimate; o Básico não aceita. Cada máquina tem a vazão cheia do tier. Desde a 2.1, a linha da máquina escolhida na lista tem Atualizar, Voltar ao perfil e Desvincular, e uma máquina trocada por outro bloco aparece como "trocada" até o Atualizar passá-la para o grupo do bloco novo. Desde a 2.2, o Vinculador vincula sem rede (a rede de cada face é escolhida explicitamente na linha Rede do painel), e o **Tirar redes** tira a rede das faces com modo Nenhum de um grupo ou de uma exceção, com Desfazer. Desde a 2.3, máquinas e grupos ganham nome (✎ ou dois cliques), cada linha mostra as coordenadas e o estado, o Olho ◉ acende a máquina no mundo através dos blocos, com uma linha até o roteador (até 64, até apagar), e o clique com o Tablet numa máquina abre a central com ela escolhida.
-- **Modos por face e por tipo:** Extrair, Inserir, Armazém ou Nenhum, com prioridade, round-robin no empate e controle por redstone.
-- **Filtros sem limite:** item ou fluido exato, tag e mod, lista branca ou negra, com dois limites por entrada desde a 2.12 (**Aceitar até**, no destino, e **Manter na origem**), e Cartões de Filtro (dois slots por face e por tipo, copiáveis na bancada). A tela é redimensionável: ponha um item no inspetor para ver e marcar todas as tags dele, ou busque em todas as tags do jogo com a prévia dos itens.
-- **Regras por propriedade** (1.0): pegue qualquer item encantado, danificado, renomeado, com poção, não empilhável ou com conteúdo, um encantamento com nível mínimo (1.3: digitado pelo nome, com sugestões, e nível de 1 a 255) ou a durabilidade abaixo de X%, limitado a uma tag ou mod (só armadura encantada, ferramentas para o reparo).
-- **Cinco tiers** (1.2; Básico, Avançado, Elite, Esmeralda e Ultimate), e **oito com o Allthemodium** (Allthemodium, Vibranium e Unobtainium entre a Esmeralda e o Ultimate), subidos por um anel de ingredientes por tier, pelo mesmo custo de dois jeitos (1.9): o bloco no centro do anel do tier seguinte, na bancada, ou o Cartão de Upgrade com origem ("Básico → Elite"; o anel em volta de uma Redstone, e um cartão no centro do anel seguinte pula mais um tier), clicando no roteador colocado, que mantém a configuração, ou juntando os dois na bancada. Cartões antigos continuam subindo de qualquer tier abaixo. No ATM10, o anel do Ultimate pede fragmentos de ATM Star.
-- **Vinculador** (dois modos, 2.7): **Vincular** escolhe um roteador com o Upgrade de Alcance (clique nele) e vincula as máquinas em que você clica, ou as de uma área marcada com Shift + clique em dois blocos (a mais perto primeiro, até o raio e o limite do tier); a chave **Desvincular** da tela tira em vez de pôr. **Abrir** abre a tela do roteador que chega na máquina em que você clica, já editando aquela máquina (com mais de um, uma lista curta; alcance, `mayInteract` e proteções de outros mods conferidos no roteador). O Vinculador não mexe mais em redes: a rede de cada face se escolhe na tela do roteador ou no Tablet.
-- **Configurador** (só o Pincel, 2.7): Shift + clique num roteador copia a configuração, clique cola em outro, Shift + clique num bloco sem roteador limpa a cópia; todas as abas ou só um tipo (Source incluída). Segurando Alt esquerdo, uma roda com um anel escolhe o tipo colado; Shift + roda do mouse também. A rede de cada face só é colada se você puder usá-la, e a face só sai de uma rede que você edita. Para configurar vários de uma vez, cole o perfil nos marcados do Tablet.
-- **Upgrade de chunk loading:** mantém carregado o chunk do roteador e o da máquina, com limite por jogador na config.
-- **Editor de receitas** (1.7): `/wa recipes`, só para operadores, abre uma tela para trocar, desativar e restaurar as receitas de bancada do mod (itens pelo inventário ou pelo JEI, tag no lugar do item, quantidade do resultado). Grava um datapack em `config/wirelessautomate/recipes/`, que vale em todos os mundos da instância e sobrevive a atualizações.
-- **Tablet de Rede:** lista, mapa, Fluxos, redes e grupos à distância, e abre a tela do roteador de longe; um roteador aparece em cada rede de uma face dele ("faces em 2 redes"). Desde a 2.0, a Lista tem busca única (máquina, rede e nome, com etiquetas), filtros rápidos e grupos por máquina, edita o nó escolhido no painel ao lado e copia e cola perfis numa máquina, num grupo ou nas marcadas, com desfazer. Desde a 2.2, a aba Fluxos mostra, por tipo ou por rede, o que entra (faces Extrai) e sai (faces Insere), o saldo dos Armazéns e o que precisa de atenção (origens vazias ou esperando destino, destinos cheios, faces paradas por redstone e sem rede); o clique numa linha abre a Lista filtrada. Desde a 2.3, as abas são Lista, Fluxos, Mapa e Redes (os grupos de redes viram seções de Redes); na Lista, ▸ abre um roteador com a presa, os grupos e cada máquina com o estado e o Olho ◉, o seletor **Roteadores | Máquinas** mostra todas as máquinas da base pelo tipo de bloco, o Selecionar marca roteadores, grupos, máquinas e blocos, e o Colar grava a exceção da máquina (com os lados pela frente dela) ou o perfil do grupo inteiro; o Mapa mostra as máquinas do roteador escolhido. Desde a 2.7, o Mapa se move arrastando (o botão Centralizar volta para você) e mostra todos os roteadores que você vê na dimensão (até 1.024 mais perto), sem depender da busca nem dos filtros da Lista, e uma rede privada pode ter convidados (que usam e editam, sem gerenciar) e times do FTB Teams (opcional, ao vivo), com sugestões ao digitar. Desde a 2.4, cada roteador é uma linha da Lista (ícone do tier, nome ou "Roteador &lt;tier&gt;", pílula do tier e a máquina presa na segunda linha), em ordem de nome, e o ✎ ou dois cliques renomeiam o roteador e a presa ali mesmo.
-- **Ressonador de Sinal** (2.1): gerador multibloco de cristal. Minere o Quartzo de Sinal (Overworld, pedra e ardósia), monte uma caixa oca 5×5×5 em volta do Núcleo de Ressonância e ponha Cristais de Sinal nas câmaras. Cada Ressonador tem uma estação que escorrega devagar: gire o dial na tela do Núcleo até a lâmpada EM SINTONIA para 100%, ou ponha um Sintonizador para seguir a estação sozinho, um pouco abaixo. Pelo vidro, a câmara mostra a sintonia: os cristais orbitam o Núcleo de plasma e cada um vivo o alimenta por um tentáculo de plasma, grosso e firme em sintonia, fino e solto fora dela. O cristal gasto fica Opaco e recarrega no Núcleo; a energia sai pela Porta de Energia, direto num roteador. Tier pelo Núcleo, com os mesmos Cartões de Upgrade: de 1 câmara e 216 FE/t por cristal no Básico a 8 câmaras e 268.435.456 FE/t no Ultimate (o Lapidado rende o dobro). O JEI mostra a estrutura em 3D. Desde a 2.4, é o melhor gerador de cada tier e custa por isso: do Elite para cima, cada câmara pede o **Cristal Afinado** do tier (o comum rende 1/4 e o Lapidado 1/2); cada cristal tem 8 cargas de integridade e depois racha, refeito na bancada com 4 Cristais de Sinal; a recarga gasta redstone ou **Pó de Ressonância** no Básico e no Avançado, só o Pó no Elite e na Esmeralda e o **Pó Carregado** do tier do Allthemodium para cima; outro Núcleo montado a até 32 blocos tira 15% da eficiência (até 60%); o Núcleo Ultimate queima Afinados Ultimate rachados como **Eco Ressonante**, +5% permanente cada, sem teto. O Núcleo Básico pede o **Coração do Ressonador** na receita e subir o Núcleo gasta o Coração do tier de destino, feito pela cascata de 11 itens (Liga de Sinal, Placa, Fio, Bobina, Lente Harmônica, Circuito e Matriz de Fase, Estabilizador de Campo, Núcleo Condensado, Moldura de Liga no Ultimate). A câmara montada é desenhada por core shader (Núcleo de plasma, raio até a Porta pela vazão real, tentáculos dos cristais, recarga e cristais 3D); com shaderpack do Iris, fica o desenho antigo.
-- **Reparador de Cristais** (2.9): conserta cristais rachados do Ressonador, até 8 em paralelo, em 8 pedestais. Cada reparo leva 7 s e gasta 4 Cristais de Sinal cheios do estoque comum mais energia (2 vezes o FE por cristal do tier do cristal: 432 FE para o Cristal de Sinal, 13.824 FE para o Lapidado); o cristal sai com a carga e a integridade cheias. Energia e itens entram por qualquer lado, então um roteador o alimenta. Animado (as rachaduras fecham de dentro para fora). Receita: Carcaça do Ressonador, Circuito de Fase, Funil, Lente Harmônica e Bloco de Redstone; `repairer.repairTicks` e `repairer.costFactor` na config. O Núcleo agora também recarrega todos os Opacos pagos de uma vez.
-- **Tela de Sinal** (2.11): tela de parede de 1 × 1 a 32 × 32 blocos, sem blocos extras, com números ao vivo das redes, de armazenamentos ligados (Baú, Bateria e Tanque, pelo modo Tela do Vinculador) e do relógio do jogo. Editor no jogo com as peças Valor, Texto, Forma, Ícone, Barra, Medidor, Gráfico e Seta, regras (cor, piscar, esconder), cinco fontes, temas, fundos, layouts e componentes prontos e salvos. O Ícone mostra qualquer item (até com dados, como as gemas do Apotheosis), fluido ou químico do Mekanism pelo JEI. Só quem está perto recebe os dados; os números de uma rede exigem acesso a ela. Na 2.12: pixel art desenhada no jogo (até 128 × 128, 16 cores por arte) e animada (até 64 quadros, de 1 a 20 por segundo) na peça Imagem e no fundo em mosaico; imagens e GIFs de verdade enviados do computador (PNG, JPG ou GIF, até 1024 px e 8 MB por padrão, com os controles do servidor em `tv.images.*`); exportar e importar layouts, artes e imagens por código (também em texto legível, para gerar com uma IA, ver [o guia](docs/guia-pixel-art-com-ia.md)); e a aba Acesso, com jogadores e times do FTB que editam a Tela.
-- **Tema claro e escuro** (2.0): o botão lua/sol no canto do cabeçalho troca todas as telas; a escolha fica na config do cliente.
-- **Baú Wireless** (1.0): guarda itens por tipo e quantidade, sem slots e com tipos ilimitados, até a capacidade do tier (de 32.768 itens no Básico a 16.777.216 na Esmeralda e 8.589.934.592 no Unobtainium, sem limite no Ultimate), subida pelos mesmos anéis e Cartões de Upgrade. Entre dois Baús, o roteador move um tipo inteiro numa operação só. Tem tela em lista com busca (`@mod` e, desde a 1.8, `#` em tags e tooltip) e ordenação (travada enquanto o Shift está apertado, como no AE2), os gestos do Mouse Tweaks e do vanilla (Shift + arrastar, rodinha e Shift + duplo clique), limite por tipo (desde a 2.12: uma linha fixa "Todos os outros tipos" e as exceções por tipo, sem lista de admissão) e sinal de comparador. Quebrado, leva o conteúdo e o filtro no item. Para os outros mods, é um inventário comum; como origem, enche slots de pilha grande (upgrades de pilha do Sophisticated, gavetas) de uma vez (1.5.1: 2,1 bilhões num barril com o Upgrade Ômega em um tick).
-- **Tanque, Bateria e Tanque Químico Wireless** (1.0): o mesmo molde do Baú para fluidos (vários por tanque, até 131 milhões de mB na Esmeralda), energia (a capacidade de cada tier é uma hora da geração cheia do Ressonador do mesmo tier: de 31,1 milhões de FE no Básico a 92,16 bilhões na Esmeralda e 10,8 trilhões no Unobtainium; sem limite no Ultimate; desde a 2.7, a energia do roteador de cada tier é a geração cheia do Ressonador dele mais 5%) e químicos do Mekanism (só com ele). Sem limite no Ultimate. O Tanque troca baldes direto no bloco e pela tela (recipientes no cursor), a Bateria mostra a carga e a variação por tick. Para os outros mods e para o roteador, são um tanque, uma bateria e um tanque de químico comuns, que já passam bilhões por chamada.
-- **Tanque de Source Wireless** (1.1, só com o Ars Nouveau): jarra fina com a coluna de vidro mostrando o nível, de 10.000 a 5.120.000 de Source na escada vanilla (sem limite no Ultimate). Os Sourcelinks num raio de 5 blocos depositam nele e as máquinas do Ars por perto tiram dele como de uma Source Jar; entre dois tanques o roteador move tudo numa operação. Mesmos Cartões de Upgrade, leva o conteúdo ao quebrar, comparador e tela própria.
-- **Telas redimensionáveis** (1.1): roteador, Tablet e Vinculador mudam de tamanho pela borda e pelo canto; as abas do roteador se adaptam à largura e o texto que não cabe é abreviado, com o tooltip inteiro.
-- **Livro-guia (GuideME):** na aba criativa e entregue a cada jogador no primeiro login.
+![Ligue máquinas sem canos](docs/curseforge/feature-1-network.png)
+
+- **Um roteador por máquina.** Prenda-o em qualquer face de qualquer bloco. Pela tela dele você configura **as seis faces da máquina**, não só aquela em que ele está. Shift + clique direito com as mãos vazias gira o roteador para qualquer lado; a configuração de cada face fica onde está.
+- **Redes, não cabos.** Roteadores na mesma rede trocam recursos do mesmo tipo (itens, fluidos, energia e, com os mods opcionais, químicos e Source). **Cada face da máquina entra na sua própria rede**, por tipo de recurso, então uma fornalha pode tirar minério da linha da mina por cima e mandar lingotes para o armazém por baixo, enquanto a energia vem da rede da base.
+- **Um roteador, várias máquinas:** com o **Upgrade de Alcance**, um roteador só atende todas as máquinas que você vincula em volta dele, então uma farm inteira se configura uma vez (veja Upgrade de Alcance abaixo).
+- **Quatro modos por face:** Extrai, Insere, Armazém (um buffer que recebe de quem extrai e entrega para quem insere) ou Nenhum.
+- **Prioridade, round-robin e controle por redstone** em cada face e cada tipo de recurso.
+- **Telas redimensionáveis:** o roteador, o Tablet de Rede e o Vinculador mudam de tamanho pela borda e pelo canto, e as abas do roteador se adaptam à largura.
+- **Tema claro e escuro:** toda tela tem os dois; troque pelo botão lua/sol do cabeçalho.
+
+![Configure todas as faces](docs/curseforge/feature-2-router.png)
+
+![Uma rede por face](docs/curseforge/feature-19-face-networks.png)
+
+### Upgrade de Alcance
+
+Um roteador move de e para todas as máquinas que você vincula no raio dele (6 blocos e 8 máquinas no Avançado, até 64 blocos e 128 máquinas no Ultimate). Máquinas vinculadas do mesmo bloco formam um grupo com um perfil, com exceções por máquina, e os lados seguem a frente de cada máquina. As máquinas acordam o roteador assim que mudam, e nada varre o mundo enquanto ele roda. Máquinas vinculadas começam sem rede: escolha a rede de cada face explicitamente na linha Rede do painel. Trocar a ação da face mantém a rede dela. **Tirar redes** tira a rede de todas as faces com Nenhum, com Desfazer. Dê nomes às máquinas e aos grupos, e acenda qualquer máquina **no mundo**, através dos blocos, com uma linha até o roteador; clique direito numa máquina com o Tablet de Rede vai direto para ela.
+
+![Um roteador, várias máquinas](docs/curseforge/feature-17-range.png)
+
+![Configure por tipo de máquina](docs/curseforge/feature-18-range-screen.png)
+
+### Filtros sem limite de entradas
+
+Itens exatos, tags (`#c:ores`) e mods inteiros (`@mekanism`), em lista branca ou negra, com **limites de estoque** ("manter 64 na origem", "aceitar até 16 no destino"). Acrescente entradas com Shift + clique no seu inventário ou arrastando do **JEI**. Os Cartões de Filtro levam um filtro inteiro para reusar em outras faces.
+
+- **Inspetor de tags:** ponha qualquer item no inspetor e todas as tags dele aparecem, prontas para marcar e acrescentar. Ou busque em todas as tags do jogo, com quantos itens cada uma casa e uma prévia.
+- Uma janela redimensionável, com as entradas numa lista com busca.
+
+![Tags com um clique](docs/curseforge/feature-3-filters.png)
+
+### Regras por propriedade
+
+Pegue itens pelo que eles **são**, não por qual item são: **qualquer item encantado**, danificado ou intacto, renomeado, poções, não empilháveis, caixas de shulker com conteúdo, um encantamento com nível mínimo (digite o nome e escolha nas sugestões, qualquer nível de 1 a 255: Fortuna ≥ III, Eficiência ≥ 37) ou a durabilidade restante (mande para o reparo as ferramentas abaixo de 25%). Limite uma regra a uma tag ou mod: Encantado + `#c:armors` = só armadura encantada. O seu inventário acende no que a regra casa antes de você acrescentá-la.
+
+![Regras por propriedade](docs/curseforge/feature-8-rules.png)
+
+### Cinco tiers, oito com o Allthemodium
+
+Os tiers sobem a vazão e o alcance do roteador pela escada Básico → Avançado → Elite → **Esmeralda** → Ultimate. Com o mod **Allthemodium** (ATM10), mais três degraus entram entre a Esmeralda e o Ultimate: **Allthemodium → Vibranium → Unobtainium**, feitos com os metais do próprio mod, e no ATM10 o anel do Ultimate pede **fragmentos de ATM Star**. Cada tier tem um anel de ingredientes, usado de dois jeitos pelo mesmo custo: ponha um roteador (ou armazenamento) no centro do anel seguinte na bancada, ou faça um Cartão de Upgrade ("Básico → Elite") e use no roteador colocado, que mantém toda a configuração. Um cartão pode pular tiers: ponha-o no centro do anel seguinte para estendê-lo.
+
+![Oito tiers](docs/curseforge/feature-4-tiers.png)
 
 | Tier | Itens/s | Fluido e químico (mB/s) | Energia (FE/t) | Source/s | Alcance | Upgrade de Alcance |
 | --- | --- | --- | --- | --- | --- | --- |
 | Básico | 32 | 2.000 | 454 | 100 | 64 blocos | — |
 | Avançado | 256 | 16.000 | 29.100 | 800 | 512 blocos | 6 blocos, 8 máquinas |
 | Elite | 2.048 | 128.000 | 63.000 | 6.400 | Dimensão inteira | 12 blocos, 16 máquinas |
-| Esmeralda | 16.384 | 1.024.000 | 1.350.000 | 51.200 | Entre dimensões | 16 blocos, 32 máquinas |
-| Allthemodium¹ | 131.072 | 8.192.000 | 67.200.000 | 409.600 | Entre dimensões | 24 blocos, 48 máquinas |
-| Vibranium¹ | 1.048.576 | 65.536.000 | 84.500.000 | 3.276.800 | Entre dimensões | 32 blocos, 64 máquinas |
-| Unobtainium¹ | 8.388.608 | 524.288.000 | 158.000.000 | 26.214.400 | Entre dimensões | 48 blocos, 96 máquinas |
-| Ultimate | Sem limite | Sem limite | Sem limite | Sem limite | Entre dimensões | 64 blocos, 128 máquinas |
+| Esmeralda | 16.384 | 1.024.000 | 1.350.000 | 51.200 | Todas as dimensões | 16 blocos, 32 máquinas |
+| Allthemodium¹ | 131.072 | 8.192.000 | 67.200.000 | 409.600 | Todas as dimensões | 24 blocos, 48 máquinas |
+| Vibranium¹ | 1.048.576 | 65.536.000 | 84.500.000 | 3.276.800 | Todas as dimensões | 32 blocos, 64 máquinas |
+| Unobtainium¹ | 8.388.608 | 524.288.000 | 158.000.000 | 26.214.400 | Todas as dimensões | 48 blocos, 96 máquinas |
+| Ultimate | Sem limite | Sem limite | Sem limite | Sem limite | Todas as dimensões | 64 blocos, 128 máquinas |
 
-¹ Só com o mod Allthemodium; sem ele, a Esmeralda sobe direto para o Ultimate.
+*Por face e por tipo de recurso; cada máquina vinculada pelo Upgrade de Alcance tem a vazão cheia, e a energia de cada tier escoa a geração cheia do Ressonador de Sinal do mesmo tier. ¹ Só com o Allthemodium. Donos de servidor podem mudar todos os valores na config.*
 
-A vazão vale por face e por tipo (`sourcePerSecond` é a da Source); a energia de cada tier escoa a geração máxima do Ressonador do mesmo tier por uma face. Os valores ficam na config do servidor (`<mundo>/serverconfig/wirelessautomate-server.toml`; num modpack, o padrão vai em `defaultconfigs/`), assim como o alcance, o raio e o limite do Upgrade de Alcance, a capacidade dos armazenamentos por tier (`storage.chestCapacity`, `tankCapacity`, `batteryCapacity`, `chemicalTankCapacity` e `sourceTankCapacity`), o chunk loading e o tamanho da área do Vinculador. A capacidade conta o total guardado, sem limite de tipos diferentes.
+![Do ferro ao Unobtainium](docs/curseforge/feature-15-tier-hall.png)
 
-## Integrações opcionais
+![Suba o tier, mantenha a configuração](docs/curseforge/feature-20-tier-up.png)
+
+### Armazenamento wireless
+
+![Armazenamento próprio](docs/curseforge/feature-9-storage.png)
+
+Cinco armazenamentos feitos para o roteador: o **Baú Wireless** (tipos de item ilimitados, sem slots), o **Tanque Wireless**, a **Bateria Wireless** e, com os mods opcionais, o **Tanque Químico Wireless** (Mekanism) e o **Tanque de Source Wireless** (Ars Nouveau). Entre dois deles, um roteador move um tipo de item inteiro numa operação só (**12 milhões de itens em um tick**) e fluidos e energia aos bilhões. Para todos os outros mods eles são um inventário, tanque ou bateria comum, e o Baú enche slots de pilha grande (upgrades de pilha do Sophisticated Storage, gavetas) um slot inteiro por inserção: **2,1 bilhões de itens num barril com o Upgrade Ômega em um tick**.
+
+| Tier | Baú (itens) | Tanque e Tanque Químico | Bateria | Tanque de Source |
+| --- | --- | --- | --- | --- |
+| Básico | 32.768 | 256 B | 31,1M FE | 10.000 |
+| Avançado | 262.144 | 2.048 B | 1,99G FE | 80.000 |
+| Elite | 2.097.152 | 16.384 B | 4,32G FE | 640.000 |
+| Esmeralda | 16.777.216 | 131.072 B | 92,2G FE | 5.120.000 |
+| Allthemodium¹ | 134.217.728 | 1.048.576 B | 4,61T FE | 40.960.000 |
+| Vibranium¹ | 1.073.741.824 | 8.388.608 B | 5,79T FE | 327.680.000 |
+| Unobtainium¹ | 8.589.934.592 | 67.108.864 B | 10,8T FE | 2.621.440.000 |
+| Ultimate | Sem limite | Sem limite | Sem limite | Sem limite |
+
+- Uma Bateria guarda **uma hora do Ressonador de Sinal do tier dela** em geração cheia, e a vazão de energia de um roteador é a geração desse mesmo Ressonador mais 5% (Ultimate: sem limite).
+- Sobem com os mesmos anéis e Cartões de Upgrade do roteador, sem perder o conteúdo.
+- **Quebrou, o conteúdo vai no item**, como numa caixa de shulker, com o tier junto.
+- Tela com busca, ordenação e redimensionável; um filtro de entrada decide o que pode entrar, por qualquer caminho; sinal de comparador.
+- Controles no estilo do Mouse Tweaks na lista do Baú: Shift + arrastar, rodinha do mouse para mover um item por vez e Shift + duplo clique (com um item no cursor) para encher o inventário.
+- Busque na lista do Baú pelo nome, por `@mod`, ou por `#` em tags e no texto do tooltip (`#ingots`, `#not yet eaten`). Segure Shift e a lista para de se reordenar enquanto você tira itens, como no terminal do AE2.
+
+![Baú Wireless](docs/curseforge/feature-10-chest.png)
+
+### Upgrades do Baú
+
+O Baú Wireless tem dois slots de upgrade, ao lado da lista. Cada upgrade abre o próprio painel ao lado da lista.
+
+- **Upgrade de Mesa de Trabalho:** uma grade de fabricação 3×3 dentro do Baú, que se repõe sozinha com o estoque dele. Shift + clique no resultado fabrica até uma pilha; o **+** do JEI enche a grade com o Baú primeiro.
+
+![Fabricando dentro do Baú](docs/curseforge/feature-31-chest-crafting.png)
+
+- **Upgrade de Compactação:** compacta e descompacta sozinho as cadeias de itens conforme elas entram: pepita, lingote, bloco, ou pedregulho até o 9x do AllTheCompressed. Escolha um modo para todas as cadeias (**Compactar** ou **Descompactar**) ou uma forma alvo para uma cadeia só. O mesmo material de mods diferentes é uma linha só, e um botão escolhe para os itens de qual mod vai tudo.
+
+![Compactação](docs/curseforge/feature-32-chest-compacting.png)
+
+![Pepitas entrando, compactadas e descompactadas](docs/curseforge/compactacao.gif)
+
+### Source do Ars Nouveau
+
+Com o Ars Nouveau instalado, todo roteador ganha uma aba **Source**. Source Jars, Relays e a Imbuement Chamber se ligam direto num roteador, então a Source viaja sem fio entre eles como qualquer outro recurso, na Source/s do tier do roteador.
+
+![Source do Ars Nouveau](docs/curseforge/feature-11-source.png)
+
+O **Tanque de Source Wireless** guarda de 10.000 de Source (Básico) a sem limite (Ultimate) e mostra o nível no vidro. Sourcelinks a até 5 blocos depositam nele e as máquinas do Ars por perto tiram dele, como de uma Source Jar.
+
+![Tanque de Source Wireless](docs/curseforge/feature-12-source-tank.png)
+
+### Ressonador de Sinal
+
+Um gerador multibloco que transforma cristais de quartzo vibrando em FE. Minere o **Quartzo de Sinal** (Overworld, pedra e ardósia), monte uma caixa oca 5×5×5 em volta de um **Núcleo de Ressonância** e ponha **Cristais de Sinal** nas câmaras dele. Cada Ressonador tem a sua **estação**, uma frequência que escorrega devagar: gire o dial até a lâmpada dizer **EM SINTONIA** para 100%, ou ponha um **Sintonizador** para seguir a estação sozinho, um pouco abaixo do topo. Fora da estação, não gera nada.
+
+![Ressonador de Sinal](docs/curseforge/ressonador.gif)
+
+Pelo vidro dá para ler a sintonia: o Núcleo de plasma com o anel do tier dele, os cristais orbitando, cada um vivo alimentando o Núcleo por um tentáculo de plasma que fica grosso e firme em sintonia e afina e se solta fora dela, e um raio de energia até cada porta que está entregando. Cristais gastos ficam **Opacos** e recarregam dentro do Núcleo com um catalisador (redstone ou Pó de Ressonância nos primeiros tiers, o Pó Carregado do tier do Allthemodium para cima). A energia sai pela **Porta de Energia**, direto num roteador.
+
+![Ressonador de Sinal](docs/curseforge/feature-21-resonator.png)
+
+| Tier do Núcleo | Câmaras | FE/t por cristal | Teto do Sintonizador |
+| --- | --- | --- | --- |
+| Básico | 1 | 216 | 85% |
+| Avançado | 2 | 6.912 | 88% |
+| Elite | 3 | 10.000 | 90% |
+| Esmeralda | 4 | 160.000 | 92% |
+| Allthemodium¹ | 5 | 6.400.000 | 94% |
+| Vibranium¹ | 6 | 6.700.000 | 95% |
+| Unobtainium¹ | 7 | 10.700.000 | 96% |
+| Ultimate | 8 | 268.435.456 | 98% |
+
+*¹ Só com o Allthemodium. Donos de servidor podem mudar o FE por cristal na config.*
+
+Um Cristal Lapidado rende o dobro e dura o dobro. Do Elite para cima, cada câmara pede o **Cristal Afinado** do tier do Núcleo (um cristal comum rende 1/4 ali, um Lapidado 1/2): com os Afinados do tier em todas as câmaras, o Ressonador supera o melhor gerador do tier dele, de 432 FE/t no Básico a 4,29 bilhões de FE/t no Ultimate. E custa à altura: todo cristal tem **8 cargas de integridade** e depois racha, refeito na bancada com 4 Cristais de Sinal; outro Núcleo montado a até 32 blocos tira 15% da eficiência (até 60%); e o Núcleo Ultimate queima Cristais Afinados Ultimate rachados como **Eco Ressonante**, +5% permanente cada, sem teto. O Núcleo é feito com o **Coração do Ressonador** do tier dele, que sai de uma cascata de 11 componentes (Liga de Sinal, placas, bobinas, lentes, circuitos e matrizes de fase, estabilizadores de campo, núcleos condensados), e subir o Núcleo de tier pede o Coração seguinte junto com o Cartão de Upgrade. O JEI mostra a estrutura em 3D e todas as receitas, e o livro-guia explica cada passo.
+
+![A cascata do Ressonador](docs/curseforge/feature-23-cascade.png)
+
+### Reparador de Cristais
+
+Um cristal rachado não é mais uma ida à bancada. Ponha-o num dos **8 pedestais** do Reparador de Cristais e ele o conserta, **até oito cristais em paralelo**. Cada reparo leva 7 segundos e gasta **4 Cristais de Sinal cheios** do slot de estoque comum mais energia: 2 vezes o FE por cristal do tier do cristal (432 FE para um Cristal de Sinal, 13.824 FE para um Lapidado e o preço do próprio tier para um Afinado). O cristal sai pelos slots de saída com a carga e a integridade cheias.
+
+![Reparador de Cristais](docs/curseforge/feature-26-repairer.png)
+
+Energia e itens entram por qualquer lado, então um roteador o mantém abastecido. As rachaduras fecham de dentro para fora, os cristais convergem para o emissor e o consertado sobe. O Núcleo do Ressonador também ficou mais rápido na outra ponta: agora recarrega **todos os cristais Opacos que o catalisador paga de uma vez**. Receita: Carcaça de Porcelana, Circuito de Fase, Funil, Lente Harmônica e um Bloco de Redstone. O tempo e o custo do reparo ficam na config (`repairer.repairTicks` e `repairer.costFactor`).
+
+### Tela de Sinal
+
+Um painel de parede que mostra **números ao vivo das suas redes e armazenamentos**. Grude-a na lateral de um bloco sólido e estique de **1 × 1 a 32 × 32 blocos** na aba Tamanho: sem blocos extras, a imagem cobre a parede inteira.
+
+![Tela de Sinal](docs/curseforge/feature-30-screen-wall.png)
+
+- **Um editor completo no jogo:** arraste, redimensione, agrupe e empilhe peças, copie e cole entre Telas, desfaça até 100 passos. Peças: **Valor, Texto, Forma, Ícone, Barra, Medidor, Gráfico e Seta**, cada uma alimentada por uma **rede**, um **armazenamento ligado** ou o **relógio do jogo**.
+- **Regras** mudam a cor de uma peça, o fundo, fazem piscar ou esconder quando um número está abaixo, acima ou igual a um valor. Cinco fontes, quatro temas prontos (Grafite, Fósforo, Âmbar, Porcelana) mais os seus, fundos, scanlines.
+- **Layouts prontos** para a Tela inteira (Energia, Armazenamento, Rede, Relógio) que se ajustam a qualquer tamanho, **layouts que você mesmo salva** e **componentes** prontos ou seus, escolhidos numa lista com um clique.
+- O **Ícone** mostra **qualquer item, fluido ou químico do Mekanism** arrastado do JEI, até itens com dados (gemas do Apotheosis, equipamento encantado), em 3D e com ícones animados.
+- **Ligue armazenamentos com o Vinculador** (modo Tela): clique na Tela, depois num Baú, Bateria ou Tanque Wireless, a qualquer distância e em qualquer dimensão. Um armazenamento num chunk descarregado mostra o último número, marcado como desatualizado; chunks nunca são carregados à força.
+- **Barata:** nada roda enquanto ninguém está perto; o cliente redesenha uma Tela só quando um número ou o layout muda, dentro de um orçamento de memória de vídeo.
+
+**Pixel art, animações, imagens e GIFs.**
+
+- **Um editor de pixel art no jogo**, de 8 × 8 a **128 × 128** com uma **paleta de 16 cores**: lápis, borracha, balde, linha, retângulo, elipse, sombra, dither e seleção, pincéis até 8 px, espelhos, virar e girar, **Criar rampa** a partir de qualquer cor e 100 passos de desfazer. As suas artes ficam na sua biblioteca (32 por padrão) e vão para uma Tela como peça **Imagem**, em qualquer escala inteira, ou como fundo em mosaico.
+
+![Desenhe pixel art no jogo](docs/curseforge/feature-27-screen-pixel-art.png)
+
+- **Anime quadro a quadro:** até **64 quadros** por arte, de **1 a 20 quadros por segundo**, em loop ou indo e voltando, com uma faixa de quadros e papel vegetal. Duas Telas com a mesma arte tocam juntas.
+
+![Anime quadro a quadro](docs/curseforge/feature-28-screen-animation.png)
+
+![Uma parede de Telas tocando](docs/curseforge/tela.gif)
+
+- **Imagens e GIFs de verdade:** **Enviar arquivo** manda um **PNG, JPG ou GIF** do seu computador (nunca um link), até **1024 px** e **8 MB** por arquivo e 240 quadros por GIF por padrão, e GIFs animados tocam na Tela. Donos de servidor podem desligar as imagens, deixar só operadores enviarem, mudar todos os limites e, com `/wa tela`, tirar uma imagem de todas as Telas ou impedir um jogador de enviar; cada jogador pode esconder as imagens enviadas pelos outros na config do cliente (`showOthersImages`).
+
+![Imagens e GIFs de verdade](docs/curseforge/feature-29-screen-images.png)
+
+- **Exportar e importar como texto:** artes, imagens e layouts inteiros se copiam como um código curto ou como texto legível, então você pode compartilhar uma Tela ou deixar uma IA de chat desenhar por você: cole o [guia de pixel art para IAs](docs/guia-pixel-art-com-ia.md) no chat, peça um desenho e importe a resposta.
+- **Acesso:** na aba Acesso, convide jogadores ou, com o FTB Teams, times inteiros para editar uma Tela como o dono (tamanho, layout e ligações). Qualquer um continua podendo olhar.
+
+### Ferramentas para construções grandes
+
+![O kit de ferramentas](docs/curseforge/feature-14-toolkit.png)
+
+![Vincule uma área inteira](docs/curseforge/feature-5-area.png)
+
+- **Vinculador** (dois modos): **Vincular** escolhe um roteador com o Upgrade de Alcance (clique nele) e vincula as máquinas em que você clica, ou **uma área marcada inteira** de uma vez (Shift + clique em dois blocos; a mais perto primeiro, até o raio e o limite do tier); a chave **Desvincular** tira em vez de pôr. **Abrir** abre a tela do roteador que chega na máquina em que você clica, já editando aquela máquina; com vários roteadores, uma lista curta deixa você escolher. Ele confere o alcance, os claims e os mods de proteção no roteador. O Vinculador não mexe mais em redes: escolha a rede de cada face na tela do roteador ou no Tablet.
+- **Configurador** (o Pincel): Shift + clique num roteador copia a configuração dele (faces, filtros, prioridades, redstone e a rede de cada face), clique cola em outro, e Shift + clique num bloco sem roteador limpa a cópia. Cole todas as abas ou só um tipo, sem tocar nas outras abas. Segure **Alt esquerdo** para uma roda radial que escolhe o tipo colado. A rede de uma face só é colada se você puder usá-la, e uma face só sai de uma rede que você edita. Para configurar vários roteadores de uma vez, cole o perfil nos marcados do Tablet.
+- **Upgrade de Chunk Loading:** mantém um roteador e a máquina dele trabalhando enquanto você está longe.
+- **Editor de receitas** (operadores): `/wa recipes` abre uma tela para trocar, desativar ou restaurar qualquer receita de bancada do mod, com itens do seu inventário ou do JEI, tags e a quantidade do resultado. Gravado como datapack em `config/wirelessautomate/recipes/`, então vale em todos os mundos e sobrevive a atualizações. Útil para packs que querem outra receita do Ultimate.
+
+![Pincel do Configurador](docs/curseforge/feature-16-wheel.png)
+
+![Vincular ou abrir](docs/curseforge/feature-13-linker.png)
+
+### Tablet de Rede
+
+![Tablet de Rede](docs/curseforge/feature-6-tablet.png)
+
+Todos os roteadores de todas as redes, de qualquer lugar: uma caixa de busca para máquina, rede e nome, filtros rápidos e uma linha por roteador (tier, nome e a máquina em que ele está), com o nó escolhido **editável ali mesmo** (as faces desdobradas como um cubo, o mesmo painel da tela do roteador). Renomeie um roteador ou a máquina dele com ✎ direto na lista. Abra um roteador na lista para ver cada máquina vinculada com o estado dela, ou troque para **Máquinas** para ver todas as máquinas da base pelo tipo de bloco. Copie o perfil de um nó e cole em roteadores, em máquinas soltas ou em grupos de máquinas inteiros, com desfazer. Tem também um **mapa visto de cima que você arrasta** e mostra todos os roteadores que você vê (use **Centralizar** para voltar a você), uma aba **Fluxos** com o que entra e sai de cada tipo e rede, os saldos dos Armazéns e o que precisa de atenção (clique numa linha para filtrar a lista), os roteadores com faces em várias redes, e grupos de redes para pausar e retomar um sistema inteiro de uma vez. O mapa mostra as máquinas do roteador escolhido. Dois cliques num nó abrem a tela completa dele à distância.
+
+**Compartilhe uma rede.** Numa rede privada sua, a aba Redes lista os seus **convidados** e, com o FTB Teams, os seus **times**: digite um nome e escolha nas sugestões (jogadores que já entraram no servidor e times de grupo), e clique no ✕ duas vezes para tirar. Convidados usam a rede e editam os nós dela; só você e os operadores a gerenciam. Um time conta como um todo e é ao vivo: quem entra ou sai dele ganha ou perde o acesso sozinho. Também há os comandos `/wa network invite`, `uninvite` e `team add|remove`.
+
+![Uma linha por roteador](docs/curseforge/feature-22-tablet-list.png)
+
+![Um mapa que você arrasta](docs/curseforge/feature-25-map.png)
+
+![Compartilhe uma rede](docs/curseforge/feature-24-network-access.png)
+
+### Livro-guia embutido
+
+![Livro-guia embutido](docs/curseforge/feature-7-guide.png)
+
+Todo jogador recebe o livro-guia no primeiro login (ele também está na aba criativa, ou faça com um livro e redstone). Ele explica cada item com cenas 3D interativas e receitas, em **inglês e português**. Passe o mouse sobre qualquer item do mod e segure **G** para ir à página dele.
+
+---
+
+## Primeiros passos
+
+1. Faça dois roteadores (ferro, redstone e um olho do ender).
+2. Use um num baú e o outro em outro baú. Roteadores novos começam sem rede.
+3. Abra o primeiro roteador, escolha a face **Cima** na aba **Itens** e, na linha **Rede**, crie uma rede e escolha-a. Faça o mesmo no segundo roteador, escolhendo a mesma rede.
+4. No primeiro roteador, ponha a face **Cima** em **Extrai**.
+5. No segundo roteador, ponha a mesma face em **Insere**. Agora os itens vão do primeiro baú para o segundo.
+
+Com o primeiro roteador de uma linha configurado, copie-o com o Configurador (Shift + clique nele) e cole (clique) nos outros.
+
+As receitas usam itens vanilla, menos os tiers do Allthemodium (feitos com os metais do mod Allthemodium, só quando ele está instalado).
+
+---
+
+## Compatibilidade
 
 | Mod | O que traz |
 | --- | --- |
-| Mekanism | Químicos: aba Químicos no roteador, com filtro por químico ou mod, e o Tanque Químico Wireless |
-| Ars Nouveau (5.2 ou mais novo) | Source: aba Source no roteador (Source Jars, Relays e Imbuement Chamber ligam direto) e o Tanque de Source Wireless |
-| Allthemodium (All The Tweaks opcional) | Os tiers Allthemodium, Vibranium e Unobtainium, e no ATM10 o anel do Ultimate com fragmentos de ATM Star |
-| JEI | Arrastar e Shift + clique para os filtros (e para o inspetor de tags), e as receitas de subir tier na bancada (bloco no anel, cartões com origem e bloco + cartão, no roteador e nos armazenamentos), e o Ressonador: a estrutura em 3D, a recarga e a tabela por tier |
-| GuideME | O livro-guia, em inglês e português |
+| **Qualquer mod com armazenamento padrão do NeoForge** | Itens, fluidos e energia funcionam com qualquer máquina, baú ou tanque que expõe os handlers padrão de item, fluido e energia do NeoForge, o que cobre a maioria dos mods de tecnologia e armazenamento (testado com o Sophisticated Storage e o Mekanism). |
+| **Mekanism** (opcional) | Uma aba **Químicos** para gases, tipos de infusão, pigmentos e lamas, e o Tanque Químico Wireless. Lembre de ligar a face na configuração de lados da máquina do Mekanism. |
+| **Ars Nouveau** (opcional) | Uma aba **Source** (Source Jars, Relays e a Imbuement Chamber se ligam direto num roteador) e o **Tanque de Source Wireless**, que as máquinas do Ars usam como uma Source Jar. Precisa do Ars Nouveau 5.2 ou mais novo. |
+| **Allthemodium** (opcional, como no ATM10) | Três tiers a mais (Allthemodium, Vibranium e Unobtainium) entre a Esmeralda e o Ultimate, para o roteador e todos os armazenamentos. Com o **All The Tweaks**, o anel do Ultimate pede fragmentos de ATM Star. |
+| **JEI** (opcional) | Arrastar e soltar (ou Shift + clique) ingredientes nos filtros sem ter o item, ou no inspetor de tags; as receitas de subir tier (bloco no anel, cartões com origem, bloco + cartão) aparecem no JEI. |
+| **FTB Teams** (opcional) | Acrescente um time de grupo a uma rede privada e cada membro ganha o acesso de convidado, ao vivo. Precisa do FTB Teams para 1.21.1 (com o FTB Library e o Architectury, que ele mesmo pede). |
+| **GuideME** (opcional) | O livro-guia no jogo. |
 
-Sem um deles, a parte correspondente não carrega e o resto funciona normal.
+## Desempenho
 
-## Desenvolvimento
+- Sem tick por bloco: um gerenciador central por servidor.
+- Um orçamento de tempo por tick (1 ms por padrão, configurável) que encolhe sozinho quando o servidor está sofrendo. O trabalho que não cabe continua no tick seguinte; nada se perde.
+- Origens vazias e destinos cheios dormem e não custam quase nada.
+
+## Requisitos
+
+- Minecraft **1.21.1**
+- **NeoForge** 21.1.248 ou mais novo (funciona no All the Mods 10)
+
+## Código-fonte
+
+O código-fonte está publicado só para consulta (veja Licença abaixo). Relatos de bugs e sugestões são bem-vindos como [issues](https://github.com/MatheusANBS/Wireless-Automate/issues).
+
+### Compilar
 
 ```bash
 ./scripts/setup.sh              # Linux, macOS ou WSL
@@ -74,22 +288,22 @@ O script instala o que faltar (JDK 21, git, curl, unzip) e roda o primeiro build
 | `./gradlew runGameTestServerChemicals` | GameTests de químicos, num servidor com o Mekanism |
 | `./gradlew runGameTestServerSource` | GameTests de Source, num servidor com o Ars Nouveau (e GeckoLib e Curios) |
 | `./gradlew runGameTestServerAllthemodium` | GameTests dos tiers do ATM, com o Allthemodium, o All The Tweaks e o GeckoLib |
-| `./gradlew runClient` | Cliente de dev com JEI, Sophisticated Storage, Observable, Mekanism, Ars Nouveau (com GeckoLib e Curios), Allthemodium, All The Tweaks e GuideME, para testar à mão |
+| `./gradlew runGameTestServerTeams` | GameTests de times, num servidor com o FTB Teams, o FTB Library e o Architectury |
+| `./gradlew runClient` | Cliente de dev com JEI, Mekanism, Ars Nouveau, Allthemodium, GuideME e outros mods, para testar à mão |
 | `./gradlew runData` | Geradores de dados, saída em `src/generated/resources/` |
-| `./scripts/e2e.sh` | Teste de ponta a ponta num mundo real (precisa de Xvfb) |
+| `./scripts/e2e.sh` | Teste de ponta a ponta num mundo real (ver `docs/e2e.md`) |
 | `./scripts/bench.sh <cenários>` | Benchmark num servidor dedicado com Sophisticated Storage (ver `docs/benchmark.md`) |
 
-O CI (`.github/workflows/build.yml`) roda `build`, `runGameTestServer`, `runGameTestServerChemicals`, `runGameTestServerSource` e `runGameTestServerAllthemodium` a cada push e pull request.
+O CI (`.github/workflows/build.yml`) roda o `build` e as cinco runs de GameTest a cada push e pull request.
 
-## Organização
+### Organização
 
 O mapa do código-fonte fica no [`CLAUDE.md`](CLAUDE.md) ("Mapa do código").
 
 - `docs/especificacao.md`: especificação do mod (fonte da verdade do design).
 - `docs/progresso.md`: o que está pronto, o que falta e o próximo passo.
 - `docs/benchmark.md`: como rodar o benchmark e os resultados.
-- `docs/pacote-de-design.md`: sprites e modelo do roteador.
-- `docs/curseforge/`: descrição, capa, banner e imagens da página do CurseForge.
+- `docs/curseforge/`: descrição do CurseForge, changelogs, banner e as imagens e GIFs usados aqui.
 - `scripts/`: `setup.sh`/`setup.ps1`, `e2e.sh`, `bench.sh`, `textures/` (gera as texturas), `guide/` (gera as páginas do guia) e `curseforge/` (gera as imagens do CurseForge).
 
 ## Licença

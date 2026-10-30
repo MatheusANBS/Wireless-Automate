@@ -35,4 +35,28 @@ class RateFormatTest {
         assertEquals("-1.5k", RateFormat.abbreviate(-1_500));
         assertEquals("-12", RateFormat.abbreviate(-12));
     }
+
+    @Test
+    void quantidadeTruncaEmVezDeArredondar() {
+        assertEquals("0", RateFormat.abbreviateAmount(0));
+        assertEquals("999", RateFormat.abbreviateAmount(999));
+        assertEquals("1k", RateFormat.abbreviateAmount(1_000));
+        assertEquals("1k", RateFormat.abbreviateAmount(1_099));
+        assertEquals("1.9k", RateFormat.abbreviateAmount(1_999));
+        assertEquals("2.6k", RateFormat.abbreviateAmount(2_664));
+        assertEquals("99.9k", RateFormat.abbreviateAmount(99_999));
+        assertEquals("100k", RateFormat.abbreviateAmount(100_000));
+        assertEquals("999k", RateFormat.abbreviateAmount(999_999));
+        assertEquals("1M", RateFormat.abbreviateAmount(1_000_000));
+        assertEquals("1.9M", RateFormat.abbreviateAmount(1_999_999));
+        assertEquals("8.5G", RateFormat.abbreviateAmount(8_589_934_592L));
+    }
+
+    @Test
+    void quantidadeNaoEstouraNosLimites() {
+        assertEquals("9.2E", RateFormat.abbreviateAmount(Long.MAX_VALUE));
+        assertEquals("-9.2E", RateFormat.abbreviateAmount(Long.MIN_VALUE));
+        assertEquals("-2.6k", RateFormat.abbreviateAmount(-2_664));
+        assertEquals("-12", RateFormat.abbreviateAmount(-12));
+    }
 }

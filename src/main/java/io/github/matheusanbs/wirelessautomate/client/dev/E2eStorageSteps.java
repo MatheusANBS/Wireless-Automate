@@ -70,7 +70,8 @@ final class E2eStorageSteps {
      * Baú Wireless num mundo real: dois Baús (Elite e Ultimate) com roteadores Ultimate na rede
      * principal; os 12 milhões de pedregulho do teste do dono passam de um para o outro. Depois a
      * tela: lista, busca, pegar e devolver uma pilha pelo clique, o filtro de entrada e Voltar. Por
-     * fim o Cartão de Upgrade no Baú, quebrar e recolocar com o conteúdo e uma foto dos blocos.
+     * fim os upgrades do Baú ({@link E2eChestUpgradeSteps}), o Cartão de Upgrade no Baú, quebrar e recolocar com o
+     * conteúdo e uma foto dos blocos.
      */
     static void storageChestSteps(List<Step> list) {
         UUID playerId = Minecraft.getInstance().player.getUUID();
@@ -79,6 +80,7 @@ final class E2eStorageSteps {
         chestScreenSteps(list);
         chestResizeSteps(list, playerId, clicked);
         chestFilterSteps(list);
+        E2eChestUpgradeSteps.upgradeSteps(list);
         chestCardSteps(list, playerId, clicked);
         chestBreakSteps(list, playerId, clicked);
         tankAndBatterySteps(list, playerId);
@@ -524,13 +526,15 @@ final class E2eStorageSteps {
     }
 
     /**
-     * Depois de redimensionar: o painel continua no centro da tela e o inventário do jogador
-     * acompanhou, centralizado embaixo dele.
+     * Depois de redimensionar: a janela inteira (a coluna dos upgrades, o painel e o painel do upgrade aberto)
+     * continua no centro da tela e o inventário do jogador acompanhou, centralizado embaixo do painel.
      */
     private static boolean inventoryFollows(StorageListScreen screen) {
         Slot first = screen.getMenu().slots.stream().filter(s -> s.getContainerSlot() == 9).findFirst().orElseThrow();
         int center = first.x + 9 * 18 / 2 - 1;
-        boolean centered = Math.abs(screen.getGuiLeft() + screen.getXSize() / 2 - screen.width / 2) <= 1
+        int left = screen.getGuiLeft() - screen.upgradePanels().extraLeft();
+        int whole = screen.upgradePanels().extraLeft() + screen.getXSize() + screen.upgradePanels().extraRight();
+        boolean centered = Math.abs(left + whole / 2 - screen.width / 2) <= 1
                 && Math.abs(screen.getGuiTop() + screen.getYSize() / 2 - screen.height / 2) <= 1;
         return centered && Math.abs(center - screen.getXSize() / 2) <= 1
                 && first.y + 3 * 18 + 4 + 18 + 8 + 8 >= screen.getYSize() - 8;

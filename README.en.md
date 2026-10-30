@@ -1,63 +1,277 @@
-# Wireless Automate
+![Wireless Automate](docs/curseforge/banner.png)
 
 *[Leia em português](README.md)*
 
-Wireless transport of items, fluids, energy, chemicals and Source for **NeoForge 1.21.1** (Java 21), built for ATM10. The goal is to be the fastest transport in the pack and the lightest on TPS: one central manager, no per-block ticking, and a time cap per tick.
+**Wireless Automate** moves items, fluids, energy, Mekanism chemicals and Ars Nouveau Source between machines **without pipes**. Attach a router to a machine, choose what each face of the machine does, and every router on the same network trades with the others, near or far. It also brings **storage blocks of its own** that move billions per operation, filters that pick tags in one click or match **any enchanted item**, and a crystal generator you tune like a radio, the **Signal Resonator**.
 
-**Status:** version 2.12 (the Signal Screen gets pixel art drawn and animated in the game, uploaded images and GIFs, codes to share and to make with an AI, and the Access tab; filters split "accept up to" at the destination from "keep in source", and storages get a limit per type). Previously, 2.11 (the Signal Screen). Previously, 2.9 (the Crystal Repairer mends cracked Resonator crystals, up to 8 in parallel, and the Core recharges every paid Dull crystal at once). Previously, 2.8 (router energy and Battery capacity now follow the Signal Resonator of the same tier: the router carries its full output plus 5% and the Battery holds an hour of it). Previously, 2.7 (access to private networks: guests and FTB Teams teams, with suggestions while you type; the Tablet Map you can drag and that shows every router you can see; the Linker with Link and Open modes; the Configurator as just the Brush). Previously, 2.6 (component rules in filters and suggestions while typing; the panel remembers the last face). Before that, 2.5 (screens redrawn around a cleaner face editor and the top of the Resonator ladder rebalanced). Before that, 2.4.1 (fix: choosing a face action no longer assigns the active network; choose its network explicitly). Previously, 2.4 (the Signal Resonator rebalanced to be the best generator of each tier: a new ladder, Tuned crystals, fatigue and recasting, Resonance Dust and Charged Dust, interference between Cores, the Resonant Echo on Ultimate, the 11-item crafting cascade and a Resonator Heart per tier; the chamber animated by core shaders; the Tablet List by router, with renaming). Before that, 2.3 (names for linked machines and groups, and the machine highlight in the world, through blocks; the Tablet List as a tree, with each router's machines, and the Machines view; pasting profiles on machines and whole groups; List, Flows, Map and Networks tabs). Before that, 2.2 (a Flows tab in the Tablet, with what comes in and goes out of every network; the Linker links machines without a network, and Clear networks, with Undo; a full efficiency pass on the server, the network and the client). Before that, 2.1 (the Signal Resonator, a multiblock crystal generator you tune, and the buttons in the Range Upgrade's machine list). Before that, 2.0 (2.0.1: the Tablet shows the nodes of other players' public networks; light and dark theme on every screen, with the moon/sun button in the header; node panel: the machine's faces unfolded like a cube, on the router screen and in the Tablet; the Tablet list with one search box, tags, quick filters and groups, editing the chosen node at a distance and copy and paste of profiles with undo; picking a mode on a face without a network puts it in the active network; fix for the crash with the Trash Cans trash can). Before that, 1.9 (Range Upgrade: one router for many machines in its radius, by group with per-machine exceptions; a network per machine face, instead of per tab; raising a tier at the crafting table or with an Upgrade Card with an origin, at the same cost; a machine that refuses an item by type no longer puts the router to sleep). Before that, 1.8 (fix for the crash when opening the Chest, `#` search in tags and tooltips, Shift locks the list order like AE2, and right click takes half of what is there), 1.7 (1.7.1: the editor runs one reload at a time; recipe editor for operators: `/wa recipes` changes, disables and restores the mod's recipes in game), 1.6 (Configurator wheel on Left Alt and Area mode on any machine) and 1.5 (1.5.0: Mouse Tweaks-style controls in the Chest, such as Shift + drag, mouse wheel and Shift + double-click, and NeoForge 21.1.248; 1.5.1: the Chest fills other mods' big-stack slots at once; 1.5.2: new "Porcelain and Signal" visual identity, with animated items, 3D blocks, light screens and tight hitboxes). Download it on [CurseForge](https://www.curseforge.com/minecraft/mc-mods/wireless-automate) or from the [latest GitHub release](https://github.com/MatheusANBS/Wireless-Automate/releases/latest), both with the changelog. Requires NeoForge 21.1.248 or newer (runs on ATM10).
+It was built for large modpacks: instead of every block ticking on its own, one central manager moves everything within a small time budget per tick, so hundreds of machines don't turn into lag.
+
+**Status:** version 2.13. The Wireless Chest gets two upgrade slots: the **Crafting Upgrade** (a 3×3 grid inside the Chest that refills itself from its stock) and the **Compacting Upgrade** (item chains such as nugget, ingot and block packed and unpacked on their own). Every version's changes are in the [changelog](docs/curseforge/changelog-curseforge-2.13.0.md) and on the [releases page](https://github.com/MatheusANBS/Wireless-Automate/releases).
+
+Download it on [CurseForge](https://www.curseforge.com/minecraft/mc-mods/wireless-automate) or from the [latest GitHub release](https://github.com/MatheusANBS/Wireless-Automate/releases/latest). Requires NeoForge 21.1.248 or newer (runs on ATM10).
+
+![Everything wireless](docs/curseforge/feature-0-overview.png)
+
+---
 
 ## Features
 
-- **Wireless Router:** attached to any face of a machine, it reaches every face of that machine; Shift + right-click with empty hands rotates the router 90° (1.3) without changing the face configuration.
-- **Network per face** (1.9): each face of the machine, for each type (Items, Fluids, Energy, Chemicals and Source), joins its own network; everything of the same type on the same network trades with each other. On a furnace with a single router, the top face takes from the mining network and the bottom one sends to the storage network. Old worlds migrate on their own (the tab's network goes to all six faces).
-- **Range Upgrade** (1.9): in the second upgrade slot, it makes one router move to and from many machines in its radius, linked with the Linker in Link mode (by click or area; unlinking with the Unlink switch on its screen). Machines of the same block form a group with one profile, with per-machine exceptions, and sides follow each machine's front. Radius and limit per tier in the config (`machineRadius` and `maxMachines`): from 6 blocks and 8 machines on Advanced to 64 blocks and 128 machines on Ultimate; Basic does not take it. Every machine gets the tier's full throughput. Since 2.1, the chosen machine's row in the list has Update, Back to profile and Unlink, and a machine replaced by another block shows as "replaced" until Update moves it to the new block's group. Since 2.2, the Linker links without a network (choose each face's network explicitly in the panel's Network row), and **Clear networks** removes the network from the faces set to None of a group or an exception, with Undo. Since 2.3, machines and groups get names (✎ or a double click), each row shows the coordinates and the state, the eye ◉ lights the machine up in the world through blocks, with a line to the router (up to 64, until turned off), and right-clicking a machine with the Tablet opens it with that machine picked.
-- **Modes per face and per type:** Extract, Insert, Storage or None, with priority, round-robin on ties and redstone control.
-- **Unlimited filters:** exact item or fluid, tag and mod, whitelist or blacklist, with two limits per entry since 2.12 (**Accept up to**, at the destination, and **Keep in source**), and Filter Cards (two slots per face and per type, copyable in the crafting table). The screen is resizable: put an item in the inspector to see and check all its tags, or search every tag in the game with an item preview.
-- **Property rules** (1.0): match any item that is enchanted, damaged, renamed, a potion, unstackable or has contents, an enchantment with a minimum level (1.3: typed by name, with suggestions, levels 1 to 255) or durability below X%, limited to a tag or mod (only enchanted armor, tools for repair).
-- **Five tiers** (1.2; Basic, Advanced, Elite, Emerald and Ultimate), and **eight with Allthemodium** (Allthemodium, Vibranium and Unobtainium between Emerald and Ultimate), raised by one ring of ingredients per tier, at the same cost two ways (1.9): the block in the middle of the next tier's ring at the crafting table, or an Upgrade Card with an origin ("Basic → Elite"; the ring around a Redstone, and a card in the middle of the next ring skips one more tier), by clicking the placed router, which keeps its configuration, or combining both in the crafting table. Old cards still raise from any lower tier. On ATM10, the Ultimate ring needs ATM Star fragments.
-- **Linker** (two modes, 2.7): **Link** picks a router with the Range Upgrade (click it) and links the machines you click, or those of an area marked with Shift + click on two blocks (nearest first, up to the tier's radius and limit); the **Unlink** switch on its screen removes instead. **Open** opens the screen of the router that reaches the machine you click, already editing that machine (with several, a short list; range, `mayInteract` and other mods' protections are checked on the router). The Linker no longer touches networks: choose each face's network on the router screen or in the Tablet.
-- **Configurator** (just the Brush, 2.7): Shift + click a router copies its configuration, click pastes onto another, Shift + click on a block without a router clears the copy; all tabs or a single type (Source included). Holding Left Alt opens a one-ring wheel to pick the pasted type; Shift + mouse wheel works too. A face's network is only pasted if you can use it, and a face only leaves a network you can edit. To configure many at once, paste the profile on the Tablet's marked ones.
-- **Chunk Loading Upgrade:** keeps the router's chunk and the machine's chunk loaded, with a per-player limit in the config.
-- **Recipe editor** (1.7): `/wa recipes`, for operators only, opens a screen to change, disable and restore the mod's crafting recipes (items from the inventory or JEI, a tag instead of an item, the result count). It writes a datapack in `config/wirelessautomate/recipes/` that works in every world of the instance and survives updates.
-- **Network Tablet:** list, map, Flows, networks and groups from a distance, and opens a router's screen remotely; a router shows up in every network one of its faces is in ("faces in 2 networks"). Since 2.0, the List has one search box (machine, network and name, with tags), quick filters and groups by machine, edits the chosen node in the panel beside it, and copies and pastes profiles on one machine, a group or the marked ones, with undo. Since 2.2, the Flows tab shows, per type or per network, what comes in (Extract faces) and goes out (Insert faces), the balance of Storage faces and what needs attention (sources that are empty or waiting for a destination, full destinations, faces stopped by redstone and without a network); clicking a line opens the List filtered. Since 2.3, the tabs are List, Flows, Map and Networks (network groups become sections of Networks); in the List, ▸ opens a router with its attached machine, its groups and each machine with its state and the eye ◉, the **Routers | Machines** switch shows every machine of the base by block type, Select marks routers, groups, machines and blocks, and Paste saves a machine's exception (sides follow its front) or a whole group's profile; the Map shows the picked router's machines. Since 2.7, the Map moves by dragging (the Center button brings it back to you) and shows every router you can see in the dimension (up to the 1,024 nearest), independent of the List's search and filters, and a private network can have guests (they use and edit, without managing) and FTB Teams teams (optional, live), with suggestions while you type. Since 2.4, every router is a row of the List (tier icon, name or "Router &lt;tier&gt;", tier pill and the attached machine on the second line), sorted by name, and ✎ or a double click renames the router and the attached machine right there.
-- **Signal Resonator** (2.1): a multiblock crystal generator. Mine Signal Quartz (Overworld, stone and deepslate), build a hollow 5×5×5 box around the Resonance Core and put Signal Crystals in its chambers. Every Resonator has a station that drifts slowly: turn the dial on the Core screen until the IN TUNE lamp lights for 100%, or add a Tuner to follow the station on its own, a little below. Through the glass, the chamber shows the tuning: the crystals orbit the plasma Core and every live one feeds it through a plasma tendril, thick and steady in tune, thin and loose out of it. A spent crystal turns Dull and recharges in the Core; energy leaves through the Energy Port, straight into a router. Tier by the Core, with the same Upgrade Cards: from 1 chamber and 216 FE/t per crystal on Basic to 8 chambers and 268,435,456 FE/t on Ultimate (the Cut crystal yields twice as much). JEI shows the structure in 3D. Since 2.4, it is the best generator of each tier and costs accordingly: from Elite up, each chamber asks for the tier's **Tuned Crystal** (a plain one yields 1/4 and a Cut one 1/2); every crystal has 8 charges of integrity and then cracks, recast at the crafting table with 4 Signal Crystals; recharging takes redstone or **Resonance Dust** on Basic and Advanced, only the Dust on Elite and Emerald, and the tier's **Charged Dust** from Allthemodium up; another formed Core within 32 blocks takes 15% of the efficiency (up to 60%); the Ultimate Core burns cracked Ultimate Tuned crystals as **Resonant Echo**, a permanent +5% each, with no cap. The Basic Core recipe takes the **Resonator Heart**, and raising the Core spends the Heart of the target tier, made through the 11-item cascade (Signal Alloy, Plate, Wire, Coil, Harmonic Lens, Phase Circuit and Matrix, Field Stabilizer, Condensed Core, the Alloy Frame on Ultimate). The formed chamber is drawn by core shaders (plasma Core, a bolt to the Port by the real flow, crystal tendrils, recharge and 3D crystals); with an Iris shader pack, the old drawing stays.
-- **Crystal Repairer** (2.9): mends cracked Resonator crystals, up to 8 in parallel on 8 pedestals. Each repair takes 7 s and uses 4 full Signal Crystals from the shared stock plus energy (2 times the FE per crystal of the crystal's tier: 432 FE for a Signal Crystal, 13,824 FE for a Cut one); the crystal comes out fully charged and with full integrity. Energy and items go in from any side, so a router can feed it. Animated (the cracks close from the inside out). Recipe: Resonator Casing, Phase Circuit, Hopper, Harmonic Lens and a Redstone Block; `repairer.repairTicks` and `repairer.costFactor` in the config. The Core now also recharges every paid Dull crystal at once.
-- **Signal Screen** (2.11): a wall display from 1 × 1 to 32 × 32 blocks, with no extra blocks, showing live numbers from networks, linked storages (Chest, Battery and Tank, by the Linker's Screen mode) and the in-game clock. In-game editor with Value, Text, Shape, Icon, Bar, Gauge, Graph and Arrow pieces, rules (color, blink, hide), five fonts, themes, backgrounds, ready and saved layouts and components. The Icon shows any item (even with data, like Apotheosis gems), fluid or Mekanism chemical from JEI. Only players near it receive data; a network's numbers need access to it. In 2.12: pixel art drawn in the game (up to 128 × 128, 16 colors per art) and animated (up to 64 frames, 1 to 20 per second) on the Image piece and the tiled background; real images and GIFs uploaded from your computer (PNG, JPG or GIF, up to 1024 px and 8 MB by default, with server controls in `tv.images.*`); exporting and importing layouts, art and images by code (also as readable text, to make with an AI, see [the guide](docs/pixel-art-ai-guide.md)); and the Access tab, with players and FTB teams who edit the Screen.
-- **Light and dark theme** (2.0): the moon/sun button in the header corner switches every screen; the choice is kept in the client config.
-- **Wireless Chest** (1.0): stores items by type and amount, with no slots and unlimited types, up to the tier's capacity (from 32,768 items on Basic to 16,777,216 on Emerald and 8,589,934,592 on Unobtainium, unlimited on Ultimate), raised with the same rings and Upgrade Cards. Between two Chests, the router moves a whole type in a single operation. It has a list screen with search (`@mod` and, since 1.8, `#` in tags and tooltips) and sorting (locked while Shift is held, like AE2), Mouse Tweaks and vanilla gestures (Shift + drag, mouse wheel and Shift + double-click), an limit per type (since 2.12: a fixed "All other types" row and per-type exceptions, no admission list) and a comparator signal. When broken, the item keeps its contents and filter. To other mods, it is a regular inventory; as a source, it fills big-stack slots (Sophisticated Storage stack upgrades, drawers) at once (1.5.1: 2.1 billion into an Omega-upgraded barrel in one tick).
-- **Wireless Tank, Battery and Chemical Tank** (1.0): the same design as the Chest for fluids (several per tank, up to 131 million mB on Emerald), energy (each tier's capacity is one hour of the same tier's Resonator at full output: from 31.1 million FE on Basic to 92.16 billion on Emerald and 10.8 trillion on Unobtainium; unlimited on Ultimate; since 2.7, each tier's router energy is the same tier's Resonator full output plus 5%) and Mekanism chemicals (only with Mekanism). Unlimited on Ultimate. The Tank swaps buckets directly on the block and through the screen (containers on the cursor); the Battery shows its charge and the change per tick. To other mods and to the router, they are a regular tank, battery and chemical tank that already move billions per call.
-- **Wireless Source Tank** (1.1, only with Ars Nouveau): a slim jar whose glass column shows the level, from 10,000 to 5,120,000 Source on the vanilla ladder (unlimited on Ultimate). Sourcelinks within 5 blocks deposit into it and nearby Ars machines draw from it like a Source Jar; between two tanks the router moves everything in one operation. Same Upgrade Cards, keeps its contents when broken, comparator and its own screen.
-- **Resizable screens** (1.1): router, Tablet and Linker resize by the edge and the corner; the router tabs adapt to the width, and text that doesn't fit is abbreviated, with the full text in a tooltip.
-- **Guide book (GuideME):** in the creative tab and given to each player on first login.
+![Connect machines without pipes](docs/curseforge/feature-1-network.png)
+
+- **One router per machine.** Attach it to any face of any block. From its screen you configure **all six faces of the machine**, not just the one it sits on. Shift + right-click it with empty hands to turn it to face any way; the setup of each face stays put.
+- **Networks, not cables.** Routers on the same network trade resources of the same type (items, fluids, energy and, with the optional mods, chemicals and Source). **Each face of the machine joins its own network**, per resource type, so one furnace can take ore from your mining line on top and send ingots to storage from the bottom, while its energy comes from your base grid.
+- **One router, many machines:** with the **Range Upgrade**, a single router serves every machine you link around it, so a whole farm is set up once (see Range Upgrade below).
+- **Four modes per face:** Extract, Insert, Storage (a buffer that takes from extractors and gives to inserters) or None.
+- **Priority, round-robin and redstone control** for every face and resource type.
+- **Resizable screens:** the router, Network Tablet and Linker can be resized from their edges and corner, and the router tabs adapt to the width.
+- **Light and dark theme:** every screen has both; switch with the moon/sun button in the header.
+
+![Configure every face](docs/curseforge/feature-2-router.png)
+
+![A network per face](docs/curseforge/feature-19-face-networks.png)
+
+### Range Upgrade
+
+One router moves to and from every machine you link in its radius (6 blocks and 8 machines on Advanced, up to 64 blocks and 128 machines on Ultimate). Linked machines of the same block form a group with one profile, with exceptions per machine, and their sides follow each machine's front. Machines wake the router as soon as they change, and nothing scans the world while it runs. Linked machines start without a network: choose each face's network explicitly in the panel's Network row. Changing its action keeps its network. **Clear networks** removes the network from every face set to None, with Undo. Give machines and groups their own names, and light any machine up **in the world**, through blocks, with a line to its router; right-click a machine with the Network Tablet to jump straight to it.
+
+![One router, many machines](docs/curseforge/feature-17-range.png)
+
+![Configure by machine type](docs/curseforge/feature-18-range-screen.png)
+
+### Filters with no entry limit
+
+Exact items, tags (`#c:ores`) and whole mods (`@mekanism`), as a whitelist or blacklist, with **stock limits** ("keep 64 in the source", "accept up to 16 in the destination"). Add entries by Shift + clicking your inventory or by dragging from **JEI**. Filter Cards carry a whole filter to reuse on other faces.
+
+- **Tag inspector:** put any item in the inspector and every tag it has shows up, ready to check and add. Or search every tag in the game, with how many items each one matches and a preview.
+- A resizable window with the entries in a searchable list.
+
+![Tags in one click](docs/curseforge/feature-3-filters.png)
+
+### Property rules
+
+Match items by what they **are**, not which item they are: **any enchanted item**, damaged or undamaged, renamed, potions, unstackable, shulker boxes with contents, an enchantment with a minimum level (type its name and pick from the suggestions, any level from 1 to 255: Fortune ≥ III, Efficiency ≥ 37) or the remaining durability (send tools under 25% to repair). Limit a rule to a tag or mod: Enchanted + `#c:armors` = enchanted armor only. Your inventory lights up on what the rule matches before you add it.
+
+![Property rules](docs/curseforge/feature-8-rules.png)
+
+### Five tiers, eight with Allthemodium
+
+Tiers raise a router's throughput and range along the ladder Basic → Advanced → Elite → **Emerald** → Ultimate. With the **Allthemodium** mod (ATM10), three more steps go between Emerald and Ultimate: **Allthemodium → Vibranium → Unobtainium**, crafted from the mod's own metals, and in ATM10 the Ultimate ring takes **ATM Star shards**. Each tier has one ring of ingredients, used two ways at the same cost: put a router (or storage block) in the middle of the next ring at the crafting table, or make an Upgrade Card ("Basic → Elite") and use it on the placed router, which keeps its whole configuration. A card can skip tiers: put it in the middle of the next ring to extend it.
+
+![Eight tiers](docs/curseforge/feature-4-tiers.png)
 
 | Tier | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Source/s | Range | Range Upgrade |
 | --- | --- | --- | --- | --- | --- | --- |
 | Basic | 32 | 2,000 | 454 | 100 | 64 blocks | — |
 | Advanced | 256 | 16,000 | 29,100 | 800 | 512 blocks | 6 blocks, 8 machines |
 | Elite | 2,048 | 128,000 | 63,000 | 6,400 | Whole dimension | 12 blocks, 16 machines |
-| Emerald | 16,384 | 1,024,000 | 1,350,000 | 51,200 | Across dimensions | 16 blocks, 32 machines |
-| Allthemodium¹ | 131,072 | 8,192,000 | 67,200,000 | 409,600 | Across dimensions | 24 blocks, 48 machines |
-| Vibranium¹ | 1,048,576 | 65,536,000 | 84,500,000 | 3,276,800 | Across dimensions | 32 blocks, 64 machines |
-| Unobtainium¹ | 8,388,608 | 524,288,000 | 158,000,000 | 26,214,400 | Across dimensions | 48 blocks, 96 machines |
-| Ultimate | Unlimited | Unlimited | Unlimited | Unlimited | Across dimensions | 64 blocks, 128 machines |
+| Emerald | 16,384 | 1,024,000 | 1,350,000 | 51,200 | Every dimension | 16 blocks, 32 machines |
+| Allthemodium¹ | 131,072 | 8,192,000 | 67,200,000 | 409,600 | Every dimension | 24 blocks, 48 machines |
+| Vibranium¹ | 1,048,576 | 65,536,000 | 84,500,000 | 3,276,800 | Every dimension | 32 blocks, 64 machines |
+| Unobtainium¹ | 8,388,608 | 524,288,000 | 158,000,000 | 26,214,400 | Every dimension | 48 blocks, 96 machines |
+| Ultimate | Unlimited | Unlimited | Unlimited | Unlimited | Every dimension | 64 blocks, 128 machines |
 
-¹ Only with the Allthemodium mod; without it, Emerald goes straight to Ultimate.
+*Per face and per resource type; every machine linked by the Range Upgrade gets the full rate, and each tier's energy carries the full output of the same tier's Signal Resonator. ¹ Only with Allthemodium. Server owners can change every value in the config.*
 
-Throughput applies per face and per type (`sourcePerSecond` is the Source one); each tier's energy carries the full output of the same tier's Resonator through one face. The values live in the server config (`<world>/serverconfig/wirelessautomate-server.toml`; in a modpack, the default goes in `defaultconfigs/`), as do the range, the Range Upgrade's radius and limit, the storage capacity per tier (`storage.chestCapacity`, `tankCapacity`, `batteryCapacity`, `chemicalTankCapacity` and `sourceTankCapacity`), chunk loading and the Linker's area size. Capacity counts the total stored, with no limit on the number of different types.
+![From iron to Unobtainium](docs/curseforge/feature-15-tier-hall.png)
 
-## Optional integrations
+![Raise a tier, keep the setup](docs/curseforge/feature-20-tier-up.png)
 
-| Mod | What it adds |
+### Wireless storage
+
+![Storage of its own](docs/curseforge/feature-9-storage.png)
+
+Five storage blocks made for the router: the **Wireless Chest** (unlimited item types, no slots), the **Wireless Tank**, the **Wireless Battery** and, with the optional mods, the **Wireless Chemical Tank** (Mekanism) and the **Wireless Source Tank** (Ars Nouveau). Between two of them, a router moves a whole item type in a single operation (**12 million items in one tick**) and fluids and energy by the billions. For every other mod they are a normal inventory, tank or battery, and the Chest fills big-stack slots (Sophisticated Storage stack upgrades, drawers) a whole slot per insert: **2.1 billion items into an Omega-upgraded barrel in one tick**.
+
+| Tier | Chest (items) | Tank and Chemical Tank | Battery | Source Tank |
+| --- | --- | --- | --- | --- |
+| Basic | 32,768 | 256 B | 31.1M FE | 10,000 |
+| Advanced | 262,144 | 2,048 B | 1.99G FE | 80,000 |
+| Elite | 2,097,152 | 16,384 B | 4.32G FE | 640,000 |
+| Emerald | 16,777,216 | 131,072 B | 92.2G FE | 5,120,000 |
+| Allthemodium¹ | 134,217,728 | 1,048,576 B | 4.61T FE | 40,960,000 |
+| Vibranium¹ | 1,073,741,824 | 8,388,608 B | 5.79T FE | 327,680,000 |
+| Unobtainium¹ | 8,589,934,592 | 67,108,864 B | 10.8T FE | 2,621,440,000 |
+| Ultimate | Unlimited | Unlimited | Unlimited | Unlimited |
+
+- A Battery holds **one hour of its tier's Signal Resonator** at full output, and a router's energy throughput is that same Resonator's output plus 5% (Ultimate: unlimited).
+- Upgrade with the same rings and Upgrade Cards as the router, without losing the contents.
+- **Break it and the contents go with the item**, like a shulker box, tier included.
+- Searchable, sortable and resizable screen; an input filter decides what may enter, by any path; comparator output.
+- Mouse Tweaks-style controls in the Chest list: Shift + drag, mouse wheel to move one item at a time, and Shift + double-click (with an item on the cursor) to fill your inventory.
+- Search the Chest list by name, `@mod`, or `#` for tags and tooltip text (`#ingots`, `#not yet eaten`). Hold Shift and the list stops reordering while you pull items out, like the AE2 terminal.
+
+![Wireless Chest](docs/curseforge/feature-10-chest.png)
+
+### Chest upgrades
+
+The Wireless Chest has two upgrade slots, next to its list. Each upgrade opens its own panel beside the list.
+
+- **Crafting Upgrade:** a 3×3 crafting grid inside the Chest that refills itself from the Chest's stock. Shift + click the result to craft up to a stack; JEI's **+** fills the grid from the Chest first.
+
+![Crafting inside the Chest](docs/curseforge/feature-31-chest-crafting.png)
+
+- **Compacting Upgrade:** packs and unpacks item chains on its own as they come in: nugget, ingot, block, or cobblestone up to AllTheCompressed's 9x. Pick one mode for every chain (**Compress** or **Decompress**) or a target form for a single chain. The same material from different mods is one row, and a button picks which mod's items it all goes to.
+
+![Compacting](docs/curseforge/feature-32-chest-compacting.png)
+
+![Nuggets coming in, compressed and decompressed](docs/curseforge/compactacao.gif)
+
+### Ars Nouveau Source
+
+With Ars Nouveau installed, every router gets a **Source** tab. Source Jars, Relays and the Imbuement Chamber connect straight to a router, so Source travels wirelessly between them like any other resource, at the Source/s of the router's tier.
+
+![Ars Nouveau Source](docs/curseforge/feature-11-source.png)
+
+The **Wireless Source Tank** holds from 10,000 Source (Basic) to unlimited (Ultimate) and shows its level in the glass. Sourcelinks within 5 blocks deposit into it and Ars machines nearby draw from it, as from a Source Jar.
+
+![Wireless Source Tank](docs/curseforge/feature-12-source-tank.png)
+
+### Signal Resonator
+
+A multiblock generator that turns vibrating quartz crystals into FE. Mine **Signal Quartz** (Overworld, stone and deepslate), build a hollow 5×5×5 box around a **Resonance Core** and put **Signal Crystals** in its chambers. Every Resonator has its own **station**, a frequency that drifts slowly: turn the dial until the lamp says **IN TUNE** for 100%, or add a **Tuner** to follow the station on its own, a little below the top. Off the station, it generates nothing.
+
+![Signal Resonator](docs/curseforge/ressonador.gif)
+
+Through the glass you can read the tuning: the plasma Core with the ring of its tier, the crystals orbiting it, each live one feeding it through a plasma tendril that holds thick and steady in tune and thins out and lets go out of it, and a bolt of energy to every port that is delivering. Spent crystals turn **Dull** and recharge inside the Core with a catalyst (redstone or Resonance Dust on the first tiers, the tier's Charged Dust from Allthemodium up). Energy leaves through the **Energy Port**, straight into a router.
+
+![Signal Resonator](docs/curseforge/feature-21-resonator.png)
+
+| Core tier | Chambers | FE/t per crystal | Tuner ceiling |
+| --- | --- | --- | --- |
+| Basic | 1 | 216 | 85% |
+| Advanced | 2 | 6,912 | 88% |
+| Elite | 3 | 10,000 | 90% |
+| Emerald | 4 | 160,000 | 92% |
+| Allthemodium¹ | 5 | 6,400,000 | 94% |
+| Vibranium¹ | 6 | 6,700,000 | 95% |
+| Unobtainium¹ | 7 | 10,700,000 | 96% |
+| Ultimate | 8 | 268,435,456 | 98% |
+
+*¹ Only with Allthemodium. Server owners can change the FE per crystal in the config.*
+
+A Cut Signal Crystal yields twice as much and lasts twice as long. From Elite up, each chamber wants the **Tuned Signal Crystal** of the Core's tier (a plain crystal yields 1/4 there, a Cut one 1/2): with the tier's Tuned crystals in every chamber, the Resonator beats the best generator of its tier, from 432 FE/t on Basic to 4.29 billion FE/t on Ultimate. It costs accordingly: every crystal has **8 charges of integrity** and then cracks, recast at the crafting table with 4 Signal Crystals; another formed Core within 32 blocks takes 15% of the efficiency (up to 60%); and the Ultimate Core burns cracked Ultimate Tuned crystals as **Resonant Echo**, a permanent +5% each, with no cap. The Core is built with the **Resonator Heart** of its tier, made from a cascade of 11 components (Signal Alloy, plates, coils, lenses, phase circuits and matrices, field stabilizers, condensed cores), and raising the Core a tier takes the next Heart along with the Upgrade Card. JEI shows the structure in 3D and every recipe, and the guide book explains every step.
+
+![The Resonator cascade](docs/curseforge/feature-23-cascade.png)
+
+### Crystal Repairer
+
+A cracked crystal no longer means a trip to the crafting table. Put it on one of the **8 pedestals** of the Crystal Repairer and it mends it, **up to eight crystals in parallel**. Each repair takes 7 seconds and uses **4 full Signal Crystals** from the shared stock slot plus energy: 2 times the FE per crystal of the crystal's tier (432 FE for a Signal Crystal, 13,824 FE for a Cut one, and the tier's own price for a Tuned one). The crystal comes out of the output slots fully charged and with full integrity.
+
+![Crystal Repairer](docs/curseforge/feature-26-repairer.png)
+
+Energy and items go in from any side, so a router can keep it fed. The cracks close from the inside out, the crystals converge on the emitter and the mended one rises out. The Resonator's Core also got faster at the other end: it now recharges **every Dull crystal the catalyst pays for at once**. Recipe: Porcelain Casing, Phase Circuit, Hopper, Harmonic Lens and a Redstone Block. The repair time and cost are in the config (`repairer.repairTicks` and `repairer.costFactor`).
+
+### Signal Screen
+
+A wall display that shows **live numbers from your networks and storages**. Stick it on the side of a solid block and stretch it from **1 × 1 to 32 × 32 blocks** in the Size tab: no extra blocks, the picture spans the whole wall.
+
+![Signal Screen](docs/curseforge/feature-30-screen-wall.png)
+
+- **A full editor in the game:** drag, resize, group and layer pieces, copy and paste between Screens, undo up to 100 steps. Pieces: **Value, Text, Shape, Icon, Bar, Gauge, Graph and Arrow**, each fed by a **network**, a **linked storage** or the **in-game clock**.
+- **Rules** change a piece's color, background, blink or hide it when a number is below, above or equal to a value. Five fonts, four ready themes (Graphite, Phosphor, Amber, Porcelain) plus your own, backgrounds, scanlines.
+- **Ready layouts** for the whole Screen (Energy, Storage, Network, Clock) that fit any size, **layouts you save yourself** and ready or custom **components**, picked from a list with a click.
+- **Icon** shows **any item, fluid or Mekanism chemical** dragged from JEI, even items with data (Apotheosis gems, enchanted gear), in 3D with animated icons.
+- **Link storages with the Linker** (Screen mode): click the Screen, then a Wireless Chest, Battery or Tank, at any distance and in any dimension. A storage in an unloaded chunk shows its last number marked as stale; chunks are never force-loaded.
+- **Cheap:** nothing runs while nobody is near; the client redraws a Screen only when a number or the layout changes, within a video memory budget.
+
+**Pixel art, animations, images and GIFs.**
+
+- **A pixel art editor in the game**, from 8 × 8 to **128 × 128** with a **16-color palette**: pen, eraser, fill, line, rectangle, ellipse, shade, dither and selection, brushes up to 8 px, mirrors, flip and rotate, **Create ramp** from any color and 100 undo steps. Your arts stay in your library (32 by default) and go on a Screen as an **Image** piece, at any whole scale, or as a tiled background.
+
+![Draw pixel art in the game](docs/curseforge/feature-27-screen-pixel-art.png)
+
+- **Animate it frame by frame:** up to **64 frames** per art, **1 to 20 frames per second**, looping or back and forth, with a frame strip and onion skin. Two Screens with the same art play in step.
+
+![Animate it frame by frame](docs/curseforge/feature-28-screen-animation.png)
+
+![A wall of Screens playing](docs/curseforge/tela.gif)
+
+- **Real images and GIFs:** **Upload file** sends a **PNG, JPG or GIF** from your computer (never a link), up to **1024 px** and **8 MB** per file and 240 frames per GIF by default, and animated GIFs play on the Screen. Server owners can turn images off, let only operators upload, change every limit, and with `/wa tela` remove an image from every Screen or stop a player from uploading; each player can hide the images uploaded by others in the client config (`showOthersImages`).
+
+![Real images and GIFs](docs/curseforge/feature-29-screen-images.png)
+
+- **Export and import as text:** arts, images and whole layouts copy as a short code or as readable text, so you can share a Screen or let a chat AI draw for you: paste the [pixel art guide for AIs](docs/pixel-art-ai-guide.md) into the chat, ask for a drawing and import the answer.
+- **Access:** on the Access tab, invite players or, with FTB Teams, whole teams to edit a Screen like its owner (size, layout and links). Anyone can still look at it.
+
+### Tools for big builds
+
+![The toolkit](docs/curseforge/feature-14-toolkit.png)
+
+![Link a whole area](docs/curseforge/feature-5-area.png)
+
+- **Linker** (two modes): **Link** picks a router with the Range Upgrade (click it) and links the machines you click, or **a whole marked area** at once (Shift + click two blocks; nearest first, up to the tier's radius and limit); the **Unlink** switch takes them out instead. **Open** opens the screen of the router that reaches the machine you click, already editing that machine; with several routers, a short list lets you pick. It checks range, claims and protection mods on the router. The Linker no longer touches networks: choose each face's network on the router screen or in the Tablet.
+- **Configurator** (the Brush): Shift + click a router copies its setup (faces, filters, priorities, redstone and the network of each face), click pastes it on another, and Shift + click on a block without a router clears the copy. Paste every tab or just one type, leaving the other tabs alone. Hold **Left Alt** for a radial wheel that picks the pasted type. A face's network is only pasted if you can use it, and a face only leaves a network you can edit. To configure many routers at once, paste the profile on the Tablet's marked ones.
+- **Chunk Loading Upgrade:** keeps a router and its machine working while you're away.
+- **Recipe editor** (operators): `/wa recipes` opens a screen to change, disable or restore any of the mod's crafting recipes, with items from your inventory or JEI, tags and the result count. Saved as a datapack in `config/wirelessautomate/recipes/`, so it works in every world and survives updates. Handy for packs that want a different Ultimate recipe.
+
+![Configurator Brush](docs/curseforge/feature-16-wheel.png)
+
+![Link or open](docs/curseforge/feature-13-linker.png)
+
+### Network Tablet
+
+![Network Tablet](docs/curseforge/feature-6-tablet.png)
+
+Every router of every network, from anywhere: one search box for machine, network and name, quick filters and one row per router (tier, name and the machine it sits on), with the chosen node **editable right there** (the faces unfolded like a cube, the same panel as the router screen). Rename a router or its machine with ✎ right in the list. Open a router in the list to see each of its linked machines with its state, or switch to **Machines** to see every machine of the base by block type. Copy a node's profile and paste it on routers, single machines or whole machine groups, with undo. Also a top-down **map you can drag** that shows every router you can see (use **Center** to come back to yourself), a **Flows** tab with what comes in and goes out of each type and network, Storage balances and what needs attention (click a line to filter the list), routers whose faces sit in several networks, and network groups to pause and resume a whole system at once. The map shows the picked router's machines. Double-click a node to open its full screen remotely.
+
+**Share a network.** On a private network you own, the Networks tab lists your **guests** and, with FTB Teams, your **teams**: type a name and pick from the suggestions (players who already joined the server, and party teams), and click the ✕ twice to remove. Guests use the network and edit its nodes; only you and operators manage it. A team counts as a whole and is live: whoever joins or leaves it gains or loses access on their own. There are `/wa network invite`, `uninvite` and `team add|remove` commands too.
+
+![One row per router](docs/curseforge/feature-22-tablet-list.png)
+
+![A map you can drag](docs/curseforge/feature-25-map.png)
+
+![Share a network](docs/curseforge/feature-24-network-access.png)
+
+### Built-in guide book
+
+![Built-in guide book](docs/curseforge/feature-7-guide.png)
+
+Every player gets the guide book on their first join (it's also in the creative tab, or craft it with a book and redstone). It explains every item with interactive 3D scenes and recipes, in **English and Portuguese**. Hover any item of the mod and hold **G** to jump to its page.
+
+---
+
+## Getting started
+
+1. Craft two routers (iron, redstone and an eye of ender).
+2. Use one on a chest and one on another chest. New routers start with no network.
+3. Open the first router, pick the **Up** face on the **Items** tab and, in the **Network** row, create a network and choose it. Do the same on the second router, choosing the same network.
+4. On the first router, set the **Up** face to **Extract**.
+5. On the second router, set the same face to **Insert**. Items now flow from the first chest to the second.
+
+Once the first router of a line is set up, copy it with the Configurator (Shift + click it) and paste (click) on the rest.
+
+Recipes use vanilla items, except the Allthemodium tiers (made from the Allthemodium mod's metals, only when it's installed).
+
+---
+
+## Compatibility
+
+| Mod | What you get |
 | --- | --- |
-| Mekanism | Chemicals: a Chemicals tab on the router, with filters by chemical or mod, and the Wireless Chemical Tank |
-| Ars Nouveau (5.2 or newer) | Source: a Source tab on the router (Source Jars, Relays and the Imbuement Chamber connect directly) and the Wireless Source Tank |
-| Allthemodium (All The Tweaks optional) | The Allthemodium, Vibranium and Unobtainium tiers, and on ATM10 the Ultimate ring with ATM Star fragments |
-| JEI | Drag and Shift + click into filters (and the tag inspector), and the tier-up recipes in the crafting table (block in the ring, cards with an origin and block + card, for the router and the storages), and the Resonator: the structure in 3D, the recharge and the per-tier table |
-| GuideME | The guide book, in English and Portuguese |
+| **Any mod with standard NeoForge storage** | Items, fluids and energy work with any machine, chest or tank that exposes NeoForge's standard item, fluid and energy handlers, which covers most tech and storage mods (tested with Sophisticated Storage and Mekanism). |
+| **Mekanism** (optional) | A **Chemicals** tab for gases, infuse types, pigments and slurries, and the Wireless Chemical Tank. Remember to enable the face in the Mekanism machine's side configuration. |
+| **Ars Nouveau** (optional) | A **Source** tab (Source Jars, Relays and the Imbuement Chamber connect straight to a router) and the **Wireless Source Tank**, which Ars machines use like a Source Jar. Needs Ars Nouveau 5.2 or newer. |
+| **Allthemodium** (optional, as in ATM10) | Three extra tiers (Allthemodium, Vibranium and Unobtainium) between Emerald and Ultimate, for the router and every storage block. With **All The Tweaks**, the Ultimate ring takes ATM Star shards. |
+| **JEI** (optional) | Drag and drop (or Shift + click) ingredients into filters without having the item, or onto the tag inspector; the tier-up recipes (block in the ring, cards with an origin, block + card) show in JEI. |
+| **FTB Teams** (optional) | Add a party team to a private network and every member gets the access of a guest, live. Needs FTB Teams for 1.21.1 (with FTB Library and Architectury, which it asks for itself). |
+| **GuideME** (optional) | The in-game guide book. |
 
-Without one of them, the matching part doesn't load and everything else works normally.
+## Performance
 
-## Development
+- No per-block ticking: one central manager per server.
+- A time budget per tick (1 ms by default, configurable) that shrinks automatically when the server is struggling. Work that doesn't fit continues next tick; nothing is lost.
+- Empty sources and full destinations sleep and cost almost nothing.
+
+## Requirements
+
+- Minecraft **1.21.1**
+- **NeoForge** 21.1.248 or newer (works with All the Mods 10)
+
+## Source code
+
+The source code is published for reference only (see License below). Bug reports and suggestions are welcome as [issues](https://github.com/MatheusANBS/Wireless-Automate/issues).
+
+### Building
 
 ```bash
 ./scripts/setup.sh              # Linux, macOS or WSL
@@ -74,22 +288,22 @@ The script installs whatever is missing (JDK 21, git, curl, unzip) and runs the 
 | `./gradlew runGameTestServerChemicals` | Chemical GameTests, on a server with Mekanism |
 | `./gradlew runGameTestServerSource` | Source GameTests, on a server with Ars Nouveau (plus GeckoLib and Curios) |
 | `./gradlew runGameTestServerAllthemodium` | ATM tier GameTests, with Allthemodium, All The Tweaks and GeckoLib |
-| `./gradlew runClient` | Dev client with JEI, Sophisticated Storage, Observable, Mekanism, Ars Nouveau (with GeckoLib and Curios), Allthemodium, All The Tweaks and GuideME, for manual testing |
+| `./gradlew runGameTestServerTeams` | Team GameTests, on a server with FTB Teams, FTB Library and Architectury |
+| `./gradlew runClient` | Dev client with JEI, Mekanism, Ars Nouveau, Allthemodium, GuideME and other mods, for manual testing |
 | `./gradlew runData` | Data generators, output in `src/generated/resources/` |
-| `./scripts/e2e.sh` | End-to-end test in a real world (needs Xvfb) |
+| `./scripts/e2e.sh` | End-to-end test in a real world (see `docs/e2e.md`) |
 | `./scripts/bench.sh <scenarios>` | Benchmark on a dedicated server with Sophisticated Storage (see `docs/benchmark.md`) |
 
-CI (`.github/workflows/build.yml`) runs `build`, `runGameTestServer`, `runGameTestServerChemicals`, `runGameTestServerSource` and `runGameTestServerAllthemodium` on every push and pull request.
+CI (`.github/workflows/build.yml`) runs `build` and the five GameTest runs on every push and pull request.
 
-## Layout
+### Layout
 
 The source code map is in [`CLAUDE.md`](CLAUDE.md) ("Mapa do código"). The project docs are in Portuguese.
 
 - `docs/especificacao.md`: the mod's specification (the source of truth for the design).
 - `docs/progresso.md`: what's done, what's left and the next step.
 - `docs/benchmark.md`: how to run the benchmark, and the results.
-- `docs/pacote-de-design.md`: sprites and the router model.
-- `docs/curseforge/`: description, logo, banner and images for the CurseForge page.
+- `docs/curseforge/`: the CurseForge description, changelogs, banner, and the images and GIFs used here.
 - `scripts/`: `setup.sh`/`setup.ps1`, `e2e.sh`, `bench.sh`, `textures/` (generates the textures), `guide/` (generates the guide pages) and `curseforge/` (generates the CurseForge images).
 
 ## License

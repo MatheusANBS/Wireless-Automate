@@ -88,11 +88,56 @@ decide o que pode **entrar** no Baú, por qualquer caminho: roteador, funil, out
 A bolinha do botão acende na cor do tier quando há um filtro. Cartões de Filtro também servem:
 importe e exporte pela tela do filtro.
 
+## Upgrades
+
+O Baú tem **dois slots de upgrade**, à esquerda da lista. Cada upgrade entra uma vez só. Clique
+num slot com o upgrade no cursor para pôr; clique na aba ao lado do slot ocupado para abrir o painel
+dele, à direita da lista. Clique de novo na aba do painel aberto para escondê-lo; ele fica escondido,
+mesmo em outros Baús, até você clicar numa aba.
+
+| Upgrade | Receita |
+| --- | --- |
+| <ItemImage id="wirelessautomate:crafting_upgrade" /> **Upgrade de Mesa de Trabalho** | Mesa de trabalho + Cristal de Sinal. |
+| <ItemImage id="wirelessautomate:compacting_upgrade" /> **Upgrade de Compactação** | Pistão + Cristal de Sinal + bloco de ferro (sem forma). |
+
+### Mesa de Trabalho
+
+Uma mesa 3×3 dentro do Baú. Monte a receita na grade e pegue o resultado.
+
+- A grade **se repõe sozinha** com o que o Baú tem.
+- **Shift** + clique no resultado: repete a receita até uma pilha e manda para o inventário.
+- **Devolver**: a grade volta para o Baú.
+- No **JEI**, o botão **+** monta a receita puxando do Baú e depois do inventário.
+
+### Compactação
+
+Junta e separa sozinha as cadeias de itens: pepita, lingote, bloco; ou pedregulho até o 9x do
+AllTheCompressed. Só entra a cadeia que a mesa de trabalho também desfaz. Itens com encantamento ou
+nome não compactam.
+
+1. Pôr o upgrade não muda nada: o modo começa **Desligada**.
+2. No painel, escolha o modo para todas as cadeias: **Compactar** (a forma mais alta) ou **Descompactar** (a base).
+3. Para uma cadeia só, use as setas ou a rodinha na linha dela; clique no ícone para escolher a forma numa lista. **Global** volta ao modo geral.
+
+O alvo vale para os dois lados: o que está **abaixo** dele é compactado até ele, e o que está **acima** é
+descompactado até ele. Com o alvo em lingote, pepitas viram lingotes e blocos viram lingotes.
+
+- A sobra que não fecha um fator fica na forma de baixo: 10 lingotes com alvo em bloco dão 1 bloco e 1 lingote.
+- Descompactar converte **só o que cabe** no Baú; o resto fica na forma alta, sem perder nada.
+- O roteador vê só a forma guardada: para tirar lingotes, deixe o alvo da cadeia em lingote.
+- O limite de **Estoque** de um item da cadeia conta a cadeia inteira (11 blocos e 1 lingote valem 100 lingotes).
+- O mesmo material de mods diferentes (a prata crua de dois mods) é uma linha só, com o nome do mod embaixo: clique nele para escolher em qual mod a Compactação junta tudo.
+- A linha de uma cadeia com regra própria (alvo ou mod escolhido) fica na lista, apagada, mesmo sem nenhum item no Baú: a regra continua valendo. Clique na etiqueta Própria para voltar a Global: a regra sai e a linha some.
+- Com a Compactação, a Mesa desce uma forma quando falta o item exato.
+
 ## Quebrar e levar
 
 Quebre o Baú: o item leva **todo o conteúdo e o filtro**, e o tooltip mostra o total e os tipos.
 Coloque de novo e está tudo lá. Cheio, ele sempre vira item: no criativo, sem picareta ou numa
 explosão, nada se perde.
+
+Os **upgrades e os itens da grade** da Mesa também vão no item, mesmo com o Baú vazio, e voltam quando
+ele é colocado. Se o bloco sumir sem virar item (um comando, outro mod), eles caem no chão.
 
 ## Com outros blocos
 

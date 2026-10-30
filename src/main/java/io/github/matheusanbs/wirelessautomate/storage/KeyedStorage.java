@@ -247,10 +247,27 @@ public abstract class KeyedStorage<K> {
 
     /** Guarda até {@code amount} de {@code key}; devolve quanto coube (filtro e capacidade). */
     public long insert(K key, long amount, boolean simulate) {
+        return put(key, amount, simulate, true);
+    }
+
+    /**
+     * Movimento interno (a conversão da Compactação): guarda só até a capacidade, sem o filtro de entrada, sem
+     * contar no vigia e sem {@link #inserted}. Contado no vigia, a Tela de Sinal mostraria vazão de itens que nunca
+     * entraram nem saíram.
+     */
+    public long insertInternal(K key, long amount) {
+        return put(key, amount, false, false);
+    }
+
+    /** O fim de um {@link #insert} de fora que guardou algo; recebe a chave guardada (não alterar). */
+    protected void inserted(K key) {
+    }
+
+    private long put(K key, long amount, boolean simulate, boolean external) {
         if (isEmptyKey(key)) {
             return 0;
         }
-        long accepted = StorageMath.accept(total, capacity.getAsLong(), admission.admit(key, amount));
+        long accepted = StorageMath.accept(total, capacity.getAsLong(), external ? admission.admit(key, amount) : amount);
         if (accepted <= 0 || simulate) {
             return accepted;
         }
@@ -265,15 +282,27 @@ public abstract class KeyedStorage<K> {
         entry.count = StorageMath.add(entry.count, accepted);
         total = StorageMath.add(total, accepted);
         addToGroup(entry.key, accepted);
-        if (watch != null) {
+        if (external && watch != null) {
             watch.inserted(groupOf(entry.key), accepted);
         }
         changed();
+        if (external) {
+            inserted(entry.key);
+        }
         return accepted;
     }
 
     /** Tira até {@code amount} de {@code key}; devolve quanto saiu. */
     public long extract(K key, long amount, boolean simulate) {
+        return take(key, amount, simulate, true);
+    }
+
+    /** Movimento interno, como o {@link #insertInternal}: tira sem contar no vigia. */
+    public long extractInternal(K key, long amount) {
+        return take(key, amount, false, false);
+    }
+
+    private long take(K key, long amount, boolean simulate, boolean external) {
         if (amount <= 0) {
             return 0;
         }
@@ -288,7 +317,7 @@ public abstract class KeyedStorage<K> {
         entry.count -= taken;
         total -= taken;
         takeFromGroup(entry.key, taken);
-        if (watch != null) {
+        if (external && watch != null) {
             watch.extracted(groupOf(entry.key), taken);
         }
         if (entry.count <= 0) {

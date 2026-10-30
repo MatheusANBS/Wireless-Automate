@@ -18,10 +18,12 @@ import static io.github.matheusanbs.wirelessautomate.client.storage.StorageListL
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.client.FlatButton;
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
+import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.client.GuiThemes;
 import io.github.matheusanbs.wirelessautomate.client.ResizeGrip;
 import io.github.matheusanbs.wirelessautomate.client.ResizeHandle;
 import io.github.matheusanbs.wirelessautomate.client.ThemeToggle;
+import io.github.matheusanbs.wirelessautomate.client.storage.upgrade.UpgradePanels;
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
 import io.github.matheusanbs.wirelessautomate.menu.ListKind;
 import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
@@ -90,6 +92,8 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
     private int rows = savedRows;
     /** Arrasto de redimensionar: pela borda direita, pela de baixo ou pela alça do canto. */
     private final ResizeHandle resizeHandle = new ResizeHandle(GRIP, EDGE);
+    /** A coluna dos upgrades e o painel aberto, dos lados do painel (só no Baú). */
+    private final UpgradePanels upgrades;
 
     public StorageListScreen(StorageListMenu<?> menu, Inventory inventory, Component title) {
         this(menu, inventory, title, false);
@@ -102,6 +106,7 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
         this.inventoryLabelY = -1000;
         this.shown = new ShownList(menu, sort);
         this.grid = new StorageGrid(this, menu, shown);
+        this.upgrades = new UpgradePanels(menu, preview, this::layout);
     }
 
     // ------------------------------------------------------------------ medidas (mudam com o tamanho)
@@ -145,7 +150,7 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
 
     /** Colunas que cabem na janela do jogo, com 4 px de folga de cada lado (o painel é centralizado). */
     private int maxCols() {
-        return Math.max(MIN_COLS, (width - 8 - FIXED_W) / CELL);
+        return Math.max(MIN_COLS, (width - 8 - FIXED_W - upgrades.extraLeft() - upgrades.extraRight()) / CELL);
     }
 
     private int maxRows() {
@@ -217,15 +222,19 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
      * para o tamanho atual.
      */
     private void layout() {
+        // o tamanho escolhido pelo jogador, até onde o painel do upgrade deixa
+        cols = Math.max(MIN_COLS, Math.min(savedCols, maxCols()));
         imageWidth = panelW();
         imageHeight = panelH();
-        leftPos = (width - imageWidth) / 2;
+        // a janela inteira (coluna, painel e painel do upgrade) fica no centro
+        leftPos = (width - imageWidth - upgrades.extraLeft() - upgrades.extraRight()) / 2 + upgrades.extraLeft();
         topPos = (height - imageHeight) / 2;
         filterButton.setPosition(leftPos + x1() - ThemeToggle.SIZE - 4 - filterButton.getWidth(), topPos + HEAD_Y);
         sortButton.setPosition(leftPos + x1() - SORT_W, topPos + SEARCH_Y);
         searchBox.setPosition(leftPos + X0 + 4, topPos + SEARCH_Y + 3);
         searchBox.setWidth(x1() - X0 - SORT_W - 12);
         menu.placeInventory(invX(), invY());
+        upgrades.layout(leftPos, topPos, imageWidth, imageHeight);
         grid.clampScroll();
     }
 
@@ -319,6 +328,10 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
         return grid.cellCenter(index);
     }
 
+    public UpgradePanels upgradePanels() {
+        return upgrades;
+    }
+
     /** Um tipo da lista como ingrediente, com o canto da célula dele (para o JEI). */
     public record Hovered(Object ingredient, int x, int y) {
     }
@@ -368,7 +381,8 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (ThemeToggle.mouseClicked(themeX(), themeY(), mouseX, mouseY, button)) {
+        if (upgrades.mouseClicked(mouseX, mouseY, button)
+                || ThemeToggle.mouseClicked(themeX(), themeY(), mouseX, mouseY, button)) {
             return true;
         }
         if (button == 0 && resizeHandle.begin(mouseX, mouseY, leftPos, topPos, imageWidth, imageHeight)) {
@@ -386,7 +400,7 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
             dragResize(mouseX, mouseY);
             return true;
         }
-        if (grid.mouseDragged(mouseX, mouseY, button)) {
+        if (grid.mouseDragged(mouseX, mouseY, button) || upgrades.mouseDragged(mouseY)) {
             return true;
         }
         return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
@@ -398,7 +412,7 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
             resizeHandle.end();
             return true;
         }
-        if (grid.mouseReleased(button)) {
+        if (grid.mouseReleased(button) || upgrades.mouseReleased()) {
             return true;
         }
         return super.mouseReleased(mouseX, mouseY, button);
@@ -406,7 +420,8 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        if (grid.mouseScrolled(mouseX, mouseY, scrollY, hoveredSlot)) {
+        if (upgrades.mouseScrolled(mouseX, mouseY, scrollY)
+                || grid.mouseScrolled(mouseX, mouseY, scrollY, hoveredSlot)) {
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
@@ -423,7 +438,20 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
             // nenhuma tecla fecha a tela enquanto se digita (nem a do inventário)
             return true;
         }
+        if (upgrades.keyPressed(keyCode)) {
+            return true;
+        }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
+    protected boolean hasClickedOutside(double mouseX, double mouseY, int guiLeft, int guiTop, int button) {
+        return !upgrades.isInside(mouseX, mouseY) && super.hasClickedOutside(mouseX, mouseY, guiLeft, guiTop, button);
+    }
+
+    @Override
+    protected void containerTick() {
+        upgrades.tick();
     }
 
     @Override
@@ -451,6 +479,7 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
             inkBoxes();
         }
         rebuild();
+        GuiText.beginFrame();
         super.render(g, mouseX, mouseY, partialTick);
         if (ThemeToggle.hovered(themeX(), themeY(), mouseX, mouseY)) {
             g.renderComponentTooltip(font, ThemeToggle.tooltip(), mouseX, mouseY);
@@ -476,12 +505,18 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
             renderKeyTooltip(g, key, mouseX, mouseY);
             return;
         }
+        List<Component> upgradeTip = upgrades.tooltip(mouseX, mouseY);
+        if (upgradeTip != null) {
+            g.renderComponentTooltip(font, upgradeTip, mouseX, mouseY);
+            return;
+        }
         renderTooltip(g, mouseX, mouseY);
     }
 
     @Override
     protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
-        // os textos são desenhados em renderBg, em coordenadas da tela
+        // os textos são desenhados em renderBg, em coordenadas da tela; aqui só o que fica por cima dos slots
+        upgrades.renderOver(g, mouseX, mouseY);
     }
 
     @Override
@@ -516,6 +551,8 @@ public class StorageListScreen extends AbstractContainerScreen<StorageListMenu<?
         // alça de redimensionar: três riscos na diagonal, acesos com o mouse em cima ou arrastando
         ResizeGrip.renderDotted(g, x, y, imageWidth, imageHeight,
                 resizeHandle.hover(mouseX, mouseY, x, y, imageWidth, imageHeight), GuiPaint.ACCENT);
+
+        upgrades.renderBg(g, mouseX, mouseY, trim);
 
         // inventário do jogador
         for (int row = 0; row < 3; row++) {

@@ -58,7 +58,7 @@ Pacote base: `src/main/java/io/github/matheusanbs/wirelessautomate/`. O mapa det
 ./gradlew runGameTestServerSource # GameTests de Source, num servidor com o Ars Nouveau (e GeckoLib e Curios) na pasta mods
 ./gradlew runGameTestServerAllthemodium # GameTests dos tiers do ATM, com o Allthemodium, o All The Tweaks e o GeckoLib (cursemaven)
 ./gradlew runGameTestServerTeams # GameTests de times, num servidor com o FTB Teams, o FTB Library e o Architectury na pasta mods (maven.ftb.dev)
-./gradlew runClient         # cliente de dev com JEI, Sophisticated Storage, Observable, Mekanism, Ars Nouveau (com GeckoLib e Curios), Allthemodium, All The Tweaks, Apotheosis (com as dependências dele), GuideME e Mouse Tweaks, para testar à mão
+./gradlew runClient         # cliente de dev com JEI, Sophisticated Storage, Observable, Mekanism, Ars Nouveau (com GeckoLib e Curios), Allthemodium, All The Tweaks, Apotheosis (com as dependências dele), GuideME, Mouse Tweaks, AllTheCompressed, Occultism (com Modonomicon e SmartBrainLib) e Just Dire Things, para testar à mão
 ./gradlew runData           # datagen para src/generated/resources/
 WA_SCREENSHOT=run/shots xvfb-run -a -s "-screen 0 1280x800x24" ./gradlew runClient  # capturas das telas (roteador, visor 3D, filtro), sem monitor
 ./scripts/e2e.sh            # e2e num mundo real, rápido por padrão (sem capturas, sem pt_br e escuro, sem a comparação antigo × plasma): `--only a,b` (suítes), `--skip`, `--capture <prefixos|todas>`, `--variants pt,escuro`, `--completo` (tudo), `--lista`; no Windows abre uma janela de verdade (veja docs/e2e.md)

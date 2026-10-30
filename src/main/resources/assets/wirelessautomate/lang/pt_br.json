@@ -615,6 +615,8 @@
   "gui.wirelessautomate.router.view.hint": "Arraste para girar; clique numa face para escolher",
   "item.wirelessautomate.network_tablet.tooltip": "Clique direito no ar: abrir (ou a tecla de atalho, em Controles)",
   "key.categories.wirelessautomate": "Wireless Automate",
+  "key.wirelessautomate.open_guide": "Abrir no livro",
+  "tooltip.wirelessautomate.open_guide": "Aperte %s para abrir no livro",
   "key.wirelessautomate.open_tablet": "Abrir o Tablet de Rede",
   "key.wirelessautomate.open_tablet.missing": "Você não tem um Tablet de Rede no inventário",
   "key.wirelessautomate.configurator_wheel": "Roda do Configurador",

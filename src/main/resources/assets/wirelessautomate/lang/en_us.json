@@ -615,6 +615,8 @@
   "gui.wirelessautomate.router.view.hint": "Drag to rotate; click a face to select it",
   "item.wirelessautomate.network_tablet.tooltip": "Right-click in the air to open (or the hotkey, in Controls)",
   "key.categories.wirelessautomate": "Wireless Automate",
+  "key.wirelessautomate.open_guide": "Open in the guide",
+  "tooltip.wirelessautomate.open_guide": "Press %s to open in the guide",
   "key.wirelessautomate.open_tablet": "Open Network Tablet",
   "key.wirelessautomate.open_tablet.missing": "You have no Network Tablet in your inventory",
   "key.wirelessautomate.configurator_wheel": "Configurator wheel",

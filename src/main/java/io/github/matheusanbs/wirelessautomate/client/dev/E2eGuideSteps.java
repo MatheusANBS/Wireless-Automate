@@ -8,10 +8,18 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 import io.github.matheusanbs.wirelessautomate.client.guide.GuidePages;
 import io.github.matheusanbs.wirelessautomate.client.guide.GuideScreen;
 import io.github.matheusanbs.wirelessautomate.item.GuideBook;
+import io.github.matheusanbs.wirelessautomate.client.guide.GuideKeys;
 import io.github.matheusanbs.wirelessautomate.item.GuideClientHooks;
+import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.util.List;
 import java.util.Objects;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.network.chat.contents.TranslatableContents;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.GameType;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
 import org.lwjgl.glfw.GLFW;
 
 /**
@@ -46,6 +54,7 @@ final class E2eGuideSteps {
                 .getPlayer(Minecraft.getInstance().player.getUUID()))),
                 () -> "o livro não foi entregue (a marca no jogador não está lá)"));
         guidePages(list, "");
+        keySteps(list);
         E2eVariants.pt(list, () -> {
             list.add(language("pt_br"));
             guidePages(list, "-pt");
@@ -89,6 +98,70 @@ final class E2eGuideSteps {
                 + " pares conferidas, nada fora da folha"));
         list.add(new Step("fechar o guia" + suffix, STEP_TIMEOUT_MS, () -> Minecraft.getInstance().setScreen(null),
                 () -> Minecraft.getInstance().screen == null, () -> "tela " + describe(Minecraft.getInstance().screen)));
+    }
+
+    /**
+     * A tecla G: com um roteador no inventário e o mouse sobre ele, a dica traz a linha da tecla e apertar a tecla (pelo
+     * teclado de verdade, com o {@code KeyMapping}) abre o livro em {@code router.md}.
+     */
+    private static void keySteps(List<Step> list) {
+        list.add(new Step("guia: tecla G, o roteador no inventário", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            var player = server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID());
+            player.setGameMode(GameType.SURVIVAL);
+            player.getInventory().setItem(9, ModItems.ROUTER.get().getDefaultInstance());
+            return null;
+        }), () -> !Minecraft.getInstance().player.isCreative()
+                && Minecraft.getInstance().player.getInventory().getItem(9).is(ModItems.ROUTER.get()),
+                () -> "slot 9 " + Minecraft.getInstance().player.getInventory().getItem(9)));
+        list.add(new Step("guia: tecla G, dica e abertura", STEP_TIMEOUT_MS, () -> {
+            if (!(Minecraft.getInstance().screen instanceof InventoryScreen)) {
+                Minecraft.getInstance().setScreen(new InventoryScreen(Minecraft.getInstance().player));
+            }
+        }, () -> {
+            if (Minecraft.getInstance().screen instanceof GuideScreen) {
+                return true;
+            }
+            if (!(Minecraft.getInstance().screen instanceof InventoryScreen inventory) || stepTicks < 4) {
+                return false;
+            }
+            E2eUpgradeCardSteps.hoverSlot(inventory, 0);
+            if (stepTicks == 8) {
+                ItemStack router = Minecraft.getInstance().player.getInventory().getItem(9);
+                boolean hint = router.getTooltipLines(Item.TooltipContext.of(Minecraft.getInstance().level),
+                        Minecraft.getInstance().player, TooltipFlag.NORMAL).stream().anyMatch(line ->
+                        line.getContents() instanceof TranslatableContents t
+                                && "tooltip.wirelessautomate.open_guide".equals(t.getKey())
+                                && line.getString().startsWith(Minecraft.getInstance().getLanguageManager()
+                                        .getSelected().equals("pt_br") ? "Aperte " : "Press "));
+                if (!hint) {
+                    throw new StepFailure("a dica do roteador não tem a linha da tecla G");
+                }
+                var keyboard = Minecraft.getInstance().keyboardHandler;
+                long window = Minecraft.getInstance().getWindow().getWindow();
+                int key = GuideKeys.OPEN_GUIDE.getKey().getValue();
+                keyboard.keyPress(window, key, 0, GLFW.GLFW_PRESS, 0);
+                keyboard.keyPress(window, key, 0, GLFW.GLFW_RELEASE, 0);
+            }
+            return false;
+        }, () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(new Step("guia: tecla G, abriu em router.md", STEP_TIMEOUT_MS, () -> {
+        }, () -> book() != null && "router".equals(book().page()) && book().spread() == 0,
+                () -> book() == null ? "sem livro" : "página " + book().page()));
+        list.add(new Step("guia: tecla G, fechar o livro", STEP_TIMEOUT_MS, () -> Minecraft.getInstance().setScreen(null),
+                () -> Minecraft.getInstance().screen == null, () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(new Step("guia: tecla G, limpar o slot", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            var player = server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID());
+            player.getInventory().setItem(9, ItemStack.EMPTY);
+            player.inventoryMenu.broadcastFullState();
+            return null;
+        }), () -> Minecraft.getInstance().player.getInventory().getItem(9).isEmpty(),
+                () -> "slot 9 " + Minecraft.getInstance().player.getInventory().getItem(9) + ", servidor "
+                        + onServer(server -> server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID())
+                                .getInventory().getItem(9))));
+        list.add(new Step("guia: tecla G, voltar ao criativo", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID()).setGameMode(GameType.CREATIVE);
+            return null;
+        }), () -> Minecraft.getInstance().player.isCreative(), () -> "criativo"));
     }
 
     /** O clique num link do índice, o voltar (Backspace) e as setas do teclado, na folha de rosto. */

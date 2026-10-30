@@ -17,7 +17,9 @@ import java.util.ArrayList;
 import java.util.List;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
+import io.github.matheusanbs.wirelessautomate.client.guide.GuideKeys;
 import mezz.jei.api.constants.RecipeTypes;
+import mezz.jei.api.constants.VanillaTypes;
 import mezz.jei.api.gui.handlers.IGuiContainerHandler;
 import mezz.jei.api.ingredients.subtypes.ISubtypeInterpreter;
 import mezz.jei.api.ingredients.subtypes.UidContext;
@@ -242,6 +244,22 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
     @Override
     public void onRuntimeAvailable(IJeiRuntime runtime) {
         UnloadedTiers.hide(runtime.getIngredientManager());
+        GuideKeys.jeiHovered = () -> hoveredItem(runtime);
+    }
+
+    /** O item sob o mouse na lista, nos favoritos ou na tela de receitas do JEI; vazio se o foco está na busca dele. */
+    private static ItemStack hoveredItem(IJeiRuntime runtime) {
+        if (runtime.getIngredientListOverlay().hasKeyboardFocus()) {
+            return ItemStack.EMPTY;
+        }
+        ItemStack stack = runtime.getIngredientListOverlay().getIngredientUnderMouse(VanillaTypes.ITEM_STACK);
+        if (stack == null || stack.isEmpty()) {
+            stack = runtime.getBookmarkOverlay().getIngredientUnderMouse(VanillaTypes.ITEM_STACK);
+        }
+        if (stack == null || stack.isEmpty()) {
+            stack = runtime.getRecipesGui().getIngredientUnderMouse(VanillaTypes.ITEM_STACK).orElse(ItemStack.EMPTY);
+        }
+        return stack == null ? ItemStack.EMPTY : stack;
     }
 
     /** O "+" nas receitas de crafting com o menu do Baú aberto ({@link ChestCraftTransfer}). */

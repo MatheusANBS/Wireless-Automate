@@ -88,6 +88,41 @@ decide o que pode **entrar** no Baú, por qualquer caminho: roteador, funil, out
 A bolinha do botão acende na cor do tier quando há um filtro. Cartões de Filtro também servem:
 importe e exporte pela tela do filtro.
 
+## Upgrades
+
+O Baú tem **dois slots de upgrade**, à esquerda da lista. Cada upgrade entra uma vez só. Clique
+num slot com o upgrade no cursor para pôr; clique no slot ocupado para abrir o painel dele, à
+direita da lista.
+
+| Upgrade | Receita |
+| --- | --- |
+| <ItemImage id="wirelessautomate:crafting_upgrade" /> **Upgrade de Mesa de Trabalho** | Mesa de trabalho + Cristal de Sinal. |
+| <ItemImage id="wirelessautomate:compacting_upgrade" /> **Upgrade de Compactação** | Pistão + Cristal de Sinal + bloco de ferro (sem forma). |
+
+### Mesa de Trabalho
+
+Uma mesa 3×3 dentro do Baú. Monte a receita na grade e pegue o resultado.
+
+- A grade **se repõe sozinha** com o que o Baú tem.
+- **Shift** + clique no resultado: repete a receita até uma pilha e manda para o inventário.
+- **Devolver**: a grade volta para o Baú.
+- No **JEI**, o botão **+** monta a receita puxando do Baú e depois do inventário.
+
+### Compactação
+
+Junta e separa sozinha as cadeias de itens: pepita, lingote, bloco; ou pedregulho até o 9x do
+AllTheCompressed. Só entra a cadeia que a mesa de trabalho também desfaz. Itens com encantamento ou
+nome não compactam.
+
+1. Pôr o upgrade não muda nada: o modo começa **Desligada**.
+2. No painel, escolha o modo para todas as cadeias: **Compactar** (a forma mais alta) ou **Descompactar** (a base).
+3. Para uma cadeia só, use as setas ou a rodinha na linha dela; clique no ícone para escolher a forma numa lista. **Global** volta ao modo geral.
+
+Descompactar converte **só o que cabe** no Baú; o resto fica na forma alta, sem perder nada. O
+roteador vê só a forma guardada: para tirar lingotes, deixe o alvo da cadeia em lingote. O limite de
+**Estoque** de um item da cadeia conta a cadeia inteira (11 blocos e 1 lingote valem 100 lingotes).
+Com a Compactação, a Mesa desce uma forma quando falta o item exato.
+
 ## Quebrar e levar
 
 Quebre o Baú: o item leva **todo o conteúdo e o filtro**, e o tooltip mostra o total e os tipos.

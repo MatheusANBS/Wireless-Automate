@@ -137,6 +137,21 @@ final class GuideChrome {
         pose.popPose();
     }
 
+    private static final String[] TENS = {"", "x", "xx", "xxx"};
+    private static final String[] ONES = {"", "i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix"};
+
+    /**
+     * O número da folha {@code slot} (de 0) entre {@code slots}: romano na abertura e no índice ({@code roman}),
+     * arábico nas páginas; vazio se a folha não existe.
+     */
+    static String number(int slot, int slots, boolean roman) {
+        if (slot >= slots) {
+            return "";
+        }
+        int n = slot + 1;
+        return !roman || n >= 40 ? Integer.toString(n) : TENS[n / 10] + ONES[n % 10];
+    }
+
     /** A seta do rodapé: um triângulo de 4 × 7 px apontando para fora. */
     private static void arrow(GuiGraphics g, int x, boolean left, int color) {
         for (int i = 0; i < 4; i++) {

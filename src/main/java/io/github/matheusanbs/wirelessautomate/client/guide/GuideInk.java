@@ -25,8 +25,6 @@ import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Matrix4f;
-import org.joml.Vector3f;
 
 /**
  * Uma folha pronta para desenhar: as {@link SheetOp} da paginação viram tinta (o texto já com estilo, a pilha do item,
@@ -110,11 +108,12 @@ final class GuideInk {
     }
 
     /**
-     * A cena parada na moldura ({@code x, y, w, h}): os estados de bloco e as posições ({@code pos}, x, y, z em
-     * sequência), a vista já enquadrada (unidades de folha) e as duas luzes já giradas com ela.
+     * A cena na moldura ({@code x, y, w, h}): os estados de bloco e as posições ({@code pos}, x, y, z em sequência), a
+     * vista que o jogador gira ({@link SceneView}, viva enquanto o livro está aberto) e o enquadramento com a matriz e
+     * as luzes do quadro ({@link GuideScenes.Camera}).
      */
-    record Scene(int x, int y, int w, int h, BlockState[] states, int[] pos, Matrix4f view, Vector3f light0,
-            Vector3f light1) implements Ink {
+    record Scene(int x, int y, int w, int h, BlockState[] states, int[] pos, SceneView view, GuideScenes.Camera camera)
+            implements Ink {
     }
 
     /** A área de clique de um link para outra página, com o título dela para a dica. */

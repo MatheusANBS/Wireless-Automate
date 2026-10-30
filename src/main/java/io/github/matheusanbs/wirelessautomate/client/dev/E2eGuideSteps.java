@@ -9,6 +9,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import io.github.matheusanbs.wirelessautomate.client.guide.GuideKeys;
 import io.github.matheusanbs.wirelessautomate.client.guide.GuidePages;
 import io.github.matheusanbs.wirelessautomate.client.guide.GuideScreen;
+import io.github.matheusanbs.wirelessautomate.client.guide.SceneView;
 import io.github.matheusanbs.wirelessautomate.item.GuideBook;
 import io.github.matheusanbs.wirelessautomate.item.GuideClientHooks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
@@ -99,6 +100,7 @@ final class E2eGuideSteps {
         spreads(list, null, "abertura" + suffix);
         if (suffix.isEmpty()) {
             navigationSteps(list);
+            sceneSteps(list);
         }
         searchSteps(list, suffix);
         for (String page : PAGES) {
@@ -486,6 +488,77 @@ final class E2eGuideSteps {
             }, () -> book() != null && target.equals(book().page()),
                     () -> book() == null ? "sem livro" : "página " + book().page()));
         }
+    }
+
+    /** A vista da primeira cena à vista, ou {@code null}. */
+    private static SceneView scene() {
+        return book() == null ? null : book().scenes().firstView();
+    }
+
+    private static String sceneState() {
+        SceneView v = scene();
+        return v == null ? "sem cena à vista" : v.state() + ", par " + book().spread();
+    }
+
+    /**
+     * A cena do roteador gira e tem zoom, com os eventos de mouse da tela: o arrasto dentro da moldura gira (e a folha
+     * não vira), a roda dentro dela dá zoom (e a folha não vira), o clique duplo volta à vista da página. Captura antes
+     * e depois do arrasto.
+     */
+    private static void sceneSteps(List<Step> list) {
+        int[] spread = {-1};
+        double[] at = new double[2];
+        list.add(new Step("guia: a cena do roteador à vista", STEP_TIMEOUT_MS, () -> {
+            moveMouse(0, 0);
+            GuideClientHooks.open.accept("router.md");
+            GuideScreen s = book();
+            for (int n = 0; s != null && n < s.spreads() && s.scenes().firstView() == null; n++) {
+                s.turnTo(n);
+            }
+            if (s == null || s.scenes().firstCenter() == null) {
+                throw new StepFailure("a página do roteador não tem cena");
+            }
+            spread[0] = s.spread();
+            System.arraycopy(s.scenes().firstCenter(), 0, at, 0, 2);
+        }, () -> {
+            if (scene() == null || !scene().isHome() || stepTicks < 6) {
+                return false;
+            }
+            capture(Minecraft.getInstance(), "guia-cena-antes");
+            return true;
+        }, E2eGuideSteps::sceneState));
+        list.add(new Step("guia: arrastar gira a cena", STEP_TIMEOUT_MS, () -> {
+            GuideScreen s = book();
+            s.mouseClicked(at[0], at[1], GLFW.GLFW_MOUSE_BUTTON_LEFT);
+            for (int i = 1; i <= 8; i++) {
+                s.mouseDragged(at[0] + i * 5, at[1] + i * 2, GLFW.GLFW_MOUSE_BUTTON_LEFT, 5, 2);
+            }
+            s.mouseReleased(at[0] + 40, at[1] + 16, GLFW.GLFW_MOUSE_BUTTON_LEFT);
+        }, () -> {
+            SceneView v = scene();
+            if (v == null || book().spread() != spread[0] || !"router".equals(book().page())) {
+                return failNow("o arrasto na cena não devia virar a folha nem sair da página: " + sceneState());
+            }
+            if (v.isHome() || v.zoom() != 1 || stepTicks < 6) {
+                return false;
+            }
+            capture(Minecraft.getInstance(), "guia-cena-girada");
+            return true;
+        }, E2eGuideSteps::sceneState));
+        list.add(new Step("guia: a roda na cena dá zoom", STEP_TIMEOUT_MS,
+                () -> book().mouseScrolled(at[0], at[1], 0, 2),
+                () -> scene() != null && book().spread() == spread[0]
+                        && Math.abs(scene().zoom() - SceneView.ZOOM_STEP * SceneView.ZOOM_STEP) < 1e-6,
+                E2eGuideSteps::sceneState));
+        list.add(new Step("guia: clique duplo volta à vista da página", STEP_TIMEOUT_MS, () -> {
+            // um clique só não volta a vista; se o primeiro daqui ainda contar com o do arrasto, ele já volta
+            GuideScreen s = book();
+            for (int i = 0; i < 2; i++) {
+                s.mouseClicked(at[0], at[1], GLFW.GLFW_MOUSE_BUTTON_LEFT);
+                s.mouseReleased(at[0], at[1], GLFW.GLFW_MOUSE_BUTTON_LEFT);
+            }
+        }, () -> scene() != null && scene().isHome() && book().spread() == spread[0]
+                && "router".equals(book().page()) && book().problems().isEmpty(), E2eGuideSteps::sceneState));
     }
 
     /**

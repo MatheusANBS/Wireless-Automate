@@ -47,7 +47,6 @@ import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.ShapedRecipe;
-import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -110,8 +109,7 @@ public final class RecipeEditorGameTests {
         helper.assertValueEqual(elite.defaults().shape(), RecipeDraft.Shape.RING, "forma do tier_core_elite");
         helper.assertValueEqual(elite.resultItem(), id("tier_core_elite"), "resultado do anel");
         helper.assertTrue(elite.defaults().slots().get(RecipeDraft.CENTER).isEmpty(), "centro do anel vazio");
-        boolean guide = entries.stream().anyMatch(e -> e.id().equals(id("guide")));
-        helper.assertValueEqual(guide, ModList.get().isLoaded("guideme"), "guide só com o GuideME");
+        helper.assertTrue(entries.stream().anyMatch(e -> e.id().equals(id("guide"))), "a receita do guia é editável");
         helper.succeed();
     }
 

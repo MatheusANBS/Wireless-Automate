@@ -254,6 +254,8 @@ dependencies {
     clientMods "curse.maven:occultism-361026:${occultism_file}"
     clientMods "curse.maven:modonomicon-538392:${modonomicon_file}"
     clientMods "curse.maven:smartbrainlib-661293:${smartbrainlib_file}"
+    // Just Dire Things, para testar junto no cliente de dev.
+    clientMods "curse.maven:just-dire-things-1002348:${justdirethings_file}"
     // FTB Teams (times) e as dependências obrigatórias dele: FTB Library e Architectury.
     clientMods "dev.ftb.mods:ftb-teams-neoforge:${ftbteams_version}"
     clientMods "dev.ftb.mods:ftb-library-neoforge:${ftblibrary_version}"
@@ -288,7 +290,7 @@ var prepareClientMods = tasks.register('prepareClientMods', Sync) {
                 'Mekanism-*.jar', 'guideme-*.jar', 'ars_nouveau-*.jar', 'geckolib-*.jar', 'curios-*.jar',
                 'allthemodium-*.jar', 'all-the-tweaks-*.jar', 'mouse-tweaks-*.jar', 'ftb-teams-*.jar',
                 'ftb-library-*.jar', 'allthecompressed-*.jar', 'occultism-*.jar', 'modonomicon-*.jar',
-                'smartbrainlib-*.jar'
+                'smartbrainlib-*.jar', 'just-dire-things-*.jar'
     }
 }
 

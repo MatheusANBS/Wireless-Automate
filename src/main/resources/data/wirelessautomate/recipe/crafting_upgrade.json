@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "minecraft:crafting_table" },
+    { "item": "wirelessautomate:signal_crystal" }
+  ],
+  "result": {
+    "id": "wirelessautomate:crafting_upgrade",
+    "count": 1
+  }
+}

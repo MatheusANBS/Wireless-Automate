@@ -54,6 +54,8 @@ public final class ModCreativeTabs {
                         output.accept(ModItems.FILTER_CARD.get());
                         output.accept(ModItems.CHUNK_LOADER_UPGRADE.get());
                         output.accept(ModItems.RANGE_UPGRADE.get());
+                        output.accept(ModItems.CRAFTING_UPGRADE.get());
+                        output.accept(ModItems.COMPACTING_UPGRADE.get());
                         output.accept(ModItems.SIGNAL_QUARTZ_ORE.get());
                         output.accept(ModItems.DEEPSLATE_SIGNAL_QUARTZ_ORE.get());
                         output.accept(ModItems.SIGNAL_CRYSTAL.get());

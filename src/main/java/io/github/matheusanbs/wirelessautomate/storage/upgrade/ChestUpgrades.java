@@ -113,6 +113,11 @@ public final class ChestUpgrades {
         return allEmpty(grid);
     }
 
+    /** Sem upgrade nos slots e sem item na grade. */
+    public boolean isEmpty() {
+        return allEmpty(upgrades) && allEmpty(grid);
+    }
+
     public void save(CompoundTag tag, HolderLookup.Provider registries) {
         saveList(tag, UPGRADES_KEY, upgrades, registries);
         saveList(tag, GRID_KEY, grid, registries);

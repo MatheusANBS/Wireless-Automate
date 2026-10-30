@@ -120,16 +120,24 @@ named items don't compact.
 2. In the panel, pick the mode for all chains: **Compress** (the highest form) or **Decompress** (the base).
 3. For a single chain, use the arrows or the wheel on its row; click the icon to pick the form from a list. **Global** goes back to the general mode.
 
-Decompressing converts **only what fits** in the chest; the rest stays in the high form, nothing is lost.
-The router only sees the stored form: to pull ingots, leave the chain's target on ingot. The **Stock**
-limit of a chain item counts the whole chain (11 blocks and 1 ingot are worth 100 ingots). With
-Compacting, the crafting grid steps down one form when the exact item is missing.
+The target works both ways: what is **below** it is compressed up to it, and what is **above** it is
+decompressed down to it. With the target on ingot, nuggets become ingots and blocks become ingots.
+
+- The leftover that doesn't make a full factor stays in the lower form: 10 ingots with the target on block give 1 block and 1 ingot.
+- Decompressing converts **only what fits** in the chest; the rest stays in the high form, nothing is lost.
+- The router only sees the stored form: to pull ingots, leave the chain's target on ingot.
+- The **Stock** limit of a chain item counts the whole chain (11 blocks and 1 ingot are worth 100 ingots).
+- With Compacting, the crafting grid steps down one form when the exact item is missing.
 
 ## Break and carry
 
 Break the chest: the item takes **all the contents and the filter** with it, and the tooltip shows
 the total and the types. Place it again and everything is there. A full chest always becomes an
 item: in creative, without a pickaxe or in an explosion, nothing is lost.
+
+The **upgrades and the crafting grid items** also go in the item, even with an empty chest, and come
+back when it is placed. If the block disappears without becoming an item (a command, another mod),
+they drop on the ground.
 
 ## With other blocks
 

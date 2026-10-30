@@ -78,55 +78,120 @@ public final class CompactingChains {
         instance = empty();
     }
 
-    private record Pair(Item small, Item big, int n) {
+    /** Um par candidato: {@code n} do {@code small} fazem 1 do {@code big}. */
+    public record Pair(Item small, Item big, int n) {
     }
 
+    /** Confere se o par vai e volta de verdade; o do servidor pergunta às receitas, e as de outro mod podem lançar. */
+    @FunctionalInterface
+    public interface PairCheck {
+        boolean confirms(Pair pair);
+    }
+
+    /**
+     * Remonta o índice das receitas de mesa e o troca no fim. As receitas são de qualquer mod: uma que lança (ao dar
+     * os ingredientes, o resultado ou ao casar) é pulada com um aviso no log, e o resto do índice é montado.
+     */
     public static void rebuild(MinecraftServer server) {
         long start = System.nanoTime();
         RecipeManager manager = server.getRecipeManager();
         ServerLevel level = server.overworld();
-        ChainGraph<Item> graph = new ChainGraph<>(Comparator.comparing(item -> BuiltInRegistries.ITEM.getKey(item)));
         Set<Pair> seen = new HashSet<>();
         List<Pair> candidates = new ArrayList<>();
         Map<Item, List<List<Ingredient>>> forward = new HashMap<>();
         List<RecipeHolder<CraftingRecipe>> all = manager.getAllRecipesFor(RecipeType.CRAFTING);
+        int skipped = 0;
         for (RecipeHolder<CraftingRecipe> holder : all) {
-            CraftingRecipe recipe = holder.value();
-            if (recipe.isSpecial()) {
-                continue;
+            try {
+                collect(holder.value(), server, seen, candidates, forward);
+            } catch (RuntimeException | LinkageError e) {
+                skipped++;
+                WirelessAutomate.LOGGER.warn("Compactação: a receita {} lançou ao ser lida e ficou de fora", holder.id(), e);
             }
-            List<Ingredient> filled = new ArrayList<>(9);
-            for (Ingredient ingredient : recipe.getIngredients()) {
-                if (!ingredient.isEmpty()) {
-                    filled.add(ingredient);
-                }
+        }
+        ChainGraph<Item> graph = newGraph();
+        skipped += linkPairs(candidates, pair -> hasForward(forward.get(pair.big()), new ItemStack(pair.small()), pair.n())
+                && roundTrip(manager, level, new ItemStack(pair.small()), pair.big(), pair.n()), graph);
+        CompactingChains built = assemble(graph);
+        instance = built;
+        WirelessAutomate.LOGGER.info("Compactação: {} cadeias de {} receitas em {} ms ({} receitas ou pares pulados)",
+                built.size(), all.size(), (System.nanoTime() - start) / 1_000_000L, skipped);
+    }
+
+    /** O grafo vazio na ordem dos ids da registry, a que torna o índice determinístico. */
+    public static ChainGraph<Item> newGraph() {
+        return new ChainGraph<>(Comparator.comparing(item -> BuiltInRegistries.ITEM.getKey(item)));
+    }
+
+    /** Separa a receita: um 2×2/3×3 que dá 1 vai para {@code forward}; um item só que dá 4 ou 9 vira candidato. */
+    private static void collect(CraftingRecipe recipe, MinecraftServer server, Set<Pair> seen, List<Pair> candidates,
+            Map<Item, List<List<Ingredient>>> forward) {
+        if (recipe.isSpecial()) {
+            return;
+        }
+        List<Ingredient> filled = new ArrayList<>(9);
+        for (Ingredient ingredient : recipe.getIngredients()) {
+            if (!ingredient.isEmpty()) {
+                filled.add(ingredient);
             }
-            ItemStack result = recipe.getResultItem(server.registryAccess());
-            int n = result.getCount();
-            if (!result.isComponentsPatchEmpty()) {
-                continue;
-            }
-            if (n == 1 && (filled.size() == 4 || filled.size() == 9)) {
-                forward.computeIfAbsent(result.getItem(), k -> new ArrayList<>(2)).add(filled);
-            } else if ((n == 4 || n == 9) && filled.size() == 1) {
-                for (ItemStack big : filled.get(0).getItems()) {
-                    if (big.isComponentsPatchEmpty() && seen.add(new Pair(result.getItem(), big.getItem(), n))) {
-                        candidates.add(new Pair(result.getItem(), big.getItem(), n));
-                    }
+        }
+        ItemStack result = recipe.getResultItem(server.registryAccess());
+        int n = result.getCount();
+        if (!result.isComponentsPatchEmpty()) {
+            return;
+        }
+        if (n == 1 && (filled.size() == 4 || filled.size() == 9)) {
+            forward.computeIfAbsent(result.getItem(), k -> new ArrayList<>(2)).add(filled);
+        } else if ((n == 4 || n == 9) && filled.size() == 1) {
+            for (ItemStack big : filled.get(0).getItems()) {
+                Pair pair = new Pair(result.getItem(), big.getItem(), n);
+                if (big.isComponentsPatchEmpty() && seen.add(pair)) {
+                    candidates.add(pair);
                 }
             }
         }
+    }
+
+    /**
+     * Liga ao grafo os pares que o conferidor confirma. Um par cujo conferidor lança fica de fora, com um aviso no
+     * log por par, e os outros seguem.
+     *
+     * @return quantos pares lançaram
+     */
+    public static int linkPairs(List<Pair> candidates, PairCheck check, ChainGraph<Item> graph) {
+        int skipped = 0;
         for (Pair pair : candidates) {
-            ItemStack probe = new ItemStack(pair.small());
-            if (hasForward(forward.get(pair.big()), probe, pair.n())
-                    && roundTrip(manager, level, probe, pair.big(), pair.n())) {
+            boolean confirmed;
+            try {
+                confirmed = check.confirms(pair);
+            } catch (RuntimeException | LinkageError e) {
+                skipped++;
+                WirelessAutomate.LOGGER.warn("Compactação: conferir {} × {} → {} lançou e o par ficou de fora",
+                        pair.n(), BuiltInRegistries.ITEM.getKey(pair.small()), BuiltInRegistries.ITEM.getKey(pair.big()), e);
+                continue;
+            }
+            if (confirmed) {
                 graph.link(pair.small(), pair.big(), pair.n());
             }
         }
+        return skipped;
+    }
+
+    /**
+     * O índice das cadeias do grafo, numa geração nova, sem trocar o atual. Uma cadeia com mais de
+     * {@link CompactingChain#MAX_FORMS} formas fica de fora com um aviso no log: o painel não a mandaria ao cliente
+     * e o jogador não veria nem escolheria o alvo de uma cadeia que o Baú converte.
+     */
+    public static CompactingChains assemble(ChainGraph<Item> graph) {
         Reference2ObjectOpenHashMap<Item, CompactingChain> index = new Reference2ObjectOpenHashMap<>();
         List<CompactingChain> chains = new ArrayList<>();
         for (ChainGraph.Chain<Item> chain : graph.chains()) {
             Item[] forms = chain.forms().toArray(Item[]::new);
+            if (forms.length > CompactingChain.MAX_FORMS) {
+                WirelessAutomate.LOGGER.warn("Compactação: a cadeia de {} tem {} formas (o teto é {}) e ficou de fora",
+                        BuiltInRegistries.ITEM.getKey(forms[0]), forms.length, CompactingChain.MAX_FORMS);
+                continue;
+            }
             ItemStack[] keys = new ItemStack[forms.length];
             for (int i = 0; i < forms.length; i++) {
                 keys[i] = new ItemStack(forms[i]);
@@ -137,9 +202,7 @@ public final class CompactingChains {
                 index.put(form, built);
             }
         }
-        instance = new CompactingChains(index, chains.toArray(CompactingChain[]::new), ++generationCounter);
-        WirelessAutomate.LOGGER.info("Compactação: {} cadeias de {} receitas em {} ms", chains.size(), all.size(),
-                (System.nanoTime() - start) / 1_000_000L);
+        return new CompactingChains(index, chains.toArray(CompactingChain[]::new), ++generationCounter);
     }
 
     /** Pré-filtro barato: alguma receita do maior tem n ingredientes e todos aceitam o menor. */

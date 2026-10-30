@@ -74,6 +74,14 @@ public abstract class StorageBlockEntity extends BlockEntity {
 
     public abstract boolean isEmptyContents();
 
+    /**
+     * A quebra pelo jogador precisa virar item: há algo que só o item do bloco leva. Aqui é o conteúdo; o Baú soma os
+     * upgrades e a grade da Mesa.
+     */
+    public boolean keepsOnBreak() {
+        return !isEmptyContents();
+    }
+
     /** Os contadores de entra e sai de uma Tela de Sinal, ou {@code null} sem vigia. */
     public abstract @Nullable StorageWatch watch();
 
@@ -209,6 +217,11 @@ public abstract class StorageBlockEntity extends BlockEntity {
         dropExpected = true;
     }
 
+    /** Um item com os componentes deste bloco foi feito ou vai ser feito pela quebra. */
+    protected boolean dropExpected() {
+        return dropExpected;
+    }
+
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
@@ -241,7 +254,9 @@ public abstract class StorageBlockEntity extends BlockEntity {
         super.collectImplicitComponents(components);
         if (!isEmptyContents()) {
             components.set(ModDataComponents.STORAGE_CONTENTS.get(), new StorageContents(storageId(), types(), total()));
-            // Um item com a referência existe: se o bloco sair agora, o conteúdo vai para o StorageSavedData.
+        }
+        if (keepsOnBreak()) {
+            // Um item com os componentes existe: se o bloco sair agora, o conteúdo vai para o StorageSavedData.
             dropExpected = true;
         }
         if (!filter.isEmpty()) {

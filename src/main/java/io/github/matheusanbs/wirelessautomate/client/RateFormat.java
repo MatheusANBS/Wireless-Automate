@@ -46,7 +46,7 @@ public final class RateFormat {
         long abs = value < 0 ? value : -value;
         int unit = 0;
         long divisor = 1;
-        while (abs <= -1000 * divisor && unit < SUFFIXES.length - 1) {
+        while (unit < SUFFIXES.length - 1 && abs <= -1000 * divisor) {
             divisor *= 1000;
             unit++;
         }

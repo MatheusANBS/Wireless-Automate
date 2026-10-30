@@ -28,12 +28,14 @@ import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
@@ -107,6 +109,65 @@ public final class ChestUpgradeGameTests {
         helper.assertFalse(dropped.has(ModDataComponents.STORAGE_UPGRADES.get()), "componente de upgrades à toa");
         helper.assertFalse(dropped.has(ModDataComponents.STORAGE_CRAFT_GRID.get()), "componente de grade à toa");
         drops.get(0).discard();
+        helper.succeed();
+    }
+
+    /** O Baú sem conteúdo, com a Mesa e itens na grade, quebrado à mão no criativo: cai como item com os dois. */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void creativeBreakKeepsUpgradesOfEmptyChest(GameTestHelper helper) {
+        breakByHandKeepsUpgrades(helper, GameType.CREATIVE);
+    }
+
+    /** O mesmo Baú quebrado sem ferramenta no sobrevivência (sem loot): o próprio bloco solta o item com os dois. */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void survivalBreakWithoutToolKeepsUpgradesOfEmptyChest(GameTestHelper helper) {
+        breakByHandKeepsUpgrades(helper, GameType.SURVIVAL);
+    }
+
+    private static void breakByHandKeepsUpgrades(GameTestHelper helper, GameType mode) {
+        StorageChestBlockEntity chest = chest(helper, A);
+        chest.upgrades().setUpgrade(0, new ItemStack(ModItems.CRAFTING_UPGRADE.get()));
+        chest.upgrades().grid().set(4, new ItemStack(Items.IRON_INGOT, 3));
+        helper.assertTrue(chest.isEmptyContents(), "o Baú do teste tem conteúdo");
+        ServerPlayer player = TestPlayers.inLevel(helper);
+        player.setGameMode(mode);
+        player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        BlockPos absolute = helper.absolutePos(A);
+        helper.assertTrue(player.gameMode.destroyBlock(absolute), "não quebrou o Baú");
+        helper.assertBlockNotPresent(ModBlocks.STORAGE_CHEST.get(), A);
+        List<ItemEntity> drops = helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(absolute).inflate(2),
+                entity -> entity.getItem().is(ModBlocks.STORAGE_CHEST.get().asItem()));
+        helper.assertValueEqual(drops.size(), 1, "um Baú no chão");
+        ItemStack dropped = drops.get(0).getItem().copy();
+        drops.get(0).discard();
+        place(helper, dropped, B);
+        ChestUpgrades placed = ((StorageChestBlockEntity) helper.getBlockEntity(B)).upgrades();
+        helper.assertTrue(placed.upgrade(0).is(ModItems.CRAFTING_UPGRADE.get()), "a Mesa sumiu");
+        helper.assertTrue(placed.grid().get(4).is(Items.IRON_INGOT) && placed.grid().get(4).getCount() == 3,
+                "os lingotes da grade sumiram");
+        helper.succeed();
+    }
+
+    /** Tirado sem item nenhum do Baú ({@code /setblock}), o Baú solta os upgrades e a grade como itens. */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void removalWithoutDropSpillsUpgrades(GameTestHelper helper) {
+        StorageChestBlockEntity chest = chest(helper, A);
+        chest.upgrades().setUpgrade(1, new ItemStack(ModItems.COMPACTING_UPGRADE.get()));
+        chest.upgrades().grid().set(0, new ItemStack(Items.GOLD_INGOT, 5));
+        helper.setBlock(A, Blocks.AIR);
+        AABB around = new AABB(helper.absolutePos(A)).inflate(2);
+        int upgrades = 0;
+        int gold = 0;
+        for (ItemEntity drop : helper.getLevel().getEntitiesOfClass(ItemEntity.class, around, entity -> true)) {
+            if (drop.getItem().is(ModItems.COMPACTING_UPGRADE.get())) {
+                upgrades += drop.getItem().getCount();
+            } else if (drop.getItem().is(Items.GOLD_INGOT)) {
+                gold += drop.getItem().getCount();
+            }
+            drop.discard();
+        }
+        helper.assertValueEqual(upgrades, 1, "o upgrade no chão");
+        helper.assertValueEqual(gold, 5, "os lingotes da grade no chão");
         helper.succeed();
     }
 

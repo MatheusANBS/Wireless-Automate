@@ -118,16 +118,23 @@ nome não compactam.
 2. No painel, escolha o modo para todas as cadeias: **Compactar** (a forma mais alta) ou **Descompactar** (a base).
 3. Para uma cadeia só, use as setas ou a rodinha na linha dela; clique no ícone para escolher a forma numa lista. **Global** volta ao modo geral.
 
-Descompactar converte **só o que cabe** no Baú; o resto fica na forma alta, sem perder nada. O
-roteador vê só a forma guardada: para tirar lingotes, deixe o alvo da cadeia em lingote. O limite de
-**Estoque** de um item da cadeia conta a cadeia inteira (11 blocos e 1 lingote valem 100 lingotes).
-Com a Compactação, a Mesa desce uma forma quando falta o item exato.
+O alvo vale para os dois lados: o que está **abaixo** dele é compactado até ele, e o que está **acima** é
+descompactado até ele. Com o alvo em lingote, pepitas viram lingotes e blocos viram lingotes.
+
+- A sobra que não fecha um fator fica na forma de baixo: 10 lingotes com alvo em bloco dão 1 bloco e 1 lingote.
+- Descompactar converte **só o que cabe** no Baú; o resto fica na forma alta, sem perder nada.
+- O roteador vê só a forma guardada: para tirar lingotes, deixe o alvo da cadeia em lingote.
+- O limite de **Estoque** de um item da cadeia conta a cadeia inteira (11 blocos e 1 lingote valem 100 lingotes).
+- Com a Compactação, a Mesa desce uma forma quando falta o item exato.
 
 ## Quebrar e levar
 
 Quebre o Baú: o item leva **todo o conteúdo e o filtro**, e o tooltip mostra o total e os tipos.
 Coloque de novo e está tudo lá. Cheio, ele sempre vira item: no criativo, sem picareta ou numa
 explosão, nada se perde.
+
+Os **upgrades e os itens da grade** da Mesa também vão no item, mesmo com o Baú vazio, e voltam quando
+ele é colocado. Se o bloco sumir sem virar item (um comando, outro mod), eles caem no chão.
 
 ## Com outros blocos
 

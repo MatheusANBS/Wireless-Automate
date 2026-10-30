@@ -147,6 +147,35 @@ final class E2eGuideSteps {
                 () -> book().keyPressed(GLFW.GLFW_KEY_ENTER, 0, 0),
                 () -> book() != null && first.equals(book().page()) && book().spread() == 0,
                 () -> book() == null ? "sem livro" : "página " + book().page()));
+        String common = suffix.isEmpty() ? "router" : "roteador";
+        list.add(new Step("guia" + suffix + ": descer até o 9º resultado", STEP_TIMEOUT_MS, () -> {
+            moveMouse(0, 0);
+            GuideScreen.openIndex();
+            for (char c : common.toCharArray()) {
+                book().charTyped(c, 0);
+            }
+            if (book().resultCount() <= 8) {
+                throw new StepFailure("a busca \"" + common + "\" devia dar mais de 8 resultados: "
+                        + book().resultCount());
+            }
+            for (int i = 0; i < 8; i++) {
+                book().keyPressed(GLFW.GLFW_KEY_DOWN, 0, 0);
+            }
+        }, () -> {
+            GuideScreen s = book();
+            if (s == null || s.resultPages().isEmpty() || stepTicks < 6) {
+                return false;
+            }
+            if (!s.resultPages().get(0).equals(s.markedResult())) {
+                throw new StepFailure("o 9º resultado devia estar à vista e marcado: " + s.markedResult() + " em "
+                        + s.resultPages());
+            }
+            if (!s.problems().isEmpty()) {
+                throw new StepFailure("não coube: " + String.join(" | ", s.problems()));
+            }
+            capture(Minecraft.getInstance(), "guia-busca-9" + suffix);
+            return true;
+        }, () -> book() == null ? "sem livro" : "marcado " + book().markedResult() + " em " + book().resultPages()));
         list.add(new Step("guia" + suffix + ": busca sem resultado", STEP_TIMEOUT_MS, () -> {
             GuideScreen.openIndex();
             for (char c : "zzzzqx".toCharArray()) {

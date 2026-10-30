@@ -35,6 +35,7 @@ final class GuideSearchBox {
     private final StringBuilder query = new StringBuilder();
     private boolean focused;
     private List<Hit> hits = List.of();
+    private int first;
     private int visible;
     private int selected;
     private List<Ink> inks = List.of();
@@ -42,6 +43,8 @@ final class GuideSearchBox {
     private FormattedCharSequence queryText = FormattedCharSequence.EMPTY;
     private int queryWidth;
     private FormattedCharSequence count = FormattedCharSequence.EMPTY;
+    private FormattedCharSequence range = FormattedCharSequence.EMPTY;
+    private static final int FIT = (GuideMetrics.SHEET_H - ROWS_Y - KEYS_H) / ROW_H;
 
     GuideSearchBox(Font font) {
         this.font = font;
@@ -80,6 +83,30 @@ final class GuideSearchBox {
         return problems;
     }
 
+    /** "9–12 de 12" quando os resultados passam de uma página, senão vazio. */
+    FormattedCharSequence range() {
+        return range;
+    }
+
+    /** Quantas páginas de resultados há. */
+    int pages() {
+        return (hits.size() + FIT - 1) / FIT;
+    }
+
+    int resultPage() {
+        return selected / FIT;
+    }
+
+    /** Vira para a página de resultados {@code to} (dentro dos limites), com a marca no primeiro dela. */
+    void turnResults(int to) {
+        int p = Math.clamp(to, 0, Math.max(0, pages() - 1));
+        if (p != resultPage()) {
+            selected = p * FIT;
+            layoutPage();
+            build();
+        }
+    }
+
     /** O total achado (pode ser maior que {@link #visible()}). */
     int total() {
         return hits.size();
@@ -87,7 +114,7 @@ final class GuideSearchBox {
 
     /** A página do resultado marcado, ou {@code null} sem resultado. */
     String selectedPage() {
-        return selected < visible ? hits.get(selected).id() : null;
+        return hits.isEmpty() ? null : hits.get(selected).id();
     }
 
     /** O texto que a busca tem agora (para o e2e e para a tela conferir). */
@@ -138,10 +165,11 @@ final class GuideSearchBox {
 
     /** Anda a marca pelos resultados à vista. */
     void move(int delta) {
-        if (visible > 0) {
-            int to = Math.clamp(selected + delta, 0, visible - 1);
+        if (!hits.isEmpty()) {
+            int to = Math.clamp(selected + delta, 0, hits.size() - 1);
             if (to != selected) {
                 selected = to;
+                layoutPage();
                 build();
             }
         }
@@ -151,13 +179,21 @@ final class GuideSearchBox {
         queryText = FormattedCharSequence.forward(query.toString(), Style.EMPTY);
         queryWidth = font.width(queryText);
         hits = GuideSearch.search(GuidePages.searchPages(), query.toString());
-        int fit = (GuideMetrics.SHEET_H - ROWS_Y - KEYS_H) / ROW_H;
-        visible = Math.min(fit, hits.size());
         selected = 0;
+        layoutPage();
         count = hits.isEmpty() ? FormattedCharSequence.EMPTY : Component.translatable(
                 hits.size() == 1 ? "gui.wirelessautomate.guide.search.found.one"
                         : "gui.wirelessautomate.guide.search.found.many", hits.size()).getVisualOrderText();
         build();
+    }
+
+    /** A página de resultados da marca: o primeiro à vista, quantos, e o texto "9–12 de 12". */
+    private void layoutPage() {
+        first = selected / FIT * FIT;
+        visible = Math.min(FIT, hits.size() - first);
+        range = pages() < 2 ? FormattedCharSequence.EMPTY : Component.translatable(
+                "gui.wirelessautomate.guide.search.range", first + 1, first + visible, hits.size())
+                .getVisualOrderText();
     }
 
     // ---- a tinta dos resultados
@@ -177,7 +213,7 @@ final class GuideSearchBox {
                     Style.EMPTY, GuideInk.FAINT));
         }
         for (int i = 0; i < visible; i++) {
-            row(out, hits.get(i), ROWS_Y + i * ROW_H, i == selected);
+            row(out, hits.get(first + i), ROWS_Y + i * ROW_H, first + i == selected);
         }
         if (visible > 0) {
             String keys = Component.translatable("gui.wirelessautomate.guide.search.keys").getString();

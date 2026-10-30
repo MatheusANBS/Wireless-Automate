@@ -143,6 +143,7 @@
   "gui.wirelessautomate.guide.cover.search": "Buscar no livro…",
   "gui.wirelessautomate.guide.cover.hint": "Segure G sobre um item do mod para abrir a página dele.",
   "gui.wirelessautomate.guide.search.results": "Resultados",
+  "gui.wirelessautomate.guide.search.range": "%s–%s de %s",
   "gui.wirelessautomate.guide.search.none": "Nada encontrado",
   "gui.wirelessautomate.guide.search.keys": "Enter abre · ↑↓ andam · Esc limpa",
   "gui.wirelessautomate.guide.search.found.one": "%s página encontrada",

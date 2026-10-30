@@ -89,7 +89,7 @@ RESONATOR_ANNOTATIONS = {
 }
 
 
-PAGINA = page('signal-resonator.md', front('Ressonador de Sinal', 'wirelessautomate:resonance_core', 19, item_ids=[
+PAGINA = page('signal-resonator.md', front('Ressonador de Sinal', 'wirelessautomate:resonance_core', 'energia', 19, item_ids=[
     'wirelessautomate:resonator_casing', 'wirelessautomate:resonator_glass', 'wirelessautomate:resonance_core',
     'wirelessautomate:resonator_energy_port', 'wirelessautomate:resonator_crystal_port',
     'wirelessautomate:resonator_tuner']) + '''
@@ -209,7 +209,7 @@ Os números são os padrões; o JEI mostra os do seu pack.
 <RecipeFor id="wirelessautomate:resonator_energy_port" />
 <RecipeFor id="wirelessautomate:resonator_crystal_port" />
 <RecipeFor id="wirelessautomate:resonator_tuner" />
-''', front('Signal Resonator', 'wirelessautomate:resonance_core', 19, item_ids=[
+''', front('Signal Resonator', 'wirelessautomate:resonance_core', 'energia', 19, item_ids=[
     'wirelessautomate:resonator_casing', 'wirelessautomate:resonator_glass', 'wirelessautomate:resonance_core',
     'wirelessautomate:resonator_energy_port', 'wirelessautomate:resonator_crystal_port',
     'wirelessautomate:resonator_tuner']) + '''

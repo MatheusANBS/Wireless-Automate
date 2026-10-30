@@ -39,7 +39,7 @@ SCENE_STORAGE = '''<GameScene zoom="3" interactive={true}>
 </GameScene>'''
 
 
-PAGINA = page('networks.md', front('Redes', 'wirelessautomate:linker', 4) + '''
+PAGINA = page('networks.md', front('Redes', 'wirelessautomate:linker', 'ferramentas', 4) + '''
 # Redes
 
 Roteadores não se ligam uns aos outros: cada **face**, em cada aba, entra numa **rede**. Tudo do
@@ -80,7 +80,7 @@ mesmo tipo na mesma rede troca entre si; o modo da face diz quem envia e quem re
 | Outra dimensão | Só com origem **Esmeralda** ou acima. |
 | Chunk descarregado | A rota pausa e volta sozinha quando o chunk carrega. |
 | Manter trabalhando longe | Use o [Upgrade de Chunk Loading](chunk-loading.md). |
-''', front('Networks', 'wirelessautomate:linker', 4) + '''
+''', front('Networks', 'wirelessautomate:linker', 'ferramentas', 4) + '''
 # Networks
 
 Routers don't link to each other: each **face**, on each tab, joins a **network**. Everything of the

@@ -63,7 +63,7 @@ def tier_table(lang):
 TIER_TABLE = {'pt': tier_table('pt'), 'en': tier_table('en')}
 
 
-PAGINA = page('router.md', front('Roteador Wireless', 'wirelessautomate:router', 2, item_ids=['wirelessautomate:router']) + '''
+PAGINA = page('router.md', front('Roteador Wireless', 'wirelessautomate:router', 'ferramentas', 2, item_ids=['wirelessautomate:router']) + '''
 # Roteador Wireless
 
 <BlockImage id="wirelessautomate:router" p:facing="up" p:tier="basic" scale="3" float="left" />
@@ -151,7 +151,7 @@ números: o tooltip do cartão de upgrade mostra os dele.
 ''' + fill(SCENE_TIERS, BASIC='Básico', ADVANCED='Avançado', ELITE='Elite', EMERALD='Esmeralda', ULTIMATE='Ultimate') + '''
 
 No criativo, o clique do meio pega o roteador já no tier do bloco.
-''', front('Wireless Router', 'wirelessautomate:router', 2, item_ids=['wirelessautomate:router']) + '''
+''', front('Wireless Router', 'wirelessautomate:router', 'ferramentas', 2, item_ids=['wirelessautomate:router']) + '''
 # Wireless Router
 
 <BlockImage id="wirelessautomate:router" p:facing="up" p:tier="basic" scale="3" float="left" />

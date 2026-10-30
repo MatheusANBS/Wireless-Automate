@@ -70,6 +70,7 @@
   "item.wirelessautomate.chunk_loader_upgrade": "Chunk Loading Upgrade",
   "item.wirelessautomate.range_upgrade": "Range Upgrade",
   "item.wirelessautomate.crafting_upgrade": "Crafting Upgrade",
+  "jei.wirelessautomate.chest_craft.needs_upgrade": "Needs the Crafting Upgrade",
   "item.wirelessautomate.compacting_upgrade": "Compacting Upgrade",
   "item.wirelessautomate.signal_crystal": "Signal Crystal",
   "item.wirelessautomate.signal_crystal.dull": "Dull Signal Crystal",

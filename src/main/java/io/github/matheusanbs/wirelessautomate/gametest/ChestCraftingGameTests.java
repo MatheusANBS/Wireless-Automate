@@ -13,10 +13,15 @@ import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingMode;
 import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingRules;
+import io.github.matheusanbs.wirelessautomate.packet.ChestCraftFillPayload;
+import io.netty.buffer.Unpooled;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.inventory.ClickType;
@@ -416,6 +421,169 @@ public final class ChestCraftingGameTests {
                 Optional.of(new ItemStack(Items.STICK)), -1), "a rodinha achou o graveto no resultado");
         helper.assertValueEqual(stored(chest, Items.STICK), 0L, "nenhum graveto no Baú");
         helper.assertValueEqual(menu.getSlot(RESULT).getItem().getCount(), 4, "o resultado intacto");
+        helper.succeed();
+    }
+
+    // ------------------------------------------------------------------ o "+" do JEI (o handler do servidor)
+
+    private static List<List<ItemStack>> lists(int firstSlot, int secondSlot, Item... alternatives) {
+        List<List<ItemStack>> slots = new ArrayList<>();
+        for (int i = 0; i < 9; i++) {
+            List<ItemStack> list = new ArrayList<>();
+            if (i == firstSlot || i == secondSlot) {
+                for (Item alternative : alternatives) {
+                    list.add(new ItemStack(alternative, 64));
+                }
+            }
+            slots.add(list);
+        }
+        return slots;
+    }
+
+    private static List<List<ItemStack>> stickLists(Item... alternatives) {
+        return lists(0, 3, alternatives);
+    }
+
+    /** O item em todo canto do jogador e do Baú: Baú, grade, inventário e cursor. */
+    private static long everywhere(StorageChestBlockEntity chest, ServerPlayer player, Item item) {
+        long grid = 0;
+        for (ItemStack stack : chest.upgrades().grid()) {
+            grid += stack.is(item) ? stack.getCount() : 0;
+        }
+        return stored(chest, item) + grid + held(player, item);
+    }
+
+    /**
+     * O "+" monta a receita pelo Baú primeiro e pelo inventário depois: o Baú tem 1 tábua de carvalho, a segunda
+     * alternativa (bétula) só existe no inventário. A grade que já tinha algo volta ao Baú antes, o slot sem nenhuma
+     * alternativa disponível fica vazio, e nenhum item some nem aparece.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void jeiPreencheAGradePeloBauEDepoisPeloInventario(GameTestHelper helper) {
+        StorageChestBlockEntity chest = chest(helper);
+        putCrafting(chest);
+        chest.storage().insert(new ItemStack(Items.OAK_PLANKS), 1, false);
+        ServerPlayer player = player(helper, chest);
+        player.getInventory().setItem(5, new ItemStack(Items.BIRCH_PLANKS, 5));
+        StorageListMenu<ItemStack> menu = open(player, chest, 91);
+        menu.getSlot(GRID + 8).set(new ItemStack(Items.DIRT, 3));
+        long oak = everywhere(chest, player, Items.OAK_PLANKS);
+        long birch = everywhere(chest, player, Items.BIRCH_PLANKS);
+        long dirt = everywhere(chest, player, Items.DIRT);
+        List<List<ItemStack>> slots = stickLists(Items.OAK_PLANKS, Items.BIRCH_PLANKS);
+        slots.set(6, List.of(new ItemStack(Items.DIAMOND)));
+
+        helper.assertTrue(ChestUpgradeSlots.handleFill(player, new ChestCraftFillPayload(91, slots, false)),
+                "o pacote foi aceito");
+
+        helper.assertTrue(menu.getSlot(GRID).getItem().is(Items.OAK_PLANKS), "a primeira alternativa vem do Baú");
+        helper.assertValueEqual(menu.getSlot(GRID).getItem().getCount(), 1, "1 por slot");
+        helper.assertTrue(menu.getSlot(GRID + 3).getItem().is(Items.BIRCH_PLANKS), "a segunda vem do inventário");
+        helper.assertValueEqual(menu.getSlot(GRID + 3).getItem().getCount(), 1, "1 por slot");
+        helper.assertTrue(menu.getSlot(GRID + 6).getItem().isEmpty(), "sem alternativa disponível, o slot fica vazio");
+        helper.assertTrue(menu.getSlot(GRID + 8).getItem().isEmpty(), "a grade velha foi devolvida");
+        helper.assertValueEqual(stored(chest, Items.DIRT), 3L, "a terra voltou ao Baú");
+        helper.assertTrue(menu.getSlot(RESULT).getItem().is(Items.STICK), "o resultado já está na grade");
+        helper.assertValueEqual(everywhere(chest, player, Items.OAK_PLANKS), oak, "tábuas de carvalho conservadas");
+        helper.assertValueEqual(everywhere(chest, player, Items.BIRCH_PLANKS), birch, "tábuas de bétula conservadas");
+        helper.assertValueEqual(everywhere(chest, player, Items.DIRT), dirt, "a terra conservada");
+        helper.assertValueEqual(player.getInventory().countItem(Items.BIRCH_PLANKS), 4, "1 de bétula saiu do inventário");
+        helper.succeed();
+    }
+
+    /** Com o Shift cada slot da mesma chave leva o mesmo tanto: o menor entre a pilha e o que há, dividido. */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void jeiComShiftEncheOsSlotsIgualmente(GameTestHelper helper) {
+        StorageChestBlockEntity chest = chest(helper);
+        putCrafting(chest);
+        chest.storage().insert(new ItemStack(Items.OAK_PLANKS), 30, false);
+        ServerPlayer player = player(helper, chest);
+        player.getInventory().setItem(5, new ItemStack(Items.OAK_PLANKS, 41));
+        StorageListMenu<ItemStack> menu = open(player, chest, 91);
+        long oak = everywhere(chest, player, Items.OAK_PLANKS);
+
+        helper.assertTrue(menu.upgradeSlots().fill(player, stickLists(Items.OAK_PLANKS), true), "aceito");
+
+        // 71 no total: 35 por slot, 30 do Baú (primeiro) e 40 do inventário, sobrando 1 lá.
+        helper.assertValueEqual(menu.getSlot(GRID).getItem().getCount(), 35, "slot de cima");
+        helper.assertValueEqual(menu.getSlot(GRID + 3).getItem().getCount(), 35, "slot de baixo");
+        helper.assertValueEqual(stored(chest, Items.OAK_PLANKS), 0L, "o Baú deu tudo");
+        helper.assertValueEqual(player.getInventory().countItem(Items.OAK_PLANKS), 1, "o inventário ficou com a sobra");
+        helper.assertValueEqual(everywhere(chest, player, Items.OAK_PLANKS), oak, "tábuas conservadas");
+
+        // Sem o Shift: 1 por slot, devolvendo a grade antes (as 70 voltam ao Baú).
+        helper.assertTrue(menu.upgradeSlots().fill(player, stickLists(Items.OAK_PLANKS), false), "aceito de novo");
+        helper.assertValueEqual(menu.getSlot(GRID).getItem().getCount(), 1, "1 no slot de cima");
+        helper.assertValueEqual(menu.getSlot(GRID + 3).getItem().getCount(), 1, "1 no slot de baixo");
+        helper.assertValueEqual(everywhere(chest, player, Items.OAK_PLANKS), oak, "tábuas conservadas de novo");
+        helper.succeed();
+    }
+
+    /** Com a Compactação, o Baú que só tem o bloco entrega o lingote: o bloco desce e a sobra fica no Baú. */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void jeiDesceAFormaCompactadaDoBau(GameTestHelper helper) {
+        StorageChestBlockEntity chest = chest(helper);
+        putCrafting(chest);
+        ItemStack compacting = new ItemStack(ModItems.COMPACTING_UPGRADE.get());
+        compacting.set(ModDataComponents.COMPACTING_RULES.get(), CompactingRules.DEFAULT.withMode(CompactingMode.COMPRESS));
+        chest.upgrades().setUpgrade(1, compacting);
+        chest.storage().insert(new ItemStack(Items.IRON_BLOCK), 1, false);
+        ServerPlayer player = player(helper, chest);
+        StorageListMenu<ItemStack> menu = open(player, chest, 91);
+
+        helper.assertTrue(menu.upgradeSlots().fill(player, lists(0, 4, Items.IRON_INGOT), false), "aceito");
+
+        helper.assertTrue(menu.getSlot(GRID).getItem().is(Items.IRON_INGOT), "o lingote na grade");
+        helper.assertTrue(menu.getSlot(GRID + 4).getItem().is(Items.IRON_INGOT), "o outro lingote na grade");
+        helper.assertValueEqual(stored(chest, Items.IRON_BLOCK), 0L, "o bloco desceu");
+        helper.assertValueEqual(stored(chest, Items.IRON_INGOT), 7L, "a sobra do bloco: 9 - 2");
+        helper.succeed();
+    }
+
+    /**
+     * O servidor não confia no cliente: sem a Mesa, com menos de 9 listas, com mais de 16 alternativas, com o
+     * {@code containerId} errado ou sem jogador nada muda (nem a grade é devolvida); a contagem das pilhas do pacote
+     * é ignorada (a de 64 leva 1); e o pacote vai e volta pelo codec.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void jeiRecusaPedidoForaDaForma(GameTestHelper helper) {
+        StorageChestBlockEntity chest = chest(helper);
+        chest.storage().insert(new ItemStack(Items.OAK_PLANKS), 10, false);
+        ServerPlayer player = player(helper, chest);
+        StorageListMenu<ItemStack> menu = open(player, chest, 91);
+        List<List<ItemStack>> valid = stickLists(Items.OAK_PLANKS);
+
+        helper.assertFalse(ChestUpgradeSlots.handleFill(player, new ChestCraftFillPayload(91, valid, false)),
+                "sem a Mesa");
+        helper.assertTrue(chest.upgrades().gridEmpty(), "nada na grade sem a Mesa");
+
+        putCrafting(chest);
+        menu.getSlot(GRID + 8).set(new ItemStack(Items.DIRT, 2));
+        List<List<ItemStack>> eight = new ArrayList<>(valid.subList(0, 8));
+        List<ItemStack> many = new ArrayList<>();
+        for (int i = 0; i < 17; i++) {
+            many.add(new ItemStack(Items.OAK_PLANKS));
+        }
+        List<List<ItemStack>> tooMany = new ArrayList<>(valid);
+        tooMany.set(0, many);
+        helper.assertFalse(ChestUpgradeSlots.handleFill(player, new ChestCraftFillPayload(91, eight, false)), "8 listas");
+        helper.assertFalse(ChestUpgradeSlots.handleFill(player, new ChestCraftFillPayload(91, tooMany, false)),
+                "17 alternativas");
+        helper.assertFalse(ChestUpgradeSlots.handleFill(player, new ChestCraftFillPayload(92, valid, false)),
+                "containerId errado");
+        helper.assertFalse(ChestUpgradeSlots.handleFill(null, new ChestCraftFillPayload(91, valid, false)), "sem jogador");
+        helper.assertTrue(menu.getSlot(GRID + 8).getItem().is(Items.DIRT), "a grade não foi mexida");
+        helper.assertValueEqual(stored(chest, Items.OAK_PLANKS), 10L, "o Baú intacto");
+
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), helper.getLevel().registryAccess());
+        ChestCraftFillPayload.STREAM_CODEC.encode(buf, new ChestCraftFillPayload(91, valid, true));
+        ChestCraftFillPayload decoded = ChestCraftFillPayload.STREAM_CODEC.decode(buf);
+        helper.assertTrue(decoded.maxTransfer() && decoded.containerId() == 91 && decoded.slots().size() == 9
+                && decoded.slots().get(0).size() == 1 && decoded.slots().get(1).isEmpty(), "o codec ida e volta");
+
+        helper.assertTrue(ChestUpgradeSlots.handleFill(player, new ChestCraftFillPayload(91, valid, false)), "válido");
+        helper.assertValueEqual(menu.getSlot(GRID).getItem().getCount(), 1, "a contagem do pacote é ignorada");
+        helper.assertTrue(menu.getSlot(GRID + 8).getItem().isEmpty(), "a terra voltou ao Baú");
         helper.succeed();
     }
 }

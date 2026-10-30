@@ -25,6 +25,7 @@ import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
+import mezz.jei.api.registration.IRecipeTransferRegistration;
 import mezz.jei.api.registration.ISubtypeRegistration;
 import mezz.jei.api.gui.builder.IClickableIngredientFactory;
 import mezz.jei.api.runtime.IClickableIngredient;
@@ -241,6 +242,13 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
     @Override
     public void onRuntimeAvailable(IJeiRuntime runtime) {
         UnloadedTiers.hide(runtime.getIngredientManager());
+    }
+
+    /** O "+" nas receitas de crafting com o menu do Baú aberto ({@link ChestCraftTransfer}). */
+    @Override
+    public void registerRecipeTransferHandlers(IRecipeTransferRegistration registration) {
+        registration.addRecipeTransferHandler(new ChestCraftTransfer(registration.getTransferHelper()),
+                RecipeTypes.CRAFTING);
     }
 
     @Override

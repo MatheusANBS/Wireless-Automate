@@ -8,12 +8,14 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Os gestos nas cenas das duas folhas à vista: o botão esquerdo apertado dentro de uma moldura começa o arrasto, que
  * gira a cena (e o clique não vira link nem folha); a roda dentro dela dá zoom; dois cliques na mesma cena em
- * {@value #DOUBLE_CLICK_MS} ms voltam à vista da página. A {@link GuideScreen} só repassa os eventos e mostra as
+ * {@value #DOUBLE_CLICK_MS} ms voltam à vista da página (um aperto que virou arrasto não conta como o primeiro). A {@link GuideScreen} só repassa os eventos e mostra as
  * folhas a cada mudança de lugar; a vista de cada cena fica na tinta dela, que vive enquanto o livro está aberto.
  */
 public final class SceneInput {
     /** O intervalo do clique duplo. */
     static final long DOUBLE_CLICK_MS = 300;
+    /** Quanto o mouse anda, em pixels de tela, para o aperto virar arrasto e não contar para o clique duplo. */
+    static final double DRAG_SLOP_PX = 2;
 
     private BookScale scale;
     private List<Ink> left = List.of();
@@ -21,6 +23,8 @@ public final class SceneInput {
     private GuideInk.@Nullable Scene dragging;
     private double lastTexX;
     private double lastTexY;
+    private double pressTexX;
+    private double pressTexY;
     private GuideInk.@Nullable Scene lastClicked;
     private long lastClickAt;
 
@@ -47,8 +51,8 @@ public final class SceneInput {
         lastClicked = s;
         lastClickAt = now;
         dragging = s;
-        lastTexX = scale.texX(mouseX);
-        lastTexY = scale.texY(mouseY);
+        lastTexX = pressTexX = scale.texX(mouseX);
+        lastTexY = pressTexY = scale.texY(mouseY);
         return true;
     }
 
@@ -62,6 +66,9 @@ public final class SceneInput {
         dragging.view().drag((tx - lastTexX) * scale.k(), (ty - lastTexY) * scale.k());
         lastTexX = tx;
         lastTexY = ty;
+        if (Math.hypot(tx - pressTexX, ty - pressTexY) * scale.k() > DRAG_SLOP_PX) {
+            lastClicked = null;
+        }
         return true;
     }
 

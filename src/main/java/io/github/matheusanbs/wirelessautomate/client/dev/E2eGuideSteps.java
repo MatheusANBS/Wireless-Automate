@@ -545,13 +545,25 @@ final class E2eGuideSteps {
             capture(Minecraft.getInstance(), "guia-cena-girada");
             return true;
         }, E2eGuideSteps::sceneState));
+        // o aperto logo depois de um arrasto curto não é clique duplo: a vista girada fica; a espera de 8 ticks passa
+        // dos 300 ms, para o clique duplo adiante não contar com este aperto
+        SceneView.State[] turned = new SceneView.State[1];
+        list.add(new Step("guia: apertar logo depois de arrastar não volta a vista", STEP_TIMEOUT_MS, () -> {
+            GuideScreen s = book();
+            s.mouseClicked(at[0], at[1], GLFW.GLFW_MOUSE_BUTTON_LEFT);
+            s.mouseDragged(at[0] + 3, at[1] + 1, GLFW.GLFW_MOUSE_BUTTON_LEFT, 3, 1);
+            s.mouseReleased(at[0] + 3, at[1] + 1, GLFW.GLFW_MOUSE_BUTTON_LEFT);
+            turned[0] = scene().state();
+            s.mouseClicked(at[0] + 3, at[1] + 1, GLFW.GLFW_MOUSE_BUTTON_LEFT);
+            s.mouseReleased(at[0] + 3, at[1] + 1, GLFW.GLFW_MOUSE_BUTTON_LEFT);
+        }, () -> scene() != null && !scene().isHome() && scene().state().equals(turned[0]) && stepTicks >= 8,
+                E2eGuideSteps::sceneState));
         list.add(new Step("guia: a roda na cena dá zoom", STEP_TIMEOUT_MS,
                 () -> book().mouseScrolled(at[0], at[1], 0, 2),
                 () -> scene() != null && book().spread() == spread[0]
                         && Math.abs(scene().zoom() - SceneView.ZOOM_STEP * SceneView.ZOOM_STEP) < 1e-6,
                 E2eGuideSteps::sceneState));
         list.add(new Step("guia: clique duplo volta à vista da página", STEP_TIMEOUT_MS, () -> {
-            // um clique só não volta a vista; se o primeiro daqui ainda contar com o do arrasto, ele já volta
             GuideScreen s = book();
             for (int i = 0; i < 2; i++) {
                 s.mouseClicked(at[0], at[1], GLFW.GLFW_MOUSE_BUTTON_LEFT);

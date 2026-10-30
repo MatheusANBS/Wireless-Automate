@@ -40,6 +40,8 @@ public final class GuideScreen extends Screen {
     private boolean leftIsCover;
     private List<Ink> left = List.of();
     private List<Ink> right = List.of();
+    /** Os gestos nas cenas à vista (girar, zoom, voltar); a vista de cada cena vive na tinta dela. */
+    private final SceneInput scenes = new SceneInput();
     /** A tela de onde a tecla abriu o livro (um baú, o JEI), para onde ele volta ao fechar; {@code null} = o mundo. */
     private final @Nullable Screen parent;
 
@@ -142,13 +144,14 @@ public final class GuideScreen extends Screen {
         } else {
             group = GuideIndex.groupOrder(GuidePages.group(page));
         }
-        String ln = number(l, slots);
-        String rn = number(r, slots);
+        String ln = GuideChrome.number(l, slots, page == null);
+        String rn = GuideChrome.number(r, slots, page == null);
         boolean pagedResults = showsResults() && search.pages() > 1;
         boolean prev = pagedResults ? search.resultPage() > 0 : spread > 0;
         boolean next = pagedResults ? search.resultPage() < search.pages() - 1 : spread < spreads - 1;
         chrome.update(font, prev, next, page != null, ln, rn, group);
         note("em volta das folhas", chrome.problems());
+        scenes.show(scale, left, right);
     }
 
     /** A folha direita mostra os resultados no lugar do índice: folha de rosto à vista e a busca com texto. */
@@ -181,21 +184,6 @@ public final class GuideScreen extends Screen {
         for (String f : found) {
             problems.add((page == null ? "índice" : page) + ", " + where + ": " + f);
         }
-    }
-
-    /** O número da folha: romano na abertura e no índice, arábico nas páginas; vazio se a folha não existe. */
-    private String number(int slot, int slots) {
-        if (slot >= slots) {
-            return "";
-        }
-        return page == null ? roman(slot + 1) : Integer.toString(slot + 1);
-    }
-
-    private static final String[] TENS = {"", "x", "xx", "xxx"};
-    private static final String[] ONES = {"", "i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix"};
-
-    private static String roman(int n) {
-        return n >= 40 ? Integer.toString(n) : TENS[n / 10] + ONES[n % 10];
     }
 
     private void go(@Nullable String to, int spread) {
@@ -261,6 +249,11 @@ public final class GuideScreen extends Screen {
             }
         }
         return out;
+    }
+
+    /** Os gestos das cenas à vista (o e2e lê a vista e o centro da primeira). */
+    public SceneInput scenes() {
+        return scenes;
     }
 
     /** A página aberta ({@code null} = folha de rosto e índice). */
@@ -385,6 +378,9 @@ public final class GuideScreen extends Screen {
         if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT) {
             return super.mouseClicked(mouseX, mouseY, button);
         }
+        if (scenes.press(mouseX, mouseY)) {
+            return true;
+        }
         double tx = scale.texX(mouseX);
         double ty = scale.texY(mouseY);
         GuideChrome.Hit hit = chrome.hit(tx, ty);
@@ -415,9 +411,23 @@ public final class GuideScreen extends Screen {
     }
 
     @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        return scenes.drag(mouseX, mouseY) || super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        scenes.release();
+        return super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    /** A roda numa cena dá zoom nela; fora, vira as folhas. */
+    @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         if (scrollY != 0) {
-            turnBy(scrollY > 0 ? -1 : 1);
+            if (!scenes.scroll(mouseX, mouseY, scrollY)) {
+                turnBy(scrollY > 0 ? -1 : 1);
+            }
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);

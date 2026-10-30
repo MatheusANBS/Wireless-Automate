@@ -29,11 +29,11 @@ import org.joml.Vector3f;
 import org.lwjgl.opengl.GL11;
 
 /**
- * A cena 3D parada na moldura do livro (etapa 1: sem girar e sem anotações). Quando a tinta da folha é preparada, os
- * estados de bloco saem do id e das propriedades {@code p:}, e a vista ortográfica (o yaw e o pitch da
- * {@code IsometricCamera} da página) é enquadrada para a cena caber na moldura com margem. Por quadro, só desenha os
- * blocos com o {@link BlockRenderDispatcher}, como o visor 3D do roteador ({@link MachineView3D}), recortados à
- * moldura e com a luz fixa já girada com a vista.
+ * A cena 3D na moldura do livro. Quando a tinta da folha é preparada, os estados de bloco saem do id e das propriedades
+ * {@code p:}, e a vista ortográfica é enquadrada para a cena caber na moldura com margem pela {@code IsometricCamera}
+ * da página. O jogador a gira e dá zoom ({@link SceneView}, pelos gestos do {@link SceneInput}); por quadro, só a
+ * matriz e a luz são refeitas, e só quando a vista mudou, e os blocos são desenhados com o
+ * {@link BlockRenderDispatcher}, como no visor 3D do roteador ({@link MachineView3D}), recortados à moldura.
  */
 final class GuideScenes {
     /** A borda da moldura (fio e latão) e a margem entre ela e a cena, em unidades de folha. */
@@ -88,34 +88,73 @@ final class GuideScenes {
         float cx = (minX + maxX) / 2;
         float cy = (minY + maxY) / 2;
         float cz = (minZ + maxZ) / 2;
-        // os oito cantos da caixa da cena, girados, dão a largura e a altura na tela
+        // os oito cantos da caixa da cena, girados pela câmera da página, dão a largura e a altura na tela
         Matrix4f rot = new Matrix4f().rotateX(pitch).rotateY(yaw);
         Vector3f c = new Vector3f();
-        float[] lo = {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE};
-        float[] hi = {-Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
+        float halfW = 0;
+        float halfH = 0;
         for (int i = 0; i < 8; i++) {
             rot.transformPosition((i & 1) == 0 ? minX - cx : maxX - cx, (i & 2) == 0 ? minY - cy : maxY - cy,
                     (i & 4) == 0 ? minZ - cz : maxZ - cz, c);
-            for (int a = 0; a < 3; a++) {
-                lo[a] = Math.min(lo[a], c.get(a));
-                hi[a] = Math.max(hi[a], c.get(a));
-            }
+            halfW = Math.max(halfW, Math.abs(c.x));
+            halfH = Math.max(halfH, Math.abs(c.y));
         }
         float availW = f.w() - 2 * (BORDER + MARGIN);
         float availH = f.h() - 2 * (BORDER + MARGIN);
-        float s = Math.min(availW / Math.max(0.01f, hi[0] - lo[0]), availH / Math.max(0.01f, hi[1] - lo[1]));
-        float depth = s * Math.max(Math.abs(lo[2]), Math.abs(hi[2])) + DEPTH;
-        Matrix4f view = new Matrix4f()
-                .translation(f.x() + f.w() / 2f, f.y() + f.h() / 2f, depth)
-                .scale(s, -s, s)
-                .translate(-(lo[0] + hi[0]) / 2, -(lo[1] + hi[1]) / 2, 0)
+        float fit = Math.min(availW / Math.max(0.01f, 2 * halfW), availH / Math.max(0.01f, 2 * halfH));
+        float radius = (float) Math.sqrt((maxX - minX) * (maxX - minX) + (maxY - minY) * (maxY - minY)
+                + (maxZ - minZ) * (maxZ - minZ)) / 2;
+        return new Scene(f.x(), f.y(), f.w(), f.h(), states.toArray(new BlockState[0]), pos,
+                new SceneView(scene.camera(), scene.zoom()), new Camera(fit, cx, cy, cz, radius));
+    }
+
+    /**
+     * O enquadramento de uma cena (o tamanho de um bloco que faz a cena caber na moldura pela câmera da página, o
+     * centro e o raio da caixa) e a matriz e as luzes do quadro, refeitas no lugar só quando a {@link SceneView} muda.
+     */
+    static final class Camera {
+        private final float fit;
+        private final float cx;
+        private final float cy;
+        private final float cz;
+        private final float radius;
+        private final Matrix4f view = new Matrix4f();
+        private final Vector3f light0 = new Vector3f();
+        private final Vector3f light1 = new Vector3f();
+        /** A versão da vista com que a matriz foi feita; -1 = nunca. */
+        private int seen = -1;
+
+        Camera(float fit, float cx, float cy, float cz, float radius) {
+            this.fit = fit;
+            this.cx = cx;
+            this.cy = cy;
+            this.cz = cz;
+            this.radius = radius;
+        }
+    }
+
+    /**
+     * A matriz da cena pela vista: o centro da caixa no meio da moldura, girado pelo yaw e pelo pitch, na escala do
+     * enquadramento vezes o zoom, e à frente do papel pelo raio inteiro (a cena girada não atravessa a folha). A luz
+     * fica presa ao mundo e gira com a vista, como a sombra das faces de um bloco colocado.
+     */
+    private static void aim(Scene s) {
+        Camera c = s.camera();
+        SceneView v = s.view();
+        if (c.seen == v.version()) {
+            return;
+        }
+        c.seen = v.version();
+        float yaw = (float) v.yaw() * Mth.DEG_TO_RAD;
+        float pitch = (float) v.pitch() * Mth.DEG_TO_RAD;
+        float k = c.fit * (float) v.scale();
+        c.view.translation(s.x() + s.w() / 2f, s.y() + s.h() / 2f, k * c.radius + DEPTH)
+                .scale(k, -k, k)
                 .rotateX(pitch)
                 .rotateY(yaw)
-                .translate(-cx, -cy, -cz);
-        // a luz fica presa ao mundo e gira com a vista, como a sombra das faces de um bloco colocado
-        Vector3f light0 = new Vector3f(WORLD_LIGHT_0).rotateY(yaw).rotateX(pitch).mul(1f, -1f, 1f);
-        Vector3f light1 = new Vector3f(WORLD_LIGHT_1).rotateY(yaw).rotateX(pitch).mul(1f, -1f, 1f);
-        return new Scene(f.x(), f.y(), f.w(), f.h(), states.toArray(new BlockState[0]), pos, view, light0, light1);
+                .translate(-c.cx, -c.cy, -c.cz);
+        c.light0.set(WORLD_LIGHT_0).rotateY(yaw).rotateX(pitch).mul(1f, -1f, 1f);
+        c.light1.set(WORLD_LIGHT_1).rotateY(yaw).rotateX(pitch).mul(1f, -1f, 1f);
     }
 
     /** O estado do bloco pelo id e pelas propriedades; {@code null} (com aviso) se o bloco não existe. */
@@ -158,9 +197,10 @@ final class GuideScenes {
         g.flush();
         PoseStack pose = g.pose();
         scissor(pose.last().pose(), x0 + BORDER, y0 + BORDER, x1 - BORDER, y1 - BORDER);
+        aim(s);
         pose.pushPose();
-        pose.mulPose(s.view());
-        RenderSystem.setShaderLights(s.light0(), s.light1());
+        pose.mulPose(s.camera().view);
+        RenderSystem.setShaderLights(s.camera().light0, s.camera().light1);
         BlockRenderDispatcher blocks = Minecraft.getInstance().getBlockRenderer();
         MultiBufferSource.BufferSource buffers = g.bufferSource();
         BlockState[] states = s.states();

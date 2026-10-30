@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.client.guide;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.guide.layout.GuideMetrics;
 import io.github.matheusanbs.wirelessautomate.client.guide.layout.Sheet;
 import io.github.matheusanbs.wirelessautomate.client.guide.layout.SheetOp;
@@ -16,6 +17,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.commands.arguments.item.ItemParser;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
@@ -82,10 +84,11 @@ final class GuideInk {
 
     /**
      * Moldura de latão ({@code x, y, w, h}) com o ícone (se houver) e o rótulo do que vem dentro, já quebrado e
-     * centrado a partir de {@code contentY}.
+     * centrado a partir de {@code contentY}. {@code full} é o rótulo inteiro quando a última linha foi abreviada (a
+     * dica mostra), senão nulo.
      */
     record Frame(int x, int y, int w, int h, int contentY, ItemStack stack, List<FormattedCharSequence> lines,
-            int[] lineX) implements Ink {
+            int[] lineX, @Nullable Component full) implements Ink {
     }
 
     /** A área de clique de um link para outra página, com o título dela para a dica. */
@@ -95,10 +98,15 @@ final class GuideInk {
     private GuideInk() {
     }
 
-    /** Monta a tinta da folha; {@code current} é a página aberta (os itens dela não levam a ela mesma). */
-    static List<Ink> prepare(Sheet sheet, @Nullable String current, Font font, TextMeasure measure) {
+    /**
+     * Monta a tinta da folha; {@code current} é a página aberta (os itens dela não levam a ela mesma). Cada operação
+     * que sai da folha e cada texto que, medido com a fonte de verdade, passa da folha vão para {@code problems}.
+     */
+    static List<Ink> prepare(Sheet sheet, @Nullable String current, Font font, TextMeasure measure,
+            List<String> problems) {
         List<Ink> out = new ArrayList<>(sheet.ops().size() + 4);
         for (SheetOp op : sheet.ops()) {
+            check(op, font, problems);
             switch (op) {
                 case SheetOp.Text t -> text(t, out);
                 case SheetOp.LinkArea l -> {
@@ -130,6 +138,25 @@ final class GuideInk {
         return out;
     }
 
+    /** A operação cabe na folha? O texto é medido de novo com a fonte, no estilo e na escala em que é desenhado. */
+    private static void check(SheetOp op, Font font, List<String> problems) {
+        int right = op.x() + op.w();
+        int bottom = op.y() + op.h();
+        if (op instanceof SheetOp.Text t) {
+            FormattedText ft = FormattedText.of(t.text(), style(t.style()));
+            right = Math.max(right, t.x() + (int) Math.ceil(font.width(ft) * t.scale()));
+            bottom = Math.max(bottom, t.y() + (int) Math.ceil(font.lineHeight * t.scale()));
+        }
+        if (op.x() < 0 || op.y() < 0 || right > GuideMetrics.SHEET_W || bottom > GuideMetrics.SHEET_H) {
+            problems.add(describe(op) + " sai da folha (" + op.x() + ", " + op.y() + " até " + right + ", " + bottom
+                    + "; a folha tem " + GuideMetrics.SHEET_W + " × " + GuideMetrics.SHEET_H + ")");
+        }
+    }
+
+    private static String describe(SheetOp op) {
+        return op instanceof SheetOp.Text t ? "o texto \"" + t.text() + "\"" : op.getClass().getSimpleName();
+    }
+
     private static void text(SheetOp.Text t, List<Ink> out) {
         int codeW = t.style() == TextStyle.CODE ? t.w() : 0;
         FormattedCharSequence seq = FormattedCharSequence.forward(t.text(), style(t.style()));
@@ -150,15 +177,43 @@ final class GuideInk {
         return new Item(x, y, size, stack, stack.getHoverName(), page);
     }
 
+    /**
+     * O rótulo dentro da moldura (4 unidades de borda): se não cabe com o ícone, o ícone sai; se nem assim cabe, a
+     * última linha que cabe é abreviada e a dica da moldura mostra o rótulo inteiro.
+     */
     private static Frame frame(SheetOp op, ItemStack stack, Component label, Font font) {
-        int iconH = stack.isEmpty() ? 0 : GuideMetrics.ICON + 4;
-        List<FormattedCharSequence> lines = font.split(label, Math.max(8, op.w() - 12));
+        int width = Math.max(8, op.w() - 12);
+        int inner = op.h() - 8;
+        List<FormattedCharSequence> lines = new ArrayList<>(font.split(label, width));
+        int lh = font.lineHeight;
+        ItemStack icon = stack;
+        if (!icon.isEmpty() && GuideMetrics.ICON + 4 + lines.size() * lh > inner) {
+            icon = ItemStack.EMPTY;
+        }
+        Component full = null;
+        int max = Math.max(1, inner / lh);
+        if (lines.size() > max) {
+            StringBuilder rest = new StringBuilder();
+            for (int i = max - 1; i < lines.size(); i++) {
+                if (rest.length() > 0) {
+                    rest.append(' ');
+                }
+                lines.get(i).accept((index, style, cp) -> {
+                    rest.appendCodePoint(cp);
+                    return true;
+                });
+            }
+            lines = new ArrayList<>(lines.subList(0, max - 1));
+            lines.add(GuiPaint.ellipsize(font, Component.literal(rest.toString()), width));
+            full = label;
+        }
+        int iconH = icon.isEmpty() ? 0 : GuideMetrics.ICON + 4;
         int[] lineX = new int[lines.size()];
         for (int i = 0; i < lines.size(); i++) {
             lineX[i] = op.x() + (op.w() - font.width(lines.get(i))) / 2;
         }
-        int contentY = op.y() + (op.h() - iconH - lines.size() * font.lineHeight) / 2;
-        return new Frame(op.x(), op.y(), op.w(), op.h(), contentY, stack, List.copyOf(lines), lineX);
+        int contentY = op.y() + (op.h() - iconH - lines.size() * lh) / 2;
+        return new Frame(op.x(), op.y(), op.w(), op.h(), contentY, icon, List.copyOf(lines), lineX, full);
     }
 
     /** As propriedades de um {@code BlockImage} como o componente {@code minecraft:block_state} do item. */

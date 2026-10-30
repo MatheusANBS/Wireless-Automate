@@ -5,7 +5,6 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eUi.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
-import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.client.guide.GuidePages;
 import io.github.matheusanbs.wirelessautomate.client.guide.GuideScreen;
 import io.github.matheusanbs.wirelessautomate.item.GuideBook;
@@ -18,7 +17,8 @@ import org.lwjgl.glfw.GLFW;
 /**
  * O livro-guia no e2e: abre pelo gancho do item, primeiro onde parou (a folha de rosto e o índice) e depois cada
  * página, vira todas as folhas e captura cada par ({@code guia-<pagina>-<n>}), conferindo que nenhum texto foi
- * cortado. Em inglês e, com a variante, em português.
+ * cortado nem ficou fora da folha (a conferência do próprio livro, {@code GuideScreen.problems()}). Em inglês e,
+ * com a variante, em português.
  */
 final class E2eGuideSteps {
     private E2eGuideSteps() {
@@ -26,6 +26,9 @@ final class E2eGuideSteps {
 
     /** Teto de pares de folhas por página; os que passam do fim da página viram passos instantâneos. */
     private static final int MAX_SPREADS = 16;
+    /** Folhas e pares conferidos na passada (para o resumo no fim). */
+    private static int checkedSheets;
+    private static int checkedSpreads;
 
     /**
      * As páginas na ordem do índice; lidas na hora (as páginas só existem depois de abrir o livro uma vez), por isso
@@ -55,6 +58,10 @@ final class E2eGuideSteps {
     }
 
     private static void guidePages(List<Step> list, String suffix) {
+        list.add(new Step("guia" + suffix + ": zerar a contagem", STEP_TIMEOUT_MS, () -> {
+            checkedSheets = 0;
+            checkedSpreads = 0;
+        }, () -> true, () -> ""));
         list.add(new Step("guia" + suffix + ": abertura pelo item", STEP_TIMEOUT_MS,
                 () -> GuideClientHooks.open.accept(null), () -> book() != null,
                 () -> "tela " + describe(Minecraft.getInstance().screen)));
@@ -76,6 +83,9 @@ final class E2eGuideSteps {
                             + (book() == null ? "" : ", página " + book().page())));
             spreads(list, page, page + suffix);
         }
+        list.add(new Step("guia" + suffix + ": tudo coube", STEP_TIMEOUT_MS, () -> {
+        }, () -> checkedSpreads > PAGES.size(), () -> checkedSheets + " folhas em " + checkedSpreads
+                + " pares conferidas, nada fora da folha"));
         list.add(new Step("fechar o guia" + suffix, STEP_TIMEOUT_MS, () -> Minecraft.getInstance().setScreen(null),
                 () -> Minecraft.getInstance().screen == null, () -> "tela " + describe(Minecraft.getInstance().screen)));
     }
@@ -123,15 +133,20 @@ final class E2eGuideSteps {
                 if (spread >= s.spreads()) {
                     return true;
                 }
-                if (stepTicks < 6 || s.spread() != spread || GuiText.clipCount() != 0) {
+                if (stepTicks < 6 || s.spread() != spread) {
                     return false;
                 }
+                if (!s.problems().isEmpty()) {
+                    throw new StepFailure("não coube: " + String.join(" | ", s.problems()));
+                }
+                checkedSheets += s.visibleSheets();
+                checkedSpreads++;
                 capture(Minecraft.getInstance(), file);
                 return true;
             }, () -> {
                 GuideScreen s = book();
                 return s == null ? "tela " + describe(Minecraft.getInstance().screen)
-                        : "par " + s.spread() + " de " + s.spreads() + ", " + GuiText.clipCount() + " texto(s) cortado(s)";
+                        : "par " + s.spread() + " de " + s.spreads() + ", " + s.problems().size() + " problema(s)";
             }));
         }
     }

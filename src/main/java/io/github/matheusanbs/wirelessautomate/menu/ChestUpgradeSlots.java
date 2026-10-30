@@ -38,6 +38,8 @@ public final class ChestUpgradeSlots {
     public static final int RESULT = GRID_FIRST + ChestUpgrades.GRID_SIZE;
     /** Posição dos slots que a tela não mostra: longe de qualquer tela, como o inventário antes do {@code placeInventory}. */
     public static final int HIDDEN = -10_000;
+    /** Distância vertical entre os dois slots de upgrade na tela: 18 do slot e 2 de folga. */
+    public static final int UPGRADE_STEP = 20;
 
     private final StorageListMenu<?> menu;
     private final Player player;
@@ -82,13 +84,13 @@ public final class ChestUpgradeSlots {
     }
 
     /**
-     * Cliente: põe os slots na tela. A coluna dos upgrades desce a partir de ({@code upgradeX}, {@code upgradeY});
-     * a grade e o resultado que a tela não mostra recebem {@link #HIDDEN}. Como o {@code placeInventory}, troca cada
-     * slot por um igual na posição nova, com o mesmo índice.
+     * Cliente: põe os slots na tela. A coluna dos upgrades desce a partir de ({@code upgradeX}, {@code upgradeY}), um
+     * slot a cada {@link #UPGRADE_STEP}; a grade e o resultado que a tela não mostra recebem {@link #HIDDEN}. Como o
+     * {@code placeInventory}, troca cada slot por um igual na posição nova, com o mesmo índice.
      */
     public void place(int upgradeX, int upgradeY, int gridX, int gridY, int resultX, int resultY) {
         for (int i = 0; i < ChestUpgrades.SLOTS; i++) {
-            move(UPGRADE_FIRST + i, upgradeX, upgradeY == HIDDEN ? HIDDEN : upgradeY + i * 18);
+            move(UPGRADE_FIRST + i, upgradeX, upgradeY == HIDDEN ? HIDDEN : upgradeY + i * UPGRADE_STEP);
         }
         for (int i = 0; i < ChestUpgrades.GRID_SIZE; i++) {
             move(GRID_FIRST + i, gridX == HIDDEN ? HIDDEN : gridX + (i % ChestCraftGrid.SIZE) * 18,

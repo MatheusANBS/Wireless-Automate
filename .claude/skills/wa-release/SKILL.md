@@ -30,7 +30,7 @@ Se a release e os dois changelogs da versão atual já existem e o que mudou des
    - blocos em negrito por tema ("**Ars Nouveau Source** (optional, needs …)"), bullets curtos com números reais (vazões e capacidades da config padrão);
    - "**Other changes**";
    - por fim, "**Compatibility note:**" (protocolo, mundos antigos, NeoForge mínimo, mods opcionais).
-   Use `docs/curseforge/changelog-1.1.0.md` como modelo.
+   Use o changelog separado da versão anterior como modelo e, depois de escrever o novo, tire o anterior com `git rm` (o unificado e as releases guardam todos; ver `wa-higiene`).
 3. **Changelog unificado:** `docs/curseforge/changelog-curseforge-<versão>.md`. Renomeie o da versão anterior com `git mv changelog-curseforge-<anterior>.md changelog-curseforge-<nova>.md` e acrescente no topo `## <versão>` com o mesmo texto do separado. Fica um arquivo só, com todas as versões, a mais nova em cima.
 4. **`docs/curseforge/descricao.md`, `README.md` e `README.en.md` (a versão em inglês, sempre igual à portuguesa):** o que a versão acrescenta (tabelas de tiers e capacidades, linha de compatibilidade). Confira cada número no código (`ResourceType`, `StorageKind`, `RouterTier`). Não invente.
 5. **`docs/progresso.md`:** estado, próximo passo e linha no histórico.
@@ -61,6 +61,8 @@ Confira com `gh release view vX.Y.Z` (o jar anexado) e veja se o CI do commit pa
 
 Depois do merge, ofereça apagar os ramos da etapa (local e remoto) e as worktrees de agentes. Antes de apagar, confira com `git log main..<ramo>` e `git cherry -v main <ramo>` que nada fica de fora. Apague só com o ok.
 
+Por fim, rode a varredura da `wa-higiene` (`python -I .claude/skills/wa-higiene/scripts/varrer.py`) e ofereça tirar os planos e mockups da feature que acabou de sair.
+
 ## O que o dono faz
 
-Subir o jar no CurseForge e colar o changelog. Entregue os caminhos: o jar em `build/libs/` e o texto em `changelog-<versão>.md`. Se a página do projeto precisar de imagens novas, use `wa-curseforge-imagens`.
+Subir o jar no CurseForge e no Modrinth (https://modrinth.com/mod/wireless-automate/) e colar o changelog nos dois. Entregue os caminhos: o jar em `build/libs/` e o texto em `changelog-<versão>.md`. Se a página do projeto precisar de imagens novas, use `wa-curseforge-imagens`.

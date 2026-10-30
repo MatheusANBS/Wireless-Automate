@@ -2055,7 +2055,8 @@ def folha(itens: dict[str, Sprite], blocos_sprites: dict[str, Sprite] | None,
 
     titulo("Itens (quadros da animação a 6×, depois o item a 1× e 2×)")
     nomes_itens = ["configurator", "linker", "network_tablet", "filter_card"] + \
-                  [f"tier_core_{t}" for t in TIERS_CARTAO] + ["chunk_loader_upgrade", "range_upgrade", "crafting_upgrade", "compacting_upgrade", "guide",
+                  [f"tier_core_{t}" for t in TIERS_CARTAO] + ["chunk_loader_upgrade", "range_upgrade",
+                                                "crafting_upgrade", "compacting_upgrade", "guide",
                                                 "signal_crystal", "cut_signal_crystal", "signal_crystal_dull",
                                                 "cut_signal_crystal_dull", "signal_crystal_cracked",
                                                 "cut_signal_crystal_cracked", "resonance_dust"] + \

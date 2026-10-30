@@ -19,7 +19,7 @@ public class ChestUpgradeItem extends Item {
         private final String tooltipKey;
 
         Kind(String id) {
-            this.tooltipKey = "tooltip.wirelessautomate." + id;
+            this.tooltipKey = "item.wirelessautomate." + id + ".tooltip";
         }
 
         public String tooltipKey() {

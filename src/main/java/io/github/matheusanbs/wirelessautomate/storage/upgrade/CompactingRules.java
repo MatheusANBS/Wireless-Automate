@@ -24,10 +24,10 @@ public record CompactingRules(CompactingMode mode, Set<ResourceLocation> targets
     public static final CompactingRules DEFAULT = new CompactingRules(CompactingMode.OFF, Set.of());
 
     public static final Codec<CompactingRules> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            CompactingMode.CODEC.fieldOf("mode").forGetter(CompactingRules::mode),
-            ResourceLocation.CODEC.listOf().optionalFieldOf("targets", List.of())
-                    .forGetter(rules -> rules.targets.stream().sorted().toList())
-    ).apply(instance, (mode, targets) -> new CompactingRules(mode, Set.copyOf(targets))));
+            CompactingMode.CODEC.optionalFieldOf("mode", CompactingMode.OFF).forGetter(CompactingRules::mode),
+            Codec.STRING.listOf().optionalFieldOf("targets", List.of())
+                    .forGetter(rules -> rules.targets.stream().map(ResourceLocation::toString).sorted().toList())
+    ).apply(instance, (mode, targets) -> new CompactingRules(mode, parseTargets(targets))));
 
     public static final StreamCodec<ByteBuf, CompactingRules> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.idMapper(index -> CompactingMode.ALL[index], CompactingMode::ordinal),
@@ -36,6 +36,18 @@ public record CompactingRules(CompactingMode mode, Set<ResourceLocation> targets
                     .map(Set::copyOf, HashSet::new),
             CompactingRules::targets,
             CompactingRules::new);
+
+    /** Os ids válidos; os de sintaxe inválida somem, para o componente nunca falhar ao ler. */
+    private static Set<ResourceLocation> parseTargets(List<String> names) {
+        Set<ResourceLocation> parsed = new HashSet<>();
+        for (String name : names) {
+            ResourceLocation id = ResourceLocation.tryParse(name);
+            if (id != null) {
+                parsed.add(id);
+            }
+        }
+        return Set.copyOf(parsed);
+    }
 
     public CompactingRules withMode(CompactingMode newMode) {
         return new CompactingRules(newMode, targets);

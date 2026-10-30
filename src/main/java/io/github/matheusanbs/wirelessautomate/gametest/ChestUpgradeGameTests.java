@@ -17,13 +17,17 @@ import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingMode;
 import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingRules;
 import io.netty.buffer.Unpooled;
 import java.util.List;
+import java.util.Set;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.BlockItem;
@@ -55,6 +59,7 @@ public final class ChestUpgradeGameTests {
         ItemStack compacting = new ItemStack(ModItems.COMPACTING_UPGRADE.get());
         helper.assertTrue(upgrades.accepts(0, crafting), "o slot 0 recusou a Mesa");
         upgrades.setUpgrade(0, crafting);
+        helper.assertTrue(upgrades.accepts(0, crafting), "o slot 0 recusou recolocar a Mesa que já tem");
         helper.assertFalse(upgrades.accepts(1, crafting), "o slot 1 aceitou uma segunda Mesa");
         helper.assertTrue(upgrades.accepts(1, compacting), "o slot 1 recusou a Compactação");
         helper.assertFalse(upgrades.accepts(0, new ItemStack(Items.STONE)), "o slot aceitou pedra");
@@ -161,9 +166,30 @@ public final class ChestUpgradeGameTests {
         helper.assertFalse(rules.hasOwn(chain), "o id sumido virou alvo");
         helper.assertValueEqual(rules.targetLevel(chain), chain.forms().length - 1, "o id sumido mudou o alvo");
 
-        ItemStack upgrade = new ItemStack(ModItems.COMPACTING_UPGRADE.get());
-        upgrade.set(ModDataComponents.COMPACTING_RULES.get(), rules);
-        helper.assertValueEqual(upgrade.get(ModDataComponents.COMPACTING_RULES.get()), rules, "o componente não guardou");
+        var ops = helper.getLevel().registryAccess().createSerializationContext(NbtOps.INSTANCE);
+        CompoundTag saved = new CompoundTag();
+        saved.putString("id", "wirelessautomate:compacting_upgrade");
+        saved.putInt("count", 1);
+        CompoundTag stored = new CompoundTag();
+        stored.putString("mode", "compress");
+        ListTag targets = new ListTag();
+        for (String id : new String[] {"modsumido:bloco", "ModSumido:Bloco", "minecraft:iron_ingot"}) {
+            targets.add(StringTag.valueOf(id));
+        }
+        stored.put("targets", targets);
+        CompoundTag components = new CompoundTag();
+        components.put("wirelessautomate:compacting_rules", stored);
+        saved.put("components", components);
+
+        ItemStack upgrade = ItemStack.CODEC.parse(ops, saved).getOrThrow();
+        helper.assertTrue(upgrade.is(ModItems.COMPACTING_UPGRADE.get()), "o item sumiu");
+        CompactingRules read = upgrade.get(ModDataComponents.COMPACTING_RULES.get());
+        helper.assertTrue(read != null, "o componente sumiu");
+        helper.assertValueEqual(read.mode(), CompactingMode.COMPRESS, "o modo não voltou");
+        helper.assertValueEqual(read.targets(), Set.of(ResourceLocation.parse("modsumido:bloco"),
+                ResourceLocation.parse("minecraft:iron_ingot")), "os alvos ruins não sumiram");
+        ItemStack again = ItemStack.CODEC.parse(ops, ItemStack.CODEC.encodeStart(ops, upgrade).getOrThrow()).getOrThrow();
+        helper.assertTrue(ItemStack.matches(upgrade, again), "o item não fez a viagem de ida e volta");
         helper.succeed();
     }
 

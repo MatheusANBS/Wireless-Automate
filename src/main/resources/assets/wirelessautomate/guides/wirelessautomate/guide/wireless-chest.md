@@ -127,6 +127,7 @@ decompressed down to it. With the target on ingot, nuggets become ingots and blo
 - Decompressing converts **only what fits** in the chest; the rest stays in the high form, nothing is lost.
 - The router only sees the stored form: to pull ingots, leave the chain's target on ingot.
 - The **Stock** limit of a chain item counts the whole chain (11 blocks and 1 ingot are worth 100 ingots).
+- The same material from different mods (two mods' raw silver) is a single row, with the mod name under it: click it to choose which mod's items Compacting gathers everything into.
 - With Compacting, the crafting grid steps down one form when the exact item is missing.
 
 ## Break and carry

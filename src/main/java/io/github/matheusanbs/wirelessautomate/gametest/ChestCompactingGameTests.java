@@ -463,20 +463,20 @@ public final class ChestCompactingGameTests {
 
     // ------------------------------------------------------------------ o estado e as regras na rede
 
-    private static ServerPlayer playerAt(GameTestHelper helper, StorageChestBlockEntity chest) {
+    static ServerPlayer playerAt(GameTestHelper helper, StorageChestBlockEntity chest) {
         ServerPlayer player = TestPlayers.inLevel(helper);
         player.moveTo(Vec3.atCenterOf(chest.getBlockPos().above()));
         player.getInventory().clearContent();
         return player;
     }
 
-    private static StorageListMenu<ItemStack> open(ServerPlayer player, StorageChestBlockEntity chest, int containerId) {
+    static StorageListMenu<ItemStack> open(ServerPlayer player, StorageChestBlockEntity chest, int containerId) {
         StorageListMenu<ItemStack> menu = new StorageListMenu<>(containerId, player.getInventory(), chest);
         player.containerMenu = menu;
         return menu;
     }
 
-    private static CompactingRules rulesOf(StorageChestBlockEntity chest) {
+    static CompactingRules rulesOf(StorageChestBlockEntity chest) {
         return chest.upgrades().upgrade(0).getOrDefault(ModDataComponents.COMPACTING_RULES.get(), CompactingRules.DEFAULT);
     }
 

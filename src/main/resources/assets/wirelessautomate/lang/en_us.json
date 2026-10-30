@@ -928,6 +928,7 @@
   "gui.wirelessautomate.upgrade.compacting.tag.global.tooltip": "Follows the global mode",
   "gui.wirelessautomate.upgrade.compacting.tag.own.tooltip": "Click: follow the global mode again",
   "gui.wirelessautomate.upgrade.compacting.target.hint": "Scroll or ‹ › change the form; click shows them all",
+  "gui.wirelessautomate.upgrade.compacting.variant": "Variant: %s (click to switch)",
   "gui.wirelessautomate.router.upgrade.tooltip": "Upgrade slot",
   "gui.wirelessautomate.router.upgrade.tooltip.effect": "Chunk Loading Upgrade: keeps the router's chunk and the machine's chunk loaded",
   "gui.wirelessautomate.router.upgrade.tooltip.add": "Place the upgrade here or Shift + click it in the inventory",

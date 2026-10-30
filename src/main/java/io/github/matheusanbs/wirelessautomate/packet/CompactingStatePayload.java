@@ -16,7 +16,9 @@ import net.minecraft.world.item.Item;
  * ou as cadeias presentes mudam. Uma linha por cadeia com algum item no Baú, na ordem do índice: as formas (da menor
  * para a maior, ids da registry), o nível de destino ({@link Row#STOPPED} é parada, sem conversão) e se o alvo é
  * próprio da cadeia ou vem do modo global. As formas por linha vão até {@link CompactingChain#MAX_FORMS}, o mesmo teto
- * do índice: o encode nunca passa dele, e o decode recusa o pacote forjado que passa.
+ * do índice: o encode nunca passa dele, e o decode recusa o pacote forjado que passa. Um grupo de variantes (o mesmo
+ * material de mods diferentes) é uma linha só, a da preferida, com as bases das variantes (até
+ * {@link Row#MAX_VARIANTS}, a preferida sempre entre elas) e qual delas é a preferida.
  */
 public record CompactingStatePayload(int containerId, CompactingMode mode, List<Row> rows) implements CustomPacketPayload {
     /**
@@ -26,15 +28,28 @@ public record CompactingStatePayload(int containerId, CompactingMode mode, List<
     public static final int MAX_ROWS = 512;
     public static final Type<CompactingStatePayload> TYPE = new Type<>(WirelessAutomate.id("compacting_state"));
 
-    /** @param target o nível de destino na cadeia; {@link #STOPPED} é parada */
-    public record Row(List<Item> forms, int target, boolean own) {
+    /**
+     * @param target o nível de destino na cadeia; {@link #STOPPED} é parada
+     * @param variants as formas base das variantes do grupo, na ordem do grupo; vazia na cadeia sem variante
+     * @param chosen a posição da preferida em {@code variants}
+     */
+    public record Row(List<Item> forms, int target, boolean own, List<Item> variants, int chosen) {
         public static final int STOPPED = -1;
+        /** O teto de variantes por linha: o botão do mod passa por elas uma a uma, e mais que isso não cabe no pacote. */
+        public static final int MAX_VARIANTS = 8;
+
+        /** A linha de uma cadeia sem variante. */
+        public Row(List<Item> forms, int target, boolean own) {
+            this(forms, target, own, List.of(), 0);
+        }
 
         /** O alvo vai somado a 1: o −1 da parada seria 5 bytes num VAR_INT. */
         static final StreamCodec<RegistryFriendlyByteBuf, Row> CODEC = StreamCodec.composite(
                 ByteBufCodecs.registry(Registries.ITEM).apply(ByteBufCodecs.list(CompactingChain.MAX_FORMS)), Row::forms,
                 ByteBufCodecs.VAR_INT.map(shifted -> shifted - 1, level -> level + 1), Row::target,
                 ByteBufCodecs.BOOL, Row::own,
+                ByteBufCodecs.registry(Registries.ITEM).apply(ByteBufCodecs.list(MAX_VARIANTS)), Row::variants,
+                ByteBufCodecs.VAR_INT, Row::chosen,
                 Row::new);
     }
 

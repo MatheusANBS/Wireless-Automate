@@ -6,18 +6,21 @@ import io.github.matheusanbs.wirelessautomate.packet.CompactingStatePayload;
 import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingMode;
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.fml.ModList;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Uma linha do painel da Compactação: uma cadeia com os nomes já medidos, o alvo mostrado e o desenho da linha (o
- * ícone da base, o nome da cadeia, ‹ a forma alvo ›, o nome da forma e a etiqueta Global ou Própria). As posições são
- * relativas ao canto interno do painel.
+ * ícone da base, o nome da cadeia, ‹ a forma alvo ›, o nome da forma e a etiqueta Global ou Própria). Com variantes
+ * (o mesmo material de mods diferentes), o nome sobe e embaixo dele fica o botão com o nome curto do mod da preferida,
+ * que passa para a próxima variante. As posições são relativas ao canto interno do painel.
  */
 final class CompactingRow {
     static final int HEIGHT = 20;
@@ -33,6 +36,9 @@ final class CompactingRow {
     static final int TAG_W = 42;
     /** Onde a linha acaba e começa a barra de rolagem. */
     static final int END_X = TAG_X + TAG_W + 2;
+    /** O botão do mod, embaixo do nome, nas linhas com variantes. */
+    static final int MOD_Y = 8;
+    static final int MOD_H = 11;
 
     /** Os textos iguais em todas as linhas (a parada e as etiquetas), medidos no {@code layout} do painel. */
     record Labels(GuiText.Fitted stopped, GuiText.Fitted global, int globalX, GuiText.Fitted own, int ownX) {
@@ -49,11 +55,17 @@ final class CompactingRow {
     final @Nullable String[] corners;
     private final GuiText.Fitted[] formNames;
     private final GuiText.Fitted name;
+    /** As bases das variantes; com menos de duas, a linha não tem o botão do mod. */
+    final Item[] variants;
+    private final GuiText.Fitted[] modLabels;
+    private final int[] modWidths;
+    private final Component[] modTooltips;
     int target;
     boolean own;
+    int chosen;
 
     private CompactingRow(Item[] forms, ItemStack[] stacks, @Nullable String[] corners, GuiText.Fitted[] formNames,
-            GuiText.Fitted name, int target, boolean own) {
+            GuiText.Fitted name, int target, boolean own, Variants variants) {
         this.forms = forms;
         this.stacks = stacks;
         this.corners = corners;
@@ -61,6 +73,37 @@ final class CompactingRow {
         this.name = name;
         this.target = target;
         this.own = own;
+        this.variants = variants.bases;
+        this.modLabels = variants.labels;
+        this.modWidths = variants.widths;
+        this.modTooltips = variants.tooltips;
+        this.chosen = variants.chosen;
+    }
+
+    /** O botão do mod de cada variante, medido quando o estado chega. */
+    private record Variants(Item[] bases, GuiText.Fitted[] labels, int[] widths, Component[] tooltips, int chosen) {
+        static final Variants NONE = new Variants(new Item[0], new GuiText.Fitted[0], new int[0], new Component[0], 0);
+
+        static Variants of(CompactingStatePayload.Row row, Font font) {
+            int count = row.variants().size();
+            if (count < 2) {
+                return NONE;
+            }
+            Item[] bases = row.variants().toArray(new Item[0]);
+            GuiText.Fitted[] labels = new GuiText.Fitted[count];
+            int[] widths = new int[count];
+            Component[] tooltips = new Component[count];
+            for (int i = 0; i < count; i++) {
+                String namespace = BuiltInRegistries.ITEM.getKey(bases[i]).getNamespace();
+                String mod = ModList.get().getModContainerById(namespace)
+                        .map(container -> container.getModInfo().getDisplayName()).orElse(namespace);
+                labels[i] = GuiText.fit(font, Component.literal(ChainNames.modShort(mod, font::width, NAME_W - 8)),
+                        NAME_W - 8);
+                widths[i] = font.width(labels[i].shown()) + 8;
+                tooltips[i] = Component.translatable("gui.wirelessautomate.upgrade.compacting.variant", mod);
+            }
+            return new Variants(bases, labels, widths, tooltips, Math.max(0, Math.min(row.chosen(), count - 1)));
+        }
     }
 
     /**
@@ -98,7 +141,23 @@ final class CompactingRow {
             formNames[i] = GuiText.fit(font, label, FORM_W);
         }
         GuiText.Fitted name = GuiText.fit(font, Component.literal(ChainNames.chainName(names)), NAME_W);
-        return new CompactingRow(forms, stacks, corners, formNames, name, Math.min(row.target(), count - 1), row.own());
+        return new CompactingRow(forms, stacks, corners, formNames, name, Math.min(row.target(), count - 1), row.own(),
+                Variants.of(row, font));
+    }
+
+    boolean hasVariants() {
+        return variants.length > 1;
+    }
+
+    /** O mouse está no botão do mod da linha que começa em {@code ry}. */
+    boolean onVariant(double mouseX, double mouseY, int x, int ry) {
+        return hasVariants() && within(mouseX, x + NAME_X, modWidths[chosen]) && within(mouseY, ry + MOD_Y, MOD_H);
+    }
+
+    /** Passa o botão para a próxima variante e devolve a base dela, para o pedido ao servidor. */
+    Item nextVariant() {
+        chosen = (chosen + 1) % variants.length;
+        return variants[chosen];
     }
 
     /** O alvo que o modo global dá a esta cadeia. */
@@ -131,7 +190,15 @@ final class CompactingRow {
             g.fill(x + 2, ry, x + END_X - 1, ry + HEIGHT, GuiPaint.ROW_HOVER);
         }
         g.renderItem(stacks[0], x + PAD, ry + 2);
-        GuiText.draw(g, font, name, x + NAME_X, ry + 6, GuiPaint.FG);
+        if (hasVariants()) {
+            GuiText.draw(g, font, name, x + NAME_X, ry, GuiPaint.FG);
+            boolean modHovered = onVariant(mouseX, mouseY, x, ry);
+            GuiPaint.pill(g, x + NAME_X, ry + MOD_Y, modWidths[chosen], MOD_H, GuiPaint.PANEL,
+                    modHovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.ACCENT);
+            GuiText.draw(g, font, modLabels[chosen], x + NAME_X + 4, ry + MOD_Y + 2, GuiPaint.ACCENT);
+        } else {
+            GuiText.draw(g, font, name, x + NAME_X, ry + 6, GuiPaint.FG);
+        }
         stepButton(g, x + PREV_X, ry + 1, target > 0, false, on(mouseX, mouseY, x, ry, PREV_X, 10));
         stepButton(g, x + NEXT_X, ry + 1, target < forms.length - 1, true, on(mouseX, mouseY, x, ry, NEXT_X, 10));
         GuiPaint.slot(g, x + SLOT_X, ry + 1);
@@ -149,6 +216,27 @@ final class CompactingRow {
         GuiPaint.pill(g, x + TAG_X, ry + 4, TAG_W, 12, GuiPaint.PANEL, tagHovered ? GuiPaint.BUTTON_HOVER_BORDER : tagColor);
         GuiText.draw(g, font, own ? labels.own() : labels.global(), x + TAG_X + (own ? labels.ownX() : labels.globalX()),
                 ry + 6, tagColor);
+    }
+
+    /**
+     * A dica sob o mouse na linha que começa em {@code ry} (forma alvo, ícone da base, botão do mod, etiqueta), ou
+     * {@code null}.
+     */
+    @Nullable List<Component> tooltip(double mouseX, double mouseY, int x, int ry) {
+        if (on(mouseX, mouseY, x, ry, SLOT_X, 18)) {
+            Component shown = target >= 0 ? stacks[target].getHoverName() : UpgradePanels.tr("compacting.stopped");
+            return List.of(shown, UpgradePanels.tr("compacting.target.hint").withStyle(ChatFormatting.GRAY));
+        }
+        if (on(mouseX, mouseY, x, ry, PAD, 16)) {
+            return List.of(stacks[0].getHoverName());
+        }
+        if (onVariant(mouseX, mouseY, x, ry)) {
+            return List.of(modTooltips[chosen]);
+        }
+        if (on(mouseX, mouseY, x, ry, TAG_X, TAG_W)) {
+            return List.of(UpgradePanels.tr(own ? "compacting.tag.own.tooltip" : "compacting.tag.global.tooltip"));
+        }
+        return null;
     }
 
     /** ‹ ou ›: caixa de 10 × 18 com a seta; apagada quando não há forma para aquele lado. */

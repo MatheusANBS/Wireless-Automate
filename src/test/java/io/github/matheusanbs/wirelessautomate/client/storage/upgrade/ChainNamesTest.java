@@ -71,4 +71,29 @@ class ChainNamesTest {
         assertFalse(ChainNames.ladder(new String[] {null, "1x", null}));
         assertFalse(ChainNames.ladder(new String[] {null}));
     }
+
+    /** Cada caractere mede 6, como a fonte do jogo em média. */
+    private static int sixEach(String text) {
+        return text.length() * 6;
+    }
+
+    @Test
+    void nomeDoModQueCabeFicaInteiro() {
+        assertEquals("Occultism", ChainNames.modShort("Occultism", ChainNamesTest::sixEach, 58));
+    }
+
+    @Test
+    void nomeDoModLongoViraAsIniciais() {
+        assertEquals("MI", ChainNames.modShort("Modern Industrialization", ChainNamesTest::sixEach, 58));
+    }
+
+    @Test
+    void palavraUnicaLongaPerdeOFimSemReticencias() {
+        assertEquals("Supercalif", ChainNames.modShort("Supercalifragilistic", ChainNamesTest::sixEach, 60));
+    }
+
+    @Test
+    void iniciaisQueNaoCabemCaemNoComecoDoNome() {
+        assertEquals("Ab", ChainNames.modShort("Ab Cd Ef", ChainNamesTest::sixEach, 12));
+    }
 }

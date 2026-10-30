@@ -1836,6 +1836,7 @@ descompactado até ele. Com o alvo em lingote, pepitas viram lingotes e blocos v
 - Descompactar converte **só o que cabe** no Baú; o resto fica na forma alta, sem perder nada.
 - O roteador vê só a forma guardada: para tirar lingotes, deixe o alvo da cadeia em lingote.
 - O limite de **Estoque** de um item da cadeia conta a cadeia inteira (11 blocos e 1 lingote valem 100 lingotes).
+- O mesmo material de mods diferentes (a prata crua de dois mods) é uma linha só, com o nome do mod embaixo: clique nele para escolher em qual mod a Compactação junta tudo.
 - Com a Compactação, a Mesa desce uma forma quando falta o item exato.
 
 ## Quebrar e levar
@@ -1953,6 +1954,7 @@ decompressed down to it. With the target on ingot, nuggets become ingots and blo
 - Decompressing converts **only what fits** in the chest; the rest stays in the high form, nothing is lost.
 - The router only sees the stored form: to pull ingots, leave the chain's target on ingot.
 - The **Stock** limit of a chain item counts the whole chain (11 blocks and 1 ingot are worth 100 ingots).
+- The same material from different mods (two mods' raw silver) is a single row, with the mod name under it: click it to choose which mod's items Compacting gathers everything into.
 - With Compacting, the crafting grid steps down one form when the exact item is missing.
 
 ## Break and carry

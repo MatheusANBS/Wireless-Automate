@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.storage;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.StockLimit;
 import io.github.matheusanbs.wirelessautomate.item.ChestUpgradeItem;
+import io.github.matheusanbs.wirelessautomate.menu.StorageListMenu;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.storage.upgrade.ChestCompacting;
@@ -104,7 +105,9 @@ public class StorageChestBlockEntity extends KeyedStorageBlockEntity<ItemStack> 
                 continue;
             }
             if (player != null) {
-                if (!player.getInventory().add(stack)) {
+                // Slot a slot, sem o Inventory.add: no criativo ele apaga o que não cabe.
+                StorageListMenu.addToInventory(player.getInventory(), stack);
+                if (!stack.isEmpty()) {
                     player.drop(stack, false);
                 }
             } else if (level != null) {

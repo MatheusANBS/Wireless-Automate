@@ -18,6 +18,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -190,6 +191,17 @@ public final class ChestCraftingGameTests {
         helper.assertTrue(menuB.getSlot(RESULT).getItem().is(Items.STICK), "B vê o resultado");
         int planks = 64 + 2;
 
+        // Receita presente, mas a grade mudou por fora sem aviso: B não recebe nada, e o resultado é recalculado.
+        // Terra no lugar da tábua (uma tábua sozinha seria o botão de madeira, outra receita).
+        ItemStack aside = chest.upgrades().grid().set(0, new ItemStack(Items.DIRT));
+        helper.assertTrue(menuB.getSlot(RESULT).getItem().is(Items.STICK), "sem aviso, o resultado velho continua");
+        menuB.clicked(RESULT, 0, ClickType.PICKUP, b);
+        helper.assertTrue(menuB.getCarried().isEmpty(), "o resultado velho saiu com a grade mudada");
+        helper.assertTrue(menuB.getSlot(RESULT).getItem().isEmpty(), "a recusa recalculou o resultado");
+        chest.upgrades().grid().set(0, aside);
+        chest.upgrades().changed();
+        helper.assertTrue(menuB.getSlot(RESULT).getItem().is(Items.STICK), "a grade de volta");
+
         menuA.clicked(GRID, 0, ClickType.QUICK_MOVE, a);
         menuA.clicked(GRID + 3, 0, ClickType.QUICK_MOVE, a);
         helper.assertTrue(chest.upgrades().gridEmpty(), "A tirou as tábuas");
@@ -294,6 +306,98 @@ public final class ChestCraftingGameTests {
         helper.assertValueEqual(stored(chest, Items.IRON_BLOCK), 1L, "1 bloco desceu");
         helper.assertValueEqual(stored(chest, Items.IRON_INGOT), 6L, "a sobra dos lingotes");
         helper.succeed();
+    }
+
+    /**
+     * Shift + clique com restos: o bloco de mel (4 × 2 garrafas de mel) devolve 4 garrafas vazias ao inventário, que
+     * tomam o único slot livre conferido para o bloco. O bloco não some: cai no chão, como no {@code CraftingMenu}.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void shiftComRestosNaoPerdeOResultado(GameTestHelper helper) {
+        StorageChestBlockEntity chest = chest(helper);
+        putCrafting(chest);
+        ServerPlayer player = TestPlayers.survivalMenuOpener(helper);
+        player.moveTo(Vec3.atCenterOf(chest.getBlockPos().above()));
+        player.getInventory().clearContent();
+        for (int i = 1; i < 36; i++) {
+            player.getInventory().setItem(i, new ItemStack(Items.DIRT, 64));
+        }
+        StorageListMenu<ItemStack> menu = open(player, chest, 91);
+        for (int slot : new int[] {0, 1, 3, 4}) {
+            menu.getSlot(GRID + slot).set(new ItemStack(Items.HONEY_BOTTLE, 2));
+        }
+        helper.assertTrue(menu.getSlot(RESULT).getItem().is(Items.HONEY_BLOCK), "o resultado é o bloco de mel");
+
+        menu.clicked(RESULT, 0, ClickType.QUICK_MOVE, player);
+
+        int bottlesUsed = 8 - inGrid(menu, Items.HONEY_BOTTLE);
+        int blocks = player.getInventory().countItem(Items.HONEY_BLOCK) + onGround(helper, player, Items.HONEY_BLOCK);
+        helper.assertValueEqual(blocks * 4, bottlesUsed, "blocos feitos (inventário + chão) contra garrafas usadas");
+        helper.assertTrue(blocks >= 1, "nenhum craft");
+        helper.assertValueEqual(player.getInventory().countItem(Items.GLASS_BOTTLE), bottlesUsed, "as garrafas vazias");
+        helper.succeed();
+    }
+
+    /**
+     * Tecla numérica (SWAP) e Ctrl + Q (THROW) no resultado consomem a grade como o clique; com a grade mudada por
+     * fora, sem aviso, não entregam nada.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void swapEThrowNoResultadoConsomemAGrade(GameTestHelper helper) {
+        StorageChestBlockEntity chest = chest(helper);
+        putCrafting(chest);
+        ServerPlayer player = player(helper, chest);
+        StorageListMenu<ItemStack> menu = open(player, chest, 91);
+        stickRecipe(menu);
+
+        menu.clicked(RESULT, 0, ClickType.SWAP, player);
+        helper.assertValueEqual(player.getInventory().getItem(0).getCount(), 4, "SWAP: 4 gravetos na barra");
+        helper.assertValueEqual(inGrid(menu, Items.OAK_PLANKS), 0, "SWAP consumiu a grade (o Baú vazio não repõe)");
+
+        stickRecipe(menu);
+        menu.clicked(RESULT, 1, ClickType.THROW, player);
+        helper.assertValueEqual(onGround(helper, player, Items.STICK), 4, "THROW: 4 gravetos no chão");
+        helper.assertValueEqual(inGrid(menu, Items.OAK_PLANKS), 0, "THROW consumiu a grade");
+
+        stickRecipe(menu);
+        chest.upgrades().grid().set(3, new ItemStack(Items.DIRT));
+        menu.clicked(RESULT, 1, ClickType.SWAP, player);
+        menu.clicked(RESULT, 1, ClickType.THROW, player);
+        helper.assertValueEqual(player.getInventory().getItem(1).getCount(), 0, "SWAP com a grade mudada");
+        helper.assertValueEqual(onGround(helper, player, Items.STICK), 4, "THROW com a grade mudada");
+        helper.assertValueEqual(inGrid(menu, Items.OAK_PLANKS), 1, "a tábua que sobrou fica");
+        helper.succeed();
+    }
+
+    /** Tirar a Mesa com o Baú cheio: a grade vai para o inventário de quem tirou, nada cai. */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void tirarAMesaComBauCheioVaiProInventario(GameTestHelper helper) {
+        StorageChestBlockEntity chest = chest(helper);
+        chest.storage().insert(new ItemStack(Items.DIRT), Long.MAX_VALUE / 4, false);
+        putCrafting(chest);
+        ServerPlayer player = player(helper, chest);
+        StorageListMenu<ItemStack> menu = open(player, chest, 91);
+        for (int i = 0; i < 9; i++) {
+            menu.getSlot(GRID + i).set(new ItemStack(Items.COBBLESTONE, 5));
+        }
+        helper.assertValueEqual(chest.storage().insert(new ItemStack(Items.COBBLESTONE), 1, true), 0L, "o Baú cheio");
+
+        menu.clicked(ChestUpgradeSlots.UPGRADE_FIRST, 0, ClickType.PICKUP, player);
+
+        helper.assertTrue(chest.upgrades().gridEmpty(), "a grade vazia");
+        helper.assertValueEqual(player.getInventory().countItem(Items.COBBLESTONE), 45, "a grade no inventário");
+        helper.assertValueEqual(onGround(helper, player, Items.COBBLESTONE), 0, "nada caiu");
+        helper.succeed();
+    }
+
+    /** Itens do tipo no chão perto do jogador. */
+    private static int onGround(GameTestHelper helper, ServerPlayer player, Item item) {
+        int total = 0;
+        for (ItemEntity entity : helper.getLevel().getEntitiesOfClass(ItemEntity.class,
+                player.getBoundingBox().inflate(4.0), e -> e.getItem().is(item))) {
+            total += entity.getItem().getCount();
+        }
+        return total;
     }
 
     /** A rodinha sobre o slot do resultado não guarda o item feito sem o craft. */

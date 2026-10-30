@@ -612,7 +612,7 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
      * {@code Inventory.add}: no criativo ele apaga o que não cabe e diz que guardou tudo, e o resto
      * sairia do Baú e sumiria.
      */
-    private static int addToInventory(Inventory inventory, ItemStack stack) {
+    public static int addToInventory(Inventory inventory, ItemStack stack) {
         int added = 0;
         while (!stack.isEmpty()) {
             int slot = inventory.getSlotWithRemainingSpace(stack);

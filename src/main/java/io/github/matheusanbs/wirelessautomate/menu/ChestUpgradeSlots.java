@@ -241,7 +241,9 @@ public final class ChestUpgradeSlots {
     /**
      * Shift + clique no resultado (servidor): repete o craft, repondo a grade a cada vez, enquanto o resultado for o
      * mesmo item e a soma não passar de uma pilha dele; para no primeiro que não couber inteiro no inventário. O
-     * {@code onTake} vem antes de mover: se ele recusar (a receita deixou de casar), a pilha zera e nada entra.
+     * {@code onTake} vem antes de mover: se ele recusar (a receita deixou de casar), a pilha zera e nada entra. Os
+     * restos da receita que o {@code onTake} põe no inventário podem tomar o lugar conferido: o que não couber cai
+     * no chão, como no {@code CraftingMenu}, e o laço para.
      */
     private void quickCraft() {
         Slot slot = menu.slots.get(RESULT);
@@ -265,6 +267,10 @@ public final class ChestUpgradeSlots {
             }
             moved += taken.getCount();
             menu.moveToInventory(taken);
+            if (!taken.isEmpty()) {
+                player.drop(taken, false);
+                return;
+            }
         }
     }
 
@@ -299,11 +305,20 @@ public final class ChestUpgradeSlots {
         if (stack.isEmpty() || chest == null) {
             return ItemStack.EMPTY;
         }
-        if (index >= GRID_FIRST) {
-            long accepted = chest.storage().insert(stack, stack.getCount(), false);
-            if (accepted > 0) {
-                slot.remove((int) accepted);
+        if (index < GRID_FIRST) {
+            // O upgrade sai pelo remove do slot, que devolve antes a grade; se ela tomou o lugar no inventário, ele cai.
+            if (fitsInInventory(stack)) {
+                ItemStack taken = slot.remove(stack.getCount());
+                menu.moveToInventory(taken);
+                if (!taken.isEmpty()) {
+                    player.drop(taken, false);
+                }
             }
+            return ItemStack.EMPTY;
+        }
+        long accepted = chest.storage().insert(stack, stack.getCount(), false);
+        if (accepted > 0) {
+            slot.remove((int) accepted);
         }
         ItemStack left = slot.getItem();
         if (!left.isEmpty() && menu.moveToInventory(left)) {
@@ -337,7 +352,11 @@ public final class ChestUpgradeSlots {
 
     // ------------------------------------------------------------------ slots e contêineres
 
-    /** Um slot de upgrade: só um upgrade do Baú, um só, e de um tipo que o outro slot não tem. */
+    /**
+     * Um slot de upgrade: só um upgrade do Baú, um só, e de um tipo que o outro slot não tem. A Mesa que sai pelas
+     * mãos do jogador devolve antes a grade com ele ({@link StorageChestBlockEntity#returnGrid}: o excesso vai para o
+     * inventário dele); sem jogador, o Baú devolve sozinho e o excesso cai em cima do bloco.
+     */
     private final class UpgradeSlot extends Slot {
         UpgradeSlot(int slot, int x, int y) {
             super(upgrades, slot, x, y);
@@ -357,6 +376,30 @@ public final class ChestUpgradeSlots {
         public int getMaxStackSize(ItemStack stack) {
             return 1;
         }
+
+        @Override
+        public ItemStack remove(int amount) {
+            if (amount > 0) {
+                beforeLeaving(ItemStack.EMPTY);
+            }
+            return super.remove(amount);
+        }
+
+        @Override
+        public void setByPlayer(ItemStack next, ItemStack old) {
+            beforeLeaving(next);
+            super.setByPlayer(next, old);
+        }
+
+        private void beforeLeaving(ItemStack next) {
+            if (chest != null && isCrafting(getItem()) && !isCrafting(next) && !chest.upgrades().gridEmpty()) {
+                chest.returnGrid(player);
+            }
+        }
+    }
+
+    private static boolean isCrafting(ItemStack stack) {
+        return stack.getItem() instanceof ChestUpgradeItem item && item.kind() == ChestUpgradeItem.Kind.CRAFTING;
     }
 
     /** Um slot da grade: aceita item só com a Mesa no slot; tirar, sempre. */

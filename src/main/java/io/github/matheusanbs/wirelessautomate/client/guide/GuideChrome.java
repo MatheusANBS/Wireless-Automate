@@ -2,6 +2,8 @@ package io.github.matheusanbs.wirelessautomate.client.guide;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import java.util.ArrayList;
+import java.util.List;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -29,6 +31,10 @@ final class GuideChrome {
     /** O "← Índice" no alto da folha esquerda, à direita da antena do canto. */
     static final int BACK_X = 44;
     static final int BACK_Y = 11;
+    /** Até onde o "← Índice" pode ir, em pixels da textura (antes do canto de latão da direita da folha). */
+    static final int BACK_END = 138;
+    /** A largura que um número do rodapé pode ter, em unidades (o meio da folha, longe das setas). */
+    static final int NUMBER_W = 100;
 
     /** O que o mouse pode apertar fora das folhas. */
     enum Hit {
@@ -47,6 +53,8 @@ final class GuideChrome {
     private FormattedCharSequence rightNum = FormattedCharSequence.EMPTY;
     private int leftNumX;
     private int rightNumX;
+    private final List<String> fixedProblems = new ArrayList<>();
+    private final List<String> problems = new ArrayList<>();
     /** A fita sob o mouse no último {@link #hit}. */
     private int hitGroup = -1;
 
@@ -60,6 +68,14 @@ final class GuideChrome {
         Component b = Component.translatable("gui.wirelessautomate.guide.back_index");
         backText = b.getVisualOrderText();
         backW = font.width(b);
+        if (BACK_X * 2 + backW > BACK_END * 2) {
+            fixedProblems.add("o \"" + b.getString() + "\" passa do alto da folha (" + backW + " unidades)");
+        }
+    }
+
+    /** O que não coube em volta das folhas no lugar atual (o e2e confere que fica vazio). */
+    List<String> problems() {
+        return problems;
     }
 
     /** Monta o que depende do lugar: as setas, os números (já medidos), o "← Índice" e a fita comprida. */
@@ -73,6 +89,13 @@ final class GuideChrome {
         // em unidades (2 por pixel): o centro de cada folha
         leftNumX = (BookScale.LEFT_X + 58) * 2 - font.width(left) / 2;
         rightNumX = (BookScale.RIGHT_X + 58) * 2 - font.width(right) / 2;
+        problems.clear();
+        problems.addAll(fixedProblems);
+        for (String n : new String[] {left, right}) {
+            if (font.width(n) > NUMBER_W) {
+                problems.add("o número \"" + n + "\" não cabe no rodapé");
+            }
+        }
     }
 
     /** O livro e as fitas, com a pose em pixels da textura a partir do canto do livro. */

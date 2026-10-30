@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.client.guide;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import io.github.matheusanbs.wirelessautomate.client.guide.layout.GuideMetrics;
+import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -23,29 +24,58 @@ final class GuideCover {
     private static final int[] BRASS_RING = ringSpans(18);
     private static final int[] LEAF_RING = ringSpans(21);
 
+    /** O topo do anel de porcelana do selo, a linha da busca e o começo da dica, em unidades. */
+    private static final int SEAL_TOP = SEAL_CY - 42;
+    private static final int SEARCH_Y = 192;
+    private static final int HINT_Y = 212;
+    private static final int HINT_STEP = 10;
+
     private final List<FormattedCharSequence> title;
     private final int[] titleX;
-    private final FormattedCharSequence subtitle;
-    private final int subtitleX;
+    private final List<FormattedCharSequence> subtitle;
+    private final int[] subtitleX;
+    private final int subtitleY;
     private final FormattedCharSequence search;
     private final List<FormattedCharSequence> hint;
     private final ItemStack seal;
+    /** O que não coube na folha de rosto (o e2e confere que fica vazio). */
+    private final List<String> problems = new ArrayList<>();
 
     GuideCover(Font font) {
         title = font.split(Component.translatable("gui.wirelessautomate.guide.cover.title"), W / TITLE_SCALE);
-        titleX = new int[title.size()];
-        for (int i = 0; i < title.size(); i++) {
-            titleX[i] = (W - font.width(title.get(i)) * TITLE_SCALE) / 2 / TITLE_SCALE;
+        titleX = centered(font, title, W / TITLE_SCALE);
+        subtitleY = 2 * TITLE_SCALE + title.size() * font.lineHeight * TITLE_SCALE + 4;
+        subtitle = font.split(Component.translatable("gui.wirelessautomate.guide.cover.subtitle"), W);
+        subtitleX = centered(font, subtitle, W);
+        if (subtitleY + subtitle.size() * HINT_STEP > SEAL_TOP) {
+            problems.add("o título e o subtítulo da folha de rosto chegam no selo (até " + (subtitleY
+                    + subtitle.size() * HINT_STEP) + ", o selo começa em " + SEAL_TOP + ")");
         }
-        Component sub = Component.translatable("gui.wirelessautomate.guide.cover.subtitle");
-        List<FormattedCharSequence> subLines = font.split(sub, W);
-        subtitle = subLines.isEmpty() ? FormattedCharSequence.EMPTY : subLines.get(0);
-        subtitleX = (W - font.width(subtitle)) / 2;
-        List<FormattedCharSequence> searchLines = font.split(
-                Component.translatable("gui.wirelessautomate.guide.cover.search"), W - 8);
+        Component searchText = Component.translatable("gui.wirelessautomate.guide.cover.search");
+        List<FormattedCharSequence> searchLines = font.split(searchText, W - 8);
         search = searchLines.isEmpty() ? FormattedCharSequence.EMPTY : searchLines.get(0);
-        hint = font.split(Component.translatable("gui.wirelessautomate.guide.cover.hint"), W);
+        if (searchLines.size() > 1) {
+            problems.add("o texto da busca \"" + searchText.getString() + "\" não cabe numa linha");
+        }
+        Component hintText = Component.translatable("gui.wirelessautomate.guide.cover.hint");
+        hint = font.split(hintText, W);
+        if (HINT_Y + hint.size() * HINT_STEP > GuideMetrics.SHEET_H) {
+            problems.add("a dica \"" + hintText.getString() + "\" passa do pé da folha de rosto (" + hint.size()
+                    + " linhas)");
+        }
         seal = GuideInk.stack("wirelessautomate:router", "");
+    }
+
+    private static int[] centered(Font font, List<FormattedCharSequence> lines, int width) {
+        int[] x = new int[lines.size()];
+        for (int i = 0; i < lines.size(); i++) {
+            x[i] = (width - font.width(lines.get(i))) / 2;
+        }
+        return x;
+    }
+
+    List<String> problems() {
+        return problems;
     }
 
     void draw(GuiGraphics g, Font font) {
@@ -58,18 +88,17 @@ final class GuideCover {
             y += font.lineHeight;
         }
         pose.popPose();
-        int below = 2 * TITLE_SCALE + title.size() * font.lineHeight * TITLE_SCALE + 4;
-        g.drawString(font, subtitle, subtitleX, below, GuideInk.FAINT, false);
+        for (int i = 0; i < subtitle.size(); i++) {
+            g.drawString(font, subtitle.get(i), subtitleX[i], subtitleY + i * HINT_STEP, GuideInk.FAINT, false);
+        }
         drawRing(g, LEAF_RING, GuideInk.LEAF);
         drawRing(g, BRASS_RING, GuideInk.BRASS);
         GuidePainter.item(g, seal, SEAL_CX - 24, SEAL_CY - 24, 48);
         GuidePainter.ornament(g, 0, 176, W);
-        g.drawString(font, search, 4, 192, GuideInk.FAINT, false);
-        g.fill(0, 203, W, 205, GuideInk.LEAF);
-        int hy = 212;
-        for (int i = 0; i < hint.size() && hy + font.lineHeight <= GuideMetrics.SHEET_H; i++) {
-            g.drawString(font, hint.get(i), 0, hy, GuideInk.FAINT, false);
-            hy += font.lineHeight + 1;
+        g.drawString(font, search, 4, SEARCH_Y, GuideInk.FAINT, false);
+        g.fill(0, SEARCH_Y + 11, W, SEARCH_Y + 13, GuideInk.LEAF);
+        for (int i = 0; i < hint.size(); i++) {
+            g.drawString(font, hint.get(i), 0, HINT_Y + i * HINT_STEP, GuideInk.FAINT, false);
         }
     }
 

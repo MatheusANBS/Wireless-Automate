@@ -2,9 +2,9 @@ package io.github.matheusanbs.wirelessautomate.client.guide;
 
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.vertex.PoseStack;
-import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.client.guide.GuideInk.Ink;
 import io.github.matheusanbs.wirelessautomate.client.guide.layout.Sheet;
+import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,7 +22,13 @@ import org.lwjgl.glfw.GLFW;
  * partir da direita; uma página corre pelas duas folhas. O lugar e o histórico ficam no {@link GuideNav}.
  */
 public final class GuideScreen extends Screen {
-    private final Map<Sheet, List<Ink>> prepared = new IdentityHashMap<>();
+    /** Uma folha preparada: a tinta e o que não coube nela. */
+    private record Prepared(List<Ink> inks, List<String> problems) {
+    }
+
+    private final Map<Sheet, Prepared> prepared = new IdentityHashMap<>();
+    /** O que não coube no par à vista (folhas, folha de rosto e o que fica em volta), montado no {@link #refresh}. */
+    private final List<String> problems = new ArrayList<>();
     private BookScale scale;
     private GuideIndex index;
     private GuideChrome chrome;
@@ -87,8 +93,14 @@ public final class GuideScreen extends Screen {
         int r = l + 1;
         int offset = page == null ? 1 : 0;
         leftIsCover = page == null && l == 0;
-        left = leftIsCover ? List.of() : ink(sheets, l - offset);
-        right = ink(sheets, r - offset);
+        problems.clear();
+        if (leftIsCover) {
+            left = List.of();
+            note("folha de rosto", cover.problems());
+        } else {
+            left = ink(sheets, l - offset, "folha " + (l + 1));
+        }
+        right = ink(sheets, r - offset, "folha " + (r + 1));
         int group;
         if (page == null) {
             int s = Math.clamp(leftIsCover ? 0 : l - offset, 0, Math.max(0, index.sheetGroup.length - 1));
@@ -99,14 +111,25 @@ public final class GuideScreen extends Screen {
         String ln = number(l, slots);
         String rn = number(r, slots);
         chrome.update(font, spread > 0, spread < spreads - 1, page != null, ln, rn, group);
+        note("em volta das folhas", chrome.problems());
     }
 
-    private List<Ink> ink(List<Sheet> sheets, int i) {
+    private List<Ink> ink(List<Sheet> sheets, int i, String where) {
         if (i < 0 || i >= sheets.size()) {
             return List.of();
         }
-        return prepared.computeIfAbsent(sheets.get(i),
-                s -> GuideInk.prepare(s, page, font, GuidePages.measure()));
+        Prepared p = prepared.computeIfAbsent(sheets.get(i), s -> {
+            List<String> found = new ArrayList<>();
+            return new Prepared(GuideInk.prepare(s, page, font, GuidePages.measure(), found), List.copyOf(found));
+        });
+        note(where, p.problems());
+        return p.inks();
+    }
+
+    private void note(String where, List<String> found) {
+        for (String f : found) {
+            problems.add((page == null ? "índice" : page) + ", " + where + ": " + f);
+        }
     }
 
     /** O número da folha: romano na abertura e no índice, arábico nas páginas; vazio se a folha não existe. */
@@ -164,6 +187,19 @@ public final class GuideScreen extends Screen {
         return spreads;
     }
 
+    /**
+     * O que não coube no par à vista: texto ou operação que sai da folha, linha descartada, rótulo que passa do
+     * espaço; cada um com a página e a folha. Vazio quando tudo cabe.
+     */
+    public List<String> problems() {
+        return problems;
+    }
+
+    /** Quantas folhas de conteúdo o par à vista tem (a folha de rosto conta), para o e2e somar as conferidas. */
+    public int visibleSheets() {
+        return (leftIsCover || !left.isEmpty() ? 1 : 0) + (right.isEmpty() ? 0 : 1);
+    }
+
     /** O centro, em coordenadas de interface, do primeiro link à vista para a página, ou {@code null}. */
     public int @Nullable [] linkCenter(String target) {
         int[] c = linkCenter(left, BookScale.LEFT_X, target);
@@ -185,7 +221,6 @@ public final class GuideScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        GuiText.beginFrame();
         super.render(g, mouseX, mouseY, partialTick);
         PoseStack pose = g.pose();
         pose.pushPose();
@@ -224,6 +259,8 @@ public final class GuideScreen extends Screen {
         Ink ink = sheetHit(tx, ty);
         if (ink instanceof GuideInk.Item it) {
             g.renderTooltip(font, it.name(), mouseX, mouseY);
+        } else if (ink instanceof GuideInk.Frame f) {
+            g.renderTooltip(font, f.full(), mouseX, mouseY);
         } else if (ink instanceof GuideInk.Link l) {
             g.renderTooltip(font, l.title(), mouseX, mouseY);
         }

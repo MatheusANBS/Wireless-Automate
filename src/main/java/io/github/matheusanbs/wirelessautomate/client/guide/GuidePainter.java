@@ -112,7 +112,7 @@ final class GuidePainter {
         g.fill(x1 - t, y0 + t, x1, y1 - t, color);
     }
 
-    /** O link ou o item sob o ponto ({@code ux}, {@code uy}) em unidades de folha, ou {@code null}. */
+    /** O link, o item ou a moldura de rótulo abreviado sob o ponto ({@code ux}, {@code uy}) em unidades de folha, ou {@code null}. */
     static @Nullable Ink hit(List<Ink> inks, double ux, double uy) {
         for (int i = 0; i < inks.size(); i++) {
             Ink ink = inks.get(i);
@@ -122,6 +122,9 @@ final class GuidePainter {
             if (ink instanceof GuideInk.Item it && !it.stack().isEmpty()
                     && inside(ux, uy, it.x(), it.y(), it.size(), it.size())) {
                 return it;
+            }
+            if (ink instanceof GuideInk.Frame f && f.full() != null && inside(ux, uy, f.x(), f.y(), f.w(), f.h())) {
+                return f;
             }
         }
         return null;

@@ -315,6 +315,7 @@ public final class GuideScreen extends Screen {
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
+        scenes.hover(mouseX, mouseY);
         PoseStack pose = g.pose();
         pose.pushPose();
         pose.translate(scale.originGuiX(), scale.originGuiY(), 0);
@@ -347,6 +348,9 @@ public final class GuideScreen extends Screen {
         GuideChrome.Hit hit = chrome.hit(tx, ty);
         if (hit == GuideChrome.Hit.RIBBON) {
             g.renderTooltip(font, chrome.groupName(chrome.hitGroup()), mouseX, mouseY);
+            return;
+        }
+        if (scenes.tooltip(g, font, mouseX, mouseY)) {
             return;
         }
         Ink ink = sheetHit(tx, ty);

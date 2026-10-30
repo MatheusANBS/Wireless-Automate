@@ -110,10 +110,10 @@ final class GuideInk {
     /**
      * A cena na moldura ({@code x, y, w, h}): os estados de bloco e as posições ({@code pos}, x, y, z em sequência), a
      * vista que o jogador gira ({@link SceneView}, viva enquanto o livro está aberto) e o enquadramento com a matriz e
-     * as luzes do quadro ({@link GuideScenes.Camera}).
+     * as luzes do quadro ({@link GuideScenes.Camera}) e as anotações ({@link SceneNotes}).
      */
-    record Scene(int x, int y, int w, int h, BlockState[] states, int[] pos, SceneView view, GuideScenes.Camera camera)
-            implements Ink {
+    record Scene(int x, int y, int w, int h, BlockState[] states, int[] pos, SceneView view, GuideScenes.Camera camera,
+            SceneNotes notes) implements Ink {
     }
 
     /** A área de clique de um link para outra página, com o título dela para a dica. */

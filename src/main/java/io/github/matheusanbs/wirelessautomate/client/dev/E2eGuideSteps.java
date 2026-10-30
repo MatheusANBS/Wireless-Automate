@@ -50,6 +50,8 @@ final class E2eGuideSteps {
 
     /** Teto de pares de folhas por página; os que passam do fim da página viram passos instantâneos. */
     private static final int MAX_SPREADS = 16;
+    /** Quadros da volta da cena para o GIF. */
+    private static final int TURN_FRAMES = 24;
     /** Folhas e pares conferidos na passada (para o resumo no fim). */
     private static int checkedSheets;
     private static int checkedSpreads;
@@ -102,6 +104,7 @@ final class E2eGuideSteps {
             navigationSteps(list);
             sceneSteps(list);
         }
+        noteSteps(list, suffix);
         searchSteps(list, suffix);
         for (String page : PAGES) {
             list.add(new Step("guia" + suffix + ": " + page, STEP_TIMEOUT_MS,
@@ -571,6 +574,58 @@ final class E2eGuideSteps {
             }
         }, () -> scene() != null && scene().isHome() && book().spread() == spread[0]
                 && "router".equals(book().page()) && book().problems().isEmpty(), E2eGuideSteps::sceneState));
+    }
+
+    /**
+     * As anotações da cena das redes: o mouse no centro projetado do bloco anotado da fornalha mostra a dica com o
+     * texto dela (no idioma da passada), com captura. Na passada em português e com a captura pedida, a cena dá uma
+     * volta em {@value #TURN_FRAMES} quadros de 15° de yaw ({@code guia-giro-000} a {@code -023}), para o GIF.
+     */
+    private static void noteSteps(List<Step> list, String suffix) {
+        String label = suffix.isEmpty() ? "Furnace · Extract" : "Fornalha · Extrai";
+        list.add(new Step("guia" + suffix + ": a cena das redes à vista", STEP_TIMEOUT_MS, () -> {
+            moveMouse(0, 0);
+            GuideClientHooks.open.accept("networks.md");
+            GuideScreen s = book();
+            for (int n = 0; s != null && n < s.spreads() && s.scenes().firstView() == null; n++) {
+                s.turnTo(n);
+            }
+            if (s == null || s.scenes().firstView() == null) {
+                throw new StepFailure("a página das redes não tem cena");
+            }
+        }, () -> scene() != null && scene().isHome() && book().scenes().noteCenter(label) != null
+                && stepTicks >= 2, E2eGuideSteps::sceneState));
+        list.add(new Step("guia" + suffix + ": a dica da anotação da fornalha", STEP_TIMEOUT_MS, () -> {
+            double[] c = book().scenes().noteCenter(label);
+            moveMouse((int) Math.round(c[0]), (int) Math.round(c[1]));
+        }, () -> {
+            if (book() == null || !label.equals(book().scenes().hoveredNote()) || stepTicks < 6) {
+                return false;
+            }
+            capture(Minecraft.getInstance(), "guia-anotacao" + suffix);
+            return true;
+        }, () -> book() == null ? "sem livro" : "anotação sob o mouse: " + book().scenes().hoveredNote()));
+        if (suffix.isEmpty() || !captureWanted("guia-giro-000")) {
+            return;
+        }
+        for (int i = 0; i < TURN_FRAMES; i++) {
+            int frame = i;
+            String file = String.format("guia-giro-%03d", i);
+            list.add(new Step("guia" + suffix + ": " + file, STEP_TIMEOUT_MS, () -> {
+                moveMouse(0, 0);
+                if (frame == 0) {
+                    scene().reset();
+                } else {
+                    scene().drag(360.0 / TURN_FRAMES / SceneView.DEGREES_PER_PIXEL, 0);
+                }
+            }, () -> {
+                if (scene() == null || stepTicks < 3) {
+                    return false;
+                }
+                capture(Minecraft.getInstance(), file);
+                return true;
+            }, E2eGuideSteps::sceneState));
+        }
     }
 
     /**

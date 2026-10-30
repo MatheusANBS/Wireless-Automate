@@ -33,6 +33,7 @@ public final class GuideScreen extends Screen {
     private GuideIndex index;
     private GuideChrome chrome;
     private GuideCover cover;
+    private GuideSearchBox search;
     private @Nullable String page;
     private int spreads = 1;
     private boolean leftIsCover;
@@ -71,6 +72,7 @@ public final class GuideScreen extends Screen {
             index = GuidePages.index();
             chrome = new GuideChrome(font, index);
             cover = new GuideCover(font);
+            search = new GuideSearchBox(font);
         }
         refresh();
     }
@@ -100,7 +102,12 @@ public final class GuideScreen extends Screen {
         } else {
             left = ink(sheets, l - offset, "folha " + (l + 1));
         }
-        right = ink(sheets, r - offset, "folha " + (r + 1));
+        if (showsResults()) {
+            right = search.inks();
+            note("resultados da busca", search.problems());
+        } else {
+            right = ink(sheets, r - offset, "folha " + (r + 1));
+        }
         int group;
         if (page == null) {
             int s = Math.clamp(leftIsCover ? 0 : l - offset, 0, Math.max(0, index.sheetGroup.length - 1));
@@ -112,6 +119,20 @@ public final class GuideScreen extends Screen {
         String rn = number(r, slots);
         chrome.update(font, spread > 0, spread < spreads - 1, page != null, ln, rn, group);
         note("em volta das folhas", chrome.problems());
+    }
+
+    /** A folha direita mostra os resultados no lugar do índice: folha de rosto à vista e a busca com texto. */
+    private boolean showsResults() {
+        return page == null && GuideNav.spread() == 0 && !search.isEmpty();
+    }
+
+    /** A folha de rosto à vista, para a busca (digitar de qualquer folha volta para ela). */
+    private void toCover() {
+        if (page != null || GuideNav.spread() != 0) {
+            GuideNav.go(null, 0);
+        }
+        search.focus();
+        refresh();
     }
 
     private List<Ink> ink(List<Sheet> sheets, int i, String where) {
@@ -173,6 +194,24 @@ public final class GuideScreen extends Screen {
     }
 
     // ---- ganchos do e2e
+
+    /** O texto da busca agora. */
+    public String searchText() {
+        return search.text();
+    }
+
+    /** As páginas dos resultados à vista, na ordem em que aparecem (vazio se a folha mostra o índice). */
+    public List<String> resultPages() {
+        List<String> out = new ArrayList<>();
+        if (showsResults()) {
+            for (Ink ink : right) {
+                if (ink instanceof GuideInk.Link l) {
+                    out.add(l.page());
+                }
+            }
+        }
+        return out;
+    }
 
     /** A página aberta ({@code null} = folha de rosto e índice). */
     public @Nullable String page() {
@@ -241,7 +280,7 @@ public final class GuideScreen extends Screen {
         pose.translate(x, BookScale.CONTENT_Y, 0);
         pose.scale(0.5f, 0.5f, 0.5f);
         if (isCover) {
-            cover.draw(g, font);
+            cover.draw(g, font, search);
         } else {
             GuidePainter.draw(g, font, inks);
         }
@@ -297,6 +336,11 @@ public final class GuideScreen extends Screen {
             }
             return true;
         }
+        if (leftIsCover && GuideCover.onField(BookScale.unit(tx, BookScale.LEFT_X),
+                BookScale.unit(ty, BookScale.CONTENT_Y))) {
+            search.focus();
+            return true;
+        }
         Ink ink = sheetHit(tx, ty);
         if (ink instanceof GuideInk.Link l) {
             go(l.page(), 0);
@@ -319,7 +363,54 @@ public final class GuideScreen extends Screen {
     }
 
     @Override
+    public boolean charTyped(char codePoint, int modifiers) {
+        if (!search.type(codePoint)) {
+            return super.charTyped(codePoint, modifiers);
+        }
+        toCover();
+        return true;
+    }
+
+    /** A busca com o livro na folha de rosto: o que Backspace, Esc, Enter e as setas fazem ali. */
+    private boolean searchKey(int keyCode) {
+        boolean onCover = page == null && GuideNav.spread() == 0;
+        if (!onCover || search.isEmpty()) {
+            return false;
+        }
+        switch (keyCode) {
+            case GLFW.GLFW_KEY_BACKSPACE -> search.backspace();
+            case GLFW.GLFW_KEY_ESCAPE -> search.clear();
+            case GLFW.GLFW_KEY_UP -> search.move(-1);
+            case GLFW.GLFW_KEY_DOWN -> search.move(1);
+            case GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> {
+                String to = search.selectedPage();
+                if (to != null) {
+                    go(to, 0);
+                }
+                return true;
+            }
+            default -> {
+                return false;
+            }
+        }
+        refresh();
+        return true;
+    }
+
+    @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (hasControlDown() && keyCode == GLFW.GLFW_KEY_F) {
+            toCover();
+            return true;
+        }
+        if (hasControlDown() && keyCode == GLFW.GLFW_KEY_V) {
+            search.paste(Minecraft.getInstance().keyboardHandler.getClipboard());
+            toCover();
+            return true;
+        }
+        if (searchKey(keyCode)) {
+            return true;
+        }
         switch (keyCode) {
             case GLFW.GLFW_KEY_LEFT -> turnTo(GuideNav.spread() - 1);
             case GLFW.GLFW_KEY_RIGHT -> turnTo(GuideNav.spread() + 1);

@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import io.github.matheusanbs.wirelessautomate.client.guide.layout.GuideMetrics;
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.Util;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -12,7 +13,7 @@ import net.minecraft.world.item.ItemStack;
 
 /**
  * A folha de rosto, à esquerda na abertura: o título, o subtítulo, o selo com o roteador desenhado grande, o
- * ornamento, o lugar da busca (só o desenho; a busca vem depois) e a dica da tecla G. Os textos são quebrados e
+ * ornamento, o campo da busca (o texto vem da {@link GuideSearchBox}) e a dica da tecla G. Os textos são quebrados e
  * medidos na criação; o quadro só desenha. Em unidades de folha (232 × 280).
  */
 final class GuideCover {
@@ -29,6 +30,8 @@ final class GuideCover {
     private static final int SEARCH_Y = 192;
     private static final int HINT_Y = 212;
     private static final int HINT_STEP = 10;
+    /** A linha da busca com foco (coral.2). */
+    private static final int FOCUS = 0xFFF0603E;
 
     private final List<FormattedCharSequence> title;
     private final int[] titleX;
@@ -78,7 +81,12 @@ final class GuideCover {
         return problems;
     }
 
-    void draw(GuiGraphics g, Font font) {
+    /** O ponto ({@code ux}, {@code uy}), em unidades de folha, está no campo da busca? */
+    static boolean onField(double ux, double uy) {
+        return ux >= 0 && ux < W && uy >= SEARCH_Y - 4 && uy < SEARCH_Y + 14;
+    }
+
+    void draw(GuiGraphics g, Font font, GuideSearchBox box) {
         PoseStack pose = g.pose();
         pose.pushPose();
         pose.scale(TITLE_SCALE, TITLE_SCALE, 1);
@@ -95,10 +103,21 @@ final class GuideCover {
         drawRing(g, BRASS_RING, GuideInk.BRASS);
         GuidePainter.item(g, seal, SEAL_CX - 24, SEAL_CY - 24, 48);
         GuidePainter.ornament(g, 0, 176, W);
-        g.drawString(font, search, 4, SEARCH_Y, GuideInk.FAINT, false);
-        g.fill(0, SEARCH_Y + 11, W, SEARCH_Y + 13, GuideInk.LEAF);
-        for (int i = 0; i < hint.size(); i++) {
-            g.drawString(font, hint.get(i), 0, HINT_Y + i * HINT_STEP, GuideInk.FAINT, false);
+        if (box.isEmpty()) {
+            g.drawString(font, search, 4, SEARCH_Y, GuideInk.FAINT, false);
+        } else {
+            g.drawString(font, box.queryText(), 4, SEARCH_Y, GuideInk.TEXT, false);
+        }
+        if (box.focused() && Util.getMillis() / 500 % 2 == 0) {
+            g.fill(5 + box.queryWidth(), SEARCH_Y - 1, 7 + box.queryWidth(), SEARCH_Y + 9, GuideInk.TEXT);
+        }
+        g.fill(0, SEARCH_Y + 11, W, SEARCH_Y + 13, box.focused() ? FOCUS : GuideInk.LEAF);
+        if (box.isEmpty() || box.total() == 0) {
+            for (int i = 0; i < hint.size(); i++) {
+                g.drawString(font, hint.get(i), 0, HINT_Y + i * HINT_STEP, GuideInk.FAINT, false);
+            }
+        } else {
+            g.drawString(font, box.count(), 0, HINT_Y, GuideInk.FAINT, false);
         }
     }
 

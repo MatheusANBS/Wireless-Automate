@@ -42,6 +42,7 @@ public final class GuidePages {
     private static final Map<String, List<Sheet>> SHEETS = new HashMap<>();
     private static @Nullable GuideIndex index;
     private static @Nullable FontMeasure measure;
+    private static @Nullable List<GuideSearch.Page> searchPages;
 
     private GuidePages() {
     }
@@ -54,6 +55,7 @@ public final class GuidePages {
         itemPages = Map.of();
         SHEETS.clear();
         index = null;
+        searchPages = null;
         measure = null;
     }
 
@@ -148,6 +150,18 @@ public final class GuidePages {
             SHEETS.put(id, s);
         }
         return s;
+    }
+
+    /** O texto de cada página para a busca, na ordem do índice: montado na primeira busca e guardado. */
+    static List<GuideSearch.Page> searchPages() {
+        if (searchPages == null) {
+            List<GuideSearch.Page> built = new ArrayList<>(order.size());
+            for (String id : order) {
+                built.add(GuideSearch.page(id, title(id), GuideSearch.textOf(docs.get(id))));
+            }
+            searchPages = List.copyOf(built);
+        }
+        return searchPages;
     }
 
     static TextMeasure measure() {

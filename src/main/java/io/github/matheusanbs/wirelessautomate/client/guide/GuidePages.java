@@ -134,7 +134,8 @@ public final class GuidePages {
         return doc == null ? "" : doc.group();
     }
 
-    static @Nullable String pageForItem(String itemId) {
+    /** A página do item (pelos {@code item_ids} das páginas), ou {@code null} se nenhuma o cita. */
+    public static @Nullable String pageForItem(String itemId) {
         return loaded.itemPages.get(itemId);
     }
 

@@ -141,7 +141,7 @@
   "gui.wirelessautomate.guide.cover.title": "Wireless Automate",
   "gui.wirelessautomate.guide.cover.subtitle": "Transport without wires",
   "gui.wirelessautomate.guide.cover.search": "Search the book…",
-  "gui.wirelessautomate.guide.cover.hint": "Press G over a mod item to open its page.",
+  "gui.wirelessautomate.guide.cover.hint": "Press %s over a mod item to open its page.",
   "gui.wirelessautomate.guide.search.results": "Results",
   "gui.wirelessautomate.guide.search.range": "%s–%s of %s",
   "gui.wirelessautomate.guide.search.none": "Nothing found",

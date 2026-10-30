@@ -32,7 +32,7 @@ Grupos do índice (o campo `group` de cada página): Começar, Ferramentas, Arma
 | Gesto | O que faz |
 | --- | --- |
 | Clique direito com o livro | Abre onde o jogador parou nesta sessão (ou na folha de rosto). |
-| Segurar G sobre um item do mod com página | No inventário, num baú e no JEI: abre o livro na página do item (`item_ids` da página). |
+| Apertar G sobre um item do mod com página | No inventário, num baú e no JEI: abre o livro na página do item (`item_ids` da página). |
 | Clique numa fita | Índice daquele grupo. |
 | ◀ ▶, ← →, roda do mouse | Vira as duas folhas. |
 | Clique num link, ou num item (de receita, tabela ou linha) que tem página | Vai para a página. |

@@ -2,11 +2,13 @@ package io.github.matheusanbs.wirelessautomate.client.guide;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -37,7 +39,7 @@ public final class GuideKeys {
     public static volatile Supplier<ItemStack> jeiHovered = () -> ItemStack.EMPTY;
 
     /** Se a busca do JEI tem o foco do teclado (o plugin troca isto); a letra segue para o campo dele. */
-    public static volatile java.util.function.BooleanSupplier jeiTyping = () -> false;
+    public static volatile BooleanSupplier jeiTyping = () -> false;
 
     /** A linha da dica e o nome da tecla de quando foi montada; refeita só quando o jogador troca a tecla. */
     private static @Nullable Component hint;
@@ -46,11 +48,17 @@ public final class GuideKeys {
     private GuideKeys() {
     }
 
+    /** Desliga as pontes do JEI (ao sair do mundo), para elas não segurarem o runtime dele até o próximo. */
+    public static void clearJei() {
+        jeiHovered = () -> ItemStack.EMPTY;
+        jeiTyping = () -> false;
+    }
+
     @SubscribeEvent
     static void onKey(ScreenEvent.KeyPressed.Pre event) {
         Screen screen = event.getScreen();
-        if (screen instanceof GuideScreen || screen.getFocused() instanceof EditBox box && box.isFocused()
-                || jeiTyping.getAsBoolean() || !OPEN_GUIDE.isActiveAndMatches(InputConstants.getKey(event.getKeyCode(), event.getScanCode()))) {
+        if (screen instanceof GuideScreen || typing(screen) || jeiTyping.getAsBoolean()
+                || !OPEN_GUIDE.isActiveAndMatches(InputConstants.getKey(event.getKeyCode(), event.getScanCode()))) {
             return;
         }
         ItemStack stack = ItemStack.EMPTY;
@@ -69,8 +77,31 @@ public final class GuideKeys {
         String page = GuidePages.pageForItem(BuiltInRegistries.ITEM.getKey(stack.getItem()).toString());
         if (page != null) {
             event.setCanceled(true);
-            GuideScreen.open(page);
+            // o GLFW entrega o caractere da mesma tecla logo depois, na mesma rodada de eventos, para a tela aberta:
+            // abrindo o livro só na fila de tarefas, a letra fica com a tela de antes e não cai na busca do livro
+            Minecraft mc = Minecraft.getInstance();
+            mc.tell(() -> {
+                if (mc.screen == screen) {
+                    GuideScreen.open(page, screen);
+                }
+            });
         }
+    }
+
+    /**
+     * Algum campo de texto da tela tem o foco? Nem todo campo vira o filho com foco da tela: a busca do inventário
+     * criativo só liga o foco dela ({@code searchBox.setFocused(true)}), por isso a busca olha todos os filhos.
+     */
+    private static boolean typing(Screen screen) {
+        if (screen.getFocused() instanceof EditBox box && box.isFocused()) {
+            return true;
+        }
+        for (GuiEventListener child : screen.children()) {
+            if (child instanceof EditBox box && box.isFocused() && box.isVisible()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @SubscribeEvent

@@ -155,7 +155,29 @@ final class GuideInk {
                         Component.translatable("gui.wirelessautomate.guide.subpages"), font));
             }
         }
+        if (current == null) {
+            indexIcons(out);
+        }
         return out;
+    }
+
+    /**
+     * No índice ({@code current} nulo), o ícone de cada linha leva à página da linha, não à do item dele (o ícone de
+     * "Redes" é o Vinculador): cada ícone toma a página do link que cruza a altura dele.
+     */
+    private static void indexIcons(List<Ink> out) {
+        for (int i = 0; i < out.size(); i++) {
+            if (!(out.get(i) instanceof Item it)) {
+                continue;
+            }
+            for (Ink ink : out) {
+                if (ink instanceof Link l && l.x() >= it.x() && l.y() < it.y() + it.size() && it.y() < l.y() + l.h()) {
+                    out.set(i, new Item(it.x(), it.y(), it.size(), it.stack(),
+                            List.of(it.stack().getHoverName(), OPEN_PAGE), l.page()));
+                    break;
+                }
+            }
+        }
     }
 
     /** A operação cabe na folha? O texto é medido de novo com a fonte, no estilo e na escala em que é desenhado. */

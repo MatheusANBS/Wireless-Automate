@@ -66,6 +66,9 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 - A Porta de Energia do Ressonador fica escondida na cena parada da página (de um ângulo só não se veem as quatro laterais); resolve com a cena girando. (30/10)
 - **(dono)** Testar a tecla G com o JEI de verdade (a lista, os favoritos e a tela de receitas; com a busca do JEI com foco ela não deve abrir) e abrir o livro a partir de um contêiner (baú, inventário); a ponte compila e o e2e cobre o inventário, mas sem o JEI. (30/10)
 - Depois, se o dono quiser: som e animação de folha virando; tabelas com os números do servidor. (30/10)
+- Dica da folha de rosto com a tecla do livro desassociada diz "Press Not bound…" (a dica do item já se esconde nesse caso). (30/10)
+- e2e do livro: o passo do baú põe o baú em `offset(2,0,0)` sem conferir se o lugar está vazio e depois põe ar ali; o ramo "contêiner fechado pelo servidor" do `onClose` sem passo próprio. (30/10)
+- **(release)** Na versão que levar o livro: uma linha no changelog (num pack com o GuideME, o livro antigo fica sem uso no inventário e o novo chega no próximo login) e refazer a `docs/curseforge/feature-7-guide.png` pela vitrine (`wa-curseforge-imagens`), que ainda mostra o livro do GuideME. (30/10)
 
 ## Integrações
 

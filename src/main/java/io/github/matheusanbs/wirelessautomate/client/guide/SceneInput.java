@@ -3,13 +3,18 @@ package io.github.matheusanbs.wirelessautomate.client.guide;
 import io.github.matheusanbs.wirelessautomate.client.guide.GuideInk.Ink;
 import java.util.List;
 import net.minecraft.Util;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Os gestos nas cenas das duas folhas à vista: o botão esquerdo apertado dentro de uma moldura começa o arrasto, que
  * gira a cena (e o clique não vira link nem folha); a roda dentro dela dá zoom; dois cliques na mesma cena em
- * {@value #DOUBLE_CLICK_MS} ms voltam à vista da página (um aperto que virou arrasto não conta como o primeiro). A {@link GuideScreen} só repassa os eventos e mostra as
- * folhas a cada mudança de lugar; a vista de cada cena fica na tinta dela, que vive enquanto o livro está aberto.
+ * {@value #DOUBLE_CLICK_MS} ms voltam à vista da página (um aperto que virou arrasto não conta como o primeiro). Com o
+ * mouse sobre uma cena, a anotação sob ele fica realçada e o texto dela vira a dica ({@link SceneNotes}; a procura só
+ * roda quando o mouse ou a vista mudam). A {@link GuideScreen} só repassa os eventos e mostra as folhas a cada mudança
+ * de lugar; a vista de cada cena fica na tinta dela, que vive enquanto o livro está aberto.
  */
 public final class SceneInput {
     /** O intervalo do clique duplo. */
@@ -27,6 +32,11 @@ public final class SceneInput {
     private double pressTexY;
     private GuideInk.@Nullable Scene lastClicked;
     private long lastClickAt;
+    /** O ponto da última {@link #at}, em unidades da folha da cena achada. */
+    private double atX;
+    private double atY;
+    /** A cena sob o mouse no quadro, com a anotação achada nela. */
+    private GuideInk.@Nullable Scene hovering;
 
     /** As folhas à vista e a escala; o arrasto em curso termina (a folha virou ou a janela mudou). */
     void show(BookScale scale, List<Ink> left, List<Ink> right) {
@@ -34,6 +44,39 @@ public final class SceneInput {
         this.left = left;
         this.right = right;
         dragging = null;
+        leave();
+    }
+
+    /**
+     * O mouse no quadro, antes do desenho: acha a anotação sob ele na cena em que está (a conta só roda se o ponto ou
+     * a vista mudou) e tira o realce da cena de antes.
+     */
+    void hover(double mouseX, double mouseY) {
+        GuideInk.Scene s = at(mouseX, mouseY);
+        if (s != hovering) {
+            leave();
+            hovering = s;
+        }
+        if (s != null) {
+            GuideScenes.hover(s, atX, atY);
+        }
+    }
+
+    private void leave() {
+        if (hovering != null) {
+            hovering.notes().clearHover();
+            hovering = null;
+        }
+    }
+
+    /** A dica da anotação sob o mouse (fora de um arrasto); {@code true} se desenhou. */
+    boolean tooltip(GuiGraphics g, Font font, int mouseX, int mouseY) {
+        Component text = hovering == null || dragging != null ? null : hovering.notes().hoveredText();
+        if (text == null) {
+            return false;
+        }
+        g.renderTooltip(font, text, mouseX, mouseY);
+        return true;
     }
 
     /** O botão esquerdo apertado: {@code true} se caiu numa cena (começa o arrasto, ou o clique duplo a volta). */
@@ -88,9 +131,10 @@ public final class SceneInput {
 
     private GuideInk.@Nullable Scene at(double mouseX, double mouseY) {
         double tx = scale.texX(mouseX);
-        double uy = BookScale.unit(scale.texY(mouseY), BookScale.CONTENT_Y);
-        return tx < BookScale.RIGHT_X - 4 ? find(left, BookScale.unit(tx, BookScale.LEFT_X), uy)
-                : find(right, BookScale.unit(tx, BookScale.RIGHT_X), uy);
+        boolean onLeft = tx < BookScale.RIGHT_X - 4;
+        atX = BookScale.unit(tx, onLeft ? BookScale.LEFT_X : BookScale.RIGHT_X);
+        atY = BookScale.unit(scale.texY(mouseY), BookScale.CONTENT_Y);
+        return find(onLeft ? left : right, atX, atY);
     }
 
     private static GuideInk.@Nullable Scene find(List<Ink> inks, double ux, double uy) {
@@ -118,6 +162,30 @@ public final class SceneInput {
                     int originX = side == 0 ? BookScale.LEFT_X : BookScale.RIGHT_X;
                     return new double[] {scale.guiX(originX + (s.x() + s.w() / 2.0) / 2),
                             scale.guiY(BookScale.CONTENT_Y + (s.y() + s.h() / 2.0) / 2)};
+                }
+            }
+        }
+        return null;
+    }
+
+    /** O texto da anotação sob o mouse, ou {@code null}. */
+    public @Nullable String hoveredNote() {
+        Component text = hovering == null ? null : hovering.notes().hoveredText();
+        return text == null ? null : text.getString();
+    }
+
+    /**
+     * O centro projetado, em coordenadas de interface, do bloco anotado com o texto {@code label} na primeira cena à
+     * vista, ou {@code null} (sem cena, sem a anotação ou antes do primeiro desenho).
+     */
+    public double @Nullable [] noteCenter(String label) {
+        for (int side = 0; side < 2; side++) {
+            for (Ink ink : side == 0 ? left : right) {
+                if (ink instanceof GuideInk.Scene s) {
+                    float[] c = s.notes().boxCenter(label);
+                    int originX = side == 0 ? BookScale.LEFT_X : BookScale.RIGHT_X;
+                    return c == null ? null : new double[] {scale.guiX(originX + c[0] / 2),
+                            scale.guiY(BookScale.CONTENT_Y + c[1] / 2)};
                 }
             }
         }

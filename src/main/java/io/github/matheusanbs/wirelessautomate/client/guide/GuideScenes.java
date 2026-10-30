@@ -105,7 +105,8 @@ final class GuideScenes {
         float radius = (float) Math.sqrt((maxX - minX) * (maxX - minX) + (maxY - minY) * (maxY - minY)
                 + (maxZ - minZ) * (maxZ - minZ)) / 2;
         return new Scene(f.x(), f.y(), f.w(), f.h(), states.toArray(new BlockState[0]), pos,
-                new SceneView(scene.camera(), scene.zoom()), new Camera(fit, cx, cy, cz, radius));
+                new SceneView(scene.camera(), scene.zoom()), new Camera(fit, cx, cy, cz, radius),
+                SceneNotes.of(scene.notes()));
     }
 
     /**
@@ -136,7 +137,8 @@ final class GuideScenes {
     /**
      * A matriz da cena pela vista: o centro da caixa no meio da moldura, girado pelo yaw e pelo pitch, na escala do
      * enquadramento vezes o zoom, e à frente do papel pelo raio inteiro (a cena girada não atravessa a folha). A luz
-     * fica presa ao mundo e gira com a vista, como a sombra das faces de um bloco colocado.
+     * fica presa ao mundo e gira com a vista, como a sombra das faces de um bloco colocado. As anotações são
+     * projetadas com a matriz nova no mesmo passo.
      */
     private static void aim(Scene s) {
         Camera c = s.camera();
@@ -155,6 +157,13 @@ final class GuideScenes {
                 .translate(-c.cx, -c.cy, -c.cz);
         c.light0.set(WORLD_LIGHT_0).rotateY(yaw).rotateX(pitch).mul(1f, -1f, 1f);
         c.light1.set(WORLD_LIGHT_1).rotateY(yaw).rotateX(pitch).mul(1f, -1f, 1f);
+        s.notes().project(c.view, c.seen, k);
+    }
+
+    /** O mouse em ({@code ux}, {@code uy}), unidades da folha, sobre a cena: a anotação sob ele (só se algo mudou). */
+    static void hover(Scene s, double ux, double uy) {
+        aim(s);
+        s.notes().hover(ux, uy);
     }
 
     /** O estado do bloco pelo id e pelas propriedades; {@code null} (com aviso) se o bloco não existe. */
@@ -218,6 +227,11 @@ final class GuideScenes {
         Lighting.setupFor3DItems();
         // o que vier depois não fica atrás dos blocos; o recorte limita a limpeza à moldura
         RenderSystem.clear(GL11.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
+        if (!s.notes().isEmpty()) {
+            // a folha não gira: a escala dela em x vezes a da interface dá os pixels de tela por unidade
+            s.notes().draw(g, 1f / (float) (pose.last().pose().m00() * Minecraft.getInstance().getWindow()
+                    .getGuiScale()));
+        }
         RenderSystem.disableScissor();
     }
 

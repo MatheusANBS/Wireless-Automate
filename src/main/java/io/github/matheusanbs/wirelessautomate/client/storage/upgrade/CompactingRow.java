@@ -37,8 +37,8 @@ final class CompactingRow {
     /** Onde a linha acaba e começa a barra de rolagem. */
     static final int END_X = TAG_X + TAG_W + 2;
     /** O botão do mod, embaixo do nome, nas linhas com variantes. */
-    static final int MOD_Y = 8;
-    static final int MOD_H = 11;
+    static final int MOD_Y = 9;
+    static final int MOD_H = 10;
 
     /** Os textos iguais em todas as linhas (a parada e as etiquetas), medidos no {@code layout} do painel. */
     record Labels(GuiText.Fitted stopped, GuiText.Fitted global, int globalX, GuiText.Fitted own, int ownX) {
@@ -191,7 +191,7 @@ final class CompactingRow {
         }
         g.renderItem(stacks[0], x + PAD, ry + 2);
         if (hasVariants()) {
-            GuiText.draw(g, font, name, x + NAME_X, ry, GuiPaint.FG);
+            GuiText.draw(g, font, name, x + NAME_X, ry + 1, GuiPaint.FG);
             boolean modHovered = onVariant(mouseX, mouseY, x, ry);
             GuiPaint.pill(g, x + NAME_X, ry + MOD_Y, modWidths[chosen], MOD_H, GuiPaint.PANEL,
                     modHovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.ACCENT);

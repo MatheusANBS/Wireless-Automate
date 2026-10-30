@@ -12,8 +12,9 @@ import org.jetbrains.annotations.Nullable;
 /**
  * A coluna dos dois slots de upgrade, colada à esquerda do painel do Baú. Os slots são do menu (pegar e pôr como
  * qualquer slot); a coluna desenha o fundo, os slots, a aba de 6 × 18 à esquerda de cada slot ocupado (clicar abre o
- * painel daquele upgrade) e a borda de destaque no slot do painel aberto. O painel aberto é lembrado só enquanto a
- * tela existe: com um upgrade só, abre o dele; ao tirar o do painel aberto, abre o outro (ou nenhum).
+ * painel daquele upgrade, e clicar na aba do painel aberto o esconde) e a borda de destaque no slot do painel aberto.
+ * O painel aberto é lembrado só enquanto a tela existe: com um upgrade só, abre o dele; ao tirar o do painel aberto,
+ * abre o outro (ou nenhum). O painel escondido é lembrado enquanto o jogo roda, em qualquer Baú, até abrir uma aba.
  */
 final class UpgradeColumn {
     static final int WIDTH = 30;
@@ -25,6 +26,8 @@ final class UpgradeColumn {
     private static final int SLOT_X = 9;
     private static final int PAD_Y = 5;
     private static final int SHADOW = 2;
+    /** O jogador escondeu o painel clicando na aba aberta; vale para os próximos Baús até ele abrir uma aba. */
+    private static boolean hidden;
 
     private final StorageListMenu<?> menu;
     private int x;
@@ -63,7 +66,9 @@ final class UpgradeColumn {
         ChestUpgradeItem.Kind first = kindAt(0);
         ChestUpgradeItem.Kind second = kindAt(1);
         ChestUpgradeItem.Kind next = open;
-        if (next == null || (next != first && next != second)) {
+        if (hidden) {
+            next = null;
+        } else if (next == null || (next != first && next != second)) {
             next = first != null ? first : second;
         }
         if (next == open) {
@@ -91,13 +96,14 @@ final class UpgradeColumn {
         return mouseX >= x && mouseX < x + WIDTH && mouseY >= y && mouseY < y + HEIGHT + SHADOW;
     }
 
-    /** Clique na aba de um slot ocupado: abre o painel dele. Devolve se consumiu o clique. */
+    /** Clique na aba de um slot ocupado: abre o painel dele, ou o esconde se já está aberto. Devolve se consumiu. */
     boolean mouseClicked(double mouseX, double mouseY, int button) {
         for (int i = 0; i < ChestUpgrades.SLOTS; i++) {
             ChestUpgradeItem.Kind kind = kindAt(i);
             if (kind != null && onTab(i, mouseX, mouseY)) {
                 if (button == 0) {
-                    open = kind;
+                    hidden = kind == open;
+                    open = hidden ? null : kind;
                 }
                 return true;
             }
@@ -134,7 +140,8 @@ final class UpgradeColumn {
         for (int i = 0; i < ChestUpgrades.SLOTS; i++) {
             ChestUpgradeItem.Kind kind = kindAt(i);
             if (kind != null && onTab(i, mouseX, mouseY)) {
-                return UpgradePanels.tr(kind == ChestUpgradeItem.Kind.CRAFTING ? "tab.crafting" : "tab.compacting");
+                return kind == open ? UpgradePanels.tr("tab.hide")
+                        : UpgradePanels.tr(kind == ChestUpgradeItem.Kind.CRAFTING ? "tab.crafting" : "tab.compacting");
             }
             if (kind == null && onSlot(i, mouseX, mouseY) && menu.getCarried().isEmpty()) {
                 return UpgradePanels.tr("slot");

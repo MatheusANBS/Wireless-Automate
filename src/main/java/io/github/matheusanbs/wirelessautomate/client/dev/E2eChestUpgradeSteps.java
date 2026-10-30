@@ -149,6 +149,18 @@ final class E2eChestUpgradeSteps {
                 && panels().compactingRowOf(Items.GOLD_INGOT) >= 0 && panels().compactingRowOf(Items.DIAMOND) >= 0
                 && onServer(server -> openMenu(server).upgradeSlots().compactingPanel().watching()),
                 () -> "painel " + panels().openKind() + ", " + panels().compactingRows() + " linhas"));
+        list.add(new Step("Upgrades" + suffix + ": a aba aberta esconde o painel", STEP_TIMEOUT_MS, () -> {
+            int[] tab = panels().tabCenter(1);
+            click(screen(), tab[0], tab[1]);
+        }, () -> panels().openKind() == null && stepTicks >= 4
+                && onServer(server -> !openMenu(server).upgradeSlots().compactingPanel().watching()),
+                () -> "painel " + panels().openKind()));
+        list.add(new Step("Upgrades" + suffix + ": a aba traz o painel de volta", STEP_TIMEOUT_MS, () -> {
+            int[] tab = panels().tabCenter(1);
+            click(screen(), tab[0], tab[1]);
+        }, () -> panels().openKind() == ChestUpgradeItem.Kind.COMPACTING && panels().compactingRowOf(Items.IRON_INGOT) >= 0
+                && onServer(server -> openMenu(server).upgradeSlots().compactingPanel().watching()),
+                () -> "painel " + panels().openKind()));
         list.add(noClip("Upgrades" + suffix + ": Compactação"));
         list.add(capture("armazenamento-upgrade-compactacao" + suffix));
         list.add(new Step("Upgrades" + suffix + ": clicar na forma do ferro abre o seletor", STEP_TIMEOUT_MS, () -> {

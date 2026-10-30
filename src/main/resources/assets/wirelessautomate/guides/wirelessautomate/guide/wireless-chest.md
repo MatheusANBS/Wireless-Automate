@@ -93,8 +93,9 @@ and export them from the filter screen.
 ## Upgrades
 
 The chest has **two upgrade slots**, to the left of the list. Each upgrade fits once. Click a slot
-with the upgrade on the cursor to place it; click the filled slot to open its panel, to the right
-of the list.
+with the upgrade on the cursor to place it; click the tab next to the filled slot to open its panel,
+to the right of the list. Click the open panel's tab again to hide it; it stays hidden, even in other
+chests, until you click a tab.
 
 | Upgrade | Recipe |
 | --- | --- |

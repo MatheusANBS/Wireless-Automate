@@ -910,6 +910,7 @@
   "gui.wirelessautomate.upgrade.slot": "Upgrade slot: Crafting or Compacting",
   "gui.wirelessautomate.upgrade.tab.crafting": "Open the Crafting panel",
   "gui.wirelessautomate.upgrade.tab.compacting": "Open the Compacting panel",
+  "gui.wirelessautomate.upgrade.tab.hide": "Hide the panel (click a tab to bring it back)",
   "gui.wirelessautomate.upgrade.crafting.title": "Crafting",
   "gui.wirelessautomate.upgrade.crafting.return": "Return",
   "gui.wirelessautomate.upgrade.crafting.return.tooltip": "Returns the whole grid to the chest",

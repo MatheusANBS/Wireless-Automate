@@ -1802,8 +1802,9 @@ importe e exporte pela tela do filtro.
 ## Upgrades
 
 O Baú tem **dois slots de upgrade**, à esquerda da lista. Cada upgrade entra uma vez só. Clique
-num slot com o upgrade no cursor para pôr; clique no slot ocupado para abrir o painel dele, à
-direita da lista.
+num slot com o upgrade no cursor para pôr; clique na aba ao lado do slot ocupado para abrir o painel
+dele, à direita da lista. Clique de novo na aba do painel aberto para escondê-lo; ele fica escondido,
+mesmo em outros Baús, até você clicar numa aba.
 
 | Upgrade | Receita |
 | --- | --- |
@@ -1920,8 +1921,9 @@ and export them from the filter screen.
 ## Upgrades
 
 The chest has **two upgrade slots**, to the left of the list. Each upgrade fits once. Click a slot
-with the upgrade on the cursor to place it; click the filled slot to open its panel, to the right
-of the list.
+with the upgrade on the cursor to place it; click the tab next to the filled slot to open its panel,
+to the right of the list. Click the open panel's tab again to hide it; it stays hidden, even in other
+chests, until you click a tab.
 
 | Upgrade | Recipe |
 | --- | --- |

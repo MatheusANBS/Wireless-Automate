@@ -293,6 +293,10 @@ public final class UpgradePanels {
         return compacting.pickerOpen();
     }
 
+    public int pickerRow() {
+        return compacting.pickerRow();
+    }
+
     public int[] pickerCellCenter(int level) {
         return compacting.pickerCellCenter(level);
     }

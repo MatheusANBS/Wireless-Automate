@@ -7,6 +7,8 @@ import java.util.List;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.FormattedText;
+import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
 import org.jetbrains.annotations.Nullable;
 
@@ -31,19 +33,20 @@ final class CraftingPanelView {
     private int x;
     private int y;
     private GuiText.Fitted title;
-    private Component hint = Component.empty();
-    private List<FormattedCharSequence> hintLines = List.of();
+    private GuiText.Fitted[] hintLines = new GuiText.Fitted[0];
+    private GuiText.Fitted label;
     private int labelX;
 
     CraftingPanelView(Font font, Runnable onReturn) {
         this.font = font;
         this.title = GuiText.fit(font, Component.empty(), 0);
-        Component label = UpgradePanels.tr("crafting.return");
-        this.returnButton = new FlatButton(0, 0, WIDTH - 2 * PAD, 13, label, (g, b, hovered) -> {
-            GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), GuiPaint.BUTTON,
-                    hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
-            GuiPaint.text(g, font, label, b.getX() + labelX, b.getY() + 3, GuiPaint.FG);
-        }, onReturn).tooltip(() -> UpgradePanels.tr("crafting.return.tooltip"));
+        this.label = title;
+        this.returnButton = new FlatButton(0, 0, WIDTH - 2 * PAD, 13, UpgradePanels.tr("crafting.return"),
+                (g, b, hovered) -> {
+                    GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), GuiPaint.BUTTON,
+                            hovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);
+                    GuiText.draw(g, font, label, b.getX() + labelX, b.getY() + 3, GuiPaint.FG);
+                }, onReturn).tooltip(() -> UpgradePanels.tr("crafting.return.tooltip"));
     }
 
     /** Põe o painel com o canto interno em ({@code x}, {@code y}) e mede os textos. */
@@ -51,10 +54,32 @@ final class CraftingPanelView {
         this.x = x;
         this.y = y;
         title = GuiText.fit(font, UpgradePanels.tr("crafting.title"), WIDTH - PAD - 3);
-        hint = UpgradePanels.tr("crafting.hint");
-        hintLines = font.split(hint, WIDTH - 2 * PAD);
+        hintLines = hintLines(UpgradePanels.tr("crafting.hint"), WIDTH - 2 * PAD);
         returnButton.setPosition(x + PAD, y + BUTTON_Y);
-        labelX = (returnButton.getWidth() - font.width(returnButton.getMessage())) / 2;
+        label = GuiText.fit(font, returnButton.getMessage(), returnButton.getWidth() - 4);
+        labelX = (returnButton.getWidth() - font.width(label.shown())) / 2;
+    }
+
+    /**
+     * A dica quebrada em até {@link #HINT_LINES} linhas; sobrando texto, a última leva o resto cortado com "…" e o
+     * texto inteiro vai para a dica do mouse (conta no {@code GuiText.clipCount}).
+     */
+    private GuiText.Fitted[] hintLines(Component hint, int width) {
+        List<FormattedText> parts = font.getSplitter().splitLines(hint.getString(), width, Style.EMPTY);
+        int shown = Math.min(parts.size(), HINT_LINES);
+        GuiText.Fitted[] lines = new GuiText.Fitted[shown];
+        for (int i = 0; i < shown; i++) {
+            lines[i] = GuiText.fit(font, Component.literal(parts.get(i).getString()), width);
+        }
+        if (parts.size() > HINT_LINES) {
+            StringBuilder rest = new StringBuilder();
+            for (int i = HINT_LINES - 1; i < parts.size(); i++) {
+                rest.append(i == HINT_LINES - 1 ? "" : " ").append(parts.get(i).getString().strip());
+            }
+            FormattedCharSequence cut = GuiPaint.ellipsize(font, Component.literal(rest.toString()), width);
+            lines[HINT_LINES - 1] = new GuiText.Fitted(hint, cut, width, true);
+        }
+        return lines;
     }
 
     /** Canto do item do primeiro slot da grade, na tela. */
@@ -91,12 +116,8 @@ final class CraftingPanelView {
         GuiPaint.arrowRight(g, x + 64, arrowY - 3, GuiPaint.MUTED);
         GuiPaint.inset(g, x + RESULT_X, resultBoxY(), RESULT_SIZE, RESULT_SIZE);
         returnButton.render(g, mouseX, mouseY, 0);
-        if (hintLines.size() > HINT_LINES) {
-            GuiText.wrap(g, font, hint, x + PAD, y + HINT_Y, WIDTH - 2 * PAD, HINT_LINES, GuiPaint.MUTED);
-        } else {
-            for (int i = 0; i < hintLines.size(); i++) {
-                GuiPaint.text(g, font, hintLines.get(i), x + PAD, y + HINT_Y + i * 10, GuiPaint.MUTED);
-            }
+        for (int i = 0; i < hintLines.length; i++) {
+            GuiText.draw(g, font, hintLines[i], x + PAD, y + HINT_Y + i * 10, GuiPaint.MUTED);
         }
     }
 

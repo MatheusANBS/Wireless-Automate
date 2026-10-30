@@ -134,6 +134,7 @@ final class E2eChestUpgradeSteps {
         }, () -> panels().pickerOpen(), () -> "seletor fechado"));
         list.add(noClip("Upgrades" + suffix + ": seletor"));
         list.add(capture("armazenamento-upgrade-seletor" + suffix));
+        pickerSteps(list, suffix);
         list.add(new Step("Upgrades" + suffix + ": escolher o lingote", STEP_TIMEOUT_MS, () -> {
             int[] cell = panels().pickerCellCenter(1);
             click(screen(), cell[0], cell[1]);
@@ -143,12 +144,64 @@ final class E2eChestUpgradeSteps {
                     CompactingRules rules = rules(server);
                     return rules.hasOwn(chain) && rules.targetLevel(chain) == 1;
                 }), () -> "no servidor " + onServer(server -> rules(server).toString())));
+        list.add(new Step("Upgrades" + suffix + ": a rodinha sobre a forma anda uma", STEP_TIMEOUT_MS, () -> {
+            int[] target = panels().compactingTargetCenter(panels().compactingRowOf(Items.IRON_INGOT));
+            moveMouse(target[0], target[1]);
+            screen().mouseScrolled(target[0], target[1], 0, 1);
+        }, () -> panels().compactingTarget(panels().compactingRowOf(Items.IRON_INGOT)) == 2 && onServer(server -> {
+            CompactingChain chain = CompactingChains.get().chainOf(Items.IRON_INGOT);
+            return rules(server).targetLevel(chain) == 2;
+        }), () -> "no servidor " + onServer(server -> rules(server).toString())));
         list.add(new Step("Upgrades" + suffix + ": a regra volta ao padrão", STEP_TIMEOUT_MS, () -> onServer(server -> {
             chest(server).upgrades().setUpgrade(1, new ItemStack(ModItems.COMPACTING_UPGRADE.get()));
             return null;
         }), () -> panels().compactingTarget(panels().compactingRowOf(Items.IRON_INGOT)) < 0,
                 () -> "alvo do ferro na tela " + panels().compactingTarget(panels().compactingRowOf(Items.IRON_INGOT))));
         list.add(close("Upgrades" + suffix + ": fechar"));
+    }
+
+    /**
+     * O seletor do ferro aberto: o Esc o fecha sem fechar a tela; reaberto, um estado novo que tira a cadeia do
+     * diamante (antes do ferro na lista) não pode deixá-lo apontando outra cadeia, nem derrubar a dica sob o mouse.
+     */
+    private static void pickerSteps(List<Step> list, String suffix) {
+        list.add(new Step("Upgrades" + suffix + ": Esc fecha o seletor e não a tela", STEP_TIMEOUT_MS,
+                () -> screen().keyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE, 0, 0),
+                () -> stepTicks >= 2 && Minecraft.getInstance().screen instanceof StorageListScreen && !panels().pickerOpen(),
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        list.add(reopenIronPicker(suffix));
+        list.add(new Step("Upgrades" + suffix + ": a cadeia do diamante sai com o seletor aberto", STEP_TIMEOUT_MS,
+                () -> onServer(server -> chest(server).storage().extract(new ItemStack(Items.DIAMOND), 20, false)),
+                () -> panels().compactingRowOf(Items.DIAMOND) < 0, () -> panels().compactingRows() + " linhas"));
+        list.add(new Step("Upgrades" + suffix + ": o seletor segue o ferro, com o mouse em cima", STEP_TIMEOUT_MS, () -> {
+            if (panels().pickerOpen()) {
+                int[] cell = panels().pickerCellCenter(2);
+                moveMouse(cell[0], cell[1]);
+            }
+        }, () -> stepTicks >= 5 && (!panels().pickerOpen()
+                || panels().pickerRow() == panels().compactingRowOf(Items.IRON_INGOT)),
+                () -> "seletor na linha " + panels().pickerRow() + ", ferro na " + panels().compactingRowOf(Items.IRON_INGOT)));
+        list.add(new Step("Upgrades" + suffix + ": o diamante volta", STEP_TIMEOUT_MS,
+                () -> onServer(server -> chest(server).storage().insert(new ItemStack(Items.DIAMOND), 20, false)),
+                () -> panels().compactingRowOf(Items.DIAMOND) >= 0
+                        && (!panels().pickerOpen() || panels().pickerRow() == panels().compactingRowOf(Items.IRON_INGOT)),
+                () -> "seletor na linha " + panels().pickerRow() + ", ferro na " + panels().compactingRowOf(Items.IRON_INGOT)));
+        list.add(reopenIronPicker(suffix));
+    }
+
+    /** Abre o seletor do ferro, se não estiver aberto nele. */
+    private static Step reopenIronPicker(String suffix) {
+        return new Step("Upgrades" + suffix + ": seletor do ferro aberto", STEP_TIMEOUT_MS, () -> {
+            int iron = panels().compactingRowOf(Items.IRON_INGOT);
+            if (panels().pickerOpen() && panels().pickerRow() != iron) {
+                screen().keyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE, 0, 0);
+            }
+            if (!panels().pickerOpen()) {
+                int[] target = panels().compactingTargetCenter(iron);
+                click(screen(), target[0], target[1]);
+            }
+        }, () -> panels().pickerOpen() && panels().pickerRow() == panels().compactingRowOf(Items.IRON_INGOT),
+                () -> "seletor na linha " + panels().pickerRow());
     }
 
     /** Alguns quadros depois, nenhum texto da tela está cortado. */

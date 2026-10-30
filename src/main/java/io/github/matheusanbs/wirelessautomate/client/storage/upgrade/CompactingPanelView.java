@@ -439,6 +439,11 @@ final class CompactingPanelView {
         return rows.get(index).target;
     }
 
+    /** Há item da cadeia da linha no Baú (a linha não está apagada). */
+    boolean presentOf(int index) {
+        return rows.get(index).present;
+    }
+
     /** Quantas variantes a linha tem (0 sem o botão do mod). */
     int variantCount(int index) {
         CompactingRow row = rows.get(index);
@@ -449,6 +454,11 @@ final class CompactingPanelView {
     int[] variantCenter(int index) {
         scroll = Math.max(0, Math.min(maxScroll(), Math.max(index - visibleRows + 1, Math.min(scroll, index))));
         return new int[] {x + CompactingRow.NAME_X + 6, rowY(index) + CompactingRow.MOD_Y + CompactingRow.MOD_H / 2};
+    }
+
+    /** Centro da etiqueta Global ou Própria da linha à vista, em coordenadas da tela. */
+    int[] tagCenter(int index) {
+        return new int[] {x + TAG_X + TAG_W / 2, rowY(index) + 10};
     }
 
     /** Centro da forma alvo da linha à vista, em coordenadas da tela. */

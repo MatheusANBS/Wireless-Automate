@@ -14,7 +14,7 @@ Telas dos armazenamentos: a lista genérica do Baú e dos Tanques (`StorageListM
 
 As telas dos armazenamentos. `StorageListScreen` (pública, anfitriã da lista do Baú e dos Tanques com busca e ordenação, redimensionável em torno do centro: tamanho, cabeçalho, busca, inventário, dicas e os ganchos do e2e e do JEI) com as partes `StorageListLayout` (as medidas), `ListSort` (a ordem), `ShownList` (os tipos mostrados: a busca começa vazia, `#` procura em tags e tooltip pela divisão do `StorageSearch`, puro com JUnit, e o Shift trava a ordem como no AE2), `StorageKeys` (nome, mod, texto da busca e desenho de cada tipo: item, fluido ou químico), `StorageGrid` (a grade: células, rolagem, barra, cliques, Shift + arrasto e a rodinha) e `UsageLine` (a ocupação); e `StorageScalarScreen` (Bateria e Tanque de Source)
 
-## `storage/upgrade/`, `menu/ChestUpgradeSlots`, `menu/ChestCraftGrid`, `menu/CompactingPanel`, `menu/ChestCraftFill`
+## `storage/upgrade/`, `menu/ChestUpgradeSlots`, `menu/ChestCraftGrid`, `menu/CompactingPanel` (o `build` acrescenta, depois das presentes, as cadeias com alvo próprio ou variante escolhida que não é a padrão, sem item no Baú, na ordem do id), `menu/ChestCraftFill`
 
 Os upgrades do Baú (spec `docs/superpowers/specs/2026-10-30-bau-upgrades-design.md`). Só o Baú os recebe; cada upgrade entra uma vez, em dois slots.
 
@@ -27,4 +27,4 @@ Os upgrades do Baú (spec `docs/superpowers/specs/2026-10-30-bau-upgrades-design
 
 ## `client/storage/upgrade/`
 
-A coluna de upgrades e os painéis, ganchados na `StorageListScreen`. `UpgradePanels` (qual painel está aberto), `UpgradeColumn` (os dois slots), `CraftingPanelView` (grade, resultado, Devolver), `CompactingPanelView` (modo global e a lista de cadeias), `CompactingRow` (uma linha: ícone, `‹ forma ›`, etiqueta Global ou Própria; com variantes, o nome sobe e embaixo fica o botão com o nome curto do mod da preferida, que passa para a próxima variante e manda o `PREFER`; a dica dele é `compacting.variant`), `ChainPicker` (a lista suspensa com a cadeia inteira) e `ChainNames` (os nomes das formas e o nome curto do mod, `modShort`, lógica pura).
+A coluna de upgrades e os painéis, ganchados na `StorageListScreen`. `UpgradePanels` (qual painel está aberto), `UpgradeColumn` (os dois slots), `CraftingPanelView` (grade, resultado, Devolver), `CompactingPanelView` (modo global e a lista de cadeias), `CompactingRow` (uma linha: ícone, `‹ forma ›`, etiqueta Global ou Própria; com variantes, o nome sobe e embaixo fica o botão com o nome curto do mod da preferida, que passa para a próxima variante e manda o `PREFER`; a dica dele é `compacting.variant`; a linha sem item no Baú, `present` falso, tem o nome apagado e a dica `compacting.absent`), `ChainPicker` (a lista suspensa com a cadeia inteira) e `ChainNames` (os nomes das formas e o nome curto do mod, `modShort`, lógica pura).

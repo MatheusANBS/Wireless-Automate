@@ -192,12 +192,44 @@ final class E2eChestUpgradeSteps {
             return null;
         }), () -> panels().compactingTarget(panels().compactingRowOf(Items.IRON_INGOT)) < 0,
                 () -> "alvo do ferro na tela " + panels().compactingTarget(panels().compactingRowOf(Items.IRON_INGOT))));
+        absentSteps(list, suffix);
         if (silverVariants()) {
             variantSteps(list, suffix);
         } else {
             WirelessAutomate.LOGGER.warn("E2E: sem o Modern Industrialization e o Occultism, a variante da prata fica de fora");
         }
         list.add(close("Upgrades" + suffix + ": fechar"));
+    }
+
+    /**
+     * O ouro com alvo próprio sai todo do Baú: a linha fica na tela, apagada (a regra continua valendo); o CLEAR dela
+     * (o Global) tira a regra e a linha some. Depois o ouro volta ao Baú.
+     */
+    private static void absentSteps(List<Step> list, String suffix) {
+        list.add(new Step("Upgrades" + suffix + ": o ouro com alvo próprio sai do Baú", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            CompactingChain gold = CompactingChains.get().chainOf(Items.GOLD_INGOT);
+            ItemStack upgrade = new ItemStack(ModItems.COMPACTING_UPGRADE.get());
+            upgrade.set(ModDataComponents.COMPACTING_RULES.get(),
+                    CompactingRules.DEFAULT.withTarget(gold, Items.GOLD_INGOT));
+            chest(server).upgrades().setUpgrade(1, upgrade);
+            chest(server).storage().extract(new ItemStack(Items.GOLD_INGOT), 30, false);
+            return null;
+        }), () -> panels().compactingRowOf(Items.GOLD_INGOT) >= 0
+                && !panels().compactingPresent(panels().compactingRowOf(Items.GOLD_INGOT)),
+                () -> "ouro na linha " + panels().compactingRowOf(Items.GOLD_INGOT)));
+        list.add(noClip("Upgrades" + suffix + ": linha ausente"));
+        list.add(capture("armazenamento-upgrade-ausente" + suffix));
+        list.add(new Step("Upgrades" + suffix + ": o Global da linha ausente a tira da lista", STEP_TIMEOUT_MS, () -> {
+            int[] tag = panels().compactingTagCenter(panels().compactingRowOf(Items.GOLD_INGOT));
+            click(screen(), tag[0], tag[1]);
+        }, () -> panels().compactingRowOf(Items.GOLD_INGOT) < 0 && onServer(server ->
+                !rules(server).hasOwn(CompactingChains.get().chainOf(Items.GOLD_INGOT))),
+                () -> "ouro na linha " + panels().compactingRowOf(Items.GOLD_INGOT)));
+        list.add(new Step("Upgrades" + suffix + ": o ouro volta ao Baú", STEP_TIMEOUT_MS,
+                () -> onServer(server -> chest(server).storage().insert(new ItemStack(Items.GOLD_INGOT), 30, false)),
+                () -> panels().compactingRowOf(Items.GOLD_INGOT) >= 0
+                        && panels().compactingPresent(panels().compactingRowOf(Items.GOLD_INGOT)),
+                () -> "ouro na linha " + panels().compactingRowOf(Items.GOLD_INGOT)));
     }
 
     /**

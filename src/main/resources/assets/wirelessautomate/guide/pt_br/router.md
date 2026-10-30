@@ -45,7 +45,7 @@ Pronto: a face já troca recursos com as outras faces da mesma rede.
   <BlockAnnotation x="0" y="0" z="1" color="#ff9a3c">
     Preso na lateral: funciona igual
   </BlockAnnotation>
-  <IsometricCamera yaw="200" pitch="30" />
+  <IsometricCamera yaw="300" pitch="30" />
 </GameScene>
 
 Quebrar o bloco de trás solta o roteador. Shift + clique direito com a mão vazia gira o roteador; as

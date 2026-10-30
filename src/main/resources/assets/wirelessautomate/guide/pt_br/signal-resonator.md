@@ -146,7 +146,7 @@ Cristais, catalisadores e Corações vêm do [Quartzo de Sinal](signal-quartz.md
   <BlockAnnotation x="2" y="4" z="2" color="#a06bff">
     Sintonizador (opcional)
   </BlockAnnotation>
-  <IsometricCamera yaw="35" pitch="30" />
+  <IsometricCamera yaw="315" pitch="30" />
 </GameScene>
 
 A cena mostra a montagem **Vitrine**. Gire-a com o mouse.

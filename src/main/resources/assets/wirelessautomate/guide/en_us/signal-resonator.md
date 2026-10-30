@@ -147,7 +147,7 @@ Crystals, catalysts and Hearts come from [Signal Quartz](signal-quartz.md).
   <BlockAnnotation x="2" y="4" z="2" color="#a06bff">
     Resonator Tuner (optional)
   </BlockAnnotation>
-  <IsometricCamera yaw="35" pitch="30" />
+  <IsometricCamera yaw="315" pitch="30" />
 </GameScene>
 
 The scene shows the **Showcase** build. Rotate it with the mouse.

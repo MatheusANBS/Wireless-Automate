@@ -290,6 +290,14 @@ public final class UpgradePanels {
         return compacting.targetOf(row);
     }
 
+    public boolean compactingPresent(int row) {
+        return compacting.presentOf(row);
+    }
+
+    public int[] compactingTagCenter(int row) {
+        return compacting.tagCenter(row);
+    }
+
     public int[] compactingTargetCenter(int row) {
         return compacting.targetCenter(row);
     }

@@ -20,7 +20,8 @@ import org.jetbrains.annotations.Nullable;
  * Uma linha do painel da Compactação: uma cadeia com os nomes já medidos, o alvo mostrado e o desenho da linha (o
  * ícone da base, o nome da cadeia, ‹ a forma alvo ›, o nome da forma e a etiqueta Global ou Própria). Com variantes
  * (o mesmo material de mods diferentes), o nome sobe e embaixo dele fica o botão com o nome curto do mod da preferida,
- * que passa para a próxima variante. As posições são relativas ao canto interno do painel.
+ * que passa para a próxima variante. A linha sem item no Baú (a regra própria que continua valendo) tem o nome
+ * apagado. As posições são relativas ao canto interno do painel.
  */
 final class CompactingRow {
     static final int HEIGHT = 20;
@@ -63,9 +64,11 @@ final class CompactingRow {
     int target;
     boolean own;
     int chosen;
+    /** Há item da cadeia no Baú; sem, o nome vai apagado e a dica avisa que a regra continua valendo. */
+    final boolean present;
 
     private CompactingRow(Item[] forms, ItemStack[] stacks, @Nullable String[] corners, GuiText.Fitted[] formNames,
-            GuiText.Fitted name, int target, boolean own, Variants variants) {
+            GuiText.Fitted name, int target, boolean own, boolean present, Variants variants) {
         this.forms = forms;
         this.stacks = stacks;
         this.corners = corners;
@@ -73,6 +76,7 @@ final class CompactingRow {
         this.name = name;
         this.target = target;
         this.own = own;
+        this.present = present;
         this.variants = variants.bases;
         this.modLabels = variants.labels;
         this.modWidths = variants.widths;
@@ -142,7 +146,7 @@ final class CompactingRow {
         }
         GuiText.Fitted name = GuiText.fit(font, Component.literal(ChainNames.chainName(names)), NAME_W);
         return new CompactingRow(forms, stacks, corners, formNames, name, Math.min(row.target(), count - 1), row.own(),
-                Variants.of(row, font));
+                row.present(), Variants.of(row, font));
     }
 
     boolean hasVariants() {
@@ -190,14 +194,15 @@ final class CompactingRow {
             g.fill(x + 2, ry, x + END_X - 1, ry + HEIGHT, GuiPaint.ROW_HOVER);
         }
         g.renderItem(stacks[0], x + PAD, ry + 2);
+        int nameColor = present ? GuiPaint.FG : GuiPaint.MUTED;
         if (hasVariants()) {
-            GuiText.draw(g, font, name, x + NAME_X, ry + 1, GuiPaint.FG);
+            GuiText.draw(g, font, name, x + NAME_X, ry + 1, nameColor);
             boolean modHovered = onVariant(mouseX, mouseY, x, ry);
             GuiPaint.pill(g, x + NAME_X, ry + MOD_Y, modWidths[chosen], MOD_H, GuiPaint.PANEL,
                     modHovered ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.ACCENT);
             GuiText.draw(g, font, modLabels[chosen], x + NAME_X + 4, ry + MOD_Y + 2, GuiPaint.ACCENT);
         } else {
-            GuiText.draw(g, font, name, x + NAME_X, ry + 6, GuiPaint.FG);
+            GuiText.draw(g, font, name, x + NAME_X, ry + 6, nameColor);
         }
         stepButton(g, x + PREV_X, ry + 1, target > 0, false, on(mouseX, mouseY, x, ry, PREV_X, 10));
         stepButton(g, x + NEXT_X, ry + 1, target < forms.length - 1, true, on(mouseX, mouseY, x, ry, NEXT_X, 10));
@@ -228,15 +233,24 @@ final class CompactingRow {
             return List.of(shown, UpgradePanels.tr("compacting.target.hint").withStyle(ChatFormatting.GRAY));
         }
         if (on(mouseX, mouseY, x, ry, PAD, 16)) {
-            return List.of(stacks[0].getHoverName());
+            return named();
         }
         if (onVariant(mouseX, mouseY, x, ry)) {
             return List.of(modTooltips[chosen]);
+        }
+        if (!present && on(mouseX, mouseY, x, ry, NAME_X, NAME_W)) {
+            return named();
         }
         if (on(mouseX, mouseY, x, ry, TAG_X, TAG_W)) {
             return List.of(UpgradePanels.tr(own ? "compacting.tag.own.tooltip" : "compacting.tag.global.tooltip"));
         }
         return null;
+    }
+
+    /** O nome do item da base, com o aviso da linha sem item no Baú. */
+    private List<Component> named() {
+        return present ? List.of(stacks[0].getHoverName())
+                : List.of(stacks[0].getHoverName(), UpgradePanels.tr("compacting.absent").withStyle(ChatFormatting.GRAY));
     }
 
     /** ‹ ou ›: caixa de 10 × 18 com a seta; apagada quando não há forma para aquele lado. */

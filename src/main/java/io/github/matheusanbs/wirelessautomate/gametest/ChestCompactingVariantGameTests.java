@@ -433,4 +433,84 @@ public final class ChestCompactingVariantGameTests {
                 })
                 .thenSucceed();
     }
+
+    /** A linha de {@code item} no último estado montado do painel, ou {@code null}. */
+    private static CompactingStatePayload.Row rowWith(CompactingPanel panel, Item item) {
+        CompactingStatePayload sent = panel.state();
+        if (sent == null) {
+            return null;
+        }
+        return sent.rows().stream().filter(each -> each.forms().contains(item)).findFirst().orElse(null);
+    }
+
+    /**
+     * A cadeia com alvo próprio some do Baú e a linha fica no estado, ausente (a regra continua valendo); o CLEAR dela
+     * tira a regra e a linha some. Uma cadeia sem regra própria e sem item não aparece.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void linhaAusenteComAlvoProprio(GameTestHelper helper) {
+        StorageChestBlockEntity chest = chest(helper, A, RouterTier.ELITE);
+        CompactingChain iron = CompactingChains.get().chainOf(Items.IRON_INGOT);
+        putUpgrade(chest, CompactingRules.DEFAULT.withTarget(iron, Items.IRON_INGOT));
+        chest.storage().insert(new ItemStack(Items.IRON_INGOT), 4, false);
+        chest.storage().insert(new ItemStack(Items.DIAMOND), 4, false);
+        ServerPlayer player = playerAt(helper, chest);
+        StorageListMenu<ItemStack> menu = open(player, chest, 98);
+        CompactingPanel panel = menu.upgradeSlots().compactingPanel();
+        helper.assertTrue(CompactingPanel.handle(player, CompactingRulePayload.of(98, CompactingRulePayload.Kind.WATCH)),
+                "WATCH recusado");
+        helper.startSequence()
+                .thenExecute(() -> menu.broadcastChanges())
+                .thenExecute(() -> {
+                    helper.assertTrue(rowWith(panel, Items.IRON_INGOT) != null && rowWith(panel, Items.IRON_INGOT).present(),
+                            "a linha do ferro presente");
+                    chest.storage().extract(new ItemStack(Items.IRON_INGOT), 4, false);
+                    chest.storage().extract(new ItemStack(Items.IRON_NUGGET), 36, false);
+                    chest.storage().extract(new ItemStack(Items.IRON_BLOCK), 4, false);
+                    menu.broadcastChanges();
+                    CompactingStatePayload.Row absent = rowWith(panel, Items.IRON_INGOT);
+                    helper.assertTrue(absent != null, "a linha do ferro sumiu com o item");
+                    helper.assertTrue(!absent.present(), "a linha do ferro devia estar ausente");
+                    helper.assertTrue(absent.own(), "a linha ausente perdeu o alvo próprio");
+                    CompactingStatePayload.Row diamond = rowWith(panel, Items.DIAMOND);
+                    helper.assertTrue(diamond != null && diamond.present(), "o diamante segue presente");
+                    helper.assertTrue(rowWith(panel, Items.COPPER_INGOT) == null, "o cobre sem regra apareceu");
+                    helper.assertTrue(CompactingPanel.handle(player,
+                            CompactingRulePayload.target(98, CompactingRulePayload.Kind.CLEAR, Items.IRON_INGOT)),
+                            "CLEAR recusado");
+                    menu.broadcastChanges();
+                    helper.assertTrue(rowWith(panel, Items.IRON_INGOT) == null, "a linha ausente ficou depois do CLEAR");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Um grupo cuja variante escolhida não é a padrão fica no estado, ausente, mesmo sem item no Baú; escolher de volta
+     * a padrão (sem alvo) o tira.
+     */
+    @GameTest(template = "empty", batch = BATCH, timeoutTicks = 100)
+    public static void linhaAusenteDeVariante(GameTestHelper helper) {
+        VariantGroup group = linkIronAndGold(helper);
+        CompactingChain preferred = group.chains().get(1);
+        CompactingChain standard = group.chains().get(0);
+        StorageChestBlockEntity chest = chest(helper, A, RouterTier.ELITE);
+        putUpgrade(chest, CompactingRules.DEFAULT.withPreferred(group, preferred));
+        ServerPlayer player = playerAt(helper, chest);
+        StorageListMenu<ItemStack> menu = open(player, chest, 99);
+        CompactingPanel panel = menu.upgradeSlots().compactingPanel();
+        helper.assertTrue(CompactingPanel.handle(player, CompactingRulePayload.of(99, CompactingRulePayload.Kind.WATCH)),
+                "WATCH recusado");
+        helper.startSequence()
+                .thenExecute(() -> {
+                    menu.broadcastChanges();
+                    CompactingStatePayload.Row row = rowWith(panel, preferred.base());
+                    helper.assertTrue(row != null && !row.present(), "a linha da variante escolhida ausente");
+                    helper.assertValueEqual(row.forms().get(0), preferred.base(), "a linha é a da preferida");
+                    helper.assertTrue(CompactingPanel.handle(player, CompactingRulePayload.target(99,
+                            CompactingRulePayload.Kind.PREFER, standard.base())), "PREFER recusado");
+                    menu.broadcastChanges();
+                    helper.assertTrue(rowWith(panel, standard.base()) == null, "a linha ficou com a padrão escolhida");
+                })
+                .thenSucceed();
+    }
 }

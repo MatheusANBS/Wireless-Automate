@@ -129,6 +129,7 @@ decompressed down to it. With the target on ingot, nuggets become ingots and blo
 - The router only sees the stored form: to pull ingots, leave the chain's target on ingot.
 - The **Stock** limit of a chain item counts the whole chain (11 blocks and 1 ingot are worth 100 ingots).
 - The same material from different mods (two mods' raw silver) is a single row, with the mod name under it: click it to choose which mod's items Compacting gathers everything into.
+- The row of a chain with its own rule (a target or a chosen mod) stays in the list, dimmed, even with no items in the chest: the rule still applies. Click the Custom tag to go back to Global: the rule is removed and the row disappears.
 - With Compacting, the crafting grid steps down one form when the exact item is missing.
 
 ## Break and carry

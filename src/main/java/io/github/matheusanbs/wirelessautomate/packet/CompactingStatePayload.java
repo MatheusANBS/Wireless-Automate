@@ -18,7 +18,8 @@ import net.minecraft.world.item.Item;
  * próprio da cadeia ou vem do modo global. As formas por linha vão até {@link CompactingChain#MAX_FORMS}, o mesmo teto
  * do índice: o encode nunca passa dele, e o decode recusa o pacote forjado que passa. Um grupo de variantes (o mesmo
  * material de mods diferentes) é uma linha só, a da preferida, com as bases das variantes (até
- * {@link Row#MAX_VARIANTS}, a preferida sempre entre elas) e qual delas é a preferida.
+ * {@link Row#MAX_VARIANTS}, a preferida sempre entre elas) e qual delas é a preferida. Depois das linhas presentes vêm
+ * as ausentes ({@link Row#present} falso): cadeias com regra própria (alvo ou variante escolhida) sem item no Baú.
  */
 public record CompactingStatePayload(int containerId, CompactingMode mode, List<Row> rows) implements CustomPacketPayload {
     /**
@@ -32,15 +33,21 @@ public record CompactingStatePayload(int containerId, CompactingMode mode, List<
      * @param target o nível de destino na cadeia; {@link #STOPPED} é parada
      * @param variants as formas base das variantes do grupo, na ordem do grupo; vazia na cadeia sem variante
      * @param chosen a posição da preferida em {@code variants}
+     * @param present há item da cadeia no Baú; {@code false} é a cadeia com regra própria que ficou sem item
      */
-    public record Row(List<Item> forms, int target, boolean own, List<Item> variants, int chosen) {
+    public record Row(List<Item> forms, int target, boolean own, List<Item> variants, int chosen, boolean present) {
         public static final int STOPPED = -1;
         /** O teto de variantes por linha: o botão do mod passa por elas uma a uma, e mais que isso não cabe no pacote. */
         public static final int MAX_VARIANTS = 8;
 
         /** A linha de uma cadeia sem variante. */
         public Row(List<Item> forms, int target, boolean own) {
-            this(forms, target, own, List.of(), 0);
+            this(forms, target, own, List.of(), 0, true);
+        }
+
+        /** A linha de uma cadeia presente no Baú, com ou sem variantes. */
+        public Row(List<Item> forms, int target, boolean own, List<Item> variants, int chosen) {
+            this(forms, target, own, variants, chosen, true);
         }
 
         /** O alvo vai somado a 1: o −1 da parada seria 5 bytes num VAR_INT. */
@@ -50,6 +57,7 @@ public record CompactingStatePayload(int containerId, CompactingMode mode, List<
                 ByteBufCodecs.BOOL, Row::own,
                 ByteBufCodecs.registry(Registries.ITEM).apply(ByteBufCodecs.list(MAX_VARIANTS)), Row::variants,
                 ByteBufCodecs.VAR_INT, Row::chosen,
+                ByteBufCodecs.BOOL, Row::present,
                 Row::new);
     }
 

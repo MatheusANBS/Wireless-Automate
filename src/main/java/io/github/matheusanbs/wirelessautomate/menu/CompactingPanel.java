@@ -14,9 +14,12 @@ import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingRules;
 import io.github.matheusanbs.wirelessautomate.storage.upgrade.VariantGroup;
 import it.unimi.dsi.fastutil.ints.IntList;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -116,7 +119,52 @@ public final class CompactingPanel {
             rows.add(new CompactingStatePayload.Row(List.of(row.forms()), rules.targetLevel(row), rules.hasOwn(row),
                     variants, Math.max(0, variants.indexOf(row.base()))));
         }
+        addAbsent(rules, chains, shown, rows);
         return new CompactingStatePayload(menu.containerId, rules.mode(), rows);
+    }
+
+    /**
+     * Depois das presentes, as cadeias com regra própria sem item no Baú, apagadas, para o jogador ver e mudar: a que
+     * tem forma nos alvos e o grupo cuja variante escolhida não é a padrão (a primeira do grupo). Ids que nenhuma
+     * cadeia tem (mod removido) são ignorados. Uma linha por cadeia ou grupo, na ordem do id da cadeia.
+     */
+    private static void addAbsent(CompactingRules rules, CompactingChains chains, Set<CompactingChain> shown,
+            List<CompactingStatePayload.Row> rows) {
+        if (rows.size() >= CompactingStatePayload.MAX_ROWS || rules.entries() == 0) {
+            return;
+        }
+        List<CompactingChain> absent = new ArrayList<>();
+        for (ResourceLocation id : rules.targets()) {
+            CompactingChain chain = BuiltInRegistries.ITEM.getOptional(id).map(chains::chainOf).orElse(null);
+            addAbsentRow(chain, rules, chains, shown, absent, false);
+        }
+        for (ResourceLocation id : rules.preferred()) {
+            CompactingChain chain = BuiltInRegistries.ITEM.getOptional(id).map(chains::chainOf).orElse(null);
+            addAbsentRow(chain, rules, chains, shown, absent, true);
+        }
+        absent.sort(Comparator.comparingInt(CompactingChain::id));
+        for (int i = 0; i < absent.size() && rows.size() < CompactingStatePayload.MAX_ROWS; i++) {
+            CompactingChain row = absent.get(i);
+            VariantGroup group = chains.groupOf(row);
+            List<Item> variants = group == null ? List.of() : variantBases(group, row);
+            rows.add(new CompactingStatePayload.Row(List.of(row.forms()), rules.targetLevel(row), rules.hasOwn(row),
+                    variants, Math.max(0, variants.indexOf(row.base())), false));
+        }
+    }
+
+    private static void addAbsentRow(@Nullable CompactingChain chain, CompactingRules rules, CompactingChains chains,
+            Set<CompactingChain> shown, List<CompactingChain> absent, boolean fromPreferred) {
+        if (chain == null) {
+            return;
+        }
+        VariantGroup group = chains.groupOf(chain);
+        CompactingChain row = group == null ? chain : rules.preferredOf(group);
+        if (fromPreferred && (group == null || row == group.chains().get(0))) {
+            return;
+        }
+        if (shown.add(row)) {
+            absent.add(row);
+        }
     }
 
     /**

@@ -127,6 +127,7 @@ descompactado até ele. Com o alvo em lingote, pepitas viram lingotes e blocos v
 - O roteador vê só a forma guardada: para tirar lingotes, deixe o alvo da cadeia em lingote.
 - O limite de **Estoque** de um item da cadeia conta a cadeia inteira (11 blocos e 1 lingote valem 100 lingotes).
 - O mesmo material de mods diferentes (a prata crua de dois mods) é uma linha só, com o nome do mod embaixo: clique nele para escolher em qual mod a Compactação junta tudo.
+- A linha de uma cadeia com regra própria (alvo ou mod escolhido) fica na lista, apagada, mesmo sem nenhum item no Baú: a regra continua valendo. Clique na etiqueta Própria para voltar a Global: a regra sai e a linha some.
 - Com a Compactação, a Mesa desce uma forma quando falta o item exato.
 
 ## Quebrar e levar

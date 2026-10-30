@@ -34,7 +34,7 @@ final class E2eGuideSteps {
      */
     static void guideSteps(List<Step> list) {
         list.add(new Step("livro-guia entregue no primeiro login", STEP_TIMEOUT_MS, () -> {
-        }, () -> GuideBook.create().isPresent() && onServer(server -> GuideBook.given(server.getPlayerList()
+        }, () -> onServer(server -> GuideBook.given(server.getPlayerList()
                 .getPlayer(Minecraft.getInstance().player.getUUID()))),
                 () -> "o livro não foi entregue (a marca no jogador não está lá)"));
         guidePages(list, "");

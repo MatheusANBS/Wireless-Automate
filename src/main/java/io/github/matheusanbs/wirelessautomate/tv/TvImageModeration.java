@@ -8,7 +8,7 @@ import net.minecraft.server.MinecraftServer;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A moderação das imagens enviadas, para o comando {@code /wa tela imagem}: achar uma imagem pelo começo do resumo e
+ * A moderação das imagens enviadas, para o comando {@code /wa screen image}: achar uma imagem pelo começo do resumo e
  * tirá-la do mundo. Remover tira a imagem das Telas carregadas (a peça fica sem imagem, o mosaico volta ao tema), de
  * todas as bibliotecas e do armazém, que apaga o arquivo. As Telas descarregadas a perdem quando carregarem, porque o
  * armazém não acha mais o resumo ({@link TvBlockEntity#dropMissingPictures}).

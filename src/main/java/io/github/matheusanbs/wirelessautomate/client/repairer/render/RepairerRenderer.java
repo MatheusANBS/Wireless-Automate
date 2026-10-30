@@ -57,7 +57,7 @@ public final class RepairerRenderer implements BlockEntityRenderer<RepairerBlock
             lastPrimitivesForTests = RepairerFallback.render(poseStack, buffer, view, state, level);
             return;
         }
-        RepairFrame frame = fill(repairer.getBlockPos(), state, view, lit, level.getGameTime(), partialTick, light);
+        RepairFrame frame = fill(repairer.getBlockPos(), state, view, lit, level.getGameTime(), partialTick);
         poseStack.pushPose();
         poseStack.scale(PIXEL, PIXEL, PIXEL);
         int drawn = RepairerCrystals.render(poseStack, buffer, view, frame);
@@ -68,10 +68,9 @@ public final class RepairerRenderer implements BlockEntityRenderer<RepairerBlock
     }
 
     private static RepairFrame fill(BlockPos pos, BlockState state, RepairerView view, boolean lit, long gameTime,
-            float partialTick, int light) {
+            float partialTick) {
         RepairFrame frame = RepairFrame.INSTANCE;
         frame.lit = lit;
-        frame.light = light;
         frame.time = (gameTime % 24000 + partialTick) / TICKS_PER_SECOND;
         boolean running = false;
         double emitter = 0;
@@ -112,6 +111,6 @@ public final class RepairerRenderer implements BlockEntityRenderer<RepairerBlock
     /** Tudo cabe no bloco: o vidro vai de 2,6 a 13,4 px. */
     @Override
     public AABB getRenderBoundingBox(RepairerBlockEntity repairer) {
-        return new AABB(repairer.getBlockPos());
+        return repairer.renderBox();
     }
 }

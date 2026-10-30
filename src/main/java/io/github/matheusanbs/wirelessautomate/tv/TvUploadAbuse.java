@@ -9,7 +9,7 @@ import java.util.Map;
 /**
  * A trava automática do envio de imagens (pura, com JUnit): quem bate no limite por minuto {@link #STRIKES} vezes em
  * {@link #WINDOW_MS} fica um tempo sem enviar (o {@code tv.images.abuseCooldownMinutes}; 0 desliga a trava). Conta
- * também as recusas por jogador desde a subida do servidor, que a lista {@code /wa tela imagens} mostra. Nunca expulsa
+ * também as recusas por jogador desde a subida do servidor, que a lista {@code /wa screen images} mostra. Nunca expulsa
  * nem bane a conta. Fica na memória: a trava não sobrevive a um reinício do servidor.
  */
 public final class TvUploadAbuse<K> {

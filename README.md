@@ -186,7 +186,7 @@ Um painel de parede que mostra **números ao vivo das suas redes e armazenamento
 
 ![Uma parede de Telas tocando](docs/curseforge/tela.gif)
 
-- **Imagens e GIFs de verdade:** **Enviar arquivo** manda um **PNG, JPG ou GIF** do seu computador (nunca um link), até **1024 px** e **8 MB** por arquivo e 240 quadros por GIF por padrão, e GIFs animados tocam na Tela. Donos de servidor podem desligar as imagens, deixar só operadores enviarem, mudar todos os limites e, com `/wa tela`, tirar uma imagem de todas as Telas ou impedir um jogador de enviar; cada jogador pode esconder as imagens enviadas pelos outros na config do cliente (`showOthersImages`).
+- **Imagens e GIFs de verdade:** **Enviar arquivo** manda um **PNG, JPG ou GIF** do seu computador (nunca um link), até **1024 px** e **8 MB** por arquivo e 240 quadros por GIF por padrão, e GIFs animados tocam na Tela. Donos de servidor podem desligar as imagens, deixar só operadores enviarem, mudar todos os limites e, com `/wa screen`, tirar uma imagem de todas as Telas ou impedir um jogador de enviar; cada jogador pode esconder as imagens enviadas pelos outros na config do cliente (`showOthersImages`).
 
 ![Imagens e GIFs de verdade](docs/curseforge/feature-29-screen-images.png)
 

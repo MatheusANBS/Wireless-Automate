@@ -4,13 +4,11 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 
 ## Núcleo, config e comandos
 
-- Pôr em inglês os comandos de moderação de imagens da Tela (`/wa tela imagem remover|banir|desbanir`, `/wa tela imagens`), como os outros. (29/10)
 - `/wa face ... network none`: o literal `none` ganha do nome, então uma rede chamada "none" não é aceita. (12/10)
 - Tirar o contador de recargas de teste do `ConfigReloadListener` (classe de produção) e levar para `gametest`. (16/10)
 
 ## Roteador, Vinculador e Configurador
 
-- Singular em "1 máquinas" no Vinculador (`LinkerText`, chaves `outcome.linked`, `outcome.unlinked` e `area.ready.with_linked`). (22/10)
 - Dividir o `NodePanel` (822 linhas, acima do limite de tela pelo `medir.py`). `RouterScreen` (644) e `PanelLayout` (636) estão em aviso. (30/10)
 - `RouterBlockEntity` em 977 linhas: o próximo método exige dividir antes (`RouterRange`, `RouterTargets` ou uma parte nova). (16/10)
 
@@ -50,8 +48,6 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 
 ## Reparador
 
-- Tirar o código morto: `PEDESTAL_GLOW_Y` (sem uso) e `RepairFrame.light` (gravado, nunca lido). (26/10)
-- Tirar o `new AABB` por quadro do `RepairerRenderer.getRenderBoundingBox`. (26/10)
 - GameTests que faltam: racha no meio do ciclo de recarga, sync da contagem do catalisador e o `onRemove` largando os 17 slots. (26/10)
 - A suíte e2e `ressonador-desempenho` repete as asserções; atualizar o spec da animação. (26/10)
 
@@ -76,7 +72,6 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 
 ## Docs, scripts e publicação
 
-- O `gerar_texturas.py` inteiro apaga `textures/gui/tv/*` (136 arquivos), porque a limpeza varre a pasta `gui` toda: tirar `gui/tv` da limpeza. (30/10)
 - **(dono)** Quando o Modrinth aprovar, pôr o link no `README.md`, no `README.en.md` e na `descricao.md`. (30/10)
 - **(dono)** Decidir o destino da worktree `C:/wab` (fora do repositório, com 2 arquivos mudados). (30/10)
 - Portes (`docs/portes.md`): investigar o 26.1 NeoForge (ATM11); o 1.20.1 Forge espera o ok do dono e a decisão do Mekanism (só gás ou os quatro químicos). (10/10)

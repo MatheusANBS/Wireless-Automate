@@ -21,6 +21,8 @@ public final class GuideMetrics {
     public static final int BLOCK_GAP = 4;
     /** Espaço entre um título e o bloco seguinte. */
     public static final int HEADING_GAP = 2;
+    /** Altura do ornamento embaixo do título de nível 1 (com o espaço até o bloco seguinte). */
+    public static final int ORNAMENT_H = 10;
     /** Espaço entre itens de lista. */
     public static final int LIST_ITEM_GAP = 2;
     /** Recuo do texto de um item de lista (cabe o marcador "10."). */

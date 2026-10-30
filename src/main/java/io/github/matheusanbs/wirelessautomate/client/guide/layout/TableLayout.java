@@ -42,22 +42,35 @@ final class TableLayout {
         return new Plan(colX, colW, header, body);
     }
 
-    /** Largura pelo conteúdo; se a soma passar da folha, encolhe na proporção, sem passar do mínimo. */
+    /**
+     * Largura pelo conteúdo; se a soma passar da folha, cada coluna fica ao menos com a palavra mais larga dela e o
+     * resto da folha se reparte na proporção do que cada uma queria a mais. Se nem as palavras cabem, encolhe tudo na
+     * proporção, sem passar do mínimo (aí a palavra é cortada).
+     */
     private int[] columnWidths(Block.Table t, int cols) {
         int[] nat = new int[cols];
+        int[] min = new int[cols];
         int total = 0;
+        int minTotal = 0;
         for (int c = 0; c < cols; c++) {
             int w = naturalWidth(t.header().get(c), TextStyle.BOLD);
+            int m = widestWord(t.header().get(c), TextStyle.BOLD);
             for (List<List<Span>> r : t.rows()) {
                 if (c < r.size()) {
                     w = Math.max(w, naturalWidth(r.get(c), TextStyle.NORMAL));
+                    m = Math.max(m, widestWord(r.get(c), TextStyle.NORMAL));
                 }
             }
             nat[c] = w + 2 * GuideMetrics.CELL_PAD_X;
+            min[c] = Math.min(nat[c], Math.max(GuideMetrics.MIN_COL, m + 2 * GuideMetrics.CELL_PAD_X));
             total += nat[c];
+            minTotal += min[c];
         }
         if (total <= width) {
             return nat;
+        }
+        if (minTotal <= width) {
+            return byWords(nat, min, total - minTotal, width - minTotal);
         }
         int[] colW = new int[cols];
         int sum = 0;
@@ -79,6 +92,18 @@ final class TableLayout {
             sum--;
         }
         return colW;
+    }
+
+    private static int[] byWords(int[] nat, int[] min, int wanted, int extra) {
+        int[] colW = new int[nat.length];
+        for (int c = 0; c < nat.length; c++) {
+            colW[c] = min[c] + (int) ((long) (nat[c] - min[c]) * extra / Math.max(1, wanted));
+        }
+        return colW;
+    }
+
+    private int widestWord(List<Span> spans, TextStyle style) {
+        return new TextWrap(spans, style, 1.0, measure).widestWord();
     }
 
     private int naturalWidth(List<Span> spans, TextStyle style) {

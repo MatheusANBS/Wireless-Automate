@@ -1,6 +1,6 @@
 # Livro próprio, etapa 1: o livro inteiro sem o GuideME
 
-Spec: `docs/superpowers/specs/2026-10-30-livro-proprio-design.md`. Mockup aprovado: `docs/preview/livro-proprio.html`. Protótipos das texturas (PIL) no rascunho da sessão; a Tarefa 2 os traz para o `scripts/textures/`.
+Spec: `docs/superpowers/specs/2026-10-30-livro-proprio-design.md`. Mockup aprovado: `docs/preview/livro-proprio.html`. Protótipos das texturas (PIL) em `docs/preview/livro-prototipo/` (`livro_proto.py`: o livro aberto e as fitas; `guia_proto.py`: o ícone, com a grade `GUIA_NOVO`); a Tarefa 2 os traz para o `scripts/textures/`.
 
 Ramo: `livro-proprio`. Uma tarefa por vez, um implementador por tarefa, revisão de cada uma antes da seguinte.
 

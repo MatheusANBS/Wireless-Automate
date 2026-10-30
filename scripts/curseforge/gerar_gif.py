@@ -4,6 +4,7 @@
     WA_SHOWCASE=$PWD/run/showcase WA_SHOWCASE_ONLY=ressonador ./gradlew runClient   # só a casa e os quadros
     python -I scripts/curseforge/gerar_gif.py run/showcase/gif [docs/curseforge/ressonador.gif]
     python -I scripts/curseforge/gerar_gif.py run/showcase/gif docs/curseforge/tela.gif --prefixo tela         --recorte 120,150,1160,650 --largura 832 --laco 1500
+    python -I scripts/curseforge/gerar_gif.py run/showcase/gif docs/curseforge/compactacao.gif --prefixo bau          --recorte 120,140,1160,665 --largura 1024 --laco 12160
 
 Lê os <prefixo>-NNN.png em ordem (padrão ressonador), recorta (padrão 16:9 no centro; --recorte em coordenadas de
 1280x800, qualquer que seja o tamanho da captura), reduz para --largura (padrão 640, LANCZOS) e salva em loop

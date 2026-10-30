@@ -52,7 +52,7 @@ final class E2eShowcase {
     /**
      * Com {@code WA_SHOWCASE_ONLY=ressonador}, a vitrine monta a casa e grava só o Ressonador (GIF e fotos); com
      * {@code cascata}, só a foto da cascata, com {@code reparador}, só as fotos do Reparador de Cristais, e com
-     * {@code tela}, só a parede das Telas de Sinal (fotos e GIF).
+     * {@code tela}, só a parede das Telas de Sinal (fotos e GIF), e com {@code bau}, só os upgrades do Baú (fotos e GIF).
      */
     private static final String ONLY = System.getenv("WA_SHOWCASE_ONLY");
 
@@ -84,6 +84,11 @@ final class E2eShowcase {
             E2eShowcaseTv.steps(list);
             return list;
         }
+        if ("bau".equals(ONLY)) {
+            list.add(mountWorld());
+            E2eShowcaseChest.steps(list);
+            return list;
+        }
         if ("cascata".equals(ONLY)) {
             list.add(mountWorld());
             showcaseCascadeShots(list);
@@ -94,6 +99,7 @@ final class E2eShowcase {
         showcaseRouterShots(list);
         showcaseTierAndRangeShots(list);
         showcaseStorageShots(list);
+        E2eShowcaseChest.steps(list);
         showcaseTabletShots(list);
         E2eShowcaseTv.steps(list);
         E2eShowcaseRepairer.steps(list);

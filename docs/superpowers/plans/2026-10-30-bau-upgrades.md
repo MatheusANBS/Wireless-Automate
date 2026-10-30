@@ -76,7 +76,7 @@ Pacote base `src/main/java/io/github/matheusanbs/wirelessautomate/`; testes JUni
 
 ---
 
-### Tarefa 1: A conta da conversão e a montagem das cadeias (lógica pura)
+### Task 1: A conta da conversão e a montagem das cadeias (lógica pura)
 
 **Custo:** nenhum no jogo (classes puras). Prova: JUnit.
 
@@ -464,7 +464,7 @@ git commit -m "Baú: a conta da Compactação e a montagem das cadeias (lógica 
 
 ---
 
-### Tarefa 2: O índice de cadeias pelas receitas
+### Task 2: O índice de cadeias pelas receitas
 
 **Custo:** uma montagem por carga de receitas (início do servidor e `/reload`), fora do jogo; consulta O(1) por item (`Reference2ObjectOpenHashMap<Item, Entry>`). Logar o tempo e o número de cadeias (`info`). Prova: GameTest e o tempo no log do runClient com o AllTheCompressed (anotar no relatório).
 
@@ -557,7 +557,7 @@ git commit -m "Baú: o índice das cadeias de compactação pelas receitas de me
 
 ---
 
-### Tarefa 3: Os itens dos upgrades e os slots do Baú
+### Task 3: Os itens dos upgrades e os slots do Baú
 
 **Custo:** dois campos no block entity (o `ChestUpgrades`, com 11 pilhas). NBT `upgrades` e `craft_grid` só gravados quando não vazios. Nenhum tick. Prova: GameTest de salvar, quebrar e colocar.
 
@@ -602,7 +602,7 @@ Em `gametest/ChestUpgradeGameTests.java`:
 
 ---
 
-### Tarefa 4: A Compactação no Baú
+### Task 4: A Compactação no Baú
 
 **Custo:** com o upgrade, cada inserção faz um `instanceof`, um `isComponentsPatchEmpty` e um `get` no índice; se o item é de cadeia, um `add` num `IntOpenHashSet` (criado sob demanda). Nenhuma alocação por inserção. No fim do tick, O(formas) por cadeia suja. Sem o upgrade, o gancho é um teste de nulo. Prova: GameTests e o bench `chest` antes e depois (ver `references/medir.md` da `wa-performance`; o cenário de Baú existente; tabela no relatório).
 
@@ -656,7 +656,7 @@ Em `gametest/ChestUpgradeGameTests.java`:
 
 ---
 
-### Tarefa 5: A Mesa de Trabalho no menu
+### Task 5: A Mesa de Trabalho no menu
 
 **Custo:** a receita só é procurada no `slotsChanged` da grade (com a dica do último resultado, como o `CraftingMenu`). Repor a grade é O(9) por craft. Os slots usam a sincronização normal do menu. Prova: GameTests com um jogador de teste.
 
@@ -704,7 +704,7 @@ Em `gametest/ChestUpgradeGameTests.java`:
 
 ---
 
-### Tarefa 6: O estado da Compactação na rede
+### Task 6: O estado da Compactação na rede
 
 **Custo:** o servidor monta o estado só com o painel da Compactação aberto (o cliente avisa abrir e fechar) e só quando a `ChestCompacting.version()` muda; um pacote por mudança, com a lista das cadeias presentes (ids de item pela registry, um `int` por forma) e as regras. Nada com a tela fechada. Prova: GameTest que conta os pacotes (ou a versão) e confere nenhum envio sem mudança.
 
@@ -727,7 +727,7 @@ Em `gametest/ChestUpgradeGameTests.java`:
 
 ---
 
-### Tarefa 7: A tela: coluna de upgrades e os dois painéis
+### Task 7: A tela: coluna de upgrades e os dois painéis
 
 **Custo:** nada por quadro além de desenhar: as linhas do painel da Compactação (nomes, rótulos, medidas) são montadas quando o `CompactingStatePayload` chega ou a lista rola, com `GuiText`; a lista desenha só as linhas à vista. Prova: e2e com capturas e `GuiText.clipCount()==0`.
 
@@ -756,7 +756,7 @@ Layout (do mockup, em pixels da GUI):
 
 ---
 
-### Tarefa 8: O "+" do JEI na Mesa do Baú
+### Task 8: O "+" do JEI na Mesa do Baú
 
 **Custo:** um pacote por clique no "+", com até 9 slots × 16 alternativas; o servidor procura cada alternativa no Baú (O(1) por `count`) e no inventário (O(36)). Prova: GameTest do handler do payload; o arrastar do JEI real só se testa à mão.
 
@@ -776,7 +776,7 @@ Layout (do mockup, em pixels da GUI):
 
 ---
 
-### Tarefa 9: Guia, docs e fechamento da etapa
+### Task 9: Guia, docs e fechamento da etapa
 
 **Files:**
 - Modify: `scripts/guide/gerar_guia.py` (página do Baú, `wireless-chest.md`, pt e en: uma seção "Upgrades" com "como operar": pôr o upgrade, abrir o painel, Mesa repõe a grade, Shift faz uma pilha, Compactação com o modo global e o alvo por cadeia, descompactar só o que cabe) e rode o script para gerar as páginas

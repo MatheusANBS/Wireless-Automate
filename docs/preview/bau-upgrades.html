@@ -174,8 +174,8 @@ li{margin-bottom:5px}
           <h4>Compactação</h4>
           <div style="font-size:12px;color:var(--gui-muted);margin-bottom:3px">Global</div>
           <div class="seg" id="gseg">
-            <button data-g="off" type="button">Desligada</button>
-            <button data-g="max" type="button" class="on">Compactar</button>
+            <button data-g="off" type="button" class="on">Desligada</button>
+            <button data-g="max" type="button">Compactar</button>
             <button data-g="min" type="button">Descompactar</button>
           </div>
           <div style="font-size:12px;color:var(--gui-muted);margin:8px 0 0">Cadeias no Baú · alvo de cada uma</div>
@@ -200,7 +200,8 @@ li{margin-bottom:5px}
   <div>
     <h3>Upgrade de Compactação</h3>
     <ul>
-      <li><b>Global:</b> Desligada, Compactar (sobe tudo até a forma mais alta) ou Descompactar (desce tudo até a forma base).</li>
+      <li><b>Global:</b> Desligada (o padrão ao pôr o upgrade), Compactar (sobe tudo até a forma mais alta) ou Descompactar (desce tudo até a forma base).</li>
+      <li>Com o upgrade, o limite de estoque conta a cadeia inteira (11 blocos + 1 lingote = 100 lingotes), e a Mesa desce um bloco na hora se faltar lingote.</li>
       <li><b>Por cadeia:</b> cada linha mostra só a forma alvo. As setas ‹ › (ou a rodinha) andam pela cadeia, e clicar no ícone abre todas as formas (pedregulho, 1x até 9x; pepita, lingote, bloco…) para escolher de uma vez. "Global" desfaz.</li>
       <li>Vale para qualquer tipo de bloco ou item compactável: pedra, terra, areia, toras, metais, gemas, blocos de outros mods. Não há lista: o que tem receita de ida e volta entra.</li>
       <li>Acima do alvo descompacta, abaixo compacta. A sobra que não fecha 9 fica na forma de baixo (10 pedregulhos → 1 pedregulho 1x + 1 pedregulho).</li>
@@ -297,7 +298,7 @@ li{margin-bottom:5px}
     {nm:'Diamante',lv:ladder('diam','bloco',[['diam small','',0,'gema']])}
   ];
   const ringColor=k=>'hsl('+((55-k*36)%360+360)%360+' 75% 55%)';
-  let gmode='max',openIdx=-1;
+  let gmode='off',openIdx=-1;
   const box=document.getElementById('chains');
   function icon(l,small){
     const cls=l[0].split(' ');const it=document.createElement('div');it.className='it '+(small?'small ':'')+cls.join(' ');

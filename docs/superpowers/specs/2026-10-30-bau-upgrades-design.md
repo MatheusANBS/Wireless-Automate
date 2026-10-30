@@ -30,7 +30,11 @@ Uma cadeia é uma lista de formas `f0 … fk` com fatores `n1 … nk` (1 de `fi`
 
 A função pura (`CompactingMath`) devolve as contagens novas; o block entity aplica só as diferenças (tira primeiro, põe depois).
 
-**Alvo de cada cadeia:** o específico, se a regra da cadeia existir; senão o global (Compactar = a forma mais alta, Descompactar = `f0`, Desligada = não mexe). Padrão ao pôr o upgrade: **Compactar**.
+**Alvo de cada cadeia:** o específico, se a regra da cadeia existir; senão o global (Compactar = a forma mais alta, Descompactar = `f0`, Desligada = não mexe). Padrão ao pôr o upgrade: **Desligada** (decisão da revisão: Compactar pegaria todas as cadeias de um baú misto, como pó de redstone, trigo e carvão, e pararia as máquinas que puxam dali). Nada muda até o jogador escolher um modo ou um alvo.
+
+**Limite de estoque conta a cadeia** (decisão da revisão): num Baú com o upgrade de Compactação, o limite de estoque de um item de cadeia, tanto o do filtro do Baú quanto o de estoque do roteador que entrega nele, conta a cadeia inteira na unidade do item limitado (11 blocos + 1 lingote = 100 lingotes). Sem isso, "manter 1000 lingotes" nunca seria atingido, porque os lingotes viram blocos, e o roteador mandaria para sempre. Sem o upgrade, a contagem é a de hoje.
+
+**A Mesa desce uma forma na hora** (decisão da revisão): com o upgrade de Compactação no Baú, se falta o item exato para repor a grade (ou para o "+" do JEI) e ele é de cadeia, o Baú desce as formas de cima até ter o que precisa (1 bloco vira 9 lingotes por dentro) e a Mesa tira dali. A sobra fica no Baú e volta a ser compactada na próxima entrada daquela cadeia. O roteador continua vendo só a forma guardada.
 
 ## Casos de borda
 
@@ -53,7 +57,7 @@ A função pura (`CompactingMath`) devolve as contagens novas; o block entity ap
 ## Compactação
 
 - **Painel:** modo global (Desligada / Compactar / Descompactar) e a lista das cadeias **presentes no Baú**. Cada linha mostra o ícone da base, o nome, `‹ [forma alvo] ›`, o nome da forma e a etiqueta Global/Própria. As setas e a rodinha andam uma forma; clicar no ícone abre a cadeia inteira (10 a 12 formas) numa lista suspensa para escolher. "Global" volta a regra da cadeia para o modo global.
-- **Onde fica a configuração:** no próprio item do upgrade (componente `compacting_rules`: modo global e um mapa id da forma base → id da forma alvo). Mudar o upgrade de Baú leva as regras junto.
+- **Onde fica a configuração:** no próprio item do upgrade (componente `compacting_rules`: modo global e o conjunto dos ids das formas alvo; a cadeia de cada regra é a que contém a forma). Mudar o upgrade de Baú leva as regras junto.
 - Trocar o modo global ou uma regra põe na fila as cadeias afetadas que existem no Baú. Pôr o upgrade põe na fila todas as cadeias presentes (uma passada O(tipos), por evento).
 
 ## Tela
@@ -85,6 +89,15 @@ Chaves existentes de NBT, componentes e config **não mudam**.
 - **Mesa:** a receita só é procurada quando a grade muda; repor é O(9).
 - **Rede:** o estado da Compactação vai ao cliente só com o painel aberto, e só quando muda (uma versão por Baú: lista de cadeias presentes + regras). A grade e os slots de upgrade usam a sincronização normal de slots do menu.
 - **Memória:** o conjunto de cadeias sujas é criado sob demanda; o Baú sem upgrade não guarda nada a mais além de dois campos nulos.
+
+## Interações e proteções (revisão de 30/10)
+
+- **Duplicação pela Mesa com dois jogadores:** a grade é do Baú e o resultado é de cada menu. Se o jogador A muda a grade, o resultado do menu de B fica velho, e tirá-lo daria o item sem os ingredientes. Proteção: toda mudança da grade recalcula o resultado de **todos** os menus abertos naquele Baú, e o slot do resultado confere de novo, no `mayPickup` e antes de consumir, que a receita casa com a grade atual (senão não entrega e recalcula).
+- **Duplicação pelo Shift + clique e pelo duplo clique:** o `quickMoveStack` de hoje guarda qualquer slot no Baú sem chamar `onTake`. Com o slot do resultado, isso guardaria o item feito sem consumir a grade. Proteção: o resultado e a grade têm caminho próprio, e o resultado não entra no "juntar tudo" do duplo clique (`canTakeItemForPickAll` falso, como o `CraftingMenu`).
+- **Ids de cadeia depois do `/reload`:** o índice é remontado e os ids mudam. Uma cadeia suja guardada com o id velho converteria a cadeia errada. Proteção: o índice tem uma geração; o Baú com geração diferente descarta as sujas e marca tudo de novo.
+- **Tela de Sinal:** a conversão não conta como entrada nem saída no vigia (`StorageWatch`), senão a vazão mostrada inventaria itens que nunca entraram.
+- **Regras e mods removidos:** as regras guardam os ids das formas alvo como texto (`ResourceLocation`), não `Item`. Um mod removido não derruba a leitura do componente (o que apagaria o item do upgrade); a regra cuja forma sumiu é ignorada.
+- **Regra presa à forma alvo, não à base:** se um `/reload` acrescentar uma forma abaixo da base (um mod novo que cria pepita), a regra continua achando a cadeia pela forma alvo.
 
 ## Fora
 

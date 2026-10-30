@@ -88,6 +88,7 @@ Pacote base `src/main/java/io/github/matheusanbs/wirelessautomate/`; testes JUni
 
 **Interfaces:**
 - Produces: `CompactingMath.convert(long[] counts, int[] factors, int target, long room)` devolve `long[]` novo (não altera a entrada); `factors[i]` é quantos de `i-1` fazem 1 de `i` (`factors[0]` ignorado); `room` é o espaço livre do Baú (`Long.MAX_VALUE` = sem limite).
+- Produces: `CompactingMath.equivalent(long[] counts, int[] factors, int level)`: quanto a cadeia vale em itens da forma `level` (as formas de cima multiplicadas, as de baixo somadas e divididas para cima, com saturação em `Long.MAX_VALUE`). É a contagem do limite de estoque com a Compactação.
 - Produces: `ChainGraph<T>` com `ChainGraph(Comparator<T> order)`, `void link(T small, T big, int factor)` e `List<Chain<T>> chains()`; `record Chain<T>(List<T> forms, int[] factors)`.
 
 - [ ] **Passo 1: Teste da conta (falha)**
@@ -147,8 +148,41 @@ class CompactingMathTest {
     void alvoNoNivelAtualNaoMexe() {
         assertArrayEquals(new long[] {3, 5, 0, 0}, CompactingMath.convert(new long[] {3, 5, 0, 0}, NINE, 1, 0));
     }
+
+    @Test
+    void equivalenteContaACadeiaNaUnidadeDaForma() {
+        // 1 lingote + 11 blocos = 100 lingotes; as 10 pepitas valem mais 1 lingote (a sobra de 1 pepita não conta)
+        org.junit.jupiter.api.Assertions.assertEquals(101, CompactingMath.equivalent(new long[] {10, 1, 11}, new int[] {1, 9, 9}, 1));
+        org.junit.jupiter.api.Assertions.assertEquals(Long.MAX_VALUE,
+                CompactingMath.equivalent(new long[] {0, 0, 0, Long.MAX_VALUE}, NINE, 0));
+    }
 }
 ```
+
+O `equivalent` em `CompactingMath`:
+
+```java
+    /**
+     * Quanto a cadeia vale em itens da forma {@code level}: as formas de cima multiplicadas pelo fator até ela,
+     * e as de baixo levadas para cima degrau a degrau (a sobra que não fecha um fator não conta). Satura em
+     * {@code Long.MAX_VALUE}. É a contagem do limite de estoque num Baú com a Compactação.
+     */
+    public static long equivalent(long[] counts, int[] factors, int level) {
+        long carry = 0;
+        for (int i = 0; i < level; i++) {
+            carry = (counts[i] + carry) / factors[i + 1];
+        }
+        long total = saturatedAdd(counts[level], carry);
+        long ratio = 1;
+        for (int i = level + 1; i < counts.length && total != Long.MAX_VALUE; i++) {
+            ratio = saturatedMul(ratio, factors[i]);
+            total = saturatedAdd(total, saturatedMul(counts[i], ratio));
+        }
+        return total;
+    }
+```
+
+(`counts[i] + carry` não estoura: `carry` é no máximo `counts[i-1] / 9`, e cada `counts[i]` é um total do Baú, bem abaixo de `Long.MAX_VALUE / 2` na prática; se quiser blindar, use `saturatedAdd` ali também.)
 
 Observação sobre `alvoNoNivelAtualNaoMexe`: 3 de nível 0 não fecham 9, então ficam; nada acima do alvo.
 
@@ -229,7 +263,7 @@ public final class CompactingMath {
 - [ ] **Passo 4: Rodar e ver passar**
 
 Run: `./gradlew test --tests "*CompactingMathTest"`
-Expected: PASS (7 testes).
+Expected: PASS (8 testes).
 
 - [ ] **Passo 5: Teste do grafo (falha)**
 
@@ -443,7 +477,7 @@ git commit -m "Baú: a conta da Compactação e a montagem das cadeias (lógica 
 - Consumes: `ChainGraph` (Tarefa 1).
 - Produces:
   - `public record CompactingChain(int id, Item[] forms, int[] factors, ItemStack[] keys)`, com `int levelOf(Item item)` (−1 se não está) e `Item base()`. `keys[i]` é `new ItemStack(forms[i])`, criada uma vez na montagem e nunca alterada (a chave de contagem no Baú, sem alocar por conversão).
-  - `CompactingChains.get()` → a instância do servidor (estática, como o `NetworkManager`), com `@Nullable CompactingChain chainOf(Item item)`, `@Nullable CompactingChain byId(int id)`, `int size()`, `static void rebuild(MinecraftServer server)`, `static void reset()`.
+  - `CompactingChains.get()` → a instância do servidor (estática, como o `NetworkManager`), com `@Nullable CompactingChain chainOf(Item item)`, `@Nullable CompactingChain byId(int id)`, `int size()`, `int generation()` (sobe a cada montagem: os ids das cadeias só valem dentro de uma geração), `static void rebuild(MinecraftServer server)`, `static void reset()`.
   - `chainOf` só para pilhas sem componentes além dos padrão: quem chama confere `stack.isComponentsPatchEmpty()`.
 
 - [ ] **Passo 1: GameTests do índice (falham)**
@@ -538,7 +572,7 @@ git commit -m "Baú: o índice das cadeias de compactação pelas receitas de me
 - Produces:
   - `ChestUpgradeItem` com `enum Kind { CRAFTING, COMPACTING }` e `Kind kind()`; itens `ModItems.CRAFTING_UPGRADE` e `ModItems.COMPACTING_UPGRADE`.
   - `enum CompactingMode { OFF, COMPRESS, DECOMPRESS }` (`StringRepresentable`, nomes `off`, `compress`, `decompress`).
-  - `record CompactingRules(CompactingMode mode, Map<Item, Item> targets)` com `static final CompactingRules DEFAULT = new CompactingRules(COMPRESS, Map.of())`, `CODEC`, `STREAM_CODEC`, `CompactingRules withMode(CompactingMode)`, `CompactingRules withTarget(Item base, @Nullable Item target)` (nulo = volta ao global), `int targetLevel(CompactingChain chain)` (−1 = não mexe: modo `OFF` sem regra; regra cujo alvo não está mais na cadeia cai no global).
+  - `record CompactingRules(CompactingMode mode, Set<ResourceLocation> targets)` com `static final CompactingRules DEFAULT = new CompactingRules(CompactingMode.OFF, Set.of())` (o upgrade novo não muda nada até o jogador escolher), `CODEC`, `STREAM_CODEC`, `CompactingRules withMode(CompactingMode)`, `CompactingRules withTarget(CompactingChain chain, @Nullable Item target)` (tira do conjunto todas as formas da cadeia e põe a nova; nulo = volta ao global), `boolean hasOwn(CompactingChain chain)` e `int targetLevel(CompactingChain chain)` (a primeira forma da cadeia cujo id está no conjunto; sem nenhuma, o modo global; −1 = não mexe). Os alvos são ids em texto (`ResourceLocation`), não `Item`: um mod removido não pode fazer o componente falhar ao ler (isso apagaria o item do upgrade), e a regra continua achando a cadeia se uma forma nova entrar abaixo da base num `/reload`.
   - Componente `ModDataComponents.COMPACTING_RULES` (`DataComponentType<CompactingRules>`, persistente e sincronizado).
   - Componentes `STORAGE_UPGRADES` e `STORAGE_CRAFT_GRID` (`ItemContainerContents`).
   - `ChestUpgrades` (dentro do `StorageChestBlockEntity`): `ItemStack upgrade(int slot)` (0 ou 1), `void setUpgrade(int slot, ItemStack)`, `boolean accepts(int slot, ItemStack)` (só `ChestUpgradeItem`, e um tipo que ainda não está no outro slot), `boolean has(ChestUpgradeItem.Kind)`, `@Nullable ItemStack find(Kind)`, `NonNullList<ItemStack> grid()` (9), `void save(CompoundTag, HolderLookup.Provider)`, `void load(CompoundTag, HolderLookup.Provider)`, `void collect(DataComponentMap.Builder)`, `void apply(DataComponentInput)`; e um `Runnable onChange` que o block entity passa (o `setChanged` do Baú).
@@ -554,7 +588,7 @@ Em `gametest/ChestUpgradeGameTests.java`:
 - [ ] **Passo 2: Rodar e ver falhar** (`./gradlew compileJava`).
 
 - [ ] **Passo 3: Implementar.** Pontos que não são óbvios:
-  - `CompactingRules.CODEC`: `RecordCodecBuilder` com `mode` (`StringRepresentable.fromEnum`) e `targets` (`Codec.unboundedMap(BuiltInRegistries.ITEM.byNameCodec(), BuiltInRegistries.ITEM.byNameCodec())`), `optionalFieldOf("targets", Map.of())`. `STREAM_CODEC` com `ByteBufCodecs.registry(Registries.ITEM)` e `ByteBufCodecs.map(HashMap::new, ..., ..., 256)`.
+  - `CompactingRules.CODEC`: `RecordCodecBuilder` com `mode` (`StringRepresentable.fromEnum`) e `targets` (`ResourceLocation.CODEC.listOf()` virando `Set` imutável), `optionalFieldOf("targets", List.of())`. `STREAM_CODEC` com `ResourceLocation.STREAM_CODEC` e `ByteBufCodecs.collection(HashSet::new, ..., 256)`. Teste no GameTest: um componente com um id que não existe (`"modsumido:bloco"`) é lido sem erro e ignorado.
   - `ChestUpgrades` grava `upgrades` e `craft_grid` com `ContainerHelper.saveAllItems` (só se não vazios) e lê com `loadAllItems`. O drop (`collect`) põe `ItemContainerContents.fromItems(...)` só quando não vazio, e o `apply` lê; `StorageChestBlockEntity` chama os dois e também tira as chaves no `removeComponentsFromTag`. O `collectImplicitComponents` da base marca `dropExpected` só com conteúdo: um Baú vazio com upgrades também precisa guardar, mas os upgrades vão no próprio componente do item (não no `StorageSavedData`), então nada muda no `stash`.
   - O drop do Baú vazio e sem filtro hoje empilha (sem componentes). Com upgrades ele passa a levar os componentes: documente isso no comentário do `collect`.
   - Receitas (`crafting_shapeless`): `crafting_upgrade` = `minecraft:crafting_table` + `wirelessautomate:signal_crystal`; `compacting_upgrade` = `minecraft:piston` + `wirelessautomate:signal_crystal` + `minecraft:iron_block`. Categoria `misc`.
@@ -580,27 +614,34 @@ Em `gametest/ChestUpgradeGameTests.java`:
 **Interfaces:**
 - Consumes: `CompactingChains`, `CompactingChain`, `CompactingRules`, `CompactingMath`, `ChestUpgrades`.
 - Produces:
-  - `KeyedStorage`: `protected void inserted(K key)` (vazio; chamado no fim de um `insert` que guardou algo) e `public long insertIgnoringAdmission(K key, long amount)` (só a capacidade).
+  - `KeyedStorage`: `protected void inserted(K key)` (vazio; chamado no fim de um `insert` que guardou algo), `public long insertInternal(K key, long amount)` (só a capacidade, sem admissão, sem `inserted` e sem contar no `StorageWatch`) e `public long extractInternal(K key, long amount)` (sem contar no `StorageWatch`). A conversão é movimento interno: contada no vigia, a Tela de Sinal mostraria vazão de itens que nunca entraram nem saíram.
   - `ItemStorage`: `public interface InsertListener { void inserted(ItemStack key); }` e `void setInsertListener(@Nullable InsertListener)`.
+  - `BulkItems`: `default long stockCount(ItemStack key, boolean components)` (hoje: `components ? count(key) : countItem(key)`). `ItemStorage` sobrescreve: com o `ChestCompacting` ativo e a chave de cadeia sem componentes, devolve `CompactingMath.equivalent(...)` da cadeia no nível da chave; senão o de hoje. Os dois lugares que contam para o limite passam a chamar `stockCount`: `ItemTransfer.bulkAccepts` (linha ~413) e `StorageChestBlockEntity.admit`. Custo: um teste de nulo sem o upgrade; O(formas) com ele, só quando há limite.
+  - `ChestCompacting.unpackFor(ItemStack key, long need)`: com as regras ativas e a chave de cadeia, desce por dentro (`extractInternal` + `insertInternal`) a forma mais próxima acima, uma por vez, até `count(key) >= need` ou acabar o que descer ou o espaço; devolve se conseguiu. A sobra não suja a cadeia (fica até a próxima entrada). Usado pela Mesa (Tarefa 5) e pelo JEI (Tarefa 8).
   - `ChestCompacting`: `void setRules(@Nullable CompactingRules)` (nulo = sem upgrade), `void markAll()` (todas as cadeias presentes), `void markChain(int chainId)`, `void convertDirty()` (chamado no fim do tick), `int version()` (sobe quando as cadeias presentes ou as regras mudam; a Tarefa 6 usa) e `IntList presentChains()` (as cadeias com algum item no Baú, na ordem do índice).
 
 - [ ] **Passo 1: GameTests (falham)**, em `ChestCompactingGameTests` (helpers: Baú colocado pelo jeito do `StorageGameTests`; o upgrade posto direto por `upgrades().setUpgrade`):
   - `compactaNaEntradaPeloHandler`: com o upgrade (modo Compactar), insere 100 lingotes de ferro pelo `ItemStorageHandler`. Na cadeia vanilla (pepita, lingote, bloco) o topo é o bloco: 100 lingotes = 11 blocos + 1 lingote. `thenWaitUntil` `count(IRON_BLOCK)==11` e `count(IRON_INGOT)==1`.
   - `compactaNaEntradaPeloRoteador`: um roteador tirando lingotes de um baú vanilla para o Baú (rede própria, como os testes do `StorageGameTests`); espera os blocos aparecerem.
-  - `alvoEspecificoVenceOGlobal`: regra `IRON_NUGGET → IRON_INGOT` (alvo lingote); põe 2 blocos; espera 18 lingotes e 0 blocos.
+  - `alvoEspecificoVenceOGlobal`: modo global Compactar e regra da cadeia do ferro com alvo lingote (`withTarget(chain, Items.IRON_INGOT)`); põe 2 blocos; espera 18 lingotes e 0 blocos.
   - `descompactarParaNaCapacidade`: Baú do menor tier, `long cap = chest.capacity()`; guarda `cap - 30` pedregulhos (sem cadeia vanilla, só ocupam espaço) e 4 blocos de ferro (espaço livre: 26); regra do ferro com alvo lingote. Cada bloco que desce rende 9 lingotes e gasta 8 de espaço: cabem 3 (24 ≤ 26). Espera 27 lingotes, 1 bloco e `total() <= cap`.
   - `semUpgradeNaoMexe`: sem upgrade, 100 lingotes ficam 100 lingotes depois de 2 ticks.
+  - `upgradeNovoNaoMexe`: com o upgrade recém-posto (regras padrão, modo Desligada), 100 lingotes ficam 100 lingotes.
+  - `limiteDoFiltroContaACadeia`: filtro do Baú com limite de 100 lingotes de ferro e modo Compactar; o handler aceita 100 lingotes (que viram 11 blocos + 1 lingote) e recusa o 101º (`insert` simulado devolve 0).
+  - `limiteDoRoteadorContaACadeia`: roteador com estoque de 100 lingotes no destino (o Baú com Compactar), origem com 200 lingotes; depois de estabilizar, o Baú vale 100 lingotes (`stockCount`) e a origem ficou com 100.
+  - `descerNaHoraParaAMesa`: modo Compactar, 2 blocos de ferro; `unpackFor(lingote, 3)` deixa 1 bloco e 9 lingotes.
   - `itemComComponenteNaoCompacta`: 9 lingotes com nome (`DataComponents.CUSTOM_NAME`) ficam como estão.
   - `conversaoIgnoraOFiltro`: filtro de entrada que só aceita lingote; com o modo Compactar, 9 lingotes viram 1 bloco mesmo o filtro recusando bloco.
 
 - [ ] **Passo 2: Rodar e ver falhar.**
 
-- [ ] **Passo 3: `KeyedStorage` e `ItemStorage`.** Separe o corpo do `insert` num `private long put(K key, long amount, boolean simulate, boolean admit)`; `insert` chama com `admit = true` e, se guardou algo e não é simulação, `inserted(entry.key)` no fim. `insertIgnoringAdmission` chama `put(key, amount, false, false)` **sem** chamar `inserted` (a conversão não suja a própria cadeia). `ItemStorage` sobrescreve `inserted` com `if (listener != null) listener.inserted(key);`.
+- [ ] **Passo 3: `KeyedStorage` e `ItemStorage`.** Separe o corpo do `insert` num `private long put(K key, long amount, boolean simulate, boolean external)`; `insert` chama com `external = true` (admissão, vigia e, se guardou algo, `inserted(entry.key)` no fim). `insertInternal` chama `put(key, amount, false, false)`: sem admissão, sem vigia e **sem** `inserted` (a conversão não suja a própria cadeia). O mesmo para o `extract` com `extractInternal`. `ItemStorage` sobrescreve `inserted` com `if (listener != null) listener.inserted(key);`. GameTest a mais: `conversaoNaoContaNoVigia` (com `startWatch()`, 9 lingotes viram 1 bloco e o vigia registra só a entrada dos 9 lingotes).
 
 - [ ] **Passo 4: `ChestCompacting`.**
   - Campos: o `ItemStorage`, um `LongSupplier capacity`, `@Nullable CompactingRules rules`, `@Nullable IntOpenHashSet dirty`, `int version`, e o último `contentsVersion` em que `presentChains` foi montado (cache: só remonta quando o conteúdo mudou e alguém pede).
   - É o `InsertListener` do `ItemStorage` (o próprio objeto, sem lambda): `inserted(key)` → `if (rules == null || !key.isComponentsPatchEmpty()) return;` → `chain = CompactingChains.get().chainOf(key.getItem())` → se não nulo, `dirty().add(chain.id())`.
-  - `convertDirty()`: para cada id sujo, a cadeia; `int target = rules.targetLevel(chain)`; se `< 0`, pula; monta `long[] counts` com `storage.count(new ItemStack(form))`. Para não alocar uma pilha por forma a cada conversão, guarde na `CompactingChain` (Tarefa 2) um `ItemStack[] keys` imutável com as pilhas de 1 de cada forma, e use `storage.count(chain.keys()[i])`. `room = capacity <= 0 ? Long.MAX_VALUE : capacity - storage.total()`. `long[] next = CompactingMath.convert(counts, chain.factors(), target, room)`. Aplique primeiro as reduções (`storage.extract(keys[i], counts[i] - next[i], false)`) e depois os aumentos (`storage.insertIgnoringAdmission(keys[i], next[i] - counts[i])`). Se um aumento couber menos que o pedido (não deve), logue `warn` com a cadeia e devolva a diferença para a forma de onde saiu (nada se perde). Limpa `dirty` no fim (sem `trim` por tick).
+  - Geração: guarde a `CompactingChains.get().generation()` junto do conjunto sujo. Se no `inserted` ou no `convertDirty` a geração do índice for outra (houve `/reload`), limpe o conjunto, atualize a geração e chame `markAll()` antes de seguir: os ids velhos apontariam para outras cadeias. GameTest a mais: `recargaDoIndiceNaoConverteCadeiaErrada` (suja a cadeia do ferro, chama `CompactingChains.rebuild(server)` e confere que no fim do tick só o ferro mudou).
+  - `convertDirty()`: para cada id sujo, a cadeia; `int target = rules.targetLevel(chain)`; se `< 0`, pula; monta `long[] counts` com `storage.count(new ItemStack(form))`. Para não alocar uma pilha por forma a cada conversão, guarde na `CompactingChain` (Tarefa 2) um `ItemStack[] keys` imutável com as pilhas de 1 de cada forma, e use `storage.count(chain.keys()[i])`. `room = capacity <= 0 ? Long.MAX_VALUE : capacity - storage.total()`. `long[] next = CompactingMath.convert(counts, chain.factors(), target, room)`. Aplique primeiro as reduções (`storage.extractInternal(keys[i], counts[i] - next[i])`) e depois os aumentos (`storage.insertInternal(keys[i], next[i] - counts[i])`). Se um aumento couber menos que o pedido (não deve), logue `warn` com a cadeia e devolva a diferença para a forma de onde saiu (nada se perde). Limpa `dirty` no fim (sem `trim` por tick).
   - `markAll()`: percorre os tipos do Baú uma vez (`storage.slots()`/`key(i)`) e suja as cadeias. Chamado quando o upgrade entra e quando as regras mudam.
   - O `version` sobe em `setRules` e quando `presentChains` muda de verdade.
 - [ ] **Passo 5: `StorageChestBlockEntity`.** Cria o `ChestCompacting` e liga: quando o slot de upgrade muda (o `onChange` do `ChestUpgrades`), `compacting.setRules(stack com COMPACTING ? stack.get(COMPACTING_RULES) com DEFAULT : null)` e, se passou a ter regras, `markAll()` e `markContentsChanged()` para entrar na fila. Sobrescreve `compactContents()`: `compacting.convertDirty(); super.compactContents();` (o `KeyedStorageBlockEntity` já chama `keyed().compact()`; garanta a ordem: converter antes de fechar os buracos). No `onLoad`/`loadAdditional`, aplica as regras do slot carregado sem sujar (o conteúdo carregado já estava convertido).
@@ -636,6 +677,9 @@ Em `gametest/ChestUpgradeGameTests.java`:
   - `shiftCraftaAteUmaPilha`: mesma montagem; `clicked(RESULT, 0, QUICK_MOVE)`. Uma pilha de gravetos (64) são 16 crafts. A grade começa com 2 tábuas e cada craft a repõe com 2 do Baú, então o Baú dá 32 tábuas: o inventário fica com 64 gravetos, a grade com 2 tábuas e o Baú com 64 − 32 = 32 (escreva essa conta num comentário do teste).
   - `devolverPoeAGradeNoBau`: grade com 3 pedras; `RETURN_GRID`; grade vazia e o Baú com 3 pedras a mais.
   - `semMesaOsSlotsNaoAceitam`: sem o upgrade, a grade não aceita item (`mayPlace` falso) e o resultado fica vazio.
+  - `doisJogadoresNaoDuplicam`: dois jogadores de teste com o menu do mesmo Baú; A monta 2 tábuas (graveto), B vê o resultado; A tira as tábuas da grade; B tenta tirar o resultado (`PICKUP` e `QUICK_MOVE`): nada sai, e a soma de tábuas e gravetos no mundo fica igual.
+  - `shiftNoResultadoNaoGuardaSemConsumir`: `quickMoveStack(player, RESULT)` direto (o caminho do `StorageListMenu` de hoje guardaria o item no Baú sem `onTake`): ou consome a grade, ou não move nada.
+  - `duploCliqueNaoJuntaDoResultado`: com gravetos no cursor e o resultado mostrando gravetos, `PICKUP_ALL` não tira nada do slot do resultado.
   - `tirarAMesaDevolveAGrade`: com a grade cheia, tirar o upgrade do slot 36 põe a grade no Baú.
 
 - [ ] **Passo 2: Rodar e ver falhar.**
@@ -645,7 +689,9 @@ Em `gametest/ChestUpgradeGameTests.java`:
 - [ ] **Passo 4: `ChestUpgradeSlots`.**
   - Slots de upgrade: `mayPlace` = `ChestUpgrades.accepts(slot, stack)`; `getMaxStackSize` 1. No cliente, um `SimpleContainer(2)` (o servidor manda o conteúdo pela sincronização normal).
   - Slots da grade: `mayPlace` só com a Mesa no slot (`craftingActive()`).
-  - Resultado: um `ResultContainer` e uma classe `ChestResultSlot extends ResultSlot`. No `onTake(player, stack)`: guarde uma cópia das 9 pilhas da grade (`before`), chame `super.onTake` (consome como a mesa vanilla, com os restos) e reponha: para cada `i`, se `before[i]` não vazio e `grid[i]` está vazio ou é o mesmo item e componentes com menos, tire do Baú `before[i].getCount() - grid[i].getCount()` de `before[i].copyWithCount(1)` (`storage.extract`) e some na grade. O resto vanilla que ficou num slot (balde vazio) não é tocado: só repõe slot vazio ou do mesmo item.
+  - **Dois jogadores, uma grade:** a grade é do Baú e o `ResultContainer` é de cada menu. Toda mudança da grade (de qualquer menu, da devolução, do JEI) recalcula o resultado de **todos** os `StorageListMenu` abertos naquele Baú: o `ChestUpgrades` avisa por um `Runnable` que cada `ChestUpgradeSlots` registra ao abrir e tira no `removed` (lista pequena no block entity, criada sob demanda). E o `ChestResultSlot` confere de novo, no `mayPickup` e no começo do `onTake`, que a receita usada ainda casa com a grade (`recipe.value().matches(grid.asCraftInput(), level)`); se não casa, não entrega, limpa o resultado e recalcula.
+  - `StorageListMenu.canTakeItemForPickAll(stack, slot)`: falso para o slot do resultado (como o `CraftingMenu`).
+  - Resultado: um `ResultContainer` e uma classe `ChestResultSlot extends ResultSlot`. No `onTake(player, stack)`: guarde uma cópia das 9 pilhas da grade (`before`), chame `super.onTake` (consome como a mesa vanilla, com os restos) e reponha: para cada `i`, se `before[i]` não vazio e `grid[i]` está vazio ou é o mesmo item e componentes com menos, tire do Baú `before[i].getCount() - grid[i].getCount()` de `before[i].copyWithCount(1)` (`storage.extract`) e some na grade. Se o Baú não tem o bastante e o upgrade de Compactação está lá, chame antes `compacting.unpackFor(key, falta)` (desce uma forma por dentro). GameTest a mais em `ChestCraftingGameTests`: `mesaDesceOBlocoParaRepor` (modo Compactar, só 2 blocos de ferro no Baú, grade com a receita do balde: 3 lingotes em V; tirar o balde repõe os 3 lingotes descendo 1 bloco, e o Baú fica com 1 bloco e 6 lingotes). O resto vanilla que ficou num slot (balde vazio) não é tocado: só repõe slot vazio ou do mesmo item.
   - `slotsChanged(grid)` (servidor): `CraftingInput input = grid.asCraftInput();` `Optional<RecipeHolder<CraftingRecipe>> recipe = server.getRecipeManager().getRecipeFor(RecipeType.CRAFTING, input, level, lastRecipe);` resultado em `resultContainer` (respeitando `resultContainer.setRecipeUsed`), e mande o slot do resultado ao jogador (`player.connection.send(new ClientboundContainerSetSlotPacket(containerId, incrementStateId(), RESULT, result))`), como o `CraftingMenu.slotChangedCraftingGrid` (é `protected static` lá; copie a lógica com um comentário dizendo de onde veio).
   - Shift + clique no resultado: no `StorageListMenu.clicked`, se `slotId == RESULT && clickType == QUICK_MOVE` e for o Baú, delegue a `ChestUpgradeSlots.quickCraft(player)`: repete enquanto o resultado não estiver vazio, for o mesmo item de antes e a soma movida for menor que `maxStackSize` do resultado; cada volta move o resultado para o inventário (`moveItemStackTo` nos slots 0–35, do fim para o começo como o vanilla) e chama `slot.onTake`. Para no primeiro que não couber.
   - Shift + clique num item do inventário com a Mesa aberta: continua indo para o Baú (o comportamento de hoje); não vai para a grade.
@@ -670,9 +716,9 @@ Em `gametest/ChestUpgradeGameTests.java`:
 **Interfaces:**
 - Produces:
   - `record CompactingStatePayload(int containerId, CompactingMode mode, List<Row> rows)`; `record Row(List<Item> forms, int target, boolean own)` (`target` = nível; −1 = parada). Limite de 512 linhas (as primeiras na ordem do índice; o resto não aparece; comente o porquê).
-  - `record CompactingRulePayload(int containerId, Kind kind, int baseItem, int targetLevel)` com `enum Kind { WATCH, UNWATCH, MODE, TARGET, CLEAR }` (`MODE` usa `targetLevel` como o ordinal do modo; `TARGET` e `CLEAR` usam o id do item base pela registry).
+  - `record CompactingRulePayload(int containerId, Kind kind, int mode, Optional<Item> item)` com `enum Kind { WATCH, UNWATCH, MODE, TARGET, CLEAR }` (`MODE` usa `mode`, o ordinal; `TARGET` leva a **forma alvo** e `CLEAR` qualquer forma da cadeia, pela registry). Pelo item e não pelo nível nem pelo id da cadeia: depois de um `/reload` o nível e o id podem apontar para outra coisa, o item não.
   - No servidor, o `CompactingRulePayload` altera o componente `COMPACTING_RULES` da pilha do upgrade no slot (cópia nova com `set`), o que passa pelo `onChange` do `ChestUpgrades` → `setRules` → `markAll` (ou só a cadeia, no `TARGET`/`CLEAR`).
-  - Validação no servidor: o jogador tem o menu do Baú aberto com aquele `containerId`, `stillValid`, o upgrade de Compactação está no Baú, o item base é a base de uma cadeia e o nível existe.
+  - Validação no servidor: o jogador tem o menu do Baú aberto com aquele `containerId`, `stillValid`, o upgrade de Compactação está no Baú e o item pertence a uma cadeia do índice atual.
 - [ ] **Passo 1: GameTests (falham):** `regraPeloPayloadMudaOAlvo` (envia `TARGET` pelo handler do servidor com um jogador de teste e confere a conversão); `payloadInvalidoEIgnorado` (nível fora da cadeia, item que não é base, menu de outro bloco); `semPainelNaoMandaEstado` (sem `WATCH`, o `broadcastChanges` não monta nada: exponha um contador `ChestUpgradeSlots.sentStates()` para o teste).
 - [ ] **Passo 2: Rodar e ver falhar.**
 - [ ] **Passo 3: Implementar** (payloads com `StreamCodec`, registro no `ModPayloads`, `VERSION` `"39"`, envio no `broadcastChanges` só com `watching && version != sentVersion`).
@@ -722,7 +768,7 @@ Layout (do mockup, em pixels da GUI):
 **Interfaces:**
 - Produces: `record ChestCraftFillPayload(int containerId, List<List<ItemStack>> slots, boolean maxTransfer)` (9 listas, até 16 pilhas de 1 cada); `ChestUpgradeSlots.fill(ServerPlayer, List<List<ItemStack>>, boolean max)`.
 - `ChestCraftTransfer implements IRecipeTransferHandler<StorageListMenu<?>, RecipeHolder<CraftingRecipe>>` para `RecipeTypes.CRAFTING`: só com a Mesa no Baú (senão devolve um erro do JEI "precisa do Upgrade de Mesa de Trabalho"); monta as 9 listas pelos `IRecipeSlotView` de entrada (as receitas sem forma ocupam a grade da esquerda para a direita; as com forma respeitam a largura pelo `IShapedRecipe`/`ShapedRecipe`); no `doTransfer`, manda o payload.
-- No servidor, `fill`: devolve a grade ao Baú (`RETURN_GRID`), depois para cada slot pega a primeira alternativa que existe no Baú (tirando 1, ou com `max` até a pilha cheia do mesmo ingrediente igual para todos os slots, limitada pelo que há), senão do inventário; slot sem nenhuma fica vazio.
+- No servidor, `fill`: devolve a grade ao Baú (`RETURN_GRID`), depois para cada slot pega a primeira alternativa que existe no Baú (com a Compactação, também a que dá para descer por `unpackFor`) (tirando 1, ou com `max` até a pilha cheia do mesmo ingrediente igual para todos os slots, limitada pelo que há), senão do inventário; slot sem nenhuma fica vazio.
 
 - [ ] **Passo 1:** GameTest `jeiPreencheAGradePeloBauEDepoisPeloInventario` chamando o handler do servidor direto (sem o JEI). Falha.
 - [ ] **Passo 2:** implementar; registrar o handler no plugin do JEI (`registerRecipeTransferHandlers`). Os tipos do JEI só em `compat/jei`.

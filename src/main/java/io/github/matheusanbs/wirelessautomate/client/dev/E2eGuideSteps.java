@@ -113,6 +113,35 @@ final class E2eGuideSteps {
         }), () -> !Minecraft.getInstance().player.isCreative()
                 && Minecraft.getInstance().player.getInventory().getItem(9).is(ModItems.ROUTER.get()),
                 () -> "slot 9 " + Minecraft.getInstance().player.getInventory().getItem(9)));
+        list.add(new Step("guia: tecla G com um campo de texto focado não abre", STEP_TIMEOUT_MS, () -> {
+            if (!(Minecraft.getInstance().screen instanceof InventoryScreen)) {
+                Minecraft.getInstance().setScreen(new InventoryScreen(Minecraft.getInstance().player));
+            }
+        }, () -> {
+            if (!(Minecraft.getInstance().screen instanceof InventoryScreen inventory) || stepTicks < 4) {
+                return stepTicks > 4 && !(Minecraft.getInstance().screen instanceof InventoryScreen)
+                        ? failNow("o livro abriu com um campo de texto focado") : false;
+            }
+            E2eUpgradeCardSteps.hoverSlot(inventory, 0);
+            if (stepTicks == 6) {
+                var box = new net.minecraft.client.gui.components.EditBox(Minecraft.getInstance().font, 0, 0, 50, 12,
+                        net.minecraft.network.chat.Component.empty());
+                box.setFocused(true);
+                inventory.setFocused(box);
+            }
+            if (stepTicks == 8) {
+                var keyboard = Minecraft.getInstance().keyboardHandler;
+                long window = Minecraft.getInstance().getWindow().getWindow();
+                int key = GuideKeys.OPEN_GUIDE.getKey().getValue();
+                keyboard.keyPress(window, key, 0, GLFW.GLFW_PRESS, 0);
+                keyboard.keyPress(window, key, 0, GLFW.GLFW_RELEASE, 0);
+            }
+            if (stepTicks == 16) {
+                inventory.setFocused(null);
+                return true;
+            }
+            return false;
+        }, () -> "tela " + describe(Minecraft.getInstance().screen)));
         list.add(new Step("guia: tecla G, dica e abertura", STEP_TIMEOUT_MS, () -> {
             if (!(Minecraft.getInstance().screen instanceof InventoryScreen)) {
                 Minecraft.getInstance().setScreen(new InventoryScreen(Minecraft.getInstance().player));
@@ -162,6 +191,10 @@ final class E2eGuideSteps {
             server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID()).setGameMode(GameType.CREATIVE);
             return null;
         }), () -> Minecraft.getInstance().player.isCreative(), () -> "criativo"));
+    }
+
+    private static boolean failNow(String message) throws StepFailure {
+        throw new StepFailure(message);
     }
 
     /** O clique num link do índice, o voltar (Backspace) e as setas do teclado, na folha de rosto. */

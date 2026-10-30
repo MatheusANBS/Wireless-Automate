@@ -35,10 +35,13 @@ public final class GuidePages {
 
     private static final String FALLBACK = "en_us";
 
-    private static @Nullable String language;
-    private static Map<String, GuideDoc> docs = Map.of();
-    private static List<String> order = List.of();
-    private static Map<String, String> itemPages = Map.of();
+    /** O que foi lido, publicado de uma vez: outras threads (a dica) só veem o estado inteiro ou o vazio. */
+    private record Loaded(@Nullable String language, Map<String, GuideDoc> docs, List<String> order,
+            Map<String, String> itemPages) {
+        static final Loaded EMPTY = new Loaded(null, Map.of(), List.of(), Map.of());
+    }
+
+    private static volatile Loaded loaded = Loaded.EMPTY;
     private static final Map<String, List<Sheet>> SHEETS = new HashMap<>();
     private static @Nullable GuideIndex index;
     private static @Nullable FontMeasure measure;
@@ -49,10 +52,7 @@ public final class GuidePages {
 
     /** Esquece as páginas, as folhas e o índice (recarregar de recursos ou saída do mundo). */
     public static void clear() {
-        language = null;
-        docs = Map.of();
-        order = List.of();
-        itemPages = Map.of();
+        loaded = Loaded.EMPTY;
         SHEETS.clear();
         index = null;
         searchPages = null;
@@ -63,11 +63,10 @@ public final class GuidePages {
     static void ensure() {
         Minecraft mc = Minecraft.getInstance();
         String want = mc.getLanguageManager().getSelected();
-        if (want.equals(language)) {
+        if (want.equals(loaded.language)) {
             return;
         }
         clear();
-        language = want;
         ResourceManager rm = mc.getResourceManager();
         measure = new FontMeasure(mc.font, rm);
         Map<String, GuideDoc> read = new HashMap<>();
@@ -88,9 +87,7 @@ public final class GuidePages {
                 items.putIfAbsent(item, id);
             }
         }
-        docs = sorted;
-        order = List.copyOf(ids);
-        itemPages = items;
+        loaded = new Loaded(want, sorted, List.copyOf(ids), items);
     }
 
     /** A página sem pai (a raiz) vem antes das outras do grupo; sem {@code position}, depois das que têm. */
@@ -120,32 +117,32 @@ public final class GuidePages {
     /** As páginas na ordem do índice (grupo, depois posição). */
     public static List<String> pageIds() {
         ensure();
-        return order;
+        return loaded.order;
     }
 
     static boolean exists(String id) {
-        return docs.containsKey(id);
+        return loaded.docs.containsKey(id);
     }
 
     static String title(String id) {
-        GuideDoc doc = docs.get(id);
+        GuideDoc doc = loaded.docs.get(id);
         return doc == null || doc.title().isEmpty() ? id : doc.title();
     }
 
     static String group(String id) {
-        GuideDoc doc = docs.get(id);
+        GuideDoc doc = loaded.docs.get(id);
         return doc == null ? "" : doc.group();
     }
 
     static @Nullable String pageForItem(String itemId) {
-        return itemPages.get(itemId);
+        return loaded.itemPages.get(itemId);
     }
 
     /** As folhas da página, paginadas na primeira vez e guardadas. */
     static List<Sheet> sheets(String id) {
         List<Sheet> s = SHEETS.get(id);
         if (s == null) {
-            GuideDoc doc = docs.get(id);
+            GuideDoc doc = loaded.docs.get(id);
             s = doc == null ? List.of() : GuideLayout.paginate(doc, GuideMetrics.SHEET_W, GuideMetrics.SHEET_H, measure);
             SHEETS.put(id, s);
         }
@@ -155,9 +152,9 @@ public final class GuidePages {
     /** O texto de cada página para a busca, na ordem do índice: montado na primeira busca e guardado. */
     static List<GuideSearch.Page> searchPages() {
         if (searchPages == null) {
-            List<GuideSearch.Page> built = new ArrayList<>(order.size());
-            for (String id : order) {
-                built.add(GuideSearch.page(id, title(id), GuideSearch.textOf(docs.get(id))));
+            List<GuideSearch.Page> built = new ArrayList<>(loaded.order.size());
+            for (String id : loaded.order) {
+                built.add(GuideSearch.page(id, title(id), GuideSearch.textOf(loaded.docs.get(id))));
             }
             searchPages = List.copyOf(built);
         }
@@ -170,7 +167,7 @@ public final class GuidePages {
 
     static GuideIndex index() {
         if (index == null) {
-            index = GuideIndex.build(order, docs, measure);
+            index = GuideIndex.build(loaded.order, loaded.docs, measure);
         }
         return index;
     }
@@ -189,6 +186,6 @@ public final class GuidePages {
         if (t.endsWith(".md")) {
             t = t.substring(0, t.length() - 3);
         }
-        return docs.containsKey(t) ? t : null;
+        return loaded.docs.containsKey(t) ? t : null;
     }
 }

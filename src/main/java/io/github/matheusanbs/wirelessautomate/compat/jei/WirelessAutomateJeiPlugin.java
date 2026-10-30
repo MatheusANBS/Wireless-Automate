@@ -245,6 +245,7 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
     public void onRuntimeAvailable(IJeiRuntime runtime) {
         UnloadedTiers.hide(runtime.getIngredientManager());
         GuideKeys.jeiHovered = () -> hoveredItem(runtime);
+        GuideKeys.jeiTyping = () -> runtime.getIngredientListOverlay().hasKeyboardFocus();
     }
 
     /** O item sob o mouse na lista, nos favoritos ou na tela de receitas do JEI; vazio se o foco está na busca dele. */

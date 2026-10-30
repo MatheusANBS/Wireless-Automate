@@ -2,6 +2,8 @@ package io.github.matheusanbs.wirelessautomate.storage.upgrade;
 
 import io.github.matheusanbs.wirelessautomate.item.ChestUpgradeItem;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
+import java.util.ArrayList;
+import java.util.List;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.component.DataComponentMap;
@@ -27,8 +29,13 @@ public final class ChestUpgrades {
     private final NonNullList<ItemStack> upgrades = NonNullList.withSize(SLOTS, ItemStack.EMPTY);
     private final NonNullList<ItemStack> grid = NonNullList.withSize(GRID_SIZE, ItemStack.EMPTY);
     private final Runnable onChange;
+    /** Os menus abertos neste Baú, avisados de toda mudança (só servidor); criada no primeiro menu. */
+    private @Nullable List<Runnable> listeners;
 
-    /** {@code onChange} é o {@code setChanged} do Baú: chamado quando um upgrade é trocado ou em {@link #changed()}. */
+    /**
+     * {@code onChange} é o {@code setChanged} do Baú: chamado quando um upgrade é trocado ou em {@link #changed()},
+     * antes dos menus abertos.
+     */
     public ChestUpgrades(Runnable onChange) {
         this.onChange = onChange;
     }
@@ -39,15 +46,20 @@ public final class ChestUpgrades {
 
     public void setUpgrade(int slot, ItemStack stack) {
         upgrades.set(slot, stack);
-        onChange.run();
+        fire();
     }
 
     /** Só um upgrade do Baú, e de um tipo que ainda não está no outro slot. */
     public boolean accepts(int slot, ItemStack stack) {
+        return fits(stack, upgrades.get(SLOTS - 1 - slot));
+    }
+
+    /** Se {@code stack} cabe num slot de upgrade quando o outro slot tem {@code beside}; vale também para o cliente. */
+    public static boolean fits(ItemStack stack, ItemStack beside) {
         if (!(stack.getItem() instanceof ChestUpgradeItem item)) {
             return false;
         }
-        return !(upgrades.get(SLOTS - 1 - slot).getItem() instanceof ChestUpgradeItem other) || other.kind() != item.kind();
+        return !(beside.getItem() instanceof ChestUpgradeItem other) || other.kind() != item.kind();
     }
 
     public boolean has(ChestUpgradeItem.Kind kind) {
@@ -69,9 +81,36 @@ public final class ChestUpgrades {
         return grid;
     }
 
-    /** Marca o Baú para salvar depois de uma mudança direta na grade. */
+    /** Marca o Baú para salvar depois de uma mudança direta na grade e avisa os menus abertos. */
     public void changed() {
+        fire();
+    }
+
+    /** Um menu aberto neste Baú passa a ser avisado das mudanças dos upgrades e da grade; tirado no fechamento. */
+    public void listen(Runnable listener) {
+        if (listeners == null) {
+            listeners = new ArrayList<>(2);
+        }
+        listeners.add(listener);
+    }
+
+    public void unlisten(Runnable listener) {
+        if (listeners != null) {
+            listeners.remove(listener);
+        }
+    }
+
+    private void fire() {
         onChange.run();
+        if (listeners != null) {
+            for (int i = 0; i < listeners.size(); i++) {
+                listeners.get(i).run();
+            }
+        }
+    }
+
+    public boolean gridEmpty() {
+        return allEmpty(grid);
     }
 
     public void save(CompoundTag tag, HolderLookup.Provider registries) {

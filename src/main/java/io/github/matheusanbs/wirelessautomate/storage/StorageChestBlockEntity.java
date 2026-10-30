@@ -11,8 +11,11 @@ import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingRules;
 import java.util.Objects;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.NonNullList;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.Containers;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.level.block.state.BlockState;
@@ -60,6 +63,7 @@ public class StorageChestBlockEntity extends KeyedStorageBlockEntity<ItemStack> 
     /**
      * Um upgrade foi trocado ou a grade mudou: salva e, se as regras da Compactação mudaram de verdade (o upgrade
      * entrou, saiu ou foi reconfigurado), aplica as novas e põe todas as cadeias presentes na fila do fim do tick.
+     * Sem a Mesa, a grade que sobrou volta para o Baú.
      */
     private void upgradesChanged() {
         setChanged();
@@ -71,6 +75,47 @@ public class StorageChestBlockEntity extends KeyedStorageBlockEntity<ItemStack> 
                 markContentsChanged();
             }
         }
+        if (level != null && !level.isClientSide && !upgrades.has(ChestUpgradeItem.Kind.CRAFTING) && !upgrades.gridEmpty()) {
+            returnGrid(null);
+        }
+    }
+
+    /**
+     * Devolve a grade da Mesa: cada pilha entra no Baú como uma inserção comum (com o filtro); o que não coube vai
+     * para o inventário do jogador e depois para o chão. Sem jogador (a Mesa saiu do slot), o resto cai em cima do
+     * Baú. Cada slot é esvaziado antes da inserção, e o aviso sai uma vez no fim (ele volta a este método, que já
+     * acha a grade vazia).
+     *
+     * @return se havia algo na grade
+     */
+    public boolean returnGrid(@Nullable Player player) {
+        NonNullList<ItemStack> grid = upgrades.grid();
+        boolean any = false;
+        for (int i = 0; i < grid.size(); i++) {
+            ItemStack stack = grid.get(i);
+            if (stack.isEmpty()) {
+                continue;
+            }
+            any = true;
+            grid.set(i, ItemStack.EMPTY);
+            long accepted = storage.insert(stack, stack.getCount(), false);
+            stack.shrink((int) accepted);
+            if (stack.isEmpty()) {
+                continue;
+            }
+            if (player != null) {
+                if (!player.getInventory().add(stack)) {
+                    player.drop(stack, false);
+                }
+            } else if (level != null) {
+                Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 1.0,
+                        worldPosition.getZ() + 0.5, stack);
+            }
+        }
+        if (any) {
+            upgrades.changed();
+        }
+        return any;
     }
 
     /** As regras do upgrade de Compactação dos slots, ou {@code null} sem ele. */

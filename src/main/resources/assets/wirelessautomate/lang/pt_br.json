@@ -910,6 +910,7 @@
   "gui.wirelessautomate.upgrade.slot": "Slot de upgrade: Mesa de Trabalho ou Compactação",
   "gui.wirelessautomate.upgrade.tab.crafting": "Abrir a Mesa de Trabalho",
   "gui.wirelessautomate.upgrade.tab.compacting": "Abrir a Compactação",
+  "gui.wirelessautomate.upgrade.tab.hide": "Esconder o painel (clique numa aba para voltar)",
   "gui.wirelessautomate.upgrade.crafting.title": "Mesa de Trabalho",
   "gui.wirelessautomate.upgrade.crafting.return": "Devolver",
   "gui.wirelessautomate.upgrade.crafting.return.tooltip": "Devolve a grade inteira para o Baú",

@@ -91,8 +91,9 @@ importe e exporte pela tela do filtro.
 ## Upgrades
 
 O Baú tem **dois slots de upgrade**, à esquerda da lista. Cada upgrade entra uma vez só. Clique
-num slot com o upgrade no cursor para pôr; clique no slot ocupado para abrir o painel dele, à
-direita da lista.
+num slot com o upgrade no cursor para pôr; clique na aba ao lado do slot ocupado para abrir o painel
+dele, à direita da lista. Clique de novo na aba do painel aberto para escondê-lo; ele fica escondido,
+mesmo em outros Baús, até você clicar numa aba.
 
 | Upgrade | Receita |
 | --- | --- |

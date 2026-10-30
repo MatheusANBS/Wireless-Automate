@@ -13,7 +13,7 @@ public enum TvImageRefusal {
     DISABLED,
     /** {@code tv.images.uploaders = ops} e o jogador não é operador. */
     NOT_ALLOWED,
-    /** Na lista de banidos ({@code /wa tela imagem banir}). */
+    /** Na lista de banidos ({@code /wa screen image ban}). */
     BANNED,
     /** Travado pela trava automática. */
     COOLDOWN,

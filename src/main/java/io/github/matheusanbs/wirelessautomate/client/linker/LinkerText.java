@@ -22,6 +22,11 @@ final class LinkerText {
         return Component.translatable("gui.wirelessautomate.linker." + key, args);
     }
 
+    /** Uma contagem: a chave {@code <key>.one} (o "1" no singular, já escrito) quando é uma, senão {@code <key>} com o número. */
+    static Component count(String key, int n) {
+        return n == 1 ? tr(key + ".one") : tr(key, n);
+    }
+
     /** O texto de uma recusa do roteador escolhido (sem upgrade, raio 0). */
     static Component refusal(LinkerSnapshot.RouterInfo router) {
         return Component.translatable("item.wirelessautomate.linker." + router.refusal().key());
@@ -39,7 +44,7 @@ final class LinkerText {
         if (s.unlink()) {
             return s.linkedInside() == 1 ? tr("count.one") : tr("count", s.linkedInside());
         }
-        return s.linkedInside() > 0 ? tr("area.ready.with_linked", s.linkedInside()) : tr("area.ready");
+        return s.linkedInside() > 0 ? count("area.ready.with_linked", s.linkedInside()) : tr("area.ready");
     }
 
     static int statusColor(LinkerSnapshot s) {
@@ -60,7 +65,7 @@ final class LinkerText {
 
     /** O resultado do último Vincular ou Desvincular. */
     static Component outcomeText(Outcome o) {
-        return tr(o.unlink() ? "outcome.unlinked" : "outcome.linked", o.linked());
+        return count(o.unlink() ? "outcome.unlinked" : "outcome.linked", o.linked());
     }
 
     /** Embaixo do resultado: o que ficou de fora (até duas razões, a mais importante primeiro); {@code null} se nada. */
@@ -79,7 +84,7 @@ final class LinkerText {
             parts.add(tr(o.unloadedChunks() == 1 ? "outcome.unloaded.one" : "outcome.unloaded", o.unloadedChunks()));
         }
         if (o.already() > 0) {
-            parts.add(tr("outcome.already", o.already()));
+            parts.add(count("outcome.already", o.already()));
         }
         if (parts.isEmpty()) {
             return null;

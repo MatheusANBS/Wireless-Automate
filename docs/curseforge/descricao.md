@@ -180,7 +180,7 @@ A wall display that shows **live numbers from your networks and storages**. Stic
 
 ![A wall of Screens playing](https://media.forgecdn.net/attachments/2125/350/tela-gif.gif)
 
-- **Real images and GIFs:** **Upload file** sends a **PNG, JPG or GIF** from your computer (never a link), up to **1024 px** and **8 MB** per file and 240 frames per GIF by default, and animated GIFs play on the Screen. Server owners can turn images off, let only operators upload, change every limit, and with `/wa tela` remove an image from every Screen or stop a player from uploading; each player can hide the images uploaded by others in the client config (`showOthersImages`).
+- **Real images and GIFs:** **Upload file** sends a **PNG, JPG or GIF** from your computer (never a link), up to **1024 px** and **8 MB** per file and 240 frames per GIF by default, and animated GIFs play on the Screen. Server owners can turn images off, let only operators upload, change every limit, and with `/wa screen` remove an image from every Screen or stop a player from uploading; each player can hide the images uploaded by others in the client config (`showOthersImages`).
 
 ![Real images and GIFs](https://media.forgecdn.net/attachments/2125/345/feature-29-screen-images-png.png)
 

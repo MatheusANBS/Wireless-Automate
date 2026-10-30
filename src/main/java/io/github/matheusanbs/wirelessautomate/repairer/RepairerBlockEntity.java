@@ -17,6 +17,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * O Reparador de Cristais: os 17 slots ({@link RepairerSlots}), o NBT e o motor de 8 linhas em paralelo. Não faz tick
@@ -38,9 +40,18 @@ public class RepairerBlockEntity extends BlockEntity {
     private final RepairerSync sync = new RepairerSync();
     /** O {@code onLoad} está rodando: mexer em bloco ou mandar pacote na carga do chunk é proibido. */
     private boolean loading;
+    /** A caixa de render (o próprio bloco), feita uma vez: o renderer a pede a cada quadro. */
+    private @Nullable AABB renderBox;
 
     public RepairerBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.CRYSTAL_REPAIRER.get(), pos, state);
+    }
+
+    public AABB renderBox() {
+        if (renderBox == null) {
+            renderBox = new AABB(worldPosition);
+        }
+        return renderBox;
     }
 
     public NonNullList<ItemStack> items() {

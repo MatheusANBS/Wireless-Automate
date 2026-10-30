@@ -28,10 +28,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 
 /**
- * {@code /wa tela}: a moderação das imagens enviadas à Tela de Sinal, só para operadores. {@code imagens [página]}
+ * {@code /wa screen}: a moderação das imagens enviadas à Tela de Sinal, só para operadores. {@code images [página]}
  * lista o armazém (resumo curto, tamanho, autor, quantas Telas e bibliotecas usam), as recusas por jogador e os
- * banidos; {@code imagem remover <resumo>} tira a imagem de todas as Telas carregadas e das bibliotecas e a apaga (o
- * começo do resumo basta, se só uma começa assim); {@code imagem banir|desbanir <jogador>} controla quem não envia.
+ * banidos; {@code image remove <resumo>} tira a imagem de todas as Telas carregadas e das bibliotecas e a apaga (o
+ * começo do resumo basta, se só uma começa assim); {@code image ban|unban <jogador>} controla quem não envia.
  */
 public final class TvImageCommand {
     private static final String KEY = "command.wirelessautomate.tv.images.";
@@ -43,23 +43,23 @@ public final class TvImageCommand {
     }
 
     static LiteralArgumentBuilder<CommandSourceStack> node() {
-        return Commands.literal("tela")
+        return Commands.literal("screen")
                 .requires(source -> source.hasPermission(2))
-                .then(Commands.literal("imagens")
+                .then(Commands.literal("images")
                         .executes(context -> list(context.getSource(), 1))
                         .then(Commands.argument("page", IntegerArgumentType.integer(1))
                                 .executes(context -> list(context.getSource(),
                                         IntegerArgumentType.getInteger(context, "page")))))
-                .then(Commands.literal("imagem")
-                        .then(Commands.literal("remover")
+                .then(Commands.literal("image")
+                        .then(Commands.literal("remove")
                                 .then(Commands.argument("hash", StringArgumentType.word())
                                         .suggests((context, builder) -> SharedSuggestionProvider.suggest(
                                                 hashes(context.getSource().getServer()), builder))
                                         .executes(TvImageCommand::remove)))
-                        .then(Commands.literal("banir")
+                        .then(Commands.literal("ban")
                                 .then(Commands.argument("player", GameProfileArgument.gameProfile())
                                         .executes(context -> ban(context, true))))
-                        .then(Commands.literal("desbanir")
+                        .then(Commands.literal("unban")
                                 .then(Commands.argument("player", GameProfileArgument.gameProfile())
                                         .executes(context -> ban(context, false)))));
     }

@@ -321,7 +321,7 @@ public final class TvImageUploads {
         }
     }
 
-    /** As recusas por jogador desde a subida do servidor (a lista {@code /wa tela imagens}). */
+    /** As recusas por jogador desde a subida do servidor (a lista {@code /wa screen images}). */
     public static Map<UUID, Integer> refusals() {
         return ABUSE.refusals();
     }

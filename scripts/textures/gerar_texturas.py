@@ -1992,8 +1992,12 @@ def modelos_itens() -> None:
     })
 
 
+# Pastas que outro script gera (o tela_icones.py escreve gui/tv): a limpeza não mexe nelas.
+DE_OUTROS = ("gui/tv/",)
+
+
 def limpar(gerados: set[str], pastas: list[str]) -> int:
-    """Apaga os PNGs e .mcmeta das pastas que não saíram desta rodada."""
+    """Apaga os PNGs e .mcmeta das pastas que não saíram desta rodada (menos as de DE_OUTROS)."""
     apagados = 0
     for pasta in pastas:
         raiz = ASSETS / pasta
@@ -2006,7 +2010,7 @@ def limpar(gerados: set[str], pastas: list[str]) -> int:
             if not nome.endswith(".png"):
                 continue
             chave = str(arq.parent.relative_to(ASSETS) / nome[:-4]).replace("\\", "/")
-            if chave in gerados:
+            if chave in gerados or chave.startswith(DE_OUTROS):
                 continue
             arq.unlink()
             apagados += 1

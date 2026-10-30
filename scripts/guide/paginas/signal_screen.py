@@ -203,8 +203,8 @@ quando alguém olha para a Tela.
 
 - **Esconder as imagens dos outros:** na config do cliente, `showOthersImages = false` troca as imagens de outros
   jogadores por um quadro cinza.
-- **Operadores:** `/wa tela imagens` lista as imagens do mundo; `/wa tela imagem remover <resumo>` tira uma de todas
-  as Telas; `/wa tela imagem banir <jogador>` impede alguém de enviar (`desbanir` desfaz).
+- **Operadores:** `/wa screen images` lista as imagens do mundo; `/wa screen image remove <resumo>` tira uma de todas
+  as Telas; `/wa screen image ban <jogador>` impede alguém de enviar (`unban` desfaz).
 
 ## Acesso
 
@@ -426,8 +426,8 @@ while someone looks at the Screen.
 
 - **Hide other players' images:** in the client config, `showOthersImages = false` swaps other players' images for a
   gray box.
-- **Operators:** `/wa tela imagens` lists the world's images; `/wa tela imagem remover <hash>` takes one off every
-  Screen; `/wa tela imagem banir <player>` stops someone from uploading (`desbanir` undoes it).
+- **Operators:** `/wa screen images` lists the world's images; `/wa screen image remove <hash>` takes one off every
+  Screen; `/wa screen image ban <player>` stops someone from uploading (`unban` undoes it).
 
 ## Access
 

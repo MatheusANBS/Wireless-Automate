@@ -27,7 +27,6 @@ final class RepairFrame {
     float ez;
     /** O quadrado da distância da câmera ao centro do bloco, em blocos. */
     double distanceSq;
-    int light;
 
     private RepairFrame() {
     }

@@ -213,8 +213,8 @@ while someone looks at the Screen.
 
 - **Hide other players' images:** in the client config, `showOthersImages = false` swaps other players' images for a
   gray box.
-- **Operators:** `/wa tela imagens` lists the world's images; `/wa tela imagem remover <hash>` takes one off every
-  Screen; `/wa tela imagem banir <player>` stops someone from uploading (`desbanir` undoes it).
+- **Operators:** `/wa screen images` lists the world's images; `/wa screen image remove <hash>` takes one off every
+  Screen; `/wa screen image ban <player>` stops someone from uploading (`unban` undoes it).
 
 ## Access
 

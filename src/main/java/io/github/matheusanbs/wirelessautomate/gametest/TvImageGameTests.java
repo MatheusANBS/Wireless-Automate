@@ -445,7 +445,7 @@ public final class TvImageGameTests {
                 .thenExecute(() -> {
                     TvBlockEntity tv = (TvBlockEntity) helper.getBlockEntity(A);
                     server.getCommands().performPrefixedCommand(server.createCommandSourceStack().withSuppressedOutput(),
-                            "wa tela imagem remover " + TvImageHash.brief(hash));
+                            "wa screen image remove " + TvImageHash.brief(hash));
                     helper.assertFalse(TvImageStore.get(server).contains(hash), "saiu do armazém");
                     helper.assertFalse(TvLibrary.get(server).hasPicture(player.getUUID(), hash), "e da biblioteca");
                     helper.assertTrue(tv.layout().pictures().isEmpty(), "e da Tela carregada");

@@ -153,7 +153,7 @@ A cracked crystal no longer means a trip to the crafting table. Put it on one of
 
 ![Crystal Repairer](https://media.forgecdn.net/attachments/2109/602/feature-26-repairer-png.png)
 
-Energy and items go in from any side, so a router can keep it fed. The cracks close from the inside out, the crystals converge on the emitter and the mended one rises out. The Resonator's Core also got faster at the other end: it now recharges **every Dull crystal the catalyst pays for at once**. Recipe: Resonator Casing, Phase Circuit, Hopper, Harmonic Lens and a Redstone Block. The repair time and cost are in the config (`repairer.repairTicks` and `repairer.costFactor`).
+Energy and items go in from any side, so a router can keep it fed. The cracks close from the inside out, the crystals converge on the emitter and the mended one rises out. The Resonator's Core also got faster at the other end: it now recharges **every Dull crystal the catalyst pays for at once**. Recipe: Porcelain Casing, Phase Circuit, Hopper, Harmonic Lens and a Redstone Block. The repair time and cost are in the config (`repairer.repairTicks` and `repairer.costFactor`).
 
 ### Signal Screen
 

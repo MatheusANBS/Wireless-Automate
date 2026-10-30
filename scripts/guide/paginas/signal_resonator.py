@@ -81,11 +81,11 @@ RESONATOR_ANNOTATIONS = {
     'pt': dict(CORE='Núcleo de Ressonância: a tela e os cristais',
                ENERGY='Porta de Energia: o roteador tira a energia daqui',
                CRYSTALS='Porta de Cristais: entram cristais e catalisador, saem Opacos e rachados',
-               TUNER='Sintonizador (opcional)', YAW='35'),
+               TUNER='Sintonizador (opcional)', YAW='315'),
     'en': dict(CORE='Resonance Core: the screen and the crystals',
                ENERGY='Resonator Energy Port: a router pulls the energy here',
                CRYSTALS='Resonator Crystal Port: crystals and catalyst in, Dull and cracked ones out',
-               TUNER='Resonator Tuner (optional)', YAW='35'),
+               TUNER='Resonator Tuner (optional)', YAW='315'),
 }
 
 

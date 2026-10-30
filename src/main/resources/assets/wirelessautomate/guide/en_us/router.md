@@ -46,7 +46,7 @@ Done: the face now trades resources with the other faces on the same network.
   <BlockAnnotation x="0" y="0" z="1" color="#ff9a3c">
     Attached to the side: works the same
   </BlockAnnotation>
-  <IsometricCamera yaw="200" pitch="30" />
+  <IsometricCamera yaw="300" pitch="30" />
 </GameScene>
 
 Breaking the block behind it drops the router. Shift + right-click with an empty hand turns the

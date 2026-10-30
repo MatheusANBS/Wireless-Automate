@@ -83,9 +83,7 @@ final class GuideScenes {
             minX = minY = minZ = 0;
             maxX = maxY = maxZ = 1;
         }
-        // o yaw das páginas (o da IsometricCamera do GuideME) olha a cena do lado oposto ao do visor do roteador: com
-        // 180° a mais, o roteador do lado sul da fornalha (página do roteador) fica à vista e o x cresce para a direita
-        float yaw = (float) (scene.camera().yaw() + 180) * Mth.DEG_TO_RAD;
+        float yaw = (float) scene.camera().yaw() * Mth.DEG_TO_RAD;
         float pitch = (float) scene.camera().pitch() * Mth.DEG_TO_RAD;
         float cx = (minX + maxX) / 2;
         float cy = (minY + maxY) / 2;

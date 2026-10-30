@@ -45,7 +45,7 @@ SCENE_SIDES = '''<GameScene zoom="4" interactive={true}>
   <BlockAnnotation x="0" y="0" z="1" color="#ff9a3c">
     {SIDE}
   </BlockAnnotation>
-  <IsometricCamera yaw="200" pitch="30" />
+  <IsometricCamera yaw="300" pitch="30" />
 </GameScene>'''
 
 

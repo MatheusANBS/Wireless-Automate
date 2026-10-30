@@ -212,7 +212,7 @@ A base são as capabilities padrão do NeoForge, que cobrem quase todo mod do AT
 | Sophisticated Storage (planejado) | Handler de itens com cache de slots | Varredura incremental de baús grandes | Nenhuma |
 | JEI | Ingredientes fantasmas e a receita de upgrade na bancada | Arrastar e clicar para os filtros | Opcional |
 
-Hoje existem as capabilities do NeoForge, os químicos do Mekanism, a Source do Ars Nouveau, e o JEI; os atalhos de AE2, RS2 e Sophisticated Storage são planejados (o Sophisticated já funciona pelas capabilities). Sem um mod opcional instalado, a parte correspondente simplesmente não carrega e o resto funciona normal.
+Hoje existem as capabilities do NeoForge, os químicos do Mekanism, a Source do Ars Nouveau e o JEI; os atalhos de AE2, RS2 e Sophisticated Storage são planejados (o Sophisticated já funciona pelas capabilities). Sem um mod opcional instalado, a parte correspondente simplesmente não carrega e o resto funciona normal.
 
 ## Armazenamento do mod
 

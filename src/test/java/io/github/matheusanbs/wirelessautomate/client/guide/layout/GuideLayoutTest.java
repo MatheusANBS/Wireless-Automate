@@ -134,6 +134,20 @@ class GuideLayoutTest {
     }
 
     @Test
+    void colunaEstreitaNaoCortaPalavraQuandoAsPalavrasCabem() {
+        String longo = "texto ".repeat(40).trim();
+        List<List<Span>> header = List.of(List.of(new Span.Text("Modo")), List.of(new Span.Text("O que faz")));
+        List<List<List<Span>>> rows = List.of(List.of(List.of(new Span.Text("Armazena")), List.of(new Span.Text(longo))));
+        List<Sheet> sheets = GuideLayout.paginate(doc(new Block.Table(header, rows)), 232, 280, FAKE);
+        List<String> t = texts(sheets.get(0)).stream().map(SheetOp.Text::text).toList();
+        assertTrue(t.contains("Armazena"), t.toString());
+        assertTrue(t.contains("Modo"), t.toString());
+        for (SheetOp op : sheets.get(0).ops()) {
+            assertTrue(op.x() >= 0 && op.x() + op.w() <= 232, op.toString());
+        }
+    }
+
+    @Test
     void blocoAtomicoVaiInteiroParaAFolhaSeguinte() {
         // parágrafo de 9 + espaço de 4 + receita de 62 = 75; a folha de 70 não cabe os dois
         List<Sheet> sheets = GuideLayout.paginate(doc(para("oi"), new Block.RecipeFor("x:y")), 232, 70, FAKE);
@@ -174,6 +188,18 @@ class GuideLayoutTest {
         assertEquals(2.0, t.scale());
         assertEquals(36, t.w());
         assertEquals(18, t.h());
+    }
+
+    @Test
+    void tituloUmTemOrnamentoEmbaixo() {
+        Block.Heading h = new Block.Heading(1, List.of(new Span.Text("abc")));
+        Sheet s = GuideLayout.paginate(doc(h, para("corpo")), 232, 280, FAKE).get(0);
+        SheetOp.Ornament o = (SheetOp.Ornament) s.ops().stream().filter(op -> op instanceof SheetOp.Ornament)
+                .findFirst().orElseThrow();
+        assertEquals(18, o.y());
+        assertEquals(232, o.w());
+        SheetOp.Text corpo = texts(s).get(1);
+        assertEquals(18 + GuideMetrics.ORNAMENT_H + GuideMetrics.HEADING_GAP, corpo.y());
     }
 
     @Test

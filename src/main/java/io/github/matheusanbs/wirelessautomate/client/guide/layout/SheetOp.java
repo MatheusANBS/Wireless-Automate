@@ -34,6 +34,9 @@ public sealed interface SheetOp {
         }
     }
 
+    /** O ornamento de latão embaixo do título da página (o título de nível 1). */
+    record Ornament(int x, int y, int w, int h) implements SheetOp {}
+
     /** Um retângulo cheio fino: as linhas da tabela. */
     record Rule(int x, int y, int w, int h) implements SheetOp {}
 

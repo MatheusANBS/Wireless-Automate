@@ -66,13 +66,19 @@ public final class GuideLayout {
         };
         double scale = h.level() == 1 ? GuideMetrics.H1_SCALE : 1.0;
         TextWrap wrap = new TextWrap(h.spans(), style, scale, measure);
+        int ornament = h.level() == 1 ? GuideMetrics.ORNAMENT_H : 0;
         boolean first = true;
         for (Line l = wrap.next(width); l != null; l = wrap.next(width)) {
-            int need = first ? l.height() + GuideMetrics.HEADING_GAP + firstChunk(next) : l.height();
+            int need = first ? l.height() + ornament + GuideMetrics.HEADING_GAP + firstChunk(next) : l.height();
             int y = flow.begin(need);
             l.emit(flow.ops(), 0, y);
             flow.advance(l.height());
             first = false;
+        }
+        if (ornament > 0) {
+            int y = flow.begin(ornament);
+            flow.ops().add(new SheetOp.Ornament(0, y, width, ornament));
+            flow.advance(ornament);
         }
         flow.gap(GuideMetrics.HEADING_GAP);
     }

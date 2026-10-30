@@ -124,6 +124,15 @@ final class TextWrap {
         return textWidth(" ", first.kind() == Line.Kind.TEXT ? first.style() : TextStyle.NORMAL);
     }
 
+    /** A largura da palavra mais larga (o mínimo que uma coluna de tabela pede para não cortar palavra). */
+    int widestWord() {
+        int max = 0;
+        for (Word w : words) {
+            max = Math.max(max, w.width);
+        }
+        return max;
+    }
+
     /** A próxima linha com no máximo {@code width} unidades (uma palavra mais larga que a linha é cortada), ou nula no fim. */
     Line next(int width) {
         if (next >= words.size()) {

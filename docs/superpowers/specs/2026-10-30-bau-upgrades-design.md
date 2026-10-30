@@ -99,6 +99,18 @@ Chaves existentes de NBT, componentes e config **não mudam**.
 - **Regras e mods removidos:** as regras guardam os ids das formas alvo como texto (`ResourceLocation`), não `Item`. Um mod removido não derruba a leitura do componente (o que apagaria o item do upgrade); a regra cuja forma sumiu é ignorada.
 - **Regra presa à forma alvo, não à base:** se um `/reload` acrescentar uma forma abaixo da base (um mod novo que cria pepita), a regra continua achando a cadeia pela forma alvo.
 
+## Cadeias de mods diferentes e a escolha da variante (decisão de 30/10, depois do teste do dono)
+
+O dono testou com o Modern Industrialization e o Occultism no runClient: o bloco de prata crua do MI não aparecia. Cada mod tem a sua prata crua e o seu bloco, e a receita "bloco → 9" do Occultism aceita qualquer bloco da tag `c:storage_blocks/raw_silver`; a mesa usa a primeira receita que casa, então o bloco do MI vira prata do Occultism, e a volta não fecha.
+
+1. **Alguma receita, não só a do jogador.** Um par entra quando existe **alguma** receita de mesa que faz cada sentido: a receita de volta candidata (1 → N) e uma receita de ida (N na grade → 1) que casa (`matches` + `assemble`) com N cópias da forma menor. Substitui a conferência pelo `getRecipeFor` (a decisão 1 de cima). Com isso, cada mod tem a sua cadeia (bloco do MI ↔ prata crua do MI; bloco do Occultism ↔ prata crua do Occultism).
+2. **Variantes.** Duas cadeias são variantes do mesmo material quando têm o mesmo número de formas, os mesmos fatores e, em cada nível, as duas formas dividem pelo menos uma tag específica do namespace `c` (com `/`, como `c:raw_materials/silver`, `c:storage_blocks/raw_silver`, `c:ingots/silver`; as tags-pai sem `/`, como `c:ingots`, não contam). Os grupos se formam por união (A ~ B e B ~ C juntam os três).
+3. **A escolha.** Cada grupo com mais de uma variante tem uma preferida: a escolhida pelo jogador (guardada nas regras do upgrade pela forma base dela, ids em texto, com o mesmo teto de `MAX_TARGETS`) ou, sem escolha, a primeira pelo id da forma base em ordem alfabética (o mod em ordem alfabética).
+4. **A troca 1 por 1.** Num Baú com o upgrade, quando uma cadeia do grupo é convertida (alvo ≥ 0), primeiro os itens das outras variantes viram a preferida, nível a nível e 1 por 1 (bloco do Occultism → bloco do MI, prata crua do Occultism → prata crua do MI), por dentro (sem admissão nem vigia, como a conversão); depois a compactação normal da preferida. A troca é 1 por 1, então não muda o total nem a capacidade. Com a cadeia parada (modo Desligada sem alvo próprio), nada troca.
+5. **Limite de estoque** de um item de cadeia com variantes conta o grupo inteiro no nível e na unidade do item limitado.
+6. **Painel.** O grupo aparece como uma linha só (a da preferida). Quando há mais de uma variante, a linha ganha um botão pequeno com o nome curto do mod da preferida; o clique passa para a próxima variante (e a regra de alvo continua a valer pela forma, na variante nova). O grupo aparece na lista quando qualquer variante está no Baú.
+7. **Custo.** Os grupos são montados junto com o índice, uma vez por carga de receitas (consulta O(1) item → grupo). A troca é O(formas × variantes) por cadeia suja, só com o upgrade.
+
 ## Fora
 
 Fundir; autocrafting e fila de pedidos; mostrar todas as formas ao mesmo tempo (como a gaveta compactadora do Functional Storage); upgrades nos Tanques e na Bateria.

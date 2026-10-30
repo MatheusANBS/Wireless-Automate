@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import java.util.function.Supplier;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -35,6 +36,9 @@ public final class GuideKeys {
     /** O item que o JEI mostra sob o mouse; o plugin do JEI troca isto (sem o JEI, nunca há item). */
     public static volatile Supplier<ItemStack> jeiHovered = () -> ItemStack.EMPTY;
 
+    /** Se a busca do JEI tem o foco do teclado (o plugin troca isto); a letra segue para o campo dele. */
+    public static volatile java.util.function.BooleanSupplier jeiTyping = () -> false;
+
     /** A linha da dica e o nome da tecla de quando foi montada; refeita só quando o jogador troca a tecla. */
     private static @Nullable Component hint;
     private static String hintKey = "";
@@ -45,8 +49,8 @@ public final class GuideKeys {
     @SubscribeEvent
     static void onKey(ScreenEvent.KeyPressed.Pre event) {
         Screen screen = event.getScreen();
-        if (screen instanceof GuideScreen || screen.getFocused() instanceof EditBox
-                || !OPEN_GUIDE.isActiveAndMatches(InputConstants.getKey(event.getKeyCode(), event.getScanCode()))) {
+        if (screen instanceof GuideScreen || screen.getFocused() instanceof EditBox box && box.isFocused()
+                || jeiTyping.getAsBoolean() || !OPEN_GUIDE.isActiveAndMatches(InputConstants.getKey(event.getKeyCode(), event.getScanCode()))) {
             return;
         }
         ItemStack stack = ItemStack.EMPTY;
@@ -75,7 +79,9 @@ public final class GuideKeys {
         if (stack.isEmpty() || OPEN_GUIDE.isUnbound()) {
             return;
         }
-        GuidePages.ensure();
+        if (Minecraft.getInstance().isSameThread()) {
+            GuidePages.ensure();
+        }
         if (GuidePages.pageForItem(BuiltInRegistries.ITEM.getKey(stack.getItem()).toString()) == null) {
             return;
         }

@@ -4,13 +4,13 @@
 
 It was built for large modpacks: instead of every block ticking on its own, one central manager moves everything within a small time budget per tick, so hundreds of machines don't turn into lag.
 
-![Everything wireless](https://media.forgecdn.net/attachments/2085/324/feature-0-overview-png.png)
+![Everything wireless](https://media.forgecdn.net/attachments/2125/303/feature-0-overview-png.png)
 
 ---
 
 ## Features
 
-![Connect machines without pipes](https://media.forgecdn.net/attachments/2085/325/feature-1-network-png.png)
+![Connect machines without pipes](https://media.forgecdn.net/attachments/2125/304/feature-1-network-png.png)
 
 - **One router per machine.** Attach it to any face of any block. From its screen you configure **all six faces of the machine**, not just the one it sits on. Shift + right-click it with empty hands to turn it to face any way; the setup of each face stays put.
 - **Networks, not cables.** Routers on the same network trade resources of the same type (items, fluids, energy and, with the optional mods, chemicals and Source). **Each face of the machine joins its own network**, per resource type, so one furnace can take ore from your mining line on top and send ingots to storage from the bottom, while its energy comes from your base grid.
@@ -20,17 +20,17 @@ It was built for large modpacks: instead of every block ticking on its own, one 
 - **Resizable screens:** the router, Network Tablet and Linker can be resized from their edges and corner, and the router tabs adapt to the width.
 - **Light and dark theme:** every screen has both; switch with the moon/sun button in the header.
 
-![Configure every face](https://media.forgecdn.net/attachments/2085/326/feature-2-router-png.png)
+![Configure every face](https://media.forgecdn.net/attachments/2125/305/feature-2-router-png.png)
 
-![A network per face](https://media.forgecdn.net/attachments/2085/343/feature-19-face-networks-png.png)
+![A network per face](https://media.forgecdn.net/attachments/2125/322/feature-19-face-networks-png.png)
 
 ### Range Upgrade
 
 One router moves to and from every machine you link in its radius (6 blocks and 8 machines on Advanced, up to 64 blocks and 128 machines on Ultimate). Linked machines of the same block form a group with one profile, with exceptions per machine, and their sides follow each machine's front. Machines wake the router as soon as they change, and nothing scans the world while it runs. Linked machines start without a network: choose each face's network explicitly in the panel's Network row. Changing its action keeps its network. **Clear networks** removes the network from every face set to None, with Undo. Give machines and groups their own names, and light any machine up **in the world**, through blocks, with a line to its router; right-click a machine with the Network Tablet to jump straight to it.
 
-![One router, many machines](https://media.forgecdn.net/attachments/2085/341/feature-17-range-png.png)
+![One router, many machines](https://media.forgecdn.net/attachments/2125/320/feature-17-range-png.png)
 
-![Configure by machine type](https://media.forgecdn.net/attachments/2085/342/feature-18-range-screen-png.png)
+![Configure by machine type](https://media.forgecdn.net/attachments/2125/321/feature-18-range-screen-png.png)
 
 ### Filters with no entry limit
 
@@ -39,19 +39,19 @@ Exact items, tags (`#c:ores`) and whole mods (`@mekanism`), as a whitelist or bl
 - **Tag inspector:** put any item in the inspector and every tag it has shows up, ready to check and add. Or search every tag in the game, with how many items each one matches and a preview.
 - A resizable window with the entries in a searchable list.
 
-![Tags in one click](https://media.forgecdn.net/attachments/2085/327/feature-3-filters-png.png)
+![Tags in one click](https://media.forgecdn.net/attachments/2125/306/feature-3-filters-png.png)
 
 ### Property rules
 
 Match items by what they **are**, not which item they are: **any enchanted item**, damaged or undamaged, renamed, potions, unstackable, shulker boxes with contents, an enchantment with a minimum level (type its name and pick from the suggestions, any level from 1 to 255: Fortune ≥ III, Efficiency ≥ 37) or the remaining durability (send tools under 25% to repair). Limit a rule to a tag or mod: Enchanted + `#c:armors` = enchanted armor only. Your inventory lights up on what the rule matches before you add it.
 
-![Property rules](https://media.forgecdn.net/attachments/2085/332/feature-8-rules-png.png)
+![Property rules](https://media.forgecdn.net/attachments/2125/311/feature-8-rules-png.png)
 
 ### Five tiers, eight with Allthemodium
 
 Tiers raise a router's throughput and range along the ladder Basic → Advanced → Elite → **Emerald** → Ultimate. With the **Allthemodium** mod (ATM10), three more steps go between Emerald and Ultimate: **Allthemodium → Vibranium → Unobtainium**, crafted from the mod's own metals, and in ATM10 the Ultimate ring takes **ATM Star shards**. Each tier has one ring of ingredients, used two ways at the same cost: put a router (or storage block) in the middle of the next ring at the crafting table, or make an Upgrade Card ("Basic → Elite") and use it on the placed router, which keeps its whole configuration. A card can skip tiers: put it in the middle of the next ring to extend it.
 
-![Eight tiers](https://media.forgecdn.net/attachments/2090/178/feature-4-tiers-png.png)
+![Eight tiers](https://media.forgecdn.net/attachments/2125/307/feature-4-tiers-png.png)
 
 | Tier | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Source/s | Range | Range Upgrade |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -66,13 +66,13 @@ Tiers raise a router's throughput and range along the ladder Basic → Advanced 
 
 *Per face and per resource type; every machine linked by the Range Upgrade gets the full rate, and each tier's energy carries the full output of the same tier's Signal Resonator. ¹ Only with Allthemodium. Server owners can change every value in the config.*
 
-![From iron to Unobtainium](https://media.forgecdn.net/attachments/2085/339/feature-15-tier-hall-png.png)
+![From iron to Unobtainium](https://media.forgecdn.net/attachments/2125/318/feature-15-tier-hall-png.png)
 
-![Raise a tier, keep the setup](https://media.forgecdn.net/attachments/2085/344/feature-20-tier-up-png.png)
+![Raise a tier, keep the setup](https://media.forgecdn.net/attachments/2125/336/feature-20-tier-up-png.png)
 
 ### Wireless storage
 
-![Storage of its own](https://media.forgecdn.net/attachments/2085/333/feature-9-storage-png.png)
+![Storage of its own](https://media.forgecdn.net/attachments/2125/312/feature-9-storage-png.png)
 
 Five storage blocks made for the router: the **Wireless Chest** (unlimited item types, no slots), the **Wireless Tank**, the **Wireless Battery** and, with the optional mods, the **Wireless Chemical Tank** (Mekanism) and the **Wireless Source Tank** (Ars Nouveau). Between two of them, a router moves a whole item type in a single operation (**12 million items in one tick**) and fluids and energy by the billions. For every other mod they are a normal inventory, tank or battery, and the Chest fills big-stack slots (Sophisticated Storage stack upgrades, drawers) a whole slot per insert: **2.1 billion items into an Omega-upgraded barrel in one tick**.
 
@@ -94,7 +94,7 @@ Five storage blocks made for the router: the **Wireless Chest** (unlimited item 
 - Mouse Tweaks-style controls in the Chest list: Shift + drag, mouse wheel to move one item at a time, and Shift + double-click (with an item on the cursor) to fill your inventory.
 - Search the Chest list by name, `@mod`, or `#` for tags and tooltip text (`#ingots`, `#not yet eaten`). Hold Shift and the list stops reordering while you pull items out, like the AE2 terminal.
 
-![Wireless Chest](https://media.forgecdn.net/attachments/2085/334/feature-10-chest-png.png)
+![Wireless Chest](https://media.forgecdn.net/attachments/2125/313/feature-10-chest-png.png)
 
 ### Chest upgrades
 
@@ -102,33 +102,33 @@ The Wireless Chest has two upgrade slots, next to its list. Each upgrade opens i
 
 - **Crafting Upgrade:** a 3×3 crafting grid inside the Chest that refills itself from the Chest's stock. Shift + click the result to craft up to a stack; JEI's **+** fills the grid from the Chest first.
 
-![Crafting inside the Chest](ENVIAR:feature-31-chest-crafting.png)
+![Crafting inside the Chest](https://media.forgecdn.net/attachments/2125/347/feature-31-chest-crafting-png.png)
 
 - **Compacting Upgrade:** packs and unpacks item chains on its own as they come in: nugget, ingot, block, or cobblestone up to AllTheCompressed's 9x. Pick one mode for every chain (**Compress** or **Decompress**) or a target form for a single chain. The same material from different mods is one row, and a button picks which mod's items it all goes to.
 
-![Compacting](ENVIAR:feature-32-chest-compacting.png)
+![Compacting](https://media.forgecdn.net/attachments/2125/348/feature-32-chest-compacting-png.png)
 
-![Nuggets coming in, compressed and decompressed](ENVIAR:compactacao.gif)
+![Nuggets coming in, compressed and decompressed](https://media.forgecdn.net/attachments/2125/351/compactacao-gif.gif)
 
 ### Ars Nouveau Source
 
 With Ars Nouveau installed, every router gets a **Source** tab. Source Jars, Relays and the Imbuement Chamber connect straight to a router, so Source travels wirelessly between them like any other resource, at the Source/s of the router's tier.
 
-![Ars Nouveau Source](https://media.forgecdn.net/attachments/2085/335/feature-11-source-png.png)
+![Ars Nouveau Source](https://media.forgecdn.net/attachments/2125/314/feature-11-source-png.png)
 
 The **Wireless Source Tank** holds from 10,000 Source (Basic) to unlimited (Ultimate) and shows its level in the glass. Sourcelinks within 5 blocks deposit into it and Ars machines nearby draw from it, as from a Source Jar.
 
-![Wireless Source Tank](https://media.forgecdn.net/attachments/2085/336/feature-12-source-tank-png.png)
+![Wireless Source Tank](https://media.forgecdn.net/attachments/2125/315/feature-12-source-tank-png.png)
 
 ### Signal Resonator
 
 A multiblock generator that turns vibrating quartz crystals into FE. Mine **Signal Quartz** (Overworld, stone and deepslate), build a hollow 5×5×5 box around a **Resonance Core** and put **Signal Crystals** in its chambers. Every Resonator has its own **station**, a frequency that drifts slowly: turn the dial until the lamp says **IN TUNE** for 100%, or add a **Tuner** to follow the station on its own, a little below the top. Off the station, it generates nothing.
 
-![Signal Resonator](https://media.forgecdn.net/attachments/2109/600/ressonador-gif.gif)
+![Signal Resonator](https://media.forgecdn.net/attachments/2125/349/ressonador-gif.gif)
 
 Through the glass you can read the tuning: the plasma Core with the ring of its tier, the crystals orbiting it, each live one feeding it through a plasma tendril that holds thick and steady in tune and thins out and lets go out of it, and a bolt of energy to every port that is delivering. Spent crystals turn **Dull** and recharge inside the Core with a catalyst (redstone or Resonance Dust on the first tiers, the tier's Charged Dust from Allthemodium up). Energy leaves through the **Energy Port**, straight into a router.
 
-![Signal Resonator](https://media.forgecdn.net/attachments/2109/601/feature-21-resonator-png.png)
+![Signal Resonator](https://media.forgecdn.net/attachments/2125/337/feature-21-resonator-png.png)
 
 | Core tier | Chambers | FE/t per crystal | Tuner ceiling |
 | --- | --- | --- | --- |
@@ -145,13 +145,13 @@ Through the glass you can read the tuning: the plasma Core with the ring of its 
 
 A Cut Signal Crystal yields twice as much and lasts twice as long. From Elite up, each chamber wants the **Tuned Signal Crystal** of the Core's tier (a plain crystal yields 1/4 there, a Cut one 1/2): with the tier's Tuned crystals in every chamber, the Resonator beats the best generator of its tier, from 432 FE/t on Basic to 4.29 billion FE/t on Ultimate. It costs accordingly: every crystal has **8 charges of integrity** and then cracks, recast at the crafting table with 4 Signal Crystals; another formed Core within 32 blocks takes 15% of the efficiency (up to 60%); and the Ultimate Core burns cracked Ultimate Tuned crystals as **Resonant Echo**, a permanent +5% each, with no cap. The Core is built with the **Resonator Heart** of its tier, made from a cascade of 11 components (Signal Alloy, plates, coils, lenses, phase circuits and matrices, field stabilizers, condensed cores), and raising the Core a tier takes the next Heart along with the Upgrade Card. JEI shows the structure in 3D and every recipe, and the guide book explains every step.
 
-![The Resonator cascade](https://media.forgecdn.net/attachments/2085/347/feature-23-cascade-png.png)
+![The Resonator cascade](https://media.forgecdn.net/attachments/2125/339/feature-23-cascade-png.png)
 
 ### Crystal Repairer
 
 A cracked crystal no longer means a trip to the crafting table. Put it on one of the **8 pedestals** of the Crystal Repairer and it mends it, **up to eight crystals in parallel**. Each repair takes 7 seconds and uses **4 full Signal Crystals** from the shared stock slot plus energy: 2 times the FE per crystal of the crystal's tier (432 FE for a Signal Crystal, 13,824 FE for a Cut one, and the tier's own price for a Tuned one). The crystal comes out of the output slots fully charged and with full integrity.
 
-![Crystal Repairer](https://media.forgecdn.net/attachments/2109/602/feature-26-repairer-png.png)
+![Crystal Repairer](https://media.forgecdn.net/attachments/2125/342/feature-26-repairer-png.png)
 
 Energy and items go in from any side, so a router can keep it fed. The cracks close from the inside out, the crystals converge on the emitter and the mended one rises out. The Resonator's Core also got faster at the other end: it now recharges **every Dull crystal the catalyst pays for at once**. Recipe: Porcelain Casing, Phase Circuit, Hopper, Harmonic Lens and a Redstone Block. The repair time and cost are in the config (`repairer.repairTicks` and `repairer.costFactor`).
 
@@ -159,7 +159,7 @@ Energy and items go in from any side, so a router can keep it fed. The cracks cl
 
 A wall display that shows **live numbers from your networks and storages**. Stick it on the side of a solid block and stretch it from **1 × 1 to 32 × 32 blocks** in the Size tab: no extra blocks, the picture spans the whole wall.
 
-![Signal Screen](ENVIAR:feature-30-screen-wall.png)
+![Signal Screen](https://media.forgecdn.net/attachments/2125/346/feature-30-screen-wall-png.png)
 
 - **A full editor in the game:** drag, resize, group and layer pieces, copy and paste between Screens, undo up to 100 steps. Pieces: **Value, Text, Shape, Icon, Bar, Gauge, Graph and Arrow**, each fed by a **network**, a **linked storage** or the **in-game clock**.
 - **Rules** change a piece's color, background, blink or hide it when a number is below, above or equal to a value. Five fonts, four ready themes (Graphite, Phosphor, Amber, Porcelain) plus your own, backgrounds, scanlines.
@@ -172,53 +172,53 @@ A wall display that shows **live numbers from your networks and storages**. Stic
 
 - **A pixel art editor in the game**, from 8 × 8 to **128 × 128** with a **16-color palette**: pen, eraser, fill, line, rectangle, ellipse, shade, dither and selection, brushes up to 8 px, mirrors, flip and rotate, **Create ramp** from any color and 100 undo steps. Your arts stay in your library (32 by default) and go on a Screen as an **Image** piece, at any whole scale, or as a tiled background.
 
-![Draw pixel art in the game](ENVIAR:feature-27-screen-pixel-art.png)
+![Draw pixel art in the game](https://media.forgecdn.net/attachments/2125/343/feature-27-screen-pixel-art-png.png)
 
 - **Animate it frame by frame:** up to **64 frames** per art, **1 to 20 frames per second**, looping or back and forth, with a frame strip and onion skin. Two Screens with the same art play in step.
 
-![Animate it frame by frame](ENVIAR:feature-28-screen-animation.png)
+![Animate it frame by frame](https://media.forgecdn.net/attachments/2125/344/feature-28-screen-animation-png.png)
 
-![A wall of Screens playing](ENVIAR:tela.gif)
+![A wall of Screens playing](https://media.forgecdn.net/attachments/2125/350/tela-gif.gif)
 
 - **Real images and GIFs:** **Upload file** sends a **PNG, JPG or GIF** from your computer (never a link), up to **1024 px** and **8 MB** per file and 240 frames per GIF by default, and animated GIFs play on the Screen. Server owners can turn images off, let only operators upload, change every limit, and with `/wa tela` remove an image from every Screen or stop a player from uploading; each player can hide the images uploaded by others in the client config (`showOthersImages`).
 
-![Real images and GIFs](ENVIAR:feature-29-screen-images.png)
+![Real images and GIFs](https://media.forgecdn.net/attachments/2125/345/feature-29-screen-images-png.png)
 
 - **Export and import as text:** arts, images and whole layouts copy as a short code or as readable text, so you can share a Screen or let a chat AI draw for you: paste the [pixel art guide for AIs](https://github.com/MatheusANBS/Wireless-Automate/blob/main/docs/pixel-art-ai-guide.md) into the chat, ask for a drawing and import the answer.
 - **Access:** on the Access tab, invite players or, with FTB Teams, whole teams to edit a Screen like its owner (size, layout and links). Anyone can still look at it.
 
 ### Tools for big builds
 
-![The toolkit](https://media.forgecdn.net/attachments/2085/338/feature-14-toolkit-png.png)
+![The toolkit](https://media.forgecdn.net/attachments/2125/317/feature-14-toolkit-png.png)
 
-![Link a whole area](https://media.forgecdn.net/attachments/2090/179/feature-5-area-png.png)
+![Link a whole area](https://media.forgecdn.net/attachments/2125/308/feature-5-area-png.png)
 
 - **Linker** (two modes): **Link** picks a router with the Range Upgrade (click it) and links the machines you click, or **a whole marked area** at once (Shift + click two blocks; nearest first, up to the tier's radius and limit); the **Unlink** switch takes them out instead. **Open** opens the screen of the router that reaches the machine you click, already editing that machine; with several routers, a short list lets you pick. It checks range, claims and protection mods on the router. The Linker no longer touches networks: choose each face's network on the router screen or in the Tablet.
 - **Configurator** (the Brush): Shift + click a router copies its setup (faces, filters, priorities, redstone and the network of each face), click pastes it on another, and Shift + click on a block without a router clears the copy. Paste every tab or just one type, leaving the other tabs alone. Hold **Left Alt** for a radial wheel that picks the pasted type. A face's network is only pasted if you can use it, and a face only leaves a network you can edit. To configure many routers at once, paste the profile on the Tablet's marked ones.
 - **Chunk Loading Upgrade:** keeps a router and its machine working while you're away.
 - **Recipe editor** (operators): `/wa recipes` opens a screen to change, disable or restore any of the mod's crafting recipes, with items from your inventory or JEI, tags and the result count. Saved as a datapack in `config/wirelessautomate/recipes/`, so it works in every world and survives updates. Handy for packs that want a different Ultimate recipe.
 
-![Configurator Brush](https://media.forgecdn.net/attachments/2090/190/feature-16-wheel-png.png)
+![Configurator Brush](https://media.forgecdn.net/attachments/2125/319/feature-16-wheel-png.png)
 
-![Link or open](https://media.forgecdn.net/attachments/2090/187/feature-13-linker-png.png)
+![Link or open](https://media.forgecdn.net/attachments/2125/316/feature-13-linker-png.png)
 
 ### Network Tablet
 
-![Network Tablet](https://media.forgecdn.net/attachments/2085/330/feature-6-tablet-png.png)
+![Network Tablet](https://media.forgecdn.net/attachments/2125/309/feature-6-tablet-png.png)
 
 Every router of every network, from anywhere: one search box for machine, network and name, quick filters and one row per router (tier, name and the machine it sits on), with the chosen node **editable right there** (the faces unfolded like a cube, the same panel as the router screen). Rename a router or its machine with ✎ right in the list. Open a router in the list to see each of its linked machines with its state, or switch to **Machines** to see every machine of the base by block type. Copy a node's profile and paste it on routers, single machines or whole machine groups, with undo. Also a top-down **map you can drag** that shows every router you can see (use **Center** to come back to yourself), a **Flows** tab with what comes in and goes out of each type and network, Storage balances and what needs attention (click a line to filter the list), routers whose faces sit in several networks, and network groups to pause and resume a whole system at once. The map shows the picked router's machines. Double-click a node to open its full screen remotely.
 
 **Share a network.** On a private network you own, the Networks tab lists your **guests** and, with FTB Teams, your **teams**: type a name and pick from the suggestions (players who already joined the server, and party teams), and click the ✕ twice to remove. Guests use the network and edit its nodes; only you and operators manage it. A team counts as a whole and is live: whoever joins or leaves it gains or loses access on their own. There are `/wa network invite`, `uninvite` and `team add|remove` commands too.
 
-![One row per router](https://media.forgecdn.net/attachments/2085/346/feature-22-tablet-list-png.png)
+![One row per router](https://media.forgecdn.net/attachments/2125/338/feature-22-tablet-list-png.png)
 
-![A map you can drag](https://media.forgecdn.net/attachments/2090/206/feature-25-map-png.png)
+![A map you can drag](https://media.forgecdn.net/attachments/2125/341/feature-25-map-png.png)
 
-![Share a network](https://media.forgecdn.net/attachments/2090/174/feature-24-network-access-png.png)
+![Share a network](https://media.forgecdn.net/attachments/2125/340/feature-24-network-access-png.png)
 
 ### Built-in guide book
 
-![Built-in guide book](https://media.forgecdn.net/attachments/2085/331/feature-7-guide-png.png)
+![Built-in guide book](https://media.forgecdn.net/attachments/2125/310/feature-7-guide-png.png)
 
 Every player gets the guide book on their first join (it's also in the creative tab, or craft it with a book and redstone). It explains every item with interactive 3D scenes and recipes, in **English and Portuguese**. Hover any item of the mod and hold **G** to jump to its page.
 

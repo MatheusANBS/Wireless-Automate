@@ -789,3 +789,40 @@ Layout (do mockup, em pixels da GUI):
 - [ ] **Passo 4:** commit ("Baú: guia e docs dos upgrades").
 
 Depois: revisão final do ramo inteiro (modelo mais capaz), com as leis da `wa-performance`, o `varrer_perf.py`, o `medir.py` e o `varrer.py` em todo o diff contra o `main`, e a onda de correções. O dono testa à mão com a farm da lâmpada no runClient (AllTheCompressed já lá). A versão (2.13.0) é com a skill `wa-release`, quando o dono pedir.
+
+---
+
+## Etapa 2: cadeias de mods diferentes e a escolha da variante (aprovada em 30/10)
+
+Spec: seção "Cadeias de mods diferentes e a escolha da variante" de `docs/superpowers/specs/2026-10-30-bau-upgrades-design.md`. As Restrições globais de cima valem (o protocolo continua `39`: a versão ainda não foi publicada).
+
+### Task 10: Alguma receita e variantes no servidor
+
+**Custo:** a montagem do índice continua uma vez por carga de receitas; os grupos de variantes saem na mesma passada (tags das formas lidas uma vez); a troca entre variantes só roda para cadeia suja num Baú com o upgrade, O(formas × variantes). Prova: o tempo do índice no log com o AllTheCompressed + MI + Occultism no runClient (deve continuar abaixo de 500 ms) e GameTests.
+
+**Files:**
+- Create: `storage/upgrade/VariantGroups.java` (puro: dados os níveis de cada cadeia como conjuntos de tags em texto, devolve os grupos por união) + JUnit
+- Modify: `storage/upgrade/CompactingChains.java` (a regra "alguma receita" no lugar do `getRecipeFor`, com o try/catch por par que já existe; grupos de variantes: `@Nullable VariantGroup groupOf(CompactingChain)`), `CompactingChain.java` (se precisar do id do grupo), `CompactingRules.java` (`Set<ResourceLocation> preferred`, a forma base da variante escolhida por grupo, com o mesmo teto `MAX_TARGETS` somado aos alvos; `withPreferred(VariantGroup, CompactingChain)`; `preferredOf(VariantGroup)` com o padrão alfabético), `ChestCompacting.java` (troca 1 por 1 antes da conversão; a cadeia suja processa o grupo dela; `stockCount` pelo grupo), `menu/CompactingPanel.java` (o grupo como uma linha, pela preferida)
+- Test: JUnit `VariantGroupsTest`; GameTests em `ChestCompactingGameTests`
+
+**Interfaces:**
+- `record VariantGroup(int id, List<CompactingChain> chains)` (as cadeias na ordem do id da forma base).
+- `CompactingChains`: `@Nullable VariantGroup groupOf(CompactingChain)` (nulo quando a cadeia não tem variante); um gancho só para teste (`static void linkVariantsForTest(CompactingChain a, CompactingChain b)`, documentado como de teste) para os GameTests, já que o vanilla não tem duplicatas.
+- A troca usa `extractInternal`/`insertInternal` (sem admissão, sem vigia), nível a nível, 1 por 1, só com a cadeia ativa (alvo ≥ 0).
+
+- [ ] **Passo 1:** JUnit do `VariantGroups` (duas cadeias que dividem `c:raw_materials/silver` e `c:storage_blocks/raw_silver` formam um grupo; tag-pai sem `/` não junta; tamanhos ou fatores diferentes não juntam; união transitiva A~B~C; a ordem é estável).
+- [ ] **Passo 2:** GameTests: (a) a regra "alguma receita" acha a cadeia de um bloco cuja primeira receita de volta é de outro item (monte com receitas vanilla se houver um caso; senão um teste JUnit da função de conferência com receitas falsas); (b) com o gancho ligando a cadeia do ferro e a do ouro como variantes e a preferida = ouro, 9 lingotes de ferro no Baú com Compactar viram 1 bloco de ouro... ATENÇÃO: o teste não pode depender de o ferro e o ouro terem o mesmo número de formas (pepita, lingote, bloco: os dois têm 3) — confira; (c) trocar a preferida pelo payload faz os itens irem para a outra; (d) modo Desligada não troca nada; (e) o limite de estoque conta o grupo; (f) nada some (conte antes e depois).
+- [ ] **Passo 3:** implementar; `./gradlew build runGameTestServer` e as outras 4 runs; medir o índice no runClient (o log "Compactação: N cadeias…") e anotar.
+- [ ] **Passo 4:** varreduras e commit ("Baú: cadeias de mods diferentes e as variantes do mesmo material").
+
+### Task 11: A escolha da variante na rede e no painel
+
+**Custo:** um campo a mais por linha no estado (até 8 bases de variante por linha, só nas linhas com variante), enviado nas mesmas condições de hoje (painel aberto e mudou). Nada por quadro: o nome curto do mod é montado quando o estado chega.
+
+**Files:**
+- Modify: `packet/CompactingStatePayload.java` (`Row` ganha `List<Item> variants` e `int chosen`, com teto 8 no decode e no encode), `packet/CompactingRulePayload.java` (`Kind.PREFER` com o item da forma base da variante), `menu/CompactingPanel.java` (validação: o item é a base de uma cadeia do mesmo grupo da linha), `client/storage/upgrade/CompactingRow.java`/`CompactingPanelView.java` (o botão do mod na linha, entre o nome e as setas ou onde couber sem cortar texto; o clique passa para a próxima variante, envio pelo `UpgradePanels`), `lang` (dica do botão: "Variante: <mod> (clique para trocar)")
+- Modify: `client/dev/E2eChestUpgradeSteps.java`: no e2e (o runClient tem o MI e o Occultism), ponha prata crua dos dois mods no Baú, confira a linha única com o botão, troque a variante e confira no servidor; captura `armazenamento-upgrade-variante` (e `-pt`, `-escuro`); `GuiText.clipCount()==0`.
+
+- [ ] **Passo 1:** GameTest do payload `PREFER` (válido, inválido, outro grupo, teto).
+- [ ] **Passo 2:** implementar; `./gradlew build runGameTestServer`; `./scripts/e2e.sh --only armazenamento --capture armazenamento --variants pt,escuro` (OK) e olhar as capturas.
+- [ ] **Passo 3:** guia (pt e en, `scripts/guide/gerar_guia.py`): uma frase sobre a variante; docs do mapa; varreduras; commit ("Baú: a escolha da variante no painel da Compactação").

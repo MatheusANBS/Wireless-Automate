@@ -75,6 +75,7 @@ final class E2eGuideSteps {
         if (suffix.isEmpty()) {
             navigationSteps(list);
         }
+        searchSteps(list, suffix);
         for (String page : PAGES) {
             list.add(new Step("guia" + suffix + ": " + page, STEP_TIMEOUT_MS,
                     () -> GuideClientHooks.open.accept(page + ".md"),
@@ -112,6 +113,55 @@ final class E2eGuideSteps {
                 () -> book().keyPressed(GLFW.GLFW_KEY_RIGHT, 0, 0),
                 () -> book() != null && book().page() == null && book().spread() == 1,
                 () -> book() == null ? "sem livro" : "par " + book().spread()));
+    }
+
+    /**
+     * A busca: digita na folha de rosto, confere que o primeiro resultado é a página do baú (em inglês, a busca por
+     * "chest": o título dela não tem "bau") e captura; depois o Enter abre a página.
+     */
+    private static void searchSteps(List<Step> list, String suffix) {
+        String query = suffix.isEmpty() ? "chest" : "bau";
+        String first = "wireless-chest";
+        list.add(new Step("guia" + suffix + ": digitar na busca", STEP_TIMEOUT_MS, () -> {
+            moveMouse(0, 0);
+            GuideScreen.openIndex();
+            for (char c : query.toCharArray()) {
+                book().charTyped(c, 0);
+            }
+        }, () -> {
+            GuideScreen s = book();
+            if (s == null || !query.equals(s.searchText()) || s.resultPages().isEmpty() || stepTicks < 6) {
+                return false;
+            }
+            if (!first.equals(s.resultPages().get(0))) {
+                throw new StepFailure("o primeiro resultado de \"" + query + "\" devia ser " + first + ": "
+                        + s.resultPages());
+            }
+            if (!s.problems().isEmpty()) {
+                throw new StepFailure("não coube: " + String.join(" | ", s.problems()));
+            }
+            capture(Minecraft.getInstance(), "guia-busca" + suffix);
+            return true;
+        }, () -> book() == null ? "sem livro" : "busca \"" + book().searchText() + "\": " + book().resultPages()));
+        list.add(new Step("guia" + suffix + ": Enter abre o resultado marcado", STEP_TIMEOUT_MS,
+                () -> book().keyPressed(GLFW.GLFW_KEY_ENTER, 0, 0),
+                () -> book() != null && first.equals(book().page()) && book().spread() == 0,
+                () -> book() == null ? "sem livro" : "página " + book().page()));
+        list.add(new Step("guia" + suffix + ": busca sem resultado", STEP_TIMEOUT_MS, () -> {
+            GuideScreen.openIndex();
+            for (char c : "zzzzqx".toCharArray()) {
+                book().charTyped(c, 0);
+            }
+        }, () -> book() != null && book().page() == null && "zzzzqx".equals(book().searchText())
+                && book().problems().isEmpty(), () -> book() == null ? "sem livro" : book().problems().toString()));
+        list.add(new Step("guia" + suffix + ": Esc limpa e depois fecha", STEP_TIMEOUT_MS, () -> {
+            GuideScreen s = book();
+            s.keyPressed(GLFW.GLFW_KEY_ESCAPE, 0, 0);
+            if (!s.searchText().isEmpty() || Minecraft.getInstance().screen != s) {
+                throw new StepFailure("o primeiro Esc devia só limpar a busca");
+            }
+            s.keyPressed(GLFW.GLFW_KEY_ESCAPE, 0, 0);
+        }, () -> Minecraft.getInstance().screen == null, () -> "tela " + describe(Minecraft.getInstance().screen)));
     }
 
     /** Vira cada par de folhas da página aberta, confere o texto e captura; pares além do fim passam direto. */

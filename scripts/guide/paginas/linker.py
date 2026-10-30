@@ -2,7 +2,7 @@
 from guia_base import *  # noqa: F401,F403
 
 
-PAGINA = page('linker.md', front('Vinculador', 'wirelessautomate:linker', 7, item_ids=['wirelessautomate:linker']) + '''
+PAGINA = page('linker.md', front('Vinculador', 'wirelessautomate:linker', 'ferramentas', 7, item_ids=['wirelessautomate:linker']) + '''
 # Vinculador
 
 <ItemImage id="wirelessautomate:linker" scale="2" float="left" />
@@ -65,7 +65,7 @@ armazenamento estiver descarregado, a Tela mantém o último número, apagado.
 ## Receita
 
 <RecipeFor id="wirelessautomate:linker" />
-''', front('Linker', 'wirelessautomate:linker', 7, item_ids=['wirelessautomate:linker']) + '''
+''', front('Linker', 'wirelessautomate:linker', 'ferramentas', 7, item_ids=['wirelessautomate:linker']) + '''
 # Linker
 
 <ItemImage id="wirelessautomate:linker" scale="2" float="left" />

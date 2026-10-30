@@ -2,7 +2,7 @@
 from guia_base import *  # noqa: F401,F403
 
 
-PAGINA = page('index.md', front('Wireless Automate', 'wirelessautomate:router', parent=None) + '''
+PAGINA = page('index.md', front('Wireless Automate', 'wirelessautomate:router', 'comecar', parent=None) + '''
 # Wireless Automate
 
 <ItemImage id="wirelessautomate:router" scale="2" float="left" />
@@ -61,7 +61,7 @@ outro: livro + redstone, na bancada. Com o mouse sobre um item do mod (inventár
 ## Todas as páginas
 
 <SubPages icons={true} />
-''', front('Wireless Automate', 'wirelessautomate:router', parent=None) + '''
+''', front('Wireless Automate', 'wirelessautomate:router', 'comecar', parent=None) + '''
 # Wireless Automate
 
 <ItemImage id="wirelessautomate:router" scale="2" float="left" />

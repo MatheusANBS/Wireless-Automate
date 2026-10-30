@@ -2,7 +2,7 @@
 from guia_base import *  # noqa: F401,F403
 
 
-PAGINA = page('filter-card.md', front('Cartão de Filtro', 'wirelessautomate:filter_card', 6, item_ids=['wirelessautomate:filter_card']) + '''
+PAGINA = page('filter-card.md', front('Cartão de Filtro', 'wirelessautomate:filter_card', 'ferramentas', 6, item_ids=['wirelessautomate:filter_card']) + '''
 # Cartão de Filtro
 
 <ItemImage id="wirelessautomate:filter_card" scale="2" float="left" />
@@ -29,7 +29,7 @@ Não há cartão de químicos: eles usam só o filtro embutido da face.
 Rende 2 cartões.
 
 <RecipeFor id="wirelessautomate:filter_card" />
-''', front('Filter Card', 'wirelessautomate:filter_card', 6, item_ids=['wirelessautomate:filter_card']) + '''
+''', front('Filter Card', 'wirelessautomate:filter_card', 'ferramentas', 6, item_ids=['wirelessautomate:filter_card']) + '''
 # Filter Card
 
 <ItemImage id="wirelessautomate:filter_card" scale="2" float="left" />

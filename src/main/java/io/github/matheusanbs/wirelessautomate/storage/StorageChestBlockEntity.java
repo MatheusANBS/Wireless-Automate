@@ -31,7 +31,7 @@ public class StorageChestBlockEntity extends KeyedStorageBlockEntity<ItemStack> 
     private final ItemStorage storage = new ItemStorage(this::markContentsChanged, this::capacity);
     private final ItemStorageHandler handler = new ItemStorageHandler(storage);
     private final ChestUpgrades upgrades = new ChestUpgrades(this::upgradesChanged);
-    private final ChestCompacting compacting = new ChestCompacting(storage, this::capacity);
+    private final ChestCompacting compacting = new ChestCompacting(storage, this::capacity, this::markContentsChanged);
 
     public StorageChestBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.CHEST.get(), StorageKind.CHEST, pos, state);

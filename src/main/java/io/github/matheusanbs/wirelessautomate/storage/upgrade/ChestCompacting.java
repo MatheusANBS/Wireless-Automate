@@ -20,15 +20,20 @@ import org.jetbrains.annotations.Nullable;
  * <p>Sem o upgrade as regras são nulas, o {@link ItemStorage} não tem ouvinte e nada aqui roda. O conjunto das
  * cadeias sujas é criado na primeira inserção de cadeia. Os ids das cadeias só valem numa geração do
  * {@link CompactingChains}: depois de um {@code /reload}, as sujas são descartadas e todas as presentes marcadas de
- * novo, senão um id velho converteria outra cadeia.
+ * novo, senão um id velho converteria outra cadeia. Quem percebe a troca primeiro (o painel, uma inserção, o fim do
+ * tick) só descarta e põe o Baú na fila do fim do tick; a remarcação roda lá, uma vez.
  */
 public final class ChestCompacting implements ItemStorage.InsertListener {
     private final ItemStorage storage;
     private final LongSupplier capacity;
+    /** Põe o Baú na fila do fim do tick, onde {@link #convertDirty} roda. */
+    private final Runnable enqueue;
     private @Nullable CompactingRules rules;
     private @Nullable IntOpenHashSet dirty;
     /** A geração do índice em que os ids de {@link #dirty} e de {@link #present} valem. */
     private int generation;
+    /** A geração mudou e as cadeias presentes ainda não foram marcadas de novo. */
+    private boolean remark;
     private int version;
     /** As cadeias presentes, montadas sob demanda; nulo até alguém pedir. */
     private @Nullable IntArrayList present;
@@ -37,10 +42,14 @@ public final class ChestCompacting implements ItemStorage.InsertListener {
     /** As contagens das formas do {@link #stockCount}, uma por tamanho de cadeia, reusadas entre chamadas. */
     private long[][] scratch = new long[0][];
 
-    /** @param capacity a capacidade do Baú ({@code <= 0} é sem limite) */
-    public ChestCompacting(ItemStorage storage, LongSupplier capacity) {
+    /**
+     * @param capacity a capacidade do Baú ({@code <= 0} é sem limite)
+     * @param enqueue põe o Baú na fila do fim do tick (o {@code markContentsChanged} dele)
+     */
+    public ChestCompacting(ItemStorage storage, LongSupplier capacity, Runnable enqueue) {
         this.storage = storage;
         this.capacity = capacity;
+        this.enqueue = enqueue;
         this.generation = CompactingChains.get().generation();
     }
 
@@ -77,7 +86,8 @@ public final class ChestCompacting implements ItemStorage.InsertListener {
             return;
         }
         CompactingChains chains = CompactingChains.get();
-        if (newGeneration(chains)) {
+        catchUp(chains);
+        if (remark) {
             markAll();
         }
         CompactingChain chain = chains.chainOf(key.getItem());
@@ -94,10 +104,12 @@ public final class ChestCompacting implements ItemStorage.InsertListener {
     }
 
     /**
-     * Se o índice foi remontado, descarta os ids guardados (apontariam para outras cadeias) e passa à geração nova;
-     * quem chama marca tudo de novo.
+     * Se o índice foi remontado, descarta os ids guardados (apontariam para outras cadeias), passa à geração nova e,
+     * com o upgrade, deixa a remarcação pendente e o Baú na fila do fim do tick.
+     *
+     * @return se a geração mudou agora
      */
-    private boolean newGeneration(CompactingChains chains) {
+    private boolean catchUp(CompactingChains chains) {
         if (chains.generation() == generation) {
             return false;
         }
@@ -107,6 +119,10 @@ public final class ChestCompacting implements ItemStorage.InsertListener {
         }
         present = null;
         version++;
+        if (rules != null) {
+            remark = true;
+            enqueue.run();
+        }
         return true;
     }
 
@@ -116,7 +132,8 @@ public final class ChestCompacting implements ItemStorage.InsertListener {
             return;
         }
         CompactingChains chains = CompactingChains.get();
-        newGeneration(chains);
+        catchUp(chains);
+        remark = false;
         for (int i = 0, n = storage.slots(); i < n; i++) {
             ItemStack key = storage.key(i);
             if (storage.count(i) > 0 && key.isComponentsPatchEmpty()) {
@@ -128,21 +145,35 @@ public final class ChestCompacting implements ItemStorage.InsertListener {
         }
     }
 
+    /**
+     * Suja uma cadeia pelo id. Um id só vale na geração do índice em que foi lido: se o índice foi remontado desde a
+     * última conta do Baú, o id é descartado (a remarcação de todas as presentes já ficou pendente) e o mesmo vale
+     * para um id que nenhuma cadeia tem.
+     */
     public void markChain(int chainId) {
-        if (rules != null) {
+        if (rules == null) {
+            return;
+        }
+        CompactingChains chains = CompactingChains.get();
+        if (!catchUp(chains) && chains.byId(chainId) != null) {
             dirty().add(chainId);
+            enqueue.run();
         }
     }
 
     /** Fim do tick: leva cada cadeia suja ao alvo dela. */
     public void convertDirty() {
-        IntOpenHashSet pending = dirty;
-        if (pending == null || pending.isEmpty() || rules == null) {
+        if (rules == null) {
             return;
         }
         CompactingChains chains = CompactingChains.get();
-        if (newGeneration(chains)) {
+        catchUp(chains);
+        if (remark) {
             markAll();
+        }
+        IntOpenHashSet pending = dirty;
+        if (pending == null || pending.isEmpty()) {
+            return;
         }
         // Um iterador por Baú com cadeia suja, no fim do tick; nunca por inserção.
         for (IntIterator it = pending.iterator(); it.hasNext(); ) {
@@ -286,9 +317,7 @@ public final class ChestCompacting implements ItemStorage.InsertListener {
 
     private void refreshPresent() {
         CompactingChains chains = CompactingChains.get();
-        if (newGeneration(chains)) {
-            markAll();
-        }
+        catchUp(chains);
         int contents = storage.version();
         if (present != null && presentContents == contents) {
             return;
@@ -307,7 +336,7 @@ public final class ChestCompacting implements ItemStorage.InsertListener {
         int[] ids = seen.toIntArray();
         Arrays.sort(ids);
         IntArrayList next = IntArrayList.wrap(ids);
-        if (!next.equals(present)) {
+        if (present == null || !next.equals(present)) {
             version++;
             present = next;
         }

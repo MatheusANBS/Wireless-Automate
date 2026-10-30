@@ -275,6 +275,9 @@ public class StorageListMenu<K> extends AbstractContainerMenu {
     @Override
     public void broadcastChanges() {
         super.broadcastChanges();
+        if (upgradeSlots != null) {
+            upgradeSlots.broadcast();
+        }
         Sync<K> sync = poll();
         if (sync != null) {
             send(sync);

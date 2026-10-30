@@ -17,6 +17,7 @@ import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
 import io.github.matheusanbs.wirelessautomate.registry.ModRecipes;
 import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeEditor;
+import io.github.matheusanbs.wirelessautomate.storage.upgrade.CompactingChains;
 import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeOverridePack;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorCapabilities;
 import io.github.matheusanbs.wirelessautomate.repairer.RepairerManager;
@@ -42,6 +43,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.level.ChunkEvent;
+import net.neoforged.neoforge.event.OnDatapackSyncEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -84,6 +86,8 @@ public final class WirelessAutomate {
         NeoForge.EVENT_BUS.addListener(RecipeEditor::onServerStarted);
         // Subida do servidor: o conteúdo de armazenamentos quebrados há mais tempo que o prazo sai do arquivo.
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onServerStarted);
+        // Recarga das receitas: remonta o índice das cadeias de compactação.
+        NeoForge.EVENT_BUS.addListener(WirelessAutomate::onDatapackSync);
         // Upgrade de chunk loading: controle de tickets, fila por tick e config.
         ChunkLoaderEvents.register(modEventBus);
     }
@@ -118,6 +122,13 @@ public final class WirelessAutomate {
 
     private static void onServerStarted(ServerStartedEvent event) {
         StorageSavedData.onServerStarted(event.getServer());
+        CompactingChains.rebuild(event.getServer());
+    }
+
+    private static void onDatapackSync(OnDatapackSyncEvent event) {
+        if (event.getPlayer() == null) {
+            CompactingChains.rebuild(event.getPlayerList().getServer());
+        }
     }
 
     private static void onServerStopped(ServerStoppedEvent event) {
@@ -134,6 +145,7 @@ public final class WirelessAutomate {
         ResonatorMembers.reset();
         ResonatorProfile.reset();
         RecipeEditor.reset();
+        CompactingChains.reset();
         TabletMenu.resetStates();
         IdleNetworkUndo.reset();
     }

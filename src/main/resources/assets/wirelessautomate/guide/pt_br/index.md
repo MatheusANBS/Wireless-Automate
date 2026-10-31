@@ -62,6 +62,8 @@ com o botão direito segurando o livro para abri-lo. Para fazer outro: livro + r
   resultado e as setas ↑ ↓ andam pelos outros.
 - **Tecla G:** com o mouse sobre um item do mod (no inventário, num baú ou no JEI), aperte **G**
   (o nome padrão da tecla; dá para trocá-la nos Controles) e o livro abre na página dele.
+- **Cenas 3D:** arraste com o botão esquerdo para girar; a roda do mouse dentro da cena dá zoom;
+  clique duplo volta ao ângulo da página. Passe o mouse numa anotação para ver o texto dela.
 
 <Recipe id="wirelessautomate:guide" />
 

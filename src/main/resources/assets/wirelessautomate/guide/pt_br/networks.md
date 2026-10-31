@@ -34,16 +34,16 @@ mesmo tipo na mesma rede troca entre si; o modo da face diz quem envia e quem re
   <LineAnnotation from="3.5 1.5 3.5" to="0.5 1.5 3.5" color="#3fc36b" thickness="0.08">
     Os barris (Armazém) entregam no baú (Insere)
   </LineAnnotation>
-  <BlockAnnotation x="0" y="1" z="0" color="#4a8cff">
+  <BlockAnnotation x="0" y="0" z="0" color="#4a8cff">
     Fornalha · Extrai
   </BlockAnnotation>
-  <BlockAnnotation x="3" y="1" z="0" color="#3fc36b">
+  <BlockAnnotation x="3" y="0" z="0" color="#3fc36b">
     Barril · Armazém
   </BlockAnnotation>
-  <BlockAnnotation x="3" y="1" z="3" color="#3fc36b">
+  <BlockAnnotation x="3" y="0" z="3" color="#3fc36b">
     Barril · Armazém
   </BlockAnnotation>
-  <BlockAnnotation x="0" y="1" z="3" color="#ff9a3c">
+  <BlockAnnotation x="0" y="0" z="3" color="#ff9a3c">
     Baú · Insere
   </BlockAnnotation>
   <IsometricCamera yaw="210" pitch="35" />

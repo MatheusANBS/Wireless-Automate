@@ -220,7 +220,7 @@ Every router of every network, from anywhere: one search box for machine, networ
 
 ![Built-in guide book](https://media.forgecdn.net/attachments/2125/310/feature-7-guide-png.png)
 
-Every player gets the guide book on their first join (it's also in the creative tab, or craft it with a book and redstone). It explains every item with 3D scenes and recipes, in **English and Portuguese**. Hover any item of the mod and press **G** to jump to its page.
+Every player gets the guide book on their first join (it's also in the creative tab, or craft it with a book and redstone). It explains every item with 3D scenes you can rotate (drag to rotate, the wheel zooms, double click goes back to the page's angle, and annotations show their text on hover) and recipes, in **English and Portuguese**. Hover any item of the mod and press **G** to jump to its page.
 
 ---
 

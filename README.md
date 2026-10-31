@@ -6,7 +6,7 @@ O **Wireless Automate** move itens, fluidos, energia, químicos do Mekanism e So
 
 Foi feito para modpacks grandes: em vez de cada bloco ter o próprio tick, um gerenciador central move tudo dentro de um orçamento de tempo pequeno por tick, então centenas de máquinas não viram lag.
 
-**Estado:** versão 2.13. O Baú Wireless ganha dois slots de upgrade: o **Upgrade de Mesa de Trabalho** (uma grade 3×3 dentro do Baú, que se repõe pelo estoque dele) e o **Upgrade de Compactação** (cadeias de itens como pepita, lingote e bloco compactadas e descompactadas sozinhas). O que mudou em cada versão está no [changelog](docs/curseforge/changelog-curseforge-2.13.0.md) e na [página de releases](https://github.com/MatheusANBS/Wireless-Automate/releases).
+**Estado:** versão 2.14. O mod ganha o **livro-guia próprio**, sem depender do GuideME: um livro aberto de duas folhas, com fitas por grupo, busca, receitas e cenas 3D que giram. O que mudou em cada versão está no [changelog](docs/curseforge/changelog-curseforge-2.14.0.md) e na [página de releases](https://github.com/MatheusANBS/Wireless-Automate/releases).
 
 Baixe no [CurseForge](https://www.curseforge.com/minecraft/mc-mods/wireless-automate) ou na [release mais recente do GitHub](https://github.com/MatheusANBS/Wireless-Automate/releases/latest). Requer NeoForge 21.1.248 ou mais novo (roda no ATM10).
 

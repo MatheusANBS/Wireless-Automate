@@ -6,7 +6,7 @@
 
 It was built for large modpacks: instead of every block ticking on its own, one central manager moves everything within a small time budget per tick, so hundreds of machines don't turn into lag.
 
-**Status:** version 2.13. The Wireless Chest gets two upgrade slots: the **Crafting Upgrade** (a 3×3 grid inside the Chest that refills itself from its stock) and the **Compacting Upgrade** (item chains such as nugget, ingot and block packed and unpacked on their own). Every version's changes are in the [changelog](docs/curseforge/changelog-curseforge-2.13.0.md) and on the [releases page](https://github.com/MatheusANBS/Wireless-Automate/releases).
+**Status:** version 2.14. The mod gets its **own guide book**, with no GuideME dependency: an open two-page book with tabs per group, search, recipes and 3D scenes you can rotate. Every version's changes are in the [changelog](docs/curseforge/changelog-curseforge-2.14.0.md) and on the [releases page](https://github.com/MatheusANBS/Wireless-Automate/releases).
 
 Download it on [CurseForge](https://www.curseforge.com/minecraft/mc-mods/wireless-automate) or from the [latest GitHub release](https://github.com/MatheusANBS/Wireless-Automate/releases/latest). Requires NeoForge 21.1.248 or newer (runs on ATM10).
 

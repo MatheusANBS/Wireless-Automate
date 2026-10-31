@@ -67,7 +67,7 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 - Depois, se o dono quiser: som e animação de folha virando; tabelas com os números do servidor. (30/10)
 - Dica da folha de rosto com a tecla do livro desassociada diz "Press Not bound…" (a dica do item já se esconde nesse caso). (30/10)
 - e2e do livro: o passo do baú põe o baú em `offset(2,0,0)` sem conferir se o lugar está vazio e depois põe ar ali; o ramo "contêiner fechado pelo servidor" do `onClose` sem passo próprio. (30/10)
-- **(release)** Na versão que levar o livro: uma linha no changelog (num pack com o GuideME, o livro antigo fica sem uso no inventário e o novo chega no próximo login) e refazer a `docs/curseforge/feature-7-guide.png` pela vitrine (`wa-curseforge-imagens`), que ainda mostra o livro do GuideME. (30/10)
+- Refazer a `docs/curseforge/feature-7-guide.png` pela vitrine (`wa-curseforge-imagens`), que ainda mostra o livro do GuideME, e trocar o link na descrição. (30/10)
 
 ## Integrações
 

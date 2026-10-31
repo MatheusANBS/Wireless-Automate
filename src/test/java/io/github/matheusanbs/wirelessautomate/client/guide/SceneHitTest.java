@@ -62,12 +62,12 @@ class SceneHitTest {
 
     @Test
     void faceDeLadoNaoConta() {
-        // a caixa achatada numa linha (vista de lado por todos os eixos): nenhum ponto fora da linha está dentro
+        // a caixa achatada numa linha (vista de lado por todos os eixos): um ponto sobre a linha não está dentro
         float[] pts = new float[16];
         for (int c = 0; c < 8; c++) {
             pts[c * 2] = c;
             pts[c * 2 + 1] = 0;
         }
-        assertFalse(SceneHit.inBox(pts, 0, 3, 1));
+        assertFalse(SceneHit.inBox(pts, 0, 3, 0));
     }
 }

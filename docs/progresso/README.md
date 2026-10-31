@@ -6,11 +6,11 @@ Comece por aqui para continuar o trabalho. Este arquivo é curto de propósito: 
 
 - **Versão atual:** 2.13.0 (30/10/2026), publicada no GitHub; os upgrades do Baú (Mesa de Trabalho e Compactação). Protocolo 40.
 - **Publicação:** a 2.13.0 está no CurseForge e no Modrinth (`modrinth.com/mod/wireless-automate`, em análise desde 30/10).
-- **Em andamento:** o ramo `livro-proprio` (etapa 1 do livro-guia próprio) está pronto e à espera do merge. Fora ele, nada em ramo aberto. O ramo `mc/1.20.1-forge` (porte) está parado à espera do ok do dono (`docs/portes.md`).
+- **Em andamento:** o ramo `livro-proprio` (etapas 1 e 2 do livro-guia próprio: o livro e as cenas que giram) está pronto e à espera do merge. Fora ele, nada em ramo aberto. O ramo `mc/1.20.1-forge` (porte) está parado à espera do ok do dono (`docs/portes.md`).
 
 ## Próximo passo
 
-1. Fechar o ramo `livro-proprio` (merge no main e o release que o leva) e o teste do dono da tecla G com o JEI de verdade (ver `pendencias.md`); depois a etapa 2 do livro (cenas 3D interativas).
+1. Fechar o ramo `livro-proprio` (merge no main e o release que o leva) e o teste do dono da tecla G com o JEI de verdade e das cenas que giram no jogo (ver `pendencias.md`).
 2. A próxima funcionalidade, a escolher com o dono: a lixeira do mod, o fim do roteador de alcance (pausar grupo, perfis no Configurador, página no guia) ou os atalhos de AE2/RS2.
 
 ## Os arquivos

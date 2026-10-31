@@ -393,7 +393,7 @@ O v1 entrega o motor de transferência e a configuração essencial; o v2 comple
 - [x] Tela de Sinal: etapas 1 (bloco, tamanho, canal de dados, Painel de rede), 2 (editor, temas, componentes e biblioteca) e 3 (mais peças, armazenamentos, relógio, layouts), lançadas na 2.11, e 4 (pixel art, Imagem e mosaico, exportar e importar por código, acesso à Tela) pronta, à espera do release
 - [ ] Tela de Sinal, etapa 5: pixel art animada (depois do release da etapa 4)
 - [x] Texturas finais (geradas por `scripts/textures/gerar_texturas.py`)
-- [x] Livro-guia próprio (livro aberto de duas folhas, sem dependência de outro mod; as cenas 3D interativas ficam para a etapa 2)
+- [x] Livro-guia próprio (livro aberto de duas folhas, sem dependência de outro mod; as cenas 3D giram com o arrasto, têm zoom na roda e mostram anotações)
 - [ ] Balanceamento das receitas
 
 **0.2, armazenamento do mod**

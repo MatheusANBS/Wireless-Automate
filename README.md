@@ -226,7 +226,7 @@ Todos os roteadores de todas as redes, de qualquer lugar: uma caixa de busca par
 
 ![Livro-guia embutido](docs/curseforge/feature-7-guide.png)
 
-Todo jogador recebe o livro-guia no primeiro login (ele também está na aba criativa, ou faça com um livro e redstone). Ele explica cada item com cenas 3D e receitas, em **inglês e português**. Passe o mouse sobre qualquer item do mod e aperte **G** para ir à página dele.
+Todo jogador recebe o livro-guia no primeiro login (ele também está na aba criativa, ou faça com um livro e redstone). Ele explica cada item com cenas 3D que giram (arraste para girar, a roda dá zoom, clique duplo volta ao ângulo, e as anotações mostram o texto ao passar o mouse) e receitas, em **inglês e português**. Passe o mouse sobre qualquer item do mod e aperte **G** para ir à página dele.
 
 ---
 

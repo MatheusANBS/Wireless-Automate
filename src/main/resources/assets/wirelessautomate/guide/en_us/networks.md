@@ -34,16 +34,16 @@ same type on the same network trades; the face mode says who sends and who recei
   <LineAnnotation from="3.5 1.5 3.5" to="0.5 1.5 3.5" color="#3fc36b" thickness="0.08">
     The barrels (Storage) deliver to the chest (Insert)
   </LineAnnotation>
-  <BlockAnnotation x="0" y="1" z="0" color="#4a8cff">
+  <BlockAnnotation x="0" y="0" z="0" color="#4a8cff">
     Furnace · Extract
   </BlockAnnotation>
-  <BlockAnnotation x="3" y="1" z="0" color="#3fc36b">
+  <BlockAnnotation x="3" y="0" z="0" color="#3fc36b">
     Barrel · Storage
   </BlockAnnotation>
-  <BlockAnnotation x="3" y="1" z="3" color="#3fc36b">
+  <BlockAnnotation x="3" y="0" z="3" color="#3fc36b">
     Barrel · Storage
   </BlockAnnotation>
-  <BlockAnnotation x="0" y="1" z="3" color="#ff9a3c">
+  <BlockAnnotation x="0" y="0" z="3" color="#ff9a3c">
     Chest · Insert
   </BlockAnnotation>
   <IsometricCamera yaw="210" pitch="35" />

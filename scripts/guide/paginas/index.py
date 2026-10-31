@@ -59,6 +59,8 @@ com o botão direito segurando o livro para abri-lo. Para fazer outro: livro + r
   resultado e as setas ↑ ↓ andam pelos outros.
 - **Tecla G:** com o mouse sobre um item do mod (no inventário, num baú ou no JEI), aperte **G**
   (o nome padrão da tecla; dá para trocá-la nos Controles) e o livro abre na página dele.
+- **Cenas 3D:** arraste com o botão esquerdo para girar; a roda do mouse dentro da cena dá zoom;
+  clique duplo volta ao ângulo da página. Passe o mouse numa anotação para ver o texto dela.
 
 <Recipe id="wirelessautomate:guide" />
 
@@ -122,6 +124,8 @@ while holding the book to open it. To make another: book + redstone, in a crafti
   first result and the ↑ ↓ arrows move through the others.
 - **G key:** with the mouse over one of the mod's items (in the inventory, in a chest or in JEI),
   press **G** (the default key; you can change it in Controls) and the book opens on its page.
+- **3D scenes:** drag with the left button to rotate; the mouse wheel over a scene zooms; double
+  click goes back to the page's angle. Hover an annotation to see its text.
 
 <Recipe id="wirelessautomate:guide" />
 

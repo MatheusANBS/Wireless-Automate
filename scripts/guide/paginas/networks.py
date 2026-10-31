@@ -23,16 +23,16 @@ SCENE_STORAGE = '''<GameScene zoom="3" interactive={true}>
   <LineAnnotation from="3.5 1.5 3.5" to="0.5 1.5 3.5" color="#3fc36b" thickness="0.08">
     {L2}
   </LineAnnotation>
-  <BlockAnnotation x="0" y="1" z="0" color="#4a8cff">
+  <BlockAnnotation x="0" y="0" z="0" color="#4a8cff">
     {FURNACE}
   </BlockAnnotation>
-  <BlockAnnotation x="3" y="1" z="0" color="#3fc36b">
+  <BlockAnnotation x="3" y="0" z="0" color="#3fc36b">
     {BARREL}
   </BlockAnnotation>
-  <BlockAnnotation x="3" y="1" z="3" color="#3fc36b">
+  <BlockAnnotation x="3" y="0" z="3" color="#3fc36b">
     {BARREL}
   </BlockAnnotation>
-  <BlockAnnotation x="0" y="1" z="3" color="#ff9a3c">
+  <BlockAnnotation x="0" y="0" z="3" color="#ff9a3c">
     {CHEST}
   </BlockAnnotation>
   <IsometricCamera yaw="210" pitch="35" />

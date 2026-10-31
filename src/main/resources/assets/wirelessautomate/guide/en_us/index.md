@@ -62,6 +62,8 @@ while holding the book to open it. To make another: book + redstone, in a crafti
   first result and the ↑ ↓ arrows move through the others.
 - **G key:** with the mouse over one of the mod's items (in the inventory, in a chest or in JEI),
   press **G** (the default key; you can change it in Controls) and the book opens on its page.
+- **3D scenes:** drag with the left button to rotate; the mouse wheel over a scene zooms; double
+  click goes back to the page's angle. Hover an annotation to see its text.
 
 <Recipe id="wirelessautomate:guide" />
 

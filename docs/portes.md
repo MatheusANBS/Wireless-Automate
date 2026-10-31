@@ -54,7 +54,7 @@ e dos payloads atuais: é o porte mais trabalhoso. Pontos que devem pesar:
 - capabilities pelo `LazyOptional`, com o cache feito pelo próprio mod;
 - pastas de dados no plural;
 - os químicos do Mekanism divididos em quatro tipos;
-- o GuideME pode não existir.
+- o livro-guia é do próprio mod (`client/guide/`), sem dependência de outro mod.
 
 O ATM9 é um pack grande e estável, com muito jogador.
 

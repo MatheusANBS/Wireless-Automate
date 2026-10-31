@@ -71,7 +71,7 @@ There is no command that creates nodes (`/ln` only has `removeNodes`, `cullNetwo
 | Tools | Linker (single and area), Configurator (area paste), Tablet (statistics, list, remote GUI) | Wrench (copy and paste with fill, mass placement of up to 2,048 nodes), Computer (directory, flow monitor, table, graph, `.lnet` files), flow lines |
 | Own storage | Chest, Tank, Battery, Chemical Tank, Source Tank, by tier | None |
 | Chunk loading | Router upgrade | None |
-| Integrations | JEI, GuideME, Mekanism, Ars, Allthemodium | JEI, EMI, Jade, GuideME, Mekanism, Ars, AE2, RS (direct access and autocrafting), Create (contraptions), CC: Tweaked, FTB Teams, Building Gadgets 2, Sophisticated and Functional Storage |
+| Integrations | JEI, Mekanism, Ars, Allthemodium | JEI, EMI, Jade, GuideME, Mekanism, Ars, AE2, RS (direct access and autocrafting), Create (contraptions), CC: Tweaked, FTB Teams, Building Gadgets 2, Sophisticated and Functional Storage |
 | Cost control | Per-tick budget (1 ms, adaptive), sleep and backoff per port, no per-block tick | No budget (synchronous); sleep per network and backoff per channel; optional async mode |
 | Built-in measurement | `/wa profile` (ms per tick, per network) and `/wa bench` | Units moved only, with the Computer open |
 

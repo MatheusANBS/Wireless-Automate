@@ -1,10 +1,9 @@
 """Base do livro-guia: o que várias páginas usam (cabeçalho, imagens de item, tiers e tabelas).
 
-Cada página fica em paginas/<pagina>.py; o gerar_guia.py junta tudo. Regras do GuideME que valem a
-pena lembrar:
-- anotações de cena (BlockAnnotation, LineAnnotation...) com o texto em linha própria; numa linha
-  só, elas não aparecem;
-- o comando de teste é /guidemec wirelessautomate:guide open wirelessautomate:<página>.md;
+Cada página fica em paginas/<pagina>.py; o gerar_guia.py junta tudo. O que vale lembrar:
+- as páginas vão para assets/wirelessautomate/guide/<en_us|pt_br>/ e o livro é uma tela do próprio mod;
+- o cabeçalho de cada página traz o grupo (um dos sete de GRUPOS) como chave de topo;
+- os links de imagem no texto (images/port_x.png) são relativos a assets/wirelessautomate/guide/;
 - os números das tabelas são os padrões do ResourceType, do StorageKind e do RouterTier (mantenha em dia).
 """
 import os
@@ -13,18 +12,25 @@ import os
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')
 
 
-BASE = os.path.join(ROOT, 'src/main/resources/assets/wirelessautomate/guides/wirelessautomate/guide')
+BASE = os.path.join(ROOT, 'src/main/resources/assets/wirelessautomate/guide')
+
+
+GRUPOS = ('comecar', 'ferramentas', 'armazenamentos', 'energia', 'painel', 'integracoes', 'referencia')
+
+
+PASTAS = {'en': 'en_us', 'pt': 'pt_br'}
 
 
 def write(lang, name, text):
-    folder = BASE if lang == 'en' else os.path.join(BASE, '_pt_br')
+    folder = os.path.join(BASE, PASTAS[lang])
     os.makedirs(folder, exist_ok=True)
     with open(os.path.join(folder, name), 'w', encoding='utf-8', newline='\n') as fh:
         fh.write(text.strip('\n') + '\n')
 
 
-def front(title, icon, position=None, parent='index.md', item_ids=()):
-    lines = ['---', 'navigation:', f'  title: {title}', f'  icon: {icon}']
+def front(title, icon, group, position=None, parent='index.md', item_ids=()):
+    assert group in GRUPOS, f'grupo desconhecido: {group}'
+    lines = ['---', f'group: {group}', 'navigation:', f'  title: {title}', f'  icon: {icon}']
     if parent:
         lines.append(f'  parent: {parent}')
     if position is not None:

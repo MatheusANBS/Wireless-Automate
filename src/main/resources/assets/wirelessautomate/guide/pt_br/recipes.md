@@ -1,0 +1,43 @@
+---
+group: referencia
+navigation:
+  title: Todas as receitas
+  icon: minecraft:crafting_table
+  parent: index.md
+  position: 23
+---
+
+
+# Todas as receitas
+
+Todas na bancada, com itens vanilla.
+
+| Também na bancada | Como |
+| --- | --- |
+| **Subir o tier** | Roteador ou armazenamento (Baú, Tanque, Bateria, Tanque Químico, Tanque de Source) + o cartão de um tier acima, em qualquer posição. |
+| **Copiar um Cartão de Filtro** | Cartão configurado + cartões vazios. O original volta. |
+| **Este guia** | Livro + redstone. |
+
+<RecipeFor id="wirelessautomate:router" />
+<RecipeFor id="wirelessautomate:storage_chest" />
+<RecipeFor id="wirelessautomate:storage_tank" />
+<RecipeFor id="wirelessautomate:storage_battery" />
+<RecipeFor id="wirelessautomate:storage_chemical_tank" />
+<RecipeFor id="wirelessautomate:storage_source_tank" />
+<RecipeFor id="wirelessautomate:tier_core_advanced" />
+<RecipeFor id="wirelessautomate:tier_core_elite" />
+<RecipeFor id="wirelessautomate:tier_core_ultimate" />
+<RecipeFor id="wirelessautomate:filter_card" />
+<RecipeFor id="wirelessautomate:linker" />
+<RecipeFor id="wirelessautomate:configurator" />
+<RecipeFor id="wirelessautomate:network_tablet" />
+<RecipeFor id="wirelessautomate:chunk_loader_upgrade" />
+<RecipeFor id="wirelessautomate:cut_signal_crystal" />
+<RecipeFor id="wirelessautomate:resonator_casing" />
+<RecipeFor id="wirelessautomate:resonator_glass" />
+<RecipeFor id="wirelessautomate:resonance_core" />
+<RecipeFor id="wirelessautomate:resonator_energy_port" />
+<RecipeFor id="wirelessautomate:resonator_crystal_port" />
+<RecipeFor id="wirelessautomate:resonator_tuner" />
+<RecipeFor id="wirelessautomate:crystal_repairer" />
+<Recipe id="wirelessautomate:guide" />

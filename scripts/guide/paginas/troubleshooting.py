@@ -2,7 +2,7 @@
 from guia_base import *  # noqa: F401,F403
 
 
-PAGINA = page('troubleshooting.md', front('Problemas comuns', 'minecraft:barrier', 21) + '''
+PAGINA = page('troubleshooting.md', front('Problemas comuns', 'minecraft:barrier', 'referencia', 21) + '''
 # Problemas comuns
 
 Algo não se move? Confira na ordem.
@@ -21,7 +21,7 @@ Algo não se move? Confira na ordem.
 
 Ainda com dúvida? A aba **Fluxos** do [Tablet de Rede](network-tablet.md) mostra o que cada rede
 move, quais faces esperam destino e quais destinos estão cheios.
-''', front('Troubleshooting', 'minecraft:barrier', 21) + '''
+''', front('Troubleshooting', 'minecraft:barrier', 'referencia', 21) + '''
 # Troubleshooting
 
 Something not moving? Check in order.

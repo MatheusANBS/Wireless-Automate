@@ -81,6 +81,7 @@ public final class SceneInput {
 
     /** O botão esquerdo apertado: {@code true} se caiu numa cena (começa o arrasto, ou o clique duplo a volta). */
     boolean press(double mouseX, double mouseY) {
+        dragging = null;
         GuideInk.Scene s = at(mouseX, mouseY);
         if (s == null) {
             return false;

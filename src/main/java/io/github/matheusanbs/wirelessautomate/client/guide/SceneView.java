@@ -41,8 +41,8 @@ public final class SceneView {
     }
 
     /**
-     * O fator da página sobre o enquadramento automático (a cena inteira na moldura): as páginas usam 4 nas cenas de um
-     * ou dois blocos e 3 nas grandes; 4 dá a vista inteira, como na etapa 1, e cada ponto a menos afasta um oitavo,
+     * O fator da página sobre o enquadramento automático (a cena inteira na moldura): as páginas usam 4 nas cenas de 3 ou 4
+     * blocos e 3 nas maiores; 4 dá a vista inteira, como na etapa 1, e cada ponto a menos afasta um oitavo,
      * deixando folga para a cena grande girar sem sair da moldura. Preso entre 0,5 e 1.
      */
     public static double frame(double pageZoom) {

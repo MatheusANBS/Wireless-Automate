@@ -8,7 +8,7 @@ Gera todas as texturas (PIL) e a folha `docs/preview/folha-de-sprites.png`; o mo
 
 ## `scripts/guide/`
 
-Gera as páginas do livro-guia (GuideME) em inglês e português; edite os `.py`, não os `.md` gerados.
+Gera as páginas do livro-guia (do próprio mod, ver [livro](livro.md)) em inglês e português; edite os `.py`, não os `.md` gerados.
 
 - `gerar_guia.py`: só o `main` e a lista `PAGINAS` (a ordem de escrita; a ordem no livro vem do `position` do `front`). Coloca a própria pasta no caminho de import, porque o `python -I` não coloca.
 - `guia_base.py`: o que mais de uma página usa: `front`, `fill`, `item`, `page`, `write`, os tiers (`TIERS`, `RATES`, `RANGE`, `CAPACITY`, `capacity_table`), a cena `SCENE_STORAGE_PAIR` e o texto `COMMON_PT`/`COMMON_EN` dos armazenamentos.
@@ -22,7 +22,7 @@ Capa (`gerar_capa.py`, 400x400) e banner e imagens da descrição (`gerar_imagen
 ## Recursos em `src/main/resources/`
 
 - `assets/wirelessautomate/`: blockstates, modelos, texturas e `lang/` (en_us e pt_br; mantenha os dois em dia).
-- `assets/wirelessautomate/guideme_guides/guide.json` e `guides/wirelessautomate/guide/`: o livro-guia do GuideME (opcional, sem código), páginas em inglês na pasta e em português em `_pt_br/`, geradas por `scripts/guide/gerar_guia.py`. O guia é para o jogador: só como operar (nada de config, ms/tick ou detalhes internos). Mantenha as especificações (tabela de tiers, gestos) em dia com o código. O e2e abre cada página nos dois idiomas, rola até o fim (pela barra do GuideME) e salva `guia-<página>[-pt][-N].png` quando o GuideME está presente.
+- `assets/wirelessautomate/guide/<idioma>/` (`en_us`, `pt_br`) e `guide/images/`: as páginas do livro-guia, lidas pela tela própria do mod (`client/guide/`), geradas por `scripts/guide/gerar_guia.py`; cada página leva `group:` no cabeçalho (os sete grupos de `guia_base.GRUPOS`). O guia é para o jogador: só como operar (nada de config, ms/tick ou detalhes internos). Mantenha as especificações (tabela de tiers, gestos) em dia com o código. O e2e abre cada página nos dois idiomas, vira todas as folhas (conferindo que nada saiu da folha) e salva `guia-<página>[-pt][-N].png`.
 - `data/`: loot table, receita, tags e `wirelessautomate/structure/empty.nbt` (estrutura 3×3×3 vazia dos GameTests).
 - `data/occultism/recipe/miner/`: o Cristal de Sinal nos mineiros do Occultism, só dados (sem código nem dependência): `ores/signal_crystal.json` (Djinni, peso 300) e `eldritch/signal_crystal.json` (Ancient Eldritch, peso 90, o padrão dessa categoria), 2 cristais por resultado (a média do minério). Leem a tag de item `c:gems/signal_quartz` (só o Cristal de Sinal cheio) e só carregam com a tag do mineiro e a da gema não vazias; conferidos pelo JUnit `OccultismMinerRecipesTest`. A Fortuna dos mineiros do Occultism soma rolagens extras (`DimensionalMineshaftBlockEntity`), então vale para qualquer resultado. Outro mod minerador tem formato próprio: veja o código dele antes.
 - `src/main/templates/META-INF/neoforge.mods.toml`: preenchido pelo Gradle a partir do `gradle.properties`.

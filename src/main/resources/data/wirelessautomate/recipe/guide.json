@@ -1,10 +1,4 @@
 {
-  "neoforge:conditions": [
-    {
-      "type": "neoforge:mod_loaded",
-      "modid": "guideme"
-    }
-  ],
   "type": "minecraft:crafting_shapeless",
   "category": "misc",
   "ingredients": [
@@ -16,10 +10,7 @@
     }
   ],
   "result": {
-    "id": "guideme:guide",
-    "count": 1,
-    "components": {
-      "guideme:guide_id": "wirelessautomate:guide"
-    }
+    "id": "wirelessautomate:guide",
+    "count": 1
   }
 }

@@ -2,7 +2,7 @@
 from guia_base import *  # noqa: F401,F403
 
 
-PAGINA = page('signal-screen.md', front('Tela de Sinal', 'wirelessautomate:signal_screen', 20, item_ids=[
+PAGINA = page('signal-screen.md', front('Tela de Sinal', 'wirelessautomate:signal_screen', 'painel', 20, item_ids=[
     'wirelessautomate:signal_screen']) + '''
 # Tela de Sinal
 
@@ -220,7 +220,7 @@ tem ficam quando qualquer um salva.
 ## Receita
 
 <RecipeFor id="wirelessautomate:signal_screen" />
-''', front('Signal Screen', 'wirelessautomate:signal_screen', 20, item_ids=[
+''', front('Signal Screen', 'wirelessautomate:signal_screen', 'painel', 20, item_ids=[
     'wirelessautomate:signal_screen']) + '''
 # Signal Screen
 

@@ -2,7 +2,7 @@
 from guia_base import *  # noqa: F401,F403
 
 
-PAGINA = page('network-tablet.md', front('Tablet de Rede', 'wirelessautomate:network_tablet', 9, item_ids=['wirelessautomate:network_tablet']) + '''
+PAGINA = page('network-tablet.md', front('Tablet de Rede', 'wirelessautomate:network_tablet', 'painel', 9, item_ids=['wirelessautomate:network_tablet']) + '''
 # Tablet de Rede
 
 <ItemImage id="wirelessautomate:network_tablet" scale="2" float="left" />
@@ -175,7 +175,7 @@ dela (vira uma exceção); num grupo, o perfil do grupo.
 ## Receita
 
 <RecipeFor id="wirelessautomate:network_tablet" />
-''', front('Network Tablet', 'wirelessautomate:network_tablet', 9, item_ids=['wirelessautomate:network_tablet']) + '''
+''', front('Network Tablet', 'wirelessautomate:network_tablet', 'painel', 9, item_ids=['wirelessautomate:network_tablet']) + '''
 # Network Tablet
 
 <ItemImage id="wirelessautomate:network_tablet" scale="2" float="left" />

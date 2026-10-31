@@ -14,7 +14,7 @@ Wireless Automate é um mod de transporte wireless de itens, fluidos, energia e 
 
 ## Componentes
 
-O mod tem um bloco e oito itens (Configurador, Tablet, Vinculador, Cartão de filtro, Upgrade de chunk loading e três Cartões de Upgrade), mais o livro-guia quando o GuideME está instalado. Todo o resto é configuração.
+O mod tem um bloco e oito itens (Configurador, Tablet, Vinculador, Cartão de filtro, Upgrade de chunk loading e três Cartões de Upgrade), mais o livro-guia, que é do próprio mod. Todo o resto é configuração.
 
 | Componente | Tipo | Função |
 | --- | --- | --- |
@@ -211,9 +211,8 @@ A base são as capabilities padrão do NeoForge, que cobrem quase todo mod do AT
 | Refined Storage 2 (planejado) | API de armazenamento por recurso | Mesmo ganho do AE2 | Opcional |
 | Sophisticated Storage (planejado) | Handler de itens com cache de slots | Varredura incremental de baús grandes | Nenhuma |
 | JEI | Ingredientes fantasmas e a receita de upgrade na bancada | Arrastar e clicar para os filtros | Opcional |
-| GuideME | Livro-guia data-driven | Guia no jogo, em inglês e português | Opcional |
 
-Hoje existem as capabilities do NeoForge, os químicos do Mekanism, a Source do Ars Nouveau, o JEI e o GuideME; os atalhos de AE2, RS2 e Sophisticated Storage são planejados (o Sophisticated já funciona pelas capabilities). Sem um mod opcional instalado, a parte correspondente simplesmente não carrega e o resto funciona normal.
+Hoje existem as capabilities do NeoForge, os químicos do Mekanism, a Source do Ars Nouveau e o JEI; os atalhos de AE2, RS2 e Sophisticated Storage são planejados (o Sophisticated já funciona pelas capabilities). Sem um mod opcional instalado, a parte correspondente simplesmente não carrega e o resto funciona normal.
 
 ## Armazenamento do mod
 
@@ -359,7 +358,7 @@ As receitas da escada vanilla usam só itens vanilla; as dos tiers do Allthemodi
 | Configurador | Fragmento de ametista na ponta de dois gravetos, na diagonal |
 | Vinculador | Pérola do ender em cima, redstone entre cobres e três lingotes de cobre embaixo |
 | Tablet de rede | Lingotes de ferro dos lados; no meio, de cima para baixo, painel de vidro, olho de ender e redstone |
-| Livro-guia (só com o GuideME) | Livro + redstone, sem forma |
+| Livro-guia | Livro + redstone, sem forma (sempre, sem depender de outro mod) |
 
 Balanceamento feito em 8/10/2026: escada ×8 com os tiers vanilla modestos e os do Allthemodium com materiais do ATM10 (fragmento de ATM Star no Ultimate).
 
@@ -394,7 +393,7 @@ O v1 entrega o motor de transferência e a configuração essencial; o v2 comple
 - [x] Tela de Sinal: etapas 1 (bloco, tamanho, canal de dados, Painel de rede), 2 (editor, temas, componentes e biblioteca) e 3 (mais peças, armazenamentos, relógio, layouts), lançadas na 2.11, e 4 (pixel art, Imagem e mosaico, exportar e importar por código, acesso à Tela) pronta, à espera do release
 - [ ] Tela de Sinal, etapa 5: pixel art animada (depois do release da etapa 4)
 - [x] Texturas finais (geradas por `scripts/textures/gerar_texturas.py`)
-- [x] Livro-guia no GuideME (opcional)
+- [x] Livro-guia próprio (livro aberto de duas folhas, sem dependência de outro mod; as cenas 3D giram com o arrasto, têm zoom na roda e mostram anotações)
 - [ ] Balanceamento das receitas
 
 **0.2, armazenamento do mod**

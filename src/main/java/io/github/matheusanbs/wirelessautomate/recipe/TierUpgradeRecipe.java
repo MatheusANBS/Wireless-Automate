@@ -42,7 +42,7 @@ import net.minecraft.world.level.Level;
  * uma Redstone). A escada (a origem do cartão de um degrau e o bloco aceito no centro) vem do {@link RouterTier}
  * em tempo de execução, não do JSON: as variantes do Ultimate continuam separadas só pelas condições de mod.
  *
- * <p>Estende {@link ShapedRecipe} para o livro de receitas, o JEI e o GuideME a verem como uma shaped comum: o
+ * <p>Estende {@link ShapedRecipe} para o livro de receitas e o JEI a verem como uma shaped comum: o
  * padrão herdado é o anel com o {@code step} no centro, e o resultado, o cartão de um degrau.
  */
 public class TierUpgradeRecipe extends ShapedRecipe {

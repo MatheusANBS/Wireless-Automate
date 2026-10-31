@@ -2,7 +2,7 @@
 from guia_base import *  # noqa: F401,F403
 
 
-PAGINA = page('filters.md', front('Filtros', 'minecraft:hopper', 5) + '''
+PAGINA = page('filters.md', front('Filtros', 'minecraft:hopper', 'ferramentas', 5) + '''
 # Filtros
 
 Cada face, em cada tipo, tem um **filtro embutido** sem limite de entradas e dois slots de
@@ -64,7 +64,7 @@ marcadas.
 | **Componentes** (itens) | Ignorar: picareta encantada = picareta. Exigir: só iguais. Para pegar só os encantados, use uma regra. |
 | **Estoque** | No destino, aceita só até N. Na origem, mantém sempre N. Selecione a entrada para definir. |
 
-''', front('Filters', 'minecraft:hopper', 5) + '''
+''', front('Filters', 'minecraft:hopper', 'ferramentas', 5) + '''
 # Filters
 
 Each face, for each type, has a **built-in filter** with no entry limit and two

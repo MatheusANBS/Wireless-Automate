@@ -2,7 +2,7 @@
 from guia_base import *  # noqa: F401,F403
 
 
-PAGINA = page('configurator.md', front('Configurador', 'wirelessautomate:configurator', 8, item_ids=['wirelessautomate:configurator']) + '''
+PAGINA = page('configurator.md', front('Configurador', 'wirelessautomate:configurator', 'ferramentas', 8, item_ids=['wirelessautomate:configurator']) + '''
 # Configurador
 
 <ItemImage id="wirelessautomate:configurator" scale="2" float="left" />
@@ -49,7 +49,7 @@ no centro ou Esc fecha sem mudar.
 ## Receita
 
 <RecipeFor id="wirelessautomate:configurator" />
-''', front('Configurator', 'wirelessautomate:configurator', 8, item_ids=['wirelessautomate:configurator']) + '''
+''', front('Configurator', 'wirelessautomate:configurator', 'ferramentas', 8, item_ids=['wirelessautomate:configurator']) + '''
 # Configurator
 
 <ItemImage id="wirelessautomate:configurator" scale="2" float="left" />

@@ -2,7 +2,7 @@
 from guia_base import *  # noqa: F401,F403
 
 
-PAGINA = page('wireless-chemical-tank.md', front('Tanque Químico Wireless', 'wirelessautomate:storage_chemical_tank', 14,
+PAGINA = page('wireless-chemical-tank.md', front('Tanque Químico Wireless', 'wirelessautomate:storage_chemical_tank', 'armazenamentos', 14,
                                         item_ids=['wirelessautomate:storage_chemical_tank']) + '''
 # Tanque Químico Wireless
 
@@ -38,7 +38,7 @@ A do [Tanque](wireless-tank.md), em mB, somando todos os químicos.
 Um Tanque Wireless com frascos de vidro e ferro (só com o Mekanism).
 
 <RecipeFor id="wirelessautomate:storage_chemical_tank" />
-''', front('Wireless Chemical Tank', 'wirelessautomate:storage_chemical_tank', 14,
+''', front('Wireless Chemical Tank', 'wirelessautomate:storage_chemical_tank', 'armazenamentos', 14,
            item_ids=['wirelessautomate:storage_chemical_tank']) + '''
 # Wireless Chemical Tank
 

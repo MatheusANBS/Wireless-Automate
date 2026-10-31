@@ -2,7 +2,7 @@
 from guia_base import *  # noqa: F401,F403
 
 
-PAGINA = page('wireless-tank.md', front('Tanque Wireless', 'wirelessautomate:storage_tank', 12,
+PAGINA = page('wireless-tank.md', front('Tanque Wireless', 'wirelessautomate:storage_tank', 'armazenamentos', 12,
                                item_ids=['wirelessautomate:storage_tank']) + '''
 # Tanque Wireless
 
@@ -39,7 +39,7 @@ O botão **Filtro** abre a [tela de filtros](filters.md) de fluidos: só entra o
 ## Receita
 
 <RecipeFor id="wirelessautomate:storage_tank" />
-''', front('Wireless Tank', 'wirelessautomate:storage_tank', 12,
+''', front('Wireless Tank', 'wirelessautomate:storage_tank', 'armazenamentos', 12,
            item_ids=['wirelessautomate:storage_tank']) + '''
 # Wireless Tank
 

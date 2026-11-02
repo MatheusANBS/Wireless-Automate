@@ -88,12 +88,17 @@ final class TreeTexts {
         List<NodeView> nodes = snapshot.nodes();
         int live = 0;
         int number = 0;
+        TabletRows.Row previous = null;
         for (int r = 0; r < n; r++) {
             TabletRows.Row row = rows.rows().get(r);
+            TabletRows.Row above = previous;
+            previous = row;
             seconds[r] = Component.empty();
             states[r] = Component.empty();
             rates[r] = Component.empty();
             switch (row) {
+                case TabletRows.Attached attached when above instanceof TabletRows.Group group
+                        && group.parent() == attached.parent() -> attachedInGroup(r, nodes.get(attached.parent()), attached);
                 case TabletRows.Attached attached -> {
                     NodeView node = nodes.get(attached.parent());
                     names[r] = node.attachedLabel().isEmpty() ? Component.literal(texts.machineName(node.machine()))
@@ -133,6 +138,18 @@ final class TreeTexts {
             stateW[r] = font.width(states[r]);
             rateW[r] = font.width(rates[r]);
         }
+    }
+
+    /**
+     * A presa dentro do grupo dela, como uma máquina: "presa" (ou o nome dado) no lugar do "#N" e, embaixo, o lado do
+     * roteador onde ela está (o grupo já diz o bloco).
+     */
+    private void attachedInGroup(int r, NodeView node, TabletRows.Attached attached) {
+        names[r] = node.attachedLabel().isEmpty() ? Component.translatable("gui.wirelessautomate.router.range.attached.row")
+                : Component.literal(node.attachedLabel());
+        seconds[r] = attached.side().<Component>map(side -> tr("tree.attached.side",
+                Component.translatable("gui.wirelessautomate.router.face." + side.getSerializedName())))
+                .orElse(Component.literal(texts.machineName(node.machine())));
     }
 
     static Component stateText(MachineStatus status) {

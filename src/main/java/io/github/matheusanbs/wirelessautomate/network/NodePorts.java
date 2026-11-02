@@ -449,6 +449,10 @@ final class NodePorts {
         port.destinationBackoff.wake();
         // O inventário mudou: a volta sem achar nada recomeça do zero.
         port.idleSlots = 0;
+        // E o que o destino recusou pode caber agora (o ferro da entrada acabou, e o ouro entra).
+        if (port.hints != null) {
+            port.hints.clearRefused();
+        }
     }
 
     private static void wakeFeeders(Port destination) {

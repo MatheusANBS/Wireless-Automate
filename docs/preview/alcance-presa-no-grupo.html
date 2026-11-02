@@ -1,0 +1,239 @@
+<title>Presa no Grupo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+/* Layout: cabeçalho curto, telas lado a lado (Hoje × Proposta), depois os estados e as decisões. As cores da tela são as do GuiPalette (claro; escuro no tema escuro). */
+:root {
+  --page: #E9E2D3; --ink: #2A2730; --ink-2: #6B6458; --rule: #CFC5B1;
+  --gui-bg: #F2EBDD; --gui-btn: #FFFBF3; --gui-inset: #DDD3BF; --gui-border: #BDB19A; --gui-row: #F8F3E8;
+  --gui-fg: #2A2730; --gui-muted: #7A7366; --gui-disabled: #B5AC9D;
+  --accent: #F0603E; --accent-dark: #C2442A; --ok: #2F9D5C; --warn: #D88A1A; --danger: #D5453A; --net: #6B6FD0; --tier: #B48E2E;
+  --sel: #FFE3D9; --cut: rgba(240,96,62,.14);
+  --f-gui: "Pixelify Sans", "Courier New", monospace;
+  --f-body: "IBM Plex Sans", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --page: #18161B; --ink: #ECE5D6; --ink-2: #A79F90; --rule: #3A3640;
+  --gui-bg: #26232B; --gui-btn: #312D37; --gui-inset: #1C1A20; --gui-border: #4A4550; --gui-row: #3A3640;
+  --gui-fg: #ECE5D6; --gui-muted: #A79F90; --gui-disabled: #625C66;
+  --accent: #F26A48; --ok: #3DB56E; --warn: #E39A2E; --danger: #E55A4E; --net: #8A8EE8; --tier: #D2AE4E;
+  --sel: #4A2E28; --cut: rgba(242,106,72,.18); color-scheme: dark } }
+:root[data-theme="dark"] {
+  --page: #18161B; --ink: #ECE5D6; --ink-2: #A79F90; --rule: #3A3640;
+  --gui-bg: #26232B; --gui-btn: #312D37; --gui-inset: #1C1A20; --gui-border: #4A4550; --gui-row: #3A3640;
+  --gui-fg: #ECE5D6; --gui-muted: #A79F90; --gui-disabled: #625C66;
+  --accent: #F26A48; --ok: #3DB56E; --warn: #E39A2E; --danger: #E55A4E; --net: #8A8EE8; --tier: #D2AE4E;
+  --sel: #4A2E28; --cut: rgba(242,106,72,.18); color-scheme: dark }
+
+body { background: var(--page); color: var(--ink); font-family: var(--f-body); line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+main { max-width: 1180px; margin: 0 auto; display: grid; gap: 36px; }
+h1 { font-family: var(--f-gui); font-weight: 600; font-size: 1.9rem; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--f-gui); font-weight: 600; font-size: 1.25rem; margin: 0 0 4px; }
+p { margin: 0; max-width: 68ch; }
+.lede { color: var(--ink-2); margin-top: 6px; }
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 540px), 1fr)); gap: 24px; }
+figure { margin: 0; display: grid; gap: 10px; min-width: 0; }
+figcaption { font-size: .92rem; color: var(--ink-2); }
+figcaption b { color: var(--ink); font-family: var(--f-gui); font-size: 1.05rem; font-weight: 600; letter-spacing: .02em; }
+.scroll { overflow-x: auto; }
+
+/* ---------- a tela (1 px de GUI = 1.8 px aqui) ---------- */
+.gui { --u: 1.8px; width: calc(300 * var(--u)); background: var(--gui-bg); border: 2px solid var(--gui-border);
+  border-top: 3px solid var(--tier); font-family: var(--f-gui); font-size: calc(8.6 * var(--u)); color: var(--gui-fg);
+  padding: calc(6 * var(--u)); display: grid; gap: calc(4 * var(--u)); line-height: 1.15; }
+.hdr { display: flex; align-items: center; gap: calc(6 * var(--u)); }
+.hdr .name { flex: 1; }
+.muted { color: var(--gui-muted); }
+.pill { border: 1px solid var(--tier); border-radius: 99px; padding: 0 calc(4 * var(--u)); }
+.tabs { display: flex; gap: calc(9 * var(--u)); align-items: center; }
+.tab { border: 1px solid var(--gui-border); background: var(--gui-btn); padding: 0 calc(3 * var(--u)); border-bottom: 2px solid var(--accent); }
+.dot { display: inline-block; width: calc(6 * var(--u)); height: calc(6 * var(--u)); border-radius: 50%; }
+.tabs .spacer { flex: 1; }
+.body { display: grid; grid-template-columns: 112fr 162fr; gap: calc(7 * var(--u)); }
+.col { display: grid; gap: calc(3 * var(--u)); align-content: start; min-width: 0; }
+.btn { background: var(--gui-btn); border: 1px solid var(--gui-border); padding: 0 calc(3 * var(--u)); white-space: nowrap; }
+.drop { display: flex; justify-content: space-between; }
+.list { background: var(--gui-row); border: 1px solid var(--gui-border); min-height: calc(104 * var(--u)); padding: 1px 0; }
+.r { display: flex; align-items: center; gap: calc(3 * var(--u)); padding: 0 calc(3 * var(--u)); height: calc(11 * var(--u)); position: relative; }
+.r.two { height: calc(19 * var(--u)); }
+.r.two .t { display: grid; }
+.r.sel { background: var(--sel); box-shadow: inset 2px 0 0 var(--accent); }
+.r.ind { padding-left: calc(9 * var(--u)); }
+.r .grow { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; }
+.ico { width: calc(8 * var(--u)); height: calc(8 * var(--u)); border-radius: 1px; flex: none; }
+.chest { background: #9C6A2E; } .furn { background: #6E6A66; }
+.exc { color: var(--accent); }
+.mini { display: inline-grid; place-items: center; width: calc(10 * var(--u)); height: calc(10 * var(--u)); border: 1px solid var(--gui-border);
+  background: var(--gui-btn); font-size: calc(7.5 * var(--u)); flex: none; line-height: 1; }
+.mini.rev { color: var(--accent); border-color: var(--accent); }
+.mini.hover { border-color: var(--gui-fg); }
+.mini.x { position: relative; }
+.mini.x::before, .mini.x::after { content: ""; position: absolute; left: 50%; top: 50%; width: calc(6 * var(--u)); height: calc(1.2 * var(--u)); background: var(--gui-fg); transform: translate(-50%, -50%) rotate(45deg); }
+.mini.x::after { transform: translate(-50%, -50%) rotate(-45deg); }
+.mini.arm { color: #fff; background: var(--danger); border-color: var(--danger); width: auto; padding: 0 calc(3 * var(--u)); }
+.cube { display: grid; grid-template-columns: repeat(4, 1fr); gap: calc(2 * var(--u)); margin-top: calc(6 * var(--u)); }
+.cube span { border: 1px dashed var(--gui-border); text-align: center; color: var(--gui-muted); }
+.cube .on { border: 2px solid var(--accent); color: var(--gui-fg); }
+.row { display: flex; gap: calc(3 * var(--u)); align-items: center; }
+.modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: calc(3 * var(--u)); }
+.modes span { background: var(--gui-btn); border: 1px solid var(--gui-border); text-align: center; height: calc(11 * var(--u)); }
+.modes .on { background: var(--sel); border-color: var(--accent); }
+.net { flex: 1; border: 1px solid var(--net); background: var(--gui-btn); padding: 0 calc(3 * var(--u)); display: flex; justify-content: space-between; }
+.slots { display: grid; grid-template-columns: repeat(9, 1fr); gap: 0; border: 1px solid var(--gui-border); margin-top: calc(4 * var(--u)); }
+.slots i { aspect-ratio: 1; border: 1px solid var(--gui-inset); background: var(--gui-inset); opacity: .55; }
+.cut { background: var(--cut); outline: 2px dashed var(--accent); outline-offset: 1px; position: relative; }
+.cut::after { content: "sai"; position: absolute; right: -2px; top: 50%; transform: translate(100%, -50%); font-size: calc(6.5 * var(--u));
+  color: var(--accent); padding-left: 6px; }
+.new { outline: 2px solid var(--ok); outline-offset: 1px; }
+.tip { position: absolute; z-index: 2; right: calc(-2 * var(--u)); top: calc(13 * var(--u)); background: #100E14; color: #EEE7F7;
+  border: 1px solid #5A36B0; padding: calc(2 * var(--u)) calc(4 * var(--u)); white-space: nowrap; font-size: calc(7.5 * var(--u)); }
+.tip .m { color: #A79F90; }
+
+/* ---------- estados ---------- */
+.states { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 20px; }
+.state { display: grid; gap: 8px; align-content: start; min-width: 0; }
+.state .gui { --u: 1.5px; }
+.snip { width: calc(112 * var(--u)); }
+.state p { font-size: .92rem; color: var(--ink-2); }
+
+.decide { border-top: 1px solid var(--rule); padding-top: 20px; display: grid; gap: 14px; }
+.decide ol { margin: 0; padding-left: 1.3em; display: grid; gap: 10px; max-width: 78ch; }
+.decide li b { font-weight: 600; }
+.keep { font-size: .92rem; color: var(--ink-2); }
+.prio { display: inline-block; font-family: var(--f-gui); font-weight: 600; font-size: .85rem; padding: 0 8px; border-radius: 4px; color: #fff; margin-right: 6px; }
+.p0 { background: var(--danger); } .p1 { background: var(--warn); } .p2 { background: var(--ink-2); }
+.triage { display: grid; gap: 10px; max-width: 86ch; }
+.triage div { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: baseline; }
+.ideas { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 16px; }
+.idea { border: 1px solid var(--rule); border-radius: 6px; padding: 14px; display: grid; gap: 6px; align-content: start; background: var(--gui-row); }
+.idea h3 { font-family: var(--f-gui); font-weight: 600; font-size: 1.05rem; margin: 0; }
+.idea p { font-size: .92rem; color: var(--ink-2); }
+.idea .rec { color: var(--ok); font-weight: 600; font-size: .85rem; }
+.tag { font-size: calc(6.5 * var(--u)); color: var(--gui-muted); border: 1px solid var(--gui-border); padding: 0 calc(2 * var(--u)); }
+</style>
+
+<main>
+  <header>
+    <h1>A presa vira uma máquina do grupo</h1>
+    <p class="lede">Proposta para os pedidos do roteador de alcance: a presa agrupada com as máquinas do mesmo bloco, máquina nova seguindo o perfil, o Desvincular do grupo inteiro e o copiar e colar por máquina. No fim, ideias para o Configurador. Nada foi codificado ainda: o código começa depois do seu ok.</p>
+  </header>
+
+  <section class="triage">
+    <h2>Prioridades</h2>
+    <div><span class="prio p0">P0</span><span><b>Etapa 1.</b> A presa vira uma máquina comum do grupo do bloco dela. A máquina vinculada passa a seguir o perfil (hoje ela entra como exceção vazia e fica parada). Sai a lógica atual do Configurador.</span></div>
+    <div><span class="prio p1">P1</span><span><b>Etapa 2.</b> Desvincular o grupo inteiro. Copiar e colar o perfil de uma máquina para outra. O Atualizar para de perder os Cartões de Filtro sem avisar.</span></div>
+    <div><span class="prio p1">P1</span><span><b>Etapa 3.</b> A função nova do Configurador, quando você escolher uma ideia (no fim da página).</span></div>
+    <div><span class="prio p2">P2</span><span><b>Etapa 4.</b> As estranhezas menores: a máquina trocada continua recebendo até alguém clicar em Atualizar; o Vinculador desvincula num clique e solta os cartões sem dizer; um clique é ignorado em silêncio quando outro jogador mexeu na lista; o "7/32" diverge; os caches não são limpos quando a config baixa o raio.</span></div>
+  </section>
+
+  <section class="pair">
+    <figure>
+      <figcaption><b>Hoje</b> · a presa é uma linha à parte, com configuração própria</figcaption>
+      <div class="scroll"><div class="gui" aria-label="Lista atual">
+        <div class="hdr"><span class="name">Roteador da fundição</span><span class="pill">● Avançado</span><span>☾</span></div>
+        <div class="body">
+          <div class="col">
+            <div class="btn">▾ Máquinas · 4/8</div>
+            <div class="list">
+              <div class="r cut"><span class="ico furn"></span><span class="grow">Máquina presa</span></div>
+              <div class="r two"><span class="muted">▸</span><span class="ico chest"></span><span class="t grow"><span>Baú ×1</span><span class="muted">todas no perfil</span></span></div>
+              <div class="r two sel"><span class="muted">▾</span><span class="ico furn"></span><span class="t grow"><span>Fornalha ×3</span><span class="exc">2 exceções</span></span></div>
+              <div class="r ind"><span style="color:var(--ok)">●</span><span class="grow">#1 · 3 blocos</span></div>
+              <div class="r ind"><span style="color:var(--gui-muted)">●</span><span class="grow">#2 · 4 blocos</span><span class="exc">exc.</span></div>
+              <div class="r ind"><span style="color:var(--gui-muted)">●</span><span class="grow">#3 · 5 blocos</span><span class="exc">exc.</span></div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="muted">Perfil: Fornalha · vale para 1 de 3</div>
+            <div class="cube"><span></span><span>Cima</span><span></span><span></span><span>Esq.</span><span class="on">F</span><span>Dir.</span><span>T</span><span></span><span>B</span><span></span><span></span></div>
+          </div>
+        </div>
+      </div></div>
+    </figure>
+    <figure>
+      <figcaption><b>Proposta</b> · a presa é a #1 do grupo Fornalha e segue o perfil</figcaption>
+      <div class="scroll"><div class="gui" aria-label="Lista proposta">
+        <div class="hdr"><span class="name">Roteador da fundição</span><span class="pill">● Avançado</span><span>☾</span></div>
+        <div class="body">
+          <div class="col">
+            <div class="btn">▾ Máquinas · 3/8</div>
+            <div class="list">
+              <div class="r two"><span class="muted">▸</span><span class="ico chest"></span><span class="t grow"><span>Baú ×1</span><span class="muted">todas no perfil</span></span></div>
+              <div class="r two sel"><span class="muted">▾</span><span class="ico furn"></span><span class="t grow"><span>Fornalha ×4</span><span class="muted">todas no perfil</span></span></div>
+              <div class="r ind new"><span style="color:var(--ok)">●</span><span class="grow">#1 · presa</span><span class="tag">◉</span></div>
+              <div class="r ind"><span style="color:var(--ok)">●</span><span class="grow">#2 · 3 blocos</span></div>
+              <div class="r ind"><span style="color:var(--ok)">●</span><span class="grow">#3 · 4 blocos</span></div>
+              <div class="r ind"><span style="color:var(--ok)">●</span><span class="grow">#4 · 5 blocos</span></div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="muted">Perfil: Fornalha · vale para 4 de 4</div>
+            <div class="cube"><span></span><span>Cima</span><span></span><span></span><span>Esq.</span><span class="on">F</span><span>Dir.</span><span>T</span><span></span><span>B</span><span></span><span></span></div>
+          </div>
+        </div>
+      </div></div>
+    </figure>
+  </section>
+
+  <section class="decide">
+    <h2>Etapa 1 · as regras da presa no grupo</h2>
+    <ol>
+      <li><b>Entra sozinha.</b> O bloco na frente do roteador entra no grupo do bloco dele, sem o Vinculador. É sempre a #1 do grupo, com "presa" no lugar da distância. O Olho na face onde o roteador está preso continua.</li>
+      <li><b>Não conta no limite</b> de máquinas do tier e funciona sem o Upgrade de Alcance. Sem o upgrade, a tela edita direto o perfil do grupo dela, como hoje edita a presa. As remotas do grupo continuam paradas até o upgrade voltar.</li>
+      <li><b>Bloco trocado na frente.</b> Se o bloco virar ar (quebrado), a presa fica no grupo como "sumiu" e nada se perde. Se outro bloco for colocado no lugar, a presa passa sozinha para o grupo do bloco novo, sem precisar do Atualizar. O grupo antigo que ficar vazio continua na lista como "×0" até você o desvincular, para que quebrar e recolocar a fornalha não apague a configuração.</li>
+      <li><b>Máquina vinculada segue o perfil.</b> Sai a exceção vazia que o Vinculador cria hoje. Vincular 10 fornalhas num grupo já configurado faz as 10 trabalharem na hora.</li>
+      <li><b>Mundos antigos, sem perder nada.</b> Se não há grupo do bloco, a configuração da presa vira o perfil de um grupo novo, com os cartões dela. Se há grupo e a configuração é igual, ela entra seguindo o perfil. Se é diferente, ela entra como exceção. Se os Cartões de Filtro dela forem diferentes dos do grupo, ela vai para um grupo próprio do mesmo bloco, porque a exceção não tem cartões.</li>
+      <li><b>Tablet.</b> Some a linha "Máquina presa" da árvore. A presa aparece dentro do grupo, com a marca "presa". Copiar o perfil de um nó copia a configuração que a presa usa (o perfil ou a exceção dela).</li>
+      <li><b>Configurador.</b> A lógica atual sai inteira (copiar e colar a presa, a roda do tipo). O item continua existindo, para não sumir dos mundos, mas fica sem função até a etapa 3.</li>
+    </ol>
+    <p class="keep"><b>Custo:</b> a presa passa a usar o caminho das remotas, com o cache por posição e o <code>isLoaded</code>, que fica no mesmo chunk e não custa nada. Some o caminho duplicado da presa no motor e no índice. A versão do protocolo sobe uma vez. Antes e depois, o bench <code>alcance</code>.</p>
+  </section>
+
+  <section>
+    <h2>Etapa 2 · desvincular o grupo e copiar e colar</h2>
+    <p class="lede">Na linha do grupo escolhido, o ✕ desvincula o grupo inteiro em dois cliques, como o Remover do Tablet. Na linha de uma máquina ou de um grupo escolhido, ⧉ copia e ⎘ cola. Ctrl+C e Ctrl+V fazem o mesmo na tela.</p>
+  </section>
+  <section class="states">
+    <div class="state">
+      <div class="gui snip"><div class="list" style="min-height:0">
+        <div class="r two sel"><span class="muted">▾</span><span class="ico chest"></span><span class="t grow"><span>Baú ×5</span><span class="muted">todas no perfil</span></span><span class="mini arm">Desvincular 5?</span></div>
+        <div class="r ind"><span style="color:var(--ok)">●</span><span class="grow">#1 · 2 blocos</span></div>
+      </div></div>
+      <p><b>Desvincular o grupo.</b> O primeiro clique arma e o segundo confirma. As máquinas saem, o grupo é apagado e os Cartões de Filtro vão para o seu inventário (o que não couber cai no chão). No grupo da presa, as remotas saem e a presa fica, com o perfil zerado, porque ela não pode ser desvinculada.</p>
+    </div>
+    <div class="state">
+      <div class="gui snip" style="position:relative"><div class="list" style="min-height:0">
+        <div class="r ind sel"><span style="color:var(--ok)">●</span><span class="grow">#2 · 3 blocos</span><span class="mini hover">⧉</span><span class="mini">⎘</span><span class="mini x" aria-label="Desvincular"></span></div>
+        <div class="r ind"><span style="color:var(--ok)">●</span><span class="grow">#3 · 4 blocos</span></div>
+      </div>
+      <div class="tip">Copiar perfil<br><span class="m">A configuração desta Fornalha (Ctrl+C)</span></div></div>
+      <p><b>Copiar.</b> Copia a configuração que a máquina usa: o perfil do grupo ou a exceção dela. A cópia fica com você, valendo em qualquer roteador, até você sair do mundo. A tela mostra "Cópia: Fornalha #2" no rodapé da lista.</p>
+    </div>
+    <div class="state">
+      <div class="gui snip"><div class="list" style="min-height:0">
+        <div class="r ind sel"><span style="color:var(--ok)">●</span><span class="grow">#3 · 4 blocos</span><span class="mini">⧉</span><span class="mini hover" style="color:var(--accent);border-color:var(--accent)">⎘</span><span class="mini x" aria-label="Desvincular"></span></div>
+      </div></div>
+      <p><b>Colar.</b> Cola só na máquina escolhida, como exceção. Se ficar igual ao perfil, a exceção some. Shift + clique, ou o ⎘ na linha do grupo, cola no perfil do grupo inteiro. Os lados acompanham a frente de cada máquina. As redes seguem a regra de hoje (só as que você pode usar). O aviso tem Desfazer.</p>
+    </div>
+  </section>
+
+  <section class="decide">
+    <h2>Configurador · ideias para escolher</h2>
+    <p class="keep">Você disse que ainda não sabe a função nova. Aqui estão quatro caminhos que não repetem o Vinculador nem o Tablet. Pode misturar.</p>
+    <div class="ideas">
+      <div class="idea"><h3>A · Chave de faces</h3><p>Clicar numa face de uma máquina vinculada (ou na presa) troca o modo daquela face direto no mundo: Extrai, Insere, Armazém, Nenhum. Shift + roda troca o tipo (Itens, Fluidos...). O que mudar vira exceção da máquina, sem abrir a tela. É o gesto do configurador do Mekanism.</p><span class="rec">Recomendada: o uso mais frequente, sem tela</span></div>
+      <div class="idea"><h3>B · Ver o fluxo</h3><p>Segurando o Configurador, aparecem no mundo as linhas de quem extrai para quem insere, na cor da rede, e as faces de cada máquina coloridas pelo modo. Já está como "planejado" na especificação. Só desenha no cliente, com o snapshot de um roteador por vez.</p></div>
+      <div class="idea"><h3>C · Conta-gotas</h3><p>Shift + clique numa máquina copia o perfil dela e clique em outra cola, no mundo. É o mesmo copiar e colar da etapa 2, mas sem abrir a tela. Combina com A.</p></div>
+      <div class="idea"><h3>D · A + B juntos</h3><p>Segurar mostra as faces e o fluxo (B), e o clique muda a face mirada (A). Você vê o efeito do clique na hora. É a mais completa, e a B pode vir depois da A.</p></div>
+    </div>
+  </section>
+
+  <section class="decide">
+    <h2>Fica de fora</h2>
+    <ol>
+      <li>Rever as decisões da spec que o jogador pode estranhar: os cartões de uma máquina valem para o grupo inteiro; no Tablet, marcar todas as máquinas de um grupo uma a uma cola no perfil do grupo. Só se você pedir.</li>
+      <li>O copiar e colar do Tablet continua como está e passa a usar a mesma conversão de lados.</li>
+    </ol>
+  </section>
+</main>

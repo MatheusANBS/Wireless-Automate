@@ -15,7 +15,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * O último colar do perfil de uma máquina de cada jogador ({@link MachineCopyPaste}), para o Desfazer do aviso: o
  * menu em que ele colou, o roteador e o que mudou ({@link PasteUndo}: o perfil ou a exceção, antes e depois). Só na
- * memória do servidor: some quando o jogador cola de novo, desfaz, fecha o menu ({@link #closed}), sai do servidor
+ * memória do servidor: some quando o jogador cola de novo mudando algo, desfaz, fecha o menu ({@link #closed}), sai do servidor
  * ou o servidor para.
  */
 public final class MachinePasteUndo {
@@ -49,6 +49,12 @@ public final class MachinePasteUndo {
         }
         LAST.remove(player.getUUID());
         return entry.change();
+    }
+
+    /** O Desfazer guardado do jogador é de um colar no menu {@code host}. */
+    static boolean heldIn(UUID player, RouterEditHost host) {
+        Entry entry = LAST.get(player);
+        return entry != null && entry.host() == host;
     }
 
     /** Há um Desfazer guardado para o jogador. */

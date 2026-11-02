@@ -168,6 +168,57 @@ public final class RangeGroupUnlinkGameTests {
     }
 
     /**
+     * O {@code GroupView.blank} do snapshot (o ✕ escondido) e o Desvincular grupo seguem a mesma regra
+     * ({@link RemoteMachines#resettable}): a presa sozinha e zerada é {@code blank} e o Desvincular não muda nada; um
+     * cartão, um nome, o perfil ou a exceção da presa a tiram do {@code blank}, e o Desvincular muda algo e a zera de
+     * novo.
+     */
+    @GameTest(template = "empty")
+    public static void blankMatchesUnlink(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        helper.setBlock(REMOTE, Blocks.CHEST);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    link(helper, router, REMOTE);
+                    RemoteMachines remotes = router.remoteMachines();
+                    int chests = groupOf(router, helper.absolutePos(REMOTE));
+                    helper.assertTrue(remotes.groupHasAttached(chests), "a presa não está no grupo dos baús");
+                    ServerPlayer player = TestPlayers.inLevel(helper);
+                    helper.assertFalse(blank(router, player, chests), "blank com uma remota");
+                    helper.assertTrue(router.unlinkGroup(chests, player).changed(), "não desvinculou a remota");
+                    helper.assertTrue(blank(router, player, chests), "a presa sozinha e zerada não é blank");
+                    helper.assertFalse(router.unlinkGroup(chests, player).changed(), "zerou o grupo já zerado");
+
+                    List<Runnable> changes = List.of(
+                            () -> router.setCard(EditTarget.group(chests), ResourceType.ITEM, Direction.NORTH, 0,
+                                    itemCard()),
+                            () -> remotes.group(chests).setName("Baús"),
+                            () -> router.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT),
+                            () -> {
+                                MachineConfig config = new MachineConfig();
+                                config.face(ResourceType.ITEM, RemoteSide.TOP).setMode(PortMode.INSERT);
+                                remotes.attached().setException(config);
+                            });
+                    for (int i = 0; i < changes.size(); i++) {
+                        changes.get(i).run();
+                        helper.assertFalse(blank(router, player, chests), "blank depois da mudança " + i);
+                        helper.assertTrue(router.unlinkGroup(chests, player).changed(),
+                                "o Desvincular não mudou nada depois da mudança " + i);
+                        helper.assertTrue(blank(router, player, chests), "não ficou blank depois de zerar " + i);
+                    }
+                    player.getInventory().clearContent();
+                })
+                .thenSucceed();
+    }
+
+    /** O {@code blank} do grupo {@code group} no snapshot que o jogador receberia. */
+    private static boolean blank(RouterBlockEntity router, ServerPlayer player, int group) {
+        return RouterSnapshot.capture(router, player).range().group(group).blank();
+    }
+
+    /**
      * O "×0" (grupo sem máquina, só com perfil) sai, com o aviso "Grupo apagado"; o bloco errado, o id que não existe
      * (também o do ×0 já apagado) e outro menu são recusados sem mudar nada.
      */

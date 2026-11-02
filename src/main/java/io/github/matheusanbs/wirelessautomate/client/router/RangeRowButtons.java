@@ -17,7 +17,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Os botões pequenos da linha escolhida na lista das máquinas ({@link RangeList}), da direita para a
  * esquerda: ✕ Desvincular (a máquina, ou o grupo inteiro na linha do grupo, menos no grupo da presa sem nada a
- * zerar, {@link RangeView.GroupView#blank}, e no grupo só quando o nome cabe ao lado dos outros), ↺ Voltar ao
+ * zerar, {@link RangeView.GroupView#blank}; sem espaço, o nome do grupo sai abreviado), ↺ Voltar ao
  * perfil (máquina ou presa com exceção), ⟳ Atualizar (máquina trocada, ou grupo com alguma trocada), o "Tirar redes" ({@link IdleNetworks}, grupo ou máquina (a presa
  * inclusive) com exceção com alguma face sem modo e com rede) e o ✎ Dar nome (máquina e presa; no grupo, depois
  * dos dois abaixo e só quando o nome cabe ao lado). Por último, ⎘ Colar (com uma cópia) e ⧉ Copiar o perfil, só
@@ -193,11 +193,9 @@ public final class RangeRowButtons {
         measure(font, view, target, attachedLabel);
         List<Action> actions = actions(view, target, unlinkArmed, revertArmed);
         int nameEnd = minX + nameW;
-        // o ✕ do grupo fica à direita, mas só entra se o nome cabe com ele (ou armado, ou sozinho): o ↺ e o ⟳
-        // consertam o grupo e vêm antes
+        // o ✕ do grupo entra sempre, como o da máquina: sem espaço, o nome sai abreviado (inteiro na dica da linha)
         RangeView.GroupView group = target.kind() == EditTarget.Kind.GROUP ? view.group(target.id()) : null;
-        if (group != null && !group.blank()
-                && (unlinkArmed || actions.isEmpty() || fits(actions.size() + 1, nameEnd, right))) {
+        if (group != null && !group.blank()) {
             actions.addFirst(Action.UNLINK);
         }
         if (!unlinkArmed && !revertArmed) {
@@ -407,6 +405,11 @@ public final class RangeRowButtons {
     /** O lápis do ✎, em 6 × 6 px (também o da linha Editando). */
     public static void pencil(GuiGraphics g, int x, int y, int color) {
         pixels(g, PENCIL, x, y, false, color);
+    }
+
+    /** O ⧉ em 6 × 6 px (também o da linha da cópia embaixo da lista). */
+    static void copyIcon(GuiGraphics g, int x, int y, int color) {
+        pixels(g, COPY, x, y, false, color);
     }
 
     private static void pixels(GuiGraphics g, String[] art, int x, int y, boolean mirror, int color) {

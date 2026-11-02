@@ -130,8 +130,9 @@ final class E2eRangeReplaceSteps {
             }
             moveMouse(update[0], update[1]);
         }, () -> stepTicks >= 2, () -> "fornalha " + furnace()));
+        // com o ✕, o ↺ e o ⟳, o nome do grupo sai abreviado no mínimo (inteiro na dica da linha)
         list.add(hoverCapture(label + "grupo trocado: linha e dica do ⟳", "range-8b-grupo-trocado",
-                () -> furnace().state() == RangeView.MachineState.REPLACED));
+                () -> furnace().state() == RangeView.MachineState.REPLACED, true));
         // o grupo que só trocou de bloco continua escolhido
         list.add(new Step(label + "grupo trocado: Atualizar pelo ⟳ do grupo", STEP_TIMEOUT_MS,
                 () -> clickPanel(routerScreen().rangeButtonCenter(RangeRowButtons.Action.UPDATE), "o ⟳ do grupo"),
@@ -167,9 +168,16 @@ final class E2eRangeReplaceSteps {
      * quando {@code ready} vale e nenhum texto está cortado.
      */
     static Step hoverCapture(String name, String file, Check ready) {
+        return hoverCapture(name, file, ready, false);
+    }
+
+    /** O mesmo, aceitando ({@code groupName}) só o nome de um grupo ("Smoker ×1") abreviado. */
+    static Step hoverCapture(String name, String file, Check ready, boolean groupName) {
         return new Step(name, STEP_TIMEOUT_MS, () -> {
         }, () -> {
-            if (stepTicks < 6 || GuiText.clipCount() != 0 || !ready.done()) {
+            boolean clipped = groupName ? !clippedTexts().stream().allMatch(text -> text.contains("×"))
+                    : GuiText.clipCount() != 0;
+            if (stepTicks < 6 || clipped || !ready.done()) {
                 return false;
             }
             capture(Minecraft.getInstance(), file);

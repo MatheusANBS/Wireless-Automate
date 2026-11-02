@@ -96,7 +96,7 @@ final class E2eRangeCopySteps {
      */
     private static void keySteps(List<Step> list, String l, boolean keys, UUID playerId) {
         list.add(new Step(l + "Ctrl+V cola na fornalha", STEP_TIMEOUT_MS,
-                () -> routerScreen().keyPressed(GLFW.GLFW_KEY_V, 0, CTRL),
+                () -> press(GLFW.GLFW_KEY_V, CTRL),
                 () -> furnaceBack() == PortMode.EXTRACT && furnaceException() && pasteUndoShown(),
                 () -> "fornalha " + furnace()));
         // no grupo: a exceção igual ao perfil novo some
@@ -104,7 +104,7 @@ final class E2eRangeCopySteps {
                 STEP_TIMEOUT_MS, () -> {
                     PanelNotices.clear();
                     if (keys) {
-                        routerScreen().keyPressed(GLFW.GLFW_KEY_V, 0, CTRL | GLFW.GLFW_MOD_SHIFT);
+                        press(GLFW.GLFW_KEY_V, CTRL | GLFW.GLFW_MOD_SHIFT);
                     } else {
                         RangeRowButtons.e2eShift = true;
                         try {
@@ -125,7 +125,7 @@ final class E2eRangeCopySteps {
                 router.revertToProfile(router.remoteMachines().index(rangeFurnace));
                 return null;
             });
-            routerScreen().keyPressed(GLFW.GLFW_KEY_C, 0, CTRL);
+            press(GLFW.GLFW_KEY_C, CTRL);
         }, () -> copied(playerId, Blocks.FURNACE) && !furnaceException(), () -> "cópia " + clipboard()));
         list.add(new Step(l + "o ✕ do rodapé esquece a cópia", STEP_TIMEOUT_MS,
                 () -> clickPanel(routerScreen().footerCenter(true), "o ✕ da cópia"),
@@ -151,7 +151,7 @@ final class E2eRangeCopySteps {
     static void noUpgradeSteps(List<Step> list, String label, UUID playerId) {
         String l = label + "sem upgrade: ";
         list.add(new Step(l + "Ctrl+C copia a presa", STEP_TIMEOUT_MS,
-                () -> routerScreen().keyPressed(GLFW.GLFW_KEY_C, 0, CTRL),
+                () -> press(GLFW.GLFW_KEY_C, CTRL),
                 () -> copied(playerId, Blocks.CHEST) && routerScreen().footerCenter(true) != null
                         && !routerScreen().rangeListShown() && stepTicks >= 4,
                 () -> "cópia " + clipboard()));
@@ -159,7 +159,7 @@ final class E2eRangeCopySteps {
         list.add(capture("range-q8-sem-upgrade-copia"));
         list.add(new Step(l + "Ctrl+V cola na presa", STEP_TIMEOUT_MS,
                 // a presa já está como a cópia: o aviso vem sem o Desfazer
-                () -> routerScreen().keyPressed(GLFW.GLFW_KEY_V, 0, CTRL), () -> noticeHas("pasted"),
+                () -> press(GLFW.GLFW_KEY_V, CTRL), () -> noticeHas("pasted"),
                 () -> "aviso " + PanelNotices.current()));
         list.add(new Step(l + "o ✕ do visor esquece a cópia", STEP_TIMEOUT_MS,
                 () -> clickPanel(routerScreen().footerCenter(true), "o ✕ da cópia no visor"),
@@ -196,6 +196,12 @@ final class E2eRangeCopySteps {
     private static @Nullable String clipboard() throws StepFailure {
         Component source = routerScreen().getMenu().snapshot().clipboard();
         return source.getString().isEmpty() ? null : source.getString();
+    }
+
+    /** Aperta e solta a tecla na tela do roteador (segurada, a tela ignora a repetição). */
+    private static void press(int key, int modifiers) throws StepFailure {
+        routerScreen().keyPressed(key, 0, modifiers);
+        routerScreen().keyReleased(key, 0, modifiers);
     }
 
     /** O aviso do colar, com o Desfazer, está na tela. */

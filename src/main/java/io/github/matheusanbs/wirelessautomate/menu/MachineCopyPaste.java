@@ -50,7 +50,7 @@ public final class MachineCopyPaste {
      *                       de agora ele não edita
      * @param source         o nome de origem da cópia
      * @param where          o nome do alvo ("Fornalha #3", "presa", "Perfil: Fornalha")
-     * @param undo           o Desfazer ficou guardado
+     * @param undo           há um Desfazer guardado neste menu (deste colar, ou do anterior quando este não mudou nada)
      * @param noMachine      a presa não recebeu nada: não há máquina na frente do roteador (ar, ou o chunk dela
      *                       descarregado)
      */
@@ -131,7 +131,8 @@ public final class MachineCopyPaste {
      * contadas). Cada face recebe modo, prioridade, redstone e filtro; a rede só se a cópia leva uma que o jogador pode
      * usar e a face pode sair da que tem ({@link #merge}). Na presa sem membro, ele nasce antes do colar (no grupo do
      * bloco da frente, ou do rascunho de um mundo antigo), para o Desfazer ter o estado de antes; sem máquina na
-     * frente, nada muda ({@link Pasted#noMachine}). Com mudança, guarda o Desfazer (o anterior sai sempre).
+     * frente, nada muda ({@link Pasted#noMachine}). Com mudança, guarda o Desfazer no lugar do anterior; sem mudança,
+     * o anterior fica.
      * {@code null} sem cópia ou com o alvo que deixou de existir.
      */
     public static @Nullable Pasted paste(ServerPlayer player, RouterEditHost host, boolean wholeGroup) {
@@ -144,7 +145,6 @@ public final class MachineCopyPaste {
         RemoteMachines remotes = router.remoteMachines();
         if (target.attached()) {
             if (!router.attachedCanHold()) {
-                MachinePasteUndo.forget(player.getUUID());
                 return new Pasted(false, 0, 0, copy.source(), attachedName(router), false, true);
             }
             router.ensureAttachedMember();
@@ -155,7 +155,6 @@ public final class MachineCopyPaste {
                 || (target.kind() == EditTarget.Kind.MACHINE && machine == null)) {
             return null;
         }
-        MachinePasteUndo.forget(player.getUUID());
         Predicate<UUID> usable = PresetApplier.usable(player);
         Predicate<UUID> canLeave = PresetPaste.canLeave(player);
         int[] kept = new int[1];
@@ -179,11 +178,13 @@ public final class MachineCopyPaste {
             where = attachedName(router);
         }
         PasteUndo change = changed ? PasteUndo.between(before, PasteUndo.State.of(router, false, true), false) : null;
+        // um colar que não muda nada (o segundo igual) não apaga o Desfazer do anterior, e o aviso dele o mantém
         if (change != null) {
             MachinePasteUndo.remember(player, host, change);
         }
         host.editApplied();
-        return new Pasted(changed, exceptions, kept[0], copy.source(), where, change != null, false);
+        return new Pasted(changed, exceptions, kept[0], copy.source(), where,
+                change != null || MachinePasteUndo.heldIn(player.getUUID(), host), false);
     }
 
     /**

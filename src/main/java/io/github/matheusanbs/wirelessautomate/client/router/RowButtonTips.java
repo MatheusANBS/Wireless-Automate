@@ -61,7 +61,7 @@ final class RowButtonTips {
     static Component tooltip(RangeView view, EditTarget target, Action action, boolean armed) {
         RangeView.GroupView group = target.kind() == EditTarget.Kind.GROUP ? view.group(target.id()) : null;
         if (action == Action.UNLINK && group != null) {
-            return withDetail(armed ? unlinkArmedText(view, target) : tr("range.unlink_group"),
+            return withDetail(armed ? unlinkGroupArmedHead(group) : tr("range.unlink_group"),
                     armed ? tr("range.unlink_group.armed.tooltip") : unlinkGroupDetail(group));
         }
         Component head = switch (action) {
@@ -86,6 +86,16 @@ final class RowButtonTips {
             case COPY, PASTE -> Component.empty();
         };
         return withDetail(head, detail);
+    }
+
+    /** A dica do ✕ do grupo armado, com o nome dele: o que o segundo clique vai fazer. */
+    private static Component unlinkGroupArmedHead(RangeView.GroupView group) {
+        Component name = MachineTexts.groupName(group);
+        int remotes = group.remotes();
+        if (remotes > 0) {
+            return tr(remotes == 1 ? "range.unlink_group.armed.head.one" : "range.unlink_group.armed.head", remotes, name);
+        }
+        return tr(group.attached() ? "range.unlink_group.armed.head.clear" : "range.unlink_group.armed.head.delete", name);
     }
 
     /** O que o ✕ do grupo faz: desvincula as remotas e apaga o grupo, ou, no da presa, o deixa zerado com ela. */

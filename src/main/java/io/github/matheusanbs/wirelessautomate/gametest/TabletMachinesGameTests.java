@@ -386,7 +386,7 @@ public final class TabletMachinesGameTests {
     @GameTest(template = "empty", timeoutTicks = 300)
     public static void movingMachineLiveInMachineView(GameTestHelper helper) {
         RouterBlockEntity router = rangeRouter(helper);
-        helper.setBlock(REMOTE_CHEST, Blocks.CHEST);
+        helper.setBlock(REMOTE_CHEST, Blocks.BARREL);
         ServerPlayer player = playerWithTablet(helper);
         TabletMenu[] menu = new TabletMenu[1];
         AtomicBoolean livePacket = new AtomicBoolean();
@@ -411,12 +411,14 @@ public final class TabletMachinesGameTests {
                     boolean page = payloads.stream().anyMatch(p -> p instanceof TabletPagePayload);
                     for (CustomPacketPayload payload : payloads) {
                         if (payload instanceof TabletLivePayload live && !page && live.machines().size() == 2
-                                && live.machines().get(1).status() == MachineStatus.MOVING) {
+                                && live.machines().stream().anyMatch(m -> m.status() == MachineStatus.MOVING)) {
                             livePacket.set(true);
                         }
                     }
+                    // A remota é um barril (o baú é a presa): a ordem por bloco o põe na sua linha, que recebe.
                     List<MachineLive> lives = menu[0].snapshot().page().machineRows().lives();
-                    MachineLive remote = lives.size() == 2 ? lives.get(1) : null;
+                    MachineLive remote = lives.size() == 2 ? lives.stream()
+                            .filter(m -> m.received(ResourceType.ITEM) > 0).findFirst().orElse(null) : null;
                     helper.assertTrue(remote != null && remote.status() == MachineStatus.MOVING
                             && remote.received(ResourceType.ITEM) > 0 && livePacket.get(),
                             "a máquina não ficou movendo no pacote pequeno: " + remote);

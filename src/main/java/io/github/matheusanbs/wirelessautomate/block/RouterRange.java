@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.block;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
+import io.github.matheusanbs.wirelessautomate.range.AttachedMember;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.MachineCaches;
 import io.github.matheusanbs.wirelessautomate.range.MachineConfig;
@@ -48,7 +49,7 @@ final class RouterRange {
     }
 
     /** Ver {@link RouterBlockEntity#linkMachine(BlockPos, UUID)}. */
-    boolean link(BlockPos pos, @Nullable UUID network, boolean isolated) {
+    boolean link(BlockPos pos, @Nullable UUID network) {
         Level level = router.getLevel();
         if (level == null || level.isClientSide || !level.isLoaded(pos) || pos.equals(router.getBlockPos())) {
             return false;
@@ -56,7 +57,7 @@ final class RouterRange {
         BlockState state = level.getBlockState(pos);
         if (state.isAir()
                 || !remotes.link(pos, BuiltInRegistries.BLOCK.getKey(state.getBlock()), RemoteMachines.frontOf(state),
-                        network, isolated)) {
+                        network)) {
             return false;
         }
         remotesChanged();
@@ -119,6 +120,11 @@ final class RouterRange {
     /** Ver {@link RouterBlockEntity#revertGroupToProfile(int)}. */
     int revertGroupToProfile(int groupId) {
         int reverted = 0;
+        AttachedMember member = remotes.attached();
+        if (remotes.groupHasAttached(groupId) && member.hasException()) {
+            member.setException(null);
+            reverted++;
+        }
         for (RemoteMachine machine : remotes.machines()) {
             if (machine.group() == groupId && machine.hasException()) {
                 machine.setException(null);

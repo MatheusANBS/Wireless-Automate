@@ -113,7 +113,8 @@ public final class IndexRemotesGameTests {
                     int furnaces = groupOf(router, helper.absolutePos(FURNACE_A));
                     int barrels = groupOf(router, helper.absolutePos(BARREL));
                     eq(helper, remotes.group(1), furnaces, "grupo da segunda");
-                    eq(helper, remotes.groupCount(), 2, "grupos");
+                    // Os dois das remotas e o do baú preso (a rede posta nele criou o membro presa).
+                    eq(helper, remotes.groupCount(), 3, "grupos");
                     int g = remotes.groupIndex(furnaces);
                     helper.assertTrue(g >= 0, "grupo das fornalhas fora do índice");
                     eq(helper, remotes.groupBlock(g), id(Blocks.FURNACE), "bloco do grupo");

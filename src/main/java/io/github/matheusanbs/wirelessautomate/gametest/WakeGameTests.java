@@ -25,6 +25,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.AbstractFurnaceBlock;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -161,21 +162,25 @@ public final class WakeGameTests {
     }
 
     /**
-     * Um destino sem máquina (pedra, sem inventário) dorme sem contar como cheio; pôr um
-     * baú no lugar invalida a capability, o listener acorda o destino e a origem que esperava, e a
-     * entrega sai logo, sem esperar o teto do sono.
+     * Um destino sem máquina (o baú tirado sem derrubar o roteador, que fica com a configuração do grupo do
+     * baú) dorme sem contar como cheio; pôr o baú de volta invalida a capability, o listener acorda o destino e a
+     * origem que esperava, e a entrega sai logo, sem esperar o teto do sono. Com outro bloco no lugar (pedra) a
+     * presa iria para o grupo dele, sem a configuração.
      */
     @GameTest(template = "empty", timeoutTicks = 300)
     public static void destinationWithoutMachineSleepsUntilMachineAppears(GameTestHelper helper) {
         UUID network = newNetwork(helper, "teste-destino-sem-maquina");
         RouterBlockEntity a = chest(helper, A, network, PortMode.EXTRACT);
-        RouterBlockEntity d = place(helper, B, Blocks.STONE.defaultBlockState(), network);
+        RouterBlockEntity d = place(helper, B, Blocks.CHEST.defaultBlockState(), network);
         d.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
-        chestAt(helper, A).setItem(0, new ItemStack(Items.DIAMOND, 10));
         long[] placedAt = {0};
 
         helper.startSequence()
                 .thenWaitUntil(() -> waitRegistered(helper, a, d))
+                .thenExecute(() -> {
+                    helper.getLevel().setBlock(helper.absolutePos(B), Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+                    chestAt(helper, A).setItem(0, new ItemStack(Items.DIAMOND, 10));
+                })
                 .thenWaitUntil(() -> {
                     NetworkStats stats = stats(helper, network);
                     helper.assertTrue(stats != null && stats.destinationsSleeping() == 1, "o destino sem máquina não dormiu");

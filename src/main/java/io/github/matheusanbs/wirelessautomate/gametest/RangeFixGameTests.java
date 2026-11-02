@@ -117,7 +117,7 @@ public final class RangeFixGameTests {
     @GameTest(template = "empty", timeoutTicks = 400)
     public static void fullRemoteDestinationCounts(GameTestHelper helper) {
         RouterBlockEntity router = rangeRouter(helper);
-        helper.setBlock(NORMAL, Blocks.CHEST);
+        helper.setBlock(NORMAL, Blocks.BARREL);
         Container full = container(helper, NORMAL);
         for (int slot = 0; slot < full.getContainerSize(); slot++) {
             full.setItem(slot, new ItemStack(Items.DIRT, 64));
@@ -565,7 +565,7 @@ public final class RangeFixGameTests {
     @GameTest(template = "empty", timeoutTicks = 400)
     public static void fullDestinationLeavesWhenModeGoesNone(GameTestHelper helper) {
         RouterBlockEntity router = rangeRouter(helper);
-        helper.setBlock(NORMAL, Blocks.CHEST);
+        helper.setBlock(NORMAL, Blocks.BARREL);
         Container full = container(helper, NORMAL);
         for (int slot = 0; slot < full.getContainerSize(); slot++) {
             full.setItem(slot, new ItemStack(Items.DIRT, 64));

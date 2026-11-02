@@ -452,20 +452,19 @@ final class NetworkRoutes {
 
     /**
      * Lê as faces ativas do tipo no nó e preenche os campos da configuração nas portas delas: as da
-     * máquina presa e, com o Upgrade de Alcance valendo, as das remotas (ver {@link #readRemotePorts}).
+     * máquina presa (a configuração que vale para ela no grupo, pela frente dela) e, com o Upgrade de Alcance valendo, as das remotas (ver {@link #readRemotePorts}).
      */
     private Port[] readPorts(NodePorts member, ResourceType type) {
         RouterBlockEntity node = member.node;
         boolean powered = node.powered();
-        // O facing e o giro saem do blockstate: lidos uma vez por nó, e não uma por face.
-        Direction facing = node.facing();
-        int spin = node.spin();
+        // A presa é um membro do grupo do bloco dela: o bloco e a frente são lidos uma vez por montagem.
+        node.prepareAttachedPorts(type);
         Port[] active = NO_PORTS;
         int count = 0;
         RouterTier tier = null;
         BlockPos machine = null;
         for (Direction face : DIRECTIONS) {
-            FaceConfig config = node.face(type, RelativeSide.fromAbsolute(facing, spin, face));
+            FaceConfig config = node.face(type, face);
             // A face que o redstone desliga entra assim mesmo, travada ({@link Port#stopped}): o sinal não
             // remonta as rotas.
             if (config.mode() == PortMode.NONE) {

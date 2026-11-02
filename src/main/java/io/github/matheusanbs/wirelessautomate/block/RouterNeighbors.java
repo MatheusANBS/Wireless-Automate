@@ -7,6 +7,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -16,14 +17,16 @@ import org.jetbrains.annotations.Nullable;
  */
 final class RouterNeighbors {
     private final RouterBlockEntity router;
+    private final RouterAttached attached;
     /** Caches de capability da máquina presa; apontados de novo quando o roteador gira. */
     private final MachineCaches attachedCaches;
     /** Bloco da máquina no último aviso do vizinho ({@link #machineNeighborChanged}); {@code null} = desconhecido. */
     private @Nullable Block machineBlock;
     private boolean powered;
 
-    RouterNeighbors(RouterBlockEntity router) {
+    RouterNeighbors(RouterBlockEntity router, RouterAttached attached) {
         this.router = router;
+        this.attached = attached;
         this.attachedCaches = MachineCaches.attached(router, BlockPos.ZERO);
     }
 
@@ -48,15 +51,23 @@ final class RouterNeighbors {
         if (level == null) {
             return;
         }
-        Block block = level.getBlockState(router.machinePos()).getBlock();
+        BlockState state = level.getBlockState(router.machinePos());
+        Block block = state.getBlock();
         if (block != machineBlock) {
             machineBlock = block;
             router.machineChanged();
             if (!level.isClientSide) {
+                // Bloco trocado: a presa vai para o grupo do bloco novo (ar não muda nada).
+                if (attached.sync(state)) {
+                    router.changed(NetworkManager.ALL_TYPES);
+                }
                 // Máquina nova: as portas dela (e quem espera por elas) tentam de novo, mesmo que a
                 // troca não invalide nenhuma capability já consultada.
                 NetworkManager.get().wake(router);
             }
+        } else if (!level.isClientSide && attached.frontChanged(state)) {
+            // Só o estado mudou e a máquina girou: os lados dela caem noutras faces.
+            router.changed(NetworkManager.ALL_TYPES);
         }
     }
 
@@ -79,7 +90,7 @@ final class RouterNeighbors {
         }
     }
 
-    /** Girado: a configuração relativa acompanha, mas a máquina mudou de lugar. */
+    /** Virado para outra face: a máquina mudou de lugar. */
     void rotated() {
         attachedCaches.retarget(router.machinePos());
         machineBlock = null;

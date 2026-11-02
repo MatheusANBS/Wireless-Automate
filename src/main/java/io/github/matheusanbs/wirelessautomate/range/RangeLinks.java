@@ -172,7 +172,7 @@ public final class RangeLinks {
         if (refusal == LinkRefusal.NONE) {
             refusal = rangeRefusal(router, distance, used(router));
         }
-        if (refusal == LinkRefusal.NONE && !router.linkMachineIsolated(pos)) {
+        if (refusal == LinkRefusal.NONE && !router.linkMachine(pos)) {
             refusal = LinkRefusal.NOT_A_MACHINE;
         }
         if (refusal != LinkRefusal.NONE) {
@@ -261,7 +261,7 @@ public final class RangeLinks {
                     counts[3]++;
                 } else if (!clickAllowed(player, hand, pos)) {
                     counts[4]++;
-                } else if (router.linkMachineIsolated(pos)) {
+                } else if (router.linkMachine(pos)) {
                     counts[0]++;
                     used++;
                 }

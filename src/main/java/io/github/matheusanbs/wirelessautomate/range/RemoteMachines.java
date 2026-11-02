@@ -357,6 +357,7 @@ public final class RemoteMachines {
         if (group == null) {
             return null;
         }
+        boolean changed = resettable(group);
         int before = machines.size();
         machines.removeIf(machine -> machine.group() == groupId);
         int removed = before - machines.size();
@@ -365,12 +366,28 @@ public final class RemoteMachines {
             groups.remove(group);
             return new GroupUnlink(removed, cards, false, true);
         }
-        boolean changed = removed > 0 || !cards.isEmpty() || !group.profile().isDefault() || !group.name().isEmpty()
-                || attached.hasException();
         group.profile().copyFrom(new MachineConfig());
         group.setName("");
         attached.setException(null);
         return new GroupUnlink(removed, cards, true, changed);
+    }
+
+    /**
+     * O {@link #unlinkGroup} do grupo mudaria algo: sempre num grupo sem a presa (ele sai); no da presa, só com
+     * remotas, cartões, perfil fora do padrão, nome ou a presa com exceção. Falso é o grupo da presa já zerado, cujo ✕
+     * a tela esconde.
+     */
+    public boolean resettable(MachineGroup group) {
+        if (!groupHasAttached(group.id()) || group.hasCards() || !group.profile().isDefault()
+                || !group.name().isEmpty() || attached.hasException()) {
+            return true;
+        }
+        for (RemoteMachine machine : machines) {
+            if (machine.group() == group.id()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public boolean contains(BlockPos pos) {

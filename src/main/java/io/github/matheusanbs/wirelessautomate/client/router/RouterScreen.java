@@ -368,6 +368,12 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
     }
 
     @Override
+    public boolean keyReleased(int keyCode, int scanCode, int modifiers) {
+        column.keyReleased(keyCode);
+        return super.keyReleased(keyCode, scanCode, modifiers);
+    }
+
+    @Override
     public boolean charTyped(char codePoint, int modifiers) {
         if (header.renaming()) {
             return header.renameBox().charTyped(codePoint, modifiers);
@@ -613,16 +619,9 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         return column.previewViewFaceCenter(direction);
     }
 
-    public int[] previewCardSlotCenter(int slot) {
+    /** Centro do slot {@code slot} do menu (um cartão, ou o {@code RouterMenu.UPGRADE_SLOT}). */
+    public int[] previewSlotCenter(int slot) {
         return slots.slotCenter(leftPos, topPos, slot);
-    }
-
-    public int[] previewUpgradeSlotCenter() {
-        return slots.slotCenter(leftPos, topPos, RouterMenu.UPGRADE_SLOT);
-    }
-
-    public int[] previewRangeSlotCenter() {
-        return slots.slotCenter(leftPos, topPos, RouterMenu.RANGE_SLOT);
     }
 
     public int[] previewEditFilterCenter() {

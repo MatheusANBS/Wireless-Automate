@@ -195,7 +195,7 @@ final class ScreenshotRouter {
                     screen.previewFace(Direction.DOWN);
                 }, "c1-cartoes"),
                 new Step(() -> {
-                    int[] center = screen.previewCardSlotCenter(1);
+                    int[] center = screen.previewSlotCenter(1);
                     mouseX = center[0];
                     mouseY = center[1];
                 }, "c2-cartao-dica"),
@@ -224,7 +224,7 @@ final class ScreenshotRouter {
                     screen.previewType(ResourceType.ITEM);
                     screen.previewFace(Direction.DOWN);
                     upgradeState(ChunkLoadState.ACTIVE);
-                    int[] center = screen.previewUpgradeSlotCenter();
+                    int[] center = screen.previewSlotCenter(RouterMenu.UPGRADE_SLOT);
                     mouseX = center[0];
                     mouseY = center[1];
                 }, "u1-upgrade-ativo"),

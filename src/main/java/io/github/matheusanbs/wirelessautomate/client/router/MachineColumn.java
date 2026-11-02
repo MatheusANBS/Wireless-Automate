@@ -54,6 +54,8 @@ final class MachineColumn {
     private final LitFooter litFooter;
     private final RangeList rangeList;
     private final CopyFooter copyFooter = new CopyFooter();
+    /** A tecla do último Ctrl+C ou Ctrl+V, até ser solta (−1 sem nenhuma). */
+    private int heldKey = -1;
     private FlatButton machinesButton;
 
     /**
@@ -163,15 +165,18 @@ final class MachineColumn {
                 Math.max(0, layout.viewH() - 2));
         Font font = Minecraft.getInstance().font;
         RouterSnapshot s = snapshot.get();
-        int copyH = listShown() && CopyFooter.shown(s.clipboard()) ? CopyFooter.H : 0;
-        int listH = layout.listH() - (LitFooter.shown(listShown()) ? LitFooter.H : 0) - copyH;
+        boolean list = listShown();
         int x = left + RouterLayout.X0;
+        // a largura da linha embaixo da lista, ou da faixa no alto do visor
+        copyFooter.prepare(font, s.clipboard(), list ? layout.lw() : layout.lw() - 2);
+        int copyH = list && copyFooter.present() ? CopyFooter.H : 0;
+        int listH = layout.listH() - (LitFooter.shown(listShown()) ? LitFooter.H : 0) - copyH;
         rangeList.setBounds(x, top + layout.listY(), layout.lw(), listH);
         // embaixo da lista; sem ela, no alto do visor
         if (copyH > 0) {
-            copyFooter.place(font, s.clipboard(), x, top + layout.listY() + listH, layout.lw(), false);
+            copyFooter.place(x, top + layout.listY() + listH, layout.lw(), false);
         } else {
-            copyFooter.place(font, s.clipboard(), x + 1, top + layout.boxY() + 1, layout.lw() - 2, true);
+            copyFooter.place(x + 1, top + layout.boxY() + 1, layout.lw() - 2, true);
         }
         litFooter.place(font, x, top + layout.listY() + listH + copyH, layout.lw());
         if (rangeShown()) {
@@ -220,7 +225,8 @@ final class MachineColumn {
     /**
      * Uma tecla na tela: primeiro a caixa do nome de uma linha e o painel (o nome da face, a busca das redes), que
      * ficam com as teclas deles; depois Ctrl+C e Ctrl+V (Shift + Ctrl+V no grupo inteiro) no alvo escolhido, também
-     * sem o Upgrade de Alcance (na presa).
+     * sem o Upgrade de Alcance (na presa). A tecla segura (a repetição do sistema) não pede de novo: um segundo colar
+     * igual apagaria o Desfazer do primeiro.
      */
     boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (labelEditor.keyPressed(keyCode, scanCode, modifiers) || panel.keyPressed(keyCode, scanCode, modifiers)) {
@@ -230,8 +236,18 @@ final class MachineColumn {
         if (request == null) {
             return false;
         }
-        send(RangeRequests.key(containerId.getAsInt(), request));
+        if (heldKey != keyCode) {
+            heldKey = keyCode;
+            send(RangeRequests.key(containerId.getAsInt(), request));
+        }
         return true;
+    }
+
+    /** A tecla solta: o próximo Ctrl+C ou Ctrl+V com ela vale de novo. */
+    void keyReleased(int keyCode) {
+        if (keyCode == heldKey) {
+            heldKey = -1;
+        }
     }
 
     boolean charTyped(char codePoint, int modifiers) {
@@ -239,8 +255,10 @@ final class MachineColumn {
     }
 
     boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (copyShown() && button == 0 && copyFooter.forgetClicked(mouseX, mouseY)) {
-            send(new MachineCopyPayload(containerId.getAsInt(), true));
+        if (copyShown() && copyFooter.over(mouseX, mouseY)) {
+            if (button == 0 && copyFooter.forgetClicked(mouseX, mouseY)) {
+                send(new MachineCopyPayload(containerId.getAsInt(), true));
+            }
             return true;
         }
         if (listShown() && button == 0 && litFooter.click(rangeList, mouseX, mouseY)) {
@@ -363,7 +381,7 @@ final class MachineColumn {
 
     /** A linha da cópia aparece: embaixo da lista, ou no alto do visor sem ela. */
     private boolean copyShown() {
-        return CopyFooter.shown(snapshot.get().clipboard()) && (listShown() || viewShown());
+        return copyFooter.present() && (listShown() || viewShown());
     }
 
     /** O visor: num alvo remoto só o bloco dele, com o anel da face escolhida na cor da rede dela. */

@@ -28,15 +28,15 @@ final class CopyFooter {
     private boolean overlay;
     private @Nullable Component preparedFor;
     private int preparedW = -1;
+    private boolean present;
+    /** O rótulo não coube: o ⧉ vai no lugar dele. */
+    private boolean icon;
+    /** A largura do ⧉ com o vão até o nome. */
+    private static final int ICON_W = 9;
     private GuiText.Fitted text = new GuiText.Fitted(Component.empty(), FormattedCharSequence.EMPTY, 0, false);
 
     private static Component tr(String key, Object... args) {
         return Component.translatable("gui.wirelessautomate.router." + key, args);
-    }
-
-    /** Há uma cópia: a linha aparece. */
-    static boolean shown(Component clipboard) {
-        return !clipboard.getString().isEmpty();
     }
 
     /**
@@ -58,19 +58,39 @@ final class CopyFooter {
     }
 
     /**
-     * Põe a linha em ({@code x}, {@code y}) com a largura {@code w} ({@code overlay}: a faixa no alto do visor) e mede
-     * o texto da cópia {@code clipboard}, se ele ou a largura mudaram; a coluna chama antes do desenho e dos cliques.
+     * Lê a cópia {@code clipboard} do snapshot: se há uma ({@link #present}) e o texto, medido em {@code w} só quando
+     * ela (o objeto) ou a largura mudam. A coluna chama antes de decidir o lugar da lista.
      */
-    void place(Font font, Component clipboard, int x, int y, int w, boolean overlay) {
+    void prepare(Font font, Component clipboard, int w) {
+        if (clipboard != preparedFor) {
+            preparedFor = clipboard;
+            present = !clipboard.getString().isEmpty();
+            preparedW = -1;
+        }
+        if (preparedW != w) {
+            preparedW = w;
+            // "Perfil copiado: Baú #1"; se não cabe, o ⧉ no lugar do rótulo (o rótulo fica na dica)
+            int room = w - RangeRowButtons.SIZE - 7;
+            Component full = tr("range.copy.footer", clipboard);
+            icon = font.width(full) > room;
+            text = GuiText.fit(font, icon ? clipboard : full, icon ? room - ICON_W : room);
+        }
+    }
+
+    /** Há uma cópia: a linha aparece. */
+    boolean present() {
+        return present;
+    }
+
+    /**
+     * Põe a linha em ({@code x}, {@code y}) com a largura {@code w} ({@code overlay}: a faixa no alto do visor); o
+     * texto vem do {@link #prepare} com a mesma largura.
+     */
+    void place(int x, int y, int w, boolean overlay) {
         this.x = x;
         this.y = y;
         this.w = w;
         this.overlay = overlay;
-        if (clipboard != preparedFor || preparedW != w) {
-            preparedFor = clipboard;
-            preparedW = w;
-            text = GuiText.fit(font, tr("range.copy.footer", clipboard), w - RangeRowButtons.SIZE - 7);
-        }
     }
 
     private int forgetX() {
@@ -81,7 +101,8 @@ final class CopyFooter {
         return mx >= forgetX() && mx < forgetX() + RangeRowButtons.SIZE && my >= y + 1 && my < y + 1 + RangeRowButtons.SIZE;
     }
 
-    private boolean over(double mx, double my) {
+    /** O mouse está na linha (ou na faixa do visor): o clique fica nela, sem chegar à face embaixo. */
+    boolean over(double mx, double my) {
         return mx >= x && mx < x + w && my >= y && my < y + H;
     }
 
@@ -89,7 +110,10 @@ final class CopyFooter {
         if (overlay) {
             g.fill(x, y, x + w, y + H, GuiPaint.alpha(GuiPaint.INSET, 0xD8));
         }
-        GuiText.draw(g, font, text, x + 3, y + 2, GuiPaint.MUTED);
+        if (icon) {
+            RangeRowButtons.copyIcon(g, x + 3, y + 3, GuiPaint.MUTED);
+        }
+        GuiText.draw(g, font, text, x + 3 + (icon ? ICON_W : 0), y + 2, GuiPaint.MUTED);
         int fx = forgetX();
         GuiPaint.box(g, fx, y + 1, RangeRowButtons.SIZE, RangeRowButtons.SIZE, GuiPaint.BUTTON,
                 overForget(mx, my) ? GuiPaint.BUTTON_HOVER_BORDER : GuiPaint.BUTTON_BORDER);

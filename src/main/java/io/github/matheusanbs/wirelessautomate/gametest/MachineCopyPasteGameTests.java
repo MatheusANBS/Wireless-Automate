@@ -339,6 +339,47 @@ public final class MachineCopyPasteGameTests {
                 .thenSucceed();
     }
 
+    /**
+     * Colar duas vezes igual (a tecla segura): o segundo não muda nada, não apaga o Desfazer do primeiro e o aviso dele
+     * ainda tem o Desfazer, que volta B ao perfil.
+     */
+    @GameTest(template = "empty")
+    public static void pasteTwiceKeepsFirstUndo(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    link(helper, router, FURNACE_A);
+                    link(helper, router, FURNACE_B);
+                    exceptionUp(helper, router, FURNACE_A, PortMode.INSERT);
+                    ServerPlayer[] holder = new ServerPlayer[1];
+                    openMenu(helper, router, holder);
+                    ServerPlayer player = holder[0];
+                    try {
+                        selectMachine(helper, player, router, FURNACE_A);
+                        helper.assertTrue(copy(player), "não copiou");
+                        selectMachine(helper, player, router, FURNACE_B);
+                        helper.assertTrue(RangePayloads.handleMachinePaste(player,
+                                MachinePastePayload.paste(CONTAINER_ID, false)), "não colou");
+                        helper.assertFalse(RangePayloads.handleMachinePaste(player,
+                                MachinePastePayload.paste(CONTAINER_ID, false)), "o segundo colar mudou algo");
+                        helper.assertTrue(MachinePasteUndo.has(player.getUUID()), "o segundo colar apagou o Desfazer");
+                        MachineCopyPaste.Pasted again = MachineCopyPaste.paste(player, (RouterMenu) player.containerMenu,
+                                false);
+                        helper.assertTrue(again != null && !again.changed()
+                                && again.notice(CONTAINER_ID).undo() == PanelNoticePayload.Undo.UNDO_MACHINE_PASTE,
+                                "o aviso do colar igual perdeu o Desfazer");
+                        helper.assertTrue(RangePayloads.handleMachinePaste(player, MachinePastePayload.undo(CONTAINER_ID)),
+                                "não desfez");
+                        helper.assertFalse(machine(helper, router, FURNACE_B).hasException(), "o Desfazer não voltou B");
+                    } finally {
+                        cleanUp(player);
+                    }
+                })
+                .thenSucceed();
+    }
+
     /** A cópia e o Desfazer somem quando o jogador sai do servidor. */
     @GameTest(template = "empty")
     public static void clipboardForgottenOnLogout(GameTestHelper helper) {

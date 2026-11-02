@@ -23,7 +23,7 @@ final class ListRename {
     enum Kind { ROUTER, ATTACHED }
 
     private static final long DOUBLE_CLICK_MS = 400;
-    private static final int PENCIL_W = 9;
+    static final int PENCIL_W = 9;
     /** A altura da primeira linha de uma linha de duas, onde ficam o nome e o ✎. */
     private static final int FIRST_H = 11;
 

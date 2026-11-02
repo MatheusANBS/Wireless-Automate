@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.packet;
 
+import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
@@ -343,13 +344,19 @@ public final class ModPayloads {
         return selected;
     }
 
-    /** Voltar ao perfil: tira a exceção da máquina remota {@code index}, se ela ainda está na posição {@code pos}. */
+    /**
+     * Voltar ao perfil: tira a exceção da máquina remota {@code index} (ou da presa, no {@link RevertMachinePayload#ATTACHED}),
+     * se ela ainda está na posição {@code pos}.
+     */
     public static boolean handleRevertMachine(@Nullable ServerPlayer player, RevertMachinePayload payload) {
         RouterEditHost host = host(player, payload.containerId());
-        if (host == null || !sameMachine(host.editedRouter(), payload.index(), payload.pos())) {
+        RouterBlockEntity router = host == null ? null : host.editedRouter();
+        boolean attached = payload.index() == RevertMachinePayload.ATTACHED;
+        if (router == null || (attached ? !RouterBlock.attachedPos(router.getBlockState(), router.getBlockPos())
+                .equals(payload.pos()) : !sameMachine(router, payload.index(), payload.pos()))) {
             return false;
         }
-        boolean reverted = host.editedRouter().revertToProfile(payload.index());
+        boolean reverted = attached ? router.revertAttachedToProfile() : router.revertToProfile(payload.index());
         host.editApplied();
         return reverted;
     }

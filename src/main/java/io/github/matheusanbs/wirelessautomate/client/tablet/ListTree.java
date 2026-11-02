@@ -7,8 +7,9 @@ import java.util.List;
 
 /**
  * As linhas da Lista do Tablet em árvore (lógica pura): cada nó (roteador) é uma linha de topo, na ordem do
- * servidor. Abaixo de um nó aberto vêm as linhas da árvore que o servidor mandou para ele, na ordem dele: a máquina
- * presa, os grupos de alcance, as máquinas de cada grupo aberto e o "mais N". O nó está aberto quando tem linhas;
+ * servidor. Abaixo de um nó aberto vêm as linhas da árvore que o servidor mandou para ele, na ordem dele: os grupos
+ * de alcance, a máquina presa e as máquinas de cada grupo aberto e o "mais N". A presa vem logo depois da linha do
+ * grupo dela e fica dentro dele; sem grupo, vem antes dos grupos, no recuo deles. O nó está aberto quando tem linhas;
  * quem abre e fecha é o servidor.
  *
  * <p>As setas andam por todas as linhas e param nas bordas.
@@ -46,7 +47,8 @@ public final class ListTree {
      * @param collapsed num grupo de alcance, se está recolhido; num nó, se ele não está aberto
      * @param node      a posição do nó (o da linha, ou o de cima numa linha da árvore)
      * @param row       numa linha da árvore, a posição dela nas linhas do servidor; senão -1
-     * @param depth     o recuo: 0 no nó, 1 na presa e no grupo, 2 na máquina e no "mais N"
+     * @param depth     o recuo: 0 no nó, 1 no grupo e na presa sem grupo, 2 na máquina, na presa dentro do grupo e no
+     *                  "mais N"
      */
     public record Line(Kind kind, boolean collapsed, int node, int row, int depth) {
     }
@@ -100,13 +102,17 @@ public final class ListTree {
         if (first < 0) {
             return;
         }
+        Kind previous = Kind.NODE;
         for (int r = first, seen = 0; r < rows.size() && seen < count; r++) {
             TreeRow row = rows.get(r);
             if (row.parent() != node) {
                 continue;
             }
             seen++;
-            int depth = row.kind() == Kind.MACHINE || row.kind() == Kind.MORE ? 2 : 1;
+            // a presa logo depois de um grupo é dele (o servidor só a põe ali quando ela é do grupo)
+            boolean inGroup = row.kind() == Kind.ATTACHED && previous == Kind.GROUP;
+            int depth = row.kind() == Kind.MACHINE || row.kind() == Kind.MORE || inGroup ? 2 : 1;
+            previous = row.kind();
             rowLines[r] = lines.size();
             lines.add(new Line(row.kind(), row.collapsed(), node, r, depth));
         }
@@ -133,8 +139,8 @@ public final class ListTree {
     }
 
     /**
-     * A linha de cima de uma linha da árvore: o grupo de alcance de uma máquina ou de um "mais N", o nó de uma presa
-     * ou de um grupo. -1 num nó ou fora da lista.
+     * A linha de cima de uma linha da árvore: o grupo de alcance de uma máquina, da presa dentro dele ou de um "mais
+     * N", o nó de uma presa sem grupo ou de um grupo. -1 num nó ou fora da lista.
      */
     public int parentLine(int line) {
         if (line < 0 || line >= lines.size() || !lines.get(line).kind().tree()) {

@@ -18,9 +18,10 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Os botões pequenos da linha escolhida na lista das máquinas ({@link RangeList}), da direita para a
- * esquerda: ✕ Desvincular (máquina), ↺ Voltar ao perfil (máquina com exceção), ⟳ Atualizar (máquina
+ * esquerda: ✕ Desvincular (máquina), ↺ Voltar ao perfil (máquina ou presa com exceção), ⟳ Atualizar (máquina
  * trocada, ou grupo com alguma trocada) e o "Tirar redes" ({@link IdleNetworks}, grupo ou máquina com
- * exceção com alguma face sem modo e com rede) e o ✎ Dar nome (máquina, e grupo quando o nome cabe ao lado).
+ * exceção com alguma face sem modo e com rede) e o ✎ Dar nome (máquina, presa dentro do grupo, e grupo quando o
+ * nome cabe ao lado).
  * O ✕ pede dois cliques ({@link ArmedClick}): armado, vira o botão de texto "Desvincular?", que desarma
  * quando o mouse sai dele ou o alvo muda. O clique devolve a ação; quem manda o pedido ao servidor é a
  * coluna da lista. Público só pela {@link Action}, que o e2e usa.
@@ -141,6 +142,13 @@ public final class RangeRowButtons {
         List<Action> actions = new ArrayList<>();
         switch (target.kind()) {
             case ATTACHED -> {
+                // a presa dentro do grupo: o ↺ com a exceção e o ✎; ela não se desvincula
+                if (view.attachedGroup() >= 0) {
+                    if (view.attachedException()) {
+                        actions.add(Action.REVERT);
+                    }
+                    actions.add(Action.RENAME);
+                }
             }
             case GROUP -> {
                 if (exceptions(view, target) > 0) {

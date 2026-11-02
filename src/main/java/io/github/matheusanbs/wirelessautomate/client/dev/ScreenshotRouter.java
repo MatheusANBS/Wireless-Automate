@@ -253,12 +253,12 @@ final class ScreenshotRouter {
                 }, "r2-alcance-maquina"));
     }
 
-    /** Tela do roteador com três grupos, uma exceção, uma máquina trocada e o alvo dado. */
+    /** Tela do roteador com três grupos (a presa no das fornalhas), uma exceção, uma máquina trocada e o alvo dado. */
     private static RouterScreen rangeScreen(EditTarget target) {
         RouterSnapshot s = sample();
         RangeView.GroupView blast = new RangeView.GroupView(0, ResourceLocation.withDefaultNamespace("blast_furnace"), "", 3, 1, false);
         RangeView.GroupView smoker = new RangeView.GroupView(1, ResourceLocation.withDefaultNamespace("smoker"), "", 2, 0, false);
-        RangeView.GroupView furnace = new RangeView.GroupView(2, ResourceLocation.withDefaultNamespace("furnace"), "", 2, 0, false);
+        RangeView.GroupView furnace = new RangeView.GroupView(2, ResourceLocation.withDefaultNamespace("furnace"), "", 3, 0, true);
         List<RangeView.MachineView> machines = List.of(
                 new RangeView.MachineView(new BlockPos(3, 64, 0), 0, 3, false, RangeView.MachineState.LOADED, null, ""),
                 new RangeView.MachineView(new BlockPos(-3, 64, 1), 0, 3, false, RangeView.MachineState.LOADED, null, ""),

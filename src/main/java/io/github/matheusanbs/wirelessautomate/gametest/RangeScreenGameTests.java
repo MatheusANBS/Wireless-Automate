@@ -4,6 +4,7 @@ import static io.github.matheusanbs.wirelessautomate.gametest.RangeTestSupport.*
 
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
@@ -182,6 +183,43 @@ public final class RangeScreenGameTests {
                         helper.assertFalse(router.remoteMachines().machine(indexB).hasException(), "a exceção ficou");
                         helper.assertValueEqual(router.face(EditTarget.machine(indexB), ResourceType.ITEM, Direction.UP).mode(),
                                 PortMode.NONE, "voltar ao perfil não voltou a face");
+                    } finally {
+                        removePlayer(helper, player);
+                    }
+                })
+                .thenSucceed();
+    }
+
+    /** O ↺ da presa: o Voltar ao perfil com o índice da presa confere o bloco atrás do roteador e tira a exceção dela. */
+    @GameTest(template = "empty")
+    public static void screenRevertsTheAttached(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        BlockPos chest = new BlockPos(2, 1, 2);
+        helper.setBlock(chest, Blocks.CHEST);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    link(helper, router, chest);
+                    // a presa e o baú no mesmo grupo: a escrita na presa vira exceção
+                    router.setMode(ResourceType.ITEM, Direction.NORTH, PortMode.INSERT);
+                    helper.assertTrue(router.remoteMachines().attached() != null
+                            && router.remoteMachines().attached().hasException(), "a presa não virou exceção");
+                    ServerPlayer[] holder = new ServerPlayer[1];
+                    RouterMenu menu = openMenu(helper, router, holder);
+                    ServerPlayer player = holder[0];
+                    try {
+                        BlockPos attached = RouterBlock.attachedPos(router.getBlockState(), router.getBlockPos());
+                        helper.assertFalse(ModPayloads.handleRevertMachine(player,
+                                RevertMachinePayload.attached(menu.containerId, attached.above(2))),
+                                "reverteu com a posição errada");
+                        helper.assertTrue(router.remoteMachines().attached().hasException(),
+                                "a posição errada tirou a exceção");
+                        helper.assertTrue(ModPayloads.handleRevertMachine(player,
+                                RevertMachinePayload.attached(menu.containerId, attached)), "não reverteu a presa");
+                        helper.assertFalse(router.remoteMachines().attached().hasException(), "a exceção da presa ficou");
+                        helper.assertValueEqual(router.face(ResourceType.ITEM, Direction.NORTH).mode(), PortMode.NONE,
+                                "a presa não voltou ao perfil");
                     } finally {
                         removePlayer(helper, player);
                     }

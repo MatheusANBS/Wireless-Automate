@@ -217,6 +217,13 @@ final class MachineColumn {
             }
             return;
         }
+        if (row.kind() == RangeList.Kind.ATTACHED) {
+            if (action == RangeRowButtons.Action.REVERT) {
+                RouterSnapshot s = snapshot.get();
+                send(RevertMachinePayload.attached(id, s.pos().relative(s.facing().getOpposite())));
+            }
+            return;
+        }
         RangeView.MachineView machine = range().machine(row.machine());
         if (row.kind() != RangeList.Kind.MACHINE || machine == null) {
             return;
@@ -310,7 +317,8 @@ final class MachineColumn {
             machineTip = true;
             Component button = rangeList.buttonTooltip(Minecraft.getInstance().font, range(), snapshot.get().target(),
                     mouseX, mouseY);
-            set.accept(button != null ? button : rangeList.tooltip(range(), row, attachedName()));
+            set.accept(button != null ? button
+                    : rangeList.tooltip(range(), row, attachedName(), snapshot.get().attachedLabel()));
         }
         return machineTip;
     }
@@ -329,7 +337,7 @@ final class MachineColumn {
         return new ItemStack(state.getBlock().asItem());
     }
 
-    /** O nome da máquina presa, para a dica da linha dela na lista. */
+    /** O nome do bloco da máquina presa, para a dica da linha dela na lista. */
     private Component attachedName() {
         ItemStack icon = attachedIcon();
         return icon.isEmpty() ? tr("machine.none") : icon.getHoverName();

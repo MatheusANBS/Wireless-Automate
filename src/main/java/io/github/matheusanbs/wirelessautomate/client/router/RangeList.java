@@ -23,11 +23,12 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Lista das máquinas da tela do roteador com o Upgrade de Alcance, no lugar do visor 3D: a linha da
- * máquina presa, os grupos (ícone, nome, {@code ×N} e as exceções), que abrem e fecham, e as máquinas
- * de cada grupo aberto ({@link MachineRow}: o nome, as coordenadas e a distância, a bolinha do estado e a
- * marca de exceção). Clicar numa linha escolhe o alvo de edição; a seta de um grupo (ou um clique no grupo
- * já escolhido) abre e fecha; dois cliques no nome abrem a edição dele. A linha escolhida ganha os botões do
+ * Lista das máquinas da tela do roteador com o Upgrade de Alcance, no lugar do visor 3D: os grupos (ícone,
+ * nome, {@code ×N} com a presa e as exceções), que abrem e fecham, e as máquinas de cada grupo aberto
+ * ({@link MachineRow}: o nome, a distância, a bolinha do estado e a marca de exceção). A máquina presa é a
+ * primeira linha do grupo dela, com "presa" (ou o nome dado) no lugar do número e da distância; sem grupo (a
+ * presa que ninguém configurou), ela fica numa linha no topo. Clicar numa linha escolhe o alvo de edição; a seta
+ * de um grupo (ou um clique no grupo já escolhido) abre e fecha; dois cliques no nome abrem a edição dele. A linha escolhida ganha os botões do
  * {@link RangeRowButtons}. Rola com a roda. Só cliente; todo texto passa por {@link GuiText}.
  */
 final class RangeList {
@@ -46,10 +47,20 @@ final class RangeList {
     enum Kind { ATTACHED, GROUP, MACHINE }
 
     /**
-     * Uma linha: {@code group} é o id do grupo (grupo e máquina), {@code machine} o índice da máquina;
-     * {@code top} é relativo ao topo do conteúdo (antes da rolagem).
+     * Uma linha: {@code group} é o id do grupo (grupo, máquina e a presa dentro do grupo; −1 na presa do topo),
+     * {@code machine} o índice da máquina; {@code top} é relativo ao topo do conteúdo (antes da rolagem).
      */
     record Row(Kind kind, int group, int machine, int top, int height) {
+        /** A linha da presa dentro do grupo dela, desenhada como uma máquina. */
+        boolean attachedInGroup() {
+            return kind == Kind.ATTACHED && group >= 0;
+        }
+
+        /** Uma linha desenhada como máquina (a máquina ou a presa dentro do grupo), com o Olho. */
+        boolean machineLike() {
+            return kind == Kind.MACHINE || attachedInGroup();
+        }
+
         EditTarget target() {
             return switch (kind) {
                 case ATTACHED -> EditTarget.ATTACHED_TARGET;
@@ -69,6 +80,8 @@ final class RangeList {
     private int width;
     private int height;
     private @Nullable EditTarget shownTarget;
+    /** O grupo do alvo mostrado: a presa muda de grupo com o bloco trocado, sem o alvo mudar. */
+    private int shownGroup = -1;
     private @Nullable RangeView cachedView;
     private @Nullable List<Row> cachedRows;
 
@@ -92,7 +105,10 @@ final class RangeList {
         return mouseX >= x && mouseX < x + width && mouseY >= y && mouseY < y + height;
     }
 
-    /** As linhas na ordem da tela: a presa, e cada grupo seguido das máquinas dele se estiver aberto. */
+    /**
+     * As linhas na ordem da tela: cada grupo seguido, se estiver aberto, da presa (se é dele) e das máquinas dele; a
+     * presa sem grupo vem no topo.
+     */
     List<Row> rows(RangeView view) {
         // as linhas só mudam com a visão (um snapshot novo é outro objeto) ou com os grupos abertos;
         // o alvo não muda a lista. Montadas uma vez e reusadas nos vários usos de cada quadro.
@@ -101,13 +117,20 @@ final class RangeList {
         }
         List<Row> rows = new ArrayList<>();
         int top = 0;
-        rows.add(new Row(Kind.ATTACHED, -1, -1, top, ATTACHED_H));
-        top += ATTACHED_H;
+        int attachedGroup = view.attachedGroup();
+        if (attachedGroup < 0) {
+            rows.add(new Row(Kind.ATTACHED, -1, -1, top, ATTACHED_H));
+            top += ATTACHED_H;
+        }
         for (GroupView group : view.groups()) {
             rows.add(new Row(Kind.GROUP, group.id(), -1, top, GROUP_H));
             top += GROUP_H;
             if (!open.contains(group.id())) {
                 continue;
+            }
+            if (group.id() == attachedGroup) {
+                rows.add(new Row(Kind.ATTACHED, group.id(), -1, top, MACHINE_H));
+                top += MACHINE_H;
             }
             for (int i = 0; i < view.machines().size(); i++) {
                 if (view.machines().get(i).group() == group.id()) {
@@ -167,8 +190,7 @@ final class RangeList {
         for (Row row : rows(view)) {
             if (row.target().equals(target)) {
                 int ry = y + 1 + row.top() - scroll;
-                // no grupo e na máquina, na primeira linha: a segunda fica com a largura toda
-                boolean eye = row.kind() == Kind.MACHINE && !buttons.unlinkArmed(target);
+                boolean eye = row.machineLike() && !buttons.unlinkArmed(target);
                 int right = rowRight(rows(view)) - (eye ? MachineRow.EYE_W : 0);
                 int rowH = row.height();
                 return buttons.place(font, view, target, ry, rowH, right, x + RowRename.nameX(row));
@@ -178,18 +200,19 @@ final class RangeList {
     }
 
     /**
-     * Chamado a cada quadro: quando o alvo muda (pela lista ou pelo servidor), o grupo dele abre e a
-     * linha dele entra na área visível. Os outros grupos ficam como o jogador deixou. {@code idleNetworks}
-     * diz se a linha do alvo tem o "Tirar redes".
+     * Chamado a cada quadro: quando o alvo muda (pela lista ou pelo servidor), ou o grupo dele muda (a presa com
+     * o bloco trocado), o grupo dele abre e a linha dele entra na área visível. Os outros grupos ficam como o
+     * jogador deixou. {@code idleNetworks} diz se a linha do alvo tem o "Tirar redes".
      */
     void sync(RangeView view, EditTarget target, boolean idleNetworks) {
         buttons.idleNetworks(idleNetworks);
-        if (target.equals(shownTarget)) {
+        int group = groupOf(view, target);
+        if (target.equals(shownTarget) && group == shownGroup) {
             scroll = Math.max(0, Math.min(scroll, maxScroll(rows(view))));
             return;
         }
         shownTarget = target;
-        int group = groupOf(view, target);
+        shownGroup = group;
         if (group >= 0 && open.add(group)) {
             invalidate();
         }
@@ -208,7 +231,7 @@ final class RangeList {
 
     private static int groupOf(RangeView view, EditTarget target) {
         return switch (target.kind()) {
-            case ATTACHED -> -1;
+            case ATTACHED -> view.attachedGroup();
             case GROUP -> target.id();
             case MACHINE -> {
                 MachineView machine = view.machine(target.id());
@@ -280,11 +303,13 @@ final class RangeList {
         return true;
     }
 
-    Component tooltip(RangeView view, Row row, Component attachedName) {
+    /**
+     * A dica da linha; na presa, {@code attachedName} é o bloco dela e {@code attachedLabel} o nome dado (vazio sem
+     * nome).
+     */
+    Component tooltip(RangeView view, Row row, Component attachedName, String attachedLabel) {
         return switch (row.kind()) {
-            case ATTACHED -> tr("range.attached").copy()
-                    .append("\n").append(attachedName.copy().withColor(GuiPaint.TOOLTIP_MUTED))
-                    .append("\n").append(tr("range.attached.tooltip").copy().withColor(GuiPaint.TOOLTIP_MUTED));
+            case ATTACHED -> MachineRow.attachedTooltip(view, row.attachedInGroup(), attachedName, attachedLabel);
             case GROUP -> {
                 GroupView group = view.group(row.group());
                 if (group == null) {
@@ -340,7 +365,14 @@ final class RangeList {
             List<RangeRowButtons.Button> placed = selected ? targetButtons(font, view, target) : List.of();
             int textRight = placed.isEmpty() ? right : placed.getLast().x() - 1;
             switch (row.kind()) {
-                case ATTACHED -> renderAttached(g, font, attachedIcon, attachedLabel, ry, right);
+                case ATTACHED -> {
+                    if (row.attachedInGroup()) {
+                        machineRow.renderAttached(g, font, view, attachedLabel, !attachedIcon.isEmpty(), x, ry,
+                                placed.isEmpty() ? right - MachineRow.EYE_W : textRight, right, placed.isEmpty());
+                    } else {
+                        renderAttached(g, font, attachedIcon, attachedLabel, ry, right);
+                    }
+                }
                 case GROUP -> renderGroup(g, font, view, row, ry, textRight, right);
                 case MACHINE -> machineRow.render(g, font, view, row.machine(), x, ry,
                         placed.isEmpty() ? right - MachineRow.EYE_W : textRight, right, placed.isEmpty(),
@@ -359,7 +391,7 @@ final class RangeList {
             buttons.track(target, List.of(), mouseX, mouseY);
         }
         if (view.machines().isEmpty()) {
-            int hy = top + ATTACHED_H + 3 - scroll;
+            int hy = top + contentHeight(rows) + 3 - scroll;
             GuiText.wrap(g, font, tr("range.list.empty"), x + 5, hy, right - x - 8, 4, GuiPaint.MUTED);
         }
         g.disableScissor();

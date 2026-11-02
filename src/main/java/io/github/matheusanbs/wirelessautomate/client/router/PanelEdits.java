@@ -20,6 +20,7 @@ import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import org.lwjgl.glfw.GLFW;
 
@@ -203,7 +204,10 @@ final class PanelEdits {
             }
             case HIGHLIGHT -> targetLine.toggleHighlight();
             case REVERT -> {
-                if (edit && machine != null) {
+                BlockPos attached = model.attachedInGroup() ? model.targetPos() : null;
+                if (edit && attached != null) {
+                    actions.send(RevertMachinePayload.attached(actions.containerId(), attached));
+                } else if (edit && machine != null) {
                     actions.send(new RevertMachinePayload(actions.containerId(), model.snapshot().target().id(),
                             machine.pos()));
                 }

@@ -17,6 +17,7 @@ import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
@@ -163,9 +164,10 @@ final class PanelModel {
         return range().present();
     }
 
-    /** A máquina escolhida tem esta face diferente da do perfil do grupo (a exceção dela). */
+    /** A máquina escolhida (remota ou a presa) tem esta face diferente da do perfil do grupo (a exceção dela). */
     boolean differsFromGroup(Direction direction) {
-        return remote() && targetMachine() != null && range().differs(type, sideOf(direction));
+        boolean machine = remote() ? targetMachine() != null : range().attachedException();
+        return machine && range().differs(type, sideOf(direction));
     }
 
     /** O alvo é um grupo ou uma máquina do alcance (faces no quadro canônico). */
@@ -178,13 +180,38 @@ final class PanelModel {
         return rangeShown() && target.kind() == EditTarget.Kind.MACHINE ? range().machine(target.id()) : null;
     }
 
+    /** O alvo é a presa dentro do grupo dela (com a lista do alcance): tem os botões de uma máquina. */
+    boolean attachedInGroup() {
+        return rangeShown() && snapshot.target().attached() && range().attachedGroup() >= 0;
+    }
+
+    /** O alvo é uma máquina, remota ou a presa no grupo dela: a linha Editando tem os botões dela. */
+    boolean targetIsMachine() {
+        return targetMachine() != null || attachedInGroup();
+    }
+
+    /** A máquina do alvo (remota ou a presa) tem exceção. */
+    boolean targetException() {
+        RangeView.MachineView machine = targetMachine();
+        return machine != null ? machine.exception() : attachedInGroup() && range().attachedException();
+    }
+
+    /** A posição da máquina do alvo (remota ou a presa no grupo), ou {@code null} num grupo. */
+    @Nullable BlockPos targetPos() {
+        RangeView.MachineView machine = targetMachine();
+        if (machine != null) {
+            return machine.pos();
+        }
+        return attachedInGroup() ? snapshot.pos().relative(snapshot.facing().getOpposite()) : null;
+    }
+
     RangeView.@Nullable GroupView targetGroup() {
         EditTarget target = snapshot.target();
         if (!rangeShown()) {
             return null;
         }
         return switch (target.kind()) {
-            case ATTACHED -> null;
+            case ATTACHED -> range().group(range().attachedGroup());
             case GROUP -> range().group(target.id());
             case MACHINE -> {
                 RangeView.MachineView machine = range().machine(target.id());
@@ -340,11 +367,18 @@ final class PanelModel {
         return view.filterSize() == 0 ? cardText : tr("filter.summary", entries, cardText);
     }
 
-    /** O nome do alvo de edição: a máquina presa, o grupo ("Fornalha (todas)") ou a máquina ("Fornalha #3"). */
+    /**
+     * O nome do alvo de edição: a máquina presa (o nome dado, "Fornalha · presa" no grupo dela ou "A máquina presa"), o
+     * grupo ("Fornalha (todas)") ou a máquina ("Fornalha #3").
+     */
     Component targetName(EditTarget target) {
         return switch (target.kind()) {
-            case ATTACHED -> snapshot.attachedLabel().isEmpty() ? panelTr("target.attached")
-                    : Component.literal(snapshot.attachedLabel());
+            case ATTACHED -> {
+                RangeView.GroupView group = range().group(range().attachedGroup());
+                yield !snapshot.attachedLabel().isEmpty() ? Component.literal(snapshot.attachedLabel())
+                        : group != null ? panelTr("target.attached_in", MachineTexts.groupName(group))
+                        : panelTr("target.attached");
+            }
             case GROUP -> {
                 RangeView.GroupView group = range().group(target.id());
                 yield panelTr("target.group", group == null ? Component.literal("?") : MachineTexts.groupName(group));

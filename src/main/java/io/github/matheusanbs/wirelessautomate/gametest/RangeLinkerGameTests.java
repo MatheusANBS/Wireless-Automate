@@ -125,7 +125,7 @@ public final class RangeLinkerGameTests {
                         assertRefused(helper, toggle(helper, player, STONE), LinkRefusal.NOT_A_MACHINE, "pedra");
                         assertRefused(helper, toggle(helper, player, new BlockPos(0, 2, 0)), LinkRefusal.NOT_A_MACHINE, "ar");
                         assertRefused(helper, toggle(helper, player, outside), LinkRefusal.OUT_OF_RANGE, "fora do raio");
-                        helper.assertTrue(router.remoteMachines().isEmpty(), "uma recusa vinculou");
+                        helper.assertTrue(router.remoteMachines().machines().isEmpty(), "uma recusa vinculou");
                         helper.assertValueEqual(toggle(helper, player, COMPOSTER).status(), RangeLinks.Status.LINKED,
                                 "a composteira (capability sem block entity) no clique");
 

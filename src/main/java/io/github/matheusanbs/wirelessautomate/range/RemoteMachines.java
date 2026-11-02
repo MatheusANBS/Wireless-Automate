@@ -38,6 +38,8 @@ public final class RemoteMachines {
     private final List<RemoteMachine> machines = new ArrayList<>();
     private final List<MachineGroup> groups = new ArrayList<>();
     private int nextGroupId;
+    /** A máquina presa como membro de um grupo; {@code null} até a primeira escrita nela. */
+    private @Nullable AttachedMember attached;
 
     /**
      * Frente horizontal do bloco ({@code HORIZONTAL_FACING} ou {@code FACING} horizontal) como índice
@@ -55,27 +57,16 @@ public final class RemoteMachines {
     }
 
     /**
-     * Vincula a máquina em {@code pos}: entra no primeiro grupo do bloco {@code block}, que não muda,
-     * ou num grupo novo com o perfil vazio e as seis faces de todos os tipos carregados na rede
-     * {@code network} ({@code null} = sem rede, o que o Vinculador sempre passa). Devolve
-     * {@code false} se a posição já estava vinculada. Só pelo {@code RouterBlockEntity.linkMachine}
-     * (ver a classe).
+     * Vincula a máquina em {@code pos}: entra no primeiro grupo do bloco {@code block}, que não muda (ela segue o
+     * perfil), ou num grupo novo com o perfil vazio e as seis faces de todos os tipos carregados na rede
+     * {@code network} ({@code null} = sem rede, o que o Vinculador sempre passa). Devolve {@code false} se a
+     * posição já estava vinculada. Só pelo {@code RouterBlockEntity.linkMachine} (ver a classe).
      */
     public boolean link(BlockPos pos, ResourceLocation block, int front, @Nullable UUID network) {
-        return link(pos, block, front, network, false);
-    }
-
-    /**
-     * Como {@link #link(BlockPos, ResourceLocation, int, UUID)}; com {@code isolated}, a máquina que entra
-     * num grupo que já existe leva uma exceção vazia (sem modo nem rede) em vez de seguir o perfil: a mesma
-     * máquina pode ter outro processamento, então ela só liga quando configurada.
-     */
-    public boolean link(BlockPos pos, ResourceLocation block, int front, @Nullable UUID network, boolean isolated) {
         if (contains(pos)) {
             return false;
         }
         MachineGroup group = firstGroupOf(block);
-        MachineConfig exception = group != null && isolated ? new MachineConfig() : null;
         if (group == null) {
             MachineConfig profile = new MachineConfig();
             if (network != null) {
@@ -85,11 +76,99 @@ public final class RemoteMachines {
                     }
                 }
             }
-            group = new MachineGroup(nextGroupId++, block, "", profile);
-            groups.add(group);
+            group = newGroup(block, profile);
         }
-        machines.add(new RemoteMachine(pos, group.id(), exception, front));
+        machines.add(new RemoteMachine(pos, group.id(), null, front));
         return true;
+    }
+
+    /** Cria um grupo do bloco {@code block}, sem nome e sem cartões, com o perfil {@code profile} (guardado como está). */
+    public MachineGroup newGroup(ResourceLocation block, MachineConfig profile) {
+        MachineGroup group = new MachineGroup(nextGroupId++, block, "", profile);
+        groups.add(group);
+        return group;
+    }
+
+    // ------------------------------------------------------------------ a presa
+
+    /** O membro presa, ou {@code null} se ninguém configurou a máquina presa ainda. */
+    public @Nullable AttachedMember attached() {
+        return attached;
+    }
+
+    /** O grupo da presa, ou {@code null} sem membro. */
+    public @Nullable MachineGroup attachedGroup() {
+        return attached == null ? null : group(attached.group());
+    }
+
+    /** A configuração que vale para a presa (a exceção, ou o perfil do grupo), ou {@code null} sem membro. */
+    public @Nullable MachineConfig effectiveAttached() {
+        if (attached == null) {
+            return null;
+        }
+        MachineConfig exception = attached.exception();
+        if (exception != null) {
+            return exception;
+        }
+        MachineGroup group = group(attached.group());
+        return group == null ? null : group.profile();
+    }
+
+    /** O grupo {@code groupId} tem a presa. */
+    public boolean groupHasAttached(int groupId) {
+        return attached != null && attached.group() == groupId;
+    }
+
+    /** Quantas máquinas o grupo tem: as remotas e a presa. */
+    public int memberCount(int groupId) {
+        int count = groupHasAttached(groupId) ? 1 : 0;
+        for (RemoteMachine machine : machines) {
+            if (machine.group() == groupId) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /**
+     * Põe a presa no bloco {@code block} com a frente {@code front}. Se ela já está num grupo desse bloco, só a
+     * frente muda e devolve {@code false}. Senão entra no primeiro grupo do bloco, ou num grupo novo com o perfil
+     * vazio, sem exceção (uma exceção só vale para o bloco em que foi feita), e devolve {@code true}; o grupo que
+     * ela deixou segue a regra de {@link #attachTo}.
+     */
+    public boolean attach(ResourceLocation block, int front) {
+        MachineGroup now = attachedGroup();
+        if (now != null && now.block().equals(block)) {
+            attached.setFront(front);
+            return false;
+        }
+        MachineGroup group = firstGroupOf(block);
+        if (group == null) {
+            group = newGroup(block, new MachineConfig());
+        }
+        attachTo(group.id(), null, front);
+        return true;
+    }
+
+    /**
+     * Põe a presa no grupo {@code groupId}, com a exceção e a frente dadas. O grupo que ela deixa fica, mesmo
+     * sem máquina, a não ser que esteja vazio de verdade (perfil no padrão e sem cartões): aí ele sai.
+     */
+    public void attachTo(int groupId, @Nullable MachineConfig exception, int front) {
+        int before = attached == null ? -1 : attached.group();
+        if (attached == null) {
+            attached = new AttachedMember(groupId, exception, front);
+        } else {
+            attached.setGroup(groupId);
+            attached.setException(exception);
+            attached.setFront(front);
+        }
+        if (before >= 0 && before != groupId) {
+            MachineGroup left = group(before);
+            if (left != null && !hasMachines(before) && !left.hasCards() && left.profile().isDefault()) {
+                groups.remove(left);
+            }
+        }
     }
 
     /**
@@ -159,7 +238,7 @@ public final class RemoteMachines {
         }
         List<ItemStack> cards = new ArrayList<>();
         for (MachineGroup group : List.copyOf(groups)) {
-            if (before.contains(group.id()) && !hasMachines(group.id())) {
+            if (before.contains(group.id()) && !hasMachines(group.id()) && !groupHasAttached(group.id())) {
                 groups.remove(group);
                 cards.addAll(group.removeAllCards());
             }
@@ -173,6 +252,9 @@ public final class RemoteMachines {
 
     /** O bloco novo se todas as máquinas de {@code group} estão em {@code pending} e vão para ele; senão {@code null}. */
     private @Nullable ResourceLocation wholeGroupMove(MachineGroup group, Map<Integer, ResourceLocation> pending) {
+        if (groupHasAttached(group.id())) {
+            return null;
+        }
         ResourceLocation block = null;
         for (int i = 0; i < machines.size(); i++) {
             if (machines.get(i).group() != group.id()) {
@@ -196,7 +278,8 @@ public final class RemoteMachines {
         return false;
     }
 
-    private @Nullable MachineGroup firstGroupOf(ResourceLocation block) {
+    /** O primeiro grupo do bloco {@code block}, na ordem de criação, ou {@code null}. */
+    public @Nullable MachineGroup firstGroupOf(ResourceLocation block) {
         for (MachineGroup group : groups) {
             if (group.block().equals(block)) {
                 return group;
@@ -206,7 +289,7 @@ public final class RemoteMachines {
     }
 
     /**
-     * Desvincula a máquina em {@code pos}. Se o grupo dela esvazia, ele sai e os cartões dele voltam
+     * Desvincula a máquina em {@code pos}. Se o grupo dela esvazia (e não tem a presa), ele sai e os cartões dele voltam
      * na lista, para quem chamou soltar no mundo. Sem a máquina, devolve uma lista vazia. Só pelo
      * {@code RouterBlockEntity.unlinkMachine} (ver a classe).
      */
@@ -221,6 +304,9 @@ public final class RemoteMachines {
         }
         RemoteMachine removed = machines.remove(index);
         int groupId = removed.group();
+        if (groupHasAttached(groupId)) {
+            return List.of();
+        }
         for (RemoteMachine machine : machines) {
             if (machine.group() == groupId) {
                 return List.of();
@@ -316,7 +402,7 @@ public final class RemoteMachines {
     }
 
     public boolean isEmpty() {
-        return machines.isEmpty() && groups.isEmpty();
+        return machines.isEmpty() && groups.isEmpty() && attached == null;
     }
 
     /** Tira os cartões de todos os grupos (para soltar quando o roteador sai do mundo). */
@@ -346,14 +432,22 @@ public final class RemoteMachines {
         return list;
     }
 
+    /** O membro presa no NBT (chave {@code attached}), ou {@code null} sem membro. */
+    public @Nullable CompoundTag saveAttached(HolderLookup.Provider registries) {
+        return attached == null ? null : attached.save(registries);
+    }
+
     /**
-     * Troca o conteúdo pelo das listas {@code machines} e {@code groups} (as tags de
-     * {@link #saveMachines} e {@link #saveGroups}). Descarta grupos repetidos ou ilegíveis, máquinas
-     * repetidas e máquinas sem grupo. O próximo id de grupo é o maior lido + 1.
+     * Troca o conteúdo pelo das listas {@code machines} e {@code groups} e pelo membro presa {@code attachedTag}
+     * (as tags de {@link #saveMachines}, {@link #saveGroups} e {@link #saveAttached}; {@code null} sem membro).
+     * Descarta grupos repetidos ou ilegíveis, máquinas repetidas, máquinas sem grupo e a presa sem grupo. Um grupo
+     * sem máquinas fica. O próximo id de grupo é o maior lido + 1.
      */
-    public void load(ListTag machinesTag, ListTag groupsTag, HolderLookup.Provider registries) {
+    public void load(ListTag machinesTag, ListTag groupsTag, @Nullable CompoundTag attachedTag,
+            HolderLookup.Provider registries) {
         machines.clear();
         groups.clear();
+        attached = null;
         nextGroupId = 0;
         for (int i = 0; i < groupsTag.size(); i++) {
             MachineGroup group = MachineGroup.load(groupsTag.getCompound(i), registries);
@@ -372,6 +466,14 @@ public final class RemoteMachines {
                 continue;
             }
             machines.add(machine);
+        }
+        if (attachedTag != null) {
+            AttachedMember member = AttachedMember.load(attachedTag, registries);
+            if (group(member.group()) == null) {
+                WirelessAutomate.LOGGER.warn("Máquina presa sem grupo descartada: {}", attachedTag);
+            } else {
+                attached = member;
+            }
         }
     }
 }

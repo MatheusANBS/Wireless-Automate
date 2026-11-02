@@ -325,7 +325,7 @@ public final class TabletTreeGameTests {
     /** O roteador num baú com pedra, extraindo para um baú remoto vinculado que recebe por cima. */
     private static RouterBlockEntity movingRouter(GameTestHelper helper) {
         RouterBlockEntity router = rangeRouter(helper);
-        helper.setBlock(REMOTE_CHEST, Blocks.CHEST);
+        helper.setBlock(REMOTE_CHEST, Blocks.BARREL);
         return router;
     }
 

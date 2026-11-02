@@ -132,15 +132,14 @@ public final class RangeMachineGameTests {
         helper.startSequence()
                 .thenWaitUntil(() -> waitLoaded(helper, router))
                 .thenExecute(() -> {
-                    // Um NBT sem machines/groups (de antes do Upgrade de Alcance): só a máquina presa configurada.
+                    // Um NBT sem machines (sem remotas): só a máquina presa configurada, no grupo dela.
                     router.configureFace(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT, 2, RedstoneMode.IGNORE);
                     CompoundTag legacy = router.saveWithFullMetadata(helper.getLevel().registryAccess());
-                    helper.assertFalse(legacy.contains("machines") || legacy.contains("groups"),
-                            "um roteador sem remotas salvou as listas");
+                    helper.assertFalse(legacy.contains("machines"), "um roteador sem remotas salvou a lista");
 
                     link(helper, router, FURNACE_A);
                     router.loadWithComponents(legacy, helper.getLevel().registryAccess());
-                    helper.assertTrue(router.remoteMachines().isEmpty(), "NBT sem as chaves deixou máquinas");
+                    helper.assertTrue(router.remoteMachines().machines().isEmpty(), "NBT sem a chave deixou máquinas");
                     FaceConfig attached = router.face(EditTarget.ATTACHED_TARGET, ResourceType.ITEM, Direction.UP);
                     helper.assertTrue(attached.mode() == PortMode.EXTRACT && attached.priority() == 2,
                             "a máquina presa perdeu a configuração");

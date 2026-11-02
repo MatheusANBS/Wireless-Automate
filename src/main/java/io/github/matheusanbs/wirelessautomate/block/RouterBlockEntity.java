@@ -55,15 +55,16 @@ import org.jetbrains.annotations.Nullable;
  * Dados de um nó. Não faz tick: quem move recursos é o {@link NetworkManager}, que só conhece
  * os nós carregados no servidor.
  *
- * <p>A configuração das faces é guardada por {@link RelativeSide}, então girar o bloco gira a
- * configuração junto. A API recebe e devolve faces absolutas da máquina.
+ * <p>A máquina presa é um membro do grupo do bloco dela ({@link RouterAttached}): a configuração das faces é a do
+ * grupo (ou a exceção dela), pelos lados da máquina, e girar o roteador não muda nada. A API recebe e devolve
+ * faces absolutas da máquina.
  *
  * <p>Para a tela do roteador há duas coisas baratas: {@link #changeVersion()}, que muda a cada
  * alteração do que a tela mostra (a tela aberta compara e reenvia; com ela fechada ninguém olha), e
  * os totais movidos por tipo ({@link #moved}), somados pelo motor numa visita que moveu algo.
  *
  * <p>Cartões de Filtro: cada face, para itens e para fluidos, tem {@link #CARD_SLOTS} slots de
- * cartão, guardados por lado relativo como a configuração. O motor junta o filtro embutido e os dos
+ * cartão, guardados no grupo da máquina (também os da presa). O motor junta o filtro embutido e os dos
  * cartões num {@link FilterSet} na montagem das rotas ({@link #filterSet}). Os cartões são itens
  * físicos: saem do roteador quebrado e não vão no preset do Configurador (que só copia a
  * configuração; o cartão é duplicado por receita ou exportando o filtro).
@@ -73,8 +74,8 @@ import org.jetbrains.annotations.Nullable;
  * descarrega ou sai do mundo. Como os cartões, o upgrade sai do roteador quebrado e fica no upgrade
  * de tier (o block entity é mantido).
  *
- * <p>Este block entity é a API do nó para o resto do mod e delega às partes: as faces e as redes
- * ({@link RouterFaces}), os cartões ({@link RouterCards}), os upgrades ({@link RouterUpgrades}), a edição
+ * <p>Este block entity é a API do nó para o resto do mod e delega às partes: a presa ({@link RouterAttached}), as
+ * regras das redes ({@link RouterFaces}), os filtros com cartões ({@link RouterCards}), os upgrades ({@link RouterUpgrades}), a edição
  * por alvo ({@link RouterTargets}), o alcance ({@link RouterRange}, com os caches das remotas em
  * {@link RouterRemoteCaches}), a máquina presa e o sinal de redstone ({@link RouterNeighbors}), a presença no
  * motor, no índice e no chunk loading ({@link RouterPresence}), o aviso das mudanças ({@link RouterChanges}) e o
@@ -87,28 +88,26 @@ public class RouterBlockEntity extends BlockEntity {
     private String name = "";
     /** Nome dado à máquina presa; vazio sem nome. Fica quando o bloco preso é trocado. */
     private String attachedLabel = "";
-    /** Configuração das faces da presa, por tipo e lado relativo. */
-    private final RouterFaces faces = new RouterFaces();
     /** Muda a cada alteração do que a tela mostra. Não é salvo. */
     private int changeVersion;
     /** Total movido como origem, por {@link ResourceType#ordinal()}, desde que o nó carregou. Não é salvo. */
     private final long[] moved = new long[TYPES.length];
     /** Slots de cartão por face e por tipo. */
     public static final int CARD_SLOTS = 2;
-    /** Cartões de Filtro da presa, por tipo, lado relativo e slot. */
-    private final RouterCards cards = new RouterCards();
     /** Os slots dos upgrades de chunk loading (com o dono) e de alcance. */
     private final RouterUpgrades upgrades = new RouterUpgrades();
     /** Máquinas remotas vinculadas e os grupos delas; guardadas mesmo sem o upgrade (aí não viram porta). */
     private final RemoteMachines remotes = new RemoteMachines();
+    /** A presa como membro do grupo do bloco dela, e o rascunho de um mundo antigo. */
+    private final RouterAttached attached = new RouterAttached(this, remotes);
     /** A máquina presa (caches, bloco e frente) e o sinal de redstone. */
-    private final RouterNeighbors neighbors = new RouterNeighbors(this);
+    private final RouterNeighbors neighbors = new RouterNeighbors(this, attached);
     /** O alcance: vincular, desvincular, a frente das remotas e os caches delas. */
     private final RouterRange range = new RouterRange(this, remotes);
     /** A edição por alvo (presa, grupo ou máquina remota). */
-    private final RouterTargets targets = new RouterTargets(this, faces, remotes);
+    private final RouterTargets targets = new RouterTargets(this, attached, remotes);
     /** Entrar e sair do motor, do índice e do chunk loading. */
-    private final RouterPresence presence = new RouterPresence(this, neighbors, range);
+    private final RouterPresence presence = new RouterPresence(this, neighbors, range, attached);
     /** O aviso das mudanças, com o lote de {@link #batchChanges}. */
     private final RouterChanges changes = new RouterChanges(this);
 
@@ -127,7 +126,7 @@ public class RouterBlockEntity extends BlockEntity {
      * {@link #faceNetwork(EditTarget, ResourceType, Direction)} ou {@link #networks(ResourceType)}.
      */
     public @Nullable UUID networkId(ResourceType type) {
-        return faces.commonNetwork(type);
+        return attached.commonNetwork(type);
     }
 
     /**
@@ -156,9 +155,7 @@ public class RouterBlockEntity extends BlockEntity {
 
     /** Põe a face {@code machineFace} (absoluta) da máquina presa na rede {@code network} ({@code null} tira). */
     public void setFaceNetwork(ResourceType type, Direction machineFace, @Nullable UUID network) {
-        if (face(type, machineFace).setNetwork(network)) {
-            changed(NetworkManager.typeBit(type));
-        }
+        attached.edit(type, machineFace, config -> config.setNetwork(network));
     }
 
     /**
@@ -166,9 +163,7 @@ public class RouterBlockEntity extends BlockEntity {
      * da máquina presa na rede {@code network} ({@code null} tira).
      */
     public void setFaceNetwork(ResourceType type, RelativeSide side, @Nullable UUID network) {
-        if (face(type, side).setNetwork(network)) {
-            changed(NetworkManager.typeBit(type));
-        }
+        setFaceNetwork(type, side.toAbsolute(facing(), spin()), network);
     }
 
     /** Rede da face {@code side} do alvo, no quadro da tela: numa máquina remota, a que vale (exceção ou perfil). */
@@ -224,7 +219,7 @@ public class RouterBlockEntity extends BlockEntity {
 
     /** As faces absolutas da presa em {@code absoluteFaceMask} e {@code types} já estão em {@code network} (Vinculador). */
     public boolean attachedFacesIn(Collection<ResourceType> types, int absoluteFaceMask, @Nullable UUID network) {
-        return faces.attachedIn(types, facing(), spin(), absoluteFaceMask, network);
+        return attached.facesIn(types, absoluteFaceMask, network);
     }
 
     /**
@@ -252,12 +247,12 @@ public class RouterBlockEntity extends BlockEntity {
      * chamam.
      */
     public UUID[] networks(ResourceType type) {
-        return faces.networks(remotes, type);
+        return RouterFaces.networks(remotes, attached.draft(), type);
     }
 
     /** Alguma face (presa, perfil ou exceção) de algum tipo está numa rede. */
     public boolean hasNetwork() {
-        return faces.hasNetwork(remotes);
+        return RouterFaces.hasNetwork(remotes, attached.draft());
     }
 
     /**
@@ -365,19 +360,13 @@ public class RouterBlockEntity extends BlockEntity {
     }
 
     /**
-     * Gira o roteador para {@code newSpin} (0 a 3) sem mudar a configuração de nenhuma face absoluta
-     * da máquina: como ela é salva por {@link RelativeSide}, faces e cartões de todos os tipos trocam
-     * de lado relativo antes do estado novo. Só no servidor; o {@link #setBlockState} avisa o motor.
+     * Gira o roteador para {@code newSpin} (0 a 3). Só o estado do bloco muda: a configuração é da máquina
+     * presa, pelos lados dela, e não do roteador. Só no servidor; o {@link #setBlockState} avisa o motor.
      */
     public void spinTo(int newSpin) {
-        int oldSpin = spin();
-        if (level == null || level.isClientSide || newSpin == oldSpin) {
+        if (level == null || level.isClientSide || newSpin == spin()) {
             return;
         }
-        int[] target = RouterFaces.spinTargets(facing(), oldSpin, newSpin);
-        faces.rotate(target);
-        cards.rotate(target);
-        setChanged();
         level.setBlock(worldPosition, getBlockState().setValue(RouterBlock.SPIN, newSpin), Block.UPDATE_ALL);
     }
 
@@ -386,51 +375,42 @@ public class RouterBlockEntity extends BlockEntity {
         return RouterBlock.attachedPos(getBlockState(), worldPosition);
     }
 
-    /** Configuração da face {@code machineFace} (absoluta) da máquina para {@code type}. Nunca nula. */
+    /**
+     * Configuração da face {@code machineFace} (absoluta) da máquina presa para {@code type}: a que vale para ela
+     * (exceção ou perfil do grupo); sem membro, a vazia. Nunca nula. <b>Só leitura</b>: mude pelos setters.
+     */
     public FaceConfig face(ResourceType type, Direction machineFace) {
-        return face(type, RelativeSide.fromAbsolute(facing(), spin(), machineFace));
+        return attached.face(type, machineFace);
     }
 
-    /** Configuração pelo lado relativo ao {@code facing}, como presets a guardam. Nunca nula. */
+    /** Como {@link #face(ResourceType, Direction)}, pelo lado relativo ao {@code facing} + {@code spin} (presets). */
     public FaceConfig face(ResourceType type, RelativeSide side) {
-        return faces.get(type, side);
+        return attached.face(type, side.toAbsolute(facing(), spin()));
     }
 
+    /** Os setters da presa mudam pela regra de uma máquina do grupo ({@link RouterAttached#edit}). */
     public void setMode(ResourceType type, Direction machineFace, PortMode mode) {
-        if (face(type, machineFace).setMode(mode)) {
-            changed(NetworkManager.typeBit(type));
-        }
+        attached.edit(type, machineFace, config -> config.setMode(mode));
     }
 
     public void setPriority(ResourceType type, Direction machineFace, int priority) {
-        if (face(type, machineFace).setPriority(priority)) {
-            changed(NetworkManager.typeBit(type));
-        }
+        attached.edit(type, machineFace, config -> config.setPriority(priority));
     }
 
     public void setRedstone(ResourceType type, Direction machineFace, RedstoneMode redstone) {
-        if (face(type, machineFace).setRedstone(redstone)) {
-            changed(NetworkManager.typeBit(type));
-        }
+        attached.edit(type, machineFace, config -> config.setRedstone(redstone));
     }
 
     /** Configura modo, prioridade e redstone de uma face (absoluta) de uma vez, avisando o motor uma vez só. */
     public void configureFace(ResourceType type, Direction machineFace, PortMode mode, int priority,
             RedstoneMode redstone) {
-        FaceConfig config = face(type, machineFace);
-        boolean changed = config.setMode(mode);
-        changed |= config.setPriority(priority);
-        changed |= config.setRedstone(redstone);
-        if (changed) {
-            changed(NetworkManager.typeBit(type));
-        }
+        attached.edit(type, machineFace,
+                config -> config.setMode(mode) | config.setPriority(priority) | config.setRedstone(redstone));
     }
 
     /** Troca o filtro da face. Energia não usa filtro, mas guardar não faz mal. */
     public void setFilter(ResourceType type, Direction machineFace, Filter filter) {
-        if (face(type, machineFace).setFilter(filter)) {
-            changed(NetworkManager.typeBit(type));
-        }
+        attached.edit(type, machineFace, config -> config.setFilter(filter));
     }
 
     // ------------------------------------------------------------------ cartões de filtro
@@ -445,20 +425,18 @@ public class RouterBlockEntity extends BlockEntity {
         return hasCardSlots(type) && FilterCardItem.isCard(stack) && FilterCardItem.contents(stack).type() == type;
     }
 
-    /** O cartão no slot; vazio se não houver ou se o tipo não tem slots. Não altere a pilha devolvida. */
+    /** O cartão no slot da presa (do grupo dela); vazio se não houver. Não altere a pilha devolvida. */
     public ItemStack card(ResourceType type, RelativeSide side, int slot) {
-        return cards.get(type, side, slot);
+        return attached.card(type, side.toAbsolute(facing(), spin()), slot);
     }
 
     /**
-     * Põe {@code stack} (guardada como está, sem cópia) no slot e avisa o motor. Não valida o
-     * tipo: quem chama (o slot do menu) já validou com {@link #acceptsCard}; um cartão que não
+     * Põe {@code stack} (guardada como está, sem cópia) no slot da presa, no grupo dela, e avisa o motor. Não
+     * valida o tipo: quem chama (o slot do menu) já validou com {@link #acceptsCard}; um cartão que não
      * vale para o tipo fica guardado, mas o motor o ignora.
      */
     public void setCard(ResourceType type, RelativeSide side, int slot, ItemStack stack) {
-        if (cards.set(type, side, slot, stack)) {
-            changed(NetworkManager.typeBit(type));
-        }
+        attached.setCard(type, side.toAbsolute(facing(), spin()), slot, stack);
     }
 
     /** Um cartão foi mexido no lugar (pilha do slot alterada): salva e remonta as rotas. */
@@ -468,7 +446,7 @@ public class RouterBlockEntity extends BlockEntity {
 
     /** Cartões nos slots da face (absoluta) para o tipo. */
     public int cardCount(ResourceType type, Direction machineFace) {
-        return cards.count(type, RelativeSide.fromAbsolute(facing(), spin(), machineFace));
+        return attached.cardCount(type, machineFace);
     }
 
     /**
@@ -476,8 +454,7 @@ public class RouterBlockEntity extends BlockEntity {
      * slots. Chamado pelo motor na montagem das rotas, não por tick; sem cartões não aloca.
      */
     public FilterSet filterSet(ResourceType type, Direction machineFace) {
-        RelativeSide side = RelativeSide.fromAbsolute(facing(), spin(), machineFace);
-        return cards.filterSet(type, side, face(type, side).filter());
+        return attached.filterSet(type, machineFace);
     }
 
     /**
@@ -492,7 +469,7 @@ public class RouterBlockEntity extends BlockEntity {
     /** Tira todos os cartões (para soltar no mundo quando o roteador sai). */
     public NonNullList<ItemStack> removeAllCards() {
         NonNullList<ItemStack> removed = NonNullList.create();
-        cards.removeAll(removed);
+        attached.removeDraftCards(removed);
         removed.addAll(remotes.removeAllCards());
         if (!removed.isEmpty()) {
             changed(RouterCards.CARD_TYPES_MASK);
@@ -612,18 +589,10 @@ public class RouterBlockEntity extends BlockEntity {
      * servidor e com o chunk carregado. Recusa ar, a posição do próprio roteador e uma posição já
      * vinculada. As regras de raio, limite e dimensão ficam com quem chama (o Vinculador, que vincula
      * sempre sem rede). Se a máquina abre um grupo novo, o perfil dele nasce com todas as faces na rede
-     * {@code network} ({@code null} = sem rede); um grupo que já existe não muda.
+     * {@code network} ({@code null} = sem rede); num grupo que já existe, ela segue o perfil, que não muda.
      */
     public boolean linkMachine(BlockPos pos, @Nullable UUID network) {
-        return range.link(pos, network, false);
-    }
-
-    /**
-     * Como {@link #linkMachine(BlockPos, UUID)} sem rede, para o Vinculador: a máquina que entra num grupo que
-     * já existe vem com uma exceção vazia e não herda o perfil, até ser configurada.
-     */
-    public boolean linkMachineIsolated(BlockPos pos) {
-        return range.link(pos, null, true);
+        return range.link(pos, network);
     }
 
     /** Desvincula a máquina do índice {@code index}; um grupo que esvazia sai e os cartões caem no roteador. */
@@ -639,6 +608,11 @@ public class RouterBlockEntity extends BlockEntity {
     /** Tira a exceção da máquina do índice {@code index}: ela volta a seguir o perfil do grupo. */
     public boolean revertToProfile(int index) {
         return range.revertToProfile(index);
+    }
+
+    /** Tira a exceção da máquina presa: ela volta a seguir o perfil do grupo. */
+    public boolean revertAttachedToProfile() {
+        return attached.revertToProfile();
     }
 
     /**
@@ -746,9 +720,7 @@ public class RouterBlockEntity extends BlockEntity {
      * Configurador). A rede da face não muda: colar decide a rede à parte, pela regra das redes.
      */
     public void setFace(ResourceType type, RelativeSide side, FaceConfig config) {
-        if (face(type, side).copySettingsFrom(config)) {
-            changed(NetworkManager.typeBit(type));
-        }
+        attached.edit(type, side.toAbsolute(facing(), spin()), face -> face.copySettingsFrom(config));
     }
 
     /** Sinal de redstone no roteador, guardado e atualizado em neighborChanged (sem consulta por tick). */
@@ -771,7 +743,7 @@ public class RouterBlockEntity extends BlockEntity {
      * roteador e vale para todas).
      */
     public int redstoneTypes() {
-        return faces.redstoneTypes(remotes);
+        return RouterFaces.redstoneTypes(remotes, attached.draft());
     }
 
     /** Inventário da máquina pela face {@code machineFace}, via BlockCapabilityCache. */
@@ -845,6 +817,17 @@ public class RouterBlockEntity extends BlockEntity {
     public RangeRules.Reach[] machineReach() {
         RouterTier tier = tier();
         return remotes.reach(worldPosition, Config.machineRadius(tier), Config.maxMachines(tier));
+    }
+
+    /**
+     * Confere o bloco da presa antes de o motor ler as portas dela do tipo {@code type} (uma leitura do bloco
+     * por montagem, só com o chunk carregado; nunca por tick). Se a presa mudou (rascunho convertido, bloco
+     * trocado, frente nova), vale já nesta leitura e os outros tipos do nó são relidos depois.
+     */
+    public void prepareAttachedPorts(ResourceType type) {
+        if (attached.sync()) {
+            NetworkManager.get().nodeChanged(this, NetworkManager.ALL_TYPES & ~NetworkManager.typeBit(type));
+        }
     }
 
     /** Os caches de capability da máquina presa (uma instância só, que acompanha o giro). */
@@ -960,7 +943,7 @@ public class RouterBlockEntity extends BlockEntity {
             tag.putString("attached_label", attachedLabel);
         }
         neighbors.save(tag);
-        RouterNbt.save(tag, registries, faces, cards, upgrades, remotes);
+        RouterNbt.save(tag, registries, attached, upgrades, remotes);
     }
 
     @Override
@@ -970,7 +953,7 @@ public class RouterBlockEntity extends BlockEntity {
         name = RenameRouterPayload.clean(tag.getString("name"));
         attachedLabel = RenameRouterPayload.clean(tag.getString("attached_label"));
         neighbors.load(tag);
-        RouterNbt.load(tag, registries, faces, cards, upgrades, remotes, legacy);
+        RouterNbt.load(tag, registries, attached, upgrades, remotes, legacy);
         presence.nbtLoaded();
     }
 }

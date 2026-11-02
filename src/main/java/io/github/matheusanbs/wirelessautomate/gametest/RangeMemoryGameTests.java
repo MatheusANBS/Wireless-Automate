@@ -34,7 +34,7 @@ public final class RangeMemoryGameTests {
     @GameTest(template = "empty", timeoutTicks = 300)
     public static void itemFacesAllocateOnlyItemArrays(GameTestHelper helper) {
         RouterBlockEntity router = rangeRouter(helper);
-        helper.setBlock(REMOTE_CHEST, Blocks.CHEST);
+        helper.setBlock(REMOTE_CHEST, Blocks.BARREL);
         container(helper, REMOTE_CHEST).setItem(0, new ItemStack(Items.COBBLESTONE, 3));
         BlockPos remote = helper.absolutePos(REMOTE_CHEST);
         helper.startSequence()

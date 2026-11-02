@@ -161,12 +161,12 @@ public final class ConfiguratorGameTests {
 
     @GameTest(template = "empty")
     public static void pasteResetsFacesDefaultInPreset(GameTestHelper helper) {
-        RouterBlockEntity source = new RouterBlockEntity(BlockPos.ZERO, router(Direction.WEST));
+        RouterBlockEntity source = place(helper, new BlockPos(2, 2, 0), Direction.WEST, Blocks.CHEST);
         source.setMode(ResourceType.ITEM, Direction.WEST, PortMode.INSERT);
         RouterPreset preset = RouterPreset.copyOf(source);
         helper.assertTrue(!preset.hasNetwork(), "rede do nada");
 
-        RouterBlockEntity target = new RouterBlockEntity(BlockPos.ZERO, router(Direction.DOWN));
+        RouterBlockEntity target = place(helper, new BlockPos(2, 2, 2), Direction.DOWN, Blocks.CHEST);
         UUID network = UUID.randomUUID();
         target.setNetworkId(network);
         target.setMode(ResourceType.ITEM, Direction.DOWN, PortMode.EXTRACT);
@@ -192,7 +192,7 @@ public final class ConfiguratorGameTests {
 
     @GameTest(template = "empty")
     public static void presetRoundTripsThroughCodecs(GameTestHelper helper) {
-        RouterBlockEntity up = new RouterBlockEntity(BlockPos.ZERO, router(Direction.UP));
+        RouterBlockEntity up = place(helper, new BlockPos(0, 1, 0), Direction.UP, Blocks.CHEST);
         configureUp(up);
         up.setPriority(ResourceType.CHEMICAL, Direction.WEST, -2);
         up.setNetworkId(UUID.randomUUID());
@@ -541,13 +541,13 @@ public final class ConfiguratorGameTests {
     public static void presetFaceWithoutNetworkKeepsTarget(GameTestHelper helper) {
         UUID a = UUID.randomUUID();
         UUID kept = UUID.randomUUID();
-        RouterBlockEntity source = new RouterBlockEntity(BlockPos.ZERO, router(Direction.UP));
+        RouterBlockEntity source = place(helper, new BlockPos(0, 1, 0), Direction.UP, Blocks.CHEST);
         source.setFaceNetwork(ResourceType.ITEM, Direction.UP, a);
         source.setMode(ResourceType.ITEM, Direction.DOWN, PortMode.INSERT);
         RouterPreset preset = RouterPreset.copyOf(source);
         assertNetwork(helper, preset.network(ResourceType.ITEM, RelativeSide.BACK), null, "BACK no preset");
 
-        RouterBlockEntity target = new RouterBlockEntity(BlockPos.ZERO, router(Direction.UP));
+        RouterBlockEntity target = place(helper, new BlockPos(2, 1, 2), Direction.UP, Blocks.CHEST);
         target.setNetworkId(kept);
         preset.applyTo(target);
         assertNetwork(helper, target.faceNetwork(ResourceType.ITEM, Direction.UP), a, "FRONT");
@@ -567,7 +567,7 @@ public final class ConfiguratorGameTests {
         WaNetwork fluids = data.create(player.getUUID(), "Só fluidos " + player.getUUID());
         WaNetwork before = data.create(player.getUUID(), "Só antes " + player.getUUID());
         try {
-            RouterBlockEntity source = new RouterBlockEntity(BlockPos.ZERO, router(Direction.UP));
+            RouterBlockEntity source = place(helper, new BlockPos(0, 1, 0), Direction.UP, Blocks.CHEST);
             source.setFaceNetwork(ResourceType.ITEM, Direction.UP, items.id());
             source.setFaceNetwork(ResourceType.FLUID, Direction.UP, fluids.id());
             source.setFaceNetwork(ResourceType.FLUID, Direction.EAST, items.id());
@@ -577,7 +577,7 @@ public final class ConfiguratorGameTests {
             helper.assertValueEqual(checked.applied(), List.of(fluids.id(), items.id()), "redes da aba de fluidos");
             helper.assertTrue(checked.preset().networks(ResourceType.ITEM).isEmpty(), "ficou rede de itens");
 
-            RouterBlockEntity target = new RouterBlockEntity(BlockPos.ZERO, router(Direction.UP));
+            RouterBlockEntity target = place(helper, new BlockPos(2, 1, 2), Direction.UP, Blocks.CHEST);
             target.setNetworkId(before.id());
             checked.preset().applyTo(target, ResourceType.FLUID);
             assertNetwork(helper, target.faceNetwork(ResourceType.FLUID, Direction.UP), fluids.id(), "fluidos, Cima");

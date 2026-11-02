@@ -35,7 +35,7 @@ public final class RangeEngineGameTests {
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void attachedToRemoteChest(GameTestHelper helper) {
         RouterBlockEntity router = rangeRouter(helper);
-        helper.setBlock(REMOTE_CHEST, Blocks.CHEST);
+        helper.setBlock(REMOTE_CHEST, Blocks.BARREL);
         container(helper, CHEST).setItem(0, new ItemStack(Items.COBBLESTONE, 16));
         helper.startSequence()
                 .thenWaitUntil(() -> waitLoaded(helper, router))
@@ -206,7 +206,7 @@ public final class RangeEngineGameTests {
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void removingUpgradeStopsRemotes(GameTestHelper helper) {
         RouterBlockEntity router = rangeRouter(helper);
-        helper.setBlock(REMOTE_CHEST, Blocks.CHEST);
+        helper.setBlock(REMOTE_CHEST, Blocks.BARREL);
         container(helper, CHEST).setItem(0, new ItemStack(Items.COBBLESTONE, 1));
         int[] before = new int[1];
         helper.startSequence()
@@ -277,7 +277,7 @@ public final class RangeEngineGameTests {
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void unlinkRemovesPorts(GameTestHelper helper) {
         RouterBlockEntity router = rangeRouter(helper);
-        helper.setBlock(REMOTE_CHEST, Blocks.CHEST);
+        helper.setBlock(REMOTE_CHEST, Blocks.BARREL);
         container(helper, CHEST).setItem(0, new ItemStack(Items.COBBLESTONE, 1));
         helper.startSequence()
                 .thenWaitUntil(() -> waitLoaded(helper, router))
@@ -312,7 +312,7 @@ public final class RangeEngineGameTests {
     public static void configRadiusRereadsPorts(GameTestHelper helper) {
         RouterBlockEntity router = chestWithRouter(helper, RouterTier.ELITE);
         router.setNetworkId(NetworkSavedData.get(helper.getLevel().getServer()).create(UUID.randomUUID(), "raio").id());
-        helper.setBlock(REMOTE_CHEST, Blocks.CHEST);
+        helper.setBlock(REMOTE_CHEST, Blocks.BARREL);
         container(helper, CHEST).setItem(0, new ItemStack(Items.COBBLESTONE, 1));
         var radius = Config.TIERS.get(RouterTier.ELITE).machineRadius();
         int[] original = new int[1];

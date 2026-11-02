@@ -8,9 +8,10 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 
 /**
- * O NBT das partes de um {@link RouterBlockEntity} (faces, cartões, upgrades, máquinas e grupos), com a
- * migração da rede antiga por aba para as faces. O nome e o sinal de redstone ficam no roteador. As chaves
- * não mudam: mundos antigos carregam.
+ * O NBT das partes de um {@link RouterBlockEntity} (upgrades, máquinas, grupos, o membro presa e o rascunho da
+ * presa de um mundo antigo), com a migração da rede antiga por aba. O nome e o sinal de redstone ficam no
+ * roteador. As chaves antigas continuam lidas: {@code faces} e {@code cards} (a presa por lado do roteador) viram
+ * o rascunho, gravado de volta nelas até a conversão.
  */
 final class RouterNbt {
     private static final ResourceType[] TYPES = ResourceType.values();
@@ -18,22 +19,19 @@ final class RouterNbt {
     private RouterNbt() {
     }
 
-    static void save(CompoundTag tag, HolderLookup.Provider registries, RouterFaces faces, RouterCards cards,
+    static void save(CompoundTag tag, HolderLookup.Provider registries, RouterAttached attached,
             RouterUpgrades upgrades, RemoteMachines remotes) {
-        CompoundTag facesTag = faces.save(registries);
-        if (!facesTag.isEmpty()) {
-            tag.put("faces", facesTag);
-        }
-        CompoundTag cardsTag = cards.save(registries);
-        if (!cardsTag.isEmpty()) {
-            tag.put("cards", cardsTag);
-        }
+        attached.save(tag, registries);
         upgrades.save(tag, registries);
         if (!remotes.machines().isEmpty()) {
             tag.put("machines", remotes.saveMachines(registries));
         }
         if (!remotes.groups().isEmpty()) {
             tag.put("groups", remotes.saveGroups(registries));
+        }
+        CompoundTag member = remotes.saveAttached(registries);
+        if (member != null) {
+            tag.put("attached", member);
         }
     }
 
@@ -52,18 +50,21 @@ final class RouterNbt {
         return legacy;
     }
 
-    /** Lê as partes e põe a rede antiga ({@link #legacyNetworks}) nas faces ainda sem rede. Sem avisar ninguém. */
-    static void load(CompoundTag tag, HolderLookup.Provider registries, RouterFaces faces, RouterCards cards,
+    /**
+     * Lê as partes e põe a rede antiga ({@link #legacyNetworks}) nas faces ainda sem rede: as do rascunho da presa,
+     * dos perfis e das exceções. Sem avisar ninguém.
+     */
+    static void load(CompoundTag tag, HolderLookup.Provider registries, RouterAttached attached,
             RouterUpgrades upgrades, RemoteMachines remotes, UUID[] legacy) {
-        faces.load(tag.getCompound("faces"), registries);
-        cards.load(tag.getCompound("cards"), registries);
         upgrades.load(tag, registries);
-        // Sem as chaves (mundo de antes do alcance), as listas ficam vazias.
-        remotes.load(tag.getList("machines", Tag.TAG_COMPOUND), tag.getList("groups", Tag.TAG_COMPOUND), registries);
+        // Sem as chaves (mundo de antes do alcance ou da presa no grupo), as listas e o membro ficam vazios.
+        remotes.load(tag.getList("machines", Tag.TAG_COMPOUND), tag.getList("groups", Tag.TAG_COMPOUND),
+                tag.contains("attached", Tag.TAG_COMPOUND) ? tag.getCompound("attached") : null, registries);
+        attached.load(tag, registries, legacy);
         for (ResourceType type : TYPES) {
             UUID network = legacy[type.ordinal()];
             if (network != null) {
-                faces.migrateLegacyNetwork(remotes, type, network);
+                RouterFaces.migrateLegacyNetwork(remotes, type, network);
             }
         }
     }

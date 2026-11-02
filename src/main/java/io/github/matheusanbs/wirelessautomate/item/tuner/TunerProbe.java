@@ -151,9 +151,13 @@ public final class TunerProbe {
      * <li>vazio: as provas aceitas pelo {@code isItemValid} e pelo {@code insertItem} simulado; <i>entrada</i> se
      * aceita alguma, <i>aberto</i> (entrada e saída, como num baú) se aceita todas, e <i>saída fraca</i> se recusa
      * todas (um slot de produto vazio);</li>
-     * <li>ocupado: só o {@code insertItem} simulado de uma unidade do próprio item vale (o {@code isItemValid} diz
-     * sim até em slot de saída, no {@code ItemStackHandler}, no {@code InvWrapper} e no Mekanism): aceito, o slot é
-     * aberto; recusado e com algo que sai pelo {@code extractItem} simulado, é <i>saída</i> de verdade.</li>
+     * <li>ocupado e não cheio: só o {@code insertItem} simulado de uma unidade do próprio item vale (o
+     * {@code isItemValid} diz sim até em slot de saída, no {@code ItemStackHandler}, no {@code InvWrapper} e no
+     * Mekanism): aceito, o slot é aberto; recusado e com algo que sai pelo {@code extractItem} simulado, é <i>saída</i>
+     * de verdade;</li>
+     * <li>cheio (a quantidade no menor entre o limite do slot e o tamanho máximo do item): a inserção não prova nada,
+     * então decide o {@code isItemValid} do próprio item: verdadeiro, aberto (o slot do barril); falso, saída de verdade
+     * (a saída cheia da fornalha).</li>
      * </ul>
      * A face é aberta se todos os slots lidos são; a saída dela é fraca se nenhum slot de saída de verdade (ocupado,
      * sem aceitar mais do próprio item) dá algo agora.
@@ -187,7 +191,11 @@ public final class TunerProbe {
                 in |= accepted != 0;
                 out |= slotOpen || accepted == 0;
             } else {
-                boolean own = handler.insertItem(slot, inSlot.copyWithCount(1), true).isEmpty();
+                // Cheio, a inserção não prova nada (nem o barril aceitaria mais): decide o isItemValid do próprio item,
+                // falso na saída da fornalha e verdadeiro no slot do barril. Não cheio, o insertItem simulado.
+                boolean full = inSlot.getCount() >= Math.min(handler.getSlotLimit(slot), inSlot.getMaxStackSize());
+                boolean own = full ? handler.isItemValid(slot, inSlot)
+                        : handler.insertItem(slot, inSlot.copyWithCount(1), true).isEmpty();
                 boolean gives = !handler.extractItem(slot, 1, true).isEmpty();
                 // Ocupado: o que importa é se o próprio item ainda entra, não qual item é.
                 signature.add(own ? -1L : -2L);

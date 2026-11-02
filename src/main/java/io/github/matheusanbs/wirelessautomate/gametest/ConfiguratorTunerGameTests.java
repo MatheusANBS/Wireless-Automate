@@ -18,6 +18,7 @@ import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -433,19 +434,49 @@ public final class ConfiguratorTunerGameTests {
     }
 
     /**
-     * Faces de uma máquina de teste: a saída cheia (o {@code isItemValid} diz sim, mas o próprio item não entra) é
-     * saída de verdade; o slot vazio que recusa tudo é saída fraca; a energia que não recebe nem dá não tem papel, e a
-     * ingênua (recebe e dá) fica AMBOS, que o plano trata como entrada numa máquina.
+     * Faces de uma máquina de teste: a saída cheia que recusa o próprio item no {@code isItemValid} é saída de verdade;
+     * a cheia que o aceita é aberta (o slot do barril), e numa face com uma entrada que aceita só parte das provas (o
+     * caso do Mekanism) não faz da máquina um armazenamento; o slot vazio que recusa tudo é saída fraca; a energia que
+     * não recebe nem dá não tem papel, e a ingênua (recebe e dá) fica AMBOS, que o plano trata como entrada numa
+     * máquina.
      */
     @GameTest(template = "empty")
     public static void testMachineFacesAreClassified(GameTestHelper helper) {
         List<ItemStack> probes = List.of(new ItemStack(Items.COBBLESTONE), new ItemStack(Items.COAL),
                 new ItemStack(Items.IRON_ORE));
-        ItemStackHandler fullOutput = new ItemStackHandler(1);
+        ItemStackHandler fullOutput = new ItemStackHandler(1) {
+            @Override
+            public boolean isItemValid(int slot, ItemStack stack) {
+                return false;
+            }
+        };
         fullOutput.setStackInSlot(0, new ItemStack(Items.IRON_INGOT, 64));
         TunerPlan.Face full = TunerProbe.items(fullOutput, probes);
-        helper.assertValueEqual(full.role(), TunerPlan.Role.OUT, "saída cheia");
+        helper.assertValueEqual(full.role(), TunerPlan.Role.OUT, "saída cheia que recusa o próprio item");
         helper.assertFalse(full.weakOut(), "a saída cheia é de verdade");
+
+        ItemStackHandler fullStorage = new ItemStackHandler(1);
+        fullStorage.setStackInSlot(0, new ItemStack(Items.IRON_INGOT, 64));
+        TunerPlan.Face stored = TunerProbe.items(fullStorage, probes);
+        helper.assertValueEqual(stored.role(), TunerPlan.Role.BOTH, "slot cheio que aceita o próprio item");
+        helper.assertTrue(stored.open(), "o slot cheio que aceita o próprio item é aberto");
+
+        // Entrada que só aceita pedregulho e saída cheia que diz sim no isItemValid (o Mekanism).
+        ItemStackHandler mekanism = new ItemStackHandler(2) {
+            @Override
+            public boolean isItemValid(int slot, ItemStack stack) {
+                return slot == 1 || stack.is(Items.COBBLESTONE);
+            }
+        };
+        mekanism.setStackInSlot(1, new ItemStack(Items.IRON_INGOT, 64));
+        TunerPlan.Face machineFace = TunerProbe.items(mekanism, probes);
+        helper.assertValueEqual(machineFace.role(), TunerPlan.Role.BOTH, "entrada e saída na mesma face");
+        helper.assertFalse(machineFace.open(), "a face com entrada restrita não é aberta");
+        TunerPlan.Face[] faces = new TunerPlan.Face[TunerPlan.FACES];
+        Arrays.fill(faces, machineFace);
+        PortMode[] modes = TunerPlan.decide(faces, -1);
+        helper.assertTrue(modes[DOWN] == PortMode.EXTRACT && modes[UP] == PortMode.INSERT,
+                "a máquina virou armazenamento: " + Arrays.toString(modes));
 
         ItemStackHandler refuses = new ItemStackHandler(1) {
             @Override
@@ -467,5 +498,54 @@ public final class ConfiguratorTunerGameTests {
         TunerPlan.Face naive = TunerProbe.energy(new EnergyStorage(1000));
         helper.assertValueEqual(naive.role(), TunerPlan.Role.BOTH, "energia ingênua");
         helper.succeed();
+    }
+
+    /** O barril com uma pilha cheia e o resto vazio continua armazenamento: Armazém em Cima. */
+    @GameTest(template = "empty")
+    public static void barrelWithAFullStackIsStillStorage(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        ServerPlayer player = player(helper, router);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    link(helper, router, BARREL);
+                    container(helper, BARREL).setItem(0, new ItemStack(Items.COBBLESTONE, 64));
+                    ConfiguratorTuner.click(player, helper.absolutePos(BARREL), false);
+                    TunerPending.Proposal proposal = TunerPending.get(player.getUUID());
+                    helper.assertTrue(proposal != null && proposal.modes().containsKey(ResourceType.ITEM),
+                            "sem proposta de itens");
+                    PortMode[] items = proposal.modes().get(ResourceType.ITEM);
+                    for (int face = 0; face < items.length; face++) {
+                        helper.assertTrue(items[face] == (face == UP ? PortMode.BOTH : PortMode.NONE),
+                                "proposta na face " + face + ": " + items[face]);
+                    }
+                    TunerPending.forget(player.getUUID());
+                })
+                .thenSucceed();
+    }
+
+    /** A fornalha com a saída cheia: Baixo Extrai, como a vazia. */
+    @GameTest(template = "empty")
+    public static void furnaceWithAFullOutputExtractsBelow(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        ServerPlayer player = player(helper, router);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    link(helper, router, FURNACE_A);
+                    container(helper, FURNACE_A).setItem(2, new ItemStack(Items.IRON_INGOT, 64));
+                    ConfiguratorTuner.click(player, helper.absolutePos(FURNACE_A), false);
+                    TunerPending.Proposal proposal = TunerPending.get(player.getUUID());
+                    helper.assertTrue(proposal != null && proposal.modes().containsKey(ResourceType.ITEM),
+                            "sem proposta de itens");
+                    PortMode[] items = proposal.modes().get(ResourceType.ITEM);
+                    helper.assertValueEqual(items[DOWN], PortMode.EXTRACT, "Baixo");
+                    helper.assertValueEqual(items[UP], PortMode.INSERT, "Cima");
+                    helper.assertValueEqual(items[Direction.WEST.ordinal()], PortMode.INSERT, "Trás");
+                    TunerPending.forget(player.getUUID());
+                })
+                .thenSucceed();
     }
 }

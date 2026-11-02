@@ -196,13 +196,14 @@ public final class LabelEditor {
         List<RangeView.MachineView> machines = new ArrayList<>(range.machines());
         if (p.kind() == EditTarget.Kind.GROUP) {
             groups.replaceAll(g -> g.id() == p.id()
-                    ? new RangeView.GroupView(g.id(), g.block(), p.name(), g.count(), g.exceptions()) : g);
+                    ? new RangeView.GroupView(g.id(), g.block(), p.name(), g.count(), g.exceptions(),
+                            g.attached()) : g);
         } else if (p.kind() == EditTarget.Kind.MACHINE && p.id() >= 0 && p.id() < machines.size()) {
             RangeView.MachineView m = machines.get(p.id());
             machines.set(p.id(), new RangeView.MachineView(m.pos(), m.group(), m.distance(), m.exception(), m.state(),
                     m.replacedBy(), p.name()));
         }
         return snapshot.withRange(new RangeView(range.radius(), range.max(), List.copyOf(groups), List.copyOf(machines),
-                range.target(), range.face(), range.differs()));
+                range.target(), range.face(), range.differs(), range.attachedException()));
     }
 }

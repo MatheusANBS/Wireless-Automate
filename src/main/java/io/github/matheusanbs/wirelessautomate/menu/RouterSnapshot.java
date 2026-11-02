@@ -12,6 +12,7 @@ import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
+import io.github.matheusanbs.wirelessautomate.range.AttachedMember;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.MachineCaches;
 import io.github.matheusanbs.wirelessautomate.range.MachineGroup;
@@ -388,21 +389,8 @@ public record RouterSnapshot(
             machines.add(new RangeView.MachineView(pos, remote.group(), distance, remote.hasException(), state,
                     replacedBy, remote.label()));
         }
-        List<RangeView.GroupView> groups = new ArrayList<>(remotes.groups().size());
-        for (MachineGroup group : remotes.groups()) {
-            int count = 0;
-            int exceptions = 0;
-            for (RemoteMachine remote : list) {
-                if (remote.group() == group.id()) {
-                    count++;
-                    if (remote.hasException()) {
-                        exceptions++;
-                    }
-                }
-            }
-            String name = group.name().length() > NAME_LENGTH ? group.name().substring(0, NAME_LENGTH) : group.name();
-            groups.add(new RangeView.GroupView(group.id(), group.block(), name, count, exceptions));
-        }
+        AttachedMember attached = remotes.attached();
+        List<RangeView.GroupView> groups = groupViews(remotes, attached);
 
         EditTarget editing = target;
         RemoteMachine viewed = null;
@@ -443,10 +431,38 @@ public record RouterSnapshot(
             if (exceptional != null && exceptional.hasException()) {
                 differs = divergentFaces(exceptional.exception(), group.profile());
             }
+        } else if (editing.attached() && attached != null && attached.hasException()) {
+            MachineGroup attachedProfile = remotes.attachedGroup();
+            if (attachedProfile != null) {
+                differs = divergentFaces(attached.exception(), attachedProfile.profile());
+            }
         }
         RangeView view = new RangeView(Config.machineRadius(tier), Config.maxMachines(tier), List.copyOf(groups),
-                List.copyOf(machines), editing, face, differs);
+                List.copyOf(machines), editing, face, differs, attached != null && attached.hasException());
         return new Captured(view, viewed, group);
+    }
+
+    /** Os grupos na ordem do roteador, cada um com as remotas e a presa ({@code attached}, se é dele) contadas. */
+    private static List<RangeView.GroupView> groupViews(RemoteMachines remotes, @Nullable AttachedMember attached) {
+        List<RemoteMachine> list = remotes.machines();
+        int attachedGroup = attached == null ? -1 : attached.group();
+        List<RangeView.GroupView> groups = new ArrayList<>(remotes.groups().size());
+        for (MachineGroup group : remotes.groups()) {
+            boolean hasAttached = group.id() == attachedGroup;
+            int count = hasAttached ? 1 : 0;
+            int exceptions = hasAttached && attached.hasException() ? 1 : 0;
+            for (RemoteMachine remote : list) {
+                if (remote.group() == group.id()) {
+                    count++;
+                    if (remote.hasException()) {
+                        exceptions++;
+                    }
+                }
+            }
+            String name = group.name().length() > NAME_LENGTH ? group.name().substring(0, NAME_LENGTH) : group.name();
+            groups.add(new RangeView.GroupView(group.id(), group.block(), name, count, exceptions, hasAttached));
+        }
+        return groups;
     }
 
     /** As faces de {@code exception} que diferem das de {@code profile}, um bit por tipo e lado ({@link RangeView#differsBit}). */

@@ -3,9 +3,10 @@ package io.github.matheusanbs.wirelessautomate.menu;
 import java.util.function.IntPredicate;
 
 /**
- * A ordem das linhas de um roteador aberto na árvore do Tablet, sem classes do jogo: a máquina presa, depois cada
- * grupo na ordem do roteador com as máquinas dele na ordem de vínculo (até {@link #FEW}, ou todas com "Mostrar
- * todas") e um "mais N" quando corta. Um grupo recolhido mostra só a linha dele. Para no teto de linhas.
+ * A ordem das linhas de um roteador aberto na árvore do Tablet, sem classes do jogo: cada grupo na ordem do roteador
+ * com a máquina presa primeiro (se ela é do grupo) e as máquinas dele na ordem de vínculo (até {@link #FEW}, ou
+ * todas com "Mostrar todas") e um "mais N" quando corta. Um grupo recolhido mostra só a linha dele. A presa sem grupo
+ * vem antes dos grupos. Para no teto de linhas.
  */
 public final class TreeOrder {
     /** Máquinas mostradas num grupo sem "Mostrar todas". */
@@ -27,7 +28,7 @@ public final class TreeOrder {
         /** O id do grupo na posição {@code g}. */
         int groupId(int g);
 
-        /** Quantas máquinas o grupo na posição {@code g} tem, inclusive as de fora das guardadas. */
+        /** Quantas máquinas remotas o grupo na posição {@code g} tem, inclusive as de fora das guardadas (sem a presa). */
         int groupTotal(int g);
     }
 
@@ -48,14 +49,26 @@ public final class TreeOrder {
     /**
      * Manda a {@code out} as linhas do nó aberto, no máximo {@code budget}; devolve quantas mandou.
      *
-     * @param attached  o nó tem máquina presa
+     * @param attached      o nó mostra a máquina presa
+     * @param attachedGroup o id do grupo da presa, ou −1: sem grupo (ou com um que não está nos grupos), a presa vem
+     *                      antes dos grupos
      * @param collapsed o grupo de id dado está recolhido
      * @param showAll   o grupo de id dado mostra todas as máquinas
      */
-    public static int plan(boolean attached, Machines machines, IntPredicate collapsed, IntPredicate showAll, int budget,
-            Rows out) {
+    public static int plan(boolean attached, int attachedGroup, Machines machines, IntPredicate collapsed,
+            IntPredicate showAll, int budget, Rows out) {
         int emitted = 0;
-        if (attached) {
+        int groups = machines.groupCount();
+        int inGroup = -1;
+        if (attached && attachedGroup >= 0) {
+            for (int g = 0; g < groups; g++) {
+                if (machines.groupId(g) == attachedGroup) {
+                    inGroup = g;
+                    break;
+                }
+            }
+        }
+        if (attached && inGroup < 0) {
             if (emitted >= budget) {
                 return emitted;
             }
@@ -63,7 +76,7 @@ public final class TreeOrder {
             emitted++;
         }
         int size = machines.size();
-        for (int g = 0, groups = machines.groupCount(); g < groups; g++) {
+        for (int g = 0; g < groups; g++) {
             if (emitted >= budget) {
                 return emitted;
             }
@@ -72,6 +85,13 @@ public final class TreeOrder {
             emitted++;
             if (collapsed.test(id)) {
                 continue;
+            }
+            if (g == inGroup) {
+                if (emitted >= budget) {
+                    return emitted;
+                }
+                out.attached();
+                emitted++;
             }
             int limit = showAll.test(id) ? Integer.MAX_VALUE : FEW;
             int shown = 0;

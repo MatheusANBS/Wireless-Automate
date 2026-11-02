@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.menu;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
+import io.github.matheusanbs.wirelessautomate.range.AttachedMember;
 import io.github.matheusanbs.wirelessautomate.range.MachineConfig;
 import io.github.matheusanbs.wirelessautomate.range.MachineGroup;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
@@ -22,9 +23,13 @@ import org.jetbrains.annotations.Nullable;
  * colar deixou: o que alguém mudou depois fica. Só na memória, até fechar o menu.
  */
 final class PasteUndo {
+    /** A chave da exceção da presa nas exceções por posição (uma posição fora do mundo). */
+    private static final long ATTACHED = TabletMarks.MachineKey.ATTACHED;
+
     /**
      * Um roteador num instante: com {@code attached}, a presa (senão {@code null}); com {@code remotes}, os perfis por
-     * id do grupo e as exceções por posição (só as máquinas que têm).
+     * id do grupo e as exceções por posição (só as máquinas que têm), a da presa na posição {@link #ATTACHED} (o
+     * perfil colado num grupo pode igualar e apagar a exceção dela).
      */
     record State(@Nullable RouterPreset attached, Int2ObjectMap<MachineConfig> profiles,
             Long2ObjectMap<MachineConfig> exceptions) {
@@ -40,6 +45,10 @@ final class PasteUndo {
                     if (machine.exception() != null) {
                         exceptions.put(machine.pos().asLong(), machine.exception().copy());
                     }
+                }
+                AttachedMember member = machines.attached();
+                if (member != null && member.exception() != null) {
+                    exceptions.put(ATTACHED, member.exception().copy());
                 }
             }
             return new State(attached ? RouterPreset.copyOf(router) : null, profiles, exceptions);
@@ -115,6 +124,14 @@ final class PasteUndo {
                 }
             }
             for (ExceptionChange change : exceptions) {
+                if (change.pos() == ATTACHED) {
+                    AttachedMember member = remotes.attached();
+                    if (member != null && same(member.exception(), change.after())
+                            && router.setAttachedException(change.before())) {
+                        restored[0]++;
+                    }
+                    continue;
+                }
                 int index = remotes.index(BlockPos.of(change.pos()));
                 RemoteMachine machine = remotes.machine(index);
                 if (machine != null && same(machine.exception(), change.after())) {

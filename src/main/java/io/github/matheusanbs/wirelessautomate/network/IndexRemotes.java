@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.network;
 
 import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
+import io.github.matheusanbs.wirelessautomate.range.AttachedMember;
 import io.github.matheusanbs.wirelessautomate.range.MachineGroup;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
@@ -31,13 +32,17 @@ import org.jetbrains.annotations.Nullable;
  * do {@link FaceSummary}: {@code remote_group_roles} e {@code remote_group_nets} na ordem do {@code remote_groups},
  * {@code remote_exception_roles} e {@code remote_exception_nets} na do {@code remote_exception}, cada par só com algum
  * valor diferente de zero. Sem as chaves (o formato da etapa 3a), tudo zero até o próximo aviso do roteador.
+ *
+ * <p>A presa ({@link RemoteMachines#attached()}) não está nas máquinas: só o id do grupo dela ({@code attached_group},
+ * −1 sem o membro presa, o que um índice sem a chave lê) e se tem exceção ({@code attached_exception}, só quando
+ * tem). As contagens dos grupos ({@link #groupMachines}) são das remotas; quem mostra soma a presa.
  */
 public final class IndexRemotes {
     /** O teto de máquinas por roteador no índice. */
     public static final int CAP = 512;
     public static final IndexRemotes EMPTY = new IndexRemotes(new long[0], new int[0], new int[0], null, 0,
             new int[0], new ResourceLocation[0], new String[0], new int[0], new int[0], new long[0], new int[0],
-            new long[0]);
+            new long[0], -1, false);
 
     private final long[] pos;
     private final int[] group;
@@ -55,10 +60,12 @@ public final class IndexRemotes {
     /** Paralelos a {@link #exceptions}. */
     private final int[] exceptionRoles;
     private final long[] exceptionNets;
+    private final int attachedGroup;
+    private final boolean attachedException;
 
     private IndexRemotes(long[] pos, int[] group, int[] exceptions, String @Nullable [] labels, int total,
             int[] groupIds, ResourceLocation[] groupBlocks, String[] groupNames, int[] groupCounts, int[] groupRoles,
-            long[] groupNets, int[] exceptionRoles, long[] exceptionNets) {
+            long[] groupNets, int[] exceptionRoles, long[] exceptionNets, int attachedGroup, boolean attachedException) {
         this.pos = pos;
         this.group = group;
         this.exceptions = exceptions;
@@ -72,6 +79,8 @@ public final class IndexRemotes {
         this.groupNets = groupNets;
         this.exceptionRoles = exceptionRoles;
         this.exceptionNets = exceptionNets;
+        this.attachedGroup = attachedGroup;
+        this.attachedException = attachedException;
     }
 
     // ------------------------------------------------------------------ leitura
@@ -93,6 +102,16 @@ public final class IndexRemotes {
     /** A posição da máquina {@code i} ({@code BlockPos.asLong}). */
     public long pos(int i) {
         return pos[i];
+    }
+
+    /** O id do grupo da presa, ou −1 sem o membro presa. */
+    public int attachedGroup() {
+        return attachedGroup;
+    }
+
+    /** A presa tem exceção (só com {@link #attachedGroup} valendo). */
+    public boolean attachedException() {
+        return attachedException;
     }
 
     /** O id do grupo da máquina {@code i}. */
@@ -201,6 +220,11 @@ public final class IndexRemotes {
      */
     boolean matches(RemoteMachines remotes, @Nullable FaceSummary summary) {
         if (remotes.size() != total || remotes.groupCount() != groupIds.length) {
+            return false;
+        }
+        AttachedMember attached = remotes.attached();
+        if ((attached == null ? -1 : attached.group()) != attachedGroup
+                || (attached != null && attached.hasException()) != attachedException) {
             return false;
         }
         int exception = 0;
@@ -312,12 +336,14 @@ public final class IndexRemotes {
             }
         }
         boolean read = summary != null && summary.exceptionCount == exceptionCount;
+        AttachedMember attached = remotes.attached();
         return new IndexRemotes(pos, group, Arrays.copyOf(exceptions, exceptionCount), labels, machines,
                 groupIds, groupBlocks, groupNames, groupCounts,
                 read ? Arrays.copyOf(summary.groupRoles, groups) : new int[groups],
                 read ? Arrays.copyOf(summary.groupNets, groups) : new long[groups],
                 read ? Arrays.copyOf(summary.exceptionRoles, exceptionCount) : new int[exceptionCount],
-                read ? Arrays.copyOf(summary.exceptionNets, exceptionCount) : new long[exceptionCount]);
+                read ? Arrays.copyOf(summary.exceptionNets, exceptionCount) : new long[exceptionCount],
+                attached == null ? -1 : attached.group(), attached != null && attached.hasException());
     }
 
     private static int indexOf(int[] ids, int id) {
@@ -376,6 +402,12 @@ public final class IndexRemotes {
         if (anyRole(exceptionRoles, exceptionNets)) {
             tag.put("remote_exception_roles", new IntArrayTag(exceptionRoles));
             tag.put("remote_exception_nets", new LongArrayTag(exceptionNets));
+        }
+        if (attachedGroup >= 0) {
+            tag.putInt("attached_group", attachedGroup);
+            if (attachedException) {
+                tag.putBoolean("attached_exception", true);
+            }
         }
     }
 
@@ -464,8 +496,19 @@ public final class IndexRemotes {
                 }
             }
         }
+        int attachedGroup = attachedGroup(tag, groupIds);
         return new IndexRemotes(pos, group, exceptions, labels, total, groupIds, groupBlocks, groupNames, groupCounts,
-                groupRoles, groupNets, exceptionRoles, exceptionNets);
+                groupRoles, groupNets, exceptionRoles, exceptionNets, attachedGroup,
+                attachedGroup >= 0 && tag.getBoolean("attached_exception"));
+    }
+
+    /**
+     * O {@code attached_group} lido, se é um dos {@code groupIds}; senão −1. Sem a chave (índice de antes da presa no
+     * grupo), sem presa até o próximo aviso do roteador.
+     */
+    private static int attachedGroup(CompoundTag tag, int[] groupIds) {
+        int id = tag.contains("attached_group", Tag.TAG_INT) ? tag.getInt("attached_group") : -1;
+        return indexOf(groupIds, id) < 0 ? -1 : id;
     }
 
     /** {@code saved}, se vale e tem exatamente {@code size} posições; senão, zeros. */

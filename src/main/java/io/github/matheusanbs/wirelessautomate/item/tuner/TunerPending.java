@@ -19,19 +19,27 @@ import org.jetbrains.annotations.Nullable;
 public final class TunerPending {
     /** O prazo do segundo clique: 10 s. */
     public static final int WINDOW = 200;
+    /** O segundo clique só vale tanto depois do primeiro (segurar o botão repete o uso a cada 4 ticks). */
+    public static final int CONFIRM_DELAY = 6;
 
     /**
      * Uma proposta.
      *
      * @param modes os modos por tipo, pelas faces absolutas ({@link TunerPlan#decide}); só leitura
-     * @param until o último tick (do jogo) em que o segundo clique aplica
+     * @param created o tick (do jogo) da análise
+     * @param until   o último tick (do jogo) em que o segundo clique aplica
      */
-    public record Proposal(ResourceKey<Level> dimension, BlockPos machine, Block block, long until,
+    public record Proposal(ResourceKey<Level> dimension, BlockPos machine, Block block, long created, long until,
             Map<ResourceType, PortMode[]> modes) {
         /** É a mesma máquina, no prazo. */
         public boolean matches(Level level, BlockPos pos, Block now) {
             return dimension == level.dimension() && machine.equals(pos) && block == now
                     && level.getGameTime() <= until;
+        }
+
+        /** Já passou o intervalo mínimo do segundo clique ({@link #CONFIRM_DELAY}). */
+        public boolean confirmable(Level level) {
+            return level.getGameTime() >= created + CONFIRM_DELAY;
         }
     }
 

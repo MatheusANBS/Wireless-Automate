@@ -34,9 +34,13 @@ import org.jetbrains.annotations.Nullable;
  * por consulta direta ({@code level.getCapability}, sem cache: é um clique) e o papel dela pelas provas, e a decisão
  * do {@link TunerPlan}. Quem chama conferiu que o chunk está carregado.
  *
- * <p>Custo, só no clique: itens, até 6 faces × {@link #MAX_SLOTS} slots × {@link #MAX_PROBES} provas, cada uma um
- * {@code isItemValid} e, no slot vazio, um {@code insertItem} simulado; fluidos, dois {@code fill} e um {@code drain}
- * simulados por face; o resto, uma leitura por face.
+ * <p>Custo, só no clique: itens, até 6 faces × {@link #MAX_SLOTS} slots × {@link #MAX_PROBES} provas no slot vazio
+ * (um {@code isItemValid} e um {@code insertItem} simulado cada) e um {@code insertItem} e um {@code extractItem}
+ * simulados no ocupado; fluidos, dois {@code fill} e um {@code drain} simulados por face; o resto, uma leitura por face.
+ *
+ * <p>Limite: só os {@link #MAX_SLOTS} primeiros slots (ou tanques) de cada face entram na análise. Uma face com mais
+ * (um baú grande de outro mod) é decidida por eles; o número total de slots entra na assinatura, então faces
+ * diferentes continuam diferentes.
  */
 public final class TunerProbe {
     /** Provas de item por análise, no máximo (o bitset de cada slot é um {@code long}). */
@@ -60,18 +64,25 @@ public final class TunerProbe {
      * máquina ({@code -1}: sem frente), para as preferências por lado.
      */
     public static Map<ResourceType, PortMode[]> analyze(Level level, BlockPos pos, int front, Player player) {
-        Map<ResourceType, PortMode[]> proposal = new EnumMap<>(ResourceType.class);
-        for (ResourceType type : LoadedTypes.LIST) {
-            Face[] faces = switch (type) {
+        List<ResourceType> types = LoadedTypes.LIST;
+        Face[][] byType = new Face[types.size()][];
+        boolean[] scalar = new boolean[types.size()];
+        for (int i = 0; i < byType.length; i++) {
+            ResourceType type = types.get(i);
+            scalar[i] = type == ResourceType.ENERGY || type == ResourceType.SOURCE;
+            byType[i] = switch (type) {
                 case ITEM -> items(level, pos, player);
                 case FLUID -> fluids(level, pos);
                 case ENERGY -> energy(level, pos);
                 case CHEMICAL -> chemicals(level, pos);
                 case SOURCE -> source(level, pos);
             };
-            PortMode[] modes = TunerPlan.decide(faces, front);
-            if (modes != null) {
-                proposal.put(type, modes);
+        }
+        PortMode[][] modes = TunerPlan.decide(byType, scalar, front);
+        Map<ResourceType, PortMode[]> proposal = new EnumMap<>(ResourceType.class);
+        for (int i = 0; i < modes.length; i++) {
+            if (modes[i] != null) {
+                proposal.put(types.get(i), modes[i]);
             }
         }
         return proposal;
@@ -135,42 +146,59 @@ public final class TunerProbe {
     }
 
     /**
-     * Uma face de itens. Por slot: as provas aceitas (o {@code isItemValid} e, no slot vazio, o {@code insertItem}
-     * simulado; no ocupado, só o {@code isItemValid}, porque outro item não cabe ali e nem por isso o slot deixa de
-     * ser entrada).
-     * O slot é <i>entrada</i> se aceita alguma; <i>saída</i> se não aceita nenhuma e dá algo (ou está vazio); e
-     * <i>aberto</i> (os dois) se o {@code isItemValid} aceita todas as provas, como num baú.
+     * Uma face de itens (também para os GameTests, com um handler de teste). Por slot, até {@link #MAX_SLOTS}:
+     * <ul>
+     * <li>vazio: as provas aceitas pelo {@code isItemValid} e pelo {@code insertItem} simulado; <i>entrada</i> se
+     * aceita alguma, <i>aberto</i> (entrada e saída, como num baú) se aceita todas, e <i>saída fraca</i> se recusa
+     * todas (um slot de produto vazio);</li>
+     * <li>ocupado: só o {@code insertItem} simulado de uma unidade do próprio item vale (o {@code isItemValid} diz
+     * sim até em slot de saída, no {@code ItemStackHandler}, no {@code InvWrapper} e no Mekanism): aceito, o slot é
+     * aberto; recusado e com algo que sai pelo {@code extractItem} simulado, é <i>saída</i> de verdade.</li>
+     * </ul>
+     * A face é aberta se todos os slots lidos são; a saída dela é fraca se nenhum slot de saída de verdade (ocupado,
+     * sem aceitar mais do próprio item) dá algo agora.
      */
-    private static Face items(IItemHandler handler, List<ItemStack> probes) {
+    public static Face items(IItemHandler handler, List<ItemStack> probes) {
         int slots = Math.min(handler.getSlots(), MAX_SLOTS);
         if (slots <= 0) {
             return Face.NOTHING;
         }
+        long all = probes.size() >= 64 ? -1L : (1L << probes.size()) - 1;
         List<Long> signature = new ArrayList<>(1 + 2 * slots);
         signature.add((long) handler.getSlots());
         boolean in = false;
         boolean out = false;
+        boolean realOut = false;
         boolean open = true;
         for (int slot = 0; slot < slots; slot++) {
-            boolean empty = handler.getStackInSlot(slot).isEmpty();
-            boolean valid = true;
-            long accepted = 0;
-            for (int i = 0, n = probes.size(); i < n; i++) {
-                ItemStack probe = probes.get(i);
-                if (!handler.isItemValid(slot, probe)) {
-                    valid = false;
-                } else if (!empty || handler.insertItem(slot, probe, true).isEmpty()) {
-                    accepted |= 1L << i;
-                }
-            }
+            ItemStack inSlot = handler.getStackInSlot(slot);
             signature.add((long) handler.getSlotLimit(slot));
-            signature.add(accepted);
-            boolean slotOpen = valid && accepted != 0;
-            open &= slotOpen;
-            in |= accepted != 0;
-            out |= slotOpen || accepted == 0 && (empty || !handler.extractItem(slot, 1, true).isEmpty());
+            if (inSlot.isEmpty()) {
+                long accepted = 0;
+                for (int i = 0, n = probes.size(); i < n; i++) {
+                    ItemStack probe = probes.get(i);
+                    if (handler.isItemValid(slot, probe) && handler.insertItem(slot, probe, true).isEmpty()) {
+                        accepted |= 1L << i;
+                    }
+                }
+                signature.add(accepted);
+                boolean slotOpen = accepted != 0 && accepted == all;
+                open &= slotOpen;
+                in |= accepted != 0;
+                out |= slotOpen || accepted == 0;
+            } else {
+                boolean own = handler.insertItem(slot, inSlot.copyWithCount(1), true).isEmpty();
+                boolean gives = !handler.extractItem(slot, 1, true).isEmpty();
+                // Ocupado: o que importa é se o próprio item ainda entra, não qual item é.
+                signature.add(own ? -1L : -2L);
+                open &= own;
+                in |= own;
+                out |= own || gives;
+                // Só o slot que não aceita mais do próprio item é saída de verdade; o aberto com algo é entrada também.
+                realOut |= !own && gives;
+            }
         }
-        return face(in, out, open, signature);
+        return face(in, out, open, signature, !realOut);
     }
 
     // ------------------------------------------------------------------ fluidos
@@ -216,12 +244,12 @@ public final class TunerProbe {
         boolean in = accepted != 0 || held;
         boolean drains = !handler.drain(Integer.MAX_VALUE, IFluidHandler.FluidAction.SIMULATE).isEmpty();
         boolean out = drains || accepted == 0 && empty;
-        return face(in, out, accepted == 3 || in && drains, signature);
+        return face(in, out, accepted == 3 || in && drains, signature, !drains);
     }
 
     // ------------------------------------------------------------------ energia, químicos e Source
 
-    /** Energia: <i>entrada</i> se recebe, <i>saída</i> se dá; aberta (uma bateria) com os dois. */
+    /** Energia, face a face ({@link #energy(IEnergyStorage)}). */
     private static Face[] energy(Level level, BlockPos pos) {
         Face[] faces = nothing();
         for (Direction face : DIRECTIONS) {
@@ -229,11 +257,22 @@ public final class TunerProbe {
             if (energy != null) {
                 boolean in = energy.canReceive();
                 boolean out = energy.canExtract();
-                faces[face.ordinal()] = face(in, out, in && out,
-                        List.of(in ? 1L : 0L, out ? 1L : 0L, (long) energy.getMaxEnergyStored()));
+                faces[face.ordinal()] = energy(energy);
             }
         }
         return faces;
+    }
+
+    /**
+     * Uma face de energia (também para os GameTests): <i>entrada</i> se recebe, <i>saída</i> se dá, aberta com os
+     * dois. Um consumidor que diz que também dá (o {@code EnergyStorage} comum) fica AMBOS aqui; o {@link TunerPlan}
+     * o trata como entrada fora do armazenamento.
+     */
+    public static Face energy(IEnergyStorage energy) {
+        boolean in = energy.canReceive();
+        boolean out = energy.canExtract();
+        return face(in, out, in && out, List.of(in ? 1L : 0L, out ? 1L : 0L, (long) energy.getMaxEnergyStored()),
+                false);
     }
 
     /** Químicos, pela ponte ({@link Chemicals#probe}): sem prova de químico, um tanque vazio fica de fora. */
@@ -248,7 +287,7 @@ public final class TunerProbe {
             if (handler != null) {
                 List<Long> signature = new ArrayList<>();
                 int bits = Chemicals.probe(handler, MAX_SLOTS, signature);
-                faces[face.ordinal()] = face((bits & 1) != 0, (bits & 2) != 0, bits == 3, signature);
+                faces[face.ordinal()] = face((bits & 1) != 0, (bits & 2) != 0, bits == 3, signature, false);
             }
         }
         return faces;
@@ -266,7 +305,7 @@ public final class TunerProbe {
             if (handler != null) {
                 List<Long> signature = new ArrayList<>(1);
                 int bits = Sources.probe(handler, signature);
-                faces[face.ordinal()] = face((bits & 1) != 0, (bits & 2) != 0, bits == 3, signature);
+                faces[face.ordinal()] = face((bits & 1) != 0, (bits & 2) != 0, bits == 3, signature, false);
             }
         }
         return faces;
@@ -280,8 +319,9 @@ public final class TunerProbe {
         return faces;
     }
 
-    private static Face face(boolean in, boolean out, boolean open, List<Long> signature) {
+    /** A face lida; sem papel, fica só a marca de que tem a capability (no armazenamento ela vai para Nenhum). */
+    private static Face face(boolean in, boolean out, boolean open, List<Long> signature, boolean weakOut) {
         Role role = in && out || open ? Role.BOTH : in ? Role.IN : out ? Role.OUT : Role.NONE;
-        return role == Role.NONE ? Face.NOTHING : new Face(role, open, signature);
+        return new Face(role, open && role != Role.NONE, signature, out && weakOut, true);
     }
 }

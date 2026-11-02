@@ -2,8 +2,10 @@ package io.github.matheusanbs.wirelessautomate.item;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.item.tuner.ConfiguratorTuner;
+import io.github.matheusanbs.wirelessautomate.range.RemoteCapabilities;
 import java.util.List;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -15,6 +17,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 
 /**
  * O Configurador: o Afinador ({@link ConfiguratorTuner}). Clique numa máquina analisa e propõe os modos das faces;
@@ -29,17 +32,25 @@ public class ConfiguratorItem extends Item {
 
     /**
      * O clique num bloco é do Configurador antes de ser do bloco (senão clicar numa fornalha a abriria), com ou sem
-     * Shift; num roteador, ou com o Configurador na outra mão, segue o caminho normal.
+     * Shift. Seguem o caminho normal, sem aviso: o Configurador na outra mão, um roteador (abre a tela dele) e um bloco
+     * sem block entity nem capability (porta, alavanca, terra). Em descanso depois de uma análise ({@code getCooldowns},
+     * que o {@code onItemUseFirst} não confere sozinho), o clique é engolido: o botão segurado não confirma.
      */
     @Override
     public InteractionResult onItemUseFirst(ItemStack stack, UseOnContext context) {
         Level level = context.getLevel();
-        if (context.getHand() != InteractionHand.MAIN_HAND
-                || level.getBlockEntity(context.getClickedPos()) instanceof RouterBlockEntity) {
+        BlockPos pos = context.getClickedPos();
+        BlockEntity blockEntity = level.getBlockEntity(pos);
+        if (context.getHand() != InteractionHand.MAIN_HAND || blockEntity instanceof RouterBlockEntity
+                || blockEntity == null && !RemoteCapabilities.any(level, pos)) {
             return InteractionResult.PASS;
         }
-        if (!level.isClientSide && context.getPlayer() instanceof ServerPlayer player) {
-            ConfiguratorTuner.click(player, context.getClickedPos(), context.isSecondaryUseActive());
+        Player player = context.getPlayer();
+        if (player != null && player.getCooldowns().isOnCooldown(this)) {
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
+        if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
+            ConfiguratorTuner.click(serverPlayer, pos, context.isSecondaryUseActive());
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
     }

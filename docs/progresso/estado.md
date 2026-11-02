@@ -25,9 +25,9 @@ Legenda: ✅ pronto e testado · 🟡 parcial · ⬜ não começado
 | --- | --- | --- | --- |
 | Telas (GUI) | ✅ | 2.0.0 (tema escuro) | Tema claro e escuro, telas redimensionáveis, roteador com visor 3D e painel do nó |
 | Vinculador | ✅ | 2.7.0 (modos atuais) | Modos Vincular e Abrir, área com limites |
-| Configurador | ✅ | 1.6.0 (roda) | Pincel e área, sem tela, colar por tipo |
+| Configurador | ⏸️ | 1.6.0; sem função no ramo da presa no grupo | O item existe, sem função até a etapa 3 (a função nova a escolher); copiar e colar perfis é pelo Tablet |
 | Tablet de Rede | ✅ | 1.0.0 (Fluxos e a Lista com máquinas da 2.2.0 à 2.4.0) | Lista (roteadores e máquinas), Fluxos, Mapa e Redes |
-| Roteador de alcance | 🟡 | 1.9.0 | Várias máquinas por roteador, grupos com perfil, lista e destaque no mundo; faltam pausar grupo, perfis no Configurador e a página no guia |
+| Roteador de alcance | 🟡 | 1.9.0 | Várias máquinas por roteador, grupos com perfil, lista e destaque no mundo; a presa é máquina do grupo do bloco dela e a vinculada segue o perfil (etapa 1, no ramo); faltam desvincular o grupo, copiar e colar por máquina, o Atualizar sem perder cartões (etapa 2), pausar grupo e a página no guia |
 | Editor de receitas | ✅ | 1.7.0 | `/wa recipes` e tela para operadores |
 | Livro-guia (GuideME) | ✅ | — | 25 páginas pt e en geradas por `scripts/guide/`; reescritas mais simples em 30/10 |
 

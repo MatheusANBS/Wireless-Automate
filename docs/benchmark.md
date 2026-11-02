@@ -547,3 +547,19 @@ Ramo `ccr-52410279-si07pg`. Antes: `54af020` (os arquivos do motor desse commit,
 
 - Nenhum cenário piorou além do ±. A primeira versão relia os slots do destino a cada recusa e pesava no `bigfull` (0,046 ms/tick); a versão final tira os vazios da própria simulação e guarda o "cheio" até a máquina mudar.
 - O ganho é no caso que nenhum cenário do bench tem, o destino seletivo; os GameTests do `SelectiveDestinationGameTests` medem em ticks: a verruga atrás de 26 pós que não cabem não chegava em 200 ticks e chega em menos de 20; atrás de 2.000 tipos de papel no Baú, de 63 ticks para menos de 40, e de volta em até 6 ticks pela chave.
+
+## Presa no grupo, etapa 1 (2 de novembro de 2026)
+
+Ramo `ccr-52410279-si07pg`. Antes: `b93bd29` (o plano, com o destino seletivo já no motor), num worktree à parte. Depois: `b885aaa` (as Tarefas 1 a 4). Uma rodada de `./scripts/bench.sh "many:500:3,full:100:3,raw:2:3,rebuild:500:3,mixed:498:3"` de cada lado (relatórios `20261102-035323.md`, antes, no worktree apagado, e `run/bench/reports/20261102-034630.md`, depois, fora do git).
+
+| Cenário | mod antes (ms/tick) | mod depois | Outra medida antes → depois |
+| --- | --- | --- | --- |
+| many 500 | 0,9028 ± 0,0560 | 0,8697 ± 0,1275 | µs/visita 18,18 → 16,83 ± 3,77 |
+| full 100 | 0,0045 ± 0,0001 | 0,0049 ± 0,0005 | µs/visita 8,94 → 9,88 ± 0,94 |
+| raw 2 | 0,1783 ± 0,0242 | 0,1951 ± 0,0230 | µs/visita 89,2 → 97,7 ± 11,6 |
+| rebuild 500 | 0,9430 ± 0,0267 | 0,9460 ± 0,0414 | µs/visita 20,15 → 23,33 ± 3,05 |
+| mixed 498 | 0,6321 ± 0,0270 | 0,6647 ± 0,0332 | visitas/tick 152,0 → 152,3 |
+
+### Leitura
+
+- Tudo dentro do ±: a presa passa pela fachada só na montagem das rotas (uma leitura do bloco da frente por tipo), nunca no tick. O `rebuild`, que remonta o tempo todo, fica igual na média do mod.

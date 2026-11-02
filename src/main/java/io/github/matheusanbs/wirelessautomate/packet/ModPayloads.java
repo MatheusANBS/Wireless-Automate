@@ -17,6 +17,7 @@ import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.FilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.IdleNetworkUndo;
 import io.github.matheusanbs.wirelessautomate.client.linker.LinkerOpenClient;
+import io.github.matheusanbs.wirelessautomate.client.tuner.TunerProposal;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RepairerMenu;
@@ -91,7 +92,7 @@ public final class ModPayloads {
      * {@code TvLibraryPayload}, {@code TvLibraryActionPayload}, {@code TvPreviewPayload} e {@code TvPreviewValuesPayload},
      * e o teto de bytes do layout no buffer de abertura da Tela); mude quando um payload mudar de formato.
      */
-    public static final String VERSION = "43";
+    public static final String VERSION = "44";
 
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(VERSION);
@@ -148,6 +149,9 @@ public final class ModPayloads {
                 (payload, context) -> LinkerOpenClient.show(payload));
         registrar.playToServer(LinkerOpenPickPayload.TYPE, LinkerOpenPickPayload.STREAM_CODEC,
                 (payload, context) -> LinkerOpen.pick(serverPlayer(context), payload.machine(), payload.router()));
+        // A proposta do Afinador do Configurador (o cliente só a guarda para a pintura).
+        registrar.playToClient(ConfiguratorProposalPayload.TYPE, ConfiguratorProposalPayload.STREAM_CODEC,
+                (payload, context) -> TunerProposal.receive(payload));
         // Telas dos armazenamentos (handlers no StorageListMenu e no StorageScalarMenu).
         registrar.playToClient(StorageEntriesPayload.TYPE, StorageEntriesPayload.STREAM_CODEC, StorageListMenu::onEntries);
         registrar.playToServer(StorageActionPayload.TYPE, StorageActionPayload.STREAM_CODEC,

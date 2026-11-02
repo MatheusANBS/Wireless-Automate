@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate;
 import com.mojang.logging.LogUtils;
 import io.github.matheusanbs.wirelessautomate.chunk.ChunkLoaderEvents;
 import io.github.matheusanbs.wirelessautomate.command.WaCommand;
+import io.github.matheusanbs.wirelessautomate.item.tuner.TunerPending;
 import io.github.matheusanbs.wirelessautomate.menu.IdleNetworkUndo;
 import io.github.matheusanbs.wirelessautomate.menu.MachineClipboard;
 import io.github.matheusanbs.wirelessautomate.menu.MachinePasteUndo;
@@ -115,6 +116,7 @@ public final class WirelessAutomate {
         IdleNetworkUndo.forget(event.getEntity().getUUID());
         MachineClipboard.forget(event.getEntity().getUUID());
         UnlinkConfirm.forget(event.getEntity().getUUID());
+        TunerPending.forget(event.getEntity().getUUID());
         MachinePasteUndo.forget(event.getEntity().getUUID());
         TvEditing.forget(event.getEntity().getUUID());
         TvPreview.forget(event.getEntity().getUUID());
@@ -168,6 +170,7 @@ public final class WirelessAutomate {
         TabletMenu.resetStates();
         IdleNetworkUndo.reset();
         MachineClipboard.reset();
+        TunerPending.reset();
         UnlinkConfirm.reset();
         MachinePasteUndo.reset();
     }

@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.network;
 import io.github.matheusanbs.wirelessautomate.compat.arsnouveau.ArsSources;
 import io.github.matheusanbs.wirelessautomate.compat.arsnouveau.ArsStorage;
 import io.github.matheusanbs.wirelessautomate.storage.StorageSourceTankBlockEntity;
+import java.util.List;
 import net.minecraft.core.Direction;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.capabilities.BlockCapability;
@@ -31,6 +32,11 @@ public final class Sources {
     /** Soma a Source guardada e a capacidade da cap do Ars em {@code out[0]} e {@code out[1]}. */
     static void held(Object handler, long[] out) {
         ArsSources.held(handler, out);
+    }
+
+    /** O Afinador do Configurador lendo uma cap de Source: bit 1 recebe, bit 2 dá (ver {@link ArsSources#probe}). */
+    public static int probe(Object handler, List<Long> signature) {
+        return ArsSources.probe(handler, signature);
     }
 
     /** A capability do Ars no Tanque de Source; sem o Ars, nada. */

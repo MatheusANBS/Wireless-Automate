@@ -80,7 +80,7 @@ final class TreeRows {
 
     /** A linha da árvore e, dentro dela, o ▸/▾ do grupo, o "Mostrar menos" e o Olho da máquina. */
     void arrange(Font font, List<Hot> hots, Line line, int index, int x, int y, int w, int h) {
-        texts.prepare(font, list.snapshot());
+        texts.prepare(font, list.snapshot(), list.model.tree());
         hots.add(new Hot(Kind.TREE, x, y, w, h, index));
         int tx = contentX(x) + line.depth() * INDENT;
         TabletRows.Row row = list.model.row(line);
@@ -117,7 +117,7 @@ final class TreeRows {
     }
 
     void render(GuiGraphics g, Font font, Hot hot, Line line, int mx, int my) {
-        texts.prepare(font, list.snapshot());
+        texts.prepare(font, list.snapshot(), list.model.tree());
         TabletRows.Row row = list.model.row(line);
         int x = hot.x();
         int y = hot.y();
@@ -141,7 +141,7 @@ final class TreeRows {
         switch (row) {
             case TabletRows.Attached attached -> {
                 int ax = attachedNameX(hot, line);
-                if (line.depth() < 2) {
+                if (!line.attachedInGroup()) {
                     g.renderItem(texts.icons[r], tx + 8, y + 2);
                 }
                 NodeKey key = list.snapshot().nodes().get(line.node()).key();
@@ -149,8 +149,8 @@ final class TreeRows {
                     list.rename.place(ax, y + 1, right - ax);
                 } else {
                     // dentro do grupo, a marca "exceção" à direita, como nas máquinas, antes do lugar do ✎
-                    int end = line.depth() == 2 && attached.exception() ? right - ListRename.PENCIL_W - 2 : right;
-                    if (line.depth() == 2 && attached.exception() && end - texts.badgeW - 4 - ax >= NAME_MIN) {
+                    int end = line.attachedInGroup() && attached.exception() ? right - ListRename.PENCIL_W - 2 : right;
+                    if (line.attachedInGroup() && attached.exception() && end - texts.badgeW - 4 - ax >= NAME_MIN) {
                         end -= texts.badgeW;
                         GuiPaint.text(g, font, texts.badge, end, y + LINE1_Y, GuiPaint.ACCENT);
                         end -= 4;
@@ -250,9 +250,11 @@ final class TreeRows {
         return payload == null || payload.snapshot().isEmpty() ? null : payload.snapshot().get().target();
     }
 
-    /** Onde o nome da presa começa na linha da árvore: dentro do grupo, como numa máquina; fora, depois do ícone. */
+    /**
+     * Onde o nome da presa começa na linha da árvore: dentro do grupo, como numa máquina; fora, depois do ícone.
+     */
     int attachedNameX(Hot hot, Line line) {
-        return contentX(hot.x()) + line.depth() * INDENT + 8 + (line.depth() == 2 ? 0 : ICON_W + 2);
+        return contentX(hot.x()) + line.depth() * INDENT + 8 + (line.attachedInGroup() ? 0 : ICON_W + 2);
     }
 
     /** A linha é o alvo do painel do nó escolhido. */

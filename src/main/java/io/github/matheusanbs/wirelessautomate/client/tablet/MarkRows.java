@@ -56,7 +56,7 @@ final class MarkRows {
             for (int i = 0; i < lines.size(); i++) {
                 Kind kind = lines.get(i).kind();
                 // a presa dentro do grupo marca como uma máquina dele
-                boolean member = kind == Kind.MACHINE || kind == Kind.ATTACHED && lines.get(i).depth() == 2;
+                boolean member = kind == Kind.MACHINE || lines.get(i).attachedInGroup();
                 if (kind == Kind.GROUP) {
                     group = i;
                 } else if (!member && kind != Kind.MORE) {

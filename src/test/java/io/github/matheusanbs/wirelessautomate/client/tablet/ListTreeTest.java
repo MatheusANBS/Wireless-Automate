@@ -139,6 +139,10 @@ class ListTreeTest {
         assertEquals(Kind.ATTACHED, lines.get(6).kind());
         assertEquals(1, lines.get(6).depth());
         assertEquals(5, tree.parentLine(6));
+        assertTrue(tree.attachedInGroup(1));
+        assertFalse(tree.attachedInGroup(4));
+        assertFalse(tree.attachedInGroup(0));
+        assertFalse(tree.attachedInGroup(99));
     }
 
     @Test

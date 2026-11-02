@@ -345,8 +345,8 @@ public final class ModPayloads {
     }
 
     /**
-     * Voltar ao perfil: tira a exceção da máquina remota {@code index} (ou da presa, no {@link RevertMachinePayload#ATTACHED}),
-     * se ela ainda está na posição {@code pos}.
+     * Voltar ao perfil: tira a exceção da máquina remota {@code index} (ou da presa, no
+     * {@link RevertMachinePayload#ATTACHED}), se ela ainda está na posição {@code pos}.
      */
     public static boolean handleRevertMachine(@Nullable ServerPlayer player, RevertMachinePayload payload) {
         RouterEditHost host = host(player, payload.containerId());

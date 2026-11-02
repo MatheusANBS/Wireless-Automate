@@ -28,8 +28,8 @@ import org.jetbrains.annotations.Nullable;
  * ({@link MachineRow}: o nome, a distância, a bolinha do estado e a marca de exceção). A máquina presa é a
  * primeira linha do grupo dela, com "presa" (ou o nome dado) no lugar do número e da distância; sem grupo (a
  * presa que ninguém configurou), ela fica numa linha no topo. Clicar numa linha escolhe o alvo de edição; a seta
- * de um grupo (ou um clique no grupo já escolhido) abre e fecha; dois cliques no nome abrem a edição dele. A linha escolhida ganha os botões do
- * {@link RangeRowButtons}. Rola com a roda. Só cliente; todo texto passa por {@link GuiText}.
+ * de um grupo (ou um clique no grupo já escolhido) abre e fecha; dois cliques no nome abrem a edição dele. A
+ * linha escolhida ganha os botões do {@link RangeRowButtons}. Rola com a roda. Só cliente; todo texto passa por {@link GuiText}.
  */
 final class RangeList {
     static final int ATTACHED_H = 13;
@@ -391,8 +391,10 @@ final class RangeList {
             buttons.track(target, List.of(), mouseX, mouseY);
         }
         if (view.machines().isEmpty()) {
+            // com a presa num grupo, a lista não está vazia: a dica diz que só ela está ali
+            Component hint = tr(view.attachedGroup() >= 0 ? "range.list.only_attached" : "range.list.empty");
             int hy = top + contentHeight(rows) + 3 - scroll;
-            GuiText.wrap(g, font, tr("range.list.empty"), x + 5, hy, right - x - 8, 4, GuiPaint.MUTED);
+            GuiText.wrap(g, font, hint, x + 5, hy, right - x - 8, 4, GuiPaint.MUTED);
         }
         g.disableScissor();
         if (max > 0) {

@@ -39,6 +39,9 @@ final class LitFooter {
     private int clearW;
     private int countW;
     private int separatorW;
+    /** O snapshot para o qual {@link #attachedPos} foi lida. */
+    private @Nullable RouterSnapshot attachedFor;
+    private long attachedPos;
 
     /** @param snapshot o snapshot da tela: a dimensão e a posição do roteador, e as máquinas */
     LitFooter(Supplier<RouterSnapshot> snapshot) {
@@ -65,9 +68,14 @@ final class LitFooter {
         return HighlightRenderer.isLit(snapshot.get().dimension(), pos);
     }
 
-    /** A posição da presa ({@code BlockPos.asLong}): o bloco atrás do roteador. */
+    /** A posição da presa ({@code BlockPos.asLong}): o bloco atrás do roteador, lida uma vez por snapshot. */
     private long attachedPos() {
-        return attachedBlock(snapshot.get()).asLong();
+        RouterSnapshot s = snapshot.get();
+        if (s != attachedFor) {
+            attachedFor = s;
+            attachedPos = attachedBlock(s).asLong();
+        }
+        return attachedPos;
     }
 
     private static BlockPos attachedBlock(RouterSnapshot s) {

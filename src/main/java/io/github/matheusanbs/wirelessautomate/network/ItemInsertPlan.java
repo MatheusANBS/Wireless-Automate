@@ -227,6 +227,26 @@ final class ItemInsertPlan {
         return true;
     }
 
+    /**
+     * O destino que acabou de recusar um item ainda tem lugar para outro: um slot vazio, ou uma pilha abaixo do
+     * próprio limite (a entrada da fornalha com 16 de ferro recusa o ouro, mas aceita mais ferro). Sem isso ele
+     * está cheio de verdade e pode dormir. Só roda na recusa, e a recusa fica anotada ({@link ItemHints}), então
+     * não se repete para o mesmo item até a máquina mudar.
+     */
+    static boolean roomForOthers(IItemHandler target) {
+        for (int slot = 0, n = target.getSlots(); slot < n; slot++) {
+            ItemStack inSlot = target.getStackInSlot(slot);
+            if (inSlot.isEmpty()) {
+                return true;
+            }
+            int count = inSlot.getCount();
+            if (count < target.getSlotLimit(slot) && count < inSlot.getMaxStackSize()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** Quanto do item a última {@link #simulate} contou no destino. */
     long counted() {
         return counted;

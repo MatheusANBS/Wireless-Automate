@@ -141,7 +141,10 @@ public record RangeView(int radius, int max, List<GroupView> groups, List<Machin
         return index >= 0 && index < machines.size() ? machines.get(index) : null;
     }
 
-    /** Máquinas que gastam vaga (dentro do raio e até o limite): o "7" de {@code 7/32}. */
+    /**
+     * Máquinas que gastam vaga (dentro do raio e até o limite): o "7" de {@code 7/32}. Os estados saem do
+     * {@code RangeRules.reach}, então é a mesma conta do {@code RangeRules.used} do Vinculador.
+     */
     public int used() {
         int used = 0;
         for (MachineView machine : machines) {

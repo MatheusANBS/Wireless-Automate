@@ -502,6 +502,14 @@ public final class RemoteMachines {
         return list;
     }
 
+    /**
+     * O próximo id de grupo (chave {@code next_group} do roteador): guardado para um id que saiu nunca voltar depois de
+     * recarregar, e um pedido antigo da tela nunca cair num grupo novo.
+     */
+    public int nextGroupId() {
+        return nextGroupId;
+    }
+
     /** O membro presa no NBT (chave {@code attached}), ou {@code null} sem membro. */
     public @Nullable CompoundTag saveAttached(HolderLookup.Provider registries) {
         return attached == null ? null : attached.save(registries);
@@ -510,23 +518,37 @@ public final class RemoteMachines {
     /**
      * Troca o conteúdo pelo das listas {@code machines} e {@code groups} e pelo membro presa {@code attachedTag}
      * (as tags de {@link #saveMachines}, {@link #saveGroups} e {@link #saveAttached}; {@code null} sem membro).
-     * Descarta grupos repetidos ou ilegíveis, máquinas repetidas, máquinas sem grupo e a presa sem grupo. Um grupo
-     * sem máquinas fica. O próximo id de grupo é o maior lido + 1.
+     * Descarta grupos ilegíveis, máquinas repetidas, máquinas sem grupo e a presa sem grupo. Um grupo de id repetido
+     * fica, com um id novo, sem máquinas e com os cartões (as máquinas e a presa daquele id são do primeiro). Um
+     * grupo sem máquinas fica. O próximo id de grupo é {@code nextGroup} ({@link #nextGroupId}; −1 num NBT de antes
+     * dele), mas nunca menos que o maior lido + 1.
      */
-    public void load(ListTag machinesTag, ListTag groupsTag, @Nullable CompoundTag attachedTag,
+    public void load(ListTag machinesTag, ListTag groupsTag, @Nullable CompoundTag attachedTag, int nextGroup,
             HolderLookup.Provider registries) {
         machines.clear();
         groups.clear();
         attached = null;
-        nextGroupId = 0;
+        nextGroupId = Math.max(nextGroup, 0);
+        List<CompoundTag> repeated = new ArrayList<>();
         for (int i = 0; i < groupsTag.size(); i++) {
             MachineGroup group = MachineGroup.load(groupsTag.getCompound(i), registries);
-            if (group == null || group(group.id()) != null) {
+            if (group == null) {
                 WirelessAutomate.LOGGER.warn("Grupo de máquinas remotas inválido descartado: {}", groupsTag.getCompound(i));
+                continue;
+            }
+            if (group(group.id()) != null) {
+                repeated.add(groupsTag.getCompound(i));
                 continue;
             }
             groups.add(group);
             nextGroupId = Math.max(nextGroupId, group.id() + 1);
+        }
+        for (CompoundTag tag : repeated) {
+            CompoundTag renumbered = tag.copy();
+            renumbered.putInt("id", nextGroupId++);
+            WirelessAutomate.LOGGER.warn("Grupo de máquinas remotas de id repetido ganhou o id {}: {}",
+                    renumbered.getInt("id"), tag);
+            groups.add(MachineGroup.load(renumbered, registries));
         }
         for (int i = 0; i < machinesTag.size(); i++) {
             CompoundTag tag = machinesTag.getCompound(i);

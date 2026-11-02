@@ -7,6 +7,7 @@ import io.github.matheusanbs.wirelessautomate.client.tablet.ListLayout.Hot;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot.NodeView;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
+import io.github.matheusanbs.wirelessautomate.menu.RangeView;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import net.minecraft.Util;
 import net.minecraft.client.gui.GuiGraphics;
@@ -123,7 +124,7 @@ final class ListRename {
         if (kind == Kind.ROUTER) {
             list.actions.send(new RenameRouterPayload(list.actions.containerId(), name));
         } else {
-            list.actions.send(LabelEditor.payload(list.actions.containerId(), EditTarget.ATTACHED_TARGET, null, name));
+            list.actions.send(LabelEditor.payload(list.actions.containerId(), EditTarget.ATTACHED_TARGET, null, RangeView.EMPTY, name));
         }
     }
 

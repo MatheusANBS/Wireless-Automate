@@ -474,7 +474,7 @@ public final class TabletTreeGameTests {
 
                         // O bloco trocado leva a presa para o grupo dos barris, com a exceção (a regra do Atualizar); o
                         // dos baús fica, sem máquinas.
-                        helper.assertTrue(router.unlinkMachine(0) && router.unlinkMachine(0), "não desvinculou");
+                        helper.assertTrue(router.unlinkMachine(0, null) >= 0 && router.unlinkMachine(0, null) >= 0, "não desvinculou");
                         helper.setBlock(CHEST, Blocks.BARREL);
                         rows = fresh(menu).rows().rows();
                         eq(helper, rows.size(), 4, "linhas depois da troca");

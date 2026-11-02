@@ -29,6 +29,9 @@ final class RouterNbt {
         if (!remotes.groups().isEmpty()) {
             tag.put("groups", remotes.saveGroups(registries));
         }
+        if (remotes.nextGroupId() > 0) {
+            tag.putInt("next_group", remotes.nextGroupId());
+        }
         CompoundTag member = remotes.saveAttached(registries);
         if (member != null) {
             tag.put("attached", member);
@@ -59,7 +62,8 @@ final class RouterNbt {
         upgrades.load(tag, registries);
         // Sem as chaves (mundo de antes do alcance ou da presa no grupo), as listas e o membro ficam vazios.
         remotes.load(tag.getList("machines", Tag.TAG_COMPOUND), tag.getList("groups", Tag.TAG_COMPOUND),
-                tag.contains("attached", Tag.TAG_COMPOUND) ? tag.getCompound("attached") : null, registries);
+                tag.contains("attached", Tag.TAG_COMPOUND) ? tag.getCompound("attached") : null,
+                tag.contains("next_group", Tag.TAG_INT) ? tag.getInt("next_group") : -1, registries);
         attached.load(tag, registries, legacy);
         for (ResourceType type : TYPES) {
             UUID network = legacy[type.ordinal()];

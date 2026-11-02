@@ -78,7 +78,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ModPayloads {
     /**
-     * Versão do protocolo (42: os payloads {@code UnlinkGroupPayload}, {@code MachineCopyPayload} e
+     * Versão do protocolo (43: o bloco do grupo no {@code RenameTargetPayload}; 42: os payloads {@code UnlinkGroupPayload}, {@code MachineCopyPayload} e
      * {@code MachinePastePayload} ({@link RangePayloads}), o Desfazer {@code UNDO_MACHINE_PASTE} do aviso e o nome da
      * cópia ({@code clipboard}) no snapshot do roteador; 39: os payloads {@code CompactingStatePayload} e {@code CompactingRulePayload}, o painel da
      * Compactação do Baú, e o {@code ChestCraftFillPayload}, o "+" do JEI na Mesa do Baú; 38: as pixel arts no layout da Tela de Sinal ({@code images}, a peça Imagem e o fundo em
@@ -91,7 +91,7 @@ public final class ModPayloads {
      * {@code TvLibraryPayload}, {@code TvLibraryActionPayload}, {@code TvPreviewPayload} e {@code TvPreviewValuesPayload},
      * e o teto de bytes do layout no buffer de abertura da Tela); mude quando um payload mudar de formato.
      */
-    public static final String VERSION = "42";
+    public static final String VERSION = "43";
 
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(VERSION);
@@ -344,18 +344,19 @@ public final class ModPayloads {
     }
 
     /**
-     * Voltar ao perfil: tira a exceção da máquina remota {@code index} (ou da presa, no
-     * {@link RevertMachinePayload#ATTACHED}), se ela ainda está na posição {@code pos}.
+     * Voltar ao perfil: tira a exceção da máquina remota em {@code pos} ({@link #machineIndex}; ou da presa, no
+     * {@link RevertMachinePayload#ATTACHED}).
      */
     public static boolean handleRevertMachine(@Nullable ServerPlayer player, RevertMachinePayload payload) {
         RouterEditHost host = host(player, payload.containerId());
         RouterBlockEntity router = host == null ? null : host.editedRouter();
         boolean attached = payload.index() == RevertMachinePayload.ATTACHED;
+        int index = router == null || attached ? -1 : machineIndex(router, payload.index(), payload.pos());
         if (router == null || (attached ? !RouterBlock.attachedPos(router.getBlockState(), router.getBlockPos())
-                .equals(payload.pos()) : !sameMachine(router, payload.index(), payload.pos()))) {
+                .equals(payload.pos()) : index < 0)) {
             return false;
         }
-        boolean reverted = attached ? router.revertAttachedToProfile() : router.revertToProfile(payload.index());
+        boolean reverted = attached ? router.revertAttachedToProfile() : router.revertToProfile(index);
         host.editApplied();
         return reverted;
     }
@@ -376,15 +377,16 @@ public final class ModPayloads {
     }
 
     /**
-     * Desvincula a máquina remota {@code index}, se ela ainda está na posição {@code pos}; os cartões de
-     * um grupo que esvazia caem no roteador. A máquina presa não tem índice e não sai por aqui.
+     * Desvincula a máquina remota em {@code pos} ({@link #machineIndex}); os cartões de um grupo que esvazia caem
+     * no roteador. A máquina presa não tem índice e não sai por aqui.
      */
     public static boolean handleUnlinkMachine(@Nullable ServerPlayer player, UnlinkMachinePayload payload) {
         RouterEditHost host = host(player, payload.containerId());
-        if (host == null || !sameMachine(host.editedRouter(), payload.index(), payload.pos())) {
+        int index = host == null ? -1 : machineIndex(host.editedRouter(), payload.index(), payload.pos());
+        if (index < 0) {
             return false;
         }
-        boolean unlinked = host.editedRouter().unlinkMachine(payload.index());
+        boolean unlinked = host.editedRouter().unlinkMachine(index, null) >= 0;
         // Os índices depois dela mudaram: o alvo segue pela posição, ou volta para a presa.
         host.validTarget();
         host.editApplied();
@@ -425,14 +427,13 @@ public final class ModPayloads {
     }
 
     /**
-     * Os índices que o Atualizar pede: a máquina, se ainda está na posição; ou todas as do grupo, se ele
+     * Os índices que o Atualizar pede: a máquina na posição ({@link #machineIndex}); ou todas as do grupo, se ele
      * ainda é do bloco visto (o roteador ignora as que não estão trocadas).
      */
     private static List<Integer> updateIndices(RouterBlockEntity router, UpdateMachinePayload payload) {
         if (payload.kind() == EditTarget.Kind.MACHINE) {
-            return payload.pos().isPresent() && sameMachine(router, payload.id(), payload.pos().get())
-                    ? List.of(payload.id())
-                    : List.of();
+            int index = payload.pos().isPresent() ? machineIndex(router, payload.id(), payload.pos().get()) : -1;
+            return index < 0 ? List.of() : List.of(index);
         }
         MachineGroup group = payload.kind() == EditTarget.Kind.GROUP && router.rangeActive()
                 ? router.remoteMachines().group(payload.id())
@@ -496,13 +497,17 @@ public final class ModPayloads {
                 PanelNoticePayload.Undo.RESTORE_IDLE_NETWORKS, containerId, ResourceType.ITEM, Direction.UP);
     }
 
-    /** Com o Upgrade de Alcance valendo (como o {@code SelectTarget}), a máquina do índice está em {@code pos}. */
-    private static boolean sameMachine(RouterBlockEntity router, int index, net.minecraft.core.BlockPos pos) {
+    /**
+     * O índice da máquina remota em {@code pos}, com o Upgrade de Alcance valendo (como o {@code SelectTarget}):
+     * {@code index}, se ela ainda está nele; senão o de agora (a lista mudou entre o clique e o pedido); −1 se a
+     * posição não está mais vinculada ou sem o Upgrade.
+     */
+    private static int machineIndex(RouterBlockEntity router, int index, net.minecraft.core.BlockPos pos) {
         if (!router.rangeActive()) {
-            return false;
+            return -1;
         }
         RemoteMachine machine = router.remoteMachines().machine(index);
-        return machine != null && machine.pos().equals(pos);
+        return machine != null && machine.pos().equals(pos) ? index : router.remoteMachines().index(pos);
     }
 
     /**
@@ -565,8 +570,9 @@ public final class ModPayloads {
 
     /**
      * Dá nome ao grupo, rótulo à máquina remota ou nome à máquina presa. Recusa nomes maiores que
-     * {@link RenameRouterPayload#MAX_LENGTH} e, em grupo e máquina, o roteador sem o Upgrade de Alcance e, numa
-     * máquina, a posição que não bate com a do índice. A presa não exige o Upgrade nem posição.
+     * {@link RenameRouterPayload#MAX_LENGTH} e, em grupo e máquina, o roteador sem o Upgrade de Alcance; numa
+     * máquina, a posição que não está mais vinculada ({@link #machineIndex}); num grupo, um bloco diferente do
+     * visto. A presa não exige o Upgrade nem posição.
      */
     public static boolean handleRenameTarget(@Nullable ServerPlayer player, RenameTargetPayload payload) {
         RouterEditHost host = host(player, payload.containerId());
@@ -574,13 +580,22 @@ public final class ModPayloads {
             return false;
         }
         RouterBlockEntity router = host.editedRouter();
-        boolean attached = payload.kind() == EditTarget.Kind.ATTACHED;
-        if (!attached && (!router.rangeActive() || payload.kind() == EditTarget.Kind.MACHINE
-                && (payload.machinePos().isEmpty()
-                || !sameMachine(router, payload.id(), payload.machinePos().get())))) {
+        int id = payload.id();
+        switch (payload.kind()) {
+            case ATTACHED -> id = 0;
+            case MACHINE -> id = payload.machinePos().isEmpty() ? -1
+                    : machineIndex(router, payload.id(), payload.machinePos().get());
+            case GROUP -> {
+                MachineGroup group = router.rangeActive() ? router.remoteMachines().group(id) : null;
+                if (group == null || payload.block().isEmpty() || !group.block().equals(payload.block().get())) {
+                    id = -1;
+                }
+            }
+        }
+        if (id < 0) {
             return false;
         }
-        boolean renamed = router.renameTarget(new EditTarget(payload.kind(), payload.id()), payload.name());
+        boolean renamed = router.renameTarget(new EditTarget(payload.kind(), id), payload.name());
         if (renamed) {
             host.editApplied();
         }

@@ -58,8 +58,8 @@ public final class RangeLinkerGameTests {
 
     /**
      * Modo Máquinas pelo clique: sem roteador escolhido não vincula; o clique no roteador o escolhe;
-     * sem o upgrade recusa; com ele, o clique na fornalha vincula (e entra no índice) e o segundo
-     * desvincula. Shift + clique marca um canto.
+     * sem o upgrade recusa; com ele, o clique na fornalha vincula (e entra no índice), o segundo pede
+     * confirmação e o terceiro desvincula. Shift + clique marca um canto.
      */
     @GameTest(template = "empty")
     public static void linkerClickLinksAndUnlinks(GameTestHelper helper) {
@@ -82,7 +82,9 @@ public final class RangeLinkerGameTests {
                         helper.assertTrue(router.remoteMachines().contains(furnace), "o clique não vinculou");
                         helper.assertTrue(RemoteIndex.get().isIndexed(router, furnace), "fora do índice");
                         click(helper, player, FURNACE_A, false);
-                        helper.assertFalse(router.remoteMachines().contains(furnace), "o segundo clique não desvinculou");
+                        helper.assertTrue(router.remoteMachines().contains(furnace), "desvinculou sem confirmar");
+                        click(helper, player, FURNACE_A, false);
+                        helper.assertFalse(router.remoteMachines().contains(furnace), "a confirmação não desvinculou");
                         helper.assertFalse(RemoteIndex.get().isIndexed(router, furnace), "ficou no índice");
                         click(helper, player, FURNACE_A, true);
                         helper.assertTrue(LinkerItem.area(linker) != null, "Shift + clique não marcou o canto");

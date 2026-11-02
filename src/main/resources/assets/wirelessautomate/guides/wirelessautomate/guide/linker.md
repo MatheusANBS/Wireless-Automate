@@ -21,7 +21,9 @@ reaches a machine.
 ## How to use it
 
 1. Put the Range Upgrade in a router and click it with the Linker.
-2. Click a machine to link it. Click it again to unlink.
+2. Click a machine to link it. To unlink it, click it again: the action bar asks for confirmation,
+   and a second click on the same machine within 3 seconds takes it out. If its group ends up empty,
+   the group's cards go back to your inventory.
 3. For a whole room: holding Shift, click two corners, click the air to open the screen and click
    **Link area**.
 4. Switch to **Open** mode (Shift + mouse wheel) and click a machine to set up its face in the
@@ -35,7 +37,7 @@ with the [Tablet](network-tablet.md).
 | Gesture | Link | Open |
 | --- | --- | --- |
 | Click a router | Picks the router | — |
-| Click a machine | Links or unlinks it | Opens the router that reaches it |
+| Click a machine | Links it; on a linked one, two clicks unlink it | Opens the router that reaches it |
 | Click a Signal Screen | Picks the Screen | — |
 | Click a mod Chest, Battery or Tank | With a Screen picked, links or unlinks it | Opens the router that reaches it |
 | Click the air | Opens the screen | Shows the mode's hint |

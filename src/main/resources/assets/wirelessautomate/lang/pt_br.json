@@ -1200,6 +1200,7 @@
   "gui.wirelessautomate.panel.notice.range.pasted": "Colado de %s em %s",
   "gui.wirelessautomate.panel.notice.range.kept_networks": "redes de %s faces ficaram",
   "gui.wirelessautomate.panel.notice.range.kept_networks.one": "rede de %s face ficou",
+  "gui.wirelessautomate.panel.notice.range.paste_no_machine": "Não há máquina na frente do roteador",
   "gui.wirelessautomate.panel.notice.range.paste_undone": "Colar desfeito",
   "gui.wirelessautomate.panel.notice.range.paste_undo_refused": "Nada desfeito: o alvo mudou depois do colar",
   "gui.wirelessautomate.panel.notice.range.unlinked": "Desvinculadas %s máquinas",

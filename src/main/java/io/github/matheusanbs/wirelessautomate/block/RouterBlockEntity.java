@@ -605,7 +605,7 @@ public class RouterBlockEntity extends BlockEntity {
         return range.unlink(index);
     }
 
-    /** Desvincula o grupo ({@link RemoteMachines#unlinkGroup}); os cartões vão para {@code recipient}, como no Atualizar. */
+    /** Desvincula o grupo ({@link RemoteMachines#unlinkGroup}); os cartões vão para {@code recipient} (sem ele, no roteador). */
     public RemoteMachines.@Nullable GroupUnlink unlinkGroup(int groupId, @Nullable Player recipient) {
         return range.unlinkGroup(groupId, recipient);
     }
@@ -633,12 +633,18 @@ public class RouterBlockEntity extends BlockEntity {
         return attached.revertToProfile();
     }
 
-    /**
-     * Muda a configuração inteira da presa: {@code edit} recebe uma cópia da que vale; sozinha no grupo, vira o
-     * perfil, senão a exceção ({@link RouterAttached#editAll}). Devolve se mudou.
-     */
+    /** Muda a configuração inteira da presa pela regra de máquina ({@link RouterAttached#editAll}). Devolve se mudou. */
     public boolean editAttachedConfig(Consumer<MachineConfig> edit) {
         return attached.editAll(edit);
+    }
+
+    /** Garante o membro presa ({@link RouterAttached#ensureMember}), avisando o motor se ele nasceu. Devolve se nasceu. */
+    public boolean ensureAttachedMember() {
+        boolean created = attached.ensureMember();
+        if (created) {
+            changed(NetworkManager.ALL_TYPES);
+        }
+        return created;
     }
 
     /** Como o {@link #setMachineException}, na presa (o Desfazer do colar do Tablet). */
@@ -675,10 +681,7 @@ public class RouterBlockEntity extends BlockEntity {
         return range.replacedBy(machine, reach);
     }
 
-    /**
-     * Atualizar: as trocadas de {@code indices} vão para o grupo do bloco novo ({@link RemoteMachines#regroup}); os
-     * cartões devolvidos vão para {@code recipient} (sem jogador, caem no roteador).
-     */
+    /** Atualizar ({@link RemoteMachines#regroup}); os cartões devolvidos vão para {@code recipient}, como no {@link #unlinkGroup}. */
     public RemoteMachines.Regroup updateReplaced(List<Integer> indices, @Nullable Player recipient) {
         return range.updateReplaced(indices, recipient);
     }

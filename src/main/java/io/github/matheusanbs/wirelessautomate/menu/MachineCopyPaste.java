@@ -38,18 +38,44 @@ import org.jetbrains.annotations.Nullable;
 public final class MachineCopyPaste {
     private static final ResourceType[] TYPES = ResourceType.values();
     private static final RemoteSide[] SIDES = RemoteSide.values();
+    private static final Direction[] DIRECTIONS = Direction.values();
     private static final String NOTICE = "gui.wirelessautomate.panel.notice.";
 
     /**
      * O que o colar fez.
      *
-     * @param changed        algo mudou (só então há Desfazer)
+     * @param changed        algo mudou
      * @param exceptionsKept exceções que continuam no grupo colado (só no perfil do grupo)
      * @param keptFaces      faces que ficaram com a rede que tinham: a rede copiada o jogador não pode usar, ou a
      *                       de agora ele não edita
-     * @param notice         o aviso do painel
+     * @param source         o nome de origem da cópia
+     * @param where          o nome do alvo ("Fornalha #3", "presa", "Perfil: Fornalha")
+     * @param undo           o Desfazer ficou guardado
+     * @param noMachine      a presa não recebeu nada: não há máquina na frente do roteador (ar, ou o chunk dela
+     *                       descarregado)
      */
-    public record Pasted(boolean changed, int exceptionsKept, int keptFaces, PanelNoticePayload notice) {
+    public record Pasted(boolean changed, int exceptionsKept, int keptFaces, Component source, Component where,
+            boolean undo, boolean noMachine) {
+        /**
+         * O aviso do painel: "Colado de X em Y", com "· N exceções mantidas" e "· redes de N faces ficaram" quando
+         * houve, e o Desfazer se ficou guardado; sem máquina na frente, a recusa.
+         */
+        public PanelNoticePayload notice(int containerId) {
+            if (noMachine) {
+                return PanelNoticePayload.plain(Component.translatable(NOTICE + "range.paste_no_machine"));
+            }
+            MutableComponent message = Component.translatable(NOTICE + "range.pasted", source, where);
+            if (exceptionsKept > 0) {
+                message.append(" · ").append(Component.translatable(
+                        NOTICE + (exceptionsKept == 1 ? "exceptions_kept.one" : "exceptions_kept"), exceptionsKept));
+            }
+            if (keptFaces > 0) {
+                message.append(" · ").append(Component.translatable(
+                        NOTICE + (keptFaces == 1 ? "range.kept_networks.one" : "range.kept_networks"), keptFaces));
+            }
+            return new PanelNoticePayload(message, undo ? PanelNoticePayload.Undo.UNDO_MACHINE_PASTE
+                    : PanelNoticePayload.Undo.NONE, containerId, ResourceType.ITEM, Direction.UP);
+        }
     }
 
     private MachineCopyPaste() {
@@ -84,7 +110,7 @@ public final class MachineCopyPaste {
             }
             case ATTACHED -> {
                 MachineConfig config = remotes.effectiveAttached();
-                MachineClipboard.put(player.getUUID(), config == null ? new MachineConfig() : config.copy(),
+                MachineClipboard.put(player.getUUID(), config == null ? readAttached(router) : config.copy(),
                         attachedBlock(router), attachedName(router));
             }
         }
@@ -103,7 +129,9 @@ public final class MachineCopyPaste {
      * presa, pela regra de uma máquina do grupo ({@link RouterBlockEntity#editAttachedConfig}); num grupo, ou numa
      * máquina com {@code wholeGroup}, no perfil do grupo dela (as exceções que ficam iguais somem, as outras são
      * contadas). Cada face recebe modo, prioridade, redstone e filtro; a rede só se a cópia leva uma que o jogador pode
-     * usar e a face pode sair da que tem ({@link #merge}). Com mudança, guarda o Desfazer (o anterior sai sempre).
+     * usar e a face pode sair da que tem ({@link #merge}). Na presa sem membro, ele nasce antes do colar (no grupo do
+     * bloco da frente, ou do rascunho de um mundo antigo), para o Desfazer ter o estado de antes; sem máquina na
+     * frente, nada muda ({@link Pasted#noMachine}). Com mudança, guarda o Desfazer (o anterior sai sempre).
      * {@code null} sem cópia ou com o alvo que deixou de existir.
      */
     public static @Nullable Pasted paste(ServerPlayer player, RouterEditHost host, boolean wholeGroup) {
@@ -114,6 +142,13 @@ public final class MachineCopyPaste {
             return null;
         }
         RemoteMachines remotes = router.remoteMachines();
+        if (target.attached()) {
+            if (!router.attachedCanHold()) {
+                MachinePasteUndo.forget(player.getUUID());
+                return new Pasted(false, 0, 0, copy.source(), attachedName(router), false, true);
+            }
+            router.ensureAttachedMember();
+        }
         MachineGroup group = wholeGroup || target.kind() == EditTarget.Kind.GROUP ? groupOf(remotes, target) : null;
         RemoteMachine machine = target.kind() == EditTarget.Kind.MACHINE ? remotes.machine(target.id()) : null;
         if ((target.kind() == EditTarget.Kind.GROUP && group == null)
@@ -140,7 +175,6 @@ public final class MachineCopyPaste {
             changed = router.setMachineException(target.id(), config);
             where = MachineNames.machine(remotes, machine.pos());
         } else {
-            // A presa sem grupo ainda (com wholeGroup também): o colar cria o membro, sozinho no grupo dele.
             changed = router.editAttachedConfig(config -> kept[0] = merge(config, copy.config(), usable, canLeave));
             where = attachedName(router);
         }
@@ -149,8 +183,7 @@ public final class MachineCopyPaste {
             MachinePasteUndo.remember(player, host, change);
         }
         host.editApplied();
-        return new Pasted(changed, exceptions, kept[0],
-                pastedNotice(host.containerId(), copy.source(), where, exceptions, kept[0], change != null));
+        return new Pasted(changed, exceptions, kept[0], copy.source(), where, change != null, false);
     }
 
     /**
@@ -198,22 +231,6 @@ public final class MachineCopyPaste {
         return kept;
     }
 
-    /** O aviso do colar: de onde veio, onde foi e o que a regra deixou de fora, com o Desfazer se algo mudou. */
-    public static PanelNoticePayload pastedNotice(int containerId, Component source, Component where, int exceptions,
-            int keptFaces, boolean undo) {
-        MutableComponent message = Component.translatable(NOTICE + "range.pasted", source, where);
-        if (exceptions > 0) {
-            message.append(" · ").append(Component.translatable(
-                    NOTICE + (exceptions == 1 ? "exceptions_kept.one" : "exceptions_kept"), exceptions));
-        }
-        if (keptFaces > 0) {
-            message.append(" · ").append(Component.translatable(
-                    NOTICE + (keptFaces == 1 ? "range.kept_networks.one" : "range.kept_networks"), keptFaces));
-        }
-        return new PanelNoticePayload(message, undo ? PanelNoticePayload.Undo.UNDO_MACHINE_PASTE
-                : PanelNoticePayload.Undo.NONE, containerId, ResourceType.ITEM, Direction.UP);
-    }
-
     /** O grupo do alvo: o próprio, ou o da máquina ou da presa; {@code null} se não há. */
     private static @Nullable MachineGroup groupOf(RemoteMachines remotes, EditTarget target) {
         return switch (target.kind()) {
@@ -241,6 +258,21 @@ public final class MachineCopyPaste {
     /** "Perfil: Fornalha": o perfil de um grupo como origem ou destino. */
     private static Component profileName(MachineGroup group) {
         return Component.translatable("gui.wirelessautomate.router.range.copy.group", MachineNames.group(group));
+    }
+
+    /**
+     * A configuração da presa sem membro, lida pela fachada (o rascunho de um mundo antigo, ou a vazia), nos lados da
+     * máquina pela frente dela.
+     */
+    private static MachineConfig readAttached(RouterBlockEntity router) {
+        MachineConfig config = new MachineConfig();
+        int front = router.attachedFront();
+        for (ResourceType type : TYPES) {
+            for (Direction face : DIRECTIONS) {
+                config.face(type, RemoteSide.fromAbsolute(front, face.ordinal())).copyFrom(router.face(type, face));
+            }
+        }
+        return config;
     }
 
     /** O nome da presa: o dado pelo jogador, ou "presa". */

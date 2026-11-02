@@ -21,6 +21,7 @@ import io.github.matheusanbs.wirelessautomate.range.MachineGroup;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
+import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -42,8 +43,9 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
  * Etapa 2 do alcance, o grupo inteiro: Desvincular o grupo pela tela ({@link UnlinkGroupPayload}: sem a presa o
- * grupo sai, com ela fica zerado, o "×0" some, o id reaproveitado é recusado, os cartões vão para o jogador e a sobra
- * cai aos pés dele) e o Atualizar que devolve os cartões ao jogador, com o aviso.
+ * grupo sai, com ela fica zerado, o "×0" some, o bloco errado e o id que não existe são recusados, os cartões vão
+ * para o jogador e a sobra cai aos pés dele) e o Atualizar que devolve os cartões ao jogador. Os avisos são os
+ * montados a partir dos resultados de verdade.
  */
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
@@ -87,8 +89,9 @@ public final class RangeGroupUnlinkGameTests {
                     ServerPlayer player = holder[0];
                     helper.assertTrue(selectGroup(player, router, furnaces), "não escolheu o grupo");
 
-                    helper.assertTrue(RangePayloads.handleUnlinkGroup(player,
-                            new UnlinkGroupPayload(CONTAINER_ID, furnaces, id(Blocks.FURNACE))), "não desvinculou");
+                    PanelNoticePayload notice = RangePayloads.handleUnlinkGroup(player,
+                            new UnlinkGroupPayload(CONTAINER_ID, furnaces, id(Blocks.FURNACE)));
+                    helper.assertTrue(notice != null, "não desvinculou");
                     RemoteMachines remotes = router.remoteMachines();
                     helper.assertTrue(remotes.group(furnaces) == null, "o grupo ficou");
                     helper.assertFalse(remotes.contains(helper.absolutePos(FURNACE_A)), "a fornalha A ficou");
@@ -97,14 +100,13 @@ public final class RangeGroupUnlinkGameTests {
                     helper.assertValueEqual(cards(player), 1, "cartões no inventário");
                     helper.assertTrue(menu.target().attached(), "o alvo não voltou para a presa: " + menu.target());
 
-                    PanelNoticePayload notice = RangePayloads.unlinkedGroupNotice(2, 1, false);
                     helper.assertValueEqual(key(notice), NOTICE + "unlinked", "aviso");
+                    helper.assertTrue(notice.message().getContents() instanceof TranslatableContents contents
+                            && contents.getArgs().length == 1 && contents.getArgs()[0].equals(2), "máquinas no aviso");
                     helper.assertValueEqual(notice.message().getSiblings().size(), 2, "partes do aviso");
+                    helper.assertTrue(notice.message().getSiblings().get(1).getContents() instanceof TranslatableContents part
+                            && part.getKey().equals(NOTICE + "cards_returned.one"), "cartões no aviso");
                     helper.assertValueEqual(notice.undo(), PanelNoticePayload.Undo.NONE, "Desfazer no aviso");
-                    helper.assertValueEqual(key(RangePayloads.unlinkedGroupNotice(1, 0, false)), NOTICE + "unlinked.one",
-                            "singular");
-                    helper.assertValueEqual(key(RangePayloads.unlinkedGroupNotice(0, 1, false)),
-                            NOTICE + "cards_returned.one", "só cartões");
                 })
                 .thenSucceed();
     }
@@ -134,8 +136,10 @@ public final class RangeGroupUnlinkGameTests {
                     ServerPlayer player = holder[0];
                     helper.assertTrue(selectGroup(player, router, chests), "não escolheu o grupo");
 
-                    helper.assertTrue(RangePayloads.handleUnlinkGroup(player,
-                            new UnlinkGroupPayload(CONTAINER_ID, chests, id(Blocks.CHEST))), "não desvinculou");
+                    PanelNoticePayload notice = RangePayloads.handleUnlinkGroup(player,
+                            new UnlinkGroupPayload(CONTAINER_ID, chests, id(Blocks.CHEST)));
+                    helper.assertTrue(notice != null, "não desvinculou");
+                    helper.assertValueEqual(key(notice), NOTICE + "unlinked.one", "aviso");
                     MachineGroup group = remotes.group(chests);
                     helper.assertTrue(group != null, "o grupo da presa saiu");
                     helper.assertTrue(remotes.groupHasAttached(chests), "a presa saiu do grupo");
@@ -148,15 +152,25 @@ public final class RangeGroupUnlinkGameTests {
                     helper.assertTrue(menu.target().attached(), "o alvo não virou a presa: " + menu.target());
 
                     // De novo, nada mais a zerar: recusa sem aviso.
-                    helper.assertFalse(RangePayloads.handleUnlinkGroup(player,
-                            new UnlinkGroupPayload(CONTAINER_ID, chests, id(Blocks.CHEST))), "zerou de novo");
-                    helper.assertValueEqual(key(RangePayloads.unlinkedGroupNotice(0, 0, true)), NOTICE + "group_cleared",
-                            "aviso do grupo da presa zerado");
+                    helper.assertTrue(RangePayloads.handleUnlinkGroup(player,
+                            new UnlinkGroupPayload(CONTAINER_ID, chests, id(Blocks.CHEST))) == null, "zerou de novo");
+
+                    // Só a presa, com o perfil configurado: nada a desvincular, o perfil zera.
+                    router.setMode(ResourceType.ITEM, Direction.UP, PortMode.INSERT);
+                    helper.assertTrue(selectGroup(player, router, chests), "não escolheu o grupo de novo");
+                    PanelNoticePayload cleared = RangePayloads.handleUnlinkGroup(player,
+                            new UnlinkGroupPayload(CONTAINER_ID, chests, id(Blocks.CHEST)));
+                    helper.assertTrue(cleared != null, "não zerou o perfil da presa sozinha");
+                    helper.assertValueEqual(key(cleared), NOTICE + "group_cleared", "aviso do grupo da presa zerado");
+                    helper.assertTrue(remotes.group(chests).profile().isDefault(), "o perfil da presa sozinha não zerou");
                 })
                 .thenSucceed();
     }
 
-    /** O "×0" (grupo sem máquina, só com perfil) sai; o id reaproveitado ou o bloco errado são recusados sem mudar nada. */
+    /**
+     * O "×0" (grupo sem máquina, só com perfil) sai, com o aviso "Grupo apagado"; o bloco errado, o id que não existe
+     * (também o do ×0 já apagado) e outro menu são recusados sem mudar nada.
+     */
     @GameTest(template = "empty")
     public static void unlinkEmptyGroupAndRefusals(GameTestHelper helper) {
         RouterBlockEntity router = routerWithMachines(helper);
@@ -174,27 +188,31 @@ public final class RangeGroupUnlinkGameTests {
                     openMenu(helper, router, holder);
                     ServerPlayer player = holder[0];
 
-                    helper.assertFalse(RangePayloads.handleUnlinkGroup(player,
-                            new UnlinkGroupPayload(CONTAINER_ID, furnaces, id(Blocks.SMOKER))), "bloco errado aceito");
-                    helper.assertFalse(RangePayloads.handleUnlinkGroup(player,
-                            new UnlinkGroupPayload(CONTAINER_ID, 999, id(Blocks.FURNACE))), "id que não existe aceito");
-                    helper.assertFalse(RangePayloads.handleUnlinkGroup(player,
-                            new UnlinkGroupPayload(CONTAINER_ID + 1, furnaces, id(Blocks.FURNACE))), "outro menu aceito");
+                    helper.assertTrue(RangePayloads.handleUnlinkGroup(player,
+                            new UnlinkGroupPayload(CONTAINER_ID, furnaces, id(Blocks.SMOKER))) == null, "bloco errado aceito");
+                    helper.assertTrue(RangePayloads.handleUnlinkGroup(player,
+                            new UnlinkGroupPayload(CONTAINER_ID, 999, id(Blocks.FURNACE))) == null, "id que não existe aceito");
+                    helper.assertTrue(RangePayloads.handleUnlinkGroup(player,
+                            new UnlinkGroupPayload(CONTAINER_ID + 1, furnaces, id(Blocks.FURNACE))) == null,
+                            "outro menu aceito");
                     helper.assertTrue(remotes.contains(helper.absolutePos(FURNACE_A)), "uma recusa desvinculou");
 
-                    helper.assertTrue(RangePayloads.handleUnlinkGroup(player,
-                            new UnlinkGroupPayload(CONTAINER_ID, empty, id(Blocks.SMOKER))), "não apagou o ×0");
+                    PanelNoticePayload notice = RangePayloads.handleUnlinkGroup(player,
+                            new UnlinkGroupPayload(CONTAINER_ID, empty, id(Blocks.SMOKER)));
+                    helper.assertTrue(notice != null, "não apagou o ×0");
+                    helper.assertValueEqual(key(notice), NOTICE + "group_removed", "aviso do ×0 sem nada");
                     helper.assertTrue(remotes.group(empty) == null, "o ×0 ficou");
                     helper.assertTrue(remotes.group(furnaces) != null, "o outro grupo saiu");
-                    helper.assertFalse(RangePayloads.handleUnlinkGroup(player,
-                            new UnlinkGroupPayload(CONTAINER_ID, empty, id(Blocks.SMOKER))), "apagou o ×0 duas vezes");
-                    helper.assertValueEqual(key(RangePayloads.unlinkedGroupNotice(0, 0, false)), NOTICE + "group_removed",
-                            "aviso do ×0 sem nada");
+                    helper.assertTrue(RangePayloads.handleUnlinkGroup(player,
+                            new UnlinkGroupPayload(CONTAINER_ID, empty, id(Blocks.SMOKER))) == null, "apagou o ×0 duas vezes");
                 })
                 .thenSucceed();
     }
 
-    /** Inventário cheio: o cartão cai aos pés do jogador, não no roteador. */
+    /**
+     * Inventário cheio de um jogador no modo criativo (o {@code Inventory.add} sumiria com o cartão): ele cai aos pés
+     * do jogador, não no roteador.
+     */
     @GameTest(template = "empty")
     public static void unlinkGroupCardsOverflowAtFeet(GameTestHelper helper) {
         RouterBlockEntity router = routerWithMachines(helper);
@@ -205,7 +223,7 @@ public final class RangeGroupUnlinkGameTests {
                     link(helper, router, FURNACE_A);
                     int furnaces = groupOf(router, helper.absolutePos(FURNACE_A));
                     router.setCard(EditTarget.group(furnaces), ResourceType.ITEM, Direction.SOUTH, 0, itemCard());
-                    TestPlayers.MenuPlayer player = TestPlayers.survivalMenuOpener(helper);
+                    ServerPlayer player = TestPlayers.inLevel(helper);
                     Vec3 feet = helper.absoluteVec(new Vec3(4.5, 2, 4.5));
                     player.moveTo(feet);
                     player.containerMenu = new RouterMenu(CONTAINER_ID, player.getInventory(), router,
@@ -214,23 +232,29 @@ public final class RangeGroupUnlinkGameTests {
                         player.getInventory().items.set(i, new ItemStack(Items.STONE, 64));
                     }
 
+                    helper.assertTrue(player.isCreative(), "o jogador de teste não é criativo");
                     helper.assertTrue(RangePayloads.handleUnlinkGroup(player,
-                            new UnlinkGroupPayload(CONTAINER_ID, furnaces, id(Blocks.FURNACE))), "não desvinculou");
+                            new UnlinkGroupPayload(CONTAINER_ID, furnaces, id(Blocks.FURNACE))) != null, "não desvinculou");
                     helper.assertValueEqual(cards(player), 0, "o cartão coube no inventário cheio");
-                    boolean atFeet = !helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(feet, feet).inflate(1.5),
-                            item -> item.getItem().is(ModItems.FILTER_CARD.get())).isEmpty();
-                    helper.assertTrue(atFeet, "o cartão não caiu aos pés do jogador");
-                    helper.assertTrue(helper.getLevel().getEntitiesOfClass(ItemEntity.class,
-                            new AABB(router.getBlockPos()).inflate(1), item -> item.getItem().is(ModItems.FILTER_CARD.get()))
-                            .isEmpty(), "o cartão caiu no roteador");
-                    player.containerMenu = player.inventoryMenu;
+                    List<ItemEntity> atFeet = helper.getLevel().getEntitiesOfClass(ItemEntity.class,
+                            new AABB(feet, feet).inflate(1.5), item -> item.getItem().is(ModItems.FILTER_CARD.get()));
+                    try {
+                        helper.assertValueEqual(atFeet.size(), 1, "cartões aos pés do jogador");
+                        helper.assertTrue(helper.getLevel().getEntitiesOfClass(ItemEntity.class,
+                                new AABB(router.getBlockPos()).inflate(1),
+                                item -> item.getItem().is(ModItems.FILTER_CARD.get())).isEmpty(), "o cartão caiu no roteador");
+                    } finally {
+                        atFeet.forEach(ItemEntity::discard);
+                        player.containerMenu = player.inventoryMenu;
+                    }
                 })
                 .thenSucceed();
     }
 
     /**
-     * Atualizar pelo pacote: as fornalhas trocadas entram no grupo dos altos-fornos que já existe, o grupo delas
-     * esvazia e o cartão dele vai para o jogador (nada cai no roteador); o aviso conta máquinas e cartões.
+     * Atualizar com o jogador: as fornalhas trocadas entram no grupo dos altos-fornos que já existe, o grupo delas
+     * esvazia e o cartão dele vai para o jogador (nada cai no roteador); o aviso, montado do resultado, conta
+     * máquinas e cartões.
      */
     @GameTest(template = "empty")
     public static void updateReturnsCardsToPlayer(GameTestHelper helper) {
@@ -254,25 +278,28 @@ public final class RangeGroupUnlinkGameTests {
                     openMenu(helper, router, holder);
                     ServerPlayer player = holder[0];
 
-                    helper.assertTrue(ModPayloads.handleUpdateMachine(player,
-                            UpdateMachinePayload.group(CONTAINER_ID, furnaces, id(Blocks.FURNACE))), "não atualizou");
+                    RemoteMachines remotes = router.remoteMachines();
+                    RemoteMachines.Regroup result = router.updateReplaced(List.of(
+                            remotes.index(helper.absolutePos(FURNACE_A)), remotes.index(helper.absolutePos(FURNACE_B))), player);
                     helper.assertTrue(router.remoteMachines().group(furnaces) == null, "o grupo vazio ficou");
                     helper.assertValueEqual(groupOf(router, helper.absolutePos(FURNACE_A)), blasts, "A");
                     helper.assertValueEqual(cards(player), 1, "cartão no inventário");
                     helper.assertTrue(helper.getLevel().getEntitiesOfClass(ItemEntity.class,
                             new AABB(router.getBlockPos()).inflate(2)).isEmpty(), "algo caiu no roteador");
 
-                    PanelNoticePayload notice = RangePayloads.updatedNotice(2, 1);
+                    PanelNoticePayload notice = RangePayloads.updatedNotice(result);
                     helper.assertValueEqual(key(notice), NOTICE + "updated", "aviso");
                     helper.assertValueEqual(notice.message().getSiblings().size(), 2, "partes do aviso");
-                    PanelNoticePayload one = RangePayloads.updatedNotice(1, 0);
-                    helper.assertValueEqual(key(one), NOTICE + "updated.one", "singular");
-                    helper.assertTrue(one.message().getSiblings().isEmpty(), "aviso sem cartões com a parte dos cartões");
+                    helper.assertTrue(notice.message().getSiblings().get(1).getContents() instanceof TranslatableContents part
+                            && part.getKey().equals(NOTICE + "cards_returned.one"), "cartões no aviso");
                 })
                 .thenSucceed();
     }
 
-    /** Atualizar a única fornalha do grupo: o grupo passa ao bloco novo e os cartões vão junto, nada ao jogador. */
+    /**
+     * Atualizar pelo pacote a única fornalha do grupo: o grupo passa ao bloco novo e os cartões vão junto, nada ao
+     * jogador; o aviso, do resultado, diz uma máquina e nenhum cartão.
+     */
     @GameTest(template = "empty")
     public static void updateKeepsCardsWithGroup(GameTestHelper helper) {
         RouterBlockEntity router = routerWithMachines(helper);
@@ -299,6 +326,14 @@ public final class RangeGroupUnlinkGameTests {
                     helper.assertTrue(group != null && group.block().equals(id(Blocks.BLAST_FURNACE)), "o grupo não mudou");
                     helper.assertTrue(group.hasCards(), "o cartão não foi junto");
                     helper.assertValueEqual(cards(player), 0, "cartão no jogador");
+
+                    // A fornalha de volta, pelo roteador, para o aviso sair do resultado: uma máquina, sem cartões.
+                    helper.setBlock(FURNACE_A, Blocks.FURNACE.defaultBlockState()
+                            .setValue(AbstractFurnaceBlock.FACING, Direction.EAST));
+                    PanelNoticePayload notice = RangePayloads.updatedNotice(router.updateReplaced(List.of(index), player));
+                    helper.assertValueEqual(key(notice), NOTICE + "updated.one", "aviso");
+                    helper.assertTrue(notice.message().getSiblings().isEmpty(), "aviso sem cartões com a parte dos cartões");
+                    helper.assertTrue(group.hasCards() && group.block().equals(id(Blocks.FURNACE)), "o grupo não voltou");
                 })
                 .thenSucceed();
     }

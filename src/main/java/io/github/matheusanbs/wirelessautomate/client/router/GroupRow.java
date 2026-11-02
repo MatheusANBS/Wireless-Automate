@@ -35,7 +35,7 @@ final class GroupRow {
         } else {
             GuiPaint.arrowRight(g, x + 4, ry + 4, GuiPaint.MUTED);
         }
-        ItemStack icon = group.icon();
+        ItemStack icon = GroupIcons.of(view, group);
         if (!icon.isEmpty()) {
             g.pose().pushPose();
             g.pose().translate(x + RangeList.ARROW_ZONE + 1, ry + 0.5f, 0);

@@ -105,7 +105,8 @@ public final class RangeScreenGameTests {
                         helper.assertValueEqual(snapshot.target(), EditTarget.group(furnaces), "alvo no snapshot");
                         RangeView.GroupView group = range.group(furnaces);
                         helper.assertTrue(group != null && group.count() == 2 && group.exceptions() == 0
-                                && group.block().equals(furnaceId()) && group.icon().is(Items.FURNACE), "grupo das fornalhas");
+                                && group.block().equals(furnaceId())
+                                && BuiltInRegistries.BLOCK.get(group.block()).asItem() == Items.FURNACE, "grupo das fornalhas");
                         helper.assertValueEqual(range.machines().size(), 3, "máquinas");
                         RangeView.MachineView view = range.machine(router.remoteMachines().index(a));
                         helper.assertTrue(view.pos().equals(a) && view.group() == furnaces && view.distance() == 1

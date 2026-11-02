@@ -23,9 +23,11 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 
 ## Roteador de alcance
 
-- **(dono)** Aprovar a proposta da presa no grupo e das etapas seguintes (`docs/preview/alcance-presa-no-grupo.html`): bloco trocado na frente, mundos antigos, desvincular o grupo da presa e a ideia nova do Configurador. Achados da revisão de 02/11: máquina vinculada entra como exceção vazia (`linkMachineIsolated`); o Atualizar perde os cartões sem aviso; máquina trocada continua recebendo até o Atualizar; o Vinculador desvincula num clique e solta os cartões sem dizer; clique ignorado em silêncio quando a lista mudou; id de grupo reaproveitado; Configurador sem `mayBuild`. (02/11)
+- **(dono)** Escolher a função nova do Configurador (ideias A a D em `docs/preview/alcance-presa-no-grupo.html`). Achados da revisão de 02/11 que continuam: o Atualizar perde os cartões sem aviso; máquina trocada continua recebendo até o Atualizar; o Vinculador desvincula num clique e solta os cartões sem dizer; clique ignorado em silêncio quando a lista mudou; id de grupo reaproveitado; Configurador sem `mayBuild`. (02/11)
 
-- Pausar grupo e os perfis do alcance no Configurador (o `RouterPreset` só leva a máquina presa). (11/10)
+- Pausar grupo. (11/10)
+- Etapa 2 (P1): desvincular o grupo inteiro (apaga também o "×0" que a presa deixa), copiar e colar o perfil por máquina na tela do roteador. (02/11)
+- Presa no grupo, menores da revisão final: o grupo "×0" segue contando nas redes do nó; sem o Upgrade de Alcance, com remotas guardadas no mesmo grupo, editar a presa cria uma exceção que a tela não mostra; `setNetworkAll` com rede cria o membro numa presa nunca configurada; o slot de cartão da presa com exceção muda o grupo inteiro sem aviso; o guia não explica a presa no grupo; destino "quase cheio" de pilhas parciais de outros itens entra no caminho das recusas (medir um cenário `partialfull`). (02/11)
 - Página própria no guia (hoje é uma seção da página do Roteador). (11/10)
 - **(dono)** Fechar as perguntas da spec: nome do item, vazão por máquina, tabela de raio e limite, Básico sem alcance; a receita e a textura seguem provisórias. (11/10)
 - Conferir os 18 achados menores da revisão da etapa 1 (`docs/superpowers/reviews/2026-10-11-roteador-de-alcance-etapa-1.md`). (11/10)

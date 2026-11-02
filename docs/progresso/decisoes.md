@@ -6,14 +6,15 @@ Decisões em vigor, do dono e do código. Quando uma decisão muda, reescreva a 
 
 - **Canais:** só redes + filtros. (7/10)
 - **Rede por face:** cada face da máquina, em cada tipo, escolhe a sua rede (ou nenhuma); grupos de redes só organizam no Tablet. Substituiu a rede por aba e a ideia de vincular redes. (12/10)
-- **Roteador colocado nasce sem rede:** o jogador vincula o primeiro e replica com o Configurador. (12/10)
+- **Roteador colocado nasce sem rede:** o jogador vincula o primeiro e replica com o perfil do Tablet. (12/10; o Configurador ficou sem função em 02/11)
 - **Modo Armazém** (antes "Ambos"): recebe de quem extrai, entrega para quem insere e não troca com outro Armazém. (7/10)
 - **Orçamento padrão:** 1 ms/tick (era 0,5 ms; trocado depois do benchmark, por mais vazão). (7/10)
 - **Cartões de filtro:** slots por face e por tipo; passa se o filtro embutido ou algum cartão aceitar. Duplicar: cartão configurado + cartão vazio = dois iguais. (7/10)
 - **Subir tier custa o mesmo pela bancada e pelo cartão:** um anel por tier, e o cartão só vale no tier de origem dele. (12/10)
 - **JEI:** integração opcional (`compileOnly` + plugin). (7/10)
 - **Visor 3D:** nome da face no canto, sem dica flutuante nem linha da máquina. (7/10)
-- **Configurador sem tela:** uma cópia só no item, modos Pincel e Área; sem biblioteca nem código de texto. (7/10)
+- **Configurador sem função** até o dono escolher a nova (ideias A a D em `docs/preview/alcance-presa-no-grupo.html`); o item, a receita e os componentes ficam registrados. (02/11)
+- **A presa é máquina do grupo do bloco dela:** perfil, exceção e cartões do grupo, lados pela frente da máquina; editar a presa sozinha no grupo muda o perfil, com outras do bloco vira exceção; não conta no limite e vale sem o Upgrade de Alcance. A máquina vinculada segue o perfil. Bloco trocado no lugar leva a presa com o perfil; ar mantém o grupo. (02/11)
 - **Central da rede:** as etapas 4 (busca por conteúdo, micro dos Fluxos) e 5 (aba Problemas) foram descartadas; fica como está. (20/10)
 - **Ressonador:** sem comparador, sem controle por redstone (a automação é o Sintonizador) e sem Tablet. (15/10)
 - **Ficam como estão:** as imagens `feature-2-router` e `feature-6-tablet` do CurseForge com as telas antigas (14/10); o prazo do stash do `StorageSavedData` em 0, sem prazo (19/10); o bench do Baú com e sem vigia, dispensado (27/10).
@@ -34,5 +35,5 @@ Decisões em vigor, do dono e do código. Quando uma decisão muda, reescreva a 
 - Filtro sem entradas passa tudo. O estoque vale o da primeira entrada que casa, só em lista branca. Recusa por filtro ou estoque pula o destino sem fazê-lo dormir; só falta de espaço faz dormir.
 - O Cartão de Filtro guarda tipo (itens ou fluidos) e filtro; troca de tipo só vazio.
 - O `FaceConfig` persiste com `HolderLookup.Provider` (o filtro guarda `ItemStack`); entradas que não leem mais (mod removido) são descartadas com aviso (`FilterCodecs.LENIENT`).
-- Telas: o servidor valida tudo (mesmo `containerId`, até 8 blocos, prioridade −999..999, rede que o jogador pode usar) e a tela espera o snapshot do servidor, sem mudar nada sozinha. Com Vinculador, Configurador ou Cartão de Upgrade na mão, o clique vai para o item, não para a tela.
+- Telas: o servidor valida tudo (mesmo `containerId`, até 8 blocos, prioridade −999..999, rede que o jogador pode usar) e a tela espera o snapshot do servidor, sem mudar nada sozinha. Com Vinculador ou Cartão de Upgrade na mão, o clique vai para o item, não para a tela (o Configurador, sem função, abre a tela como qualquer item).
 - A receita do roteador é ferro + redstone + olho de ender (`data/wirelessautomate/recipe/router.json`).

@@ -89,6 +89,28 @@ ela. Máquina sem frente, como um barril: Frente = Norte.
 - **Upgrade de Alcance:** o roteador atende várias máquinas ao redor. A lista delas aparece embaixo
   do visor: o ✎ dá um nome e o olho ◉ acende a máquina no mundo.
 
+## Máquinas e grupos (Upgrade de Alcance)
+
+A máquina presa ao roteador aparece **dentro do grupo do bloco dela**, e segue o perfil do grupo.
+
+- **Editar a presa:** se ela está sozinha no grupo, você muda o perfil. Se há outras máquinas do mesmo
+  bloco, a presa vira uma **exceção**. O ↺ na linha volta ao perfil.
+- **Trocar a máquina** por outra no mesmo lugar (um upgrade de tier, por exemplo): a configuração vai junto.
+- **Desvincular o grupo inteiro:** clique no ✕ da linha do grupo e clique de novo para confirmar. Os
+  cartões do grupo voltam ao seu inventário. No grupo da presa, ela fica e o grupo é zerado.
+- **Atualizar** (⟳): se o grupo antigo esvazia, os cartões dele voltam ao seu inventário.
+
+### Copiar e colar o perfil de uma máquina
+
+1. Escolha a máquina na lista e clique em ⧉ (ou aperte **Ctrl+C**).
+2. Escolha outra máquina e clique em ⎘ (ou aperte **Ctrl+V**).
+3. Para colar no grupo inteiro, segure **Shift** no clique ou use **Shift + Ctrl+V**.
+4. Para voltar atrás, use **Desfazer** no aviso.
+
+O rodapé **Perfil copiado** mostra a origem; o ✕ dele esquece a cópia. A cópia vale até você sair do
+mundo. Os cartões não vão junto. É diferente do **Cop.** de uma face (copia só aquela face) e da cópia
+do [Tablet](network-tablet.md), que fica guardada no item.
+
 ## Vazão por tier
 
 <Row gap="12">

@@ -133,6 +133,28 @@ ela. Máquina sem frente, como um barril: Frente = Norte.
 - **Upgrade de Alcance:** o roteador atende várias máquinas ao redor. A lista delas aparece embaixo
   do visor: o ✎ dá um nome e o olho ◉ acende a máquina no mundo.
 
+## Máquinas e grupos (Upgrade de Alcance)
+
+A máquina presa ao roteador aparece **dentro do grupo do bloco dela**, e segue o perfil do grupo.
+
+- **Editar a presa:** se ela está sozinha no grupo, você muda o perfil. Se há outras máquinas do mesmo
+  bloco, a presa vira uma **exceção**. O ↺ na linha volta ao perfil.
+- **Trocar a máquina** por outra no mesmo lugar (um upgrade de tier, por exemplo): a configuração vai junto.
+- **Desvincular o grupo inteiro:** clique no ✕ da linha do grupo e clique de novo para confirmar. Os
+  cartões do grupo voltam ao seu inventário. No grupo da presa, ela fica e o grupo é zerado.
+- **Atualizar** (⟳): se o grupo antigo esvazia, os cartões dele voltam ao seu inventário.
+
+### Copiar e colar o perfil de uma máquina
+
+1. Escolha a máquina na lista e clique em ⧉ (ou aperte **Ctrl+C**).
+2. Escolha outra máquina e clique em ⎘ (ou aperte **Ctrl+V**).
+3. Para colar no grupo inteiro, segure **Shift** no clique ou use **Shift + Ctrl+V**.
+4. Para voltar atrás, use **Desfazer** no aviso.
+
+O rodapé **Perfil copiado** mostra a origem; o ✕ dele esquece a cópia. A cópia vale até você sair do
+mundo. Os cartões não vão junto. É diferente do **Cop.** de uma face (copia só aquela face) e da cópia
+do [Tablet](network-tablet.md), que fica guardada no item.
+
 ## Vazão por tier
 
 <Row gap="12">
@@ -222,6 +244,29 @@ without a front, like a barrel: Front = North.
   working while you're away.
 - **Range Upgrade:** the router serves several machines around it. Their list sits under the viewer:
   ✎ names a machine and the eye ◉ lights it up in the world.
+
+## Machines and groups (Range Upgrade)
+
+The machine attached to the router shows up **inside its block's group** and follows the group's profile.
+
+- **Edit the attached machine:** if it is alone in the group, you change the profile. If other machines
+  of the same block are there, it becomes an **exception**. The ↺ on its row goes back to the profile.
+- **Swap the machine** for another in the same place (a tier upgrade, for example): the configuration
+  goes with it.
+- **Unlink a whole group:** click the ✕ on the group row and click again to confirm. The group's cards
+  come back to your inventory. In the attached machine's group, the machine stays and the group is reset.
+- **Update** (⟳): if the old group ends up empty, its cards come back to your inventory.
+
+### Copy and paste a machine's profile
+
+1. Pick the machine in the list and click ⧉ (or press **Ctrl+C**).
+2. Pick another machine and click ⎘ (or press **Ctrl+V**).
+3. To paste on the whole group, hold **Shift** on the click or use **Shift + Ctrl+V**.
+4. To go back, use **Undo** on the notice.
+
+The **Copied profile** footer shows the source; its ✕ forgets the copy. The copy lasts until you leave
+the world. Cards don't come along. It is different from a face's **Copy** button (that copies only
+that face) and from the [Tablet](network-tablet.md) copy, which is kept on the item.
 
 ## Throughput per tier
 

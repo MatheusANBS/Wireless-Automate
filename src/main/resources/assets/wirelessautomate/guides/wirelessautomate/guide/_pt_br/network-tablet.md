@@ -162,6 +162,8 @@ Clique numa linha para ver na Lista só os roteadores daquele tipo ou rede; o ch
 | **Ctrl+V** | Cola. |
 | **Ctrl+Z** | Desfaz (o aviso depois de colar também traz **Desfazer**). |
 
+A cópia do Tablet fica guardada no item. A cópia de máquina da tela do roteador é outra: vale só até você sair do mundo.
+
 Os nós mostram "igual ao perfil" ou "N diferentes do perfil". Só entram as redes que você pode usar.
 
 O que o colar faz em cada coisa marcada:

@@ -91,6 +91,29 @@ without a front, like a barrel: Front = North.
 - **Range Upgrade:** the router serves several machines around it. Their list sits under the viewer:
   ✎ names a machine and the eye ◉ lights it up in the world.
 
+## Machines and groups (Range Upgrade)
+
+The machine attached to the router shows up **inside its block's group** and follows the group's profile.
+
+- **Edit the attached machine:** if it is alone in the group, you change the profile. If other machines
+  of the same block are there, it becomes an **exception**. The ↺ on its row goes back to the profile.
+- **Swap the machine** for another in the same place (a tier upgrade, for example): the configuration
+  goes with it.
+- **Unlink a whole group:** click the ✕ on the group row and click again to confirm. The group's cards
+  come back to your inventory. In the attached machine's group, the machine stays and the group is reset.
+- **Update** (⟳): if the old group ends up empty, its cards come back to your inventory.
+
+### Copy and paste a machine's profile
+
+1. Pick the machine in the list and click ⧉ (or press **Ctrl+C**).
+2. Pick another machine and click ⎘ (or press **Ctrl+V**).
+3. To paste on the whole group, hold **Shift** on the click or use **Shift + Ctrl+V**.
+4. To go back, use **Undo** on the notice.
+
+The **Copied profile** footer shows the source; its ✕ forgets the copy. The copy lasts until you leave
+the world. Cards don't come along. It is different from a face's **Copy** button (that copies only
+that face) and from the [Tablet](network-tablet.md) copy, which is kept on the item.
+
 ## Throughput per tier
 
 <Row gap="12">

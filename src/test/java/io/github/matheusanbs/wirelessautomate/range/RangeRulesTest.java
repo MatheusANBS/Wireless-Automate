@@ -22,6 +22,14 @@ class RangeRulesTest {
     }
 
     @Test
+    void usedCountsOnlyTheActive() {
+        // limite baixado para 2: a terceira de dentro do raio passa do limite e não gasta vaga
+        RangeRules.Reach[] reach = RangeRules.reach(new int[] {1, 9, 2, 3}, 4, 2);
+        assertEquals(2, RangeRules.used(reach));
+        assertEquals(0, RangeRules.used(new RangeRules.Reach[0]));
+    }
+
+    @Test
     void okWhenEverythingFits() {
         assertEquals(LinkRefusal.NONE, RangeRules.check(true, 6, true, 6, 7, 8));
     }

@@ -66,16 +66,18 @@ final class RouterRange {
         return true;
     }
 
-    /** Ver {@link RouterBlockEntity#unlinkMachine(int)}. */
-    boolean unlink(int index) {
-        if (remotes.machine(index) == null) {
-            return false;
+    /** Ver {@link RouterBlockEntity#unlinkMachine(int, Player)}. */
+    int unlink(int index, @Nullable Player recipient) {
+        Level level = router.getLevel();
+        if (level == null || level.isClientSide || remotes.machine(index) == null) {
+            return -1;
         }
-        dropAtRouter(remotes.unlink(index));
+        List<ItemStack> cards = remotes.unlink(index);
+        deliver(recipient, cards);
         pruneCaches();
         remotesChanged();
         router.changed(NetworkManager.ALL_TYPES);
-        return true;
+        return cards.size();
     }
 
     /** Ver {@link RouterBlockEntity#unlinkGroup}. */

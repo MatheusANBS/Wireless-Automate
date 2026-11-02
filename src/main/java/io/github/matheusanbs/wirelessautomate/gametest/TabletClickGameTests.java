@@ -209,6 +209,8 @@ public final class TabletClickGameTests {
                     router.renameTarget(EditTarget.machine(router.remoteMachines().index(furnace)), "Forno do ferro");
                     router.renameTarget(EditTarget.group(groupOf(router, furnace)), "Fornos");
                     helper.assertValueEqual(RangeLinks.toggle(player, linker, furnace).status(),
+                            RangeLinks.Status.CONFIRM, "pedir confirmação");
+                    helper.assertValueEqual(RangeLinks.toggle(player, linker, furnace).status(),
                             RangeLinks.Status.UNLINKED, "desvincular");
                     args = messageArgs(helper, player, "item.wirelessautomate.linker.range.unlinked");
                     helper.assertTrue(args[0] instanceof Component machine && machine.getString().equals("Forno do ferro"),

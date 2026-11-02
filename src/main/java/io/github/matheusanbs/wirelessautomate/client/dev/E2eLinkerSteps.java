@@ -196,7 +196,7 @@ final class E2eLinkerSteps {
             // nada cai no chão: sem o upgrade e sem máquinas antes de tirar o bloco
             router.removeRangeUpgrade();
             while (!router.remoteMachines().machines().isEmpty()) {
-                router.unlinkMachine(0);
+                router.unlinkMachine(0, null);
             }
             for (BlockPos pos : List.of(linkAttached, linkChest, linkRouter, linkRouter.below())) {
                 level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());

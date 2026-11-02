@@ -48,11 +48,14 @@ import org.jetbrains.annotations.Nullable;
  * <p>Vínculos passam sempre por {@link RouterBlockEntity#linkMachine} e
  * {@link RouterBlockEntity#unlinkMachine(BlockPos)}, que mantêm o índice do mixin e os caches.
  *
- * <p>Ordem das recusas de uma máquina: roteador escolhido presente; {@code mayInteract} na máquina e
- * no roteador ({@link LinkRefusal#PROTECTED}); o próprio roteador, outro roteador, a máquina presa e
- * um bloco sem capability de um tipo carregado; depois {@link RangeRules#check} (upgrade, raio do
- * tier, distância e limite). As vagas do limite são as máquinas vinculadas dentro do raio (as de fora
- * não gastam vaga, como no motor).
+ * <p>Ordem das recusas de uma máquina: roteador escolhido presente; {@code mayBuild} do jogador (o modo aventura não
+ * vincula) e {@code mayInteract} na máquina e no roteador ({@link LinkRefusal#PROTECTED}); o próprio roteador, outro
+ * roteador, a máquina presa e um bloco sem capability de um tipo carregado; depois {@link RangeRules#check} (upgrade,
+ * raio do tier, distância e limite). As vagas do limite são as máquinas ativas ({@link RangeRules#used}), a conta da
+ * tela.
+ *
+ * <p>Desvincular uma máquina pede dois cliques ({@link UnlinkConfirm}); os cartões de um grupo que esvazia vão para
+ * quem clicou, e a mensagem diz quantos.
  */
 public final class RangeLinks {
     private static final String KEY = "item.wirelessautomate.linker.range.";
@@ -65,6 +68,8 @@ public final class RangeLinks {
         /** Escolheu o roteador (clique num roteador). */
         CHOSEN,
         LINKED,
+        /** Clique numa máquina vinculada: o próximo, na mesma, em até {@link UnlinkConfirm#WINDOW} ticks, desvincula. */
+        CONFIRM,
         UNLINKED,
         /** Vincular da área aplicado (mesmo com zero vinculadas). */
         AREA_DONE,
@@ -130,7 +135,7 @@ public final class RangeLinks {
      * vagas ({@code Linha de Minério · 7/32 máquinas}) ou por que ele ainda não vincula.
      */
     public static Result choose(ServerPlayer player, ItemStack stack, RouterBlockEntity router) {
-        if (!player.serverLevel().mayInteract(player, router.getBlockPos())) {
+        if (!mayEdit(player, router.getBlockPos())) {
             return refuse(player, Result.refused(LinkRefusal.PROTECTED), router, 0);
         }
         LinkerItem.setRouter(stack, GlobalPos.of(player.level().dimension(), router.getBlockPos()));
@@ -147,23 +152,32 @@ public final class RangeLinks {
 
     /**
      * Clique numa máquina no modo Vincular: vincula ao roteador escolhido ou, se já estava vinculada a
-     * ele, desvincula. Mostra o resultado na action bar.
+     * ele, pede confirmação; o segundo clique na mesma máquina, em até 3 s, desvincula ({@link UnlinkConfirm}).
+     * Mostra o resultado na action bar.
      */
     public static Result toggle(ServerPlayer player, ItemStack stack, BlockPos pos) {
         RouterBlockEntity router = chosen(player, stack);
+        boolean confirmed = UnlinkConfirm.take(player, router, pos);
         if (router == null) {
             return missing(player, stack);
         }
         ServerLevel level = player.serverLevel();
-        if (!level.mayInteract(player, pos) || !level.mayInteract(player, router.getBlockPos())) {
+        if (!mayEdit(player, pos) || !mayEdit(player, router.getBlockPos())) {
             return refuse(player, Result.refused(LinkRefusal.PROTECTED), router, 0);
         }
-        if (router.remoteMachines().contains(pos)) {
+        int index = router.remoteMachines().index(pos);
+        if (index >= 0) {
             Component machine = MachineNames.machine(router.remoteMachines(), pos);
+            if (!confirmed) {
+                UnlinkConfirm.ask(player, router, pos);
+                player.displayClientMessage(Component.translatable(KEY + "confirm_unlink", machine), true);
+                return Result.of(Status.CONFIRM);
+            }
             Component group = MachineNames.groupOf(router.remoteMachines(), pos);
-            router.unlinkMachine(pos);
-            player.displayClientMessage(Component.translatable(KEY + "unlinked", machine, group, routerName(router),
-                    used(router), max(router)), true);
+            int cards = router.unlinkMachine(index, player);
+            MutableComponent text = Component.translatable(KEY + "unlinked", machine, group, routerName(router),
+                    used(router), max(router));
+            player.displayClientMessage(withCards(text, cards), true);
             level.playSound(null, pos, SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.BLOCKS, 0.5F, 0.8F);
             return Result.of(Status.UNLINKED);
         }
@@ -211,7 +225,7 @@ public final class RangeLinks {
             return missing(player, stack);
         }
         ServerLevel level = player.serverLevel();
-        if (!level.mayInteract(player, router.getBlockPos())) {
+        if (!mayEdit(player, router.getBlockPos())) {
             return refuse(player, Result.refused(LinkRefusal.PROTECTED), router, 0);
         }
         LinkRefusal state = upgradeRefusal(router);
@@ -282,7 +296,7 @@ public final class RangeLinks {
      * Percorre só a lista do roteador (nada de varrer o mundo, e vale com o chunk da máquina
      * descarregado), tira a máquina inteira e não exige o upgrade valendo, para
      * dar para limpar a lista depois de tirá-lo. Basta poder mexer no roteador: desvincular não toca
-     * na máquina.
+     * na máquina. Os cartões dos grupos que esvaziam vão para o jogador, e a mensagem diz quantos.
      */
     private static Result unlinkArea(ServerPlayer player, ItemStack stack, LinkerArea area) {
         RouterBlockEntity router = chosen(player, stack);
@@ -290,7 +304,7 @@ public final class RangeLinks {
             return missing(player, stack);
         }
         ServerLevel level = player.serverLevel();
-        if (!level.mayInteract(player, router.getBlockPos())) {
+        if (!mayEdit(player, router.getBlockPos())) {
             return refuse(player, Result.refused(LinkRefusal.PROTECTED), router, 0);
         }
         LinkerBox box = area.box();
@@ -301,19 +315,29 @@ public final class RangeLinks {
                 inside.add(pos);
             }
         }
+        int[] cards = new int[1];
         router.batchChanges(() -> {
             for (BlockPos pos : inside) {
-                router.unlinkMachine(pos);
+                cards[0] += Math.max(0, router.unlinkMachine(router.remoteMachines().index(pos), player));
             }
         });
         Result result = new Result(Status.AREA_DONE, LinkRefusal.NONE, LinkerProblem.NONE, inside.size(), 0, 0, 0, 0, 0);
-        player.displayClientMessage(Component.translatable(KEY + "area.unlinked", inside.size(), routerName(router),
-                used(router), max(router)), true);
+        player.displayClientMessage(withCards(Component.translatable(KEY + "area.unlinked", inside.size(),
+                routerName(router), used(router), max(router)), cards[0]), true);
         if (!inside.isEmpty()) {
             level.playSound(null, player.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS,
                     0.5F, 0.8F);
         }
         return result;
+    }
+
+    /** {@code text}, mais {@code · 2 cartões devolvidos} quando {@code cards} é maior que zero. */
+    private static MutableComponent withCards(MutableComponent text, int cards) {
+        if (cards > 0) {
+            text.append(" · ").append(cards == 1 ? Component.translatable(KEY + "cards_returned.one")
+                    : Component.translatable(KEY + "cards_returned", cards));
+        }
+        return text;
     }
 
     /** {@code Vinculadas 9 · 2 já estavam · 3 fora do alcance · 2 além do limite · ...}. */
@@ -435,16 +459,17 @@ public final class RangeLinks {
                 0, 0, Integer.MAX_VALUE);
     }
 
-    /** Vagas usadas: as máquinas vinculadas dentro do raio (as de fora não gastam vaga). */
+    /** Vagas usadas ({@link RangeRules#used}): as ativas, dentro do raio e até o limite, como na tela. */
     public static int used(RouterBlockEntity router) {
-        int radius = radius(router);
-        int used = 0;
-        for (RemoteMachine machine : router.remoteMachines().machines()) {
-            if (distance(router, machine.pos()) <= radius) {
-                used++;
-            }
-        }
-        return used;
+        return RangeRules.used(router.machineReach());
+    }
+
+    /**
+     * O jogador pode mexer em {@code pos}: constrói ({@code mayBuild}: o modo aventura e o espectador não) e o
+     * {@code mayInteract} deixa (proteção do spawn, borda do mundo).
+     */
+    private static boolean mayEdit(ServerPlayer player, BlockPos pos) {
+        return player.mayBuild() && player.serverLevel().mayInteract(player, pos);
     }
 
     public static int distance(RouterBlockEntity router, BlockPos pos) {

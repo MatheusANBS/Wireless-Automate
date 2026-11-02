@@ -141,7 +141,7 @@ final class E2eRangeAttachedSteps {
             onServer(server -> {
                 RouterBlockEntity router = router(server, rangeRouter);
                 while (!router.remoteMachines().machines().isEmpty()) {
-                    router.unlinkMachine(0);
+                    router.unlinkMachine(0, null);
                 }
                 // só a presa no grupo: a escrita muda o perfil, e o grupo não sai vazio quando a presa o deixa
                 router.setMode(ResourceType.ITEM, Direction.NORTH, PortMode.EXTRACT);

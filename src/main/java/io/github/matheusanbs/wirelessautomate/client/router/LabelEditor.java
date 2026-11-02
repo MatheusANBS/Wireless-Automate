@@ -181,9 +181,15 @@ public final class LabelEditor {
 
     // ------------------------------------------------------------------ o pedido
 
-    /** O pedido ao servidor para dar {@code name} ao alvo {@code target} da tela {@code containerId}. */
-    public static RenameTargetPayload payload(int containerId, EditTarget target, @Nullable BlockPos machinePos, String name) {
-        return new RenameTargetPayload(containerId, target.kind(), target.id(), Optional.ofNullable(machinePos), name);
+    /**
+     * O pedido ao servidor para dar {@code name} ao alvo {@code target} da tela {@code containerId}; num grupo, com o
+     * bloco dele em {@code range}, para o servidor conferir que o grupo é o visto.
+     */
+    public static RenameTargetPayload payload(int containerId, EditTarget target, @Nullable BlockPos machinePos,
+            RangeView range, String name) {
+        RangeView.GroupView group = target.kind() == EditTarget.Kind.GROUP ? range.group(target.id()) : null;
+        return new RenameTargetPayload(containerId, target.kind(), target.id(), Optional.ofNullable(machinePos),
+                Optional.ofNullable(group == null ? null : group.block()), name);
     }
 
     /** Captura sem servidor: o snapshot com o nome do pedido no grupo ou na máquina dele. */

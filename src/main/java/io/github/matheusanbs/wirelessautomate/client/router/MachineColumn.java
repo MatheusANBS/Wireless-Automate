@@ -194,7 +194,7 @@ final class MachineColumn {
     }
 
     private void sendRename(EditTarget target, @Nullable BlockPos machinePos, String name) {
-        send(LabelEditor.payload(containerId.getAsInt(), target, machinePos, name));
+        send(LabelEditor.payload(containerId.getAsInt(), target, machinePos, range(), name));
     }
 
     /** Linha da lista clicada: o servidor troca o alvo e o snapshot seguinte traz o alvo e a face novos. */

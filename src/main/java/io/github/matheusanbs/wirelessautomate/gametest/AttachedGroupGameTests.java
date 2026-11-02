@@ -143,7 +143,7 @@ public final class AttachedGroupGameTests {
                             "de volta ao perfil, a presa não segue o grupo");
 
                     // Desvincular a última remota não leva o grupo da presa.
-                    helper.assertTrue(router.unlinkMachine(index), "não desvinculou");
+                    helper.assertTrue(router.unlinkMachine(index, null) >= 0, "não desvinculou");
                     helper.assertTrue(remotes.group(group.id()) != null, "o grupo da presa saiu com a última remota");
                 })
                 .thenSucceed();

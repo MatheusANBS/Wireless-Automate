@@ -573,18 +573,12 @@ public class RouterBlockEntity extends BlockEntity {
 
     // ------------------------------------------------------------------ máquinas remotas
 
-    /**
-     * As máquinas remotas e os grupos. Para ler; mude pelos métodos deste roteador, que salvam e avisam
-     * o motor.
-     */
+    /** As máquinas remotas e os grupos. Para ler; mude pelos métodos deste roteador, que salvam e avisam o motor. */
     public RemoteMachines remoteMachines() {
         return remotes;
     }
 
-    /**
-     * Atalho de {@link #linkMachine(BlockPos, UUID)} sem rede: um grupo novo nasce com as faces sem
-     * rede (testes e e2e, que não têm jogador).
-     */
+    /** Atalho de {@link #linkMachine(BlockPos, UUID)} sem rede (testes e e2e, que não têm jogador). */
     public boolean linkMachine(BlockPos pos) {
         return linkMachine(pos, null);
     }
@@ -600,9 +594,12 @@ public class RouterBlockEntity extends BlockEntity {
         return range.link(pos, network);
     }
 
-    /** Desvincula a máquina do índice {@code index}; um grupo que esvazia sai e os cartões caem no roteador. */
-    public boolean unlinkMachine(int index) {
-        return range.unlink(index);
+    /**
+     * Desvincula a máquina do índice {@code index}; um grupo que esvazia sai e os cartões dele vão para
+     * {@code recipient} (sem ele, caem no roteador). Devolve quantos cartões saíram, ou −1 se o índice não vale.
+     */
+    public int unlinkMachine(int index, @Nullable Player recipient) {
+        return range.unlink(index, recipient);
     }
 
     /** Desvincula o grupo ({@link RemoteMachines#unlinkGroup}); os cartões vão para {@code recipient} (sem ele, no roteador). */
@@ -610,9 +607,14 @@ public class RouterBlockEntity extends BlockEntity {
         return range.unlinkGroup(groupId, recipient);
     }
 
-    /** Como {@link #unlinkMachine(int)}, pela posição da máquina. */
+    /** Como {@link #unlinkMachine(int, Player)}, pela posição da máquina e sem jogador; se desvinculou. */
     public boolean unlinkMachine(BlockPos pos) {
-        return unlinkMachine(remotes.index(pos));
+        return unlinkMachine(remotes.index(pos), null) >= 0;
+    }
+
+    /** A config recarregou: descarta os caches das remotas que deixaram de valer (raio ou limite menor, sem upgrade). */
+    public void pruneRemoteCaches() {
+        range.pruneCaches();
     }
 
     /** Tira a exceção da máquina do índice {@code index}: ela volta a seguir o perfil do grupo. */
@@ -741,10 +743,7 @@ public class RouterBlockEntity extends BlockEntity {
 
     /** Estado do upgrade para a tela. Só no servidor; no cliente, {@link ChunkLoadState#NONE}. */
     public ChunkLoadState chunkLoadState() {
-        if (level == null || level.isClientSide) {
-            return ChunkLoadState.NONE;
-        }
-        return RouterChunkLoader.get().state(this);
+        return level == null || level.isClientSide ? ChunkLoadState.NONE : RouterChunkLoader.get().state(this);
     }
 
     /** O estado do upgrade mudou (ativo, limite, desligado): a tela aberta remonta o snapshot. */

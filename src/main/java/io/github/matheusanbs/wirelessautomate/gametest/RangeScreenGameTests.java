@@ -246,8 +246,8 @@ public final class RangeScreenGameTests {
                                 SelectTargetPayload.machine(menu.containerId, index, barrel)), "não escolheu o barril");
 
                         helper.assertFalse(ModPayloads.handleUnlinkMachine(player,
-                                new UnlinkMachinePayload(menu.containerId, index, helper.absolutePos(FURNACE_A))),
-                                "desvinculou com a posição de outra máquina");
+                                new UnlinkMachinePayload(menu.containerId, index, barrel.above())),
+                                "desvinculou uma posição que não está vinculada");
                         helper.assertTrue(router.remoteMachines().contains(barrel), "o barril saiu pela posição errada");
                         helper.assertTrue(ModPayloads.handleUnlinkMachine(player,
                                 new UnlinkMachinePayload(menu.containerId, index, barrel)), "não desvinculou");

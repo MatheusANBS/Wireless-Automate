@@ -41,7 +41,7 @@ final class TargetLine {
         this.model = model;
         this.layout = layout;
         this.label = new LabelEditor((target, pos, name) ->
-                actions.send(LabelEditor.payload(actions.containerId(), target, pos, name)));
+                actions.send(LabelEditor.payload(actions.containerId(), target, pos, model.range(), name)));
     }
 
     /** A caixa do nome do grupo ou da máquina do alvo, que abre pelo ✎. */

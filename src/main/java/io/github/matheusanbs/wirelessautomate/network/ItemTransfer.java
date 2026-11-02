@@ -26,7 +26,7 @@ import org.jetbrains.annotations.Nullable;
  * backoff de "cheio" o deixaria de fora também para o B. Pelo mesmo motivo, a inserção simulada que
  * não aceita nada de um item só faz o destino dormir se ele está cheio de verdade: sem lugar para outro
  * item, ou travado, com um lugar que aceita este item e mesmo assim o recusou
- * ({@link ItemInsertPlan#roomForOthers}). A máquina que recusa o item pelo
+ * ({@link ItemInsertPlan#roomForOthers}, guardado em {@link Port#full}). A máquina que recusa o item pelo
  * tipo ({@link ItemInsertPlan#refusesItem}: a Salvaging Table do Apotheosis com o que não se desmonta,
  * uma máquina com o que não tem receita) ou que tem lugar só para outros (a entrada da fornalha com
  * ferro, diante do ouro) é pulada, e a recusa fica anotada nas dicas dela ({@link ItemHints}) até a
@@ -215,16 +215,18 @@ final class ItemTransfer {
 
     /**
      * O destino de inventário {@code target} não aceitou nada de {@code item}. Se ele recusa o item pelo tipo
-     * ({@link ItemInsertPlan#refusesItem}) ou ainda tem lugar para outros ({@link ItemInsertPlan#roomForOthers}),
+     * ({@link ItemInsertPlan#refusesItem}) ou ainda tem lugar para outros ({@link ItemInsertPlan#roomForOthers};
+     * o "cheio" fica guardado em {@link Port#full} até a máquina mudar),
      * a recusa é só deste item: fica anotada nas dicas dele ({@link ItemHints}) e ele não dorme, porque o próximo
      * item pode entrar. Só o destino cheio de verdade dorme.
      */
     static void refusedByTarget(Port destination, IItemHandler target, ItemStack item, long now) {
-        if (PLAN.refusesItem(target, item) || ItemInsertPlan.roomForOthers(target, item)) {
+        if (PLAN.refusesItem(target, item) || !destination.full && PLAN.roomForOthers(target, item)) {
             destination.hints().refuse(item);
             stepRefusals++;
             visitRefusals++;
         } else {
+            destination.full = true;
             destination.destinationBackoff.sleep(now);
             destinationSlept = true;
         }

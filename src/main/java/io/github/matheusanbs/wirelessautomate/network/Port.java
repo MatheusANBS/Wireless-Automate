@@ -72,6 +72,11 @@ final class Port {
      */
     @Nullable ItemHints hints;
     /**
+     * Este destino de itens recusou um item sem ter lugar para outros: está cheio de verdade, e a próxima recusa
+     * dorme sem reler os slots ({@link ItemInsertPlan#roomForOthers}). A mudança na máquina apaga.
+     */
+    boolean full;
+    /**
      * Motivo do último sono da origem, gravado onde ela dorme ({@link SourceSleep}): {@code true} se
      * todos os destinos dormiam ou se ela ofereceu algo e foi recusada (espera destino); {@code false}
      * se não tinha o que dar (vazia, filtro ou estoque da própria origem, sem máquina). Uma mudança na

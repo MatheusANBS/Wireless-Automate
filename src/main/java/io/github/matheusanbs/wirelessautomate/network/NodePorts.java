@@ -450,6 +450,7 @@ final class NodePorts {
         // O inventário mudou: a volta sem achar nada recomeça do zero.
         port.idleSlots = 0;
         // E o que o destino recusou pode caber agora (o ferro da entrada acabou, e o ouro entra).
+        port.full = false;
         if (port.hints != null) {
             port.hints.clearRefused();
         }

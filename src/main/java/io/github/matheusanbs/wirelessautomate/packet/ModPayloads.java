@@ -386,7 +386,7 @@ public final class ModPayloads {
         if (index < 0) {
             return false;
         }
-        boolean unlinked = host.editedRouter().unlinkMachine(index, null) >= 0;
+        boolean unlinked = host.editedRouter().unlinkMachine(index, player) >= 0;
         // Os índices depois dela mudaram: o alvo segue pela posição, ou volta para a presa.
         host.validTarget();
         host.editApplied();

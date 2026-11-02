@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
@@ -38,7 +37,6 @@ import org.jetbrains.annotations.Nullable;
 public final class TabletTree {
     public static final int MAX_OPEN = 64;
     public static final int MAX_GROUPS = 256;
-    private static final ResourceLocation AIR = ResourceLocation.withDefaultNamespace("air");
 
     /** Um grupo de um roteador. */
     public record GroupKey(NodeKey node, int group) {
@@ -180,9 +178,7 @@ public final class TabletTree {
         NodeKey key = entry.key();
         emitter.start(entry, parent, rows, lives, sample, now);
         try {
-            // A presa num grupo aparece mesmo com o bloco quebrado (como uma remota que sumiu); sem grupo, só com bloco.
-            int attachedGroup = entry.attachedGroup();
-            return TreeOrder.plan(attachedGroup >= 0 || !entry.machine().equals(AIR), attachedGroup, emitter,
+            return TreeOrder.plan(entry.showsAttached(), entry.attachedGroup(), emitter,
                     id -> collapsed.contains(new GroupKey(key, id)), id -> showAll.contains(new GroupKey(key, id)),
                     budget, emitter);
         } finally {

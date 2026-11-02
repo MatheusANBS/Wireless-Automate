@@ -72,6 +72,7 @@ public final class NodeIndex extends SavedData {
     public static final int INSERT = 1;
     public static final int STORAGE = 2;
     private static final int ROLES_PER_TYPE = 3;
+    private static final ResourceLocation AIR_ID = ResourceLocation.withDefaultNamespace("air");
     private static final ResourceType[] TYPES = ResourceType.values();
 
     /** Dimensão e posição de um roteador. */
@@ -222,6 +223,23 @@ public final class NodeIndex extends SavedData {
         /** Bloco da máquina onde o roteador está preso (ar se não se sabe). */
         public ResourceLocation machine() {
             return machine;
+        }
+
+        /**
+         * A presa aparece no Tablet (na árvore e na visão por máquinas): com um bloco na frente, ou com o membro presa
+         * num grupo, mesmo com ar (a máquina quebrada fica, como uma remota que sumiu).
+         */
+        public boolean showsAttached() {
+            return remotes.attachedGroup() >= 0 || !machine.equals(AIR_ID);
+        }
+
+        /** O bloco da presa no Tablet: o da frente; com ar, o do grupo dela (ar sem grupo). */
+        public ResourceLocation attachedBlock() {
+            if (!machine.equals(AIR_ID)) {
+                return machine;
+            }
+            int g = remotes.groupIndex(remotes.attachedGroup());
+            return g < 0 ? machine : remotes.groupBlock(g);
         }
 
         public @Nullable UUID placedBy() {

@@ -507,6 +507,99 @@ public final class TabletMarkedGameTests {
         });
     }
 
+    /**
+     * O Desfazer não devolve a exceção da presa depois que o bloco da frente mudou: a presa foi para o grupo do bloco
+     * novo, e a exceção era do antigo.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void undoKeepsTheAttachedOutAfterTheBlockChanged(GameTestHelper helper) {
+        run(helper, scene -> {
+            RouterBlockEntity target = scene.target();
+            int chests = chestGroupWithRemote(helper, target);
+            RemoteMachines remotes = target.remoteMachines();
+            MachineKey attached = MachineKey.attached(scene.targetKey());
+            helper.assertTrue(paste(scene, List.of(), machines(attached)) == 1, "a presa: " + text(scene.menu()));
+            helper.assertTrue(remotes.attached().hasException(), "a presa colada não virou exceção");
+            helper.assertTrue(paste(scene, List.of(), new TabletMarks(List.of(attached),
+                    List.of(new GroupKey(scene.targetKey(), chests)), List.of())) == 1,
+                    "o grupo com a presa: " + text(scene.menu()));
+            helper.assertFalse(remotes.attached().hasException(), "a exceção igual ao perfil ficou");
+
+            helper.setBlock(RangeTestSupport.CHEST, Blocks.BARREL);
+            int barrels = remotes.attached().group();
+            helper.assertTrue(barrels != chests, "a presa não foi para o grupo do barril");
+            profile(scene.player(), Action.UNDO, null, List.of(), TabletMarks.EMPTY);
+            eq(helper, remotes.attached().group(), barrels, "a presa voltou de grupo");
+            helper.assertFalse(remotes.attached().hasException(),
+                    "o Desfazer pôs a exceção do baú na presa do grupo do barril");
+            eq(helper, remotes.group(chests).profile().face(ResourceType.ITEM, RemoteSide.LEFT).mode(), PortMode.NONE,
+                    "o perfil dos baús não voltou");
+        });
+    }
+
+    /**
+     * O roteador inteiro e o grupo da presa no mesmo colar: a exceção que a presa tinha antes não conta como mantida
+     * quando o colar a iguala ao perfil, e o Desfazer volta tudo ao que era (a presa, a exceção dela, os perfis e a
+     * remota).
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void pasteOnRouterAndAttachedGroupUndoesEverything(GameTestHelper helper) {
+        run(helper, scene -> {
+            RouterBlockEntity target = scene.target();
+            int chests = chestGroupWithRemote(helper, target);
+            RemoteMachines remotes = target.remoteMachines();
+            target.configureFace(EditTarget.ATTACHED_TARGET, ResourceType.ITEM, Direction.SOUTH, PortMode.INSERT, 0,
+                    RedstoneMode.IGNORE);
+            helper.assertTrue(remotes.attached().hasException(), "a presa sem exceção");
+            RouterPreset attachedBefore = RouterPreset.copyOf(target);
+            MachineConfig exceptionBefore = remotes.attached().exception().copy();
+            List<MachineConfig> profilesBefore = new ArrayList<>();
+            remotes.groups().forEach(group -> profilesBefore.add(group.profile().copy()));
+
+            helper.assertTrue(paste(scene, List.of(scene.targetKey()), new TabletMarks(List.of(),
+                    List.of(new GroupKey(scene.targetKey(), chests)), List.of())) == 2,
+                    "o roteador e o grupo: " + text(scene.menu()));
+            eq(helper, remotes.group(chests).profile().face(ResourceType.ITEM, RemoteSide.LEFT).mode(), PortMode.INSERT,
+                    "o perfil colado");
+            // A presa colada pelo roteador e o perfil colado no grupo ficam iguais: a exceção some e não é "mantida".
+            helper.assertFalse(remotes.attached().hasException(), "a exceção igual ao perfil ficou");
+            helper.assertFalse(text(scene.menu()).contains("exceptions_kept"),
+                    "contou como mantida a exceção que sumiu: " + text(scene.menu()));
+
+            helper.assertTrue(profile(scene.player(), Action.UNDO, null, List.of(), TabletMarks.EMPTY) >= 1,
+                    "não desfez: " + text(scene.menu()));
+            for (int g = 0; g < profilesBefore.size(); g++) {
+                helper.assertTrue(remotes.groupAt(g).profile().sameAs(profilesBefore.get(g)),
+                        "o perfil do grupo " + remotes.groupAt(g).id() + " não voltou");
+            }
+            helper.assertTrue(remotes.attached().hasException() && remotes.attached().exception().sameAs(exceptionBefore),
+                    "a exceção da presa não voltou");
+            helper.assertTrue(RouterPreset.copyOf(target).equals(attachedBefore), "a presa não voltou");
+            helper.assertFalse(remote(helper, target, REMOTE_CHEST).hasException(), "o baú vinculado ganhou exceção");
+        });
+    }
+
+    /** Origem sem o quadro (formato antigo): a presa marcada junto com o grupo dela recebe o colar como presa. */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void oldProfileStillPastesOnTheAttachedMarkedWithItsGroup(GameTestHelper helper) {
+        run(helper, scene -> {
+            ItemStack tablet = scene.player().getInventory().getItem(0);
+            ProfileSource from = tablet.get(ModDataComponents.PROFILE_SOURCE.get());
+            tablet.set(ModDataComponents.PROFILE_SOURCE.get(),
+                    new ProfileSource(from.nodeName(), from.machine(), from.origin()));
+            RouterBlockEntity target = scene.target();
+            int chests = chestGroupWithRemote(helper, target);
+            MachineKey attached = MachineKey.attached(scene.targetKey());
+            helper.assertTrue(paste(scene, List.of(), new TabletMarks(List.of(attached),
+                    List.of(new GroupKey(scene.targetKey(), chests)), List.of())) == 1,
+                    "a presa: " + text(scene.menu()));
+            eq(helper, target.face(ResourceType.ITEM, Direction.EAST).mode(), PortMode.INSERT, "a presa não recebeu");
+            eq(helper, target.remoteMachines().group(chests).profile().face(ResourceType.ITEM, RemoteSide.LEFT).mode(),
+                    PortMode.NONE, "colou no grupo sem o quadro");
+            helper.assertTrue(text(scene.menu()).contains("copy_again"), "aviso: " + text(scene.menu()));
+        });
+    }
+
     @GameTest(template = "empty", timeoutTicks = 100)
     public static void limitsOfThePacketsAndOfThePlayer(GameTestHelper helper) {
         RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), helper.getLevel().registryAccess());

@@ -508,8 +508,17 @@ public final class TabletTreeGameTests {
                     try {
                         TabletSnapshot.Page page = fresh(menu);
                         eq(helper, page.rows().rows().size(), loadedRows, "linhas com o roteador descarregado");
-                        helper.assertTrue(page.rows().rows().stream().anyMatch(row -> row instanceof Attached attached
-                                && attached.side().isEmpty()), "o lado da presa sem o roteador");
+                        // A presa logo depois da linha do grupo dela, do índice, sem o lado.
+                        List<Row> rows = page.rows().rows();
+                        int group = router.remoteMachines().attached().group();
+                        int at = -1;
+                        for (int i = 0; i < rows.size(); i++) {
+                            if (rows.get(i) instanceof Group g && g.id() == group) {
+                                at = i;
+                            }
+                        }
+                        helper.assertTrue(at >= 0 && at + 1 < rows.size() && rows.get(at + 1) instanceof Attached attached
+                                && attached.side().isEmpty(), "a presa sem o roteador fora do lugar: " + rows);
                         eq(helper, page.rows().lives(), List.of(MachineLive.still(MachineStatus.UNLOADED)),
                                 "a máquina descarregada");
                     } finally {

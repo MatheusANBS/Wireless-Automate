@@ -32,7 +32,7 @@ final class PasteUndo {
      * perfil colado num grupo pode igualar e apagar a exceção dela).
      */
     record State(@Nullable RouterPreset attached, Int2ObjectMap<MachineConfig> profiles,
-            Long2ObjectMap<MachineConfig> exceptions) {
+            Long2ObjectMap<MachineConfig> exceptions, int attachedGroup) {
         static State of(RouterBlockEntity router, boolean attached, boolean remotes) {
             Int2ObjectMap<MachineConfig> profiles = new Int2ObjectLinkedOpenHashMap<>();
             Long2ObjectMap<MachineConfig> exceptions = new Long2ObjectLinkedOpenHashMap<>();
@@ -51,14 +51,22 @@ final class PasteUndo {
                     exceptions.put(ATTACHED, member.exception().copy());
                 }
             }
-            return new State(attached ? RouterPreset.copyOf(router) : null, profiles, exceptions);
+            AttachedMember member = router.remoteMachines().attached();
+            return new State(attached ? RouterPreset.copyOf(router) : null, profiles, exceptions,
+                    member == null ? -1 : member.group());
+        }
+
+        /** A presa tinha exceção (só lida com as remotas). */
+        boolean hadAttachedException() {
+            return exceptions.containsKey(ATTACHED);
         }
     }
 
     private record ProfileChange(int group, MachineConfig before, MachineConfig after) {
     }
 
-    private record ExceptionChange(long pos, @Nullable MachineConfig before, @Nullable MachineConfig after) {
+    /** {@code group}: na exceção da presa, o grupo dela no colar (uma exceção só vale no grupo de onde veio). */
+    private record ExceptionChange(long pos, @Nullable MachineConfig before, @Nullable MachineConfig after, int group) {
     }
 
     /** A presa antes e depois; {@code null} se o colar não a atingiu. */
@@ -66,13 +74,16 @@ final class PasteUndo {
     private final @Nullable RouterPreset attachedAfter;
     private final List<ProfileChange> profiles;
     private final List<ExceptionChange> exceptions;
+    /** O grupo da presa depois do colar (−1 sem membro): com outro, o bloco da frente mudou e a presa não volta. */
+    private final int attachedGroup;
 
     private PasteUndo(@Nullable RouterPreset attachedBefore, @Nullable RouterPreset attachedAfter,
-            List<ProfileChange> profiles, List<ExceptionChange> exceptions) {
+            List<ProfileChange> profiles, List<ExceptionChange> exceptions, int attachedGroup) {
         this.attachedBefore = attachedBefore;
         this.attachedAfter = attachedAfter;
         this.profiles = profiles;
         this.exceptions = exceptions;
+        this.attachedGroup = attachedGroup;
     }
 
     /**
@@ -94,14 +105,14 @@ final class PasteUndo {
             MachineConfig was = before.exceptions().get(pos);
             MachineConfig now = after.exceptions().get(pos);
             if (!same(was, now)) {
-                exceptions.add(new ExceptionChange(pos, was, now));
+                exceptions.add(new ExceptionChange(pos, was, now, pos == ATTACHED ? after.attachedGroup() : -1));
             }
         }
         if (!attached && profiles.isEmpty() && exceptions.isEmpty()) {
             return null;
         }
         return new PasteUndo(attached ? before.attached() : null, attached ? after.attached() : null,
-                List.copyOf(profiles), List.copyOf(exceptions));
+                List.copyOf(profiles), List.copyOf(exceptions), after.attachedGroup());
     }
 
     /**
@@ -111,7 +122,9 @@ final class PasteUndo {
     int restore(RouterBlockEntity router) {
         int[] restored = new int[1];
         router.batchChanges(() -> {
-            if (attachedBefore != null && RouterPreset.copyOf(router).equals(attachedAfter)) {
+            AttachedMember now = router.remoteMachines().attached();
+            if (attachedBefore != null && (now == null ? -1 : now.group()) == attachedGroup
+                    && RouterPreset.copyOf(router).equals(attachedAfter)) {
                 attachedBefore.restoreTo(router);
                 restored[0]++;
             }
@@ -126,7 +139,8 @@ final class PasteUndo {
             for (ExceptionChange change : exceptions) {
                 if (change.pos() == ATTACHED) {
                     AttachedMember member = remotes.attached();
-                    if (member != null && same(member.exception(), change.after())
+                    // Com o bloco da frente trocado, a presa está noutro grupo: a exceção do antigo não vale nele.
+                    if (member != null && member.group() == change.group() && same(member.exception(), change.after())
                             && router.setAttachedException(change.before())) {
                         restored[0]++;
                     }

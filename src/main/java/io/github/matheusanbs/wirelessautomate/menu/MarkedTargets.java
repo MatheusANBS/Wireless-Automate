@@ -52,11 +52,13 @@ final class MarkedTargets {
     /**
      * O que vale num roteador carregado.
      *
-     * @param attached a presa
-     * @param groups   os ids dos grupos inteiros
-     * @param machines os índices das máquinas fora deles
+     * @param attached        a presa
+     * @param groups          os ids dos grupos inteiros
+     * @param machines        os índices das máquinas fora deles
+     * @param attachedInGroup a presa estava marcada e foi como parte do grupo inteiro dela (então {@code attached} é
+     *                        falso); quem não pode atingir os grupos a trata como a presa
      */
-    record Resolved(boolean attached, IntArrayList groups, IntArrayList machines) {
+    record Resolved(boolean attached, IntArrayList groups, IntArrayList machines, boolean attachedInGroup) {
         boolean remote() {
             return !groups.isEmpty() || !machines.isEmpty();
         }
@@ -155,7 +157,8 @@ final class MarkedTargets {
                 groups.add(id);
             }
         }
-        if (attached && groups.contains(attachedGroup)) {
+        boolean attachedInGroup = attached && groups.contains(attachedGroup);
+        if (attachedInGroup) {
             attached = false;
         }
         IntPredicate inGroup = i -> groups.contains(all.get(i).group());
@@ -165,7 +168,7 @@ final class MarkedTargets {
                 machines.add(i);
             }
         }
-        return new Resolved(attached, new IntArrayList(groups), machines);
+        return new Resolved(attached, new IntArrayList(groups), machines, attachedInGroup);
     }
 
     /**

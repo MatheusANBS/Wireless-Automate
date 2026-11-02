@@ -22,6 +22,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.Containers;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -75,6 +76,21 @@ final class RouterRange {
         remotesChanged();
         router.changed(NetworkManager.ALL_TYPES);
         return true;
+    }
+
+    /** Ver {@link RouterBlockEntity#unlinkGroup}. */
+    RemoteMachines.@Nullable GroupUnlink unlinkGroup(int groupId, @Nullable Player recipient) {
+        RemoteMachines.GroupUnlink result = remotes.unlinkGroup(groupId);
+        if (result == null || !result.changed()) {
+            return result;
+        }
+        deliver(recipient, result.cards());
+        if (result.machines() > 0) {
+            pruneCaches();
+            remotesChanged();
+        }
+        router.changed(NetworkManager.ALL_TYPES);
+        return result;
     }
 
     /**
@@ -182,8 +198,8 @@ final class RouterRange {
         return RemoteCapabilities.any(level, machine.pos()) ? block : null;
     }
 
-    /** Ver {@link RouterBlockEntity#updateReplaced}. */
-    RemoteMachines.Regroup updateReplaced(List<Integer> indices) {
+    /** Ver {@link RouterBlockEntity#updateReplaced(List, Player)}. */
+    RemoteMachines.Regroup updateReplaced(List<Integer> indices, @Nullable Player recipient) {
         Level level = router.getLevel();
         if (level == null || level.isClientSide) {
             return RemoteMachines.Regroup.EMPTY;
@@ -206,11 +222,28 @@ final class RouterRange {
             // O replacedBy conferiu o chunk carregado.
             storeFront(machine, level.getBlockState(machine.pos()));
         }
-        dropAtRouter(result.cards());
+        deliver(recipient, result.cards());
         pruneCaches();
         remotesChanged();
         router.changed(NetworkManager.ALL_TYPES);
         return result;
+    }
+
+    /**
+     * Entrega as pilhas a {@code recipient}: no inventário e, o que não couber, aos pés dele. Sem jogador (testes e
+     * comandos), caem no roteador.
+     */
+    private void deliver(@Nullable Player recipient, List<ItemStack> stacks) {
+        if (recipient == null) {
+            dropAtRouter(stacks);
+            return;
+        }
+        for (ItemStack stack : stacks) {
+            recipient.getInventory().add(stack);
+            if (!stack.isEmpty()) {
+                recipient.drop(stack, false);
+            }
+        }
     }
 
     private void dropAtRouter(List<ItemStack> stacks) {

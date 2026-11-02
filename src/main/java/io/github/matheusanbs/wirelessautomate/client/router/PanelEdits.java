@@ -8,6 +8,7 @@ import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.FaceView;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.packet.FaceActionPayload;
+import io.github.matheusanbs.wirelessautomate.packet.MachinePastePayload;
 import io.github.matheusanbs.wirelessautomate.packet.OpenFilterPayload;
 import io.github.matheusanbs.wirelessautomate.packet.PanelNoticePayload;
 import io.github.matheusanbs.wirelessautomate.packet.PanelNotices;
@@ -154,6 +155,7 @@ final class PanelEdits {
                     notice.face(), Optional.empty()));
             case UNDO_PASTE -> actions.undoPaste();
             case RESTORE_IDLE_NETWORKS -> actions.clearIdleNetworks(true);
+            case UNDO_MACHINE_PASTE -> actions.send(MachinePastePayload.undo(notice.containerId()));
             case NONE -> {
             }
         }

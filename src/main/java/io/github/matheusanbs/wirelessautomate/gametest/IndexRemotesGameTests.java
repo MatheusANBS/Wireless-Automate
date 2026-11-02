@@ -164,7 +164,7 @@ public final class IndexRemotesGameTests {
                     // O Atualizar: a fornalha virou alto-forno e passa para um grupo novo.
                     helper.setBlock(FURNACE_A, Blocks.BLAST_FURNACE.defaultBlockState()
                             .setValue(AbstractFurnaceBlock.FACING, Direction.EAST));
-                    router.updateReplaced(List.of(0));
+                    router.updateReplaced(List.of(0), null);
                     version = bumped(helper, version, "mudar o grupo");
                     remotes = entry(helper, router).remotes();
                     int blasts = groupOf(router, helper.absolutePos(FURNACE_A));

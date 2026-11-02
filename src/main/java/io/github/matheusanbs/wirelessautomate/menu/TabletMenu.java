@@ -255,6 +255,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
     public void removed(Player player) {
         super.removed(player);
         IdleNetworkUndo.closed(player, this);
+        MachinePasteUndo.closed(player, this);
         if (flows != null) {
             flows.stop();
         }

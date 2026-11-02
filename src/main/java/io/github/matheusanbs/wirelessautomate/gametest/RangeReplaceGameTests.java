@@ -135,7 +135,7 @@ public final class RangeReplaceGameTests {
                     blastAt(helper, FURNACE_A, Direction.WEST);
 
                     int index = index(helper, router, FURNACE_A);
-                    RemoteMachines.Regroup result = router.updateReplaced(List.of(index));
+                    RemoteMachines.Regroup result = router.updateReplaced(List.of(index), null);
                     helper.assertValueEqual(result.destinations().get(index), furnaces, "destino");
                     helper.assertTrue(result.cards().isEmpty(), "cartões soltos");
                     helper.assertTrue(router.remoteMachines().group(furnaces) == group, "o grupo não é o mesmo");
@@ -166,7 +166,7 @@ public final class RangeReplaceGameTests {
                     router.setCard(EditTarget.group(furnaces), ResourceType.ITEM, Direction.SOUTH, 0, itemCard());
                     blastAt(helper, FURNACE_A, Direction.WEST);
 
-                    router.updateReplaced(List.of(index(helper, router, FURNACE_A)));
+                    router.updateReplaced(List.of(index(helper, router, FURNACE_A)), null);
                     int blasts = groupOf(router, helper.absolutePos(FURNACE_A));
                     MachineGroup group = router.remoteMachines().group(blasts);
                     helper.assertTrue(blasts != furnaces && group.block().equals(id(Blocks.BLAST_FURNACE)), "grupo novo");
@@ -215,7 +215,7 @@ public final class RangeReplaceGameTests {
                     blastAt(helper, FURNACE_A, Direction.EAST);
                     blastAt(helper, FURNACE_B, Direction.SOUTH);
 
-                    RemoteMachines.Regroup result = router.updateReplaced(List.of(indexA, index(helper, router, FURNACE_B)));
+                    RemoteMachines.Regroup result = router.updateReplaced(List.of(indexA, index(helper, router, FURNACE_B)), null);
                     helper.assertValueEqual(groupOf(router, helper.absolutePos(FURNACE_A)), blasts, "A no grupo existente");
                     helper.assertValueEqual(groupOf(router, helper.absolutePos(FURNACE_B)), blasts, "B no grupo existente");
                     helper.assertTrue(router.remoteMachines().group(furnaces) == null, "o grupo vazio ficou");
@@ -391,7 +391,7 @@ public final class RangeReplaceGameTests {
                         helper.assertValueEqual(groupOf(router, a), furnaces, "A mudou de grupo pela posição errada");
                         helper.assertFalse(ModPayloads.handleUpdateMachine(player,
                                 UpdateMachinePayload.machine(menu.containerId, indexB, b)), "atualizou a sumida");
-                        helper.assertTrue(router.updateReplaced(List.of(indexB)).isEmpty(), "o roteador atualizou a sumida");
+                        helper.assertTrue(router.updateReplaced(List.of(indexB), null).isEmpty(), "o roteador atualizou a sumida");
                         helper.assertValueEqual(groupOf(router, b), furnaces, "a sumida mudou de grupo");
                         helper.assertTrue(router.remoteMachines().group(furnaces).block().equals(id(Blocks.FURNACE)),
                                 "o grupo trocou de bloco com uma sumida");
@@ -418,7 +418,7 @@ public final class RangeReplaceGameTests {
                     blastAt(helper, FURNACE_A, Direction.EAST);
                     blastAt(helper, FURNACE_B, Direction.SOUTH);
 
-                    router.updateReplaced(List.of(index(helper, router, FURNACE_A), index(helper, router, FURNACE_B)));
+                    router.updateReplaced(List.of(index(helper, router, FURNACE_A), index(helper, router, FURNACE_B)), null);
                     int blasts = groupOf(router, helper.absolutePos(FURNACE_A));
                     helper.assertTrue(blasts != furnaces, "A ficou no grupo antigo");
                     helper.assertValueEqual(groupOf(router, helper.absolutePos(FURNACE_B)), blasts, "B noutro grupo novo");
@@ -521,7 +521,7 @@ public final class RangeReplaceGameTests {
                     router.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
                     linkInNetwork(helper, router, REMOTE_CHEST);
                     blastAt(helper, REMOTE_CHEST, Direction.EAST);
-                    helper.assertFalse(router.updateReplaced(List.of(index(helper, router, REMOTE_CHEST))).isEmpty(),
+                    helper.assertFalse(router.updateReplaced(List.of(index(helper, router, REMOTE_CHEST)), null).isEmpty(),
                             "não atualizou");
                     // Trás, no quadro canônico (frente = Norte), é o Sul.
                     profile(helper, router, REMOTE_CHEST, Direction.SOUTH, PortMode.INSERT);

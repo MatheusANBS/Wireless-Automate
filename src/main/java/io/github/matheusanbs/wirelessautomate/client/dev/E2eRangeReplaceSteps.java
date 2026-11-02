@@ -105,7 +105,7 @@ final class E2eRangeReplaceSteps {
             onServer(server -> {
                 var router = router(server, rangeRouter);
                 int index = router.remoteMachines().index(rangeFurnace);
-                router.updateReplaced(List.of(index));
+                router.updateReplaced(List.of(index), null);
                 router.revertToProfile(index);
                 return null;
             });

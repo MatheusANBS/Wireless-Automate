@@ -6,10 +6,13 @@ import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.range.MachineCaches;
+import io.github.matheusanbs.wirelessautomate.range.RangeLinks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
@@ -17,6 +20,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -344,6 +348,54 @@ public final class RangeEngineGameTests {
                     } finally {
                         radius.set(original[0]);
                         NetworkManager.configChanged();
+                    }
+                })
+                .thenSucceed();
+    }
+    /**
+     * Baixar o limite na config: a tela e o Vinculador contam as mesmas vagas (as ativas), e os caches da remota que
+     * passou do limite são descartados na recarga. Como o {@link #configRadiusRereadsPorts}, tudo num passo síncrono,
+     * num Elite.
+     */
+    @GameTest(template = "empty", timeoutTicks = 300, batch = "wirelessautomate_config")
+    public static void configLimitCountsAndPrunes(GameTestHelper helper) {
+        RouterBlockEntity router = chestWithRouter(helper, RouterTier.ELITE);
+        router.setNetworkId(NetworkSavedData.get(helper.getLevel().getServer()).create(UUID.randomUUID(), "limite").id());
+        helper.setBlock(FURNACE_A, Blocks.FURNACE);
+        helper.setBlock(FURNACE_B, Blocks.FURNACE);
+        var max = Config.TIERS.get(RouterTier.ELITE).maxMachines();
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    linkInNetwork(helper, router, FURNACE_A);
+                    linkInNetwork(helper, router, FURNACE_B);
+                    profile(helper, router, FURNACE_A, Direction.DOWN, PortMode.EXTRACT);
+                })
+                .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, FURNACE_A, Direction.DOWN)
+                        && remotePort(helper, router, FURNACE_B, Direction.DOWN), "sem as portas"))
+                .thenExecute(() -> {
+                    MachineCaches second = router.remoteCaches(helper.absolutePos(FURNACE_B));
+                    second.items(Direction.DOWN);
+                    helper.assertTrue(second.capabilityArraysForTests() > 0, "a B sem cache");
+                    int original = max.get();
+                    MinecraftServer server = helper.getLevel().getServer();
+                    ServerPlayer player = TestPlayers.inLevel(helper);
+                    try {
+                        max.set(1);
+                        NetworkManager.configChanged();
+                        for (int tick = 0; tick < 3; tick++) {
+                            NetworkManager.get().tick(server);
+                        }
+                        helper.assertFalse(remotePort(helper, router, FURNACE_B, Direction.DOWN), "porta além do limite");
+                        int screen = RouterSnapshot.capture(router, player).range().used();
+                        helper.assertValueEqual(RangeLinks.used(router), screen, "Vinculador × tela");
+                        helper.assertValueEqual(screen, 1, "vagas usadas");
+                        helper.assertValueEqual(second.capabilityArraysForTests(), 0, "o cache da B ficou");
+                    } finally {
+                        max.set(original);
+                        NetworkManager.configChanged();
+                        removePlayer(helper, player);
                     }
                 })
                 .thenSucceed();

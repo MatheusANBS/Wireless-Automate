@@ -258,14 +258,15 @@ final class RouterRange {
     }
 
     /**
-     * Descarta os caches (e os listeners deles) das remotas que não estão mais vinculadas; sem o
-     * upgrade valendo, de todas. Chamado ao desvincular, ao carregar o NBT e quando o upgrade sai.
+     * Descarta os caches (e os listeners deles) das remotas que não estão mais vinculadas ou ativas (fora do raio ou
+     * do limite, que o motor não lê); sem o upgrade valendo, de todas. Chamado ao desvincular, ao carregar o NBT,
+     * quando o upgrade sai e na recarga da config ({@link RouterBlockEntity#pruneRemoteCaches}).
      */
     void pruneCaches() {
         if (caches.isEmpty()) {
             return;
         }
-        caches.prune(router.rangeActive(), remotes);
+        caches.prune(router.rangeActive() ? router.machineReach() : null, remotes);
     }
 
     /**

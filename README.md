@@ -200,11 +200,9 @@ Um painel de parede que mostra **números ao vivo das suas redes e armazenamento
 ![Vincule uma área inteira](docs/curseforge/feature-5-area.png)
 
 - **Vinculador** (dois modos): **Vincular** escolhe um roteador com o Upgrade de Alcance (clique nele) e vincula as máquinas em que você clica, ou **uma área marcada inteira** de uma vez (Shift + clique em dois blocos; a mais perto primeiro, até o raio e o limite do tier); a chave **Desvincular** tira em vez de pôr. **Abrir** abre a tela do roteador que chega na máquina em que você clica, já editando aquela máquina; com vários roteadores, uma lista curta deixa você escolher. Ele confere o alcance, os claims e os mods de proteção no roteador. O Vinculador não mexe mais em redes: escolha a rede de cada face na tela do roteador ou no Tablet.
-- **Configurador** (o Pincel): Shift + clique num roteador copia a configuração dele (faces, filtros, prioridades, redstone e a rede de cada face), clique cola em outro, e Shift + clique num bloco sem roteador limpa a cópia. Cole todas as abas ou só um tipo, sem tocar nas outras abas. Segure **Alt esquerdo** para uma roda radial que escolhe o tipo colado. A rede de uma face só é colada se você puder usá-la, e uma face só sai de uma rede que você edita. Para configurar vários roteadores de uma vez, cole o perfil nos marcados do Tablet.
+- **Configurador**: sem função por enquanto; uma ferramenta nova chega numa próxima versão. Para copiar a configuração de um roteador para outros, use o perfil do Tablet.
 - **Upgrade de Chunk Loading:** mantém um roteador e a máquina dele trabalhando enquanto você está longe.
 - **Editor de receitas** (operadores): `/wa recipes` abre uma tela para trocar, desativar ou restaurar qualquer receita de bancada do mod, com itens do seu inventário ou do JEI, tags e a quantidade do resultado. Gravado como datapack em `config/wirelessautomate/recipes/`, então vale em todos os mundos e sobrevive a atualizações. Útil para packs que querem outra receita do Ultimate.
-
-![Pincel do Configurador](docs/curseforge/feature-16-wheel.png)
 
 ![Vincular ou abrir](docs/curseforge/feature-13-linker.png)
 
@@ -238,7 +236,7 @@ Todo jogador recebe o livro-guia no primeiro login (ele também está na aba cri
 4. No primeiro roteador, ponha a face **Cima** em **Extrai**.
 5. No segundo roteador, ponha a mesma face em **Insere**. Agora os itens vão do primeiro baú para o segundo.
 
-Com o primeiro roteador de uma linha configurado, copie-o com o Configurador (Shift + clique nele) e cole (clique) nos outros.
+Com o primeiro roteador de uma linha configurado, copie o perfil dele no Tablet e cole nos outros.
 
 As receitas usam itens vanilla, menos os tiers do Allthemodium (feitos com os metais do mod Allthemodium, só quando ele está instalado).
 

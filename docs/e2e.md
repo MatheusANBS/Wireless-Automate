@@ -38,7 +38,7 @@ Ordem do registro. "Pré-requisito": o que a suíte pressupõe além da abertura
 | `roteador` | nome, redes por face, tamanhos, painel, cartões e chunk loading | nenhum (faz as redes de B) | padrão |
 | `alcance` | roteador de alcance | redes | padrão |
 | `tablet` | transporte por aba e o Tablet | redes | padrão |
-| `vinculador` | Configurador e Vinculador | redes | padrão |
+| `vinculador` | Vinculador | redes | padrão |
 | `portugues` | telas em português (a variante pt de todas) | redes | opcional |
 | `armazenamento` | Baú de armazenamento | redes | padrão |
 | `source` | Tanque de Source (só com o Ars Nouveau) | redes | padrão |

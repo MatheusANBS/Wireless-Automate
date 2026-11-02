@@ -38,7 +38,7 @@ other, with no pipes.
 | <ItemImage id="wirelessautomate:tier_core_advanced" /> [Upgrade Cards](upgrade-cards.md) | Raise the router's tier: more throughput and range. |
 | <ItemImage id="wirelessautomate:filter_card" /> [Filter Card](filter-card.md) | A ready-made filter for many faces. |
 | <ItemImage id="wirelessautomate:linker" /> [Linker](linker.md) | Links machines to a range router and opens the router of a machine. |
-| <ItemImage id="wirelessautomate:configurator" /> [Configurator](configurator.md) | Copies a router's configuration to another. |
+| <ItemImage id="wirelessautomate:configurator" /> [Configurator](configurator.md) | No function for now: a new tool arrives in a future version. |
 | <ItemImage id="wirelessautomate:network_tablet" /> [Network Tablet](network-tablet.md) | See and manage your networks from anywhere. |
 | <ItemImage id="wirelessautomate:chunk_loader_upgrade" /> [Chunk Loading Upgrade](chunk-loading.md) | The router keeps working while you're away. |
 | <ItemImage id="wirelessautomate:storage_chest" /> [Wireless Chest](wireless-chest.md) | Millions of items by type; between two of them, a whole type moves at once. |

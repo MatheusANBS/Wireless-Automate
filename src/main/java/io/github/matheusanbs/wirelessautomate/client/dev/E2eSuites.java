@@ -1,7 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client.dev;
 
 import static io.github.matheusanbs.wirelessautomate.client.dev.DevEndToEnd.*;
-import static io.github.matheusanbs.wirelessautomate.client.dev.E2eConfiguratorSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eLinkerSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2ePanelSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eRouterSteps.*;
@@ -60,10 +59,7 @@ final class E2eSuites {
                 typeNetworkTransferSteps(list);
                 tabletSteps(list);
             }),
-            suite("vinculador", "Configurador e Vinculador", Prereq.REDES, list -> {
-                configuratorSteps(list);
-                linkerSteps(list);
-            }),
+            suite("vinculador", "Vinculador", Prereq.REDES, E2eLinkerSteps::linkerSteps),
             optional("portugues", "telas em português (a variante pt de todas)", Prereq.REDES, E2ePortugueseSteps::portugueseSteps),
             suite(ARMAZENAMENTO, "Baú de armazenamento", Prereq.REDES, E2eStorageSteps::storageChestSteps),
             new Suite("source", "Tanque de Source (com o Ars Nouveau)", Prereq.REDES, E2eSourceTankSteps::sourceTankSteps,

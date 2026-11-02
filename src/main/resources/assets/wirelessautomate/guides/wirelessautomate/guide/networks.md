@@ -69,7 +69,6 @@ same type on the same network trades; the face mode says who sends and who recei
 | --- | --- |
 | The face's **Network** row, on the router screen | One face, on one tab |
 | <ItemLink id="wirelessautomate:network_tablet" />, Select | All faces of the checked nodes, in the chosen type (or every type) |
-| <ItemLink id="wirelessautomate:configurator" /> | The network goes with the pasted configuration |
 
 ## Range and chunks
 

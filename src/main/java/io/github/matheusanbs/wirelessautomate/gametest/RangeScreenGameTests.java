@@ -229,7 +229,7 @@ public final class RangeScreenGameTests {
     }
 
     @GameTest(template = "empty")
-    public static void screenUnlinkDropsGroupCards(GameTestHelper helper) {
+    public static void screenUnlinkReturnsGroupCards(GameTestHelper helper) {
         RouterBlockEntity router = routerWithMachines(helper);
         helper.startSequence()
                 .thenWaitUntil(() -> waitLoaded(helper, router))
@@ -254,7 +254,7 @@ public final class RangeScreenGameTests {
                                 new UnlinkMachinePayload(menu.containerId, index, barrel)), "não desvinculou");
                         helper.assertFalse(router.remoteMachines().contains(barrel), "o barril continua vinculado");
                         helper.assertTrue(router.remoteMachines().group(barrels) == null, "o grupo vazio ficou");
-                        helper.assertItemEntityPresent(ModItems.FILTER_CARD.get(), ROUTER, 2.0);
+                        helper.assertTrue(player.getInventory().countItem(ModItems.FILTER_CARD.get()) > 0, "os cartões não voltaram ao inventário");
                         helper.assertTrue(menu.target().attached(), "o alvo continua na máquina desvinculada");
                     } finally {
                         removePlayer(helper, player);

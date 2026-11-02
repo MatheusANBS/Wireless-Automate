@@ -13,7 +13,8 @@ import net.minecraft.world.item.ItemStack;
  * para esses itens só comparando, sem simular a inserção, e sem pôr o destino para dormir: recusar o ouro
  * não diz nada sobre o ferro. Qualquer mudança na máquina ({@link #clearRefused}, pelo aviso que acorda a
  * porta) apaga a lista, então o ouro recusado com a entrada cheia de ferro volta a ser oferecido quando o
- * ferro acaba.</li>
+ * ferro acaba. Uma máquina que muda sem avisar ({@code setChanged}) não deixa a lista para sempre: ela vence
+ * no teto do sono do destino, contado da primeira recusa ({@link #refused(ItemStack, long, int)}).</li>
  * <li><b>Aprendidos:</b> os últimos itens que o destino recebeu. Uma origem que é um Baú do mod procura
  * esses itens direto pela chave ({@link ItemBulkTransfer}), antes de varrer os tipos dela: com milhares de
  * tipos, a fornalha que já recebeu ferro não espera a varredura chegar no ferro.</li>
@@ -28,12 +29,25 @@ final class ItemHints {
     private final ItemStack[] refused = new ItemStack[SIZE];
     private int refusedSize;
     private int refusedNext;
+    /** O tick da primeira recusa da lista de agora (vale só com {@code refusedSize > 0}). */
+    private long refusedSince;
     private final ItemStack[] learned = new ItemStack[SIZE];
     private int learnedSize;
     private int learnedNext;
 
-    /** O destino recusou {@code stack} desde a última mudança dele. */
-    boolean refused(ItemStack stack) {
+    /**
+     * O destino recusou {@code stack} desde a última mudança dele. Passados {@code maxTicks} desde a primeira
+     * recusa da lista (o teto do sono do destino), a lista vence e é apagada: o item volta a ser oferecido.
+     */
+    boolean refused(ItemStack stack, long now, int maxTicks) {
+        if (refusedSize > 0 && now - refusedSince > maxTicks) {
+            clearRefused();
+            return false;
+        }
+        return refused(stack);
+    }
+
+    private boolean refused(ItemStack stack) {
         for (int i = 0; i < refusedSize; i++) {
             if (ItemStack.isSameItemSameComponents(refused[i], stack)) {
                 return true;
@@ -42,10 +56,13 @@ final class ItemHints {
         return false;
     }
 
-    /** Anota a recusa; com a lista cheia, sai a mais antiga. */
-    void refuse(ItemStack stack) {
+    /** Anota a recusa no tick {@code now}; com a lista cheia, sai a mais antiga. */
+    void refuse(ItemStack stack, long now) {
         if (refused(stack)) {
             return;
+        }
+        if (refusedSize == 0) {
+            refusedSince = now;
         }
         refused[refusedNext] = stack.copyWithCount(1);
         refusedNext = (refusedNext + 1) % SIZE;

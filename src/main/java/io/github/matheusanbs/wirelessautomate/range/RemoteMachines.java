@@ -132,21 +132,39 @@ public final class RemoteMachines {
 
     /**
      * Põe a presa no bloco {@code block} com a frente {@code front}. Se ela já está num grupo desse bloco, só a
-     * frente muda e devolve {@code false}. Senão entra no primeiro grupo do bloco, ou num grupo novo com o perfil
-     * vazio, sem exceção (uma exceção só vale para o bloco em que foi feita), e devolve {@code true}; o grupo que
-     * ela deixou segue a regra de {@link #attachTo}.
+     * frente muda e devolve {@code false}. Sem membro, ela nasce no primeiro grupo do bloco, ou num grupo novo com o
+     * perfil vazio. Com o bloco trocado no lugar (um upgrade de tier de outro mod, por exemplo), a regra do
+     * {@link #regroup} das remotas: se a presa é a única do grupo e não há grupo do bloco novo, o grupo inteiro passa
+     * para o bloco novo (mesmo id, nome, perfil e cartões); senão ela entra no primeiro grupo do bloco novo, ou num
+     * grupo novo com uma cópia do perfil do antigo, sem nome e sem cartões. A exceção dela continua (some se fica
+     * igual ao perfil do grupo de destino), e o grupo que ela deixou segue a regra de {@link #attachTo}. Devolve
+     * {@code true} nesses casos.
      */
     public boolean attach(ResourceLocation block, int front) {
         MachineGroup now = attachedGroup();
-        if (now != null && now.block().equals(block)) {
+        if (now == null) {
+            MachineGroup group = firstGroupOf(block);
+            if (group == null) {
+                group = newGroup(block, new MachineConfig());
+            }
+            attachTo(group.id(), null, front);
+            return true;
+        }
+        if (now.block().equals(block)) {
             attached.setFront(front);
             return false;
         }
-        MachineGroup group = firstGroupOf(block);
-        if (group == null) {
-            group = newGroup(block, new MachineConfig());
+        MachineGroup target = firstGroupOf(block);
+        if (target == null && !hasMachines(now.id())) {
+            now.setBlock(block);
+            attached.setFront(front);
+            return true;
         }
-        attachTo(group.id(), null, front);
+        if (target == null) {
+            target = newGroup(block, now.profile().copy());
+        }
+        MachineConfig exception = attached.exception();
+        attachTo(target.id(), exception == null || exception.sameAs(target.profile()) ? null : exception, front);
         return true;
     }
 

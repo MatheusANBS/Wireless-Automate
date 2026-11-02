@@ -66,7 +66,7 @@ import org.jetbrains.annotations.Nullable;
  * <p>Cartões de Filtro: cada face, para itens e para fluidos, tem {@link #CARD_SLOTS} slots de
  * cartão, guardados no grupo da máquina (também os da presa). O motor junta o filtro embutido e os dos
  * cartões num {@link FilterSet} na montagem das rotas ({@link #filterSet}). Os cartões são itens
- * físicos: saem do roteador quebrado e não vão no preset do Configurador (que só copia a
+ * físicos: saem do roteador quebrado e não vão no perfil copiado pelo Tablet (que só copia a
  * configuração; o cartão é duplicado por receita ou exportando o filtro).
  *
  * <p>Upgrade de chunk loading: um slot ({@link #upgrade()}), com o dono (quem pôs o upgrade). Quem
@@ -732,8 +732,8 @@ public class RouterBlockEntity extends BlockEntity {
     }
 
     /**
-     * Copia modo, prioridade, redstone e filtro de uma face, pelo lado relativo (presets e o
-     * Configurador). A rede da face não muda: colar decide a rede à parte, pela regra das redes.
+     * Copia modo, prioridade, redstone e filtro de uma face, pelo lado relativo (o colar de perfil do
+     * Tablet). A rede da face não muda: colar decide a rede à parte, pela regra das redes.
      */
     public void setFace(ResourceType type, RelativeSide side, FaceConfig config) {
         attached.edit(type, side.toAbsolute(facing(), spin()), face -> face.copySettingsFrom(config));

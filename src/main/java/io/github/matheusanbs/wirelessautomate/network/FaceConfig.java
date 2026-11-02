@@ -125,7 +125,7 @@ public final class FaceConfig {
     }
 
     /**
-     * Formato salvo (NBT da face, preset do Configurador): só os campos fora do padrão, então uma
+     * Formato salvo (NBT da face, perfil copiado): só os campos fora do padrão, então uma
      * face padrão vira um mapa vazio. A rede vai em {@code network} (o array de inteiros do
      * {@code putUUID}); ausente = sem rede. Tolerante: enum com nome inválido ou campo com tipo errado
      * volta ao padrão, e uma entrada de filtro que não lê é descartada ({@link FilterCodecs#LENIENT}).

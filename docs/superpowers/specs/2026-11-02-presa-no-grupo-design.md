@@ -20,7 +20,7 @@ Junto: a máquina vinculada pelo Vinculador entra hoje num grupo que já existe 
 ## Bloco trocado na frente
 
 - **Ar** (máquina quebrada): o membro fica no grupo, como uma remota que "sumiu"; nada se perde, e recolocar a máquina volta a funcionar.
-- **Outro bloco** (que não é ar): o membro passa para o grupo do bloco novo (o primeiro daquele bloco, ou um novo com o perfil vazio), sem o Atualizar. A exceção é descartada (ela era do bloco antigo). O grupo antigo segue a regra acima.
+- **Outro bloco** (que não é ar), sem o Atualizar, com a regra do Atualizar das remotas (o `regroup`), para um upgrade de tier no lugar (Sophisticated Storage, Mekanism) não zerar a configuração: se a presa é a única máquina do grupo e não há grupo do bloco novo, o grupo inteiro passa para o bloco novo (mesmo id, nome, perfil e cartões); senão ela entra no primeiro grupo do bloco novo, ou num grupo novo com uma cópia do perfil do grupo antigo (sem nome e sem cartões). A exceção da presa continua (some se fica igual ao perfil do grupo de destino). O grupo antigo segue a regra acima.
 - **Quando confere:** no aviso de vizinho da posição da máquina (`machineNeighborChanged`, que já distingue troca de bloco de troca de estado), ao girar o roteador para outra face (`facing` novo) e na primeira leitura com o nível pronto. Nunca por tick. Só com `level.isLoaded(machinePos)`.
 - **Girar o `spin`** não muda mais nada na presa: a configuração é da máquina, não do roteador.
 - **Girar a máquina** (frente nova): a configuração acompanha a frente, como nas remotas.
@@ -33,8 +33,8 @@ As chaves de NBT `faces` e `cards` do roteador (a presa antiga, por `RelativeSid
 2. Lados: `RelativeSide` do roteador → face absoluta (`facing` + `spin`) → `RemoteSide` pela frente da máquina (sem frente, Norte), como o `ProfileSides`.
 3. Bloco da frente é ar: o rascunho fica guardado (continua salvo nas chaves antigas) até haver bloco.
 4. Sem grupo do bloco: grupo novo com o rascunho como perfil e os cartões dele.
-5. Com grupo do bloco e cartões iguais (ou rascunho sem cartões): entra no grupo; se a configuração difere do perfil, como exceção. Os cartões físicos do rascunho (iguais aos do grupo) caem no mundo, na posição do roteador, para nenhum item sumir.
-6. Com grupo do bloco e cartões diferentes: grupo novo do mesmo bloco com o rascunho e os cartões (a exceção não tem cartões).
+5. Com grupo do bloco e cartões iguais (os dois sem cartões também vale): entra no grupo; se a configuração difere do perfil, como exceção. Os cartões físicos do rascunho (iguais aos do grupo) caem no mundo, na posição do roteador, para nenhum item sumir.
+6. Com grupo do bloco e cartões diferentes, inclusive rascunho sem cartões diante de um grupo com cartões (senão a presa passaria a filtrar por cartões que não tinha): grupo novo do mesmo bloco com o rascunho e os cartões (a exceção não tem cartões).
 7. A rede antiga da aba (`networks`/`network`, migração de mundos de antes da rede por face) vai para o rascunho antes da conversão, como hoje.
 
 Depois de convertido, o roteador não grava mais `faces` nem `cards`.

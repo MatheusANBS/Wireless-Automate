@@ -472,7 +472,8 @@ public final class TabletTreeGameTests {
                                 "a presa num grupo recolhido");
                         helper.assertTrue(tree(player, menu, Action.EXPAND_GROUP, key, chests), "não abriu o grupo");
 
-                        // O bloco trocado leva a presa para o grupo dos barris; o dos baús fica, sem máquinas.
+                        // O bloco trocado leva a presa para o grupo dos barris, com a exceção (a regra do Atualizar); o
+                        // dos baús fica, sem máquinas.
                         helper.assertTrue(router.unlinkMachine(0) && router.unlinkMachine(0), "não desvinculou");
                         helper.setBlock(CHEST, Blocks.BARREL);
                         rows = fresh(menu).rows().rows();
@@ -481,8 +482,8 @@ public final class TabletTreeGameTests {
                                 && group.total() == 0 && group.exceptions() == 0, "o grupo deixado: " + rows.get(0));
                         helper.assertTrue(rows.get(1) instanceof Group group && group.id() == barrels
                                 && group.total() == 2, "o grupo novo da presa: " + rows.get(1));
-                        helper.assertTrue(rows.get(2) instanceof Attached attached && !attached.exception(),
-                                "a presa no grupo novo, sem a exceção do baú");
+                        helper.assertTrue(rows.get(2) instanceof Attached attached && attached.exception(),
+                                "a presa no grupo novo, com a exceção que tinha");
                         helper.assertTrue(rows.get(3) instanceof Machine, "o barril depois da presa");
                     } finally {
                         player.containerMenu = player.inventoryMenu;

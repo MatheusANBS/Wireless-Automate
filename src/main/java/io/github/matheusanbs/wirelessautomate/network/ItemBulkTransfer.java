@@ -180,7 +180,7 @@ final class ItemBulkTransfer {
                     return moved;
                 }
                 ItemStack key = hints.learned(i);
-                if (hints.refused(key)) {
+                if (hints.refused(key, now, destination.destinationBackoff.maxTicks())) {
                     continue;
                 }
                 long have = bulk.count(key);
@@ -257,7 +257,7 @@ final class ItemBulkTransfer {
                 continue;
             }
             ItemHints hints = destination.hints;
-            if (hints != null && hints.refused(key)) {
+            if (hints != null && hints.refused(key, now, destination.destinationBackoff.maxTicks())) {
                 // Recusou este item desde a última mudança: pula sem simular.
                 continue;
             }
@@ -364,6 +364,8 @@ final class ItemBulkTransfer {
     /** Uma entrega que deixou algo no destino: acorda-o, conta na volta da passada e nas operações. */
     private static void delivered(Port source, Port destination, RoundRobinOrder<Port> order, long amount) {
         destination.destinationBackoff.wake();
+        // Recebeu: não está cheio.
+        destination.full = false;
         destination.addGot(amount);
         order.delivered(destination);
         if (source.network != null) {

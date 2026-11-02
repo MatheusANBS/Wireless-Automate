@@ -100,8 +100,8 @@ public class RouterBlock extends BaseEntityBlock {
     }
 
     /**
-     * O roteador nasce sem rede em nenhuma face: o jogador configura o primeiro (tela do roteador ou
-     * Vinculador) e replica com o Configurador. Se o item trouxe dados do block entity com alguma
+     * O roteador nasce sem rede em nenhuma face: o jogador configura (tela do roteador, Vinculador ou o colar
+     * de perfil do Tablet). Se o item trouxe dados do block entity com alguma
      * rede, eles já foram aplicados antes desta chamada e as redes que vieram são mantidas.
      */
     @Override

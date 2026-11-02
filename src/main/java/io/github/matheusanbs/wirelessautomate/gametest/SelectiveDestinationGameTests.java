@@ -6,6 +6,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
+import io.github.matheusanbs.wirelessautomate.network.NodeProbe;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
@@ -162,6 +163,109 @@ public final class SelectiveDestinationGameTests {
                 })
                 .thenWaitUntil(() -> helper.assertValueEqual(stand.getItem(INGREDIENT).getCount(), 8, "o pó não entrou"))
                 .thenExecute(() -> helper.assertTrue(stand.getItem(INGREDIENT).is(Items.REDSTONE), "outro item no suporte"))
+                .thenSucceed();
+    }
+
+    /** A máquina de teste em {@code relative}, zerada: as de {@link TestMachines} ficam por posição absoluta. */
+    private static TestMachines.Furnace furnace(GameTestHelper helper, BlockPos relative) {
+        helper.setBlock(relative, TestMachines.FURNACE);
+        TestMachines.reset(helper.absolutePos(relative));
+        return TestMachines.furnace(helper.absolutePos(relative));
+    }
+
+    /**
+     * A recusa anotada vence sozinha: uma máquina que muda sem avisar ninguém (a de teste não tem block entity nem
+     * {@code setChanged}) não fica recusando o ouro para sempre. Com a entrada cheia de ferro e lugar para mais
+     * ferro, o ouro é recusado só para ele; a entrada esvazia em silêncio e o ouro entra depois do teto do sono do
+     * destino, contado da primeira recusa.
+     */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void refusalExpiresWhenTheMachineChangesSilently(GameTestHelper helper) {
+        UUID network = network(helper, "seletivo-silencio");
+        helper.setBlock(SOURCE, Blocks.CHEST);
+        ChestBlockEntity chest = helper.getBlockEntity(SOURCE);
+        chest.setItem(0, new ItemStack(Items.GOLD_INGOT, 4));
+        TestMachines.Furnace machine = furnace(helper, STAND);
+        machine.slots[0] = new ItemStack(Items.IRON_INGOT, 10);
+        RouterBlockEntity source = router(helper, SOURCE, network, PortMode.EXTRACT);
+        RouterBlockEntity target = router(helper, STAND, network, PortMode.INSERT);
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(registered(source, target), "roteadores não registrados"))
+                .thenIdle(10)
+                .thenExecute(() -> {
+                    helper.assertValueEqual(chest.getItem(0).getCount(), 4, "o ouro saiu com a entrada ocupada");
+                    machine.slots[0] = ItemStack.EMPTY;
+                })
+                .thenWaitUntil(() -> helper.assertTrue(machine.slots[0].is(Items.GOLD_INGOT), "a recusa do ouro não venceu"))
+                .thenSucceed();
+    }
+
+    /**
+     * O cheio guardado na porta ({@code Port.full}) sai na entrega: a entrada cheia de ferro dorme como cheia; ela
+     * esvazia em silêncio e recebe o ferro. Depois, com ouro em quase toda a origem e o ferro no último slot, o ouro
+     * é recusado só para ele (lugar só para ferro) e o ferro entra; com o cheio esquecido na porta, o ouro faria o
+     * destino dormir como cheio a cada visita e o ferro não entraria.
+     */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void fullIsClearedByADelivery(GameTestHelper helper) {
+        UUID network = network(helper, "seletivo-cheio");
+        helper.setBlock(SOURCE, Blocks.CHEST);
+        ChestBlockEntity chest = helper.getBlockEntity(SOURCE);
+        chest.setItem(0, new ItemStack(Items.IRON_INGOT, 5));
+        helper.setBlock(STAND, TestMachines.NAIVE_SLOTS);
+        TestMachines.reset(helper.absolutePos(STAND));
+        TestMachines.NaiveSlots machine = TestMachines.naiveSlots(helper.absolutePos(STAND));
+        for (int slot = 0; slot < TestMachines.NaiveSlots.SLOTS; slot++) {
+            machine.set(slot, new ItemStack(Items.IRON_INGOT, 64));
+        }
+        RouterBlockEntity source = router(helper, SOURCE, network, PortMode.EXTRACT);
+        RouterBlockEntity target = router(helper, STAND, network, PortMode.INSERT);
+        int start = 10 * TestMachines.NaiveSlots.SLOTS;
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(registered(source, target), "roteadores não registrados"))
+                .thenWaitUntil(() -> helper.assertValueEqual(NodeProbe.fullDestinations(target, ResourceType.ITEM,
+                        helper.getLevel().getServer().getTickCount()), 1, "a máquina cheia não dormiu como cheia"))
+                .thenExecute(() -> {
+                    for (int slot = 0; slot < TestMachines.NaiveSlots.SLOTS; slot++) {
+                        machine.set(slot, new ItemStack(Items.IRON_INGOT, 10));
+                    }
+                })
+                .thenWaitUntil(() -> helper.assertValueEqual(machine.total(), start + 5, "o ferro não entrou"))
+                .thenExecute(() -> {
+                    // Ouro em quase todos os slots e o ferro no último: com o cheio esquecido, cada visita para no
+                    // primeiro ouro e o ferro não chega.
+                    for (int slot = 0; slot < chest.getContainerSize() - 1; slot++) {
+                        chest.setItem(slot, new ItemStack(Items.GOLD_INGOT, 1));
+                    }
+                    chest.setItem(chest.getContainerSize() - 1, new ItemStack(Items.IRON_INGOT, 3));
+                })
+                .thenWaitUntil(() -> helper.assertValueEqual(machine.total(), start + 8,
+                        "o ouro recusado fez o destino dormir como cheio e o ferro não entrou"))
+                .thenSucceed();
+    }
+
+    /** Máquina travada (um slot vazio que aceita o item, mas a inserção recusa): dorme como cheia e volta depois. */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void jammedMachineSleepsAsFull(GameTestHelper helper) {
+        UUID network = network(helper, "seletivo-travada");
+        helper.setBlock(SOURCE, Blocks.CHEST);
+        ChestBlockEntity chest = helper.getBlockEntity(SOURCE);
+        chest.setItem(0, new ItemStack(Items.DIAMOND, 4));
+        helper.setBlock(STAND, TestMachines.TYPED_SLOT);
+        TestMachines.reset(helper.absolutePos(STAND));
+        TestMachines.TypedSlot machine = TestMachines.typedSlot(helper.absolutePos(STAND));
+        machine.setFull(true);
+        RouterBlockEntity source = router(helper, SOURCE, network, PortMode.EXTRACT);
+        RouterBlockEntity target = router(helper, STAND, network, PortMode.INSERT);
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(registered(source, target), "roteadores não registrados"))
+                .thenWaitUntil(() -> helper.assertValueEqual(NodeProbe.fullDestinations(target, ResourceType.ITEM,
+                        helper.getLevel().getServer().getTickCount()), 1, "a máquina travada não dormiu como cheia"))
+                .thenExecute(() -> {
+                    helper.assertValueEqual(machine.consumed(), 0, "a travada recebeu");
+                    machine.setFull(false);
+                })
+                .thenWaitUntil(() -> helper.assertValueEqual(machine.consumed(), 4, "destravada, não voltou a receber"))
                 .thenSucceed();
     }
 

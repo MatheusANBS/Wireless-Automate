@@ -14,8 +14,7 @@ import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * Shift + roda do mouse com uma ferramenta do mod na mão principal: o Configurador troca o tipo que ele cola
- * (Todos e um por tipo carregado) e o Vinculador troca o modo (Vincular ↔ Abrir). Só no jogo, sem tela aberta;
+ * Shift + roda do mouse com o Vinculador na mão principal: troca o modo (Vincular ↔ Abrir). Só no jogo, sem tela aberta;
  * o evento é cancelado para a roda não trocar o slot da hotbar. Como na hotbar, rolar para baixo vai para o
  * próximo. O servidor troca e mostra o resultado na action bar.
  */

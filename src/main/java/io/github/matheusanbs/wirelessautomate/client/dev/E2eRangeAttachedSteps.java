@@ -126,8 +126,9 @@ final class E2eRangeAttachedSteps {
     }
 
     /**
-     * O grupo "×0": sem as remotas, o grupo dos baús fica só com a presa; com um barril no lugar do baú, a presa
-     * vai para o grupo do barril e o dos baús fica, sem máquina. A tela abre no mínimo, com a lista.
+     * O grupo "×0": sem as remotas, o grupo dos baús fica só com a presa; com um barril vinculado (no lugar da
+     * fornalha) e outro barril no lugar do baú, a presa vai para o grupo dos barris e o dos baús fica, sem máquina
+     * (sem grupo do barril, o grupo inteiro passaria para ele). A tela abre no mínimo, com a lista.
      */
     static void emptyGroupSteps(List<Step> list, String label) {
         String l = label + "grupo ×0: ";
@@ -144,6 +145,8 @@ final class E2eRangeAttachedSteps {
                 }
                 // só a presa no grupo: a escrita muda o perfil, e o grupo não sai vazio quando a presa o deixa
                 router.setMode(ResourceType.ITEM, Direction.NORTH, PortMode.EXTRACT);
+                server.overworld().setBlockAndUpdate(rangeFurnace, Blocks.BARREL.defaultBlockState());
+                router.linkMachine(rangeFurnace);
                 server.overworld().setBlockAndUpdate(rangeRouter.below(), Blocks.BARREL.defaultBlockState());
                 return null;
             });
@@ -152,6 +155,7 @@ final class E2eRangeAttachedSteps {
             RangeView.GroupView chests = view.group(rangeGroup(Blocks.CHEST));
             // a presa mudou de grupo sem o alvo mudar: o grupo do barril abre com ela
             return chests != null && chests.count() == 0 && view.attachedGroup() == rangeGroup(Blocks.BARREL)
+                    && view.group(rangeGroup(Blocks.BARREL)).count() == 2
                     && routerScreen().rangeRowCenter(EditTarget.ATTACHED_TARGET) != null
                     && routerScreen().rangeListShown() && stepTicks >= 4;
         }, () -> "alcance " + rangeView()));

@@ -15,6 +15,10 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.menu.RangeView;
+import io.github.matheusanbs.wirelessautomate.filter.Filter;
+import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
+import io.github.matheusanbs.wirelessautomate.filter.FilterSet;
+import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
@@ -33,6 +37,7 @@ import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.netty.buffer.Unpooled;
+import java.util.List;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -173,29 +178,66 @@ public final class AttachedGroupGameTests {
                 .thenSucceed();
     }
 
-    /** Outro bloco na frente leva a presa para o grupo dele; o grupo antigo, configurado, fica. */
+    /**
+     * Bloco trocado no lugar com a presa sozinha no grupo e sem grupo do bloco novo: o grupo inteiro muda de bloco
+     * (mesmo id e perfil). Com uma remota do bloco antigo no grupo, a presa vai para um grupo novo com a cópia do
+     * perfil, levando a exceção; o grupo antigo fica com a remota.
+     */
     @GameTest(template = "empty", timeoutTicks = 100)
     public static void swappedBlockMovesAttachedToNewGroup(GameTestHelper helper) {
         RouterBlockEntity router = chestWithRouter(helper, RouterTier.ADVANCED);
+        helper.setBlock(OTHER_CHEST, Blocks.CHEST);
         RemoteMachines remotes = router.remoteMachines();
         router.setMode(ResourceType.ITEM, Direction.NORTH, PortMode.EXTRACT);
         int chests = remotes.attached().group();
         helper.setBlock(CHEST, Blocks.BARREL);
+        helper.assertValueEqual(remotes.attached().group(), chests, "sozinha, a presa mudou de grupo");
         helper.assertValueEqual(remotes.attachedGroup().block(), BuiltInRegistries.BLOCK.getKey(Blocks.BARREL),
-                "a presa não foi para o grupo do barril");
-        helper.assertValueEqual(attachedFace(router, Direction.NORTH).mode(), PortMode.NONE,
-                "o barril herdou a configuração do baú");
-        MachineGroup old = remotes.group(chests);
-        helper.assertTrue(old != null && old.profile().face(ResourceType.ITEM, RemoteSide.FRONT).mode() == PortMode.EXTRACT,
-                "o grupo do baú, configurado, sumiu");
-
-        // De volta ao baú: entra no primeiro grupo do baú, que guardou a configuração. O do barril, vazio, sai.
-        int barrels = remotes.attached().group();
+                "o grupo não passou para o barril");
+        helper.assertValueEqual(attachedFace(router, Direction.NORTH).mode(), PortMode.EXTRACT, "o barril perdeu a configuração");
         helper.setBlock(CHEST, Blocks.CHEST);
-        helper.assertValueEqual(remotes.attached().group(), chests, "não voltou ao grupo do baú");
-        helper.assertValueEqual(attachedFace(router, Direction.NORTH).mode(), PortMode.EXTRACT, "perdeu a configuração");
-        helper.assertTrue(remotes.group(barrels) == null, "o grupo vazio do barril ficou");
-        helper.succeed();
+        helper.assertValueEqual(remotes.attachedGroup().block(), CHEST_ID, "o grupo não voltou ao baú");
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    link(helper, router, OTHER_CHEST);
+                    router.setMode(ResourceType.ITEM, Direction.SOUTH, PortMode.INSERT);
+                    helper.assertTrue(remotes.attached().hasException(), "com a remota, não virou exceção");
+                    helper.setBlock(CHEST, Blocks.BARREL);
+                    MachineGroup barrels = remotes.attachedGroup();
+                    helper.assertTrue(barrels.id() != chests, "com a remota no grupo, o grupo inteiro mudou de bloco");
+                    helper.assertValueEqual(barrels.block(), BuiltInRegistries.BLOCK.getKey(Blocks.BARREL), "bloco do grupo novo");
+                    helper.assertValueEqual(barrels.profile().face(ResourceType.ITEM, RemoteSide.FRONT).mode(), PortMode.EXTRACT,
+                            "o grupo novo não copiou o perfil");
+                    helper.assertTrue(remotes.attached().hasException(), "a exceção não acompanhou a presa");
+                    helper.assertValueEqual(attachedFace(router, Direction.SOUTH).mode(), PortMode.INSERT, "perdeu a exceção");
+                    helper.assertValueEqual(remotes.machine(0).group(), chests, "a remota saiu do grupo do baú");
+                    helper.assertTrue(remotes.group(chests) != null, "o grupo do baú com a remota sumiu");
+                })
+                .thenSucceed();
+    }
+
+    /** Upgrade no lugar (baú trocado por barril com itens): a configuração da presa continua e move. */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void inPlaceUpgradeKeepsConfigAndMoves(GameTestHelper helper) {
+        RouterBlockEntity router = chestWithRouter(helper, RouterTier.ADVANCED);
+        UUID network = NetworkSavedData.get(helper.getLevel().getServer()).create(UUID.randomUUID(), "upgrade-no-lugar").id();
+        helper.setBlock(BARREL_A, Blocks.DROPPER);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    router.configureFace(EditTarget.ATTACHED_TARGET, ResourceType.ITEM, Direction.UP, PortMode.EXTRACT, 0,
+                            RedstoneMode.IGNORE, network);
+                    link(helper, router, BARREL_A);
+                    router.configureFace(EditTarget.group(groupOf(router, helper.absolutePos(BARREL_A))), ResourceType.ITEM,
+                            Direction.NORTH, PortMode.INSERT, 0, RedstoneMode.IGNORE, network);
+                    helper.setBlock(CHEST, Blocks.BARREL);
+                    container(helper, CHEST).setItem(0, new ItemStack(Items.COBBLESTONE, 5));
+                })
+                .thenWaitUntil(() -> helper.assertValueEqual(count(helper, BARREL_A), 5, "o barril no lugar do baú não extraiu"))
+                .thenSucceed();
     }
 
     /** Ar na frente (máquina quebrada sem derrubar o roteador) não muda nada; a máquina de volta segue igual. */
@@ -383,6 +425,52 @@ public final class AttachedGroupGameTests {
                     helper.assertItemEntityPresent(ModItems.FILTER_CARD.get(), CHEST.above(), 2.0);
                 })
                 .thenSucceed();
+    }
+
+    /** Caso 6 com o rascunho sem cartões diante de um grupo com cartões: grupo novo, sem filtrar pelos cartões. */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void legacyWithoutCardsAvoidsGroupWithCards(GameTestHelper helper) {
+        RouterBlockEntity router = chestWithRouter(helper, RouterTier.ADVANCED);
+        helper.setBlock(OTHER_CHEST, Blocks.CHEST);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    link(helper, router, OTHER_CHEST);
+                    int chests = groupOf(router, helper.absolutePos(OTHER_CHEST));
+                    router.setCard(EditTarget.group(chests), ResourceType.ITEM, Direction.NORTH, 0, itemCard());
+                    router.loadWithComponents(legacy(helper, router, false), helper.getLevel().registryAccess());
+                    assertConverted(helper, router, "sem cartões");
+                    RemoteMachines remotes = router.remoteMachines();
+                    helper.assertTrue(remotes.attached().group() != chests, "entrou no grupo com cartões");
+                    helper.assertValueEqual(router.cardCount(ResourceType.ITEM, bottom(router)), 0, "a presa ganhou cartão");
+                })
+                .thenSucceed();
+    }
+
+    /** Sem membro (máquina ausente), as portas montadas pelo rascunho filtram também pelos cartões dele. */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void draftFilterSetHasCards(GameTestHelper helper) {
+        HolderLookup.Provider registries = helper.getLevel().registryAccess();
+        RouterBlockEntity router = chestWithRouter(helper, RouterTier.ADVANCED);
+        helper.getLevel().setBlock(helper.absolutePos(CHEST), Blocks.AIR.defaultBlockState(),
+                Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+        CompoundTag tag = legacy(helper, router, true);
+        ItemStack diamonds = new ItemStack(ModItems.FILTER_CARD.get());
+        FilterCardItem.setContents(diamonds, new FilterCardItem.Contents(ResourceType.ITEM, new Filter(
+                Filter.ListMode.WHITELIST, false, List.of(new FilterEntry.ItemEntry(new ItemStack(Items.DIAMOND), 0)))));
+        CompoundTag slot = new CompoundTag();
+        slot.putByte("slot", (byte) 0);
+        ListTag list = new ListTag();
+        list.add(diamonds.save(registries, slot));
+        tag.getCompound("cards").getCompound(ResourceType.ITEM.key()).put(RelativeSide.BOTTOM.key(), list);
+        router.loadWithComponents(tag, registries);
+        helper.assertTrue(router.remoteMachines().attached() == null, "converteu sem máquina");
+        FilterSet filters = router.filterSet(ResourceType.ITEM, bottom(router));
+        helper.assertTrue(filters.testItem(new ItemStack(Items.DIAMOND)), "o rascunho recusou o diamante");
+        helper.assertFalse(filters.testItem(new ItemStack(Items.COBBLESTONE)), "o cartão do rascunho ficou de fora");
+        helper.getLevel().setBlock(helper.absolutePos(CHEST), Blocks.CHEST.defaultBlockState(),
+                Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+        helper.succeed();
     }
 
     /** Lado lateral, spin 1 e baú com a frente em Leste: o lado relativo vai para o lado certo da máquina. */
@@ -590,7 +678,8 @@ public final class AttachedGroupGameTests {
                     RouterSnapshot.STREAM_CODEC.encode(buf, snapshot);
                     helper.assertTrue(RouterSnapshot.STREAM_CODEC.decode(buf).equals(snapshot), "o snapshot pelo codec");
 
-                    // Bloco trocado: a presa vai para o grupo do barril e o dos baús, configurado, fica com zero.
+                    // Bloco trocado: a presa vai para o grupo do barril, com a exceção (a regra do Atualizar), e o dos
+                    // baús, configurado, fica com zero.
                     helper.assertTrue(router.unlinkMachine(helper.absolutePos(OTHER_CHEST)), "não desvinculou");
                     helper.setBlock(CHEST, Blocks.BARREL);
                     range = RouterSnapshot.capture(router, player).range();
@@ -598,7 +687,7 @@ public final class AttachedGroupGameTests {
                     helper.assertTrue(chestGroup != null && !chestGroup.attached() && chestGroup.count() == 0
                             && chestGroup.exceptions() == 0, "o grupo deixado pela presa: " + chestGroup);
                     barrelGroup = range.group(barrels);
-                    helper.assertTrue(barrelGroup.attached() && barrelGroup.count() == 2 && !range.attachedException(),
+                    helper.assertTrue(barrelGroup.attached() && barrelGroup.count() == 2 && range.attachedException(),
                             "a presa no grupo do barril: " + barrelGroup);
                     IndexRemotes index = NodeIndex.get(helper.getLevel().getServer())
                             .entry(NodeKey.of(router.getLevel(), router.getBlockPos())).remotes();

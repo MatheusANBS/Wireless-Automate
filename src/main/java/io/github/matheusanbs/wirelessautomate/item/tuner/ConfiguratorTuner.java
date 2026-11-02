@@ -14,6 +14,7 @@ import io.github.matheusanbs.wirelessautomate.range.RemoteIndex;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
+import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +41,8 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ConfiguratorTuner {
     private static final String KEY = "item.wirelessautomate.configurator.tuner.";
+    /** O Configurador descansa tanto depois de uma análise (o botão segurado não confirma sozinho). */
+    public static final int COOLDOWN = 10;
     private static final Direction[] DIRECTIONS = Direction.values();
     /** A ordem das faces no texto da proposta. */
     private static final RemoteSide[] TEXT_ORDER = {RemoteSide.TOP, RemoteSide.FRONT, RemoteSide.BACK,
@@ -66,42 +69,52 @@ public final class ConfiguratorTuner {
 
     /**
      * O clique com o Configurador na mão principal num bloco que não é roteador. {@code wholeGroup}: Shift, que no
-     * segundo clique aplica no perfil do grupo.
+     * segundo clique aplica no perfil do grupo. Devolve o aviso mostrado na action bar ({@code null}: nenhum, o clique
+     * repetido cedo demais).
      */
-    public static void click(ServerPlayer player, BlockPos pos, boolean wholeGroup) {
+    public static @Nullable Component click(ServerPlayer player, BlockPos pos, boolean wholeGroup) {
         ServerLevel level = player.serverLevel();
         if (!level.isLoaded(pos)) {
-            return;
+            return null;
         }
         if (!player.mayBuild() || !level.mayInteract(player, pos)) {
-            refuse(player, pos, "protected");
-            return;
+            return refuse(player, pos, "protected");
         }
         Reach reach = reach(player, level, pos);
         if (reach == null) {
             boolean linked = !TabletClick.attachedRouters(level, pos).isEmpty()
                     || !RemoteIndex.get().routersAt(level, pos).isEmpty();
-            refuse(player, pos, linked ? "no_access" : "not_linked");
-            return;
+            return refuse(player, pos, linked ? "no_access" : "not_linked");
         }
         Block block = level.getBlockState(pos).getBlock();
         TunerPending.Proposal pending = TunerPending.get(player.getUUID());
         if (pending != null && pending.matches(level, pos, block)) {
+            // Segurar o botão repete o uso a cada 4 ticks: o segundo clique só vale depois do intervalo mínimo.
+            if (!pending.confirmable(level)) {
+                return null;
+            }
+            // O roteador e a frente não são conferidos de novo: os modos da proposta são por face absoluta, e o
+            // roteador de agora (o primeiro que o jogador pode editar) é quem recebe.
             TunerPending.forget(player.getUUID());
             send(player, ConfiguratorProposalPayload.clear(pos));
-            player.displayClientMessage(apply(reach, pending.modes(), wholeGroup), true);
-            return;
+            return show(player, apply(reach, pending.modes(), wholeGroup));
         }
         int front = reach.front();
         Map<ResourceType, PortMode[]> modes = TunerProbe.analyze(level, pos, front, player);
         if (modes.isEmpty()) {
-            refuse(player, pos, "nothing");
-            return;
+            return refuse(player, pos, "nothing");
         }
-        TunerPending.put(player.getUUID(), new TunerPending.Proposal(level.dimension(), pos.immutable(), block,
-                level.getGameTime() + TunerPending.WINDOW, modes));
+        long now = level.getGameTime();
+        TunerPending.put(player.getUUID(), new TunerPending.Proposal(level.dimension(), pos.immutable(), block, now,
+                now + TunerPending.WINDOW, modes));
+        player.getCooldowns().addCooldown(ModItems.CONFIGURATOR.get(), COOLDOWN);
         send(player, new ConfiguratorProposalPayload(pos.immutable(), faces(modes), TunerPending.WINDOW));
-        player.displayClientMessage(Component.translatable(KEY + "proposal", describe(modes, front)), true);
+        return show(player, Component.translatable(KEY + "proposal", describe(modes, front)));
+    }
+
+    private static Component show(ServerPlayer player, Component message) {
+        player.displayClientMessage(message, true);
+        return message;
     }
 
     /** O clique no ar: a proposta some. */
@@ -127,11 +140,11 @@ public final class ConfiguratorTuner {
         return null;
     }
 
-    private static void refuse(ServerPlayer player, BlockPos pos, String reason) {
+    private static Component refuse(ServerPlayer player, BlockPos pos, String reason) {
         if (TunerPending.forget(player.getUUID())) {
             send(player, ConfiguratorProposalPayload.clear(pos));
         }
-        player.displayClientMessage(Component.translatable(KEY + reason), true);
+        return show(player, Component.translatable(KEY + reason));
     }
 
     // ------------------------------------------------------------------ aplicar
@@ -146,7 +159,8 @@ public final class ConfiguratorTuner {
         RemoteMachines remotes = router.remoteMachines();
         int front = reach.front();
         int[] changed = new int[1];
-        boolean[] network = new boolean[1];
+        // [0]: alguma face mudada com modo tem rede; [1]: alguma face mudada tem modo (o Nenhum não pede rede).
+        boolean[] network = new boolean[2];
         Component[] where = new Component[1];
         router.batchChanges(() -> {
             EditTarget target;
@@ -183,7 +197,10 @@ public final class ConfiguratorTuner {
                     }
                     router.configureFace(target, type, side, faces[face], current.priority(), current.redstone());
                     changed[0] |= 1 << face;
-                    network[0] |= router.face(target, type, side).network() != null;
+                    if (faces[face] != PortMode.NONE) {
+                        network[1] = true;
+                        network[0] |= router.face(target, type, side).network() != null;
+                    }
                 }
             }
         });
@@ -197,7 +214,7 @@ public final class ConfiguratorTuner {
         }
         MutableComponent message = Component.translatable(KEY + "applied" + group, where[0],
                 Component.translatable(KEY + (count == 1 ? "faces.one" : "faces"), count));
-        if (!network[0]) {
+        if (network[1] && !network[0]) {
             message.append(Component.translatable(KEY + "choose_network"));
         }
         return message;

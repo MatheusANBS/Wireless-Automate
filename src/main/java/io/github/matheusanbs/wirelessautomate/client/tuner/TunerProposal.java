@@ -10,8 +10,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Só cliente: a proposta do Afinador que o servidor mandou ({@link ConfiguratorProposalPayload}), para a pintura nas
  * faces da máquina ({@link TunerPaint}). Guarda o mundo em que chegou e o prazo em ticks do jogo desse mundo; sair do
- * mundo, o prazo passar ou o jogador mirar outro bloco por {@link #AIM_AWAY_TICKS} ticks a apaga sem pacote. O
- * handler é chamado só pelo lambda do registro, no cliente.
+ * mundo, o prazo passar, a máquina virar ar (quebrada) ou o jogador mirar outro bloco por {@link #AIM_AWAY_TICKS}
+ * ticks a apaga sem pacote. O handler é chamado só pelo lambda do registro, no cliente.
  */
 public final class TunerProposal {
     /** O prazo mais longo aceito do servidor (o dele é de 200 ticks). */

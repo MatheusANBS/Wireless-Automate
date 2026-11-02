@@ -70,6 +70,9 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 
 ## Testes, e2e e bench
 
+- O passo "Baú: filtro, adicionar a tag" do e2e falha às vezes no e2e completo ("Adicionar está desativado"): corrida de 1 tick entre marcar a tag e clicar em Adicionar; sozinho (`--only armazenamento`) passa. (02/11)
+- O passo "Vinculador: Desvincular a área" do e2e falhou duas vezes no e2e completo ("não achei Desvincular N"), sem causa achada; sozinho passa. (02/11)
+- O e2e completo padrão passa de 600 s neste ambiente (~615 s): sem `E2E_TIMEOUT=1200` ele estoura na suíte `guia` com tudo `OK` até ali. (02/11)
 - GameTest próprio para `/wa network invite` e `team`. (22/10)
 - Rodar as variantes `pt` e `escuro` do e2e (não rodaram na 2.12 nem na 2.13, por decisão do dono). (29/10)
 - O passo "alcance: tema escuro" do e2e falhou uma vez sem causa achada; ficar de olho. (22/10)

@@ -79,6 +79,8 @@ public final class IndexRemotesGameTests {
         eq(helper, b.size(), a.size(), what + ": máquinas");
         eq(helper, b.total(), a.total(), what + ": total");
         eq(helper, b.groupCount(), a.groupCount(), what + ": grupos");
+        eq(helper, b.attachedGroup(), a.attachedGroup(), what + ": grupo da presa");
+        eq(helper, b.attachedException(), a.attachedException(), what + ": exceção da presa");
         for (int i = 0; i < a.size(); i++) {
             helper.assertTrue(a.pos(i) == b.pos(i) && a.group(i) == b.group(i) && a.label(i).equals(b.label(i))
                     && a.hasException(i) == b.hasException(i), what + ": máquina " + i);
@@ -181,6 +183,65 @@ public final class IndexRemotesGameTests {
                     int still = index(helper).dataVersion();
                     NodeIndex.track(router);
                     eq(helper, index(helper).dataVersion(), still, "aviso sem mudança");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * O grupo da presa no índice ({@code attached_group}, e {@code attached_exception} só com exceção): chega com a
+     * escrita na presa, vai e volta do NBT, e um índice sem as chaves (de antes da presa no grupo) lê sem presa e não
+     * bate com o roteador, para o próximo aviso refazer a entrada.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void attachedGroupReachesTheIndexAndOldIndexReadsNone(GameTestHelper helper) {
+        RouterBlockEntity router = chestWithRouter(helper, io.github.matheusanbs.wirelessautomate.block.RouterTier.ADVANCED);
+        BlockPos otherChest = new BlockPos(0, 1, 0);
+        helper.setBlock(otherChest, Blocks.CHEST);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    NodeIndex.track(router);
+                    eq(helper, entry(helper, router).attachedGroup(), -1, "presa no índice sem membro");
+                    router.setRangeUpgrade(rangeUpgrade());
+                    router.setMode(ResourceType.ITEM, Direction.NORTH, PortMode.EXTRACT);
+                    int group = router.remoteMachines().attached().group();
+                    eq(helper, entry(helper, router).attachedGroup(), group, "o grupo da presa no índice");
+                    eq(helper, entry(helper, router).remotes().attachedException(), false, "exceção sem exceção");
+
+                    link(helper, router, otherChest);
+                    int version = index(helper).dataVersion();
+                    router.configureFace(EditTarget.ATTACHED_TARGET, ResourceType.ITEM, Direction.SOUTH, PortMode.INSERT,
+                            0, RedstoneMode.IGNORE);
+                    bumped(helper, version, "a exceção da presa");
+                    IndexRemotes remotes = entry(helper, router).remotes();
+                    helper.assertTrue(remotes.attachedException(), "a exceção da presa fora do índice");
+                    eq(helper, remotes.groupMachines(remotes.groupIndex(group)), 1, "a contagem do grupo é das remotas");
+
+                    NodeKey key = entry(helper, router).key();
+                    CompoundTag saved = index(helper).save(new CompoundTag(), helper.getLevel().registryAccess());
+                    CompoundTag tag = node(saved, key);
+                    helper.assertTrue(tag != null && tag.getInt("attached_group") == group
+                            && tag.getBoolean("attached_exception"), "as chaves da presa: " + tag);
+                    NodeIndex.Entry loaded = NodeIndex.load(saved, helper.getLevel().registryAccess()).entry(key);
+                    helper.assertTrue(loaded != null, "entrada perdida na ida e volta");
+                    same(helper, remotes, loaded.remotes(), "ida e volta com a presa");
+                    eq(helper, loaded.attachedGroup(), group, "o grupo da presa lido");
+
+                    CompoundTag old = tag.copy();
+                    old.remove("attached_group");
+                    old.remove("attached_exception");
+                    IndexRemotes read = IndexRemotes.loadForTests(old);
+                    helper.assertTrue(read.attachedGroup() == -1 && !read.attachedException(),
+                            "o índice antigo leu presa");
+                    helper.assertFalse(read.matchesForTests(router.remoteMachines()), "o índice antigo bate com a presa");
+                    CompoundTag unknown = tag.copy();
+                    unknown.putInt("attached_group", 9999);
+                    eq(helper, IndexRemotes.loadForTests(unknown).attachedGroup(), -1, "grupo que não existe");
+
+                    helper.assertTrue(router.revertAttachedToProfile(), "não voltou ao perfil");
+                    tag = node(index(helper).save(new CompoundTag(), helper.getLevel().registryAccess()), key);
+                    helper.assertTrue(tag.getInt("attached_group") == group && !tag.contains("attached_exception"),
+                            "a exceção ficou gravada: " + tag);
                 })
                 .thenSucceed();
     }

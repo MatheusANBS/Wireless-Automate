@@ -626,6 +626,11 @@ public class RouterBlockEntity extends BlockEntity {
         return attached.revertToProfile();
     }
 
+    /** Como o {@link #setMachineException}, na presa (o Desfazer do colar do Tablet). */
+    public boolean setAttachedException(@Nullable MachineConfig config) {
+        return attached.setException(config);
+    }
+
     /**
      * Tira a exceção de todas as máquinas do grupo {@code groupId}, numa mudança só: elas voltam a seguir o
      * perfil. Devolve quantas voltaram (0 se nenhuma tinha exceção).

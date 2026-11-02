@@ -233,6 +233,11 @@ public final class NodeIndex extends SavedData {
             return remotes;
         }
 
+        /** O id do grupo da presa ({@link IndexRemotes#attachedGroup}), ou −1 sem o membro presa. */
+        public int attachedGroup() {
+            return remotes.attachedGroup();
+        }
+
         /** O roteador, se o chunk está carregado. */
         public @Nullable RouterBlockEntity router() {
             return router != null && !router.isRemoved() ? router : null;

@@ -14,9 +14,14 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.menu.RangeView;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
+import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
+import io.github.matheusanbs.wirelessautomate.network.IndexRemotes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
+import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
+import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
@@ -27,6 +32,7 @@ import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
+import io.netty.buffer.Unpooled;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -36,6 +42,7 @@ import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
@@ -533,6 +540,71 @@ public final class AttachedGroupGameTests {
                     } finally {
                         holder[0].containerMenu = holder[0].inventoryMenu;
                     }
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * O snapshot da tela: o grupo da presa diz que tem a presa e conta com ela, a exceção dela aparece como a de uma
+     * remota (contagem, flag e as faces que diferem), e o grupo que a presa deixa fica com zero máquinas.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void snapshotGroupCountsTheAttached(GameTestHelper helper) {
+        RouterBlockEntity router = chestWithRouter(helper, RouterTier.ADVANCED);
+        helper.setBlock(OTHER_CHEST, Blocks.CHEST);
+        helper.setBlock(BARREL_B, Blocks.BARREL);
+        RemoteMachines remotes = router.remoteMachines();
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    ServerPlayer player = TestPlayers.inLevel(helper);
+                    router.setRangeUpgrade(rangeUpgrade());
+                    router.setMode(ResourceType.ITEM, Direction.NORTH, PortMode.EXTRACT);
+                    link(helper, router, OTHER_CHEST);
+                    link(helper, router, BARREL_B);
+                    int chests = remotes.attached().group();
+                    int barrels = groupOf(router, helper.absolutePos(BARREL_B));
+
+                    RangeView range = RouterSnapshot.capture(router, player).range();
+                    RangeView.GroupView chestGroup = range.group(chests);
+                    helper.assertTrue(chestGroup != null && chestGroup.attached() && chestGroup.count() == 2
+                            && chestGroup.exceptions() == 0, "o grupo da presa: " + chestGroup);
+                    RangeView.GroupView barrelGroup = range.group(barrels);
+                    helper.assertTrue(barrelGroup != null && !barrelGroup.attached() && barrelGroup.count() == 1,
+                            "o grupo do barril: " + barrelGroup);
+                    helper.assertValueEqual(range.attachedGroup(), chests, "o grupo da presa no snapshot");
+                    helper.assertFalse(range.attachedException(), "exceção sem exceção");
+                    helper.assertValueEqual(range.machines().size(), 2, "a presa entrou nas remotas");
+
+                    // Com uma remota no grupo, editar a presa vira exceção: Sul de um baú virado para o norte é Atrás.
+                    router.configureFace(EditTarget.ATTACHED_TARGET, ResourceType.ITEM, Direction.SOUTH, PortMode.INSERT,
+                            0, RedstoneMode.IGNORE);
+                    RouterSnapshot snapshot = RouterSnapshot.capture(router, player, EditTarget.ATTACHED_TARGET);
+                    range = snapshot.range();
+                    helper.assertTrue(range.attachedException(), "a exceção da presa não chegou ao snapshot");
+                    helper.assertValueEqual(range.group(chests).exceptions(), 1, "a exceção da presa no grupo");
+                    helper.assertTrue(range.differs(ResourceType.ITEM, RemoteSide.BACK), "a face que difere");
+                    helper.assertFalse(range.differs(ResourceType.ITEM, RemoteSide.FRONT), "a Frente igual ao perfil");
+                    RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(),
+                            helper.getLevel().registryAccess());
+                    RouterSnapshot.STREAM_CODEC.encode(buf, snapshot);
+                    helper.assertTrue(RouterSnapshot.STREAM_CODEC.decode(buf).equals(snapshot), "o snapshot pelo codec");
+
+                    // Bloco trocado: a presa vai para o grupo do barril e o dos baús, configurado, fica com zero.
+                    helper.assertTrue(router.unlinkMachine(helper.absolutePos(OTHER_CHEST)), "não desvinculou");
+                    helper.setBlock(CHEST, Blocks.BARREL);
+                    range = RouterSnapshot.capture(router, player).range();
+                    chestGroup = range.group(chests);
+                    helper.assertTrue(chestGroup != null && !chestGroup.attached() && chestGroup.count() == 0
+                            && chestGroup.exceptions() == 0, "o grupo deixado pela presa: " + chestGroup);
+                    barrelGroup = range.group(barrels);
+                    helper.assertTrue(barrelGroup.attached() && barrelGroup.count() == 2 && !range.attachedException(),
+                            "a presa no grupo do barril: " + barrelGroup);
+                    IndexRemotes index = NodeIndex.get(helper.getLevel().getServer())
+                            .entry(NodeKey.of(router.getLevel(), router.getBlockPos())).remotes();
+                    int g = index.groupIndex(chests);
+                    helper.assertTrue(g >= 0 && index.groupMachines(g) == 0, "o grupo deixado fora do índice");
+                    helper.assertValueEqual(index.attachedGroup(), barrels, "o grupo da presa no índice");
                 })
                 .thenSucceed();
     }

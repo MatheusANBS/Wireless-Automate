@@ -22,6 +22,7 @@ import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
+import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.ModPayloads;
 import io.github.matheusanbs.wirelessautomate.packet.SelectTargetPayload;
@@ -31,6 +32,7 @@ import io.github.matheusanbs.wirelessautomate.packet.TabletPayloads;
 import io.github.matheusanbs.wirelessautomate.packet.TabletSelectNodePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletTreePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletTreePayload.Action;
+import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
@@ -161,10 +163,12 @@ public final class TabletTreeGameTests {
                     TabletSnapshot.Page page = fresh(menuA);
                     List<Row> rows = page.rows().rows();
                     eq(helper, rows.size(), 1 + 1 + 8 + 1 + 1 + 2, "linhas abertas");
-                    helper.assertTrue(rows.get(0) instanceof Attached attached && attached.parent() == 0
-                            && attached.side().equals(java.util.Optional.of(Direction.DOWN)), "a presa vem primeiro");
-                    helper.assertTrue(rows.get(1) instanceof Group group && group.id() == chests && group.total() == 10
+                    // A presa (um baú) é do grupo dos baús: a primeira linha dentro dele, e o total conta com ela.
+                    helper.assertTrue(rows.get(0) instanceof Group group && group.id() == chests && group.total() == 11
                             && group.block().equals(CHEST_ID) && !group.collapsed() && !group.showAll(), "o grupo dos baús");
+                    helper.assertTrue(rows.get(1) instanceof Attached attached && attached.parent() == 0
+                            && attached.side().equals(java.util.Optional.of(Direction.DOWN)) && !attached.exception(),
+                            "a presa vem primeiro no grupo");
                     for (int i = 0; i < 8; i++) {
                         helper.assertTrue(rows.get(2 + i) instanceof Machine machine && machine.index() == i
                                 && machine.pos() == remotes.machine(i).pos().asLong(), "máquina " + i + " fora de ordem");
@@ -185,7 +189,7 @@ public final class TabletTreeGameTests {
                     helper.assertTrue(tree(a, menuA, Action.COLLAPSE_GROUP, key, barrels), "não recolheu");
                     rows = fresh(menuA).rows().rows();
                     eq(helper, rows.size(), 1 + 1 + 10 + 1, "linhas com todas e o grupo recolhido");
-                    helper.assertTrue(rows.get(1) instanceof Group group && group.showAll(), "a marca do Mostrar todas");
+                    helper.assertTrue(rows.get(0) instanceof Group group && group.showAll(), "a marca do Mostrar todas");
                     helper.assertTrue(rows.get(11) instanceof Machine machine && machine.index() == 9, "a última dos baús");
                     helper.assertTrue(rows.get(12) instanceof Group group && group.id() == barrels && group.collapsed(),
                             "o grupo recolhido");
@@ -417,6 +421,76 @@ public final class TabletTreeGameTests {
                 .thenSucceed();
     }
 
+    /**
+     * A presa é a primeira linha dentro do grupo dela (o total conta com ela, e a exceção dela também); o grupo
+     * recolhido a esconde; o grupo que ela deixa (bloco trocado) fica, sem máquinas.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void attachedInsideItsGroupOpenAndCollapsed(GameTestHelper helper) {
+        RouterBlockEntity router = chestWithRouter(helper, RouterTier.ADVANCED);
+        ServerPlayer player = playerWithTablet(helper);
+        String name = uniqueName(helper, "arvp");
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setNetworkId(NetworkSavedData.get(helper.getLevel().getServer())
+                            .create(player.getUUID(), "presa").id());
+                    router.setName(name);
+                    fakeLinks(router, helper, 2, CHEST_ID, 0);
+                    fakeLinks(router, helper, 1, BARREL_ID, 1);
+                    NodeIndex.placedBy(router, player.getUUID());
+                    NodeKey key = key(router);
+                    RemoteMachines remotes = router.remoteMachines();
+                    int chests = remotes.attached().group();
+                    int barrels = remotes.machine(2).group();
+                    eq(helper, remotes.machine(0).group(), chests, "os baús vinculados fora do grupo da presa");
+                    // Uma exceção na presa (o grupo tem remotas): a marca na linha e na contagem do grupo.
+                    router.configureFace(EditTarget.ATTACHED_TARGET, ResourceType.ITEM, Direction.SOUTH,
+                            PortMode.INSERT, 0, RedstoneMode.IGNORE);
+                    helper.assertTrue(remotes.attached().hasException(), "a presa sem exceção");
+                    TabletMenu menu = openTablet(player, 148, name);
+                    try {
+                        helper.assertTrue(tree(player, menu, Action.OPEN, key, 0), "não abriu");
+                        TabletSnapshot.Page page = fresh(menu);
+                        List<Row> rows = page.rows().rows();
+                        eq(helper, rows.size(), 6, "linhas abertas");
+                        helper.assertTrue(rows.get(0) instanceof Group group && group.id() == chests
+                                && group.total() == 3 && group.exceptions() == 1, "o grupo da presa: " + rows.get(0));
+                        helper.assertTrue(rows.get(1) instanceof Attached attached && attached.exception(),
+                                "a presa dentro do grupo: " + rows.get(1));
+                        helper.assertTrue(rows.get(2) instanceof Machine m0 && m0.index() == 0
+                                && rows.get(3) instanceof Machine m1 && m1.index() == 1, "os baús depois da presa");
+                        helper.assertTrue(rows.get(4) instanceof Group group && group.id() == barrels
+                                && group.total() == 1, "o grupo dos barris");
+                        roundTrip(helper, page);
+
+                        helper.assertTrue(tree(player, menu, Action.COLLAPSE_GROUP, key, chests), "não recolheu");
+                        rows = fresh(menu).rows().rows();
+                        eq(helper, rows.size(), 3, "linhas com o grupo da presa recolhido");
+                        helper.assertTrue(rows.get(0) instanceof Group group && group.collapsed(), "o grupo recolhido");
+                        helper.assertFalse(rows.stream().anyMatch(row -> row instanceof Attached),
+                                "a presa num grupo recolhido");
+                        helper.assertTrue(tree(player, menu, Action.EXPAND_GROUP, key, chests), "não abriu o grupo");
+
+                        // O bloco trocado leva a presa para o grupo dos barris; o dos baús fica, sem máquinas.
+                        helper.assertTrue(router.unlinkMachine(0) && router.unlinkMachine(0), "não desvinculou");
+                        helper.setBlock(CHEST, Blocks.BARREL);
+                        rows = fresh(menu).rows().rows();
+                        eq(helper, rows.size(), 4, "linhas depois da troca");
+                        helper.assertTrue(rows.get(0) instanceof Group group && group.id() == chests
+                                && group.total() == 0 && group.exceptions() == 0, "o grupo deixado: " + rows.get(0));
+                        helper.assertTrue(rows.get(1) instanceof Group group && group.id() == barrels
+                                && group.total() == 2, "o grupo novo da presa: " + rows.get(1));
+                        helper.assertTrue(rows.get(2) instanceof Attached attached && !attached.exception(),
+                                "a presa no grupo novo, sem a exceção do baú");
+                        helper.assertTrue(rows.get(3) instanceof Machine, "o barril depois da presa");
+                    } finally {
+                        player.containerMenu = player.inventoryMenu;
+                    }
+                })
+                .thenSucceed();
+    }
+
     /** Com o roteador descarregado, as linhas de máquina continuam, do índice, como descarregadas e sem vazão. */
     @GameTest(template = "empty", timeoutTicks = 100)
     public static void unloadedRouterKeepsMachineRows(GameTestHelper helper) {
@@ -434,8 +508,8 @@ public final class TabletTreeGameTests {
                     try {
                         TabletSnapshot.Page page = fresh(menu);
                         eq(helper, page.rows().rows().size(), loadedRows, "linhas com o roteador descarregado");
-                        helper.assertTrue(page.rows().rows().get(0) instanceof Attached attached
-                                && attached.side().isEmpty(), "o lado da presa sem o roteador");
+                        helper.assertTrue(page.rows().rows().stream().anyMatch(row -> row instanceof Attached attached
+                                && attached.side().isEmpty()), "o lado da presa sem o roteador");
                         eq(helper, page.rows().lives(), List.of(MachineLive.still(MachineStatus.UNLOADED)),
                                 "a máquina descarregada");
                     } finally {

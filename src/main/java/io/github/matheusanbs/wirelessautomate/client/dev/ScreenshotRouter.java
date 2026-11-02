@@ -256,9 +256,9 @@ final class ScreenshotRouter {
     /** Tela do roteador com três grupos, uma exceção, uma máquina trocada e o alvo dado. */
     private static RouterScreen rangeScreen(EditTarget target) {
         RouterSnapshot s = sample();
-        RangeView.GroupView blast = new RangeView.GroupView(0, ResourceLocation.withDefaultNamespace("blast_furnace"), "", 3, 1);
-        RangeView.GroupView smoker = new RangeView.GroupView(1, ResourceLocation.withDefaultNamespace("smoker"), "", 2, 0);
-        RangeView.GroupView furnace = new RangeView.GroupView(2, ResourceLocation.withDefaultNamespace("furnace"), "", 2, 0);
+        RangeView.GroupView blast = new RangeView.GroupView(0, ResourceLocation.withDefaultNamespace("blast_furnace"), "", 3, 1, false);
+        RangeView.GroupView smoker = new RangeView.GroupView(1, ResourceLocation.withDefaultNamespace("smoker"), "", 2, 0, false);
+        RangeView.GroupView furnace = new RangeView.GroupView(2, ResourceLocation.withDefaultNamespace("furnace"), "", 2, 0, false);
         List<RangeView.MachineView> machines = List.of(
                 new RangeView.MachineView(new BlockPos(3, 64, 0), 0, 3, false, RangeView.MachineState.LOADED, null, ""),
                 new RangeView.MachineView(new BlockPos(-3, 64, 1), 0, 3, false, RangeView.MachineState.LOADED, null, ""),
@@ -270,7 +270,8 @@ final class ScreenshotRouter {
                 new RangeView.MachineView(new BlockPos(8, 64, 5), 2, 8, false, RangeView.MachineState.LOADED, null, ""));
         int differs = target.kind() == EditTarget.Kind.MACHINE
                 ? 1 << RangeView.differsBit(ResourceType.ITEM, io.github.matheusanbs.wirelessautomate.range.RemoteSide.TOP) : 0;
-        RangeView range = new RangeView(16, 32, List.of(blast, smoker, furnace), machines, target, Direction.UP, differs);
+        RangeView range = new RangeView(16, 32, List.of(blast, smoker, furnace), machines, target, Direction.UP, differs,
+                false);
         RouterSnapshot snapshot = s.withRange(range);
         Inventory inventory = new Inventory(null);
         RouterMenu menu = new RouterMenu(0, inventory, snapshot);

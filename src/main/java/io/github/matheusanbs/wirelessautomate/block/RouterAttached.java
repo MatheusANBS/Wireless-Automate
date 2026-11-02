@@ -219,6 +219,26 @@ final class RouterAttached {
     }
 
     /**
+     * Troca a exceção da presa por uma cópia de {@code config}; {@code null}, ou igual ao perfil do grupo, tira a
+     * exceção. Sem membro, nada. Devolve se mudou.
+     */
+    boolean setException(@Nullable MachineConfig config) {
+        AttachedMember member = remotes.attached();
+        MachineGroup group = remotes.attachedGroup();
+        if (member == null || group == null) {
+            return false;
+        }
+        MachineConfig next = config == null || config.sameAs(group.profile()) ? null : config.copy();
+        MachineConfig now = member.exception();
+        if (now == null ? next == null : next != null && now.sameAs(next)) {
+            return false;
+        }
+        member.setException(next);
+        router.changed(NetworkManager.ALL_TYPES);
+        return true;
+    }
+
+    /**
      * Garante o membro presa: se não há, converte o rascunho ou entra no grupo do bloco da frente. Só no
      * servidor, com o chunk da máquina carregado e um bloco que não é ar. Devolve se o membro nasceu agora (quem
      * chama avisa o motor de todos os tipos: o grupo em que ela entrou pode já estar configurado).

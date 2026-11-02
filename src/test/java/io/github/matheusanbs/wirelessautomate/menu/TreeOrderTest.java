@@ -41,8 +41,13 @@ class TreeOrderTest {
     };
 
     private static List<String> plan(boolean attached, Set<Integer> collapsed, Set<Integer> showAll, int budget) {
+        return plan(attached, -1, collapsed, showAll, budget);
+    }
+
+    private static List<String> plan(boolean attached, int attachedGroup, Set<Integer> collapsed, Set<Integer> showAll,
+            int budget) {
         List<String> rows = new ArrayList<>();
-        int emitted = TreeOrder.plan(attached, MACHINES, collapsed::contains, showAll::contains, budget,
+        int emitted = TreeOrder.plan(attached, attachedGroup, MACHINES, collapsed::contains, showAll::contains, budget,
                 new TreeOrder.Rows() {
                     @Override
                     public void attached() {
@@ -91,5 +96,30 @@ class TreeOrderTest {
         assertEquals(List.of("presa", "g7", "m0"), plan(true, Set.of(), Set.of(), 3));
         assertEquals(List.of("presa", "g7", "m0", "m1", "m3", "m4", "m5", "m6", "m7", "m8"),
                 plan(true, Set.of(), Set.of(), 10));
+    }
+
+    @Test
+    void attachedGoesFirstInsideItsGroup() {
+        assertEquals(List.of("g7", "m0", "m1", "m3", "m4", "m5", "m6", "m7", "m8", "+3", "g9", "presa", "m2", "m9"),
+                plan(true, 9, Set.of(), Set.of(), 256));
+    }
+
+    @Test
+    void collapsedGroupHidesTheAttached() {
+        assertEquals(List.of("g7", "m0", "m1", "m3", "m4", "m5", "m6", "m7", "m8", "+3", "g9"),
+                plan(true, 9, Set.of(9), Set.of(), 256));
+    }
+
+    @Test
+    void attachedInAGroupDoesNotCountInTheMore() {
+        assertEquals(List.of("g7", "presa", "m0", "m1", "m3", "m4", "m5", "m6", "m7", "m8", "+3", "g9", "m2", "m9"),
+                plan(true, 7, Set.of(), Set.of(), 256));
+        assertEquals(List.of("g7", "presa"), plan(true, 7, Set.of(), Set.of(), 2));
+    }
+
+    @Test
+    void unknownGroupKeepsTheAttachedOnTop() {
+        assertEquals(List.of("presa", "g7"), plan(true, 42, Set.of(), Set.of(), 2));
+        assertEquals(List.of("g7", "m0"), plan(false, 7, Set.of(), Set.of(), 2));
     }
 }

@@ -180,7 +180,9 @@ public final class TabletTree {
         NodeKey key = entry.key();
         emitter.start(entry, parent, rows, lives, sample, now);
         try {
-            return TreeOrder.plan(!entry.machine().equals(AIR), emitter,
+            // A presa num grupo aparece mesmo com o bloco quebrado (como uma remota que sumiu); sem grupo, só com bloco.
+            int attachedGroup = entry.attachedGroup();
+            return TreeOrder.plan(attachedGroup >= 0 || !entry.machine().equals(AIR), attachedGroup, emitter,
                     id -> collapsed.contains(new GroupKey(key, id)), id -> showAll.contains(new GroupKey(key, id)),
                     budget, emitter);
         } finally {
@@ -253,6 +255,12 @@ public final class TabletTree {
                     exceptions[g]++;
                 }
             }
+            if (remotes.attachedException()) {
+                int g = remotes.groupIndex(remotes.attachedGroup());
+                if (g >= 0) {
+                    exceptions[g]++;
+                }
+            }
         }
 
         void clear() {
@@ -291,14 +299,16 @@ public final class TabletTree {
 
         @Override
         public void attached() {
-            rows.add(new Attached(parent, router == null ? Optional.empty() : Optional.of(router.facing().getOpposite())));
+            rows.add(new Attached(parent, router == null ? Optional.empty() : Optional.of(router.facing().getOpposite()),
+                    remotes.attachedException()));
         }
 
         @Override
         public void group(int g) {
             int groupId = remotes.groupId(g);
             GroupKey key = new GroupKey(entry.key(), groupId);
-            rows.add(new Group(parent, groupId, remotes.groupBlock(g), clip(remotes.groupName(g)), remotes.groupMachines(g),
+            int total = remotes.groupMachines(g) + (groupId == remotes.attachedGroup() ? 1 : 0);
+            rows.add(new Group(parent, groupId, remotes.groupBlock(g), clip(remotes.groupName(g)), total,
                     exceptions[g], collapsed.contains(key), showAll.contains(key)));
         }
 

@@ -361,7 +361,7 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             // nenhuma tecla fecha a tela enquanto se digita (nem a do inventário)
             return true;
         }
-        if (column.keyPressed(keyCode, scanCode, modifiers) || panel.keyPressed(keyCode, scanCode, modifiers)) {
+        if (column.keyPressed(keyCode, scanCode, modifiers)) {
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
@@ -563,9 +563,9 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         return column.rangeEyeCenter(target);
     }
 
-    /** Centro do Apagar todas embaixo da lista, ou {@code null} se ele não aparece (gancho do e2e). */
-    public int @Nullable [] litClearCenter() {
-        return column.litClearCenter();
+    /** Centro do ✕ da cópia ({@code copy}) ou do Apagar todas embaixo da lista, ou {@code null} (gancho do e2e). */
+    public int @Nullable [] footerCenter(boolean copy) {
+        return copy ? column.copyForgetCenter() : column.litClearCenter();
     }
 
     /** O ✕ da linha do alvo na lista está armado, esperando o segundo clique (gancho do e2e). */

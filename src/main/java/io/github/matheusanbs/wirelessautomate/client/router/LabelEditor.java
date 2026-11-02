@@ -197,7 +197,7 @@ public final class LabelEditor {
         if (p.kind() == EditTarget.Kind.GROUP) {
             groups.replaceAll(g -> g.id() == p.id()
                     ? new RangeView.GroupView(g.id(), g.block(), p.name(), g.count(), g.exceptions(),
-                            g.attached()) : g);
+                            g.attached(), g.blank() && p.name().isEmpty()) : g);
         } else if (p.kind() == EditTarget.Kind.MACHINE && p.id() >= 0 && p.id() < machines.size()) {
             RangeView.MachineView m = machines.get(p.id());
             machines.set(p.id(), new RangeView.MachineView(m.pos(), m.group(), m.distance(), m.exception(), m.state(),

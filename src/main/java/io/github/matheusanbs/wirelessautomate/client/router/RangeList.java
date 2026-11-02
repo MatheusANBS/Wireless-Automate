@@ -29,7 +29,8 @@ import org.jetbrains.annotations.Nullable;
  * primeira linha do grupo dela, com "presa" (ou o nome dado) no lugar do número e da distância; sem grupo (a
  * presa que ninguém configurou), ela fica numa linha no topo. Clicar numa linha escolhe o alvo de edição; a seta
  * de um grupo (ou um clique no grupo já escolhido) abre e fecha; dois cliques no nome abrem a edição dele. A
- * linha escolhida ganha os botões do {@link RangeRowButtons}. Rola com a roda. Só cliente; todo texto passa por {@link GuiText}.
+ * linha escolhida ganha os botões do {@link RangeRowButtons}; a do grupo é desenhada pelo {@link GroupRow}. Rola com a
+ * roda. Só cliente; todo texto passa por {@link GuiText}.
  */
 final class RangeList {
     static final int ATTACHED_H = 13;
@@ -38,7 +39,7 @@ final class RangeList {
     /** Rolagem de um passo da roda, em px. */
     private static final int SCROLL_STEP = 12;
     /** Largura da área da seta à esquerda de um grupo (clicar ali só abre e fecha). */
-    private static final int ARROW_ZONE = 9;
+    static final int ARROW_ZONE = 9;
     /** Onde o nome do grupo começa, depois da seta e do ícone. */
     static final int GROUP_TEXT_X = ARROW_ZONE + 15;
     /** Onde o nome da presa começa, a partir da borda da lista (depois do ícone). */
@@ -84,6 +85,8 @@ final class RangeList {
     private int shownGroup = -1;
     private @Nullable RangeView cachedView;
     private @Nullable List<Row> cachedRows;
+    /** O nome dado à presa, do snapshot (o ⧉ e o ⎘ só entram com o nome dela inteiro). */
+    private String attachedLabel = "";
 
     /**
      * @param rename     a edição do nome das linhas, da coluna
@@ -193,7 +196,7 @@ final class RangeList {
                 boolean eye = row.machineLike() && !buttons.unlinkArmed(target);
                 int right = rowRight(rows(view)) - (eye ? MachineRow.EYE_W : 0);
                 int rowH = row.height();
-                return buttons.place(font, view, target, ry, rowH, right, x + RowRename.nameX(row));
+                return buttons.place(font, view, target, attachedLabel, ry, rowH, right, x + RowRename.nameX(row));
             }
         }
         return List.of();
@@ -202,10 +205,13 @@ final class RangeList {
     /**
      * Chamado a cada quadro: quando o alvo muda (pela lista ou pelo servidor), ou o grupo dele muda (a presa com
      * o bloco trocado), o grupo dele abre e a linha dele entra na área visível. Os outros grupos ficam como o
-     * jogador deixou. {@code idleNetworks} diz se a linha do alvo tem o "Tirar redes".
+     * jogador deixou. {@code idleNetworks} diz se a linha do alvo tem o "Tirar redes"; {@code attachedLabel} é o nome
+     * dado à presa e {@code clipboard} a origem da cópia do jogador (vazia sem cópia: sem o ⎘).
      */
-    void sync(RangeView view, EditTarget target, boolean idleNetworks) {
+    void sync(RangeView view, EditTarget target, boolean idleNetworks, String attachedLabel, Component clipboard) {
         buttons.idleNetworks(idleNetworks);
+        buttons.clipboard(clipboard);
+        this.attachedLabel = attachedLabel;
         int group = groupOf(view, target);
         if (target.equals(shownTarget) && group == shownGroup) {
             scroll = Math.max(0, Math.min(scroll, maxScroll(rows(view))));
@@ -370,10 +376,11 @@ final class RangeList {
                         machineRow.renderAttached(g, font, view, attachedLabel, !attachedIcon.isEmpty(), x, ry,
                                 placed.isEmpty() ? right - MachineRow.EYE_W : textRight, right, placed.isEmpty());
                     } else {
-                        renderAttached(g, font, attachedIcon, attachedLabel, ry, right);
+                        renderAttached(g, font, attachedIcon, attachedLabel, ry, textRight);
                     }
                 }
-                case GROUP -> renderGroup(g, font, view, row, ry, textRight, right);
+                case GROUP -> GroupRow.render(g, font, view, row.group(), open.contains(row.group()), x, ry,
+                        textRight, right);
                 case MACHINE -> machineRow.render(g, font, view, row.machine(), x, ry,
                         placed.isEmpty() ? right - MachineRow.EYE_W : textRight, right, placed.isEmpty(),
                         !selected || !buttons.unlinkArmed(target));
@@ -407,7 +414,8 @@ final class RangeList {
         rename.endFrame(view, g, mouseX, mouseY);
     }
 
-    private void renderAttached(GuiGraphics g, Font font, ItemStack icon, String label, int ry, int right) {
+    /** A presa sem grupo, na linha do topo: o ícone e o nome até {@code nameRight} (antes dos botões dela). */
+    private void renderAttached(GuiGraphics g, Font font, ItemStack icon, String label, int ry, int nameRight) {
         if (!icon.isEmpty()) {
             g.pose().pushPose();
             g.pose().translate(x + 4, ry + 0.5f, 0);
@@ -418,49 +426,8 @@ final class RangeList {
         int textX = x + 19;
         if (!rename.editing(EditTarget.ATTACHED_TARGET)) {
             GuiText.draw(g, font, label.isEmpty() ? tr("range.attached") : Component.literal(label), textX, ry + 2,
-                    right - textX - 2, GuiPaint.FG);
+                    nameRight - textX - 2, GuiPaint.FG);
         }
-    }
-
-    /**
-     * Um grupo, numa linha: a seta, o ícone do bloco a 3/4, "Nome ×N" e, à direita, o que merece aviso: "1 trocada" ou
-     * as exceções (o perfil comum não diz nada). {@code nameRight} é até onde vai o texto (antes dos botões da linha
-     * escolhida) e {@code right} a borda direita da linha.
-     */
-    private void renderGroup(GuiGraphics g, Font font, RangeView view, Row row, int ry, int nameRight, int right) {
-        GroupView group = view.group(row.group());
-        if (group == null) {
-            return;
-        }
-        if (open.contains(group.id())) {
-            GuiPaint.arrowDown(g, x + 3, ry + 5, GuiPaint.MUTED);
-        } else {
-            GuiPaint.arrowRight(g, x + 4, ry + 4, GuiPaint.MUTED);
-        }
-        ItemStack icon = group.icon();
-        if (!icon.isEmpty()) {
-            g.pose().pushPose();
-            g.pose().translate(x + ARROW_ZONE + 1, ry + 0.5f, 0);
-            g.pose().scale(0.75f, 0.75f, 1f);
-            g.renderItem(icon, 0, 0);
-            g.pose().popPose();
-        }
-        int textX = x + GROUP_TEXT_X;
-        Component name = tr("range.group.count", groupName(group), group.count());
-        int replaced = RangeRowButtons.replaced(view, group.id());
-        Component detail = replaced > 0 ? replaced == 1 ? tr("range.group.replaced.one") : tr("range.group.replaced", replaced)
-                : group.exceptions() > 0 ? exceptions(group) : null;
-        int color = replaced > 0 ? GuiPaint.BRASS : GuiPaint.ACCENT;
-        int detailW = detail == null ? 0 : font.width(detail) + 4;
-        // com os botões da linha escolhida, o aviso sai (ele vai na dica); sem eles, vai à direita
-        boolean buttonsOnRow = nameRight < right;
-        // o aviso só entra se o nome continua inteiro (senão ele vai só na dica)
-        if (detail != null && !buttonsOnRow && textX + font.width(name) + detailW + 2 <= right) {
-            GuiText.draw(g, font, detail, right - detailW + 2, ry + 2, detailW - 4, color);
-        } else {
-            detailW = 0;
-        }
-        GuiText.draw(g, font, name, textX, ry + 2, nameRight - detailW - textX - 2, GuiPaint.FG);
     }
 
     // ------------------------------------------------------------------ captura de desenvolvimento

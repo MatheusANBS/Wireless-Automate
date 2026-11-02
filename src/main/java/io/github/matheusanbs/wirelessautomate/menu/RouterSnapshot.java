@@ -481,7 +481,10 @@ public record RouterSnapshot(
                 }
             }
             String name = group.name().length() > NAME_LENGTH ? group.name().substring(0, NAME_LENGTH) : group.name();
-            groups.add(new RangeView.GroupView(group.id(), group.block(), name, count, exceptions, hasAttached));
+            // só a presa, sem nada a zerar: o Desvincular grupo seria recusado em silêncio
+            boolean blank = hasAttached && count == 1 && exceptions == 0 && group.name().isEmpty()
+                    && !group.hasCards() && group.profile().isDefault();
+            groups.add(new RangeView.GroupView(group.id(), group.block(), name, count, exceptions, hasAttached, blank));
         }
         return groups;
     }

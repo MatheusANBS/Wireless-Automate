@@ -118,7 +118,7 @@ final class MachineRow {
                 .append("\n").append(MachineTexts.stateText(machine.state()).copy()
                         .withColor(MachineTexts.stateColor(machine.state())));
         if (machine.state() == MachineState.REPLACED) {
-            text = text.copy().append("\n").append(RangeRowButtons.updateDetail(view, EditTarget.machine(index)).copy()
+            text = text.copy().append("\n").append(RowButtonTips.updateDetail(view, EditTarget.machine(index)).copy()
                     .withColor(GuiPaint.TOOLTIP_MUTED));
         }
         return text.copy().append("\n").append(tr("range.machine.tooltip").copy().withColor(GuiPaint.TOOLTIP_MUTED));

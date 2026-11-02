@@ -228,33 +228,27 @@ final class ItemInsertPlan {
     }
 
     /**
-     * O destino que acabou de recusar {@code item} ainda tem lugar só para outros itens: um slot vazio que não
-     * aceita este item ({@link IItemHandler#isItemValid}), ou uma pilha de outro item abaixo do próprio limite (a
-     * entrada da fornalha com 16 de ferro recusa o ouro, mas aceita mais ferro). Se um slot vazio aceita o item,
-     * ou a pilha dele tem espaço, e mesmo assim nada entrou, a máquina está travada (a saída cheia): {@code false},
-     * e ela dorme como cheia. Só roda na recusa, e a recusa fica anotada ({@link ItemHints}), então não se repete
-     * para o mesmo item até a máquina mudar.
+     * O destino da última {@link #simulate}, que não aceitou nada de {@code item}, ainda tem lugar só para outros
+     * itens: uma pilha de outro item abaixo do próprio limite (a entrada da fornalha com 16 de ferro recusa o
+     * ouro, mas aceita mais ferro). Chame depois de {@link #refusesItem} dar {@code false}: então, se a simulação
+     * viu um slot vazio, algum deles aceita o item e mesmo assim nada entrou, e a máquina está travada (a saída
+     * cheia), como a pilha do próprio item com espaço que recusou. Nesses casos, e sem pilha de outro item com
+     * espaço, devolve {@code false} e o destino dorme como cheio. Os vazios vêm da simulação; só sem vazio é que
+     * os slots são relidos, e o veredito de cheio fica guardado na porta até a máquina mudar ({@link Port#full}).
      */
-    static boolean roomForOthers(IItemHandler target, ItemStack item) {
-        boolean room = false;
+    boolean roomForOthers(IItemHandler target, ItemStack item) {
+        if (emptySeen > 0 || sameSeen) {
+            return false;
+        }
         for (int slot = 0, n = target.getSlots(); slot < n; slot++) {
             ItemStack inSlot = target.getStackInSlot(slot);
-            if (inSlot.isEmpty()) {
-                if (target.isItemValid(slot, item)) {
-                    return false;
-                }
-                room = true;
-                continue;
-            }
             int count = inSlot.getCount();
-            if (count < target.getSlotLimit(slot) && count < inSlot.getMaxStackSize()) {
-                if (ItemStack.isSameItemSameComponents(inSlot, item)) {
-                    return false;
-                }
-                room = true;
+            if (!inSlot.isEmpty() && count < target.getSlotLimit(slot) && count < inSlot.getMaxStackSize()
+                    && !ItemStack.isSameItemSameComponents(inSlot, item)) {
+                return true;
             }
         }
-        return room;
+        return false;
     }
 
     /** Quanto do item a última {@link #simulate} contou no destino. */

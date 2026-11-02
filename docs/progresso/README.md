@@ -4,15 +4,14 @@ Comece por aqui para continuar o trabalho. Este arquivo é curto de propósito: 
 
 ## Agora
 
-- **Versão atual:** 2.13.0 (30/10/2026), publicada no GitHub; os upgrades do Baú (Mesa de Trabalho e Compactação). Protocolo 40 (43 no ramo).
+- **Versão atual:** 2.13.0 (30/10/2026), publicada no GitHub; os upgrades do Baú (Mesa de Trabalho e Compactação). Protocolo 40 (44 no ramo).
 - **Publicação:** a 2.13.0 está no CurseForge e no Modrinth (`modrinth.com/mod/wireless-automate`, em análise desde 30/10).
-- **Em andamento:** ramo `ccr-52410279-si07pg`: o destino seletivo no motor e as etapas 1, 2 e 4 do roteador de alcance (a presa no grupo, o Configurador sem função; desvincular o grupo, copiar e colar por máquina, Atualizar com cartões; os menores das revisões), feitas; falta o teste à mão do dono. O ramo `mc/1.20.1-forge` (porte) está parado à espera do ok do dono (`docs/portes.md`).
+- **Em andamento:** ramo `ccr-52410279-si07pg`: o destino seletivo no motor e as etapas 1 a 4 do roteador de alcance (a presa no grupo; desvincular o grupo, copiar e colar por máquina, Atualizar com cartões; o Afinador do Configurador; os menores das revisões), feitas; falta o teste à mão do dono. O ramo `mc/1.20.1-forge` (porte) está parado à espera do ok do dono (`docs/portes.md`).
 
 ## Próximo passo
 
-1. O dono testa à mão as etapas 1, 2 e 4 (listas nas linhas de 02/11 do histórico) e decide o merge.
-2. Etapa 3: a função nova do Configurador, à espera da escolha do dono entre as ideias A a D.
-3. Os menores que sobraram do alcance (`pendencias.md`, seção "Roteador de alcance").
+1. O dono testa à mão as etapas 1 a 4 (listas nas linhas de 02/11 do histórico; o Afinador na linha do topo) e decide o merge.
+2. Os menores que sobraram do alcance (`pendencias.md`, seção "Roteador de alcance").
 
 ## Os arquivos
 

@@ -20,7 +20,7 @@ O mod tem um bloco e oito itens (Configurador, Tablet, Vinculador, Cartão de fi
 | --- | --- | --- |
 | Roteador Wireless | Bloco direcional | Gruda na face da máquina onde é colocado: em cima, embaixo (de cabeça para baixo) ou de lado. Shift + clique direito com as mãos vazias gira o roteador 90° em torno do eixo da face (horário para quem olha a face de frente); a configuração das faces da máquina não muda. Corpo de 14×6×12 px, duas antenas e quatro LEDs decorativos na frente. |
 | Cartões de Upgrade (Avançado, Elite, Esmeralda, Ultimate; Allthemodium, Vibranium e Unobtainium com o mod) | Item | Têm origem (componente `upgrade_from`, "Básico → Elite") e só valem num bloco exatamente daquele tier (`RouterTier.acceptsCard`); os cartões antigos, sem origem, sobem de qualquer tier abaixo. Shift + clique no roteador ou armazenamento colocado (sem perder a configuração) ou bloco + cartão na bancada. Não há cartão Básico. |
-| Configurador | Item (varinha) | Sem função até a etapa 3: uma ferramenta nova chega numa próxima versão. |
+| Configurador | Item (varinha) | O Afinador: analisa as faces de uma máquina vinculada, propõe os modos e aplica no segundo clique. |
 | Tablet de rede | Item | Gerencia nós, redes e grupos à distância. |
 | Vinculador | Item (controle) | Liga máquinas a um roteador de alcance (uma a uma ou por área) e abre o roteador que chega numa máquina. |
 | Cartão de filtro | Item | Guarda um filtro reutilizável entre roteadores. |
@@ -53,7 +53,7 @@ A vazão vale por face e por tipo. Os números ficam no arquivo de config do ser
 
 ## Telas da interface
 
-São quatro telas (Roteador, Filtro, Tablet e Vinculador; o Configurador está sem função), todas com a mesma hierarquia: o essencial à vista, ajustes secundários recolhidos e um botão principal na cor do tier.
+São quatro telas (Roteador, Filtro, Tablet e Vinculador; o Configurador não tem tela), todas com a mesma hierarquia: o essencial à vista, ajustes secundários recolhidos e um botão principal na cor do tier.
 
 **Tema claro e escuro:** todas as telas têm um botão de 11 × 11 px no canto direito do cabeçalho (uma lua no claro, um sol no escuro; a dica diz "Modo escuro" ou "Modo claro"). Clicar troca o tema de todas as telas de uma vez, na hora, sem reabrir; a escolha fica salva na config do cliente (`config/wirelessautomate-client.toml`, `gui.theme`, `LIGHT` ou `DARK`, padrão `LIGHT`). As paletas estão em `docs/identidade-visual.md`.
 
@@ -123,7 +123,9 @@ Dois modos (`LinkerMode`, componente `linker_mode`; sem o componente, Vincular).
 
 ### Configurador
 
-Sem função até a etapa 3 (a função nova vem numa próxima versão). O item, a receita, o modelo e os componentes (`configurator_type`, `configurator_machine` e os antigos `configurator_mode`, `configurator_any_machine` e `configurator_area`) continuam registrados para os itens não sumirem dos mundos; o tooltip diz que a ferramenta nova chega numa próxima versão. Saíram o copiar e colar, o seletor de tipo, a roda e as duas mensagens (`ConfiguratorWheelPayload`, `CycleConfiguratorTypePayload`). Copiar e colar perfis é do Tablet. A regra das redes ao colar (a rede de cada face só é colada se o jogador pode usá-la, e só sai de uma rede que ele edita; `PresetPaste` e `PresetApplier`) continua valendo no Tablet.
+O **Afinador** (etapa 3; desenho completo em `docs/superpowers/specs/2026-11-02-configurador-afinador-design.md`). Clique numa máquina vinculada (a presa ou uma remota de um roteador que o jogador pode editar): o servidor lê a capability de cada face e tipo (até 27 slots por face e 64 itens de prova), classifica a face em entrada, saída, as duas ou nada e propõe os modos: a saída em Extrai e as entradas em Insere, uma face por assinatura; um armazenamento (baú, barril, tanque, bateria) recebe Armazém numa face só e Nenhum nas outras. A proposta vai ao cliente (`ConfiguratorProposalPayload`), que pinta uma moldura na cor do modo em cada face (com a letra do tipo quando há mais de um) por até 10 s, ou até o jogador mirar outro bloco por 2 s; a action bar resume. O segundo clique na mesma máquina (no mínimo 6 ticks depois, e só com a tecla solta desde o primeiro) aplica na máquina, com a semântica de máquina (exceção ou perfil da presa sozinha); Shift + clique aplica no perfil do grupo. Muda só os modos (prioridade, redstone, filtro e rede ficam) e não tem Desfazer. Num roteador, o clique abre a tela dele. Sem tela própria e nada por tick.
+
+O item, a receita, o modelo e os componentes (`configurator_type`, `configurator_machine` e os antigos `configurator_mode`, `configurator_any_machine` e `configurator_area`) continuam registrados para os itens não sumirem dos mundos. Copiar e colar perfis é do Tablet. A regra das redes ao colar (a rede de cada face só é colada se o jogador pode usá-la, e só sai de uma rede que ele edita; `PresetPaste` e `PresetApplier`) continua valendo no Tablet.
 
 ## Filtros
 
@@ -368,7 +370,7 @@ O v1 entrega o motor de transferência e a configuração essencial; o v2 comple
 - [x] Filtros sem limite (inventário, JEI, tags, mod, estoque) e cartões
 - [x] Filtro v2 (1.0): tela em lista redimensionável, inspetor e busca de tags e regras por propriedade
 - [x] Tiers e Cartões de Upgrade
-- [x] Configurador como pincel (sem função desde a etapa 1 da presa no grupo) e Vinculador modo Único (o Vinculador virou Vincular e Abrir máquinas em 22/10/2026)
+- [x] Configurador como pincel (o Afinador desde a etapa 3 do roteador de alcance) e Vinculador modo Único (o Vinculador virou Vincular e Abrir máquinas em 22/10/2026)
 - [x] Profiler embutido e benchmark com Sophisticated Storage
 
 **v2, escala e integrações**

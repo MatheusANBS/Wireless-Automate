@@ -26,6 +26,9 @@ import net.minecraft.world.level.block.entity.BlockEntity;
  * itens dos mundos que já os têm.
  */
 public class ConfiguratorItem extends Item {
+    /** As linhas do tooltip, na ordem do gesto. */
+    private static final String[] TOOLTIP = {"analyze", "apply", "group", "modes"};
+
     public ConfiguratorItem(Properties properties) {
         super(properties);
     }
@@ -67,7 +70,9 @@ public class ConfiguratorItem extends Item {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, context, tooltip, flag);
-        tooltip.add(Component.translatable("item.wirelessautomate.configurator.tooltip.no_function")
-                .withStyle(ChatFormatting.GRAY));
+        for (String line : TOOLTIP) {
+            tooltip.add(Component.translatable("item.wirelessautomate.configurator.tooltip." + line)
+                    .withStyle(ChatFormatting.GRAY));
+        }
     }
 }

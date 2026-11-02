@@ -23,7 +23,7 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 
 ## Roteador de alcance
 
-- **(dono)** Escolher a função nova do Configurador (ideias A a D em `docs/preview/alcance-presa-no-grupo.html`); a função nova confere o `mayBuild`, como o Vinculador. (02/11)
+- Teste à mão do Afinador do Configurador (etapa 3, linha de 02/11 do histórico): a pintura nas faces, o segundo clique, Shift no grupo, segurar o botão e máquinas de outros mods (Mekanism, Sophisticated). (02/11)
 - Teste à mão da etapa 4 do alcance (linha de 02/11 do histórico): o Vinculador pedindo confirmação, a máquina trocada parando de receber na hora. (02/11)
 
 - Pausar grupo. (11/10)

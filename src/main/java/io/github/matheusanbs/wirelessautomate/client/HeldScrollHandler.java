@@ -1,7 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
-import io.github.matheusanbs.wirelessautomate.packet.CycleConfiguratorTypePayload;
 import io.github.matheusanbs.wirelessautomate.packet.CycleLinkerModePayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import net.minecraft.client.Minecraft;
@@ -35,9 +34,7 @@ public final class HeldScrollHandler {
         int direction = event.getScrollDeltaY() > 0 ? -1 : 1;
         ItemStack held = minecraft.player.getMainHandItem();
         CustomPacketPayload payload;
-        if (held.is(ModItems.CONFIGURATOR.get())) {
-            payload = new CycleConfiguratorTypePayload(direction);
-        } else if (held.is(ModItems.LINKER.get())) {
+        if (held.is(ModItems.LINKER.get())) {
             payload = new CycleLinkerModePayload(direction);
         } else {
             return;

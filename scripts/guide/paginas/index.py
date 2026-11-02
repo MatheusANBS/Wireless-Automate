@@ -36,7 +36,7 @@ entre si, sem canos.
 | ''' + item('tier_core_advanced') + ''' [Cartões de Upgrade](upgrade-cards.md) | Sobem o tier do roteador: mais vazão e alcance. |
 | ''' + item('filter_card') + ''' [Cartão de Filtro](filter-card.md) | Um filtro pronto para várias faces. |
 | ''' + item('linker') + ''' [Vinculador](linker.md) | Liga máquinas a um roteador de alcance e abre o roteador de uma máquina. |
-| ''' + item('configurator') + ''' [Configurador](configurator.md) | Copia a configuração de um roteador para outro. |
+| ''' + item('configurator') + ''' [Configurador](configurator.md) | Sem função por enquanto: uma ferramenta nova chega numa próxima versão. |
 | ''' + item('network_tablet') + ''' [Tablet de Rede](network-tablet.md) | Vê e gerencia suas redes de qualquer lugar. |
 | ''' + item('chunk_loader_upgrade') + ''' [Upgrade de Chunk Loading](chunk-loading.md) | O roteador trabalha com você longe. |
 | ''' + item('storage_chest') + ''' [Baú Wireless](wireless-chest.md) | Milhões de itens por tipo; entre dois deles, um tipo inteiro passa de uma vez. |
@@ -95,7 +95,7 @@ other, with no pipes.
 | ''' + item('tier_core_advanced') + ''' [Upgrade Cards](upgrade-cards.md) | Raise the router's tier: more throughput and range. |
 | ''' + item('filter_card') + ''' [Filter Card](filter-card.md) | A ready-made filter for many faces. |
 | ''' + item('linker') + ''' [Linker](linker.md) | Links machines to a range router and opens the router of a machine. |
-| ''' + item('configurator') + ''' [Configurator](configurator.md) | Copies a router's configuration to another. |
+| ''' + item('configurator') + ''' [Configurator](configurator.md) | No function for now: a new tool arrives in a future version. |
 | ''' + item('network_tablet') + ''' [Network Tablet](network-tablet.md) | See and manage your networks from anywhere. |
 | ''' + item('chunk_loader_upgrade') + ''' [Chunk Loading Upgrade](chunk-loading.md) | The router keeps working while you're away. |
 | ''' + item('storage_chest') + ''' [Wireless Chest](wireless-chest.md) | Millions of items by type; between two of them, a whole type moves at once. |

@@ -1,7 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client.dev;
 
 import static io.github.matheusanbs.wirelessautomate.client.dev.DevEndToEnd.*;
-import static io.github.matheusanbs.wirelessautomate.client.dev.E2eConfiguratorSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eRouterSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eTabletSteps.*;
@@ -14,7 +13,6 @@ import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -23,7 +21,7 @@ import net.minecraft.world.item.ItemStack;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
 
 /**
- * A volta em português com uma rede de nome longo: roteador, roda do Configurador, Vinculador e Tablet, no
+ * A volta em português com uma rede de nome longo: roteador, Vinculador e Tablet, no
  * mínimo e no máximo, conferindo que todo texto cortado tem o texto inteiro no tooltip.
  */
 final class E2ePortugueseSteps {
@@ -40,7 +38,7 @@ final class E2ePortugueseSteps {
      */
     static void portugueseSteps(List<Step> list) {
         ptRouterSteps(list);
-        ptWheelAndLinkerSteps(list);
+        ptLinkerSteps(list);
         ptTabletSteps(list);
     }
 
@@ -96,18 +94,8 @@ final class E2ePortugueseSteps {
         list.add(close("pt: fechar B"));
     }
 
-    /** Português: a roda do Configurador e o Vinculador. */
-    private static void ptWheelAndLinkerSteps(List<Step> list) {
-        // Roda do Configurador em português (rótulos e descrições mais longos)
-        list.add(new Step("pt: Configurador na mão", STEP_TIMEOUT_MS, () -> onServer(server -> {
-            server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID())
-                    .setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.CONFIGURATOR.get()));
-            return null;
-        }), () -> Minecraft.getInstance().player.getMainHandItem().is(ModItems.CONFIGURATOR.get()),
-                () -> "na mão: " + Minecraft.getInstance().player.getMainHandItem()));
-        wheelSteps(list, "pt: ", "10c-configurador-roda-pt");
-        list.add(close("pt: fechar a roda"));
-
+    /** Português: o Vinculador. */
+    private static void ptLinkerSteps(List<Step> list) {
         // Vinculador sem roteador escolhido: a ajuda dos gestos e o aviso são os textos mais longos
         list.add(new Step("pt: Vinculador na mão", STEP_TIMEOUT_MS, () -> onServer(server -> {
             server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID())

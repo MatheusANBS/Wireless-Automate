@@ -3,8 +3,6 @@ package io.github.matheusanbs.wirelessautomate.gametest;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
-import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
-import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
@@ -12,54 +10,39 @@ import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
-import io.github.matheusanbs.wirelessautomate.network.Sources;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
-import io.github.matheusanbs.wirelessautomate.packet.ConfiguratorWheelPayload;
-import io.github.matheusanbs.wirelessautomate.packet.CycleConfiguratorTypePayload;
-import io.github.matheusanbs.wirelessautomate.packet.ModPayloads;
 import io.github.matheusanbs.wirelessautomate.preset.PresetApplier;
+import io.github.matheusanbs.wirelessautomate.preset.PresetPaste;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
-import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
-import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.netty.buffer.Unpooled;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.RegistryAccess;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Configurador (pincel e colar em área na mesma máquina ou em qualquer uma, o seletor de tipo) e o
- * {@link RouterPreset} que ele copia e cola.
+ * O {@link RouterPreset} e o {@link PresetPaste}, a lógica de copiar e colar a configuração de um roteador que o
+ * Tablet usa: faces pela frente do roteador, a rede de cada face e o colar por tipo.
  */
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
-public final class ConfiguratorGameTests {
+public final class PresetPasteGameTests {
     private static final ResourceType[] TYPES = ResourceType.values();
     private static final RelativeSide[] SIDES = RelativeSide.values();
 
@@ -80,14 +63,6 @@ public final class ConfiguratorGameTests {
         return helper.getBlockEntity(pos);
     }
 
-    private static boolean use(ServerPlayer player, RouterBlockEntity router, boolean sneak) {
-        player.setShiftKeyDown(sneak);
-        BlockPos pos = router.getBlockPos();
-        UseOnContext context = new UseOnContext(player, InteractionHand.MAIN_HAND,
-                new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false));
-        return ModItems.CONFIGURATOR.get().useOn(context).consumesAction();
-    }
-
     /** Configuração variada, pelas faces absolutas de um roteador com {@code facing=up}. */
     private static void configureUp(RouterBlockEntity up) {
         up.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);         // FRONT
@@ -106,25 +81,18 @@ public final class ConfiguratorGameTests {
         ServerPlayer player = TestPlayers.inLevel(helper);
         WaNetwork own = data.create(player.getUUID(), "Pincel " + player.getUUID());
         WaNetwork other = data.create(UUID.randomUUID(), "Alheia " + player.getUUID());
-        ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
-        player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
 
         helper.startSequence()
                 .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(target), "sem onLoad"))
                 .thenExecute(() -> {
                     try {
-                        helper.assertTrue(use(player, target, false), "colar sem cópia não respondeu");
-                        helper.assertTrue(!configurator.has(ModDataComponents.PRESET.get()), "cópia do nada");
-
                         configureUp(source);
                         source.setNetworkId(own.id());
-                        helper.assertTrue(use(player, source, true), "copiar não agiu");
-                        RouterPreset preset = configurator.get(ModDataComponents.PRESET.get());
-                        helper.assertTrue(preset != null, "nada copiado para o item");
+                        RouterPreset preset = PresetPaste.copy(player, source);
                         helper.assertValueEqual(preset.configuredFaces(), 4, "faces configuradas");
                         helper.assertValueEqual(preset.networks(ResourceType.ITEM), List.of(own.id()), "rede não copiada");
 
-                        helper.assertTrue(use(player, target, false), "colar não agiu");
+                        PresetPaste.paste(player, target, preset, null);
                         for (ResourceType type : TYPES) {
                             for (RelativeSide side : SIDES) {
                                 helper.assertValueEqual(target.face(type, side), source.face(type, side),
@@ -145,8 +113,7 @@ public final class ConfiguratorGameTests {
 
                         // Rede de outro dono: só as faces vão.
                         source.setNetworkId(other.id());
-                        use(player, source, true);
-                        use(player, foreign, false);
+                        PresetPaste.paste(player, foreign, PresetPaste.copy(player, source), null);
                         helper.assertValueEqual(foreign.face(ResourceType.ITEM, RelativeSide.TOP).mode(),
                                 PortMode.INSERT, "faces não coladas sem a rede");
                         helper.assertTrue(foreign.networkId(ResourceType.ITEM) == null, "colou rede de outro dono");
@@ -219,18 +186,6 @@ public final class ConfiguratorGameTests {
         helper.succeed();
     }
 
-    /** Clique direito com o Configurador num bloco (posição relativa à estrutura), pelo caminho do jogo. */
-    private static void clickBlock(GameTestHelper helper, ServerPlayer player, BlockPos relative, boolean sneak) {
-        player.setShiftKeyDown(sneak);
-        BlockPos pos = helper.absolutePos(relative);
-        ItemStack stack = player.getMainHandItem();
-        UseOnContext context = new UseOnContext(player, InteractionHand.MAIN_HAND,
-                new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false));
-        if (!stack.onItemUseFirst(context).consumesAction()) {
-            stack.useOn(context);
-        }
-    }
-
     /** Destino com faces e rede próprias em todas as abas, para ver o que o colar por tipo não toca. */
     private static void configureTarget(RouterBlockEntity target, UUID network) {
         target.setNetworkId(network);
@@ -272,8 +227,6 @@ public final class ConfiguratorGameTests {
         WaNetwork before = data.create(player.getUUID(), "Antes " + player.getUUID());
         // Rede de outro dono na aba de itens: colar só Fluidos não pode avisar dela.
         WaNetwork foreign = data.create(UUID.randomUUID(), "Alheia " + player.getUUID());
-        ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
-        player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
 
         helper.startSequence()
                 .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(target), "sem onLoad"))
@@ -287,11 +240,9 @@ public final class ConfiguratorGameTests {
                         source.setNetworkId(ResourceType.SOURCE, energy.id());
                         configureTarget(target, before.id());
                         RouterPreset targetBefore = RouterPreset.copyOf(target);
-                        helper.assertTrue(use(player, source, true), "copiar não agiu");
-                        RouterPreset copied = configurator.get(ModDataComponents.PRESET.get());
+                        RouterPreset copied = PresetPaste.copy(player, source);
 
-                        ConfiguratorItem.setType(configurator, ResourceType.FLUID);
-                        helper.assertTrue(use(player, target, false), "colar não agiu");
+                        PresetPaste.paste(player, target, copied, ResourceType.FLUID);
                         assertFaces(helper, target, ResourceType.FLUID, copied, "fluidos não colados:");
                         assertNetwork(helper, target.networkId(ResourceType.FLUID), fluids.id(), "rede dos fluidos");
                         for (ResourceType other : new ResourceType[] {ResourceType.ITEM, ResourceType.ENERGY,
@@ -310,10 +261,7 @@ public final class ConfiguratorGameTests {
                         source.setNetworkId(ResourceType.ITEM, items.id());
 
                         // Todos: tudo colado.
-                        ConfiguratorItem.setType(configurator, null);
-                        helper.assertTrue(!configurator.has(ModDataComponents.CONFIGURATOR_TYPE.get()),
-                                "Todos deixou o componente");
-                        use(player, target, false);
+                        PresetPaste.paste(player, target, copied, null);
                         for (ResourceType type : TYPES) {
                             assertFaces(helper, target, type, copied, "Todos:");
                             helper.assertTrue(Objects.equals(target.networkId(type), copied.network(type, RelativeSide.FRONT)),
@@ -327,100 +275,6 @@ public final class ConfiguratorGameTests {
                     }
                 })
                 .thenSucceed();
-    }
-
-    /**
-     * Shift + roda com o Configurador: Todos → um tipo por vez, só os carregados (Químicos com o
-     * Mekanism, Source com o Ars) → Todos, e para trás; só com o Configurador na mão.
-     */
-    @GameTest(template = "empty")
-    public static void cycleConfiguratorTypeSkipsChemicalsWithoutMekanism(GameTestHelper helper) {
-        ServerPlayer player = TestPlayers.inLevel(helper);
-        try {
-            ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
-            player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
-            List<ResourceType> forward = new ArrayList<>(List.of(ResourceType.ITEM, ResourceType.FLUID,
-                    ResourceType.ENERGY));
-            if (Chemicals.LOADED) {
-                forward.add(ResourceType.CHEMICAL);
-            }
-            if (Sources.LOADED) {
-                forward.add(ResourceType.SOURCE);
-            }
-            forward.add(null);
-            for (ResourceType expected : forward) {
-                helper.assertTrue(ModPayloads.handleCycleConfiguratorType(player, new CycleConfiguratorTypePayload(1)),
-                        "recusou avançar");
-                helper.assertTrue(ConfiguratorItem.type(configurator) == expected,
-                        "avançar: " + ConfiguratorItem.type(configurator));
-            }
-            helper.assertFalse(configurator.has(ModDataComponents.CONFIGURATOR_TYPE.get()), "Todos deixou o componente");
-            helper.assertTrue(ModPayloads.handleCycleConfiguratorType(player, new CycleConfiguratorTypePayload(-1)),
-                    "recusou voltar");
-            helper.assertValueEqual(ConfiguratorItem.type(configurator),
-                    Sources.LOADED ? ResourceType.SOURCE
-                            : Chemicals.LOADED ? ResourceType.CHEMICAL : ResourceType.ENERGY, "voltar de Todos");
-            helper.assertFalse(ModPayloads.handleCycleConfiguratorType(player, new CycleConfiguratorTypePayload(0)),
-                    "aceitou direção 0");
-
-            ItemStack linker = new ItemStack(ModItems.LINKER.get());
-            player.setItemInHand(InteractionHand.MAIN_HAND, linker);
-            helper.assertFalse(ModPayloads.handleCycleConfiguratorType(player, new CycleConfiguratorTypePayload(1)),
-                    "aceitou sem o Configurador na mão");
-            helper.assertFalse(linker.has(ModDataComponents.CONFIGURATOR_TYPE.get()), "mexeu noutro item");
-        } finally {
-            helper.getLevel().getServer().getPlayerList().remove(player);
-        }
-        helper.succeed();
-    }
-
-    /**
-     * A roda do Configurador grava o tipo colado; vazio é Todos. Recusa outra coisa na mão e um tipo que não
-     * está carregado, sem mexer no item.
-     */
-    @GameTest(template = "empty")
-    public static void wheelPayloadSetsType(GameTestHelper helper) {
-        ServerPlayer player = TestPlayers.inLevel(helper);
-        try {
-            ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
-            player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
-            helper.assertTrue(ModPayloads.handleConfiguratorWheel(player,
-                    new ConfiguratorWheelPayload(Optional.of(ResourceType.FLUID))), "recusou");
-            helper.assertValueEqual(ConfiguratorItem.type(configurator), ResourceType.FLUID, "tipo");
-
-            helper.assertTrue(ModPayloads.handleConfiguratorWheel(player,
-                    new ConfiguratorWheelPayload(Optional.empty())), "recusou Todos");
-            helper.assertFalse(configurator.has(ModDataComponents.CONFIGURATOR_TYPE.get()), "Todos deixou o tipo");
-
-            if (!Chemicals.LOADED) {
-                helper.assertFalse(ModPayloads.handleConfiguratorWheel(player,
-                        new ConfiguratorWheelPayload(Optional.of(ResourceType.CHEMICAL))),
-                        "aceitou Químicos sem o Mekanism");
-                helper.assertFalse(configurator.has(ModDataComponents.CONFIGURATOR_TYPE.get()), "mudou ao recusar");
-            }
-
-            ItemStack linker = new ItemStack(ModItems.LINKER.get());
-            player.setItemInHand(InteractionHand.MAIN_HAND, linker);
-            helper.assertFalse(ModPayloads.handleConfiguratorWheel(player,
-                    new ConfiguratorWheelPayload(Optional.of(ResourceType.FLUID))), "aceitou sem o Configurador");
-            helper.assertFalse(linker.has(ModDataComponents.CONFIGURATOR_TYPE.get()), "mexeu noutro item");
-        } finally {
-            helper.getLevel().getServer().getPlayerList().remove(player);
-        }
-        helper.succeed();
-    }
-
-    /** O componente do seletor passa pelos codecs; Químicos é lido mesmo sem o Mekanism. */
-    @GameTest(template = "empty")
-    public static void configuratorTypeRoundTripsThroughCodec(GameTestHelper helper) {
-        for (ResourceType type : TYPES) {
-            Tag tag = ConfiguratorItem.TYPE_CODEC.encodeStart(NbtOps.INSTANCE, type).getOrThrow();
-            helper.assertValueEqual(ConfiguratorItem.TYPE_CODEC.parse(NbtOps.INSTANCE, tag).getOrThrow(), type,
-                    "codec " + type);
-        }
-        helper.assertTrue(ConfiguratorItem.TYPE_CODEC.parse(NbtOps.INSTANCE, NbtOps.INSTANCE.createString("lava"))
-                .isError(), "aceitou um tipo desconhecido");
-        helper.succeed();
     }
 
     // ------------------------------------------------------------------ rede por face
@@ -443,8 +297,6 @@ public final class ConfiguratorGameTests {
         ServerPlayer player = TestPlayers.inLevel(helper);
         WaNetwork a = data.create(player.getUUID(), "Face A " + player.getUUID());
         WaNetwork b = data.create(player.getUUID(), "Face B " + player.getUUID());
-        ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
-        player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
 
         helper.startSequence()
                 .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(target), "sem onLoad"))
@@ -452,14 +304,12 @@ public final class ConfiguratorGameTests {
                     try {
                         source.setFaceNetwork(ResourceType.ITEM, Direction.UP, a.id());
                         source.setFaceNetwork(ResourceType.ITEM, Direction.DOWN, b.id());
-                        helper.assertTrue(use(player, source, true), "copiar não agiu");
-                        RouterPreset preset = configurator.get(ModDataComponents.PRESET.get());
-                        helper.assertTrue(preset != null, "nada copiado");
+                        RouterPreset preset = PresetPaste.copy(player, source);
                         helper.assertValueEqual(preset.networks(ResourceType.ITEM), List.of(a.id(), b.id()),
                                 "redes das faces no preset");
                         helper.assertValueEqual(preset.configuredFaces(), 0, "a rede contou como configuração");
 
-                        helper.assertTrue(use(player, target, false), "colar não agiu");
+                        PresetPaste.paste(player, target, preset, null);
                         assertNetwork(helper, target.face(ResourceType.ITEM, RelativeSide.FRONT).network(), a.id(), "FRONT");
                         assertNetwork(helper, target.face(ResourceType.ITEM, RelativeSide.BACK).network(), b.id(), "BACK");
                         assertNetwork(helper, target.faceNetwork(ResourceType.ITEM, Direction.NORTH), a.id(), "norte");
@@ -495,8 +345,6 @@ public final class ConfiguratorGameTests {
         WaNetwork a = data.create(player.getUUID(), "Própria " + player.getUUID());
         WaNetwork before = data.create(player.getUUID(), "Antes " + player.getUUID());
         WaNetwork foreign = data.create(UUID.randomUUID(), "Privada " + player.getUUID());
-        ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
-        player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
 
         helper.startSequence()
                 .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(target), "sem onLoad"))
@@ -506,8 +354,7 @@ public final class ConfiguratorGameTests {
                         source.setFaceNetwork(ResourceType.ITEM, Direction.UP, a.id());
                         source.setFaceNetwork(ResourceType.ITEM, Direction.DOWN, foreign.id());
                         target.setNetworkId(before.id());
-                        helper.assertTrue(use(player, source, true), "copiar não agiu");
-                        RouterPreset preset = configurator.get(ModDataComponents.PRESET.get());
+                        RouterPreset preset = PresetPaste.copy(player, source);
 
                         PresetApplier.Checked checked = PresetApplier.check(player, preset);
                         helper.assertValueEqual(checked.applied(), List.of(a.id()), "redes aplicadas");
@@ -518,7 +365,7 @@ public final class ConfiguratorGameTests {
                         helper.assertTrue(!checked.preset().distinctNetworks().contains(foreign.id()),
                                 "a rede recusada ficou no preset");
 
-                        helper.assertTrue(use(player, target, false), "colar não agiu");
+                        PresetPaste.paste(player, target, preset, null);
                         assertNetwork(helper, target.faceNetwork(ResourceType.ITEM, Direction.UP), a.id(), "Cima");
                         assertNetwork(helper, target.faceNetwork(ResourceType.ITEM, Direction.DOWN), before.id(),
                                 "Baixo (rede proibida)");

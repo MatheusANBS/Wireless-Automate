@@ -37,7 +37,7 @@ Itens de um baú para outro, sem canos, em um minuto.
 5. Ponha a face **Cima** em **Extrai** no A e em **Insere** no B.
 6. Ponha itens no baú A: eles aparecem no baú B.
 
-O [Configurador](configurator.md) copia a configuração, com as redes, para outros roteadores.
+Para copiar a configuração de um roteador, com as redes, para outros, use o [Tablet](network-tablet.md).
 
 O botão de lua, no canto de cima à direita, põe as telas no modo escuro.
 

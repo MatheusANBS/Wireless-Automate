@@ -28,7 +28,7 @@ Modo de face e controle por redstone
 
 ## `item/`
 
-`TierCoreItem` (o Cartão de Upgrade: destino pelo item, origem pelo componente `upgrade_from`, `card(to, from)`; nome "A → B", tooltip com origem, recusa e sucesso na action bar; sem origem = cartão antigo), `RouterBlockItem`, `LinkerItem`, `ConfiguratorItem`, `FilterCardItem`, `NetworkTabletItem` (com o `onItemUseFirst`, que vem antes da interface da máquina e abre a central pelo `TabletClick`), `ChunkLoaderUpgradeItem`, `RangeUpgradeItem` (o Upgrade de Alcance; o tooltip mostra raio e limite por tier) e `GuideBook` (o livro do GuideME: aba criativa e entrega no primeiro login, só pelos registros)
+`TierCoreItem` (o Cartão de Upgrade: destino pelo item, origem pelo componente `upgrade_from`, `card(to, from)`; nome "A → B", tooltip com origem, recusa e sucesso na action bar; sem origem = cartão antigo), `RouterBlockItem`, `LinkerItem`, `ConfiguratorItem` (sem função: só o tooltip "sem função por enquanto"; o item, a receita e os componentes `configurator_*` ficam registrados), `FilterCardItem`, `NetworkTabletItem` (com o `onItemUseFirst`, que vem antes da interface da máquina e abre a central pelo `TabletClick`), `ChunkLoaderUpgradeItem`, `RangeUpgradeItem` (o Upgrade de Alcance; o tooltip mostra raio e limite por tier) e `GuideBook` (o livro do GuideME: aba criativa e entrega no primeiro login, só pelos registros)
 
 ## `linker/`
 
@@ -36,7 +36,7 @@ Vinculador, dois modos, trocados com Shift + roda do mouse (`LinkerMode`, lógic
 
 ## `preset/`
 
-Configurador (só o Pincel): regra das redes ao colar (`PresetApplier`, por rede distinta das faces da cópia; só as faces da presa, perfis e exceções do alcance ficam de fora), colar um perfil num nó (`PresetPaste`: `copy`, `paste` e `canLeave`, a regra de só tirar uma face de uma rede que o jogador gerencia, e `machine`, o bloco da máquina; usados pelo Configurador e pelo Tablet; `ProfileDiff`, `ProfileSource` e o componente `profile_source` dizem de onde o perfil veio e em que ele difere de um nó; o `profile_source` guarda também o quadro da presa de origem, frente e cima num byte, chave `frame`, opcional: o perfil sem ele só cola em roteadores), a conversão dos lados do perfil para uma máquina vinculada (`ProfileSides`, puro com JUnit: `RelativeSide` do roteador de origem, pelo quadro da presa, para o `RemoteSide` da máquina; sem frente, Norte) e o seletor do tipo colado (`PasteTypes`, lógica pura com JUnit)
+Regra das redes ao colar (`PresetApplier`, por rede distinta das faces da cópia; só as faces da presa, perfis e exceções do alcance ficam de fora), colar um perfil num nó (`PresetPaste`: `copy`, `paste` e `canLeave`, a regra de só tirar uma face de uma rede que o jogador gerencia, e `machine`, o bloco da máquina; usados pelo Tablet; `ProfileDiff`, `ProfileSource` e o componente `profile_source` dizem de onde o perfil veio e em que ele difere de um nó; o `profile_source` guarda também o quadro da presa de origem, frente e cima num byte, chave `frame`, opcional: o perfil sem ele só cola em roteadores), a conversão dos lados do perfil para uma máquina vinculada (`ProfileSides`, puro com JUnit: `RelativeSide` do roteador de origem, pelo quadro da presa, para o `RemoteSide` da máquina; sem frente, Norte)
 
 ## `menu/RouterMenu.java`, `RouterSnapshot.java`, `RemoteRouterMenu.java`
 

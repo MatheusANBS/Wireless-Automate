@@ -7,7 +7,6 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterCodecs;
-import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
@@ -26,6 +25,7 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.item.component.ItemContainerContents;
+import net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 public final class ModDataComponents {
@@ -109,7 +109,7 @@ public final class ModDataComponents {
                     .persistent(GlobalPos.CODEC)
                     .networkSynchronized(GlobalPos.STREAM_CODEC));
 
-    /** Bloco da máquina do roteador copiado pelo Configurador: colar em área só vale para essa máquina. */
+    /** Bloco da máquina copiado pelo Configurador antigo; nada mais o lê nem grava, fica registrado para os itens que o levam. */
     public static final Supplier<DataComponentType<ResourceLocation>> CONFIGURATOR_MACHINE =
             DATA_COMPONENTS.registerComponentType("configurator_machine", builder -> builder
                     .persistent(ResourceLocation.CODEC)
@@ -151,11 +151,21 @@ public final class ModDataComponents {
                     .persistent(ExtraCodecs.intRange(0, 64))
                     .networkSynchronized(ByteBufCodecs.VAR_INT));
 
-    /** Tipo (aba) que o Configurador cola; sem o componente, todos. */
+    /**
+     * Tipo (aba) do seletor do Configurador antigo; nada mais o lê nem grava. Fica registrado para os itens que o
+     * levam carregarem; o codec aceita todos os tipos, inclusive Químicos sem o Mekanism.
+     */
     public static final Supplier<DataComponentType<ResourceType>> CONFIGURATOR_TYPE =
             DATA_COMPONENTS.registerComponentType("configurator_type", builder -> builder
-                    .persistent(ConfiguratorItem.TYPE_CODEC)
-                    .networkSynchronized(ConfiguratorItem.TYPE_STREAM_CODEC));
+                    .persistent(Codec.STRING.comapFlatMap(name -> {
+                        for (ResourceType type : ResourceType.values()) {
+                            if (type.key().equals(name)) {
+                                return DataResult.success(type);
+                            }
+                        }
+                        return DataResult.error(() -> "tipo de Configurador desconhecido: " + name);
+                    }, ResourceType::key))
+                    .networkSynchronized(NeoForgeStreamCodecs.enumCodec(ResourceType.class)));
 
     /**
      * Tier de origem do Cartão de Upgrade (pelo nome do tier): o cartão só vale num bloco desse tier. Ausente =

@@ -4,7 +4,6 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
-import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
@@ -135,12 +134,8 @@ public final class ModPayloads {
                 (payload, context) -> handleAddFilterEntry(serverPlayer(context), payload));
         registrar.playToServer(FilterEntriesPayload.TYPE, FilterEntriesPayload.STREAM_CODEC,
                 (payload, context) -> handleFilterEntries(serverPlayer(context), payload));
-        registrar.playToServer(CycleConfiguratorTypePayload.TYPE, CycleConfiguratorTypePayload.STREAM_CODEC,
-                (payload, context) -> handleCycleConfiguratorType(serverPlayer(context), payload));
         registrar.playToServer(CycleLinkerModePayload.TYPE, CycleLinkerModePayload.STREAM_CODEC,
                 (payload, context) -> handleCycleLinkerMode(serverPlayer(context), payload));
-        registrar.playToServer(ConfiguratorWheelPayload.TYPE, ConfiguratorWheelPayload.STREAM_CODEC,
-                (payload, context) -> handleConfiguratorWheel(serverPlayer(context), payload));
         // Tela do Vinculador (handlers em LinkerActions e LinkerMenu).
         registrar.playToClient(LinkerSnapshotPayload.TYPE, LinkerSnapshotPayload.STREAM_CODEC, LinkerMenu::onSnapshot);
         registrar.playToServer(LinkerActionPayload.TYPE, LinkerActionPayload.STREAM_CODEC,
@@ -599,25 +594,6 @@ public final class ModPayloads {
     }
 
     /**
-     * Shift + roda do mouse com o Configurador na mão principal: avança ou volta o tipo que ele cola
-     * e mostra o novo na action bar. Recusa direção 0 e outra coisa na mão.
-     */
-    public static boolean handleCycleConfiguratorType(@Nullable ServerPlayer player,
-            CycleConfiguratorTypePayload payload) {
-        if (player == null || payload.direction() == 0) {
-            return false;
-        }
-        ItemStack stack = player.getMainHandItem();
-        if (!(stack.getItem() instanceof ConfiguratorItem)) {
-            return false;
-        }
-        ResourceType type = ConfiguratorItem.cycleType(stack, payload.direction());
-        player.displayClientMessage(Component.translatable("item.wirelessautomate.configurator.type",
-                ConfiguratorItem.typeName(type)), true);
-        return true;
-    }
-
-    /**
      * Shift + roda do mouse com o Vinculador na mão principal: passa ao outro modo (Vincular ↔ Abrir) e o mostra
      * na action bar. Recusa direção 0 e outra coisa na mão principal.
      */
@@ -633,25 +609,6 @@ public final class ModPayloads {
         LinkerItem.setMode(stack, mode);
         player.displayClientMessage(Component.translatable("item.wirelessautomate.linker.mode",
                 LinkerItem.modeName(mode)), true);
-        return true;
-    }
-
-    /**
-     * Escolha na roda do Configurador: grava o tipo colado e o mostra na action bar. Recusa outra coisa
-     * na mão principal e um tipo que não está carregado.
-     */
-    public static boolean handleConfiguratorWheel(@Nullable ServerPlayer player, ConfiguratorWheelPayload payload) {
-        if (player == null) {
-            return false;
-        }
-        ItemStack stack = player.getMainHandItem();
-        ResourceType type = payload.pasteType().orElse(null);
-        if (!(stack.getItem() instanceof ConfiguratorItem) || (type != null && !LoadedTypes.LIST.contains(type))) {
-            return false;
-        }
-        ConfiguratorItem.setType(stack, type);
-        player.displayClientMessage(Component.translatable("item.wirelessautomate.configurator.type",
-                ConfiguratorItem.typeName(type)), true);
         return true;
     }
 

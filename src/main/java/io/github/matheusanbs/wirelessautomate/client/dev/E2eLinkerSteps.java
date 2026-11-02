@@ -10,6 +10,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.client.linker.LinkerOpenScreen;
+import io.github.matheusanbs.wirelessautomate.client.linker.LinkerSameBlockInput;
 import io.github.matheusanbs.wirelessautomate.client.linker.LinkerScreen;
 import io.github.matheusanbs.wirelessautomate.client.router.RouterScreen;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
@@ -38,7 +39,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * O Vinculador no e2e: um roteador Avançado com o Upgrade de Alcance escolhido com o clique, a área marcada com
- * Shift + clique, a tela com o Vincular e o Desvincular, e o modo Abrir com a lista de dois roteadores.
+ * Shift + clique, a tela com o Vincular e o Desvincular, o Ctrl + clique que vincula os baús, e o modo Abrir com a lista de dois roteadores.
  */
 final class E2eLinkerSteps {
     /** Onde o jogador estava antes de ir para perto do baú do Vinculador, e para onde olhava. */
@@ -52,6 +53,8 @@ final class E2eLinkerSteps {
     /** O baú que o Vincular junta ao roteador, com um roteador preso nele (os dois chegam na mesma máquina). */
     static BlockPos linkChest;
     private static BlockPos linkAttached;
+    /** Outro baú perto, que o Ctrl + clique no {@link #linkChest} vincula junto (o mesmo bloco). */
+    private static BlockPos linkChestSame;
     private static BlockPos linkCornerA;
     private static BlockPos linkCornerB;
 
@@ -70,9 +73,10 @@ final class E2eLinkerSteps {
             linkRouter = chest.above();
             linkChest = chest.offset(2, 0, 0);
             linkAttached = linkChest.above();
+            linkChestSame = linkChest.offset(0, 0, 2);
             linkCornerA = linkChest.offset(-1, -1, -1);
             linkCornerB = linkChest;
-            for (BlockPos pos : List.of(chest, linkChest)) {
+            for (BlockPos pos : List.of(chest, linkChest, linkChestSame)) {
                 level.setBlockAndUpdate(pos, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.SOUTH));
             }
             level.setBlockAndUpdate(linkRouter, ModBlocks.ROUTER.get().defaultBlockState()
@@ -156,7 +160,28 @@ final class E2eLinkerSteps {
         list.add(clipCheck("Vinculador: desvinculado"));
         list.add(capture("9b-vinculador-desvincular"));
         list.add(close("Vinculador: fechar a tela"));
+        list.add(ctrlClickStep());
+        list.add(capture("9c-vinculador-ctrl-clique"));
         openSteps(list);
+    }
+
+    /**
+     * Ctrl + clique no baú: o Ctrl de verdade não chega ao {@code Screen.hasControlDown()} no e2e, então o passo chama o
+     * que o {@link LinkerSameBlockInput} faz depois de ver o Ctrl (confere o gesto e manda o pacote). Os dois baús
+     * soltos entram, e a action bar diz quantos.
+     */
+    private static Step ctrlClickStep() {
+        return new Step("Vinculador: Ctrl + clique vincula os baús", STEP_TIMEOUT_MS, () -> {
+            Minecraft minecraft = Minecraft.getInstance();
+            BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(linkChest), Direction.UP, linkChest, false);
+            if (!LinkerSameBlockInput.applies(minecraft, hit) || !LinkerSameBlockInput.send(minecraft, hit)) {
+                throw new StepFailure("o Ctrl + clique não vale no baú");
+            }
+        }, () -> onServer(server -> router(server, linkRouter).remoteMachines().contains(linkChest)
+                && router(server, linkRouter).remoteMachines().contains(linkChestSame))
+                && "item.wirelessautomate.linker.range.same.linked".equals(E2eResonatorSteps.overlayKey()),
+                () -> "máquinas " + onServer(server -> router(server, linkRouter).remoteMachines().machines().size())
+                        + "; action bar " + E2eResonatorSteps.overlayKey());
     }
 
     /**
@@ -198,7 +223,7 @@ final class E2eLinkerSteps {
             while (!router.remoteMachines().machines().isEmpty()) {
                 router.unlinkMachine(0, null);
             }
-            for (BlockPos pos : List.of(linkAttached, linkChest, linkRouter, linkRouter.below())) {
+            for (BlockPos pos : List.of(linkAttached, linkChest, linkChestSame, linkRouter, linkRouter.below())) {
                 level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
             }
             ServerPlayer player = server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID());

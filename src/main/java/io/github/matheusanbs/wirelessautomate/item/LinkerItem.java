@@ -31,7 +31,9 @@ import org.jetbrains.annotations.Nullable;
  * {@link ModDataComponents#LINKER_MODE}); Shift + roda do mouse passa ao outro.
  *
  * <p><b>Vincular</b>: clique num roteador o escolhe ({@link ModDataComponents#LINKER_ROUTER}); clique em outro
- * bloco vincula ou desvincula essa máquina a ele ({@link RangeLinks}). Shift + clique em dois blocos marca os
+ * bloco vincula ou desvincula essa máquina a ele ({@link RangeLinks}); Ctrl + clique numa máquina vincula as do mesmo
+ * bloco no raio ({@code client/linker/LinkerSameBlockInput} e {@link io.github.matheusanbs.wirelessautomate.range.SameBlockLinks}).
+ * Shift + clique em dois blocos marca os
  * cantos de uma área ({@link ModDataComponents#LINKER_AREA}, ver {@link LinkerActions}); clique no ar abre a
  * tela ({@link LinkerMenu}), que vincula as máquinas da área e escolhe vincular ou desvincular
  * ({@link ModDataComponents#LINKER_UNLINK}: os mesmos gestos tiram em vez de pôr).
@@ -217,6 +219,7 @@ public class LinkerItem extends Item {
                         LinkerActions.position(second)).withStyle(ChatFormatting.GRAY)));
             }
             tooltip.add(Component.translatable(KEY + "tooltip.link_click").withStyle(ChatFormatting.DARK_GRAY));
+            tooltip.add(Component.translatable(KEY + "tooltip.same_block").withStyle(ChatFormatting.DARK_GRAY));
             tooltip.add(Component.translatable(KEY + "tooltip.open").withStyle(ChatFormatting.DARK_GRAY));
         }
         tooltip.add(Component.translatable(KEY + "tooltip.toggle").withStyle(ChatFormatting.DARK_GRAY));

@@ -21,12 +21,14 @@ chega numa máquina.
 ## Como usar
 
 1. Ponha o Upgrade de Alcance num roteador e clique nele com o Vinculador.
-2. Clique numa máquina para vinculá-la. Para desvincular, clique nela de novo: a action bar pede
-   confirmação, e um segundo clique na mesma máquina em até 3 segundos a tira. Se o grupo dela fica
+2. Clique numa máquina para vinculá-la. Clique nela de novo para desvincular. Se o grupo dela fica
    vazio, os cartões dele voltam para o seu inventário.
-3. Para uma sala inteira: com Shift, clique em dois cantos, clique no ar para abrir a tela e clique
+3. Para vincular todas as máquinas iguais de uma vez, segure **Ctrl** e clique numa delas: entram as
+   do mesmo bloco no raio do roteador, as mais perto primeiro, até o limite do tier. A action bar
+   diz quantas, por exemplo **Vinculadas 7 Fornalhas**.
+4. Para uma sala inteira: com Shift, clique em dois cantos, clique no ar para abrir a tela e clique
    em **Vincular área**.
-4. Passe para o modo **Abrir** (Shift + roda do mouse) e clique numa máquina para configurar a face
+5. Passe para o modo **Abrir** (Shift + roda do mouse) e clique numa máquina para configurar a face
    dela no roteador.
 
 O Vinculador não mexe nas redes: escolha a rede de cada face na linha **Rede** da tela do roteador ou
@@ -37,7 +39,8 @@ pelo [Tablet](network-tablet.md).
 | Gesto | Vincular | Abrir |
 | --- | --- | --- |
 | Clique num roteador | Escolhe o roteador | — |
-| Clique numa máquina | Vincula; numa vinculada, dois cliques desvinculam | Abre o roteador que chega nela |
+| Clique numa máquina | Vincula ou desvincula | Abre o roteador que chega nela |
+| Ctrl + clique numa máquina | Vincula as do mesmo bloco no raio | — |
 | Clique numa Tela de Sinal | Escolhe a Tela | — |
 | Clique num Baú, Bateria ou Tanque do mod | Com uma Tela escolhida, liga ou desliga | Abre o roteador que chega nele |
 | Clique no ar | Abre a tela | Mostra a dica do modo |

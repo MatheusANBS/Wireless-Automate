@@ -19,7 +19,6 @@ import io.github.matheusanbs.wirelessautomate.range.MachineGroup;
 import io.github.matheusanbs.wirelessautomate.range.RangeLinks;
 import io.github.matheusanbs.wirelessautomate.range.RangeRules.LinkRefusal;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
-import io.github.matheusanbs.wirelessautomate.range.UnlinkConfirm;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
@@ -193,12 +192,11 @@ public final class RangeReviewGameTests {
                 .thenSucceed();
     }
     /**
-     * O Vinculador pede confirmação para desvincular: o primeiro clique na máquina vinculada só pergunta; o segundo,
-     * na mesma, desvincula, e os cartões do grupo que esvaziou vão para o inventário de quem clicou, com a contagem na
-     * mensagem. Clicar em outra máquina no meio desfaz a pergunta.
+     * O Vinculador desvincula num clique: o clique na máquina vinculada a tira, e os cartões do grupo que esvaziou vão
+     * para o inventário de quem clicou, com a contagem na mensagem.
      */
     @GameTest(template = "empty", timeoutTicks = 300)
-    public static void linkerUnlinkAsksFirst(GameTestHelper helper) {
+    public static void linkerUnlinksInOneClick(GameTestHelper helper) {
         RouterBlockEntity router = routerWithMachines(helper);
         ItemStack linker = machinesLinker();
         TestPlayers.MenuPlayer player = TestPlayers.survivalMenuOpener(helper);
@@ -216,19 +214,11 @@ public final class RangeReviewGameTests {
                     router.setCard(EditTarget.group(groupOf(router, furnace)), ResourceType.ITEM, Direction.UP, 0,
                             itemCard());
 
-                    helper.assertValueEqual(toggle(helper, player, FURNACE_A).status(), RangeLinks.Status.CONFIRM,
-                            "o primeiro clique");
-                    helper.assertTrue(router.remoteMachines().contains(furnace), "desvinculou no primeiro clique");
-                    assertKey(helper, player.actionBar, "item.wirelessautomate.linker.range.confirm_unlink");
-                    // outra máquina no meio: a pergunta some
-                    helper.assertValueEqual(toggle(helper, player, BARREL).status(), RangeLinks.Status.CONFIRM,
-                            "o clique no barril");
-                    helper.assertValueEqual(toggle(helper, player, FURNACE_A).status(), RangeLinks.Status.CONFIRM,
-                            "a pergunta do barril confirmou a fornalha");
-
                     helper.assertValueEqual(toggle(helper, player, FURNACE_A).status(), RangeLinks.Status.UNLINKED,
-                            "a confirmação");
+                            "o clique na vinculada");
                     helper.assertFalse(router.remoteMachines().contains(furnace), "a fornalha continua vinculada");
+                    helper.assertTrue(router.remoteMachines().contains(helper.absolutePos(BARREL)),
+                            "o barril saiu junto");
                     helper.assertValueEqual(player.getInventory().countItem(ModItems.FILTER_CARD.get()), 1,
                             "o cartão não veio para o inventário");
                     helper.assertItemEntityNotPresent(ModItems.FILTER_CARD.get(), ROUTER, 2.0);
@@ -237,38 +227,6 @@ public final class RangeReviewGameTests {
                             instanceof TranslatableContents c
                             && c.getKey().equals("item.wirelessautomate.linker.range.cards_returned.one")),
                             "a mensagem não diz o cartão: " + player.actionBar.getString());
-                })
-                .thenSucceed();
-    }
-
-    /** A confirmação vale por 3 s: depois disso o clique pergunta de novo. */
-    @GameTest(template = "empty", timeoutTicks = 300)
-    public static void linkerUnlinkConfirmExpires(GameTestHelper helper) {
-        RouterBlockEntity router = routerWithMachines(helper);
-        ItemStack linker = machinesLinker();
-        ServerPlayer player = linkerPlayer(helper, linker);
-        BlockPos furnace = helper.absolutePos(FURNACE_A);
-        helper.startSequence()
-                .thenWaitUntil(() -> waitLoaded(helper, router))
-                .thenExecute(() -> {
-                    router.setRangeUpgrade(rangeUpgrade());
-                    LinkerItem.setRouter(linker, GlobalPos.of(helper.getLevel().dimension(), router.getBlockPos()));
-                    helper.assertValueEqual(toggle(helper, player, FURNACE_A).status(), RangeLinks.Status.LINKED, "vincular");
-                    helper.assertValueEqual(toggle(helper, player, FURNACE_A).status(), RangeLinks.Status.CONFIRM,
-                            "o primeiro clique");
-                })
-                .thenIdle(UnlinkConfirm.WINDOW + 5)
-                .thenExecute(() -> {
-                    try {
-                        helper.assertValueEqual(toggle(helper, player, FURNACE_A).status(), RangeLinks.Status.CONFIRM,
-                                "o clique depois do prazo");
-                        helper.assertTrue(router.remoteMachines().contains(furnace), "desvinculou depois do prazo");
-                        UnlinkConfirm.forget(player.getUUID());
-                        helper.assertValueEqual(toggle(helper, player, FURNACE_A).status(), RangeLinks.Status.CONFIRM,
-                                "o clique depois de esquecer (saída do jogador)");
-                    } finally {
-                        removePlayer(helper, player);
-                    }
                 })
                 .thenSucceed();
     }

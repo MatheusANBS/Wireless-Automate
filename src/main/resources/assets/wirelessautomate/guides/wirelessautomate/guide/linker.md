@@ -21,12 +21,14 @@ reaches a machine.
 ## How to use it
 
 1. Put the Range Upgrade in a router and click it with the Linker.
-2. Click a machine to link it. To unlink it, click it again: the action bar asks for confirmation,
-   and a second click on the same machine within 3 seconds takes it out. If its group ends up empty,
-   the group's cards go back to your inventory.
-3. For a whole room: holding Shift, click two corners, click the air to open the screen and click
+2. Click a machine to link it. Click it again to unlink it. If its group ends up empty, the group's
+   cards go back to your inventory.
+3. To link all the matching machines at once, hold **Ctrl** and click one of them: the ones of the
+   same block within the router's radius go in, nearest first, up to the tier's limit. The action
+   bar says how many, for example **Linked 7 Furnaces**.
+4. For a whole room: holding Shift, click two corners, click the air to open the screen and click
    **Link area**.
-4. Switch to **Open** mode (Shift + mouse wheel) and click a machine to set up its face in the
+5. Switch to **Open** mode (Shift + mouse wheel) and click a machine to set up its face in the
    router.
 
 The Linker doesn't touch networks: pick each face's network in the router screen's **Network** row or
@@ -37,7 +39,8 @@ with the [Tablet](network-tablet.md).
 | Gesture | Link | Open |
 | --- | --- | --- |
 | Click a router | Picks the router | — |
-| Click a machine | Links it; on a linked one, two clicks unlink it | Opens the router that reaches it |
+| Click a machine | Links or unlinks it | Opens the router that reaches it |
+| Ctrl + click a machine | Links the ones of the same block in range | — |
 | Click a Signal Screen | Picks the Screen | — |
 | Click a mod Chest, Battery or Tank | With a Screen picked, links or unlinks it | Opens the router that reaches it |
 | Click the air | Opens the screen | Shows the mode's hint |

@@ -230,8 +230,9 @@ final class RouterRange {
     }
 
     /**
-     * Entrega as pilhas a {@code recipient}: no inventário e, o que não couber, aos pés dele. Sem jogador (testes e
-     * comandos), caem no roteador.
+     * Entrega cópias das pilhas a {@code recipient}: no inventário e, o que não couber, aos pés dele (o
+     * {@code placeItemBackInInventory} solta o resto; o {@code Inventory.add} sumiria com ele no modo criativo). As
+     * pilhas da lista ficam como estão, para quem chamou contar. Sem jogador (testes e comandos), caem no roteador.
      */
     private void deliver(@Nullable Player recipient, List<ItemStack> stacks) {
         if (recipient == null) {
@@ -239,10 +240,7 @@ final class RouterRange {
             return;
         }
         for (ItemStack stack : stacks) {
-            recipient.getInventory().add(stack);
-            if (!stack.isEmpty()) {
-                recipient.drop(stack, false);
-            }
+            recipient.getInventory().placeItemBackInInventory(stack.copy());
         }
     }
 

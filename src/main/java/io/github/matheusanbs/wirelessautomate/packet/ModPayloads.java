@@ -420,7 +420,7 @@ public final class ModPayloads {
             host.validTarget();
         }
         host.editApplied();
-        sendNotice(player, RangePayloads.updatedNotice(result.destinations().size(), result.cards().size()));
+        sendNotice(player, RangePayloads.updatedNotice(result));
         return true;
     }
 

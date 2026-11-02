@@ -40,22 +40,23 @@ public final class RangePayloads {
     /**
      * Desvincula o grupo inteiro, se ele ainda existe com o id e o bloco que a tela viu e o Upgrade de Alcance vale
      * ({@link RouterBlockEntity#unlinkGroup}): as remotas saem; o grupo sem a presa sai, o da presa fica zerado; os
-     * cartões vão para o jogador. Depois, o alvo vira a presa (se o grupo era o dela) ou o que ainda vale. Devolve se
-     * algo mudou.
+     * cartões vão para o jogador. Depois, o alvo vira a presa (se o grupo era o dela) ou o que ainda vale. Devolve o
+     * aviso mandado, ou {@code null} se recusou ou nada mudou.
      */
-    public static boolean handleUnlinkGroup(@Nullable ServerPlayer player, UnlinkGroupPayload payload) {
+    public static @Nullable PanelNoticePayload handleUnlinkGroup(@Nullable ServerPlayer player,
+            UnlinkGroupPayload payload) {
         RouterEditHost host = ModPayloads.host(player, payload.containerId());
         if (host == null || !host.editedRouter().rangeActive()) {
-            return false;
+            return null;
         }
         RouterBlockEntity router = host.editedRouter();
         MachineGroup group = router.remoteMachines().group(payload.group());
         if (group == null || !group.block().equals(payload.block())) {
-            return false;
+            return null;
         }
         RemoteMachines.GroupUnlink result = router.unlinkGroup(group.id(), player);
         if (result == null || !result.changed()) {
-            return false;
+            return null;
         }
         if (result.kept()) {
             host.selectTarget(EditTarget.ATTACHED_TARGET, null, null);
@@ -63,30 +64,34 @@ public final class RangePayloads {
             host.validTarget();
         }
         host.editApplied();
-        ModPayloads.sendNotice(player, unlinkedGroupNotice(result.machines(), result.cards().size(), result.kept()));
-        return true;
+        PanelNoticePayload notice = unlinkedGroupNotice(result);
+        ModPayloads.sendNotice(player, notice);
+        return notice;
     }
 
     /**
-     * O aviso do Desvincular grupo: "Desvinculadas N máquinas · M cartões devolvidos", só com as partes que houve;
-     * sem nenhuma, "Grupo apagado" (ou, no grupo da presa, que fica, "Perfil do grupo zerado").
+     * O aviso do Desvincular grupo, pelo resultado: "Desvinculadas N máquinas · M cartões devolvidos", só com as
+     * partes que houve; sem nenhuma, "Grupo apagado" (ou, no grupo da presa, que fica, "Perfil do grupo zerado").
      */
-    public static PanelNoticePayload unlinkedGroupNotice(int machines, int cards, boolean kept) {
+    public static PanelNoticePayload unlinkedGroupNotice(RemoteMachines.GroupUnlink result) {
+        int machines = result.machines();
         MutableComponent message = null;
         if (machines > 0) {
             message = Component.translatable(NOTICE + (machines == 1 ? "unlinked.one" : "unlinked"), machines);
         }
-        message = withCards(message, cards);
+        message = withCards(message, result.cards().size());
         if (message == null) {
-            message = Component.translatable(NOTICE + (kept ? "group_cleared" : "group_removed"));
+            message = Component.translatable(NOTICE + (result.kept() ? "group_cleared" : "group_removed"));
         }
         return PanelNoticePayload.plain(message);
     }
 
-    /** O aviso do Atualizar: "Atualizadas N máquinas" e, com cartões devolvidos, "· M cartões devolvidos". */
-    public static PanelNoticePayload updatedNotice(int machines, int cards) {
+    /** O aviso do Atualizar, pelo resultado: "Atualizadas N máquinas" e, com cartões devolvidos, "· M cartões devolvidos". */
+    public static PanelNoticePayload updatedNotice(RemoteMachines.Regroup result) {
+        int machines = result.destinations().size();
         return PanelNoticePayload.plain(withCards(
-                Component.translatable(NOTICE + (machines == 1 ? "updated.one" : "updated"), machines), cards));
+                Component.translatable(NOTICE + (machines == 1 ? "updated.one" : "updated"), machines),
+                result.cards().size()));
     }
 
     /** {@code message} com "· M cartões devolvidos" (ou só essa parte, sem {@code message}); sem cartões, igual. */
@@ -114,7 +119,8 @@ public final class RangePayloads {
 
     /**
      * Cola a cópia do jogador no alvo de edição ({@link MachineCopyPaste#paste}) e manda o aviso, com o Desfazer se
-     * algo mudou; com {@code undo}, o Desfazer ({@link MachineCopyPaste#undo}). Devolve se agiu.
+     * algo mudou (sem máquina na frente da presa, a recusa); com {@code undo}, o Desfazer
+     * ({@link MachineCopyPaste#undo}). Devolve se mudou algo.
      */
     public static boolean handleMachinePaste(@Nullable ServerPlayer player, MachinePastePayload payload) {
         RouterEditHost host = ModPayloads.host(player, payload.containerId());
@@ -132,7 +138,7 @@ public final class RangePayloads {
         if (pasted == null) {
             return false;
         }
-        ModPayloads.sendNotice(player, pasted.notice());
+        ModPayloads.sendNotice(player, pasted.notice(host.containerId()));
         return pasted.changed();
     }
 }

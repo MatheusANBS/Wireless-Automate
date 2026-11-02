@@ -133,22 +133,6 @@ public final class MachineGroup {
         return removed;
     }
 
-    /**
-     * Passa todos os cartões deste grupo para os mesmos slots de {@code heir}, que fica com eles; este fica sem
-     * cartões. Para um grupo sem cartões (o grupo novo do Atualizar), senão os de {@code heir} se perderiam.
-     */
-    void moveCardsTo(MachineGroup heir) {
-        for (int t = 0; t < cards.length; t++) {
-            for (int s = 0; s < cards[t].length; s++) {
-                ItemStack[] from = cards[t][s];
-                for (int i = 0; i < from.length; i++) {
-                    heir.cards[t][s][i] = from[i];
-                    from[i] = ItemStack.EMPTY;
-                }
-            }
-        }
-    }
-
     /** NBT com {@code id}, {@code block}, {@code name} (se não vazio), {@code profile} e {@code cards}. */
     public CompoundTag save(HolderLookup.Provider registries) {
         CompoundTag tag = new CompoundTag();

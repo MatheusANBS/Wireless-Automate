@@ -32,7 +32,7 @@ Aprovado pelo dono em 02/11/2026 sobre a seção "Etapa 2" do mockup `docs/previ
 
 Hoje o Atualizar (`RemoteMachines.regroup`) passa a máquina trocada para um grupo novo com a cópia do perfil e sem cartões, e o grupo que esvazia solta os cartões no chão, sem aviso.
 
-- **Grupo que esvazia e tem exatamente um grupo de destino criado pelo próprio Atualizar:** os cartões vão junto para ele (o perfil já ia).
+- **Grupo inteiro que troca de bloco** (todas as máquinas dele trocadas para o mesmo bloco, sem grupo desse bloco): o grupo passa a ser do bloco novo e leva os cartões (é o mesmo grupo). É o único caso em que as máquinas vão juntas para um grupo novo: um grupo que mandaria todas para um só grupo criado pelo Atualizar já cai nesta regra.
 - **Senão** (o grupo não esvazia: os cartões ficam com ele; ou esvazia para um grupo que já existia, ou para vários): os cartões do grupo que saiu vão para o inventário de quem clicou (o que não couber, aos pés dele).
 - **Aviso** ao clicar: "Atualizada N máquina(s)" e, quando houver, "· M cartões devolvidos".
 

@@ -190,8 +190,8 @@ public final class RemoteMachines {
     }
 
     /**
-     * O resultado de {@link #regroup}: os cartões devolvidos (dos grupos que esvaziaram sem um herdeiro, para quem
-     * clicou) e o grupo de destino de cada máquina movida, por índice, na ordem do lote.
+     * O resultado de {@link #regroup}: os cartões dos grupos que esvaziaram (para quem clicou) e o grupo de destino
+     * de cada máquina movida, por índice, na ordem do lote.
      */
     public record Regroup(List<ItemStack> cards, Map<Integer, Integer> destinations) {
         public static final Regroup EMPTY = new Regroup(List.of(), Map.of());
@@ -208,8 +208,8 @@ public final class RemoteMachines {
      * ser do bloco novo (mesmo id, nome, perfil e cartões);</li>
      * <li>as outras entram no primeiro grupo do bloco novo, ou num grupo novo criado uma vez por bloco, com
      * uma cópia do perfil do grupo antigo, sem nome e sem cartões;</li>
-     * <li>os grupos que esvaziaram saem; os cartões de um que mandou todas as máquinas para um só grupo, criado
-     * neste mesmo Atualizar e ainda sem cartões, vão junto para ele; os dos outros voltam no resultado.</li>
+     * <li>os grupos que esvaziaram saem, e os cartões deles voltam no resultado (o grupo inteiro que trocou de
+     * bloco no passo 1 não esvazia: fica com os cartões).</li>
      * </ol>
      * A exceção de cada máquina continua. Índice inválido ou bloco igual ao do grupo é ignorado. Quem
      * confere que a máquina está mesmo trocada é o roteador: só pelo {@code RouterBlockEntity.updateReplaced}
@@ -217,12 +217,10 @@ public final class RemoteMachines {
      */
     public Regroup regroup(Map<Integer, ResourceLocation> moves) {
         Map<Integer, ResourceLocation> pending = new LinkedHashMap<>();
-        Map<Integer, Integer> origins = new LinkedHashMap<>();
         for (Map.Entry<Integer, ResourceLocation> move : moves.entrySet()) {
             RemoteMachine machine = machine(move.getKey());
             if (machine != null && !groupOf(machine).block().equals(move.getValue())) {
                 pending.put(move.getKey(), move.getValue());
-                origins.put(move.getKey(), machine.group());
             }
         }
         if (pending.isEmpty()) {
@@ -233,7 +231,6 @@ public final class RemoteMachines {
             before.add(machine.group());
         }
         Map<Integer, Integer> destinations = new LinkedHashMap<>();
-        Set<Integer> created = new HashSet<>();
         for (MachineGroup group : groups) {
             ResourceLocation block = wholeGroupMove(group, pending);
             if (block != null && firstGroupOf(block) == null) {
@@ -254,7 +251,6 @@ public final class RemoteMachines {
             if (target == null) {
                 target = new MachineGroup(nextGroupId++, move.getValue(), "", groupOf(machine).profile().copy());
                 groups.add(target);
-                created.add(target.id());
             }
             machine.setGroup(target.id());
             destinations.put(move.getKey(), target.id());
@@ -263,12 +259,7 @@ public final class RemoteMachines {
         for (MachineGroup group : List.copyOf(groups)) {
             if (before.contains(group.id()) && !hasMachines(group.id()) && !groupHasAttached(group.id())) {
                 groups.remove(group);
-                MachineGroup heir = soleNewDestination(group.id(), origins, destinations, created);
-                if (heir != null && !heir.hasCards()) {
-                    group.moveCardsTo(heir);
-                } else {
-                    cards.addAll(group.removeAllCards());
-                }
+                cards.addAll(group.removeAllCards());
             }
         }
         Map<Integer, Integer> ordered = new LinkedHashMap<>();
@@ -276,26 +267,6 @@ public final class RemoteMachines {
             ordered.put(index, destinations.get(index));
         }
         return new Regroup(List.copyOf(cards), Collections.unmodifiableMap(ordered));
-    }
-
-    /**
-     * O grupo para onde foram todas as máquinas que saíram de {@code groupId}, se é um só e foi criado neste
-     * Atualizar ({@code created}); senão {@code null}.
-     */
-    private @Nullable MachineGroup soleNewDestination(int groupId, Map<Integer, Integer> origins,
-            Map<Integer, Integer> destinations, Set<Integer> created) {
-        int sole = -1;
-        for (Map.Entry<Integer, Integer> origin : origins.entrySet()) {
-            if (origin.getValue() != groupId) {
-                continue;
-            }
-            Integer destination = destinations.get(origin.getKey());
-            if (destination == null || (sole >= 0 && sole != destination)) {
-                return null;
-            }
-            sole = destination;
-        }
-        return sole >= 0 && created.contains(sole) ? group(sole) : null;
     }
 
     /** O bloco novo se todas as máquinas de {@code group} estão em {@code pending} e vão para ele; senão {@code null}. */

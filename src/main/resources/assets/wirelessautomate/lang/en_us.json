@@ -1200,6 +1200,7 @@
   "gui.wirelessautomate.panel.notice.range.pasted": "Pasted from %s onto %s",
   "gui.wirelessautomate.panel.notice.range.kept_networks": "networks of %s faces kept",
   "gui.wirelessautomate.panel.notice.range.kept_networks.one": "network of %s face kept",
+  "gui.wirelessautomate.panel.notice.range.paste_no_machine": "There is no machine in front of the router",
   "gui.wirelessautomate.panel.notice.range.paste_undone": "Paste undone",
   "gui.wirelessautomate.panel.notice.range.paste_undo_refused": "Nothing undone: the target changed after the paste",
   "gui.wirelessautomate.panel.notice.range.unlinked": "Unlinked %s machines",

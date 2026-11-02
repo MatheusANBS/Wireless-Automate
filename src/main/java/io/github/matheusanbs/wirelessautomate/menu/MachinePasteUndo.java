@@ -36,8 +36,9 @@ public final class MachinePasteUndo {
     }
 
     /**
-     * O que o último colar mudou, se o jogador ainda está no mesmo menu e no mesmo roteador; senão {@code null}. O
-     * Desfazer vale uma vez só: o colar é esquecido mesmo quando quem chama não consegue desfazer nada.
+     * O que o último colar mudou, se o jogador ainda está no mesmo menu e no mesmo roteador, e esquece o colar: o
+     * Desfazer vale uma vez só, mesmo quando quem chama não consegue desfazer nada. Noutro menu ou roteador, devolve
+     * {@code null} e o colar continua guardado (ele some quando o menu dele fecha).
      */
     static @Nullable PasteUndo take(ServerPlayer player, RouterEditHost host) {
         Entry entry = LAST.get(player.getUUID());

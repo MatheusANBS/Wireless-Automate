@@ -69,9 +69,21 @@ public record RangeView(int radius, int max, List<GroupView> groups, List<Machin
      * @param count      máquinas do grupo, a presa inclusive; zero num grupo que a presa deixou
      * @param exceptions dessas, quantas têm exceção (a presa inclusive)
      * @param attached   a presa é deste grupo (no máximo um grupo; nenhum sem o membro presa)
+     * @param blank      o grupo da presa sem nada a desvincular nem a zerar (só ela, sem exceção, com o perfil
+     *                   padrão, sem nome e sem cartões): o Desvincular grupo não faria nada, e a tela o esconde
      */
     public record GroupView(int id, ResourceLocation block, String name, int count, int exceptions,
-            boolean attached) {
+            boolean attached, boolean blank) {
+        /** Sem o {@code blank} (prévias e capturas). */
+        public GroupView(int id, ResourceLocation block, String name, int count, int exceptions, boolean attached) {
+            this(id, block, name, count, exceptions, attached, false);
+        }
+
+        /** As máquinas remotas do grupo (sem a presa). */
+        public int remotes() {
+            return attached ? count - 1 : count;
+        }
+
         /** O item do bloco do grupo, para o ícone ({@link ItemStack#EMPTY} se o bloco não tem item). */
         public ItemStack icon() {
             return new ItemStack(BuiltInRegistries.BLOCK.get(block).asItem());
@@ -160,6 +172,7 @@ public record RangeView(int radius, int max, List<GroupView> groups, List<Machin
             buf.writeVarInt(group.count);
             buf.writeVarInt(group.exceptions);
             buf.writeBoolean(group.attached);
+            buf.writeBoolean(group.blank);
         }
         buf.writeVarInt(view.machines.size());
         for (MachineView machine : view.machines) {
@@ -187,7 +200,7 @@ public record RangeView(int radius, int max, List<GroupView> groups, List<Machin
         List<GroupView> groups = new ArrayList<>(groupCount);
         for (int i = 0; i < groupCount; i++) {
             groups.add(new GroupView(buf.readVarInt(), buf.readResourceLocation(), buf.readUtf(RouterSnapshot.NAME_LENGTH),
-                    buf.readVarInt(), buf.readVarInt(), buf.readBoolean()));
+                    buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean()));
         }
         int machineCount = buf.readVarInt();
         List<MachineView> machines = new ArrayList<>(machineCount);

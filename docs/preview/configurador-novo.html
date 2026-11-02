@@ -1,0 +1,179 @@
+<title>Configurador Novo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+/* Layout: cabeçalho curto, telas lado a lado (Hoje × Proposta), depois os estados e as decisões. As cores da tela são as do GuiPalette (claro; escuro no tema escuro). */
+:root {
+  --page: #E9E2D3; --ink: #2A2730; --ink-2: #6B6458; --rule: #CFC5B1;
+  --gui-bg: #F2EBDD; --gui-btn: #FFFBF3; --gui-inset: #DDD3BF; --gui-border: #BDB19A; --gui-row: #F8F3E8;
+  --gui-fg: #2A2730; --gui-muted: #7A7366; --gui-disabled: #B5AC9D;
+  --accent: #F0603E; --accent-dark: #C2442A; --ok: #2F9D5C; --warn: #D88A1A; --danger: #D5453A; --net: #6B6FD0; --tier: #B48E2E;
+  --sel: #FFE3D9; --cut: rgba(240,96,62,.14);
+  --f-gui: "Pixelify Sans", "Courier New", monospace;
+  --f-body: "IBM Plex Sans", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --page: #18161B; --ink: #ECE5D6; --ink-2: #A79F90; --rule: #3A3640;
+  --gui-bg: #26232B; --gui-btn: #312D37; --gui-inset: #1C1A20; --gui-border: #4A4550; --gui-row: #3A3640;
+  --gui-fg: #ECE5D6; --gui-muted: #A79F90; --gui-disabled: #625C66;
+  --accent: #F26A48; --ok: #3DB56E; --warn: #E39A2E; --danger: #E55A4E; --net: #8A8EE8; --tier: #D2AE4E;
+  --sel: #4A2E28; --cut: rgba(242,106,72,.18); color-scheme: dark } }
+:root[data-theme="dark"] {
+  --page: #18161B; --ink: #ECE5D6; --ink-2: #A79F90; --rule: #3A3640;
+  --gui-bg: #26232B; --gui-btn: #312D37; --gui-inset: #1C1A20; --gui-border: #4A4550; --gui-row: #3A3640;
+  --gui-fg: #ECE5D6; --gui-muted: #A79F90; --gui-disabled: #625C66;
+  --accent: #F26A48; --ok: #3DB56E; --warn: #E39A2E; --danger: #E55A4E; --net: #8A8EE8; --tier: #D2AE4E;
+  --sel: #4A2E28; --cut: rgba(242,106,72,.18); color-scheme: dark }
+
+body { background: var(--page); color: var(--ink); font-family: var(--f-body); line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+main { max-width: 1180px; margin: 0 auto; display: grid; gap: 36px; }
+h1 { font-family: var(--f-gui); font-weight: 600; font-size: 1.9rem; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--f-gui); font-weight: 600; font-size: 1.25rem; margin: 0 0 4px; }
+p { margin: 0; max-width: 68ch; }
+.lede { color: var(--ink-2); margin-top: 6px; }
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 540px), 1fr)); gap: 24px; }
+figure { margin: 0; display: grid; gap: 10px; min-width: 0; }
+figcaption { font-size: .92rem; color: var(--ink-2); }
+figcaption b { color: var(--ink); font-family: var(--f-gui); font-size: 1.05rem; font-weight: 600; letter-spacing: .02em; }
+.scroll { overflow-x: auto; }
+
+/* ---------- a tela (1 px de GUI = 1.8 px aqui) ---------- */
+.gui { --u: 1.8px; width: calc(300 * var(--u)); background: var(--gui-bg); border: 2px solid var(--gui-border);
+  border-top: 3px solid var(--tier); font-family: var(--f-gui); font-size: calc(8.6 * var(--u)); color: var(--gui-fg);
+  padding: calc(6 * var(--u)); display: grid; gap: calc(4 * var(--u)); line-height: 1.15; }
+.hdr { display: flex; align-items: center; gap: calc(6 * var(--u)); }
+.hdr .name { flex: 1; }
+.muted { color: var(--gui-muted); }
+.pill { border: 1px solid var(--tier); border-radius: 99px; padding: 0 calc(4 * var(--u)); }
+.tabs { display: flex; gap: calc(9 * var(--u)); align-items: center; }
+.tab { border: 1px solid var(--gui-border); background: var(--gui-btn); padding: 0 calc(3 * var(--u)); border-bottom: 2px solid var(--accent); }
+.dot { display: inline-block; width: calc(6 * var(--u)); height: calc(6 * var(--u)); border-radius: 50%; }
+.tabs .spacer { flex: 1; }
+.body { display: grid; grid-template-columns: 112fr 162fr; gap: calc(7 * var(--u)); }
+.col { display: grid; gap: calc(3 * var(--u)); align-content: start; min-width: 0; }
+.btn { background: var(--gui-btn); border: 1px solid var(--gui-border); padding: 0 calc(3 * var(--u)); white-space: nowrap; }
+.drop { display: flex; justify-content: space-between; }
+.list { background: var(--gui-row); border: 1px solid var(--gui-border); min-height: calc(104 * var(--u)); padding: 1px 0; }
+.r { display: flex; align-items: center; gap: calc(3 * var(--u)); padding: 0 calc(3 * var(--u)); height: calc(11 * var(--u)); position: relative; }
+.r.two { height: calc(19 * var(--u)); }
+.r.two .t { display: grid; }
+.r.sel { background: var(--sel); box-shadow: inset 2px 0 0 var(--accent); }
+.r.ind { padding-left: calc(9 * var(--u)); }
+.r .grow { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; }
+.ico { width: calc(8 * var(--u)); height: calc(8 * var(--u)); border-radius: 1px; flex: none; }
+.chest { background: #9C6A2E; } .furn { background: #6E6A66; }
+.exc { color: var(--accent); }
+.mini { display: inline-grid; place-items: center; width: calc(10 * var(--u)); height: calc(10 * var(--u)); border: 1px solid var(--gui-border);
+  background: var(--gui-btn); font-size: calc(7.5 * var(--u)); flex: none; line-height: 1; }
+.mini.rev { color: var(--accent); border-color: var(--accent); }
+.mini.hover { border-color: var(--gui-fg); }
+.mini.x { position: relative; }
+.mini.x::before, .mini.x::after { content: ""; position: absolute; left: 50%; top: 50%; width: calc(6 * var(--u)); height: calc(1.2 * var(--u)); background: var(--gui-fg); transform: translate(-50%, -50%) rotate(45deg); }
+.mini.x::after { transform: translate(-50%, -50%) rotate(-45deg); }
+.mini.arm { color: #fff; background: var(--danger); border-color: var(--danger); width: auto; padding: 0 calc(3 * var(--u)); }
+.cube { display: grid; grid-template-columns: repeat(4, 1fr); gap: calc(2 * var(--u)); margin-top: calc(6 * var(--u)); }
+.cube span { border: 1px dashed var(--gui-border); text-align: center; color: var(--gui-muted); }
+.cube .on { border: 2px solid var(--accent); color: var(--gui-fg); }
+.row { display: flex; gap: calc(3 * var(--u)); align-items: center; }
+.modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: calc(3 * var(--u)); }
+.modes span { background: var(--gui-btn); border: 1px solid var(--gui-border); text-align: center; height: calc(11 * var(--u)); }
+.modes .on { background: var(--sel); border-color: var(--accent); }
+.net { flex: 1; border: 1px solid var(--net); background: var(--gui-btn); padding: 0 calc(3 * var(--u)); display: flex; justify-content: space-between; }
+.slots { display: grid; grid-template-columns: repeat(9, 1fr); gap: 0; border: 1px solid var(--gui-border); margin-top: calc(4 * var(--u)); }
+.slots i { aspect-ratio: 1; border: 1px solid var(--gui-inset); background: var(--gui-inset); opacity: .55; }
+.cut { background: var(--cut); outline: 2px dashed var(--accent); outline-offset: 1px; position: relative; }
+.cut::after { content: "sai"; position: absolute; right: -2px; top: 50%; transform: translate(100%, -50%); font-size: calc(6.5 * var(--u));
+  color: var(--accent); padding-left: 6px; }
+.new { outline: 2px solid var(--ok); outline-offset: 1px; }
+.tip { position: absolute; z-index: 2; right: calc(-2 * var(--u)); top: calc(13 * var(--u)); background: #100E14; color: #EEE7F7;
+  border: 1px solid #5A36B0; padding: calc(2 * var(--u)) calc(4 * var(--u)); white-space: nowrap; font-size: calc(7.5 * var(--u)); }
+.tip .m { color: #A79F90; }
+
+/* ---------- estados ---------- */
+.states { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 20px; }
+.state { display: grid; gap: 8px; align-content: start; min-width: 0; }
+.state .gui { --u: 1.5px; }
+.snip { width: calc(112 * var(--u)); }
+.state p { font-size: .92rem; color: var(--ink-2); }
+
+.decide { border-top: 1px solid var(--rule); padding-top: 20px; display: grid; gap: 14px; }
+.decide ol { margin: 0; padding-left: 1.3em; display: grid; gap: 10px; max-width: 78ch; }
+.decide li b { font-weight: 600; }
+.keep { font-size: .92rem; color: var(--ink-2); }
+.prio { display: inline-block; font-family: var(--f-gui); font-weight: 600; font-size: .85rem; padding: 0 8px; border-radius: 4px; color: #fff; }
+.ideas { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr)); gap: 20px; }
+.idea { border: 1px solid var(--rule); border-radius: 6px; padding: 16px; display: grid; gap: 10px; align-content: start; background: var(--gui-row); min-width: 0; }
+.idea h3 { font-family: var(--f-gui); font-weight: 600; font-size: 1.2rem; margin: 0; }
+.idea p, .idea li { font-size: .93rem; color: var(--ink-2); }
+.idea ul { margin: 0; padding-left: 1.1em; display: grid; gap: 4px; }
+.idea .rec { color: var(--ok); font-weight: 600; font-size: .88rem; }
+.idea .cost { font-size: .85rem; color: var(--ink-2); border-top: 1px dashed var(--rule); padding-top: 8px; }
+.hud { --u: 1.5px; background: #100E14; color: #EEE7F7; border: 1px solid #5A36B0; font-family: var(--f-gui); font-size: calc(7.6 * var(--u)); padding: calc(4 * var(--u)) calc(5 * var(--u)); display: grid; gap: calc(2 * var(--u)); line-height: 1.2; max-width: 100%; }
+.hud .m { color: #A79F90; } .hud .ok { color: #3DB56E; } .hud .bad { color: #E55A4E; } .hud .warn { color: #E39A2E; } .hud .net { color: #8A8EE8; }
+.cube3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; max-width: 220px; font-family: var(--f-gui); font-size: .8rem; }
+.cube3 span { border: 1px solid var(--gui-border); text-align: center; padding: 3px 0; background: var(--gui-btn); }
+.cube3 .in { border-color: #3B82C4; color: #3B82C4; } .cube3 .out { border-color: var(--accent); color: var(--accent); } .cube3 .fuel { border-color: var(--warn); color: var(--warn); }
+.mold { font-family: var(--f-gui); font-size: .82rem; display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; max-width: 260px; }
+.mold span { aspect-ratio: 1; display: grid; place-items: center; border: 1px solid var(--gui-border); background: var(--gui-btn); }
+.mold .r { background: var(--tier); color: #fff; } .mold .f { background: #6E6A66; color: #fff; } .mold .c { background: #9C6A2E; color: #fff; } .mold .e { opacity: .3; }
+</style>
+
+<main>
+  <header>
+    <h1>Configurador: três ferramentas que o mod ainda não tem</h1>
+    <p class="lede">O Vinculador liga máquinas e o Tablet administra a rede. Falta uma ferramenta de mão para o que acontece na máquina que você está olhando: entender por que ela parou, configurá-la sem pensar em lados e repetir uma linha de produção inteira. Cada ideia funciona sozinha, e a 1 e a 2 usam o mesmo gesto.</p>
+  </header>
+
+  <section class="ideas">
+    <div class="idea">
+      <h3>1 · Sonda: por que parou?</h3>
+      <p>Segurando o Configurador e mirando numa máquina (presa ou vinculada), aparece um cartão no canto da tela com o estado de cada face e o <b>motivo</b> quando nada se move. É o diagnóstico que hoje ninguém mostra.</p>
+      <div class="hud">
+        <span>Fornalha #2 · via Roteador da fundição</span>
+        <span><span class="ok">●</span> Cima · Insere · <span class="net">Mina</span> · 12 itens/s</span>
+        <span><span class="bad">●</span> Lado · Insere · <span class="net">Mina</span> · <span class="bad">recusou Ouro: sem receita</span></span>
+        <span><span class="warn">●</span> Baixo · Extrai · <span class="net">Armazém</span> · <span class="warn">ninguém insere nessa rede</span></span>
+        <span class="m">Shift + clique: fixar · roda: outro tipo</span>
+      </div>
+      <ul>
+        <li>Motivos que o motor já sabe: sem receita, destino cheio, dormindo até a máquina mudar, sem quem insere na rede, rede sem permissão, fora do raio, acima do limite, chunk descarregado, travado pelo redstone, máquina trocada.</li>
+        <li>Shift + clique fixa o cartão para acompanhar enquanto você mexe na base.</li>
+      </ul>
+      <p class="cost"><b>Custo:</b> o servidor só responde para quem está mirando, quando o alvo ou o estado muda (no máximo 4 vezes por segundo), lendo as portas daquela máquina. Parado, nada.</p>
+    </div>
+
+    <div class="idea">
+      <h3>2 · Afinador: configura sozinho</h3>
+      <p>Clique numa máquina sem configuração: o Configurador testa cada face e descobre o que ela aceita e o que ela dá (os slots de entrada, de combustível e de saída que a própria máquina expõe por lado). Ele pinta a proposta nas faces, no mundo; um segundo clique aplica.</p>
+      <div class="cube3"><span></span><span class="in">Cima · Insere</span><span></span><span class="fuel">Esq. · Combustível</span><span>Frente</span><span class="fuel">Dir. · Combustível</span><span></span><span class="out">Baixo · Extrai</span><span></span></div>
+      <ul>
+        <li>Combustível vira Insere com um filtro automático do que a máquina aceita naquele slot (carvão na fornalha), para o minério não entupir a face errada.</li>
+        <li>Shift + segundo clique aplica no grupo inteiro. As redes ficam como estão: o Afinador só decide modos e filtros.</li>
+        <li>Para os mods do ATM10 que expõem lados (Mekanism, Thermal, Industrial Foregoing) acerta quase sempre; o que ele não sabe, deixa em Nenhum.</li>
+      </ul>
+      <p class="cost"><b>Custo:</b> só no clique, uma simulação por face e por tipo. Nada fica rodando.</p>
+    </div>
+
+    <div class="idea">
+      <h3>3 · Molde: carimba uma linha inteira</h3>
+      <p>Shift + clique em dois cantos grava um <b>molde</b> da linha já configurada: as máquinas, as posições relativas ao roteador, o perfil de cada uma e as redes. Monte as mesmas máquinas em outro lugar, mire o roteador novo e clique: ele vincula todas e aplica os perfis numa vez.</p>
+      <div class="mold"><span class="r">R</span><span class="f">F</span><span class="f">F</span><span class="f">F</span><span class="c">B</span><span class="e"></span><span class="e"></span><span class="f">F</span><span class="f">F</span><span class="f">F</span><span class="c">B</span><span class="e"></span></div>
+      <ul>
+        <li>Funciona girado: o molde se ajusta à frente do roteador novo.</li>
+        <li>Antes de aplicar, mostra no mundo o que bate (verde), o que falta (vermelho) e o que sobra; aplica só o que bate, com Desfazer.</li>
+        <li>As redes do molde só entram se você pode usá-las; senão o aviso pergunta: mesmas redes ou redes novas.</li>
+      </ul>
+      <p class="cost"><b>Custo:</b> só no clique, limitado pelo número de máquinas do tier. O molde fica no item (uma lista curta).</p>
+    </div>
+  </section>
+
+  <section class="decide">
+    <h2>Minha recomendação</h2>
+    <ol>
+      <li><b>Sonda + Afinador juntos</b> como a função do Configurador: mirar mostra o diagnóstico, clicar numa máquina sem configuração propõe e aplica. É o par "entender e resolver" no mesmo gesto, e a Sonda reaproveita o que o motor ganhou com a recusa por item.</li>
+      <li><b>Molde</b> numa etapa seguinte: é o mais trabalhoso e brilha em base grande, depois que a 1 e a 2 estiverem prontas.</li>
+    </ol>
+    <p class="keep">Nenhuma das três repete o Vinculador (ligar) nem o Tablet (administrar a rede de longe).</p>
+  </section>
+</main>

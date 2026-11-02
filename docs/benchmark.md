@@ -529,3 +529,21 @@ Ramo `bau-upgrades`. Antes: `dc0c239` (a Tarefa 3), num worktree à parte. Depoi
 
 - Sem o upgrade, o gancho é um teste de campo nulo por inserção e o `stockCount` uma chamada a mais com um `instanceof` antes da contagem de sempre: nenhum cenário piorou; as diferenças ficam dentro do ± ou a favor do depois, que é ruído da máquina (o código do depois só acrescenta).
 - O custo com o upgrade (um `get` no índice e um `add` no conjunto sujo por inserção de cadeia, O(formas) por cadeia suja no fim do tick) não tem cenário de bench; os GameTests do `ChestCompactingGameTests` cobrem o comportamento.
+
+## Destino seletivo: recusa de um item e busca pela chave (2 de novembro de 2026)
+
+Ramo `ccr-52410279-si07pg`. Antes: `54af020` (os arquivos do motor desse commit, no mesmo checkout). Depois: a recusa anotada por destino (`ItemHints`), o "cheio" guardado na porta (`Port.full`) e a busca pela chave no Baú do mod. Uma rodada de `./scripts/bench.sh "full:100:3,sparse:500:3,raw:2:3,bigfull:20:3,chesttypes:20:3:wa,many:500:3"` de cada lado (relatórios `run/bench/reports/20261102-004714.md`, antes, e `20261102-003919.md`, depois, fora do git); `bigfull` e `many` medidos de novo depois do ajuste do "cheio" (`20261102-005653.md`).
+
+| Cenário | mod antes (ms/tick) | mod depois | Outra medida antes → depois |
+| --- | --- | --- | --- |
+| full 100 | 0,0045 ± 0,0002 | 0,0057 ± 0,0016 | µs/visita 8,95 → 11,37 ± 3,30 |
+| sparse 500 | 0,0174 ± 0,0004 | 0,0184 ± 0,0011 | visitas/tick 4,1 → 4,1 |
+| raw 2 | 0,2181 ± 0,0403 | 0,1909 ± 0,0180 | 68.885 → 69.073 itens/s |
+| bigfull 20 | 0,0373 ± 0,0025 | 0,0374 ± 0,0040 | µs/visita 14,93 → 14,94 |
+| chesttypes 20 | 0,0297 ± 0,0103 | 0,0277 ± 0,0103 | µs/visita 9,84 → 9,12 |
+| many 500 | 0,8641 ± 0,0347 | 0,8818 ± 0,0452 | visitas/tick 51,4 → 50,7 |
+
+### Leitura
+
+- Nenhum cenário piorou além do ±. A primeira versão relia os slots do destino a cada recusa e pesava no `bigfull` (0,046 ms/tick); a versão final tira os vazios da própria simulação e guarda o "cheio" até a máquina mudar.
+- O ganho é no caso que nenhum cenário do bench tem, o destino seletivo; os GameTests do `SelectiveDestinationGameTests` medem em ticks: a verruga atrás de 26 pós que não cabem não chegava em 200 ticks e chega em menos de 20; atrás de 2.000 tipos de papel no Baú, de 63 ticks para menos de 40, e de volta em até 6 ticks pela chave.

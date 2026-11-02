@@ -1,5 +1,8 @@
 package io.github.matheusanbs.wirelessautomate.block;
 
+import io.github.matheusanbs.wirelessautomate.filter.Filter;
+import io.github.matheusanbs.wirelessautomate.filter.FilterSet;
+import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
@@ -8,6 +11,7 @@ import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.range.MachineConfig;
 import io.github.matheusanbs.wirelessautomate.range.MachineGroup;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -141,6 +145,22 @@ final class AttachedDraft {
             }
         }
         return ItemStack.EMPTY;
+    }
+
+    /** O filtro embutido do lado e os dos cartões válidos dele, na ordem dos slots; sem cartões não aloca. */
+    FilterSet filterSet(ResourceType type, RelativeSide side) {
+        Filter embedded = face(type, side).filter();
+        List<Filter> fromCards = null;
+        for (int slot = 0; slot < CARD_SLOTS; slot++) {
+            ItemStack stack = card(type, side, slot);
+            if (RouterBlockEntity.acceptsCard(type, stack)) {
+                if (fromCards == null) {
+                    fromCards = new ArrayList<>(CARD_SLOTS);
+                }
+                fromCards.add(FilterCardItem.contents(stack).filter());
+            }
+        }
+        return fromCards == null ? embedded.asSet() : FilterSet.of(embedded, fromCards);
     }
 
     /** Põe as seis faces do tipo na rede, menos as que o {@code canLeave} segura (contadas em {@code kept}). */

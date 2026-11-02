@@ -501,7 +501,7 @@ public final class ModPayloads {
     /**
      * Põe uma face do alvo de edição da tela (a presa, o perfil de um grupo ou uma máquina remota) numa
      * rede. Só aceita tipo carregado, rede que existe e que o jogador pode usar (dono, operador nível 2, convidado
-     * ou rede pública, a mesma regra do Configurador), ou vazio para tirar a face da rede; e só tira a face de uma
+     * ou rede pública, a mesma regra do colar de perfil), ou vazio para tirar a face da rede; e só tira a face de uma
      * rede que o jogador edita ({@link WaNetwork#canEdit}). Ignora a ação se o alvo deixou
      * de existir ({@link RouterEditHost#actionTarget()}).
      */
@@ -516,7 +516,7 @@ public final class ModPayloads {
             return false;
         }
         Optional<UUID> id = payload.network();
-        // sair de uma rede pede o mesmo que o Mover, o colar e o Configurador: editá-la (dono, operador ou convidado)
+        // sair de uma rede pede o mesmo que o Mover e o colar: editá-la (dono, operador ou convidado)
         UUID leaving = router.face(target, payload.resource(), payload.face()).network();
         if (leaving != null && !leaving.equals(id.orElse(null))) {
             WaNetwork from = NetworkSavedData.get(player.server).network(leaving);

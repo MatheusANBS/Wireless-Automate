@@ -365,6 +365,11 @@ public final class TestMachines {
             return largestCall;
         }
 
+        /** Troca o slot em silêncio, sem avisar ninguém (a máquina que muda sozinha). */
+        void set(int slot, ItemStack stack) {
+            stacks[slot] = stack;
+        }
+
         int total() {
             int total = 0;
             for (ItemStack stack : stacks) {

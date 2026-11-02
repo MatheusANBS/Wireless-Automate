@@ -71,9 +71,6 @@ import io.github.matheusanbs.wirelessautomate.client.GuiThemes;
  *   <li>Tablet de rede: abre pelo item, acha o roteador B pela busca, cria um grupo com a rede dos
  *       itens, pausa o grupo e confere que as pedras param, retoma e confere que chegam, e abre o
  *       roteador B à distância pela lista (20 blocos, longe demais para a tela comum).</li>
- *   <li>Configurador (sem tela): copia A com Shift + clique, passa ao modo Área com Shift + clique
- *       no ar, marca o baú A e o roteador B com cliques e cola a cópia em B com um clique no ar
- *       (os dois estão em baús, a mesma máquina);</li>
  *   <li>Vinculador por área (por último): Shift + clique no ar passa para Área, Shift + clique em
  *       dois blocos marca os cantos em volta dos roteadores, clique no ar abre a tela, que escolhe a
  *       rede e o tipo Fluidos e vincula; confere no servidor que só a aba de fluidos dos dois mudou.</li>

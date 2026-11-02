@@ -10,7 +10,6 @@ import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
-import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import java.util.EnumSet;
 import java.util.Map;
@@ -281,20 +280,19 @@ public final class RouterConfigGameTests {
                     helper.setBlock(MACHINE, Blocks.CHEST);
                     helper.assertTrue(node.items(Direction.UP) != null, "cache não viu o baú voltar");
 
-                    // Virar o roteador para o funil: a presa passa a ser o funil, no grupo dele, e o grupo do baú
-                    // (configurado) fica.
+                    // Virar o roteador para o funil: a presa passa a ser o funil. Sozinha no grupo do baú e sem grupo
+                    // de funil, o grupo inteiro muda de bloco e a configuração continua, pelos lados da máquina.
                     node.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
                     helper.setBlock(hopper, Blocks.HOPPER);
                     helper.setBlock(ROUTER, router(Direction.SOUTH));
                     helper.assertTrue(helper.getBlockEntity(ROUTER) == node, "block entity trocado ao girar");
                     helper.assertValueEqual(node.machinePos(), helper.absolutePos(hopper), "máquina");
-                    helper.assertValueEqual(node.face(ResourceType.ITEM, Direction.UP).mode(), PortMode.NONE,
-                            "o funil pegou a configuração do baú");
                     helper.assertValueEqual(node.remoteMachines().attachedGroup().block(),
-                            BuiltInRegistries.BLOCK.getKey(Blocks.HOPPER), "a presa não foi para o grupo do funil");
-                    helper.assertValueEqual(node.remoteMachines().firstGroupOf(BuiltInRegistries.BLOCK.getKey(Blocks.CHEST))
-                            .profile().face(ResourceType.ITEM, RemoteSide.TOP).mode(), PortMode.EXTRACT,
-                            "o grupo do baú configurado sumiu");
+                            BuiltInRegistries.BLOCK.getKey(Blocks.HOPPER), "o grupo da presa não passou para o funil");
+                    helper.assertValueEqual(node.face(ResourceType.ITEM, Direction.UP).mode(), PortMode.EXTRACT,
+                            "a configuração não seguiu para o funil");
+                    helper.assertTrue(node.remoteMachines().firstGroupOf(BuiltInRegistries.BLOCK.getKey(Blocks.CHEST)) == null,
+                            "sobrou um grupo do baú");
                     var items = node.items(Direction.SOUTH);
                     helper.assertTrue(items != null && items.getSlots() == 5, "cache não foi refeito para o funil");
                 })

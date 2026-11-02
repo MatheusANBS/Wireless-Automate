@@ -222,7 +222,7 @@ final class ItemTransfer {
      */
     static void refusedByTarget(Port destination, IItemHandler target, ItemStack item, long now) {
         if (PLAN.refusesItem(target, item) || !destination.full && PLAN.roomForOthers(target, item)) {
-            destination.hints().refuse(item);
+            destination.hints().refuse(item, now);
             stepRefusals++;
             visitRefusals++;
         } else {
@@ -307,7 +307,7 @@ final class ItemTransfer {
             // Passou no filtro do destino: a origem tem o que oferecer (motivo do sono).
             source.offered = true;
             ItemHints hints = destination.hints;
-            if (hints != null && hints.refused(offered)) {
+            if (hints != null && hints.refused(offered, now, destination.destinationBackoff.maxTicks())) {
                 // Recusou este item desde a última mudança: pula sem simular.
                 continue;
             }
@@ -354,6 +354,8 @@ final class ItemTransfer {
                 PLAN.delivered(destination, offered, delivered);
                 learned(destination, offered);
                 destination.destinationBackoff.wake();
+                // Recebeu: não está cheio.
+                destination.full = false;
                 destination.addGot(delivered);
                 order.delivered(destination);
                 if (source.network != null) {

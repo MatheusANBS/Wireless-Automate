@@ -127,8 +127,8 @@ final class RouterAttached {
     FilterSet filterSet(ResourceType type, Direction face) {
         MachineGroup group = remotes.attachedGroup();
         if (group == null) {
-            // O rascunho só monta portas sem os cartões: a conversão vem antes, na montagem, com o bloco à mão.
-            return face(type, face).filter().asSet();
+            // Sem membro, as portas saem do rascunho (a máquina num chunk descarregado), com os cartões dele.
+            return draft == null ? EMPTY.filter().asSet() : draft.filterSet(type, relative(face));
         }
         RemoteSide side = side(remotes.attached(), face);
         return RouterCards.groupFilterSet(group, remotes.effectiveAttached().face(type, side).filter(), type, side);
@@ -290,8 +290,10 @@ final class RouterAttached {
 
     /**
      * Acompanha o bloco da frente em {@code state}: converte o rascunho; com outro bloco (que não é ar), passa a
-     * presa para o grupo dele, sem a exceção; com outra frente, guarda a frente. Ar não muda nada. Devolve se a
-     * configuração da presa mudou (aí salva e refaz a tela; o motor fica com quem chamou).
+     * presa para ele ({@link RemoteMachines#attach}: o grupo inteiro muda de bloco se ela é a única, senão ela vai
+     * para o grupo do bloco novo ou para uma cópia do perfil, com a exceção); com outra frente, guarda a frente. Ar
+     * não muda nada. Devolve se a configuração da presa mudou (aí salva e refaz a tela; o motor fica com quem
+     * chamou).
      */
     boolean sync(BlockState state) {
         AttachedMember member = remotes.attached();
@@ -331,9 +333,9 @@ final class RouterAttached {
     }
 
     /**
-     * O rascunho vira membro (spec, "Mundos antigos"): sem grupo do bloco, ou com um grupo de cartões diferentes,
-     * num grupo novo com o rascunho como perfil e os cartões dele; senão no primeiro grupo do bloco, com a
-     * exceção se a configuração difere do perfil.
+     * O rascunho vira membro (spec, "Mundos antigos"): sem grupo do bloco, ou com um grupo de cartões diferentes
+     * (também nenhum cartão diante de algum), num grupo novo com o rascunho como perfil e os cartões dele; senão no
+     * primeiro grupo do bloco, com a exceção se a configuração difere do perfil.
      */
     private void convert(BlockState state) {
         AttachedDraft old = draft;
@@ -343,14 +345,14 @@ final class RouterAttached {
         int front = RemoteMachines.frontOf(state);
         MachineConfig config = old.toConfig(facing, spin, front);
         MachineGroup group = remotes.firstGroupOf(BuiltInRegistries.BLOCK.getKey(state.getBlock()));
-        if (group == null || (old.hasCards() && !old.sameCards(group, facing, spin, front))) {
+        if (group == null || !old.sameCards(group, facing, spin, front)) {
             group = remotes.newGroup(BuiltInRegistries.BLOCK.getKey(state.getBlock()), config);
             old.cardsInto(group, facing, spin, front);
             remotes.attachTo(group.id(), null, front);
         } else {
             remotes.attachTo(group.id(), config.sameAs(group.profile()) ? null : config, front);
-            // Os cartões do rascunho são iguais aos do grupo (ou não há): as pilhas físicas dele sobram e caem no
-            // roteador, para nenhum item sumir.
+            // Os cartões do rascunho são iguais aos do grupo: as pilhas físicas dele sobram e caem no roteador, para
+            // nenhum item sumir.
             dropDraftCards(old);
         }
     }

@@ -154,7 +154,7 @@ public final class Config {
 
         builder.push("linker");
         LINKER_MAX_AREA_VOLUME = builder
-                .comment("Volume máximo, em blocos, da área do Vinculador e do Configurador (modo Área).")
+                .comment("Volume máximo, em blocos, da área do Vinculador (modo Área).")
                 .defineInRange("maxAreaVolume", 262_144, 1, 16_777_216);
         LINKER_MAX_DISTANCE = builder
                 .comment("Distância máxima, em blocos, do jogador até a área para vincular ou colar por área (0 = sem limite).")

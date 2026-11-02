@@ -24,8 +24,9 @@ import org.jetbrains.annotations.Nullable;
  * volta inteira sem mover ainda faz a origem dormir). Um destino que recusa pelo filtro, ou que já
  * tem o estoque, é só pulado, <b>sem dormir</b>: recusar o item A não diz nada sobre o B, e o
  * backoff de "cheio" o deixaria de fora também para o B. Pelo mesmo motivo, a inserção simulada que
- * não aceita nada de um item só faz o destino dormir se ele está cheio de verdade (nenhum slot vazio e
- * todas as pilhas no limite, {@link ItemInsertPlan#roomForOthers}). A máquina que recusa o item pelo
+ * não aceita nada de um item só faz o destino dormir se ele está cheio de verdade: sem lugar para outro
+ * item, ou travado, com um lugar que aceita este item e mesmo assim o recusou
+ * ({@link ItemInsertPlan#roomForOthers}). A máquina que recusa o item pelo
  * tipo ({@link ItemInsertPlan#refusesItem}: a Salvaging Table do Apotheosis com o que não se desmonta,
  * uma máquina com o que não tem receita) ou que tem lugar só para outros (a entrada da fornalha com
  * ferro, diante do ouro) é pulada, e a recusa fica anotada nas dicas dela ({@link ItemHints}) até a
@@ -219,7 +220,7 @@ final class ItemTransfer {
      * item pode entrar. Só o destino cheio de verdade dorme.
      */
     static void refusedByTarget(Port destination, IItemHandler target, ItemStack item, long now) {
-        if (PLAN.refusesItem(target, item) || ItemInsertPlan.roomForOthers(target)) {
+        if (PLAN.refusesItem(target, item) || ItemInsertPlan.roomForOthers(target, item)) {
             destination.hints().refuse(item);
             stepRefusals++;
             visitRefusals++;

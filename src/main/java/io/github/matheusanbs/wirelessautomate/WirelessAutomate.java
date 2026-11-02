@@ -12,7 +12,6 @@ import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.packet.ModPayloads;
 import io.github.matheusanbs.wirelessautomate.range.RemoteIndex;
-import io.github.matheusanbs.wirelessautomate.range.UnlinkConfirm;
 import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeEditor;
 import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeOverridePack;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
@@ -115,7 +114,6 @@ public final class WirelessAutomate {
         TabletMenu.forget(event.getEntity().getUUID());
         IdleNetworkUndo.forget(event.getEntity().getUUID());
         MachineClipboard.forget(event.getEntity().getUUID());
-        UnlinkConfirm.forget(event.getEntity().getUUID());
         TunerPending.forget(event.getEntity().getUUID());
         MachinePasteUndo.forget(event.getEntity().getUUID());
         TvEditing.forget(event.getEntity().getUUID());
@@ -171,7 +169,6 @@ public final class WirelessAutomate {
         IdleNetworkUndo.reset();
         MachineClipboard.reset();
         TunerPending.reset();
-        UnlinkConfirm.reset();
         MachinePasteUndo.reset();
     }
 

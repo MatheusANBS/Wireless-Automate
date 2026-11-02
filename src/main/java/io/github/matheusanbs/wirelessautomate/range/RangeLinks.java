@@ -54,8 +54,8 @@ import org.jetbrains.annotations.Nullable;
  * raio do tier, distância e limite). As vagas do limite são as máquinas ativas ({@link RangeRules#used}), a conta da
  * tela.
  *
- * <p>Desvincular uma máquina pede dois cliques ({@link UnlinkConfirm}); os cartões de um grupo que esvazia vão para
- * quem clicou, e a mensagem diz quantos.
+ * <p>Um clique numa máquina vinculada a desvincula; os cartões de um grupo que esvazia vão para quem clicou, e a
+ * mensagem diz quantos. O Ctrl + clique (vincular as do mesmo bloco no raio) fica no {@link SameBlockLinks}.
  */
 public final class RangeLinks {
     private static final String KEY = "item.wirelessautomate.linker.range.";
@@ -68,11 +68,11 @@ public final class RangeLinks {
         /** Escolheu o roteador (clique num roteador). */
         CHOSEN,
         LINKED,
-        /** Clique numa máquina vinculada: o próximo, na mesma, em até {@link UnlinkConfirm#WINDOW} ticks, desvincula. */
-        CONFIRM,
         UNLINKED,
         /** Vincular da área aplicado (mesmo com zero vinculadas). */
         AREA_DONE,
+        /** Ctrl + clique aplicado ({@link SameBlockLinks}), mesmo com zero vinculadas. */
+        SAME_BLOCK_DONE,
         /** Nenhum roteador escolhido no Vinculador. */
         NO_ROUTER,
         /** O roteador escolhido está descarregado, quebrado ou em outra dimensão. */
@@ -102,7 +102,7 @@ public final class RangeLinks {
         /** O pedido foi aplicado (escolher, vincular, desvincular ou o Vincular da área). */
         public boolean ok() {
             return status == Status.CHOSEN || status == Status.LINKED || status == Status.UNLINKED
-                    || status == Status.AREA_DONE;
+                    || status == Status.AREA_DONE || status == Status.SAME_BLOCK_DONE;
         }
     }
 
@@ -152,12 +152,10 @@ public final class RangeLinks {
 
     /**
      * Clique numa máquina no modo Vincular: vincula ao roteador escolhido ou, se já estava vinculada a
-     * ele, pede confirmação; o segundo clique na mesma máquina, em até 3 s, desvincula ({@link UnlinkConfirm}).
-     * Mostra o resultado na action bar.
+     * ele, desvincula. Mostra o resultado na action bar.
      */
     public static Result toggle(ServerPlayer player, ItemStack stack, BlockPos pos) {
         RouterBlockEntity router = chosen(player, stack);
-        boolean confirmed = UnlinkConfirm.take(player, router, pos);
         if (router == null) {
             return missing(player, stack);
         }
@@ -168,11 +166,6 @@ public final class RangeLinks {
         int index = router.remoteMachines().index(pos);
         if (index >= 0) {
             Component machine = MachineNames.machine(router.remoteMachines(), pos);
-            if (!confirmed) {
-                UnlinkConfirm.ask(player, router, pos);
-                player.displayClientMessage(Component.translatable(KEY + "confirm_unlink", machine), true);
-                return Result.of(Status.CONFIRM);
-            }
             Component group = MachineNames.groupOf(router.remoteMachines(), pos);
             int cards = router.unlinkMachine(index, player);
             MutableComponent text = Component.translatable(KEY + "unlinked", machine, group, routerName(router),
@@ -351,7 +344,7 @@ public final class RangeLinks {
         return text;
     }
 
-    private static void appendCount(MutableComponent text, String key, int count) {
+    static void appendCount(MutableComponent text, String key, int count) {
         if (count > 0) {
             text.append(" · ").append(Component.translatable(KEY + key, count));
         }
@@ -468,7 +461,7 @@ public final class RangeLinks {
      * O jogador pode mexer em {@code pos}: constrói ({@code mayBuild}: o modo aventura e o espectador não) e o
      * {@code mayInteract} deixa (proteção do spawn, borda do mundo).
      */
-    private static boolean mayEdit(ServerPlayer player, BlockPos pos) {
+    static boolean mayEdit(ServerPlayer player, BlockPos pos) {
         return player.mayBuild() && player.serverLevel().mayInteract(player, pos);
     }
 
@@ -477,7 +470,7 @@ public final class RangeLinks {
         return RangeRules.chebyshev(origin.getX(), origin.getY(), origin.getZ(), pos.getX(), pos.getY(), pos.getZ());
     }
 
-    private static int radius(RouterBlockEntity router) {
+    static int radius(RouterBlockEntity router) {
         return Config.machineRadius(router.tier());
     }
 
@@ -505,12 +498,12 @@ public final class RangeLinks {
         };
     }
 
-    private static Result refuse(ServerPlayer player, Result result, RouterBlockEntity router, int distance) {
+    static Result refuse(ServerPlayer player, Result result, RouterBlockEntity router, int distance) {
         player.displayClientMessage(refusalText(result.refusal(), router, distance), true);
         return result;
     }
 
-    private static Result missing(ServerPlayer player, ItemStack stack) {
+    static Result missing(ServerPlayer player, ItemStack stack) {
         boolean none = chosenPos(stack) == null;
         player.displayClientMessage(Component.translatable(KEY + (none ? "no_router" : "router_missing")), true);
         return Result.of(none ? Status.NO_ROUTER : Status.ROUTER_MISSING);

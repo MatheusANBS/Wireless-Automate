@@ -6,6 +6,7 @@ import io.github.matheusanbs.wirelessautomate.menu.RouterEditHost;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.MachineGroup;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
+import io.github.matheusanbs.wirelessautomate.range.SameBlockLinks;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerPlayer;
@@ -15,7 +16,8 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Os pacotes do roteador de alcance que mexem num grupo inteiro ou no perfil por máquina: Desvincular o grupo e
- * Copiar e Colar (com o Desfazer), e os avisos deles e do Atualizar. Todos agem só com um {@link RouterEditHost}
+ * Copiar e Colar (com o Desfazer), e os avisos deles e do Atualizar; e o Ctrl + clique do Vinculador
+ * ({@link LinkSameBlockPayload}, que confere o item na mão e não um menu). Os da tela agem só com um {@link RouterEditHost}
  * aberto ({@link ModPayloads#host}), no alvo conferido.
  */
 public final class RangePayloads {
@@ -31,6 +33,8 @@ public final class RangePayloads {
                 (payload, context) -> handleMachineCopy(serverPlayer(context), payload));
         registrar.playToServer(MachinePastePayload.TYPE, MachinePastePayload.STREAM_CODEC,
                 (payload, context) -> handleMachinePaste(serverPlayer(context), payload));
+        registrar.playToServer(LinkSameBlockPayload.TYPE, LinkSameBlockPayload.STREAM_CODEC,
+                (payload, context) -> SameBlockLinks.link(serverPlayer(context), payload.pos()));
     }
 
     private static @Nullable ServerPlayer serverPlayer(IPayloadContext context) {

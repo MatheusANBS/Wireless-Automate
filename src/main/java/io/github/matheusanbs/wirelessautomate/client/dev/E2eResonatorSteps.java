@@ -416,7 +416,7 @@ final class E2eResonatorSteps {
      * A chave do texto na action bar agora, ou o texto cru se ele não é traduzível. O campo do {@link Gui} é privado
      * e só serve a este teste (o jogo de dev roda com os nomes da Mojang).
      */
-    private static String overlayKey() {
+    static String overlayKey() {
         try {
             Field field = Gui.class.getDeclaredField("overlayMessageString");
             field.setAccessible(true);

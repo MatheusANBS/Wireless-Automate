@@ -15,12 +15,15 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 ## Motor e redes
 
 - **(dono)** Decidir se a saída do Ressonador deve ser suavizada (hoje o lote de 20 ticks sai num tick só). (28/10)
-- Ver se os fluidos pedem o mesmo tratamento da recusa por tipo (Salvaging Table do Apotheosis). (11/10)
+- Ver se os fluidos e os químicos pedem o mesmo tratamento do destino seletivo dos itens (tanque com outro fluido recusa e dorme como cheio; `ItemHints`). (02/11)
+- Bench: um cenário de destino seletivo (Baú do mod com milhares de tipos diante de máquinas que recusam a maioria); hoje só os GameTests medem. (02/11)
 - Avaliar se o orçamento padrão de 1 ms deve subir em servidores com folga: com 1.000 máquinas ou no Sophisticated, o mod deixa de 14% a 55% da vazão para trás (`docs/benchmark-logistics-network.md`). (bench comparativo)
 - Limites conhecidos: um fluido por tanque por visita; inserção em inventário grande sem índice de slots com espaço; sem custo medido por vizinho.
 - Teste automático do callback que limpa os tickets de chunk ao recarregar o mundo.
 
 ## Roteador de alcance
+
+- **(dono)** Aprovar a proposta da presa no grupo e das etapas seguintes (`docs/preview/alcance-presa-no-grupo.html`): bloco trocado na frente, mundos antigos, desvincular o grupo da presa e a ideia nova do Configurador. Achados da revisão de 02/11: máquina vinculada entra como exceção vazia (`linkMachineIsolated`); o Atualizar perde os cartões sem aviso; máquina trocada continua recebendo até o Atualizar; o Vinculador desvincula num clique e solta os cartões sem dizer; clique ignorado em silêncio quando a lista mudou; id de grupo reaproveitado; Configurador sem `mayBuild`. (02/11)
 
 - Pausar grupo e os perfis do alcance no Configurador (o `RouterPreset` só leva a máquina presa). (11/10)
 - Página própria no guia (hoje é uma seção da página do Roteador). (11/10)

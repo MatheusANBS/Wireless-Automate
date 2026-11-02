@@ -13,12 +13,41 @@ item_ids:
 
 <ItemImage id="wirelessautomate:configurator" scale="2" float="left" />
 
-Sem função por enquanto: uma ferramenta nova chega numa próxima versão.
+O **Afinador**: descobre sozinho o que cada face de uma máquina aceita e o que ela dá, e propõe os
+modos (Insere, Extrai, Armazém) para você conferir antes de aplicar.
 
 <br clear="all" />
 
-O item continua existindo, com a mesma receita. Para copiar e colar perfis de roteadores, máquinas e
-grupos, use o [Tablet](network-tablet.md).
+## Como operar
+
+1. Vincule a máquina a um roteador (preso nela ou de alcance, pelo [Vinculador](linker.md)).
+2. Clique na máquina com o Configurador. As faces com modo ganham uma moldura na cor do modo, e a
+   action bar resume a proposta.
+3. Confira a proposta. Se estiver boa, clique de novo na mesma máquina em até 10 segundos: os modos
+   são aplicados nela.
+4. Com **Shift**, o segundo clique aplica no perfil do grupo inteiro.
+5. Escolha a rede das faces na tela do roteador, se ainda não tiverem.
+
+Clicar em outra máquina refaz a análise para ela. Clicar no ar, mirar outro bloco por 2 segundos ou
+esperar 10 segundos apaga a proposta. Segurar o botão não aplica: solte e clique de novo.
+
+## O que muda
+
+- Só os **modos** dos tipos que a análise achou. Prioridade, redstone, filtro e rede de cada face
+  ficam como estão.
+- Numa máquina de um grupo com outras, a mudança vira exceção dela; com Shift, vai para o perfil.
+- Baús, barris, tanques e baterias viram **Armazém** numa face só; as outras faces ficam em Nenhum.
+- Não há Desfazer: a moldura mostra a proposta antes, e o segundo clique é a confirmação.
+
+## Limites
+
+- A análise olha até **27 slots por face** e até 64 itens de prova (alguns comuns, os da máquina e os
+  do seu inventário). Uma máquina com mais slots, ou que só aceita um item raro, pode receber uma
+  proposta incompleta.
+- É uma proposta: confira antes de aplicar, principalmente em máquinas de outros mods.
+- Você precisa poder mexer na máquina e editar o roteador.
+
+Num roteador, o clique com o Configurador abre a tela dele.
 
 ## Receita
 

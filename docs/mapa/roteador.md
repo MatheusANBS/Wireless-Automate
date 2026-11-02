@@ -28,7 +28,7 @@ Modo de face e controle por redstone
 
 ## `item/`
 
-`TierCoreItem` (o Cartão de Upgrade: destino pelo item, origem pelo componente `upgrade_from`, `card(to, from)`; nome "A → B", tooltip com origem, recusa e sucesso na action bar; sem origem = cartão antigo), `RouterBlockItem`, `LinkerItem`, `ConfiguratorItem` (o Afinador, `item/tuner/`: o `onItemUseFirst` numa máquina, na mão principal, com ou sem Shift, vem antes da interface dela; num roteador segue para o bloco, que abre a tela, e num bloco sem block entity nem capability segue sem aviso; em descanso, o clique é engolido; o clique no ar esquece a proposta; o item, a receita e os componentes `configurator_*` ficam registrados), `FilterCardItem`, `NetworkTabletItem` (com o `onItemUseFirst`, que vem antes da interface da máquina e abre a central pelo `TabletClick`), `ChunkLoaderUpgradeItem`, `RangeUpgradeItem` (o Upgrade de Alcance; o tooltip mostra raio e limite por tier) e `GuideBook` (o livro do GuideME: aba criativa e entrega no primeiro login, só pelos registros)
+`TierCoreItem` (o Cartão de Upgrade: destino pelo item, origem pelo componente `upgrade_from`, `card(to, from)`; nome "A → B", tooltip com origem, recusa e sucesso na action bar; sem origem = cartão antigo), `RouterBlockItem`, `LinkerItem`, `ConfiguratorItem` (o Afinador, `item/tuner/`: o `onItemUseFirst` numa máquina, na mão principal, com ou sem Shift, vem antes da interface dela; num roteador segue para o bloco, que abre a tela, e num bloco sem block entity nem capability segue sem aviso; em descanso, o clique é engolido; o clique no ar esquece a proposta; o tooltip explica o gesto em quatro linhas; o item, a receita e os componentes `configurator_*` ficam registrados), `FilterCardItem`, `NetworkTabletItem` (com o `onItemUseFirst`, que vem antes da interface da máquina e abre a central pelo `TabletClick`), `ChunkLoaderUpgradeItem`, `RangeUpgradeItem` (o Upgrade de Alcance; o tooltip mostra raio e limite por tier) e `GuideBook` (o livro do GuideME: aba criativa e entrega no primeiro login, só pelos registros)
 
 ## `linker/`
 
@@ -57,6 +57,10 @@ A tela do roteador e o painel do nó, em partes. Anfitriãs: `RouterScreen` (tam
 ## `client/highlight/`
 
 O destaque no mundo, só cliente (nada de pacote nem de tick). `MachineHighlights` (puro, com JUnit: o conjunto das acesas, no máximo 64 (`LIMIT`), por dimensão e máquina, com o roteador de cada uma; `toggle` liga ou apaga e `clear` apaga todas), `HighlightRenderer` (o desenho por quadro, só com acesas: o contorno da máquina através dos blocos e a linha contínua até o roteador; a 0,5 µs sem acesas e ~90 µs com 64) e `HighlightRenderTypes` (os tipos de render, com `depthFunc` ALWAYS). O Olho ◉ da linha da lista do alcance e o **No mundo** do painel do Tablet ligam, o **Apagar todas** apaga, e sair do mundo limpa. Testado com os gráficos Fabulous
+
+## `client/tuner/`
+
+A pintura do Afinador, só cliente. `TunerProposal` (a proposta que chegou pelo `ConfiguratorProposalPayload`: o mundo, a máquina, as faces e o prazo, limitado a 400 ticks; `current()`; mirar outro bloco por 40 ticks seguidos a apaga, mirar o ar não conta), `TunerPaint` (monta os vértices quando a proposta chega: em cada face com modo, um véu e uma moldura na cor do modo do painel, um pouco por fora do bloco, uma moldura por tipo, e com mais de um tipo a letra de cada um no meio, na cor do modo, sobre fundo escuro; faces fora de 0..5 ignoradas; por quadro só soma a câmera e desenha, e por tick só confere a mira, nos dois casos só com proposta), `TunerRenderTypes` (quadriláteros translúcidos com teste de profundidade, sem gravá-la) e `TunerInput` (o toque novo: com o Configurador na mão principal e a mira num bloco que não é roteador, o uso só passa se a tecla de uso soltou desde o último, pelo `InteractionKeyMappingTriggered`).
 
 ## `client/linker/`
 

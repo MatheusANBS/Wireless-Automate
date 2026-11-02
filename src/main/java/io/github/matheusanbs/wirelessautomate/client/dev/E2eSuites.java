@@ -60,6 +60,8 @@ final class E2eSuites {
                 tabletSteps(list);
             }),
             suite("vinculador", "Vinculador", Prereq.REDES, E2eLinkerSteps::linkerSteps),
+            suite("afinador", "Afinador do Configurador: a pintura da proposta e o segundo clique", Prereq.NENHUM,
+                    E2eTunerSteps::tunerSteps),
             optional("portugues", "telas em português (a variante pt de todas)", Prereq.REDES, E2ePortugueseSteps::portugueseSteps),
             suite(ARMAZENAMENTO, "Baú de armazenamento", Prereq.REDES, E2eStorageSteps::storageChestSteps),
             new Suite("source", "Tanque de Source (com o Ars Nouveau)", Prereq.REDES, E2eSourceTankSteps::sourceTankSteps,

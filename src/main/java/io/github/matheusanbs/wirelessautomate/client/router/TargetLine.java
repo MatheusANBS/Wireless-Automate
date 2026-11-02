@@ -70,7 +70,7 @@ final class TargetLine {
             RangeView.GroupView group = model.targetGroup();
             PanelPainter.dropButton(g, font, pill, model.targetName(model.snapshot().target()),
                     pill.contains(mx, my) || open, model.readOnly() == null, border,
-                    group == null ? ItemStack.EMPTY : group.icon());
+                    group == null ? ItemStack.EMPTY : GroupIcons.of(model.range(), group));
         }
         Hot rename = layout.hot(Kind.RENAME);
         if (rename != null) {

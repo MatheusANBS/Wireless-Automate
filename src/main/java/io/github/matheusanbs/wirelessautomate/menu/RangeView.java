@@ -8,11 +8,9 @@ import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -82,11 +80,6 @@ public record RangeView(int radius, int max, List<GroupView> groups, List<Machin
         /** As máquinas remotas do grupo (sem a presa). */
         public int remotes() {
             return attached ? count - 1 : count;
-        }
-
-        /** O item do bloco do grupo, para o ícone ({@link ItemStack#EMPTY} se o bloco não tem item). */
-        public ItemStack icon() {
-            return new ItemStack(BuiltInRegistries.BLOCK.get(block).asItem());
         }
     }
 

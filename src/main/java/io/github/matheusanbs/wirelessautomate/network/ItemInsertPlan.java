@@ -228,23 +228,33 @@ final class ItemInsertPlan {
     }
 
     /**
-     * O destino que acabou de recusar um item ainda tem lugar para outro: um slot vazio, ou uma pilha abaixo do
-     * próprio limite (a entrada da fornalha com 16 de ferro recusa o ouro, mas aceita mais ferro). Sem isso ele
-     * está cheio de verdade e pode dormir. Só roda na recusa, e a recusa fica anotada ({@link ItemHints}), então
-     * não se repete para o mesmo item até a máquina mudar.
+     * O destino que acabou de recusar {@code item} ainda tem lugar só para outros itens: um slot vazio que não
+     * aceita este item ({@link IItemHandler#isItemValid}), ou uma pilha de outro item abaixo do próprio limite (a
+     * entrada da fornalha com 16 de ferro recusa o ouro, mas aceita mais ferro). Se um slot vazio aceita o item,
+     * ou a pilha dele tem espaço, e mesmo assim nada entrou, a máquina está travada (a saída cheia): {@code false},
+     * e ela dorme como cheia. Só roda na recusa, e a recusa fica anotada ({@link ItemHints}), então não se repete
+     * para o mesmo item até a máquina mudar.
      */
-    static boolean roomForOthers(IItemHandler target) {
+    static boolean roomForOthers(IItemHandler target, ItemStack item) {
+        boolean room = false;
         for (int slot = 0, n = target.getSlots(); slot < n; slot++) {
             ItemStack inSlot = target.getStackInSlot(slot);
             if (inSlot.isEmpty()) {
-                return true;
+                if (target.isItemValid(slot, item)) {
+                    return false;
+                }
+                room = true;
+                continue;
             }
             int count = inSlot.getCount();
             if (count < target.getSlotLimit(slot) && count < inSlot.getMaxStackSize()) {
-                return true;
+                if (ItemStack.isSameItemSameComponents(inSlot, item)) {
+                    return false;
+                }
+                room = true;
             }
         }
-        return false;
+        return room;
     }
 
     /** Quanto do item a última {@link #simulate} contou no destino. */

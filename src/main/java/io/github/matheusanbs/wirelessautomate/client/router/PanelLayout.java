@@ -340,7 +340,6 @@ final class PanelLayout {
             int pillW = w - labelW;
             int right = x + w;
             RangeView.MachineView machine = model.targetMachine();
-            // a presa no grupo tem o No mundo e o Voltar, sem o Atualizar e o Desvincular
             boolean replaced = machine != null && machine.state() == RangeView.MachineState.REPLACED;
             if (compactTarget && model.targetIsMachine()) {
                 int used = arrangeCompactButtons(right, y, model.targetException(), replaced, machine != null);
@@ -436,12 +435,11 @@ final class PanelLayout {
         int bx = right;
         for (int i = TARGET_BUTTONS.length - 1; i >= 0; i--) {
             Kind kind = TARGET_BUTTONS[i];
-            if (kind == Kind.REVERT && !exception || kind == Kind.UPDATE && !replaced || kind == Kind.UNLINK && !unlink) {
-                continue;
+            if (kind == Kind.REVERT ? exception : kind == Kind.UPDATE ? replaced : kind != Kind.UNLINK || unlink) {
+                bx -= ROW_H;
+                hots.add(new Hot(kind, bx, y, ROW_H, ROW_H, 0));
+                bx -= GAP;
             }
-            bx -= ROW_H;
-            hots.add(new Hot(kind, bx, y, ROW_H, ROW_H, 0));
-            bx -= GAP;
         }
         return right - bx;
     }
@@ -525,7 +523,8 @@ final class PanelLayout {
      * texto da especificação; se não couberem, o No mundo só com o Olho, um Voltar mais curto ("Voltar ao
      * perfil", "Voltar") e, por fim, o Voltar só com o ↺; se nem assim, cada um fica com até uma parte igual.
      */
-    private void arrangeTargetButtons(Font font, int x, int y, int w, boolean exception, boolean replaced, boolean unlink) {
+    private void arrangeTargetButtons(Font font, int x, int y, int w, boolean exception, boolean replaced,
+            boolean unlink) {
         int unlinkW = unlink ? font.width(PanelModel.tr("range.unlink")) + 2 * TARGET_PAD : 0;
         int updateW = replaced ? font.width(PanelModel.tr("range.update")) + 2 * TARGET_PAD : 0;
         int highlightW = font.width(LitFooter.SHOW) + 2 * TARGET_PAD + HIGHLIGHT_EYE;

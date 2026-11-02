@@ -255,8 +255,7 @@ final class MachineRow {
 
     /**
      * A linha da máquina (ou da presa dentro do grupo) da lista {@code list} cujo Olho está sob o mouse, ou
-     * {@code null}. Na linha do alvo com o
-     * "Desvincular?" armado, o Olho não aparece.
+     * {@code null}. Na linha do alvo com o "Desvincular?" armado, o Olho não aparece.
      */
     @Nullable RangeList.Row eyeAt(RangeList list, RangeView view, EditTarget target, double mouseX, double mouseY) {
         RangeList.Row row = list.rowAt(view, mouseX, mouseY);
@@ -268,7 +267,10 @@ final class MachineRow {
         return mouseX >= right - EYE_W && mouseX < right && mouseY >= ry && mouseY < ry + EYE_H ? row : null;
     }
 
-    /** O centro do Olho da linha da máquina (ou da presa) {@code target} (gancho do e2e); {@code null} se fora da vista. */
+    /**
+     * O centro do Olho da linha da máquina (ou da presa) {@code target} (gancho do e2e); {@code null} se fora da
+     * vista.
+     */
     int @Nullable [] eyeCenter(RangeList list, RangeView view, EditTarget target) {
         int[] center = list.rowCenter(view, target);
         return center == null ? null

@@ -13,6 +13,7 @@ import io.github.matheusanbs.wirelessautomate.client.router.RangeRowButtons;
 import io.github.matheusanbs.wirelessautomate.menu.RangeView;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.packet.PanelNotices;
 import io.github.matheusanbs.wirelessautomate.range.AttachedMember;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import java.util.List;
@@ -26,7 +27,7 @@ import net.minecraft.world.level.block.Blocks;
  * grupo, com "presa", a marca de exceção e o Olho ({@code range-p0-presa-marca}), e escolhida tem o ↺ e o ✎, sem o ✕
  * ({@code range-p1-presa-excecao}, também no tema escuro);
  * sem a lista, a linha Editando tem o No mundo e o Voltar, sem o Desvincular ({@code range-p2-presa-editando}, só
- * em inglês). O ↺ tira a exceção no servidor ({@code range-p3-presa-no-grupo}) e o grupo recolhido esconde a presa
+ * em inglês). Com uma face sem modo e com rede, o Tirar redes aparece na linha dela e tira a rede. O ↺ tira a exceção no servidor ({@code range-p3-presa-no-grupo}) e o grupo recolhido esconde a presa
  * ({@code range-p4-grupo-recolhido}). No fim, sem as remotas e com um barril no lugar do baú, o grupo dos baús fica
  * "×0" e a presa vai para o grupo do barril, que abre com ela ({@code range-p5-grupo-vazio}).
  */
@@ -81,6 +82,7 @@ final class E2eRangeAttachedSteps {
             list.add(new Step(l + "de volta à lista", STEP_TIMEOUT_MS, () -> routerScreen().previewToggleList(),
                     () -> routerScreen().rangeListShown(), () -> "lista " + routerScreen().rangeListShown()));
         }
+        idleNetworkSteps(list, l);
         list.add(new Step(l + "o ↺ tira a exceção", STEP_TIMEOUT_MS,
                 () -> clickPanel(routerScreen().rangeButtonCenter(RangeRowButtons.Action.REVERT), "o ↺ da presa"),
                 () -> !rangeView().attachedException() && stepTicks >= 2
@@ -101,6 +103,26 @@ final class E2eRangeAttachedSteps {
                 () -> clickArrow(rangeGroup(Blocks.CHEST)),
                 () -> routerScreen().rangeRowCenter(EditTarget.ATTACHED_TARGET) != null,
                 () -> "linha da presa fora da vista"));
+    }
+
+    /** Uma face sem modo com rede na exceção da presa: o Tirar redes aparece na linha dela e tira a rede no servidor. */
+    private static void idleNetworkSteps(List<Step> list, String l) {
+        list.add(new Step(l + "uma face sem modo com rede mostra o Tirar redes", STEP_TIMEOUT_MS,
+                () -> onServer(server -> {
+                    router(server, rangeRouter).setFaceNetwork(ResourceType.ITEM, Direction.UP, mainNetwork);
+                    return null;
+                }), () -> routerScreen().rangeButtonCenter(RangeRowButtons.Action.CLEAR_NETWORKS) != null,
+                () -> "alcance " + rangeView()));
+        list.add(new Step(l + "o Tirar redes tira a rede da presa", STEP_TIMEOUT_MS,
+                () -> clickPanel(routerScreen().rangeButtonCenter(RangeRowButtons.Action.CLEAR_NETWORKS),
+                        "o Tirar redes da presa"),
+                () -> routerScreen().rangeButtonCenter(RangeRowButtons.Action.CLEAR_NETWORKS) == null
+                        && onServer(server -> router(server, rangeRouter).faceNetwork(ResourceType.ITEM, Direction.UP)
+                                == null),
+                () -> "rede no servidor " + onServer(server -> router(server, rangeRouter)
+                        .faceNetwork(ResourceType.ITEM, Direction.UP))));
+        list.add(new Step(l + "sem o aviso do Tirar redes", STEP_TIMEOUT_MS, PanelNotices::clear,
+                () -> PanelNotices.current() == null, () -> "aviso"));
     }
 
     /**

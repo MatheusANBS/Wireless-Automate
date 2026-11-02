@@ -51,6 +51,10 @@ public final class ListTree {
      *                  "mais N"
      */
     public record Line(Kind kind, boolean collapsed, int node, int row, int depth) {
+        /** A presa dentro do grupo dela (no recuo das máquinas). */
+        public boolean attachedInGroup() {
+            return kind == Kind.ATTACHED && depth == 2;
+        }
     }
 
     private final List<Line> lines = new ArrayList<>();
@@ -131,6 +135,15 @@ public final class ListTree {
     /** A linha do nó, ou -1 fora da lista. */
     public int lineOfNode(int node) {
         return node >= 0 && node < nodeLines.length ? nodeLines[node] : -1;
+    }
+
+    /**
+     * A linha {@code row} da árvore do servidor é a presa dentro do grupo dela. A regra é uma só, a do recuo: a presa
+     * logo depois de um grupo do mesmo nó é dele.
+     */
+    public boolean attachedInGroup(int row) {
+        int line = lineOfRow(row);
+        return line >= 0 && lines.get(line).attachedInGroup();
     }
 
     /** A linha da linha {@code row} da árvore do servidor, ou -1. */

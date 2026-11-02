@@ -1001,6 +1001,7 @@
   "gui.wirelessautomate.highlight.clear_all.count": "Turn all off (%s)",
   "gui.wirelessautomate.highlight.clear_all.tooltip": "Turns off every machine lit in the world, from any router",
   "gui.wirelessautomate.router.range.list.empty": "No machines linked. Use the Linker in Machines mode",
+  "gui.wirelessautomate.router.range.list.only_attached": "Only the attached machine. Link more with the Linker in Machines mode",
   "gui.wirelessautomate.router.range.scope.group": "Profile: %s · for %s of %s",
   "gui.wirelessautomate.router.range.scope.machine": "%s · %s",
   "gui.wirelessautomate.router.range.revert": "Back to profile",

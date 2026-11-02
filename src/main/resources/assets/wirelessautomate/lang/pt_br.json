@@ -1001,6 +1001,7 @@
   "gui.wirelessautomate.highlight.clear_all.count": "Apagar todas (%s)",
   "gui.wirelessautomate.highlight.clear_all.tooltip": "Apaga todas as máquinas acesas no mundo, de qualquer roteador",
   "gui.wirelessautomate.router.range.list.empty": "Nenhuma máquina vinculada. Use o Vinculador no modo Máquinas",
+  "gui.wirelessautomate.router.range.list.only_attached": "Só a máquina presa. Vincule outras com o Vinculador no modo Máquinas",
   "gui.wirelessautomate.router.range.scope.group": "Perfil: %s · vale para %s de %s",
   "gui.wirelessautomate.router.range.scope.machine": "%s · %s",
   "gui.wirelessautomate.router.range.revert": "Voltar ao perfil",

@@ -221,6 +221,8 @@ final class MachineColumn {
             if (action == RangeRowButtons.Action.REVERT) {
                 RouterSnapshot s = snapshot.get();
                 send(RevertMachinePayload.attached(id, s.pos().relative(s.facing().getOpposite())));
+            } else if (action == RangeRowButtons.Action.CLEAR_NETWORKS) {
+                send(new ClearIdleNetworksPayload(id, false));
             }
             return;
         }

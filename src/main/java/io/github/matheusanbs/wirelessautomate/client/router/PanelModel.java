@@ -39,6 +39,10 @@ final class PanelModel {
     private final ArmedClick clearArm = new ArmedClick();
     /** A face copiada pelo Copiar (tipo e face, no quadro da tela), ou {@code null}. */
     private @Nullable Copied copied;
+    /** O snapshot para o qual a posição e o nome da presa foram montados (a linha Editando os lê por quadro). */
+    private @Nullable RouterSnapshot attachedFor;
+    private BlockPos attachedPos = BlockPos.ZERO;
+    private Component attachedName = Component.empty();
 
     /** O que o Copiar guardou: a face e o tipo; o Colar copia dela para a face escolhida depois, no mesmo alvo. */
     record Copied(ResourceType type, Direction face) {
@@ -202,7 +206,24 @@ final class PanelModel {
         if (machine != null) {
             return machine.pos();
         }
-        return attachedInGroup() ? snapshot.pos().relative(snapshot.facing().getOpposite()) : null;
+        if (!attachedInGroup()) {
+            return null;
+        }
+        prepareAttached();
+        return attachedPos;
+    }
+
+    /** Monta a posição e o nome da presa, só quando o snapshot muda. */
+    private void prepareAttached() {
+        if (attachedFor == snapshot) {
+            return;
+        }
+        attachedFor = snapshot;
+        attachedPos = snapshot.pos().relative(snapshot.facing().getOpposite());
+        RangeView.GroupView group = range().group(range().attachedGroup());
+        attachedName = !snapshot.attachedLabel().isEmpty() ? Component.literal(snapshot.attachedLabel())
+                : group != null ? panelTr("target.attached_in", MachineTexts.groupName(group))
+                : panelTr("target.attached");
     }
 
     RangeView.@Nullable GroupView targetGroup() {
@@ -374,10 +395,8 @@ final class PanelModel {
     Component targetName(EditTarget target) {
         return switch (target.kind()) {
             case ATTACHED -> {
-                RangeView.GroupView group = range().group(range().attachedGroup());
-                yield !snapshot.attachedLabel().isEmpty() ? Component.literal(snapshot.attachedLabel())
-                        : group != null ? panelTr("target.attached_in", MachineTexts.groupName(group))
-                        : panelTr("target.attached");
+                prepareAttached();
+                yield attachedName;
             }
             case GROUP -> {
                 RangeView.GroupView group = range().group(target.id());

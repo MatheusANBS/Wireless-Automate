@@ -26,8 +26,8 @@ final class IdleNetworks {
     }
 
     /**
-     * O alvo do snapshot é um grupo ou uma máquina com exceção e tem ao menos uma face, de qualquer tipo
-     * carregado, com modo Nenhum e com rede.
+     * O alvo do snapshot é um grupo ou uma máquina (remota ou a presa) com exceção e tem ao menos uma face, de
+     * qualquer tipo carregado, com modo Nenhum e com rede.
      */
     static boolean shown(RouterSnapshot snapshot) {
         RangeView range = snapshot.range();
@@ -36,7 +36,7 @@ final class IdleNetworks {
             return false;
         }
         boolean ownFaces = switch (target.kind()) {
-            case ATTACHED -> false;
+            case ATTACHED -> range.attachedException();
             case GROUP -> range.group(target.id()) != null;
             case MACHINE -> {
                 RangeView.MachineView machine = range.machine(target.id());

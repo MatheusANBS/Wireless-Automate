@@ -78,12 +78,15 @@ final class MarkedPaste {
                 continue;
             }
             MarkedTargets.Resolved targets = MarkedTargets.resolve(router, marks);
-            boolean attached = (marks.node || targets.attached()) && !key.equals(source.origin());
+            boolean attachedMarked = marks.node || targets.attached();
             boolean remote = targets.remote();
             if (remote && !source.pastesOnMachines()) {
                 refusedOld = true;
                 remote = false;
+                // Sem os grupos, a presa marcada junto com o dela recebe o colar como presa.
+                attachedMarked |= targets.attachedInGroup();
             }
+            boolean attached = attachedMarked && !key.equals(source.origin());
             if (!attached && !remote) {
                 continue;
             }
@@ -103,7 +106,7 @@ final class MarkedPaste {
             if (remote) {
                 groups += targets.groups().size();
                 machines += targets.machines().size();
-                kept += exceptionsIn(router.remoteMachines(), targets);
+                kept += exceptionsIn(router.remoteMachines(), targets, before.hadAttachedException());
             }
             PasteUndo change = PasteUndo.between(before, PasteUndo.State.of(router, attached, remote), attached);
             if (change != null) {
@@ -159,10 +162,15 @@ final class MarkedPaste {
         }
     }
 
-    /** As máquinas com exceção nos grupos colados, a presa inclusive. */
-    private static int exceptionsIn(RemoteMachines remotes, MarkedTargets.Resolved targets) {
+    /**
+     * As máquinas com exceção nos grupos colados, a presa inclusive se já tinha a exceção antes do colar
+     * ({@code attachedHadException}): a que o próprio colar criou nela (o roteador inteiro marcado) não foi mantida.
+     */
+    private static int exceptionsIn(RemoteMachines remotes, MarkedTargets.Resolved targets,
+            boolean attachedHadException) {
         AttachedMember attached = remotes.attached();
-        int count = attached != null && attached.hasException() && targets.groups().contains(attached.group()) ? 1 : 0;
+        int count = attachedHadException && attached != null && attached.hasException()
+                && targets.groups().contains(attached.group()) ? 1 : 0;
         for (RemoteMachine machine : remotes.machines()) {
             if (machine.hasException() && targets.groups().contains(machine.group())) {
                 count++;

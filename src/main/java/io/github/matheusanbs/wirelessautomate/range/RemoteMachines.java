@@ -82,7 +82,7 @@ public final class RemoteMachines {
         return true;
     }
 
-    /** Cria um grupo do bloco {@code block}, sem nome e sem cartões, com o perfil {@code profile} (guardado como está). */
+    /** Cria um grupo do bloco {@code block}, sem nome e sem cartões, com o perfil {@code profile} (guardado assim). */
     public MachineGroup newGroup(ResourceLocation block, MachineConfig profile) {
         MachineGroup group = new MachineGroup(nextGroupId++, block, "", profile);
         groups.add(group);
@@ -289,8 +289,8 @@ public final class RemoteMachines {
     }
 
     /**
-     * Desvincula a máquina em {@code pos}. Se o grupo dela esvazia (e não tem a presa), ele sai e os cartões dele voltam
-     * na lista, para quem chamou soltar no mundo. Sem a máquina, devolve uma lista vazia. Só pelo
+     * Desvincula a máquina em {@code pos}. Se o grupo dela esvazia (e não tem a presa), ele sai e os cartões dele
+     * voltam na lista, para quem chamou soltar no mundo. Sem a máquina, devolve uma lista vazia. Só pelo
      * {@code RouterBlockEntity.unlinkMachine} (ver a classe).
      */
     public List<ItemStack> unlink(BlockPos pos) {

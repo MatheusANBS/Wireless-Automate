@@ -10,6 +10,7 @@ import io.github.matheusanbs.wirelessautomate.range.MachineConfig;
 import io.github.matheusanbs.wirelessautomate.range.MachineGroup;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
@@ -22,6 +23,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
@@ -31,9 +33,9 @@ import org.jetbrains.annotations.Nullable;
  * dela; a edição com a regra de uma máquina do grupo; os cartões do grupo; o acompanhamento do bloco da frente;
  * e o rascunho de um mundo antigo ({@link AttachedDraft}) até a conversão.
  *
- * <p>As faces chegam e saem absolutas ({@link Direction}). Sem membro, a leitura dá a configuração vazia e a
- * primeira escrita que muda algo cria o membro, se o bloco da frente está carregado e não é ar. Nada aqui roda
- * por tick: só na montagem das rotas, na tela, nas edições e nos avisos do bloco.
+ * <p>As faces chegam e saem absolutas ({@link Direction}). Sem membro, a leitura dá o rascunho, se houver, ou a
+ * configuração vazia; a primeira escrita que muda algo cria o membro, se o bloco da frente está carregado e não é
+ * ar. Nada aqui roda por tick: só na montagem das rotas, na tela, nas edições e nos avisos do bloco.
  */
 final class RouterAttached {
     private static final Direction[] DIRECTIONS = Direction.values();
@@ -92,7 +94,8 @@ final class RouterAttached {
     boolean facesIn(Collection<ResourceType> types, int absoluteFaceMask, @Nullable UUID network) {
         for (ResourceType type : types) {
             for (Direction face : DIRECTIONS) {
-                if ((absoluteFaceMask & (1 << face.ordinal())) != 0 && !Objects.equals(network, face(type, face).network())) {
+                if ((absoluteFaceMask & (1 << face.ordinal())) != 0
+                        && !Objects.equals(network, face(type, face).network())) {
                     return false;
                 }
             }
@@ -134,11 +137,12 @@ final class RouterAttached {
     // ------------------------------------------------------------------ escrita
 
     /**
-     * Muda uma face da presa com a regra de uma máquina do grupo: com exceção, muda a exceção; sem exceção e
-     * única máquina do grupo, muda o perfil; senão copia o perfil para a exceção e aplica. A exceção que fica
-     * igual ao perfil some. Um aviso ao motor, com o tipo, se algo mudou. Sem membro, {@code edit} roda antes
+     * Muda uma face da presa com a regra de uma máquina do grupo: única máquina do grupo, muda o perfil (uma
+     * exceção que ela tenha passa antes para o perfil); senão muda a exceção, criada como cópia do perfil, que
+     * some se fica igual a ele. Um aviso ao motor, com o tipo, se algo mudou. Sem membro, {@code edit} roda antes
      * numa cópia solta da face que se lê: só a escrita que muda algo cria o membro (se o bloco da frente deixa;
-     * senão a escrita é ignorada e devolve {@code false}).
+     * senão a escrita é ignorada e devolve {@code false}). O membro criado conta como mudança (com todos os tipos),
+     * mesmo que o grupo em que ele entrou já tivesse a face assim.
      */
     boolean edit(ResourceType type, Direction face, Predicate<FaceConfig> edit) {
         boolean created = false;
@@ -153,13 +157,18 @@ final class RouterAttached {
         MachineGroup group = remotes.attachedGroup();
         RemoteSide side = side(member, face);
         MachineConfig exception = member.exception();
-        if (exception == null && remotes.memberCount(group.id()) == 1) {
-            if (!edit.test(group.profile().face(type, side))) {
+        if (remotes.memberCount(group.id()) == 1) {
+            boolean folded = exception != null;
+            if (folded) {
+                group.profile().copyFrom(exception);
+                member.setException(null);
+            }
+            if (!edit.test(group.profile().face(type, side)) && !folded && !created) {
                 return false;
             }
         } else {
             MachineConfig config = exception != null ? exception : group.profile().copy();
-            if (!edit.test(config.face(type, side))) {
+            if (!edit.test(config.face(type, side)) && !created) {
                 return false;
             }
             member.setException(config.sameAs(group.profile()) ? null : config);
@@ -228,6 +237,12 @@ final class RouterAttached {
             remotes.attach(BuiltInRegistries.BLOCK.getKey(state.getBlock()), RemoteMachines.frontOf(state));
         }
         return true;
+    }
+
+    /** Ver {@link RouterBlockEntity#attachedCanHold()}. */
+    boolean canHold() {
+        BlockState state = machineState();
+        return remotes.attached() != null || (state != null && !state.isAir());
     }
 
     /** O estado do bloco da frente, ou {@code null} fora do servidor ou com o chunk dele descarregado. */
@@ -314,6 +329,28 @@ final class RouterAttached {
             remotes.attachTo(group.id(), null, front);
         } else {
             remotes.attachTo(group.id(), config.sameAs(group.profile()) ? null : config, front);
+            // Os cartões do rascunho são iguais aos do grupo (ou não há): as pilhas físicas dele sobram e caem no
+            // roteador, para nenhum item sumir.
+            dropDraftCards(old);
+        }
+    }
+
+    private void dropDraftCards(AttachedDraft old) {
+        Level level = router.getLevel();
+        if (level == null || !old.hasCards()) {
+            return;
+        }
+        List<ItemStack> removed = new ArrayList<>();
+        old.removeAllCards(removed);
+        for (ItemStack stack : removed) {
+            Block.popResource(level, router.getBlockPos(), stack);
+        }
+    }
+
+    /** O roteador girou ({@code spin}) com o rascunho pendente: ele gira junto, sem mudar as faces absolutas. */
+    void spun(int oldSpin, int newSpin) {
+        if (draft != null) {
+            draft.rotate(router.facing(), oldSpin, newSpin);
         }
     }
 

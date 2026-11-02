@@ -452,7 +452,8 @@ final class NetworkRoutes {
 
     /**
      * Lê as faces ativas do tipo no nó e preenche os campos da configuração nas portas delas: as da
-     * máquina presa (a configuração que vale para ela no grupo, pela frente dela) e, com o Upgrade de Alcance valendo, as das remotas (ver {@link #readRemotePorts}).
+     * máquina presa (a configuração que vale para ela no grupo, pela frente dela) e, com o Upgrade de Alcance
+     * valendo, as das remotas (ver {@link #readRemotePorts}).
      */
     private Port[] readPorts(NodePorts member, ResourceType type) {
         RouterBlockEntity node = member.node;

@@ -171,6 +171,30 @@ final class AttachedDraft {
         return false;
     }
 
+    /**
+     * O giro do roteador de {@code oldSpin} para {@code newSpin}: faces e cartões de cada lado relativo vão para o
+     * lado que fica na mesma face absoluta.
+     */
+    void rotate(Direction facing, int oldSpin, int newSpin) {
+        int[] target = new int[SIDES.length];
+        for (RelativeSide side : SIDES) {
+            Direction absolute = side.toAbsolute(facing, oldSpin);
+            target[side.ordinal()] = RelativeSide.fromAbsolute(facing, newSpin, absolute).ordinal();
+        }
+        for (FaceConfig[] row : faces) {
+            FaceConfig[] old = row.clone();
+            for (int i = 0; i < old.length; i++) {
+                row[target[i]] = old[i];
+            }
+        }
+        for (ItemStack[][] byType : cards) {
+            ItemStack[][] old = byType.clone();
+            for (int i = 0; i < old.length; i++) {
+                byType[target[i]] = old[i];
+            }
+        }
+    }
+
     /** O lado da máquina (frente {@code front}) onde fica o lado relativo {@code side} do roteador. */
     private static RemoteSide remote(RelativeSide side, Direction facing, int spin, int front) {
         return RemoteSide.fromAbsolute(front, side.toAbsolute(facing, spin).ordinal());

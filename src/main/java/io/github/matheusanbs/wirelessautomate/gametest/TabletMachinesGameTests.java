@@ -120,6 +120,20 @@ public final class TabletMachinesGameTests {
     }
 
     /** Vincula sem olhar o mundo (posições sem bloco) e avisa o índice: só para a ordem e os tetos. */
+    /** A posição, entre as linhas de máquina da visão por máquinas (a ordem das {@code lives}), da que está em {@code pos}. */
+    private static int remoteRow(TabletMenu menu, BlockPos pos) {
+        int machine = 0;
+        for (Row row : menu.snapshot().page().machineRows().rows()) {
+            if (row instanceof Machine m) {
+                if (!m.attached() && m.pos() == pos.asLong()) {
+                    return machine;
+                }
+                machine++;
+            }
+        }
+        return -1;
+    }
+
     private static void fakeLinks(RouterBlockEntity router, GameTestHelper helper, int count, ResourceLocation block,
             int z) {
         RemoteMachines remotes = router.remoteMachines();
@@ -410,15 +424,16 @@ public final class TabletMachinesGameTests {
                     List<CustomPacketPayload> payloads = menu[0].pollPayloads();
                     boolean page = payloads.stream().anyMatch(p -> p instanceof TabletPagePayload);
                     for (CustomPacketPayload payload : payloads) {
-                        if (payload instanceof TabletLivePayload live && !page && live.machines().size() == 2
-                                && live.machines().stream().anyMatch(m -> m.status() == MachineStatus.MOVING)) {
+                        int at = remoteRow(menu[0], helper.absolutePos(REMOTE_CHEST));
+                        if (payload instanceof TabletLivePayload live && !page && live.machines().size() == 2 && at >= 0
+                                && live.machines().get(at).status() == MachineStatus.MOVING) {
                             livePacket.set(true);
                         }
                     }
-                    // A remota é um barril (o baú é a presa): a ordem por bloco o põe na sua linha, que recebe.
+                    // A remota é um barril (o baú é a presa): a linha dela é achada pela posição.
                     List<MachineLive> lives = menu[0].snapshot().page().machineRows().lives();
-                    MachineLive remote = lives.size() == 2 ? lives.stream()
-                            .filter(m -> m.received(ResourceType.ITEM) > 0).findFirst().orElse(null) : null;
+                    int at = remoteRow(menu[0], helper.absolutePos(REMOTE_CHEST));
+                    MachineLive remote = lives.size() == 2 && at >= 0 ? lives.get(at) : null;
                     helper.assertTrue(remote != null && remote.status() == MachineStatus.MOVING
                             && remote.received(ResourceType.ITEM) > 0 && livePacket.get(),
                             "a máquina não ficou movendo no pacote pequeno: " + remote);

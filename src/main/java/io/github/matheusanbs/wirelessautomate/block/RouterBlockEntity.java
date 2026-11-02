@@ -75,11 +75,11 @@ import org.jetbrains.annotations.Nullable;
  * de tier (o block entity é mantido).
  *
  * <p>Este block entity é a API do nó para o resto do mod e delega às partes: a presa ({@link RouterAttached}), as
- * regras das redes ({@link RouterFaces}), os filtros com cartões ({@link RouterCards}), os upgrades ({@link RouterUpgrades}), a edição
- * por alvo ({@link RouterTargets}), o alcance ({@link RouterRange}, com os caches das remotas em
- * {@link RouterRemoteCaches}), a máquina presa e o sinal de redstone ({@link RouterNeighbors}), a presença no
- * motor, no índice e no chunk loading ({@link RouterPresence}), o aviso das mudanças ({@link RouterChanges}) e o
- * NBT ({@link RouterNbt}).
+ * regras das redes ({@link RouterFaces}), os filtros com cartões ({@link RouterCards}), os upgrades
+ * ({@link RouterUpgrades}), a edição por alvo ({@link RouterTargets}), o alcance ({@link RouterRange}, com os
+ * caches das remotas em {@link RouterRemoteCaches}), a máquina presa e o sinal de redstone
+ * ({@link RouterNeighbors}), a presença no motor, no índice e no chunk loading ({@link RouterPresence}), o aviso
+ * das mudanças ({@link RouterChanges}) e o NBT ({@link RouterNbt}).
  */
 public class RouterBlockEntity extends BlockEntity {
     private static final ResourceType[] TYPES = ResourceType.values();
@@ -361,12 +361,15 @@ public class RouterBlockEntity extends BlockEntity {
 
     /**
      * Gira o roteador para {@code newSpin} (0 a 3). Só o estado do bloco muda: a configuração é da máquina
-     * presa, pelos lados dela, e não do roteador. Só no servidor; o {@link #setBlockState} avisa o motor.
+     * presa, pelos lados dela, e não do roteador (um rascunho de mundo antigo, por lado do roteador, gira junto).
+     * Só no servidor; o {@link #setBlockState} avisa a tela.
      */
     public void spinTo(int newSpin) {
         if (level == null || level.isClientSide || newSpin == spin()) {
             return;
         }
+        attached.spun(spin(), newSpin);
+        setChanged();
         level.setBlock(worldPosition, getBlockState().setValue(RouterBlock.SPIN, newSpin), Block.UPDATE_ALL);
     }
 
@@ -610,6 +613,14 @@ public class RouterBlockEntity extends BlockEntity {
         return range.revertToProfile(index);
     }
 
+    /**
+     * A presa pode guardar configuração e cartões: tem membro, ou o bloco da frente está carregado e não é ar (a
+     * escrita cria o membro). Sem isso uma escrita na presa é ignorada; o slot de cartão recusa o cartão.
+     */
+    public boolean attachedCanHold() {
+        return attached.canHold();
+    }
+
     /** Tira a exceção da máquina presa: ela volta a seguir o perfil do grupo. */
     public boolean revertAttachedToProfile() {
         return attached.revertToProfile();
@@ -822,11 +833,13 @@ public class RouterBlockEntity extends BlockEntity {
     /**
      * Confere o bloco da presa antes de o motor ler as portas dela do tipo {@code type} (uma leitura do bloco
      * por montagem, só com o chunk carregado; nunca por tick). Se a presa mudou (rascunho convertido, bloco
-     * trocado, frente nova), vale já nesta leitura e os outros tipos do nó são relidos depois.
+     * trocado, frente nova), vale já nesta leitura, todos os tipos do nó (este também, por segurança: as redes do
+     * nó podem ter mudado) são relidos na próxima remontagem, sem laço (lá o bloco já bate), e o índice é avisado.
      */
     public void prepareAttachedPorts(ResourceType type) {
         if (attached.sync()) {
-            NetworkManager.get().nodeChanged(this, NetworkManager.ALL_TYPES & ~NetworkManager.typeBit(type));
+            NetworkManager.get().nodeChanged(this, NetworkManager.ALL_TYPES);
+            NodeIndex.track(this);
         }
     }
 

@@ -40,6 +40,7 @@ esperar 10 segundos apaga a proposta. Segurar o botão não aplica: solte e cliq
   proposta incompleta.
 - É uma proposta: confira antes de aplicar, principalmente em máquinas de outros mods.
 - Você precisa poder mexer na máquina e editar o roteador.
+- Numa máquina sem roteador aparece "Vincule a máquina a um roteador primeiro" e nada é analisado.
 
 Num roteador, o clique com o Configurador abre a tela dele.
 
@@ -51,7 +52,7 @@ Num roteador, o clique com o Configurador abre a tela dele.
 
 <ItemImage id="wirelessautomate:configurator" scale="2" float="left" />
 
-The **Tuner**: it finds out on its own what each face of a machine takes and what it gives, and
+The **Auto-Setup**: it finds out on its own what each face of a machine takes and what it gives, and
 proposes the modes (Insert, Extract, Storage) for you to check before applying them.
 
 <br clear="all" />
@@ -86,6 +87,7 @@ again.
   may get an incomplete proposal.
 - It is a proposal: check it before applying, especially on other mods' machines.
 - You must be able to touch the machine and edit the router.
+- On a machine with no router, "Link the machine to a router first" shows up and nothing is analyzed.
 
 On a router, clicking with the Configurator opens its screen.
 

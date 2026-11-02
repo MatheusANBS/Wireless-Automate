@@ -22,6 +22,7 @@ import java.util.UUID;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -36,8 +37,8 @@ import net.minecraft.world.phys.Vec3;
  * câmera embaixo dela, a sudeste, de onde se veem Baixo, Trás e Leste. O clique mostra a pintura
  * ({@code cfg-afinador-proposta}, também {@code -escuro} e {@code -pt}); depois do intervalo mínimo, o segundo clique
  * aplica (Baixo Extrai, Cima e Trás Insere) e a pintura some ({@code cfg-afinador-aplicado}). Mirar outro bloco por
- * 2 s apaga a proposta. No fim, uma proposta montada no cliente com dois tipos por face mostra as letras
- * ({@code cfg-afinador-letras}).
+ * 2 s apaga a proposta; o clique no ar, que também a apaga, só roda na variante pt. No fim, uma proposta montada no
+ * cliente com dois tipos por face mostra as letras ({@code cfg-afinador-letras}), com a action bar limpa.
  */
 final class E2eTunerSteps {
     /** O segundo clique precisa de 6 ticks (servidor) e do fim do descanso do item (10 ticks). */
@@ -99,17 +100,19 @@ final class E2eTunerSteps {
         list.add(new Step("afinador: apagou depois de uns 2 s, não antes", STEP_TIMEOUT_MS, () -> {
         }, () -> gone[0] >= 38, () -> "apagou em " + gone[0] + " ticks"));
         list.add(camera("afinador: câmera de volta", 1.6, -2.4, 2.4));
-        list.add(new Step("afinador: letras com dois tipos por face", STEP_TIMEOUT_MS, () -> TunerProposal.receive(
-                new ConfiguratorProposalPayload(furnace, List.of(
-                        new ConfiguratorProposalPayload.Face(Direction.DOWN.ordinal(), ResourceType.ITEM, PortMode.EXTRACT),
-                        new ConfiguratorProposalPayload.Face(Direction.DOWN.ordinal(), ResourceType.ENERGY, PortMode.INSERT),
-                        new ConfiguratorProposalPayload.Face(Direction.SOUTH.ordinal(), ResourceType.ITEM, PortMode.INSERT),
-                        new ConfiguratorProposalPayload.Face(Direction.SOUTH.ordinal(), ResourceType.FLUID, PortMode.EXTRACT),
-                        new ConfiguratorProposalPayload.Face(Direction.SOUTH.ordinal(), ResourceType.ENERGY, PortMode.BOTH),
-                        new ConfiguratorProposalPayload.Face(Direction.EAST.ordinal(), ResourceType.FLUID, PortMode.BOTH),
-                        // fora de 0..5: ignorada
-                        new ConfiguratorProposalPayload.Face(9, ResourceType.ITEM, PortMode.INSERT)), 2000)),
-                () -> TunerProposal.current() != null && stepTicks >= 2, () -> "proposta " + TunerProposal.current()));
+        list.add(new Step("afinador: letras com dois tipos por face", STEP_TIMEOUT_MS, () -> {
+            // a action bar ainda traz o resumo da proposta anterior, que não é a desta captura
+            Minecraft.getInstance().gui.setOverlayMessage(Component.empty(), false);
+            TunerProposal.receive(new ConfiguratorProposalPayload(furnace, List.of(
+                    new ConfiguratorProposalPayload.Face(Direction.DOWN.ordinal(), ResourceType.ITEM, PortMode.EXTRACT),
+                    new ConfiguratorProposalPayload.Face(Direction.DOWN.ordinal(), ResourceType.ENERGY, PortMode.INSERT),
+                    new ConfiguratorProposalPayload.Face(Direction.SOUTH.ordinal(), ResourceType.ITEM, PortMode.INSERT),
+                    new ConfiguratorProposalPayload.Face(Direction.SOUTH.ordinal(), ResourceType.FLUID, PortMode.EXTRACT),
+                    new ConfiguratorProposalPayload.Face(Direction.SOUTH.ordinal(), ResourceType.ENERGY, PortMode.BOTH),
+                    new ConfiguratorProposalPayload.Face(Direction.EAST.ordinal(), ResourceType.FLUID, PortMode.BOTH),
+                    // fora de 0..5: ignorada
+                    new ConfiguratorProposalPayload.Face(9, ResourceType.ITEM, PortMode.INSERT)), 2000));
+        }, () -> TunerProposal.current() != null && stepTicks >= 2, () -> "proposta " + TunerProposal.current()));
         list.add(capture("cfg-afinador-letras"));
         list.add(new Step("afinador: o prazo é limitado a 400 ticks", STEP_TIMEOUT_MS, () -> {
         }, () -> {

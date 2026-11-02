@@ -39,7 +39,7 @@ Ordem do registro. "Pré-requisito": o que a suíte pressupõe além da abertura
 | `alcance` | roteador de alcance | redes | padrão |
 | `tablet` | transporte por aba e o Tablet | redes | padrão |
 | `vinculador` | Vinculador | redes | padrão |
-| `afinador` | Afinador do Configurador: uma fornalha vinculada no ar, o clique pinta a proposta (capturas `cfg-afinador-*`, com `pt` e `escuro`), o segundo clique aplica, mirar outro bloco por 2 s apaga, e as letras com dois tipos por face | nenhum | padrão |
+| `afinador` | Afinador do Configurador: uma fornalha vinculada no ar, o clique pinta a proposta (capturas `cfg-afinador-*`, com `pt` e `escuro`), o segundo clique aplica, mirar outro bloco por 2 s apaga, e as letras com dois tipos por face (com a action bar limpa); o clique no ar que apaga a proposta só é testado na variante `pt` | nenhum | padrão |
 | `portugues` | telas em português (a variante pt de todas) | redes | opcional |
 | `armazenamento` | Baú de armazenamento | redes | padrão |
 | `source` | Tanque de Source (só com o Ars Nouveau) | redes | padrão |

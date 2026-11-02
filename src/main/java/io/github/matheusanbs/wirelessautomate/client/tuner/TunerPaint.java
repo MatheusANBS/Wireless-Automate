@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client.tuner;
 
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
@@ -15,6 +16,9 @@ import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -50,8 +54,11 @@ public final class TunerPaint {
     /** A letra tem 8 px de altura: 0,22 do bloco. */
     private static final float TEXT_SCALE = 0.22f / 8f;
     private static final int TEXT_BACKGROUND = 0xA0000000;
-    /** Longe disso a máquina nem é desenhada. */
-    private static final double REACH_SQR = 96.0 * 96.0;
+    /**
+     * Longe disso a máquina nem é desenhada: os afastamentos acima são fixos, e mais longe a profundidade perde precisão
+     * e a pintura piscaria contra a face.
+     */
+    private static final double REACH_SQR = 32.0 * 32.0;
 
     /** Para cada face absoluta, do plano dela (x e y em [-0,5; 0,5], z para fora) ao bloco [0, 1]³. */
     private static final Matrix4f[] FACE = new Matrix4f[6];
@@ -72,8 +79,8 @@ public final class TunerPaint {
         }
     }
 
-    /** As letras de uma face: o texto, a cor e o x de cada uma, já em pixels da fonte. */
-    private record Letters(int face, String[] text, int[] color, float[] x) {
+    /** A linha de letras de uma face, já com a cor de cada uma, o x de onde começa e a largura, em pixels da fonte. */
+    private record Letters(int face, FormattedCharSequence line, float x, int width) {
     }
 
     /** O que o quadro desenha, montado em {@link #build}; {@code null} sem proposta. */
@@ -84,6 +91,9 @@ public final class TunerPaint {
     private static Letters[] letters = new Letters[0];
     /** O texto do tick, em matriz própria para não alocar por quadro. */
     private static final Matrix4f TEXT = new Matrix4f();
+    /** O buffer das letras ({@link #textBuffers}) e o tamanho inicial dele: dá para algumas faces sem crescer. */
+    private static final int TEXT_BUFFER_BYTES = 4096;
+    private static MultiBufferSource.@Nullable BufferSource textBuffers;
 
     private TunerPaint() {
     }
@@ -130,7 +140,7 @@ public final class TunerPaint {
                 Letters row = letters(font, d, entries);
                 faceLetters.add(row);
                 // o fundo escuro atrás da linha, 1 px além das letras (o da fonte ficaria na frente delas)
-                float half = (1 - row.x()[0]) * TEXT_SCALE;
+                float half = (row.width() / 2f + 1) * TEXT_SCALE;
                 float halfHeight = 5 * TEXT_SCALE;
                 quad(quads, quadColors, d, 0.5f - half, 0.5f - halfHeight, 0.5f + half, 0.5f + halfHeight,
                         LIFT_BACK, TEXT_BACKGROUND);
@@ -148,25 +158,22 @@ public final class TunerPaint {
         machine = shown.machine();
     }
 
-    /** As letras dos tipos da face, centradas numa linha, com um espaço de 2 px entre elas. */
+    /**
+     * As letras dos tipos da face numa linha só, separadas por espaço, cada uma na cor do modo dela, centrada: uma
+     * chamada de texto por face no quadro.
+     */
     private static Letters letters(Font font, int face, List<ConfiguratorProposalPayload.Face> entries) {
-        int n = entries.size();
-        String[] text = new String[n];
-        int[] color = new int[n];
-        float[] x = new float[n];
-        float total = 0;
-        for (int i = 0; i < n; i++) {
+        MutableComponent line = Component.empty();
+        for (int i = 0; i < entries.size(); i++) {
             String name = ResourceStyle.name(entries.get(i).type()).getString();
-            text[i] = name.isEmpty() ? "?" : name.substring(0, name.offsetByCodePoints(0, 1)).toUpperCase();
-            color[i] = 0xFF000000 | GuiPaint.modeColor(entries.get(i).mode());
-            total += font.width(text[i]) + (i > 0 ? 3 : 0);
+            String letter = name.isEmpty() ? "?" : name.substring(0, name.offsetByCodePoints(0, 1)).toUpperCase();
+            if (i > 0) {
+                line.append(" ");
+            }
+            line.append(Component.literal(letter).withColor(GuiPaint.modeColor(entries.get(i).mode()) & 0xFFFFFF));
         }
-        float at = -total / 2f;
-        for (int i = 0; i < n; i++) {
-            x[i] = at;
-            at += font.width(text[i]) + 3;
-        }
-        return new Letters(face, text, color, x);
+        int width = font.width(line);
+        return new Letters(face, line.getVisualOrderText(), -width / 2f, width);
     }
 
     /** Moldura de {@code a} a {@code b} da borda da face. */
@@ -198,10 +205,17 @@ public final class TunerPaint {
 
     @SubscribeEvent
     static void onTick(ClientTickEvent.Post event) {
-        if (machine == null) {
+        BlockPos at = machine;
+        if (at == null) {
             return;
         }
-        HitResult hit = Minecraft.getInstance().hitResult;
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.level != null && minecraft.level.getBlockState(at).isAir()) {
+            // a máquina foi quebrada: a proposta não tem mais onde ser pintada
+            TunerProposal.clear();
+            return;
+        }
+        HitResult hit = minecraft.hitResult;
         TunerProposal.tickAim(hit instanceof BlockHitResult block && hit.getType() == HitResult.Type.BLOCK
                 ? block.getBlockPos() : null);
     }
@@ -236,14 +250,24 @@ public final class TunerPaint {
             return;
         }
         Font font = Minecraft.getInstance().font;
+        MultiBufferSource.BufferSource text = textBuffers();
         for (Letters face : letters) {
             TEXT.set(pose.pose()).translate(ox, oy, oz).mul(FACE[face.face()])
                     .translate(0, 0, 0.5f + LIFT_TEXT).scale(TEXT_SCALE, -TEXT_SCALE, TEXT_SCALE);
-            for (int i = 0; i < face.text().length; i++) {
-                font.drawInBatch(face.text()[i], face.x()[i], -3.5f, face.color()[i], false, TEXT, buffers,
-                        Font.DisplayMode.POLYGON_OFFSET, 0, LightTexture.FULL_BRIGHT);
-            }
+            font.drawInBatch(face.line(), face.x(), -3.5f, 0xFFFFFFFF, false, TEXT, text,
+                    Font.DisplayMode.POLYGON_OFFSET, 0, LightTexture.FULL_BRIGHT);
         }
-        buffers.endBatch();
+        text.endBatch();
+    }
+
+    /**
+     * Um buffer só das letras, criado no primeiro quadro com letras: fechá-lo desenha só os tipos de texto usados
+     * aqui, sem esvaziar o buffer geral do quadro, que guarda o que os outros desenharam.
+     */
+    private static MultiBufferSource.BufferSource textBuffers() {
+        if (textBuffers == null) {
+            textBuffers = MultiBufferSource.immediate(new ByteBufferBuilder(TEXT_BUFFER_BYTES));
+        }
+        return textBuffers;
     }
 }

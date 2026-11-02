@@ -378,6 +378,14 @@ public class RouterMenu extends AbstractContainerMenu implements RouterEditHost 
      * Os slots de cartão estão travados: o alvo remoto sumiu e o menu caiu para a presa sem a tela
      * escolher (ver {@link #selectTarget}). No cliente, sempre falso (o servidor recusa e ressincroniza).
      */
+    /**
+     * O alvo pode guardar um cartão: na presa, só com o membro já no grupo ou um bloco na frente para criá-lo
+     * (senão o cartão sumiria). No cliente, sem o roteador, o servidor decide.
+     */
+    private boolean cardHolderReady() {
+        return router == null || !validTarget().attached() || router.attachedCanHold();
+    }
+
     public boolean cardsLocked() {
         if (router == null) {
             return false;
@@ -713,7 +721,7 @@ public class RouterMenu extends AbstractContainerMenu implements RouterEditHost 
 
         @Override
         public boolean mayPlace(ItemStack stack) {
-            return RouterBlockEntity.acceptsCard(selectedType, stack) && !cardsLocked();
+            return RouterBlockEntity.acceptsCard(selectedType, stack) && !cardsLocked() && cardHolderReady();
         }
 
         @Override
@@ -809,7 +817,7 @@ public class RouterMenu extends AbstractContainerMenu implements RouterEditHost 
 
         @Override
         public boolean canPlaceItem(int slot, ItemStack stack) {
-            return RouterBlockEntity.acceptsCard(selectedType, stack);
+            return RouterBlockEntity.acceptsCard(selectedType, stack) && cardHolderReady();
         }
 
         @Override

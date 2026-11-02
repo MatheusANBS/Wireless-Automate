@@ -33,7 +33,7 @@ As chaves de NBT `faces` e `cards` do roteador (a presa antiga, por `RelativeSid
 2. Lados: `RelativeSide` do roteador → face absoluta (`facing` + `spin`) → `RemoteSide` pela frente da máquina (sem frente, Norte), como o `ProfileSides`.
 3. Bloco da frente é ar: o rascunho fica guardado (continua salvo nas chaves antigas) até haver bloco.
 4. Sem grupo do bloco: grupo novo com o rascunho como perfil e os cartões dele.
-5. Com grupo do bloco e cartões iguais (ou rascunho sem cartões): entra no grupo; se a configuração difere do perfil, como exceção.
+5. Com grupo do bloco e cartões iguais (ou rascunho sem cartões): entra no grupo; se a configuração difere do perfil, como exceção. Os cartões físicos do rascunho (iguais aos do grupo) caem no mundo, na posição do roteador, para nenhum item sumir.
 6. Com grupo do bloco e cartões diferentes: grupo novo do mesmo bloco com o rascunho e os cartões (a exceção não tem cartões).
 7. A rede antiga da aba (`networks`/`network`, migração de mundos de antes da rede por face) vai para o rascunho antes da conversão, como hoje.
 

@@ -11,8 +11,10 @@ import static io.github.matheusanbs.wirelessautomate.gametest.RangeTestSupport.r
 import static io.github.matheusanbs.wirelessautomate.gametest.RangeTestSupport.waitLoaded;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
@@ -23,6 +25,8 @@ import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.MachineGroup;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
+import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
+import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -33,11 +37,13 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ChestBlock;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -256,6 +262,12 @@ public final class AttachedGroupGameTests {
 
     /** O NBT de um roteador antigo: a presa nas chaves {@code faces} e {@code cards} por lado do roteador. */
     private static CompoundTag legacy(GameTestHelper helper, RouterBlockEntity router, boolean withCard) {
+        return legacy(helper, router, RelativeSide.BOTTOM, withCard);
+    }
+
+    /** Como o outro, com a face configurada (Extrai, prioridade 4) e o cartão no lado relativo {@code at}. */
+    private static CompoundTag legacy(GameTestHelper helper, RouterBlockEntity router, RelativeSide at,
+            boolean withCard) {
         HolderLookup.Provider registries = helper.getLevel().registryAccess();
         CompoundTag tag = router.saveWithoutMetadata(registries);
         tag.remove("attached");
@@ -263,7 +275,7 @@ public final class AttachedGroupGameTests {
         face.setMode(PortMode.EXTRACT);
         face.setPriority(4);
         CompoundTag item = new CompoundTag();
-        item.put(RelativeSide.BOTTOM.key(), face.save(registries));
+        item.put(at.key(), face.save(registries));
         CompoundTag faces = new CompoundTag();
         faces.put(ResourceType.ITEM.key(), item);
         tag.put("faces", faces);
@@ -273,7 +285,7 @@ public final class AttachedGroupGameTests {
             ListTag list = new ListTag();
             list.add(itemCard().save(registries, slot));
             CompoundTag side = new CompoundTag();
-            side.put(RelativeSide.BOTTOM.key(), list);
+            side.put(at.key(), list);
             CompoundTag cards = new CompoundTag();
             cards.put(ResourceType.ITEM.key(), side);
             tag.put("cards", cards);
@@ -342,6 +354,185 @@ public final class AttachedGroupGameTests {
                     helper.assertValueEqual(remotes.attachedGroup().block(), CHEST_ID, "o grupo novo não é do baú");
                     helper.assertFalse(remotes.attached().hasException(), "o rascunho virou exceção");
                     helper.assertValueEqual(router.cardCount(ResourceType.ITEM, bottom(router)), 1, "perdeu o cartão");
+                })
+                .thenSucceed();
+    }
+
+    /** Caso 5 com cartões iguais aos do grupo: entra no grupo e o cartão físico do rascunho cai no roteador. */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void legacySameCardsDropsDraftCard(GameTestHelper helper) {
+        RouterBlockEntity router = chestWithRouter(helper, RouterTier.ADVANCED);
+        helper.setBlock(OTHER_CHEST, Blocks.CHEST);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    link(helper, router, OTHER_CHEST);
+                    int chests = groupOf(router, helper.absolutePos(OTHER_CHEST));
+                    // BOTTOM do roteador em cima do baú é o Norte, a frente do baú: Norte no quadro canônico.
+                    router.setCard(EditTarget.group(chests), ResourceType.ITEM, Direction.NORTH, 0, itemCard());
+                    router.loadWithComponents(legacy(helper, router, true), helper.getLevel().registryAccess());
+                    assertConverted(helper, router, "cartões iguais");
+                    helper.assertValueEqual(router.remoteMachines().attached().group(), chests, "não entrou no grupo");
+                    helper.assertItemEntityPresent(ModItems.FILTER_CARD.get(), CHEST.above(), 2.0);
+                })
+                .thenSucceed();
+    }
+
+    /** Lado lateral, spin 1 e baú com a frente em Leste: o lado relativo vai para o lado certo da máquina. */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void legacyLateralSpunRouterConverts(GameTestHelper helper) {
+        helper.setBlock(CHEST, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.EAST));
+        BlockPos at = CHEST.north();
+        helper.setBlock(at, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.NORTH)
+                .setValue(RouterBlock.SPIN, 1).setValue(RouterBlock.TIER, RouterTier.ADVANCED));
+        RouterBlockEntity router = helper.getBlockEntity(at);
+        router.loadWithComponents(legacy(helper, router, RelativeSide.TOP, false), helper.getLevel().registryAccess());
+        // facing=north, spin 1: TOP (sul no caso facing=up) gira para oeste e a rotação x=90 o deixa em oeste.
+        // Com a frente do baú em Leste, oeste é Trás.
+        MachineGroup group = router.remoteMachines().attachedGroup();
+        helper.assertTrue(group != null, "não converteu");
+        for (RemoteSide side : RemoteSide.values()) {
+            PortMode expected = side == RemoteSide.BACK ? PortMode.EXTRACT : PortMode.NONE;
+            helper.assertValueEqual(group.profile().face(ResourceType.ITEM, side).mode(), expected, "lado " + side);
+        }
+        helper.succeed();
+    }
+
+    /** Caso 1: o rascunho vazio some, sem criar membro nem grupo. */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void legacyEmptyDraftVanishes(GameTestHelper helper) {
+        RouterBlockEntity router = chestWithRouter(helper, RouterTier.ADVANCED);
+        CompoundTag tag = router.saveWithoutMetadata(helper.getLevel().registryAccess());
+        CompoundTag item = new CompoundTag();
+        item.put(RelativeSide.BOTTOM.key(), new FaceConfig().save(helper.getLevel().registryAccess()));
+        CompoundTag faces = new CompoundTag();
+        faces.put(ResourceType.ITEM.key(), item);
+        tag.put("faces", faces);
+        router.loadWithComponents(tag, helper.getLevel().registryAccess());
+        helper.assertTrue(router.remoteMachines().attached() == null, "o rascunho vazio criou o membro");
+        helper.assertTrue(router.remoteMachines().groups().isEmpty(), "o rascunho vazio criou grupo");
+        CompoundTag saved = router.saveWithoutMetadata(helper.getLevel().registryAccess());
+        helper.assertFalse(saved.contains("faces"), "o rascunho vazio continuou salvo");
+        helper.succeed();
+    }
+
+    /** Caso 3: com ar na frente o rascunho fica (lido e salvo nas chaves antigas) e converte quando a máquina volta. */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void legacyWaitsForMachine(GameTestHelper helper) {
+        RouterBlockEntity router = chestWithRouter(helper, RouterTier.ADVANCED);
+        helper.getLevel().setBlock(helper.absolutePos(CHEST), Blocks.AIR.defaultBlockState(),
+                Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+        router.loadWithComponents(legacy(helper, router, false), helper.getLevel().registryAccess());
+        helper.assertTrue(router.remoteMachines().attached() == null, "converteu com ar");
+        helper.assertValueEqual(attachedFace(router, bottom(router)).mode(), PortMode.EXTRACT, "o rascunho não vale");
+        CompoundTag saved = router.saveWithoutMetadata(helper.getLevel().registryAccess());
+        helper.assertTrue(saved.contains("faces"), "o rascunho não ficou salvo");
+        // Girar com o rascunho pendente gira o rascunho junto: a face absoluta não muda.
+        Direction where = bottom(router);
+        router.spinTo(1);
+        helper.assertValueEqual(attachedFace(router, where).mode(), PortMode.EXTRACT, "o giro mexeu no rascunho");
+        helper.getLevel().setBlock(helper.absolutePos(CHEST), Blocks.CHEST.defaultBlockState(),
+                Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+        router.machineNeighborChanged();
+        helper.assertTrue(router.remoteMachines().attached() != null, "não converteu com a máquina de volta");
+        helper.assertValueEqual(attachedFace(router, where).mode(), PortMode.EXTRACT, "a face mudou de lugar");
+        helper.succeed();
+    }
+
+    /** Caso 7: a rede antiga da aba vai para o rascunho e, convertido, para o perfil. */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void legacyTabNetworkGoesToDraft(GameTestHelper helper) {
+        RouterBlockEntity router = chestWithRouter(helper, RouterTier.ADVANCED);
+        UUID network = UUID.randomUUID();
+        CompoundTag tag = legacy(helper, router, false);
+        tag.putUUID("network", network);
+        router.loadWithComponents(tag, helper.getLevel().registryAccess());
+        assertConverted(helper, router, "rede antiga");
+        for (Direction face : Direction.values()) {
+            helper.assertTrue(network.equals(router.faceNetwork(ResourceType.ITEM, face)), "a face " + face + " sem a rede");
+        }
+        helper.succeed();
+    }
+
+    /** Uma escrita que não muda nada no grupo em que a presa entrou ainda cria o membro, salvo e com a porta. */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void createdMemberWithoutChangeCounts(GameTestHelper helper) {
+        RouterBlockEntity router = chestWithRouter(helper, RouterTier.ADVANCED);
+        UUID network = NetworkSavedData.get(helper.getLevel().getServer()).create(UUID.randomUUID(), "presa-sem-mudar").id();
+        helper.setBlock(OTHER_CHEST, Blocks.CHEST);
+        helper.setBlock(BARREL_A, Blocks.BARREL);
+        container(helper, CHEST).setItem(0, new ItemStack(Items.COBBLESTONE, 16));
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    link(helper, router, OTHER_CHEST);
+                    link(helper, router, BARREL_A);
+                    int chests = groupOf(router, helper.absolutePos(OTHER_CHEST));
+                    int barrels = groupOf(router, helper.absolutePos(BARREL_A));
+                    router.configureFace(EditTarget.group(chests), ResourceType.ITEM, Direction.NORTH, PortMode.EXTRACT, 0,
+                            RedstoneMode.IGNORE, network);
+                    router.configureFace(EditTarget.group(barrels), ResourceType.ITEM, Direction.NORTH, PortMode.INSERT, 0,
+                            RedstoneMode.IGNORE, network);
+                    helper.assertTrue(router.remoteMachines().attached() == null, "a presa já tinha membro");
+                    router.setMode(ResourceType.ITEM, Direction.NORTH, PortMode.EXTRACT);
+                    helper.assertTrue(router.remoteMachines().attached() != null, "a escrita sem mudança não criou o membro");
+                    helper.assertValueEqual(router.remoteMachines().attached().group(), chests, "outro grupo");
+                    helper.assertFalse(router.remoteMachines().attached().hasException(), "exceção igual ao perfil");
+                    HolderLookup.Provider registries = helper.getLevel().registryAccess();
+                    RouterBlockEntity copy = new RouterBlockEntity(router.getBlockPos(), router.getBlockState());
+                    copy.loadWithComponents(router.saveWithoutMetadata(registries), registries);
+                    helper.assertTrue(copy.remoteMachines().attached() != null, "o membro não foi salvo");
+                })
+                .thenWaitUntil(() -> helper.assertValueEqual(count(helper, BARREL_A), 16, "a presa não extraiu"))
+                .thenSucceed();
+    }
+
+    /** Sozinha no grupo e com exceção, editar a presa passa a exceção para o perfil e muda o perfil. */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void soleAttachedFoldsExceptionIntoProfile(GameTestHelper helper) {
+        RouterBlockEntity router = chestWithRouter(helper, RouterTier.ADVANCED);
+        helper.setBlock(OTHER_CHEST, Blocks.CHEST);
+        RemoteMachines remotes = router.remoteMachines();
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    link(helper, router, OTHER_CHEST);
+                    router.setMode(ResourceType.ITEM, Direction.NORTH, PortMode.EXTRACT);
+                    helper.assertTrue(remotes.attached().hasException(), "com a remota, não virou exceção");
+                    helper.assertTrue(router.unlinkMachine(helper.absolutePos(OTHER_CHEST)), "não desvinculou");
+                    router.setMode(ResourceType.ITEM, Direction.SOUTH, PortMode.INSERT);
+                    helper.assertFalse(remotes.attached().hasException(), "a exceção ficou");
+                    MachineGroup group = remotes.attachedGroup();
+                    helper.assertValueEqual(group.profile().face(ResourceType.ITEM, RemoteSide.FRONT).mode(), PortMode.EXTRACT,
+                            "a exceção não foi para o perfil");
+                    helper.assertValueEqual(group.profile().face(ResourceType.ITEM, RemoteSide.BACK).mode(), PortMode.INSERT,
+                            "a edição não foi para o perfil");
+                })
+                .thenSucceed();
+    }
+
+    /** O slot de cartão da presa recusa o cartão sem máquina na frente (ele sumiria) e aceita com ela. */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void cardSlotRefusesWithoutMachine(GameTestHelper helper) {
+        RouterBlockEntity router = chestWithRouter(helper, RouterTier.ADVANCED);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    ServerPlayer[] holder = new ServerPlayer[1];
+                    RouterMenu menu = RangeTestSupport.openMenu(helper, router, holder);
+                    try {
+                        helper.getLevel().setBlock(helper.absolutePos(CHEST), Blocks.AIR.defaultBlockState(),
+                                Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+                        helper.assertFalse(router.attachedCanHold(), "a presa sem máquina guarda");
+                        helper.assertFalse(menu.getSlot(0).mayPlace(itemCard()), "o slot aceitou o cartão sem máquina");
+                        helper.getLevel().setBlock(helper.absolutePos(CHEST), Blocks.CHEST.defaultBlockState(),
+                                Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+                        helper.assertTrue(menu.getSlot(0).mayPlace(itemCard()), "o slot recusou o cartão com a máquina");
+                    } finally {
+                        holder[0].containerMenu = holder[0].inventoryMenu;
+                    }
                 })
                 .thenSucceed();
     }

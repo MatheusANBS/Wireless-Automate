@@ -894,12 +894,12 @@ public class RouterBlockEntity extends BlockEntity {
     }
 
     /**
-     * Relê a frente da máquina remota pelo mundo, só com o chunk carregado. Chamado pela remontagem das
-     * portas ({@code NetworkRoutes.readRemotePorts}): grava e devolve {@code true} se mudou, sem
-     * avisar o motor (quem chama decide o que remontar).
+     * Relê a frente e o bloco da máquina remota pelo mundo, só com o chunk carregado. Chamado pela remontagem das
+     * portas ({@code NetworkRoutes.readRemotePorts}): grava a trocada ({@link RemoteMachine#replaced}) e a frente, e
+     * devolve {@code true} se a frente mudou, sem avisar o motor (quem chama decide o que remontar).
      */
-    public boolean rereadFront(RemoteMachine machine) {
-        return range.rereadFront(machine);
+    public boolean rereadRemote(RemoteMachine machine) {
+        return range.rereadRemote(machine);
     }
 
     /**

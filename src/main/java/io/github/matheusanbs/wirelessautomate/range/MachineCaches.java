@@ -116,6 +116,16 @@ public final class MachineCaches {
         discarded = true;
     }
 
+    /**
+     * Garante que a troca do bloco desta remota avise o roteador antes da primeira consulta do motor e mesmo sem porta
+     * (a trocada, que a montagem pula): consulta o cache de itens da face de cima, criado na primeira vez, cujo listener
+     * chega no {@link RouterBlockEntity#machineInvalidated} quando a block entity sai ou entra. Depois de cada aviso o
+     * listener só volta a valer com uma consulta, e é esta, na montagem seguinte. Só na montagem.
+     */
+    public void watch() {
+        items(Direction.UP);
+    }
+
     /** Para GameTests: quantas capabilities já têm o arranjo das faces criado. */
     public int capabilityArraysForTests() {
         Object[][] all = {itemCaches, bulkItemCaches, bulkEnergyCaches, bulkFluidCaches, bulkSourceCaches, fluidCaches,

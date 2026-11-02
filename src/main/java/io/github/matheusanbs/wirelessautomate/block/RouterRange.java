@@ -290,8 +290,7 @@ final class RouterRange {
 
     /**
      * Relê a frente da máquina remota em {@code state}. Se mudou, grava e refaz as rotas do nó (os
-     * lados relativos mudaram) e devolve {@code true}. A regra num lugar só: o aviso da máquina
-     * ({@link #machineChanged}) e a invalidação da capability ({@link #invalidated}).
+     * lados relativos mudaram) e devolve {@code true}. O aviso da máquina ({@link #machineChanged}).
      */
     private boolean refreshFront(RemoteMachine machine, BlockState state) {
         if (!storeFront(machine, state)) {
@@ -301,13 +300,28 @@ final class RouterRange {
         return true;
     }
 
-    /** Ver {@link RouterBlockEntity#rereadFront}. */
-    boolean rereadFront(RemoteMachine machine) {
+    /** Ver {@link RouterBlockEntity#rereadRemote}. */
+    boolean rereadRemote(RemoteMachine machine) {
         Level level = router.getLevel();
         if (level == null || level.isClientSide || !level.isLoaded(machine.pos())) {
             return false;
         }
-        return storeFront(machine, level.getBlockState(machine.pos()));
+        BlockState state = level.getBlockState(machine.pos());
+        storeReplaced(machine, state);
+        return storeFront(machine, state);
+    }
+
+    /**
+     * Grava se o bloco em {@code state} deixou de ser o do grupo da máquina ({@link RemoteMachine#replaced}); devolve
+     * se isso mudou. Sem avisar o motor.
+     */
+    private boolean storeReplaced(RemoteMachine machine, BlockState state) {
+        boolean replaced = !BuiltInRegistries.BLOCK.getKey(state.getBlock()).equals(remotes.groupOf(machine).block());
+        if (replaced == machine.replaced()) {
+            return false;
+        }
+        machine.setReplaced(replaced);
+        return true;
     }
 
     /** Grava a frente de {@code state} na máquina, se mudou (salva e refaz o snapshot), sem avisar o motor. */
@@ -323,14 +337,22 @@ final class RouterRange {
     }
 
     /**
-     * Um cache de uma remota foi invalidado, no servidor: a frente é relida (só com o chunk carregado); se
-     * mudou, as rotas do nó são refeitas, senão acorda a porta da face.
+     * Um cache de uma remota foi invalidado, no servidor: o bloco e a frente são relidos (só com o chunk carregado).
+     * Se a frente mudou, ou se a máquina é trocada (ou o bloco do grupo voltou), as rotas do nó são refeitas: a
+     * montagem pula a trocada e consulta de novo o cache que a vigia ({@link MachineCaches#watch}), sem o qual o
+     * próximo aviso não viria. Senão acorda a porta da face. A troca de um bloco com block entity sempre chega aqui:
+     * o NeoForge invalida as capabilities da posição quando a block entity sai e quando a nova entra.
      */
     void invalidated(Level level, BlockPos pos, ResourceType type, Direction machineFace) {
         if (level.isLoaded(pos)) {
             RemoteMachine machine = remotes.machine(remotes.index(pos));
-            if (machine != null && refreshFront(machine, level.getBlockState(pos))) {
-                return;
+            if (machine != null) {
+                BlockState state = level.getBlockState(pos);
+                boolean swapped = storeReplaced(machine, state);
+                if (storeFront(machine, state) || swapped || machine.replaced()) {
+                    router.changed(NetworkManager.ALL_TYPES);
+                    return;
+                }
             }
         }
         NetworkManager.get().capabilityChanged(router, pos, type, machineFace);

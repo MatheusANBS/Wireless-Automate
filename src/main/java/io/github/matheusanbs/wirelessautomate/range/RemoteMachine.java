@@ -18,6 +18,8 @@ public final class RemoteMachine {
     private int front;
     /** Rótulo dado pelo jogador; vazio = a tela usa o nome do bloco. Nunca texto traduzido. */
     private String label = "";
+    /** Na última leitura do bloco, ele não era o do grupo (a máquina foi trocada). Não é salvo. */
+    private boolean replaced;
 
     public RemoteMachine(BlockPos pos, int group, @Nullable MachineConfig exception, int front) {
         this.pos = pos.immutable();
@@ -63,6 +65,18 @@ public final class RemoteMachine {
 
     public String label() {
         return label;
+    }
+
+    /**
+     * Na última leitura do bloco (a montagem das rotas ou uma capability invalidada), ele não era o do grupo: a
+     * montagem não faz porta dela até o Atualizar ou até o bloco do grupo voltar.
+     */
+    public boolean replaced() {
+        return replaced;
+    }
+
+    public void setReplaced(boolean replaced) {
+        this.replaced = replaced;
     }
 
     /** Já limpo por quem chama ({@code RenameRouterPayload.clean}). Mude pelo roteador. */

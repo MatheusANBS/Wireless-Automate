@@ -117,6 +117,49 @@ public final class RangeReplaceGameTests {
                 .thenSucceed();
     }
 
+    /**
+     * A trocada perde as portas sem esperar o Atualizar (o aviso é a invalidação da capability da posição, que refaz
+     * as rotas do nó); com o bloco do grupo de volta (também depois de passar por outro bloco), ou depois do
+     * Atualizar, elas voltam.
+     */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void replacedMachineHasNoPorts(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    linkInNetwork(helper, router, FURNACE_A);
+                    profile(helper, router, FURNACE_A, Direction.DOWN, PortMode.EXTRACT);
+                })
+                .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, FURNACE_A, Direction.DOWN), "sem porta"))
+                .thenExecute(() -> blastAt(helper, FURNACE_A, Direction.EAST))
+                .thenWaitUntil(() -> helper.assertFalse(remotePort(helper, router, FURNACE_A, Direction.DOWN),
+                        "a trocada continua com porta"))
+                .thenExecute(() -> helper.setBlock(FURNACE_A,
+                        Blocks.FURNACE.defaultBlockState().setValue(AbstractFurnaceBlock.FACING, Direction.EAST)))
+                .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, FURNACE_A, Direction.DOWN),
+                        "a fornalha voltou e a porta não"))
+                .thenExecute(() -> blastAt(helper, FURNACE_A, Direction.EAST))
+                .thenWaitUntil(() -> helper.assertFalse(remotePort(helper, router, FURNACE_A, Direction.DOWN),
+                        "trocada de novo com porta"))
+                // de trocada para trocada (o aviso não muda o estado) e de volta: o aviso seguinte ainda chega
+                .thenExecute(() -> helper.setBlock(FURNACE_A, Blocks.STONE))
+                .thenIdle(3)
+                .thenExecute(() -> helper.setBlock(FURNACE_A,
+                        Blocks.FURNACE.defaultBlockState().setValue(AbstractFurnaceBlock.FACING, Direction.EAST)))
+                .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, FURNACE_A, Direction.DOWN),
+                        "a fornalha voltou depois da pedra e a porta não"))
+                .thenExecute(() -> blastAt(helper, FURNACE_A, Direction.EAST))
+                .thenWaitUntil(() -> helper.assertFalse(remotePort(helper, router, FURNACE_A, Direction.DOWN),
+                        "trocada pela terceira vez com porta"))
+                .thenExecute(() -> helper.assertFalse(router.updateReplaced(
+                        List.of(index(helper, router, FURNACE_A)), null).isEmpty(), "o Atualizar não moveu"))
+                .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, FURNACE_A, Direction.DOWN),
+                        "atualizada sem porta"))
+                .thenSucceed();
+    }
+
     /** Sozinha no grupo: o grupo passa a ser do bloco novo, com id, nome, perfil e cartões; a frente é relida. */
     @GameTest(template = "empty")
     public static void updateLoneMachineMovesGroup(GameTestHelper helper) {

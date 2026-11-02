@@ -499,7 +499,7 @@ final class NetworkRoutes {
     /**
      * Depois das faces da presa ({@code attached}), as das máquinas remotas: as primeiras
      * {@code maxMachines} do tier dentro do raio, na ordem de vínculo (as de fora do raio ou do limite
-     * não viram porta). A face absoluta de cada lado sai da frente da máquina ({@link RemoteSide}); a
+     * e a trocada, com outro bloco que não o do grupo, não viram porta). A face absoluta de cada lado sai da frente da máquina ({@link RemoteSide}); a
      * configuração é a que vale para ela (exceção ou perfil do grupo), o filtro é o embutido mais os
      * cartões do grupo naquele lado e o {@code powered} é o do roteador. O resto é como na presa.
      */
@@ -518,7 +518,6 @@ final class NetworkRoutes {
             }
             RemoteMachine remote = machines.get(i);
             BlockPos pos = remote.pos();
-            keep.add(pos.asLong());
             MachineConfig config = remotes.effective(remote);
             MachineCaches caches = null;
             int front = remote.front();
@@ -529,14 +528,22 @@ final class NetworkRoutes {
                 }
                 if (caches == null) {
                     caches = node.remoteCaches(pos);
-                    // A frente é relida aqui (uma vez por máquina com face ativa, só na remontagem):
-                    // girar a máquina sem setChanged não avisa ninguém. Se mudou, vale já nesta
-                    // leitura; os outros tipos do nó são relidos na próxima remontagem, sem laço
+                    // A frente e o bloco são relidos aqui (uma vez por máquina com face ativa, só na
+                    // remontagem): girar a máquina sem setChanged não avisa ninguém. Se a frente mudou, vale
+                    // já nesta leitura; os outros tipos do nó são relidos na próxima remontagem, sem laço
                     // (lá a frente já bate).
-                    if (node.rereadFront(remote)) {
+                    if (node.rereadRemote(remote)) {
                         front = remote.front();
                         NetworkManager.get().nodeChanged(node, ALL_TYPES & ~NetworkManager.typeBit(type));
                     }
+                    // O listener de um cache dela avisa a troca do bloco, mesmo antes da primeira consulta
+                    // do motor. A trocada (outro bloco que não o do grupo) não tem porta até o Atualizar
+                    // ou até o bloco do grupo voltar.
+                    caches.watch();
+                    if (remote.replaced()) {
+                        break;
+                    }
+                    keep.add(pos.asLong());
                 }
                 Port port = member.remotePort(caches, type, DIRECTIONS[side.toAbsolute(front)]);
                 port.faceNetwork = face.network();

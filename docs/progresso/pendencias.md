@@ -23,13 +23,14 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 
 ## Roteador de alcance
 
-- **(dono)** Escolher a função nova do Configurador (ideias A a D em `docs/preview/alcance-presa-no-grupo.html`). Achados da revisão de 02/11 que continuam: máquina trocada continua recebendo até o Atualizar; o Vinculador desvincula num clique e solta os cartões sem dizer; clique ignorado em silêncio quando a lista mudou; id de grupo reaproveitado; Configurador sem `mayBuild`. (02/11)
+- **(dono)** Escolher a função nova do Configurador (ideias A a D em `docs/preview/alcance-presa-no-grupo.html`); a função nova confere o `mayBuild`, como o Vinculador. (02/11)
+- Teste à mão da etapa 4 do alcance (linha de 02/11 do histórico): o Vinculador pedindo confirmação, a máquina trocada parando de receber na hora. (02/11)
 
 - Pausar grupo. (11/10)
 - Presa no grupo, menores da revisão final: o grupo "×0" segue contando nas redes do nó; sem o Upgrade de Alcance, com remotas guardadas no mesmo grupo, editar a presa cria uma exceção que a tela não mostra; `setNetworkAll` com rede cria o membro numa presa nunca configurada; o slot de cartão da presa com exceção muda o grupo inteiro sem aviso;  destino "quase cheio" de pilhas parciais de outros itens entra no caminho das recusas (medir um cenário `partialfull`). (02/11)
 - Página própria no guia (hoje é uma seção da página do Roteador). (11/10)
 - **(dono)** Fechar as perguntas da spec: nome do item, vazão por máquina, tabela de raio e limite, Básico sem alcance; a receita e a textura seguem provisórias. (11/10)
-- Conferir os 18 achados menores da revisão da etapa 1 (`docs/superpowers/reviews/2026-10-11-roteador-de-alcance-etapa-1.md`). (11/10)
+- Conferir os achados menores da revisão da etapa 1 (`docs/superpowers/reviews/2026-10-11-roteador-de-alcance-etapa-1.md`) que a etapa 4 não cobriu (ela resolveu o "7/32", os caches na recarga da config, o `unlink` sem `isClientSide` e o grupo de id repetido no NBT). (11/10)
 
 ## Tablet
 

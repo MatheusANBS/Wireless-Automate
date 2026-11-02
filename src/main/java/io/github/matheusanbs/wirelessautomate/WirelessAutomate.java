@@ -4,6 +4,8 @@ import com.mojang.logging.LogUtils;
 import io.github.matheusanbs.wirelessautomate.chunk.ChunkLoaderEvents;
 import io.github.matheusanbs.wirelessautomate.command.WaCommand;
 import io.github.matheusanbs.wirelessautomate.menu.IdleNetworkUndo;
+import io.github.matheusanbs.wirelessautomate.menu.MachineClipboard;
+import io.github.matheusanbs.wirelessautomate.menu.MachinePasteUndo;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
@@ -110,6 +112,8 @@ public final class WirelessAutomate {
     private static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         TabletMenu.forget(event.getEntity().getUUID());
         IdleNetworkUndo.forget(event.getEntity().getUUID());
+        MachineClipboard.forget(event.getEntity().getUUID());
+        MachinePasteUndo.forget(event.getEntity().getUUID());
         TvEditing.forget(event.getEntity().getUUID());
         TvPreview.forget(event.getEntity().getUUID());
         NetworkManager.get().flows().unwatch(event.getEntity().getUUID());
@@ -161,6 +165,8 @@ public final class WirelessAutomate {
         CompactingChains.reset();
         TabletMenu.resetStates();
         IdleNetworkUndo.reset();
+        MachineClipboard.reset();
+        MachinePasteUndo.reset();
     }
 
     private static void onChunkLoad(ChunkEvent.Load event) {

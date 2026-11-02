@@ -15,6 +15,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -175,6 +176,37 @@ final class RouterAttached {
         }
         router.changed(created ? NetworkManager.ALL_TYPES : NetworkManager.typeBit(type));
         return true;
+    }
+
+    /**
+     * Muda a configuração inteira da presa (o colar da tela), com a regra de {@link #edit}: {@code edit} recebe uma
+     * cópia da que vale; única máquina do grupo, a cópia vira o perfil (e a exceção sai); senão vira a exceção, que
+     * some se igual ao perfil. Sem membro, cria (se o bloco da frente deixa; senão nada muda). Um aviso ao motor, de
+     * todos os tipos, se algo mudou. Devolve se mudou.
+     */
+    boolean editAll(Consumer<MachineConfig> edit) {
+        boolean created = ensureMember();
+        AttachedMember member = remotes.attached();
+        MachineGroup group = remotes.attachedGroup();
+        if (member == null || group == null) {
+            return false;
+        }
+        MachineConfig config = remotes.effectiveAttached().copy();
+        edit.accept(config);
+        boolean changed;
+        if (remotes.memberCount(group.id()) == 1) {
+            changed = group.profile().copyFrom(config) | member.hasException();
+            member.setException(null);
+        } else {
+            MachineConfig next = config.sameAs(group.profile()) ? null : config;
+            MachineConfig now = member.exception();
+            changed = now == null ? next != null : next == null || !now.sameAs(next);
+            member.setException(next);
+        }
+        if (changed || created) {
+            router.changed(NetworkManager.ALL_TYPES);
+        }
+        return changed || created;
     }
 
     /** Põe o cartão no slot da face, no grupo da presa; sem membro, só um cartão de verdade cria o membro. */

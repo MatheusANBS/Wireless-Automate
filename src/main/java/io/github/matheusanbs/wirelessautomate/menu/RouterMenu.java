@@ -117,6 +117,8 @@ public class RouterMenu extends AbstractContainerMenu implements RouterEditHost 
     private final @Nullable ServerPlayer viewer;
     private int sentChangeVersion;
     private int sentDataVersion;
+    /** A cópia do perfil de máquina do jogador no último snapshot (pela identidade: uma cópia nova é outro objeto). */
+    private MachineClipboard.@Nullable Entry sentClipboard;
     private long sampleTick;
     private final long[] sampleTotals = new long[ResourceType.values().length];
     private final long[] sentThroughput = new long[ResourceType.values().length];
@@ -140,6 +142,7 @@ public class RouterMenu extends AbstractContainerMenu implements RouterEditHost 
         this.sentChangeVersion = router.changeVersion();
         if (viewer != null) {
             this.sentDataVersion = NetworkSavedData.get(viewer.server).version();
+            this.sentClipboard = MachineClipboard.get(viewer.getUUID());
             this.sampleTick = viewer.server.getTickCount();
             this.rangeTick = sampleTick;
         }
@@ -270,6 +273,7 @@ public class RouterMenu extends AbstractContainerMenu implements RouterEditHost 
     public void removed(Player player) {
         super.removed(player);
         IdleNetworkUndo.closed(player, this);
+        MachinePasteUndo.closed(player, this);
     }
 
     /** O roteador; só existe no servidor. */
@@ -885,7 +889,7 @@ public class RouterMenu extends AbstractContainerMenu implements RouterEditHost 
     }
 
     /**
-     * Snapshot novo se a versão do roteador ou das redes mudou, o alvo mudou ou, com as remotas na
+     * Snapshot novo se a versão do roteador ou das redes mudou, o alvo ou a cópia do jogador mudou ou, com as remotas na
      * tela, passaram {@link #SAMPLE_TICKS} ticks, e ele ficou diferente do último enviado; senão
      * {@code null}. Marca o novo como enviado. Só no servidor; público para os GameTests.
      */
@@ -900,11 +904,14 @@ public class RouterMenu extends AbstractContainerMenu implements RouterEditHost 
         boolean rangeDue = now - rangeTick >= SAMPLE_TICKS
                 && (snapshot.range().present() || router.powered() != snapshot.powered());
         EditTarget target = validTarget();
-        if (changeVersion == sentChangeVersion && dataVersion == sentDataVersion && !targetChanged && !rangeDue) {
+        MachineClipboard.Entry clipboard = MachineClipboard.get(viewer.getUUID());
+        if (changeVersion == sentChangeVersion && dataVersion == sentDataVersion && !targetChanged && !rangeDue
+                && clipboard == sentClipboard) {
             return null;
         }
         sentChangeVersion = changeVersion;
         sentDataVersion = dataVersion;
+        sentClipboard = clipboard;
         targetChanged = false;
         rangeTick = now;
         RouterSnapshot captured = RouterSnapshot.capture(router, viewer, target, selectedFace);

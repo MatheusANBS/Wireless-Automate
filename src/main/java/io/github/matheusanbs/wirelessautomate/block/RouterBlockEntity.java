@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -42,6 +43,7 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -603,6 +605,11 @@ public class RouterBlockEntity extends BlockEntity {
         return range.unlink(index);
     }
 
+    /** Desvincula o grupo ({@link RemoteMachines#unlinkGroup}); os cartões vão para {@code recipient}, como no Atualizar. */
+    public RemoteMachines.@Nullable GroupUnlink unlinkGroup(int groupId, @Nullable Player recipient) {
+        return range.unlinkGroup(groupId, recipient);
+    }
+
     /** Como {@link #unlinkMachine(int)}, pela posição da máquina. */
     public boolean unlinkMachine(BlockPos pos) {
         return unlinkMachine(remotes.index(pos));
@@ -624,6 +631,14 @@ public class RouterBlockEntity extends BlockEntity {
     /** Tira a exceção da máquina presa: ela volta a seguir o perfil do grupo. */
     public boolean revertAttachedToProfile() {
         return attached.revertToProfile();
+    }
+
+    /**
+     * Muda a configuração inteira da presa: {@code edit} recebe uma cópia da que vale; sozinha no grupo, vira o
+     * perfil, senão a exceção ({@link RouterAttached#editAll}). Devolve se mudou.
+     */
+    public boolean editAttachedConfig(Consumer<MachineConfig> edit) {
+        return attached.editAll(edit);
     }
 
     /** Como o {@link #setMachineException}, na presa (o Desfazer do colar do Tablet). */
@@ -660,9 +675,12 @@ public class RouterBlockEntity extends BlockEntity {
         return range.replacedBy(machine, reach);
     }
 
-    /** Atualizar: as trocadas de {@code indices} vão para o grupo do bloco novo ({@link RemoteMachines#regroup}). */
-    public RemoteMachines.Regroup updateReplaced(List<Integer> indices) {
-        return range.updateReplaced(indices);
+    /**
+     * Atualizar: as trocadas de {@code indices} vão para o grupo do bloco novo ({@link RemoteMachines#regroup}); os
+     * cartões devolvidos vão para {@code recipient} (sem jogador, caem no roteador).
+     */
+    public RemoteMachines.Regroup updateReplaced(List<Integer> indices, @Nullable Player recipient) {
+        return range.updateReplaced(indices, recipient);
     }
 
     /**

@@ -31,6 +31,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -73,6 +75,8 @@ import org.jetbrains.annotations.Nullable;
  *                  à distância de outra dimensão)
  * @param attachedLabel nome dado à máquina presa ({@link RouterBlockEntity#attachedLabel()}); vazio = sem nome (a
  *                  tela mostra o nome do bloco)
+ * @param clipboard o nome de origem da cópia do perfil de máquina do jogador ({@link MachineClipboard#source}: "Fornalha
+ *                  #2", "presa", "Perfil: Fornalha"); vazio = sem cópia
  */
 public record RouterSnapshot(
         BlockPos pos,
@@ -88,7 +92,17 @@ public record RouterSnapshot(
         ChunkLoadState chunkLoad,
         RangeView range,
         ResourceKey<Level> dimension,
-        String attachedLabel) {
+        String attachedLabel,
+        Component clipboard) {
+
+    /** Sem cópia do perfil de máquina (prévias, capturas e testes). */
+    public RouterSnapshot(BlockPos pos, String name, RouterTier tier, Direction facing,
+            int attachedFront, List<NetworkEntry> networks, boolean powered, ItemStack machine,
+            BlockState machineState, List<FaceView> faces, ChunkLoadState chunkLoad, RangeView range,
+            ResourceKey<Level> dimension, String attachedLabel) {
+        this(pos, name, tier, facing, attachedFront, networks, powered, machine, machineState, faces, chunkLoad,
+                range, dimension, attachedLabel, Component.empty());
+    }
 
     /** Sem nome da máquina presa (prévias, capturas e testes). */
     public RouterSnapshot(BlockPos pos, String name, RouterTier tier, Direction facing,
@@ -144,31 +158,37 @@ public record RouterSnapshot(
     /** O mesmo snapshot com outras redes no seletor. */
     public RouterSnapshot withNetworks(List<NetworkEntry> networks) {
         return new RouterSnapshot(pos, name, tier, facing, attachedFront, networks, powered, machine, machineState,
-                faces, chunkLoad, range, dimension, attachedLabel);
+                faces, chunkLoad, range, dimension, attachedLabel, clipboard);
     }
 
     /** O mesmo snapshot com outras faces (prévias da tela). */
     public RouterSnapshot withFaces(List<FaceView> faces) {
         return new RouterSnapshot(pos, name, tier, facing, attachedFront, networks, powered, machine, machineState,
-                faces, chunkLoad, range, dimension, attachedLabel);
+                faces, chunkLoad, range, dimension, attachedLabel, clipboard);
     }
 
     /** O mesmo snapshot com outra frente da máquina presa (prévias da tela). */
     public RouterSnapshot withAttachedFront(int attachedFront) {
         return new RouterSnapshot(pos, name, tier, facing, attachedFront, networks, powered, machine, machineState,
-                faces, chunkLoad, range, dimension, attachedLabel);
+                faces, chunkLoad, range, dimension, attachedLabel, clipboard);
     }
 
     /** O mesmo snapshot com outro nome da máquina presa (prévias da tela). */
     public RouterSnapshot withAttachedLabel(String attachedLabel) {
         return new RouterSnapshot(pos, name, tier, facing, attachedFront, networks, powered, machine, machineState,
-                faces, chunkLoad, range, dimension, attachedLabel);
+                faces, chunkLoad, range, dimension, attachedLabel, clipboard);
     }
 
     /** O mesmo snapshot com outras máquinas remotas (prévias da tela). */
     public RouterSnapshot withRange(RangeView range) {
         return new RouterSnapshot(pos, name, tier, facing, attachedFront, networks, powered, machine, machineState,
-                faces, chunkLoad, range, dimension, attachedLabel);
+                faces, chunkLoad, range, dimension, attachedLabel, clipboard);
+    }
+
+    /** O mesmo snapshot com outra cópia do perfil de máquina (prévias da tela). */
+    public RouterSnapshot withClipboard(Component clipboard) {
+        return new RouterSnapshot(pos, name, tier, facing, attachedFront, networks, powered, machine, machineState,
+                faces, chunkLoad, range, dimension, attachedLabel, clipboard);
     }
 
     /** O alvo de edição atual ({@link EditTarget#ATTACHED_TARGET} sem o Upgrade de Alcance). */
@@ -183,7 +203,7 @@ public record RouterSnapshot(
                 && attachedFront == other.attachedFront && powered == other.powered
                 && ItemStack.matches(machine, other.machine) && machineState == other.machineState
                 && faces.equals(other.faces) && chunkLoad == other.chunkLoad && range.equals(other.range)
-                && dimension.equals(other.dimension);
+                && dimension.equals(other.dimension) && clipboard.equals(other.clipboard);
     }
 
     /** Igualdade de valor; o {@link ItemStack} da máquina é comparado por {@link ItemStack#matches}. */
@@ -196,7 +216,7 @@ public record RouterSnapshot(
     public int hashCode() {
         return java.util.Objects.hash(pos, name, attachedLabel, tier, facing, attachedFront, networks, powered,
                 ItemStack.hashItemAndComponents(machine), machine.getCount(), machineState, faces, chunkLoad, range,
-                dimension);
+                dimension, clipboard);
     }
 
     /**
@@ -356,7 +376,8 @@ public record RouterSnapshot(
         return new RouterSnapshot(router.getBlockPos(), router.name(), router.tier(), router.facing(),
                 router.attachedFront(), List.copyOf(networks), router.powered(), machine,
                 machineState, List.of(faces), router.chunkLoadState(), range,
-                router.getLevel() == null ? Level.OVERWORLD : router.getLevel().dimension(), router.attachedLabel());
+                router.getLevel() == null ? Level.OVERWORLD : router.getLevel().dimension(), router.attachedLabel(),
+                MachineClipboard.source(player.getUUID()));
     }
 
     /** A visão das remotas, mais a máquina que o visor e os slots mostram (nula se nenhuma carregada) e o grupo do alvo. */
@@ -607,6 +628,7 @@ public record RouterSnapshot(
         RangeView.encode(buf, s.range);
         buf.writeResourceKey(s.dimension);
         buf.writeUtf(s.attachedLabel, NAME_LENGTH);
+        ComponentSerialization.STREAM_CODEC.encode(buf, s.clipboard);
     }
 
     private static RouterSnapshot decodeBody(RegistryFriendlyByteBuf buf) {
@@ -629,7 +651,8 @@ public record RouterSnapshot(
         RangeView range = RangeView.decode(buf);
         ResourceKey<Level> dimension = buf.readResourceKey(Registries.DIMENSION);
         String attachedLabel = buf.readUtf(NAME_LENGTH);
+        Component clipboard = ComponentSerialization.STREAM_CODEC.decode(buf);
         return new RouterSnapshot(pos, name, tier, facing, attachedFront, List.of(), powered, machine,
-                machineState, List.copyOf(faces), chunkLoad, range, dimension, attachedLabel);
+                machineState, List.copyOf(faces), chunkLoad, range, dimension, attachedLabel, clipboard);
     }
 }

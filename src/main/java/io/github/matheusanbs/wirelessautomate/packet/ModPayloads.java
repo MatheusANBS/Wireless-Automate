@@ -78,7 +78,9 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ModPayloads {
     /**
-     * Versão do protocolo (39: os payloads {@code CompactingStatePayload} e {@code CompactingRulePayload}, o painel da
+     * Versão do protocolo (42: os payloads {@code UnlinkGroupPayload}, {@code MachineCopyPayload} e
+     * {@code MachinePastePayload} ({@link RangePayloads}), o Desfazer {@code UNDO_MACHINE_PASTE} do aviso e o nome da
+     * cópia ({@code clipboard}) no snapshot do roteador; 39: os payloads {@code CompactingStatePayload} e {@code CompactingRulePayload}, o painel da
      * Compactação do Baú, e o {@code ChestCraftFillPayload}, o "+" do JEI na Mesa do Baú; 38: as pixel arts no layout da Tela de Sinal ({@code images}, a peça Imagem e o fundo em
      * mosaico) e na biblioteca do jogador ({@code TvLibraryPayload.arts}, as ações {@code SAVE_ART}, {@code RENAME_ART}
      * e {@code REMOVE_ART}); o update tag da Tela leva as artes só como referência e os pixels vão no
@@ -89,7 +91,7 @@ public final class ModPayloads {
      * {@code TvLibraryPayload}, {@code TvLibraryActionPayload}, {@code TvPreviewPayload} e {@code TvPreviewValuesPayload},
      * e o teto de bytes do layout no buffer de abertura da Tela); mude quando um payload mudar de formato.
      */
-    public static final String VERSION = "41";
+    public static final String VERSION = "42";
 
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(VERSION);
@@ -129,6 +131,8 @@ public final class ModPayloads {
                 (payload, context) -> handleRevertGroup(serverPlayer(context), payload));
         registrar.playToServer(ClearIdleNetworksPayload.TYPE, ClearIdleNetworksPayload.STREAM_CODEC,
                 (payload, context) -> handleClearIdleNetworks(serverPlayer(context), payload));
+        // Desvincular o grupo e copiar e colar por máquina (packet/RangePayloads).
+        RangePayloads.register(registrar);
         // Ingrediente fantasma do JEI (compat/jei); registrado sempre, com ou sem o JEI.
         registrar.playToServer(AddFilterEntryPayload.TYPE, AddFilterEntryPayload.STREAM_CODEC,
                 (payload, context) -> handleAddFilterEntry(serverPlayer(context), payload));
@@ -391,7 +395,8 @@ public final class ModPayloads {
      * Atualizar: passa para o grupo do bloco novo a máquina trocada do índice (conferida pela posição) ou as
      * trocadas do grupo (conferido pelo bloco). Depois, uma máquina escolhida continua, e um grupo escolhido
      * que só trocou de bloco também ({@link EditTargetRef#refresh} o segue pelo id); um que saiu dá lugar ao
-     * grupo de destino da primeira máquina atualizada.
+     * grupo de destino da primeira máquina atualizada. Os cartões devolvidos vão para o jogador, e o aviso diz
+     * quantas máquinas e quantos cartões ({@link RangePayloads#updatedNotice}).
      */
     public static boolean handleUpdateMachine(@Nullable ServerPlayer player, UpdateMachinePayload payload) {
         RouterEditHost host = host(player, payload.containerId());
@@ -401,7 +406,8 @@ public final class ModPayloads {
         RouterBlockEntity router = host.editedRouter();
         List<Integer> indices = updateIndices(router, payload);
         EditTargetRef before = host.targetRef();
-        RemoteMachines.Regroup result = indices.isEmpty() ? RemoteMachines.Regroup.EMPTY : router.updateReplaced(indices);
+        RemoteMachines.Regroup result = indices.isEmpty() ? RemoteMachines.Regroup.EMPTY
+                : router.updateReplaced(indices, player);
         if (result.isEmpty()) {
             return false;
         }
@@ -414,6 +420,7 @@ public final class ModPayloads {
             host.validTarget();
         }
         host.editApplied();
+        sendNotice(player, RangePayloads.updatedNotice(result.destinations().size(), result.cards().size()));
         return true;
     }
 

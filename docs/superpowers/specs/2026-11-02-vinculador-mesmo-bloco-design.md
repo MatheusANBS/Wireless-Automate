@@ -14,7 +14,7 @@ Pedido e decidido pelo dono em 02/11/2026.
 
 ## Custo
 
-Só no clique. A varredura é o cubo do raio em volta do roteador, limitada: para raios grandes, varre só os chunks carregados que cruzam o cubo, lendo o id do bloco de cada posição (sem block entity, sem capability) e parando quando junta candidatos suficientes para o limite. Raio de dimensão inteira (alcance 0): só os chunks carregados num quadrado de 8 chunks em volta do jogador, com um teto de 4.096 posições lidas por clique. Diga no aviso se o teto foi atingido ("· mais longe não foi procurado").
+Só no clique. A varredura é o cubo do raio em volta do roteador, limitada: para raios grandes, varre só os chunks carregados que cruzam o cubo, lendo o id do bloco de cada posição (sem block entity, sem capability) e parando quando junta candidatos suficientes para o limite. O raio de máquinas vai até 64 (0 = o tier não aceita o upgrade; "dimensão inteira" é só o alcance de rede, não o de máquinas): seções da mais perto para a mais longe, pulando a seção sem o bloco na paleta, com teto de 131.072 posições lidas por clique. Diga no aviso se o teto foi atingido ("· mais longe não foi procurado").
 
 ## Desvincular volta a ser num clique
 

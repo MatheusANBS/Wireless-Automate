@@ -904,6 +904,7 @@
   "gui.wirelessautomate.tablet.notice.refused.known": "Jogador desconhecido: só quem já entrou neste servidor pode ser convidado",
   "gui.wirelessautomate.tablet.notice.refused.exists": "Já está nesta rede",
   "gui.wirelessautomate.tablet.notice.refused.team": "Time não encontrado (só times de grupo do FTB Teams)",
+  "gui.wirelessautomate.tablet.notice.refused.icon": "Esse item não serve de ícone",
   "gui.wirelessautomate.tablet.notice.access.member.added": "%s convidado para %s",
   "gui.wirelessautomate.tablet.notice.access.member.removed": "%s tirado de %s",
   "gui.wirelessautomate.tablet.notice.access.team.added": "Time %s adicionado a %s",

@@ -121,7 +121,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
         GROUP_CREATE,
         GROUP_RENAME,
         GROUP_REMOVE,
-        /** Alvo: grupo; outro: rede. */
+        /** Alvo: grupo; outro: rede. Move a rede para o grupo, tirando-a dos outros. */
         GROUP_ADD_NETWORK,
         GROUP_REMOVE_NETWORK,
         /** Alvo: rede; outro: jogador (ou texto: o nome). Só quem gerencia. */
@@ -133,7 +133,9 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
         /** Alvo: rede; outro: time. Tira também um time que já foi desfeito. */
         NETWORK_TEAM_REMOVE,
         /** Alvo: grupo; valor: 1 pausa, 0 retoma. */
-        GROUP_PAUSE
+        GROUP_PAUSE,
+        /** Alvo: grupo; texto: id do item do ícone (vazio tira). Só quem gerencia o grupo. */
+        GROUP_ICON
     }
 
     private TabletSnapshot snapshot;

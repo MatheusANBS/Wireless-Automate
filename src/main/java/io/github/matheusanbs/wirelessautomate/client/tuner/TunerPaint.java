@@ -10,6 +10,7 @@ import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.packet.ConfiguratorProposalPayload;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.LightTexture;
@@ -41,7 +42,10 @@ import org.joml.Vector3f;
 @EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
 public final class TunerPaint {
     private static final Direction[] DIRECTIONS = Direction.values();
-    /** Largura de uma moldura e o vão até a de dentro, em frações da face. */
+    /**
+     * Largura de uma moldura e o vão até a de dentro, em frações da face. Até quatro tipos cabem assim na metade da
+     * face; com mais (os cinco, com o Mekanism e o Ars), as molduras e os vãos encolhem na mesma proporção.
+     */
     private static final float RING = 0.09f;
     private static final float GAP = 0.035f;
     /** O quanto véu, molduras e letras saem do bloco. */
@@ -53,6 +57,8 @@ public final class TunerPaint {
     private static final int RING_ALPHA = 0xD0;
     /** A letra tem 8 px de altura: 0,22 do bloco. */
     private static final float TEXT_SCALE = 0.22f / 8f;
+    /** A linha de letras ocupa no máximo isso da face; mais larga (cinco tipos), encolhe. */
+    private static final float TEXT_MAX_WIDTH = 0.9f;
     private static final int TEXT_BACKGROUND = 0xA0000000;
     /**
      * Longe disso a máquina nem é desenhada: os afastamentos acima são fixos, e mais longe a profundidade perde precisão
@@ -79,8 +85,11 @@ public final class TunerPaint {
         }
     }
 
-    /** A linha de letras de uma face, já com a cor de cada uma, o x de onde começa e a largura, em pixels da fonte. */
-    private record Letters(int face, FormattedCharSequence line, float x, int width) {
+    /**
+     * A linha de letras de uma face, já com a cor de cada uma, o x de onde começa e a largura, em pixels da fonte, e a
+     * escala que a faz caber na face.
+     */
+    private record Letters(int face, FormattedCharSequence line, float x, int width, float scale) {
     }
 
     /** O que o quadro desenha, montado em {@link #build}; {@code null} sem proposta. */
@@ -128,20 +137,19 @@ public final class TunerPaint {
             entries.sort((a, b) -> Integer.compare(a.type().ordinal(), b.type().ordinal()));
             int first = GuiPaint.modeColor(entries.getFirst().mode()) & 0xFFFFFF;
             quad(quads, quadColors, d, 0, 0, 1, 1, LIFT_VEIL, VEIL_ALPHA << 24 | first);
+            float step = Math.min(RING + GAP, 0.5f / entries.size());
+            float width = step * RING / (RING + GAP);
             for (int k = 0; k < entries.size(); k++) {
-                float a = k * (RING + GAP);
-                if (a + RING > 0.5f) {
-                    break;
-                }
+                float a = k * step;
                 int color = RING_ALPHA << 24 | GuiPaint.modeColor(entries.get(k).mode()) & 0xFFFFFF;
-                ring(quads, quadColors, d, a, a + RING, LIFT_RING + k * 0.0005f, color);
+                ring(quads, quadColors, d, a, a + width, LIFT_RING + k * 0.0005f, color);
             }
             if (entries.size() > 1) {
                 Letters row = letters(font, d, entries);
                 faceLetters.add(row);
                 // o fundo escuro atrás da linha, 1 px além das letras (o da fonte ficaria na frente delas)
-                float half = (row.width() / 2f + 1) * TEXT_SCALE;
-                float halfHeight = 5 * TEXT_SCALE;
+                float half = (row.width() / 2f + 1) * row.scale();
+                float halfHeight = 5 * row.scale();
                 quad(quads, quadColors, d, 0.5f - half, 0.5f - halfHeight, 0.5f + half, 0.5f + halfHeight,
                         LIFT_BACK, TEXT_BACKGROUND);
             }
@@ -166,14 +174,16 @@ public final class TunerPaint {
         MutableComponent line = Component.empty();
         for (int i = 0; i < entries.size(); i++) {
             String name = ResourceStyle.name(entries.get(i).type()).getString();
-            String letter = name.isEmpty() ? "?" : name.substring(0, name.offsetByCodePoints(0, 1)).toUpperCase();
+            String letter = name.isEmpty() ? "?" : name.substring(0, name.offsetByCodePoints(0, 1))
+                    .toUpperCase(Locale.ROOT);
             if (i > 0) {
                 line.append(" ");
             }
             line.append(Component.literal(letter).withColor(GuiPaint.modeColor(entries.get(i).mode()) & 0xFFFFFF));
         }
         int width = font.width(line);
-        return new Letters(face, line.getVisualOrderText(), -width / 2f, width);
+        float scale = width <= 0 ? TEXT_SCALE : Math.min(TEXT_SCALE, TEXT_MAX_WIDTH / width);
+        return new Letters(face, line.getVisualOrderText(), -width / 2f, width, scale);
     }
 
     /** Moldura de {@code a} a {@code b} da borda da face. */
@@ -253,7 +263,7 @@ public final class TunerPaint {
         MultiBufferSource.BufferSource text = textBuffers();
         for (Letters face : letters) {
             TEXT.set(pose.pose()).translate(ox, oy, oz).mul(FACE[face.face()])
-                    .translate(0, 0, 0.5f + LIFT_TEXT).scale(TEXT_SCALE, -TEXT_SCALE, TEXT_SCALE);
+                    .translate(0, 0, 0.5f + LIFT_TEXT).scale(face.scale(), -face.scale(), face.scale());
             font.drawInBatch(face.line(), face.x(), -3.5f, 0xFFFFFFFF, false, TEXT, text,
                     Font.DisplayMode.POLYGON_OFFSET, 0, LightTexture.FULL_BRIGHT);
         }

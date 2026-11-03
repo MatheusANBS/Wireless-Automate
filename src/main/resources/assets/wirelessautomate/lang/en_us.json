@@ -761,8 +761,6 @@
   "gui.wirelessautomate.tablet.machines.count.rows": "%s of %s lines · refine the search",
   "gui.wirelessautomate.tablet.machines.count.blocks": "%s blocks",
   "gui.wirelessautomate.tablet.machines.count.blocks.one": "%s block",
-  "gui.wirelessautomate.tablet.meta.machines": "%s machines",
-  "gui.wirelessautomate.tablet.meta.machines.one": "%s machine",
   "gui.wirelessautomate.tablet.tree.open.tooltip": "Click to show the machines of this router",
   "gui.wirelessautomate.tablet.tree.close.tooltip": "Click to hide the machines of this router",
   "gui.wirelessautomate.tablet.tree.group.open": "Click to show the machines of the group",

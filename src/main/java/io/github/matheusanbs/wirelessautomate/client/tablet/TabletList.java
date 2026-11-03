@@ -221,6 +221,15 @@ public final class TabletList {
         }
     }
 
+    /** Pede a visão Roteadores; {@code true} quando a página dela já chegou (gancho do e2e, chamado até dar certo). */
+    public boolean previewRouters() {
+        if (layout.viewBar().shown()) {
+            layout.viewBar().choose(0);
+            return false;
+        }
+        return !machineView();
+    }
+
     /** Tira a busca, as etiquetas, os filtros rápidos e o de tipo. */
     public void clearAll() {
         search.clearAll();

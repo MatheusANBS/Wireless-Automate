@@ -129,6 +129,11 @@ final class NetworkActions {
         }
     }
 
+    /** A cor escolhida no seletor ({@code rgb}) vai para a rede {@code id}. */
+    void networkColor(UUID id, int rgb) {
+        actions.networkColor(id, rgb);
+    }
+
     void setPublic(boolean value) {
         NetworkView view = networkView();
         if (view != null && view.isPublic() != value) {

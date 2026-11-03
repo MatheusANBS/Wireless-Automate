@@ -108,6 +108,25 @@ public final class NetworksProbe {
         return onNetwork() ? detail.colorSlotCenter() : null;
     }
 
+    public boolean colorOpen() {
+        return modals.current() instanceof ColorModal;
+    }
+
+    public int @Nullable [] colorSquareCenter() {
+        return modals.current() instanceof ColorModal open ? open.popup().svCenter() : null;
+    }
+
+    /** A cor (ARGB) que o seletor aberto mostra, ou 0 sem seletor. */
+    public int colorValue() {
+        return modals.current() instanceof ColorModal open ? open.current() : 0;
+    }
+
+    public void colorHexFocus() {
+        if (modals.current() instanceof ColorModal open) {
+            open.popup().focusHex();
+        }
+    }
+
     public int @Nullable [] iconSlotCenter() {
         return onGroup() ? groupPanel.iconSlotCenter() : null;
     }

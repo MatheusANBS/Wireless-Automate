@@ -100,7 +100,8 @@ final class NetworkColumn {
         return Math.max(0, contentH - (layout.h - 27 - NetworkTree.TOP));
     }
 
-    void render(GuiGraphics g, Font font, int mx, int my, @Nullable UUID network, @Nullable UUID group) {
+    void render(GuiGraphics g, Font font, int mx, int my, @Nullable UUID network, @Nullable UUID group,
+            int liveColor) {
         int left = layout.left;
         int top = layout.top;
         int h = layout.h;
@@ -125,7 +126,8 @@ final class NetworkColumn {
                 case GROUP -> renderGroup(g, font, line, left, y);
                 case LOOSE -> GuiText.draw(g, font, line.name(), left + 28, y + 6, GuiPaint.MUTED);
                 case NETWORK -> {
-                    PanelPaint.swatch(g, left + 28, y + 3, 7, line.color());
+                    PanelPaint.swatch(g, left + 28, y + 3, 7,
+                            liveColor != 0 && chosen ? liveColor : line.color());
                     GuiText.draw(g, font, line.name(), left + 39, y + 3, line.muted() ? GuiPaint.MUTED : GuiPaint.FG);
                     GuiPaint.text(g, font, line.right(), left + RIGHT - line.rightW(), y + 3, GuiPaint.MUTED);
                 }

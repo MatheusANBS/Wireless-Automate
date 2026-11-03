@@ -36,6 +36,8 @@ final class E2eNetworksSteps {
     static final String GROUP_NAME = "E2E Grupo";
     static final String SECOND_GROUP = "E2E Grupo 2";
     private static GuiTheme themeBefore = GuiTheme.LIGHT;
+    private static int colorBefore;
+    private static int chosenColor;
 
     private static NetworksProbe panel() throws StepFailure {
         return tabletScreen().networks().probe();
@@ -68,6 +70,7 @@ final class E2eNetworksSteps {
         list.add(capture("tablet-redes"));
         list.add(clipCheck("Tablet: Redes"));
         darkCapture(list, "tablet-redes-escuro");
+        colorSteps(list);
         list.add(new Step("redes: o grupo escolhido, com a rede", STEP_TIMEOUT_MS,
                 () -> clickAt(panel().groupRowCenter(groupId(SECOND_GROUP)), "a linha do segundo grupo"),
                 () -> java.util.Objects.equals(panel().selectedGroup(), groupId(SECOND_GROUP))
@@ -87,6 +90,48 @@ final class E2eNetworksSteps {
             clickAt(remove, "o Apagar grupo");
             clickAt(panel().removeCenter(), "o Apagar grupo armado");
         }, () -> groupId(SECOND_GROUP) == null, () -> "grupos " + tabletScreen().getMenu().snapshot().groups()));
+    }
+
+    /**
+     * O seletor de cor da rede dos itens: o clique no slot o abre, o clique no quadrado muda a cor, Esc fecha e grava
+     * (uma vez, ao fechar); o hexadecimal digitado também; no fim a cor de antes volta pelo servidor.
+     */
+    private static void colorSteps(List<Step> list) {
+        list.add(new Step("redes: a cor pelo seletor", STEP_TIMEOUT_MS, () -> {
+            colorBefore = serverColor();
+            clickAt(panel().colorSlotCenter(), "o slot da cor");
+        }, () -> panel().colorOpen(), () -> "seletor fechado"));
+        list.add(capture("tablet-redes-cor"));
+        darkCapture(list, "tablet-redes-cor-escuro");
+        list.add(new Step("redes: o clique no quadrado muda a cor", STEP_TIMEOUT_MS,
+                () -> clickAt(panel().colorSquareCenter(), "o quadrado da cor"),
+                () -> (panel().colorValue() & 0xFFFFFF) != colorBefore,
+                () -> "cor " + Integer.toHexString(panel().colorValue())));
+        list.add(new Step("redes: Esc fecha e grava", STEP_TIMEOUT_MS, () -> {
+            chosenColor = panel().colorValue() & 0xFFFFFF;
+            tabletScreen().keyPressed(GLFW.GLFW_KEY_ESCAPE, 0, 0);
+        }, () -> !panel().colorOpen() && serverColor() == chosenColor,
+                () -> "aberto " + panel().colorOpen() + ", servidor " + Integer.toHexString(serverColor())));
+        list.add(new Step("redes: o hexadecimal", STEP_TIMEOUT_MS, () -> {
+            clickAt(panel().colorSlotCenter(), "o slot da cor");
+            panel().colorHexFocus();
+            for (int i = 0; i < 9; i++) {
+                tabletScreen().keyPressed(GLFW.GLFW_KEY_BACKSPACE, 0, 0);
+            }
+            type("#123456");
+            tabletScreen().keyPressed(GLFW.GLFW_KEY_ENTER, 0, 0);
+            tabletScreen().keyPressed(GLFW.GLFW_KEY_ESCAPE, 0, 0);
+        }, () -> !panel().colorOpen() && serverColor() == 0x123456,
+                () -> "aberto " + panel().colorOpen() + ", servidor " + Integer.toHexString(serverColor())));
+        list.add(new Step("redes: a cor de antes volta", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            NetworkSavedData data = NetworkSavedData.get(server);
+            data.update(data.network(otherNetwork).withColor(colorBefore));
+            return null;
+        }), () -> serverColor() == colorBefore, () -> "servidor " + Integer.toHexString(serverColor())));
+    }
+
+    private static int serverColor() throws Exception {
+        return onServer(server -> NetworkSavedData.get(server).network(otherNetwork).color()) & 0xFFFFFF;
     }
 
     /** "+ Grupo" cria com o nome livre e abre o nome; digitar troca o texto todo e Enter grava {@code name}. */

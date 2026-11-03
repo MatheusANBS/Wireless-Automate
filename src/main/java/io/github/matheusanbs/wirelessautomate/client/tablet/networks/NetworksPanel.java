@@ -185,6 +185,22 @@ public final class NetworksPanel {
         rebuild(font());
     }
 
+    /** Fecha a janela aberta, que grava o que guardava (a cor); a tela chama antes de fechar o menu. */
+    public void closeWindows() {
+        modals.close();
+    }
+
+    /** A área da grade de ícones aberta ({@code x, y, w, h}), onde o JEI solta um item, ou {@code null}. */
+    public int @Nullable [] ghostBounds() {
+        return windows.ghostBounds();
+    }
+
+    public void acceptGhost(Object ingredient) {
+        if (ingredient instanceof ItemStack stack) {
+            windows.acceptGhost(stack);
+        }
+    }
+
     // ------------------------------------------------------------------ entrada
 
     public boolean mouseClicked(double mx, double my, int button) {

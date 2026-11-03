@@ -4,6 +4,7 @@ import io.github.matheusanbs.wirelessautomate.client.tablet.kit.DropdownModal;
 import io.github.matheusanbs.wirelessautomate.client.tablet.kit.ModalLayer;
 import java.util.UUID;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -129,5 +130,31 @@ public final class NetworksProbe {
 
     public int @Nullable [] iconSlotCenter() {
         return onGroup() ? groupPanel.iconSlotCenter() : null;
+    }
+
+    public boolean iconOpen() {
+        return modals.current() instanceof IconModal;
+    }
+
+    /** Dá o foco ao campo de busca da grade aberta (ele já abre com o foco). */
+    public void iconSearchFocus() {
+        if (modals.current() instanceof IconModal open) {
+            open.searchFocus();
+        }
+    }
+
+    /** Centro da célula {@code index} da grade de ícones aberta, ou {@code null}. */
+    public int @Nullable [] iconCellCenter(int index) {
+        return modals.current() instanceof IconModal open ? open.cellCenter(index) : null;
+    }
+
+    /** O item da célula {@code index} da grade aberta, ou {@code null} (também enquanto a busca espera o texto). */
+    public @Nullable ResourceLocation iconCellItem(int index) {
+        return modals.current() instanceof IconModal open ? open.cellItem(index) : null;
+    }
+
+    /** Quanto levou a última consulta da grade aberta ao registro, em nanossegundos (0 sem consulta). */
+    public long iconSearchNanos() {
+        return modals.current() instanceof IconModal open ? open.lastSearchNanos() : 0;
     }
 }

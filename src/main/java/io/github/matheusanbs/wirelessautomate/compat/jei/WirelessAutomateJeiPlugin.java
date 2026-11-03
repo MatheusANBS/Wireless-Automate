@@ -6,6 +6,7 @@ import io.github.matheusanbs.wirelessautomate.client.guide.GuideKeys;
 import io.github.matheusanbs.wirelessautomate.client.recipe.RecipeEditorScreen;
 import io.github.matheusanbs.wirelessautomate.client.tv.TvScreen;
 import io.github.matheusanbs.wirelessautomate.client.storage.StorageListScreen;
+import io.github.matheusanbs.wirelessautomate.client.tablet.TabletScreen;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
@@ -54,7 +55,8 @@ import io.github.matheusanbs.wirelessautomate.recipe.TierUpgradeRecipe;
  * Integração opcional com o JEI. Só o próprio JEI acha e carrega esta classe (pela anotação
  * {@link JeiPlugin}, no cliente); nenhum código do mod a referencia, então sem o JEI nada daqui é
  * carregado. Na tela de filtro: arrastar um ingrediente para a grade e Shift + clique nele na lista
- * acrescentam a entrada ({@link FilterGhostHandler}); as áreas extras do painel afastam o JEI. Na
+ * acrescentam a entrada ({@link FilterGhostHandler}); as áreas extras do painel afastam o JEI. No Tablet, soltar
+ * um item na grade de ícones de um grupo escolhe o ícone ({@link TabletGhostHandler}). Na
  * bancada, mostra as três receitas de cada anel (cartão de um degrau, cartão que pula e receita direta) e o
  * upgrade bloco + cartão com a origem do cartão. O tier é subtipo do roteador e dos armazenamentos, e a origem
  * é subtipo do cartão, para o JEI listar cada um separado, como a aba criativa. Os itens dos tiers que não carregaram
@@ -280,6 +282,7 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
         registration.addGhostIngredientHandler(FilterScreen.class, new FilterGhostHandler());
         registration.addGhostIngredientHandler(RecipeEditorScreen.class, new RecipeEditorGhostHandler());
         registration.addGhostIngredientHandler(TvScreen.class, new TvGhostHandler());
+        registration.addGhostIngredientHandler(TabletScreen.class, new TabletGhostHandler());
         // Lista do Baú e dos Tanques: o tipo sob o mouse vale para os atalhos do JEI (R, U, A...).
         IIngredientManager ingredients = registration.getJeiHelpers().getIngredientManager();
         registration.addGuiContainerHandler(StorageListScreen.class, new IGuiContainerHandler<StorageListScreen>() {

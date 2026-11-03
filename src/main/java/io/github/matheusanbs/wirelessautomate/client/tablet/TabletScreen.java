@@ -236,10 +236,28 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         list.tick();
     }
 
+    /** A janela aberta da aba Redes grava (a cor) antes do menu fechar: o servidor recusa o que vem depois. */
+    @Override
+    public void onClose() {
+        networks.closeWindows();
+        super.onClose();
+    }
+
     @Override
     public void removed() {
+        networks.closeWindows();
         PanelNotices.clear();
         super.removed();
+    }
+
+    /** A grade de ícones aberta na aba Redes, onde o JEI solta um item ({@code x, y, w, h}), ou {@code null}. */
+    public int @Nullable [] ghostBounds() {
+        return tab == Tab.NETWORKS ? networks.ghostBounds() : null;
+    }
+
+    /** Um ingrediente solto do JEI na grade de ícones (só item conta). */
+    public void acceptGhost(Object ingredient) {
+        networks.acceptGhost(ingredient);
     }
 
     // ------------------------------------------------------------------ geometria

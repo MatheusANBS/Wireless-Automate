@@ -6,6 +6,7 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eUi.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
 import io.github.matheusanbs.wirelessautomate.GuiTheme;
+import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.client.GuiThemes;
 import io.github.matheusanbs.wirelessautomate.client.tablet.TabletScreen;
 import io.github.matheusanbs.wirelessautomate.client.tablet.networks.NetworksProbe;
@@ -13,9 +14,12 @@ import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.WaGroup;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -25,9 +29,10 @@ import org.lwjgl.glfw.GLFW;
 /**
  * A aba Redes do Tablet no e2e: "+ Grupo" cria e abre o nome (digitar troca e Enter grava), o seletor Grupo põe a rede
  * dos itens no grupo, Pausar pausa o grupo dela (as pedras param e voltam), um segundo grupo leva a rede (ela sai do
- * primeiro, "uma rede, um grupo"), o segundo grupo escolhido com a rede dele ({@code tablet-redes*},
- * {@code tablet-grupo*}, também no tema escuro), o "+ pôr uma rede neste grupo" do primeiro a traz de volta e o "Apagar grupo" de dois cliques tira o
- * segundo grupo.
+ * primeiro, "uma rede, um grupo"), o seletor de cor (fechar o Tablet com ele aberto grava), o segundo grupo escolhido
+ * com a rede dele ({@code tablet-redes*}, {@code tablet-grupo*}, também no tema escuro), o "+ pôr uma rede neste
+ * grupo" do primeiro a traz de volta, a grade de ícones dele ({@code tablet-grupo-icone*}) e o "Apagar grupo" de dois
+ * cliques tira o segundo grupo.
  */
 final class E2eNetworksSteps {
     private E2eNetworksSteps() {
@@ -38,6 +43,10 @@ final class E2eNetworksSteps {
     private static GuiTheme themeBefore = GuiTheme.LIGHT;
     private static int colorBefore;
     private static int chosenColor;
+    private static int colorAtOpen;
+    private static long firstSearchNanos;
+    private static final ResourceLocation DIAMOND = ResourceLocation.withDefaultNamespace("diamond");
+    private static final ResourceLocation EMERALD = ResourceLocation.withDefaultNamespace("emerald");
 
     private static NetworksProbe panel() throws StepFailure {
         return tabletScreen().networks().probe();
@@ -84,6 +93,7 @@ final class E2eNetworksSteps {
             clickAt(panel().addToGroupCenter(), "o link de pôr uma rede");
             clickAt(panel().pickerRowCenter(otherNetwork), "a linha da rede dos itens");
         }, () -> onlyIn(GROUP_NAME), () -> "grupos no servidor " + groupsOf()));
+        iconSteps(list);
         list.add(new Step("redes: o segundo grupo sai", STEP_TIMEOUT_MS, () -> {
             clickAt(panel().groupRowCenter(groupId(SECOND_GROUP)), "a linha do segundo grupo");
             int[] remove = panel().removeCenter();
@@ -94,7 +104,8 @@ final class E2eNetworksSteps {
 
     /**
      * O seletor de cor da rede dos itens: o clique no slot o abre, o clique no quadrado muda a cor, Esc fecha e grava
-     * (uma vez, ao fechar); o hexadecimal digitado também; no fim a cor de antes volta pelo servidor.
+     * (uma vez, ao fechar); o hexadecimal digitado também; fechar o Tablet com o seletor aberto também grava (e o
+     * Tablet abre de novo na rede); no fim a cor de antes volta pelo servidor.
      */
     private static void colorSteps(List<Step> list) {
         list.add(new Step("redes: a cor pelo seletor", STEP_TIMEOUT_MS, () -> {
@@ -123,11 +134,86 @@ final class E2eNetworksSteps {
             tabletScreen().keyPressed(GLFW.GLFW_KEY_ESCAPE, 0, 0);
         }, () -> !panel().colorOpen() && serverColor() == 0x123456,
                 () -> "aberto " + panel().colorOpen() + ", servidor " + Integer.toHexString(serverColor())));
+        list.add(new Step("redes: o seletor aberto de novo", STEP_TIMEOUT_MS, () -> {
+            colorAtOpen = serverColor();
+            clickAt(panel().colorSlotCenter(), "o slot da cor");
+        }, () -> panel().colorOpen(), () -> "seletor fechado"));
+        list.add(new Step("redes: o quadrado muda a cor de novo", STEP_TIMEOUT_MS,
+                () -> clickAt(panel().colorSquareCenter(), "o quadrado da cor"),
+                () -> (panel().colorValue() & 0xFFFFFF) != colorAtOpen,
+                () -> "cor " + Integer.toHexString(panel().colorValue())));
+        list.add(new Step("redes: fechar o Tablet com o seletor aberto grava", STEP_TIMEOUT_MS, () -> {
+            chosenColor = panel().colorValue() & 0xFFFFFF;
+            tabletScreen().onClose();
+        }, () -> Minecraft.getInstance().screen == null && serverColor() == chosenColor,
+                () -> "tela " + describe(Minecraft.getInstance().screen) + ", servidor " + Integer.toHexString(serverColor())));
+        list.add(E2eTabletMachinesSteps.openTablet("redes: o Tablet de volta"));
+        list.add(chooseNetwork("redes: de volta: "));
         list.add(new Step("redes: a cor de antes volta", STEP_TIMEOUT_MS, () -> onServer(server -> {
             NetworkSavedData data = NetworkSavedData.get(server);
             data.update(data.network(otherNetwork).withColor(colorBefore));
             return null;
         }), () -> serverColor() == colorBefore, () -> "servidor " + Integer.toHexString(serverColor())));
+    }
+
+    /**
+     * A grade de ícones do grupo escolhido: o clique no slot a abre com o foco na busca, "diamond" põe o diamante na
+     * primeira célula (150 ms depois da última tecla), o clique nele o grava; um item solto do JEI (pelo gancho da
+     * tela; o arraste de verdade fica para o teste à mão) também; o clique no escolhido tira o ícone.
+     */
+    private static void iconSteps(List<Step> list) {
+        list.add(new Step("grupo: abrir a grade de ícones", STEP_TIMEOUT_MS, () -> {
+            openIcons();
+            type("diamon");
+        }, () -> {
+            ResourceLocation first = panel().iconCellItem(0);
+            return first != null && !first.equals(DIAMOND);
+        }, () -> "célula 0: " + panel().iconCellItem(0)));
+        list.add(new Step("grupo: \"diamond\" põe o diamante primeiro", STEP_TIMEOUT_MS, () -> {
+            firstSearchNanos = panel().iconSearchNanos();
+            type("d");
+        }, () -> DIAMOND.equals(panel().iconCellItem(0)) && panel().iconCellCenter(0) != null,
+                () -> "célula 0: " + panel().iconCellItem(0)));
+        list.add(new Step("grupo: o tempo da busca", STEP_TIMEOUT_MS, () -> WirelessAutomate.LOGGER.info(
+                "E2E: busca da grade de ícones: primeira {} µs (monta o catálogo), seguinte {} µs",
+                firstSearchNanos / 1000, panel().iconSearchNanos() / 1000), () -> true, () -> ""));
+        list.add(capture("tablet-grupo-icone"));
+        darkCapture(list, "tablet-grupo-icone-escuro");
+        list.add(new Step("grupo: escolher o diamante", STEP_TIMEOUT_MS,
+                () -> clickAt(panel().iconCellCenter(0), "a célula do diamante"),
+                () -> !panel().iconOpen() && iconIs(DIAMOND), () -> "ícone " + serverIcon()));
+        list.add(new Step("grupo: o JEI", STEP_TIMEOUT_MS, () -> {
+            openIcons();
+            tabletScreen().acceptGhost(new ItemStack(Items.EMERALD));
+        }, () -> !panel().iconOpen() && iconIs(EMERALD), () -> "ícone " + serverIcon()));
+        list.add(new Step("grupo: tirar o ícone", STEP_TIMEOUT_MS, () -> {
+            openIcons();
+            if (!EMERALD.equals(panel().iconCellItem(0))) {
+                throw new StepFailure("a primeira célula não é o ícone escolhido: " + panel().iconCellItem(0));
+            }
+            clickAt(panel().iconCellCenter(0), "a célula do escolhido");
+        }, () -> !panel().iconOpen() && iconIs(null), () -> "ícone " + serverIcon()));
+    }
+
+    private static void openIcons() throws StepFailure {
+        clickAt(panel().iconSlotCenter(), "o slot do ícone");
+        if (!panel().iconOpen()) {
+            throw new StepFailure("a grade de ícones não abriu");
+        }
+        panel().iconSearchFocus();
+    }
+
+    /** O ícone do grupo {@link #GROUP_NAME} é {@code id} no servidor e no snapshot da tela. */
+    private static boolean iconIs(@Nullable ResourceLocation id) throws Exception {
+        UUID groupId = groupId(GROUP_NAME);
+        boolean shown = tabletScreen().getMenu().snapshot().groups().stream()
+                .anyMatch(g -> g.id().equals(groupId) && Objects.equals(g.icon().orElse(null), id));
+        return shown && Objects.equals(serverIcon(), id);
+    }
+
+    private static @Nullable ResourceLocation serverIcon() throws Exception {
+        WaGroup group = group(GROUP_NAME);
+        return group == null ? null : group.icon();
     }
 
     private static int serverColor() throws Exception {

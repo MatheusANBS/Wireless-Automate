@@ -10,7 +10,8 @@ import java.util.function.Function;
  * A conta de "Nesta rede" do Tablet: por rede, quantas máquinas há e, por tipo, quantas dão (Extrair ou Armazém) e
  * quantas recebem (Inserir ou Armazém). Uma máquina conta numa rede quando a máscara dela ({@code NetworkOrder}) tem o
  * bit da rede; dá ou recebe um tipo quando tem o papel dele e a rede está entre as do tipo no nó. A máscara é a união
- * dos tipos, então uma máquina com papéis cruzados em duas redes do mesmo tipo pode contar a mais. Lógica pura, com
+ * dos tipos, então uma máquina com papéis cruzados em duas redes do mesmo tipo pode contar a mais. As redes além da
+ * 63ª de um nó não contam: o bit 63 da máscara é o "alguma das outras" do {@code NetworkOrder}. Lógica pura, com
  * JUnit; os bits dos papéis são os do {@code NodeIndex.role} (um GameTest confere).
  */
 public final class NetworkTally {

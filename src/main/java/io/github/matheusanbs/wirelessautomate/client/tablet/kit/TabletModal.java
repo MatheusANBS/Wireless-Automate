@@ -46,4 +46,9 @@ public interface TabletModal {
     /** A camada a fechou. */
     default void closed() {
     }
+
+    /** A camada a fechou porque o que ela editava sumiu: nada vai ao servidor. Por padrão, como {@link #closed}. */
+    default void dropped() {
+        closed();
+    }
 }

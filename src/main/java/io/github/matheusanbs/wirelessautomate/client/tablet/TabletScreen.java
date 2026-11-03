@@ -13,6 +13,7 @@ import io.github.matheusanbs.wirelessautomate.client.ResizeGrip;
 import io.github.matheusanbs.wirelessautomate.client.ThemeToggle;
 import io.github.matheusanbs.wirelessautomate.client.access.AccessPanel;
 import io.github.matheusanbs.wirelessautomate.client.router.NodePanel;
+import io.github.matheusanbs.wirelessautomate.client.tablet.kit.ModalLayer;
 import io.github.matheusanbs.wirelessautomate.client.tablet.networks.NetworksPanel;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
@@ -79,6 +80,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     private Tab tab = Tab.LIST;
     private int lastVersion = -1;
+    private int lastHeader = -1;
     private EditBox searchBox;
 
     public TabletScreen(TabletMenu menu, Inventory inventory, Component title) {
@@ -178,11 +180,17 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         tabs.refresh(tab, searchBox);
     }
 
-    /** Snapshot novo: a seleção que sumiu sai e o aviso aparece. */
+    /**
+     * Snapshot novo: a seleção que sumiu sai e o aviso aparece. A aba Redes só lê o cabeçalho e só se remonta quando
+     * ele chega, não a cada página ou amostra ao vivo da aba Máquina.
+     */
     private void onSnapshot() {
         TabletSnapshot s = snapshot();
         frame.onSnapshot(s);
-        networks.onSnapshot(s, font);
+        if (menu.headerVersion() != lastHeader) {
+            lastHeader = menu.headerVersion();
+            networks.onSnapshot(s, font);
+        }
         selectBar.onSnapshot(s);
         list.onSnapshot();
     }
@@ -373,7 +381,8 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             Component modalTip = tab == Tab.NETWORKS ? networks.tooltip(mouseX, mouseY) : null;
             Component clipped = modalTip != null ? modalTip : GuiText.clipAt(mouseX, mouseY);
             if (clipped != null) {
-                setTooltipForNextRenderPass(clipped);
+                // desenhada aqui e não no fim do quadro: no z de sempre, os itens da janela a cobririam
+                ModalLayer.tooltip(g, font, clipped, mouseX, mouseY);
             }
             return;
         }

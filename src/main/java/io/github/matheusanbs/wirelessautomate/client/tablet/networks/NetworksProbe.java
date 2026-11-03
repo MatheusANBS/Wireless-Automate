@@ -40,6 +40,11 @@ public final class NetworksProbe {
         return modals.isOpen();
     }
 
+    /** Quantos snapshots montaram a aba desde que a tela abriu (só os de cabeçalho novo). */
+    public int snapshotBuilds() {
+        return panel.snapshotBuilds();
+    }
+
     public @Nullable EditBox titleBox() {
         return panel.titleBox();
     }

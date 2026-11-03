@@ -29,7 +29,7 @@ Alcance). O Tablet abre já com o nó dela escolhido, antes da interface da máq
 | **Máquina** | As máquinas da base (por ora, a Lista na visão Máquinas). |
 | **Fluxos** | Quanto entra e sai de cada tipo e de cada rede, e o que precisa de atenção. |
 
-O cabeçalho conta a sua base: nós, máquinas e redes.
+No topo ficam o título, o botão do tema (claro ou escuro) e os avisos do Tablet, como uma ação recusada.
 
 ## O painel do nó
 
@@ -112,7 +112,9 @@ não aparece, mesmo que o roteador dela também mova fluidos.
   - **o grupo:** uma rede fica num grupo só; escolher outro a muda de lugar;
   - **o acesso:** **Todos** ou **Convidados** (com **+ convidar** para pôr jogadores e times);
   - **Nesta rede:** quantas máquinas dão e recebem de cada tipo.
-- **Pausar** para todas as redes do grupo da rede; **Apagar rede** pede dois cliques.
+- **Pausar** para todas as redes do grupo da rede. Numa rede sem grupo, fica desativado.
+- **Usar** faz da rede a ativa do Vinculador. A rede ativa mostra **Em uso**.
+- **Apagar rede** pede dois cliques.
 - Clique num grupo para mudar o nome e o ícone (clique no ícone e busque um item, ou arraste um do JEI), ver as
   redes dele, pôr outra rede nele, pausar e apagar.
 
@@ -202,7 +204,7 @@ Range Upgrade). The Tablet opens with its node already chosen, before the machin
 | **Machine** | The machines of your base (for now, the List in the Machines view). |
 | **Flows** | How much of each type comes in and goes out, per network, and what needs attention. |
 
-The header counts your base: nodes, machines and networks.
+At the top sit the title, the theme button (light or dark) and the Tablet's notices, such as a refused action.
 
 ## The node panel
 
@@ -287,7 +289,9 @@ On the left are the groups, each with its icon and its networks, and last **No g
   - **the group:** a network sits in one group only; choosing another moves it;
   - **the access:** **Everyone** or **Guests** (with **+ invite** to add players and teams);
   - **In this network:** how many machines give and receive of each type.
-- **Pause** stops every network of the network's group; **Delete network** takes two clicks.
+- **Pause** stops every network of the network's group. On a network without a group, it is disabled.
+- **Use** makes the network the Linker's active one. The active network shows **In use**.
+- **Delete network** takes two clicks.
 - Click a group to change its name and icon (click the icon and search for an item, or drag one from JEI),
   see its networks, put another network in it, pause and delete.
 

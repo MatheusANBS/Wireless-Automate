@@ -31,8 +31,9 @@ import org.lwjgl.glfw.GLFW;
  * dos itens no grupo, Pausar pausa o grupo dela (as pedras param e voltam), um segundo grupo leva a rede (ela sai do
  * primeiro, "uma rede, um grupo"), o seletor de cor (fechar o Tablet com ele aberto grava), o segundo grupo escolhido
  * com a rede dele ({@code tablet-redes*}, {@code tablet-grupo*}, também no tema escuro), o "+ pôr uma rede neste
- * grupo" do primeiro a traz de volta, a grade de ícones dele ({@code tablet-grupo-icone*}) e o "Apagar grupo" de dois
- * cliques tira o segundo grupo.
+ * grupo" do primeiro a traz de volta, a grade de ícones dele ({@code tablet-grupo-icone*}, com a dica de uma célula
+ * por cima dos itens vizinhos em {@code tablet-grupo-icone-dica*}) e o "Apagar grupo" de dois cliques tira o
+ * segundo grupo.
  */
 final class E2eNetworksSteps {
     private E2eNetworksSteps() {
@@ -179,6 +180,16 @@ final class E2eNetworksSteps {
                 firstSearchNanos / 1000, panel().iconSearchNanos() / 1000), () -> true, () -> ""));
         list.add(capture("tablet-grupo-icone"));
         darkCapture(list, "tablet-grupo-icone-escuro");
+        list.add(iconTipCapture("tablet-grupo-icone-dica"));
+        E2eVariants.escuro(list, () -> {
+            list.add(new Step("grupo: tema escuro (dica)", STEP_TIMEOUT_MS, () -> {
+                themeBefore = GuiThemes.current();
+                GuiThemes.preview(GuiTheme.DARK);
+            }, () -> GuiThemes.current() == GuiTheme.DARK, () -> "tema " + GuiThemes.current()));
+            list.add(iconTipCapture("tablet-grupo-icone-dica-escuro"));
+            list.add(new Step("grupo: tema de volta (dica)", STEP_TIMEOUT_MS, () -> GuiThemes.preview(themeBefore),
+                    () -> GuiThemes.current() == themeBefore, () -> "tema " + GuiThemes.current()));
+        });
         list.add(new Step("grupo: escolher o diamante", STEP_TIMEOUT_MS,
                 () -> clickAt(panel().iconCellCenter(0), "a célula do diamante"),
                 () -> !panel().iconOpen() && iconIs(DIAMOND), () -> "ícone " + serverIcon()));
@@ -193,6 +204,25 @@ final class E2eNetworksSteps {
             }
             clickAt(panel().iconCellCenter(0), "a célula do escolhido");
         }, () -> !panel().iconOpen() && iconIs(null), () -> "ícone " + serverIcon()));
+    }
+
+    /** O mouse na célula do diamante: a dica do nome fica por cima dos itens das células vizinhas. */
+    private static Step iconTipCapture(String file) {
+        return new Step("grupo: a dica sobre a grade (" + file + ")", STEP_TIMEOUT_MS, () -> {
+            int[] c = panel().iconCellCenter(0);
+            if (c == null) {
+                throw new StepFailure("sem a célula do diamante à vista");
+            }
+            moveMouse(c[0], c[1]);
+        }, () -> {
+            int[] c = panel().iconCellCenter(0);
+            if (stepTicks < 6 || c == null || tabletScreen().networks().tooltip(c[0], c[1]) == null) {
+                return false;
+            }
+            capture(Minecraft.getInstance(), file);
+            moveMouse(0, 0);
+            return true;
+        }, () -> "sem a dica da célula 0");
     }
 
     private static void openIcons() throws StepFailure {

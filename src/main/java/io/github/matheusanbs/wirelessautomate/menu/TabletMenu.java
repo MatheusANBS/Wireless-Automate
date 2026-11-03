@@ -140,6 +140,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
 
     private TabletSnapshot snapshot;
     private int version;
+    private int headerVersion;
     /** Cliente: o último painel do nó escolhido recebido, ou {@code null}. */
     private @Nullable TabletPanelPayload panel;
     private int panelVersion;
@@ -426,7 +427,20 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
         return version;
     }
 
+    /**
+     * Muda só quando o cabeçalho pode ter mudado (snapshot inteiro ou {@code TabletHeaderPayload}), não com uma página
+     * ou uma amostra ao vivo: o que só lê o cabeçalho (a aba Redes) não se remonta a cada amostra.
+     */
+    public int headerVersion() {
+        return headerVersion;
+    }
+
     public void applySnapshot(TabletSnapshot snapshot) {
+        store(snapshot);
+        headerVersion++;
+    }
+
+    private void store(TabletSnapshot snapshot) {
         this.snapshot = snapshot;
         version++;
     }
@@ -436,14 +450,14 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
         applySnapshot(header.withPage(snapshot.page()));
     }
 
-    /** Cliente: página nova ({@code TabletPagePayload}). */
+    /** Cliente: página nova ({@code TabletPagePayload}); o cabeçalho fica. */
     public void applyPage(TabletSnapshot.Page page) {
-        applySnapshot(snapshot.withPage(page));
+        store(snapshot.withPage(page));
     }
 
     /** Cliente: só o estado e a vazão dos nós e das linhas de máquina da página mudaram ({@code TabletLivePayload}). */
     public void applyLives(List<TabletSnapshot.Live> lives, List<TabletRows.MachineLive> machines) {
-        applySnapshot(snapshot.withPage(snapshot.page().withLives(lives, machines)));
+        store(snapshot.withPage(snapshot.page().withLives(lives, machines)));
     }
 
     /** Cliente: o painel novo do nó escolhido ({@code TabletPanelPayload}). */

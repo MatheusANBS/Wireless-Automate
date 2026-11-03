@@ -55,6 +55,8 @@ public final class NetworksPanel {
     private int builtTheme = -1;
     /** A aba estava à vista no último {@link #refresh}: ao sair dela, o acesso larga o que foi digitado. */
     private boolean shownBefore;
+    /** Quantos snapshots montaram a aba: o e2e confere que uma amostra ao vivo não conta. */
+    private int snapshotBuilds;
     private final NetworksProbe probe;
 
     public NetworksPanel(TabletLayout layout, TabletMenu menu, Supplier<TabletSnapshot> snapshot, TabletActions actions) {
@@ -106,9 +108,11 @@ public final class NetworksPanel {
 
     /**
      * Snapshot novo: a árvore, os textos e os ícones são refeitos; o escolhido que sumiu sai; o que acabou de ser
-     * criado fica escolhido com o nome aberto; sem nada escolhido, vale a primeira rede.
+     * criado fica escolhido com o nome aberto; sem nada escolhido, vale a primeira rede. A janela aberta sobre o
+     * escolhido que sumiu fecha sem gravar: a cor de uma rede apagada não vai ao servidor.
      */
     public void onSnapshot(TabletSnapshot s, Font font) {
+        snapshotBuilds++;
         model.build(s);
         boolean createdGroup = send.awaitingGroup();
         UUID created = send.takeCreated();
@@ -116,6 +120,7 @@ public final class NetworksPanel {
             pick(createdGroup ? null : created, createdGroup ? created : null);
         }
         if (network != null && model.network(network) == null || group != null && model.group(group) == null) {
+            modals.drop();
             pick(null, null);
         }
         if (network == null && group == null) {
@@ -335,6 +340,10 @@ public final class NetworksPanel {
 
     public boolean modalOpen() {
         return modals.isOpen();
+    }
+
+    int snapshotBuilds() {
+        return snapshotBuilds;
     }
 
     @Nullable UUID network() {

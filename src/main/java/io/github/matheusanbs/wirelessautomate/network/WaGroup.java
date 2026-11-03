@@ -7,7 +7,9 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.Tag;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Grupo de redes de um mesmo sistema (ex.: "Linha 5x"), só para organizar no Tablet: ver as redes
@@ -16,18 +18,29 @@ import net.minecraft.server.level.ServerPlayer;
  *
  * @param networks redes do grupo, em ordem de inclusão, sem repetição
  * @param paused   as redes do grupo ficam paradas (o motor não monta as rotas delas)
+ * @param icon     id do item que representa o grupo no Tablet, ou {@code null} (o Tablet usa a primeira máquina)
  */
-public record WaGroup(UUID id, String name, UUID owner, List<UUID> networks, boolean paused) {
+public record WaGroup(UUID id, String name, UUID owner, List<UUID> networks, boolean paused,
+        @Nullable ResourceLocation icon) {
     public WaGroup {
         networks = List.copyOf(networks);
     }
 
+    /** Um grupo sem ícone. */
+    public WaGroup(UUID id, String name, UUID owner, List<UUID> networks, boolean paused) {
+        this(id, name, owner, networks, paused, null);
+    }
+
+    public WaGroup withIcon(@Nullable ResourceLocation icon) {
+        return new WaGroup(id, name, owner, networks, paused, icon);
+    }
+
     public WaGroup withName(String name) {
-        return new WaGroup(id, name, owner, networks, paused);
+        return new WaGroup(id, name, owner, networks, paused, icon);
     }
 
     public WaGroup withPaused(boolean paused) {
-        return new WaGroup(id, name, owner, networks, paused);
+        return new WaGroup(id, name, owner, networks, paused, icon);
     }
 
     public WaGroup withNetwork(UUID network) {
@@ -36,7 +49,7 @@ public record WaGroup(UUID id, String name, UUID owner, List<UUID> networks, boo
         }
         List<UUID> list = new ArrayList<>(networks);
         list.add(network);
-        return new WaGroup(id, name, owner, list, paused);
+        return new WaGroup(id, name, owner, list, paused, icon);
     }
 
     public WaGroup withoutNetwork(UUID network) {
@@ -45,7 +58,7 @@ public record WaGroup(UUID id, String name, UUID owner, List<UUID> networks, boo
         }
         List<UUID> list = new ArrayList<>(networks);
         list.remove(network);
-        return new WaGroup(id, name, owner, list, paused);
+        return new WaGroup(id, name, owner, list, paused, icon);
     }
 
     /** Dono ou operador nível 2. */
@@ -66,6 +79,9 @@ public record WaGroup(UUID id, String name, UUID owner, List<UUID> networks, boo
         if (paused) {
             tag.putBoolean("paused", true);
         }
+        if (icon != null) {
+            tag.putString("icon", icon.toString());
+        }
         return tag;
     }
 
@@ -78,7 +94,9 @@ public record WaGroup(UUID id, String name, UUID owner, List<UUID> networks, boo
                 networks.add(network);
             }
         }
+        ResourceLocation icon = tag.contains("icon", Tag.TAG_STRING)
+                ? ResourceLocation.tryParse(tag.getString("icon")) : null;
         return new WaGroup(tag.getUUID("id"), tag.getString("name"), tag.getUUID("owner"), networks,
-                tag.getBoolean("paused"));
+                tag.getBoolean("paused"), icon);
     }
 }

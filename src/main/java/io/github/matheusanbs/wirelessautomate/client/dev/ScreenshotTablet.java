@@ -238,9 +238,9 @@ final class ScreenshotTablet {
                         0, null));
         List<TabletSnapshot.GroupView> groups = List.of(
                 new TabletSnapshot.GroupView(UUID.nameUUIDFromBytes("g1".getBytes()), "Linha 5x", "Dev", true, true,
-                        List.of(ore, line, fluids)),
+                        List.of(ore, line, fluids), Optional.of(ResourceLocation.withDefaultNamespace("iron_pickaxe"))),
                 new TabletSnapshot.GroupView(UUID.nameUUIDFromBytes("g2".getBytes()), "Base principal", "Dev", true, false,
-                        List.of(base)));
+                        List.of(base), Optional.empty()));
         java.util.Map<ResourceLocation, Integer> machines = new java.util.LinkedHashMap<>();
         java.util.Map<UUID, Integer> nets = new java.util.LinkedHashMap<>();
         for (TabletSnapshot.NodeView node : nodes) {

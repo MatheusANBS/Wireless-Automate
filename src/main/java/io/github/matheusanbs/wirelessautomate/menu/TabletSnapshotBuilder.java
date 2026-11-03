@@ -151,7 +151,7 @@ final class TabletSnapshotBuilder {
         for (WaGroup group : data.groups()) {
             if (operator || group.owner().equals(me)) {
                 groups.add(new GroupView(group.id(), group.name(), ownerName(server, group.owner(), names),
-                        group.canManage(viewer), group.paused(), group.networks()));
+                        group.canManage(viewer), group.paused(), group.networks(), Optional.ofNullable(group.icon())));
             }
         }
 

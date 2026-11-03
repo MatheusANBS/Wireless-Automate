@@ -215,6 +215,12 @@ final class NameFields {
 
     /** Nome da rede ou do grupo no alto da coluna da direita; clicável para renomear quando pode. */
     void renderTitle(GuiGraphics g, Font font, int mouseX, int mouseY, Component name, int color, boolean canRename) {
+        renderTitle(g, font, mouseX, mouseY, name, color, canRename, 0);
+    }
+
+    /** O título com {@code reserve} pixels livres à direita (o slot do ícone do grupo). */
+    void renderTitle(GuiGraphics g, Font font, int mouseX, int mouseY, Component name, int color, boolean canRename,
+            int reserve) {
         int x = layout.left + RX;
         int y = layout.top + BODY_Y;
         if (renaming != Rename.NONE) {
@@ -223,9 +229,9 @@ final class NameFields {
         }
         boolean hovered = canRename && overTitle(mouseX, mouseY);
         GuiPaint.eye(g, x, y + 4, color);
-        GuiText.draw(g, font, name, x + 9, y + 3, layout.rw() - 10, hovered ? GuiPaint.ACCENT : GuiPaint.FG);
+        GuiText.draw(g, font, name, x + 9, y + 3, layout.rw() - 10 - reserve, hovered ? GuiPaint.ACCENT : GuiPaint.FG);
         if (hovered) {
-            int width = Math.min(font.width(name), layout.rw() - 10);
+            int width = Math.min(font.width(name), layout.rw() - 10 - reserve);
             for (int i = 0; i < width; i += 2) {
                 g.fill(x + 9 + i, y + 12, x + 10 + i, y + 13, GuiPaint.ACCENT);
             }

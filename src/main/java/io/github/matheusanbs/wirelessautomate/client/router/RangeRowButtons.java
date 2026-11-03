@@ -69,13 +69,18 @@ public final class RangeRowButtons {
     private boolean idleNetworks;
     /** O nome de origem da cópia do jogador (vazio sem cópia), do snapshot. */
     private Component clipboard = Component.empty();
-    /** O nome da linha e o "Desvincular 3?" do grupo, medidos só quando a visão, o alvo ou o nome da presa mudam. */
+    /**
+     * O nome da linha, o "Desvincular 3?" do grupo e o "Voltar 2?" do ↺ do grupo, medidos só quando a visão, o alvo
+     * ou o nome da presa mudam.
+     */
     private @Nullable RangeView textView;
     private @Nullable EditTarget textTarget;
     private @Nullable String textLabel;
     private int nameW;
     private Component unlinkText = Component.empty();
     private int unlinkTextW;
+    private Component revertGroupText = Component.empty();
+    private int revertGroupTextW;
     /** Os botões postos por último e o que os decidiu ({@link #place}). */
     private List<Button> placed = List.of();
     private @Nullable RangeView placedView;
@@ -122,7 +127,7 @@ public final class RangeRowButtons {
 
     /**
      * Mede, quando a visão, o alvo ou o nome da presa mudam, o nome da linha do alvo ("Fornalha ×3", "#2",
-     * "presa") e o texto do ✕ armado.
+     * "presa"), o texto do ✕ armado e o do ↺ do grupo armado.
      */
     private void measure(Font font, RangeView view, EditTarget target, String attachedLabel) {
         if (view == textView && target.equals(textTarget) && attachedLabel.equals(textLabel)) {
@@ -142,6 +147,9 @@ public final class RangeRowButtons {
         nameW = font.width(name);
         unlinkText = RowButtonTips.unlinkArmedText(view, target);
         unlinkTextW = font.width(unlinkText);
+        revertGroupText = target.kind() == EditTarget.Kind.GROUP ? revertGroupArmedText(view, target)
+                : Component.empty();
+        revertGroupTextW = font.width(revertGroupText);
     }
 
     void idleNetworks(boolean shown) {
@@ -218,7 +226,7 @@ public final class RangeRowButtons {
             if (action == Action.UNLINK && unlinkArmed) {
                 w = Math.max(SIZE, Math.min(unlinkTextW + 6, bx - minX));
             } else if (action == Action.REVERT_GROUP && revertArmed) {
-                w = Math.max(SIZE, Math.min(font.width(revertGroupArmedText(view, target)) + 6, bx - minX));
+                w = Math.max(SIZE, Math.min(revertGroupTextW + 6, bx - minX));
             }
             bx -= w;
             buttons.add(new Button(action, bx, by, w, SIZE));
@@ -354,7 +362,7 @@ public final class RangeRowButtons {
             boolean hovered = b.contains(mouseX, mouseY);
             if (b.action() == Action.REVERT_GROUP && revertGroupArmed(target)) {
                 GuiPaint.box(g, b.x(), b.y(), b.w(), b.h(), GuiPaint.DANGER, GuiPaint.DANGER);
-                GuiText.draw(g, font, revertGroupArmedText(view, target), b.x() + 3, b.y() + 1, b.w() - 5,
+                GuiText.draw(g, font, revertGroupText, b.x() + 3, b.y() + 1, b.w() - 5,
                         GuiPaint.SELECTED_TEXT);
                 continue;
             }

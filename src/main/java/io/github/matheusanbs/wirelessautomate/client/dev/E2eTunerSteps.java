@@ -82,18 +82,15 @@ final class E2eTunerSteps {
         list.add(DevEndToEnd.wait("afinador: descanso antes da trava", SECOND_CLICK_TICKS));
         list.add(click("afinador: proposta para a trava", () -> proposalShown()));
         list.add(holdLock(playerId));
-        list.add(DevEndToEnd.wait("afinador: pausa antes do clique no ar", AIR_CLICK_TICKS));
-        list.add(new Step("afinador: clique no ar apaga", STEP_TIMEOUT_MS, () -> {
-            Minecraft minecraft = Minecraft.getInstance();
-            minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);
-        }, () -> TunerProposal.current() == null && !pendingOnServer(playerId),
-                () -> "proposta " + TunerProposal.current() + ", no servidor " + pendingOnServer(playerId)));
+        airClick(list, "afinador", playerId);
 
         E2eVariants.pt(list, () -> {
             list.add(language("pt_br"));
             list.add(DevEndToEnd.wait("pt: afinador: descanso", SECOND_CLICK_TICKS));
             list.add(click("pt: afinador: clicar mostra a proposta", () -> proposalShown()));
             list.add(capture("cfg-afinador-proposta-pt"));
+            // a proposta do pt sai aqui: senão o "clicar de novo" acha a dela e o prazo vence no meio do teste da mira
+            airClick(list, "pt: afinador", playerId);
             list.add(language("en_us"));
         });
 
@@ -164,6 +161,16 @@ final class E2eTunerSteps {
             return modes().equals(UNTOUCHED) && proposalShown() && pendingOnServer(playerId);
         }, () -> "modos " + modes() + ", proposta " + TunerProposal.current() + ", no servidor "
                 + pendingOnServer(playerId));
+    }
+
+    /** A pausa e o clique no ar, que apaga a proposta no cliente e no servidor. */
+    private static void airClick(List<Step> list, String prefix, UUID playerId) {
+        list.add(DevEndToEnd.wait(prefix + ": pausa antes do clique no ar", AIR_CLICK_TICKS));
+        list.add(new Step(prefix + ": clique no ar apaga", STEP_TIMEOUT_MS, () -> {
+            Minecraft minecraft = Minecraft.getInstance();
+            minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);
+        }, () -> TunerProposal.current() == null && !pendingOnServer(playerId),
+                () -> "proposta " + TunerProposal.current() + ", no servidor " + pendingOnServer(playerId)));
     }
 
     /** O servidor ainda guarda uma proposta do jogador. */

@@ -10,8 +10,10 @@ import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.range.RangeLinks;
 import io.github.matheusanbs.wirelessautomate.range.RangeRules.LinkRefusal;
 import io.github.matheusanbs.wirelessautomate.range.SameBlockLinks;
+import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.gametest.framework.GameTest;
@@ -23,6 +25,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.jetbrains.annotations.Nullable;
@@ -30,7 +34,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * O Ctrl + clique do Vinculador ({@link SameBlockLinks}, pelo handler do {@code LinkSameBlockPayload}): vincula as
  * máquinas do mesmo bloco no raio, das mais perto para as mais longe, até o limite; deixa de fora as já vinculadas, a
- * presa e as de fora do raio; recusa sem roteador escolhido e no modo aventura.
+ * presa e as de fora do raio; recusa sem roteador escolhido, no modo aventura e no descanso do item; o limite do tier só
+ * aparece com alguma de fora.
  */
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
@@ -55,8 +60,10 @@ public final class SameBlockLinkGameTests {
         return player;
     }
 
+    /** O Ctrl + clique, sem o descanso do anterior (os testes clicam várias vezes no mesmo tick). */
     private static RangeLinks.@Nullable Result ctrlClick(GameTestHelper helper, TestPlayers.MenuPlayer player,
             BlockPos relative) {
+        player.getCooldowns().removeCooldown(ModItems.LINKER.get());
         return SameBlockLinks.link(player, helper.absolutePos(relative));
     }
 
@@ -94,6 +101,10 @@ public final class SameBlockLinkGameTests {
                     helper.assertFalse(linked(helper, router, BARREL), "o barril entrou");
                     TranslatableContents text = message(helper, player.actionBar, KEY + "linked");
                     helper.assertValueEqual(text.getArgs()[0], 2, "a contagem");
+                    // logo em seguida, o Vinculador está no descanso: o pacote é ignorado
+                    helper.assertTrue(player.getCooldowns().isOnCooldown(ModItems.LINKER.get()), "sem descanso");
+                    helper.assertTrue(SameBlockLinks.link(player, helper.absolutePos(FURNACE_A)) == null,
+                            "aceitou no descanso");
                     // sem o Vinculador na mão, o pacote é ignorado
                     player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
                     helper.assertTrue(ctrlClick(helper, player, BARREL) == null, "aceitou sem o Vinculador");
@@ -225,6 +236,82 @@ public final class SameBlockLinkGameTests {
                             "no modo aventura: " + result);
                     helper.assertFalse(linked(helper, router, FURNACE_A) || linked(helper, router, FURNACE_B),
                             "vinculou recusado");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Com exatamente as vagas em candidatas (as duas fornalhas a 1) e uma seção mais longe com fornalha na paleta,
+     * mas já vinculada, o aviso não acusa o limite do tier: não ficou nenhuma de fora.
+     */
+    @GameTest(template = "empty", timeoutTicks = 300, batch = "wirelessautomate_config_sameblock_exact")
+    public static void sameBlockExactRoomIsNotTheLimit(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        BlockPos origin = router.getBlockPos();
+        // o começo da seção de cima, ou da seguinte se ela começa logo acima: a seção fica a 2 ou mais
+        int sectionStart = ((origin.getY() >> 4) + 1) << 4;
+        if (sectionStart - origin.getY() < 2) {
+            sectionStart += 16;
+        }
+        int far = sectionStart - origin.getY();
+        BlockPos farFurnace = helper.relativePos(origin.above(far));
+        helper.setBlock(farFurnace, Blocks.FURNACE);
+        int beforeMax = Config.TIERS.get(RouterTier.ADVANCED).maxMachines().get();
+        int beforeRadius = Config.TIERS.get(RouterTier.ADVANCED).machineRadius().get();
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    Config.TIERS.get(RouterTier.ADVANCED).maxMachines().set(3);
+                    Config.TIERS.get(RouterTier.ADVANCED).machineRadius().set(far);
+                    try {
+                        router.setRangeUpgrade(rangeUpgrade());
+                        link(helper, router, farFurnace);
+                        TestPlayers.MenuPlayer player = player(helper, router, true);
+                        RangeLinks.Result result = ctrlClick(helper, player, FURNACE_A);
+                        helper.assertTrue(result != null && result.linked() == 2 && result.overLimit() == 0
+                                && result.already() == 1, "resultado " + result);
+                        message(helper, player.actionBar, KEY + "linked");
+                        helper.assertFalse(hasPart(player.actionBar, KEY + "limit"),
+                                "acusou o limite: " + player.actionBar.getString());
+                    } finally {
+                        Config.TIERS.get(RouterTier.ADVANCED).maxMachines().set(beforeMax);
+                        Config.TIERS.get(RouterTier.ADVANCED).machineRadius().set(beforeRadius);
+                        helper.setBlock(farFurnace, Blocks.AIR);
+                    }
+                })
+                .thenSucceed();
+    }
+
+    /** Todas as achadas recusadas pelo evento de clique das proteções: a recusa de área protegida, nada entra. */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void sameBlockAllRefusedByTheEvent(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        TestPlayers.MenuPlayer player = player(helper, router, true);
+        int[] posted = new int[1];
+        Consumer<PlayerInteractEvent.RightClickBlock> claim = event -> {
+            if (event.getEntity() == player) {
+                posted[0]++;
+                event.setCanceled(true);
+            }
+        };
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    NeoForge.EVENT_BUS.addListener(claim);
+                    try {
+                        router.setRangeUpgrade(rangeUpgrade());
+                        RangeLinks.Result result = ctrlClick(helper, player, FURNACE_A);
+                        helper.assertTrue(result != null && result.refusal() == LinkRefusal.PROTECTED,
+                                "resultado " + result);
+                        helper.assertValueEqual(posted[0], 2, "eventos postados");
+                        helper.assertFalse(linked(helper, router, FURNACE_A) || linked(helper, router, FURNACE_B),
+                                "vinculou recusada pelo evento");
+                        helper.assertFalse(player.actionBar != null
+                                && player.actionBar.getContents() instanceof TranslatableContents c
+                                && c.getKey().startsWith(KEY + "linked"), "aviso de vinculadas: " + player.actionBar);
+                    } finally {
+                        NeoForge.EVENT_BUS.unregister(claim);
+                    }
                 })
                 .thenSucceed();
     }

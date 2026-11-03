@@ -23,7 +23,7 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 
 ## Roteador de alcance
 
-- Teste à mão do Afinador do Configurador (etapa 3, linha de 02/11 do histórico): a pintura nas faces, o segundo clique, Shift no grupo, segurar o botão (também com uma tocha na mão secundária, que deve repetir num bloco comum) e máquinas de outros mods (Mekanism, Sophisticated). (02/11)
+- Teste à mão do Afinador do Configurador (etapa 3, linha de 02/11 do histórico): a pintura nas faces, o segundo clique, Shift no grupo, segurar o botão (não confirma nem apaga ao escorregar a mira para o chão ou o ar; com a tecla solta, uma tocha na mão secundária repete num bloco comum, e segurada desde uma máquina ela também espera a tecla soltar), mirar outro bloco por 2 s e clicar de novo (análise nova), e máquinas de outros mods (Mekanism, Sophisticated, uma máquina só de energia, que deve receber Insere). (02/11, 03/11)
 - Teste à mão da etapa 4 do alcance (linha de 02/11 do histórico): a máquina trocada parando de receber na hora. (02/11)
 - Teste à mão do Ctrl + clique do Vinculador (linha do topo de 02/11): uma fileira de fornalhas, um bloco de outro mod ("7 × Nome"), segurar o botão, o limite do tier. (02/11)
 

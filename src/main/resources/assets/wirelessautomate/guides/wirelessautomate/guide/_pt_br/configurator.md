@@ -29,14 +29,18 @@ modos (Insere, Extrai, Armazém) para você conferir antes de aplicar.
 5. Escolha a rede das faces na tela do roteador, se ainda não tiverem.
 
 Clicar em outra máquina refaz a análise para ela. Clicar no ar, mirar outro bloco por 2 segundos ou
-esperar 10 segundos apaga a proposta. Segurar o botão não aplica: solte e clique de novo.
+esperar 10 segundos apaga a proposta, e o próximo clique na máquina faz uma análise nova. Segurar o
+botão não aplica nem apaga: solte e clique de novo.
 
 ## O que muda
 
 - Só os **modos** dos tipos que a análise achou. Prioridade, redstone, filtro e rede de cada face
   ficam como estão.
 - Numa máquina de um grupo com outras, a mudança vira exceção dela; com Shift, vai para o perfil.
-- Baús, barris, tanques e baterias viram **Armazém** numa face só; as outras faces ficam em Nenhum.
+- Baús, barris e tanques viram **Armazém** numa face só; as outras faces ficam em Nenhum. Uma máquina
+  só de energia ou de Source vira Armazém só se for a Bateria ou o Tanque de Source do mod: nas de
+  outros mods ela recebe Insere, porque uma máquina que consome lê igual a uma bateria, e Insere não a
+  esvazia.
 - Não há Desfazer: a moldura mostra a proposta antes, e o segundo clique é a confirmação.
 
 ## Limites

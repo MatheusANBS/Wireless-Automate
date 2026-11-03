@@ -904,6 +904,7 @@
   "gui.wirelessautomate.tablet.notice.refused.known": "Unknown player: only players who joined this server can be invited",
   "gui.wirelessautomate.tablet.notice.refused.exists": "Already on this network",
   "gui.wirelessautomate.tablet.notice.refused.team": "Team not found (only FTB Teams party teams)",
+  "gui.wirelessautomate.tablet.notice.refused.icon": "That item can't be an icon",
   "gui.wirelessautomate.tablet.notice.access.member.added": "%s invited to %s",
   "gui.wirelessautomate.tablet.notice.access.member.removed": "%s removed from %s",
   "gui.wirelessautomate.tablet.notice.access.team.added": "Team %s added to %s",

@@ -308,8 +308,8 @@ final class RouterRange {
             return false;
         }
         BlockState state = level.getBlockState(machine.pos());
-        storeReplaced(machine, state);
-        return storeFront(machine, state);
+        // Sem curto-circuito: as duas marcas são gravadas, e qualquer uma faz os outros tipos remontarem.
+        return storeReplaced(machine, state) | storeFront(machine, state);
     }
 
     /**
@@ -339,10 +339,11 @@ final class RouterRange {
 
     /**
      * Um cache de uma remota foi invalidado, no servidor: o bloco e a frente são relidos (só com o chunk carregado).
-     * Se a frente mudou, ou se a máquina é trocada (ou o bloco do grupo voltou), as rotas do nó são refeitas: a
-     * montagem pula a trocada e consulta de novo o cache que a vigia ({@link MachineCaches#watch}), sem o qual o
-     * próximo aviso não viria. Senão acorda a porta da face. A troca de um bloco com block entity sempre chega aqui:
-     * o NeoForge invalida as capabilities da posição quando a block entity sai e quando a nova entra.
+     * Se a frente mudou, ou se a troca é nova (a máquina virou outro bloco, ou o bloco do grupo voltou), as rotas do
+     * nó são refeitas. Se ela continua trocada, nada muda nas rotas (a montagem já a pula): só o cache que a vigia é
+     * consultado de novo ({@link MachineCaches#watch}), sem o qual o próximo aviso não viria. Senão acorda a porta
+     * da face. A troca de um bloco com block entity sempre chega aqui: o NeoForge invalida as capabilities da
+     * posição quando a block entity sai e quando a nova entra.
      */
     void invalidated(Level level, BlockPos pos, ResourceType type, Direction machineFace) {
         if (level.isLoaded(pos)) {
@@ -350,8 +351,12 @@ final class RouterRange {
             if (machine != null) {
                 BlockState state = level.getBlockState(pos);
                 boolean swapped = storeReplaced(machine, state);
-                if (storeFront(machine, state) || swapped || machine.replaced()) {
+                if (storeFront(machine, state) || swapped) {
                     router.changed(NetworkManager.ALL_TYPES);
+                    return;
+                }
+                if (machine.replaced()) {
+                    caches(pos).watch();
                     return;
                 }
             }

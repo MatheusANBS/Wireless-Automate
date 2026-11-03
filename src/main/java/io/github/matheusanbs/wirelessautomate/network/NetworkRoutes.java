@@ -459,7 +459,7 @@ final class NetworkRoutes {
         RouterBlockEntity node = member.node;
         boolean powered = node.powered();
         // A presa é um membro do grupo do bloco dela: o bloco e a frente são lidos uma vez por montagem.
-        node.prepareAttachedPorts(type);
+        node.prepareAttachedPorts();
         Port[] active = NO_PORTS;
         int count = 0;
         RouterTier tier = null;
@@ -529,9 +529,9 @@ final class NetworkRoutes {
                 if (caches == null) {
                     caches = node.remoteCaches(pos);
                     // A frente e o bloco são relidos aqui (uma vez por máquina com face ativa, só na
-                    // remontagem): girar a máquina sem setChanged não avisa ninguém. Se a frente mudou, vale
-                    // já nesta leitura; os outros tipos do nó são relidos na próxima remontagem, sem laço
-                    // (lá a frente já bate).
+                    // remontagem): girar a máquina sem setChanged não avisa ninguém. Se a frente ou a troca
+                    // mudou, vale já nesta leitura; os outros tipos do nó são relidos na próxima remontagem, sem
+                    // laço (lá as duas já batem).
                     if (node.rereadRemote(remote)) {
                         front = remote.front();
                         NetworkManager.get().nodeChanged(node, ALL_TYPES & ~NetworkManager.typeBit(type));

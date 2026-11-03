@@ -42,7 +42,7 @@ public final class TabletActions {
         return menu.containerId;
     }
 
-    void send(CustomPacketPayload payload) {
+    public void send(CustomPacketPayload payload) {
         if (!preview) {
             PacketDistributor.sendToServer(payload);
         }
@@ -52,11 +52,11 @@ public final class TabletActions {
         send(new TabletTabPayload(menu.containerId, tab));
     }
 
-    void query(Query query) {
+    public void query(Query query) {
         send(new TabletQueryPayload(menu.containerId, query));
     }
 
-    void selectNode(@Nullable NodeKey key) {
+    public void selectNode(@Nullable NodeKey key) {
         send(new TabletSelectNodePayload(menu.containerId, Optional.ofNullable(key)));
     }
 
@@ -65,7 +65,7 @@ public final class TabletActions {
     }
 
     /** Troca a visão da Lista ou abre, recolhe, mostra todas ou poucas máquinas do bloco. */
-    void machines(TabletMachinesPayload.Action action, Optional<ResourceLocation> block) {
+    public void machines(TabletMachinesPayload.Action action, Optional<ResourceLocation> block) {
         send(new TabletMachinesPayload(menu.containerId, action, block));
     }
 

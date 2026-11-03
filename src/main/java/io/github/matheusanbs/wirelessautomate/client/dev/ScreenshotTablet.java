@@ -54,6 +54,7 @@ final class ScreenshotTablet {
                 new Step(() -> {
                     mouseX = mouseY = -1;
                     TabletMenu menu = new TabletMenu(0, new Inventory(null), sampleTablet(false));
+                    TabletScreen.legacyList(true);
                     tabletScreen = new TabletScreen(menu, new Inventory(null),
                             Component.translatable("item.wirelessautomate.network_tablet"), true);
                     Minecraft minecraft = Minecraft.getInstance();

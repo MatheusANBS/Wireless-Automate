@@ -14,6 +14,7 @@ import io.github.matheusanbs.wirelessautomate.client.ThemeToggle;
 import io.github.matheusanbs.wirelessautomate.client.access.AccessPanel;
 import io.github.matheusanbs.wirelessautomate.client.router.NodePanel;
 import io.github.matheusanbs.wirelessautomate.client.tablet.kit.ModalLayer;
+import io.github.matheusanbs.wirelessautomate.client.tablet.machine.MachinePanel;
 import io.github.matheusanbs.wirelessautomate.client.tablet.networks.NetworksPanel;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
@@ -30,30 +31,20 @@ import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * Tela do Tablet de rede (especificação, "Telas da interface › Tablet de rede"), com três abas na barra, Redes,
- * Máquina (por ora, a Lista na visão Máquinas) e Fluxos; o Mapa continua na tela só para as capturas e o e2e até a
- * etapa 4:
+ * Tela do Tablet de rede (especificação, "Telas da interface › Tablet de rede"), com três abas na barra, Redes, Máquina
+ * e Fluxos; o Mapa continua na tela só para as capturas e o e2e até a etapa 4:
  * <ul>
- *   <li><b>Lista:</b> a busca com sugestões e etiquetas, o seletor Roteadores · Máquinas, os filtros rápidos, os
- *       nós agrupados pela máquina (ou, por máquinas, as máquinas pelo tipo de bloco), cada
- *       roteador com máquinas vinculadas aberto em árvore (a presa, os grupos e as máquinas com estado e vazão), e
- *       o painel do nó escolhido, com copiar e colar o perfil ({@link TabletList}); Selecionar para mover ou
- *       colar em vários nós ({@link SelectBar});
- *   <li><b>Fluxos:</b> tempo do mod por tick e o que entra e sai de cada tipo, Por tipo ou Por rede, média
- *       dos últimos 5 s ({@link FlowsTab});
- *   <li><b>Mapa:</b> vista de cima centrada no jogador, pontos coloridos por status; clicar escolhe o nó, o mesmo
- *       nó escolhido da Lista, e mostra as máquinas dele, com Abrir ({@link MapTab});
- *   <li><b>Redes:</b> os grupos com as redes deles à esquerda e, à direita, a rede escolhida (grupo, acesso e o
- *       que há nela) ou o grupo, com "+ Rede" e "+ Grupo" embaixo da coluna ({@link NetworksPanel}).
+ *   <li><b>Máquina:</b> a lista de máquinas à esquerda e a escolhida à direita ({@link MachinePanel}); a Lista antiga
+ *       ({@link TabletList}, com o Selecionar da {@link SelectBar}) só aparece pelo gancho {@link #legacyList} dos e2e;
+ *   <li><b>Fluxos:</b> o tempo do mod por tick e o que entra e sai de cada tipo ({@link FlowsTab});
+ *   <li><b>Mapa:</b> vista de cima, pontos coloridos por status ({@link MapTab});
+ *   <li><b>Redes:</b> os grupos com as redes deles e a rede ou o grupo escolhido ({@link NetworksPanel}).
  * </ul>
  *
- * <p>Tudo vem de {@link TabletMenu#snapshot()}; a tela só pede (consulta, ações, pelo {@link TabletActions}) e
- * espera o servidor. A tela é a anfitriã: os botões das abas e os campos, e repassa às partes o tamanho
- * ({@link TabletResize}), a moldura, as abas e o aviso ({@link TabletFrame}), o corpo da aba aberta ({@link TabletBody}:
- * desenho, cliques, roda e dicas), os botões de cada aba ({@link TabletTabs}), o teclado ({@link TabletKeys}) e a
- * dica do quadro ({@link TabletTips}). Linhas de lista, pontos do mapa e cores
- * são desenhados e clicados por geometria, sem um widget por item; os botões fixos são {@link FlatButton}s que leem o
- * estado a cada quadro.
+ * <p>Tudo vem de {@link TabletMenu#snapshot()}; a tela só pede (consulta, ações, pelo {@link TabletActions}) e espera o
+ * servidor. É a anfitriã: os botões das abas e os campos, e repassa às partes o tamanho ({@link TabletResize}), a moldura
+ * e o aviso ({@link TabletFrame}), o corpo da aba aberta ({@link TabletBody}), os botões de cada aba ({@link TabletTabs}),
+ * o teclado ({@link TabletKeys}) e a dica do quadro ({@link TabletTips}).
  */
 public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     public enum Tab { LIST, FLOWS, MAP, NETWORKS }
@@ -71,12 +62,16 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     private final MapTab map;
     private final FlowsTab flows;
     private final NetworksPanel networks;
+    private final MachinePanel machine;
     private final TabletBody body;
     private final TabletTabs tabs;
     private final TabletKeys keys;
     private final TabletTips tips;
     private final TabletFrame frame;
     private final TabletResize resize = new TabletResize(layout);
+
+    /** Gancho dos e2e antigos: a aba Máquina mostra a Lista antiga até a etapa 4 a apagar. Vale para as telas que abrirem. */
+    private static boolean legacyList;
 
     private Tab tab = Tab.LIST;
     private int lastVersion = -1;
@@ -100,20 +95,14 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         this.actions = new TabletActions(menu, preview);
         NodeText nodes = new NodeText(menu::snapshot);
         this.list = new TabletList(menu, actions, nodes, () -> layout.h);
-        if (tab == Tab.LIST && menu.restoredNode() == null) {
-            // aberto na aba Máquina; com um nó lembrado (a volta do filtro, o Abrir no Tablet) fica a visão de antes
-            list.showMachines();
-        }
         this.selectBar = new SelectBar(layout, menu::snapshot, nodes, actions, list);
         this.map = new MapTab(layout, menu::snapshot, menu.feed()::mapPoints, nodes, actions, list);
-        this.flows = new FlowsTab(layout, menu, (type, network) -> {
-            switchTab(Tab.LIST);
-            list.filterFlow(type, network);
-        });
+        this.flows = new FlowsTab(layout, menu, (type, network) -> switchTab(Tab.LIST));
         this.networks = new NetworksPanel(layout, menu, menu::snapshot, actions);
-        this.body = new TabletBody(list, map, flows, networks);
-        this.tabs = new TabletTabs(selectBar, map, networks);
-        this.keys = new TabletKeys(this, list, networks, () -> tab);
+        this.machine = new MachinePanel(layout, menu, menu::snapshot, actions);
+        this.body = new TabletBody(list, machine, () -> legacyList, map, flows, networks);
+        this.tabs = new TabletTabs(selectBar, machine, () -> legacyList, map, networks);
+        this.keys = new TabletKeys(this, list, machine, networks, () -> tab, () -> legacyList);
         this.tips = new TabletTips(resize, tabs.buttons(), body);
         // o aviso de outra tela agiria no alvo errado
         PanelNotices.clear();
@@ -137,13 +126,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         int x = leftPos;
         int y = topPos;
 
-        frame.addTabs(this::add, font, () -> tab, t -> {
-            boolean machines = tab != t && t == Tab.LIST; // entrar na aba Máquina pede a visão por máquinas
-            switchTab(t);
-            if (machines) {
-                list.showMachines();
-            }
-        });
+        frame.addTabs(this::add, font, () -> tab, this::switchTab);
 
         // Lista: a busca (posição e largura acertadas pela lista a cada quadro) e os botões do Selecionar
         list.layout(x + X0, y + BODY_Y, layout.x1() - X0, y + h - 8);
@@ -160,6 +143,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         flows.addButtons(this::add, font);
         networks.addButtons(this::add, font);
         networks.createBoxes(font).forEach(this::addRenderableWidget);
+        addRenderableWidget(machine.createBox(font));
         refresh();
         if (tab == Tab.LIST) {
             keys.focusSearch();
@@ -197,11 +181,13 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     // ------------------------------------------------------------------ abas
 
-    /** Sem pedir a visão: o link dos Fluxos filtra os nós na visão em que a Lista estiver. */
     private void switchTab(Tab t) {
         if (tab != t) {
             list.cancelLabel();
             tab = t;
+            if (t == Tab.LIST && legacyList) {
+                list.showMachines(); // entrar na Lista antiga pede a visão por máquinas
+            }
             actions.tab(t.ordinal());
             if (t == Tab.FLOWS) {
                 flows.shown();
@@ -228,7 +214,17 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         return networks.access();
     }
 
-    /** A aba Lista (busca, nós e o painel), para os ganchos do e2e e das capturas. */
+    /** Liga a Lista antiga no lugar da aba Máquina nova (gancho dos e2e antigos); as telas já abertas também a mostram. */
+    public static void legacyList(boolean on) {
+        legacyList = on;
+    }
+
+    /** A aba Máquina, para os ganchos do e2e e das capturas. */
+    public MachinePanel machine() {
+        return machine;
+    }
+
+    /** A aba Lista antiga (busca, nós e o painel), para os ganchos do e2e e das capturas. */
     public TabletList list() {
         return list;
     }
@@ -241,7 +237,10 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     @Override
     protected void containerTick() {
         super.containerTick();
-        list.tick();
+        if (legacyList) {
+            list.tick();
+        }
+        machine.tick();
     }
 
     /** A janela aberta da aba Redes grava (a cor) antes do menu fechar: o servidor recusa o que vem depois. */
@@ -293,7 +292,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         if (tab == Tab.NETWORKS && networks.mouseClicked(mouseX, mouseY, button)) {
             return true;
         }
-        if (tab == Tab.LIST && list.mouseClicked(mouseX, mouseY, button)) {
+        if (tab == Tab.LIST && body.listClicked(mouseX, mouseY, button)) {
             return true;
         }
         if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && body.mouseClicked(tab, mouseX, mouseY)) {
@@ -366,10 +365,10 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         keys.ink();
         refresh();
         GuiText.beginFrame();
-        boolean popup = tab == Tab.LIST && list.panel() != null && list.panel().popupOpen()
+        boolean popup = tab == Tab.LIST && legacyList && list.panel() != null && list.panel().popupOpen()
                 || tab == Tab.NETWORKS && networks.modalOpen();
         super.render(g, popup ? -1 : mouseX, popup ? -1 : mouseY, partialTick);
-        if (tab == Tab.LIST) {
+        if (tab == Tab.LIST && legacyList) {
             list.renderOverlay(g, mouseX, mouseY);
         }
         // o aviso antes da janela da aba Redes: os dois usam o z 300 do véu, e a janela fica por cima

@@ -105,7 +105,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
             list.showMachines();
         }
         this.selectBar = new SelectBar(layout, menu::snapshot, nodes, actions, list);
-        this.map = new MapTab(layout, menu::snapshot, menu::mapPoints, nodes, actions, list);
+        this.map = new MapTab(layout, menu::snapshot, menu.feed()::mapPoints, nodes, actions, list);
         this.flows = new FlowsTab(layout, menu, (type, network) -> {
             switchTab(Tab.LIST);
             list.filterFlow(type, network);

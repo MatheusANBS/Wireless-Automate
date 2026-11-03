@@ -9,7 +9,6 @@ import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.packet.NetworkSuggestionsPayload;
-import io.github.matheusanbs.wirelessautomate.packet.TabletMapPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletFlowsPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletHeaderPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletLivePayload;
@@ -18,6 +17,7 @@ import io.github.matheusanbs.wirelessautomate.packet.TabletPagePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPanelPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletProfilePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletTreePayload;
+import io.github.matheusanbs.wirelessautomate.packet.TabletVerdictPayload;
 import io.github.matheusanbs.wirelessautomate.preset.PresetApplier;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
@@ -144,10 +144,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
     /** Cliente: o último painel do nó escolhido recebido, ou {@code null}. */
     private @Nullable TabletPanelPayload panel;
     private int panelVersion;
-    /** Cliente: os últimos Fluxos recebidos, ou {@code null}. */
-    private @Nullable TabletFlowsPayload flowsPayload;
-    /** Cliente: os últimos pontos do Mapa recebidos, ou {@code null}. */
-    private @Nullable TabletMapPayload mapPayload;
+    private final TabletClientFeed feed = new TabletClientFeed();
     /** Cliente: as últimas sugestões do campo de acesso recebidas, ou {@code null}. */
     private @Nullable NetworkSuggestionsPayload suggestions;
     private int suggestionsVersion;
@@ -162,7 +159,6 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
     private final @Nullable TabletChosenNode node;
     private final @Nullable TabletProfile profile;
     private final @Nullable TabletMenuActions actions;
-    private final @Nullable TabletFlows flows;
     private final @Nullable TabletWatches watches;
     private final @Nullable TabletTree tree;
     private final @Nullable TabletMachines machines;
@@ -185,10 +181,8 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
         this.node = new TabletChosenNode(viewer, containerId);
         this.profile = new TabletProfile(viewer, containerId, query, builder, machines);
         this.actions = new TabletMenuActions(this, viewer);
-        this.flows = new TabletFlows(viewer, containerId);
-        this.watches = new TabletWatches(viewer, containerId);
+        this.watches = new TabletWatches(viewer, containerId, node);
         restore(TabletPlayers.saved(viewer.getUUID()));
-        flows.tab(tab);
         watches.tab(tab);
         builder.listOpen(tab == LIST_TAB);
         this.snapshot = builder.build(true, actions.notice(), actions.noticeId());
@@ -214,7 +208,6 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
         this.node = null;
         this.profile = null;
         this.actions = null;
-        this.flows = null;
         this.watches = null;
         this.tree = null;
         this.machines = null;
@@ -259,9 +252,6 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
         super.removed(player);
         IdleNetworkUndo.closed(player, this);
         MachinePasteUndo.closed(player, this);
-        if (flows != null) {
-            flows.stop();
-        }
         if (watches != null) {
             watches.stop();
         }
@@ -290,9 +280,6 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
         }
         boolean wasList = this.tab == LIST_TAB;
         this.tab = tab;
-        if (flows != null) {
-            flows.tab(tab);
-        }
         if (watches != null) {
             watches.tab(tab);
         }
@@ -476,24 +463,14 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
         return panelVersion;
     }
 
-    /** Cliente: os Fluxos novos ({@code TabletFlowsPayload}). */
-    public void applyFlows(TabletFlowsPayload flows) {
-        this.flowsPayload = flows;
+    /** Cliente: o último veredito recebido; só vale se o nó e a máquina dele batem com a escolha. */
+    public @Nullable TabletVerdictPayload verdict() {
+        return feed.verdict();
     }
 
-    /** Cliente: os últimos Fluxos recebidos, ou {@code null}. */
-    public @Nullable TabletFlowsPayload flows() {
-        return flowsPayload;
-    }
-
-    /** Cliente: os pontos novos do Mapa ({@code TabletMapPayload}). */
-    public void applyMap(TabletMapPayload map) {
-        this.mapPayload = map;
-    }
-
-    /** Cliente: os últimos pontos do Mapa recebidos, ou {@code null} (a tela usa a página da Lista até chegarem). */
-    public @Nullable TabletMapPayload mapPoints() {
-        return mapPayload;
+    /** Cliente: o último pacote de cada vigia do servidor (Fluxos, Mapa e veredito). */
+    public TabletClientFeed feed() {
+        return feed;
     }
 
     /** Cliente: as sugestões novas do campo de acesso ({@code NetworkSuggestionsPayload}). */
@@ -557,10 +534,6 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
         if (panelNow != null) {
             payloads.add(panelNow);
         }
-        TabletFlowsPayload flowsNow = pollFlows();
-        if (flowsNow != null) {
-            payloads.add(flowsNow);
-        }
         if (watches != null) {
             watches.poll(payloads);
         }
@@ -572,7 +545,15 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
      * {@code null}. Só no servidor; público para os GameTests.
      */
     public @Nullable TabletFlowsPayload pollFlows() {
-        return flows == null ? null : flows.poll();
+        return watches == null ? null : watches.pollFlows();
+    }
+
+    /**
+     * O veredito da máquina escolhida, se a aba Máquina está aberta e ele mudou; senão {@code null}. Só no servidor;
+     * público para os GameTests.
+     */
+    public @Nullable TabletVerdictPayload pollVerdict() {
+        return watches == null ? null : watches.pollVerdict();
     }
 
     private void send(CustomPacketPayload payload) {

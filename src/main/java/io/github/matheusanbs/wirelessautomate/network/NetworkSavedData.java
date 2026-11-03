@@ -80,11 +80,6 @@ public final class NetworkSavedData extends SavedData {
         return PALETTE[ownedNetworks(owner) % PALETTE.length];
     }
 
-    /** As cores padrão, para o seletor de cor do Tablet. Cópia. */
-    public static int[] palette() {
-        return PALETTE.clone();
-    }
-
     public WaNetwork create(UUID owner, String name) {
         UUID id = UUID.randomUUID();
         WaNetwork network = new WaNetwork(id, name, nextColor(owner), owner);

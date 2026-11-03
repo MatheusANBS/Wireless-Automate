@@ -178,9 +178,9 @@ final class E2eTabletMachinesSteps {
         list.add(clipCheck("pt: Tablet: máquinas"));
         list.add(listClipTooltip("pt: Tablet: máquinas"));
         E2eTabletMarkSteps.portugueseSteps(list);
-        list.add(E2eNetworkSectionSteps.chooseNetwork("pt: redes: "));
-        list.add(capture("7p-tablet-redes-grupos-pt"));
-        list.add(clipCheck("pt: Tablet: Redes com grupos"));
+        list.add(E2eNetworksSteps.chooseNetwork("pt: redes: "));
+        list.add(capture("tablet-redes-pt"));
+        list.add(clipCheck("pt: Tablet: Redes"));
         list.add(new Step("pt: de volta à Lista", STEP_TIMEOUT_MS,
                 () -> tabletScreen().previewTab(TabletScreen.Tab.LIST),
                 () -> tabletScreen().currentTab() == TabletScreen.Tab.LIST, () -> "aba " + tabletScreen().currentTab()));

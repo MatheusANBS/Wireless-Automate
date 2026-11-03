@@ -90,6 +90,8 @@ final class ItemTransfer {
     static int stepRefusals;
     /** Recusas de um item só na visita em curso; o teto é {@link #MAX_REFUSALS_PER_VISIT}. */
     static int visitRefusals;
+    /** Conta as visitas de itens ({@link #beginVisit}), para as recusas seguidas de um destino ({@link ItemHints}). */
+    static long visit;
 
     /**
      * Uma visita. Devolve {@link NetworkManager#MOVED} se moveu algo, mais {@link NetworkManager#MORE}
@@ -129,8 +131,7 @@ final class ItemTransfer {
         if (filtered && filter.usesItemStock()) {
             tally = ItemStockTally.prepare(source);
         }
-        PLAN.beginVisit();
-        visitRefusals = 0;
+        beginVisit();
         FilterSet.ItemRule rule = SOURCE_RULE;
         int slot = source.slotCursor < slots ? source.slotCursor : 0;
         int limit = Math.min(slots, MAX_SLOTS_PER_VISIT);
@@ -213,23 +214,49 @@ final class ItemTransfer {
         return amount > 0 || stepSimulations > stepRefusals;
     }
 
+    /** Começo da visita de uma origem de itens (pilha a pilha ou o Baú do mod). */
+    static void beginVisit() {
+        PLAN.beginVisit();
+        visitRefusals = 0;
+        visit++;
+    }
+
     /**
      * O destino de inventário {@code target} não aceitou nada de {@code item}. Se ele recusa o item pelo tipo
      * ({@link ItemInsertPlan#refusesItem}) ou ainda tem lugar para outros ({@link ItemInsertPlan#roomForOthers};
-     * o "cheio" fica guardado em {@link Port#full} até a máquina mudar),
+     * o "sim" fica nas dicas e o "cheio" em {@link Port#full} até a máquina mudar),
      * a recusa é só deste item: fica anotada nas dicas dele ({@link ItemHints}) e ele não dorme, porque o próximo
-     * item pode entrar. Só o destino cheio de verdade dorme.
+     * item pode entrar. Só o destino cheio de verdade dorme, e o que só tem lugar para outros depois de
+     * {@link ItemHints#SIZE} recusas seguidas na visita: a lista não guarda mais que isso, e sem o sono a origem
+     * grande re-simularia os mesmos itens a cada visita. O sono cresce como o do cheio; a visita seguinte continua do
+     * cursor da origem, então os itens depois desses ainda chegam ao destino.
      */
     static void refusedByTarget(Port destination, IItemHandler target, ItemStack item, long now) {
-        if (PLAN.refusesItem(target, item) || !destination.full && PLAN.roomForOthers(target, item)) {
-            destination.hints().refuse(item, now);
-            stepRefusals++;
-            visitRefusals++;
-        } else {
-            destination.full = true;
-            destination.destinationBackoff.sleep(now);
-            destinationSlept = true;
+        if (PLAN.refusesItem(target, item)) {
+            refuseOne(destination.hints(), item, now);
+            return;
         }
+        ItemHints hints = destination.hints;
+        if (!destination.full && !PLAN.jammed()
+                && (hints != null && hints.roomForOthers() || PLAN.roomForOthers(target, item))) {
+            hints = destination.hints();
+            hints.sawRoomForOthers();
+            refuseOne(hints, item, now);
+            if (hints.refusedInRow(visit) >= ItemHints.SIZE) {
+                destination.destinationBackoff.sleep(now);
+                destinationSlept = true;
+            }
+            return;
+        }
+        destination.full = true;
+        destination.destinationBackoff.sleep(now);
+        destinationSlept = true;
+    }
+
+    private static void refuseOne(ItemHints hints, ItemStack item, long now) {
+        hints.refuse(item, now);
+        stepRefusals++;
+        visitRefusals++;
     }
 
     /** Entregou {@code item} no destino: se ele é seletivo, o item entra nos aprendidos ({@link ItemHints}). */

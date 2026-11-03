@@ -228,18 +228,22 @@ final class ItemInsertPlan {
     }
 
     /**
-     * O destino da última {@link #simulate}, que não aceitou nada de {@code item}, ainda tem lugar só para outros
-     * itens: uma pilha de outro item abaixo do próprio limite (a entrada da fornalha com 16 de ferro recusa o
-     * ouro, mas aceita mais ferro). Chame depois de {@link #refusesItem} dar {@code false}: então, se a simulação
-     * viu um slot vazio, algum deles aceita o item e mesmo assim nada entrou, e a máquina está travada (a saída
-     * cheia), como a pilha do próprio item com espaço que recusou. Nesses casos, e sem pilha de outro item com
-     * espaço, devolve {@code false} e o destino dorme como cheio. Os vazios vêm da simulação; só sem vazio é que
-     * os slots são relidos, e o veredito de cheio fica guardado na porta até a máquina mudar ({@link Port#full}).
+     * O destino da última {@link #simulate}, que não aceitou nada do item, está travado: chame depois de
+     * {@link #refusesItem} dar {@code false}. Então, se a simulação viu um slot vazio, algum deles aceita o item e
+     * mesmo assim nada entrou (a saída cheia); e a pilha do próprio item, com ou sem espaço, também recusou. Lugar
+     * para outros itens não muda nada: ele dorme como cheio. Só olha o que a simulação anotou.
+     */
+    boolean jammed() {
+        return emptySeen > 0 || sameSeen;
+    }
+
+    /**
+     * O destino tem lugar para outros itens que não {@code item}: uma pilha de outro item abaixo do próprio limite
+     * (a entrada da fornalha com 16 de ferro recusa o ouro, mas aceita mais ferro). Relê os slots (O(slots)); vale
+     * só para um destino que não está {@link #jammed}. Quem chama guarda o "sim" nas dicas da porta até a máquina
+     * mudar ou receber ({@link ItemHints#roomForOthers}) e o "não" em {@link Port#full}.
      */
     boolean roomForOthers(IItemHandler target, ItemStack item) {
-        if (emptySeen > 0 || sameSeen) {
-            return false;
-        }
         for (int slot = 0, n = target.getSlots(); slot < n; slot++) {
             ItemStack inSlot = target.getStackInSlot(slot);
             int count = inSlot.getCount();

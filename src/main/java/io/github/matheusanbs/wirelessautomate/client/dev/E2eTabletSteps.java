@@ -117,7 +117,9 @@ final class E2eTabletSteps {
                 throw new StepFailure("ainda há uma tela aberta: " + describe(minecraft.screen));
             }
             minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);
-        }, () -> Minecraft.getInstance().screen instanceof TabletScreen screen && screen.searchBox().isFocused(),
+        }, () -> Minecraft.getInstance().screen instanceof TabletScreen screen && screen.searchBox().isFocused()
+                // abre na aba Máquina, pela visão por máquinas; a busca de B é pela de roteadores
+                && screen.list().previewRouters(),
                 () -> "tela " + describe(Minecraft.getInstance().screen)));
         list.add(new Step("achar B pela busca (o cursor já está nela)", STEP_TIMEOUT_MS, () -> type(NODE_NAME), () -> {
             TabletScreen screen = tabletScreen();
@@ -340,8 +342,11 @@ final class E2eTabletSteps {
             });
         }, () -> Minecraft.getInstance().player.position().distanceTo(Vec3.atCenterOf(routerB)) > 15,
                 () -> "distância " + Minecraft.getInstance().player.position().distanceTo(Vec3.atCenterOf(routerB))));
+        list.add(new Step("aba Máquina, na visão Roteadores", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.tablet.tab.machine")), "aba Máquina")),
+                () -> tabletScreen().currentTab() == TabletScreen.Tab.LIST && tabletScreen().list().previewRouters(),
+                () -> "aba " + tabletScreen().currentTab()));
         list.add(new Step("filtro de B a 20 blocos pelo painel", STEP_TIMEOUT_MS, () -> {
-            click(widget(byMessage(Component.translatable("gui.wirelessautomate.tablet.tab.machine")), "aba Máquina"));
             int[] row = tabletScreen().nodeRowCenter(nodeB());
             if (row == null) {
                 throw new StepFailure("B não está na lista");

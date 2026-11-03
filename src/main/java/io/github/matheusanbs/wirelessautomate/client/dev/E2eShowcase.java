@@ -409,7 +409,7 @@ final class E2eShowcase {
         list.add(new Step("abrir o Tablet", STEP_TIMEOUT_MS, () -> {
             Minecraft minecraft = Minecraft.getInstance();
             minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);
-        }, () -> Minecraft.getInstance().screen instanceof TabletScreen screen
+        }, () -> Minecraft.getInstance().screen instanceof TabletScreen screen && screen.list().previewRouters()
                 && !screen.getMenu().snapshot().nodes().isEmpty(),
                 () -> "tela " + describe(Minecraft.getInstance().screen)));
         list.add(new Step("Tablet maior", STEP_TIMEOUT_MS,

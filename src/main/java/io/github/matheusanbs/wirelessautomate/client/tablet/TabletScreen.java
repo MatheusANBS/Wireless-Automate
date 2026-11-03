@@ -94,15 +94,16 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         this.imageHeight = MIN_H;
         this.frame = new TabletFrame(layout, menu.snapshot().noticeId());
         if (menu.restoredTab() >= 0 && menu.restoredTab() < Tab.values().length) {
-            this.tab = Tab.values()[menu.restoredTab()];
-        }
-        if (menu.restoredTab() == Tab.MAP.ordinal()) {
             // o Mapa não está na barra
-            this.tab = Tab.NETWORKS;
+            this.tab = menu.restoredTab() == Tab.MAP.ordinal() ? Tab.NETWORKS : Tab.values()[menu.restoredTab()];
         }
         this.actions = new TabletActions(menu, preview);
         NodeText nodes = new NodeText(menu::snapshot);
         this.list = new TabletList(menu, actions, nodes, () -> layout.h);
+        if (tab == Tab.LIST && menu.restoredNode() == null) {
+            // aberto na aba Máquina; com um nó lembrado (a volta do filtro, o Abrir no Tablet) fica a visão de antes
+            list.showMachines();
+        }
         this.selectBar = new SelectBar(layout, menu::snapshot, nodes, actions, list);
         this.map = new MapTab(layout, menu::snapshot, menu::mapPoints, nodes, actions, list);
         this.flows = new FlowsTab(layout, menu, (type, network) -> {
@@ -142,7 +143,13 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         int x = leftPos;
         int y = topPos;
 
-        frame.addTabs(this::add, font, () -> tab, this::openTab);
+        frame.addTabs(this::add, font, () -> tab, t -> {
+            boolean machines = tab != t && t == Tab.LIST; // entrar na aba Máquina pede a visão por máquinas
+            switchTab(t);
+            if (machines) {
+                list.showMachines();
+            }
+        });
 
         // Lista: a busca (posição e largura acertadas pela lista a cada quadro) e os botões do Selecionar
         list.layout(x + X0, y + BODY_Y, layout.x1() - X0, y + h - 8);
@@ -194,18 +201,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     // ------------------------------------------------------------------ abas
 
-    /**
-     * O clique numa aba da barra: entrar na Máquina pede a visão por máquinas. O link dos Fluxos e os ganchos do e2e
-     * passam direto pelo {@link #switchTab}, porque filtram os nós na visão em que a Lista estiver.
-     */
-    private void openTab(Tab t) {
-        boolean entering = tab != t;
-        switchTab(t);
-        if (entering && t == Tab.LIST) {
-            list.showMachines();
-        }
-    }
-
+    /** Sem pedir a visão: o link dos Fluxos filtra os nós na visão em que a Lista estiver. */
     private void switchTab(Tab t) {
         if (tab != t) {
             list.cancelLabel();

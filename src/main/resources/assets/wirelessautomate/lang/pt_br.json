@@ -761,8 +761,6 @@
   "gui.wirelessautomate.tablet.machines.count.rows": "%s de %s linhas · refine a busca",
   "gui.wirelessautomate.tablet.machines.count.blocks": "%s blocos",
   "gui.wirelessautomate.tablet.machines.count.blocks.one": "%s bloco",
-  "gui.wirelessautomate.tablet.meta.machines": "%s máquinas",
-  "gui.wirelessautomate.tablet.meta.machines.one": "%s máquina",
   "gui.wirelessautomate.tablet.tree.open.tooltip": "Clique para mostrar as máquinas deste roteador",
   "gui.wirelessautomate.tablet.tree.close.tooltip": "Clique para esconder as máquinas deste roteador",
   "gui.wirelessautomate.tablet.tree.group.open": "Clique para mostrar as máquinas do grupo",

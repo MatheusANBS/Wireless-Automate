@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.client.tablet.kit;
 
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -15,10 +16,18 @@ public final class Segments {
 
     private final Component[] labels;
     private int[] widths;
+    private int[] lefts;
+    private int leftsX = Integer.MIN_VALUE;
     private int total;
 
     public Segments(Component... labels) {
         this.labels = labels;
+    }
+
+    /** Já mede com a {@code font} dada, para {@link #width} e {@link #center} valerem antes do primeiro quadro. */
+    public Segments(Font font, Component... labels) {
+        this(labels);
+        measure(font);
     }
 
     /** Mede os rótulos; a anfitriã chama quando o texto ou o idioma muda. */
@@ -33,6 +42,21 @@ public final class Segments {
             total += w;
         }
         total -= Math.max(0, widths.length - 1);
+        lefts = new int[widths.length];
+        leftsX = Integer.MIN_VALUE;
+    }
+
+    /** As bordas esquerdas a partir de {@code x}, refeitas só quando {@code x} muda. */
+    private int[] lefts(int x) {
+        if (x != leftsX) {
+            int at = x;
+            for (int i = 0; i < widths.length; i++) {
+                lefts[i] = at;
+                at += widths[i] - 1;
+            }
+            leftsX = x;
+        }
+        return lefts;
     }
 
     /** Os não escolhidos primeiro e o escolhido por último, para a moldura dele não ser coberta pelo vizinho. */
@@ -40,7 +64,7 @@ public final class Segments {
         if (widths == null) {
             measure(font);
         }
-        int[] lefts = SegmentLayout.lefts(x, widths);
+        int[] lefts = lefts(x);
         for (int pass = 0; pass < 2; pass++) {
             for (int i = 0; i < widths.length; i++) {
                 if ((i == chosen) == (pass == 1)) {
@@ -65,12 +89,18 @@ public final class Segments {
     }
 
     public int width() {
+        if (widths == null) {
+            measure(Minecraft.getInstance().font);
+        }
         return total;
     }
 
     /** O centro da parte {@code index} na tela (para o e2e clicar). */
     public int[] center(int x, int y, int index) {
-        int[] lefts = SegmentLayout.lefts(x, widths);
+        if (widths == null) {
+            measure(Minecraft.getInstance().font);
+        }
+        int[] lefts = lefts(x);
         return new int[] {lefts[index] + widths[index] / 2, y + H / 2};
     }
 }

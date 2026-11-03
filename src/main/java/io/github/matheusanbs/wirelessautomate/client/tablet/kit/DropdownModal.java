@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Consumer;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -35,6 +36,7 @@ public final class DropdownModal implements TabletModal {
     private final int y;
     private final int w;
     private final List<Row> rows;
+    private final GuiText.Fitted[] labels;
     private final @Nullable UUID chosen;
     private final Consumer<@Nullable UUID> pick;
     private final Anchor anchor;
@@ -52,6 +54,11 @@ public final class DropdownModal implements TabletModal {
         this.chosen = chosen;
         this.pick = pick;
         this.anchor = anchor;
+        Font font = Minecraft.getInstance().font;
+        this.labels = new GuiText.Fitted[rows.size()];
+        for (int i = 0; i < labels.length; i++) {
+            labels[i] = GuiText.fit(font, rows.get(i).label(), w - 22 - 5);
+        }
         this.visible = Math.min(MAX_ROWS, rows.size());
         for (int i = 0; i < rows.size(); i++) {
             if (Objects.equals(rows.get(i).id(), chosen)) {
@@ -82,7 +89,7 @@ public final class DropdownModal implements TabletModal {
             } else {
                 PanelPaint.swatch(g, x + 7, ry + 6, 7, row.color());
             }
-            GuiText.draw(g, font, row.label(), x + 22, ry + 5, w - 22 - 5, row.muted() ? GuiPaint.MUTED : GuiPaint.FG);
+            GuiText.draw(g, font, labels[scroll + i], x + 22, ry + 5, row.muted() ? GuiPaint.MUTED : GuiPaint.FG);
         }
     }
 
@@ -112,7 +119,7 @@ public final class DropdownModal implements TabletModal {
     }
 
     /** O centro da linha de {@code id} na tela (para o e2e clicar); {@code null} se ela não está à vista. */
-    public int[] rowCenter(@Nullable UUID id) {
+    public int @Nullable [] rowCenter(@Nullable UUID id) {
         for (int i = 0; i < visible; i++) {
             if (Objects.equals(rows.get(scroll + i).id(), id)) {
                 return new int[] {x + w / 2, y + 1 + i * ROW_H + ROW_H / 2};

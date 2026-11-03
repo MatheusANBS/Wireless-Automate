@@ -20,6 +20,9 @@ public final class ChipLayout {
 
     public static Placed place(int[] textWidths, int x, int right, int linkW, IntUnaryOperator moreTextW) {
         int n = textWidths.length;
+        if (n == 0) {
+            return new Placed(new int[0], 0, -1, x);
+        }
         int[] xs = new int[n];
         int at = x;
         int shown = 0;

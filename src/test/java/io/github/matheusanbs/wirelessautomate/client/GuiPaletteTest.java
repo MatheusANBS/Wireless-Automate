@@ -49,8 +49,7 @@ class GuiPaletteTest {
         GuiPalette p = GuiPalette.of(theme);
         int[] all = {p.panel(), p.bevelLight(), p.inset(), p.bevelDark(), p.rowHover(), p.fg(), p.muted(),
                 p.disabled(), p.tabIdle(), p.accent(), p.accentDeep(), p.ok(), p.warn(), p.danger(), p.paused(),
-                p.brass(), p.ruleText(), p.tooltipMuted(), p.tooltipAccent(), p.darkText(), p.ring(),
-                p.frame(), p.reliefLight(), p.reliefDark(), p.face(), p.slot(), p.slotLight(), p.slotDark(), p.primary()};
+                p.brass(), p.ruleText(), p.tooltipMuted(), p.tooltipAccent(), p.darkText(), p.ring()};
         for (int color : all) {
             assertEquals(0xFF, color >>> 24, Integer.toHexString(color));
         }
@@ -63,8 +62,6 @@ class GuiPaletteTest {
         assertTrue(GuiPalette.contrast(p.fg(), p.panel()) >= 7, "texto no painel");
         assertTrue(GuiPalette.contrast(p.fg(), p.bevelLight()) >= 7, "texto no botão");
         assertTrue(GuiPalette.contrast(p.fg(), p.inset()) >= 7, "texto na área afundada");
-        assertTrue(GuiPalette.contrast(p.fg(), p.face()) >= 7, "texto no botão do Tablet");
-        assertTrue(GuiPalette.contrast(0xFFFFFFFF, p.primary()) >= 2.5, "texto no botão primário");
         assertTrue(GuiPalette.contrast(p.muted(), p.panel()) >= 3.5, "texto secundário");
         assertTrue(GuiPalette.contrast(p.tabIdle(), p.panel()) >= 4.5, "aba inativa");
         assertTrue(GuiPalette.contrast(p.ruleText(), p.panel()) >= 4.5, "texto da regra");
@@ -81,33 +78,5 @@ class GuiPaletteTest {
         double muted = GuiPalette.contrast(p.muted(), p.panel());
         double disabled = GuiPalette.contrast(p.disabled(), p.panel());
         assertTrue(fg > muted && muted > disabled && disabled > 1.5, fg + " > " + muted + " > " + disabled);
-    }
-
-    @Test
-    void mockupTokensInLight() {
-        GuiPalette p = GuiPalette.LIGHT;
-        assertEquals(0xFFB8304F, p.danger());
-        assertEquals(0xFF8C826F, p.frame());
-        assertEquals(0xFFFFFFFF, p.reliefLight());
-        assertEquals(0xFFA89C84, p.reliefDark());
-        assertEquals(0xFFFAF5EA, p.face());
-        assertEquals(0xFFD6CCB6, p.slot());
-        assertEquals(0xFFFFFBF3, p.slotLight());
-        assertEquals(0xFF9C917A, p.slotDark());
-        assertEquals(0xFFF0603E, p.primary());
-    }
-
-    @Test
-    void mockupTokensInDark() {
-        GuiPalette p = GuiPalette.DARK;
-        assertEquals(0xFFE5577A, p.danger());
-        assertEquals(0xFF0F0E12, p.frame());
-        assertEquals(0xFF4A4550, p.reliefLight());
-        assertEquals(0xFF16151A, p.reliefDark());
-        assertEquals(0xFF332F39, p.face());
-        assertEquals(0xFF3A3A44, p.slot());
-        assertEquals(0xFF4E4C58, p.slotLight());
-        assertEquals(0xFF151419, p.slotDark());
-        assertEquals(0xFFD9573A, p.primary());
     }
 }

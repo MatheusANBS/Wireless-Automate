@@ -4,14 +4,14 @@ Comece por aqui para continuar o trabalho. Este arquivo é curto de propósito: 
 
 ## Agora
 
-- **Versão atual:** 2.14.0 (30/10/2026), mesclada no main, sem push nem tag ainda; o livro-guia próprio no lugar do GuideME. Protocolo 40 (47 no ramo).
+- **Versão atual:** 2.14.0 (30/10/2026), mesclada no main, sem push nem tag ainda; o livro-guia próprio no lugar do GuideME. Protocolo 40 (46 no ramo).
 - **Publicação:** a 2.13.0 está no CurseForge e no Modrinth (`modrinth.com/mod/wireless-automate`); a 2.14.0 espera o dono subir o jar e o changelog.
-- **Em andamento:** ramo `ccr-52410279-si07pg`: o destino seletivo no motor e as etapas 1 a 4 do roteador de alcance (a presa no grupo; desvincular o grupo, copiar e colar por máquina, Atualizar com cartões; o Afinador do Configurador, com as correções da auditoria pré-PR de 03/11; os menores das revisões), o Ctrl + clique do Vinculador e a etapa 1 do "Tablet do zero" (a moldura com Redes, Máquina e Fluxos, a aba Redes nova, o seletor de cor comum), feitos; falta o teste à mão do dono. O ramo `mc/1.20.1-forge` (porte) está parado à espera do ok do dono (`docs/portes.md`).
+- **Em andamento:** ramo `ccr-52410279-si07pg`: o destino seletivo no motor e as etapas 1 a 4 do roteador de alcance (a presa no grupo; desvincular o grupo, copiar e colar por máquina, Atualizar com cartões; o Afinador do Configurador, com as correções da auditoria pré-PR de 03/11; os menores das revisões) e o Ctrl + clique do Vinculador, feitos; falta o teste à mão do dono. O ramo `mc/1.20.1-forge` (porte) está parado à espera do ok do dono (`docs/portes.md`).
 
 ## Próximo passo
 
-1. O dono testa à mão as etapas 1 a 4 do alcance, o Ctrl + clique do Vinculador (listas nas linhas de 02/11 do histórico) e a aba Redes nova do Tablet (`pendencias.md`, área Tablet) e decide o merge.
-2. O "Tablet do zero", etapa 2: a aba Máquina (a lista, o veredito, as faces editáveis), com o plano próprio em `docs/superpowers/plans/` e mockup para o ok do dono; depois os Fluxos e a limpeza.
+1. O dono testa à mão as etapas 1 a 4 e o Ctrl + clique do Vinculador (listas nas linhas de 02/11 do histórico) e decide o merge.
+2. Reidealizar as telas do Tablet do zero (criação de redes etc.), mockup primeiro para o ok do dono.
 3. Publicar a 2.14.0 (push, tag e release no GitHub; o jar no CurseForge e no Modrinth), refazer a imagem do livro na vitrine e o teste do dono da tecla G com o JEI de verdade e das cenas que giram no jogo (ver `pendencias.md`).
 4. Os menores que sobraram do alcance (`pendencias.md`, seção "Roteador de alcance").
 

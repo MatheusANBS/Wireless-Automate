@@ -15,7 +15,7 @@ Uma visão de todas as suas redes, de qualquer lugar.
 
 1. Clique direito com o Tablet. Ou use a tecla **Abrir o Tablet de Rede** com ele no inventário (sem
    tecla padrão: escolha em Opções › Controles).
-2. Na aba **Máquina**, procure o nó e clique nele.
+2. Na aba **Lista**, procure o nó e clique nele.
 3. Mude as faces no painel à direita, como na [tela do roteador](router.md). Vale na hora.
 
 Atalho: com o Tablet na mão, clique direito numa máquina com roteador (ou vinculada pelo Upgrade de
@@ -25,11 +25,12 @@ Alcance). O Tablet abre já com o nó dela escolhido, antes da interface da máq
 
 | Aba | O que faz |
 | --- | --- |
-| **Redes** | Criar e organizar redes e grupos: cor, grupo, acesso e o que cada rede tem. |
-| **Máquina** | As máquinas da base (por ora, a Lista na visão Máquinas). |
+| **Lista** | Todos os nós, com busca, filtros e o painel do nó escolhido. |
 | **Fluxos** | Quanto entra e sai de cada tipo e de cada rede, e o que precisa de atenção. |
+| **Mapa** | Vista de cima, com cor por status e todos os roteadores que você vê. |
+| **Redes** | Criar redes, cor, membros, privacidade e grupos de redes. |
 
-No topo ficam o título, o botão do tema (claro ou escuro) e os avisos do Tablet, como uma ação recusada.
+O cabeçalho conta a sua base: nós, máquinas e redes.
 
 ## O painel do nó
 
@@ -44,7 +45,7 @@ ao reabrir.
 **No mundo** acende a máquina através dos blocos, como o Olho da tela do roteador. **Apagar todas
 (N)**, no pé da Lista, apaga as acesas.
 
-## A Lista (aba Máquina)
+## A Lista
 
 O seletor embaixo da busca troca a visão:
 
@@ -101,27 +102,27 @@ presa ou num grupo para editar a presa ou o perfil do grupo.
 Na visão **Máquinas**, os filtros por tipo e rede valem por máquina: em **Só Fluidos**, uma fornalha
 não aparece, mesmo que o roteador dela também mova fluidos.
 
+## O Mapa
+
+Arraste para mover (**Centralizar** volta para você), role para dar zoom e clique num ponto para
+escolher o nó. O Mapa mostra todos os roteadores, sem depender da busca nem dos filtros da Lista.
+
+O nó escolhido é o mesmo da Lista. As máquinas vinculadas a ele aparecem como quadradinhos ligados
+por uma linha; as acesas pelo Olho ficam em ciano. Clique numa para torná-la o alvo do painel.
+
 ## Redes e grupos
 
-À esquerda ficam os grupos, cada um com o ícone e as redes dele, e por último **Sem grupo**.
+A aba **Redes** é uma lista só. Cada grupo de redes é uma seção com **Pausar** no cabeçalho; as redes
+fora de grupo vêm no fim, em **Sem grupo**. Uma rede pode estar em dois grupos.
 
-- **+ Rede** e **+ Grupo** criam na hora; digite o nome e aperte Enter.
-- Clique numa rede para ver e mudar:
-  - **a cor:** clique no quadrado ao lado do nome e escolha no seletor (qualquer cor);
-  - **o nome:** clique nele;
-  - **o grupo:** uma rede fica num grupo só; escolher outro a muda de lugar;
-  - **o acesso:** **Todos** ou **Convidados** (com **+ convidar** para pôr jogadores e times);
-  - **Nesta rede:** quantas máquinas dão e recebem de cada tipo.
-- **Pausar** para todas as redes do grupo da rede. Numa rede sem grupo, fica desativado.
-- **Usar** faz da rede a ativa do Vinculador. A rede ativa mostra **Em uso**.
-- **Apagar rede** pede dois cliques.
-- Clique num grupo para mudar o nome e o ícone (clique no ícone e busque um item, ou arraste um do JEI), ver as
-  redes dele, pôr outra rede nele, pausar e apagar.
+- Clique numa rede para ver a cor, se é pública ou privada, usá-la e removê-la.
+- Numa rede privada sua, adicione **convidados** e **times do FTB Teams** (só com o mod). Digite um
+  nome e escolha com as setas e Enter; o ✕ duas vezes tira. Só aparecem jogadores que já entraram no
+  servidor. Um time vale por inteiro: quem entra ou sai dele ganha ou perde o acesso sozinho.
+- Clique no cabeçalho de um grupo para mudar o nome, pausar, marcar as redes dele e removê-lo.
+- **Nova rede** e **Novo grupo**, embaixo da lista, criam uma rede ou um grupo.
 
-Os convidados e os times do FTB Teams (só com o mod) entram digitando um nome e escolhendo com as setas e
-Enter; o ✕ duas vezes tira. Só aparecem jogadores que já entraram no servidor. Um time vale por inteiro: quem
-entra ou sai dele ganha ou perde o acesso sozinho. Um grupo pausado para todas as redes dele de uma vez;
-retomar as solta.
+Um grupo pausado para todas as redes dele de uma vez; retomar as solta.
 
 ## Fluxos
 
@@ -189,7 +190,7 @@ An overview of all your networks, from anywhere.
 
 1. Right-click with the Tablet. Or use the **Open Network Tablet** key with it in your inventory
    (unbound by default: set it in Options › Controls).
-2. On the **Machine** tab, find the node and click it.
+2. On the **List** tab, find the node and click it.
 3. Change its faces in the panel on the right, as on the [router screen](router.md). It takes effect
    at once.
 
@@ -200,11 +201,12 @@ Range Upgrade). The Tablet opens with its node already chosen, before the machin
 
 | Tab | What it does |
 | --- | --- |
-| **Networks** | Create and organize networks and groups: color, group, access and what each network has. |
-| **Machine** | The machines of your base (for now, the List in the Machines view). |
+| **List** | Every node, with search, filters and the chosen node's panel. |
 | **Flows** | How much of each type comes in and goes out, per network, and what needs attention. |
+| **Map** | Top-down view, colored by status, with every router you can see. |
+| **Networks** | Create networks, color, members, privacy and network groups. |
 
-At the top sit the title, the theme button (light or dark) and the Tablet's notices, such as a refused action.
+The header counts your base: nodes, machines and networks.
 
 ## The node panel
 
@@ -219,7 +221,7 @@ its tab and node when you reopen it.
 **In the world** lights the machine up through the blocks, like the Eye on the router screen. **Clear
 all (N)**, at the foot of the List, turns off the lit ones.
 
-## The List (Machine tab)
+## The List
 
 The switch below the search changes the view:
 
@@ -278,27 +280,28 @@ attached machine or a group to edit the attached machine or the group's profile.
 In the **Machines** view, the type and network filters apply per machine: under **Only Fluids**, a
 furnace does not show up, even if its router also moves fluids.
 
+## The Map
+
+Drag to move (**Center** brings it back to you), scroll to zoom and click a point to choose the node.
+The Map shows every router, independent of the List's search and filters.
+
+The chosen node is the same as in the List. Its linked machines show up as small squares joined by a
+line; the ones lit by the Eye are cyan. Click one to make it the panel's target.
+
 ## Networks and groups
 
-On the left are the groups, each with its icon and its networks, and last **No group**.
+The **Networks** tab is a single list. Each network group is a section with **Pause** on its header;
+networks outside any group come last, under **No group**. A network can be in two groups.
 
-- **+ Network** and **+ Group** create at once; type the name and press Enter.
-- Click a network to see and change:
-  - **the color:** click the square next to the name and pick from the picker (any color);
-  - **the name:** click it;
-  - **the group:** a network sits in one group only; choosing another moves it;
-  - **the access:** **Everyone** or **Guests** (with **+ invite** to add players and teams);
-  - **In this network:** how many machines give and receive of each type.
-- **Pause** stops every network of the network's group. On a network without a group, it is disabled.
-- **Use** makes the network the Linker's active one. The active network shows **In use**.
-- **Delete network** takes two clicks.
-- Click a group to change its name and icon (click the icon and search for an item, or drag one from JEI),
-  see its networks, put another network in it, pause and delete.
+- Click a network to see its color and whether it is public or private, use it or remove it.
+- On a private network you own, add **guests** and **FTB Teams teams** (only with that mod). Type a
+  name and pick with the arrows and Enter; click the ✕ twice to remove. Only players who already joined
+  the server show up. A team counts as a whole: whoever joins or leaves it gains or loses access on
+  their own.
+- Click a group's header to rename it, pause it, check its networks and remove it.
+- **New network** and **New group**, below the list, create a network or a group.
 
-Guests and FTB Teams teams (only with that mod) are added by typing a name and picking with the arrows and
-Enter; click the ✕ twice to remove. Only players who already joined the server show up. A team counts as a
-whole: whoever joins or leaves it gains or loses access on their own. A paused group stops all its networks
-at once; resuming lets them go.
+A paused group stops all its networks at once; resuming lets them go.
 
 ## Flows
 

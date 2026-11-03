@@ -20,8 +20,6 @@ Decisões em vigor, do dono e do código. Quando uma decisão muda, reescreva a 
 - **Vinculador: o desvincular é num clique** (saiu a confirmação da etapa 4), e **Ctrl + clique numa máquina vincula, direto, as do mesmo bloco no raio**, das mais perto do roteador até o limite do tier. Ctrl + clique para desvincular em massa fica fora. (02/11)
 - **Cartões devolvidos ao desvincular um grupo ou ao Atualizar vão para o inventário de quem clicou** (o que não cabe cai aos pés). A cópia de perfil por máquina é do jogador, fica no servidor (`MachineClipboard`) e vale até ele sair do mundo; os cartões não vão junto. (02/11)
 - **A presa é máquina do grupo do bloco dela:** perfil, exceção e cartões do grupo, lados pela frente da máquina; editar a presa sozinha no grupo muda o perfil, com outras do bloco vira exceção; não conta no limite e vale sem o Upgrade de Alcance. A máquina vinculada segue o perfil. Bloco trocado no lugar leva a presa com o perfil; ar mantém o grupo. (02/11)
-- **Uma rede fica num grupo só** (o seletor Grupo a move); um mundo antigo com a rede em dois grupos fica igual até alguém mexer, e a lista a mostra no primeiro. (03/11)
-- **A cor de uma rede é livre** (qualquer uma, pelo seletor comum); a rede nova recebe a próxima da paleta. (03/11)
 - **Central da rede:** as etapas 4 (busca por conteúdo, micro dos Fluxos) e 5 (aba Problemas) foram descartadas; fica como está. (20/10)
 - **Ressonador:** sem comparador, sem controle por redstone (a automação é o Sintonizador) e sem Tablet. (15/10)
 - **Ficam como estão:** as imagens `feature-2-router` e `feature-6-tablet` do CurseForge com as telas antigas (14/10); o prazo do stash do `StorageSavedData` em 0, sem prazo (19/10); o bench do Baú com e sem vigia, dispensado (27/10).

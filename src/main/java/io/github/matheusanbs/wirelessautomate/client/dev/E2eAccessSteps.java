@@ -1,7 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.client.dev;
 
 import static io.github.matheusanbs.wirelessautomate.client.dev.DevEndToEnd.*;
-import static io.github.matheusanbs.wirelessautomate.client.dev.E2eNetworksSteps.chooseNetwork;
+import static io.github.matheusanbs.wirelessautomate.client.dev.E2eNetworkSectionSteps.chooseNetwork;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eTabletSteps.tabletScreen;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eUi.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
@@ -21,11 +21,10 @@ import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * O acesso a uma rede privada no e2e, na janela "Acesso a …" da aba Redes do Tablet (Convidados e "+ convidar"): a
- * rede dos itens ganha convidados escolhidos pela lista de sugestões (setas e Enter) e pelo nome digitado, e um time do
- * FTB Teams (com ele no jogo); depois a lista de acesso (capturas {@code tablet-acesso*}, também no tema escuro) e o ✕
- * de dois cliques; Esc fecha a janela e as fichas ficam à vista ({@code tablet-redes-convidados}). No fim a rede
- * volta ao que era. Três jogadores falsos entram no cache de perfis só para haver nomes a sugerir.
+ * O acesso a uma rede privada no e2e, na aba Redes do Tablet: a rede dos itens ganha convidados escolhidos pela lista
+ * de sugestões (setas e Enter) e pelo nome digitado, e um time do FTB Teams (com ele no jogo); depois a lista de
+ * acesso (capturas {@code 7s-tablet-acesso*}, também no tema escuro) e o ✕ de dois cliques. No fim a rede volta ao
+ * que era. Três jogadores falsos entram no cache de perfis só para haver nomes a sugerir.
  */
 final class E2eAccessSteps {
     private E2eAccessSteps() {
@@ -62,15 +61,8 @@ final class E2eAccessSteps {
             }
             return null;
         }), () -> usercacheHas("Bruna"), () -> "o cache de jogadores não chegou ao disco"));
-        list.add(new Step("acesso: Convidados", STEP_TIMEOUT_MS, () -> {
-            int[] c = tabletScreen().networks().probe().accessCenter(true);
-            click(tabletScreen(), c[0], c[1]);
-        }, () -> tabletScreen().networks().probe().inviteCenter() != null, () -> "sem o + convidar"));
-        list.add(new Step("acesso: + convidar abre a janela", STEP_TIMEOUT_MS, () -> {
-            int[] c = tabletScreen().networks().probe().inviteCenter();
-            click(tabletScreen(), c[0], c[1]);
-        }, () -> tabletScreen().networks().probe().modalOpen() && tabletScreen().access().shown(),
-                () -> "a janela de acesso não abriu"));
+        list.add(new Step("acesso: a seção aparece na rede privada", STEP_TIMEOUT_MS, () -> {
+        }, () -> tabletScreen().access().shown(), () -> "a seção de acesso não está à vista"));
         list.add(new Step("acesso: clicar no campo de convidar", STEP_TIMEOUT_MS, () -> {
             int[] c = tabletScreen().access().fieldCenter(false);
             click(tabletScreen(), c[0], c[1]);
@@ -79,7 +71,7 @@ final class E2eAccessSteps {
         list.add(new Step("acesso: digitar Br", STEP_TIMEOUT_MS, () -> type("Br"),
                 () -> tabletScreen().access().suggestionCount(false) == 2,
                 () -> "sugestões " + tabletScreen().access().suggestionCount(false)));
-        list.add(capture("tablet-acesso-sugestoes"));
+        list.add(capture("7s-tablet-acesso-sugestoes"));
         list.add(clipCheck("Tablet: acesso com sugestões"));
         list.add(new Step("acesso: seta para baixo e Enter convidam", STEP_TIMEOUT_MS, () -> {
             tabletScreen().keyPressed(GLFW.GLFW_KEY_DOWN, 0, 0);
@@ -100,14 +92,14 @@ final class E2eAccessSteps {
                 tabletScreen().keyPressed(GLFW.GLFW_KEY_ENTER, 0, 0);
             }, () -> counts()[1] == 1, () -> "times " + counts()[1]));
         }
-        list.add(capture("tablet-acesso"));
+        list.add(capture("7s-tablet-acesso"));
         list.add(clipCheck("Tablet: lista de acesso"));
         E2eVariants.escuro(list, () -> {
             list.add(new Step("acesso: tema escuro", STEP_TIMEOUT_MS, () -> {
                 themeBefore = GuiThemes.current();
                 GuiThemes.preview(GuiTheme.DARK);
             }, () -> GuiThemes.current() == GuiTheme.DARK, () -> "tema " + GuiThemes.current()));
-            list.add(capture("tablet-acesso-escuro"));
+            list.add(capture("7s-tablet-acesso-escuro"));
             list.add(new Step("acesso: tema de volta", STEP_TIMEOUT_MS, () -> GuiThemes.preview(themeBefore),
                     () -> GuiThemes.current() == themeBefore, () -> "tema " + GuiThemes.current()));
         });
@@ -116,16 +108,6 @@ final class E2eAccessSteps {
             click(tabletScreen(), c[0], c[1]);
             click(tabletScreen(), c[0], c[1]);
         }, () -> counts()[0] == 1, () -> "convidados " + counts()[0]));
-        list.add(new Step("acesso: Esc fecha a janela", STEP_TIMEOUT_MS, () -> {
-            tabletScreen().keyPressed(GLFW.GLFW_KEY_ESCAPE, 0, 0);
-            if (tabletScreen().networks().probe().modalOpen()) {
-                // o primeiro Esc fechou a lista de sugestões do campo
-                tabletScreen().keyPressed(GLFW.GLFW_KEY_ESCAPE, 0, 0);
-            }
-        }, () -> !tabletScreen().networks().probe().modalOpen() && !tabletScreen().access().shown(),
-                () -> "a janela de acesso continua aberta"));
-        list.add(capture("tablet-redes-convidados"));
-        list.add(clipCheck("Tablet: rede com convidados"));
         list.add(new Step("acesso: a rede volta ao que era", STEP_TIMEOUT_MS, () -> onServer(server -> {
             NetworkSavedData data = NetworkSavedData.get(server);
             WaNetwork network = data.network(otherNetwork);
@@ -137,7 +119,6 @@ final class E2eAccessSteps {
             }
             data.update(network);
             return null;
-        }), () -> tabletScreen().getMenu().snapshot().network(otherNetwork).map(n -> n.access().isEmpty()).orElse(false),
-                () -> "acesso " + tabletScreen().getMenu().snapshot().network(otherNetwork).map(n -> n.access()).orElse(null)));
+        }), () -> counts()[0] == 0 && counts()[1] == 0, () -> "acesso " + counts()[0] + "/" + counts()[1]));
     }
 }

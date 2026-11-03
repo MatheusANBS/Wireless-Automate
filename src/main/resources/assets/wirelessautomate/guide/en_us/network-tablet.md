@@ -22,7 +22,7 @@ An overview of all your networks, from anywhere.
 
 1. Right-click with the Tablet. Or use the **Open Network Tablet** key with it in your inventory
    (unbound by default: set it in Options › Controls).
-2. On the **Machine** tab, find the node and click it.
+2. On the **List** tab, find the node and click it.
 3. Change its faces in the panel on the right, as on the [router screen](router.md). It takes effect
    at once.
 
@@ -33,11 +33,12 @@ Range Upgrade). The Tablet opens with its node already chosen, before the machin
 
 | Tab | What it does |
 | --- | --- |
-| **Networks** | Create and organize networks and groups: color, group, access and what each network has. |
-| **Machine** | The machines of your base (for now, the List in the Machines view). |
+| **List** | Every node, with search, filters and the chosen node's panel. |
 | **Flows** | How much of each type comes in and goes out, per network, and what needs attention. |
+| **Map** | Top-down view, colored by status, with every router you can see. |
+| **Networks** | Create networks, color, members, privacy and network groups. |
 
-At the top sit the title, the theme button (light or dark) and the Tablet's notices, such as a refused action.
+The header counts your base: nodes, machines and networks.
 
 ## The node panel
 
@@ -52,7 +53,7 @@ its tab and node when you reopen it.
 **In the world** lights the machine up through the blocks, like the Eye on the router screen. **Clear
 all (N)**, at the foot of the List, turns off the lit ones.
 
-## The List (Machine tab)
+## The List
 
 The switch below the search changes the view:
 
@@ -111,27 +112,28 @@ attached machine or a group to edit the attached machine or the group's profile.
 In the **Machines** view, the type and network filters apply per machine: under **Only Fluids**, a
 furnace does not show up, even if its router also moves fluids.
 
+## The Map
+
+Drag to move (**Center** brings it back to you), scroll to zoom and click a point to choose the node.
+The Map shows every router, independent of the List's search and filters.
+
+The chosen node is the same as in the List. Its linked machines show up as small squares joined by a
+line; the ones lit by the Eye are cyan. Click one to make it the panel's target.
+
 ## Networks and groups
 
-On the left are the groups, each with its icon and its networks, and last **No group**.
+The **Networks** tab is a single list. Each network group is a section with **Pause** on its header;
+networks outside any group come last, under **No group**. A network can be in two groups.
 
-- **+ Network** and **+ Group** create at once; type the name and press Enter.
-- Click a network to see and change:
-  - **the color:** click the square next to the name and pick from the picker (any color);
-  - **the name:** click it;
-  - **the group:** a network sits in one group only; choosing another moves it;
-  - **the access:** **Everyone** or **Guests** (with **+ invite** to add players and teams);
-  - **In this network:** how many machines give and receive of each type.
-- **Pause** stops every network of the network's group. On a network without a group, it is disabled.
-- **Use** makes the network the Linker's active one. The active network shows **In use**.
-- **Delete network** takes two clicks.
-- Click a group to change its name and icon (click the icon and search for an item, or drag one from JEI),
-  see its networks, put another network in it, pause and delete.
+- Click a network to see its color and whether it is public or private, use it or remove it.
+- On a private network you own, add **guests** and **FTB Teams teams** (only with that mod). Type a
+  name and pick with the arrows and Enter; click the ✕ twice to remove. Only players who already joined
+  the server show up. A team counts as a whole: whoever joins or leaves it gains or loses access on
+  their own.
+- Click a group's header to rename it, pause it, check its networks and remove it.
+- **New network** and **New group**, below the list, create a network or a group.
 
-Guests and FTB Teams teams (only with that mod) are added by typing a name and picking with the arrows and
-Enter; click the ✕ twice to remove. Only players who already joined the server show up. A team counts as a
-whole: whoever joins or leaves it gains or loses access on their own. A paused group stops all its networks
-at once; resuming lets them go.
+A paused group stops all its networks at once; resuming lets them go.
 
 ## Flows
 

@@ -61,7 +61,6 @@ mesmo tipo na mesma rede troca entre si; o modo da face diz quem envia e quem re
 | --- | --- |
 | **Rede por face** | A face de **Cima** da fornalha pode estar na rede "Mina" e a de **Baixo** na "Armazém". A energia pode ir para a "Base". |
 | **Ordem de entrega** | Prioridade maior primeiro; empates se revezam. |
-| **Cor e grupo** | A cor da rede é livre (qualquer uma, pelo seletor do [Tablet](network-tablet.md)). Cada rede fica em um grupo só, ou em **Sem grupo**. |
 | **Rede ativa** | A que o [Tablet](network-tablet.md) usa como destino do **Mover**. Cada jogador tem a sua. |
 | **Quem usa** | Pública: todos. Privada: o dono, os operadores, os **convidados** e, com o FTB Teams, os times adicionados. Só o dono (ou um operador) renomeia, convida e remove. |
 
@@ -102,7 +101,6 @@ same type on the same network trades; the face mode says who sends and who recei
 | --- | --- |
 | **Network per face** | A furnace's **Top** face can be on the "Mine" network and its **Bottom** face on "Storage". The energy can go to "Base". |
 | **Delivery order** | Higher priority first; ties take turns. |
-| **Color and group** | A network's color is free (any color, from the [Tablet](network-tablet.md)'s picker). Each network sits in one group only, or in **No group**. |
 | **Active network** | The one the [Tablet](network-tablet.md) uses as the target of **Move**. Every player has their own. |
 | **Who can use it** | Public: everyone. Private: the owner, operators, **guests** and, with FTB Teams, the added teams. Only the owner (or an operator) renames, invites and removes. |
 

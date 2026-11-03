@@ -7,7 +7,6 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eSteps.*;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.client.dev.E2eSuites.Prereq;
 import io.github.matheusanbs.wirelessautomate.client.dev.E2eSuites.Suite;
-import io.github.matheusanbs.wirelessautomate.client.tablet.TabletScreen;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -27,7 +26,6 @@ final class E2eScript {
     }
 
     static List<Step> script() {
-        TabletScreen.legacyList(true);
         List<Suite> available = new ArrayList<>();
         for (Suite suite : E2eSuites.ALL) {
             if (suite.disponivel().getAsBoolean()) {

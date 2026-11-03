@@ -61,7 +61,6 @@ same type on the same network trades; the face mode says who sends and who recei
 | --- | --- |
 | **Network per face** | A furnace's **Top** face can be on the "Mine" network and its **Bottom** face on "Storage". The energy can go to "Base". |
 | **Delivery order** | Higher priority first; ties take turns. |
-| **Color and group** | A network's color is free (any color, from the [Tablet](network-tablet.md)'s picker). Each network sits in one group only, or in **No group**. |
 | **Active network** | The one the [Tablet](network-tablet.md) uses as the target of **Move**. Every player has their own. |
 | **Who can use it** | Public: everyone. Private: the owner, operators, **guests** and, with FTB Teams, the added teams. Only the owner (or an operator) renames, invites and removes. |
 

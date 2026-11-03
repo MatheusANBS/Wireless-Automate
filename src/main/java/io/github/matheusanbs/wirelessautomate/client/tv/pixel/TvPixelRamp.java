@@ -1,6 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client.tv.pixel;
 
-import io.github.matheusanbs.wirelessautomate.client.color.ColorHsv;
+import io.github.matheusanbs.wirelessautomate.client.tv.editor.TvHsv;
 import io.github.matheusanbs.wirelessautomate.tv.TvPixels;
 
 /**
@@ -43,7 +43,7 @@ public final class TvPixelRamp {
             return;
         }
         int argb = palette[index];
-        float[] hsv = ColorHsv.fromRgb(argb & 0xFFFFFF);
+        float[] hsv = TvHsv.fromRgb(argb & 0xFFFFFF);
         double hue = hsv[0] * 360.0;
         int alpha = argb & 0xFF000000;
         int row = index / ROW * ROW;
@@ -55,7 +55,7 @@ public final class TvPixelRamp {
             double h = toward(hue, k < 0 ? DARK_HUE : LIGHT_HUE, HUE_STEP * Math.abs(k));
             double s = clamp(hsv[1] - SATURATION_STEP * k, 0, 1);
             double v = clamp(hsv[2] + VALUE_STEP * k, MIN_VALUE, 1);
-            palette[j] = alpha | ColorHsv.toRgb((float) (h / 360.0), (float) s, (float) v);
+            palette[j] = alpha | TvHsv.toRgb((float) (h / 360.0), (float) s, (float) v);
         }
     }
 

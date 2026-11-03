@@ -214,22 +214,6 @@ public final class TabletList {
 
     // ------------------------------------------------------------------ ações
 
-    /** A aba Máquina da moldura nova: a Lista na visão por máquinas (a da etapa 2 ainda não existe). */
-    void showMachines() {
-        if (!layout.viewBar().shown()) {
-            layout.viewBar().choose(1);
-        }
-    }
-
-    /** Pede a visão Roteadores; {@code true} quando a página dela já chegou (gancho do e2e, chamado até dar certo). */
-    public boolean previewRouters() {
-        if (layout.viewBar().shown()) {
-            layout.viewBar().choose(0);
-            return false;
-        }
-        return !machineView();
-    }
-
     /** Tira a busca, as etiquetas, os filtros rápidos e o de tipo. */
     public void clearAll() {
         search.clearAll();

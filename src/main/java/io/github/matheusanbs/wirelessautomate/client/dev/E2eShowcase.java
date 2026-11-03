@@ -346,7 +346,7 @@ final class E2eShowcase {
         list.add(capture("s21-cascata"));
     }
 
-    /** Vitrine: a janela de acesso da aba Redes com os convidados e o time do FTB Teams de uma rede privada. */
+    /** Vitrine: a aba Redes com os convidados e o time do FTB Teams de uma rede privada. */
     private static void showcaseAccessShots(List<Step> list) {
         UUID playerId = Minecraft.getInstance().player.getUUID();
         String[] names = {"Ana", "Bruno", "Carla"};
@@ -368,9 +368,7 @@ final class E2eShowcase {
             if (network[0] == null) {
                 throw new StepFailure("nenhuma rede privada do jogador na vitrine");
             }
-            // a lista de acesso fica na janela "Acesso a …", que conta os convidados ao ser desenhada
-            screen.networks().previewAccess();
-        }, () -> tabletScreen().access().shown(), () -> "sem a janela de acesso"));
+        }, () -> tabletScreen().access().shown(), () -> "sem a seção de acesso"));
         list.add(new Step("convidados e time", STEP_TIMEOUT_MS, () -> onServer(server -> {
             for (int i = 0; i < names.length; i++) {
                 server.getProfileCache().add(new com.mojang.authlib.GameProfile(guests[i], names[i]));
@@ -411,7 +409,7 @@ final class E2eShowcase {
         list.add(new Step("abrir o Tablet", STEP_TIMEOUT_MS, () -> {
             Minecraft minecraft = Minecraft.getInstance();
             minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);
-        }, () -> Minecraft.getInstance().screen instanceof TabletScreen screen && screen.list().previewRouters()
+        }, () -> Minecraft.getInstance().screen instanceof TabletScreen screen
                 && !screen.getMenu().snapshot().nodes().isEmpty(),
                 () -> "tela " + describe(Minecraft.getInstance().screen)));
         list.add(new Step("Tablet maior", STEP_TIMEOUT_MS,
@@ -426,7 +424,7 @@ final class E2eShowcase {
         list.add(DevEndToEnd.wait("os 5 s dos Fluxos", 140));
         list.add(capture("s6b-tablet-fluxos"));
         list.add(new Step("aba Mapa", STEP_TIMEOUT_MS,
-                () -> tabletScreen().previewTab(TabletScreen.Tab.MAP),
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.tablet.tab.map")), "aba Mapa")),
                 () -> true, () -> "mapa"));
         list.add(DevEndToEnd.wait("mapa desenhado", 10));
         list.add(capture("s7-tablet-mapa"));

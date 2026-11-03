@@ -2,10 +2,8 @@ package io.github.matheusanbs.wirelessautomate.client.tablet;
 
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiThemes;
+import io.github.matheusanbs.wirelessautomate.client.access.AccessPanel;
 import io.github.matheusanbs.wirelessautomate.client.tablet.TabletScreen.Tab;
-import io.github.matheusanbs.wirelessautomate.client.tablet.machine.MachinePanel;
-import io.github.matheusanbs.wirelessautomate.client.tablet.networks.NetworksPanel;
-import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -13,30 +11,26 @@ import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * O teclado do Tablet: o que digitar na aba Máquina (ou na Lista antiga) procura, as teclas dela, as da aba Redes (as janelas dela e o nome
- * em edição, antes de tudo) e os campos de texto que seguram as teclas enquanto o cursor está neles. Devolve
- * {@code true} quando tratou a tecla; {@code false} deixa o resto para a tela. Também dá aos campos a cor do tema (o
- * {@link EditBox} guarda a cor).
+ * O teclado do Tablet: o que digitar na Lista procura, as teclas da Lista, e os campos de texto (renomear e
+ * nova rede ou grupo, e os do acesso à rede) que seguram as teclas enquanto o cursor está neles. Devolve {@code true} quando tratou a
+ * tecla; {@code false} deixa o resto para a tela. Também dá aos campos a cor do tema (o {@link EditBox} guarda a cor).
  */
 final class TabletKeys {
     private final Screen screen;
     private final TabletList list;
-    private final MachinePanel machine;
-    private final NetworksPanel networks;
+    private final NameFields names;
+    private final AccessPanel access;
     private final Supplier<Tab> tab;
-    private final BooleanSupplier legacy;
     private @Nullable EditBox searchBox;
     /** Versão do tema com que os campos foram pintados ({@link GuiThemes#version()}). */
     private int inkVersion = -1;
 
-    TabletKeys(Screen screen, TabletList list, MachinePanel machine, NetworksPanel networks, Supplier<Tab> tab,
-            BooleanSupplier legacy) {
+    TabletKeys(Screen screen, TabletList list, NameFields names, AccessPanel access, Supplier<Tab> tab) {
         this.screen = screen;
         this.list = list;
-        this.machine = machine;
-        this.networks = networks;
+        this.names = names;
+        this.access = access;
         this.tab = tab;
-        this.legacy = legacy;
     }
 
     /** A caixa de busca nova (a tela refaz os widgets); os campos serão pintados de novo. */
@@ -45,17 +39,11 @@ final class TabletKeys {
         inkVersion = -1;
     }
 
-    /** O campo de busca da aba: o da Lista antiga ou o da aba Máquina. */
-    private @Nullable EditBox activeBox() {
-        return legacy.getAsBoolean() ? searchBox : machine.box();
-    }
-
-    /** A busca com o cursor: digitar na aba Máquina (ou na Lista antiga) procura. */
+    /** A busca com o cursor: digitar na Lista procura. */
     void focusSearch() {
-        EditBox box = activeBox();
-        if (box != null) {
-            box.visible = true;
-            screen.setFocused(box);
+        if (searchBox != null) {
+            searchBox.visible = true;
+            screen.setFocused(searchBox);
         }
     }
 
@@ -67,32 +55,33 @@ final class TabletKeys {
         inkVersion = GuiThemes.version();
         // a dica da busca é desenhada pela lista, que a corta e a mostra também com o cursor na caixa
         GuiPaint.ink(searchBox);
-        if (networks.titleBox() != null) {
-            GuiPaint.ink(networks.titleBox());
-        }
-        networks.access().ink();
+        GuiPaint.ink(names.newBox());
+        GuiPaint.ink(names.renameBox());
+        access.ink();
     }
 
     boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        EditBox focused = screen.getFocused() instanceof EditBox box && box.isFocused() ? box : null;
-        if (tab.get() == Tab.NETWORKS && networks.keyPressed(keyCode, scanCode, modifiers, focused)) {
-            return true;
-        }
         if (tab.get() == Tab.LIST) {
-            if (legacy.getAsBoolean() ? list.keyPressed(keyCode, scanCode, modifiers)
-                    : machine.keyPressed(keyCode, scanCode, modifiers)) {
+            if (list.keyPressed(keyCode, scanCode, modifiers)) {
                 return true;
             }
             if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
                 // sem busca nem filtro, Esc fecha o Tablet
                 return false;
             }
-            if (screen.getFocused() != activeBox()) {
+            if (screen.getFocused() != searchBox) {
                 focusSearch();
             }
         }
         if (screen.getFocused() instanceof EditBox box && box.isFocused()) {
-            if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+            boolean enter = keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER;
+            if (box == names.renameBox() && (enter || keyCode == GLFW.GLFW_KEY_ESCAPE)) {
+                names.finishRename(enter);
+            } else if (box == names.newBox() && enter) {
+                names.create();
+            } else if (access.keyPressed(box, keyCode)) {
+                // tratada pela lista de sugestões do acesso
+            } else if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
                 screen.setFocused(null);
             } else {
                 box.keyPressed(keyCode, scanCode, modifiers);
@@ -104,13 +93,10 @@ final class TabletKeys {
     }
 
     boolean charTyped(char codePoint, int modifiers) {
-        if (tab.get() == Tab.NETWORKS && networks.charTyped(codePoint, modifiers)) {
+        if (tab.get() == Tab.LIST && list.charTyped(codePoint, modifiers)) {
             return true;
         }
-        if (tab.get() == Tab.LIST && legacy.getAsBoolean() && list.charTyped(codePoint, modifiers)) {
-            return true;
-        }
-        if (tab.get() == Tab.LIST && screen.getFocused() != activeBox()) {
+        if (tab.get() == Tab.LIST && screen.getFocused() != searchBox) {
             focusSearch();
         }
         return screen.getFocused() instanceof EditBox box && box.isFocused() && box.charTyped(codePoint, modifiers);

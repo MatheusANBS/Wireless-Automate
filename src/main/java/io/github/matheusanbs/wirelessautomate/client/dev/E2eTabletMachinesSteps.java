@@ -8,7 +8,6 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eUi.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
 import io.github.matheusanbs.wirelessautomate.GuiTheme;
-import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
@@ -54,13 +53,13 @@ import org.lwjgl.glfw.GLFW;
  * põe como alvo do painel, e o Mapa mostra as máquinas dele. "Mostrar todas" e "Mostrar menos"; ↓ e Enter escolhem a
  * seguinte; ← ← recolhe o bloco e → o abre; o clique no cabeçalho recolhe os baús; fechar e reabrir o Tablet volta em
  * Máquinas com os baús recolhidos. Capturas {@code 7o-tablet-maquinas} (também no tema escuro e em português, com a
- * aba Redes em português, {@code tablet-redes-pt}) e {@code 7o-tablet-maquinas-recolhidas}.
+ * aba Redes em português, {@code 7p-tablet-redes-grupos-pt}) e {@code 7o-tablet-maquinas-recolhidas}.
  */
 final class E2eTabletMachinesSteps {
     private E2eTabletMachinesSteps() {
     }
 
-    static final String NAME = "E2E Maquinas";
+    private static final String NAME = "E2E Maquinas";
     private static final int FURNACES = 10;
     static final int FIRST_FURNACE = 2;
     static final int EXCEPTION = FIRST_FURNACE;
@@ -76,7 +75,6 @@ final class E2eTabletMachinesSteps {
     static void machineSteps(List<Step> list) {
         UUID playerId = Minecraft.getInstance().player.getUUID();
         list.add(setUp(playerId));
-        E2eTabletMachineSteps.tabSteps(list);
         list.add(new Step("máquinas: a Lista", STEP_TIMEOUT_MS,
                 () -> tabletScreen().previewTab(TabletScreen.Tab.LIST),
                 () -> tabletScreen().currentTab() == TabletScreen.Tab.LIST, () -> "aba " + tabletScreen().currentTab()));
@@ -90,7 +88,6 @@ final class E2eTabletMachinesSteps {
         list.add(search("máquinas: "));
         list.add(chooseMachine("máquinas: ", EXCEPTION));
         list.add(flowingCapture("7o-tablet-maquinas"));
-        list.add(livesKeepNetworks());
         list.add(clipCheck("Tablet: máquinas"));
         list.add(listClipTooltip("Tablet: máquinas"));
         E2eVariants.escuro(list, () -> {
@@ -181,9 +178,9 @@ final class E2eTabletMachinesSteps {
         list.add(clipCheck("pt: Tablet: máquinas"));
         list.add(listClipTooltip("pt: Tablet: máquinas"));
         E2eTabletMarkSteps.portugueseSteps(list);
-        list.add(E2eNetworksSteps.chooseNetwork("pt: redes: "));
-        list.add(capture("tablet-redes-pt"));
-        list.add(clipCheck("pt: Tablet: Redes"));
+        list.add(E2eNetworkSectionSteps.chooseNetwork("pt: redes: "));
+        list.add(capture("7p-tablet-redes-grupos-pt"));
+        list.add(clipCheck("pt: Tablet: Redes com grupos"));
         list.add(new Step("pt: de volta à Lista", STEP_TIMEOUT_MS,
                 () -> tabletScreen().previewTab(TabletScreen.Tab.LIST),
                 () -> tabletScreen().currentTab() == TabletScreen.Tab.LIST, () -> "aba " + tabletScreen().currentTab()));
@@ -250,7 +247,15 @@ final class E2eTabletMachinesSteps {
             moveMouse(0, 0);
             PanelNotices.clear();
         }, () -> {
-            feedChests();
+            onServer(server -> {
+                Container from = (Container) server.overworld().getBlockEntity(source);
+                Container to = (Container) server.overworld().getBlockEntity(sink);
+                for (int i = 0; i < 4; i++) {
+                    from.setItem(i, new ItemStack(Items.COBBLESTONE, 64));
+                }
+                to.clearContent();
+                return null;
+            });
             TabletRows.MachineLive live = live(0);
             if (stepTicks < 25 || live == null || live.status() != TabletRows.MachineStatus.MOVING
                     || live.given(ResourceType.ITEM) == 0 || PanelNotices.current() != null) {
@@ -259,52 +264,6 @@ final class E2eTabletMachinesSteps {
             capture(Minecraft.getInstance(), file);
             return true;
         }, () -> "origem " + live(0));
-    }
-
-    private static int versionAt;
-    private static int headerAt;
-    private static int buildsAt;
-
-    /**
-     * Com os baús movendo, chegam amostras ao vivo (e talvez um cabeçalho): a aba Redes, escondida, só se remonta com um
-     * cabeçalho novo, nunca com uma amostra.
-     */
-    private static Step livesKeepNetworks() {
-        return new Step("máquinas: as amostras ao vivo não remontam a aba Redes", STEP_TIMEOUT_MS, () -> {
-            versionAt = tabletScreen().getMenu().version();
-            headerAt = tabletScreen().getMenu().headerVersion();
-            buildsAt = tabletScreen().networks().probe().snapshotBuilds();
-        }, () -> {
-            feedChests();
-            int headers = tabletScreen().getMenu().headerVersion() - headerAt;
-            int samples = tabletScreen().getMenu().version() - versionAt - headers;
-            int builds = tabletScreen().networks().probe().snapshotBuilds() - buildsAt;
-            if (builds > headers) {
-                throw new StepFailure(builds + " montagens da aba Redes com " + headers + " cabeçalho(s) e " + samples
-                        + " amostra(s)");
-            }
-            if (samples >= 1 && stepTicks >= 40) {
-                WirelessAutomate.LOGGER.info("E2E: {} amostras e {} cabeçalho(s), {} montagem(ns) da aba Redes",
-                        samples, headers, builds);
-                return true;
-            }
-            return false;
-        }, () -> "snapshots " + (tabletScreen().getMenu().version() - versionAt) + ", cabeçalhos "
-                + (tabletScreen().getMenu().headerVersion() - headerAt) + ", montagens "
-                + (tabletScreen().networks().probe().snapshotBuilds() - buildsAt));
-    }
-
-    /** A origem ganha pedregulho e o destino esvazia, para os baús continuarem movendo. */
-    private static void feedChests() throws Exception {
-        onServer(server -> {
-            Container from = (Container) server.overworld().getBlockEntity(source);
-            Container to = (Container) server.overworld().getBlockEntity(sink);
-            for (int i = 0; i < 4; i++) {
-                from.setItem(i, new ItemStack(Items.COBBLESTONE, 64));
-            }
-            to.clearContent();
-            return null;
-        });
     }
 
     /**
@@ -355,7 +314,7 @@ final class E2eTabletMachinesSteps {
     }
 
     /** Fecha pela própria tela, com a busca como está (o Esc a limparia); termina quando o servidor fechou o menu. */
-    static Step closeKeeping(String name) {
+    private static Step closeKeeping(String name) {
         return new Step(name, STEP_TIMEOUT_MS, () -> tabletScreen().onClose(), () -> {
             UUID playerId = Minecraft.getInstance().player.getUUID();
             return Minecraft.getInstance().screen == null && onServer(server -> {
@@ -365,7 +324,7 @@ final class E2eTabletMachinesSteps {
         }, () -> "tela " + describe(Minecraft.getInstance().screen));
     }
 
-    static Step openTablet(String name) {
+    private static Step openTablet(String name) {
         return new Step(name, STEP_TIMEOUT_MS, () -> {
             Minecraft minecraft = Minecraft.getInstance();
             minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);

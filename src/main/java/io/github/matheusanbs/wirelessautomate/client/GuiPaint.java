@@ -90,20 +90,6 @@ public final class GuiPaint {
     /** Texto das regras na lista do filtro (roxo da regra, legível no painel). */
     public static int RULE_TEXT;
 
-    /** Tablet novo: moldura de 1 px do relevo e dos campos. */
-    public static int FRAME;
-    /** Luz e sombra do relevo (botões, seletores, janelas). */
-    public static int RELIEF_LIGHT;
-    public static int RELIEF_DARK;
-    /** Face plana de botão e de segmento não escolhido. */
-    public static int FACE;
-    /** Slot de item e as linhas de luz e sombra dele. */
-    public static int SLOT;
-    public static int SLOT_LIGHT;
-    public static int SLOT_DARK;
-    /** O botão primário (o único lugar, com a aba ativa, em que o coral aparece). */
-    public static int PRIMARY;
-
     // -- o osciloscópio do Núcleo de Ressonância: fora da paleta, iguais nos dois temas, porque o visor é um
     // instrumento de fundo escuro tanto no claro quanto no escuro (o único fundo escuro da tela)
     public static final int SCOPE_BG = 0xFF1B1920;
@@ -167,14 +153,6 @@ public final class GuiPaint {
         PAUSED = p.paused();
         BRASS = p.brass();
         RULE_TEXT = p.ruleText();
-        FRAME = p.frame();
-        RELIEF_LIGHT = p.reliefLight();
-        RELIEF_DARK = p.reliefDark();
-        FACE = p.face();
-        SLOT = p.slot();
-        SLOT_LIGHT = p.slotLight();
-        SLOT_DARK = p.slotDark();
-        PRIMARY = p.primary();
     }
 
     /** A cor com outra transparência ({@code alpha} de 0 a 255): os véus seguem o tema. */

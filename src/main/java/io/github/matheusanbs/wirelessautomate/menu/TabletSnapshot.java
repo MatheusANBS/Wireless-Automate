@@ -8,6 +8,7 @@ import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.TeamAccess;
 import io.github.matheusanbs.wirelessautomate.preset.ProfileDiff.ProfileMatch;
+import io.github.matheusanbs.wirelessautomate.preset.ProfileSource;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.netty.handler.codec.DecoderException;
 import java.util.ArrayList;
@@ -19,6 +20,7 @@ import java.util.UUID;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceLocation;
 
@@ -28,7 +30,7 @@ import net.minecraft.resources.ResourceLocation;
  * ({@link Query}): no máximo {@link #MAX_NODES}, ordenados pelo id da máquina e depois pelo nome, e
  * {@code matchingNodes} diz quantos casaram, para nenhum pacote levar milhares de nós.
  *
- * <p>Vai ao cliente em duas partes, cada uma só quando muda: o cabeçalho ({@link TabletHeaderCodec}:
+ * <p>Vai ao cliente em duas partes, cada uma só quando muda: o cabeçalho ({@link #HEADER_CODEC}:
  * redes, grupos, facetas, contagens dos filtros rápidos e aviso, pequeno) e a página de nós ({@link Page},
  * a parte grande). O buffer de abertura leva as duas
  * ({@link #STREAM_CODEC}).
@@ -79,7 +81,6 @@ public record TabletSnapshot(
     public static final int MAX_TEXT_MACHINES = 32;
     /** Etiquetas de máquina e de rede de uma consulta, cada. */
     public static final int MAX_LABELS = 8;
-    /** Quantos tipos o mod tem, o teto das contas por tipo de uma rede no cabeçalho. */
 
     /** Filtro rápido da lista; os ligados valem todos ao mesmo tempo. */
     public enum QuickFilter {
@@ -263,31 +264,14 @@ public record TabletSnapshot(
      * @param unloaded   nós da rede em chunks descarregados
      * @param access     convidados e times da rede; só vai para quem gerencia ({@link AccessView#EMPTY} para os
      *                   outros, que não recebem os nomes)
-     * @param machines   máquinas na rede, a presa e as remotas dos nós ({@link NetworkTally})
-     * @param types      os tipos em que a rede tem quem dá ou quem recebe, na ordem do {@link LoadedTypes#LIST}
      */
     public record NetworkView(UUID id, String name, int color, String owner, boolean owned, boolean manageable,
-            boolean isPublic, boolean paused, int nodes, int unloaded, AccessView access, int machines,
-            List<TypeCount> types) {
-        public NetworkView {
-            types = List.copyOf(types);
-        }
-
-        /** Uma rede sem as contas de máquinas. */
-        public NetworkView(UUID id, String name, int color, String owner, boolean owned, boolean manageable,
-                boolean isPublic, boolean paused, int nodes, int unloaded, AccessView access) {
-            this(id, name, color, owner, owned, manageable, isPublic, paused, nodes, unloaded, access, 0, List.of());
-        }
-
-        /** Uma rede sem lista de acesso nem contas de máquinas. */
+            boolean isPublic, boolean paused, int nodes, int unloaded, AccessView access) {
+        /** Uma rede sem lista de acesso para mostrar. */
         public NetworkView(UUID id, String name, int color, String owner, boolean owned, boolean manageable,
                 boolean isPublic, boolean paused, int nodes, int unloaded) {
             this(id, name, color, owner, owned, manageable, isPublic, paused, nodes, unloaded, AccessView.EMPTY);
         }
-    }
-
-    /** Quantas máquinas de uma rede dão e recebem um tipo (Armazém conta nos dois). */
-    public record TypeCount(ResourceType type, int givers, int receivers) {
     }
 
     /** Quem tem acesso a uma rede privada, para o dono editar. */
@@ -340,19 +324,9 @@ public record TabletSnapshot(
     public record Guest(UUID id, String name, boolean online) {
     }
 
-    /**
-     * Um grupo de redes do jogador (ou de qualquer um, para operador).
-     *
-     * @param icon    o item escolhido para o grupo
-     * @param machine a primeira máquina das redes do grupo, o ícone de reserva quando não há {@code icon}
-     */
+    /** Um grupo de redes do jogador (ou de qualquer um, para operador). */
     public record GroupView(UUID id, String name, String owner, boolean manageable, boolean paused,
-            List<UUID> networks, Optional<ResourceLocation> icon, Optional<ResourceLocation> machine) {
-        /** Um grupo sem ícone nem máquina. */
-        public GroupView(UUID id, String name, String owner, boolean manageable, boolean paused,
-                List<UUID> networks) {
-            this(id, name, owner, manageable, paused, networks, Optional.empty(), Optional.empty());
-        }
+            List<UUID> networks) {
     }
 
     /**
@@ -510,12 +484,135 @@ public record TabletSnapshot(
     /** Snapshot inteiro (cabeçalho e página), para o buffer de abertura. */
     public static final StreamCodec<RegistryFriendlyByteBuf, TabletSnapshot> STREAM_CODEC = StreamCodec.of(
             (buf, s) -> {
-                TabletHeaderCodec.CODEC.encode(buf, s);
+                encodeHeader(buf, s);
                 TabletPageCodec.encodePage(buf, s.page());
             },
-            buf -> TabletHeaderCodec.CODEC.decode(buf).withPage(TabletPageCodec.decodePage(buf)));
-    /** Só o cabeçalho; decodificado com {@link Page#EMPTY} no lugar da página ({@link TabletHeaderCodec}). */
-    public static final StreamCodec<RegistryFriendlyByteBuf, TabletSnapshot> HEADER_CODEC = TabletHeaderCodec.CODEC;
+            buf -> decodeHeader(buf).withPage(TabletPageCodec.decodePage(buf)));
+    /** Só o cabeçalho; decodificado com {@link Page#EMPTY} no lugar da página. */
+    public static final StreamCodec<RegistryFriendlyByteBuf, TabletSnapshot> HEADER_CODEC =
+            StreamCodec.of(TabletSnapshot::encodeHeader, TabletSnapshot::decodeHeader);
+
+    private static void encodeHeader(RegistryFriendlyByteBuf buf, TabletSnapshot s) {
+        buf.writeBoolean(s.operator);
+        buf.writeResourceLocation(s.dimension);
+        buf.writeOptional(s.activeNetwork, (b, id) -> b.writeUUID(id));
+        buf.writeVarInt(s.networks.size());
+        for (NetworkView n : s.networks) {
+            buf.writeUUID(n.id);
+            buf.writeUtf(n.name, 64);
+            buf.writeInt(n.color);
+            buf.writeUtf(n.owner, 64);
+            buf.writeBoolean(n.owned);
+            buf.writeBoolean(n.manageable);
+            buf.writeBoolean(n.isPublic);
+            buf.writeBoolean(n.paused);
+            buf.writeVarInt(n.nodes);
+            buf.writeVarInt(n.unloaded);
+            n.access.write(buf);
+        }
+        buf.writeVarInt(s.groups.size());
+        for (GroupView g : s.groups) {
+            buf.writeUUID(g.id);
+            buf.writeUtf(g.name, 64);
+            buf.writeUtf(g.owner, 64);
+            buf.writeBoolean(g.manageable);
+            buf.writeBoolean(g.paused);
+            buf.writeVarInt(g.networks.size());
+            for (UUID id : g.networks) {
+                buf.writeUUID(id);
+            }
+        }
+        buf.writeVarInt(s.machineFacets.size());
+        for (Facet<ResourceLocation> facet : s.machineFacets) {
+            buf.writeResourceLocation(facet.id());
+            buf.writeVarInt(facet.count());
+        }
+        buf.writeVarInt(s.networkFacets.size());
+        for (Facet<UUID> facet : s.networkFacets) {
+            buf.writeUUID(facet.id());
+            buf.writeVarInt(facet.count());
+        }
+        buf.writeVarInt(s.quickCounts.problem());
+        buf.writeVarInt(s.quickCounts.noNetwork());
+        buf.writeVarInt(s.quickCounts.unloaded());
+        buf.writeVarInt(s.machines);
+        buf.writeOptional(s.profile, (b, p) -> {
+            b.writeUtf(ProfileSource.clip(p.sourceName), ProfileSource.MAX_NAME);
+            b.writeResourceLocation(p.machine);
+            NodeKey.STREAM_CODEC.encode(b, p.origin);
+            b.writeVarInt(p.types.size());
+            p.types.forEach(type -> b.writeEnum(type));
+            b.writeVarInt(p.faces);
+        });
+        ComponentSerialization.TRUSTED_STREAM_CODEC.encode(buf, s.notice);
+        buf.writeVarInt(s.noticeId);
+    }
+
+    private static TabletSnapshot decodeHeader(RegistryFriendlyByteBuf buf) {
+        boolean operator = buf.readBoolean();
+        ResourceLocation dimension = buf.readResourceLocation();
+        Optional<UUID> active = buf.readOptional(b -> b.readUUID());
+        int networkCount = buf.readVarInt();
+        List<NetworkView> networks = new ArrayList<>(networkCount);
+        for (int i = 0; i < networkCount; i++) {
+            UUID id = buf.readUUID();
+            String name = buf.readUtf(64);
+            int color = buf.readInt();
+            String owner = buf.readUtf(64);
+            boolean owned = buf.readBoolean();
+            boolean manageable = buf.readBoolean();
+            boolean isPublic = buf.readBoolean();
+            boolean paused = buf.readBoolean();
+            int nodes = buf.readVarInt();
+            int unloaded = buf.readVarInt();
+            networks.add(new NetworkView(id, name, color, owner, owned, manageable, isPublic, paused, nodes,
+                    unloaded, AccessView.read(buf)));
+        }
+        int groupCount = buf.readVarInt();
+        List<GroupView> groups = new ArrayList<>(groupCount);
+        for (int i = 0; i < groupCount; i++) {
+            UUID id = buf.readUUID();
+            String name = buf.readUtf(64);
+            String owner = buf.readUtf(64);
+            boolean manageable = buf.readBoolean();
+            boolean paused = buf.readBoolean();
+            int count = buf.readVarInt();
+            List<UUID> members = new ArrayList<>(count);
+            for (int j = 0; j < count; j++) {
+                members.add(buf.readUUID());
+            }
+            groups.add(new GroupView(id, name, owner, manageable, paused, List.copyOf(members)));
+        }
+        int machineCount = buf.readVarInt();
+        List<Facet<ResourceLocation>> machineFacets = new ArrayList<>(machineCount);
+        for (int i = 0; i < machineCount; i++) {
+            machineFacets.add(new Facet<>(buf.readResourceLocation(), buf.readVarInt()));
+        }
+        int facetCount = buf.readVarInt();
+        List<Facet<UUID>> networkFacets = new ArrayList<>(facetCount);
+        for (int i = 0; i < facetCount; i++) {
+            networkFacets.add(new Facet<>(buf.readUUID(), buf.readVarInt()));
+        }
+        QuickCounts quickCounts = new QuickCounts(buf.readVarInt(), buf.readVarInt(), buf.readVarInt());
+        int machines = buf.readVarInt();
+        Optional<ProfileSummary> profile = buf.readOptional(b -> {
+            String sourceName = b.readUtf(ProfileSource.MAX_NAME);
+            ResourceLocation machine = b.readResourceLocation();
+            NodeKey origin = NodeKey.STREAM_CODEC.decode(b);
+            int typeCount = b.readVarInt();
+            List<ResourceType> types = new ArrayList<>(typeCount);
+            for (int i = 0; i < typeCount; i++) {
+                types.add(b.readEnum(ResourceType.class));
+            }
+            return new ProfileSummary(sourceName, machine, origin, List.copyOf(types), b.readVarInt());
+        });
+        Component notice = ComponentSerialization.TRUSTED_STREAM_CODEC.decode(buf);
+        int noticeId = buf.readVarInt();
+        return new TabletSnapshot(operator, dimension, active, Page.EMPTY.query(),
+                0, 0, List.copyOf(networks), List.copyOf(groups), List.copyOf(machineFacets),
+                List.copyOf(networkFacets), quickCounts, machines, profile, List.of(), TabletRows.EMPTY,
+                TabletMachineRows.EMPTY, notice, noticeId);
+    }
 
     /**
      * O que muda a cada amostra num nó da página: o estado e a vazão por tipo. Quando só isso muda, o Tablet manda

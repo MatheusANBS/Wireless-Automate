@@ -140,8 +140,8 @@ final class E2ePortugueseSteps {
         }, () -> Minecraft.getInstance().screen instanceof TabletScreen,
                 () -> "tela " + describe(Minecraft.getInstance().screen)));
         list.add(new Step("pt: Tablet no mínimo, Lista", STEP_TIMEOUT_MS,
-                () -> tabletScreen().previewResize(420, 240),
-                () -> tabletScreen().size()[0] == 420 && stepTicks >= 10,
+                () -> tabletScreen().previewResize(300, 240),
+                () -> tabletScreen().size()[0] == 300 && stepTicks >= 10,
                 () -> "tamanho " + java.util.Arrays.toString(tabletScreen().size())));
         list.add(clipCheck("pt: Tablet Lista"));
         list.add(new Step("pt: aba Fluxos", STEP_TIMEOUT_MS,
@@ -164,8 +164,8 @@ final class E2ePortugueseSteps {
         list.add(clipCheck("pt: Tablet máximo"));
         list.add(capture("7g-tablet-pt-max"));
         list.add(new Step("pt: Tablet de volta ao mínimo", STEP_TIMEOUT_MS,
-                () -> tabletScreen().previewResize(420, 240),
-                () -> tabletScreen().size()[0] == 420,
+                () -> tabletScreen().previewResize(300, 240),
+                () -> tabletScreen().size()[0] == 300,
                 () -> "tamanho " + java.util.Arrays.toString(tabletScreen().size())));
         list.add(close("pt: fechar o Tablet"));
         list.add(E2eFlowsSteps.machines("pt: tirar os roteadores dos Fluxos", false));

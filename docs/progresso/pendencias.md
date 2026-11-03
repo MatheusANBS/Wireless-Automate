@@ -35,17 +35,12 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 
 ## Tablet
 
-- **(dono)** Teste à mão da etapa 1 do "Tablet do zero" (03/11): o arraste de um item do JEI de verdade na grade de ícones do grupo (o e2e só chama o `acceptGhost`); a escala 4 em 1080p (a tela mínima é 420 × 240 e a de 1080p com escala 4 dá 480 × 270); o botão "Usar" no rodapé ao lado de "ativa" (o dono confirma se fica); e o engasgo de 10 a 50 ms na primeira busca da grade de ícones no ATM10 (o `IconCatalog` é montado por janela: se pesar, guardar o catálogo na sessão com um reload listener).
-- **Tablet do zero, etapas 2 a 4** (`docs/superpowers/specs/2026-11-03-tablet-do-zero-design.md`): a Máquina (a lista, o veredito, as faces editáveis, "Mostrar no mundo"), os Fluxos por máquina e a limpeza (sai o que está em "O que sai do Tablet"; o guia, `docs/especificacao.md` e o Mapa fora da tela). Até lá a Máquina mostra a Lista e o Tablet lembrado abre com "Máquina" acesa e os Roteadores no corpo. (03/11)
-- O "dão/recebem" de "Nesta rede" erra com uma máquina em duas redes do mesmo tipo e papéis cruzados (a máscara de redes é a união dos tipos), e o `NetworkTally` não conta nó com mais de 63 redes. (03/11)
-- O texto branco do botão primário ("+ Rede") sobre o coral do mockup tem contraste 2,5: é o limite da cor do mockup; o dono decide se escurece o coral. (03/11)
-- Menores da etapa 1 do Tablet (03/11): o `nextColor` pela contagem de redes pode repetir uma cor viva depois de apagar uma; `GROUP_ICON` sem aviso de sucesso; o aviso "Grupo criado" com o nome padrão fica velho depois de renomear; fechar o Tablet com o seletor de cor aberto perde a cor, e a rede apagada com ele aberto manda `NETWORK_COLOR`; o "ou arraste um item do JEI" aparece sem o JEI; a borda coral do campo com foco na janela de Acesso (a decisão pede `FG`); o `TabletSnapshot` (698 linhas) pede o codec do cabeçalho em classe própria.
 - O "via" de um roteador sem nome usa o bloco da presa ou "roteador": o servidor não manda o nome padrão. (20/10)
 - Na tela mínima (420 × 280), a segunda linha da máquina corta as coordenadas. (20/10)
 - Copiar o perfil de uma máquina ou grupo para colar noutra. (20/10)
 - **(dono)** Decidir se a linha do grupo mostra a soma da vazão (o mockup mostra, a spec não). (19/10)
 - O operador recebe a lista de acesso de todas as redes da página (melhor só a da rede escolhida); o `online` e a contagem de membros só atualizam quando o snapshot muda por outro motivo. (22/10)
-- Menores da etapa 3b: blocos marcados que continuam marcados ao voltar a Roteadores; o `machineCount` do botão pode contar duas vezes; desmarcar uma máquina de um bloco marcado tira as escondidas sem aviso; a ordem dos bits do `NetworkOrder` depende do `LoadedTypes.LIST`. (20/10)
+- Menores da etapa 3b: blocos marcados que continuam marcados ao voltar a Roteadores; "Nova rede Novo grupo" colados; o `machineCount` do botão pode contar duas vezes; desmarcar uma máquina de um bloco marcado tira as escondidas sem aviso; a ordem dos bits do `NetworkOrder` depende do `LoadedTypes.LIST`. (20/10)
 - Mapa com um quad por pixel de traço; se pesar, o `MapLines` passa a dar segmentos. (19/10)
 
 ## Armazenamentos

@@ -435,7 +435,7 @@ final class E2eTabletTreeSteps {
         return new Step(name, STEP_TIMEOUT_MS, () -> {
             Minecraft minecraft = Minecraft.getInstance();
             minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);
-        }, () -> Minecraft.getInstance().screen instanceof TabletScreen screen && screen.list().previewRouters(),
+        }, () -> Minecraft.getInstance().screen instanceof TabletScreen,
                 () -> "tela " + describe(Minecraft.getInstance().screen));
     }
 

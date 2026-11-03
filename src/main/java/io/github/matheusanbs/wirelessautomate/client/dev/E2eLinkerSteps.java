@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -35,11 +36,13 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.client.ClientHooks;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * O Vinculador no e2e: um roteador Avançado com o Upgrade de Alcance escolhido com o clique, a área marcada com
- * Shift + clique, a tela com o Vincular e o Desvincular, o Ctrl + clique que vincula os baús, e o modo Abrir com a lista de dois roteadores.
+ * Shift + clique, a tela com o Vincular e o Desvincular, o Ctrl + clique que vincula os funis (e não vale correndo),
+ * e o modo Abrir com a lista de dois roteadores.
  */
 final class E2eLinkerSteps {
     /** Onde o jogador estava antes de ir para perto do baú do Vinculador, e para onde olhava. */
@@ -53,8 +56,12 @@ final class E2eLinkerSteps {
     /** O baú que o Vincular junta ao roteador, com um roteador preso nele (os dois chegam na mesma máquina). */
     static BlockPos linkChest;
     private static BlockPos linkAttached;
-    /** Outro baú perto, que o Ctrl + clique no {@link #linkChest} vincula junto (o mesmo bloco). */
-    private static BlockPos linkChestSame;
+    /**
+     * Os dois funis que o Ctrl + clique vincula juntos: um bloco que nenhuma outra suíte usa, para a contagem do aviso
+     * não pegar máquinas de fora.
+     */
+    private static BlockPos linkHopper;
+    private static BlockPos linkHopperSame;
     private static BlockPos linkCornerA;
     private static BlockPos linkCornerB;
 
@@ -73,11 +80,15 @@ final class E2eLinkerSteps {
             linkRouter = chest.above();
             linkChest = chest.offset(2, 0, 0);
             linkAttached = linkChest.above();
-            linkChestSame = linkChest.offset(0, 0, 2);
+            linkHopper = linkChest.offset(1, 0, 2);
+            linkHopperSame = linkChest.offset(-1, 0, 2);
             linkCornerA = linkChest.offset(-1, -1, -1);
             linkCornerB = linkChest;
-            for (BlockPos pos : List.of(chest, linkChest, linkChestSame)) {
+            for (BlockPos pos : List.of(chest, linkChest)) {
                 level.setBlockAndUpdate(pos, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.SOUTH));
+            }
+            for (BlockPos pos : List.of(linkHopper, linkHopperSame)) {
+                level.setBlockAndUpdate(pos, Blocks.HOPPER.defaultBlockState());
             }
             level.setBlockAndUpdate(linkRouter, ModBlocks.ROUTER.get().defaultBlockState()
                     .setValue(RouterBlock.FACING, Direction.UP).setValue(RouterBlock.TIER, RouterTier.ADVANCED));
@@ -160,28 +171,77 @@ final class E2eLinkerSteps {
         list.add(clipCheck("Vinculador: desvinculado"));
         list.add(capture("9b-vinculador-desvincular"));
         list.add(close("Vinculador: fechar a tela"));
-        list.add(ctrlClickStep());
+        ctrlClickSteps(list);
         list.add(capture("9c-vinculador-ctrl-clique"));
         openSteps(list);
     }
 
     /**
-     * Ctrl + clique no baú: o Ctrl de verdade não chega ao {@code Screen.hasControlDown()} no e2e, então o passo chama o
-     * que o {@link LinkerSameBlockInput} faz depois de ver o Ctrl (confere o gesto e manda o pacote). Os dois baús
-     * soltos entram, e a action bar diz quantos.
+     * Ctrl + clique num funil, pelo caminho do jogo: o {@code InteractionKeyMappingTriggered} postado como o jogo posta
+     * ({@code ClientHooks.onClickInput}), duas vezes com a tecla de uso descida (o jogo repete o uso com o botão
+     * segurado). O Ctrl de verdade não chega ao {@code Screen.hasControlDown()} no e2e, então o passo o força pelo
+     * gancho do {@link LinkerSameBlockInput}. Os dois usos são cancelados, um pedido só vai ao servidor, os dois funis
+     * entram e a action bar diz 2. Depois, correndo (ou mirando o chão, que não é máquina), o gesto não vale: o uso
+     * passa e nenhum pedido sai.
      */
-    private static Step ctrlClickStep() {
-        return new Step("Vinculador: Ctrl + clique vincula os baús", STEP_TIMEOUT_MS, () -> {
+    private static void ctrlClickSteps(List<Step> list) {
+        int[] sentBefore = new int[1];
+        list.add(new Step("Vinculador: Ctrl + clique segurado manda um pedido só", STEP_TIMEOUT_MS, () -> {
             Minecraft minecraft = Minecraft.getInstance();
-            BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(linkChest), Direction.UP, linkChest, false);
-            if (!LinkerSameBlockInput.applies(minecraft, hit) || !LinkerSameBlockInput.send(minecraft, hit)) {
-                throw new StepFailure("o Ctrl + clique não vale no baú");
+            KeyMapping use = minecraft.options.keyUse;
+            sentBefore[0] = LinkerSameBlockInput.sentCount();
+            boolean[] canceled = new boolean[2];
+            LinkerSameBlockInput.forceControl(true);
+            KeyMapping.set(use.getKey(), true);
+            try {
+                minecraft.hitResult = new BlockHitResult(Vec3.atCenterOf(linkHopper), Direction.UP, linkHopper, false);
+                canceled[0] = ClientHooks.onClickInput(1, use, InteractionHand.MAIN_HAND).isCanceled();
+                canceled[1] = ClientHooks.onClickInput(1, use, InteractionHand.MAIN_HAND).isCanceled();
+            } finally {
+                KeyMapping.set(use.getKey(), false);
+                LinkerSameBlockInput.forceControl(false);
             }
-        }, () -> onServer(server -> router(server, linkRouter).remoteMachines().contains(linkChest)
-                && router(server, linkRouter).remoteMachines().contains(linkChestSame))
-                && "item.wirelessautomate.linker.range.same.linked".equals(E2eResonatorSteps.overlayKey()),
+            int sent = LinkerSameBlockInput.sentCount() - sentBefore[0];
+            if (!canceled[0] || !canceled[1] || sent != 1) {
+                throw new StepFailure("usos cancelados " + canceled[0] + "/" + canceled[1] + ", pedidos " + sent);
+            }
+        }, () -> onServer(server -> router(server, linkRouter).remoteMachines().contains(linkHopper)
+                && router(server, linkRouter).remoteMachines().contains(linkHopperSame))
+                && "item.wirelessautomate.linker.range.same.linked".equals(E2eResonatorSteps.overlayKey())
+                && E2eResonatorSteps.overlayArgs().length > 0
+                && Integer.valueOf(2).equals(E2eResonatorSteps.overlayArgs()[0])
+                && LinkerSameBlockInput.sentCount() - sentBefore[0] == 1,
                 () -> "máquinas " + onServer(server -> router(server, linkRouter).remoteMachines().machines().size())
-                        + "; action bar " + E2eResonatorSteps.overlayKey());
+                        + "; action bar " + E2eResonatorSteps.overlayKey() + " "
+                        + java.util.Arrays.toString(E2eResonatorSteps.overlayArgs()) + "; pedidos "
+                        + (LinkerSameBlockInput.sentCount() - sentBefore[0])));
+        list.add(new Step("Vinculador: correndo ou no chão, o Ctrl + clique não vale", STEP_TIMEOUT_MS, () -> {
+            Minecraft minecraft = Minecraft.getInstance();
+            KeyMapping use = minecraft.options.keyUse;
+            sentBefore[0] = LinkerSameBlockInput.sentCount();
+            boolean sprinting;
+            boolean floor;
+            LinkerSameBlockInput.forceControl(true);
+            try {
+                minecraft.player.setSprinting(true);
+                minecraft.hitResult = new BlockHitResult(Vec3.atCenterOf(linkHopper), Direction.UP, linkHopper, false);
+                sprinting = ClientHooks.onClickInput(1, use, InteractionHand.MAIN_HAND).isCanceled();
+                minecraft.player.setSprinting(false);
+                BlockPos ground = linkHopper.below();
+                minecraft.hitResult = new BlockHitResult(Vec3.atCenterOf(ground), Direction.UP, ground, false);
+                floor = ClientHooks.onClickInput(1, use, InteractionHand.MAIN_HAND).isCanceled();
+            } finally {
+                minecraft.player.setSprinting(false);
+                LinkerSameBlockInput.forceControl(false);
+            }
+            if (sprinting || floor) {
+                throw new StepFailure("cancelado correndo " + sprinting + ", no chão " + floor);
+            }
+        }, () -> stepTicks >= 2 && LinkerSameBlockInput.sentCount() == sentBefore[0]
+                // o descanso do Ctrl + clique acaba antes dos cliques do Abrir (no descanso, o clique abriria o baú)
+                && !Minecraft.getInstance().player.getCooldowns().isOnCooldown(ModItems.LINKER.get()),
+                () -> "pedidos " + (LinkerSameBlockInput.sentCount() - sentBefore[0]) + ", descanso "
+                        + Minecraft.getInstance().player.getCooldowns().isOnCooldown(ModItems.LINKER.get())));
     }
 
     /**
@@ -223,7 +283,8 @@ final class E2eLinkerSteps {
             while (!router.remoteMachines().machines().isEmpty()) {
                 router.unlinkMachine(0, null);
             }
-            for (BlockPos pos : List.of(linkAttached, linkChest, linkChestSame, linkRouter, linkRouter.below())) {
+            for (BlockPos pos : List.of(linkAttached, linkChest, linkHopper, linkHopperSame, linkRouter,
+                    linkRouter.below())) {
                 level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
             }
             ServerPlayer player = server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID());

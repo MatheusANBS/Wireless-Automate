@@ -24,7 +24,8 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * O grupo escolhido na aba Redes (mockup {@code grupo_detalhe}): o cabeçalho com o slot do ícone e o nome editável,
+ * O grupo escolhido na aba Redes (mockup {@code grupo_detalhe}): o cabeçalho com o slot do ícone (o clique abre a
+ * grade de ícones, {@link IconModal}) e o nome editável,
  * "Redes do grupo" (cor, nome e máquinas; clicar escolhe a rede), o link "+ pôr uma rede neste grupo" e o rodapé com
  * Pausar grupo e "Apagar grupo" de dois cliques. Os textos são montados no {@link #set}.
  */
@@ -53,6 +54,7 @@ final class GroupPanel {
     private final Component resumeText = tr("nets.resume_group");
     private final Component renameTip = tr("rename.tooltip");
     private final Component removeTip = tr("group.remove.tooltip");
+    private final Component iconTip = tr("nets.icon.tooltip");
     private int addLinkW;
     private int removeW;
     private int removeArmedW;
@@ -219,6 +221,12 @@ final class GroupPanel {
         return mx >= right - w && mx < right && my >= y - 1 && my < y + 9;
     }
 
+    private boolean overIconSlot(double mx, double my) {
+        int sx = layout.left + X0 - 1;
+        int sy = layout.top + 29;
+        return mx >= sx && mx < sx + 18 && my >= sy && my < sy + 18;
+    }
+
     boolean mouseClicked(double mx, double my) {
         GroupView v = group;
         if (v == null) {
@@ -236,10 +244,8 @@ final class GroupPanel {
         if (!v.manageable()) {
             return false;
         }
-        int sx = layout.left + X0 - 1;
-        int sy = layout.top + 29;
-        if (mx >= sx && mx < sx + 18 && my >= sy && my < sy + 18) {
-            // o slot do ícone: o clique fica reservado à grade de ícones
+        if (overIconSlot(mx, my)) {
+            windows.openIcon();
             return true;
         }
         if (header.overTitle(mx, my, layout.left, layout.top, X0)) {
@@ -269,6 +275,9 @@ final class GroupPanel {
         }
         if (header.overTitle(mx, my, layout.left, layout.top, X0)) {
             return renameTip;
+        }
+        if (overIconSlot(mx, my)) {
+            return iconTip;
         }
         return overRemove(mx, my) ? removeTip : null;
     }

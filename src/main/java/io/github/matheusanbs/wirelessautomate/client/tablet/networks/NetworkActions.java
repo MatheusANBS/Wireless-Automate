@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
+import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -127,6 +128,11 @@ final class NetworkActions {
         } else if (view == null && chosen != null && !name.equals(chosen.name())) {
             actions.rename(Action.GROUP_RENAME, chosen.id(), name);
         }
+    }
+
+    /** O ícone escolhido na grade vai para o grupo {@code id}; {@code null} tira a escolha. */
+    void groupIcon(UUID id, @Nullable ResourceLocation icon) {
+        actions.groupIcon(id, icon);
     }
 
     /** A cor escolhida no seletor ({@code rgb}) vai para a rede {@code id}. */

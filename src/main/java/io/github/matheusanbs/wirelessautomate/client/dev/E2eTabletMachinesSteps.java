@@ -324,7 +324,7 @@ final class E2eTabletMachinesSteps {
         }, () -> "tela " + describe(Minecraft.getInstance().screen));
     }
 
-    private static Step openTablet(String name) {
+    static Step openTablet(String name) {
         return new Step(name, STEP_TIMEOUT_MS, () -> {
             Minecraft minecraft = Minecraft.getInstance();
             minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);

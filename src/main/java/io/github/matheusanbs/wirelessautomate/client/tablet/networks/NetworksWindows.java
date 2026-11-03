@@ -12,11 +12,13 @@ import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * O que abre por cima do painel da aba Redes, a pedido das peças: o nome em edição ({@link TitleEditor}) e as janelas
- * sobre o véu ({@link ModalLayer}): o seletor Grupo, o "+ pôr uma rede neste grupo" e a {@link AccessWindow}. Lê a
+ * sobre o véu ({@link ModalLayer}): o seletor Grupo, o "+ pôr uma rede neste grupo", a {@link AccessWindow}, o seletor
+ * de cor ({@link ColorModal}) e a grade de ícones do grupo ({@link IconModal}, onde o JEI solta itens). Lê a
  * rede ou o grupo escolhido da anfitriã ({@link NetworksPanel}).
  */
 final class NetworksWindows {
@@ -98,6 +100,29 @@ final class NetworksWindows {
     /** A cor que o seletor aberto está mostrando (ARGB), ou 0 sem seletor aberto. */
     int liveColor() {
         return modals.current() instanceof ColorModal open ? open.current() : 0;
+    }
+
+    /** A grade de ícones do grupo escolhido, abaixo do slot do ícone; a escolha vai ao servidor na hora. */
+    void openIcon() {
+        GroupView chosen = groupView();
+        if (chosen != null && chosen.manageable()) {
+            UUID id = chosen.id();
+            modals.open(new IconModal(font(), layout.left, layout.top, chosen.icon().orElse(null), model.icon(id),
+                    Minecraft.getInstance().player.getInventory(), icon -> send.groupIcon(id, icon)));
+        }
+    }
+
+    /** A área onde o JEI pode soltar um item ({@code x, y, w, h}): a grade de ícones aberta, ou {@code null}. */
+    int @Nullable [] ghostBounds() {
+        return modals.current() instanceof IconModal open ? open.bounds() : null;
+    }
+
+    /** Um item solto do JEI na grade de ícones aberta: escolhe e fecha. */
+    void acceptGhost(ItemStack stack) {
+        if (modals.current() instanceof IconModal open) {
+            open.accept(stack);
+            modals.close();
+        }
     }
 
     void openAccess() {

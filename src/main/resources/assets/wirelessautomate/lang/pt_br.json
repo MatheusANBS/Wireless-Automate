@@ -83,6 +83,8 @@
   "item.wirelessautomate.configurator.tuner.protected": "Você não pode mexer nesta máquina",
   "item.wirelessautomate.configurator.tuner.nothing": "Afinador: nada a configurar nesta máquina",
   "item.wirelessautomate.configurator.tuner.no_group": "Afinador: a máquina presa não tem grupo",
+  "item.wirelessautomate.configurator.tuner.no_group_remote": "Afinador: esta máquina não tem grupo",
+  "item.wirelessautomate.configurator.tuner.failed": "Afinador: a máquina falhou na análise (veja o log)",
   "item.wirelessautomate.network_tablet": "Tablet de Rede",
   "item.wirelessautomate.linker": "Vinculador",
   "item.wirelessautomate.filter_card": "Cartão de Filtro",

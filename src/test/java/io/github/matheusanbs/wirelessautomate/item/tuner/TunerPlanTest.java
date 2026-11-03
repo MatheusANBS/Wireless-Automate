@@ -137,7 +137,8 @@ class TunerPlanTest {
     @Test
     void machineWithNaiveEnergyIsNotStorageAndEnergyOnlyInserts() {
         Face[] energy = all(face(Role.BOTH, true, "recebe e dá"));
-        PortMode[][] modes = TunerPlan.decide(new Face[][] {furnace(), energy}, new boolean[] {false, true}, EAST);
+        PortMode[][] modes = TunerPlan.decide(new Face[][] {furnace(), energy}, new boolean[] {false, true}, false,
+                EAST);
         assertArrayEquals(TunerPlan.decide(furnace(), EAST), modes[0]);
         assertArrayEquals(new PortMode[] {N, I, N, N, N, N}, modes[1]);
     }
@@ -149,22 +150,56 @@ class TunerPlanTest {
         items[UP] = face(Role.IN, false, "entrada");
         items[DOWN] = face(Role.OUT, false, "produto");
         Face[] energy = all(face(Role.BOTH, false, "ingênua"));
-        PortMode[][] modes = TunerPlan.decide(new Face[][] {items, energy}, new boolean[] {false, true}, NORTH);
+        PortMode[][] modes = TunerPlan.decide(new Face[][] {items, energy}, new boolean[] {false, true}, false,
+                NORTH);
         assertArrayEquals(new PortMode[] {N, I, N, N, N, N}, modes[1]);
     }
 
+    /** A Bateria do mod (a capability de energia em {@code long}): Armazém em Cima, o resto Nenhum. */
     @Test
     void batteryAloneIsStorage() {
         PortMode[][] modes = TunerPlan.decide(new Face[][] {all(face(Role.BOTH, true, "bateria"))},
-                new boolean[] {true}, NORTH);
+                new boolean[] {true}, true, NORTH);
         assertArrayEquals(new PortMode[] {N, S, N, N, N, N}, modes[0]);
+    }
+
+    /**
+     * Um consumidor só de energia com o {@code EnergyStorage} comum (recebe e diz que dá, em todas as faces) lê
+     * igual a uma bateria: sem ser um armazenamento conhecido, Insere em Cima, nunca Armazém (que o esvaziaria).
+     */
+    @Test
+    void energyOnlyConsumerInsertsInsteadOfStorage() {
+        PortMode[][] modes = TunerPlan.decide(new Face[][] {all(face(Role.BOTH, true, "recebe e dá"))},
+                new boolean[] {true}, false, NORTH);
+        assertArrayEquals(new PortMode[] {N, I, N, N, N, N}, modes[0]);
+    }
+
+    /** Só escalares (energia e Source), sem armazenamento conhecido: Insere nos dois, sem Armazém. */
+    @Test
+    void scalarOnlyMachineWithTwoTypesInserts() {
+        Face[] open = all(face(Role.BOTH, true, "recebe e dá"));
+        PortMode[][] modes = TunerPlan.decide(new Face[][] {open, open}, new boolean[] {true, true}, false, NORTH);
+        assertArrayEquals(new PortMode[] {N, I, N, N, N, N}, modes[0]);
+        assertArrayEquals(new PortMode[] {N, I, N, N, N, N}, modes[1]);
+    }
+
+    /** Um baú que também guarda energia: com o armazenamento de itens junto, a energia é Armazém também. */
+    @Test
+    void energyNextToAChestIsStorage() {
+        Face[] items = all(face(Role.BOTH, true, "baú"));
+        Face[] energy = all(face(Role.BOTH, true, "bateria"));
+        PortMode[][] modes = TunerPlan.decide(new Face[][] {items, energy}, new boolean[] {false, true}, false,
+                NORTH);
+        assertArrayEquals(new PortMode[] {N, S, N, N, N, N}, modes[0]);
+        assertArrayEquals(new PortMode[] {N, S, N, N, N, N}, modes[1]);
     }
 
     @Test
     void storageNeedsEveryTypeToBeStorage() {
         Face[] items = all(face(Role.BOTH, true, "baú"));
         Face[] fluid = all(face(Role.IN, false, "só entra"));
-        PortMode[][] modes = TunerPlan.decide(new Face[][] {items, fluid}, new boolean[] {false, false}, NORTH);
+        PortMode[][] modes = TunerPlan.decide(new Face[][] {items, fluid}, new boolean[] {false, false}, false,
+                NORTH);
         // Não é armazenamento: os itens viram Baixo Extrai e Cima Insere.
         assertArrayEquals(new PortMode[] {E, I, N, N, N, N}, modes[0]);
         assertArrayEquals(new PortMode[] {N, I, N, N, N, N}, modes[1]);

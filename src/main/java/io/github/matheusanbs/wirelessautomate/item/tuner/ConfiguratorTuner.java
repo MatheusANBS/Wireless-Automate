@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.item.tuner;
 
+import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerOpen;
 import io.github.matheusanbs.wirelessautomate.menu.TabletClick;
@@ -20,12 +21,14 @@ import java.util.List;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.level.block.Block;
+import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
@@ -74,6 +77,7 @@ public final class ConfiguratorTuner {
      */
     public static @Nullable Component click(ServerPlayer player, BlockPos pos, boolean wholeGroup) {
         ServerLevel level = player.serverLevel();
+        boolean fresh = TunerPending.attempt(player.getUUID(), level.getGameTime());
         if (!level.isLoaded(pos)) {
             return null;
         }
@@ -89,8 +93,9 @@ public final class ConfiguratorTuner {
         Block block = level.getBlockState(pos).getBlock();
         TunerPending.Proposal pending = TunerPending.get(player.getUUID());
         if (pending != null && pending.matches(level, pos, block)) {
-            // Segurar o botão repete o uso a cada 4 ticks: o segundo clique só vale depois do intervalo mínimo.
-            if (!pending.confirmable(level)) {
+            // Segurar o botão repete o uso a cada 4 ticks: o segundo clique só vale depois do intervalo mínimo e de
+            // uma pausa desde a tentativa anterior (inclusive as engolidas no descanso).
+            if (!fresh || !pending.confirmable(level)) {
                 return null;
             }
             // O roteador e a frente não são conferidos de novo: os modos da proposta são por face absoluta, e o
@@ -100,14 +105,25 @@ public final class ConfiguratorTuner {
             return show(player, apply(reach, pending.modes(), wholeGroup));
         }
         int front = reach.front();
-        Map<ResourceType, PortMode[]> modes = TunerProbe.analyze(level, pos, front, player);
+        Map<ResourceType, PortMode[]> modes;
+        try {
+            modes = TunerProbe.analyze(level, pos, front, player);
+        } catch (RuntimeException e) {
+            // A análise chama as capabilities de outro mod com provas que ele não espera: uma exceção dele derruba
+            // só esta análise, não o servidor.
+            WirelessAutomate.LOGGER.warn("Afinador: a análise de {} em {} falhou", BuiltInRegistries.BLOCK.getKey(block),
+                    pos.toShortString(), e);
+            rest(player);
+            return refuse(player, pos, "failed");
+        }
         if (modes.isEmpty()) {
+            rest(player);
             return refuse(player, pos, "nothing");
         }
         long now = level.getGameTime();
         TunerPending.put(player.getUUID(), new TunerPending.Proposal(level.dimension(), pos.immutable(), block, now,
                 now + TunerPending.WINDOW, modes));
-        player.getCooldowns().addCooldown(ModItems.CONFIGURATOR.get(), COOLDOWN);
+        rest(player);
         send(player, new ConfiguratorProposalPayload(pos.immutable(), faces(modes), TunerPending.WINDOW));
         return show(player, Component.translatable(KEY + "proposal", describe(modes, front)));
     }
@@ -117,12 +133,54 @@ public final class ConfiguratorTuner {
         return message;
     }
 
-    /** O clique no ar: a proposta some. */
+    /** Põe o Configurador em descanso depois de uma análise, com proposta ou não (o botão segurado não a repete). */
+    private static void rest(ServerPlayer player) {
+        player.getCooldowns().addCooldown(ModItems.CONFIGURATOR.get(), COOLDOWN);
+    }
+
+    /**
+     * Uma tentativa engolida no descanso do Configurador ({@code ConfiguratorItem.onItemUseFirst}): não faz nada, mas
+     * conta para a trava do botão segurado ({@link TunerPending#attempt}).
+     */
+    public static void held(ServerPlayer player) {
+        TunerPending.attempt(player.getUUID(), player.serverLevel().getGameTime());
+    }
+
+    /**
+     * O uso do Configurador no ar ou num bloco em que ele não age: com um clique novo (não o botão segurado desde a
+     * máquina), a proposta some. No descanso o jogo nem chama o {@code use} do item, então as repetições dele não
+     * contam como tentativas: a primeira depois do descanso só vale se veio uma pausa depois do fim dele.
+     */
+    public static void useInAir(ServerPlayer player) {
+        long now = player.serverLevel().getGameTime();
+        boolean fresh = TunerPending.attempt(player.getUUID(), now);
+        TunerPending.Proposal pending = TunerPending.get(player.getUUID());
+        if (fresh && pending != null && now - (pending.created() + COOLDOWN) > TunerPending.HOLD_GAP) {
+            cancel(player);
+        }
+    }
+
+    /** A proposta some, no servidor e na pintura do cliente. */
     public static void cancel(ServerPlayer player) {
         TunerPending.Proposal pending = TunerPending.get(player.getUUID());
         if (pending != null) {
             TunerPending.forget(player.getUUID());
             send(player, ConfiguratorProposalPayload.clear(pending.machine()));
+        }
+    }
+
+    /**
+     * A pintura sumiu no cliente (o jogador mirou outro bloco): a proposta da máquina {@code machine} some aqui
+     * também, sem pacote de volta, e o próximo clique nela refaz a análise. Uma proposta de outra máquina, que chegou
+     * depois, fica.
+     */
+    public static void discard(@Nullable ServerPlayer player, BlockPos machine) {
+        if (player == null) {
+            return;
+        }
+        TunerPending.Proposal pending = TunerPending.get(player.getUUID());
+        if (pending != null && pending.machine().equals(machine)) {
+            TunerPending.forget(player.getUUID());
         }
     }
 
@@ -205,7 +263,7 @@ public final class ConfiguratorTuner {
             }
         });
         if (where[0] == null) {
-            return Component.translatable(KEY + "no_group");
+            return Component.translatable(KEY + (reach.attached() ? "no_group" : "no_group_remote"));
         }
         String group = wholeGroup ? "_group" : "";
         int count = Integer.bitCount(changed[0]);
@@ -279,9 +337,9 @@ public final class ConfiguratorTuner {
         };
     }
 
-    /** Jogadores falsos (GameTests) não negociam os canais do mod. */
+    /** Jogadores falsos (GameTests, o {@code FakePlayer} de outro mod) não negociam os canais do mod. */
     private static void send(ServerPlayer player, ConfiguratorProposalPayload payload) {
-        if (player.connection != null && player.connection.hasChannel(payload)) {
+        if (!(player instanceof FakePlayer) && player.connection != null && player.connection.hasChannel(payload)) {
             PacketDistributor.sendToPlayer(player, payload);
         }
     }

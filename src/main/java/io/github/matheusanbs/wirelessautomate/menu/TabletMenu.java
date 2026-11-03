@@ -163,7 +163,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
     private final @Nullable TabletProfile profile;
     private final @Nullable TabletMenuActions actions;
     private final @Nullable TabletFlows flows;
-    private final @Nullable TabletMap mapWatch;
+    private final @Nullable TabletWatches watches;
     private final @Nullable TabletTree tree;
     private final @Nullable TabletMachines machines;
     private int tab;
@@ -186,10 +186,10 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
         this.profile = new TabletProfile(viewer, containerId, query, builder, machines);
         this.actions = new TabletMenuActions(this, viewer);
         this.flows = new TabletFlows(viewer, containerId);
-        this.mapWatch = new TabletMap(viewer, containerId);
+        this.watches = new TabletWatches(viewer, containerId);
         restore(TabletPlayers.saved(viewer.getUUID()));
         flows.tab(tab);
-        mapWatch.tab(tab);
+        watches.tab(tab);
         builder.listOpen(tab == LIST_TAB);
         this.snapshot = builder.build(true, actions.notice(), actions.noticeId());
         this.sent = snapshot;
@@ -215,7 +215,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
         this.profile = null;
         this.actions = null;
         this.flows = null;
-        this.mapWatch = null;
+        this.watches = null;
         this.tree = null;
         this.machines = null;
         this.snapshot = snapshot;
@@ -262,8 +262,8 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
         if (flows != null) {
             flows.stop();
         }
-        if (mapWatch != null) {
-            mapWatch.stop();
+        if (watches != null) {
+            watches.stop();
         }
         if (machines != null) {
             machines.stop();
@@ -293,8 +293,8 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
         if (flows != null) {
             flows.tab(tab);
         }
-        if (mapWatch != null) {
-            mapWatch.tab(tab);
+        if (watches != null) {
+            watches.tab(tab);
         }
         if (builder != null) {
             builder.listOpen(tab == LIST_TAB);
@@ -561,9 +561,8 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
         if (flowsNow != null) {
             payloads.add(flowsNow);
         }
-        TabletMapPayload mapNow = mapWatch == null ? null : mapWatch.poll();
-        if (mapNow != null) {
-            payloads.add(mapNow);
+        if (watches != null) {
+            watches.poll(payloads);
         }
         return payloads;
     }

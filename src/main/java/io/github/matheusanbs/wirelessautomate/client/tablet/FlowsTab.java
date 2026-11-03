@@ -117,7 +117,7 @@ public final class FlowsTab {
 
     /** A aba acabou de abrir: os Fluxos que o menu já tinha são de antes e esperam os novos. */
     void shown() {
-        stale = menu.flows();
+        stale = menu.feed().flows();
     }
 
     private void setMode(boolean network) {
@@ -128,7 +128,7 @@ public final class FlowsTab {
     }
 
     private @Nullable TabletFlowsPayload current() {
-        TabletFlowsPayload flows = menu.flows();
+        TabletFlowsPayload flows = menu.feed().flows();
         return flows == stale ? null : flows;
     }
 

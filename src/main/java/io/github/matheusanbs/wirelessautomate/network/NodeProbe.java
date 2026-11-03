@@ -95,7 +95,7 @@ public final class NodeProbe {
     }
 
     /** Um destino com rota, cheio agora. */
-    private static boolean countsAsFull(Port port, long now) {
+    static boolean countsAsFull(Port port, long now) {
         return port.network != null && port.destination && !port.stopped && isFull(port, now);
     }
 

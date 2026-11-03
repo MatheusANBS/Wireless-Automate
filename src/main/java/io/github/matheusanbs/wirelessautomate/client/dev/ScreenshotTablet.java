@@ -104,7 +104,7 @@ final class ScreenshotTablet {
                 }, "t4-tablet-mapa"),
                 new Step(() -> {
                     tabletScreen.previewTab(TabletScreen.Tab.FLOWS);
-                    tabletScreen.getMenu().applyFlows(sampleFlows());
+                    tabletScreen.getMenu().feed().applyFlows(sampleFlows());
                     tabletScreen.flows().previewOpen(ResourceType.ENERGY, true);
                 }, "t5-tablet-fluxos"),
                 new Step(() -> tabletScreen.flows().previewMode(true), "t5b-tablet-fluxos-rede"),

@@ -130,7 +130,8 @@ public final class MachineCopyPaste {
      * máquina com {@code wholeGroup}, no perfil do grupo dela (as exceções que ficam iguais somem, as outras são
      * contadas). Cada face recebe modo, prioridade, redstone e filtro; a rede só se a cópia leva uma que o jogador pode
      * usar e a face pode sair da que tem ({@link #merge}). Na presa sem membro, ele nasce antes do colar (no grupo do
-     * bloco da frente, ou do rascunho de um mundo antigo), para o Desfazer ter o estado de antes; sem máquina na
+     * bloco da frente, ou do rascunho de um mundo antigo), para o Desfazer ter o estado de antes, e só se o colar muda
+     * o que a presa mostra (a fachada: o rascunho ou a vazia); sem máquina na
      * frente, nada muda ({@link Pasted#noMachine}). Com mudança, guarda o Desfazer no lugar do anterior; sem mudança,
      * o anterior fica.
      * {@code null} sem cópia ou com o alvo que deixou de existir.
@@ -143,11 +144,24 @@ public final class MachineCopyPaste {
             return null;
         }
         RemoteMachines remotes = router.remoteMachines();
+        Predicate<UUID> usable = PresetApplier.usable(player);
+        Predicate<UUID> canLeave = PresetPaste.canLeave(player);
         if (target.attached()) {
             if (!router.attachedCanHold()) {
                 return new Pasted(false, 0, 0, copy.source(), attachedName(router), false, true);
             }
-            router.ensureAttachedMember();
+            if (remotes.attached() == null) {
+                // o membro só nasce se o colar muda o que a presa mostra: um colar igual não cria grupo
+                MachineConfig now = readAttached(router);
+                MachineConfig next = now.copy();
+                int keptFaces = merge(next, copy.config(), usable, canLeave);
+                if (next.sameAs(now)) {
+                    host.editApplied();
+                    return new Pasted(false, 0, keptFaces, copy.source(), attachedName(router),
+                            MachinePasteUndo.heldIn(player.getUUID(), host), false);
+                }
+                router.ensureAttachedMember();
+            }
         }
         MachineGroup group = wholeGroup || target.kind() == EditTarget.Kind.GROUP ? groupOf(remotes, target) : null;
         RemoteMachine machine = target.kind() == EditTarget.Kind.MACHINE ? remotes.machine(target.id()) : null;
@@ -155,8 +169,6 @@ public final class MachineCopyPaste {
                 || (target.kind() == EditTarget.Kind.MACHINE && machine == null)) {
             return null;
         }
-        Predicate<UUID> usable = PresetApplier.usable(player);
-        Predicate<UUID> canLeave = PresetPaste.canLeave(player);
         int[] kept = new int[1];
         PasteUndo.State before = PasteUndo.State.of(router, false, true);
         boolean changed;

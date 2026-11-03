@@ -9,6 +9,8 @@ import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2IntMap;
+import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.LongLinkedOpenHashSet;
@@ -29,19 +31,23 @@ final class PasteUndo {
     /**
      * Um roteador num instante: com {@code attached}, a presa (senão {@code null}); com {@code remotes}, os perfis por
      * id do grupo e as exceções por posição (só as máquinas que têm), a da presa na posição {@link #ATTACHED} (o
-     * perfil colado num grupo pode igualar e apagar a exceção dela).
+     * perfil colado num grupo pode igualar e apagar a exceção dela); {@code groups}, o grupo de cada remota por
+     * posição (com {@code remotes}).
      */
     record State(@Nullable RouterPreset attached, Int2ObjectMap<MachineConfig> profiles,
-            Long2ObjectMap<MachineConfig> exceptions, int attachedGroup) {
+            Long2ObjectMap<MachineConfig> exceptions, int attachedGroup, Long2IntMap groups) {
         static State of(RouterBlockEntity router, boolean attached, boolean remotes) {
             Int2ObjectMap<MachineConfig> profiles = new Int2ObjectLinkedOpenHashMap<>();
             Long2ObjectMap<MachineConfig> exceptions = new Long2ObjectLinkedOpenHashMap<>();
+            Long2IntMap groups = new Long2IntOpenHashMap();
+            groups.defaultReturnValue(-1);
             if (remotes) {
                 RemoteMachines machines = router.remoteMachines();
                 for (MachineGroup group : machines.groups()) {
                     profiles.put(group.id(), group.profile().copy());
                 }
                 for (RemoteMachine machine : machines.machines()) {
+                    groups.put(machine.pos().asLong(), machine.group());
                     if (machine.exception() != null) {
                         exceptions.put(machine.pos().asLong(), machine.exception().copy());
                     }
@@ -53,7 +59,7 @@ final class PasteUndo {
             }
             AttachedMember member = router.remoteMachines().attached();
             return new State(attached ? RouterPreset.copyOf(router) : null, profiles, exceptions,
-                    member == null ? -1 : member.group());
+                    member == null ? -1 : member.group(), groups);
         }
 
         /** A presa tinha exceção (só lida com as remotas). */
@@ -65,7 +71,10 @@ final class PasteUndo {
     private record ProfileChange(int group, MachineConfig before, MachineConfig after) {
     }
 
-    /** {@code group}: na exceção da presa, o grupo dela no colar (uma exceção só vale no grupo de onde veio). */
+    /**
+     * {@code group}: o grupo da máquina (a presa ou a remota) depois do colar; uma exceção só vale no grupo de onde
+     * veio, então com a máquina noutro grupo (bloco trocado, Atualizar, desvincular e vincular de novo) ela não volta.
+     */
     private record ExceptionChange(long pos, @Nullable MachineConfig before, @Nullable MachineConfig after, int group) {
     }
 
@@ -105,7 +114,8 @@ final class PasteUndo {
             MachineConfig was = before.exceptions().get(pos);
             MachineConfig now = after.exceptions().get(pos);
             if (!same(was, now)) {
-                exceptions.add(new ExceptionChange(pos, was, now, pos == ATTACHED ? after.attachedGroup() : -1));
+                exceptions.add(new ExceptionChange(pos, was, now,
+                        pos == ATTACHED ? after.attachedGroup() : after.groups().get(pos)));
             }
         }
         if (!attached && profiles.isEmpty() && exceptions.isEmpty()) {
@@ -148,7 +158,7 @@ final class PasteUndo {
                 }
                 int index = remotes.index(BlockPos.of(change.pos()));
                 RemoteMachine machine = remotes.machine(index);
-                if (machine != null && same(machine.exception(), change.after())) {
+                if (machine != null && machine.group() == change.group() && same(machine.exception(), change.after())) {
                     router.setMachineException(index, change.before());
                     restored[0]++;
                 }

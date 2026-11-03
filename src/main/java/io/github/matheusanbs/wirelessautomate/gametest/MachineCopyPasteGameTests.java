@@ -7,7 +7,9 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.menu.MachineClipboard;
 import io.github.matheusanbs.wirelessautomate.menu.MachineCopyPaste;
+import io.github.matheusanbs.wirelessautomate.menu.EditTargetRef;
 import io.github.matheusanbs.wirelessautomate.menu.MachinePasteUndo;
+import io.github.matheusanbs.wirelessautomate.menu.RouterEditHost;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
@@ -26,7 +28,9 @@ import io.github.matheusanbs.wirelessautomate.range.MachineConfig;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
+import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.netty.buffer.Unpooled;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
@@ -36,21 +40,83 @@ import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.contents.TranslatableContents;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.AbstractFurnaceBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Etapa 2 do alcance, copiar e colar o perfil por máquina ({@link MachineCopyPayload}, {@link MachinePastePayload}):
  * máquina → máquina como exceção, a exceção igual ao perfil some, a presa sozinha muda o perfil, o grupo inteiro com
  * as exceções contadas, a rede proibida que não entra, outro bloco, o Desfazer (e recusado quando o alvo mudou), o
- * nome da cópia no snapshot e a cópia que some no logout.
+ * nome da cópia no snapshot e a cópia que some no logout; o Desfazer recusado com a máquina noutro grupo ou o host
+ * noutro roteador, e a presa sem membro que não ganha um num colar que não muda nada.
  */
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
 public final class MachineCopyPasteGameTests {
+    /** Um host que troca de roteador sem fechar, como o Tablet que escolhe outro nó. */
+    private static final class SwitchingHost extends AbstractContainerMenu implements RouterEditHost {
+        @Nullable RouterBlockEntity router;
+        EditTarget target = EditTarget.ATTACHED_TARGET;
+
+        SwitchingHost(RouterBlockEntity router) {
+            super(null, CONTAINER_ID);
+            this.router = router;
+        }
+
+        @Override
+        public int containerId() {
+            return containerId;
+        }
+
+        @Override
+        public @Nullable RouterBlockEntity editedRouter() {
+            return router;
+        }
+
+        @Override
+        public boolean canEdit(ServerPlayer player) {
+            return true;
+        }
+
+        @Override
+        public EditTargetRef targetRef() {
+            return EditTargetRef.ATTACHED;
+        }
+
+        @Override
+        public EditTarget actionTarget() {
+            return target;
+        }
+
+        @Override
+        public EditTarget validTarget() {
+            return target;
+        }
+
+        @Override
+        public boolean selectTarget(EditTarget target, @Nullable BlockPos pos, @Nullable ResourceLocation block) {
+            return false;
+        }
+
+        @Override
+        public ItemStack quickMoveStack(Player player, int index) {
+            return ItemStack.EMPTY;
+        }
+
+        @Override
+        public boolean stillValid(Player player) {
+            return true;
+        }
+    }
+
     private static String key(PanelNoticePayload notice) {
         return notice.message().getContents() instanceof TranslatableContents contents ? contents.getKey() : "";
     }
@@ -521,6 +587,125 @@ public final class MachineCopyPasteGameTests {
                         helper.assertTrue(machine(helper, router, FURNACE_B).hasException(), "o outro menu desfez");
                         menu.removed(player);
                         helper.assertFalse(MachinePasteUndo.has(player.getUUID()), "o Desfazer ficou depois de fechar");
+                    } finally {
+                        cleanUp(player);
+                    }
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Colar numa remota e depois o Atualizar a passar para outro grupo (o bloco trocado), com a exceção junto: o
+     * Desfazer não a devolve, porque a exceção só vale no grupo de onde veio.
+     */
+    @GameTest(template = "empty")
+    public static void pasteUndoRefusedInAnotherGroup(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    link(helper, router, FURNACE_A);
+                    link(helper, router, FURNACE_B);
+                    exceptionUp(helper, router, FURNACE_A, PortMode.INSERT);
+                    ServerPlayer[] holder = new ServerPlayer[1];
+                    RouterMenu menu = openMenu(helper, router, holder);
+                    ServerPlayer player = holder[0];
+                    try {
+                        selectMachine(helper, player, router, FURNACE_A);
+                        helper.assertTrue(copy(player), "não copiou");
+                        selectMachine(helper, player, router, FURNACE_B);
+                        helper.assertTrue(RangePayloads.handleMachinePaste(player,
+                                MachinePastePayload.paste(CONTAINER_ID, false)), "não colou");
+                        int groupBefore = machine(helper, router, FURNACE_B).group();
+                        helper.setBlock(FURNACE_B, Blocks.BLAST_FURNACE.defaultBlockState()
+                                .setValue(AbstractFurnaceBlock.FACING, Direction.SOUTH));
+                        RemoteMachines.Regroup regroup = router.updateReplaced(
+                                List.of(index(helper, router, FURNACE_B)), null);
+                        helper.assertFalse(regroup.isEmpty(), "o Atualizar não mudou o grupo");
+                        RemoteMachine b = machine(helper, router, FURNACE_B);
+                        helper.assertTrue(b.group() != groupBefore && b.hasException(),
+                                "B no grupo " + b.group() + " com exceção " + b.hasException());
+                        PanelNoticePayload notice = MachineCopyPaste.undo(player, menu);
+                        helper.assertTrue(notice != null, "sem aviso do Desfazer");
+                        helper.assertValueEqual(key(notice), "gui.wirelessautomate.panel.notice.range.paste_undo_refused",
+                                "aviso do Desfazer");
+                        helper.assertTrue(machine(helper, router, FURNACE_B).hasException(),
+                                "o Desfazer mexeu na máquina do outro grupo");
+                    } finally {
+                        cleanUp(player);
+                    }
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * A presa sem membro e um colar que não muda o que ela mostra (o perfil vazio do grupo da fornalha): o membro não
+     * nasce e nada muda.
+     */
+    @GameTest(template = "empty")
+    public static void pasteSameOnAttachedWithoutMemberCreatesNothing(GameTestHelper helper) {
+        RouterBlockEntity router = chestWithRouter(helper, RouterTier.ADVANCED);
+        helper.setBlock(FURNACE_A, Blocks.FURNACE.defaultBlockState()
+                .setValue(AbstractFurnaceBlock.FACING, Direction.EAST));
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    link(helper, router, FURNACE_A);
+                    RemoteMachines remotes = router.remoteMachines();
+                    int groups = remotes.groups().size();
+                    ServerPlayer[] holder = new ServerPlayer[1];
+                    RouterMenu menu = openMenu(helper, router, holder);
+                    ServerPlayer player = holder[0];
+                    try {
+                        selectMachine(helper, player, router, FURNACE_A);
+                        helper.assertTrue(copy(player), "não copiou");
+                        selectAttached(helper, player);
+                        MachineCopyPaste.Pasted pasted = MachineCopyPaste.paste(player, menu, false);
+                        helper.assertTrue(pasted != null && !pasted.changed(), "o colar igual mudou: " + pasted);
+                        helper.assertTrue(remotes.attached() == null, "o membro nasceu num colar sem mudança");
+                        helper.assertValueEqual(remotes.groups().size(), groups, "grupos");
+                        helper.assertFalse(MachinePasteUndo.has(player.getUUID()), "Desfazer sem mudança");
+                    } finally {
+                        cleanUp(player);
+                    }
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * O mesmo menu apontando outro roteador (o Tablet que escolheu outro nó): o Desfazer é recusado e fica guardado;
+     * de volta ao roteador do colar, ele vale.
+     */
+    @GameTest(template = "empty")
+    public static void pasteUndoRefusedOnAnotherRouter(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        BlockPos otherPos = new BlockPos(3, 1, 3);
+        helper.setBlock(otherPos, ModBlocks.ROUTER.get());
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    RouterBlockEntity other = helper.getBlockEntity(otherPos);
+                    router.setRangeUpgrade(rangeUpgrade());
+                    link(helper, router, FURNACE_A);
+                    link(helper, router, FURNACE_B);
+                    exceptionUp(helper, router, FURNACE_A, PortMode.INSERT);
+                    ServerPlayer player = TestPlayers.inLevel(helper);
+                    SwitchingHost host = new SwitchingHost(router);
+                    try {
+                        host.target = EditTarget.machine(index(helper, router, FURNACE_A));
+                        helper.assertTrue(MachineCopyPaste.copy(player, host), "não copiou");
+                        host.target = EditTarget.machine(index(helper, router, FURNACE_B));
+                        MachineCopyPaste.Pasted pasted = MachineCopyPaste.paste(player, host, false);
+                        helper.assertTrue(pasted != null && pasted.changed(), "não colou");
+                        host.router = other;
+                        helper.assertTrue(MachineCopyPaste.undo(player, host) == null, "desfez noutro roteador");
+                        helper.assertTrue(MachinePasteUndo.has(player.getUUID()), "o outro roteador apagou o Desfazer");
+                        helper.assertTrue(machine(helper, router, FURNACE_B).hasException(), "o outro roteador desfez");
+                        host.router = router;
+                        helper.assertTrue(MachineCopyPaste.undo(player, host) != null, "não desfez de volta");
+                        helper.assertFalse(machine(helper, router, FURNACE_B).hasException(), "o Desfazer não voltou B");
                     } finally {
                         cleanUp(player);
                     }

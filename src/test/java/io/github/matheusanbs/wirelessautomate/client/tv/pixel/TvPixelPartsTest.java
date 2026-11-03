@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.github.matheusanbs.wirelessautomate.client.tv.editor.TvHsv;
+import io.github.matheusanbs.wirelessautomate.client.color.ColorHsv;
 import org.junit.jupiter.api.Test;
 
 /** A arte, a rampa, a seleção, o desfazer e a vista do editor de pixel art. */
@@ -61,10 +61,10 @@ class TvPixelPartsTest {
         palette[9] = base;
         TvPixelRamp.make(palette, 9);
         assertEquals(base, palette[9], "a cor escolhida fica");
-        float[] mid = TvHsv.fromRgb(base & 0xFFFFFF);
-        float[] dark = TvHsv.fromRgb(palette[8] & 0xFFFFFF);
-        float[] light = TvHsv.fromRgb(palette[10] & 0xFFFFFF);
-        float[] lighter = TvHsv.fromRgb(palette[11] & 0xFFFFFF);
+        float[] mid = ColorHsv.fromRgb(base & 0xFFFFFF);
+        float[] dark = ColorHsv.fromRgb(palette[8] & 0xFFFFFF);
+        float[] light = ColorHsv.fromRgb(palette[10] & 0xFFFFFF);
+        float[] lighter = ColorHsv.fromRgb(palette[11] & 0xFFFFFF);
         assertEquals(mid[2] - 0.17, dark[2], 0.01, "uma casa para a esquerda: 0,17 mais escura");
         assertEquals(mid[1] + 0.08, dark[1], 0.02, "e 0,08 mais saturada");
         assertEquals(mid[2] + 0.17, light[2], 0.01);
@@ -82,7 +82,7 @@ class TvPixelPartsTest {
         TvPixelRamp.make(palette, 2);
         assertEquals(0, palette[0]);
         assertTrue((palette[1] >>> 24) == 0xFF && (palette[3] >>> 24) == 0xFF);
-        assertTrue(TvHsv.fromRgb(palette[1] & 0xFFFFFF)[2] < TvHsv.fromRgb(palette[3] & 0xFFFFFF)[2]);
+        assertTrue(ColorHsv.fromRgb(palette[1] & 0xFFFFFF)[2] < ColorHsv.fromRgb(palette[3] & 0xFFFFFF)[2]);
     }
 
     @Test

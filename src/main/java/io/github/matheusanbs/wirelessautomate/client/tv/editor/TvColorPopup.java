@@ -2,6 +2,8 @@ package io.github.matheusanbs.wirelessautomate.client.tv.editor;
 
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
+import io.github.matheusanbs.wirelessautomate.client.color.ColorHsv;
+import io.github.matheusanbs.wirelessautomate.client.color.RecentColors;
 import io.github.matheusanbs.wirelessautomate.tv.TvColor;
 import io.github.matheusanbs.wirelessautomate.tv.TvTheme;
 import java.util.function.IntConsumer;
@@ -14,7 +16,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * O seletor de cor: uma janela com as seis cores do tema (marcadas "do tema"), o quadrado de saturação e brilho, a
  * faixa de matiz, a de alfa, o campo hexadecimal, o conta-gotas (o próximo clique na miniatura pega a cor do pixel) e
- * as últimas cores usadas ({@link TvRecentColors}). O quadrado é pintado por colunas de degradê vertical (o brilho é
+ * as últimas cores usadas ({@link RecentColors}). O quadrado é pintado por colunas de degradê vertical (o brilho é
  * linear, então cada coluna vai da cor cheia ao preto), sem textura; as cores das colunas só são refeitas quando o
  * matiz muda. Só existe aberta; cada mudança vai ao {@code set} na hora, e ao fechar a cor fixa escolhida entra nas
  * recentes. Sem tema (o editor de pixel art, cuja paleta guarda ARGB fixo), a linha "do tema" some e o resto sobe.
@@ -95,7 +97,7 @@ final class TvColorPopup implements TvPopup {
         if (argb == 0) {
             return;
         }
-        float[] hsv = TvHsv.fromRgb(argb & 0xFFFFFF);
+        float[] hsv = ColorHsv.fromRgb(argb & 0xFFFFFF);
         h = hsv[0];
         s = hsv[1];
         v = hsv[2];
@@ -111,7 +113,7 @@ final class TvColorPopup implements TvPopup {
     }
 
     private void applyHsv() {
-        value = a << 24 | TvHsv.toRgb(h, s, v);
+        value = a << 24 | ColorHsv.toRgb(h, s, v);
         set.accept(value);
         hex.refresh();
     }
@@ -177,7 +179,7 @@ final class TvColorPopup implements TvPopup {
         }
         columnsHue = h;
         for (int i = 0; i < columns.length; i++) {
-            columns[i] = 0xFF000000 | TvHsv.toRgb(h, i / (float) (columns.length - 1), 1);
+            columns[i] = 0xFF000000 | ColorHsv.toRgb(h, i / (float) (columns.length - 1), 1);
         }
     }
 
@@ -215,11 +217,11 @@ final class TvColorPopup implements TvPopup {
         if (allowNone) {
             fillSwatch(g, noneX(), row(ROW2_Y), 11, 11, 0, value == 0, mouseX, mouseY);
         }
-        if (TvRecentColors.size() > 0) {
+        if (RecentColors.size() > 0) {
             GuiText.draw(g, font, recentLabel, x + PAD, row(RECENT_Y) - 10, GuiPaint.MUTED);
         }
-        for (int i = 0; i < TvRecentColors.size(); i++) {
-            int color = TvRecentColors.get(i);
+        for (int i = 0; i < RecentColors.size(); i++) {
+            int color = RecentColors.get(i);
             fillSwatch(g, x + PAD + i * (RECENT + 2), row(RECENT_Y), RECENT, RECENT, color, color == value, mouseX,
                     mouseY);
         }
@@ -232,8 +234,8 @@ final class TvColorPopup implements TvPopup {
         for (int k = 0; k < 6; k++) {
             int from = top + Math.round(k * SV_H / 6f);
             int to = top + Math.round((k + 1) * SV_H / 6f);
-            g.fillGradient(left, from, left + STRIP, to, 0xFF000000 | TvHsv.toRgb(k / 6f, 1, 1),
-                    0xFF000000 | TvHsv.toRgb((k + 1) / 6f, 1, 1));
+            g.fillGradient(left, from, left + STRIP, to, 0xFF000000 | ColorHsv.toRgb(k / 6f, 1, 1),
+                    0xFF000000 | ColorHsv.toRgb((k + 1) / 6f, 1, 1));
         }
         int at = top + Math.round(h * (SV_H - 1));
         g.fill(left - 1, at, left + STRIP + 1, at + 1, 0xFFFFFFFF);
@@ -244,7 +246,7 @@ final class TvColorPopup implements TvPopup {
         int left = alphaX();
         int top = svY();
         checker(g, left, top, STRIP, SV_H);
-        int rgb = 0xFF000000 | TvHsv.toRgb(h, s, v);
+        int rgb = 0xFF000000 | ColorHsv.toRgb(h, s, v);
         g.fillGradient(left, top, left + STRIP, top + SV_H, rgb, rgb & 0xFFFFFF);
         int at = top + Math.round((1 - a / 255f) * (SV_H - 1));
         g.fill(left - 1, at, left + STRIP + 1, at + 1, 0xFFFFFFFF);
@@ -309,9 +311,9 @@ final class TvColorPopup implements TvPopup {
             set.accept(0);
             hex.refresh();
         } else {
-            for (int i = 0; i < TvRecentColors.size(); i++) {
+            for (int i = 0; i < RecentColors.size(); i++) {
                 if (in(mx, my, x + PAD + i * (RECENT + 2), row(RECENT_Y), RECENT, RECENT)) {
-                    applyColor(TvRecentColors.get(i));
+                    applyColor(RecentColors.get(i));
                     return;
                 }
             }
@@ -387,7 +389,7 @@ final class TvColorPopup implements TvPopup {
     public void closed() {
         hex.blur();
         if (value != initial) {
-            TvRecentColors.push(value);
+            RecentColors.push(value);
         }
     }
 

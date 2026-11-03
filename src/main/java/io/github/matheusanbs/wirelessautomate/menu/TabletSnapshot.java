@@ -81,6 +81,8 @@ public record TabletSnapshot(
     public static final int MAX_TEXT_MACHINES = 32;
     /** Etiquetas de máquina e de rede de uma consulta, cada. */
     public static final int MAX_LABELS = 8;
+    /** Quantos tipos o mod tem, o teto das contas por tipo de uma rede no cabeçalho. */
+    private static final int TYPE_COUNT = ResourceType.values().length;
 
     /** Filtro rápido da lista; os ligados valem todos ao mesmo tempo. */
     public enum QuickFilter {
@@ -264,14 +266,31 @@ public record TabletSnapshot(
      * @param unloaded   nós da rede em chunks descarregados
      * @param access     convidados e times da rede; só vai para quem gerencia ({@link AccessView#EMPTY} para os
      *                   outros, que não recebem os nomes)
+     * @param machines   máquinas na rede, a presa e as remotas dos nós ({@link NetworkTally})
+     * @param types      os tipos em que a rede tem quem dá ou quem recebe, na ordem do {@link LoadedTypes#LIST}
      */
     public record NetworkView(UUID id, String name, int color, String owner, boolean owned, boolean manageable,
-            boolean isPublic, boolean paused, int nodes, int unloaded, AccessView access) {
-        /** Uma rede sem lista de acesso para mostrar. */
+            boolean isPublic, boolean paused, int nodes, int unloaded, AccessView access, int machines,
+            List<TypeCount> types) {
+        public NetworkView {
+            types = List.copyOf(types);
+        }
+
+        /** Uma rede sem as contas de máquinas. */
+        public NetworkView(UUID id, String name, int color, String owner, boolean owned, boolean manageable,
+                boolean isPublic, boolean paused, int nodes, int unloaded, AccessView access) {
+            this(id, name, color, owner, owned, manageable, isPublic, paused, nodes, unloaded, access, 0, List.of());
+        }
+
+        /** Uma rede sem lista de acesso nem contas de máquinas. */
         public NetworkView(UUID id, String name, int color, String owner, boolean owned, boolean manageable,
                 boolean isPublic, boolean paused, int nodes, int unloaded) {
             this(id, name, color, owner, owned, manageable, isPublic, paused, nodes, unloaded, AccessView.EMPTY);
         }
+    }
+
+    /** Quantas máquinas de uma rede dão e recebem um tipo (Armazém conta nos dois). */
+    public record TypeCount(ResourceType type, int givers, int receivers) {
     }
 
     /** Quem tem acesso a uma rede privada, para o dono editar. */
@@ -324,9 +343,19 @@ public record TabletSnapshot(
     public record Guest(UUID id, String name, boolean online) {
     }
 
-    /** Um grupo de redes do jogador (ou de qualquer um, para operador). */
+    /**
+     * Um grupo de redes do jogador (ou de qualquer um, para operador).
+     *
+     * @param icon    o item escolhido para o grupo
+     * @param machine a primeira máquina das redes do grupo, o ícone de reserva quando não há {@code icon}
+     */
     public record GroupView(UUID id, String name, String owner, boolean manageable, boolean paused,
-            List<UUID> networks) {
+            List<UUID> networks, Optional<ResourceLocation> icon, Optional<ResourceLocation> machine) {
+        /** Um grupo sem ícone nem máquina. */
+        public GroupView(UUID id, String name, String owner, boolean manageable, boolean paused,
+                List<UUID> networks) {
+            this(id, name, owner, manageable, paused, networks, Optional.empty(), Optional.empty());
+        }
     }
 
     /**
@@ -509,6 +538,13 @@ public record TabletSnapshot(
             buf.writeVarInt(n.nodes);
             buf.writeVarInt(n.unloaded);
             n.access.write(buf);
+            buf.writeVarInt(n.machines);
+            buf.writeVarInt(n.types.size());
+            for (TypeCount count : n.types) {
+                buf.writeEnum(count.type());
+                buf.writeVarInt(count.givers());
+                buf.writeVarInt(count.receivers());
+            }
         }
         buf.writeVarInt(s.groups.size());
         for (GroupView g : s.groups) {
@@ -521,6 +557,8 @@ public record TabletSnapshot(
             for (UUID id : g.networks) {
                 buf.writeUUID(id);
             }
+            buf.writeOptional(g.icon, (b, id) -> b.writeResourceLocation(id));
+            buf.writeOptional(g.machine, (b, id) -> b.writeResourceLocation(id));
         }
         buf.writeVarInt(s.machineFacets.size());
         for (Facet<ResourceLocation> facet : s.machineFacets) {
@@ -565,8 +603,10 @@ public record TabletSnapshot(
             boolean paused = buf.readBoolean();
             int nodes = buf.readVarInt();
             int unloaded = buf.readVarInt();
+            AccessView access = AccessView.read(buf);
+            int machines = buf.readVarInt();
             networks.add(new NetworkView(id, name, color, owner, owned, manageable, isPublic, paused, nodes,
-                    unloaded, AccessView.read(buf)));
+                    unloaded, access, machines, readTypeCounts(buf)));
         }
         int groupCount = buf.readVarInt();
         List<GroupView> groups = new ArrayList<>(groupCount);
@@ -581,7 +621,9 @@ public record TabletSnapshot(
             for (int j = 0; j < count; j++) {
                 members.add(buf.readUUID());
             }
-            groups.add(new GroupView(id, name, owner, manageable, paused, List.copyOf(members)));
+            Optional<ResourceLocation> icon = buf.readOptional(b -> b.readResourceLocation());
+            Optional<ResourceLocation> machine = buf.readOptional(b -> b.readResourceLocation());
+            groups.add(new GroupView(id, name, owner, manageable, paused, List.copyOf(members), icon, machine));
         }
         int machineCount = buf.readVarInt();
         List<Facet<ResourceLocation>> machineFacets = new ArrayList<>(machineCount);
@@ -612,6 +654,19 @@ public record TabletSnapshot(
                 0, 0, List.copyOf(networks), List.copyOf(groups), List.copyOf(machineFacets),
                 List.copyOf(networkFacets), quickCounts, machines, profile, List.of(), TabletRows.EMPTY,
                 TabletMachineRows.EMPTY, notice, noticeId);
+    }
+
+    /** As contas por tipo de uma rede; recusa mais tipos do que o mod tem. */
+    private static List<TypeCount> readTypeCounts(RegistryFriendlyByteBuf buf) {
+        int count = buf.readVarInt();
+        if (count > TYPE_COUNT) {
+            throw new DecoderException("tipos " + count);
+        }
+        List<TypeCount> types = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            types.add(new TypeCount(buf.readEnum(ResourceType.class), buf.readVarInt(), buf.readVarInt()));
+        }
+        return types;
     }
 
     /**

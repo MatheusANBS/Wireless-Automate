@@ -160,7 +160,9 @@ final class E2eLinkerSteps {
                 () -> "tamanho " + java.util.Arrays.toString(linkerScreen().size())));
         list.add(new Step("Vinculador: seletor Desvincular", STEP_TIMEOUT_MS,
                 () -> click(widget(byMessageKey("gui.wirelessautomate.linker.action.unlink"), "Desvincular")),
-                () -> serverLinker(LinkerItem::unlink) && linkerScreen().getMenu().snapshot().unlink(),
+                // o botão "Desvincular N" nasce quando a tela refaz os widgets com o snapshot novo, um quadro depois
+                () -> serverLinker(LinkerItem::unlink) && linkerScreen().getMenu().snapshot().unlink()
+                        && find(byMessageKey("gui.wirelessautomate.linker.unlink.count")) != null,
                 () -> "desvincular na tela " + linkerScreen().getMenu().snapshot().unlink()));
         list.add(new Step("Vinculador: Desvincular a área", STEP_TIMEOUT_MS,
                 () -> click(widget(byMessageKey("gui.wirelessautomate.linker.unlink.count"), "Desvincular N")),

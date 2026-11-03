@@ -311,7 +311,7 @@ public final class RangeFaceNetworkGameTests {
                         helper.assertTrue(router.linkMachine(a), "não vinculou");
                         UUID own = NetworkSavedData.get(player.server).create(player.getUUID(), "girada").id();
                         helper.assertTrue(selectMachine(player, menu, router, a), "não escolheu a A");
-                        // canônica Sul = Trás, seja qual for a frente da máquina
+                        // no quadro canônico, o Sul é a Trás da máquina, qualquer que seja a frente dela
                         helper.assertTrue(ModPayloads.handleSetNetwork(player, set(menu, Direction.SOUTH, own)), "recusou");
                         assertNetwork(helper, shown(router, player, menu, Direction.SOUTH), own, "a tela não mostra na Trás");
                         RemoteMachines remotes = router.remoteMachines();

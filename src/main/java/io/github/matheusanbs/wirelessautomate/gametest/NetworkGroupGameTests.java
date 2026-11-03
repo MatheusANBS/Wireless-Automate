@@ -1,31 +1,45 @@
 package io.github.matheusanbs.wirelessautomate.gametest;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
+import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import io.github.matheusanbs.wirelessautomate.menu.NetworkTally;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu.Action;
+import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
+import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
+import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
+import io.github.matheusanbs.wirelessautomate.network.PortMode;
+import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaGroup;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.packet.TabletActionPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPayloads;
+import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Os grupos de redes do Tablet novo: o ícone (NBT de ida e volta, grupo antigo sem a chave, a ação {@code GROUP_ICON}),
- * "uma rede, um grupo" ({@code GROUP_ADD_NETWORK} move) e a cor de uma rede nova (a próxima da paleta). Cada teste
+ * "uma rede, um grupo" ({@code GROUP_ADD_NETWORK} move), a cor de uma rede nova (a próxima da paleta) e o cabeçalho
+ * (ícone e máquina do grupo, máquinas e "dão/recebem" da rede). Cada teste
  * cria as próprias redes e grupos e confere pertinência.
  */
 @GameTestHolder(WirelessAutomate.MODID)
@@ -151,5 +165,50 @@ public final class NetworkGroupGameTests {
         data.remove(a.id());
         data.remove(b.id());
         helper.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void headerCarriesIconMachinesAndTypes(GameTestHelper helper) {
+        ServerPlayer player = tabletPlayer(helper, 83);
+        NetworkSavedData data = data(helper);
+        UUID me = player.getUUID();
+        WaNetwork network = data.create(me, "teste-cabecalho");
+        WaGroup group = data.createGroup(me, "teste-cabecalho-grupo");
+        data.moveToGroup(network.id(), group.id());
+        BlockPos chest = new BlockPos(0, 1, 0);
+        helper.setBlock(chest, Blocks.CHEST);
+        helper.setBlock(chest.above(), ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING,
+                Direction.UP));
+        RouterBlockEntity router = helper.getBlockEntity(chest.above());
+        router.setNetworkId(network.id());
+        router.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
+        NodeIndex.placedBy(router, me);
+        TabletMenu menu = (TabletMenu) player.containerMenu;
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(router), "sem onLoad"))
+                .thenExecute(() -> {
+                    helper.assertTrue(TabletPayloads.handleAction(player, new TabletActionPayload(83, Action.GROUP_ICON,
+                            Optional.of(group.id()), Optional.empty(), "minecraft:diamond", 0)), "ícone");
+                    menu.setQuery(menu.query());
+                    menu.pollSnapshot();
+                    TabletSnapshot s = menu.snapshot();
+                    TabletSnapshot.NetworkView view = s.network(network.id()).orElseThrow();
+                    eq(helper, view.machines(), 1, "máquinas");
+                    helper.assertTrue(view.types().stream().anyMatch(t -> t.type() == ResourceType.ITEM
+                            && t.givers() == 1 && t.receivers() == 0), "tipos " + view.types());
+                    TabletSnapshot.GroupView g = s.groups().stream().filter(x -> x.id().equals(group.id()))
+                            .findFirst().orElseThrow();
+                    eq(helper, g.icon(), Optional.of(DIAMOND), "ícone no cabeçalho");
+                    eq(helper, g.machine(), Optional.of(BuiltInRegistries.BLOCK.getKey(Blocks.CHEST)), "máquina");
+                    for (ResourceType type : ResourceType.values()) {
+                        for (int role = 0; role < 3; role++) {
+                            eq(helper, NetworkTally.bit(type, role), NodeIndex.role(type, role), "bit do papel");
+                        }
+                    }
+                    data.remove(network.id());
+                    data.removeGroup(group.id());
+                    player.containerMenu = player.inventoryMenu;
+                })
+                .thenSucceed();
     }
 }

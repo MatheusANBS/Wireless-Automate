@@ -17,7 +17,11 @@ import net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs;
  */
 public record TabletActionPayload(int containerId, TabletMenu.Action action, Optional<UUID> target,
         Optional<UUID> other, String text, int value) implements CustomPacketPayload {
-    public static final int MAX_TEXT = 64;
+    /**
+     * Teto do texto: nomes têm 32 ({@code WaCommand.MAX_NAME_LENGTH}, conferido no servidor); o id de um item de ícone
+     * pode passar de 64.
+     */
+    public static final int MAX_TEXT = 256;
     public static final Type<TabletActionPayload> TYPE = new Type<>(WirelessAutomate.id("tablet_action"));
     public static final StreamCodec<RegistryFriendlyByteBuf, TabletActionPayload> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.VAR_INT, TabletActionPayload::containerId,

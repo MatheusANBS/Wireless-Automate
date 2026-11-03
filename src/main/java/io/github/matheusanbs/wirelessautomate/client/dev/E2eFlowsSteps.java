@@ -104,8 +104,8 @@ final class E2eFlowsSteps {
         }, () -> "aba " + tabletScreen().currentTab() + ", consulta " + tabletScreen().getMenu().snapshot().query()));
         list.add(capture("7e-tablet-lista-energia"));
         list.add(new Step("Tablet de volta ao mínimo", STEP_TIMEOUT_MS,
-                () -> tabletScreen().previewResize(300, 240),
-                () -> tabletScreen().size()[0] == 300,
+                () -> tabletScreen().previewResize(420, 240),
+                () -> tabletScreen().size()[0] == 420,
                 () -> "tamanho " + java.util.Arrays.toString(tabletScreen().size())));
         list.add(clipCheck("Tablet: Lista no mínimo"));
         list.add(listClipTooltip("Tablet: Lista no mínimo"));

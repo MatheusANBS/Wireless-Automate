@@ -424,7 +424,7 @@ final class E2eShowcase {
         list.add(DevEndToEnd.wait("os 5 s dos Fluxos", 140));
         list.add(capture("s6b-tablet-fluxos"));
         list.add(new Step("aba Mapa", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.tablet.tab.map")), "aba Mapa")),
+                () -> tabletScreen().previewTab(TabletScreen.Tab.MAP),
                 () -> true, () -> "mapa"));
         list.add(DevEndToEnd.wait("mapa desenhado", 10));
         list.add(capture("s7-tablet-mapa"));

@@ -3,8 +3,6 @@ package io.github.matheusanbs.wirelessautomate.client.tablet;
 import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletLayout.BODY_Y;
 import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletLayout.MIN_H;
 import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletLayout.MIN_W;
-import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletLayout.TAB_H;
-import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletLayout.TAB_Y;
 import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletLayout.X0;
 import static io.github.matheusanbs.wirelessautomate.client.tablet.TabletText.tr;
 
@@ -20,7 +18,6 @@ import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.packet.PanelNotices;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPanelPayload;
-import java.util.Locale;
 import java.util.UUID;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -32,7 +29,9 @@ import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * Tela do Tablet de rede (especificação, "Telas da interface › Tablet de rede"), com quatro abas:
+ * Tela do Tablet de rede (especificação, "Telas da interface › Tablet de rede"), com três abas na barra, Redes,
+ * Máquina (por ora, a Lista na visão Máquinas) e Fluxos; o Mapa continua na tela só para as capturas e o e2e até a
+ * etapa 4:
  * <ul>
  *   <li><b>Lista:</b> a busca com sugestões e etiquetas, o seletor Roteadores · Máquinas, os filtros rápidos, os
  *       nós agrupados pela máquina (ou, por máquinas, as máquinas pelo tipo de bloco), cada
@@ -50,7 +49,7 @@ import org.lwjgl.glfw.GLFW;
  *
  * <p>Tudo vem de {@link TabletMenu#snapshot()}; a tela só pede (consulta, ações, pelo {@link TabletActions}) e
  * espera o servidor. A tela é a anfitriã: os botões das abas e os campos, e repassa às partes o tamanho
- * ({@link TabletResize}), o cabeçalho e o aviso ({@link TabletHeader}), o corpo da aba aberta ({@link TabletBody}:
+ * ({@link TabletResize}), a moldura, as abas e o aviso ({@link TabletFrame}), o corpo da aba aberta ({@link TabletBody}:
  * desenho, cliques, roda e dicas), os botões de cada aba ({@link TabletTabs}), o teclado ({@link TabletKeys}) e a
  * dica do quadro ({@link TabletTips}). Linhas de lista, pontos do mapa e cores
  * são desenhados e clicados por geometria, sem um widget por item; os botões fixos são {@link FlatButton}s que leem o
@@ -77,7 +76,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     private final TabletTabs tabs;
     private final TabletKeys keys;
     private final TabletTips tips;
-    private final TabletHeader header;
+    private final TabletFrame frame;
     private final TabletResize resize = new TabletResize(layout);
 
     private Tab tab = Tab.LIST;
@@ -93,9 +92,13 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         super(menu, inventory, title);
         this.imageWidth = MIN_W;
         this.imageHeight = MIN_H;
-        this.header = new TabletHeader(layout, menu.snapshot().noticeId());
+        this.frame = new TabletFrame(layout, menu.snapshot().noticeId());
         if (menu.restoredTab() >= 0 && menu.restoredTab() < Tab.values().length) {
             this.tab = Tab.values()[menu.restoredTab()];
+        }
+        if (menu.restoredTab() == Tab.MAP.ordinal()) {
+            // o Mapa não está na barra
+            this.tab = Tab.NETWORKS;
         }
         this.actions = new TabletActions(menu, preview);
         NodeText nodes = new NodeText(menu::snapshot);
@@ -139,14 +142,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         int x = leftPos;
         int y = topPos;
 
-        int tabX = x + X0;
-        for (Tab t : Tab.values()) {
-            Component label = tr("tab." + t.name().toLowerCase(Locale.ROOT));
-            int width = font.width(label) + 12;
-            add(null, new FlatButton(tabX, y + TAB_Y, width, TAB_H, label,
-                    (g, b, hovered) -> TabletButtons.paintTab(g, b, hovered, t == tab), () -> switchTab(t)));
-            tabX += width + 3;
-        }
+        frame.addTabs(this::add, font, () -> tab, this::openTab);
 
         // Lista: a busca (posição e largura acertadas pela lista a cada quadro) e os botões do Selecionar
         list.layout(x + X0, y + BODY_Y, layout.x1() - X0, y + h - 8);
@@ -190,13 +186,25 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     /** Snapshot novo: a seleção que sumiu sai e o aviso aparece. */
     private void onSnapshot() {
         TabletSnapshot s = snapshot();
-        header.onSnapshot(s);
+        frame.onSnapshot(s);
         networks.onSnapshot(s);
         selectBar.onSnapshot(s);
         list.onSnapshot();
     }
 
     // ------------------------------------------------------------------ abas
+
+    /**
+     * O clique numa aba da barra: entrar na Máquina pede a visão por máquinas. O link dos Fluxos e os ganchos do e2e
+     * passam direto pelo {@link #switchTab}, porque filtram os nós na visão em que a Lista estiver.
+     */
+    private void openTab(Tab t) {
+        boolean entering = tab != t;
+        switchTab(t);
+        if (entering && t == Tab.LIST) {
+            list.showMachines();
+        }
+    }
 
     private void switchTab(Tab t) {
         if (tab != t) {
@@ -255,11 +263,11 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
     // ------------------------------------------------------------------ geometria
 
     public int themeX() {
-        return header.themeX();
+        return frame.themeX();
     }
 
     public int themeY() {
-        return header.themeY();
+        return frame.themeY();
     }
 
     // ------------------------------------------------------------------ entrada
@@ -370,7 +378,7 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
         } else if (tab == Tab.NETWORKS) {
             networks.renderOverlay(g, font);
         }
-        header.renderNotice(g, font);
+        frame.renderNotice(g, font);
         if (popup) {
             Component clipped = GuiText.clipAt(mouseX, mouseY);
             if (clipped != null) {
@@ -400,16 +408,10 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     @Override
     protected void renderBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
-        TabletSnapshot s = snapshot();
-        int x = leftPos;
-        int y = topPos;
-        int w = layout.w;
-        int h = layout.h;
-        GuiPaint.panel(g, x, y, w, h, GuiPaint.ACCENT);
-        header.render(g, font, s, mouseX, mouseY);
+        frame.render(g, font, mouseX, mouseY);
         body.render(tab, g, font, mouseX, mouseY);
         // alça de redimensionar: três riscos na diagonal, acesos com o mouse em cima ou arrastando
-        ResizeGrip.renderDotted(g, x, y, w, h, resize.hover(mouseX, mouseY), GuiPaint.ACCENT);
+        ResizeGrip.renderDotted(g, leftPos, topPos, layout.w, layout.h, resize.hover(mouseX, mouseY), GuiPaint.FG);
     }
 
     // ------------------------------------------------------------------ captura e teste de ponta a ponta

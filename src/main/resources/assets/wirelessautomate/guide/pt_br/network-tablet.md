@@ -22,7 +22,7 @@ Uma visão de todas as suas redes, de qualquer lugar.
 
 1. Clique direito com o Tablet. Ou use a tecla **Abrir o Tablet de Rede** com ele no inventário (sem
    tecla padrão: escolha em Opções › Controles).
-2. Na aba **Lista**, procure o nó e clique nele.
+2. Na aba **Máquina**, procure o nó e clique nele.
 3. Mude as faces no painel à direita, como na [tela do roteador](router.md). Vale na hora.
 
 Atalho: com o Tablet na mão, clique direito numa máquina com roteador (ou vinculada pelo Upgrade de
@@ -32,10 +32,9 @@ Alcance). O Tablet abre já com o nó dela escolhido, antes da interface da máq
 
 | Aba | O que faz |
 | --- | --- |
-| **Lista** | Todos os nós, com busca, filtros e o painel do nó escolhido. |
+| **Redes** | Criar e organizar redes e grupos: cor, grupo, acesso e o que cada rede tem. |
+| **Máquina** | As máquinas da base (por ora, a Lista na visão Máquinas). |
 | **Fluxos** | Quanto entra e sai de cada tipo e de cada rede, e o que precisa de atenção. |
-| **Mapa** | Vista de cima, com cor por status e todos os roteadores que você vê. |
-| **Redes** | Criar redes, cor, membros, privacidade e grupos de redes. |
 
 O cabeçalho conta a sua base: nós, máquinas e redes.
 
@@ -52,7 +51,7 @@ ao reabrir.
 **No mundo** acende a máquina através dos blocos, como o Olho da tela do roteador. **Apagar todas
 (N)**, no pé da Lista, apaga as acesas.
 
-## A Lista
+## A Lista (aba Máquina)
 
 O seletor embaixo da busca troca a visão:
 
@@ -109,27 +108,25 @@ presa ou num grupo para editar a presa ou o perfil do grupo.
 Na visão **Máquinas**, os filtros por tipo e rede valem por máquina: em **Só Fluidos**, uma fornalha
 não aparece, mesmo que o roteador dela também mova fluidos.
 
-## O Mapa
-
-Arraste para mover (**Centralizar** volta para você), role para dar zoom e clique num ponto para
-escolher o nó. O Mapa mostra todos os roteadores, sem depender da busca nem dos filtros da Lista.
-
-O nó escolhido é o mesmo da Lista. As máquinas vinculadas a ele aparecem como quadradinhos ligados
-por uma linha; as acesas pelo Olho ficam em ciano. Clique numa para torná-la o alvo do painel.
-
 ## Redes e grupos
 
-A aba **Redes** é uma lista só. Cada grupo de redes é uma seção com **Pausar** no cabeçalho; as redes
-fora de grupo vêm no fim, em **Sem grupo**. Uma rede pode estar em dois grupos.
+À esquerda ficam os grupos, cada um com o ícone e as redes dele, e por último **Sem grupo**.
 
-- Clique numa rede para ver a cor, se é pública ou privada, usá-la e removê-la.
-- Numa rede privada sua, adicione **convidados** e **times do FTB Teams** (só com o mod). Digite um
-  nome e escolha com as setas e Enter; o ✕ duas vezes tira. Só aparecem jogadores que já entraram no
-  servidor. Um time vale por inteiro: quem entra ou sai dele ganha ou perde o acesso sozinho.
-- Clique no cabeçalho de um grupo para mudar o nome, pausar, marcar as redes dele e removê-lo.
-- **Nova rede** e **Novo grupo**, embaixo da lista, criam uma rede ou um grupo.
+- **+ Rede** e **+ Grupo** criam na hora; digite o nome e aperte Enter.
+- Clique numa rede para ver e mudar:
+  - **a cor:** clique no quadrado ao lado do nome e escolha no seletor (qualquer cor);
+  - **o nome:** clique nele;
+  - **o grupo:** uma rede fica num grupo só; escolher outro a muda de lugar;
+  - **o acesso:** **Todos** ou **Convidados** (com **+ convidar** para pôr jogadores e times);
+  - **Nesta rede:** quantas máquinas dão e recebem de cada tipo.
+- **Pausar** para todas as redes do grupo da rede; **Apagar rede** pede dois cliques.
+- Clique num grupo para mudar o nome e o ícone (clique no ícone e busque um item, ou arraste um do JEI), ver as
+  redes dele, pôr outra rede nele, pausar e apagar.
 
-Um grupo pausado para todas as redes dele de uma vez; retomar as solta.
+Os convidados e os times do FTB Teams (só com o mod) entram digitando um nome e escolhendo com as setas e
+Enter; o ✕ duas vezes tira. Só aparecem jogadores que já entraram no servidor. Um time vale por inteiro: quem
+entra ou sai dele ganha ou perde o acesso sozinho. Um grupo pausado para todas as redes dele de uma vez;
+retomar as solta.
 
 ## Fluxos
 

@@ -11,6 +11,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.client.GuiThemes;
 import io.github.matheusanbs.wirelessautomate.client.tuner.TunerProposal;
+import io.github.matheusanbs.wirelessautomate.item.tuner.TunerPending;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.ConfiguratorProposalPayload;
@@ -19,6 +20,7 @@ import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.util.List;
 import java.util.UUID;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -31,18 +33,26 @@ import net.minecraft.world.level.block.AbstractFurnaceBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.client.ClientHooks;
 
 /**
  * O Afinador do Configurador no e2e: uma fornalha no ar (frente para o Norte), vinculada a um roteador de alcance, e a
  * câmera embaixo dela, a sudeste, de onde se veem Baixo, Trás e Leste. O clique mostra a pintura
  * ({@code cfg-afinador-proposta}, também {@code -escuro} e {@code -pt}); depois do intervalo mínimo, o segundo clique
- * aplica (Baixo Extrai, Cima e Trás Insere) e a pintura some ({@code cfg-afinador-aplicado}). Mirar outro bloco por
- * 2 s apaga a proposta; o clique no ar, que também a apaga, só roda na variante pt. No fim, uma proposta montada no
- * cliente com dois tipos por face mostra as letras ({@code cfg-afinador-letras}), com a action bar limpa.
+ * aplica (Baixo Extrai, Cima e Trás Insere) e a pintura some ({@code cfg-afinador-aplicado}). Com uma proposta nova,
+ * a tecla de uso segurada não confirma (o segundo {@code InteractionKeyMappingTriggered} vem cancelado e o jogo, que
+ * repete o uso com a tecla descida, não muda a fornalha), e o clique no ar a apaga nos dois lados. Mirar outro bloco
+ * por 2 s também a apaga, no cliente e no servidor. No fim, uma proposta montada no cliente com dois tipos por face
+ * mostra as letras ({@code cfg-afinador-letras}), com a action bar limpa.
  */
 final class E2eTunerSteps {
     /** O segundo clique precisa de 6 ticks (servidor) e do fim do descanso do item (10 ticks). */
     private static final int SECOND_CLICK_TICKS = 14;
+    /** O clique no ar só apaga uma pausa depois do fim do descanso (servidor: 10 + 5 ticks depois da análise). */
+    private static final int AIR_CLICK_TICKS = 18;
+    /** Quanto tempo a tecla de uso fica descida no passo da trava: o jogo repete o uso a cada 4 ticks. */
+    private static final int HOLD_TICKS = 30;
+    private static final List<PortMode> UNTOUCHED = List.of(PortMode.NONE, PortMode.NONE, PortMode.NONE);
 
     private static BlockPos furnace = BlockPos.ZERO;
     private static BlockPos router = BlockPos.ZERO;
@@ -68,19 +78,25 @@ final class E2eTunerSteps {
         list.add(click("afinador: o segundo clique aplica", () -> TunerProposal.current() == null && applied()));
         list.add(capture("cfg-afinador-aplicado"));
 
+        list.add(revert("afinador: modos de volta"));
+        list.add(DevEndToEnd.wait("afinador: descanso antes da trava", SECOND_CLICK_TICKS));
+        list.add(click("afinador: proposta para a trava", () -> proposalShown()));
+        list.add(holdLock(playerId));
+        list.add(DevEndToEnd.wait("afinador: pausa antes do clique no ar", AIR_CLICK_TICKS));
+        list.add(new Step("afinador: clique no ar apaga", STEP_TIMEOUT_MS, () -> {
+            Minecraft minecraft = Minecraft.getInstance();
+            minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);
+        }, () -> TunerProposal.current() == null && !pendingOnServer(playerId),
+                () -> "proposta " + TunerProposal.current() + ", no servidor " + pendingOnServer(playerId)));
+
         E2eVariants.pt(list, () -> {
-            list.add(revert("pt: afinador: modos de volta"));
             list.add(language("pt_br"));
+            list.add(DevEndToEnd.wait("pt: afinador: descanso", SECOND_CLICK_TICKS));
             list.add(click("pt: afinador: clicar mostra a proposta", () -> proposalShown()));
             list.add(capture("cfg-afinador-proposta-pt"));
-            list.add(new Step("pt: afinador: clique no ar apaga", STEP_TIMEOUT_MS, () -> {
-                Minecraft minecraft = Minecraft.getInstance();
-                minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);
-            }, () -> TunerProposal.current() == null, () -> "proposta " + TunerProposal.current()));
             list.add(language("en_us"));
         });
 
-        list.add(revert("afinador: modos de volta"));
         list.add(DevEndToEnd.wait("afinador: descanso", SECOND_CLICK_TICKS));
         list.add(click("afinador: clicar de novo", () -> proposalShown()));
         int[] gone = new int[1];
@@ -97,8 +113,9 @@ final class E2eTunerSteps {
             return gone[0] >= 0;
         }, () -> "proposta " + TunerProposal.current() + " em " + stepTicks + " ticks, mira "
                 + Minecraft.getInstance().hitResult));
-        list.add(new Step("afinador: apagou depois de uns 2 s, não antes", STEP_TIMEOUT_MS, () -> {
-        }, () -> gone[0] >= 38, () -> "apagou em " + gone[0] + " ticks"));
+        list.add(new Step("afinador: apagou depois de uns 2 s, não antes, e no servidor também", STEP_TIMEOUT_MS, () -> {
+        }, () -> gone[0] >= 38 && !pendingOnServer(playerId),
+                () -> "apagou em " + gone[0] + " ticks, no servidor " + pendingOnServer(playerId)));
         list.add(camera("afinador: câmera de volta", 1.6, -2.4, 2.4));
         list.add(new Step("afinador: letras com dois tipos por face", STEP_TIMEOUT_MS, () -> {
             // a action bar ainda traz o resumo da proposta anterior, que não é a desta captura
@@ -120,6 +137,38 @@ final class E2eTunerSteps {
             return shown != null && shown.until() - Minecraft.getInstance().level.getGameTime() <= 400;
         }, () -> "proposta " + TunerProposal.current()));
         cleanupSteps(list, playerId, back);
+    }
+
+    /**
+     * A trava do botão segurado, pelo caminho do jogo: com a tecla de uso descida e a mira na fornalha, o primeiro
+     * {@code InteractionKeyMappingTriggered} passa e o segundo vem cancelado; depois o jogo repete o uso sozinho por
+     * {@link #HOLD_TICKS} ticks, e a fornalha continua sem mudança, com a proposta de pé.
+     */
+    private static Step holdLock(UUID playerId) {
+        boolean[] canceled = new boolean[2];
+        return new Step("afinador: o botão segurado não confirma", STEP_TIMEOUT_MS, () -> {
+            Minecraft minecraft = Minecraft.getInstance();
+            KeyMapping use = minecraft.options.keyUse;
+            KeyMapping.set(use.getKey(), true);
+            canceled[0] = ClientHooks.onClickInput(1, use, InteractionHand.MAIN_HAND).isCanceled();
+            canceled[1] = ClientHooks.onClickInput(1, use, InteractionHand.MAIN_HAND).isCanceled();
+            if (canceled[0] || !canceled[1]) {
+                KeyMapping.set(use.getKey(), false);
+                throw new StepFailure("o primeiro uso cancelado: " + canceled[0] + ", o segundo: " + canceled[1]);
+            }
+        }, () -> {
+            if (stepTicks < HOLD_TICKS) {
+                return false;
+            }
+            KeyMapping.set(Minecraft.getInstance().options.keyUse.getKey(), false);
+            return modes().equals(UNTOUCHED) && proposalShown() && pendingOnServer(playerId);
+        }, () -> "modos " + modes() + ", proposta " + TunerProposal.current() + ", no servidor "
+                + pendingOnServer(playerId));
+    }
+
+    /** O servidor ainda guarda uma proposta do jogador. */
+    private static boolean pendingOnServer(UUID playerId) throws Exception {
+        return onServer(server -> TunerPending.get(playerId) != null);
     }
 
     /** O roteador Avançado com o Upgrade de Alcance e a fornalha no ar, vinculada; o Configurador na mão. */
@@ -210,7 +259,7 @@ final class E2eTunerSteps {
             RouterBlockEntity be = router(server, router);
             be.revertToProfile(be.remoteMachines().index(furnace));
             return null;
-        }), () -> modes().equals(List.of(PortMode.NONE, PortMode.NONE, PortMode.NONE)), () -> "modos " + modes());
+        }), () -> modes().equals(UNTOUCHED), () -> "modos " + modes());
     }
 
     /**

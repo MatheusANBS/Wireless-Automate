@@ -1,14 +1,10 @@
 package io.github.matheusanbs.wirelessautomate.client.tuner;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
-import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
-import io.github.matheusanbs.wirelessautomate.range.RemoteCapabilities;
+import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.neoforged.api.distmarker.Dist;
@@ -18,12 +14,13 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
 
 /**
- * O toque novo do Configurador: o uso numa máquina só vai ao servidor se a tecla de uso soltou desde o último, para o
- * botão segurado (que o jogo repete a cada 4 ticks) não analisar e confirmar sozinho. A trava só age onde o
- * Configurador agiria ({@code ConfiguratorItem.onItemUseFirst}): bloco com block entity ou com capability, e não
- * roteador. Num roteador, no ar e em qualquer outro bloco o evento segue intacto, para a mão secundária (tocha, bloco,
- * farinha de osso) repetir o uso como sempre. O servidor tem o próprio intervalo mínimo entre os dois cliques; isto só
- * poupa os pacotes.
+ * O toque novo do Configurador: depois de um uso numa máquina (onde o Configurador age,
+ * {@link ConfiguratorItem#actsOn}), nenhum uso dele vai ao servidor até a tecla de uso soltar, para o botão segurado
+ * (que o jogo repete a cada 4 ticks) não analisar e confirmar sozinho, nem apagar a proposta quando a mira escorrega
+ * para o chão ou o ar: só um clique novo no ar a apaga. Com a tecla solta, o evento segue intacto fora das máquinas
+ * (num roteador, no ar, em qualquer outro bloco), para a mão secundária (tocha, bloco, farinha de osso) repetir o uso
+ * como sempre; segurado desde uma máquina, o cancelamento também a segura. O servidor tem a própria trava
+ * ({@code TunerPending.attempt}); esta poupa os pacotes.
  */
 @EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
 public final class TunerInput {
@@ -44,22 +41,17 @@ public final class TunerInput {
     static void onUse(InputEvent.InteractionKeyMappingTriggered event) {
         Minecraft minecraft = Minecraft.getInstance();
         if (!event.isUseItem() || event.getHand() != InteractionHand.MAIN_HAND || minecraft.player == null
-                || minecraft.level == null || !minecraft.player.getMainHandItem().is(ModItems.CONFIGURATOR.get())
-                || !(minecraft.hitResult instanceof BlockHitResult hit) || hit.getType() != HitResult.Type.BLOCK
-                || !actsOn(minecraft.level, hit.getBlockPos())) {
+                || minecraft.level == null || !minecraft.player.getMainHandItem().is(ModItems.CONFIGURATOR.get())) {
             return;
         }
         if (released) {
-            released = false;
+            if (minecraft.hitResult instanceof BlockHitResult hit && hit.getType() == HitResult.Type.BLOCK
+                    && ConfiguratorItem.actsOn(InteractionHand.MAIN_HAND, minecraft.level, hit.getBlockPos())) {
+                released = false;
+            }
             return;
         }
         event.setCanceled(true);
         event.setSwingHand(false);
-    }
-
-    /** O Configurador agiria no bloco: a mesma condição do {@code ConfiguratorItem.onItemUseFirst}. */
-    private static boolean actsOn(ClientLevel level, BlockPos pos) {
-        BlockEntity blockEntity = level.getBlockEntity(pos);
-        return blockEntity == null ? RemoteCapabilities.any(level, pos) : !(blockEntity instanceof RouterBlockEntity);
     }
 }

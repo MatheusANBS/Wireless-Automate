@@ -8,6 +8,7 @@ import io.github.matheusanbs.wirelessautomate.menu.RangeView;
 import io.github.matheusanbs.wirelessautomate.menu.RemoteRouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
+import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
@@ -23,6 +24,7 @@ import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.netty.buffer.Unpooled;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -157,6 +159,63 @@ public final class RangeReplaceGameTests {
                         List.of(index(helper, router, FURNACE_A)), null).isEmpty(), "o Atualizar não moveu"))
                 .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, FURNACE_A, Direction.DOWN),
                         "atualizada sem porta"))
+                .thenSucceed();
+    }
+
+    /**
+     * A trocada que continua trocada: um aviso novo do cache dela (a block entity do bloco novo invalida as
+     * capabilities) não remonta as rotas, só volta a vigiar a posição; a fornalha de volta ainda refaz a porta.
+     */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void stillReplacedMachineDoesNotRebuild(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        UUID[] network = new UUID[1];
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    linkInNetwork(helper, router, FURNACE_A);
+                    profile(helper, router, FURNACE_A, Direction.DOWN, PortMode.EXTRACT);
+                    network[0] = router.networkId(ResourceType.ITEM);
+                })
+                .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, FURNACE_A, Direction.DOWN), "sem porta"))
+                .thenExecute(() -> blastAt(helper, FURNACE_A, Direction.EAST))
+                .thenWaitUntil(() -> helper.assertFalse(remotePort(helper, router, FURNACE_A, Direction.DOWN),
+                        "a trocada continua com porta"))
+                .thenWaitUntil(() -> helper.assertFalse(NetworkManager.get().isDirty(network[0], ResourceType.ITEM),
+                        "a rede não assentou"))
+                .thenExecute(() -> {
+                    helper.assertTrue(machine(helper, router, FURNACE_A).replaced(), "não ficou trocada");
+                    BlockPos pos = helper.absolutePos(FURNACE_A);
+                    router.machineInvalidated(router.remoteCaches(pos), ResourceType.ITEM, Direction.UP);
+                    helper.assertFalse(NetworkManager.get().isDirty(network[0], ResourceType.ITEM),
+                            "o aviso da trocada que continua trocada remontou as rotas");
+                })
+                .thenExecute(() -> helper.setBlock(FURNACE_A,
+                        Blocks.FURNACE.defaultBlockState().setValue(AbstractFurnaceBlock.FACING, Direction.EAST)))
+                .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, FURNACE_A, Direction.DOWN),
+                        "a fornalha voltou e a porta não"))
+                .thenSucceed();
+    }
+
+    /**
+     * A releitura da montagem ({@code rereadRemote}) conta a marca de trocada que mudou, mesmo com a frente igual:
+     * os outros tipos do nó também remontam.
+     */
+    @GameTest(template = "empty")
+    public static void rereadReportsReplacedChange(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    link(helper, router, FURNACE_A);
+                    RemoteMachine machine = machine(helper, router, FURNACE_A);
+                    helper.assertFalse(router.rereadRemote(machine), "nada mudou e a releitura disse que sim");
+                    machine.setReplaced(true);
+                    helper.assertTrue(router.rereadRemote(machine), "a marca de trocada mudou e a releitura não contou");
+                    helper.assertFalse(machine.replaced(), "a releitura não regravou a marca");
+                })
                 .thenSucceed();
     }
 

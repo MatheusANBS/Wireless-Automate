@@ -856,12 +856,12 @@ public class RouterBlockEntity extends BlockEntity {
     }
 
     /**
-     * Confere o bloco da presa antes de o motor ler as portas dela do tipo {@code type} (uma leitura do bloco
+     * Confere o bloco da presa antes de o motor ler as portas dela de um tipo (uma leitura do bloco
      * por montagem, só com o chunk carregado; nunca por tick). Se a presa mudou (rascunho convertido, bloco
      * trocado, frente nova), vale já nesta leitura, todos os tipos do nó (este também, por segurança: as redes do
      * nó podem ter mudado) são relidos na próxima remontagem, sem laço (lá o bloco já bate), e o índice é avisado.
      */
-    public void prepareAttachedPorts(ResourceType type) {
+    public void prepareAttachedPorts() {
         if (attached.sync()) {
             NetworkManager.get().nodeChanged(this, NetworkManager.ALL_TYPES);
             NodeIndex.track(this);
@@ -896,7 +896,7 @@ public class RouterBlockEntity extends BlockEntity {
     /**
      * Relê a frente e o bloco da máquina remota pelo mundo, só com o chunk carregado. Chamado pela remontagem das
      * portas ({@code NetworkRoutes.readRemotePorts}): grava a trocada ({@link RemoteMachine#replaced}) e a frente, e
-     * devolve {@code true} se a frente mudou, sem avisar o motor (quem chama decide o que remontar).
+     * devolve {@code true} se uma delas mudou, sem avisar o motor (quem chama decide o que remontar).
      */
     public boolean rereadRemote(RemoteMachine machine) {
         return range.rereadRemote(machine);

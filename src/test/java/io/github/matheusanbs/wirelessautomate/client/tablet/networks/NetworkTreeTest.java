@@ -45,6 +45,19 @@ class NetworkTreeTest {
     }
 
     @Test
+    void looseNetworkFirstInTheInputStillGoesLast() {
+        List<NetworkTree.Row> rows = NetworkTree.build(List.of(new NetworkTree.GroupIn(BASE, List.of(FUND, EST))),
+                List.of(ARC, FUND, EST));
+        assertEquals(List.of(NetworkTree.Kind.GROUP, NetworkTree.Kind.NETWORK, NetworkTree.Kind.NETWORK,
+                NetworkTree.Kind.LOOSE, NetworkTree.Kind.NETWORK), rows.stream().map(NetworkTree.Row::kind).toList());
+        assertEquals(FUND, rows.get(1).id());
+        assertEquals(EST, rows.get(2).id());
+        assertEquals(ARC, rows.get(4).id());
+        assertEquals(null, rows.get(4).group());
+        assertEquals(28 + 22 + 14 + 14 + 4, rows.get(3).top());
+    }
+
+    @Test
     void unknownNetworksInAGroupAreSkipped() {
         List<NetworkTree.Row> rows = NetworkTree.build(List.of(new NetworkTree.GroupIn(BASE, List.of(FUND, EST))),
                 List.of(EST));

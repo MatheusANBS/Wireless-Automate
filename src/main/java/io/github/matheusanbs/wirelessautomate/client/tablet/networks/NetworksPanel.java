@@ -9,7 +9,6 @@ import io.github.matheusanbs.wirelessautomate.client.access.AccessPanel;
 import io.github.matheusanbs.wirelessautomate.client.tablet.TabletActions;
 import io.github.matheusanbs.wirelessautomate.client.tablet.TabletLayout;
 import io.github.matheusanbs.wirelessautomate.client.tablet.TabletScreen;
-import io.github.matheusanbs.wirelessautomate.client.tablet.kit.DropdownModal;
 import io.github.matheusanbs.wirelessautomate.client.tablet.kit.ModalLayer;
 import io.github.matheusanbs.wirelessautomate.client.tablet.kit.TabletModal;
 import io.github.matheusanbs.wirelessautomate.client.tablet.kit.TitleEditor;
@@ -33,9 +32,9 @@ import org.lwjgl.glfw.GLFW;
 /**
  * A aba Redes do Tablet (mockups {@code redes} e {@code grupo} de {@code docs/preview/tablet-do-zero}): à esquerda a
  * árvore de grupos e redes ({@link NetworkColumn}); à direita a rede escolhida ({@link NetworkDetail}) ou o grupo
- * ({@link GroupPanel}); as janelas sobre o véu ({@link ModalLayer}: o seletor Grupo, o "+ pôr uma rede" e o
- * {@link AccessWindow}) e o nome editável ({@link TitleEditor}). É a anfitriã: guarda o escolhido, monta tudo uma vez
- * por snapshot ({@link NetworksModel}) e manda as ações pelas {@link NetworkActions}. "+ Rede" e "+ Grupo" criam com
+ * ({@link GroupPanel}); as janelas sobre o véu e o nome editável ({@link NetworksWindows}). É a anfitriã: guarda o
+ * escolhido, monta tudo uma vez por snapshot ({@link NetworksModel}), repassa o mouse e o teclado e manda as ações pelas
+ * {@link NetworkActions}; os ganchos do e2e ficam no {@link NetworksProbe}. "+ Rede" e "+ Grupo" criam com
  * um nome livre, escolhem o novo quando ele chega e abrem o nome para edição.
  */
 public final class NetworksPanel {
@@ -49,11 +48,14 @@ public final class NetworksPanel {
     private final NetworkColumn column;
     private final NetworkDetail detail;
     private final GroupPanel groupPanel;
+    private final NetworksWindows windows;
     private final Component empty = tr("nets.empty");
-    private List<EditBox> accessBoxes = List.of();
     private @Nullable UUID network;
     private @Nullable UUID group;
     private int builtTheme = -1;
+    /** A aba estava à vista no último {@link #refresh}: ao sair dela, o acesso larga o que foi digitado. */
+    private boolean shownBefore;
+    private final NetworksProbe probe;
 
     public NetworksPanel(TabletLayout layout, TabletMenu menu, Supplier<TabletSnapshot> snapshot, TabletActions actions) {
         this.layout = layout;
@@ -62,16 +64,15 @@ public final class NetworksPanel {
         this.title = new TitleEditor(send::rename);
         this.access = new AccessPanel(AccessWindow.frame(layout), send.accessHost());
         this.column = new NetworkColumn(layout);
-        this.detail = new NetworkDetail(layout, this, send);
-        this.groupPanel = new GroupPanel(layout, this, send);
+        this.windows = new NetworksWindows(layout, modals, model, send, title, access, () -> network, () -> group);
+        this.detail = new NetworkDetail(layout, windows, send);
+        this.groupPanel = new GroupPanel(layout, this, windows, send);
+        windows.attach(detail, groupPanel);
+        this.probe = new NetworksProbe(this, modals, column, detail, groupPanel);
     }
 
     private static Font font() {
         return Minecraft.getInstance().font;
-    }
-
-    public ModalLayer modals() {
-        return modals;
     }
 
     public AccessPanel access() {
@@ -97,7 +98,8 @@ public final class NetworksPanel {
     public List<EditBox> createBoxes(Font font) {
         List<EditBox> boxes = new ArrayList<>();
         boxes.add(title.createBox(font));
-        accessBoxes = access.createBoxes(font);
+        List<EditBox> accessBoxes = access.createBoxes(font);
+        windows.accessBoxes(accessBoxes);
         boxes.addAll(accessBoxes);
         return boxes;
     }
@@ -121,7 +123,7 @@ public final class NetworksPanel {
         }
         rebuild(font);
         if (created != null) {
-            startTitle();
+            windows.startTitle();
         }
     }
 
@@ -152,10 +154,12 @@ public final class NetworksPanel {
         if (shown && builtTheme != GuiThemes.version()) {
             rebuild(font());
         }
-        if (!shown) {
+        if (!shown && shownBefore) {
             title.finish(false);
             modals.close();
+            access.reset();
         }
+        shownBefore = shown;
         detail.refresh(shown && network != null);
         groupPanel.refresh(shown && network == null && group != null);
         access.refresh(shown && modals.current() instanceof AccessWindow);
@@ -181,51 +185,6 @@ public final class NetworksPanel {
         rebuild(font());
     }
 
-    /** Abre o nome da rede ou do grupo escolhido para edição, com o texto todo selecionado. */
-    void startTitle() {
-        int x = layout.left + NetworkDetail.X0 + 21;
-        int y = layout.top + 30;
-        NetworkView view = selectedView();
-        if (view != null && view.manageable()) {
-            title.start(view.name(), x, y, detail.titleWidth());
-            return;
-        }
-        GroupView chosen = group == null ? null : model.group(group);
-        if (view == null && chosen != null && chosen.manageable()) {
-            title.start(chosen.name(), x, y, groupPanel.titleWidth());
-        }
-    }
-
-    void openAccess() {
-        NetworkView view = selectedView();
-        if (view != null) {
-            modals.open(new AccessWindow(layout, access, accessBoxes, font(), view.name()));
-            access.refresh(true);
-        }
-    }
-
-    void openGroupPicker() {
-        NetworkView view = selectedView();
-        if (view == null) {
-            return;
-        }
-        GroupView in = model.groupOf(view.id());
-        UUID id = view.id();
-        modals.open(GroupPicker.groups(layout.left + NetworkDetail.VX, layout.top + 60, model.snapshot(),
-                model.icons(), in == null ? null : in.id(), to -> send.moveNetwork(id, to),
-                g -> detail.renderPicker(g, font(), false)));
-    }
-
-    /** A lista das redes fora do grupo escolhido, aberta logo abaixo do link em ({@code x}, {@code y}). */
-    void openAddToGroup(int x, int y) {
-        GroupView chosen = group == null ? null : model.group(group);
-        if (chosen != null) {
-            UUID id = chosen.id();
-            modals.open(GroupPicker.networks(x, y, model.snapshot(), chosen, to -> send.moveNetwork(to, id),
-                    g -> groupPanel.renderLink(g, font())));
-        }
-    }
-
     // ------------------------------------------------------------------ entrada
 
     public boolean mouseClicked(double mx, double my, int button) {
@@ -233,7 +192,11 @@ public final class NetworksPanel {
             return true;
         }
         EditBox box = title.box();
-        if (title.editing() && box != null && !box.isMouseOver(mx, my)) {
+        if (title.editing() && box != null) {
+            if (box.isMouseOver(mx, my)) {
+                // o clique é do campo do nome: a tela o repassa e ele põe o cursor
+                return false;
+            }
             title.finish(true);
         }
         if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT) {
@@ -255,8 +218,11 @@ public final class NetworksPanel {
     }
 
     public void mouseScrolled(double mx, double my, double delta) {
-        if (!modals.mouseScrolled(mx, my, delta)) {
-            column.mouseScrolled(mx, my, delta);
+        if (modals.mouseScrolled(mx, my, delta) || column.mouseScrolled(mx, my, delta)) {
+            return;
+        }
+        if (network == null && group != null) {
+            groupPanel.mouseScrolled(delta);
         }
     }
 
@@ -333,6 +299,11 @@ public final class NetworksPanel {
 
     // ------------------------------------------------------------------ ganchos do e2e e das capturas
 
+    /** Os ganchos de clique do e2e (centros na tela) e o estado que eles conferem. */
+    public NetworksProbe probe() {
+        return probe;
+    }
+
     public void preview(int index) {
         selectNetwork(snapshot.get().networks().get(index).id());
     }
@@ -343,83 +314,22 @@ public final class NetworksPanel {
 
     /** Abre a janela de acesso da rede escolhida (vitrine). */
     public void previewAccess() {
-        openAccess();
-    }
-
-    public @Nullable UUID selectedNetwork() {
-        return network;
-    }
-
-    public @Nullable UUID selectedGroup() {
-        return network == null ? group : null;
+        windows.openAccess();
     }
 
     public boolean modalOpen() {
         return modals.isOpen();
     }
 
+    @Nullable UUID network() {
+        return network;
+    }
+
+    @Nullable UUID group() {
+        return group;
+    }
+
     public @Nullable EditBox titleBox() {
         return title.box();
-    }
-
-    public int @Nullable [] networkRowCenter(UUID id) {
-        return column.rowCenter(NetworkTree.Kind.NETWORK, id);
-    }
-
-    public int @Nullable [] groupRowCenter(UUID id) {
-        return column.rowCenter(NetworkTree.Kind.GROUP, id);
-    }
-
-    public int @Nullable [] newNetworkCenter() {
-        return column.newNetworkCenter();
-    }
-
-    public int @Nullable [] newGroupCenter() {
-        return column.newGroupCenter();
-    }
-
-    public int @Nullable [] titleCenter() {
-        return network != null || group != null ? detail.titleCenter() : null;
-    }
-
-    public int @Nullable [] groupPickerCenter() {
-        return network == null ? null : detail.groupPickerCenter();
-    }
-
-    /** Centro da linha {@code id} da lista aberta (o seletor Grupo ou o "+ pôr uma rede"), ou {@code null}. */
-    public int @Nullable [] pickerRowCenter(@Nullable UUID id) {
-        return modals.current() instanceof DropdownModal open ? open.rowCenter(id) : null;
-    }
-
-    public int @Nullable [] accessCenter(boolean guests) {
-        return network == null ? null : detail.accessCenter(guests);
-    }
-
-    public int @Nullable [] inviteCenter() {
-        return network == null ? null : detail.inviteCenter();
-    }
-
-    public int @Nullable [] chipRemoveCenter(int index) {
-        return network == null ? null : detail.chipRemoveCenter(index);
-    }
-
-    public int @Nullable [] pauseCenter() {
-        return network != null ? detail.pauseCenter() : groupPanel.pauseCenter();
-    }
-
-    public int @Nullable [] removeCenter() {
-        return network != null ? detail.removeCenter() : group != null ? groupPanel.removeCenter() : null;
-    }
-
-    public int @Nullable [] addToGroupCenter() {
-        return network == null ? groupPanel.addToGroupCenter() : null;
-    }
-
-    public int @Nullable [] colorSlotCenter() {
-        return network == null ? null : detail.colorSlotCenter();
-    }
-
-    public int @Nullable [] iconSlotCenter() {
-        return network == null && group != null ? groupPanel.iconSlotCenter() : null;
     }
 }

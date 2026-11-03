@@ -24,7 +24,8 @@ import org.lwjgl.glfw.GLFW;
  * O acesso a uma rede privada no e2e, na janela "Acesso a …" da aba Redes do Tablet (Convidados e "+ convidar"): a
  * rede dos itens ganha convidados escolhidos pela lista de sugestões (setas e Enter) e pelo nome digitado, e um time do
  * FTB Teams (com ele no jogo); depois a lista de acesso (capturas {@code tablet-acesso*}, também no tema escuro) e o ✕
- * de dois cliques; Esc fecha a janela. No fim a rede volta ao que era. Três jogadores falsos entram no cache de perfis só para haver nomes a sugerir.
+ * de dois cliques; Esc fecha a janela e as fichas ficam à vista ({@code tablet-redes-convidados}). No fim a rede
+ * volta ao que era. Três jogadores falsos entram no cache de perfis só para haver nomes a sugerir.
  */
 final class E2eAccessSteps {
     private E2eAccessSteps() {
@@ -62,13 +63,13 @@ final class E2eAccessSteps {
             return null;
         }), () -> usercacheHas("Bruna"), () -> "o cache de jogadores não chegou ao disco"));
         list.add(new Step("acesso: Convidados", STEP_TIMEOUT_MS, () -> {
-            int[] c = tabletScreen().networks().accessCenter(true);
+            int[] c = tabletScreen().networks().probe().accessCenter(true);
             click(tabletScreen(), c[0], c[1]);
-        }, () -> tabletScreen().networks().inviteCenter() != null, () -> "sem o + convidar"));
+        }, () -> tabletScreen().networks().probe().inviteCenter() != null, () -> "sem o + convidar"));
         list.add(new Step("acesso: + convidar abre a janela", STEP_TIMEOUT_MS, () -> {
-            int[] c = tabletScreen().networks().inviteCenter();
+            int[] c = tabletScreen().networks().probe().inviteCenter();
             click(tabletScreen(), c[0], c[1]);
-        }, () -> tabletScreen().networks().modalOpen() && tabletScreen().access().shown(),
+        }, () -> tabletScreen().networks().probe().modalOpen() && tabletScreen().access().shown(),
                 () -> "a janela de acesso não abriu"));
         list.add(new Step("acesso: clicar no campo de convidar", STEP_TIMEOUT_MS, () -> {
             int[] c = tabletScreen().access().fieldCenter(false);
@@ -115,6 +116,16 @@ final class E2eAccessSteps {
             click(tabletScreen(), c[0], c[1]);
             click(tabletScreen(), c[0], c[1]);
         }, () -> counts()[0] == 1, () -> "convidados " + counts()[0]));
+        list.add(new Step("acesso: Esc fecha a janela", STEP_TIMEOUT_MS, () -> {
+            tabletScreen().keyPressed(GLFW.GLFW_KEY_ESCAPE, 0, 0);
+            if (tabletScreen().networks().probe().modalOpen()) {
+                // o primeiro Esc fechou a lista de sugestões do campo
+                tabletScreen().keyPressed(GLFW.GLFW_KEY_ESCAPE, 0, 0);
+            }
+        }, () -> !tabletScreen().networks().probe().modalOpen() && !tabletScreen().access().shown(),
+                () -> "a janela de acesso continua aberta"));
+        list.add(capture("tablet-redes-convidados"));
+        list.add(clipCheck("Tablet: rede com convidados"));
         list.add(new Step("acesso: a rede volta ao que era", STEP_TIMEOUT_MS, () -> onServer(server -> {
             NetworkSavedData data = NetworkSavedData.get(server);
             WaNetwork network = data.network(otherNetwork);
@@ -126,14 +137,7 @@ final class E2eAccessSteps {
             }
             data.update(network);
             return null;
-        }), () -> counts()[0] == 0 && counts()[1] == 0, () -> "acesso " + counts()[0] + "/" + counts()[1]));
-        list.add(new Step("acesso: Esc fecha a janela", STEP_TIMEOUT_MS, () -> {
-            tabletScreen().keyPressed(GLFW.GLFW_KEY_ESCAPE, 0, 0);
-            if (tabletScreen().networks().modalOpen()) {
-                // o primeiro Esc fechou a lista de sugestões do campo
-                tabletScreen().keyPressed(GLFW.GLFW_KEY_ESCAPE, 0, 0);
-            }
-        }, () -> !tabletScreen().networks().modalOpen() && !tabletScreen().access().shown(),
-                () -> "a janela de acesso continua aberta"));
+        }), () -> tabletScreen().getMenu().snapshot().network(otherNetwork).map(n -> n.access().isEmpty()).orElse(false),
+                () -> "acesso " + tabletScreen().getMenu().snapshot().network(otherNetwork).map(n -> n.access()).orElse(null)));
     }
 }

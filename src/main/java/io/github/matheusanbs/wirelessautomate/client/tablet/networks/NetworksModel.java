@@ -62,11 +62,9 @@ final class NetworksModel {
     /** O ícone do grupo: o item escolhido, senão o da primeira máquina das redes dele, senão o Tablet. */
     private static Item iconItem(GroupView g) {
         Item chosen = item(g.icon(), false);
-        if (chosen != Items.AIR) {
-            return chosen;
-        }
         Item machine = item(g.machine(), true);
-        return machine != Items.AIR ? machine : ModItems.NETWORK_TABLET.get();
+        return GroupIcon.pick(chosen == Items.AIR ? null : chosen, machine == Items.AIR ? null : machine,
+                ModItems.NETWORK_TABLET.get());
     }
 
     private static Item item(Optional<ResourceLocation> id, boolean block) {

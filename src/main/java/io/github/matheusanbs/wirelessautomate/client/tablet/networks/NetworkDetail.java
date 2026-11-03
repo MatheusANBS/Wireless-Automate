@@ -20,6 +20,7 @@ import java.util.List;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
@@ -27,7 +28,7 @@ import org.jetbrains.annotations.Nullable;
  * A rede escolhida na aba Redes (mockup {@code rede_detalhe}): o cabeçalho com o slot da cor, o nome editável, as
  * máquinas e o estado; o seletor "Grupo"; o "Acesso" (Todos ou Convidados, com as fichas); "Nesta rede", uma linha por
  * tipo com quantas máquinas dão e recebem; e o rodapé com Pausar (o grupo da rede), Usar e "Apagar rede" de dois
- * cliques. Os textos são montados no {@link #set}; os cliques abrem as janelas da anfitriã ({@link NetworksPanel}) ou
+ * cliques. Os textos são montados no {@link #set}; os cliques abrem as janelas ({@link NetworksWindows}) ou
  * mandam pelas {@link NetworkActions}.
  */
 final class NetworkDetail {
@@ -37,7 +38,7 @@ final class NetworkDetail {
     private static final int TYPE_STEP = 20;
 
     private final TabletLayout layout;
-    private final NetworksPanel host;
+    private final NetworksWindows windows;
     private final NetworkActions send;
     private final PanelHeader header = new PanelHeader();
     private final GuestChips chips = new GuestChips();
@@ -80,9 +81,9 @@ final class NetworkDetail {
     private Component[] typeLines = new Component[0];
     private int[] typeLineW = new int[0];
 
-    NetworkDetail(TabletLayout layout, NetworksPanel host, NetworkActions send) {
+    NetworkDetail(TabletLayout layout, NetworksWindows windows, NetworkActions send) {
         this.layout = layout;
-        this.host = host;
+        this.windows = windows;
         this.send = send;
     }
 
@@ -101,7 +102,7 @@ final class NetworkDetail {
         use = buttons.add(TabletScreen.Tab.NETWORKS, new FlatButton(layout.left + X0 + pauseW + 4, y, useW, 16, useText,
                 (g, b, hovered) -> PanelPaint.button(g, font, b.getX(), b.getY(), b.getWidth(), b.getHeight(),
                         b.getMessage(), false, hovered, b.active), send::useNetwork)
-                .tooltip(() -> tr("use.tooltip")));
+                .tooltip(() -> useTip));
     }
 
     /** A rede, o grupo em que ela aparece (ou nenhum) com o ícone dele, e se é a rede ativa do jogador. */
@@ -117,11 +118,12 @@ final class NetworkDetail {
         Component state = tr(network.paused() ? "nets.state.paused" : "nets.state.active");
         int stateW = font.width(state);
         titleW = x1 - stateW - 7 - 4 - (X0 + 21);
-        header.set(font, Component.literal(network.name()), plural("nets.machines", network.machines()), state,
+        header.set(font, Component.literal(network.name()), subtitle(network), state,
                 network.paused() ? GuiPaint.DISABLED : GuiPaint.OK, network.manageable(),
                 titleW - (network.manageable() ? 11 : 0));
         groupName = in == null ? null : GuiText.fit(font, Component.literal(in.name()), 78);
-        pauseTip = in == null ? tr("nets.pause.no_group") : tr("nets.pause.tooltip", in.name());
+        pauseTip = in == null ? tr("nets.pause.no_group")
+                : tr(in.paused() ? "nets.resume.tooltip" : "nets.pause.tooltip", in.name());
         if (network.manageable() && !network.isPublic()) {
             chips.set(font, network.access(), VX, x1);
         }
@@ -135,6 +137,18 @@ final class NetworkDetail {
             typeLines[i] = tr("nets.here.line", types[i].givers(), types[i].receivers());
             typeLineW[i] = font.width(typeLines[i]);
         }
+    }
+
+    /** "N máquinas", com o dono quando a rede é de outro jogador e os roteadores descarregados, se houver. */
+    private static Component subtitle(NetworkView network) {
+        MutableComponent sub = plural("nets.machines", network.machines()).copy();
+        if (!network.owned()) {
+            sub.append(" · ").append(tr("nets.owner", network.owner()));
+        }
+        if (network.unloaded() > 0) {
+            sub.append(" · ").append(plural("nets.unloaded", network.unloaded()));
+        }
+        return sub;
     }
 
     void clear() {
@@ -274,11 +288,15 @@ final class NetworkDetail {
             return true;
         }
         if (header.overTitle(mx, my, layout.left, layout.top, X0)) {
-            host.startTitle();
+            // em edição, o clique é do campo (posiciona o cursor); a tela o repassa
+            if (windows.titleEditing()) {
+                return false;
+            }
+            windows.startTitle();
             return true;
         }
         if (overPicker(mx, my)) {
-            host.openGroupPicker();
+            windows.openGroupPicker();
             return true;
         }
         int segment = access.clicked(layout.left + VX, layout.top + 84, mx, my);
@@ -293,7 +311,7 @@ final class NetworkDetail {
                 return true;
             }
             if (chips.openAt(layout.left, layout.top, mx, my)) {
-                host.openAccess();
+                windows.openAccess();
                 return true;
             }
         }

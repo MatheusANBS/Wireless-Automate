@@ -8,7 +8,7 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 import io.github.matheusanbs.wirelessautomate.GuiTheme;
 import io.github.matheusanbs.wirelessautomate.client.GuiThemes;
 import io.github.matheusanbs.wirelessautomate.client.tablet.TabletScreen;
-import io.github.matheusanbs.wirelessautomate.client.tablet.networks.NetworksPanel;
+import io.github.matheusanbs.wirelessautomate.client.tablet.networks.NetworksProbe;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.WaGroup;
@@ -25,8 +25,8 @@ import org.lwjgl.glfw.GLFW;
 /**
  * A aba Redes do Tablet no e2e: "+ Grupo" cria e abre o nome (digitar troca e Enter grava), o seletor Grupo põe a rede
  * dos itens no grupo, Pausar pausa o grupo dela (as pedras param e voltam), um segundo grupo leva a rede (ela sai do
- * primeiro, "uma rede, um grupo"), o grupo escolhido com as redes dele ({@code tablet-redes*}, {@code tablet-grupo*},
- * também no tema escuro), o "+ pôr uma rede neste grupo" a traz de volta e o "Apagar grupo" de dois cliques tira o
+ * primeiro, "uma rede, um grupo"), o segundo grupo escolhido com a rede dele ({@code tablet-redes*},
+ * {@code tablet-grupo*}, também no tema escuro), o "+ pôr uma rede neste grupo" do primeiro a traz de volta e o "Apagar grupo" de dois cliques tira o
  * segundo grupo.
  */
 final class E2eNetworksSteps {
@@ -37,8 +37,8 @@ final class E2eNetworksSteps {
     static final String SECOND_GROUP = "E2E Grupo 2";
     private static GuiTheme themeBefore = GuiTheme.LIGHT;
 
-    private static NetworksPanel panel() throws StepFailure {
-        return tabletScreen().networks();
+    private static NetworksProbe panel() throws StepFailure {
+        return tabletScreen().networks().probe();
     }
 
     private static void clickAt(int @Nullable [] c, String what) throws StepFailure {
@@ -68,15 +68,16 @@ final class E2eNetworksSteps {
         list.add(capture("tablet-redes"));
         list.add(clipCheck("Tablet: Redes"));
         darkCapture(list, "tablet-redes-escuro");
-        list.add(new Step("redes: o grupo escolhido", STEP_TIMEOUT_MS,
-                () -> clickAt(panel().groupRowCenter(groupId(GROUP_NAME)), "a linha do grupo"),
-                () -> panel().selectedGroup() != null
+        list.add(new Step("redes: o grupo escolhido, com a rede", STEP_TIMEOUT_MS,
+                () -> clickAt(panel().groupRowCenter(groupId(SECOND_GROUP)), "a linha do segundo grupo"),
+                () -> java.util.Objects.equals(panel().selectedGroup(), groupId(SECOND_GROUP))
                         && find(byMessage(Component.translatable("gui.wirelessautomate.tablet.nets.pause_group"))) != null,
                 () -> "sem o grupo à direita"));
         list.add(capture("tablet-grupo"));
         list.add(clipCheck("Tablet: grupo"));
         darkCapture(list, "tablet-grupo-escuro");
         list.add(new Step("redes: + pôr uma rede neste grupo", STEP_TIMEOUT_MS, () -> {
+            clickAt(panel().groupRowCenter(groupId(GROUP_NAME)), "a linha do grupo");
             clickAt(panel().addToGroupCenter(), "o link de pôr uma rede");
             clickAt(panel().pickerRowCenter(otherNetwork), "a linha da rede dos itens");
         }, () -> onlyIn(GROUP_NAME), () -> "grupos no servidor " + groupsOf()));

@@ -19,6 +19,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * A volta em português com uma rede de nome longo: roteador, Vinculador e Tablet, no
@@ -30,6 +31,9 @@ final class E2ePortugueseSteps {
 
     private static final String LONG_NETWORK = "Rede de teste com um nome bem comprido 40";
     private static UUID longNetwork;
+    /** A rede de itens de B e a rede ativa do jogador antes da rede de nome longo, devolvidas no fim. */
+    private static @Nullable UUID previousItemNetwork;
+    private static @Nullable UUID previousActive;
 
     /**
      * Volta em português com uma rede de nome longo: roteador (mínimo e máximo), Vinculador e Tablet
@@ -48,6 +52,8 @@ final class E2ePortugueseSteps {
         list.add(new Step("rede de nome longo no roteador B", STEP_TIMEOUT_MS, () -> {
             UUID playerId = Minecraft.getInstance().player.getUUID();
             onServer(server -> {
+                previousItemNetwork = router(server, routerB).networkId(ResourceType.ITEM);
+                previousActive = NetworkSavedData.get(server).activeNetwork(playerId);
                 longNetwork = NetworkSavedData.get(server).create(playerId, LONG_NETWORK).id();
                 NetworkSavedData.get(server).setActiveNetwork(playerId, longNetwork);
                 router(server, routerB).setNetworkId(ResourceType.ITEM, longNetwork);
@@ -164,5 +170,15 @@ final class E2ePortugueseSteps {
         list.add(close("pt: fechar o Tablet"));
         list.add(E2eFlowsSteps.machines("pt: tirar os roteadores dos Fluxos", false));
         list.add(language("en_us"));
+        // a rede de nome longo sai: as suítes seguintes (a Tela de Sinal) listam as redes e a cortariam sem tooltip
+        list.add(new Step("pt: tirar a rede de nome longo", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            UUID playerId = Minecraft.getInstance().player.getUUID();
+            NetworkSavedData data = NetworkSavedData.get(server);
+            router(server, routerB).setNetworkId(ResourceType.ITEM, previousItemNetwork);
+            data.setActiveNetwork(playerId, previousActive);
+            data.remove(longNetwork);
+            return null;
+        }), () -> onServer(server -> NetworkSavedData.get(server).network(longNetwork) == null),
+                () -> "rede " + longNetwork));
     }
 }

@@ -22,7 +22,7 @@ def card_table(lang):
 CARD_IMAGES = '\n'.join(f'  <ItemImage id="wirelessautomate:tier_core_{t[0]}" scale="2" />' for t in TIERS[1:])
 
 
-PAGINA = page('upgrade-cards.md', front('Cartões de Upgrade', 'wirelessautomate:tier_core_advanced', 3, item_ids=[
+PAGINA = page('upgrade-cards.md', front('Cartões de Upgrade', 'wirelessautomate:tier_core_advanced', 'ferramentas', 3, item_ids=[
     f'wirelessautomate:tier_core_{t[0]}' for t in TIERS[1:]]) + '''
 # Cartões de Upgrade
 
@@ -76,7 +76,7 @@ As receitas mostram a Redstone no centro; o JEI mostra os três caminhos do seu 
 Os anéis do Allthemodium usam o próprio metal. No ATM10, o do Ultimate leva fragmentos de ATM Star,
 ovo do dragão e blocos de liga Unobtainium-Allthemodium. Um cartão feito antes de o Allthemodium
 entrar no pack (ex.: Esmeralda → Ultimate) continua valendo e pula esses degraus.
-''', front('Upgrade Cards', 'wirelessautomate:tier_core_advanced', 3, item_ids=[
+''', front('Upgrade Cards', 'wirelessautomate:tier_core_advanced', 'ferramentas', 3, item_ids=[
     f'wirelessautomate:tier_core_{t[0]}' for t in TIERS[1:]]) + '''
 # Upgrade Cards
 

@@ -312,7 +312,7 @@ public final class Config {
 
         builder.push("guide");
         GIVE_GUIDE_ON_FIRST_JOIN = builder
-                .comment("Entrega o livro-guia (precisa do GuideME) a cada jogador no primeiro login.")
+                .comment("Entrega o livro-guia do mod a cada jogador no primeiro login.")
                 .define("giveOnFirstJoin", true);
         builder.pop();
 

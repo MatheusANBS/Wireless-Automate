@@ -13,6 +13,7 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eUpgradeCardSt
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
 import io.github.matheusanbs.wirelessautomate.client.filter.FilterScreen;
+import io.github.matheusanbs.wirelessautomate.client.guide.GuideScreen;
 import io.github.matheusanbs.wirelessautomate.client.linker.LinkerScreen;
 import io.github.matheusanbs.wirelessautomate.client.storage.StorageListScreen;
 import io.github.matheusanbs.wirelessautomate.client.storage.StorageScalarScreen;
@@ -37,8 +38,6 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
-import net.neoforged.fml.ModList;
-import net.neoforged.neoforge.client.ClientCommandHandler;
 import org.lwjgl.glfw.GLFW;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 
@@ -441,16 +440,13 @@ final class E2eShowcase {
         list.add(capture("s7b-tablet-mapa-arrastado"));
         showcaseAccessShots(list);
         list.add(close("fechar o Tablet"));
-        if (ModList.get().isLoaded("guideme")) {
-            list.add(new Step("guia", STEP_TIMEOUT_MS,
-                    () -> ClientCommandHandler.runCommand("guidemec wirelessautomate:guide open wirelessautomate:getting-started.md"),
-                    () -> Minecraft.getInstance().screen != null
-                            && Minecraft.getInstance().screen.getClass().getName().startsWith("guideme"),
-                    () -> "tela " + describe(Minecraft.getInstance().screen)));
-            // o GuideME monta a página e a cena 3D nos primeiros quadros: sem a espera, a captura pega a tela anterior
-            list.add(DevEndToEnd.wait("guia desenhado", 40));
-            list.add(capture("s8-guia"));
-        }
+        list.add(new Step("guia", STEP_TIMEOUT_MS,
+                () -> GuideScreen.open("getting-started"),
+                () -> Minecraft.getInstance().screen instanceof GuideScreen,
+                () -> "tela " + describe(Minecraft.getInstance().screen)));
+        // o livro monta as folhas e a cena 3D nos primeiros quadros: sem a espera, a captura pega a tela anterior
+        list.add(DevEndToEnd.wait("guia desenhado", 40));
+        list.add(capture("s8-guia"));
     }
 
     /**

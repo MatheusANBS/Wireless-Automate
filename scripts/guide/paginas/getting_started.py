@@ -23,7 +23,7 @@ SCENE_TWO_CHESTS = '''<GameScene zoom="4" interactive={true}>
 </GameScene>'''
 
 
-PAGINA = page('getting-started.md', front('Primeiros passos', 'minecraft:chest', 1) + '''
+PAGINA = page('getting-started.md', front('Primeiros passos', 'minecraft:chest', 'comecar', 1) + '''
 # Primeiros passos
 
 Itens de um baú para outro, sem canos, em um minuto.
@@ -57,7 +57,7 @@ O botão de lua, no canto de cima à direita, põe as telas no modo escuro.
 | Separar fábricas | [Redes](networks.md) |
 | Mais vazão ou alcance | [Cartões de Upgrade](upgrade-cards.md) |
 | Não funcionou | [Problemas comuns](troubleshooting.md) |
-''', front('Getting started', 'minecraft:chest', 1) + '''
+''', front('Getting started', 'minecraft:chest', 'comecar', 1) + '''
 # Getting started
 
 Items from one chest to another, without pipes, in a minute.

@@ -6,7 +6,7 @@ O **Wireless Automate** move itens, fluidos, energia, químicos do Mekanism e So
 
 Foi feito para modpacks grandes: em vez de cada bloco ter o próprio tick, um gerenciador central move tudo dentro de um orçamento de tempo pequeno por tick, então centenas de máquinas não viram lag.
 
-**Estado:** versão 2.13. O Baú Wireless ganha dois slots de upgrade: o **Upgrade de Mesa de Trabalho** (uma grade 3×3 dentro do Baú, que se repõe pelo estoque dele) e o **Upgrade de Compactação** (cadeias de itens como pepita, lingote e bloco compactadas e descompactadas sozinhas). O que mudou em cada versão está no [changelog](docs/curseforge/changelog-curseforge-2.13.0.md) e na [página de releases](https://github.com/MatheusANBS/Wireless-Automate/releases).
+**Estado:** versão 2.14. O mod ganha o **livro-guia próprio**, sem depender do GuideME: um livro aberto de duas folhas, com fitas por grupo, busca, receitas e cenas 3D que giram. O que mudou em cada versão está no [changelog](docs/curseforge/changelog-curseforge-2.14.0.md) e na [página de releases](https://github.com/MatheusANBS/Wireless-Automate/releases).
 
 Baixe no [CurseForge](https://www.curseforge.com/minecraft/mc-mods/wireless-automate) ou na [release mais recente do GitHub](https://github.com/MatheusANBS/Wireless-Automate/releases/latest). Requer NeoForge 21.1.248 ou mais novo (roda no ATM10).
 
@@ -224,7 +224,7 @@ Todos os roteadores de todas as redes, de qualquer lugar: uma caixa de busca par
 
 ![Livro-guia embutido](docs/curseforge/feature-7-guide.png)
 
-Todo jogador recebe o livro-guia no primeiro login (ele também está na aba criativa, ou faça com um livro e redstone). Ele explica cada item com cenas 3D interativas e receitas, em **inglês e português**. Passe o mouse sobre qualquer item do mod e segure **G** para ir à página dele.
+Todo jogador recebe o livro-guia no primeiro login (ele também está na aba criativa, ou faça com um livro e redstone). Ele explica cada item com cenas 3D que giram (arraste para girar, a roda dá zoom, clique duplo volta ao ângulo, e as anotações mostram o texto ao passar o mouse) e receitas, em **inglês e português**. Passe o mouse sobre qualquer item do mod e aperte **G** para ir à página dele.
 
 ---
 
@@ -252,7 +252,6 @@ As receitas usam itens vanilla, menos os tiers do Allthemodium (feitos com os me
 | **Allthemodium** (opcional, como no ATM10) | Três tiers a mais (Allthemodium, Vibranium e Unobtainium) entre a Esmeralda e o Ultimate, para o roteador e todos os armazenamentos. Com o **All The Tweaks**, o anel do Ultimate pede fragmentos de ATM Star. |
 | **JEI** (opcional) | Arrastar e soltar (ou Shift + clique) ingredientes nos filtros sem ter o item, ou no inspetor de tags; as receitas de subir tier (bloco no anel, cartões com origem, bloco + cartão) aparecem no JEI. |
 | **FTB Teams** (opcional) | Acrescente um time de grupo a uma rede privada e cada membro ganha o acesso de convidado, ao vivo. Precisa do FTB Teams para 1.21.1 (com o FTB Library e o Architectury, que ele mesmo pede). |
-| **GuideME** (opcional) | O livro-guia no jogo. |
 
 ## Desempenho
 
@@ -287,7 +286,7 @@ O script instala o que faltar (JDK 21, git, curl, unzip) e roda o primeiro build
 | `./gradlew runGameTestServerSource` | GameTests de Source, num servidor com o Ars Nouveau (e GeckoLib e Curios) |
 | `./gradlew runGameTestServerAllthemodium` | GameTests dos tiers do ATM, com o Allthemodium, o All The Tweaks e o GeckoLib |
 | `./gradlew runGameTestServerTeams` | GameTests de times, num servidor com o FTB Teams, o FTB Library e o Architectury |
-| `./gradlew runClient` | Cliente de dev com JEI, Mekanism, Ars Nouveau, Allthemodium, GuideME e outros mods, para testar à mão |
+| `./gradlew runClient` | Cliente de dev com JEI, Mekanism, Ars Nouveau, Allthemodium e outros mods, para testar à mão |
 | `./gradlew runData` | Geradores de dados, saída em `src/generated/resources/` |
 | `./scripts/e2e.sh` | Teste de ponta a ponta num mundo real (ver `docs/e2e.md`) |
 | `./scripts/bench.sh <cenários>` | Benchmark num servidor dedicado com Sophisticated Storage (ver `docs/benchmark.md`) |

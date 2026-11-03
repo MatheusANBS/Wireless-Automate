@@ -15,7 +15,7 @@ import java.util.Locale;
 import org.junit.jupiter.api.Test;
 
 /**
- * A cena do guia (a Vitrine montada, em linhas {@code <Block>} do GuideME) fica em
+ * A cena do guia (a Vitrine montada, em linhas {@code <Block>}) fica em
  * {@code scripts/guide/resonator_scene.txt}; este teste a confere com o {@link ResonatorBill}, para o Python não
  * repetir a regra das texturas conectadas, e falha se o arquivo faltar. Só escreve com
  * {@code ./gradlew test --tests "*ResonatorGuideSceneTest" -Dwa.regen=true}. Que as propriedades são as do estado

@@ -91,7 +91,7 @@ public final class ModCreativeTabs {
                         output.accept(ModItems.RESONATOR_TUNER.get());
                         output.accept(ModItems.CRYSTAL_REPAIRER.get());
                         output.accept(ModItems.SIGNAL_SCREEN.get());
-                        GuideBook.create().ifPresent(output::accept);
+                        output.accept(GuideBook.create());
                     })
                     .build());
 

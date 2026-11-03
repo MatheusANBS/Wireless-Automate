@@ -27,7 +27,7 @@ RECIPES = '''<RecipeFor id="wirelessautomate:router" />
 <Recipe id="wirelessautomate:guide" />'''
 
 
-PAGINA = page('recipes.md', front('Todas as receitas', 'minecraft:crafting_table', 23) + '''
+PAGINA = page('recipes.md', front('Todas as receitas', 'minecraft:crafting_table', 'referencia', 23) + '''
 # Todas as receitas
 
 Todas na bancada, com itens vanilla.
@@ -39,7 +39,7 @@ Todas na bancada, com itens vanilla.
 | **Este guia** | Livro + redstone. |
 
 ''' + RECIPES + '''
-''', front('All recipes', 'minecraft:crafting_table', 23) + '''
+''', front('All recipes', 'minecraft:crafting_table', 'referencia', 23) + '''
 # All recipes
 
 All in a crafting table, with vanilla items.

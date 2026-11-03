@@ -53,7 +53,7 @@ import org.lwjgl.glfw.GLFW;
  * põe como alvo do painel, e o Mapa mostra as máquinas dele. "Mostrar todas" e "Mostrar menos"; ↓ e Enter escolhem a
  * seguinte; ← ← recolhe o bloco e → o abre; o clique no cabeçalho recolhe os baús; fechar e reabrir o Tablet volta em
  * Máquinas com os baús recolhidos. Capturas {@code 7o-tablet-maquinas} (também no tema escuro e em português, com a
- * aba Redes em português, {@code 7p-tablet-redes-grupos-pt}) e {@code 7o-tablet-maquinas-recolhidas}.
+ * aba Redes em português, {@code tablet-redes-pt}) e {@code 7o-tablet-maquinas-recolhidas}.
  */
 final class E2eTabletMachinesSteps {
     private E2eTabletMachinesSteps() {

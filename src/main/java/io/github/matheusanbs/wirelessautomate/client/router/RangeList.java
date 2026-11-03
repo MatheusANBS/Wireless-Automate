@@ -74,6 +74,7 @@ final class RangeList {
     private final Set<Integer> open = new HashSet<>();
     private final RangeRowButtons buttons = new RangeRowButtons();
     private final MachineRow machineRow;
+    private final GroupRow groupRow = new GroupRow();
     private final RowRename rename;
     private int scroll;
     private int x;
@@ -379,7 +380,7 @@ final class RangeList {
                         renderAttached(g, font, attachedIcon, attachedLabel, ry, textRight);
                     }
                 }
-                case GROUP -> GroupRow.render(g, font, view, row.group(), open.contains(row.group()), x, ry,
+                case GROUP -> groupRow.render(g, font, view, row.group(), open.contains(row.group()), x, ry,
                         textRight, right);
                 case MACHINE -> machineRow.render(g, font, view, row.machine(), x, ry,
                         placed.isEmpty() ? right - MachineRow.EYE_W : textRight, right, placed.isEmpty(),
@@ -397,7 +398,8 @@ final class RangeList {
         if (!targetShown) { // a linha do alvo saiu da vista pela rolagem: o "Desvincular?" desarma
             buttons.track(target, List.of(), mouseX, mouseY);
         }
-        if (view.machines().isEmpty()) {
+        // um grupo sem máquinas (o "×0") já ocupa a lista: a dica de lista vazia o contradiria
+        if (view.machines().isEmpty() && (view.attachedGroup() >= 0 || view.groups().isEmpty())) {
             // com a presa num grupo, a lista não está vazia: a dica diz que só ela está ali
             Component hint = tr(view.attachedGroup() >= 0 ? "range.list.only_attached" : "range.list.empty");
             int hy = top + contentHeight(rows) + 3 - scroll;

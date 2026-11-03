@@ -29,8 +29,8 @@ proposes the modes (Insert, Extract, Storage) for you to check before applying t
 5. Pick the faces' network on the router screen, if they don't have one yet.
 
 Clicking another machine analyzes that one instead. Clicking the air, aiming at another block for 2
-seconds or waiting 10 seconds clears the proposal. Holding the button doesn't apply: let go and click
-again.
+seconds or waiting 10 seconds clears the proposal, and the next click on the machine analyzes it
+again. Holding the button neither applies nor clears: let go and click again.
 
 ## What changes
 
@@ -38,7 +38,10 @@ again.
   network stay as they are.
 - On a machine in a group with others, the change becomes its exception; with Shift, it goes to the
   profile.
-- Chests, barrels, tanks and batteries get **Storage** on a single face; the other faces go to None.
+- Chests, barrels and tanks get **Storage** on a single face; the other faces go to None. A machine
+  with only energy or Source gets Storage only if it is this mod's Battery or Source Tank: on other
+  mods' it gets Insert, because a machine that consumes reads just like a battery, and Insert doesn't
+  drain it.
 - There is no Undo: the frame shows the proposal first, and the second click is the confirmation.
 
 ## Limits

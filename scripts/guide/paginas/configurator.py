@@ -23,14 +23,18 @@ modos (Insere, Extrai, Armazém) para você conferir antes de aplicar.
 5. Escolha a rede das faces na tela do roteador, se ainda não tiverem.
 
 Clicar em outra máquina refaz a análise para ela. Clicar no ar, mirar outro bloco por 2 segundos ou
-esperar 10 segundos apaga a proposta. Segurar o botão não aplica: solte e clique de novo.
+esperar 10 segundos apaga a proposta, e o próximo clique na máquina faz uma análise nova. Segurar o
+botão não aplica nem apaga: solte e clique de novo.
 
 ## O que muda
 
 - Só os **modos** dos tipos que a análise achou. Prioridade, redstone, filtro e rede de cada face
   ficam como estão.
 - Numa máquina de um grupo com outras, a mudança vira exceção dela; com Shift, vai para o perfil.
-- Baús, barris, tanques e baterias viram **Armazém** numa face só; as outras faces ficam em Nenhum.
+- Baús, barris e tanques viram **Armazém** numa face só; as outras faces ficam em Nenhum. Uma máquina
+  só de energia ou de Source vira Armazém só se for a Bateria ou o Tanque de Source do mod: nas de
+  outros mods ela recebe Insere, porque uma máquina que consome lê igual a uma bateria, e Insere não a
+  esvazia.
 - Não há Desfazer: a moldura mostra a proposta antes, e o segundo clique é a confirmação.
 
 ## Limites
@@ -68,8 +72,8 @@ proposes the modes (Insert, Extract, Storage) for you to check before applying t
 5. Pick the faces' network on the router screen, if they don't have one yet.
 
 Clicking another machine analyzes that one instead. Clicking the air, aiming at another block for 2
-seconds or waiting 10 seconds clears the proposal. Holding the button doesn't apply: let go and click
-again.
+seconds or waiting 10 seconds clears the proposal, and the next click on the machine analyzes it
+again. Holding the button neither applies nor clears: let go and click again.
 
 ## What changes
 
@@ -77,7 +81,10 @@ again.
   network stay as they are.
 - On a machine in a group with others, the change becomes its exception; with Shift, it goes to the
   profile.
-- Chests, barrels, tanks and batteries get **Storage** on a single face; the other faces go to None.
+- Chests, barrels and tanks get **Storage** on a single face; the other faces go to None. A machine
+  with only energy or Source gets Storage only if it is this mod's Battery or Source Tank: on other
+  mods' it gets Insert, because a machine that consumes reads just like a battery, and Insert doesn't
+  drain it.
 - There is no Undo: the frame shows the proposal first, and the second click is the confirmation.
 
 ## Limits

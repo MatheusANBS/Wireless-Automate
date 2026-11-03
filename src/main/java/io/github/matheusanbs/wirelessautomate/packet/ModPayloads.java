@@ -352,7 +352,7 @@ public final class ModPayloads {
 
     /**
      * Voltar ao perfil: tira a exceção da máquina remota em {@code pos} ({@link #machineIndex}; ou da presa, no
-     * {@link RevertMachinePayload#ATTACHED}).
+     * {@link RevertMachinePayload#ATTACHED}, se a posição atrás do roteador ainda é {@code pos}).
      */
     public static boolean handleRevertMachine(@Nullable ServerPlayer player, RevertMachinePayload payload) {
         RouterEditHost host = host(player, payload.containerId());

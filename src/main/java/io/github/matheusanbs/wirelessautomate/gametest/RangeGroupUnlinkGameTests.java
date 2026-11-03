@@ -43,8 +43,8 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
  * Etapa 2 do alcance, o grupo inteiro: Desvincular o grupo pela tela ({@link UnlinkGroupPayload}: sem a presa o
- * grupo sai, com ela fica zerado, o "×0" some, o bloco errado e o id que não existe são recusados, os cartões vão
- * para o jogador e a sobra cai aos pés dele) e o Atualizar que devolve os cartões ao jogador. Os avisos são os
+ * grupo sai, com ela fica zerado, o "×0" some, o bloco errado, o id que não existe e o roteador sem o upgrade são
+ * recusados, os cartões vão para o jogador e a sobra cai aos pés dele) e o Atualizar que devolve os cartões ao jogador. Os avisos são os
  * montados a partir dos resultados de verdade.
  */
 @GameTestHolder(WirelessAutomate.MODID)
@@ -385,6 +385,33 @@ public final class RangeGroupUnlinkGameTests {
                     helper.assertValueEqual(key(notice), NOTICE + "updated.one", "aviso");
                     helper.assertTrue(notice.message().getSiblings().isEmpty(), "aviso sem cartões com a parte dos cartões");
                     helper.assertTrue(group.hasCards() && group.block().equals(id(Blocks.FURNACE)), "o grupo não voltou");
+                })
+                .thenSucceed();
+    }
+
+    /** Sem o Upgrade de Alcance o desvincular grupo é recusado e nada sai (as máquinas ficam guardadas no roteador). */
+    @GameTest(template = "empty")
+    public static void unlinkGroupRefusedWithoutUpgrade(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    link(helper, router, FURNACE_A);
+                    link(helper, router, FURNACE_B);
+                    int furnaces = groupOf(router, helper.absolutePos(FURNACE_A));
+                    ServerPlayer[] holder = new ServerPlayer[1];
+                    openMenu(helper, router, holder);
+                    ServerPlayer player = holder[0];
+                    router.setRangeUpgrade(ItemStack.EMPTY);
+                    helper.assertFalse(router.rangeActive(), "o alcance vale sem o upgrade");
+                    helper.assertTrue(RangePayloads.handleUnlinkGroup(player,
+                            new UnlinkGroupPayload(CONTAINER_ID, furnaces, id(Blocks.FURNACE))) == null,
+                            "desvinculou sem o upgrade");
+                    RemoteMachines remotes = router.remoteMachines();
+                    helper.assertTrue(remotes.group(furnaces) != null, "o grupo saiu sem o upgrade");
+                    helper.assertTrue(remotes.contains(helper.absolutePos(FURNACE_A))
+                            && remotes.contains(helper.absolutePos(FURNACE_B)), "uma fornalha saiu sem o upgrade");
                 })
                 .thenSucceed();
     }

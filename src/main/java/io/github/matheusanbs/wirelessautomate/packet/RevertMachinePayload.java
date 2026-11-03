@@ -9,8 +9,9 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
 /**
  * Cliente → servidor: Voltar ao perfil na máquina remota {@code index}, ou na presa ({@link #ATTACHED}): tira a
- * exceção dela. A posição vai junto para o servidor conferir que o índice ainda é dela (na presa, que o bloco
- * atrás do roteador é o que a tela viu).
+ * exceção dela. A posição vai junto: numa remota, o servidor acha a máquina por ela quando o índice deixou de ser
+ * dela; na presa, confere que a posição atrás do roteador é a que a tela viu (o roteador não girou depois). O bloco
+ * em si não é conferido.
  */
 public record RevertMachinePayload(int containerId, int index, BlockPos pos) implements CustomPacketPayload {
     /** O {@code index} da máquina presa. */

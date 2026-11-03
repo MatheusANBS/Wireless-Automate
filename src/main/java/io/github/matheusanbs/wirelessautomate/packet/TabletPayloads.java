@@ -53,7 +53,6 @@ public final class TabletPayloads {
         registrar.playToServer(OpenTabletPayload.TYPE, OpenTabletPayload.STREAM_CODEC,
                 (payload, context) -> handleOpenTablet(serverPlayer(context)));
         registrar.playToClient(TabletMapPayload.TYPE, TabletMapPayload.STREAM_CODEC, TabletPayloads::onMap);
-        registrar.playToClient(TabletVerdictPayload.TYPE, TabletVerdictPayload.STREAM_CODEC, TabletPayloads::onVerdict);
         registrar.playToServer(NetworkSuggestPayload.TYPE, NetworkSuggestPayload.STREAM_CODEC,
                 (payload, context) -> handleSuggest(serverPlayer(context), payload));
         registrar.playToClient(NetworkSuggestionsPayload.TYPE, NetworkSuggestionsPayload.STREAM_CODEC,
@@ -63,14 +62,7 @@ public final class TabletPayloads {
     private static void onMap(TabletMapPayload payload, IPayloadContext context) {
         Player player = context.player();
         if (player != null && player.containerMenu instanceof TabletMenu menu && menu.containerId == payload.containerId()) {
-            menu.feed().applyMap(payload);
-        }
-    }
-
-    private static void onVerdict(TabletVerdictPayload payload, IPayloadContext context) {
-        Player player = context.player();
-        if (player != null && player.containerMenu instanceof TabletMenu menu && menu.containerId == payload.containerId()) {
-            menu.feed().applyVerdict(payload);
+            menu.applyMap(payload);
         }
     }
 
@@ -116,7 +108,7 @@ public final class TabletPayloads {
     private static void onFlows(TabletFlowsPayload payload, IPayloadContext context) {
         Player player = context.player();
         if (player != null && player.containerMenu instanceof TabletMenu menu && menu.containerId == payload.containerId()) {
-            menu.feed().applyFlows(payload);
+            menu.applyFlows(payload);
         }
     }
 

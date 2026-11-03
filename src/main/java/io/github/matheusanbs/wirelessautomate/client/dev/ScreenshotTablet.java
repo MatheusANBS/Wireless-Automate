@@ -54,7 +54,6 @@ final class ScreenshotTablet {
                 new Step(() -> {
                     mouseX = mouseY = -1;
                     TabletMenu menu = new TabletMenu(0, new Inventory(null), sampleTablet(false));
-                    TabletScreen.legacyList(true);
                     tabletScreen = new TabletScreen(menu, new Inventory(null),
                             Component.translatable("item.wirelessautomate.network_tablet"), true);
                     Minecraft minecraft = Minecraft.getInstance();
@@ -96,7 +95,7 @@ final class ScreenshotTablet {
                     themeBefore = GuiThemes.current();
                     GuiThemes.preview(GuiTheme.DARK);
                 }, "t3c-tablet-escuro"),
-                new Step(() -> tabletScreen.previewResize(420, 240), "t3d-tablet-escuro-minimo"),
+                new Step(() -> tabletScreen.previewResize(300, 240), "t3d-tablet-escuro-minimo"),
                 new Step(() -> GuiThemes.preview(themeBefore), "t3e-tablet-minimo"),
                 new Step(() -> {
                     tabletScreen.previewResize(420, 280);
@@ -105,7 +104,7 @@ final class ScreenshotTablet {
                 }, "t4-tablet-mapa"),
                 new Step(() -> {
                     tabletScreen.previewTab(TabletScreen.Tab.FLOWS);
-                    tabletScreen.getMenu().feed().applyFlows(sampleFlows());
+                    tabletScreen.getMenu().applyFlows(sampleFlows());
                     tabletScreen.flows().previewOpen(ResourceType.ENERGY, true);
                 }, "t5-tablet-fluxos"),
                 new Step(() -> tabletScreen.flows().previewMode(true), "t5b-tablet-fluxos-rede"),
@@ -114,7 +113,10 @@ final class ScreenshotTablet {
                     tabletScreen.previewTab(TabletScreen.Tab.NETWORKS);
                     tabletScreen.previewNetwork(0);
                 }, "t6-tablet-redes"),
-                new Step(() -> tabletScreen.previewNetwork(2), "t7-tablet-redes-alheia"),
+                new Step(() -> {
+                    tabletScreen.previewNetwork(2);
+                    tabletScreen.previewNewOpen("Utilidades");
+                }, "t7-tablet-redes-alheia-nova"),
                 new Step(() -> tabletScreen.previewGroup(0), "t8-tablet-grupos"));
     }
 

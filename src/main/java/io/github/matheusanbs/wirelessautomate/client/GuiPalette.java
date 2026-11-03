@@ -12,23 +12,19 @@ public record GuiPalette(
         int panel, int bevelLight, int inset, int bevelDark, int rowHover,
         int fg, int muted, int disabled, int tabIdle,
         int accent, int accentDeep, int ok, int warn, int danger, int paused, int brass, int ruleText,
-        int tooltipMuted, int tooltipAccent, int darkText, int ring,
-        // Os do Tablet novo (mockup docs/preview/tablet-do-zero): moldura, luz e sombra do relevo, face de botão, slot e o primário.
-        int frame, int reliefLight, int reliefDark, int face, int slot, int slotLight, int slotDark, int primary) {
+        int tooltipMuted, int tooltipAccent, int darkText, int ring) {
 
     public static final GuiPalette LIGHT = new GuiPalette(
             0xFFF2EBDD, 0xFFFFFBF3, 0xFFDDD3BF, 0xFFBDB19A, 0xFFF8F3E8,
             0xFF2A2730, 0xFF7A7366, 0xFFB5AC9D, 0xFF5A5660,
-            0xFFF0603E, 0xFFC2442A, 0xFF2F9D5C, 0xFFD88A1A, 0xFFB8304F, 0xFF6B6FD0, 0xFFB48E2E, 0xFF5A36B0,
-            0xFFBDB19A, 0xFFFFB39E, 0xFF0F0E12, 0xFF1B1920,
-            0xFF8C826F, 0xFFFFFFFF, 0xFFA89C84, 0xFFFAF5EA, 0xFFD6CCB6, 0xFFFFFBF3, 0xFF9C917A, 0xFFF0603E);
+            0xFFF0603E, 0xFFC2442A, 0xFF2F9D5C, 0xFFD88A1A, 0xFFD5453A, 0xFF6B6FD0, 0xFFB48E2E, 0xFF5A36B0,
+            0xFFBDB19A, 0xFFFFB39E, 0xFF0F0E12, 0xFF1B1920);
 
     public static final GuiPalette DARK = new GuiPalette(
             0xFF26232B, 0xFF312D37, 0xFF1C1A20, 0xFF4A4550, 0xFF3A3640,
             0xFFECE5D6, 0xFFA79F90, 0xFF625C66, 0xFF9A9284,
-            0xFFF26A48, 0xFFC2442A, 0xFF3DB56E, 0xFFE39A2E, 0xFFE5577A, 0xFF8A8EE8, 0xFFD2AE4E, 0xFFB79AF5,
-            0xFFBDB19A, 0xFFFFB39E, 0xFF0F0E12, 0xFF1B1920,
-            0xFF0F0E12, 0xFF4A4550, 0xFF16151A, 0xFF332F39, 0xFF3A3A44, 0xFF4E4C58, 0xFF151419, 0xFFD9573A);
+            0xFFF26A48, 0xFFC2442A, 0xFF3DB56E, 0xFFE39A2E, 0xFFE55A4E, 0xFF8A8EE8, 0xFFD2AE4E, 0xFFB79AF5,
+            0xFFBDB19A, 0xFFFFB39E, 0xFF0F0E12, 0xFF1B1920);
 
     public static GuiPalette of(GuiTheme theme) {
         return theme == GuiTheme.DARK ? DARK : LIGHT;
@@ -39,14 +35,6 @@ public record GuiPalette(
         double la = luminance(a);
         double lb = luminance(b);
         return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
-    }
-
-    /** A cor com os canais multiplicados por {@code f}, o alfa intacto (aqui, sem Minecraft, para o JUnit; o {@code PanelPaint} repassa). */
-    public static int shade(int argb, float f) {
-        int r = (int) ((argb >> 16 & 0xFF) * f);
-        int g = (int) ((argb >> 8 & 0xFF) * f);
-        int b = (int) ((argb & 0xFF) * f);
-        return argb & 0xFF000000 | r << 16 | g << 8 | b;
     }
 
     private static double luminance(int argb) {

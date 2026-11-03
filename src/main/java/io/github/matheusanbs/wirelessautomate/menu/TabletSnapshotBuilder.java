@@ -32,7 +32,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Monta o {@link TabletSnapshot} de um jogador: percorre o índice na ordem da Lista, conta as facetas e os filtros
@@ -54,8 +53,6 @@ final class TabletSnapshotBuilder {
     private int builtDataVersion;
     /** Redes já contadas do nó em {@link #countMembership}, reaproveitado. */
     private final List<Totals> counted = new ArrayList<>();
-    /** As máquinas e o "dão/recebem" por rede, refeitos só quando o índice ou as redes mudam. */
-    private final NetworkTallies tallies = new NetworkTallies();
     private boolean listOpen = true;
 
     TabletSnapshotBuilder(ServerPlayer viewer, TabletQuery query, TabletTree tree, TabletMachines machines) {
@@ -113,7 +110,6 @@ final class TabletSnapshotBuilder {
         NodeIndex index = NodeIndex.get(server);
         builtIndexVersion = index.dataVersion();
         builtDataVersion = data.version();
-        tallies.refresh(index, data);
         boolean operator = viewer.hasPermissions(2);
         UUID me = viewer.getUUID();
         TabletSample shared = TabletSample.get(server);
@@ -146,18 +142,16 @@ final class TabletSnapshotBuilder {
         List<NetworkView> networks = new ArrayList<>();
         totals.forEach((id, t) -> {
             WaNetwork network = data.network(id);
-            NetworkTally.Counts c = tallies.counts(id);
             networks.add(new NetworkView(id, network.name(), network.color(), ownerName(server, network.owner(), names),
                     network.owner().equals(me), network.canManage(viewer), network.isPublic(), data.isPaused(id),
                     t.nodes, t.unloaded, network.canManage(viewer) ? TabletAccess.view(server, network)
-                            : TabletSnapshot.AccessView.EMPTY, c == null ? 0 : c.machines(), typeCounts(c)));
+                            : TabletSnapshot.AccessView.EMPTY));
         });
         List<GroupView> groups = new ArrayList<>();
         for (WaGroup group : data.groups()) {
             if (operator || group.owner().equals(me)) {
                 groups.add(new GroupView(group.id(), group.name(), ownerName(server, group.owner(), names),
-                        group.canManage(viewer), group.paused(), group.networks(), Optional.ofNullable(group.icon()),
-                        groupMachine(group)));
+                        group.canManage(viewer), group.paused(), group.networks()));
             }
         }
 
@@ -169,31 +163,6 @@ final class TabletSnapshotBuilder {
                 TabletProfile.profileSummary(viewer, profile), List.copyOf(nodes),
                 rows.isEmpty() ? TabletRows.EMPTY : new TabletRows(List.copyOf(rows), List.copyOf(lives)), machineRows,
                 notice, noticeId);
-    }
-
-    /** A primeira máquina das redes do grupo, o ícone de reserva de um grupo sem ícone. */
-    private Optional<ResourceLocation> groupMachine(WaGroup group) {
-        for (UUID network : group.networks()) {
-            Optional<ResourceLocation> machine = tallies.firstMachine(network);
-            if (machine.isPresent()) {
-                return machine;
-            }
-        }
-        return Optional.empty();
-    }
-
-    /** Os tipos carregados em que a rede tem quem dá ou quem recebe, na ordem do {@link LoadedTypes#LIST}. */
-    private static List<TabletSnapshot.TypeCount> typeCounts(@Nullable NetworkTally.Counts c) {
-        if (c == null) {
-            return List.of();
-        }
-        List<TabletSnapshot.TypeCount> out = new ArrayList<>(2);
-        for (ResourceType type : LoadedTypes.LIST) {
-            if (c.givers(type) > 0 || c.receivers(type) > 0) {
-                out.add(new TabletSnapshot.TypeCount(type, c.givers(type), c.receivers(type)));
-            }
-        }
-        return List.copyOf(out);
     }
 
     /** Uma passada pelo índice, na ordem da Lista: conta as facetas e os filtros rápidos e filtra pela consulta. */

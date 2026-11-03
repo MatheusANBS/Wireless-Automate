@@ -61,7 +61,6 @@ mesmo tipo na mesma rede troca entre si; o modo da face diz quem envia e quem re
 | --- | --- |
 | **Rede por face** | A face de **Cima** da fornalha pode estar na rede "Mina" e a de **Baixo** na "Armazém". A energia pode ir para a "Base". |
 | **Ordem de entrega** | Prioridade maior primeiro; empates se revezam. |
-| **Cor e grupo** | A cor da rede é livre (qualquer uma, pelo seletor do [Tablet](network-tablet.md)). Cada rede fica em um grupo só, ou em **Sem grupo**. |
 | **Rede ativa** | A que o [Tablet](network-tablet.md) usa como destino do **Mover**. Cada jogador tem a sua. |
 | **Quem usa** | Pública: todos. Privada: o dono, os operadores, os **convidados** e, com o FTB Teams, os times adicionados. Só o dono (ou um operador) renomeia, convida e remove. |
 

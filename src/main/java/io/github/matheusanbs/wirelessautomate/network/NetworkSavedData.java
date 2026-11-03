@@ -36,7 +36,7 @@ public final class NetworkSavedData extends SavedData {
     public static final SavedData.Factory<NetworkSavedData> FACTORY =
             new SavedData.Factory<>(NetworkSavedData::new, NetworkSavedData::load);
 
-    /** Cores das redes novas, em ordem: a n-ésima rede de um dono recebe a n-ésima (o jogador muda depois para qualquer RGB). */
+    /** Cores padrão das redes novas, escolhidas pelo hash do id. */
     private static final int[] PALETTE = {
         0x4FC3F7, 0x81C784, 0xFFB74D, 0xE57373, 0xBA68C8, 0xFFF176,
         0x4DB6AC, 0xF06292, 0x9575CD, 0xAED581, 0x7986CB, 0xA1887F,
@@ -75,14 +75,18 @@ public final class NetworkSavedData extends SavedData {
         }
     }
 
-    /** A cor da próxima rede do dono: a paleta em ordem, pelo número de redes que ele já tem. */
-    public int nextColor(UUID owner) {
-        return PALETTE[ownedNetworks(owner) % PALETTE.length];
+    public static int colorFor(UUID id) {
+        return PALETTE[Math.floorMod(id.hashCode(), PALETTE.length)];
+    }
+
+    /** As cores padrão, para o seletor de cor do Tablet. Cópia. */
+    public static int[] palette() {
+        return PALETTE.clone();
     }
 
     public WaNetwork create(UUID owner, String name) {
         UUID id = UUID.randomUUID();
-        WaNetwork network = new WaNetwork(id, name, nextColor(owner), owner);
+        WaNetwork network = new WaNetwork(id, name, colorFor(id), owner);
         networks.put(id, network);
         setDirty();
         return network;
@@ -252,31 +256,6 @@ public final class NetworkSavedData extends SavedData {
         refreshPaused();
         setDirty();
         return true;
-    }
-
-    /**
-     * Põe a rede no grupo {@code group} e a tira de todos os outros (no Tablet, o grupo é o lugar da rede);
-     * {@code null} a deixa sem grupo. Devolve se algum grupo mudou. O mundo antigo, com a rede em vários grupos, só se
-     * arruma aqui, quando alguém mexe.
-     */
-    public boolean moveToGroup(UUID network, @Nullable UUID group) {
-        if (!networks.containsKey(network) || group != null && !groups.containsKey(group)) {
-            return false;
-        }
-        boolean changed = false;
-        for (Map.Entry<UUID, WaGroup> entry : groups.entrySet()) {
-            WaGroup old = entry.getValue();
-            WaGroup next = entry.getKey().equals(group) ? old.withNetwork(network) : old.withoutNetwork(network);
-            if (next != old) {
-                entry.setValue(next);
-                changed = true;
-            }
-        }
-        if (changed) {
-            refreshPaused();
-            setDirty();
-        }
-        return changed;
     }
 
     public boolean removeGroup(UUID id) {

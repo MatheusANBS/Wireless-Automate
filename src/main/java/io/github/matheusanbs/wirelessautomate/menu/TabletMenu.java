@@ -9,6 +9,7 @@ import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
 import io.github.matheusanbs.wirelessautomate.packet.NetworkSuggestionsPayload;
+import io.github.matheusanbs.wirelessautomate.packet.TabletMapPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletFlowsPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletHeaderPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletLivePayload;
@@ -17,7 +18,6 @@ import io.github.matheusanbs.wirelessautomate.packet.TabletPagePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPanelPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletProfilePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletTreePayload;
-import io.github.matheusanbs.wirelessautomate.packet.TabletVerdictPayload;
 import io.github.matheusanbs.wirelessautomate.preset.PresetApplier;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
@@ -121,7 +121,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
         GROUP_CREATE,
         GROUP_RENAME,
         GROUP_REMOVE,
-        /** Alvo: grupo; outro: rede. Move a rede para o grupo, tirando-a dos outros. */
+        /** Alvo: grupo; outro: rede. */
         GROUP_ADD_NETWORK,
         GROUP_REMOVE_NETWORK,
         /** Alvo: rede; outro: jogador (ou texto: o nome). Só quem gerencia. */
@@ -133,18 +133,18 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
         /** Alvo: rede; outro: time. Tira também um time que já foi desfeito. */
         NETWORK_TEAM_REMOVE,
         /** Alvo: grupo; valor: 1 pausa, 0 retoma. */
-        GROUP_PAUSE,
-        /** Alvo: grupo; texto: id do item do ícone (vazio tira). Só quem gerencia o grupo. */
-        GROUP_ICON
+        GROUP_PAUSE
     }
 
     private TabletSnapshot snapshot;
     private int version;
-    private int headerVersion;
     /** Cliente: o último painel do nó escolhido recebido, ou {@code null}. */
     private @Nullable TabletPanelPayload panel;
     private int panelVersion;
-    private final TabletClientFeed feed = new TabletClientFeed();
+    /** Cliente: os últimos Fluxos recebidos, ou {@code null}. */
+    private @Nullable TabletFlowsPayload flowsPayload;
+    /** Cliente: os últimos pontos do Mapa recebidos, ou {@code null}. */
+    private @Nullable TabletMapPayload mapPayload;
     /** Cliente: as últimas sugestões do campo de acesso recebidas, ou {@code null}. */
     private @Nullable NetworkSuggestionsPayload suggestions;
     private int suggestionsVersion;
@@ -159,7 +159,8 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
     private final @Nullable TabletChosenNode node;
     private final @Nullable TabletProfile profile;
     private final @Nullable TabletMenuActions actions;
-    private final @Nullable TabletWatches watches;
+    private final @Nullable TabletFlows flows;
+    private final @Nullable TabletMap mapWatch;
     private final @Nullable TabletTree tree;
     private final @Nullable TabletMachines machines;
     private int tab;
@@ -181,9 +182,11 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
         this.node = new TabletChosenNode(viewer, containerId);
         this.profile = new TabletProfile(viewer, containerId, query, builder, machines);
         this.actions = new TabletMenuActions(this, viewer);
-        this.watches = new TabletWatches(viewer, containerId, node);
+        this.flows = new TabletFlows(viewer, containerId);
+        this.mapWatch = new TabletMap(viewer, containerId);
         restore(TabletPlayers.saved(viewer.getUUID()));
-        watches.tab(tab);
+        flows.tab(tab);
+        mapWatch.tab(tab);
         builder.listOpen(tab == LIST_TAB);
         this.snapshot = builder.build(true, actions.notice(), actions.noticeId());
         this.sent = snapshot;
@@ -208,7 +211,8 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
         this.node = null;
         this.profile = null;
         this.actions = null;
-        this.watches = null;
+        this.flows = null;
+        this.mapWatch = null;
         this.tree = null;
         this.machines = null;
         this.snapshot = snapshot;
@@ -252,8 +256,11 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
         super.removed(player);
         IdleNetworkUndo.closed(player, this);
         MachinePasteUndo.closed(player, this);
-        if (watches != null) {
-            watches.stop();
+        if (flows != null) {
+            flows.stop();
+        }
+        if (mapWatch != null) {
+            mapWatch.stop();
         }
         if (machines != null) {
             machines.stop();
@@ -280,8 +287,11 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
         }
         boolean wasList = this.tab == LIST_TAB;
         this.tab = tab;
-        if (watches != null) {
-            watches.tab(tab);
+        if (flows != null) {
+            flows.tab(tab);
+        }
+        if (mapWatch != null) {
+            mapWatch.tab(tab);
         }
         if (builder != null) {
             builder.listOpen(tab == LIST_TAB);
@@ -414,20 +424,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
         return version;
     }
 
-    /**
-     * Muda só quando o cabeçalho pode ter mudado (snapshot inteiro ou {@code TabletHeaderPayload}), não com uma página
-     * ou uma amostra ao vivo: o que só lê o cabeçalho (a aba Redes) não se remonta a cada amostra.
-     */
-    public int headerVersion() {
-        return headerVersion;
-    }
-
     public void applySnapshot(TabletSnapshot snapshot) {
-        store(snapshot);
-        headerVersion++;
-    }
-
-    private void store(TabletSnapshot snapshot) {
         this.snapshot = snapshot;
         version++;
     }
@@ -437,14 +434,14 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
         applySnapshot(header.withPage(snapshot.page()));
     }
 
-    /** Cliente: página nova ({@code TabletPagePayload}); o cabeçalho fica. */
+    /** Cliente: página nova ({@code TabletPagePayload}). */
     public void applyPage(TabletSnapshot.Page page) {
-        store(snapshot.withPage(page));
+        applySnapshot(snapshot.withPage(page));
     }
 
     /** Cliente: só o estado e a vazão dos nós e das linhas de máquina da página mudaram ({@code TabletLivePayload}). */
     public void applyLives(List<TabletSnapshot.Live> lives, List<TabletRows.MachineLive> machines) {
-        store(snapshot.withPage(snapshot.page().withLives(lives, machines)));
+        applySnapshot(snapshot.withPage(snapshot.page().withLives(lives, machines)));
     }
 
     /** Cliente: o painel novo do nó escolhido ({@code TabletPanelPayload}). */
@@ -463,14 +460,24 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
         return panelVersion;
     }
 
-    /** Cliente: o último veredito recebido; só vale se o nó e a máquina dele batem com a escolha. */
-    public @Nullable TabletVerdictPayload verdict() {
-        return feed.verdict();
+    /** Cliente: os Fluxos novos ({@code TabletFlowsPayload}). */
+    public void applyFlows(TabletFlowsPayload flows) {
+        this.flowsPayload = flows;
     }
 
-    /** Cliente: o último pacote de cada vigia do servidor (Fluxos, Mapa e veredito). */
-    public TabletClientFeed feed() {
-        return feed;
+    /** Cliente: os últimos Fluxos recebidos, ou {@code null}. */
+    public @Nullable TabletFlowsPayload flows() {
+        return flowsPayload;
+    }
+
+    /** Cliente: os pontos novos do Mapa ({@code TabletMapPayload}). */
+    public void applyMap(TabletMapPayload map) {
+        this.mapPayload = map;
+    }
+
+    /** Cliente: os últimos pontos do Mapa recebidos, ou {@code null} (a tela usa a página da Lista até chegarem). */
+    public @Nullable TabletMapPayload mapPoints() {
+        return mapPayload;
     }
 
     /** Cliente: as sugestões novas do campo de acesso ({@code NetworkSuggestionsPayload}). */
@@ -534,8 +541,13 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
         if (panelNow != null) {
             payloads.add(panelNow);
         }
-        if (watches != null) {
-            watches.poll(payloads);
+        TabletFlowsPayload flowsNow = pollFlows();
+        if (flowsNow != null) {
+            payloads.add(flowsNow);
+        }
+        TabletMapPayload mapNow = mapWatch == null ? null : mapWatch.poll();
+        if (mapNow != null) {
+            payloads.add(mapNow);
         }
         return payloads;
     }
@@ -545,15 +557,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
      * {@code null}. Só no servidor; público para os GameTests.
      */
     public @Nullable TabletFlowsPayload pollFlows() {
-        return watches == null ? null : watches.pollFlows();
-    }
-
-    /**
-     * O veredito da máquina escolhida, se a aba Máquina está aberta e ele mudou; senão {@code null}. Só no servidor;
-     * público para os GameTests.
-     */
-    public @Nullable TabletVerdictPayload pollVerdict() {
-        return watches == null ? null : watches.pollVerdict();
+        return flows == null ? null : flows.poll();
     }
 
     private void send(CustomPacketPayload payload) {

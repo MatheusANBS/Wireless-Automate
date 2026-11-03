@@ -16,6 +16,8 @@ import io.github.matheusanbs.wirelessautomate.menu.PanelAccess;
 import io.github.matheusanbs.wirelessautomate.menu.RemoteRouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
+import io.github.matheusanbs.wirelessautomate.network.WaGroup;
+import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
@@ -28,6 +30,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -35,8 +38,10 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.phys.Vec3;
@@ -53,6 +58,7 @@ final class E2eTabletSteps {
     private E2eTabletSteps() {
     }
 
+    static final String GROUP_NAME = "E2E Grupo";
     /** Posição do jogador antes de se afastar para abrir B à distância. */
     private static Vec3 beforeTablet = Vec3.ZERO;
     /** Baú com um roteador sem rede, só durante os passos do Tablet (dá o filtro rápido "Sem rede"). */
@@ -66,8 +72,8 @@ final class E2eTabletSteps {
      * máquina (vira etiqueta e filtra) e a tira pelo ✕, liga e desliga o filtro rápido "Sem rede", escolhe B na
      * lista (o painel aparece e muda o modo de uma face no servidor), copia o perfil de B (a faixa aparece), cola
      * no grupo dos baús (o aviso aparece e A fica "igual ao perfil"), desfaz, e repete com Ctrl+C, Ctrl+V e Ctrl+Z.
-     * Depois a aba Redes ({@link E2eNetworksSteps}) e o acesso, edita o filtro de B a 20 blocos pelo painel e volta
-     * ao Tablet com B escolhido, e abre B à distância com duplo clique na segunda linha dela.
+     * Depois cria um grupo de redes, pausa e retoma, edita o filtro de B a 20 blocos pelo painel e volta ao
+     * Tablet com B escolhido, e abre B à distância com duplo clique na segunda linha dela.
      */
     static void tabletSteps(List<Step> list) {
         UUID playerId = Minecraft.getInstance().player.getUUID();
@@ -76,7 +82,8 @@ final class E2eTabletSteps {
         tabletProfileSteps(list);
         E2eTabletTreeSteps.treeSteps(list);
         E2eFlowsSteps.flowsSteps(list);
-        E2eNetworksSteps.networksSteps(list);
+        tabletGroupSteps(list);
+        E2eNetworkSectionSteps.sectionSteps(list);
         E2eAccessSteps.accessSteps(list);
         E2eTabletMachinesSteps.machineSteps(list);
         tabletRemoteSteps(list, playerId);
@@ -110,9 +117,7 @@ final class E2eTabletSteps {
                 throw new StepFailure("ainda há uma tela aberta: " + describe(minecraft.screen));
             }
             minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);
-        }, () -> Minecraft.getInstance().screen instanceof TabletScreen screen && screen.searchBox().isFocused()
-                // abre na aba Máquina, pela visão por máquinas; a busca de B é pela de roteadores
-                && screen.list().previewRouters(),
+        }, () -> Minecraft.getInstance().screen instanceof TabletScreen screen && screen.searchBox().isFocused(),
                 () -> "tela " + describe(Minecraft.getInstance().screen)));
         list.add(new Step("achar B pela busca (o cursor já está nela)", STEP_TIMEOUT_MS, () -> type(NODE_NAME), () -> {
             TabletScreen screen = tabletScreen();
@@ -265,6 +270,64 @@ final class E2eTabletSteps {
         }, () -> tabletScreen().getMenu().snapshot().profile().isEmpty(), () -> "perfil " + tabletScreen().getMenu().snapshot().profile()));
     }
 
+    /**
+     * Tablet: na aba Redes, cria um grupo pelo "Novo grupo" (ele fica escolhido, com o detalhe à direita), põe a rede
+     * dos itens nele, pausa e retoma.
+     */
+    private static void tabletGroupSteps(List<Step> list) {
+        // os widgets da aba só aparecem no quadro seguinte, como para o jogador
+        list.add(new Step("aba Redes", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.tablet.tab.networks")), "aba Redes")),
+                () -> find(byMessage(Component.translatable("gui.wirelessautomate.tablet.group.new"))) != null,
+                () -> "Novo grupo visível"));
+        list.add(new Step("novo grupo", STEP_TIMEOUT_MS, () -> {
+            click(widget(byMessage(Component.translatable("gui.wirelessautomate.tablet.group.new")), "Novo grupo"));
+            type(GROUP_NAME);
+            tabletScreen().keyPressed(GLFW.GLFW_KEY_ENTER, 0, 0);
+        }, () -> group() != null && tabletScreen().getMenu().snapshot().groups().stream()
+                .anyMatch(g -> g.name().equals(GROUP_NAME)) && tabletScreen().groupNetworkCenter(otherNetwork) != null,
+                () -> "grupos na tela " + tabletScreen().getMenu().snapshot().groups()));
+        list.add(new Step("rede dos itens no grupo", STEP_TIMEOUT_MS, () -> {
+            TabletScreen screen = tabletScreen();
+            int[] box = screen.groupNetworkCenter(otherNetwork);
+            if (box == null) {
+                throw new StepFailure("a rede " + OTHER_NETWORK + " não aparece na coluna do grupo");
+            }
+            click(screen, box[0], box[1]);
+        }, () -> {
+            WaGroup group = group();
+            // e o botão Pausar já redesenhado como ativo (a tela o atualiza a cada quadro)
+            AbstractWidget pause = find(byMessage(Component.translatable("gui.wirelessautomate.tablet.group.pause")));
+            return group != null && group.networks().contains(otherNetwork) && pause != null && pause.active
+                    && tabletScreen().getMenu().snapshot().groups().stream()
+                            .anyMatch(g -> g.name().equals(GROUP_NAME) && g.networks().contains(otherNetwork));
+        }, () -> "grupo no servidor " + group()));
+        list.add(new Step("pausar o grupo", STEP_TIMEOUT_MS,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.tablet.group.pause")),
+                        "Pausar o grupo")),
+                () -> onServer(server -> NetworkSavedData.get(server).isPaused(otherNetwork))
+                        && tabletScreen().getMenu().snapshot().groups().stream()
+                                .anyMatch(g -> g.name().equals(GROUP_NAME) && g.paused()),
+                () -> "pausada no servidor: " + onServer(server -> NetworkSavedData.get(server).isPaused(otherNetwork))));
+        list.add(capture("8-tablet-grupo-pausado"));
+        list.add(new Step("rede pausada: pedras param", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            ((Container) server.overworld().getBlockEntity(chestA)).setItem(0, new ItemStack(Items.STONE, 64));
+            return null;
+        }), () -> {
+            if (onServer(server -> count(server, chestB, Items.STONE)) != 192) {
+                throw new StepFailure("pedras chegaram a B com a rede pausada");
+            }
+            return stepTicks >= 40 && onServer(server -> count(server, chestA, Items.STONE) == 64);
+        }, () -> onServer(server -> "A=" + count(server, chestA, Items.STONE) + " B=" + count(server, chestB, Items.STONE))));
+        list.add(new Step("retomar: pedras chegam", 30_000,
+                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.tablet.group.pause")),
+                        "Retomar o grupo")),
+                () -> onServer(server -> !NetworkSavedData.get(server).isPaused(otherNetwork)
+                        && count(server, chestA, Items.STONE) == 0 && count(server, chestB, Items.STONE) == 256),
+                () -> onServer(server -> "pausada " + NetworkSavedData.get(server).isPaused(otherNetwork) + ", A="
+                        + count(server, chestA, Items.STONE) + " B=" + count(server, chestB, Items.STONE))));
+    }
+
     /** Tablet: a 20 blocos, o filtro de B pelo painel e B aberto à distância; depois volta. */
     private static void tabletRemoteSteps(List<Step> list, UUID playerId) {
         list.add(new Step("afastar 20 blocos", STEP_TIMEOUT_MS, () -> {
@@ -277,11 +340,8 @@ final class E2eTabletSteps {
             });
         }, () -> Minecraft.getInstance().player.position().distanceTo(Vec3.atCenterOf(routerB)) > 15,
                 () -> "distância " + Minecraft.getInstance().player.position().distanceTo(Vec3.atCenterOf(routerB))));
-        list.add(new Step("aba Máquina, na visão Roteadores", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.tablet.tab.machine")), "aba Máquina")),
-                () -> tabletScreen().currentTab() == TabletScreen.Tab.LIST && tabletScreen().list().previewRouters(),
-                () -> "aba " + tabletScreen().currentTab()));
         list.add(new Step("filtro de B a 20 blocos pelo painel", STEP_TIMEOUT_MS, () -> {
+            click(widget(byMessage(Component.translatable("gui.wirelessautomate.tablet.tab.list")), "aba Lista"));
             int[] row = tabletScreen().nodeRowCenter(nodeB());
             if (row == null) {
                 throw new StepFailure("B não está na lista");
@@ -384,4 +444,10 @@ final class E2eTabletSteps {
     private static PortMode panelModeBefore = PortMode.NONE;
     private static PortMode panelModeAfter = PortMode.NONE;
     private static @Nullable UUID panelNetworkBefore;
+
+    /** O grupo do teste no servidor, ou {@code null}. */
+    static @Nullable WaGroup group() throws Exception {
+        return onServer(server -> NetworkSavedData.get(server).groups().stream()
+                .filter(g -> g.name().equals(GROUP_NAME)).findFirst().orElse(null));
+    }
 }

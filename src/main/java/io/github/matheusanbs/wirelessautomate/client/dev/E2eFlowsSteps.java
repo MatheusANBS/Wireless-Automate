@@ -94,16 +94,18 @@ final class E2eFlowsSteps {
             list.add(clipCheck("Tablet: Fluxos no escuro"));
             list.add(themeClick("Fluxos: claro de novo", GuiTheme.LIGHT));
         });
-        // por ora o clique só troca para a aba Máquina; a etapa 3 refaz o filtro por ele
-        list.add(new Step("linha da Energia na rede abre a aba Máquina", STEP_TIMEOUT_MS, () -> {
+        list.add(new Step("linha da Energia na rede filtra a Lista", STEP_TIMEOUT_MS, () -> {
             int[] c = flows().rowCenter(ResourceType.ENERGY, energyNetwork);
             click(tabletScreen(), c[0], c[1]);
-        }, () -> tabletScreen().currentTab() == TabletScreen.Tab.LIST,
-                () -> "aba " + tabletScreen().currentTab()));
+        }, () -> {
+            TabletSnapshot.Query q = tabletScreen().getMenu().snapshot().query();
+            return tabletScreen().currentTab() == TabletScreen.Tab.LIST && q.type().equals(Optional.of(ResourceType.ENERGY))
+                    && q.networks().equals(List.of(energyNetwork)) && !tabletScreen().getMenu().snapshot().nodes().isEmpty();
+        }, () -> "aba " + tabletScreen().currentTab() + ", consulta " + tabletScreen().getMenu().snapshot().query()));
         list.add(capture("7e-tablet-lista-energia"));
         list.add(new Step("Tablet de volta ao mínimo", STEP_TIMEOUT_MS,
-                () -> tabletScreen().previewResize(420, 240),
-                () -> tabletScreen().size()[0] == 420,
+                () -> tabletScreen().previewResize(300, 240),
+                () -> tabletScreen().size()[0] == 300,
                 () -> "tamanho " + java.util.Arrays.toString(tabletScreen().size())));
         list.add(clipCheck("Tablet: Lista no mínimo"));
         list.add(listClipTooltip("Tablet: Lista no mínimo"));

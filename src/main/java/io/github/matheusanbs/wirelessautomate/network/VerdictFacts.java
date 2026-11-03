@@ -5,7 +5,11 @@ import java.util.List;
 import java.util.UUID;
 import org.jetbrains.annotations.Nullable;
 
-/** O que o motor sabe de uma máquina num instante: o alcance dela e o estado de cada face em uso (um por tipo e face). */
+/**
+ * O que o motor sabe de uma máquina num instante: o alcance dela e o estado de cada face em uso (um por tipo e face).
+ * O chamador ordena {@code faces} por tipo ({@code LoadedTypes.LIST}) e depois por face: "a primeira face" do veredito
+ * (a do sem rede, do alcance e do detalhe) depende dessa ordem.
+ */
 public record VerdictFacts(Reach reach, List<FaceFact> faces) {
     /** Se a máquina está ao alcance do roteador e carregada; o resto diz por que não. */
     public enum Reach { OK, UNLOADED, NO_UPGRADE, OUT_OF_RANGE, OVER_LIMIT, REPLACED, MISSING }
@@ -69,7 +73,7 @@ public record VerdictFacts(Reach reach, List<FaceFact> faces) {
                 waits = true;
                 full = n;
                 List<Long> list = new ArrayList<>(n);
-                for (int i = 0; i < Math.min(n, 8); i++) {
+                for (int i = 0; i < Math.min(n, Verdict.MAX_POSITIONS); i++) {
                     list.add((long) i);
                 }
                 positions = list;

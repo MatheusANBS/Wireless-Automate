@@ -4,6 +4,8 @@ import io.github.matheusanbs.wirelessautomate.network.Verdict.Action;
 import io.github.matheusanbs.wirelessautomate.network.Verdict.Problem;
 import io.github.matheusanbs.wirelessautomate.network.Verdict.ProblemKind;
 import io.github.matheusanbs.wirelessautomate.network.Verdict.Reason;
+import io.netty.handler.codec.DecoderException;
+import io.netty.handler.codec.EncoderException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -43,7 +45,10 @@ public final class VerdictCodec {
             int count = buf.readVarInt();
             Action action = ACTION_CODEC.decode(buf);
             List<Problem> problems = PROBLEMS_CODEC.decode(buf);
-            int n = Math.min(buf.readVarInt(), Verdict.MAX_POSITIONS);
+            int n = buf.readVarInt();
+            if (n < 0 || n > Verdict.MAX_POSITIONS) {
+                throw new DecoderException("Posições do veredito fora do teto: " + n);
+            }
             List<Long> positions = new ArrayList<>(n);
             for (int i = 0; i < n; i++) {
                 positions.add(buf.readVarLong());
@@ -63,6 +68,9 @@ public final class VerdictCodec {
             buf.writeVarInt(v.count());
             ACTION_CODEC.encode(buf, v.action());
             PROBLEMS_CODEC.encode(buf, v.problems());
+            if (v.positions().size() > Verdict.MAX_POSITIONS) {
+                throw new EncoderException("Posições do veredito acima do teto: " + v.positions().size());
+            }
             buf.writeVarInt(v.positions().size());
             for (long pos : v.positions()) {
                 buf.writeVarLong(pos);

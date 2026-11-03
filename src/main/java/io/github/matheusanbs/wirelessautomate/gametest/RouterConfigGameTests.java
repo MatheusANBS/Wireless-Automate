@@ -318,7 +318,7 @@ public final class RouterConfigGameTests {
 
     /**
      * As chaves salvas por tipo continuam as de sempre, e um roteador salvo volta igual. A rede mora
-     * nas faces ({@code network} dentro de cada uma); a chave antiga {@code networks} não é mais escrita.
+     * nas faces ({@code network} dentro de cada uma); a chave {@code networks} do formato velho não é escrita.
      */
     @GameTest(template = "empty")
     public static void savedKeysStayTheSame(GameTestHelper helper) {

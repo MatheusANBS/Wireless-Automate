@@ -25,7 +25,7 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 
 - Teste à mão do Afinador do Configurador (etapa 3, linha de 02/11 do histórico): a pintura nas faces, o segundo clique, Shift no grupo, segurar o botão (não confirma nem apaga ao escorregar a mira para o chão ou o ar; com a tecla solta, uma tocha na mão secundária repete num bloco comum, e segurada desde uma máquina ela também espera a tecla soltar), mirar outro bloco por 2 s e clicar de novo (análise nova), e máquinas de outros mods (Mekanism, Sophisticated, uma máquina só de energia, que deve receber Insere). (02/11, 03/11)
 - Teste à mão da etapa 4 do alcance (linha de 02/11 do histórico): a máquina trocada parando de receber na hora. (02/11)
-- Teste à mão do Ctrl + clique do Vinculador (linha do topo de 02/11): uma fileira de fornalhas, um bloco de outro mod ("7 × Nome"), segurar o botão, o limite do tier. (02/11)
+- Teste à mão do Ctrl + clique do Vinculador (linha do topo de 02/11): uma fileira de fornalhas, um bloco de outro mod ("7 × Nome"), segurar o botão, o limite do tier; correndo com o Ctrl de correr o clique é normal, e na terra nada acontece (03/11). (02/11)
 
 - Pausar grupo. (11/10)
 - Presa no grupo, menores da revisão final: o grupo "×0" segue contando nas redes do nó; sem o Upgrade de Alcance, com remotas guardadas no mesmo grupo, editar a presa cria uma exceção que a tela não mostra; `setNetworkAll` com rede cria o membro numa presa nunca configurada; o slot de cartão da presa com exceção muda o grupo inteiro sem aviso;  destino "quase cheio" de pilhas parciais de outros itens entra no caminho das recusas (medir um cenário `partialfull`). (02/11)
@@ -81,6 +81,7 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 
 ## Docs, scripts e publicação
 
+- Changelog da próxima versão: uma remota vinculada ao lado da presa sozinha herda na hora a config dela (inclusive Extrair e a rede); avisar no changelog. (03/11)
 - **(dono)** Quando o Modrinth aprovar, pôr o link no `README.md`, no `README.en.md` e na `descricao.md`. (30/10)
 - **(dono)** Decidir o destino da worktree `C:/wab` (fora do repositório, com 2 arquivos mudados). (30/10)
 - Portes (`docs/portes.md`): investigar o 26.1 NeoForge (ATM11); o 1.20.1 Forge espera o ok do dono e a decisão do Mekanism (só gás ou os quatro químicos). (10/10)

@@ -8,6 +8,7 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eUi.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
 import io.github.matheusanbs.wirelessautomate.GuiTheme;
+import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
@@ -88,6 +89,7 @@ final class E2eTabletMachinesSteps {
         list.add(search("máquinas: "));
         list.add(chooseMachine("máquinas: ", EXCEPTION));
         list.add(flowingCapture("7o-tablet-maquinas"));
+        list.add(livesKeepNetworks());
         list.add(clipCheck("Tablet: máquinas"));
         list.add(listClipTooltip("Tablet: máquinas"));
         E2eVariants.escuro(list, () -> {
@@ -247,15 +249,7 @@ final class E2eTabletMachinesSteps {
             moveMouse(0, 0);
             PanelNotices.clear();
         }, () -> {
-            onServer(server -> {
-                Container from = (Container) server.overworld().getBlockEntity(source);
-                Container to = (Container) server.overworld().getBlockEntity(sink);
-                for (int i = 0; i < 4; i++) {
-                    from.setItem(i, new ItemStack(Items.COBBLESTONE, 64));
-                }
-                to.clearContent();
-                return null;
-            });
+            feedChests();
             TabletRows.MachineLive live = live(0);
             if (stepTicks < 25 || live == null || live.status() != TabletRows.MachineStatus.MOVING
                     || live.given(ResourceType.ITEM) == 0 || PanelNotices.current() != null) {
@@ -264,6 +258,52 @@ final class E2eTabletMachinesSteps {
             capture(Minecraft.getInstance(), file);
             return true;
         }, () -> "origem " + live(0));
+    }
+
+    private static int versionAt;
+    private static int headerAt;
+    private static int buildsAt;
+
+    /**
+     * Com os baús movendo, chegam amostras ao vivo (e talvez um cabeçalho): a aba Redes, escondida, só se remonta com um
+     * cabeçalho novo, nunca com uma amostra.
+     */
+    private static Step livesKeepNetworks() {
+        return new Step("máquinas: as amostras ao vivo não remontam a aba Redes", STEP_TIMEOUT_MS, () -> {
+            versionAt = tabletScreen().getMenu().version();
+            headerAt = tabletScreen().getMenu().headerVersion();
+            buildsAt = tabletScreen().networks().probe().snapshotBuilds();
+        }, () -> {
+            feedChests();
+            int headers = tabletScreen().getMenu().headerVersion() - headerAt;
+            int samples = tabletScreen().getMenu().version() - versionAt - headers;
+            int builds = tabletScreen().networks().probe().snapshotBuilds() - buildsAt;
+            if (builds > headers) {
+                throw new StepFailure(builds + " montagens da aba Redes com " + headers + " cabeçalho(s) e " + samples
+                        + " amostra(s)");
+            }
+            if (samples >= 1 && stepTicks >= 40) {
+                WirelessAutomate.LOGGER.info("E2E: {} amostras e {} cabeçalho(s), {} montagem(ns) da aba Redes",
+                        samples, headers, builds);
+                return true;
+            }
+            return false;
+        }, () -> "snapshots " + (tabletScreen().getMenu().version() - versionAt) + ", cabeçalhos "
+                + (tabletScreen().getMenu().headerVersion() - headerAt) + ", montagens "
+                + (tabletScreen().networks().probe().snapshotBuilds() - buildsAt));
+    }
+
+    /** A origem ganha pedregulho e o destino esvazia, para os baús continuarem movendo. */
+    private static void feedChests() throws Exception {
+        onServer(server -> {
+            Container from = (Container) server.overworld().getBlockEntity(source);
+            Container to = (Container) server.overworld().getBlockEntity(sink);
+            for (int i = 0; i < 4; i++) {
+                from.setItem(i, new ItemStack(Items.COBBLESTONE, 64));
+            }
+            to.clearContent();
+            return null;
+        });
     }
 
     /**

@@ -19,16 +19,17 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.fml.ModList;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 /**
  * A escolha do ícone do grupo (mockup {@code popup_icone}): logo abaixo do slot do ícone, o campo de busca e uma grade
- * 8 × 3 de itens que a roda rola, com "ou arraste um item do JEI" embaixo. Sem texto, a grade mostra o ícone atual e os
- * itens distintos do inventário do jogador; com 2 letras ou mais, os itens do registro que casam ({@link IconSearch}),
- * 150 ms depois da última tecla. A lista, os {@code ItemStack}s e os nomes são montados aí, nunca por quadro. Clicar
- * num item o escolhe; clicar no escolhido tira a escolha (o grupo volta ao ícone da primeira máquina). Um item solto
- * do JEI na janela ({@link #accept}) também escolhe.
+ * 8 × 3 de itens que a roda rola, com "ou arraste um item do JEI" embaixo (só com o JEI instalado). Sem texto, a grade
+ * mostra o ícone atual e os itens distintos do inventário do jogador; com 2 letras ou mais, os itens do registro que
+ * casam ({@link IconSearch}), 150 ms depois da última tecla. A lista, os {@code ItemStack}s e os nomes são montados aí,
+ * nunca por quadro. Clicar num item o escolhe; clicar no escolhido tira a escolha (o grupo volta ao ícone da primeira
+ * máquina). Um item solto do JEI na janela ({@link #accept}) também escolhe.
  */
 final class IconModal implements TabletModal {
     static final int COLS = 8;
@@ -49,6 +50,7 @@ final class IconModal implements TabletModal {
     private final EditBox box;
     private final Component hint = tr("nets.icon.search");
     private final Component jei = tr("nets.icon.jei");
+    private final boolean jeiLoaded;
     private final IconCatalog catalog = new IconCatalog();
     private ItemStack[] cells = new ItemStack[0];
     private ResourceLocation[] ids = new ResourceLocation[0];
@@ -71,6 +73,7 @@ final class IconModal implements TabletModal {
         this.shown = shown;
         this.inventory = inventory;
         this.choose = choose;
+        this.jeiLoaded = ModList.get().isLoaded("jei");
         box = new EditBox(font, x + 11, y + 9, W - 22, 8, hint);
         box.setBordered(false);
         box.setMaxLength(64);
@@ -170,7 +173,9 @@ final class IconModal implements TabletModal {
                 g.renderItem(cells[i], cx + 1, cy + 1);
             }
         }
-        GuiPaint.text(g, font, jei, x + 7, y + H - 14, GuiPaint.MUTED);
+        if (jeiLoaded) {
+            GuiPaint.text(g, font, jei, x + 7, y + H - 14, GuiPaint.MUTED);
+        }
     }
 
     // ------------------------------------------------------------------ entrada

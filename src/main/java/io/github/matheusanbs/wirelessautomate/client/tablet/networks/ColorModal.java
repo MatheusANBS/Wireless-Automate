@@ -12,7 +12,8 @@ import net.minecraft.client.gui.GuiGraphics;
 /**
  * O seletor de cor da rede escolhida (mockup {@code popup_cor}): o {@link ColorPopup} comum no visual
  * {@link ColorLook#TABLET}, sem alfa, sem conta-gotas e sem as cores do tema, logo abaixo do slot da cor. Por cima do
- * véu, o slot é redesenhado com a cor que está sendo escolhida. A cor vai ao servidor uma vez, ao fechar, e só se mudou.
+ * véu, o slot é redesenhado com a cor que está sendo escolhida. A cor vai ao servidor uma vez, ao fechar, e só se mudou
+ * e a rede ainda existe.
  */
 final class ColorModal implements TabletModal {
     private static final ColorPopup.Options OPTIONS = new ColorPopup.Options(ColorLook.TABLET, false, false, null, null);
@@ -81,6 +82,12 @@ final class ColorModal implements TabletModal {
         if (current != initial) {
             commit.accept(current & 0xFFFFFF);
         }
+    }
+
+    /** A rede sumiu com o seletor aberto: fecha sem mandar a cor (o servidor recusaria com um aviso enganoso). */
+    @Override
+    public void dropped() {
+        popup.closed();
     }
 
     ColorPopup popup() {

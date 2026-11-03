@@ -37,7 +37,7 @@ Range Upgrade). The Tablet opens with its node already chosen, before the machin
 | **Machine** | The machines of your base (for now, the List in the Machines view). |
 | **Flows** | How much of each type comes in and goes out, per network, and what needs attention. |
 
-The header counts your base: nodes, machines and networks.
+At the top sit the title, the theme button (light or dark) and the Tablet's notices, such as a refused action.
 
 ## The node panel
 
@@ -122,7 +122,9 @@ On the left are the groups, each with its icon and its networks, and last **No g
   - **the group:** a network sits in one group only; choosing another moves it;
   - **the access:** **Everyone** or **Guests** (with **+ invite** to add players and teams);
   - **In this network:** how many machines give and receive of each type.
-- **Pause** stops every network of the network's group; **Delete network** takes two clicks.
+- **Pause** stops every network of the network's group. On a network without a group, it is disabled.
+- **Use** makes the network the Linker's active one. The active network shows **In use**.
+- **Delete network** takes two clicks.
 - Click a group to change its name and icon (click the icon and search for an item, or drag one from JEI),
   see its networks, put another network in it, pause and delete.
 

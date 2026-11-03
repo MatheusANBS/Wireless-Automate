@@ -15,6 +15,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
+import net.neoforged.neoforge.energy.EnergyStorage;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.items.IItemHandler;
@@ -23,7 +24,8 @@ import net.neoforged.neoforge.items.IItemHandler;
  * Máquinas de teste dos GameTests que o vanilla não tem: um slot com pilha enorme (como uma gaveta
  * ou um barril com upgrade de pilha), uma máquina com mais tanques que a janela de uma visita e um
  * tanque que entrega a própria pilha interna e a encolhe ao drenar (como os do Mekanism), uma
- * máquina com entrada e saída na mesma face e um destino que mente na simulação.
+ * máquina com entrada e saída na mesma face, um destino que mente na simulação e, para o Afinador, um slot que lança
+ * exceção e uma energia sem papel.
  * Presas a blocos vanilla sem capability, com o estado guardado por posição. Só existem com
  * {@code -Dwirelessautomate.gameTests=true} (a run {@code gameTestServer} liga).
  */
@@ -53,6 +55,10 @@ public final class TestMachines {
 
     /** Uma célula de energia que muda sem avisar ninguém, como uma máquina que gera ou consome FE por tick ({@link SilentCell}). */
     public static final Block SILENT_CELL = Blocks.RAW_COPPER_BLOCK;
+    /** Um slot de outro mod que lança exceção ao ser provado ({@link ThrowingSlot}): a análise do Afinador não cai. */
+    public static final Block THROWING_SLOT = Blocks.RAW_GOLD_BLOCK;
+    /** Energia que não recebe nem dá: tem a capability e nada que o Afinador configure. */
+    public static final Block INERT_CELL = Blocks.RAW_IRON_BLOCK;
 
     private static final boolean ENABLED = Boolean.getBoolean("wirelessautomate.gameTests");
     private static final Map<BlockPos, BigSlot> BIG_SLOTS = new ConcurrentHashMap<>();
@@ -63,6 +69,7 @@ public final class TestMachines {
     private static final Map<BlockPos, Furnace> FURNACES = new ConcurrentHashMap<>();
     private static final Map<BlockPos, VoidSink> VOID_SINKS = new ConcurrentHashMap<>();
     private static final Map<BlockPos, SilentCell> SILENT_CELLS = new ConcurrentHashMap<>();
+    private static final EnergyStorage INERT = new EnergyStorage(1_000, 0, 0);
 
     public static boolean enabled() {
         return ENABLED;
@@ -85,6 +92,9 @@ public final class TestMachines {
         event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) -> LyingSink.INSTANCE, LYING_SINK);
         event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) -> voidSink(pos), VOID_SINK);
         event.registerBlock(Capabilities.EnergyStorage.BLOCK, (level, pos, state, be, side) -> silentCell(pos), SILENT_CELL);
+        event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) -> ThrowingSlot.INSTANCE,
+                THROWING_SLOT);
+        event.registerBlock(Capabilities.EnergyStorage.BLOCK, (level, pos, state, be, side) -> INERT, INERT_CELL);
     }
 
     /** O slot da posição absoluta {@code pos} (criado vazio na primeira consulta). */
@@ -614,6 +624,41 @@ public final class TestMachines {
                 stored.shrink(taken);
             }
             return out;
+        }
+    }
+
+    /** Um slot vazio que lança exceção nas provas ({@code isItemValid}, {@code insertItem}), como um mod com bug. */
+    static final class ThrowingSlot implements IItemHandler {
+        static final ThrowingSlot INSTANCE = new ThrowingSlot();
+
+        @Override
+        public int getSlots() {
+            return 1;
+        }
+
+        @Override
+        public ItemStack getStackInSlot(int slot) {
+            return ItemStack.EMPTY;
+        }
+
+        @Override
+        public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+            throw new IllegalStateException("slot de teste que falha ao inserir");
+        }
+
+        @Override
+        public ItemStack extractItem(int slot, int amount, boolean simulate) {
+            return ItemStack.EMPTY;
+        }
+
+        @Override
+        public int getSlotLimit(int slot) {
+            return 64;
+        }
+
+        @Override
+        public boolean isItemValid(int slot, ItemStack stack) {
+            throw new IllegalStateException("slot de teste que falha ao validar");
         }
     }
 

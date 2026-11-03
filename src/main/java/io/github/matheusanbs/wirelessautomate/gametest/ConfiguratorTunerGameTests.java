@@ -27,13 +27,19 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.gametest.framework.GameTestSequence;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.block.AbstractFurnaceBlock;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.energy.EnergyStorage;
@@ -75,6 +81,24 @@ public final class ConfiguratorTunerGameTests {
     private static String key(@Nullable Component message) {
         return message != null && message.getContents() instanceof TranslatableContents contents ? contents.getKey()
                 : String.valueOf(message);
+    }
+
+    /** A máquina {@code block} em (1, 1, 1) com um roteador preso por cima, numa rede própria. */
+    private static RouterBlockEntity attached(GameTestHelper helper, Block block) {
+        BlockPos machine = new BlockPos(1, 1, 1);
+        helper.setBlock(machine, block);
+        helper.setBlock(machine.above(), ModBlocks.ROUTER.get().defaultBlockState()
+                .setValue(RouterBlock.FACING, Direction.UP));
+        RouterBlockEntity router = helper.getBlockEntity(machine.above());
+        router.setNetworkId(NetworkSavedData.get(helper.getLevel().getServer()).create(UUID.randomUUID(), "presa").id());
+        return router;
+    }
+
+    /** O uso do Configurador na mão principal no bloco {@code pos} (absoluto), pelo caminho do item. */
+    private static InteractionResult use(ServerPlayer player, BlockPos pos) {
+        ItemStack stack = player.getMainHandItem();
+        return stack.getItem().onItemUseFirst(stack, new UseOnContext(player, InteractionHand.MAIN_HAND,
+                new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false)));
     }
 
     /** Os modos da fornalha depois de aplicar: Cima e Trás Insere, Baixo Extrai, o resto Nenhum. */
@@ -547,5 +571,184 @@ public final class ConfiguratorTunerGameTests {
                     TunerPending.forget(player.getUUID());
                 })
                 .thenSucceed();
+    }
+
+    /**
+     * O botão segurado, de um cliente sem a trava dele: o uso repete a cada 4 ticks por 24 ticks, pelo caminho do item
+     * (as tentativas no descanso são engolidas, mas contam), e nada é aplicado; depois de uma pausa, o clique aplica.
+     * O descanso do item anda a cada tick pela mão (o jogador de teste pode não ter o tick dele).
+     */
+    @GameTest(template = "empty")
+    public static void heldButtonNeverConfirms(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        ServerPlayer player = player(helper, router);
+        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.CONFIGURATOR.get()));
+        BlockPos furnace = helper.absolutePos(FURNACE_A);
+        GameTestSequence sequence = helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    link(helper, router, FURNACE_A);
+                    use(player, furnace);
+                    helper.assertTrue(TunerPending.get(player.getUUID()) != null, "sem proposta");
+                });
+        for (int tick = 1; tick <= 24; tick++) {
+            boolean repeat = tick % 4 == 0;
+            sequence = sequence.thenExecuteAfter(1, () -> {
+                player.getCooldowns().tick();
+                if (repeat) {
+                    use(player, furnace);
+                }
+            });
+        }
+        sequence.thenExecute(() -> {
+                    helper.assertValueEqual(mode(router, machine(helper, router, FURNACE_A), RemoteSide.TOP),
+                            PortMode.NONE, "o botão segurado aplicou");
+                    helper.assertTrue(TunerPending.get(player.getUUID()) != null, "a proposta sumiu");
+                })
+                .thenIdle(TunerPending.HOLD_GAP + 1)
+                .thenExecute(() -> {
+                    use(player, furnace);
+                    assertFurnaceModes(helper, router, machine(helper, router, FURNACE_A));
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * O uso no ar logo depois do descanso (o botão segurado que escorregou da máquina) não apaga a proposta; um
+     * clique novo, depois de uma pausa, apaga.
+     */
+    @GameTest(template = "empty")
+    public static void heldUseInAirKeepsTheProposal(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        ServerPlayer player = player(helper, router);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    link(helper, router, FURNACE_A);
+                    ConfiguratorTuner.click(player, helper.absolutePos(FURNACE_A), false);
+                })
+                .thenIdle(ConfiguratorTuner.COOLDOWN + 2)
+                .thenExecute(() -> {
+                    ConfiguratorTuner.useInAir(player);
+                    helper.assertTrue(TunerPending.get(player.getUUID()) != null, "o uso segurado no ar apagou");
+                })
+                .thenIdle(TunerPending.HOLD_GAP + 1)
+                .thenExecute(() -> {
+                    ConfiguratorTuner.useInAir(player);
+                    helper.assertTrue(TunerPending.get(player.getUUID()) == null, "o clique no ar não apagou");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * A pintura apagada no cliente ({@code ConfiguratorCancelPayload}) descarta a proposta da mesma máquina, e não a
+     * de outra; o clique seguinte refaz a análise em vez de aplicar.
+     */
+    @GameTest(template = "empty")
+    public static void clientDismissDiscardsTheProposal(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        ServerPlayer player = player(helper, router);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    link(helper, router, FURNACE_A);
+                    ConfiguratorTuner.click(player, helper.absolutePos(FURNACE_A), false);
+                    ConfiguratorTuner.discard(player, helper.absolutePos(BARREL));
+                    helper.assertTrue(TunerPending.get(player.getUUID()) != null,
+                            "o aviso de outra máquina descartou a proposta");
+                    ConfiguratorTuner.discard(player, helper.absolutePos(FURNACE_A));
+                    helper.assertTrue(TunerPending.get(player.getUUID()) == null, "a proposta ficou no servidor");
+                })
+                .thenIdle(ConfiguratorTuner.COOLDOWN)
+                .thenExecute(() -> {
+                    helper.assertValueEqual(key(ConfiguratorTuner.click(player, helper.absolutePos(FURNACE_A), false)),
+                            KEY + "proposal", "o clique depois do descarte devia refazer a análise");
+                    helper.assertValueEqual(mode(router, machine(helper, router, FURNACE_A), RemoteSide.TOP),
+                            PortMode.NONE, "a proposta descartada foi aplicada");
+                    TunerPending.forget(player.getUUID());
+                })
+                .thenSucceed();
+    }
+
+    /** Uma exceção da capability de outro mod na análise não derruba o servidor: aviso de falha, sem proposta. */
+    @GameTest(template = "empty")
+    public static void throwingMachineIsRefused(GameTestHelper helper) {
+        RouterBlockEntity router = attached(helper, TestMachines.THROWING_SLOT);
+        ServerPlayer player = player(helper, router);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    helper.assertValueEqual(key(ConfiguratorTuner.click(player, helper.absolutePos(
+                            new BlockPos(1, 1, 1)), false)), KEY + "failed", "aviso da análise que falhou");
+                    helper.assertTrue(TunerPending.get(player.getUUID()) == null, "proposta da análise que falhou");
+                    helper.assertTrue(player.getCooldowns().isOnCooldown(ModItems.CONFIGURATOR.get()),
+                            "o Configurador não descansou depois da falha");
+                })
+                .thenSucceed();
+    }
+
+    /** Nada a configurar (a energia que não recebe nem dá): o aviso, e o Configurador descansa como numa análise. */
+    @GameTest(template = "empty")
+    public static void nothingToConfigureRests(GameTestHelper helper) {
+        RouterBlockEntity router = attached(helper, TestMachines.INERT_CELL);
+        ServerPlayer player = player(helper, router);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    helper.assertValueEqual(key(ConfiguratorTuner.click(player, helper.absolutePos(
+                            new BlockPos(1, 1, 1)), false)), KEY + "nothing", "aviso de nada a configurar");
+                    helper.assertTrue(player.getCooldowns().isOnCooldown(ModItems.CONFIGURATOR.get()),
+                            "o Configurador não descansou depois do nada");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Um consumidor só de energia com o {@code EnergyStorage} comum (recebe e diz que dá) não vira Armazém, que o
+     * esvaziaria: Insere em Cima e o resto Nenhum (a Bateria do mod é Armazém, no
+     * {@link #energyOnlyMachineGetsStorageOnTheAttached}).
+     */
+    @GameTest(template = "empty")
+    public static void energyOnlyConsumerInserts(GameTestHelper helper) {
+        TestMachines.reset(helper.absolutePos(new BlockPos(1, 1, 1)));
+        RouterBlockEntity router = attached(helper, TestMachines.SILENT_CELL);
+        ServerPlayer player = player(helper, router);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    ConfiguratorTuner.click(player, helper.absolutePos(new BlockPos(1, 1, 1)), false);
+                    TunerPending.Proposal proposal = TunerPending.get(player.getUUID());
+                    helper.assertTrue(proposal != null && proposal.modes().containsKey(ResourceType.ENERGY),
+                            "sem proposta de energia");
+                    PortMode[] energy = proposal.modes().get(ResourceType.ENERGY);
+                    for (int face = 0; face < energy.length; face++) {
+                        helper.assertTrue(energy[face] == (face == UP ? PortMode.INSERT : PortMode.NONE),
+                                "proposta na face " + face + ": " + energy[face]);
+                    }
+                    TunerPending.forget(player.getUUID());
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Um bloco com block entity e sem capability de recurso (o atril, a mesa de encantamento): o Configurador passa,
+     * para a interação do bloco acontecer, sem aviso.
+     */
+    @GameTest(template = "empty")
+    public static void blockWithoutCapabilityPassesTheClick(GameTestHelper helper) {
+        ServerPlayer player = TestPlayers.inLevel(helper);
+        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.CONFIGURATOR.get()));
+        BlockPos lectern = new BlockPos(0, 1, 0);
+        BlockPos table = new BlockPos(2, 1, 0);
+        helper.setBlock(lectern, Blocks.LECTERN);
+        helper.setBlock(table, Blocks.ENCHANTING_TABLE);
+        helper.assertTrue(helper.getLevel().getBlockEntity(helper.absolutePos(lectern)) != null, "atril sem block entity");
+        helper.assertValueEqual(use(player, helper.absolutePos(lectern)), InteractionResult.PASS, "o atril");
+        helper.assertValueEqual(use(player, helper.absolutePos(table)), InteractionResult.PASS,
+                "a mesa de encantamento");
+        helper.succeed();
     }
 }

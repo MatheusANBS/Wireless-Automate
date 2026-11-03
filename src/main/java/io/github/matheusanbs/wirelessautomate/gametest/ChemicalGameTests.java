@@ -1,10 +1,13 @@
 package io.github.matheusanbs.wirelessautomate.gametest;
 
+import com.mojang.authlib.GameProfile;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
+import io.github.matheusanbs.wirelessautomate.item.tuner.ConfiguratorTuner;
+import io.github.matheusanbs.wirelessautomate.item.tuner.TunerPending;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
@@ -30,9 +33,12 @@ import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.common.util.FakePlayerFactory;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.jetbrains.annotations.Nullable;
@@ -275,6 +281,39 @@ public final class ChemicalGameTests {
         }
         TierUpgradeGameTests.directStorage(helper, StorageKind.CHEMICAL_TANK);
         helper.succeed();
+    }
+
+    /**
+     * O Afinador num tanque de químico da API do Mekanism com hidrogênio (sem prova de químico, o vazio fica de fora):
+     * aberto e igual em todas as faces, é armazenamento, Armazém em Cima e o resto Nenhum.
+     */
+    @GameTest(template = "empty")
+    public static void tunerProposesStorageOnAChemicalTank(GameTestHelper helper) {
+        if (!ChemicalTestTanks.enabled()) {
+            helper.succeed();
+            return;
+        }
+        RouterBlockEntity router = tank(helper, A, newNetwork(helper, "afinador-quimico"), PortMode.NONE);
+        // Um FakePlayer, fora da lista do servidor: tirar um jogador de teste da lista faz o Mekanism mandar um pacote
+        // dele a todos, e a conexão falsa derruba o servidor.
+        ServerPlayer player = FakePlayerFactory.get(helper.getLevel(), new GameProfile(UUID.randomUUID(), "[wa-afinador]"));
+        player.moveTo(Vec3.atCenterOf(router.getBlockPos().above()));
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(router), "roteador não registrado"))
+                .thenExecute(() -> {
+                    fill(helper, A, HYDROGEN, 2_000);
+                    ConfiguratorTuner.click(player, helper.absolutePos(A), false);
+                    TunerPending.Proposal proposal = TunerPending.get(player.getUUID());
+                    TunerPending.forget(player.getUUID());
+                    helper.assertTrue(proposal != null && proposal.modes().containsKey(ResourceType.CHEMICAL),
+                            "sem proposta de químico: " + (proposal == null ? null : proposal.modes().keySet()));
+                    PortMode[] modes = proposal.modes().get(ResourceType.CHEMICAL);
+                    for (int face = 0; face < modes.length; face++) {
+                        PortMode expected = face == Direction.UP.ordinal() ? PortMode.BOTH : PortMode.NONE;
+                        helper.assertTrue(modes[face] == expected, "proposta na face " + face + ": " + modes[face]);
+                    }
+                })
+                .thenSucceed();
     }
 
     /** Compara redes com {@code Objects.equals}: o {@code assertValueEqual} com nulo derruba o servidor. */

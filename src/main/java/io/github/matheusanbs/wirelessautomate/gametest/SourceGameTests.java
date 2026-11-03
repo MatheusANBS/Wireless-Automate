@@ -1,8 +1,11 @@
 package io.github.matheusanbs.wirelessautomate.gametest;
 
+import com.mojang.authlib.GameProfile;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.item.tuner.ConfiguratorTuner;
+import io.github.matheusanbs.wirelessautomate.item.tuner.TunerPending;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
@@ -19,8 +22,11 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.fml.ModList;
+import net.neoforged.neoforge.common.util.FakePlayerFactory;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -484,6 +490,72 @@ public final class SourceGameTests {
         }
         TierUpgradeGameTests.directStorage(helper, StorageKind.SOURCE_TANK);
         helper.succeed();
+    }
+
+    // ---- Afinador do Configurador ----
+
+    /** Os modos de Source que o Afinador propõe para a máquina em {@code pos}, presa no roteador {@code router}. */
+    private static PortMode[] tunerProposal(GameTestHelper helper, RouterBlockEntity router, BlockPos pos) {
+        // Um FakePlayer, fora da lista do servidor, como na run de químicos (lá o Mekanism manda um pacote a todos
+        // quando um jogador de teste sai, e a conexão falsa derruba o servidor).
+        ServerPlayer player = FakePlayerFactory.get(helper.getLevel(), new GameProfile(UUID.randomUUID(), "[wa-afinador]"));
+        player.moveTo(Vec3.atCenterOf(router.getBlockPos().above()));
+        ConfiguratorTuner.click(player, helper.absolutePos(pos), false);
+        TunerPending.Proposal proposal = TunerPending.get(player.getUUID());
+        TunerPending.forget(player.getUUID());
+        helper.assertTrue(proposal != null && proposal.modes().containsKey(ResourceType.SOURCE),
+                "sem proposta de Source: " + (proposal == null ? null : proposal.modes().keySet()));
+        return proposal.modes().get(ResourceType.SOURCE);
+    }
+
+    private static void assertOnlyUp(GameTestHelper helper, PortMode[] modes, PortMode up) {
+        for (int face = 0; face < modes.length; face++) {
+            PortMode expected = face == Direction.UP.ordinal() ? up : PortMode.NONE;
+            helper.assertTrue(modes[face] == expected, "proposta na face " + face + ": " + modes[face]);
+        }
+    }
+
+    /**
+     * O Afinador numa Source Jar: só Source, e a jarra lê igual a um consumidor que também dá (não é o Tanque de
+     * Source do mod), então na dúvida Insere em Cima, nunca Armazém.
+     */
+    @GameTest(template = "empty")
+    public static void tunerProposesInsertOnASourceJar(GameTestHelper helper) {
+        if (!enabled()) {
+            helper.succeed();
+            return;
+        }
+        RouterBlockEntity router = jar(helper, A, RouterTier.ADVANCED, newNetwork(helper, "afinador-jarra"),
+                PortMode.NONE);
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(registered(router), "roteador não registrado"))
+                .thenExecute(() -> {
+                    set(helper, A, 1_000);
+                    assertOnlyUp(helper, tunerProposal(helper, router, A), PortMode.INSERT);
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * O Afinador no Tanque de Source do mod com Source dentro (a capability em {@code long}): Armazém em Cima, o resto
+     * Nenhum.
+     */
+    @GameTest(template = "empty")
+    public static void tunerProposesStorageOnTheSourceTank(GameTestHelper helper) {
+        if (!enabled()) {
+            helper.succeed();
+            return;
+        }
+        RouterBlockEntity router = sourceTank(helper, A, RouterTier.ADVANCED, newNetwork(helper, "afinador-tanque"),
+                PortMode.NONE);
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(registered(router), "roteador não registrado"))
+                .thenExecute(() -> {
+                    // Com algo dentro, para o tanque dar e receber (vazio, a capability do Ars diz que não dá).
+                    set(helper, A, 1_000);
+                    assertOnlyUp(helper, tunerProposal(helper, router, A), PortMode.BOTH);
+                })
+                .thenSucceed();
     }
 
     private SourceGameTests() {

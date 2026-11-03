@@ -95,7 +95,7 @@ final class ScreenshotTablet {
                     themeBefore = GuiThemes.current();
                     GuiThemes.preview(GuiTheme.DARK);
                 }, "t3c-tablet-escuro"),
-                new Step(() -> tabletScreen.previewResize(300, 240), "t3d-tablet-escuro-minimo"),
+                new Step(() -> tabletScreen.previewResize(420, 240), "t3d-tablet-escuro-minimo"),
                 new Step(() -> GuiThemes.preview(themeBefore), "t3e-tablet-minimo"),
                 new Step(() -> {
                     tabletScreen.previewResize(420, 280);

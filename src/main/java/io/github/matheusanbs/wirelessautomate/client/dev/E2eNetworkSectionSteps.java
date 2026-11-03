@@ -37,11 +37,14 @@ final class E2eNetworkSectionSteps {
             tabletScreen().keyPressed(GLFW.GLFW_KEY_ENTER, 0, 0);
         }, () -> groupId(SECOND_GROUP) != null && tabletScreen().groupNetworkCenter(otherNetwork) != null,
                 () -> "grupos " + tabletScreen().getMenu().snapshot().groups()));
-        list.add(new Step("redes: a rede dos itens também no segundo grupo", STEP_TIMEOUT_MS, () -> {
+        // uma rede fica num grupo só: marcá-la no segundo a tira do primeiro
+        list.add(new Step("redes: a rede dos itens passa ao segundo grupo", STEP_TIMEOUT_MS, () -> {
             int[] box = tabletScreen().groupNetworkCenter(otherNetwork);
             click(tabletScreen(), box[0], box[1]);
         }, () -> tabletScreen().getMenu().snapshot().groups().stream()
-                .filter(g -> g.networks().contains(otherNetwork)).count() == 2,
+                .anyMatch(g -> g.name().equals(SECOND_GROUP) && g.networks().contains(otherNetwork))
+                && tabletScreen().getMenu().snapshot().groups().stream()
+                        .filter(g -> g.networks().contains(otherNetwork)).count() == 1,
                 () -> "grupos " + tabletScreen().getMenu().snapshot().groups()));
         list.add(chooseNetwork("redes: "));
         list.add(capture("7p-tablet-redes-grupos"));
@@ -71,6 +74,12 @@ final class E2eNetworkSectionSteps {
             for (WaGroup group : List.copyOf(data.groups())) {
                 if (group.name().equals(SECOND_GROUP)) {
                     data.removeGroup(group.id());
+                }
+            }
+            // a rede dos itens volta ao primeiro grupo, onde os passos seguintes a esperam
+            for (WaGroup group : data.groups()) {
+                if (group.name().equals(E2eTabletSteps.GROUP_NAME)) {
+                    data.moveToGroup(otherNetwork, group.id());
                 }
             }
             return null;

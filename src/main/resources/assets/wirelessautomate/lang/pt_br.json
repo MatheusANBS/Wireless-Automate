@@ -619,6 +619,8 @@
   "gui.wirelessautomate.tablet.tab.map": "Mapa",
   "gui.wirelessautomate.tablet.tab.flows": "Fluxos",
   "gui.wirelessautomate.tablet.tab.networks": "Redes",
+  "gui.wirelessautomate.tablet.tab.machine": "Máquina",
+  "gui.wirelessautomate.tablet.frame.title": "Tablet",
   "gui.wirelessautomate.tablet.search": "Buscar máquina, rede ou nome",
   "gui.wirelessautomate.tablet.label.extract": "Extrai %s",
   "gui.wirelessautomate.tablet.label.insert": "Insere %s",

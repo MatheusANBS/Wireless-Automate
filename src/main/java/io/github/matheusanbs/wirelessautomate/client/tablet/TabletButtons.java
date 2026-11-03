@@ -8,19 +8,13 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 
-/** O desenho dos botões fixos do Tablet ({@link FlatButton}): aba, texto, opção, alternância, principal e perigo. */
+/** O desenho dos botões fixos do Tablet ({@link FlatButton}): texto, opção, alternância, principal e perigo. */
 final class TabletButtons {
     private TabletButtons() {
     }
 
     private static Font font() {
         return Minecraft.getInstance().font;
-    }
-
-    static void paintTab(GuiGraphics g, FlatButton b, boolean hovered, boolean chosen) {
-        GuiPaint.tab(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), chosen, hovered);
-        GuiPaint.textCentered(g, font(), b.getMessage(), b.getX() + b.getWidth() / 2 + 1, b.getY() + 4,
-                GuiPaint.tabText(chosen, hovered));
     }
 
     static void paintText(GuiGraphics g, FlatButton b, boolean hovered, Component text) {

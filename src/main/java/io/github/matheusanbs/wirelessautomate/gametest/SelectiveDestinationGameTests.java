@@ -140,6 +140,32 @@ public final class SelectiveDestinationGameTests {
     }
 
     /**
+     * Destino sem slot vazio e com lugar só para outros itens (a verruga do suporte abaixo do limite) diante de mais
+     * tipos recusados do que as dicas guardam ({@code ItemHints.SIZE}): ele dorme depois de tantas recusas seguidas,
+     * cada vez mais fundo, em vez de a origem re-simular os mesmos pós a cada visita.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void manyRefusedTypesPutTheDestinationToSleep(GameTestHelper helper) {
+        UUID network = network(helper, "seletivo-sono");
+        helper.setBlock(SOURCE, Blocks.CHEST);
+        ChestBlockEntity chest = helper.getBlockEntity(SOURCE);
+        for (int i = 0; i < 26; i++) {
+            chest.setItem(i, named(Items.REDSTONE, i));
+        }
+        stand(helper, new ItemStack(Items.NETHER_WART, 10));
+        RouterBlockEntity source = router(helper, SOURCE, network, PortMode.EXTRACT);
+        RouterBlockEntity target = router(helper, STAND, network, PortMode.INSERT);
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(registered(source, target), "roteadores não registrados"))
+                .thenWaitUntil(() -> {
+                    int interval = NetworkManager.get().destinationSleepInterval(target, ResourceType.ITEM, Direction.UP);
+                    helper.assertTrue(interval >= 16, "o suporte não dormiu: próximo sono de " + interval + " ticks");
+                })
+                .thenExecute(() -> helper.assertValueEqual(chest.getItem(0).getCount(), 1, "o pó saiu"))
+                .thenSucceed();
+    }
+
+    /**
      * A recusa vale só até a máquina mudar: o pó recusado com o slot ocupado pela verruga entra quando a
      * verruga sai do suporte.
      */

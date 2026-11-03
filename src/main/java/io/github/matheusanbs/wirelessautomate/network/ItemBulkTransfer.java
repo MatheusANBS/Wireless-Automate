@@ -54,8 +54,7 @@ final class ItemBulkTransfer {
             view = source.machine.items(source.face);
             tally = ItemStockTally.prepare(source);
         }
-        ItemTransfer.PLAN.beginVisit();
-        ItemTransfer.visitRefusals = 0;
+        ItemTransfer.beginVisit();
         FilterSet.ItemRule rule = ItemTransfer.SOURCE_RULE;
         int index = source.slotCursor < types ? source.slotCursor : 0;
         int limit = Math.min(types, ItemTransfer.MAX_SLOTS_PER_VISIT);

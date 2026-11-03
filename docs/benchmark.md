@@ -65,6 +65,7 @@ Contêiner Linux x86-64 com 4 CPUs e 15 GB, **dividido com outros agentes que co
 | `raw` | 1 par de inventários grandes, tier Ultimate | Itens/s máximos ("Vazão bruta") | O máximo dentro de 0,5 ms |
 | `big` | Pares de inventários grandes: um item diferente por slot na origem, destino vazio | Custo por visita em inventário grande | Abaixo do orçamento |
 | `bigfull` | Como `big`, mas o destino está cheio de outros itens, exceto nos 4 últimos slots | Pior caso da inserção (varrer tudo para achar espaço) | Abaixo do orçamento |
+| `partialfull` | Como `big`, mas sem slot vazio no destino: 32 de outro item em cada slot, então ele recusa cada item da origem tendo lugar só para os próprios | O destino seletivo diante de mais tipos recusados que as dicas guardam (nada se move) | Perto do `full` |
 | `types` | Como `big`, com lista negra de centenas de itens na origem e lista branca de mais de mil entradas (itens e tags) no destino | Custo de filtro e varredura ("Muitos tipos") | Abaixo do orçamento |
 | `mixed` | Um terço de pares de itens (barris), um terço de fluidos e um terço de energia (máquinas de teste: fonte infinita e ralo, `bench/BenchCapabilities.java`) | Comportamento realista ("Misto") | Abaixo do orçamento |
 | `rebuild` | Como `many`, e a cada segundo um nó muda de prioridade | Custo de remontar as rotas | Abaixo do orçamento |
@@ -83,7 +84,7 @@ Contêiner Linux x86-64 com 4 CPUs e 15 GB, **dividido com outros agentes que co
 | `tablet-range` | n roteadores Ultimate (padrão 100) com o Upgrade de Alcance, cada um num barril cheio de pedregulho (Extrair) com 16 barris vinculados em volta, num grupo com o lado de cima em Inserir; tudo numa rede, com o reenchimento a cada 30 ticks (enche a presa e esvazia os vinculados; a cada 20, no ritmo da amostra do Tablet, a vazão de cada nó seria a mesma em toda amostra e a Lista não mudaria). A linha "Tablet:" da repetição conta os pacotes depois da abertura e os nós da página. Um jogador falso tem o Tablet aberto, como no `tablet`; quando a Lista mostrar as máquinas, ele abre 4 roteadores e um grupo com "Mostrar todas" (`BenchScene.openRangeRows`) | Custo do Tablet aberto e bytes por segundo com nós de alcance movendo (colunas "Tablet" e KB/s) | Bem abaixo do orçamento; bytes só das linhas à vista |
 | `tablet-machines` | A cena do `tablet-range` (padrão 100 roteadores, 16 máquinas vinculadas cada, alternando barril, baú, fornalha e alto-forno: quatro blocos, um grupo por bloco), com o jogador falso na visão por máquinas da Lista (`BenchTablet.openMachines`, pelo caminho do `TabletMachinesPayload`): a base inteira passa do teto da página, então os blocos começam recolhidos, e ele abre o dos barris. Mede a ordem por bloco compartilhada (`MachineOrder`), a passada da página por máquinas e o "live" das máquinas à vista | Custo do Tablet aberto e bytes por segundo na visão por máquinas (colunas "Tablet" e KB/s) | Bem abaixo do orçamento; a ordem por bloco só refeita quando o índice muda |
 
-Os inventários grandes são o baú duplo (54 slots) no vanilla e o barril de netherita do Sophisticated Storage (132 slots). Os pequenos são o barril vanilla e o barril de madeira do Sophisticated Storage, ambos com 27 slots. Com `wa`, o pequeno e o grande são o Baú do mod Elite (2.097.152 itens), que não tem slots de verdade (um por tipo, mais um vazio): a cena o enche pelo conteúdo com as mesmas pilhas de 64 dos vanilla (27 no pequeno, 54 no grande, um item por pilha no grande) e o esvazia inteiro; no `full`, o destino fica cheio de pedra até a capacidade. O `bigfull` não roda com `wa` (mede a varredura de slots). Os destinos do `hub` e do `chesttypes` são sempre o Baú do mod; o armazenamento escolhido vale para as origens.
+Os inventários grandes são o baú duplo (54 slots) no vanilla e o barril de netherita do Sophisticated Storage (132 slots). Os pequenos são o barril vanilla e o barril de madeira do Sophisticated Storage, ambos com 27 slots. Com `wa`, o pequeno e o grande são o Baú do mod Elite (2.097.152 itens), que não tem slots de verdade (um por tipo, mais um vazio): a cena o enche pelo conteúdo com as mesmas pilhas de 64 dos vanilla (27 no pequeno, 54 no grande, um item por pilha no grande) e o esvazia inteiro; no `full`, o destino fica cheio de pedra até a capacidade. O `bigfull` e o `partialfull` não rodam com `wa` (medem a varredura de slots). Os destinos do `hub` e do `chesttypes` são sempre o Baú do mod; o armazenamento escolhido vale para as origens.
 
 Detalhes dos cenários da auditoria de performance (`sparse`, `stock`, `bigstack`, `redstone` e `tablet`):
 
@@ -563,3 +564,19 @@ Ramo `ccr-52410279-si07pg`. Antes: `b93bd29` (o plano, com o destino seletivo j�
 ### Leitura
 
 - Tudo dentro do ±: a presa passa pela fachada só na montagem das rotas (uma leitura do bloco da frente por tipo), nunca no tick. O `rebuild`, que remonta o tempo todo, fica igual na média do mod.
+
+## Destino seletivo que dorme e a remota trocada (3 de novembro de 2026)
+
+Ramo `ccr-52410279-si07pg`. Antes: `580addf` com o cenário novo `partialfull` (só o bench mudado). Depois: as correções da auditoria pré-PR (o destino que só tem lugar para outros dorme depois de 8 recusas seguidas na visita e guarda o "tem lugar" lido; a remota que continua trocada não remonta as rotas). `./scripts/bench.sh "bigfull:20:3:vanilla;chesttypes:20:3;full:100:3:vanilla;partialfull:20:3:vanilla"` de cada lado (relatórios `20261103-101733.md`, antes, e `20261103-102915.md`, depois, em `run/bench/reports/`, fora do git); o `partialfull` e o `full` depois foram medidos de novo em `20261103-103507.md` (5 repetições do `partialfull`), porque uma repetição da primeira rodada teve um pico de 10 ms fora do motor (o ± maior que a média).
+
+| Cenário | mod antes (ms/tick) | mod depois | Outra medida antes → depois |
+| --- | --- | --- | --- |
+| partialfull 20 | 0,0529 ± 0,0042 | 0,0052 ± 0,0016 | p99 0,865 → 0,147; µs/visita 96,3 → 34,4; visitas/tick 0,5 → 0,2 |
+| full 100 | 0,0038 ± 0,0001 | 0,0041 ± 0,0007 | µs/visita 7,59 → 8,15 ± 1,43 |
+| bigfull 20 | 0,0407 ± 0,0081 | 0,0374 ± 0,0103 | µs/visita 16,27 → 14,58 |
+| chesttypes 20 | 0,0383 ± 0,0072 | 0,0382 ± 0,0082 | µs/visita 12,55 → 12,55 |
+
+### Leitura
+
+- O `partialfull` caiu dez vezes e fica perto do `full`: antes o destino nunca dormia, e cada volta da origem re-simulava os 54 itens recusados (o anel das dicas guarda 8) com uma releitura dos slots por recusa; agora a visita para no oitavo e o destino dorme cada vez mais fundo, até a máquina mudar ou receber.
+- `full`, `bigfull` e `chesttypes` ficam dentro do ±: o sono depois das recusas só vale para o destino que tem lugar só para outros, e a recusa pelo tipo (a fornalha diante dos 2.000 papéis) segue sem dormir.

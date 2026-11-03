@@ -431,6 +431,19 @@ final class E2eResonatorSteps {
         }
     }
 
+    /** Os argumentos do texto traduzível da action bar agora; vazio se não há ou ele não é traduzível. */
+    static Object[] overlayArgs() {
+        try {
+            Field field = Gui.class.getDeclaredField("overlayMessageString");
+            field.setAccessible(true);
+            Component message = (Component) field.get(Minecraft.getInstance().gui);
+            return message != null && message.getContents() instanceof TranslatableContents contents
+                    ? contents.getArgs() : new Object[0];
+        } catch (ReflectiveOperationException e) {
+            return new Object[0];
+        }
+    }
+
     static BlockPos core(BlockPos origin) {
         return origin.offset(4, 2, 2);
     }

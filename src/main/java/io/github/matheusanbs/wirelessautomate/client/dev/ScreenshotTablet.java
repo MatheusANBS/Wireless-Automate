@@ -113,10 +113,7 @@ final class ScreenshotTablet {
                     tabletScreen.previewTab(TabletScreen.Tab.NETWORKS);
                     tabletScreen.previewNetwork(0);
                 }, "t6-tablet-redes"),
-                new Step(() -> {
-                    tabletScreen.previewNetwork(2);
-                    tabletScreen.previewNewOpen("Utilidades");
-                }, "t7-tablet-redes-alheia-nova"),
+                new Step(() -> tabletScreen.previewNetwork(2), "t7-tablet-redes-alheia"),
                 new Step(() -> tabletScreen.previewGroup(0), "t8-tablet-grupos"));
     }
 

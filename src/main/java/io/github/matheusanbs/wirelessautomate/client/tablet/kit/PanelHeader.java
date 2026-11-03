@@ -16,6 +16,8 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class PanelHeader {
     private GuiText.Fitted title;
+    /** A largura do título como aparece (o {@code Fitted} guarda o espaço, não o texto). */
+    private int titleW;
     private GuiText.Fitted subtitle;
     private @Nullable Component state;
     private int stateW;
@@ -25,6 +27,7 @@ public final class PanelHeader {
     public void set(Font font, Component title, Component subtitle, @Nullable Component state, int stateColor,
             boolean editable, int maxTitleW) {
         this.title = GuiText.fit(font, title.copy().withStyle(ChatFormatting.BOLD), maxTitleW);
+        this.titleW = font.width(this.title.shown());
         this.subtitle = GuiText.fit(font, subtitle, maxTitleW);
         this.state = state;
         this.stateW = state == null ? 0 : font.width(state);
@@ -40,7 +43,7 @@ public final class PanelHeader {
         int tx = left + x0 + 21;
         GuiText.draw(g, font, title, tx, top + 30, GuiPaint.FG);
         if (editable) {
-            PanelPaint.pencil(g, tx + title.width() + 4, top + 31, GuiPaint.MUTED);
+            PanelPaint.pencil(g, tx + titleW + 4, top + 31, GuiPaint.MUTED);
         }
         GuiText.draw(g, font, subtitle, tx, top + 40, GuiPaint.MUTED);
         if (state != null) {
@@ -56,6 +59,6 @@ public final class PanelHeader {
             return false;
         }
         int tx = left + x0 + 21;
-        return mx >= tx && mx < tx + title.width() + (editable ? 12 : 0) && my >= top + 29 && my < top + 40;
+        return mx >= tx && mx < tx + titleW + (editable ? 12 : 0) && my >= top + 29 && my < top + 40;
     }
 }

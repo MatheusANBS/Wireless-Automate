@@ -2,8 +2,8 @@ package io.github.matheusanbs.wirelessautomate.client.tablet;
 
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiThemes;
-import io.github.matheusanbs.wirelessautomate.client.access.AccessPanel;
 import io.github.matheusanbs.wirelessautomate.client.tablet.TabletScreen.Tab;
+import io.github.matheusanbs.wirelessautomate.client.tablet.networks.NetworksPanel;
 import java.util.function.Supplier;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -11,25 +11,24 @@ import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * O teclado do Tablet: o que digitar na Lista procura, as teclas da Lista, e os campos de texto (renomear e
- * nova rede ou grupo, e os do acesso à rede) que seguram as teclas enquanto o cursor está neles. Devolve {@code true} quando tratou a
- * tecla; {@code false} deixa o resto para a tela. Também dá aos campos a cor do tema (o {@link EditBox} guarda a cor).
+ * O teclado do Tablet: o que digitar na Lista procura, as teclas da Lista, as da aba Redes (as janelas dela e o nome
+ * em edição, antes de tudo) e os campos de texto que seguram as teclas enquanto o cursor está neles. Devolve
+ * {@code true} quando tratou a tecla; {@code false} deixa o resto para a tela. Também dá aos campos a cor do tema (o
+ * {@link EditBox} guarda a cor).
  */
 final class TabletKeys {
     private final Screen screen;
     private final TabletList list;
-    private final NameFields names;
-    private final AccessPanel access;
+    private final NetworksPanel networks;
     private final Supplier<Tab> tab;
     private @Nullable EditBox searchBox;
     /** Versão do tema com que os campos foram pintados ({@link GuiThemes#version()}). */
     private int inkVersion = -1;
 
-    TabletKeys(Screen screen, TabletList list, NameFields names, AccessPanel access, Supplier<Tab> tab) {
+    TabletKeys(Screen screen, TabletList list, NetworksPanel networks, Supplier<Tab> tab) {
         this.screen = screen;
         this.list = list;
-        this.names = names;
-        this.access = access;
+        this.networks = networks;
         this.tab = tab;
     }
 
@@ -55,12 +54,17 @@ final class TabletKeys {
         inkVersion = GuiThemes.version();
         // a dica da busca é desenhada pela lista, que a corta e a mostra também com o cursor na caixa
         GuiPaint.ink(searchBox);
-        GuiPaint.ink(names.newBox());
-        GuiPaint.ink(names.renameBox());
-        access.ink();
+        if (networks.titleBox() != null) {
+            GuiPaint.ink(networks.titleBox());
+        }
+        networks.access().ink();
     }
 
     boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        EditBox focused = screen.getFocused() instanceof EditBox box && box.isFocused() ? box : null;
+        if (tab.get() == Tab.NETWORKS && networks.keyPressed(keyCode, scanCode, modifiers, focused)) {
+            return true;
+        }
         if (tab.get() == Tab.LIST) {
             if (list.keyPressed(keyCode, scanCode, modifiers)) {
                 return true;
@@ -74,14 +78,7 @@ final class TabletKeys {
             }
         }
         if (screen.getFocused() instanceof EditBox box && box.isFocused()) {
-            boolean enter = keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER;
-            if (box == names.renameBox() && (enter || keyCode == GLFW.GLFW_KEY_ESCAPE)) {
-                names.finishRename(enter);
-            } else if (box == names.newBox() && enter) {
-                names.create();
-            } else if (access.keyPressed(box, keyCode)) {
-                // tratada pela lista de sugestões do acesso
-            } else if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+            if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
                 screen.setFocused(null);
             } else {
                 box.keyPressed(keyCode, scanCode, modifiers);
@@ -93,6 +90,9 @@ final class TabletKeys {
     }
 
     boolean charTyped(char codePoint, int modifiers) {
+        if (tab.get() == Tab.NETWORKS && networks.charTyped(codePoint, modifiers)) {
+            return true;
+        }
         if (tab.get() == Tab.LIST && list.charTyped(codePoint, modifiers)) {
             return true;
         }

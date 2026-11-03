@@ -346,7 +346,7 @@ final class E2eShowcase {
         list.add(capture("s21-cascata"));
     }
 
-    /** Vitrine: a aba Redes com os convidados e o time do FTB Teams de uma rede privada. */
+    /** Vitrine: a janela de acesso da aba Redes com os convidados e o time do FTB Teams de uma rede privada. */
     private static void showcaseAccessShots(List<Step> list) {
         UUID playerId = Minecraft.getInstance().player.getUUID();
         String[] names = {"Ana", "Bruno", "Carla"};
@@ -368,7 +368,9 @@ final class E2eShowcase {
             if (network[0] == null) {
                 throw new StepFailure("nenhuma rede privada do jogador na vitrine");
             }
-        }, () -> tabletScreen().access().shown(), () -> "sem a seção de acesso"));
+            // a lista de acesso fica na janela "Acesso a …", que conta os convidados ao ser desenhada
+            screen.networks().previewAccess();
+        }, () -> tabletScreen().access().shown(), () -> "sem a janela de acesso"));
         list.add(new Step("convidados e time", STEP_TIMEOUT_MS, () -> onServer(server -> {
             for (int i = 0; i < names.length; i++) {
                 server.getProfileCache().add(new com.mojang.authlib.GameProfile(guests[i], names[i]));

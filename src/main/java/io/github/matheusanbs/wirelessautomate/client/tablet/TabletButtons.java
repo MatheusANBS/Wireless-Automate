@@ -8,7 +8,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 
-/** O desenho dos botões fixos do Tablet ({@link FlatButton}): texto, opção, alternância, principal e perigo. */
+/** O desenho dos botões fixos do Tablet ({@link FlatButton}): texto, opção, alternância, principal e abreviado. */
 final class TabletButtons {
     private TabletButtons() {
     }
@@ -56,14 +56,6 @@ final class TabletButtons {
                 GuiPaint.SELECTED_TEXT);
     }
 
-    static void paintDanger(GuiGraphics g, FlatButton b, boolean hovered, Component text, boolean armed) {
-        int fill = armed ? GuiPaint.mix(GuiPaint.BUTTON, GuiPaint.DANGER, 0.3f) : GuiPaint.BUTTON;
-        int border = armed || hovered ? GuiPaint.DANGER : GuiPaint.BUTTON_BORDER;
-        GuiPaint.box(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), fill, border);
-        GuiPaint.textCentered(g, font(), text, b.getX() + b.getWidth() / 2 + 1, b.getY() + 3,
-                armed || hovered ? GuiPaint.DANGER : GuiPaint.FG);
-    }
-
     /** Botão de texto que abrevia pelo {@link GuiText} quando o texto não cabe (o inteiro vai na dica). */
     static void paintClipped(GuiGraphics g, FlatButton b, boolean hovered, Component text) {
         Font font = font();
@@ -74,14 +66,5 @@ final class TabletButtons {
         int textW = Math.min(font.width(text), room);
         GuiText.draw(g, font, text, b.getX() + 4 + (room - textW + 1) / 2, b.getY() + (b.getHeight() - 8) / 2, room,
                 b.active ? GuiPaint.FG : GuiPaint.DISABLED);
-    }
-
-    /** O "Nova rede" ou "Novo grupo" embaixo da lista de Redes: o rótulo, sublinhado em coral quando aberto. */
-    static void paintNew(GuiGraphics g, FlatButton b, boolean hovered, Component label, boolean open) {
-        int color = open ? GuiPaint.ACCENT : hovered ? GuiPaint.FG : GuiPaint.MUTED;
-        GuiText.draw(g, font(), label, b.getX() + 1, b.getY() + 2, b.getWidth() - 1, color);
-        if (open || hovered) {
-            g.fill(b.getX() + 1, b.getY() + 11, b.getX() + b.getWidth() - 1, b.getY() + 12, color);
-        }
     }
 }

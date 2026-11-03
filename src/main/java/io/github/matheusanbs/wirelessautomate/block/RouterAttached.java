@@ -8,6 +8,7 @@ import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.range.AttachedMember;
 import io.github.matheusanbs.wirelessautomate.range.MachineConfig;
 import io.github.matheusanbs.wirelessautomate.range.MachineGroup;
+import io.github.matheusanbs.wirelessautomate.range.RemoteCapabilities;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import java.util.ArrayList;
@@ -289,6 +290,27 @@ final class RouterAttached {
             remotes.attach(BuiltInRegistries.BLOCK.getKey(state.getBlock()), RemoteMachines.frontOf(state));
         }
         return true;
+    }
+
+    /**
+     * Como {@link #ensureMember}, mas um roteador com o alcance valendo só ganha o membro se o bloco da frente é uma
+     * máquina (expõe alguma capability, {@link RemoteCapabilities#any}): o preso na parede, usado só pelo alcance,
+     * não ganha um grupo da pedra quando todas as faces vão para uma rede. Sem o alcance, a presa continua nascendo
+     * em qualquer bloco que não é ar, para a face esperar a máquina chegar. Consulta as capabilities da frente: só
+     * numa ação do jogador.
+     */
+    boolean ensureMachineMember() {
+        if (remotes.attached() != null) {
+            return false;
+        }
+        if (router.rangeActive()) {
+            Level level = router.getLevel();
+            BlockState state = machineState();
+            if (level == null || state == null || state.isAir() || !RemoteCapabilities.any(level, router.machinePos())) {
+                return false;
+            }
+        }
+        return ensureMember();
     }
 
     /** Ver {@link RouterBlockEntity#attachedCanHold()}. */

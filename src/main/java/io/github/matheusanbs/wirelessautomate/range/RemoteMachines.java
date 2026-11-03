@@ -561,7 +561,7 @@ public final class RemoteMachines {
         }
         if (attachedTag != null) {
             AttachedMember member = AttachedMember.load(attachedTag, registries);
-            if (group(member.group()) == null) {
+            if (member == null || group(member.group()) == null) {
                 WirelessAutomate.LOGGER.warn("Máquina presa sem grupo descartada: {}", attachedTag);
             } else {
                 attached = member;

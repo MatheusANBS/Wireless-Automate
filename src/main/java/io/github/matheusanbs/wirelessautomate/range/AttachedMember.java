@@ -64,7 +64,11 @@ public final class AttachedMember {
         return tag;
     }
 
-    static AttachedMember load(CompoundTag tag, HolderLookup.Provider registries) {
+    /** Lê o NBT de {@link #save}; sem a chave {@code group} não há grupo a que pertencer, e devolve {@code null}. */
+    static @Nullable AttachedMember load(CompoundTag tag, HolderLookup.Provider registries) {
+        if (!tag.contains("group", CompoundTag.TAG_INT)) {
+            return null;
+        }
         MachineConfig exception = tag.contains("exception", CompoundTag.TAG_COMPOUND)
                 ? MachineConfig.load(tag.getCompound("exception"), registries)
                 : null;

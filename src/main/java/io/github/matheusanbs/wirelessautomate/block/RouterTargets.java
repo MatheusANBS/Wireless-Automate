@@ -61,8 +61,9 @@ final class RouterTargets {
     int setNetworkAll(Collection<ResourceType> types, @Nullable UUID network, Predicate<UUID> canLeave) {
         int[] kept = new int[1];
         router.batchChanges(() -> {
-            // A presa sem membro ganha um, para as faces dela entrarem na rede pelo perfil do grupo.
-            if (network != null && attached.ensureMember()) {
+            // A presa sem membro ganha um, para as faces dela entrarem na rede pelo perfil do grupo; a parede de um
+            // roteador de alcance, que não é máquina, não.
+            if (network != null && attached.ensureMachineMember()) {
                 router.changed(NetworkManager.ALL_TYPES);
             }
             for (ResourceType type : types) {

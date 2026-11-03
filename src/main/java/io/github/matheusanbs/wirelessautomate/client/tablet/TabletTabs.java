@@ -2,11 +2,13 @@ package io.github.matheusanbs.wirelessautomate.client.tablet;
 
 import io.github.matheusanbs.wirelessautomate.client.FlatButton;
 import io.github.matheusanbs.wirelessautomate.client.tablet.TabletScreen.Tab;
+import io.github.matheusanbs.wirelessautomate.client.tablet.machine.MachinePanel;
 import io.github.matheusanbs.wirelessautomate.client.tablet.networks.NetworksPanel;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BooleanSupplier;
 import net.minecraft.client.gui.components.EditBox;
 import org.jetbrains.annotations.Nullable;
 
@@ -21,8 +23,13 @@ final class TabletTabs {
     private final SelectBar selectBar;
     private final MapTab map;
     private final NetworksPanel networks;
+    private final MachinePanel machine;
+    private final BooleanSupplier legacy;
 
-    TabletTabs(SelectBar selectBar, MapTab map, NetworksPanel networks) {
+    TabletTabs(SelectBar selectBar, MachinePanel machine, BooleanSupplier legacy, MapTab map,
+            NetworksPanel networks) {
+        this.machine = machine;
+        this.legacy = legacy;
         this.selectBar = selectBar;
         this.map = map;
         this.networks = networks;
@@ -58,8 +65,10 @@ final class TabletTabs {
                 button.visible = entry.getKey() == tab;
             }
         }
-        searchBox.visible = tab == Tab.LIST;
-        selectBar.refresh(tab == Tab.LIST);
+        boolean old = tab == Tab.LIST && legacy.getAsBoolean();
+        searchBox.visible = old;
+        selectBar.refresh(old);
+        machine.refresh(tab == Tab.LIST && !old);
         map.refresh(tab == Tab.MAP);
         networks.refresh(tab == Tab.NETWORKS);
     }

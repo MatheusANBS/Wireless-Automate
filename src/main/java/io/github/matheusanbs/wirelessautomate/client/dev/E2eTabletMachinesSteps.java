@@ -60,7 +60,7 @@ final class E2eTabletMachinesSteps {
     private E2eTabletMachinesSteps() {
     }
 
-    private static final String NAME = "E2E Maquinas";
+    static final String NAME = "E2E Maquinas";
     private static final int FURNACES = 10;
     static final int FIRST_FURNACE = 2;
     static final int EXCEPTION = FIRST_FURNACE;
@@ -76,6 +76,7 @@ final class E2eTabletMachinesSteps {
     static void machineSteps(List<Step> list) {
         UUID playerId = Minecraft.getInstance().player.getUUID();
         list.add(setUp(playerId));
+        E2eTabletMachineSteps.tabSteps(list);
         list.add(new Step("máquinas: a Lista", STEP_TIMEOUT_MS,
                 () -> tabletScreen().previewTab(TabletScreen.Tab.LIST),
                 () -> tabletScreen().currentTab() == TabletScreen.Tab.LIST, () -> "aba " + tabletScreen().currentTab()));
@@ -354,7 +355,7 @@ final class E2eTabletMachinesSteps {
     }
 
     /** Fecha pela própria tela, com a busca como está (o Esc a limparia); termina quando o servidor fechou o menu. */
-    private static Step closeKeeping(String name) {
+    static Step closeKeeping(String name) {
         return new Step(name, STEP_TIMEOUT_MS, () -> tabletScreen().onClose(), () -> {
             UUID playerId = Minecraft.getInstance().player.getUUID();
             return Minecraft.getInstance().screen == null && onServer(server -> {

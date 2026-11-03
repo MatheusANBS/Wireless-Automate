@@ -29,7 +29,7 @@ Legenda: ✅ pronto e testado · 🟡 parcial · ⬜ não começado
 | Tablet de Rede | ✅ | 1.0.0 (Fluxos e a Lista com máquinas da 2.2.0 à 2.4.0) | Lista (roteadores e máquinas), Fluxos, Mapa e Redes |
 | Roteador de alcance | 🟡 | 1.9.0 | Várias máquinas por roteador, grupos com perfil, lista e destaque no mundo; a presa é máquina do grupo do bloco dela e a vinculada segue o perfil (etapa 1) e dá para desvincular o grupo inteiro, copiar e colar o perfil por máquina e o Atualizar devolve os cartões (etapa 2), e a máquina trocada para de receber na hora (etapa 4), e o Vinculador vincula as do mesmo bloco no raio com Ctrl + clique e desvincula num clique, tudo no ramo; faltam pausar grupo e a página própria no guia |
 | Editor de receitas | ✅ | 1.7.0 | `/wa recipes` e tela para operadores |
-| Livro-guia (GuideME) | ✅ | — | 25 páginas pt e en geradas por `scripts/guide/`; reescritas mais simples em 30/10 |
+| Livro-guia | ✅ | 2.14.0 (livro próprio) | Livro próprio de duas folhas, sem dependência de outro mod: índice por grupos com fitas, busca, receitas, cenas 3D que giram (arrasto, zoom na roda, clique duplo volta) e mostram anotações, e a tecla G; 25 páginas pt e en geradas por `scripts/guide/` |
 
 ## Armazenamentos
 

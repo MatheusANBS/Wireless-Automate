@@ -218,7 +218,7 @@ Every router of every network, from anywhere: one search box for machine, networ
 
 ![Built-in guide book](https://media.forgecdn.net/attachments/2125/310/feature-7-guide-png.png)
 
-Every player gets the guide book on their first join (it's also in the creative tab, or craft it with a book and redstone). It explains every item with interactive 3D scenes and recipes, in **English and Portuguese**. Hover any item of the mod and hold **G** to jump to its page.
+Every player gets the guide book on their first join (it's also in the creative tab, or craft it with a book and redstone). It explains every item with 3D scenes you can rotate (drag to rotate, the wheel zooms, double click goes back to the page's angle, and annotations show their text on hover) and recipes, in **English and Portuguese**. Hover any item of the mod and press **G** to jump to its page.
 
 ---
 
@@ -246,7 +246,6 @@ Recipes use vanilla items, except the Allthemodium tiers (made from the Allthemo
 | **Allthemodium** (optional, as in ATM10) | Three extra tiers (Allthemodium, Vibranium and Unobtainium) between Emerald and Ultimate, for the router and every storage block. With **All The Tweaks**, the Ultimate ring takes ATM Star shards. |
 | **JEI** (optional) | Drag and drop (or Shift + click) ingredients into filters without having the item, or onto the tag inspector; the tier-up recipes (block in the ring, cards with an origin, block + card) show in JEI. |
 | **FTB Teams** (optional) | Add a party team to a private network and every member gets the access of a guest, live. Needs FTB Teams for 1.21.1 (with FTB Library and Architectury, which it asks for itself). |
-| **GuideME** (optional) | The in-game guide book. |
 
 ## Performance
 

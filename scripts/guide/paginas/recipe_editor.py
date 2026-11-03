@@ -2,7 +2,7 @@
 from guia_base import *  # noqa: F401,F403
 
 
-PAGINA = page('recipe-editor.md', front('Editor de receitas', 'minecraft:writable_book', 22) + '''
+PAGINA = page('recipe-editor.md', front('Editor de receitas', 'minecraft:writable_book', 'referencia', 22) + '''
 # Editor de receitas
 
 Ajuste o custo das receitas de bancada do mod ao seu pack, sem sair do jogo.
@@ -35,7 +35,7 @@ Fechar a tela também aplica o que foi salvo.
 | **Datapacks e KubeJS** | Se mexerem na mesma receita, eles vencem; a tela avisa. |
 | **Fora do editor** | Receitas de outros mods, a cópia de Cartão de Filtro e o upgrade de roteador na bancada. Não cria receitas novas. |
 | **Voltar tudo** | Apague `data` dentro de `config/wirelessautomate/recipes/` e use `/reload`. |
-''', front('Recipe editor', 'minecraft:writable_book', 22) + '''
+''', front('Recipe editor', 'minecraft:writable_book', 'referencia', 22) + '''
 # Recipe editor
 
 Fit the cost of the mod's crafting recipes to your pack, without leaving the game.

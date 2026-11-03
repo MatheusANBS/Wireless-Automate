@@ -6,7 +6,7 @@
 
 It was built for large modpacks: instead of every block ticking on its own, one central manager moves everything within a small time budget per tick, so hundreds of machines don't turn into lag.
 
-**Status:** version 2.13. The Wireless Chest gets two upgrade slots: the **Crafting Upgrade** (a 3×3 grid inside the Chest that refills itself from its stock) and the **Compacting Upgrade** (item chains such as nugget, ingot and block packed and unpacked on their own). Every version's changes are in the [changelog](docs/curseforge/changelog-curseforge-2.13.0.md) and on the [releases page](https://github.com/MatheusANBS/Wireless-Automate/releases).
+**Status:** version 2.14. The mod gets its **own guide book**, with no GuideME dependency: an open two-page book with tabs per group, search, recipes and 3D scenes you can rotate. Every version's changes are in the [changelog](docs/curseforge/changelog-curseforge-2.14.0.md) and on the [releases page](https://github.com/MatheusANBS/Wireless-Automate/releases).
 
 Download it on [CurseForge](https://www.curseforge.com/minecraft/mc-mods/wireless-automate) or from the [latest GitHub release](https://github.com/MatheusANBS/Wireless-Automate/releases/latest). Requires NeoForge 21.1.248 or newer (runs on ATM10).
 
@@ -224,7 +224,7 @@ Every router of every network, from anywhere: one search box for machine, networ
 
 ![Built-in guide book](docs/curseforge/feature-7-guide.png)
 
-Every player gets the guide book on their first join (it's also in the creative tab, or craft it with a book and redstone). It explains every item with interactive 3D scenes and recipes, in **English and Portuguese**. Hover any item of the mod and hold **G** to jump to its page.
+Every player gets the guide book on their first join (it's also in the creative tab, or craft it with a book and redstone). It explains every item with 3D scenes you can rotate (drag to rotate, the wheel zooms, double click goes back to the page's angle, and annotations show their text on hover) and recipes, in **English and Portuguese**. Hover any item of the mod and press **G** to jump to its page.
 
 ---
 
@@ -252,7 +252,6 @@ Recipes use vanilla items, except the Allthemodium tiers (made from the Allthemo
 | **Allthemodium** (optional, as in ATM10) | Three extra tiers (Allthemodium, Vibranium and Unobtainium) between Emerald and Ultimate, for the router and every storage block. With **All The Tweaks**, the Ultimate ring takes ATM Star shards. |
 | **JEI** (optional) | Drag and drop (or Shift + click) ingredients into filters without having the item, or onto the tag inspector; the tier-up recipes (block in the ring, cards with an origin, block + card) show in JEI. |
 | **FTB Teams** (optional) | Add a party team to a private network and every member gets the access of a guest, live. Needs FTB Teams for 1.21.1 (with FTB Library and Architectury, which it asks for itself). |
-| **GuideME** (optional) | The in-game guide book. |
 
 ## Performance
 
@@ -287,7 +286,7 @@ The script installs whatever is missing (JDK 21, git, curl, unzip) and runs the 
 | `./gradlew runGameTestServerSource` | Source GameTests, on a server with Ars Nouveau (plus GeckoLib and Curios) |
 | `./gradlew runGameTestServerAllthemodium` | ATM tier GameTests, with Allthemodium, All The Tweaks and GeckoLib |
 | `./gradlew runGameTestServerTeams` | Team GameTests, on a server with FTB Teams, FTB Library and Architectury |
-| `./gradlew runClient` | Dev client with JEI, Mekanism, Ars Nouveau, Allthemodium, GuideME and other mods, for manual testing |
+| `./gradlew runClient` | Dev client with JEI, Mekanism, Ars Nouveau, Allthemodium and other mods, for manual testing |
 | `./gradlew runData` | Data generators, output in `src/generated/resources/` |
 | `./scripts/e2e.sh` | End-to-end test in a real world (see `docs/e2e.md`) |
 | `./scripts/bench.sh <scenarios>` | Benchmark on a dedicated server with Sophisticated Storage (see `docs/benchmark.md`) |

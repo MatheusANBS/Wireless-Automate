@@ -2,7 +2,7 @@
 from guia_base import *  # noqa: F401,F403
 
 
-PAGINA = page('source.md', front('Source (Ars Nouveau)', 'minecraft:amethyst_shard', 16) + '''
+PAGINA = page('source.md', front('Source (Ars Nouveau)', 'minecraft:amethyst_shard', 'integracoes', 16) + '''
 # Source do Ars Nouveau
 
 Com o **Ars Nouveau**, o roteador ganha a aba **Source**. Sem ele, a aba some.
@@ -25,7 +25,7 @@ O roteador também liga direto nos Relays e na Imbuement Chamber. Um
 | Modo, prioridade, redstone e rede | Sim. |
 | Vazão | Básico 100/s, Avançado 800/s, Elite 6.400/s, Esmeralda 51.200/s, Ultimate sem limite ([Roteador](router.md)). |
 | Filtro e Cartão de Filtro | Não: a Source não tem tipos. |
-''', front('Source (Ars Nouveau)', 'minecraft:amethyst_shard', 16) + '''
+''', front('Source (Ars Nouveau)', 'minecraft:amethyst_shard', 'integracoes', 16) + '''
 # Ars Nouveau Source
 
 With **Ars Nouveau**, the router gets a **Source** tab. Without it, the tab is hidden.

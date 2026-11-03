@@ -433,7 +433,7 @@ public final class DevEndToEnd {
     }
 
     /** A vitrine e a captura de falha sempre saem; as demais pelo {@code WA_E2E_CAPTURE}. */
-    private static boolean captureWanted(String file) {
+    static boolean captureWanted(String file) {
         return SHOWCASE != null || "falha".equals(file) || E2eSelection.captureWanted(CAPTURE, file);
     }
 

@@ -24,6 +24,6 @@ memória: cada uma precisa de fonte (primer, notas, código do alvo) antes de en
 | Mekanism | `compat/mekanism/`, `network/ChemicalTransfer` | No 1.21 os químicos são um tipo só; no Mekanism do 1.20.1 eram gás, infusão, pigmento e lama, cada um com o seu handler. A aba Químicos pode virar quatro sub-tipos ou só o gás |
 | Ars Nouveau | `compat/arsnouveau/` | A capability de Source e o `SourceManager` mudam de versão para versão; confirmar se o pack do alvo traz o Ars |
 | JEI | `compat/jei/` | Versão da API do JEI do alvo |
-| GuideME | `assets/wirelessautomate/guideme_guides/`, `scripts/guide/` | Se existe GuideME para o alvo; senão, outro livro (Patchouli) ou nenhum |
+| Livro-guia | `client/guide/`, `item/GuideBook*`, `assets/wirelessautomate/guide/`, `scripts/guide/` | É do mod, sem dependência: vai junto. Conferir só as APIs de tela e de desenho (`GuiGraphics`, `RenderSystem`, recorte, `ItemTooltipEvent`) e as chaves de tecla do alvo |
 | Allthemodium | receitas e tiers | Ids dos itens e tags no alvo; se o pack traz All The Tweaks (ATM Star) |
 | Lado do cliente | tudo em `client/` | A regra de não referenciar classes de cliente vale em qualquer versão: o servidor dedicado dos GameTests prova |

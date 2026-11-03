@@ -24,7 +24,7 @@ TUNED_ROW = '\n'.join('  ' + item('tuned_signal_crystal_' + t) for t in TUNED_TI
 HEART_ROW = '\n'.join('  ' + item('resonator_heart_' + t[0]) for t in TIERS)
 
 
-PAGINA = page('signal-quartz.md', front('Quartzo de Sinal e cristais', 'wirelessautomate:signal_crystal', 18, item_ids=[
+PAGINA = page('signal-quartz.md', front('Quartzo de Sinal e cristais', 'wirelessautomate:signal_crystal', 'energia', 18, item_ids=[
     'wirelessautomate:' + i for i in QUARTZ_ITEMS]) + '''
 # Quartzo de Sinal e cristais
 
@@ -195,7 +195,7 @@ liga Unobtainium-Vibranium com o Allthemodium, blocos de netherite sem ele.
 
 Os números são os padrões; o JEI mostra os do seu pack. Para montar o gerador, veja o
 [Ressonador de Sinal](signal-resonator.md).
-''', front('Signal Quartz and crystals', 'wirelessautomate:signal_crystal', 18, item_ids=[
+''', front('Signal Quartz and crystals', 'wirelessautomate:signal_crystal', 'energia', 18, item_ids=[
     'wirelessautomate:' + i for i in QUARTZ_ITEMS]) + '''
 # Signal Quartz and crystals
 

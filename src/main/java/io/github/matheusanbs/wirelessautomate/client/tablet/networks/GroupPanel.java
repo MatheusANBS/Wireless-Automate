@@ -32,6 +32,8 @@ final class GroupPanel {
     private static final int X0 = TabletLayout.PANEL_X0;
     private static final int ROWS_Y = 75;
     private static final int ROW_H = 14;
+    private static final Component MORE_UP = Component.literal("▲");
+    private static final Component MORE_DOWN = Component.literal("▼");
 
     /** Uma rede do grupo pronta para desenhar. */
     private record Line(UUID id, int color, GuiText.Fitted name, Component machines, int machinesW) {
@@ -39,6 +41,7 @@ final class GroupPanel {
 
     private final TabletLayout layout;
     private final NetworksPanel host;
+    private final NetworksWindows windows;
     private final NetworkActions send;
     private final PanelHeader header = new PanelHeader();
     private final ArmedClick removeArm = new ArmedClick();
@@ -60,10 +63,13 @@ final class GroupPanel {
     private @Nullable GroupView group;
     private ItemStack icon = ItemStack.EMPTY;
     private Line[] lines = new Line[0];
+    /** A primeira rede à vista em "Redes do grupo" (a roda rola quando não cabem todas). */
+    private int scroll;
 
-    GroupPanel(TabletLayout layout, NetworksPanel host, NetworkActions send) {
+    GroupPanel(TabletLayout layout, NetworksPanel host, NetworksWindows windows, NetworkActions send) {
         this.layout = layout;
         this.host = host;
+        this.windows = windows;
         this.send = send;
     }
 
@@ -82,6 +88,7 @@ final class GroupPanel {
     void set(Font font, GroupView view, ItemStack groupIcon, Map<UUID, NetworkView> networks) {
         if (group == null || !group.id().equals(view.id())) {
             removeArm.disarm();
+            scroll = 0;
         }
         group = view;
         icon = groupIcon;
@@ -100,6 +107,7 @@ final class GroupPanel {
                     GuiText.fit(font, Component.literal(network.name()), x1 - X0 - 11 - countW - 6), count, countW));
         }
         lines = built.toArray(new Line[0]);
+        scroll = Math.min(scroll, maxScroll());
         Component sub = tr("nets.group.sub", plural("nets.networks", lines.length), plural("nets.machines", machines));
         header.set(font, Component.literal(view.name()), sub, null, 0, view.manageable(),
                 x1 - X0 - 21 - (view.manageable() ? 11 : 0));
@@ -123,10 +131,23 @@ final class GroupPanel {
         pause.active = group.manageable();
     }
 
-    /** Quantas linhas de rede cabem acima do link e do rodapé. */
+    /** Quantas linhas cabem acima do link e do rodapé. */
+    private int roomRows() {
+        return Math.max(1, (layout.footerRuleY() - 20 - ROWS_Y) / ROW_H);
+    }
+
+    /** Quantas linhas de rede estão à vista, a partir da rolagem. */
     private int visibleRows() {
-        int room = layout.footerRuleY() - 20 - ROWS_Y;
-        return Math.max(0, Math.min(lines.length, room / ROW_H));
+        return Math.max(0, Math.min(lines.length - scroll, roomRows()));
+    }
+
+    private int maxScroll() {
+        return Math.max(0, lines.length - roomRows());
+    }
+
+    /** A roda sobre o painel rola as redes do grupo, uma linha por passo. */
+    void mouseScrolled(double delta) {
+        scroll = Math.max(0, Math.min(maxScroll(), scroll - (int) Math.signum(delta)));
     }
 
     private int linkY() {
@@ -147,9 +168,15 @@ final class GroupPanel {
         g.renderItem(icon, left + X0, top + 30);
         header.render(g, font, left, top, X0, x1);
         GuiPaint.text(g, font, networksLabel, left + X0, top + 61, GuiPaint.MUTED);
+        if (scroll > 0) {
+            GuiPaint.text(g, font, MORE_UP, left + x1 - 16, top + 61, GuiPaint.MUTED);
+        }
+        if (scroll < maxScroll()) {
+            GuiPaint.text(g, font, MORE_DOWN, left + x1 - 6, top + 61, GuiPaint.MUTED);
+        }
         int hovered = rowAt(mx, my);
         for (int i = 0, n = visibleRows(); i < n; i++) {
-            Line line = lines[i];
+            Line line = lines[scroll + i];
             int y = top + ROWS_Y + i * ROW_H;
             if (i == hovered) {
                 g.fill(left + X0 - 2, y - 2, left + x1 + 1, y + ROW_H - 2, GuiPaint.ROW_HOVER);
@@ -203,7 +230,7 @@ final class GroupPanel {
         }
         int row = rowAt(mx, my);
         if (row >= 0) {
-            host.selectNetwork(lines[row].id());
+            host.selectNetwork(lines[scroll + row].id());
             return true;
         }
         if (!v.manageable()) {
@@ -216,11 +243,15 @@ final class GroupPanel {
             return true;
         }
         if (header.overTitle(mx, my, layout.left, layout.top, X0)) {
-            host.startTitle();
+            // em edição, o clique é do campo (posiciona o cursor); a tela o repassa
+            if (windows.titleEditing()) {
+                return false;
+            }
+            windows.startTitle();
             return true;
         }
         if (overLink(mx, my)) {
-            host.openAddToGroup(layout.left + X0, layout.top + linkY() - 6);
+            windows.openAddToGroup(layout.left + X0, layout.top + linkY() - 6);
             return true;
         }
         if (onRemove) {

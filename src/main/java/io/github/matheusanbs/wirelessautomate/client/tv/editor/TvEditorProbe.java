@@ -238,7 +238,7 @@ public final class TvEditorProbe {
         if (c == null) {
             return false;
         }
-        c.hex().focus();
+        c.focusHex();
         return true;
     }
 

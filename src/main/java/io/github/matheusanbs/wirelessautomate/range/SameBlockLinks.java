@@ -53,6 +53,8 @@ public final class SameBlockLinks {
      * 129³ ≈ 2,1 milhões de posições), mas só as seções que têm o bloco na paleta são lidas.
      */
     public static final int MAX_READS = 32 * 4096;
+    /** O descanso do Vinculador depois de um Ctrl + clique aceito pelo servidor (meio segundo). */
+    public static final int COOLDOWN_TICKS = 10;
 
     private SameBlockLinks() {
     }
@@ -72,7 +74,8 @@ public final class SameBlockLinks {
 
     /**
      * O pacote do Ctrl + clique em {@code pos}. Sem o Vinculador no modo Vincular na mão principal, com o bloco
-     * descarregado ou longe da mão do jogador, ignora (devolve {@code null}, sem mensagem: o cliente não pediria).
+     * descarregado ou longe da mão do jogador, ou com o Vinculador no descanso ({@link #COOLDOWN_TICKS}), ignora
+     * (devolve {@code null}, sem mensagem: o cliente não pediria).
      */
     public static @Nullable Result link(@Nullable ServerPlayer player, BlockPos pos) {
         if (player == null) {
@@ -81,9 +84,12 @@ public final class SameBlockLinks {
         ItemStack stack = player.getMainHandItem();
         ServerLevel level = player.serverLevel();
         if (!(stack.getItem() instanceof LinkerItem) || LinkerItem.mode(stack) != LinkerMode.LINK
-                || !level.isLoaded(pos) || !player.canInteractWithBlock(pos, 1.0)) {
+                || !level.isLoaded(pos) || !player.canInteractWithBlock(pos, 1.0)
+                || player.getCooldowns().isOnCooldown(stack.getItem())) {
             return null;
         }
+        // o descanso segura um cliente que mande o pacote em rajada: a varredura custa até MAX_READS posições
+        player.getCooldowns().addCooldown(stack.getItem(), COOLDOWN_TICKS);
         RouterBlockEntity router = RangeLinks.chosen(player, stack);
         if (router == null) {
             return RangeLinks.missing(player, stack);
@@ -109,7 +115,8 @@ public final class SameBlockLinks {
 
         Block block = level.getBlockState(pos).getBlock();
         int room = RangeLinks.max(router) - RangeLinks.used(router);
-        Scan scan = scan(player, router, block, Math.max(1, room));
+        // uma além das vagas: o "limite do tier" só aparece quando há de fato uma que ficou de fora
+        Scan scan = scan(player, router, block, Math.max(1, room + 1));
         LongArrayList candidates = scan.candidates();
         if (candidates.isEmpty() && scan.protectedCount() > 0) {
             return RangeLinks.refuse(player, Result.refused(LinkRefusal.PROTECTED), router, 0);
@@ -131,9 +138,13 @@ public final class SameBlockLinks {
                 }
             }
         });
+        if (counts[0] == 0 && counts[2] > 0) {
+            // todas as achadas recusadas pelo evento de clique das proteções
+            return RangeLinks.refuse(player, Result.refused(LinkRefusal.PROTECTED), router, 0);
+        }
         Result result = new Result(Status.SAME_BLOCK_DONE, LinkRefusal.NONE, LinkerProblem.NONE, counts[0],
                 scan.already(), 0, counts[1], scan.protectedCount() + counts[2], scan.unloadedChunks());
-        boolean limit = counts[0] >= room && (counts[1] > 0 || !scan.complete());
+        boolean limit = counts[1] > 0;
         player.displayClientMessage(message(block, result, candidates.size(), scan, limit), true);
         if (result.linked() > 0) {
             level.playSound(null, pos, SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.BLOCKS, 0.5F, 1.2F);
@@ -280,15 +291,16 @@ public final class SameBlockLinks {
     // ------------------------------------------------------------------ mensagens
 
     /**
-     * {@code Vinculadas 7 Fornalhas}, {@code Vinculadas 32 de 47 Fornalhas · limite do tier} ou, sem nenhuma nova,
-     * {@code Fornalha: todas as do raio já estão vinculadas}; mais as protegidas, os chunks descarregados e o teto.
+     * {@code Vinculou 7 Fornalhas}, {@code Vinculou 32 de 47 Fornalhas · limite do tier} ou, sem nenhuma nova,
+     * {@code Fornalha: todas as do raio já estão vinculadas} (com a varredura inteira) ou {@code Fornalha: nenhuma nova
+     * nas posições lidas} (parada no teto); mais as protegidas, os chunks descarregados e o teto.
      */
     static MutableComponent message(Block block, Result result, int found, Scan scan, boolean limit) {
         Component single = RouterBlock.machineName(block);
         MutableComponent text;
         int linked = result.linked();
         if (found == 0) {
-            text = Component.translatable(KEY + "none", single);
+            text = Component.translatable(KEY + (scan.capped() ? "none.capped" : "none"), single);
         } else {
             boolean of = limit && scan.complete() && found > linked;
             Component name = linked == 1 && !of ? single : plural(block, single);

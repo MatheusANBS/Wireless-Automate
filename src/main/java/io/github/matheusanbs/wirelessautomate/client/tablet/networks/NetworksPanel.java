@@ -278,7 +278,7 @@ public final class NetworksPanel {
     // ------------------------------------------------------------------ desenho
 
     public void render(GuiGraphics g, Font font, int mx, int my) {
-        column.render(g, font, mx, my, network, group);
+        column.render(g, font, mx, my, network, group, windows.liveColor());
         g.fill(layout.left + NetworkColumn.RULE + 1, layout.top + layout.footerRuleY(), layout.left + layout.w - 2,
                 layout.top + layout.footerRuleY() + 1, GuiPaint.INSET);
         if (network != null) {

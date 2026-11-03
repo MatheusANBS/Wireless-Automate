@@ -86,6 +86,20 @@ final class NetworksWindows {
         }
     }
 
+    /** O seletor de cor da rede escolhida, abaixo do slot da cor; a cor vai ao servidor ao fechar. */
+    void openColor() {
+        NetworkView view = networkView();
+        if (view != null) {
+            UUID id = view.id();
+            modals.open(new ColorModal(font(), layout.left, layout.top, view.color(), rgb -> send.networkColor(id, rgb)));
+        }
+    }
+
+    /** A cor que o seletor aberto está mostrando (ARGB), ou 0 sem seletor aberto. */
+    int liveColor() {
+        return modals.current() instanceof ColorModal open ? open.current() : 0;
+    }
+
     void openAccess() {
         NetworkView view = networkView();
         if (view != null) {

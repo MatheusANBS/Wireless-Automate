@@ -188,7 +188,8 @@ final class NetworkDetail {
         int top = layout.top;
         int x1 = layout.panelX1();
         PanelPaint.slot(g, left + X0 - 1, top + 29, 18, false);
-        g.fill(left + X0 + 1, top + 31, left + X0 + 15, top + 45, 0xFF000000 | v.color());
+        int live = windows.liveColor();
+        g.fill(left + X0 + 1, top + 31, left + X0 + 15, top + 45, live != 0 ? live : 0xFF000000 | v.color());
         header.render(g, font, left, top, X0, x1);
         GuiPaint.text(g, font, groupLabel, left + X0, top + 65, GuiPaint.MUTED);
         renderPicker(g, font, v.manageable() && overPicker(mx, my));
@@ -284,7 +285,7 @@ final class NetworkDetail {
             return false;
         }
         if (overSlot(mx, my)) {
-            // o slot da cor: o clique fica reservado ao seletor de cor
+            windows.openColor();
             return true;
         }
         if (header.overTitle(mx, my, layout.left, layout.top, X0)) {

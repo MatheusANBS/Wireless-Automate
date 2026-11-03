@@ -7,6 +7,8 @@ import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.Sources;
+import io.github.matheusanbs.wirelessautomate.storage.BulkEnergy;
+import io.github.matheusanbs.wirelessautomate.storage.BulkSource;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumMap;
@@ -78,7 +80,7 @@ public final class TunerProbe {
                 case SOURCE -> source(level, pos);
             };
         }
-        PortMode[][] modes = TunerPlan.decide(byType, scalar, front);
+        PortMode[][] modes = TunerPlan.decide(byType, scalar, scalarStore(level, pos), front);
         Map<ResourceType, PortMode[]> proposal = new EnumMap<>(ResourceType.class);
         for (int i = 0; i < modes.length; i++) {
             if (modes[i] != null) {
@@ -263,8 +265,6 @@ public final class TunerProbe {
         for (Direction face : DIRECTIONS) {
             IEnergyStorage energy = level.getCapability(Capabilities.EnergyStorage.BLOCK, pos, face);
             if (energy != null) {
-                boolean in = energy.canReceive();
-                boolean out = energy.canExtract();
                 faces[face.ordinal()] = energy(energy);
             }
         }
@@ -274,7 +274,8 @@ public final class TunerProbe {
     /**
      * Uma face de energia (também para os GameTests): <i>entrada</i> se recebe, <i>saída</i> se dá, aberta com os
      * dois. Um consumidor que diz que também dá (o {@code EnergyStorage} comum) fica AMBOS aqui; o {@link TunerPlan}
-     * o trata como entrada fora do armazenamento.
+     * o trata como entrada fora do armazenamento, e uma máquina só de energia só é armazenamento se for a Bateria do
+     * mod ({@link #scalarStore}).
      */
     public static Face energy(IEnergyStorage energy) {
         boolean in = energy.canReceive();
@@ -320,6 +321,15 @@ public final class TunerProbe {
     }
 
     // ------------------------------------------------------------------ apoio
+
+    /**
+     * O bloco é um armazenamento escalar do mod (a Bateria, o Tanque de Source), pelas capabilities em {@code long}
+     * que só eles registram: só assim uma máquina só de energia ou de Source recebe Armazém ({@link TunerPlan#decide}).
+     */
+    private static boolean scalarStore(Level level, BlockPos pos) {
+        return level.getCapability(BulkEnergy.BLOCK, pos, null) != null
+                || level.getCapability(BulkSource.BLOCK, pos, null) != null;
+    }
 
     private static Face[] nothing() {
         Face[] faces = new Face[TunerPlan.FACES];

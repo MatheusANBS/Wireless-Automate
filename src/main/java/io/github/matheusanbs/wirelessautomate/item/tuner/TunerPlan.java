@@ -62,9 +62,9 @@ public final class TunerPlan {
         }
     }
 
-    /** Como {@link #decide(Face[][], boolean[], int)} para uma máquina de um tipo só, que não é escalar. */
+    /** Como {@link #decide(Face[][], boolean[], boolean, int)} para uma máquina de um tipo só, que não é escalar. */
     public static PortMode[] decide(Face[] faces, int front) {
-        return decide(new Face[][] {faces}, new boolean[] {false}, front)[0];
+        return decide(new Face[][] {faces}, new boolean[] {false}, false, front)[0];
     }
 
     /**
@@ -75,7 +75,10 @@ public final class TunerPlan {
      * <ol>
      * <li>Armazenamento: em <b>todo</b> tipo achado, as faces com algo são abertas, AMBOS e com a mesma assinatura (um
      * baú, um tanque, uma bateria): em cada tipo só a face preferida recebe Armazém ({@link PortMode#BOTH}) e as outras
-     * faces com a capability dele vão para Nenhum (Armazém e Extrai na mesma máquina a esvaziariam nela mesma).</li>
+     * faces com a capability dele vão para Nenhum (Armazém e Extrai na mesma máquina a esvaziariam nela mesma). Uma
+     * máquina só de tipos escalares só é armazenamento com {@code scalarStore} (a Bateria e o Tanque de Source do mod):
+     * um consumidor com o {@code EnergyStorage} comum lê igual a uma bateria, e na dúvida Insere, que não o esvazia,
+     * vale mais que Armazém.</li>
      * <li>Fora do armazenamento, uma face AMBOS de um tipo escalar ({@code scalar}: energia e Source, em que um
      * consumidor pode dizer que também dá) conta como ENTRADA: escalar nunca recebe Extrai por AMBOS.</li>
      * <li>Faces SAÍDA recebem Extrai, uma por assinatura, pela preferência de Extrai, as de saída de verdade antes das
@@ -85,22 +88,26 @@ public final class TunerPlan {
      * <li>O resto fica em Nenhum.</li>
      * </ol>
      */
-    public static PortMode[][] decide(Face[][] byType, boolean[] scalar, int front) {
+    public static PortMode[][] decide(Face[][] byType, boolean[] scalar, boolean scalarStore, int front) {
         PortMode[][] modes = new PortMode[byType.length][];
         boolean anyType = false;
         boolean storage = true;
-        for (Face[] faces : byType) {
+        boolean anyNonScalar = false;
+        for (int type = 0; type < byType.length; type++) {
+            Face[] faces = byType[type];
             if (faces.length != FACES) {
                 throw new IllegalArgumentException("Uma máquina tem " + FACES + " faces: " + faces.length);
             }
             if (has(faces)) {
                 anyType = true;
                 storage &= storage(faces);
+                anyNonScalar |= !scalar[type];
             }
         }
         if (!anyType) {
             return modes;
         }
+        storage &= anyNonScalar || scalarStore;
         for (int type = 0; type < byType.length; type++) {
             Face[] faces = byType[type];
             if (!has(faces)) {

@@ -83,6 +83,8 @@
   "item.wirelessautomate.configurator.tuner.protected": "You can't change this machine",
   "item.wirelessautomate.configurator.tuner.nothing": "Auto-Setup: nothing to configure on this machine",
   "item.wirelessautomate.configurator.tuner.no_group": "Auto-Setup: the attached machine has no group",
+  "item.wirelessautomate.configurator.tuner.no_group_remote": "Auto-Setup: this machine has no group",
+  "item.wirelessautomate.configurator.tuner.failed": "Auto-Setup: this machine failed the analysis (see the log)",
   "item.wirelessautomate.network_tablet": "Network Tablet",
   "item.wirelessautomate.linker": "Linker",
   "item.wirelessautomate.filter_card": "Filter Card",

@@ -114,7 +114,7 @@ public final class WirelessAutomate {
         TabletMenu.forget(event.getEntity().getUUID());
         IdleNetworkUndo.forget(event.getEntity().getUUID());
         MachineClipboard.forget(event.getEntity().getUUID());
-        TunerPending.forget(event.getEntity().getUUID());
+        TunerPending.leave(event.getEntity().getUUID());
         MachinePasteUndo.forget(event.getEntity().getUUID());
         TvEditing.forget(event.getEntity().getUUID());
         TvPreview.forget(event.getEntity().getUUID());

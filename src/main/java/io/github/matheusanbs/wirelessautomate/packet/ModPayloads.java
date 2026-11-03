@@ -18,6 +18,7 @@ import io.github.matheusanbs.wirelessautomate.menu.FilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.IdleNetworkUndo;
 import io.github.matheusanbs.wirelessautomate.client.linker.LinkerOpenClient;
 import io.github.matheusanbs.wirelessautomate.client.tuner.TunerProposal;
+import io.github.matheusanbs.wirelessautomate.item.tuner.ConfiguratorTuner;
 import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RepairerMenu;
@@ -79,7 +80,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ModPayloads {
     /**
-     * Versão do protocolo (45: o {@code LinkSameBlockPayload}, o Ctrl + clique do Vinculador; 43: o bloco do grupo no {@code RenameTargetPayload}; 42: os payloads {@code UnlinkGroupPayload}, {@code MachineCopyPayload} e
+     * Versão do protocolo (46: o {@code ConfiguratorCancelPayload}, a pintura do Afinador apagada no cliente; 45: o {@code LinkSameBlockPayload}, o Ctrl + clique do Vinculador; 43: o bloco do grupo no {@code RenameTargetPayload}; 42: os payloads {@code UnlinkGroupPayload}, {@code MachineCopyPayload} e
      * {@code MachinePastePayload} ({@link RangePayloads}), o Desfazer {@code UNDO_MACHINE_PASTE} do aviso e o nome da
      * cópia ({@code clipboard}) no snapshot do roteador; 39: os payloads {@code CompactingStatePayload} e {@code CompactingRulePayload}, o painel da
      * Compactação do Baú, e o {@code ChestCraftFillPayload}, o "+" do JEI na Mesa do Baú; 38: as pixel arts no layout da Tela de Sinal ({@code images}, a peça Imagem e o fundo em
@@ -92,7 +93,7 @@ public final class ModPayloads {
      * {@code TvLibraryPayload}, {@code TvLibraryActionPayload}, {@code TvPreviewPayload} e {@code TvPreviewValuesPayload},
      * e o teto de bytes do layout no buffer de abertura da Tela); mude quando um payload mudar de formato.
      */
-    public static final String VERSION = "45";
+    public static final String VERSION = "46";
 
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(VERSION);
@@ -149,9 +150,11 @@ public final class ModPayloads {
                 (payload, context) -> LinkerOpenClient.show(payload));
         registrar.playToServer(LinkerOpenPickPayload.TYPE, LinkerOpenPickPayload.STREAM_CODEC,
                 (payload, context) -> LinkerOpen.pick(serverPlayer(context), payload.machine(), payload.router()));
-        // A proposta do Afinador do Configurador (o cliente só a guarda para a pintura).
+        // A proposta do Afinador do Configurador (o cliente só a guarda para a pintura) e a pintura apagada no cliente.
         registrar.playToClient(ConfiguratorProposalPayload.TYPE, ConfiguratorProposalPayload.STREAM_CODEC,
                 (payload, context) -> TunerProposal.receive(payload));
+        registrar.playToServer(ConfiguratorCancelPayload.TYPE, ConfiguratorCancelPayload.STREAM_CODEC,
+                (payload, context) -> ConfiguratorTuner.discard(serverPlayer(context), payload.machine()));
         // Telas dos armazenamentos (handlers no StorageListMenu e no StorageScalarMenu).
         registrar.playToClient(StorageEntriesPayload.TYPE, StorageEntriesPayload.STREAM_CODEC, StorageListMenu::onEntries);
         registrar.playToServer(StorageActionPayload.TYPE, StorageActionPayload.STREAM_CODEC,

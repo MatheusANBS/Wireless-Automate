@@ -4,15 +4,15 @@ Comece por aqui para continuar o trabalho. Este arquivo é curto de propósito: 
 
 ## Agora
 
-- **Versão atual:** 2.14.0 (30/10/2026), mesclada no main, sem push nem tag ainda; o livro-guia próprio no lugar do GuideME. Protocolo 40 (46 no ramo).
-- **Publicação:** a 2.13.0 está no CurseForge e no Modrinth (`modrinth.com/mod/wireless-automate`); a 2.14.0 espera o dono subir o jar e o changelog.
+- **Versão atual:** 2.15.0 (04/11/2026): presa no grupo, alcance com desvincular grupo e copiar/colar por máquina, Ctrl + clique do Vinculador (sem a área), o Afinador do Configurador, ícone de grupo no Tablet. Protocolo 49.
+- **Publicação:** a 2.14.0 está no CurseForge; a 2.15.0 tem release no GitHub com o jar e espera o dono subir no CurseForge e no Modrinth.
 - **Em andamento:** ramo `ccr-52410279-si07pg`: o destino seletivo no motor e as etapas 1 a 4 do roteador de alcance (a presa no grupo; desvincular o grupo, copiar e colar por máquina, Atualizar com cartões; o Afinador do Configurador, com as correções da auditoria pré-PR de 03/11; os menores das revisões) e o Ctrl + clique do Vinculador, feitos; falta o teste à mão do dono. O ramo `mc/1.20.1-forge` (porte) está parado à espera do ok do dono (`docs/portes.md`).
 
 ## Próximo passo
 
 1. O dono testa à mão as etapas 1 a 4 e o Ctrl + clique do Vinculador (listas nas linhas de 02/11 do histórico) e decide o merge.
 2. Reidealizar as telas do Tablet do zero (criação de redes etc.), mockup primeiro para o ok do dono.
-3. Publicar a 2.14.0 (push, tag e release no GitHub; o jar no CurseForge e no Modrinth), refazer a imagem do livro na vitrine e o teste do dono da tecla G com o JEI de verdade e das cenas que giram no jogo (ver `pendencias.md`).
+3. Subir a 2.15.0 no CurseForge e no Modrinth; refazer as imagens do Vinculador na vitrine (sem a área) e a do livro (ver `pendencias.md`).
 4. Os menores que sobraram do alcance (`pendencias.md`, seção "Roteador de alcance").
 
 ## Os arquivos

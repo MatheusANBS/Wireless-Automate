@@ -2,7 +2,6 @@ package io.github.matheusanbs.wirelessautomate.client.dev;
 
 import static io.github.matheusanbs.wirelessautomate.client.dev.ScreenshotFilter.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.ScreenshotGalleries.*;
-import static io.github.matheusanbs.wirelessautomate.client.dev.ScreenshotLinker.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.ScreenshotRepairer.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.ScreenshotResonator.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.ScreenshotRouter.*;
@@ -82,7 +81,7 @@ public final class DevScreenshot {
      * Ressonador, Reparador de Cristais e as galerias (giro, blocos, capa).
      */
     private static final List<Step> SEQUENCE = Stream.of(STEPS, viewSteps(), filterSteps(), cardSteps(),
-                    upgradeSteps(), rangeSteps(), tabletSteps(), linkerSteps(), resonatorSteps(), repairerSteps(), spinSteps(), blockSteps(), coverSteps())
+                    upgradeSteps(), rangeSteps(), tabletSteps(), resonatorSteps(), repairerSteps(), spinSteps(), blockSteps(), coverSteps())
             .flatMap(List::stream)
             .filter(step -> ONLY == null || step.file().startsWith(ONLY))
             .toList();
@@ -113,7 +112,6 @@ public final class DevScreenshot {
         }
         AbstractContainerScreen<?> active = repairerScreen != null ? repairerScreen
                 : resonatorScreen != null ? resonatorScreen
-                : linkerScreen != null ? linkerScreen
                 : tabletScreen != null ? tabletScreen
                 : filterScreen != null ? filterScreen : screen;
         if (active.width != title.width || active.height != title.height) {

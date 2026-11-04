@@ -18,8 +18,8 @@ import org.jetbrains.annotations.Nullable;
  * pintura some no cliente ({@code ConfiguratorCancelPayload}), quando o jogador sai ou quando o servidor para; vencida,
  * o clique seguinte refaz a análise.
  *
- * <p>Guarda também o tick da última tentativa de cada jogador com o Configurador, inclusive as engolidas no descanso:
- * o botão segurado repete o uso a cada 4 ticks, e a confirmação só vale depois de uma pausa maior que
+ * <p>Guarda também o tick da última tentativa de cada jogador com o Configurador: o botão segurado repete o uso a
+ * cada 4 ticks, e a análise e a confirmação só valem depois de uma pausa maior que
  * {@link #HOLD_GAP} ({@link #attempt}). A trava do cliente ({@code TunerInput}) poupa os pacotes; esta vale contra
  * qualquer cliente.
  */

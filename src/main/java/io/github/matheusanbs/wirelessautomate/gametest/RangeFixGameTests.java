@@ -6,8 +6,6 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
-import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
 import io.github.matheusanbs.wirelessautomate.menu.IdleNetworkUndo;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
@@ -179,32 +177,6 @@ public final class RangeFixGameTests {
                         helper.assertValueEqual(toggle(helper, player, FURNACE_A).status(), RangeLinks.Status.LINKED,
                                 "clique na fornalha");
                         assertProfileNetwork(helper, router, FURNACE_A, null, "perfil da fornalha");
-                    } finally {
-                        removePlayer(helper, player);
-                    }
-                })
-                .thenSucceed();
-    }
-
-    /** O mesmo pela área: o grupo do barril, vinculado pelo Vincular da tela, também nasce sem rede. */
-    @GameTest(template = "empty")
-    public static void linkerAreaCreatesGroupWithoutNetwork(GameTestHelper helper) {
-        RouterBlockEntity router = routerWithMachines(helper);
-        ItemStack linker = machinesLinker();
-        ServerPlayer player = linkerPlayer(helper, linker);
-        helper.startSequence()
-                .thenWaitUntil(() -> waitLoaded(helper, router))
-                .thenExecute(() -> {
-                    try {
-                        activeNetworkOf(helper, player, "ativa da área");
-                        router.setRangeUpgrade(rangeUpgrade());
-                        click(helper, player, ROUTER, false);
-                        BlockPos barrel = helper.absolutePos(BARREL);
-                        LinkerItem.setArea(linker, LinkerArea.firstCorner(helper.getLevel().dimension(), barrel)
-                                .withSecond(barrel));
-                        RangeLinks.Result area = RangeLinks.linkArea(player, linker);
-                        helper.assertTrue(area.ok() && area.linked() == 1, "área do barril: " + area);
-                        assertProfileNetwork(helper, router, BARREL, null, "perfil do barril (área)");
                     } finally {
                         removePlayer(helper, player);
                     }

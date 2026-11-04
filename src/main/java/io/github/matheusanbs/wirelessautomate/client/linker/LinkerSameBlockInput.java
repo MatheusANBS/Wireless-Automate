@@ -1,6 +1,5 @@
 package io.github.matheusanbs.wirelessautomate.client.linker;
 
-import com.mojang.blaze3d.platform.InputConstants;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
@@ -9,7 +8,6 @@ import io.github.matheusanbs.wirelessautomate.packet.LinkSameBlockPayload;
 import io.github.matheusanbs.wirelessautomate.range.RemoteCapabilities;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.tv.TvBlockEntity;
-import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ClientPacketListener;
@@ -24,15 +22,15 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
-import org.lwjgl.glfw.GLFW;
 
 /**
  * Ctrl (Cmd no Mac, o {@code Screen.hasControlDown}) + clique direito com o Vinculador na mão principal, no modo
  * Vincular, sem Shift e sem uma Tela de Sinal escolhida, numa máquina (bloco com a capability de algum tipo carregado,
  * como o {@code ConfiguratorItem.actsOn}) que não é roteador nem Tela: cancela o uso normal e manda o
- * {@link LinkSameBlockPayload} (o servidor vincula as máquinas do mesmo bloco no raio e refaz todas as conferências).
+ * {@link LinkSameBlockPayload} (o servidor vincula as máquinas do mesmo bloco no raio ou, se a clicada já está
+ * vinculada ao roteador escolhido, desvincula todas as vinculadas do mesmo bloco, e refaz todas as conferências).
  * Uma vez por clique: segurando o botão, o jogo repete o uso a cada 4 ticks, e as repetições são canceladas sem pacote
- * até a tecla soltar. Correndo, ou com a tecla de correr no Ctrl e apertada, o gesto não vale e o clique segue como um
+ * até a tecla soltar. Correndo (andando com o Ctrl, que é a tecla padrão de correr), o gesto não vale e o clique segue como um
  * clique normal do Vinculador.
  */
 @EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
@@ -85,21 +83,11 @@ public final class LinkerSameBlockInput {
     }
 
     /**
-     * O jogador corre, ou a tecla de correr está no Ctrl (o mesmo do {@code hasControlDown}: Cmd no Mac) e apertada:
-     * aí o Ctrl é o de correr, não o do gesto.
+     * O jogador está correndo de fato. A tecla de correr apertada não basta: o padrão dela é o próprio Ctrl, e parado
+     * ele não corre; só andando para a frente com o Ctrl o clique é o de quem corre, não o do gesto.
      */
     public static boolean sprinting(Minecraft minecraft) {
-        if (minecraft.player != null && minecraft.player.isSprinting()) {
-            return true;
-        }
-        KeyMapping sprint = minecraft.options.keySprint;
-        InputConstants.Key key = sprint.getKey();
-        if (key.getType() != InputConstants.Type.KEYSYM || !sprint.isDown()) {
-            return false;
-        }
-        int code = key.getValue();
-        return Minecraft.ON_OSX ? code == GLFW.GLFW_KEY_LEFT_SUPER || code == GLFW.GLFW_KEY_RIGHT_SUPER
-                : code == GLFW.GLFW_KEY_LEFT_CONTROL || code == GLFW.GLFW_KEY_RIGHT_CONTROL;
+        return minecraft.player != null && minecraft.player.isSprinting();
     }
 
     /**

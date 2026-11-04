@@ -30,13 +30,15 @@ import org.jetbrains.annotations.Nullable;
  *                 bit por tipo e lado da máquina, {@link #differs(ResourceType, RemoteSide)}; na presa, o lado pela
  *                 frente dela, {@code RouterSnapshot.attachedFront}); zero nos outros alvos
  * @param attachedException a presa tem exceção (o grupo dela é o {@link GroupView#attached()})
+ * @param attachedShown     a presa aparece na lista: tem membro, ou o bloco da frente é uma máquina (o roteador de
+ *                          alcance preso no chão ou na parede não mostra a "Máquina presa")
  */
 public record RangeView(int radius, int max, List<GroupView> groups, List<MachineView> machines, EditTarget target,
-        Direction face, int differs, boolean attachedException) {
+        Direction face, int differs, boolean attachedException, boolean attachedShown) {
     /** Os lados de uma máquina (os bits de {@link #differs} andam de seis em seis). */
     private static final int SIDE_COUNT = 6;
     public static final RangeView EMPTY = new RangeView(0, 0, List.of(), List.of(), EditTarget.ATTACHED_TARGET,
-            Direction.NORTH, 0, false);
+            Direction.NORTH, 0, false, true);
 
     /** Estado de uma máquina remota na tela. */
     public enum MachineState {
@@ -160,6 +162,7 @@ public record RangeView(int radius, int max, List<GroupView> groups, List<Machin
         buf.writeEnum(view.face);
         buf.writeVarInt(view.differs);
         buf.writeBoolean(view.attachedException);
+        buf.writeBoolean(view.attachedShown);
         buf.writeVarInt(view.groups.size());
         for (GroupView group : view.groups) {
             buf.writeVarInt(group.id);
@@ -192,6 +195,7 @@ public record RangeView(int radius, int max, List<GroupView> groups, List<Machin
         Direction face = buf.readEnum(Direction.class);
         int differs = buf.readVarInt();
         boolean attachedException = buf.readBoolean();
+        boolean attachedShown = buf.readBoolean();
         int groupCount = buf.readVarInt();
         List<GroupView> groups = new ArrayList<>(groupCount);
         for (int i = 0; i < groupCount; i++) {
@@ -206,6 +210,6 @@ public record RangeView(int radius, int max, List<GroupView> groups, List<Machin
                     buf.readUtf(RouterSnapshot.NAME_LENGTH)));
         }
         return new RangeView(radius, max, List.copyOf(groups), List.copyOf(machines), target, face, differs,
-                attachedException);
+                attachedException, attachedShown);
     }
 }

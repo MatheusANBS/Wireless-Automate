@@ -210,6 +210,6 @@ public final class LabelEditor {
                     m.replacedBy(), p.name()));
         }
         return snapshot.withRange(new RangeView(range.radius(), range.max(), List.copyOf(groups), List.copyOf(machines),
-                range.target(), range.face(), range.differs(), range.attachedException()));
+                range.target(), range.face(), range.differs(), range.attachedException(), range.attachedShown()));
     }
 }

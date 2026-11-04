@@ -7,7 +7,6 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eTabletSteps.*
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eUi.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
-import io.github.matheusanbs.wirelessautomate.client.linker.LinkerScreen;
 import io.github.matheusanbs.wirelessautomate.client.tablet.TabletScreen;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
@@ -22,7 +21,7 @@ import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A volta em português com uma rede de nome longo: roteador, Vinculador e Tablet, no
+ * A volta em português com uma rede de nome longo: roteador e Tablet, no
  * mínimo e no máximo, conferindo que todo texto cortado tem o texto inteiro no tooltip.
  */
 final class E2ePortugueseSteps {
@@ -36,13 +35,12 @@ final class E2ePortugueseSteps {
     private static @Nullable UUID previousActive;
 
     /**
-     * Volta em português com uma rede de nome longo: roteador (mínimo e máximo), Vinculador e Tablet
+     * Volta em português com uma rede de nome longo: roteador (mínimo e máximo) e Tablet
      * (mínimo e máximo), com as capturas {@code *-pt-*} e, em cada tela, a conferência de que todo
      * texto cortado tem o texto inteiro no tooltip.
      */
     static void portugueseSteps(List<Step> list) {
         ptRouterSteps(list);
-        ptLinkerSteps(list);
         ptTabletSteps(list);
     }
 
@@ -98,28 +96,6 @@ final class E2ePortugueseSteps {
                 () -> routerScreen().size()[0] == 300,
                 () -> "tamanho " + java.util.Arrays.toString(routerScreen().size())));
         list.add(close("pt: fechar B"));
-    }
-
-    /** Português: o Vinculador. */
-    private static void ptLinkerSteps(List<Step> list) {
-        // Vinculador sem roteador escolhido: a ajuda dos gestos e o aviso são os textos mais longos
-        list.add(new Step("pt: Vinculador na mão", STEP_TIMEOUT_MS, () -> onServer(server -> {
-            server.getPlayerList().getPlayer(Minecraft.getInstance().player.getUUID())
-                    .setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.LINKER.get()));
-            return null;
-        }), () -> Minecraft.getInstance().player.getMainHandItem().is(ModItems.LINKER.get()),
-                () -> "na mão " + Minecraft.getInstance().player.getMainHandItem()));
-        list.add(new Step("pt: abrir o Vinculador", STEP_TIMEOUT_MS, () -> {
-            Minecraft minecraft = Minecraft.getInstance();
-            if (minecraft.screen != null) {
-                throw new StepFailure("ainda há uma tela aberta: " + describe(minecraft.screen));
-            }
-            minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);
-        }, () -> Minecraft.getInstance().screen instanceof LinkerScreen,
-                () -> "tela " + describe(Minecraft.getInstance().screen)));
-        list.add(clipCheck("pt: Vinculador"));
-        list.add(capture("8c-vinculador-pt"));
-        list.add(close("pt: fechar o Vinculador"));
     }
 
     /** Português: o Tablet no mínimo e no máximo, e a volta ao inglês. */

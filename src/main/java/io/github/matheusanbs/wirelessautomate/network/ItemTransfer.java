@@ -236,6 +236,10 @@ final class ItemTransfer {
             refuseOne(destination.hints(), item, now);
             return;
         }
+        if (destination.full && now - destination.fullSince > destination.destinationBackoff.maxTicks()) {
+            // Cheio há mais que o teto do sono, sem aviso nem entrega: relê, como as recusas do ItemHints.
+            destination.full = false;
+        }
         ItemHints hints = destination.hints;
         if (!destination.full && !PLAN.jammed()
                 && (hints != null && hints.roomForOthers() || PLAN.roomForOthers(target, item))) {
@@ -248,7 +252,10 @@ final class ItemTransfer {
             }
             return;
         }
-        destination.full = true;
+        if (!destination.full) {
+            destination.full = true;
+            destination.fullSince = now;
+        }
         destination.destinationBackoff.sleep(now);
         destinationSlept = true;
     }

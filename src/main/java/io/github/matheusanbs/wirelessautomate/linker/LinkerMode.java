@@ -8,7 +8,7 @@ import java.util.Locale;
  * {@link LinkerModeCodecs}, que carrega as classes do Minecraft.
  */
 public enum LinkerMode {
-    /** Clique num roteador o escolhe; num bloco vincula ou desvincula a máquina; Shift + clique marca a área. */
+    /** Clique num roteador o escolhe; num bloco vincula ou desvincula a máquina; Ctrl + clique age nas do mesmo bloco. */
     LINK,
     /** Clique numa máquina abre a tela do roteador que chega nela. */
     OPEN;
@@ -25,10 +25,5 @@ public enum LinkerMode {
     /** O ciclo do Shift + roda do mouse. */
     public LinkerMode next() {
         return this == LINK ? OPEN : LINK;
-    }
-
-    /** Shift + clique num bloco marca um canto da área (só ao vincular). */
-    public boolean marksArea() {
-        return this == LINK;
     }
 }

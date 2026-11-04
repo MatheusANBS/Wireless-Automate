@@ -130,8 +130,9 @@ public final class MachineCopyPaste {
      * máquina com {@code wholeGroup}, no perfil do grupo dela (as exceções que ficam iguais somem, as outras são
      * contadas). Cada face recebe modo, prioridade, redstone e filtro; a rede só se a cópia leva uma que o jogador pode
      * usar e a face pode sair da que tem ({@link #merge}). Na presa sem membro, ele nasce antes do colar (no grupo do
-     * bloco da frente, ou do rascunho de um mundo antigo), para o Desfazer ter o estado de antes, e só se o colar muda
-     * o que a presa mostra (a fachada: o rascunho ou a vazia); sem máquina na
+     * bloco da frente, ou do rascunho de um mundo antigo) com o que ela mostrava (a fachada: o rascunho ou a vazia,
+     * como exceção ou, sozinha no grupo, como perfil), para o Desfazer voltar a isso; e só se o colar muda a fachada.
+     * Com {@code wholeGroup}, ela entra seguindo o perfil, que é onde o colar vai; sem máquina na
      * frente, nada muda ({@link Pasted#noMachine}). Com mudança, guarda o Desfazer no lugar do anterior; sem mudança,
      * o anterior fica.
      * {@code null} sem cópia ou com o alvo que deixou de existir.
@@ -161,6 +162,11 @@ public final class MachineCopyPaste {
                             MachinePasteUndo.heldIn(player.getUUID(), host), false);
                 }
                 router.ensureAttachedMember();
+                if (!wholeGroup) {
+                    // o membro entra no grupo com o que a presa mostrava (senão herdaria o perfil), e o Desfazer
+                    // volta a isso, não ao perfil do grupo
+                    router.editAttachedConfig(config -> config.copyFrom(now));
+                }
             }
         }
         MachineGroup group = wholeGroup || target.kind() == EditTarget.Kind.GROUP ? groupOf(remotes, target) : null;

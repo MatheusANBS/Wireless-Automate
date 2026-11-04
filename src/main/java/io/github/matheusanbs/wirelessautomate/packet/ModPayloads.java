@@ -6,7 +6,6 @@ import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerOpen;
 import io.github.matheusanbs.wirelessautomate.menu.CardFilterTarget;
@@ -19,7 +18,6 @@ import io.github.matheusanbs.wirelessautomate.menu.IdleNetworkUndo;
 import io.github.matheusanbs.wirelessautomate.client.linker.LinkerOpenClient;
 import io.github.matheusanbs.wirelessautomate.client.tuner.TunerProposal;
 import io.github.matheusanbs.wirelessautomate.item.tuner.ConfiguratorTuner;
-import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RepairerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RemoteRouterMenu;
@@ -80,7 +78,9 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ModPayloads {
     /**
-     * Versão do protocolo (47: o ícone do grupo no Tablet, a ação {@code GROUP_ICON}, o ícone no {@code GroupView} do
+     * Versão do protocolo (49: a tela do Vinculador e a área saíram, com o {@code LinkerMenu}, o
+     * {@code LinkerSnapshotPayload} e o {@code LinkerActionPayload}; 48: o {@code attachedShown} da {@code RangeView} (a presa que não é máquina sai da lista
+     * do alcance); 47: o ícone do grupo no Tablet, a ação {@code GROUP_ICON}, o ícone no {@code GroupView} do
      * cabeçalho e o texto de 256 do {@code TabletActionPayload}; 46: o {@code ConfiguratorCancelPayload}, a pintura do Afinador apagada no cliente; 45: o {@code LinkSameBlockPayload}, o Ctrl + clique do Vinculador; 43: o bloco do grupo no {@code RenameTargetPayload}; 42: os payloads {@code UnlinkGroupPayload}, {@code MachineCopyPayload} e
      * {@code MachinePastePayload} ({@link RangePayloads}), o Desfazer {@code UNDO_MACHINE_PASTE} do aviso e o nome da
      * cópia ({@code clipboard}) no snapshot do roteador; 39: os payloads {@code CompactingStatePayload} e {@code CompactingRulePayload}, o painel da
@@ -94,7 +94,7 @@ public final class ModPayloads {
      * {@code TvLibraryPayload}, {@code TvLibraryActionPayload}, {@code TvPreviewPayload} e {@code TvPreviewValuesPayload},
      * e o teto de bytes do layout no buffer de abertura da Tela); mude quando um payload mudar de formato.
      */
-    public static final String VERSION = "47";
+    public static final String VERSION = "49";
 
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(VERSION);
@@ -143,10 +143,7 @@ public final class ModPayloads {
                 (payload, context) -> handleFilterEntries(serverPlayer(context), payload));
         registrar.playToServer(CycleLinkerModePayload.TYPE, CycleLinkerModePayload.STREAM_CODEC,
                 (payload, context) -> handleCycleLinkerMode(serverPlayer(context), payload));
-        // Tela do Vinculador (handlers em LinkerActions e LinkerMenu).
-        registrar.playToClient(LinkerSnapshotPayload.TYPE, LinkerSnapshotPayload.STREAM_CODEC, LinkerMenu::onSnapshot);
-        registrar.playToServer(LinkerActionPayload.TYPE, LinkerActionPayload.STREAM_CODEC,
-                (payload, context) -> LinkerActions.handle(serverPlayer(context), payload));
+        // Modo Abrir do Vinculador.
         registrar.playToClient(LinkerOpenListPayload.TYPE, LinkerOpenListPayload.STREAM_CODEC,
                 (payload, context) -> LinkerOpenClient.show(payload));
         registrar.playToServer(LinkerOpenPickPayload.TYPE, LinkerOpenPickPayload.STREAM_CODEC,

@@ -41,29 +41,13 @@ final class RouterTargets {
         this.remotes = remotes;
     }
 
-    /** Ver {@link RouterBlockEntity#setAttachedFacesNetwork}. */
-    int setAttachedNetwork(Collection<ResourceType> types, int absoluteFaceMask, @Nullable UUID network) {
-        int[] count = new int[1];
-        router.batchChanges(() -> count[0] = attached.setNetwork(types, absoluteFaceMask, network, from -> true,
-                new int[1]));
-        return count[0];
-    }
-
-    /** Ver {@link RouterBlockEntity#setAttachedFacesNetwork(Collection, int, UUID, Predicate)}. */
-    int setAttachedNetwork(Collection<ResourceType> types, int absoluteFaceMask, @Nullable UUID network,
-            Predicate<UUID> canLeave) {
-        int[] kept = new int[1];
-        router.batchChanges(() -> attached.setNetwork(types, absoluteFaceMask, network, canLeave, kept));
-        return kept[0];
-    }
-
     /** Ver {@link RouterBlockEntity#setNetworkAllFaces(Collection, UUID, Predicate)}. */
     int setNetworkAll(Collection<ResourceType> types, @Nullable UUID network, Predicate<UUID> canLeave) {
         int[] kept = new int[1];
         router.batchChanges(() -> {
             // A presa sem membro ganha um, para as faces dela entrarem na rede pelo perfil do grupo; a parede de um
             // roteador de alcance, que não é máquina, não.
-            if (network != null && attached.ensureMachineMember()) {
+            if (network != null && attached.ensureMember()) {
                 router.changed(NetworkManager.ALL_TYPES);
             }
             for (ResourceType type : types) {

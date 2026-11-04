@@ -210,7 +210,7 @@ final class PanelLayout {
         int target = 0;
         if (model.rangeShown()) {
             target = ROW_H + ROW_GAP + 2;
-            if (!model.targetFromList() && model.targetMachine() != null) {
+            if (!model.targetFromList() && model.targetIsMachine()) {
                 target += ROW_H + GAP;
             }
         }
@@ -311,7 +311,7 @@ final class PanelLayout {
         // Editando, só com o ícone (e a linha da face volta se couber); o que ainda faltar sai de baixo
         int room = bottom - y;
         boolean targetShown = model.rangeShown();
-        boolean buttonsRow = targetShown && !model.targetFromList() && model.targetMachine() != null;
+        boolean buttonsRow = targetShown && !model.targetFromList() && model.targetIsMachine();
         int targetH = targetShown ? ROW_H + GAP : 0;
         compactTarget = buttonsRow && targetH + ROW_H + GAP + ROWS_H > room;
         boolean face = targetH + (buttonsRow && !compactTarget ? ROW_H + GAP : 0) + FACE_LINE_H + ROWS_H <= room;
@@ -326,8 +326,8 @@ final class PanelLayout {
 
     /**
      * A linha Editando, com o ✎ do nome (presa, grupo ou máquina, painel editável) e o "Tirar redes" na ponta quando
-     * ele vale, e, numa máquina do alcance, os botões dela; devolve o topo do que vem depois. Com a lista das
-     * máquinas à vista ao lado, a linha não aparece: a lista marca o alvo e tem os botões.
+     * ele vale, e, numa máquina (remota ou a presa no grupo), os botões dela; devolve o topo do que vem depois. Com a
+     * lista das máquinas à vista ao lado, a linha não aparece: a lista marca o alvo e tem os botões.
      */
     private int arrangeTarget(Font font, PanelModel model, int x, int y, int w) {
         targetY = -1;
@@ -340,9 +340,9 @@ final class PanelLayout {
             int pillW = w - labelW;
             int right = x + w;
             RangeView.MachineView machine = model.targetMachine();
-            if (compactTarget && machine != null) {
-                int used = arrangeCompactButtons(right, y, machine.exception(),
-                        machine.state() == RangeView.MachineState.REPLACED);
+            boolean replaced = machine != null && machine.state() == RangeView.MachineState.REPLACED;
+            if (compactTarget && model.targetIsMachine()) {
+                int used = arrangeCompactButtons(right, y, model.targetException(), replaced, machine != null);
                 pillW -= used;
                 right -= used;
             }
@@ -369,9 +369,8 @@ final class PanelLayout {
                 return y + ROW_H + GAP;
             }
             y += ROW_H + GAP;
-            if (machine != null) {
-                arrangeTargetButtons(font, x, y, w, machine.exception(),
-                        machine.state() == RangeView.MachineState.REPLACED);
+            if (model.targetIsMachine()) {
+                arrangeTargetButtons(font, x, y, w, model.targetException(), replaced, machine != null);
                 Hot unlink = hot(Kind.UNLINK);
                 if (model.unlinkArmed() && unlink != null) {
                     // armado, o Desvincular fica sozinho, do começo da linha até onde ele estava (o mouse
@@ -396,14 +395,13 @@ final class PanelLayout {
     private int arrangeTargetBar(Font font, PanelModel model, int x, int y, int w) {
         targetY = y;
         int labelW = font.width(PanelModel.panelTr("target")) + 5;
-        RangeView.MachineView machine = model.targetMachine();
         compactTarget = false;
         revertIcon = false;
         // a pílula precisa do ícone do bloco, do nome inteiro e da seta; se não cabe, o Igualar vira só o ↺ e, por fim,
         // o rótulo Editando sai
         int need = font.width(model.targetName(model.snapshot().target())) + DROP_TEXT_PAD + 12;
         int equalizeW = 0;
-        if (machine != null && machine.exception()) {
+        if (model.targetException()) {
             revertLabel = PanelModel.panelTr("target.equalize");
             equalizeW = font.width(revertLabel) + 2 * TARGET_PAD;
             if (w - labelW - equalizeW - GAP < need) {
@@ -431,18 +429,17 @@ final class PanelLayout {
      * Os botões da máquina só com o ícone, na ponta direita ({@code right}) da linha Editando apertada, na ordem da
      * linha deles; devolve o que eles tiram da pílula.
      */
-    private int arrangeCompactButtons(int right, int y, boolean exception, boolean replaced) {
+    private int arrangeCompactButtons(int right, int y, boolean exception, boolean replaced, boolean unlink) {
         highlightIcon = true;
         revertIcon = true;
         int bx = right;
         for (int i = TARGET_BUTTONS.length - 1; i >= 0; i--) {
             Kind kind = TARGET_BUTTONS[i];
-            if (kind == Kind.REVERT && !exception || kind == Kind.UPDATE && !replaced) {
-                continue;
+            if (kind == Kind.REVERT ? exception : kind == Kind.UPDATE ? replaced : kind != Kind.UNLINK || unlink) {
+                bx -= ROW_H;
+                hots.add(new Hot(kind, bx, y, ROW_H, ROW_H, 0));
+                bx -= GAP;
             }
-            bx -= ROW_H;
-            hots.add(new Hot(kind, bx, y, ROW_H, ROW_H, 0));
-            bx -= GAP;
         }
         return right - bx;
     }
@@ -522,15 +519,16 @@ final class PanelLayout {
     }
 
     /**
-     * No mundo, Voltar a igual às outras (só na exceção), Atualizar (só na trocada) e Desvincular, lado a lado: o
+     * No mundo, Voltar a igual às outras (só na exceção), Atualizar (só na trocada) e Desvincular (só na remota): o
      * texto da especificação; se não couberem, o No mundo só com o Olho, um Voltar mais curto ("Voltar ao
      * perfil", "Voltar") e, por fim, o Voltar só com o ↺; se nem assim, cada um fica com até uma parte igual.
      */
-    private void arrangeTargetButtons(Font font, int x, int y, int w, boolean exception, boolean replaced) {
-        int unlinkW = font.width(PanelModel.tr("range.unlink")) + 2 * TARGET_PAD;
+    private void arrangeTargetButtons(Font font, int x, int y, int w, boolean exception, boolean replaced,
+            boolean unlink) {
+        int unlinkW = unlink ? font.width(PanelModel.tr("range.unlink")) + 2 * TARGET_PAD : 0;
         int updateW = replaced ? font.width(PanelModel.tr("range.update")) + 2 * TARGET_PAD : 0;
         int highlightW = font.width(LitFooter.SHOW) + 2 * TARGET_PAD + HIGHLIGHT_EYE;
-        int count = 2 + (replaced ? 1 : 0) + (exception ? 1 : 0);
+        int count = 1 + (unlink ? 1 : 0) + (replaced ? 1 : 0) + (exception ? 1 : 0);
         int revertW = 0;
         if (exception) {
             revertLabel = PanelModel.panelTr("target.revert");

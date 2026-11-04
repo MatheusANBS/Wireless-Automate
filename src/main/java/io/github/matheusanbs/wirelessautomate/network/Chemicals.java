@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.network;
 import io.github.matheusanbs.wirelessautomate.compat.mekanism.MekanismChemicals;
 import io.github.matheusanbs.wirelessautomate.compat.mekanism.MekanismStorage;
 import io.github.matheusanbs.wirelessautomate.storage.ChemicalStorage;
+import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -34,6 +35,14 @@ public final class Chemicals {
     /** Tanques de um handler de químico (o objeto de {@code RouterBlockEntity.chemicals}). */
     public static int tanks(Object handler) {
         return MekanismChemicals.tanks(handler);
+    }
+
+    /**
+     * O Afinador do Configurador lendo um handler de químico: bit 1 entra, bit 2 sai; a assinatura dos tanques vai em
+     * {@code signature} (ver {@link MekanismChemicals#probe}).
+     */
+    public static int probe(Object handler, int maxTanks, List<Long> signature) {
+        return MekanismChemicals.probe(handler, maxTanks, signature);
     }
 
     /** Soma o guardado e a capacidade dos tanques do handler em {@code out[0]} e {@code out[1]}. */

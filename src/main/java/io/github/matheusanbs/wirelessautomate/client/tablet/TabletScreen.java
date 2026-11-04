@@ -28,6 +28,7 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
@@ -425,6 +426,26 @@ public class TabletScreen extends AbstractContainerScreen<TabletMenu> {
 
     public void previewMulti(boolean on, int count) {
         list.previewMulti(on, count);
+    }
+
+    /**
+     * Onde soltar um item arrastado do JEI: o slot do ícone do grupo escolhido na aba Redes, {x, y, w, h}, ou
+     * {@code null}.
+     */
+    public int @Nullable [] ghostBounds() {
+        return tab == Tab.NETWORKS ? networks.groupIconSlot() : null;
+    }
+
+    /** Um item do JEI solto no slot do ícone do grupo. */
+    public void acceptGhost(Object dropped) {
+        if (dropped instanceof ItemStack stack) {
+            networks.acceptGroupIcon(stack);
+        }
+    }
+
+    /** O JEI começou ou acabou de arrastar um item: o slot do ícone pisca enquanto isso. */
+    public void ghostDragging(boolean dragging) {
+        networks.ghostDragging(dragging);
     }
 
     /** O que o Selecionar marcou, {@code {roteadores, máquinas}} (gancho do e2e). */

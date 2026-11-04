@@ -193,12 +193,10 @@ A wall display that shows **live numbers from your networks and storages**. Stic
 
 ![Link a whole area](https://media.forgecdn.net/attachments/2125/308/feature-5-area-png.png)
 
-- **Linker** (two modes): **Link** picks a router with the Range Upgrade (click it) and links the machines you click, or **a whole marked area** at once (Shift + click two blocks; nearest first, up to the tier's radius and limit); the **Unlink** switch takes them out instead. **Open** opens the screen of the router that reaches the machine you click, already editing that machine; with several routers, a short list lets you pick. It checks range, claims and protection mods on the router. The Linker no longer touches networks: choose each face's network on the router screen or in the Tablet.
-- **Configurator** (the Brush): Shift + click a router copies its setup (faces, filters, priorities, redstone and the network of each face), click pastes it on another, and Shift + click on a block without a router clears the copy. Paste every tab or just one type, leaving the other tabs alone. Hold **Left Alt** for a radial wheel that picks the pasted type. A face's network is only pasted if you can use it, and a face only leaves a network you can edit. To configure many routers at once, paste the profile on the Tablet's marked ones.
+- **Linker** (two modes): **Link** picks a router with the Range Upgrade (click it) and links the machines you click, or **all of the same block in range** with Ctrl (Cmd on Mac) + click on one of them (nearest first, up to the tier's radius and limit; Ctrl + click on a linked one unlinks them all); Shift + click in the air releases the chosen router. **Open** opens the screen of the router that reaches the machine you click, already editing that machine; with several routers, a short list lets you pick. It checks range, claims and protection mods on the router. The Linker no longer touches networks: choose each face's network on the router screen or in the Tablet.
+- **Configurator** (the Auto-Setup): click a linked machine and it finds out what each face takes and gives, and paints the proposed modes on the faces (Insert, Extract, Storage); click again to apply, with Shift on the whole group. It changes only the modes. To copy a router's setup to others, use the profile on the Tablet.
 - **Chunk Loading Upgrade:** keeps a router and its machine working while you're away.
 - **Recipe editor** (operators): `/wa recipes` opens a screen to change, disable or restore any of the mod's crafting recipes, with items from your inventory or JEI, tags and the result count. Saved as a datapack in `config/wirelessautomate/recipes/`, so it works in every world and survives updates. Handy for packs that want a different Ultimate recipe.
-
-![Configurator Brush](https://media.forgecdn.net/attachments/2125/319/feature-16-wheel-png.png)
 
 ![Link or open](https://media.forgecdn.net/attachments/2125/316/feature-13-linker-png.png)
 
@@ -232,7 +230,7 @@ Every player gets the guide book on their first join (it's also in the creative 
 4. On the first router, set the **Up** face to **Extract**.
 5. On the second router, set the same face to **Insert**. Items now flow from the first chest to the second.
 
-Once the first router of a line is set up, copy it with the Configurator (Shift + click it) and paste (click) on the rest.
+Once the first router of a line is set up, copy its profile on the Tablet and paste it on the rest.
 
 Recipes use vanilla items, except the Allthemodium tiers (made from the Allthemodium mod's metals, only when it's installed).
 

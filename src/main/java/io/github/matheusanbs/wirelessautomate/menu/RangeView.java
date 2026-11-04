@@ -8,11 +8,9 @@ import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -28,15 +26,19 @@ import org.jetbrains.annotations.Nullable;
  * @param face     a face selecionada no menu do servidor (absoluta na presa, canônica num alvo remoto).
  *                 Trocar de alvo a põe numa face padrão do quadro novo (Frente = NORTH num remoto, a face
  *                 de antes na presa); o cliente a adota quando o alvo do snapshot muda
- * @param differs  numa máquina com exceção, as faces dela que diferem do perfil do grupo (um bit por tipo e lado,
- *                 {@link #differs(ResourceType, RemoteSide)}); zero nos outros alvos
+ * @param differs  numa máquina com exceção (remota ou a presa), as faces dela que diferem do perfil do grupo (um
+ *                 bit por tipo e lado da máquina, {@link #differs(ResourceType, RemoteSide)}; na presa, o lado pela
+ *                 frente dela, {@code RouterSnapshot.attachedFront}); zero nos outros alvos
+ * @param attachedException a presa tem exceção (o grupo dela é o {@link GroupView#attached()})
+ * @param attachedShown     a presa aparece na lista: tem membro, ou o bloco da frente é uma máquina (o roteador de
+ *                          alcance preso no chão ou na parede não mostra a "Máquina presa")
  */
 public record RangeView(int radius, int max, List<GroupView> groups, List<MachineView> machines, EditTarget target,
-        Direction face, int differs) {
+        Direction face, int differs, boolean attachedException, boolean attachedShown) {
     /** Os lados de uma máquina (os bits de {@link #differs} andam de seis em seis). */
     private static final int SIDE_COUNT = 6;
     public static final RangeView EMPTY = new RangeView(0, 0, List.of(), List.of(), EditTarget.ATTACHED_TARGET,
-            Direction.NORTH, 0);
+            Direction.NORTH, 0, false, true);
 
     /** Estado de uma máquina remota na tela. */
     public enum MachineState {
@@ -64,13 +66,22 @@ public record RangeView(int radius, int max, List<GroupView> groups, List<Machin
      * Um grupo.
      *
      * @param name       nome dado pelo jogador; vazio = o nome do bloco
-     * @param count      máquinas vinculadas no grupo
-     * @param exceptions dessas, quantas têm exceção
+     * @param count      máquinas do grupo, a presa inclusive; zero num grupo que a presa deixou
+     * @param exceptions dessas, quantas têm exceção (a presa inclusive)
+     * @param attached   a presa é deste grupo (no máximo um grupo; nenhum sem o membro presa)
+     * @param blank      o grupo da presa sem nada a desvincular nem a zerar (só ela, sem exceção, com o perfil
+     *                   padrão, sem nome e sem cartões): o Desvincular grupo não faria nada, e a tela o esconde
      */
-    public record GroupView(int id, ResourceLocation block, String name, int count, int exceptions) {
-        /** O item do bloco do grupo, para o ícone ({@link ItemStack#EMPTY} se o bloco não tem item). */
-        public ItemStack icon() {
-            return new ItemStack(BuiltInRegistries.BLOCK.get(block).asItem());
+    public record GroupView(int id, ResourceLocation block, String name, int count, int exceptions,
+            boolean attached, boolean blank) {
+        /** Sem o {@code blank} (prévias e capturas). */
+        public GroupView(int id, ResourceLocation block, String name, int count, int exceptions, boolean attached) {
+            this(id, block, name, count, exceptions, attached, false);
+        }
+
+        /** As máquinas remotas do grupo (sem a presa). */
+        public int remotes() {
+            return attached ? count - 1 : count;
         }
     }
 
@@ -111,11 +122,24 @@ public record RangeView(int radius, int max, List<GroupView> groups, List<Machin
         return null;
     }
 
+    /** O id do grupo da presa, ou −1 sem o membro presa. */
+    public int attachedGroup() {
+        for (GroupView group : groups) {
+            if (group.attached) {
+                return group.id;
+            }
+        }
+        return -1;
+    }
+
     public @Nullable MachineView machine(int index) {
         return index >= 0 && index < machines.size() ? machines.get(index) : null;
     }
 
-    /** Máquinas que gastam vaga (dentro do raio e até o limite): o "7" de {@code 7/32}. */
+    /**
+     * Máquinas que gastam vaga (dentro do raio e até o limite): o "7" de {@code 7/32}. Os estados saem do
+     * {@code RangeRules.reach}, então é a mesma conta do {@code RangeRules.used} do Vinculador.
+     */
     public int used() {
         int used = 0;
         for (MachineView machine : machines) {
@@ -137,6 +161,8 @@ public record RangeView(int radius, int max, List<GroupView> groups, List<Machin
         buf.writeVarInt(view.target.id());
         buf.writeEnum(view.face);
         buf.writeVarInt(view.differs);
+        buf.writeBoolean(view.attachedException);
+        buf.writeBoolean(view.attachedShown);
         buf.writeVarInt(view.groups.size());
         for (GroupView group : view.groups) {
             buf.writeVarInt(group.id);
@@ -144,6 +170,8 @@ public record RangeView(int radius, int max, List<GroupView> groups, List<Machin
             buf.writeUtf(group.name, RouterSnapshot.NAME_LENGTH);
             buf.writeVarInt(group.count);
             buf.writeVarInt(group.exceptions);
+            buf.writeBoolean(group.attached);
+            buf.writeBoolean(group.blank);
         }
         buf.writeVarInt(view.machines.size());
         for (MachineView machine : view.machines) {
@@ -166,11 +194,13 @@ public record RangeView(int radius, int max, List<GroupView> groups, List<Machin
         EditTarget target = new EditTarget(buf.readEnum(EditTarget.Kind.class), buf.readVarInt());
         Direction face = buf.readEnum(Direction.class);
         int differs = buf.readVarInt();
+        boolean attachedException = buf.readBoolean();
+        boolean attachedShown = buf.readBoolean();
         int groupCount = buf.readVarInt();
         List<GroupView> groups = new ArrayList<>(groupCount);
         for (int i = 0; i < groupCount; i++) {
             groups.add(new GroupView(buf.readVarInt(), buf.readResourceLocation(), buf.readUtf(RouterSnapshot.NAME_LENGTH),
-                    buf.readVarInt(), buf.readVarInt()));
+                    buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean()));
         }
         int machineCount = buf.readVarInt();
         List<MachineView> machines = new ArrayList<>(machineCount);
@@ -179,6 +209,7 @@ public record RangeView(int radius, int max, List<GroupView> groups, List<Machin
                     buf.readEnum(MachineState.class), buf.readOptional(FriendlyByteBuf::readResourceLocation).orElse(null),
                     buf.readUtf(RouterSnapshot.NAME_LENGTH)));
         }
-        return new RangeView(radius, max, List.copyOf(groups), List.copyOf(machines), target, face, differs);
+        return new RangeView(radius, max, List.copyOf(groups), List.copyOf(machines), target, face, differs,
+                attachedException, attachedShown);
     }
 }

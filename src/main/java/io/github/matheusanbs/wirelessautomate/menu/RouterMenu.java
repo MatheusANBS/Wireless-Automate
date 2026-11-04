@@ -117,6 +117,8 @@ public class RouterMenu extends AbstractContainerMenu implements RouterEditHost 
     private final @Nullable ServerPlayer viewer;
     private int sentChangeVersion;
     private int sentDataVersion;
+    /** A cópia do perfil de máquina do jogador no último snapshot (pela identidade: uma cópia nova é outro objeto). */
+    private MachineClipboard.@Nullable Entry sentClipboard;
     private long sampleTick;
     private final long[] sampleTotals = new long[ResourceType.values().length];
     private final long[] sentThroughput = new long[ResourceType.values().length];
@@ -140,6 +142,7 @@ public class RouterMenu extends AbstractContainerMenu implements RouterEditHost 
         this.sentChangeVersion = router.changeVersion();
         if (viewer != null) {
             this.sentDataVersion = NetworkSavedData.get(viewer.server).version();
+            this.sentClipboard = MachineClipboard.get(viewer.getUUID());
             this.sampleTick = viewer.server.getTickCount();
             this.rangeTick = sampleTick;
         }
@@ -240,7 +243,7 @@ public class RouterMenu extends AbstractContainerMenu implements RouterEditHost 
      * não existe mais, na presa.
      */
     public static void open(ServerPlayer player, RouterBlockEntity router, EditTargetRef target) {
-        EditTargetRef fresh = target.refresh(router);
+        EditTargetRef fresh = skipHiddenAttached(router, target.refresh(router));
         RouterSnapshot snapshot = RouterSnapshot.capture(router, player, fresh.target());
         Component title = router.name().isEmpty()
                 ? router.getBlockState().getBlock().getName()
@@ -270,6 +273,7 @@ public class RouterMenu extends AbstractContainerMenu implements RouterEditHost 
     public void removed(Player player) {
         super.removed(player);
         IdleNetworkUndo.closed(player, this);
+        MachinePasteUndo.closed(player, this);
     }
 
     /** O roteador; só existe no servidor. */
@@ -372,6 +376,14 @@ public class RouterMenu extends AbstractContainerMenu implements RouterEditHost 
             targetChanged = true;
         }
         return targetRef.target();
+    }
+
+    /**
+     * O alvo pode guardar um cartão: na presa, só com o membro já no grupo ou um bloco na frente para criá-lo
+     * (senão o cartão sumiria). No cliente, sem o roteador, o servidor decide.
+     */
+    private boolean cardHolderReady() {
+        return router == null || !validTarget().attached() || router.attachedCanHold();
     }
 
     /**
@@ -713,7 +725,7 @@ public class RouterMenu extends AbstractContainerMenu implements RouterEditHost 
 
         @Override
         public boolean mayPlace(ItemStack stack) {
-            return RouterBlockEntity.acceptsCard(selectedType, stack) && !cardsLocked();
+            return RouterBlockEntity.acceptsCard(selectedType, stack) && !cardsLocked() && cardHolderReady();
         }
 
         @Override
@@ -809,7 +821,7 @@ public class RouterMenu extends AbstractContainerMenu implements RouterEditHost 
 
         @Override
         public boolean canPlaceItem(int slot, ItemStack stack) {
-            return RouterBlockEntity.acceptsCard(selectedType, stack);
+            return RouterBlockEntity.acceptsCard(selectedType, stack) && cardHolderReady();
         }
 
         @Override
@@ -877,10 +889,25 @@ public class RouterMenu extends AbstractContainerMenu implements RouterEditHost 
     }
 
     /**
-     * Snapshot novo se a versão do roteador ou das redes mudou, o alvo mudou ou, com as remotas na
+     * Snapshot novo se a versão do roteador ou das redes mudou, o alvo ou a cópia do jogador mudou ou, com as remotas na
      * tela, passaram {@link #SAMPLE_TICKS} ticks, e ele ficou diferente do último enviado; senão
      * {@code null}. Marca o novo como enviado. Só no servidor; público para os GameTests.
      */
+    /**
+     * Com o alcance valendo e a presa escondida (o bloco da frente não é máquina e não tem membro, como o chão ou a
+     * parede), o alvo que cai na presa passa para a primeira máquina vinculada, que a lista mostra no lugar dela. Sem
+     * máquina vinculada fica na presa. Consulta as capabilities da frente só quando um snapshot vai sair.
+     */
+    public static EditTargetRef skipHiddenAttached(RouterBlockEntity router, EditTargetRef target) {
+        if (!target.target().attached() || !router.rangeActive() || router.remoteMachines().machines().isEmpty()
+                || router.attachedCanHold()) {
+            return target;
+        }
+        BlockPos first = router.remoteMachines().machines().get(0).pos();
+        EditTargetRef machine = EditTargetRef.resolve(router, EditTarget.machine(0), first, null);
+        return machine == null ? target : machine;
+    }
+
     public @Nullable RouterSnapshot pollSnapshot() {
         if (router == null || viewer == null || router.isRemoved()) {
             return null;
@@ -892,13 +919,20 @@ public class RouterMenu extends AbstractContainerMenu implements RouterEditHost 
         boolean rangeDue = now - rangeTick >= SAMPLE_TICKS
                 && (snapshot.range().present() || router.powered() != snapshot.powered());
         EditTarget target = validTarget();
-        if (changeVersion == sentChangeVersion && dataVersion == sentDataVersion && !targetChanged && !rangeDue) {
+        MachineClipboard.Entry clipboard = MachineClipboard.get(viewer.getUUID());
+        if (changeVersion == sentChangeVersion && dataVersion == sentDataVersion && !targetChanged && !rangeDue
+                && clipboard == sentClipboard) {
             return null;
         }
         sentChangeVersion = changeVersion;
         sentDataVersion = dataVersion;
-        targetChanged = false;
+        sentClipboard = clipboard;
         rangeTick = now;
+        EditTargetRef shown = skipHiddenAttached(router, targetRef);
+        if (shown != targetRef && selectTarget(shown.target(), shown.pos(), null)) {
+            target = validTarget();
+        }
+        targetChanged = false;
         RouterSnapshot captured = RouterSnapshot.capture(router, viewer, target, selectedFace);
         bodyChanged = !captured.sameBody(snapshot);
         networksChanged = !captured.networks().equals(snapshot.networks());

@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.world.item.ItemStack;
@@ -40,7 +41,7 @@ final class TargetLine {
         this.model = model;
         this.layout = layout;
         this.label = new LabelEditor((target, pos, name) ->
-                actions.send(LabelEditor.payload(actions.containerId(), target, pos, name)));
+                actions.send(LabelEditor.payload(actions.containerId(), target, pos, model.range(), name)));
     }
 
     /** A caixa do nome do grupo ou da máquina do alvo, que abre pelo ✎. */
@@ -65,12 +66,11 @@ final class TargetLine {
         }
         Hot pill = layout.hot(Kind.TARGET);
         if (pill != null) {
-            RangeView.MachineView machine = model.targetMachine();
-            int border = machine != null && machine.exception() ? GuiPaint.ACCENT : GuiPaint.BUTTON_BORDER;
+            int border = model.targetException() ? GuiPaint.ACCENT : GuiPaint.BUTTON_BORDER;
             RangeView.GroupView group = model.targetGroup();
             PanelPainter.dropButton(g, font, pill, model.targetName(model.snapshot().target()),
                     pill.contains(mx, my) || open, model.readOnly() == null, border,
-                    group == null ? ItemStack.EMPTY : group.icon());
+                    group == null ? ItemStack.EMPTY : GroupIcons.of(model.range(), group));
         }
         Hot rename = layout.hot(Kind.RENAME);
         if (rename != null) {
@@ -143,17 +143,17 @@ final class TargetLine {
         GuiText.draw(g, font, LitFooter.SHOW, textX, b.y() + (b.h() - 8) / 2, room, GuiPaint.FG);
     }
 
-    /** A máquina do alvo está acesa no mundo. */
+    /** A máquina do alvo (remota ou a presa) está acesa no mundo. */
     boolean highlightLit() {
-        RangeView.MachineView machine = model.targetMachine();
-        return machine != null && HighlightRenderer.isLit(model.snapshot().dimension(), machine.pos());
+        BlockPos pos = model.targetPos();
+        return pos != null && HighlightRenderer.isLit(model.snapshot().dimension(), pos);
     }
 
     /** O "No mundo": acende ou apaga a máquina do alvo, com a linha até o roteador do painel. */
     void toggleHighlight() {
-        RangeView.MachineView machine = model.targetMachine();
-        if (machine != null) {
-            HighlightRenderer.toggle(model.snapshot().dimension(), machine.pos(), model.snapshot().pos());
+        BlockPos pos = model.targetPos();
+        if (pos != null) {
+            HighlightRenderer.toggle(model.snapshot().dimension(), pos, model.snapshot().pos());
         }
     }
 
@@ -190,10 +190,12 @@ final class TargetLine {
     Component tooltip() {
         RangeView.MachineView machine = model.targetMachine();
         Component scope;
+        Component state = model.targetException() ? tr("range.machine.exception") : tr("range.machine.follows");
         if (machine != null) {
-            Component state = machine.exception() ? tr("range.machine.exception") : tr("range.machine.follows");
             scope = tr("range.scope.machine", MachineTexts.machineName(model.range(), model.snapshot().target().id()),
                     state);
+        } else if (model.attachedInGroup()) {
+            scope = tr("range.scope.machine", model.targetName(EditTarget.ATTACHED_TARGET), state);
         } else {
             RangeView.GroupView group = model.targetGroup();
             scope = group == null ? panelTr("target.attached")
@@ -204,14 +206,22 @@ final class TargetLine {
 
     // ------------------------------------------------------------------ a lista do alvo
 
+    /** A presa (no topo só sem grupo) e cada grupo seguido da presa, se é dele, e das máquinas dele. */
     List<TargetRow> rows() {
         List<TargetRow> rows = new ArrayList<>();
-        rows.add(new TargetRow(EditTarget.ATTACHED_TARGET, model.targetName(EditTarget.ATTACHED_TARGET), null, 0,
-                false));
         RangeView view = model.range();
+        int attachedGroup = view.attachedGroup();
+        if (attachedGroup < 0 && view.attachedShown()) {
+            rows.add(new TargetRow(EditTarget.ATTACHED_TARGET, model.targetName(EditTarget.ATTACHED_TARGET), null, 0,
+                    false));
+        }
         for (RangeView.GroupView group : view.groups()) {
             rows.add(new TargetRow(EditTarget.group(group.id()), panelTr("target.group", MachineTexts.groupName(group)),
                     Component.literal(Integer.toString(group.count())), GuiPaint.MUTED, false));
+            if (group.id() == attachedGroup) {
+                rows.add(new TargetRow(EditTarget.ATTACHED_TARGET, model.targetName(EditTarget.ATTACHED_TARGET),
+                        view.attachedException() ? panelTr("target.exception") : null, GuiPaint.WARN, true));
+            }
             for (int i = 0; i < view.machines().size(); i++) {
                 RangeView.MachineView machine = view.machines().get(i);
                 if (machine.group() == group.id()) {

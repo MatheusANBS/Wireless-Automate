@@ -60,8 +60,8 @@ final class TreeTexts {
         this.texts = texts;
     }
 
-    /** Monta os textos se as linhas da página mudaram. */
-    void prepare(Font font, TabletSnapshot snapshot) {
+    /** Monta os textos se as linhas da página mudaram; {@code tree} é a árvore dessas linhas (o recuo da presa). */
+    void prepare(Font font, TabletSnapshot snapshot, ListTree tree) {
         TabletRows rows = snapshot.rows();
         if (rows == built) {
             return;
@@ -90,10 +90,13 @@ final class TreeTexts {
         int number = 0;
         for (int r = 0; r < n; r++) {
             TabletRows.Row row = rows.rows().get(r);
+            boolean inGroup = tree.attachedInGroup(r);
             seconds[r] = Component.empty();
             states[r] = Component.empty();
             rates[r] = Component.empty();
             switch (row) {
+                case TabletRows.Attached attached when inGroup ->
+                        attachedInGroup(r, nodes.get(attached.parent()), attached);
                 case TabletRows.Attached attached -> {
                     NodeView node = nodes.get(attached.parent());
                     names[r] = node.attachedLabel().isEmpty() ? Component.literal(texts.machineName(node.machine()))
@@ -133,6 +136,19 @@ final class TreeTexts {
             stateW[r] = font.width(states[r]);
             rateW[r] = font.width(rates[r]);
         }
+    }
+
+    /**
+     * A presa dentro do grupo dela, como uma máquina: "presa" (ou o nome dado) no lugar do "#N" e, embaixo, o lado do
+     * roteador onde ela está (o grupo já diz o bloco).
+     */
+    private void attachedInGroup(int r, NodeView node, TabletRows.Attached attached) {
+        names[r] = node.attachedLabel().isEmpty()
+                ? Component.translatable("gui.wirelessautomate.router.range.attached.row")
+                : Component.literal(node.attachedLabel());
+        seconds[r] = attached.side().<Component>map(side -> tr("tree.attached.side",
+                Component.translatable("gui.wirelessautomate.router.face." + side.getSerializedName())))
+                .orElse(Component.literal(texts.machineName(node.machine())));
     }
 
     static Component stateText(MachineStatus status) {

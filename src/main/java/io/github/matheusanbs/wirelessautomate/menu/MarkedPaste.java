@@ -11,6 +11,7 @@ import io.github.matheusanbs.wirelessautomate.preset.PresetApplier;
 import io.github.matheusanbs.wirelessautomate.preset.PresetPaste;
 import io.github.matheusanbs.wirelessautomate.preset.ProfileSides;
 import io.github.matheusanbs.wirelessautomate.preset.ProfileSource;
+import io.github.matheusanbs.wirelessautomate.range.AttachedMember;
 import io.github.matheusanbs.wirelessautomate.range.MachineConfig;
 import io.github.matheusanbs.wirelessautomate.range.MachineGroup;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
@@ -23,7 +24,9 @@ import net.minecraft.server.level.ServerPlayer;
 
 /**
  * O Colar nos marcados com máquinas (etapa 3b), por roteador, num lote só ({@code batchChanges}): a presa como no
- * colar de sempre; o grupo inteiro com o perfil do grupo, e as exceções dele ficam (D2); a máquina com a exceção dela.
+ * colar de sempre, com a regra de uma máquina do grupo (sozinha no grupo muda o perfil, senão vira exceção); o grupo
+ * inteiro com o perfil do grupo, e as exceções dele ficam (D2), a da presa inclusive (a presa marcada num grupo
+ * marcado é parte dele, {@link MarkedTargets#resolve}); a máquina com a exceção dela.
  * Nas máquinas, os lados do perfil passam do quadro do roteador de origem para os da máquina ({@link ProfileSides}).
  * A regra das redes é a do {@link PresetApplier}: a face cuja rede o jogador não pode usar fica com a que tinha.
  */
@@ -75,12 +78,15 @@ final class MarkedPaste {
                 continue;
             }
             MarkedTargets.Resolved targets = MarkedTargets.resolve(router, marks);
-            boolean attached = (marks.node || targets.attached()) && !key.equals(source.origin());
+            boolean attachedMarked = marks.node || targets.attached();
             boolean remote = targets.remote();
             if (remote && !source.pastesOnMachines()) {
                 refusedOld = true;
                 remote = false;
+                // Sem os grupos, a presa marcada junto com o dela recebe o colar como presa.
+                attachedMarked |= targets.attachedInGroup();
             }
+            boolean attached = attachedMarked && !key.equals(source.origin());
             if (!attached && !remote) {
                 continue;
             }
@@ -100,7 +106,7 @@ final class MarkedPaste {
             if (remote) {
                 groups += targets.groups().size();
                 machines += targets.machines().size();
-                kept += exceptionsIn(router.remoteMachines(), targets);
+                kept += exceptionsIn(router.remoteMachines(), targets, before.hadAttachedException());
             }
             PasteUndo change = PasteUndo.between(before, PasteUndo.State.of(router, attached, remote), attached);
             if (change != null) {
@@ -156,9 +162,15 @@ final class MarkedPaste {
         }
     }
 
-    /** As máquinas com exceção nos grupos colados. */
-    private static int exceptionsIn(RemoteMachines remotes, MarkedTargets.Resolved targets) {
-        int count = 0;
+    /**
+     * As máquinas com exceção nos grupos colados, a presa inclusive se já tinha a exceção antes do colar
+     * ({@code attachedHadException}): a que o próprio colar criou nela (o roteador inteiro marcado) não foi mantida.
+     */
+    private static int exceptionsIn(RemoteMachines remotes, MarkedTargets.Resolved targets,
+            boolean attachedHadException) {
+        AttachedMember attached = remotes.attached();
+        int count = attachedHadException && attached != null && attached.hasException()
+                && targets.groups().contains(attached.group()) ? 1 : 0;
         for (RemoteMachine machine : remotes.machines()) {
             if (machine.hasException() && targets.groups().contains(machine.group())) {
                 count++;

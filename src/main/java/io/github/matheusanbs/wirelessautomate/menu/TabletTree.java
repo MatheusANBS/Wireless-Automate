@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
@@ -38,7 +37,6 @@ import org.jetbrains.annotations.Nullable;
 public final class TabletTree {
     public static final int MAX_OPEN = 64;
     public static final int MAX_GROUPS = 256;
-    private static final ResourceLocation AIR = ResourceLocation.withDefaultNamespace("air");
 
     /** Um grupo de um roteador. */
     public record GroupKey(NodeKey node, int group) {
@@ -180,7 +178,7 @@ public final class TabletTree {
         NodeKey key = entry.key();
         emitter.start(entry, parent, rows, lives, sample, now);
         try {
-            return TreeOrder.plan(!entry.machine().equals(AIR), emitter,
+            return TreeOrder.plan(entry.showsAttached(), entry.attachedGroup(), emitter,
                     id -> collapsed.contains(new GroupKey(key, id)), id -> showAll.contains(new GroupKey(key, id)),
                     budget, emitter);
         } finally {
@@ -253,6 +251,12 @@ public final class TabletTree {
                     exceptions[g]++;
                 }
             }
+            if (remotes.attachedException()) {
+                int g = remotes.groupIndex(remotes.attachedGroup());
+                if (g >= 0) {
+                    exceptions[g]++;
+                }
+            }
         }
 
         void clear() {
@@ -291,14 +295,16 @@ public final class TabletTree {
 
         @Override
         public void attached() {
-            rows.add(new Attached(parent, router == null ? Optional.empty() : Optional.of(router.facing().getOpposite())));
+            rows.add(new Attached(parent, router == null ? Optional.empty() : Optional.of(router.facing().getOpposite()),
+                    remotes.attachedException()));
         }
 
         @Override
         public void group(int g) {
             int groupId = remotes.groupId(g);
             GroupKey key = new GroupKey(entry.key(), groupId);
-            rows.add(new Group(parent, groupId, remotes.groupBlock(g), clip(remotes.groupName(g)), remotes.groupMachines(g),
+            int total = remotes.groupMachines(g) + (groupId == remotes.attachedGroup() ? 1 : 0);
+            rows.add(new Group(parent, groupId, remotes.groupBlock(g), clip(remotes.groupName(g)), total,
                     exceptions[g], collapsed.contains(key), showAll.contains(key)));
         }
 

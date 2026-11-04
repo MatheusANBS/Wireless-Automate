@@ -167,6 +167,8 @@ Click a row to list only the routers of that type or network; the "Only …" chi
 | **Ctrl+V** | Pastes. |
 | **Ctrl+Z** | Undoes (the notice after pasting also has **Undo**). |
 
+The Tablet copy is kept on the item. The router screen's machine copy is separate: it lasts only until you leave the world.
+
 Nodes show "same as the profile" or "N different from the profile". Only networks you can use are
 applied.
 

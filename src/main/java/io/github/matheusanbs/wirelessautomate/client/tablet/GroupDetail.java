@@ -21,23 +21,29 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * O detalhe de um grupo de redes na coluna da direita da aba Redes (o cabeçalho do grupo escolhido na lista): o
  * nome, que vira o campo de renomear, o resumo, pausar e retomar o grupo todo, marcar as redes dele (com "em
- * <grupo>" ao lado da rede que já está noutro) e remover de dois cliques. As linhas das redes e o resumo são
- * montados quando as redes, os grupos, o grupo escolhido ou o tema mudam.
+ * <grupo>" ao lado da rede que já está noutro) e remover de dois cliques. À direita do nome, o slot do ícone do
+ * grupo: recebe um item arrastado do JEI (o slot pisca enquanto o item está no ar) ou o item da outra mão num clique;
+ * um clique sem item na outra mão tira o ícone. As linhas das redes, o resumo e o ícone são montados quando as redes,
+ * os grupos, o grupo escolhido ou o tema mudam.
  */
 final class GroupDetail {
     private static final Component MORE = Component.literal("▼");
     private static final int GROUP_NET_Y = BODY_Y + 62;
     private static final int GROUP_NET_ROW = 13;
     private static final int GROUP_NET_ROWS = 6;
+    private static final int SLOT = 18;
 
     /** Uma rede que se pode marcar no grupo: o nome e, se está noutro grupo, "em <grupo>". */
     private record NetRow(UUID id, int color, Component name, @Nullable Component elsewhere, int elsewhereW) {
@@ -54,6 +60,9 @@ final class GroupDetail {
     // montados para o grupo escolhido
     private List<NetRow> rows = List.of();
     private Component summary = Component.empty();
+    private ItemStack icon = ItemStack.EMPTY;
+    /** Um item do JEI está sendo arrastado: o slot pisca para mostrar onde soltar. */
+    private boolean ghostDragging;
     private @Nullable List<NetworkView> builtNetworks;
     private @Nullable List<GroupView> builtGroups;
     private @Nullable UUID builtGroup;
@@ -121,6 +130,7 @@ final class GroupDetail {
                     elsewhere == null ? 0 : font.width(elsewhere)));
         }
         rows = built;
+        icon = group.icon().map(id -> new ItemStack(BuiltInRegistries.ITEM.get(id))).orElse(ItemStack.EMPTY);
         int nodes = 0;
         for (UUID id : group.networks()) {
             Optional<NetworkView> n = s.network(id);
@@ -170,6 +180,45 @@ final class GroupDetail {
         return remove;
     }
 
+    // ------------------------------------------------------------------ ícone
+
+    /** O slot do ícone do grupo escolhido, {x, y, w, h}, ou {@code null} se não há grupo que o jogador gerencie. */
+    int @Nullable [] iconSlot() {
+        GroupView group = selectedView();
+        if (group == null || !group.manageable() || names.renaming()) {
+            return null;
+        }
+        return new int[] {layout.left + RX + layout.rw() - SLOT, layout.top + BODY_Y - 2, SLOT, SLOT};
+    }
+
+    private boolean overIcon(double mouseX, double mouseY) {
+        int[] at = iconSlot();
+        return at != null && mouseX >= at[0] && mouseX < at[0] + at[2] && mouseY >= at[1] && mouseY < at[1] + at[3];
+    }
+
+    void ghostDragging(boolean dragging) {
+        ghostDragging = dragging;
+    }
+
+    /** Usa o item como ícone do grupo escolhido. */
+    void acceptIcon(ItemStack stack) {
+        GroupView group = selectedView();
+        if (group != null && group.manageable() && !stack.isEmpty()) {
+            actions.groupIcon(group.id(), BuiltInRegistries.ITEM.getKey(stack.getItem()).toString());
+        }
+    }
+
+    /** O clique no slot: o item da outra mão vira o ícone; sem item, o ícone sai. */
+    private void clickIcon(GroupView group) {
+        ItemStack offhand = Minecraft.getInstance().player == null ? ItemStack.EMPTY
+                : Minecraft.getInstance().player.getOffhandItem();
+        if (!offhand.isEmpty()) {
+            acceptIcon(offhand);
+        } else if (group.icon().isPresent()) {
+            actions.groupIcon(group.id(), "");
+        }
+    }
+
     // ------------------------------------------------------------------ ações
 
     private void togglePause() {
@@ -198,6 +247,10 @@ final class GroupDetail {
         if (group == null || !group.manageable()) {
             return false;
         }
+        if (overIcon(mouseX, mouseY)) {
+            clickIcon(group);
+            return true;
+        }
         List<NetRow> list = rows(font, group);
         int net = groupNetAt(mouseX, mouseY, list.size());
         if (net >= 0) {
@@ -222,6 +275,9 @@ final class GroupDetail {
         GroupView group = selectedView();
         if (group == null || !group.manageable()) {
             return null;
+        }
+        if (overIcon(mouseX, mouseY)) {
+            return tr("group.icon.tooltip");
         }
         if (groupNetAt(mouseX, mouseY, rows(font, group).size()) >= 0) {
             return tr("group.network.tooltip");
@@ -255,10 +311,32 @@ final class GroupDetail {
         int y = layout.top;
         int rw = layout.rw();
         List<NetRow> list = rows(font, group);
-        names.renderTitle(g, font, mouseX, mouseY, tr("group.title", group.name()), color(group), group.manageable());
-        GuiText.draw(g, font, summary, x, y + BODY_Y + 15, rw, GuiPaint.FG);
+        int reserve = group.manageable() || !icon.isEmpty() ? SLOT + 4 : 0;
+        names.renderTitle(g, font, mouseX, mouseY, tr("group.title", group.name()), color(group), group.manageable(),
+                reserve);
+        boolean dropHere = ghostDragging && iconSlot() != null;
+        GuiText.draw(g, font, dropHere ? tr("group.icon.drop") : summary, x, y + BODY_Y + 15, rw - reserve,
+                dropHere ? GuiPaint.ACCENT : GuiPaint.FG);
+        if (reserve > 0) {
+            renderIcon(g, x + rw - SLOT, y + BODY_Y - 2, mouseX, mouseY, dropHere);
+        }
         renderNetworks(g, font, mouseX, mouseY, group, list);
         GuiText.wrap(g, font, tr("group.hint"), x, y + layout.newY() - 10, rw, 2, GuiPaint.DISABLED);
+    }
+
+    /** O slot do ícone; com um item do JEI no ar, a moldura pisca na cor de destaque para mostrar onde soltar. */
+    private void renderIcon(GuiGraphics g, int sx, int sy, int mouseX, int mouseY, boolean dropHere) {
+        GuiPaint.slot(g, sx, sy);
+        if (!icon.isEmpty()) {
+            g.renderItem(icon, sx + 1, sy + 1);
+        }
+        if (dropHere) {
+            int color = (System.currentTimeMillis() / 300) % 2 == 0 ? GuiPaint.ACCENT : GuiPaint.FG;
+            GuiPaint.outline(g, sx - 1, sy - 1, SLOT + 2, SLOT + 2, color);
+            GuiPaint.outline(g, sx - 2, sy - 2, SLOT + 4, SLOT + 4, color);
+        } else if (overIcon(mouseX, mouseY)) {
+            GuiPaint.outline(g, sx - 1, sy - 1, SLOT + 2, SLOT + 2, GuiPaint.BUTTON_HOVER_BORDER);
+        }
     }
 
     /** As redes que se pode marcar no grupo, com a caixa de marcar, o olho na cor e "em <grupo>". */

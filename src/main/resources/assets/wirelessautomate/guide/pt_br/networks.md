@@ -70,7 +70,6 @@ mesmo tipo na mesma rede troca entre si; o modo da face diz quem envia e quem re
 | --- | --- |
 | Linha **Rede** da face, na tela do roteador | Uma face, numa aba |
 | <ItemLink id="wirelessautomate:network_tablet" />, Selecionar | Todas as faces dos nós marcados, no tipo escolhido (ou em todos) |
-| <ItemLink id="wirelessautomate:configurator" /> | A rede vai junto com a configuração colada |
 
 ## Alcance e chunks
 

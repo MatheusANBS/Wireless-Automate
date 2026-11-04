@@ -38,7 +38,7 @@ Items from one chest to another, without pipes, in a minute.
 5. Set the **Up** face to **Extract** on A and to **Insert** on B.
 6. Put items in chest A: they show up in chest B.
 
-The [Configurator](configurator.md) copies the setup, networks included, to other routers.
+To copy a router's setup, networks included, to other routers, use the [Tablet](network-tablet.md).
 
 The moon button, in the top-right corner, switches the screens to dark mode.
 

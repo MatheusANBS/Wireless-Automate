@@ -14,18 +14,25 @@ item_ids:
 
 <ItemImage id="wirelessautomate:linker" scale="2" float="left" />
 
-Liga **máquinas** a um roteador de alcance, uma a uma ou uma área inteira. Também abre o roteador que
-chega numa máquina.
+Liga **máquinas** a um roteador de alcance, uma a uma ou todas as do mesmo bloco. Também abre o
+roteador que chega numa máquina.
 
 <br clear="all" />
 
 ## Como usar
 
-1. Ponha o Upgrade de Alcance num roteador e clique nele com o Vinculador.
-2. Clique numa máquina para vinculá-la. Clique de novo para desvincular.
-3. Para uma sala inteira: com Shift, clique em dois cantos, clique no ar para abrir a tela e clique
-   em **Vincular área**.
-4. Passe para o modo **Abrir** (Shift + roda do mouse) e clique numa máquina para configurar a face
+1. Ponha o Upgrade de Alcance num roteador e clique nele com o Vinculador. Clique nele de novo para
+   soltá-lo.
+2. Clique numa máquina para vinculá-la. Clique nela de novo para desvincular. Se o grupo dela fica
+   vazio, os cartões dele voltam para o seu inventário.
+3. Para vincular todas as máquinas iguais de uma vez, segure **Ctrl** (**Cmd** no Mac) e clique numa
+   delas: entram as do mesmo bloco no raio do roteador, as mais perto primeiro, até o limite do
+   tier. A action bar diz quantas, por exemplo **Vinculou 7 Fornalhas**. Correndo, o Ctrl é o da
+   corrida e o clique vale como um clique normal.
+4. Para desvincular todas as iguais de uma vez, faça o mesmo gesto numa máquina que já está
+   vinculada.
+5. Clique no ar para ver o roteador escolhido. **Shift** + clique no ar o solta.
+6. Passe para o modo **Abrir** (Shift + roda do mouse) e clique numa máquina para configurar a face
    dela no roteador.
 
 O Vinculador não mexe nas redes: escolha a rede de cada face na linha **Rede** da tela do roteador ou
@@ -37,23 +44,12 @@ pelo [Tablet](network-tablet.md).
 | --- | --- | --- |
 | Clique num roteador | Escolhe o roteador | — |
 | Clique numa máquina | Vincula ou desvincula | Abre o roteador que chega nela |
+| Ctrl (Cmd no Mac) + clique numa máquina | Vincula as do mesmo bloco no raio; se ela já está vinculada, desvincula todas as do mesmo bloco | — |
 | Clique numa Tela de Sinal | Escolhe a Tela | — |
 | Clique num Baú, Bateria ou Tanque do mod | Com uma Tela escolhida, liga ou desliga | Abre o roteador que chega nele |
-| Clique no ar | Abre a tela | Mostra a dica do modo |
-| Shift + clique em dois blocos | Marca os cantos da área | — |
+| Clique no ar | Mostra o roteador escolhido | Mostra a dica do modo |
+| Shift + clique no ar | Solta o roteador e a Tela escolhidos | Mostra a dica do modo |
 | Shift + roda do mouse | Passa para **Abrir** | Passa para **Vincular** |
-
-## A tela (modo Vincular)
-
-- Mostra o roteador escolhido e as vagas usadas (por exemplo **7/32 máquinas**). Se ele ainda não
-  vincula (sem o Upgrade de Alcance), o motivo aparece ali.
-- **Vincular área** liga as máquinas da área que o roteador alcança, as mais perto primeiro, até o
-  limite do tier.
-- **Desvincular**, no cabeçalho, faz os cliques e o botão da área tirarem máquinas em vez de pôr.
-- **Limpar** apaga os cantos.
-
-A área pode ter até 262.144 blocos (por exemplo 64 × 64 × 64), e você precisa estar a até 64
-blocos dela.
 
 ## Modo Abrir
 

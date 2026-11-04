@@ -13,6 +13,7 @@ import io.github.matheusanbs.wirelessautomate.menu.TabletMachineRows.More;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMachineRows.Row;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMachines;
 import io.github.matheusanbs.wirelessautomate.menu.TabletMenu;
+import io.github.matheusanbs.wirelessautomate.menu.TabletRows;
 import io.github.matheusanbs.wirelessautomate.menu.TabletRows.MachineLive;
 import io.github.matheusanbs.wirelessautomate.menu.TabletRows.MachineStatus;
 import io.github.matheusanbs.wirelessautomate.menu.TabletSnapshot;
@@ -28,6 +29,7 @@ import io.github.matheusanbs.wirelessautomate.packet.TabletMachinesPayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletMachinesPayload.Action;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPagePayload;
 import io.github.matheusanbs.wirelessautomate.packet.TabletPayloads;
+import io.github.matheusanbs.wirelessautomate.packet.TabletTreePayload;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
@@ -120,6 +122,20 @@ public final class TabletMachinesGameTests {
     }
 
     /** Vincula sem olhar o mundo (posições sem bloco) e avisa o índice: só para a ordem e os tetos. */
+    /** A posição, entre as linhas de máquina da visão por máquinas (a ordem das {@code lives}), da que está em {@code pos}. */
+    private static int remoteRow(TabletMenu menu, BlockPos pos) {
+        int machine = 0;
+        for (Row row : menu.snapshot().page().machineRows().rows()) {
+            if (row instanceof Machine m) {
+                if (!m.attached() && m.pos() == pos.asLong()) {
+                    return machine;
+                }
+                machine++;
+            }
+        }
+        return -1;
+    }
+
     private static void fakeLinks(RouterBlockEntity router, GameTestHelper helper, int count, ResourceLocation block,
             int z) {
         RemoteMachines remotes = router.remoteMachines();
@@ -386,7 +402,7 @@ public final class TabletMachinesGameTests {
     @GameTest(template = "empty", timeoutTicks = 300)
     public static void movingMachineLiveInMachineView(GameTestHelper helper) {
         RouterBlockEntity router = rangeRouter(helper);
-        helper.setBlock(REMOTE_CHEST, Blocks.CHEST);
+        helper.setBlock(REMOTE_CHEST, Blocks.BARREL);
         ServerPlayer player = playerWithTablet(helper);
         TabletMenu[] menu = new TabletMenu[1];
         AtomicBoolean livePacket = new AtomicBoolean();
@@ -410,13 +426,16 @@ public final class TabletMachinesGameTests {
                     List<CustomPacketPayload> payloads = menu[0].pollPayloads();
                     boolean page = payloads.stream().anyMatch(p -> p instanceof TabletPagePayload);
                     for (CustomPacketPayload payload : payloads) {
-                        if (payload instanceof TabletLivePayload live && !page && live.machines().size() == 2
-                                && live.machines().get(1).status() == MachineStatus.MOVING) {
+                        int at = remoteRow(menu[0], helper.absolutePos(REMOTE_CHEST));
+                        if (payload instanceof TabletLivePayload live && !page && live.machines().size() == 2 && at >= 0
+                                && live.machines().get(at).status() == MachineStatus.MOVING) {
                             livePacket.set(true);
                         }
                     }
+                    // A remota é um barril (o baú é a presa): a linha dela é achada pela posição.
                     List<MachineLive> lives = menu[0].snapshot().page().machineRows().lives();
-                    MachineLive remote = lives.size() == 2 ? lives.get(1) : null;
+                    int at = remoteRow(menu[0], helper.absolutePos(REMOTE_CHEST));
+                    MachineLive remote = lives.size() == 2 && at >= 0 ? lives.get(at) : null;
                     helper.assertTrue(remote != null && remote.status() == MachineStatus.MOVING
                             && remote.received(ResourceType.ITEM) > 0 && livePacket.get(),
                             "a máquina não ficou movendo no pacote pequeno: " + remote);
@@ -507,6 +526,75 @@ public final class TabletMachinesGameTests {
                     helper.assertFalse(fresh.machinesState().active(), "abriu em Máquinas depois do logout");
                     fresh.removed(player);
                     player.containerMenu = player.inventoryMenu;
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Presa com o membro e ar na frente (a máquina quebrada sem derrubar o roteador): a árvore a mostra no grupo dela
+     * e a visão por máquinas a conta no bloco do grupo, as duas iguais. Sem membro e com ar, nenhuma das duas.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void brokenAttachedWithMemberCountsInBothViews(GameTestHelper helper) {
+        RouterBlockEntity router = chestWithRouter(helper, RouterTier.ADVANCED);
+        RouterBlockEntity bare = secondRouter(helper);
+        ServerPlayer player = playerWithTablet(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> {
+                    waitLoaded(helper, router);
+                    waitLoaded(helper, bare);
+                })
+                .thenExecute(() -> {
+                    router.setMode(ResourceType.ITEM, Direction.NORTH, PortMode.EXTRACT);
+                    int group = router.remoteMachines().attached().group();
+                    helper.assertTrue(bare.remoteMachines().attached() == null, "o segundo roteador ganhou membro");
+                    for (BlockPos chest : List.of(new BlockPos(1, 1, 1), new BlockPos(0, 1, 0))) {
+                        helper.getLevel().setBlock(helper.absolutePos(chest), Blocks.AIR.defaultBlockState(),
+                                net.minecraft.world.level.block.Block.UPDATE_CLIENTS
+                                        | net.minecraft.world.level.block.Block.UPDATE_KNOWN_SHAPE);
+                    }
+                    router.machineNeighborChanged();
+                    bare.machineNeighborChanged();
+                    NodeIndex.track(router);
+                    NodeIndex.track(bare);
+                    NodeIndex.placedBy(router, player.getUUID());
+                    NodeIndex.placedBy(bare, player.getUUID());
+                    NodeIndex.Entry entry = NodeIndex.get(helper.getLevel().getServer()).entry(key(router));
+                    eq(helper, entry.machine(), BuiltInRegistries.BLOCK.getKey(Blocks.AIR), "a máquina no índice");
+                    helper.assertTrue(entry.showsAttached(), "a presa com membro sumiu");
+                    eq(helper, entry.attachedBlock(), CHEST_ID, "o bloco da presa quebrada");
+                    helper.assertFalse(NodeIndex.get(helper.getLevel().getServer()).entry(key(bare)).showsAttached(),
+                            "a presa sem membro e com ar apareceu");
+
+                    TabletMenu menu = openTablet(player, 160);
+                    try {
+                        helper.assertTrue(TabletPayloads.handleTree(player, new TabletTreePayload(menu.containerId,
+                                TabletTreePayload.Action.OPEN, key(router), 0)), "não abriu o roteador");
+                        fresh(menu);
+                        List<TabletRows.Row> tree = menu.snapshot().page().rows().rows();
+                        helper.assertTrue(tree.size() == 2 && tree.get(0) instanceof TabletRows.Group g && g.id() == group
+                                && g.total() == 1 && tree.get(1) instanceof TabletRows.Attached,
+                                "a árvore sem a presa no grupo: " + tree);
+
+                        helper.assertTrue(act(player, menu, Action.MACHINES, null), "não entrou na visão por máquinas");
+                        List<Row> rows = fresh(menu).rows();
+                        int chestRow = -1;
+                        for (int i = 0; i < rows.size(); i++) {
+                            helper.assertFalse(rows.get(i) instanceof Block b && b.block().equals(
+                                    BuiltInRegistries.BLOCK.getKey(Blocks.AIR)), "um bloco de ar na visão por máquinas");
+                            if (block(rows.get(i), CHEST_ID, 1, 1, false)) {
+                                chestRow = i;
+                            }
+                        }
+                        helper.assertTrue(chestRow >= 0 && chestRow + 1 < rows.size()
+                                && rows.get(chestRow + 1) instanceof Machine m && m.attached(),
+                                "a visão por máquinas sem a presa no bloco do grupo: " + rows);
+                        eq(helper, machines(menu.snapshot().page().machineRows()), List.of("presa"),
+                                "só a presa com membro");
+                    } finally {
+                        menu.removed(player);
+                        player.containerMenu = player.inventoryMenu;
+                    }
                 })
                 .thenSucceed();
     }

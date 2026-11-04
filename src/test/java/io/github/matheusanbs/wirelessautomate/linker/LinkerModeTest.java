@@ -31,10 +31,4 @@ class LinkerModeTest {
         assertEquals(LinkerMode.OPEN, LinkerMode.LINK.next());
         assertEquals(LinkerMode.LINK, LinkerMode.OPEN.next());
     }
-
-    @Test
-    void onlyLinkMarksTheArea() {
-        assertEquals(true, LinkerMode.LINK.marksArea());
-        assertEquals(false, LinkerMode.OPEN.marksArea());
-    }
 }

@@ -1,6 +1,5 @@
 package io.github.matheusanbs.wirelessautomate.client.router;
 
-import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.client.ArmedClick;
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
@@ -12,21 +11,28 @@ import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Os botões pequenos da linha escolhida na lista das máquinas ({@link RangeList}), da direita para a
- * esquerda: ✕ Desvincular (máquina), ↺ Voltar ao perfil (máquina com exceção), ⟳ Atualizar (máquina
- * trocada, ou grupo com alguma trocada) e o "Tirar redes" ({@link IdleNetworks}, grupo ou máquina com
- * exceção com alguma face sem modo e com rede) e o ✎ Dar nome (máquina, e grupo quando o nome cabe ao lado).
- * O ✕ pede dois cliques ({@link ArmedClick}): armado, vira o botão de texto "Desvincular?", que desarma
- * quando o mouse sai dele ou o alvo muda. O clique devolve a ação; quem manda o pedido ao servidor é a
- * coluna da lista. Público só pela {@link Action}, que o e2e usa.
+ * esquerda: ✕ Desvincular (a máquina, ou o grupo inteiro na linha do grupo, menos no grupo da presa sem nada a
+ * zerar, {@link RangeView.GroupView#blank}; sem espaço, o nome do grupo sai abreviado), ↺ Voltar ao
+ * perfil (máquina ou presa com exceção), ⟳ Atualizar (máquina trocada, ou grupo com alguma trocada), o "Tirar redes" ({@link IdleNetworks}, grupo ou máquina (a presa
+ * inclusive) com exceção com alguma face sem modo e com rede) e o ✎ Dar nome (máquina e presa; no grupo, depois
+ * dos dois abaixo e só quando o nome cabe ao lado). Por último, ⎘ Colar (com uma cópia) e ⧉ Copiar o perfil, só
+ * quando o nome da linha continua inteiro ao lado deles (senão ficam o Ctrl+C e o Ctrl+V).
+ * O ✕ pede dois cliques ({@link ArmedClick}): armado, vira o botão de texto "Desvincular?" (no grupo, "Desvincular
+ * 3?", "Apagar?" no grupo sem máquina ou "Zerar?" no da presa sozinha), que desarma quando o mouse sai dele ou o alvo
+ * muda. O clique devolve a ação; quem manda o pedido ao servidor é a coluna da lista. Os botões são postos de novo
+ * só quando algo que os muda muda (a visão, o alvo, o lugar da linha, o armado, a cópia). Público só pela
+ * {@link Action}, que o e2e usa.
  */
 public final class RangeRowButtons {
-    public enum Action { UPDATE, REVERT, REVERT_GROUP, UNLINK, CLEAR_NETWORKS, RENAME }
+    public enum Action { UPDATE, REVERT, REVERT_GROUP, UNLINK, CLEAR_NETWORKS, RENAME, COPY, PASTE }
+
+    /** Shift + clique no ⎘ nos passos do e2e, que não seguram a tecla. */
+    public static boolean e2eShift;
 
     /** Um botão posto na tela. */
     record Button(Action action, int x, int y, int w, int h) {
@@ -50,6 +56,10 @@ public final class RangeRowButtons {
     private static final String[] ARROW = {".###.#", "#...##", "#..###", "#.....", "#....#", ".####."};
     /** O lápis do ✎ em 6 × 6 px, na diagonal, com a ponta embaixo à esquerda. */
     private static final String[] PENCIL = {"....##", "...#.#", "..#.#.", ".#.#..", "#.#...", "##...."};
+    /** O ⧉ em 6 × 6 px: dois quadrados sobrepostos. */
+    private static final String[] COPY = {"####..", "#..#..", "#.####", "####.#", "..#..#", "..####"};
+    /** O ⎘ em 6 × 6 px: a prancheta com o prendedor em cima. */
+    private static final String[] PASTE = {".####.", "#.##.#", "#....#", "#.##.#", "#....#", "######"};
 
     private final ArmedClick unlinkArm = new ArmedClick();
     private @Nullable EditTarget armedFor;
@@ -57,9 +67,28 @@ public final class RangeRowButtons {
     private @Nullable EditTarget revertGroupFor;
     /** O alvo tem faces sem modo com rede ({@link IdleNetworks#shown}), lido do snapshot a cada quadro. */
     private boolean idleNetworks;
-    private @Nullable RangeView widthView;
-    private int widthGroup = -1;
-    private int groupNameW;
+    /** O nome de origem da cópia do jogador (vazio sem cópia), do snapshot. */
+    private Component clipboard = Component.empty();
+    /**
+     * O nome da linha, o "Desvincular 3?" do grupo e o "Voltar 2?" do ↺ do grupo, medidos só quando a visão, o alvo
+     * ou o nome da presa mudam.
+     */
+    private @Nullable RangeView textView;
+    private @Nullable EditTarget textTarget;
+    private @Nullable String textLabel;
+    private int nameW;
+    private Component unlinkText = Component.empty();
+    private int unlinkTextW;
+    private Component revertGroupText = Component.empty();
+    private int revertGroupTextW;
+    /** Os botões postos por último e o que os decidiu ({@link #place}). */
+    private List<Button> placed = List.of();
+    private @Nullable RangeView placedView;
+    private @Nullable EditTarget placedTarget;
+    private @Nullable Component placedClipboard;
+    private @Nullable String placedLabel;
+    /** O topo, a altura, a borda direita, o começo do texto e os armados (bits) dos botões postos. */
+    private final int[] placedAt = new int[5];
 
     private static Component tr(String key, Object... args) {
         return Component.translatable("gui.wirelessautomate.router." + key, args);
@@ -96,19 +125,40 @@ public final class RangeRowButtons {
         return null;
     }
 
-    /** A largura do nome do grupo na linha ("Fornalha ×3"), medida só quando a visão ou o grupo mudam. */
-    private int groupNameWidth(Font font, RangeView view, int group) {
-        if (view != widthView || group != widthGroup) {
-            RangeView.GroupView g = view.group(group);
-            widthView = view;
-            widthGroup = group;
-            groupNameW = g == null ? 0 : font.width(tr("range.group.count", MachineTexts.groupName(g), g.count()));
+    /**
+     * Mede, quando a visão, o alvo ou o nome da presa mudam, o nome da linha do alvo ("Fornalha ×3", "#2",
+     * "presa"), o texto do ✕ armado e o do ↺ do grupo armado.
+     */
+    private void measure(Font font, RangeView view, EditTarget target, String attachedLabel) {
+        if (view == textView && target.equals(textTarget) && attachedLabel.equals(textLabel)) {
+            return;
         }
-        return groupNameW;
+        textView = view;
+        textTarget = target;
+        textLabel = attachedLabel;
+        RangeView.GroupView group = target.kind() == EditTarget.Kind.GROUP ? view.group(target.id()) : null;
+        Component name = switch (target.kind()) {
+            case GROUP -> group == null ? Component.empty()
+                    : tr("range.group.count", MachineTexts.groupName(group), group.count());
+            case MACHINE -> MachineRow.rowName(view, target.id());
+            case ATTACHED -> view.attachedGroup() >= 0 ? MachineRow.attachedRowName(attachedLabel)
+                    : attachedLabel.isEmpty() ? tr("range.attached") : Component.literal(attachedLabel);
+        };
+        nameW = font.width(name);
+        unlinkText = RowButtonTips.unlinkArmedText(view, target);
+        unlinkTextW = font.width(unlinkText);
+        revertGroupText = target.kind() == EditTarget.Kind.GROUP ? revertGroupArmedText(view, target)
+                : Component.empty();
+        revertGroupTextW = font.width(revertGroupText);
     }
 
     void idleNetworks(boolean shown) {
         idleNetworks = shown;
+    }
+
+    /** O nome de origem da cópia do jogador ({@code RouterSnapshot.clipboard}); vazio sem cópia. */
+    void clipboard(Component source) {
+        clipboard = source;
     }
 
     /** O ✕ do alvo {@code target} está armado, esperando o segundo clique. */
@@ -133,30 +183,100 @@ public final class RangeRowButtons {
 
     /**
      * Os botões da linha do alvo {@code target}, com o topo em {@code ry} e a borda direita em {@code right};
-     * {@code minX} é onde o texto da linha começa: até onde o "Desvincular?" pode crescer e, no grupo, onde o
-     * nome dele começa. Vazia se o alvo não tem botões. Com o ✕ armado, só ele: os outros saem para o texto
-     * caber. No grupo, o ✎ só sai quando o nome não cabe ao lado dele (o nome se edita então pelos dois cliques).
+     * {@code minX} é onde o texto da linha começa: até onde o armado pode crescer e onde o nome dela começa
+     * ({@code attachedLabel} é o nome dado à presa). Vazia se o alvo não tem botões. Com o ✕ armado, só ele; com o
+     * ↺ do grupo armado, só ele e o ✕: os outros saem para o texto caber. A lista devolvida é reusada enquanto nada
+     * que a decide muda.
      */
-    List<Button> place(Font font, RangeView view, EditTarget target, int ry, int rowH, int right, int minX) {
-        List<Action> actions = new ArrayList<>();
+    List<Button> place(Font font, RangeView view, EditTarget target, String attachedLabel, int ry, int rowH,
+            int right, int minX) {
+        boolean unlinkArmed = unlinkArmed(target);
+        boolean revertArmed = revertGroupArmed(target);
+        int flags = (unlinkArmed ? 4 : 0) | (revertArmed ? 2 : 0) | (idleNetworks ? 1 : 0);
+        if (view == placedView && target.equals(placedTarget) && clipboard == placedClipboard
+                && attachedLabel.equals(placedLabel) && placedAt[0] == ry && placedAt[1] == rowH
+                && placedAt[2] == right && placedAt[3] == minX && placedAt[4] == flags) {
+            return placed;
+        }
+        measure(font, view, target, attachedLabel);
+        List<Action> actions = actions(view, target, unlinkArmed, revertArmed);
+        int nameEnd = minX + nameW;
+        // o ✕ do grupo entra sempre, como o da máquina: sem espaço, o nome sai abreviado (inteiro na dica da linha)
+        RangeView.GroupView group = target.kind() == EditTarget.Kind.GROUP ? view.group(target.id()) : null;
+        if (group != null && !group.blank()) {
+            actions.addFirst(Action.UNLINK);
+        }
+        if (!unlinkArmed && !revertArmed) {
+            if (!clipboard.getString().isEmpty() && fits(actions.size() + 1, nameEnd, right)) {
+                actions.add(Action.PASTE);
+            }
+            if (fits(actions.size() + 1, nameEnd, right)) {
+                actions.add(Action.COPY);
+            }
+            // no grupo, o ✎ só quando o nome cabe ao lado (ele também se edita pelos dois cliques)
+            if (target.kind() == EditTarget.Kind.GROUP && (actions.isEmpty() || fits(actions.size() + 1, nameEnd, right))) {
+                actions.add(Action.RENAME);
+            }
+        }
+        List<Button> buttons = new ArrayList<>(actions.size());
+        int bx = right - PAD;
+        int by = ry + (rowH - SIZE) / 2;
+        for (Action action : actions) {
+            int w = SIZE;
+            if (action == Action.UNLINK && unlinkArmed) {
+                w = Math.max(SIZE, Math.min(unlinkTextW + 6, bx - minX));
+            } else if (action == Action.REVERT_GROUP && revertArmed) {
+                w = Math.max(SIZE, Math.min(revertGroupTextW + 6, bx - minX));
+            }
+            bx -= w;
+            buttons.add(new Button(action, bx, by, w, SIZE));
+            bx -= GAP;
+        }
+        placed = List.copyOf(buttons);
+        placedView = view;
+        placedTarget = target;
+        placedClipboard = clipboard;
+        placedLabel = attachedLabel;
+        placedAt[0] = ry;
+        placedAt[1] = rowH;
+        placedAt[2] = right;
+        placedAt[3] = minX;
+        placedAt[4] = flags;
+        return placed;
+    }
+
+    /** Cabem {@code count} botões de 10 px à esquerda de {@code right} com o nome inteiro até {@code nameEnd}. */
+    private static boolean fits(int count, int nameEnd, int right) {
+        return nameEnd <= right - PAD - count * (SIZE + GAP) - 3;
+    }
+
+    /** Os botões que a linha sempre tem, da direita para a esquerda (o ✕ do grupo, o ⎘, o ⧉ e o ✎ do grupo vêm depois). */
+    private List<Action> actions(RangeView view, EditTarget target, boolean unlinkArmed, boolean revertArmed) {
+        List<Action> actions = new ArrayList<>(8);
         switch (target.kind()) {
             case ATTACHED -> {
+                // a presa dentro do grupo: o ↺ e o Tirar redes com a exceção, e o ✎; ela não se desvincula
+                if (view.attachedGroup() >= 0) {
+                    if (view.attachedException()) {
+                        actions.add(Action.REVERT);
+                    }
+                    if (idleNetworks) {
+                        actions.add(Action.CLEAR_NETWORKS);
+                    }
+                    actions.add(Action.RENAME);
+                }
             }
             case GROUP -> {
-                if (exceptions(view, target) > 0) {
+                if (!unlinkArmed && exceptions(view, target) > 0) {
                     actions.add(Action.REVERT_GROUP);
                 }
                 // armado, só o ↺ fica, para o "Voltar 3?" caber
-                if (!revertGroupArmed(target)) {
+                if (!unlinkArmed && !revertArmed) {
                     if (replaced(view, target.id()) > 0) {
                         actions.add(Action.UPDATE);
                     }
                     if (idleNetworks) {
                         actions.add(Action.CLEAR_NETWORKS);
-                    }
-                    int withRename = right - PAD - (actions.size() + 1) * (SIZE + GAP) - 1;
-                    if (actions.isEmpty() || minX + groupNameWidth(font, view, target.id()) <= withRename - 2) {
-                        actions.add(Action.RENAME);
                     }
                 }
             }
@@ -164,37 +284,22 @@ public final class RangeRowButtons {
                 MachineView machine = view.machine(target.id());
                 if (machine != null) {
                     actions.add(Action.UNLINK);
-                    boolean armed = unlinkArmed(target);
-                    if (!armed && machine.exception()) {
+                    if (!unlinkArmed && machine.exception()) {
                         actions.add(Action.REVERT);
                     }
-                    if (!armed && machine.state() == MachineState.REPLACED) {
+                    if (!unlinkArmed && machine.state() == MachineState.REPLACED) {
                         actions.add(Action.UPDATE);
                     }
-                    if (!armed && idleNetworks) {
+                    if (!unlinkArmed && idleNetworks) {
                         actions.add(Action.CLEAR_NETWORKS);
                     }
-                    if (!armed) {
+                    if (!unlinkArmed) {
                         actions.add(Action.RENAME);
                     }
                 }
             }
         }
-        List<Button> buttons = new ArrayList<>();
-        int bx = right - PAD;
-        int by = ry + (rowH - SIZE) / 2;
-        for (Action action : actions) {
-            int w = SIZE;
-            if (action == Action.UNLINK && unlinkArmed(target)) {
-                w = Math.max(SIZE, Math.min(font.width(tr("range.unlink.armed")) + 6, bx - minX));
-            } else if (action == Action.REVERT_GROUP && revertGroupArmed(target)) {
-                w = Math.max(SIZE, Math.min(font.width(revertGroupArmedText(view, target)) + 6, bx - minX));
-            }
-            bx -= w;
-            buttons.add(new Button(action, bx, by, w, SIZE));
-            bx -= GAP;
-        }
-        return buttons;
+        return actions;
     }
 
     /**
@@ -257,19 +362,20 @@ public final class RangeRowButtons {
             boolean hovered = b.contains(mouseX, mouseY);
             if (b.action() == Action.REVERT_GROUP && revertGroupArmed(target)) {
                 GuiPaint.box(g, b.x(), b.y(), b.w(), b.h(), GuiPaint.DANGER, GuiPaint.DANGER);
-                GuiText.draw(g, font, revertGroupArmedText(view, target), b.x() + 3, b.y() + 1, b.w() - 5,
+                GuiText.draw(g, font, revertGroupText, b.x() + 3, b.y() + 1, b.w() - 5,
                         GuiPaint.SELECTED_TEXT);
                 continue;
             }
             if (b.action() == Action.UNLINK && unlinkArmed(target)) {
                 GuiPaint.box(g, b.x(), b.y(), b.w(), b.h(), GuiPaint.DANGER, GuiPaint.DANGER);
-                GuiText.draw(g, font, tr("range.unlink.armed"), b.x() + 3, b.y() + 1, b.w() - 5, GuiPaint.SELECTED_TEXT);
+                // o texto medido na última {@link #place}, a desta linha
+                GuiText.draw(g, font, unlinkText, b.x() + 3, b.y() + 1, b.w() - 5, GuiPaint.SELECTED_TEXT);
                 continue;
             }
             int color = switch (b.action()) {
                 case UPDATE -> GuiPaint.OK;
                 case REVERT, REVERT_GROUP -> GuiPaint.ACCENT;
-                case UNLINK, CLEAR_NETWORKS, RENAME -> GuiPaint.FG;
+                case UNLINK, CLEAR_NETWORKS, RENAME, COPY, PASTE -> GuiPaint.FG;
             };
             boolean revert = b.action() == Action.REVERT || b.action() == Action.REVERT_GROUP;
             // o ↺ já tem a borda coral: com o mouse em cima, ela escurece
@@ -283,6 +389,8 @@ public final class RangeRowButtons {
                 IdleNetworks.icon(g, b.x() + 2, b.y() + 2, color);
             } else if (b.action() == Action.RENAME) {
                 pencil(g, b.x() + 2, b.y() + 2, color);
+            } else if (b.action() == Action.COPY || b.action() == Action.PASTE) {
+                pixels(g, b.action() == Action.COPY ? COPY : PASTE, b.x() + 2, b.y() + 2, false, color);
             } else {
                 arrow(g, b.x() + 2, b.y() + 2, revert, color);
             }
@@ -307,6 +415,11 @@ public final class RangeRowButtons {
         pixels(g, PENCIL, x, y, false, color);
     }
 
+    /** O ⧉ em 6 × 6 px (também o da linha da cópia embaixo da lista). */
+    static void copyIcon(GuiGraphics g, int x, int y, int color) {
+        pixels(g, COPY, x, y, false, color);
+    }
+
     private static void pixels(GuiGraphics g, String[] art, int x, int y, boolean mirror, int color) {
         for (int row = 0; row < art.length; row++) {
             for (int col = 0; col < art[row].length(); col++) {
@@ -321,40 +434,8 @@ public final class RangeRowButtons {
     Component tooltip(RangeView view, EditTarget target, Action action) {
         boolean armed = action == Action.UNLINK && unlinkArmed(target)
                 || action == Action.REVERT_GROUP && revertGroupArmed(target);
-        return tooltip(view, target, action, armed);
+        return action == Action.COPY || action == Action.PASTE ? RowButtonTips.copy(target, action, clipboard)
+                : RowButtonTips.tooltip(view, target, action, armed);
     }
 
-    /** A dica de uma ação de máquina, a mesma na lista e na linha Editando; {@code armed} é o ✕ armado. */
-    static Component tooltip(RangeView view, EditTarget target, Action action, boolean armed) {
-        Component head = switch (action) {
-            case UPDATE -> tr("range.update");
-            case REVERT -> tr("range.revert");
-            case REVERT_GROUP -> tr(armed ? "range.revert_group.armed" : "range.revert_group",
-                    exceptions(view, target));
-            case UNLINK -> tr(armed ? "range.unlink.armed" : "range.unlink");
-            case CLEAR_NETWORKS -> PanelModel.panelTr("idle.clear");
-            case RENAME -> tr("range.rename");
-        };
-        Component detail = switch (action) {
-            case UPDATE -> updateDetail(view, target);
-            case REVERT -> tr("range.revert.tooltip");
-            case REVERT_GROUP -> tr(armed ? "range.revert_group.armed.tooltip" : "range.revert_group.tooltip",
-                    exceptions(view, target));
-            case UNLINK -> tr(armed ? "range.unlink.armed.tooltip" : "range.unlink.tooltip");
-            case CLEAR_NETWORKS -> PanelModel.panelTr("idle.clear.tooltip");
-            case RENAME -> tr("range.rename.tooltip");
-        };
-        return head.copy().append("\n").append(detail.copy().withColor(GuiPaint.TOOLTIP_MUTED));
-    }
-
-    /** O que o Atualizar faz: o bloco que está no lugar da máquina, ou quantas do grupo estão trocadas. */
-    static Component updateDetail(RangeView view, EditTarget target) {
-        if (target.kind() == EditTarget.Kind.GROUP) {
-            return tr("range.update.tooltip.group", replaced(view, target.id()));
-        }
-        MachineView machine = view.machine(target.id());
-        Component block = machine == null || machine.replacedBy() == null ? Component.literal("?")
-                : RouterBlock.machineName(BuiltInRegistries.BLOCK.get(machine.replacedBy()));
-        return tr("range.update.tooltip.machine", block);
-    }
 }

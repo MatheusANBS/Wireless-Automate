@@ -85,7 +85,7 @@ public final class RangeWakeGameTests {
     @GameTest(template = "empty", timeoutTicks = 300)
     public static void remoteSourceWakesOnSetChanged(GameTestHelper helper) {
         RouterBlockEntity router = rangeRouter(helper);
-        helper.setBlock(REMOTE_CHEST, Blocks.CHEST);
+        helper.setBlock(REMOTE_CHEST, Blocks.BARREL);
         long[] insertedAt = {0};
         helper.startSequence()
                 .thenWaitUntil(() -> waitLoaded(helper, router))
@@ -117,7 +117,7 @@ public final class RangeWakeGameTests {
     @GameTest(template = "empty", timeoutTicks = 400)
     public static void fullRemoteDestinationWakesWhenEmptied(GameTestHelper helper) {
         RouterBlockEntity router = rangeRouter(helper);
-        helper.setBlock(REMOTE_CHEST, Blocks.CHEST);
+        helper.setBlock(REMOTE_CHEST, Blocks.BARREL);
         Container full = container(helper, REMOTE_CHEST);
         for (int i = 0; i < full.getContainerSize(); i++) {
             full.setItem(i, new ItemStack(Items.DIRT, 64));
@@ -160,7 +160,7 @@ public final class RangeWakeGameTests {
         RouterBlockEntity router = rangeRouter(helper);
         RouterBlockEntity feeder = waitingFeeder(helper, new BlockPos(0, 1, 0), router.networkId(ResourceType.ITEM));
         fillButOne(helper, CHEST);
-        helper.setBlock(REMOTE_CHEST, Blocks.CHEST);
+        helper.setBlock(REMOTE_CHEST, Blocks.BARREL);
         long[] feederWake = {0};
         helper.startSequence()
                 .thenWaitUntil(() -> {
@@ -195,7 +195,7 @@ public final class RangeWakeGameTests {
     public static void deliveryIntoRemoteDoesNotWakeFeeders(GameTestHelper helper) {
         RouterBlockEntity router = rangeRouter(helper);
         RouterBlockEntity feeder = waitingFeeder(helper, new BlockPos(0, 1, 0), router.networkId(ResourceType.ITEM));
-        helper.setBlock(REMOTE_CHEST, Blocks.CHEST);
+        helper.setBlock(REMOTE_CHEST, Blocks.BARREL);
         fillButOne(helper, REMOTE_CHEST);
         long[] feederWake = {0};
         helper.startSequence()

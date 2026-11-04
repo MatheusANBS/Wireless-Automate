@@ -103,6 +103,20 @@ public final class MachineGroup {
         return true;
     }
 
+    /** Algum slot de cartão do grupo tem uma pilha. */
+    public boolean hasCards() {
+        for (ItemStack[][] byType : cards) {
+            for (ItemStack[] bySide : byType) {
+                for (ItemStack stack : bySide) {
+                    if (!stack.isEmpty()) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
     /** Tira todos os cartões do grupo (para soltar no mundo). */
     public List<ItemStack> removeAllCards() {
         List<ItemStack> removed = new ArrayList<>();

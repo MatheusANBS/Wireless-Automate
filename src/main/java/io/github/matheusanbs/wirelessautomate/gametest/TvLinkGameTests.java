@@ -113,6 +113,26 @@ public final class TvLinkGameTests {
         helper.succeed();
     }
 
+    /** Clicar de novo no roteador ou na Tela escolhidos os solta: o Vinculador fica sem nenhum. */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void clicarDeNovoSoltaOEscolhido(GameTestHelper helper) {
+        TestPlayers.MenuPlayer player = TestPlayers.menuOpener(helper);
+        TvBlockEntity tv = screenAt(helper, player.getUUID());
+        helper.setBlock(ROUTER, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
+        RouterBlockEntity router = helper.getBlockEntity(ROUTER);
+        ItemStack stack = linker();
+        RangeLinks.choose(player, stack, router);
+        helper.assertValueEqual(RangeLinks.choose(player, stack, router).status(), RangeLinks.Status.RELEASED,
+                "o segundo clique no roteador");
+        helper.assertTrue(LinkerItem.router(stack) == null, "o roteador ficou escolhido");
+        helper.assertValueEqual(key(player), "item.wirelessautomate.linker.range.released", "o aviso do roteador");
+        TvLinks.choose(player, stack, tv);
+        TvLinks.choose(player, stack, tv);
+        helper.assertTrue(LinkerItem.tv(stack) == null, "a Tela ficou escolhida");
+        helper.assertValueEqual(key(player), "item.wirelessautomate.linker.tv.released", "o aviso da Tela");
+        helper.succeed();
+    }
+
     @GameTest(template = "empty", timeoutTicks = 100)
     public static void ligaEDesligaOsArmazenamentosDoMod(GameTestHelper helper) {
         TestPlayers.MenuPlayer player = TestPlayers.menuOpener(helper);

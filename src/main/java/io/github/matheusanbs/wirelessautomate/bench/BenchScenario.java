@@ -27,6 +27,8 @@ public enum BenchScenario {
             "Inventário grande: um item diferente por slot na origem, destino grande vazio"),
     BIG_FULL("bigfull", 20, RouterTier.ELITE, 60, 20,
             "Inventário grande quase cheio: o destino só tem espaço nos 4 últimos slots"),
+    PARTIAL_FULL("partialfull", 20, RouterTier.ELITE, 60, 0,
+            "Inventário grande sem slot vazio: o destino tem pilhas parciais de outros itens, então recusa cada item da origem tendo lugar só para outros"),
     TYPES("types", 20, RouterTier.ELITE, 60, 20,
             "Muitos tipos: centenas de itens diferentes e filtros com milhares de entradas"),
     MIXED("mixed", 498, RouterTier.ELITE, 60, 20,
@@ -86,7 +88,7 @@ public enum BenchScenario {
 
     /** Usa inventário grande (baú duplo ou Sophisticated Storage de netherita). */
     public boolean bigInventories() {
-        return this == RAW || this == BIG || this == BIG_FULL || this == TYPES || this == STOCK;
+        return this == RAW || this == BIG || this == BIG_FULL || this == PARTIAL_FULL || this == TYPES || this == STOCK;
     }
 
     /** Mede o Ressonador de Sinal ({@link BenchResonators}); a cena não tem máquinas de itens. */
@@ -101,7 +103,7 @@ public enum BenchScenario {
     public boolean comparable() {
         return switch (this) {
             case MANY, IDLE, FULL, RAW, BIG, BIG_FULL, MIXED, SPARSE, REDSTONE, INFINITE, PAIRS -> true;
-            case TYPES, REBUILD, STOCK, BIG_STACK, TABLET, REDSTONE_FACE, HUB, CHEST_TYPES, RESONATOR_GEN, RESONATOR_IDLE,
+            case PARTIAL_FULL, TYPES, REBUILD, STOCK, BIG_STACK, TABLET, REDSTONE_FACE, HUB, CHEST_TYPES, RESONATOR_GEN, RESONATOR_IDLE,
                     RESONATOR_EVENT, RANGE, TABLET_RANGE, TABLET_MACHINES -> false;
         };
     }

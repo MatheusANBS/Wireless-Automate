@@ -60,7 +60,7 @@ final class E2eRangeSteps {
     }
 
     static BlockPos rangeRouter;
-    private static BlockPos rangeChestA;
+    static BlockPos rangeChestA;
     private static BlockPos rangeChestB;
     static BlockPos rangeFurnace;
     private static BlockPos rangeDropper;
@@ -74,8 +74,11 @@ final class E2eRangeSteps {
      * perfil; {@code range-2-grupo}, com os lados relativos), escolhe a fornalha e põe Frente em Inserir
      * (vira exceção; {@code range-3-excecao}, com o ↺ na linha dela) e volta ao perfil pelo ↺. Depois, a
      * fornalha trocada no lugar e o Atualizar ({@link E2eRangeReplaceSteps}). Na volta em português,
-     * desvincula o segundo baú pela tela, em dois cliques. Em inglês, os nomes das máquinas e dos grupos
-     * ({@link E2eRangeLabelSteps}) e o destaque no mundo ({@link E2eHighlightSteps}). Sem texto cortado nas
+     * desvincula o segundo baú pela tela, em dois cliques. A presa no grupo dos baús e o grupo "×0"
+     * ({@link E2eRangeAttachedSteps}). Em inglês, os nomes das máquinas e dos grupos
+     * ({@link E2eRangeLabelSteps}) e o destaque no mundo ({@link E2eHighlightSteps}). Copiar e colar por máquina
+     * ({@link E2eRangeCopySteps}), e no fim desvincular o grupo e o Atualizar que devolve cartões
+     * ({@link E2eRangeGroupSteps}). Sem texto cortado nas
      * capturas (no Desvincular armado da lista, só o nome da linha abreviado).
      */
     static void rangeSteps(List<Step> list) {
@@ -92,10 +95,12 @@ final class E2eRangeSteps {
             if (!pt) {
                 rangeNetworkAndViewSteps(list, label);
             }
+            E2eRangeAttachedSteps.attachedSteps(list, label, suffix);
             rangeExceptionSteps(list, label, suffix);
             // em inglês o Atualizar sai pelo ⟳ da lista; em português, pelo botão da linha Editando
             E2eRangeReplaceSteps.rangeReplaceSteps(list, label, suffix, !pt);
             rangeIdleNetworkSteps(list, label, suffix, playerId);
+            E2eRangeCopySteps.copySteps(list, label, suffix, playerId);
             if (!pt) {
                 E2eRangeLabelSteps.rangeLabelSteps(list, label, playerId);
                 E2eHighlightSteps.highlightSteps(list, label, playerId);
@@ -105,6 +110,7 @@ final class E2eRangeSteps {
             }
             if (!pt) {
                 rangeUpgradeOutSteps(list, label, playerId);
+                E2eRangeCopySteps.noUpgradeSteps(list, label, playerId);
             }
             list.add(close(label + "fechar"));
             if (!pt) {
@@ -120,13 +126,15 @@ final class E2eRangeSteps {
                 list.add(language("en_us"));
             }
         }
+        E2eRangeAttachedSteps.emptyGroupSteps(list, "alcance: ");
+        E2eRangeGroupSteps.groupSteps(list, "alcance: ");
         list.add(new Step("alcance: limpar", STEP_TIMEOUT_MS, () -> onServer(server -> {
             ServerLevel level = server.overworld();
             RouterBlockEntity router = router(server, rangeRouter);
             // nada cai no chão: sem o upgrade e sem máquinas antes de tirar o bloco
             router.removeRangeUpgrade();
             while (!router.remoteMachines().machines().isEmpty()) {
-                router.unlinkMachine(0);
+                router.unlinkMachine(0, null);
             }
             for (BlockPos pos : List.of(rangeRouter, rangeRouter.below(), rangeChestA, rangeChestB, rangeFurnace)) {
                 level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
@@ -431,7 +439,7 @@ final class E2eRangeSteps {
     }
 
     /** Troca o alvo do menu aberto do jogador no servidor, pelo handler do pacote (como a lista faz). */
-    private static void selectOnServer(MinecraftServer server, UUID playerId, IntFunction<SelectTargetPayload> payload) {
+    static void selectOnServer(MinecraftServer server, UUID playerId, IntFunction<SelectTargetPayload> payload) {
         ServerPlayer player = server.getPlayerList().getPlayer(playerId);
         ModPayloads.handleSelectTarget(player, payload.apply(player.containerMenu.containerId));
     }

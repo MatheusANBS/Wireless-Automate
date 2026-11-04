@@ -14,44 +14,46 @@ item_ids:
 
 <ItemImage id="wirelessautomate:configurator" scale="2" float="left" />
 
-Copia a configuração de um roteador e cola em outro.
+O **Afinador**: descobre sozinho o que cada face de uma máquina aceita e o que ela dá, e propõe os
+modos (Insere, Extrai, Armazém) para você conferir antes de aplicar.
 
 <br clear="all" />
 
-## Como usar
+## Como operar
 
-1. Shift + clique no roteador já configurado: copia faces, filtros, prioridades, redstone e redes.
-2. Clique em outro roteador: cola nele.
+1. Vincule a máquina a um roteador (preso nela ou de alcance, pelo [Vinculador](linker.md)).
+2. Clique na máquina com o Configurador. As faces com modo ganham uma moldura na cor do modo, e a
+   action bar resume a proposta.
+3. Confira a proposta. Se estiver boa, clique de novo na mesma máquina em até 10 segundos: os modos
+   são aplicados nela.
+4. Com **Shift**, o segundo clique aplica no perfil do grupo inteiro.
+5. Escolha a rede das faces na tela do roteador, se ainda não tiverem.
 
-O item guarda uma cópia só. O tooltip mostra o que está copiado.
+Clicar em outra máquina refaz a análise para ela. Clicar no ar, mirar outro bloco por 2 segundos ou
+esperar 10 segundos apaga a proposta, e o próximo clique na máquina faz uma análise nova. Segurar o
+botão não aplica nem apaga: solte e clique de novo.
 
-| Gesto | O que faz |
-| --- | --- |
-| Shift + clique num roteador | Copia |
-| Clique num roteador | Cola nele |
-| Shift + clique num bloco sem roteador | Limpa a varinha |
-| Shift + roda do mouse | Troca o tipo colado |
-| Segurar Alt esquerdo | Abre a roda do tipo colado |
+## O que muda
 
-## Tipo colado
+- Só os **modos** dos tipos que a análise achou. Prioridade, redstone, filtro e rede de cada face
+  ficam como estão.
+- Numa máquina de um grupo com outras, a mudança vira exceção dela; com Shift, vai para o perfil.
+- Baús, barris e tanques viram **Armazém** numa face só; as outras faces ficam em Nenhum. Uma máquina
+  só de energia ou de Source vira Armazém só se for a Bateria ou o Tanque de Source do mod: nas de
+  outros mods ela recebe Insere, porque uma máquina que consome lê igual a uma bateria, e Insere não a
+  esvazia.
+- Não há Desfazer: a moldura mostra a proposta antes, e o segundo clique é a confirmação.
 
-Copiar sempre copia tudo. O **tipo colado** escolhe o que vai para o roteador: **Todos** (padrão),
-Itens, Fluidos, Energia, Químicos (com o Mekanism) ou Source (com o Ars Nouveau). Num tipo só, as
-outras abas do roteador ficam como estavam.
+## Limites
 
-Exemplo: copie um roteador de fluidos, passe para **Fluidos** e cole nos outros sem mexer nos itens
-nem na energia deles.
+- A análise olha até **27 slots por face** e até 64 itens de prova (alguns comuns, os da máquina e os
+  do seu inventário). Uma máquina com mais slots, ou que só aceita um item raro, pode receber uma
+  proposta incompleta.
+- É uma proposta: confira antes de aplicar, principalmente em máquinas de outros mods.
+- Você precisa poder mexer na máquina e editar o roteador.
+- Numa máquina sem roteador aparece "Vincule a máquina a um roteador primeiro" e nada é analisado.
 
-Na roda (Alt esquerdo; a tecla muda em Controles), solte a tecla sobre a fatia para escolher. Soltar
-no centro ou Esc fecha sem mudar.
-
-## Bom saber
-
-- A cópia é relativa ao roteador: funciona com ele preso em qualquer face.
-- A rede só é colada se você puder usá-la, e a face só sai de uma rede que você gerencia (a sua, ou
-  qualquer uma se for operador). Senão, a face fica com a de antes. Uma face sem rede na cópia não mexe na rede do destino.
-- A rede vale para a máquina presa; as máquinas do Upgrade de Alcance ficam como estão.
-- Para colar em muitos roteadores de uma vez, use a seleção do [Tablet](network-tablet.md).
+Num roteador, o clique com o Configurador abre a tela dele.
 
 ## Receita
 

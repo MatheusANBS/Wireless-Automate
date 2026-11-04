@@ -361,10 +361,16 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
             // nenhuma tecla fecha a tela enquanto se digita (nem a do inventário)
             return true;
         }
-        if (column.keyPressed(keyCode, scanCode, modifiers) || panel.keyPressed(keyCode, scanCode, modifiers)) {
+        if (column.keyPressed(keyCode, scanCode, modifiers)) {
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
+    public boolean keyReleased(int keyCode, int scanCode, int modifiers) {
+        column.keyReleased(keyCode);
+        return super.keyReleased(keyCode, scanCode, modifiers);
     }
 
     @Override
@@ -563,9 +569,9 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         return column.rangeEyeCenter(target);
     }
 
-    /** Centro do Apagar todas embaixo da lista, ou {@code null} se ele não aparece (gancho do e2e). */
-    public int @Nullable [] litClearCenter() {
-        return column.litClearCenter();
+    /** Centro do ✕ da cópia ({@code copy}) ou do Apagar todas embaixo da lista, ou {@code null} (gancho do e2e). */
+    public int @Nullable [] footerCenter(boolean copy) {
+        return copy ? column.copyForgetCenter() : column.litClearCenter();
     }
 
     /** O ✕ da linha do alvo na lista está armado, esperando o segundo clique (gancho do e2e). */
@@ -613,16 +619,9 @@ public class RouterScreen extends AbstractContainerScreen<RouterMenu> {
         return column.previewViewFaceCenter(direction);
     }
 
-    public int[] previewCardSlotCenter(int slot) {
+    /** Centro do slot {@code slot} do menu (um cartão, ou o {@code RouterMenu.UPGRADE_SLOT}). */
+    public int[] previewSlotCenter(int slot) {
         return slots.slotCenter(leftPos, topPos, slot);
-    }
-
-    public int[] previewUpgradeSlotCenter() {
-        return slots.slotCenter(leftPos, topPos, RouterMenu.UPGRADE_SLOT);
-    }
-
-    public int[] previewRangeSlotCenter() {
-        return slots.slotCenter(leftPos, topPos, RouterMenu.RANGE_SLOT);
     }
 
     public int[] previewEditFilterCenter() {

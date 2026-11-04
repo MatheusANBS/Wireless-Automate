@@ -15,7 +15,7 @@ memória: cada uma precisa de fonte (primer, notas, código do alvo) antes de en
 | Motor | `network/NetworkManager`, `TickBudget` etc. | Em geral não muda (lógica pura); confirme os eventos de tick do servidor |
 | Receitas | `recipe/`, `data/wirelessautomate/recipe/` | `RecipeInput`/`CraftingInput` (1.21+), o sistema de receitas do 1.21.2 (receitas só no servidor, exibição no livro), as condições (`neoforge:conditions` × `forge:conditions`), pastas de dados no plural no 1.20.1 (`recipes/`, `loot_tables/`, `tags/blocks/`) |
 | Modelos e texturas | `assets/wirelessautomate/`, `scripts/textures/` | Definições de modelo de item (pasta `items/` do 1.21.4 em diante), transformações raiz do blockstate (o giro do roteador depende delas), formato dos `.mcmeta` |
-| Telas | `client/` | `GuiGraphics` existe desde o 1.20; o 1.21.6 mudou o desenho da GUI (estados de render e desenho adiado, segundo os primers): pesa no `ConfiguratorWheelScreen` (triângulos com `BufferBuilder`), no `MachineView3D` (bloco 3D na tela) e no `DevScreenshot` |
+| Telas | `client/` | `GuiGraphics` existe desde o 1.20; o 1.21.6 mudou o desenho da GUI (estados de render e desenho adiado, segundo os primers): pesa no `MachineView3D` (bloco 3D na tela) e no `DevScreenshot` |
 | Mundo e render | `client/AreaRenderer`, `client/MachineView3D` | Eventos de render do nível, `RenderType`, `PoseStack` |
 | Chunk loading | `chunk/` | `TicketController` (NeoForge) × `ForgeChunkManager` (Forge) |
 | Config | `Config.java` | `ModConfigSpec` (NeoForge) × `ForgeConfigSpec` (Forge) |

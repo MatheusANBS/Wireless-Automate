@@ -15,7 +15,8 @@ import net.minecraft.resources.ResourceLocation;
  *
  * <p>Sem objeto por máquina: cada uma é um {@code long} (o bloco, o roteador e o índice da máquina mais um, 0 na
  * presa), ordenado de uma vez. Guarda as vinculadas que o índice guarda ({@link IndexRemotes#CAP} por roteador) e
- * a presa de cada roteador; ~8 B por máquina.
+ * a presa de cada roteador que a mostra ({@link NodeIndex.Entry#showsAttached}, a mesma regra da árvore), no bloco
+ * {@link NodeIndex.Entry#attachedBlock}; ~8 B por máquina.
  */
 final class MachineOrder {
     /** O índice de máquina da presa. */
@@ -53,12 +54,12 @@ final class MachineOrder {
         Object2IntOpenHashMap<ResourceLocation> ranks = new Object2IntOpenHashMap<>();
         int machines = 0;
         for (NodeIndex.Entry entry : routers) {
-            ranks.putIfAbsent(entry.machine(), 0);
+            ranks.putIfAbsent(entry.attachedBlock(), 0);
             IndexRemotes remotes = entry.remotes();
             for (int g = 0, n = remotes.groupCount(); g < n; g++) {
                 ranks.putIfAbsent(remotes.groupBlock(g), 0);
             }
-            machines += 1 + remotes.size();
+            machines += (entry.showsAttached() ? 1 : 0) + remotes.size();
         }
         ranks.putIfAbsent(AIR, 0);
         ResourceLocation[] blocks = ranks.keySet().toArray(ResourceLocation[]::new);
@@ -70,7 +71,9 @@ final class MachineOrder {
         int k = 0;
         for (int r = 0; r < routers.length; r++) {
             NodeIndex.Entry entry = routers[r];
-            keys[k++] = key(ranks.getInt(entry.machine()), r, ATTACHED);
+            if (entry.showsAttached()) {
+                keys[k++] = key(ranks.getInt(entry.attachedBlock()), r, ATTACHED);
+            }
             IndexRemotes remotes = entry.remotes();
             for (int i = 0, n = remotes.size(); i < n; i++) {
                 int g = remotes.groupIndex(remotes.group(i));

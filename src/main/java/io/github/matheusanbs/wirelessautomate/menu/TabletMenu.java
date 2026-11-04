@@ -133,7 +133,9 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
         /** Alvo: rede; outro: time. Tira também um time que já foi desfeito. */
         NETWORK_TEAM_REMOVE,
         /** Alvo: grupo; valor: 1 pausa, 0 retoma. */
-        GROUP_PAUSE
+        GROUP_PAUSE,
+        /** Alvo: grupo; texto: id do item do ícone (vazio tira). Só quem gerencia o grupo. */
+        GROUP_ICON
     }
 
     private TabletSnapshot snapshot;
@@ -255,6 +257,7 @@ public class TabletMenu extends AbstractContainerMenu implements RouterEditHost,
     public void removed(Player player) {
         super.removed(player);
         IdleNetworkUndo.closed(player, this);
+        MachinePasteUndo.closed(player, this);
         if (flows != null) {
             flows.stop();
         }

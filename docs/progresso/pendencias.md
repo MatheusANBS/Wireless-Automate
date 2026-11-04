@@ -15,17 +15,23 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 ## Motor e redes
 
 - **(dono)** Decidir se a saída do Ressonador deve ser suavizada (hoje o lote de 20 ticks sai num tick só). (28/10)
-- Ver se os fluidos pedem o mesmo tratamento da recusa por tipo (Salvaging Table do Apotheosis). (11/10)
+- Ver se os fluidos e os químicos pedem o mesmo tratamento do destino seletivo dos itens (tanque com outro fluido recusa e dorme como cheio; `ItemHints`). (02/11)
+- Bench: um cenário de destino seletivo (Baú do mod com milhares de tipos diante de máquinas que recusam a maioria); hoje só os GameTests medem. (02/11)
 - Avaliar se o orçamento padrão de 1 ms deve subir em servidores com folga: com 1.000 máquinas ou no Sophisticated, o mod deixa de 14% a 55% da vazão para trás (`docs/benchmark-logistics-network.md`). (bench comparativo)
 - Limites conhecidos: um fluido por tanque por visita; inserção em inventário grande sem índice de slots com espaço; sem custo medido por vizinho.
 - Teste automático do callback que limpa os tickets de chunk ao recarregar o mundo.
 
 ## Roteador de alcance
 
-- Pausar grupo e os perfis do alcance no Configurador (o `RouterPreset` só leva a máquina presa). (11/10)
+- Teste à mão do Afinador do Configurador (etapa 3, linha de 02/11 do histórico): a pintura nas faces, o segundo clique, Shift no grupo, segurar o botão (não confirma nem apaga ao escorregar a mira para o chão ou o ar; com a tecla solta, uma tocha na mão secundária repete num bloco comum, e segurada desde uma máquina ela também espera a tecla soltar), mirar outro bloco por 2 s e clicar de novo (análise nova), e máquinas de outros mods (Mekanism, Sophisticated, uma máquina só de energia, que deve receber Insere). (02/11, 03/11)
+- Teste à mão da etapa 4 do alcance (linha de 02/11 do histórico): a máquina trocada parando de receber na hora. (02/11)
+- Teste à mão do Ctrl + clique do Vinculador (linha do topo de 02/11): uma fileira de fornalhas, um bloco de outro mod ("7 × Nome"), segurar o botão, o limite do tier; correndo com o Ctrl de correr o clique é normal, e na terra nada acontece (03/11). (02/11)
+
+- Pausar grupo. (11/10)
+- Presa no grupo, menores da revisão final: o grupo "×0" segue contando nas redes do nó; sem o Upgrade de Alcance, com remotas guardadas no mesmo grupo, editar a presa cria uma exceção que a tela não mostra; `setNetworkAll` com rede cria o membro numa presa nunca configurada; o slot de cartão da presa com exceção muda o grupo inteiro sem aviso;  destino "quase cheio" de pilhas parciais de outros itens entra no caminho das recusas (medir um cenário `partialfull`). (02/11)
 - Página própria no guia (hoje é uma seção da página do Roteador). (11/10)
 - **(dono)** Fechar as perguntas da spec: nome do item, vazão por máquina, tabela de raio e limite, Básico sem alcance; a receita e a textura seguem provisórias. (11/10)
-- Conferir os 18 achados menores da revisão da etapa 1 (`docs/superpowers/reviews/2026-10-11-roteador-de-alcance-etapa-1.md`). (11/10)
+- Conferir os achados menores da revisão da etapa 1 (`docs/superpowers/reviews/2026-10-11-roteador-de-alcance-etapa-1.md`) que a etapa 4 não cobriu (ela resolveu o "7/32", os caches na recarga da config, o `unlink` sem `isClientSide` e o grupo de id repetido no NBT). (11/10)
 
 ## Tablet
 
@@ -74,6 +80,8 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 
 ## Testes, e2e e bench
 
+- O passo "Baú: filtro, adicionar a tag" do e2e falha às vezes no e2e completo ("Adicionar está desativado"): corrida de 1 tick entre marcar a tag e clicar em Adicionar; sozinho (`--only armazenamento`) passa. (02/11)
+- O e2e completo padrão passa de 600 s neste ambiente (~615 s): sem `E2E_TIMEOUT=1200` ele estoura na suíte `guia` com tudo `OK` até ali. (02/11)
 - GameTest próprio para `/wa network invite` e `team`. (22/10)
 - Rodar as variantes `pt` e `escuro` do e2e (não rodaram na 2.12 nem na 2.13, por decisão do dono). (29/10)
 - O passo "alcance: tema escuro" do e2e falhou uma vez sem causa achada; ficar de olho. (22/10)
@@ -81,6 +89,7 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 
 ## Docs, scripts e publicação
 
+- Changelog da próxima versão: uma remota vinculada ao lado da presa sozinha herda na hora a config dela (inclusive Extrair e a rede); avisar no changelog. (03/11)
 - **(dono)** Quando o Modrinth aprovar, pôr o link no `README.md`, no `README.en.md` e na `descricao.md`. (30/10)
 - **(dono)** Decidir o destino da worktree `C:/wab` (fora do repositório, com 2 arquivos mudados). (30/10)
 - Portes (`docs/portes.md`): investigar o 26.1 NeoForge (ATM11); o 1.20.1 Forge espera o ok do dono e a decisão do Mekanism (só gás ou os quatro químicos). (10/10)

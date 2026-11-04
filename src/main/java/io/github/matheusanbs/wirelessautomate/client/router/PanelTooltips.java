@@ -70,7 +70,7 @@ final class PanelTooltips {
 
     /** A dica de um botão da máquina, a mesma da lista das máquinas. */
     private Component machineTooltip(RangeRowButtons.Action action) {
-        return RangeRowButtons.tooltip(model.range(), model.snapshot().target(), action, model.unlinkArmed());
+        return RowButtonTips.tooltip(model.range(), model.snapshot().target(), action, model.unlinkArmed());
     }
 
     /** Dica de uma face: o lado (e, na presa, o absoluto), o modo e o acesso, a rede e o roteador preso. */

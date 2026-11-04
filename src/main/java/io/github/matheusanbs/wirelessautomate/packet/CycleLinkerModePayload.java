@@ -8,7 +8,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
 /**
  * Cliente → servidor: Shift + roda do mouse com o Vinculador na mão principal troca o modo (Vincular ↔ Abrir;
- * {@code direction} +1 ou −1, os dois levam ao outro modo). Irmão do {@link CycleConfiguratorTypePayload}.
+ * {@code direction} +1 ou −1, os dois levam ao outro modo).
  */
 public record CycleLinkerModePayload(int direction) implements CustomPacketPayload {
     public static final Type<CycleLinkerModePayload> TYPE = new Type<>(WirelessAutomate.id("cycle_linker_mode"));

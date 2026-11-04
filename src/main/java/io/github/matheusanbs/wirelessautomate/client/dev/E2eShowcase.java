@@ -14,14 +14,11 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
 import io.github.matheusanbs.wirelessautomate.client.filter.FilterScreen;
 import io.github.matheusanbs.wirelessautomate.client.guide.GuideScreen;
-import io.github.matheusanbs.wirelessautomate.client.linker.LinkerScreen;
 import io.github.matheusanbs.wirelessautomate.client.storage.StorageListScreen;
 import io.github.matheusanbs.wirelessautomate.client.storage.StorageScalarScreen;
 import io.github.matheusanbs.wirelessautomate.client.tablet.TabletScreen;
 import io.github.matheusanbs.wirelessautomate.filter.ItemRule;
-import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
@@ -41,7 +38,6 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import org.lwjgl.glfw.GLFW;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
-import io.github.matheusanbs.wirelessautomate.client.ConfiguratorWheelScreen;
 
 /**
  * A vitrine do CurseForge ({@code WA_SHOWCASE}): os passos que posicionam a câmera, abrem as telas e
@@ -132,57 +128,8 @@ final class E2eShowcase {
         list.add(capture("s1-fabrica"));
     }
 
-    /** Vitrine: o Vinculador e o Configurador na mão, com a área, a tela do Vinculador e a roda. */
+    /** Vitrine: de volta à mão vazia e à interface, depois das ferramentas. */
     private static void showcaseToolShots(List<Step> list) {
-        // Vinculador na mão, com a fileira de fornalhas marcada.
-        list.add(new Step("área do Vinculador", STEP_TIMEOUT_MS, () -> {
-            UUID playerId = Minecraft.getInstance().player.getUUID();
-            onServer(server -> {
-                ServerPlayer player = server.getPlayerList().getPlayer(playerId);
-                ItemStack linker = new ItemStack(ModItems.LINKER.get());
-                LinkerItem.setArea(linker, new LinkerArea(player.level().dimension(), showBase.offset(-11, 0, -15),
-                        java.util.Optional.of(showBase.offset(-8, 1, -7))));
-                LinkerItem.setRouter(linker, net.minecraft.core.GlobalPos.of(player.level().dimension(), showRange));
-                player.setItemInHand(InteractionHand.MAIN_HAND, linker);
-                return null;
-            });
-        }, () -> LinkerItem.area(Minecraft.getInstance().player.getMainHandItem()) != null, () -> "Vinculador na mão"));
-        list.add(DevEndToEnd.wait("contorno", 10));
-        list.add(capture("s2-vinculador-area"));
-        // Com o Vinculador ainda na mão: a tela dele.
-        list.add(new Step("abrir o Vinculador", STEP_TIMEOUT_MS, () -> {
-            Minecraft minecraft = Minecraft.getInstance();
-            minecraft.options.hideGui = false;
-            minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);
-        }, () -> Minecraft.getInstance().screen instanceof LinkerScreen,
-                () -> "tela " + describe(Minecraft.getInstance().screen)));
-        list.add(new Step("Vinculador maior", STEP_TIMEOUT_MS,
-                () -> linkerScreen().previewResize(460, 300),
-                () -> linkerScreen().size()[0] > 300,
-                () -> "tamanho " + java.util.Arrays.toString(linkerScreen().size())));
-        list.add(DevEndToEnd.wait("tela do Vinculador", 5));
-        list.add(capture("s13-vinculador"));
-        list.add(close("fechar o Vinculador"));
-        // Configurador na mão e a roda aberta, com o mouse no tipo Itens.
-        list.add(new Step("Configurador na mão", STEP_TIMEOUT_MS, () -> {
-            UUID playerId = Minecraft.getInstance().player.getUUID();
-            onServer(server -> {
-                ServerPlayer player = server.getPlayerList().getPlayer(playerId);
-                player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.CONFIGURATOR.get()));
-                return null;
-            });
-        }, () -> Minecraft.getInstance().player.getMainHandItem().getItem() instanceof ConfiguratorItem,
-                () -> "Configurador na mão"));
-        list.add(showLook("câmera nas fornalhas (roda)", -5, 2.6, -7, -10.5, 0.6, -11.5, false));
-        list.add(new Step("abrir a roda", STEP_TIMEOUT_MS, () -> {
-            ConfiguratorWheelScreen wheel = new ConfiguratorWheelScreen();
-            Minecraft.getInstance().setScreen(wheel);
-            wheel.previewHover(wheel.sliceOf(ResourceType.ITEM));
-        }, () -> Minecraft.getInstance().screen instanceof ConfiguratorWheelScreen, () -> "tela "
-                + describe(Minecraft.getInstance().screen)));
-        list.add(DevEndToEnd.wait("abertura da roda", 10));
-        list.add(capture("s16-roda"));
-        list.add(close("fechar a roda"));
         list.add(new Step("mão vazia e interface", STEP_TIMEOUT_MS, () -> {
             Minecraft.getInstance().options.hideGui = false;
             UUID playerId = Minecraft.getInstance().player.getUUID();

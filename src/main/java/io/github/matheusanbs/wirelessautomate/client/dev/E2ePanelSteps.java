@@ -272,7 +272,7 @@ final class E2ePanelSteps {
                 throw new StepFailure("o upgrade sumiu do inventário");
             }
             click(screen, screen.getGuiLeft() + from.x + 8, screen.getGuiTop() + from.y + 8);
-            int[] to = screen.previewUpgradeSlotCenter();
+            int[] to = screen.previewSlotCenter(RouterMenu.UPGRADE_SLOT);
             click(screen, to[0], to[1]);
         }, () -> {
             UUID playerId = Minecraft.getInstance().player.getUUID();
@@ -288,7 +288,7 @@ final class E2ePanelSteps {
                 + router(server, routerB).chunkLoadState()) + ", tela " + routerScreen().getMenu().snapshot().chunkLoad()
                 + ", na mão " + routerScreen().getMenu().getCarried()));
         list.add(new Step("captura 7-upgrade-no-slot", STEP_TIMEOUT_MS, () -> {
-            int[] center = routerScreen().previewUpgradeSlotCenter();
+            int[] center = routerScreen().previewSlotCenter(RouterMenu.UPGRADE_SLOT);
             moveMouse(center[0], center[1]);
         }, () -> {
             if (stepTicks < 6) {

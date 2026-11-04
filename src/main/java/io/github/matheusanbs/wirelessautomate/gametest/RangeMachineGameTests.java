@@ -9,6 +9,7 @@ import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
+import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
@@ -132,15 +133,24 @@ public final class RangeMachineGameTests {
         helper.startSequence()
                 .thenWaitUntil(() -> waitLoaded(helper, router))
                 .thenExecute(() -> {
-                    // Um NBT sem machines/groups (de antes do Upgrade de Alcance): só a máquina presa configurada.
-                    router.configureFace(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT, 2, RedstoneMode.IGNORE);
+                    // Um NBT de antes do Upgrade de Alcance: sem machines, groups nem attached, só a máquina presa nas
+                    // faces por lado do roteador (o roteador está em cima do baú: a face de cima é a FRONT).
                     CompoundTag legacy = router.saveWithFullMetadata(helper.getLevel().registryAccess());
-                    helper.assertFalse(legacy.contains("machines") || legacy.contains("groups"),
-                            "um roteador sem remotas salvou as listas");
+                    legacy.remove("machines");
+                    legacy.remove("groups");
+                    legacy.remove("attached");
+                    FaceConfig old = new FaceConfig();
+                    old.setMode(PortMode.EXTRACT);
+                    old.setPriority(2);
+                    CompoundTag item = new CompoundTag();
+                    item.put(RelativeSide.FRONT.key(), old.save(helper.getLevel().registryAccess()));
+                    CompoundTag faces = new CompoundTag();
+                    faces.put(ResourceType.ITEM.key(), item);
+                    legacy.put("faces", faces);
 
                     link(helper, router, FURNACE_A);
                     router.loadWithComponents(legacy, helper.getLevel().registryAccess());
-                    helper.assertTrue(router.remoteMachines().isEmpty(), "NBT sem as chaves deixou máquinas");
+                    helper.assertTrue(router.remoteMachines().machines().isEmpty(), "NBT sem a chave deixou máquinas");
                     FaceConfig attached = router.face(EditTarget.ATTACHED_TARGET, ResourceType.ITEM, Direction.UP);
                     helper.assertTrue(attached.mode() == PortMode.EXTRACT && attached.priority() == 2,
                             "a máquina presa perdeu a configuração");

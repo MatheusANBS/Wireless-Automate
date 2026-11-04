@@ -28,6 +28,5 @@ The router also connects straight to Relays and the Imbuement Chamber. A
 | Feature | Source |
 | --- | --- |
 | Mode, priority, redstone and network | Yes. |
-| Configurator | Yes: the **Source** type on the wheel and the mouse wheel shortcut. |
 | Throughput | Basic 100/s, Advanced 800/s, Elite 6,400/s, Emerald 51,200/s, Ultimate unlimited ([Router](router.md)). |
 | Filter and Filter Card | No: Source has no types. |

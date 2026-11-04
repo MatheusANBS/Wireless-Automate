@@ -23,13 +23,15 @@ import org.jetbrains.annotations.Nullable;
  * {@link FilterSet}): o da origem decide que slots podem sair, e o do destino o que pode entrar. Um slot recusado pela origem só conta como varrido (a
  * volta inteira sem mover ainda faz a origem dormir). Um destino que recusa pelo filtro, ou que já
  * tem o estoque, é só pulado, <b>sem dormir</b>: recusar o item A não diz nada sobre o B, e o
- * backoff de "cheio" o deixaria de fora também para o B. Só a recusa por falta de espaço (a
- * inserção simulada não aceita nada de um item que o filtro deixa entrar) faz o destino dormir.
- * A máquina que recusa o item pelo tipo também é só pulada ({@link ItemInsertPlan#refusesItem}): ela
- * tem slot vazio, nenhum dos vazios o aceita ({@link IItemHandler#isItemValid}) e não há pilha dele
- * lá dentro. É a Salvaging Table do Apotheosis com o que não se desmonta, ou uma máquina com o que
- * não tem receita: sem isso, o primeiro item sem receita do baú a punha para dormir como cheia, e
- * os que ela aceitaria esperavam o sono acabar.
+ * backoff de "cheio" o deixaria de fora também para o B. Pelo mesmo motivo, a inserção simulada que
+ * não aceita nada de um item só faz o destino dormir se ele está cheio de verdade: sem lugar para outro
+ * item, ou travado, com um lugar que aceita este item e mesmo assim o recusou
+ * ({@link ItemInsertPlan#roomForOthers}, guardado em {@link Port#full}). A máquina que recusa o item pelo
+ * tipo ({@link ItemInsertPlan#refusesItem}: a Salvaging Table do Apotheosis com o que não se desmonta,
+ * uma máquina com o que não tem receita) ou que tem lugar só para outros (a entrada da fornalha com
+ * ferro, diante do ouro) é pulada, e a recusa fica anotada nas dicas dela ({@link ItemHints}) até a
+ * máquina mudar: os slots seguintes com o mesmo item a pulam sem simular, e os outros itens seguem na
+ * mesma visita, em vez de a origem andar um slot por sono.
  * Se nenhum destino aceitar nenhum item, a origem é que dorme, pela volta sem mover; se todos os
  * destinos estão dormindo, ela dorme até o primeiro deles acordar ({@link SourceSleep}).
  *
@@ -62,6 +64,12 @@ final class ItemTransfer {
      * de novo, e cada repetição conta como uma tentativa.
      */
     static final int MAX_ATTEMPTS_PER_VISIT = 32;
+    /**
+     * Recusas de um item só por visita ({@link #refusedByTarget}): simulações curtas que não entregam nem fazem
+     * dormir. Contam à parte das tentativas, para uma máquina que recusa a maioria dos itens (uma fornalha diante
+     * de um baú de milhares de tipos) não parar a visita em 32 itens; o teto é o da janela de slots.
+     */
+    static final int MAX_REFUSALS_PER_VISIT = MAX_SLOTS_PER_VISIT;
     /** Plano da última simulação de inserção; o laço roda numa thread só (a do servidor). */
     static final ItemInsertPlan PLAN = new ItemInsertPlan();
     /** Respostas do filtro da origem e do destino ({@link FilterSet#evaluateItem}), reaproveitadas. */
@@ -76,6 +84,14 @@ final class ItemTransfer {
      * {@link ItemBulkTransfer#deliverBulk}); cada uma conta como uma tentativa.
      */
     static int burstSteps;
+    /** Simulações de inserção do último {@link #moveSlot} (ou {@link ItemBulkTransfer#deliverBulk}). */
+    static int stepSimulations;
+    /** Dessas, as que foram recusa de um item só ({@link #refusedByTarget}). */
+    static int stepRefusals;
+    /** Recusas de um item só na visita em curso; o teto é {@link #MAX_REFUSALS_PER_VISIT}. */
+    static int visitRefusals;
+    /** Conta as visitas de itens ({@link #beginVisit}), para as recusas seguidas de um destino ({@link ItemHints}). */
+    static long visit;
 
     /**
      * Uma visita. Devolve {@link NetworkManager#MOVED} se moveu algo, mais {@link NetworkManager#MORE}
@@ -115,7 +131,7 @@ final class ItemTransfer {
         if (filtered && filter.usesItemStock()) {
             tally = ItemStockTally.prepare(source);
         }
-        PLAN.beginVisit();
+        beginVisit();
         FilterSet.ItemRule rule = SOURCE_RULE;
         int slot = source.slotCursor < slots ? source.slotCursor : 0;
         int limit = Math.min(slots, MAX_SLOTS_PER_VISIT);
@@ -170,7 +186,7 @@ final class ItemTransfer {
                     slot = current;
                 }
             }
-            if (++attempts >= MAX_ATTEMPTS_PER_VISIT) {
+            if (countsAsAttempt(amount) && ++attempts >= MAX_ATTEMPTS_PER_VISIT || visitRefusals >= MAX_REFUSALS_PER_VISIT) {
                 capped = true;
                 break;
             }
@@ -187,6 +203,75 @@ final class ItemTransfer {
         source.slotCursor = slot;
         boolean more = moved > 0 && tokens > 0 && (capped || (scanned >= limit && limit < slots));
         return endVisit(source, moved, more, scanned, slots, destinationsAsleep, pass, now);
+    }
+
+    /**
+     * O último {@link #moveSlot} (ou {@link ItemBulkTransfer#deliverBulk}) conta como tentativa: entregou, ou
+     * simulou algo que não foi só a recusa de um item. O slot que nenhum destino quis por recusa anotada, ou
+     * só por recusas de um item, conta só na janela de slots e no {@link #visitRefusals}.
+     */
+    static boolean countsAsAttempt(long amount) {
+        return amount > 0 || stepSimulations > stepRefusals;
+    }
+
+    /** Começo da visita de uma origem de itens (pilha a pilha ou o Baú do mod). */
+    static void beginVisit() {
+        PLAN.beginVisit();
+        visitRefusals = 0;
+        visit++;
+    }
+
+    /**
+     * O destino de inventário {@code target} não aceitou nada de {@code item}. Se ele recusa o item pelo tipo
+     * ({@link ItemInsertPlan#refusesItem}) ou ainda tem lugar para outros ({@link ItemInsertPlan#roomForOthers};
+     * o "sim" fica nas dicas e o "cheio" em {@link Port#full} até a máquina mudar),
+     * a recusa é só deste item: fica anotada nas dicas dele ({@link ItemHints}) e ele não dorme, porque o próximo
+     * item pode entrar. Só o destino cheio de verdade dorme, e o que só tem lugar para outros depois de
+     * {@link ItemHints#SIZE} recusas seguidas na visita: a lista não guarda mais que isso, e sem o sono a origem
+     * grande re-simularia os mesmos itens a cada visita. O sono cresce como o do cheio; a visita seguinte continua do
+     * cursor da origem, então os itens depois desses ainda chegam ao destino.
+     */
+    static void refusedByTarget(Port destination, IItemHandler target, ItemStack item, long now) {
+        if (PLAN.refusesItem(target, item)) {
+            refuseOne(destination.hints(), item, now);
+            return;
+        }
+        if (destination.full && now - destination.fullSince > destination.destinationBackoff.maxTicks()) {
+            // Cheio há mais que o teto do sono, sem aviso nem entrega: relê, como as recusas do ItemHints.
+            destination.full = false;
+        }
+        ItemHints hints = destination.hints;
+        if (!destination.full && !PLAN.jammed()
+                && (hints != null && hints.roomForOthers() || PLAN.roomForOthers(target, item))) {
+            hints = destination.hints();
+            hints.sawRoomForOthers();
+            refuseOne(hints, item, now);
+            if (hints.refusedInRow(visit) >= ItemHints.SIZE) {
+                destination.destinationBackoff.sleep(now);
+                destinationSlept = true;
+            }
+            return;
+        }
+        if (!destination.full) {
+            destination.full = true;
+            destination.fullSince = now;
+        }
+        destination.destinationBackoff.sleep(now);
+        destinationSlept = true;
+    }
+
+    private static void refuseOne(ItemHints hints, ItemStack item, long now) {
+        hints.refuse(item, now);
+        stepRefusals++;
+        visitRefusals++;
+    }
+
+    /** Entregou {@code item} no destino: se ele é seletivo, o item entra nos aprendidos ({@link ItemHints}). */
+    static void learned(Port destination, ItemStack item) {
+        ItemHints hints = destination.hints;
+        if (hints != null) {
+            hints.learn(item);
+        }
     }
 
     /**
@@ -226,6 +311,8 @@ final class ItemTransfer {
             RoundRobinOrder<Port> order, List<Port> pass, long now, int allowance) {
         destinationSlept = false;
         burstSteps = 0;
+        stepSimulations = 0;
+        stepRefusals = 0;
         ItemStack offered = handler.extractItem(slot, max, true);
         lastOffered = offered.getCount();
         if (offered.isEmpty()) {
@@ -253,6 +340,11 @@ final class ItemTransfer {
             }
             // Passou no filtro do destino: a origem tem o que oferecer (motivo do sono).
             source.offered = true;
+            ItemHints hints = destination.hints;
+            if (hints != null && hints.refused(offered, now, destination.destinationBackoff.maxTicks())) {
+                // Recusou este item desde a última mudança: pula sem simular.
+                continue;
+            }
             // Baú do mod: guarda por tipo, sem varrer slots. Senão, o inventário da máquina.
             BulkItems bulkTarget = destination.machine.bulkItems(destination.face);
             IItemHandler target = bulkTarget == null ? destination.machine.items(destination.face) : null;
@@ -264,6 +356,7 @@ final class ItemTransfer {
                 continue;
             }
             ItemStack probe = remaining == offered.getCount() ? offered : offered.copyWithCount(remaining);
+            stepSimulations++;
             int accepts = bulkTarget != null
                     ? (int) bulkAccepts(bulkTarget, probe, remaining, stock, components)
                     : planInsert(source, destination, target, offered, probe, stock, components);
@@ -272,12 +365,13 @@ final class ItemTransfer {
                 continue;
             }
             if (accepts == 0) {
-                if (target != null && PLAN.refusesItem(target, probe)) {
-                    // A máquina não aceita este item (sem receita): pula sem dormir, como o filtro.
-                    continue;
+                if (target != null) {
+                    // Recusa só deste item (sem receita, ou sem lugar para ele): anota e segue; cheia, dorme.
+                    refusedByTarget(destination, target, probe, now);
+                } else {
+                    destination.destinationBackoff.sleep(now);
+                    destinationSlept = true;
                 }
-                destination.destinationBackoff.sleep(now);
-                destinationSlept = true;
                 continue;
             }
             ItemStack taken = handler.extractItem(slot, accepts, false);
@@ -292,7 +386,10 @@ final class ItemTransfer {
             }
             if (delivered > 0) {
                 PLAN.delivered(destination, offered, delivered);
+                learned(destination, offered);
                 destination.destinationBackoff.wake();
+                // Recebeu: não está cheio.
+                destination.full = false;
                 destination.addGot(delivered);
                 order.delivered(destination);
                 if (source.network != null) {

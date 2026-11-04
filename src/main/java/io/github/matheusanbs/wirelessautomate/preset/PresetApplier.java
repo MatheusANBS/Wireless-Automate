@@ -8,6 +8,7 @@ import io.github.matheusanbs.wirelessautomate.packet.ModPayloads;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Predicate;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
 
@@ -15,8 +16,8 @@ import org.jetbrains.annotations.Nullable;
  * A regra das redes ao colar ou aplicar um preset, por rede distinta: cada rede do preset só vai se
  * ela existe e o jogador pode usá-la (dono ou operador nível 2, {@link ModPayloads#canUse}); senão
  * ela sai do preset e as faces que a levariam ficam com a rede que já tinham no roteador. A mesma
- * regra vale para o pincel, a área e os códigos importados (a rede de outro mundo não existe aqui e
- * cai).
+ * regra vale para o pincel, a área, os códigos importados (a rede de outro mundo não existe aqui e
+ * cai) e o colar de uma máquina na tela do roteador ({@link #usable(ServerPlayer)}).
  */
 public final class PresetApplier {
     /**
@@ -45,15 +46,16 @@ public final class PresetApplier {
     public static Checked check(ServerPlayer player, RouterPreset preset, @Nullable ResourceType only) {
         preset = preset.onlyNetworkOf(only);
         NetworkSavedData data = NetworkSavedData.get(player.server);
+        Predicate<UUID> usable = usable(player);
         List<UUID> applied = new ArrayList<>();
         List<UUID> kept = new ArrayList<>();
         WaNetwork denied = null;
         for (UUID id : preset.distinctNetworks()) {
-            WaNetwork network = data.network(id);
-            if (network != null && ModPayloads.canUse(player, network)) {
+            if (usable.test(id)) {
                 applied.add(id);
             } else {
                 kept.add(id);
+                WaNetwork network = data.network(id);
                 if (network != null) {
                     denied = network;
                 }
@@ -74,6 +76,18 @@ public final class PresetApplier {
             }
         }
         return new Checked(preset, List.copyOf(applied), List.copyOf(keptTypes), List.copyOf(kept), denied);
+    }
+
+    /**
+     * A regra de uma rede colada, a mesma do {@link #check}: ela existe e o jogador pode usá-la
+     * ({@link ModPayloads#canUse}).
+     */
+    public static Predicate<UUID> usable(ServerPlayer player) {
+        NetworkSavedData data = NetworkSavedData.get(player.server);
+        return id -> {
+            WaNetwork network = data.network(id);
+            return network != null && ModPayloads.canUse(player, network);
+        };
     }
 
     /** O preset só com as redes que o jogador pode usar (as outras saem). */

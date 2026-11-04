@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.block;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
+import io.github.matheusanbs.wirelessautomate.range.AttachedMember;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.MachineCaches;
 import io.github.matheusanbs.wirelessautomate.range.MachineConfig;
@@ -21,6 +22,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.Containers;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -48,7 +50,7 @@ final class RouterRange {
     }
 
     /** Ver {@link RouterBlockEntity#linkMachine(BlockPos, UUID)}. */
-    boolean link(BlockPos pos, @Nullable UUID network, boolean isolated) {
+    boolean link(BlockPos pos, @Nullable UUID network) {
         Level level = router.getLevel();
         if (level == null || level.isClientSide || !level.isLoaded(pos) || pos.equals(router.getBlockPos())) {
             return false;
@@ -56,7 +58,7 @@ final class RouterRange {
         BlockState state = level.getBlockState(pos);
         if (state.isAir()
                 || !remotes.link(pos, BuiltInRegistries.BLOCK.getKey(state.getBlock()), RemoteMachines.frontOf(state),
-                        network, isolated)) {
+                        network)) {
             return false;
         }
         remotesChanged();
@@ -64,16 +66,33 @@ final class RouterRange {
         return true;
     }
 
-    /** Ver {@link RouterBlockEntity#unlinkMachine(int)}. */
-    boolean unlink(int index) {
-        if (remotes.machine(index) == null) {
-            return false;
+    /** Ver {@link RouterBlockEntity#unlinkMachine(int, Player)}. */
+    int unlink(int index, @Nullable Player recipient) {
+        Level level = router.getLevel();
+        if (level == null || level.isClientSide || remotes.machine(index) == null) {
+            return -1;
         }
-        dropAtRouter(remotes.unlink(index));
+        List<ItemStack> cards = remotes.unlink(index);
+        deliver(recipient, cards);
         pruneCaches();
         remotesChanged();
         router.changed(NetworkManager.ALL_TYPES);
-        return true;
+        return cards.size();
+    }
+
+    /** Ver {@link RouterBlockEntity#unlinkGroup}. */
+    RemoteMachines.@Nullable GroupUnlink unlinkGroup(int groupId, @Nullable Player recipient) {
+        RemoteMachines.GroupUnlink result = remotes.unlinkGroup(groupId);
+        if (result == null || !result.changed()) {
+            return result;
+        }
+        deliver(recipient, result.cards());
+        if (result.machines() > 0) {
+            pruneCaches();
+            remotesChanged();
+        }
+        router.changed(NetworkManager.ALL_TYPES);
+        return result;
     }
 
     /**
@@ -119,6 +138,11 @@ final class RouterRange {
     /** Ver {@link RouterBlockEntity#revertGroupToProfile(int)}. */
     int revertGroupToProfile(int groupId) {
         int reverted = 0;
+        AttachedMember member = remotes.attached();
+        if (remotes.groupHasAttached(groupId) && member.hasException()) {
+            member.setException(null);
+            reverted++;
+        }
         for (RemoteMachine machine : remotes.machines()) {
             if (machine.group() == groupId && machine.hasException()) {
                 machine.setException(null);
@@ -176,8 +200,8 @@ final class RouterRange {
         return RemoteCapabilities.any(level, machine.pos()) ? block : null;
     }
 
-    /** Ver {@link RouterBlockEntity#updateReplaced}. */
-    RemoteMachines.Regroup updateReplaced(List<Integer> indices) {
+    /** Ver {@link RouterBlockEntity#updateReplaced(List, Player)}. */
+    RemoteMachines.Regroup updateReplaced(List<Integer> indices, @Nullable Player recipient) {
         Level level = router.getLevel();
         if (level == null || level.isClientSide) {
             return RemoteMachines.Regroup.EMPTY;
@@ -200,11 +224,26 @@ final class RouterRange {
             // O replacedBy conferiu o chunk carregado.
             storeFront(machine, level.getBlockState(machine.pos()));
         }
-        dropAtRouter(result.cards());
+        deliver(recipient, result.cards());
         pruneCaches();
         remotesChanged();
         router.changed(NetworkManager.ALL_TYPES);
         return result;
+    }
+
+    /**
+     * Entrega cópias das pilhas a {@code recipient}: no inventário e, o que não couber, aos pés dele (o
+     * {@code placeItemBackInInventory} solta o resto; o {@code Inventory.add} sumiria com ele no modo criativo). As
+     * pilhas da lista ficam como estão, para quem chamou contar. Sem jogador (testes e comandos), caem no roteador.
+     */
+    private void deliver(@Nullable Player recipient, List<ItemStack> stacks) {
+        if (recipient == null) {
+            dropAtRouter(stacks);
+            return;
+        }
+        for (ItemStack stack : stacks) {
+            recipient.getInventory().placeItemBackInInventory(stack.copy());
+        }
     }
 
     private void dropAtRouter(List<ItemStack> stacks) {
@@ -219,14 +258,15 @@ final class RouterRange {
     }
 
     /**
-     * Descarta os caches (e os listeners deles) das remotas que não estão mais vinculadas; sem o
-     * upgrade valendo, de todas. Chamado ao desvincular, ao carregar o NBT e quando o upgrade sai.
+     * Descarta os caches (e os listeners deles) das remotas que não estão mais vinculadas ou ativas (fora do raio ou
+     * do limite, que o motor não lê); sem o upgrade valendo, de todas. Chamado ao desvincular, ao carregar o NBT,
+     * quando o upgrade sai e na recarga da config ({@link RouterBlockEntity#pruneRemoteCaches}).
      */
     void pruneCaches() {
         if (caches.isEmpty()) {
             return;
         }
-        caches.prune(router.rangeActive(), remotes);
+        caches.prune(router.rangeActive() ? router.machineReach() : null, remotes);
     }
 
     /**
@@ -251,8 +291,7 @@ final class RouterRange {
 
     /**
      * Relê a frente da máquina remota em {@code state}. Se mudou, grava e refaz as rotas do nó (os
-     * lados relativos mudaram) e devolve {@code true}. A regra num lugar só: o aviso da máquina
-     * ({@link #machineChanged}) e a invalidação da capability ({@link #invalidated}).
+     * lados relativos mudaram) e devolve {@code true}. O aviso da máquina ({@link #machineChanged}).
      */
     private boolean refreshFront(RemoteMachine machine, BlockState state) {
         if (!storeFront(machine, state)) {
@@ -262,13 +301,28 @@ final class RouterRange {
         return true;
     }
 
-    /** Ver {@link RouterBlockEntity#rereadFront}. */
-    boolean rereadFront(RemoteMachine machine) {
+    /** Ver {@link RouterBlockEntity#rereadRemote}. */
+    boolean rereadRemote(RemoteMachine machine) {
         Level level = router.getLevel();
         if (level == null || level.isClientSide || !level.isLoaded(machine.pos())) {
             return false;
         }
-        return storeFront(machine, level.getBlockState(machine.pos()));
+        BlockState state = level.getBlockState(machine.pos());
+        // Sem curto-circuito: as duas marcas são gravadas, e qualquer uma faz os outros tipos remontarem.
+        return storeReplaced(machine, state) | storeFront(machine, state);
+    }
+
+    /**
+     * Grava se o bloco em {@code state} deixou de ser o do grupo da máquina ({@link RemoteMachine#replaced}); devolve
+     * se isso mudou. Sem avisar o motor.
+     */
+    private boolean storeReplaced(RemoteMachine machine, BlockState state) {
+        boolean replaced = !BuiltInRegistries.BLOCK.getKey(state.getBlock()).equals(remotes.groupOf(machine).block());
+        if (replaced == machine.replaced()) {
+            return false;
+        }
+        machine.setReplaced(replaced);
+        return true;
     }
 
     /** Grava a frente de {@code state} na máquina, se mudou (salva e refaz o snapshot), sem avisar o motor. */
@@ -284,14 +338,27 @@ final class RouterRange {
     }
 
     /**
-     * Um cache de uma remota foi invalidado, no servidor: a frente é relida (só com o chunk carregado); se
-     * mudou, as rotas do nó são refeitas, senão acorda a porta da face.
+     * Um cache de uma remota foi invalidado, no servidor: o bloco e a frente são relidos (só com o chunk carregado).
+     * Se a frente mudou, ou se a troca é nova (a máquina virou outro bloco, ou o bloco do grupo voltou), as rotas do
+     * nó são refeitas. Se ela continua trocada, nada muda nas rotas (a montagem já a pula): só o cache que a vigia é
+     * consultado de novo ({@link MachineCaches#watch}), sem o qual o próximo aviso não viria. Senão acorda a porta
+     * da face. A troca de um bloco com block entity sempre chega aqui: o NeoForge invalida as capabilities da
+     * posição quando a block entity sai e quando a nova entra.
      */
     void invalidated(Level level, BlockPos pos, ResourceType type, Direction machineFace) {
         if (level.isLoaded(pos)) {
             RemoteMachine machine = remotes.machine(remotes.index(pos));
-            if (machine != null && refreshFront(machine, level.getBlockState(pos))) {
-                return;
+            if (machine != null) {
+                BlockState state = level.getBlockState(pos);
+                boolean swapped = storeReplaced(machine, state);
+                if (storeFront(machine, state) || swapped) {
+                    router.changed(NetworkManager.ALL_TYPES);
+                    return;
+                }
+                if (machine.replaced()) {
+                    caches(pos).watch();
+                    return;
+                }
             }
         }
         NetworkManager.get().capabilityChanged(router, pos, type, machineFace);

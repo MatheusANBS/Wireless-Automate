@@ -9,6 +9,7 @@ import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import java.util.function.Supplier;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
@@ -27,7 +28,7 @@ final class LitFooter {
     static final Component SHOW = tr("show");
 
     private final Supplier<RouterSnapshot> snapshot;
-    private final MachineRow machineRow = new MachineRow(this::lit);
+    private final MachineRow machineRow = new MachineRow(this::lit, this::attachedPos);
     private int x;
     private int y;
     private int w;
@@ -38,6 +39,9 @@ final class LitFooter {
     private int clearW;
     private int countW;
     private int separatorW;
+    /** O snapshot para o qual {@link #attachedPos} foi lida. */
+    private @Nullable RouterSnapshot attachedFor;
+    private long attachedPos;
 
     /** @param snapshot o snapshot da tela: a dimensão e a posição do roteador, e as máquinas */
     LitFooter(Supplier<RouterSnapshot> snapshot) {
@@ -62,6 +66,32 @@ final class LitFooter {
     /** A máquina na posição {@code pos} da dimensão do roteador está acesa. */
     private boolean lit(long pos) {
         return HighlightRenderer.isLit(snapshot.get().dimension(), pos);
+    }
+
+    /** A posição da presa ({@code BlockPos.asLong}): o bloco atrás do roteador, lida uma vez por snapshot. */
+    private long attachedPos() {
+        RouterSnapshot s = snapshot.get();
+        if (s != attachedFor) {
+            attachedFor = s;
+            attachedPos = attachedBlock(s).asLong();
+        }
+        return attachedPos;
+    }
+
+    private static BlockPos attachedBlock(RouterSnapshot s) {
+        return s.pos().relative(s.facing().getOpposite());
+    }
+
+    /** A posição da linha {@code row} da lista (a máquina ou a presa), ou {@code null} sem máquina. */
+    private static @Nullable BlockPos rowPos(RouterSnapshot s, RangeList.@Nullable Row row) {
+        if (row == null) {
+            return null;
+        }
+        if (row.kind() == RangeList.Kind.ATTACHED) {
+            return attachedBlock(s);
+        }
+        RangeView.MachineView machine = s.range().machine(row.machine());
+        return machine == null ? null : machine.pos();
     }
 
     /** A linha das acesas aparece: com a lista à vista e alguma máquina acesa. */
@@ -125,12 +155,11 @@ final class LitFooter {
             return true;
         }
         RouterSnapshot s = snapshot.get();
-        RangeList.Row row = machineRow.eyeAt(list, s.range(), s.target(), mx, my);
-        RangeView.MachineView machine = row == null ? null : s.range().machine(row.machine());
-        if (machine == null) {
+        BlockPos pos = rowPos(s, machineRow.eyeAt(list, s.range(), s.target(), mx, my));
+        if (pos == null) {
             return false;
         }
-        HighlightRenderer.toggle(s.dimension(), machine.pos(), s.pos());
+        HighlightRenderer.toggle(s.dimension(), pos, s.pos());
         return true;
     }
 
@@ -140,9 +169,8 @@ final class LitFooter {
             return tr("clear_all.tooltip");
         }
         RouterSnapshot s = snapshot.get();
-        RangeList.Row row = machineRow.eyeAt(list, s.range(), s.target(), mx, my);
-        RangeView.MachineView machine = row == null ? null : s.range().machine(row.machine());
-        return machine == null ? null : eyeTooltip(lit(machine.pos().asLong()));
+        BlockPos pos = rowPos(s, machineRow.eyeAt(list, s.range(), s.target(), mx, my));
+        return pos == null ? null : eyeTooltip(lit(pos.asLong()));
     }
 
     /** O centro do Olho da linha da máquina {@code target} (gancho do e2e). */

@@ -3,9 +3,6 @@ package io.github.matheusanbs.wirelessautomate.gametest;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
-import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
-import io.github.matheusanbs.wirelessautomate.network.Chemicals;
-import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.NetworkStats;
@@ -14,12 +11,9 @@ import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
 import io.github.matheusanbs.wirelessautomate.network.WaNetwork;
-import io.github.matheusanbs.wirelessautomate.packet.ModPayloads;
+import io.github.matheusanbs.wirelessautomate.preset.PresetPaste;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
-import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
-import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.netty.buffer.Unpooled;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -35,17 +29,13 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LayeredCauldronBlock;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.jetbrains.annotations.Nullable;
@@ -104,14 +94,6 @@ public final class TypeNetworkGameTests {
     private static int nodes(GameTestHelper helper, UUID network) {
         NetworkStats stats = stats(helper, network);
         return stats == null ? 0 : stats.nodes();
-    }
-
-    private static boolean use(ServerPlayer player, Item item, RouterBlockEntity router, boolean sneak) {
-        player.setShiftKeyDown(sneak);
-        BlockPos pos = router.getBlockPos();
-        UseOnContext context = new UseOnContext(player, InteractionHand.MAIN_HAND,
-                new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false));
-        return item.useOn(context).consumesAction();
     }
 
     /**
@@ -235,7 +217,7 @@ public final class TypeNetworkGameTests {
     }
 
     /**
-     * O Configurador copia a rede de cada aba; ao colar, aplica as que o jogador pode usar e deixa
+     * Copiar o perfil guarda a rede de cada aba; ao colar, aplica as que o jogador pode usar e deixa
      * as outras como estavam. Um tipo sem rede no preset não mexe na rede do destino.
      */
     @GameTest(template = "empty")
@@ -252,18 +234,14 @@ public final class TypeNetworkGameTests {
         source.setNetworkId(ResourceType.ENERGY, foreign.id());
         RouterBlockEntity target = place(helper, new BlockPos(2, 1, 2), Blocks.STONE.defaultBlockState(),
                 targetNetwork.id(), targetNetwork.id());
-        ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
-        player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
         try {
-            helper.assertTrue(use(player, ModItems.CONFIGURATOR.get(), source, true), "copiar não agiu");
-            RouterPreset preset = configurator.get(ModDataComponents.PRESET.get());
-            helper.assertTrue(preset != null, "nada copiado");
+            RouterPreset preset = PresetPaste.copy(player, source);
             helper.assertValueEqual(preset.networks(ResourceType.ITEM), List.of(lines.id()), "itens no preset");
             helper.assertValueEqual(preset.networks(ResourceType.FLUID), List.of(fluids.id()), "fluidos no preset");
             helper.assertValueEqual(preset.networks(ResourceType.ENERGY), List.of(foreign.id()), "energia no preset");
             helper.assertTrue(preset.networks(ResourceType.CHEMICAL).isEmpty(), "químicos no preset");
 
-            helper.assertTrue(use(player, ModItems.CONFIGURATOR.get(), target, false), "colar não agiu");
+            PresetPaste.paste(player, target, preset, null);
             assertNetwork(helper, target.networkId(ResourceType.ITEM), lines.id(), "itens colados");
             assertNetwork(helper, target.networkId(ResourceType.FLUID), fluids.id(), "fluidos colados");
             assertNetwork(helper, target.networkId(ResourceType.ENERGY), targetNetwork.id(),

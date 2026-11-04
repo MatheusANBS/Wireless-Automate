@@ -35,7 +35,7 @@ final class RowRename {
     static int nameX(RangeList.Row row) {
         return switch (row.kind()) {
             case GROUP -> RangeList.GROUP_TEXT_X;
-            case ATTACHED -> RangeList.ATTACHED_TEXT_X;
+            case ATTACHED -> row.attachedInGroup() ? MachineRow.TEXT_X : RangeList.ATTACHED_TEXT_X;
             case MACHINE -> MachineRow.TEXT_X;
         };
     }

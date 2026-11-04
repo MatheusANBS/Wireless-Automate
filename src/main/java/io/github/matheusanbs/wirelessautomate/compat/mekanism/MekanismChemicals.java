@@ -1,6 +1,8 @@
 package io.github.matheusanbs.wirelessautomate.compat.mekanism;
 
+import java.util.List;
 import java.util.Optional;
+import mekanism.api.Action;
 import mekanism.api.MekanismAPI;
 import mekanism.api.chemical.Chemical;
 import mekanism.api.chemical.ChemicalStack;
@@ -41,6 +43,29 @@ public final class MekanismChemicals {
             out[0] += chemicals.getChemicalInTank(tank).getAmount();
             out[1] += chemicals.getChemicalTankCapacity(tank);
         }
+    }
+
+    /**
+     * O que o Afinador do Configurador lê de um handler: bit 1 se algum tanque aceita mais do químico que já tem, bit 2
+     * se algum dá algo (simulado). Sem prova de químico, um tanque vazio não conta. Põe em {@code signature} o número
+     * de tanques e a capacidade de cada um (até {@code maxTanks}).
+     */
+    public static int probe(Object handler, int maxTanks, List<Long> signature) {
+        IChemicalHandler chemicals = (IChemicalHandler) handler;
+        int tanks = chemicals.getChemicalTanks();
+        signature.add((long) tanks);
+        int bits = 0;
+        for (int tank = 0, n = Math.min(tanks, maxTanks); tank < n; tank++) {
+            signature.add(chemicals.getChemicalTankCapacity(tank));
+            ChemicalStack inTank = chemicals.getChemicalInTank(tank);
+            if (!inTank.isEmpty() && chemicals.insertChemical(tank, inTank.copyWithAmount(1), Action.SIMULATE).isEmpty()) {
+                bits |= 1;
+            }
+            if (!chemicals.extractChemical(tank, Long.MAX_VALUE, Action.SIMULATE).isEmpty()) {
+                bits |= 2;
+            }
+        }
+        return bits;
     }
 
     private static final ResourceLocation EMPTY = ResourceLocation.fromNamespaceAndPath("mekanism", "empty");

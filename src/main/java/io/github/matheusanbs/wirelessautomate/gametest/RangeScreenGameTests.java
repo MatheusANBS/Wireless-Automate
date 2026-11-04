@@ -4,6 +4,7 @@ import static io.github.matheusanbs.wirelessautomate.gametest.RangeTestSupport.*
 
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
@@ -104,7 +105,8 @@ public final class RangeScreenGameTests {
                         helper.assertValueEqual(snapshot.target(), EditTarget.group(furnaces), "alvo no snapshot");
                         RangeView.GroupView group = range.group(furnaces);
                         helper.assertTrue(group != null && group.count() == 2 && group.exceptions() == 0
-                                && group.block().equals(furnaceId()) && group.icon().is(Items.FURNACE), "grupo das fornalhas");
+                                && group.block().equals(furnaceId())
+                                && BuiltInRegistries.BLOCK.get(group.block()).asItem() == Items.FURNACE, "grupo das fornalhas");
                         helper.assertValueEqual(range.machines().size(), 3, "máquinas");
                         RangeView.MachineView view = range.machine(router.remoteMachines().index(a));
                         helper.assertTrue(view.pos().equals(a) && view.group() == furnaces && view.distance() == 1
@@ -189,8 +191,45 @@ public final class RangeScreenGameTests {
                 .thenSucceed();
     }
 
+    /** O ↺ da presa: o Voltar ao perfil com o índice da presa confere o bloco atrás do roteador e tira a exceção dela. */
     @GameTest(template = "empty")
-    public static void screenUnlinkDropsGroupCards(GameTestHelper helper) {
+    public static void screenRevertsTheAttached(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        BlockPos chest = new BlockPos(2, 1, 2);
+        helper.setBlock(chest, Blocks.CHEST);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    link(helper, router, chest);
+                    // a presa e o baú no mesmo grupo: a escrita na presa vira exceção
+                    router.setMode(ResourceType.ITEM, Direction.NORTH, PortMode.INSERT);
+                    helper.assertTrue(router.remoteMachines().attached() != null
+                            && router.remoteMachines().attached().hasException(), "a presa não virou exceção");
+                    ServerPlayer[] holder = new ServerPlayer[1];
+                    RouterMenu menu = openMenu(helper, router, holder);
+                    ServerPlayer player = holder[0];
+                    try {
+                        BlockPos attached = RouterBlock.attachedPos(router.getBlockState(), router.getBlockPos());
+                        helper.assertFalse(ModPayloads.handleRevertMachine(player,
+                                RevertMachinePayload.attached(menu.containerId, attached.above(2))),
+                                "reverteu com a posição errada");
+                        helper.assertTrue(router.remoteMachines().attached().hasException(),
+                                "a posição errada tirou a exceção");
+                        helper.assertTrue(ModPayloads.handleRevertMachine(player,
+                                RevertMachinePayload.attached(menu.containerId, attached)), "não reverteu a presa");
+                        helper.assertFalse(router.remoteMachines().attached().hasException(), "a exceção da presa ficou");
+                        helper.assertValueEqual(router.face(ResourceType.ITEM, Direction.NORTH).mode(), PortMode.NONE,
+                                "a presa não voltou ao perfil");
+                    } finally {
+                        removePlayer(helper, player);
+                    }
+                })
+                .thenSucceed();
+    }
+
+    @GameTest(template = "empty")
+    public static void screenUnlinkReturnsGroupCards(GameTestHelper helper) {
         RouterBlockEntity router = routerWithMachines(helper);
         helper.startSequence()
                 .thenWaitUntil(() -> waitLoaded(helper, router))
@@ -208,14 +247,14 @@ public final class RangeScreenGameTests {
                                 SelectTargetPayload.machine(menu.containerId, index, barrel)), "não escolheu o barril");
 
                         helper.assertFalse(ModPayloads.handleUnlinkMachine(player,
-                                new UnlinkMachinePayload(menu.containerId, index, helper.absolutePos(FURNACE_A))),
-                                "desvinculou com a posição de outra máquina");
+                                new UnlinkMachinePayload(menu.containerId, index, barrel.above())),
+                                "desvinculou uma posição que não está vinculada");
                         helper.assertTrue(router.remoteMachines().contains(barrel), "o barril saiu pela posição errada");
                         helper.assertTrue(ModPayloads.handleUnlinkMachine(player,
                                 new UnlinkMachinePayload(menu.containerId, index, barrel)), "não desvinculou");
                         helper.assertFalse(router.remoteMachines().contains(barrel), "o barril continua vinculado");
                         helper.assertTrue(router.remoteMachines().group(barrels) == null, "o grupo vazio ficou");
-                        helper.assertItemEntityPresent(ModItems.FILTER_CARD.get(), ROUTER, 2.0);
+                        helper.assertTrue(player.getInventory().countItem(ModItems.FILTER_CARD.get()) > 0, "os cartões não voltaram ao inventário");
                         helper.assertTrue(menu.target().attached(), "o alvo continua na máquina desvinculada");
                     } finally {
                         removePlayer(helper, player);

@@ -2,7 +2,6 @@ package io.github.matheusanbs.wirelessautomate.client.dev;
 
 import static io.github.matheusanbs.wirelessautomate.client.dev.DevScreenshot.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.ScreenshotFilter.*;
-import static io.github.matheusanbs.wirelessautomate.client.dev.ScreenshotLinker.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.ScreenshotTablet.*;
 
 import com.mojang.blaze3d.platform.Lighting;
@@ -49,7 +48,6 @@ final class ScreenshotGalleries {
     /** Galeria do giro: roteadores com spin 0 a 3 numa parede e no chão, com o contorno da colisão. */
     static List<Step> spinSteps() {
         return List.of(new Step(() -> {
-            linkerScreen = null;
             tabletScreen = null;
             filterScreen = null;
             mouseX = mouseY = -1;
@@ -112,7 +110,6 @@ final class ScreenshotGalleries {
     /** Galeria dos armazenamentos: os cinco blocos (o Tanque de Source em três níveis) nos tiers Básico e Ultimate. */
     static List<Step> blockSteps() {
         return List.of(new Step(() -> {
-            linkerScreen = null;
             tabletScreen = null;
             filterScreen = null;
             mouseX = mouseY = -1;
@@ -206,7 +203,6 @@ final class ScreenshotGalleries {
 
     static List<Step> coverSteps() {
         return List.of(new Step(() -> {
-            linkerScreen = null;
             tabletScreen = null;
             filterScreen = null;
             mouseX = mouseY = -1;

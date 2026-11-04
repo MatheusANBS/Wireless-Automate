@@ -8,7 +8,7 @@ Plugin opcional do JEI; nada fora desse pacote referencia o JEI. Ressonador (eta
 
 ## `compat/mekanism/`, `network/Chemicals.java`, `network/ChemicalTransfer.java`
 
-Químicos do Mekanism (só a API dele). O resto do mod passa pela ponte `Chemicals` (`Chemicals.LOADED`), sem tipos do Mekanism
+Químicos do Mekanism (só a API dele). O resto do mod passa pela ponte `Chemicals` (`Chemicals.LOADED`), sem tipos do Mekanism. O Afinador do Configurador (`item/tuner/TunerProbe`) lê um handler de químico por `Chemicals.probe(handler, maxTanks, assinatura)`, que chama `MekanismChemicals.probe`: bit 1 se algum tanque aceita mais do químico que já tem, bit 2 se algum dá algo (simulado; sem prova de químico, um tanque vazio não conta), e põe na assinatura o número de tanques e a capacidade de cada um
 
 ## `compat/ftbteams/`, `network/TeamAccess.java`
 
@@ -16,7 +16,7 @@ Times do FTB Teams (mod opcional, id `ftbteams`; só times de grupo valem, não 
 
 ## `compat/arsnouveau/`, `network/Sources.java`
 
-Source do Ars Nouveau (só a API dele, em `ArsSources`: a capability `ars_nouveau:source` e o `ScalarAccess` da Source). O resto do mod passa pela ponte `Sources` (`Sources.LOADED`), sem tipos do Ars. `ArsStorage` dá ao Tanque de Source a capability `ISourceCap` (roteador e Relays) e o provider no `SourceManager` do Ars (Sourcelinks a 5 blocos depositam, máquinas do Ars tiram); a visão `int` é limitada a `Integer.MAX_VALUE`
+Source do Ars Nouveau (só a API dele, em `ArsSources`: a capability `ars_nouveau:source` e o `ScalarAccess` da Source). O resto do mod passa pela ponte `Sources` (`Sources.LOADED`), sem tipos do Ars. `ArsStorage` dá ao Tanque de Source a capability `ISourceCap` (roteador e Relays) e o provider no `SourceManager` do Ars (Sourcelinks a 5 blocos depositam, máquinas do Ars tiram); a visão `int` é limitada a `Integer.MAX_VALUE`. O Afinador lê uma cap de Source por `Sources.probe(handler, assinatura)`, que chama `ArsSources.probe`: bit 1 pelo `canReceive`, bit 2 pelo `canExtract`, e a capacidade na assinatura
 
 ## `compat/sodium/`
 

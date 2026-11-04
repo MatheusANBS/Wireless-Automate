@@ -25,6 +25,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -367,6 +368,19 @@ final class NetworksTab {
     int @Nullable [] groupRowCenter(Font font, UUID id) {
         list.reveal(font, id);
         return list.groupCenter(font, id);
+    }
+
+    /** O slot do ícone do grupo escolhido, {x, y, w, h}, ou {@code null}. */
+    int @Nullable [] groupIconSlot() {
+        return groups.selected() == null ? null : groups.iconSlot();
+    }
+
+    void acceptGroupIcon(ItemStack stack) {
+        groups.acceptIcon(stack);
+    }
+
+    void ghostDragging(boolean dragging) {
+        groups.ghostDragging(dragging);
     }
 
     /** Centro da caixa de marcar da rede no detalhe do grupo escolhido, ou {@code null}. */

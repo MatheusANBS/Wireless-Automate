@@ -12,6 +12,10 @@ import net.neoforged.neoforge.items.IItemHandler;
  * A visita do {@link ItemTransfer} quando a origem é um Baú do mod ({@link BulkItems}): percorre tipos em vez
  * de slots e entrega em quantidades {@code long}. Usa o plano, as regras de filtro e os contadores da visita
  * do {@link ItemTransfer}, com as mesmas regras de filtro, estoque, ordem e sono.
+ *
+ * <p>Antes da varredura dos tipos, cada visita procura pela chave os itens que os destinos seletivos já
+ * receberam ({@link #pull}): a fornalha diante de um Baú com milhares de tipos recebe o ferro na hora, sem
+ * esperar a varredura chegar nele.
  */
 final class ItemBulkTransfer {
     /** O último {@link #deliverToBulk} acabou com a passada (a origem esvaziou). O laço roda numa thread só. */
@@ -50,7 +54,7 @@ final class ItemBulkTransfer {
             view = source.machine.items(source.face);
             tally = ItemStockTally.prepare(source);
         }
-        ItemTransfer.PLAN.beginVisit();
+        ItemTransfer.beginVisit();
         FilterSet.ItemRule rule = ItemTransfer.SOURCE_RULE;
         int index = source.slotCursor < types ? source.slotCursor : 0;
         int limit = Math.min(types, ItemTransfer.MAX_SLOTS_PER_VISIT);
@@ -59,6 +63,16 @@ final class ItemBulkTransfer {
         long moved = 0;
         boolean destinationsAsleep = false;
         boolean capped = false;
+        if (tally == null) {
+            // Primeiro o que os destinos seletivos já receberam, direto pela chave (ver pull).
+            moved = pull(source, bulk, filter, order, pass, tokens, now);
+            tokens -= moved;
+            attempts = pullAttempts;
+            if (tokens <= 0 || attempts >= ItemTransfer.MAX_ATTEMPTS_PER_VISIT) {
+                limit = 0;
+                capped = attempts >= ItemTransfer.MAX_ATTEMPTS_PER_VISIT;
+            }
+        }
         while (scanned < limit) {
             // A lista encolhe no fim do tick em que um tipo zera: o cursor volta ao começo.
             types = bulk.slots();
@@ -99,7 +113,8 @@ final class ItemBulkTransfer {
                     break;
                 }
             }
-            if (++attempts >= ItemTransfer.MAX_ATTEMPTS_PER_VISIT) {
+            if (ItemTransfer.countsAsAttempt(amount) && ++attempts >= ItemTransfer.MAX_ATTEMPTS_PER_VISIT
+                    || ItemTransfer.visitRefusals >= ItemTransfer.MAX_REFUSALS_PER_VISIT) {
                 capped = true;
                 break;
             }
@@ -129,6 +144,63 @@ final class ItemBulkTransfer {
         return 0;
     }
 
+    /** Tentativas gastas pelo último {@link #pull}. */
+    private static int pullAttempts;
+
+    /**
+     * Itens procurados pela chave por visita no {@link #pull}, somando os destinos: o custo fixo de uma visita
+     * que não acha nada é este número de consultas ao índice do Baú.
+     */
+    static final int MAX_PULL_LOOKUPS = 16;
+
+    /**
+     * Antes de varrer os tipos, procura no Baú, pela chave, os itens que cada destino seletivo acordado já
+     * recebeu ({@link ItemHints}, só nas máquinas que recusam parte dos itens) e entrega os que houver. Com
+     * milhares de tipos, a varredura levaria dezenas de visitas até chegar no item que a fornalha quer; a
+     * consulta pela chave é O(1). Pula o item que o destino recusou desde a última mudança dele, e a origem
+     * com estoque no filtro (a contagem do estoque vem da varredura). Devolve quanto entregou; as tentativas
+     * gastas ficam em {@link #pullAttempts}.
+     */
+    private static long pull(Port source, BulkItems bulk, FilterSet filter, RoundRobinOrder<Port> order,
+            List<Port> pass, long tokens, long now) {
+        pullAttempts = 0;
+        long moved = 0;
+        int lookups = 0;
+        FilterSet.ItemRule rule = ItemTransfer.SOURCE_RULE;
+        boolean filtered = !filter.isEmpty();
+        for (int d = 0, n = pass.size(); d < n; d++) {
+            Port destination = pass.get(d);
+            ItemHints hints = destination.hints;
+            if (hints == null || destination.destinationBackoff.isSleeping(now)) {
+                continue;
+            }
+            for (int i = 0, learned = hints.learnedSize(); i < learned; i++) {
+                if (lookups++ >= MAX_PULL_LOOKUPS) {
+                    return moved;
+                }
+                ItemStack key = hints.learned(i);
+                if (hints.refused(key, now, destination.destinationBackoff.maxTicks())) {
+                    continue;
+                }
+                long have = bulk.count(key);
+                if (have <= 0 || filtered && !filter.evaluateItem(key, rule)) {
+                    continue;
+                }
+                long amount = deliverBulk(source, bulk, key, Math.min(tokens - moved, have), order, pass, now,
+                        ItemTransfer.MAX_ATTEMPTS_PER_VISIT - pullAttempts - 1);
+                pullAttempts += ItemTransfer.burstSteps;
+                if (ItemTransfer.countsAsAttempt(amount)) {
+                    pullAttempts++;
+                }
+                moved += amount;
+                if (moved >= tokens || pullAttempts >= ItemTransfer.MAX_ATTEMPTS_PER_VISIT) {
+                    return moved;
+                }
+            }
+        }
+        return moved;
+    }
+
     /**
      * Entrega até {@code max} de um tipo do Baú de origem, na ordem da passada. Para outro Baú do mod
      * é uma transferência só, de qualquer tamanho. Para um inventário comum, uma entrega simulada leva
@@ -142,6 +214,8 @@ final class ItemBulkTransfer {
             RoundRobinOrder<Port> order, List<Port> pass, long now, int allowance) {
         ItemTransfer.destinationSlept = false;
         ItemTransfer.burstSteps = 0;
+        ItemTransfer.stepSimulations = 0;
+        ItemTransfer.stepRefusals = 0;
         long remaining = max;
         long moved = 0;
         FilterSet.ItemRule rule = ItemTransfer.DESTINATION_RULE;
@@ -181,6 +255,11 @@ final class ItemBulkTransfer {
                 ItemTransfer.destinationSlept = true;
                 continue;
             }
+            ItemHints hints = destination.hints;
+            if (hints != null && hints.refused(key, now, destination.destinationBackoff.maxTicks())) {
+                // Recusou este item desde a última mudança: pula sem simular.
+                continue;
+            }
             boolean first = true;
             boolean sourceEmpty = false;
             while (remaining > 0) {
@@ -194,15 +273,15 @@ final class ItemBulkTransfer {
                     }
                     ItemTransfer.burstSteps++;
                 }
+                ItemTransfer.stepSimulations++;
                 int accepts = ItemTransfer.planInsert(source, destination, target, key, key.copyWithCount(chunk), stock, components);
                 if (accepts < 0) {
                     break;
                 }
                 if (accepts == 0) {
-                    // A máquina que não aceita este item (sem receita) é pulada sem dormir, como o filtro.
-                    if (first && !ItemTransfer.PLAN.refusesItem(target, key)) {
-                        destination.destinationBackoff.sleep(now);
-                        ItemTransfer.destinationSlept = true;
+                    // Recusa só deste item (sem receita, ou sem lugar para ele): anota e segue; cheia, dorme.
+                    if (first) {
+                        ItemTransfer.refusedByTarget(destination, target, key, now);
                     }
                     break;
                 }
@@ -218,6 +297,7 @@ final class ItemBulkTransfer {
                 }
                 if (delivered > 0) {
                     ItemTransfer.PLAN.delivered(destination, key, delivered);
+                    ItemTransfer.learned(destination, key);
                     delivered(source, destination, order, delivered);
                     moved += delivered;
                     remaining -= delivered;
@@ -283,6 +363,8 @@ final class ItemBulkTransfer {
     /** Uma entrega que deixou algo no destino: acorda-o, conta na volta da passada e nas operações. */
     private static void delivered(Port source, Port destination, RoundRobinOrder<Port> order, long amount) {
         destination.destinationBackoff.wake();
+        // Recebeu: não está cheio.
+        destination.full = false;
         destination.addGot(amount);
         order.delivered(destination);
         if (source.network != null) {

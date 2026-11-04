@@ -49,8 +49,9 @@ import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * A Lista do Tablet em árvore no e2e: um roteador Elite com o Upgrade de Alcance, dois baús que movem de verdade (um
- * extrai, o outro insere) e dez fornalhas vinculadas (uma com exceção, outra com rótulo) abre na Lista; escolher uma
+ * A Lista do Tablet em árvore no e2e: um roteador Elite num baú (a presa, com exceção, dentro do grupo dos baús), com
+ * o Upgrade de Alcance, dois baús que movem de verdade (um extrai, o outro insere) e dez fornalhas vinculadas (uma
+ * com exceção, outra com rótulo) abre na Lista; escolher uma
  * máquina põe ela como alvo do painel; o Olho a acende no mundo; ↓ e Enter escolhem a seguinte; "Mostrar todas" e
  * "Mostrar menos"; ← e → recolhem e abrem o grupo; voltar à busca devolve as setas ao texto; e as capturas em
  * inglês, no tema escuro e em português ({@code 7l-tablet-arvore*}, {@code 7m-tablet-mostrar-todas}), com a vazão
@@ -266,7 +267,7 @@ final class E2eTabletTreeSteps {
                 () -> "tela " + describe(Minecraft.getInstance().screen)));
         list.add(openTablet("árvore: reabrir o Tablet"));
         list.add(new Step("árvore: o roteador continua aberto", STEP_TIMEOUT_MS, () -> {
-        }, () -> furnaceRows() == 8 && rows().getFirst() instanceof TabletRows.Attached
+        }, () -> furnaceRows() == 8 && rows().get(1) instanceof TabletRows.Attached
                 && center(TabletList.TreePart.TOGGLE, ListTree.Kind.NODE, 0) != null,
                 () -> "linhas " + rows().size()));
     }
@@ -357,6 +358,8 @@ final class E2eTabletTreeSteps {
             r.renameTarget(EditTarget.machine(FIRST_FURNACE + 1), "Fundição 2");
             r.configureFace(EditTarget.machine(EXCEPTION), ResourceType.ITEM, Direction.UP, PortMode.INSERT, 0,
                     RedstoneMode.IGNORE);
+            // a presa (o baú embaixo) entra no grupo dos baús, com exceção: a linha dela vem dentro do grupo
+            r.setMode(ResourceType.ITEM, Direction.NORTH, PortMode.INSERT);
             furnaceGroup = r.remoteMachines().machine(FIRST_FURNACE).group();
             NodeIndex.placedBy(r, playerId);
             return null;
@@ -366,7 +369,7 @@ final class E2eTabletTreeSteps {
         }), () -> "máquinas no índice");
     }
 
-    /** Acha o roteador pela busca e o abre pelo ▸: a presa, os baús, as fornalhas (8) e o "mais 2". */
+    /** Acha o roteador pela busca e o abre pelo ▸: os baús com a presa, as fornalhas (8) e o "mais 2". */
     private static void openTreeSteps(List<Step> list, String label) {
         list.add(new Step(label + "achar o roteador pela busca", STEP_TIMEOUT_MS, () -> {
             TabletScreen screen = tabletScreen();
@@ -387,7 +390,7 @@ final class E2eTabletTreeSteps {
             int[] c = center(TabletList.TreePart.TOGGLE, ListTree.Kind.NODE, 0);
             click(tabletScreen(), c[0], c[1]);
         }, () -> furnaceRows() == 8 && rows().stream().anyMatch(r -> r instanceof TabletRows.More m && m.hidden() == 2)
-                && rows().getFirst() instanceof TabletRows.Attached
+                && rows().getFirst() instanceof TabletRows.Group && rows().get(1) instanceof TabletRows.Attached
                 && center(TabletList.TreePart.LINE, ListTree.Kind.MACHINE, EXCEPTION) != null,
                 () -> "linhas " + rows()));
     }
@@ -446,7 +449,7 @@ final class E2eTabletTreeSteps {
                 RouterBlockEntity r = router(server, router);
                 r.removeRangeUpgrade();
                 while (!r.remoteMachines().machines().isEmpty()) {
-                    r.unlinkMachine(0);
+                    r.unlinkMachine(0, null);
                 }
                 ((Container) level.getBlockEntity(source)).clearContent();
                 ((Container) level.getBlockEntity(sink)).clearContent();

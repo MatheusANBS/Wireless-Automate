@@ -6,6 +6,7 @@ import io.github.matheusanbs.wirelessautomate.menu.TabletTree.GroupKey;
 import io.github.matheusanbs.wirelessautomate.network.NetworkSavedData;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex.NodeKey;
+import io.github.matheusanbs.wirelessautomate.range.AttachedMember;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -51,11 +52,13 @@ final class MarkedTargets {
     /**
      * O que vale num roteador carregado.
      *
-     * @param attached a presa
-     * @param groups   os ids dos grupos inteiros
-     * @param machines os índices das máquinas fora deles
+     * @param attached        a presa
+     * @param groups          os ids dos grupos inteiros
+     * @param machines        os índices das máquinas fora deles
+     * @param attachedInGroup a presa estava marcada e foi como parte do grupo inteiro dela (então {@code attached} é
+     *                        falso); quem não pode atingir os grupos a trata como a presa
      */
-    record Resolved(boolean attached, IntArrayList groups, IntArrayList machines) {
+    record Resolved(boolean attached, IntArrayList groups, IntArrayList machines, boolean attachedInGroup) {
         boolean remote() {
             return !groups.isEmpty() || !machines.isEmpty();
         }
@@ -125,12 +128,15 @@ final class MarkedTargets {
 
     /**
      * Os alvos no roteador carregado: a presa (também pela posição dela), as máquinas pelas posições (as que saíram
-     * ficam de fora) e os grupos inteiros: os marcados e os que têm todas as máquinas marcadas, que saem das
-     * máquinas.
+     * ficam de fora) e os grupos inteiros: os marcados e os que têm todas as máquinas marcadas, a presa inclusive, que
+     * saem das máquinas. A presa de um grupo inteiro é parte dele (segue o perfil, ou fica com a exceção, D2) e não
+     * conta como presa.
      */
     static Resolved resolve(RouterBlockEntity router, Marked marked) {
         boolean attached = marked.attached || marked.machines.contains(router.machinePos().asLong());
         RemoteMachines remotes = router.remoteMachines();
+        AttachedMember member = remotes.attached();
+        int attachedGroup = member == null ? -1 : member.group();
         IntLinkedOpenHashSet groups = new IntLinkedOpenHashSet();
         for (int id : marked.groups) {
             if (remotes.group(id) != null) {
@@ -147,9 +153,13 @@ final class MarkedTargets {
         List<RemoteMachine> all = remotes.machines();
         for (int g = 0; g < remotes.groupCount(); g++) {
             int id = remotes.groupAt(g).id();
-            if (!groups.contains(id) && everyMachineOf(all, id, chosen)) {
+            if (!groups.contains(id) && everyMachineOf(all, id, chosen, id != attachedGroup || attached)) {
                 groups.add(id);
             }
+        }
+        boolean attachedInGroup = attached && groups.contains(attachedGroup);
+        if (attachedInGroup) {
+            attached = false;
         }
         IntPredicate inGroup = i -> groups.contains(all.get(i).group());
         IntArrayList machines = new IntArrayList();
@@ -158,11 +168,18 @@ final class MarkedTargets {
                 machines.add(i);
             }
         }
-        return new Resolved(attached, new IntArrayList(groups), machines);
+        return new Resolved(attached, new IntArrayList(groups), machines, attachedInGroup);
     }
 
-    /** O grupo tem máquinas e todas estão em {@code marked}. */
-    private static boolean everyMachineOf(List<RemoteMachine> all, int group, IntOpenHashSet marked) {
+    /**
+     * O grupo tem máquinas remotas, todas em {@code marked}, e a presa, se é dele, marcada ({@code attachedOk}). Um
+     * grupo só com a presa não vira grupo inteiro: a presa marcada sozinha continua a presa.
+     */
+    private static boolean everyMachineOf(List<RemoteMachine> all, int group, IntOpenHashSet marked,
+            boolean attachedOk) {
+        if (!attachedOk) {
+            return false;
+        }
         boolean any = false;
         for (int i = 0; i < all.size(); i++) {
             if (all.get(i).group() == group) {

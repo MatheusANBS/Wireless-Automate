@@ -7,12 +7,7 @@ import io.github.matheusanbs.wirelessautomate.menu.RangeView;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.FaceView;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.NetworkEntry;
-import io.github.matheusanbs.wirelessautomate.packet.ClearIdleNetworksPayload;
-import io.github.matheusanbs.wirelessautomate.packet.RevertGroupPayload;
-import io.github.matheusanbs.wirelessautomate.packet.RevertMachinePayload;
-import io.github.matheusanbs.wirelessautomate.packet.SelectTargetPayload;
-import io.github.matheusanbs.wirelessautomate.packet.UnlinkMachinePayload;
-import io.github.matheusanbs.wirelessautomate.packet.UpdateMachinePayload;
+import io.github.matheusanbs.wirelessautomate.packet.MachineCopyPayload;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import java.util.Optional;
@@ -23,6 +18,7 @@ import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -57,6 +53,9 @@ final class MachineColumn {
     private final LabelEditor labelEditor = rowRename.editor();
     private final LitFooter litFooter;
     private final RangeList rangeList;
+    private final CopyFooter copyFooter = new CopyFooter();
+    /** A tecla do último Ctrl+C ou Ctrl+V, até ser solta (−1 sem nenhuma). */
+    private int heldKey = -1;
     private FlatButton machinesButton;
 
     /**
@@ -164,12 +163,24 @@ final class MachineColumn {
         machinesButton.setMessage(tr("range.machines", range().used(), range().max()));
         machineView.setBounds(left + RouterLayout.X0 + 1, top + layout.boxY() + 1, layout.lw() - 2,
                 Math.max(0, layout.viewH() - 2));
-        int listH = layout.listH() - (LitFooter.shown(listShown()) ? LitFooter.H : 0);
-        rangeList.setBounds(left + RouterLayout.X0, top + layout.listY(), layout.lw(), listH);
-        litFooter.place(Minecraft.getInstance().font, left + RouterLayout.X0, top + layout.listY() + listH,
-                layout.lw());
+        Font font = Minecraft.getInstance().font;
+        RouterSnapshot s = snapshot.get();
+        boolean list = listShown();
+        int x = left + RouterLayout.X0;
+        // a largura da linha embaixo da lista, ou da faixa no alto do visor
+        copyFooter.prepare(font, s.clipboard(), list ? layout.lw() : layout.lw() - 2);
+        int copyH = list && copyFooter.present() ? CopyFooter.H : 0;
+        int listH = layout.listH() - (LitFooter.shown(listShown()) ? LitFooter.H : 0) - copyH;
+        rangeList.setBounds(x, top + layout.listY(), layout.lw(), listH);
+        // embaixo da lista; sem ela, no alto do visor
+        if (copyH > 0) {
+            copyFooter.place(x, top + layout.listY() + listH, layout.lw(), false);
+        } else {
+            copyFooter.place(x + 1, top + layout.boxY() + 1, layout.lw() - 2, true);
+        }
+        litFooter.place(font, x, top + layout.listY() + listH + copyH, layout.lw());
         if (rangeShown()) {
-            rangeList.sync(range(), snapshot.get().target(), IdleNetworks.shown(snapshot.get()));
+            rangeList.sync(range(), s.target(), IdleNetworks.shown(s), s.attachedLabel(), s.clipboard());
         }
     }
 
@@ -183,19 +194,12 @@ final class MachineColumn {
     }
 
     private void sendRename(EditTarget target, @Nullable BlockPos machinePos, String name) {
-        send(LabelEditor.payload(containerId.getAsInt(), target, machinePos, name));
+        send(LabelEditor.payload(containerId.getAsInt(), target, machinePos, range(), name));
     }
 
     /** Linha da lista clicada: o servidor troca o alvo e o snapshot seguinte traz o alvo e a face novos. */
     private void selectTarget(RangeList.Row row) {
-        int id = containerId.getAsInt();
-        RangeView.GroupView group = range().group(row.group());
-        RangeView.MachineView machine = range().machine(row.machine());
-        send(switch (row.kind()) {
-            case ATTACHED -> SelectTargetPayload.attached(id);
-            case GROUP -> group == null ? null : SelectTargetPayload.group(id, group.id(), group.block());
-            case MACHINE -> machine == null ? null : SelectTargetPayload.machine(id, row.machine(), machine.pos());
-        });
+        send(RangeRequests.select(containerId.getAsInt(), range(), row));
     }
 
     /** Um botão da linha escolhida: o servidor confere o que a tela viu e age; o snapshot seguinte mostra. */
@@ -205,30 +209,7 @@ final class MachineColumn {
             rowRename.start(row, range(), s.attachedLabel(), attachedName());
             return;
         }
-        int id = containerId.getAsInt();
-        if (row.kind() == RangeList.Kind.GROUP) {
-            RangeView.GroupView group = range().group(row.group());
-            if (group != null && action == RangeRowButtons.Action.UPDATE) {
-                send(UpdateMachinePayload.group(id, group.id(), group.block()));
-            } else if (group != null && action == RangeRowButtons.Action.REVERT_GROUP) {
-                send(new RevertGroupPayload(id, group.id(), group.block()));
-            } else if (action == RangeRowButtons.Action.CLEAR_NETWORKS) {
-                send(new ClearIdleNetworksPayload(id, false));
-            }
-            return;
-        }
-        RangeView.MachineView machine = range().machine(row.machine());
-        if (row.kind() != RangeList.Kind.MACHINE || machine == null) {
-            return;
-        }
-        send(switch (action) {
-            case UPDATE -> UpdateMachinePayload.machine(id, row.machine(), machine.pos());
-            case REVERT -> new RevertMachinePayload(id, row.machine(), machine.pos());
-            case REVERT_GROUP -> null;
-            case UNLINK -> new UnlinkMachinePayload(id, row.machine(), machine.pos());
-            case CLEAR_NETWORKS -> new ClearIdleNetworksPayload(id, false);
-            case RENAME -> null;
-        });
+        send(RangeRequests.action(containerId.getAsInt(), snapshot.get(), row, action, Screen.hasShiftDown()));
     }
 
     // ------------------------------------------------------------------ entrada
@@ -241,8 +222,32 @@ final class MachineColumn {
         return labelEditor.mouseClicked(mouseX, mouseY, button);
     }
 
+    /**
+     * Uma tecla na tela: primeiro a caixa do nome de uma linha e o painel (o nome da face, a busca das redes), que
+     * ficam com as teclas deles; depois Ctrl+C e Ctrl+V (Shift + Ctrl+V no grupo inteiro) no alvo escolhido, também
+     * sem o Upgrade de Alcance (na presa). A tecla segura (a repetição do sistema) não pede de novo: um segundo colar
+     * igual apagaria o Desfazer do primeiro.
+     */
     boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        return labelEditor.keyPressed(keyCode, scanCode, modifiers);
+        if (labelEditor.keyPressed(keyCode, scanCode, modifiers) || panel.keyPressed(keyCode, scanCode, modifiers)) {
+            return true;
+        }
+        CopyFooter.Request request = CopyFooter.key(keyCode, modifiers);
+        if (request == null) {
+            return false;
+        }
+        if (heldKey != keyCode) {
+            heldKey = keyCode;
+            send(RangeRequests.key(containerId.getAsInt(), request));
+        }
+        return true;
+    }
+
+    /** A tecla solta: o próximo Ctrl+C ou Ctrl+V com ela vale de novo. */
+    void keyReleased(int keyCode) {
+        if (keyCode == heldKey) {
+            heldKey = -1;
+        }
     }
 
     boolean charTyped(char codePoint, int modifiers) {
@@ -250,6 +255,12 @@ final class MachineColumn {
     }
 
     boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (copyShown() && copyFooter.over(mouseX, mouseY)) {
+            if (button == 0 && copyFooter.forgetClicked(mouseX, mouseY)) {
+                send(new MachineCopyPayload(containerId.getAsInt(), true));
+            }
+            return true;
+        }
         if (listShown() && button == 0 && litFooter.click(rangeList, mouseX, mouseY)) {
             return true;
         }
@@ -295,6 +306,11 @@ final class MachineColumn {
         if (machineTip) {
             set.accept(machineTooltip());
         }
+        Component copy = copyShown() ? copyFooter.tooltip(snapshot.get().clipboard(), mouseX, mouseY) : null;
+        if (copy != null) {
+            set.accept(copy);
+            return true;
+        }
         Component hint = labelEditor.tooltip(mouseX, mouseY);
         if (hint != null) {
             set.accept(hint);
@@ -310,7 +326,8 @@ final class MachineColumn {
             machineTip = true;
             Component button = rangeList.buttonTooltip(Minecraft.getInstance().font, range(), snapshot.get().target(),
                     mouseX, mouseY);
-            set.accept(button != null ? button : rangeList.tooltip(range(), row, attachedName()));
+            set.accept(button != null ? button
+                    : rangeList.tooltip(range(), row, attachedName(), snapshot.get().attachedLabel()));
         }
         return machineTip;
     }
@@ -329,7 +346,7 @@ final class MachineColumn {
         return new ItemStack(state.getBlock().asItem());
     }
 
-    /** O nome da máquina presa, para a dica da linha dela na lista. */
+    /** O nome do bloco da máquina presa, para a dica da linha dela na lista. */
     private Component attachedName() {
         ItemStack icon = attachedIcon();
         return icon.isEmpty() ? tr("machine.none") : icon.getHoverName();
@@ -357,6 +374,14 @@ final class MachineColumn {
         if (viewShown()) {
             renderView(g, font, s, left, top, pointerX, pointerY);
         }
+        if (copyShown()) {
+            copyFooter.render(g, font, pointerX, pointerY);
+        }
+    }
+
+    /** A linha da cópia aparece: embaixo da lista, ou no alto do visor sem ela. */
+    private boolean copyShown() {
+        return copyFooter.present() && (listShown() || viewShown());
     }
 
     /** O visor: num alvo remoto só o bloco dele, com o anel da face escolhida na cor da rede dela. */
@@ -428,6 +453,11 @@ final class MachineColumn {
 
     int @Nullable [] rangeEyeCenter(EditTarget target) {
         return listShown() ? litFooter.eyeCenter(rangeList, target) : null;
+    }
+
+    /** O ✕ da linha da cópia, ou {@code null} sem cópia. */
+    int @Nullable [] copyForgetCenter() {
+        return copyShown() ? copyFooter.forgetCenter() : null;
     }
 
     /** O Apagar todas embaixo da lista, ou {@code null} se ele não aparece. */

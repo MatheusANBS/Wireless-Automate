@@ -211,7 +211,7 @@ final class TargetLine {
         List<TargetRow> rows = new ArrayList<>();
         RangeView view = model.range();
         int attachedGroup = view.attachedGroup();
-        if (attachedGroup < 0) {
+        if (attachedGroup < 0 && view.attachedShown()) {
             rows.add(new TargetRow(EditTarget.ATTACHED_TARGET, model.targetName(EditTarget.ATTACHED_TARGET), null, 0,
                     false));
         }

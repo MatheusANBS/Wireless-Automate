@@ -11,17 +11,13 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.client.linker.LinkerOpenScreen;
 import io.github.matheusanbs.wirelessautomate.client.linker.LinkerSameBlockInput;
-import io.github.matheusanbs.wirelessautomate.client.linker.LinkerScreen;
 import io.github.matheusanbs.wirelessautomate.client.router.RouterScreen;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerProblem;
 import io.github.matheusanbs.wirelessautomate.packet.CycleLinkerModePayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 import net.minecraft.client.KeyMapping;
@@ -40,9 +36,8 @@ import net.neoforged.neoforge.client.ClientHooks;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * O Vinculador no e2e: um roteador Avançado com o Upgrade de Alcance escolhido com o clique, a área marcada com
- * Shift + clique, a tela com o Vincular e o Desvincular, o Ctrl + clique que vincula os funis (e não vale correndo),
- * e o modo Abrir com a lista de dois roteadores.
+ * O Vinculador no e2e: um roteador Avançado com o Upgrade de Alcance escolhido com o clique, o Ctrl + clique que
+ * vincula os funis (e não vale correndo) e o modo Abrir com a lista de dois roteadores.
  */
 final class E2eLinkerSteps {
     /** Onde o jogador estava antes de ir para perto do baú do Vinculador, e para onde olhava. */
@@ -53,7 +48,7 @@ final class E2eLinkerSteps {
     }
 
     private static BlockPos linkRouter;
-    /** O baú que o Vincular junta ao roteador, com um roteador preso nele (os dois chegam na mesma máquina). */
+    /** O baú que o Abrir usa, com um roteador preso nele (os dois chegam na mesma máquina). */
     static BlockPos linkChest;
     private static BlockPos linkAttached;
     /**
@@ -62,14 +57,11 @@ final class E2eLinkerSteps {
      */
     private static BlockPos linkHopper;
     private static BlockPos linkHopperSame;
-    private static BlockPos linkCornerA;
-    private static BlockPos linkCornerB;
 
     /**
-     * Vincular: com o Vinculador na mão, clique no roteador o escolhe; Shift + clique em dois blocos (o chão ao lado e o baú) marca a área em
-     * volta do baú; a tela mostra o roteador e a área, Vincular junta o baú ao roteador, Desvincular o tira (com
-     * a tela maior no meio). Abrir: Shift + clique no ar troca o modo, clique no baú (que tem o roteador preso e
-     * o de alcance) abre a lista, e a escolha abre a tela do roteador.
+     * Vincular: com o Vinculador na mão, clique no roteador o escolhe e o Ctrl + clique vincula os funis. Abrir:
+     * Shift + roda troca o modo, clique no baú (que tem o roteador preso e o de alcance) abre a lista, e a escolha
+     * abre a tela do roteador.
      */
     static void linkerSteps(List<Step> list) {
         UUID playerId = Minecraft.getInstance().player.getUUID();
@@ -82,8 +74,6 @@ final class E2eLinkerSteps {
             linkAttached = linkChest.above();
             linkHopper = linkChest.offset(1, 0, 2);
             linkHopperSame = linkChest.offset(-1, 0, 2);
-            linkCornerA = linkChest.offset(-1, -1, -1);
-            linkCornerB = linkChest;
             for (BlockPos pos : List.of(chest, linkChest)) {
                 level.setBlockAndUpdate(pos, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.SOUTH));
             }
@@ -112,67 +102,6 @@ final class E2eLinkerSteps {
         }, () -> serverLinker(stack -> LinkerItem.router(stack) != null
                 && LinkerItem.router(stack).pos().equals(linkRouter)),
                 () -> "roteador no servidor " + serverLinker(stack -> String.valueOf(LinkerItem.router(stack)))));
-        list.add(shift("Shift pressionado", true));
-        list.add(new Step("Vinculador: Shift + clique nos dois cantos", STEP_TIMEOUT_MS, () -> {
-            Minecraft minecraft = Minecraft.getInstance();
-            for (BlockPos corner : List.of(linkCornerA, linkCornerB)) {
-                minecraft.gameMode.useItemOn(minecraft.player, InteractionHand.MAIN_HAND,
-                        new BlockHitResult(Vec3.atCenterOf(corner), Direction.UP, corner, false));
-            }
-        }, () -> serverLinker(stack -> {
-            LinkerArea area = LinkerItem.area(stack);
-            return area != null && area.first().equals(linkCornerA) && area.second().equals(Optional.of(linkCornerB));
-        }) && LinkerItem.area(Minecraft.getInstance().player.getMainHandItem()) != null
-                && LinkerItem.area(Minecraft.getInstance().player.getMainHandItem()).complete(),
-                () -> "área no servidor " + serverLinker(stack -> String.valueOf(LinkerItem.area(stack)))));
-        list.add(shift("Shift solto", false));
-        list.add(capture("7b-vinculador-contorno"));
-        list.add(new Step("Vinculador: abrir a tela (clique no ar)", STEP_TIMEOUT_MS, () -> {
-            Minecraft minecraft = Minecraft.getInstance();
-            if (minecraft.screen != null) {
-                throw new StepFailure("ainda há uma tela aberta: " + describe(minecraft.screen));
-            }
-            minecraft.gameMode.useItem(minecraft.player, InteractionHand.MAIN_HAND);
-        }, () -> Minecraft.getInstance().screen instanceof LinkerScreen screen
-                && screen.getMenu().snapshot().router().links()
-                && screen.getMenu().snapshot().problem() == LinkerProblem.NONE,
-                () -> Minecraft.getInstance().screen instanceof LinkerScreen screen
-                        ? "roteador " + screen.getMenu().snapshot().router() + ", " + screen.getMenu().snapshot().problem()
-                        : "tela " + describe(Minecraft.getInstance().screen)));
-        list.add(clipCheck("Vinculador: tela"));
-        list.add(capture("8-vinculador-area"));
-        list.add(new Step("Vinculador: Vincular", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessageKey("gui.wirelessautomate.linker.link.label"), "Vincular")),
-                () -> onServer(server -> router(server, linkRouter).remoteMachines().contains(linkChest))
-                        && linkerScreen().getMenu().snapshot().outcome().map(o -> !o.unlink() && o.linked() == 1)
-                                .orElse(false),
-                () -> "máquinas " + onServer(server -> router(server, linkRouter).remoteMachines().machines().size())
-                        + "; resultado na tela " + linkerScreen().getMenu().snapshot().outcome()));
-        list.add(capture("9-vinculador-vinculado"));
-        list.add(new Step("Vinculador maior", STEP_TIMEOUT_MS,
-                () -> linkerScreen().previewResize(460, 300),
-                () -> linkerScreen().size()[0] > 300 && linkerScreen().size()[1] > 204,
-                () -> "tamanho " + java.util.Arrays.toString(linkerScreen().size())));
-        list.add(capture("8d-vinculador-grande"));
-        list.add(new Step("Vinculador de volta ao mínimo", STEP_TIMEOUT_MS,
-                () -> linkerScreen().previewResize(300, 204),
-                () -> linkerScreen().size()[0] == 300 && linkerScreen().size()[1] == 204,
-                () -> "tamanho " + java.util.Arrays.toString(linkerScreen().size())));
-        list.add(new Step("Vinculador: seletor Desvincular", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessageKey("gui.wirelessautomate.linker.action.unlink"), "Desvincular")),
-                // o botão "Desvincular N" nasce quando a tela refaz os widgets com o snapshot novo, um quadro depois
-                () -> serverLinker(LinkerItem::unlink) && linkerScreen().getMenu().snapshot().unlink()
-                        && find(byMessageKey("gui.wirelessautomate.linker.unlink.count")) != null,
-                () -> "desvincular na tela " + linkerScreen().getMenu().snapshot().unlink()));
-        list.add(new Step("Vinculador: Desvincular a área", STEP_TIMEOUT_MS,
-                () -> click(widget(byMessageKey("gui.wirelessautomate.linker.unlink.count"), "Desvincular N")),
-                () -> onServer(server -> !router(server, linkRouter).remoteMachines().contains(linkChest))
-                        && linkerScreen().getMenu().snapshot().outcome().map(o -> o.unlink() && o.linked() == 1)
-                                .orElse(false),
-                () -> "resultado na tela " + linkerScreen().getMenu().snapshot().outcome()));
-        list.add(clipCheck("Vinculador: desvinculado"));
-        list.add(capture("9b-vinculador-desvincular"));
-        list.add(close("Vinculador: fechar a tela"));
         ctrlClickSteps(list);
         list.add(capture("9c-vinculador-ctrl-clique"));
         openSteps(list);
@@ -182,7 +111,7 @@ final class E2eLinkerSteps {
      * Ctrl + clique num funil, pelo caminho do jogo: o {@code InteractionKeyMappingTriggered} postado como o jogo posta
      * ({@code ClientHooks.onClickInput}), duas vezes com a tecla de uso descida (o jogo repete o uso com o botão
      * segurado). O Ctrl de verdade não chega ao {@code Screen.hasControlDown()} no e2e, então o passo o força pelo
-     * gancho do {@link LinkerSameBlockInput}. Os dois usos são cancelados, um pedido só vai ao servidor, os dois funis
+     * gancho do {@link LinkerSameBlockInput}, com a tecla de correr (o Ctrl no padrão) apertada e o jogador parado. Os dois usos são cancelados, um pedido só vai ao servidor, os dois funis
      * entram e a action bar diz 2. Depois, correndo (ou mirando o chão, que não é máquina), o gesto não vale: o uso
      * passa e nenhum pedido sai.
      */
@@ -195,12 +124,16 @@ final class E2eLinkerSteps {
             boolean[] canceled = new boolean[2];
             LinkerSameBlockInput.forceControl(true);
             KeyMapping.set(use.getKey(), true);
+            // A tecla de correr é o próprio Ctrl no padrão: apertada, parado, o gesto ainda vale.
+            KeyMapping sprint = minecraft.options.keySprint;
+            KeyMapping.set(sprint.getKey(), true);
             try {
                 minecraft.hitResult = new BlockHitResult(Vec3.atCenterOf(linkHopper), Direction.UP, linkHopper, false);
                 canceled[0] = ClientHooks.onClickInput(1, use, InteractionHand.MAIN_HAND).isCanceled();
                 canceled[1] = ClientHooks.onClickInput(1, use, InteractionHand.MAIN_HAND).isCanceled();
             } finally {
                 KeyMapping.set(use.getKey(), false);
+                KeyMapping.set(sprint.getKey(), false);
                 LinkerSameBlockInput.forceControl(false);
             }
             int sent = LinkerSameBlockInput.sentCount() - sentBefore[0];
@@ -306,12 +239,5 @@ final class E2eLinkerSteps {
     static <T> T serverLinker(Function<ItemStack, T> read) throws Exception {
         UUID playerId = Minecraft.getInstance().player.getUUID();
         return onServer(server -> read.apply(server.getPlayerList().getPlayer(playerId).getMainHandItem()));
-    }
-
-    static LinkerScreen linkerScreen() throws StepFailure {
-        if (Minecraft.getInstance().screen instanceof LinkerScreen screen) {
-            return screen;
-        }
-        throw new StepFailure("a tela do Vinculador não está aberta (tela: " + describe(Minecraft.getInstance().screen) + ")");
     }
 }

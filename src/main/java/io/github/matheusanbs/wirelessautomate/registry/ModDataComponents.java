@@ -8,7 +8,6 @@ import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterCodecs;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerModeCodecs;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
@@ -73,23 +72,11 @@ public final class ModDataComponents {
                     .networkSynchronized(FilterCardItem.Contents.STREAM_CODEC)
                     .cacheEncoding());
 
-    /** Vinculador no modo desvincular; sem o componente, vincula. */
-    public static final Supplier<DataComponentType<Boolean>> LINKER_UNLINK =
-            DATA_COMPONENTS.registerComponentType("linker_unlink", builder -> builder
-                    .persistent(Codec.BOOL)
-                    .networkSynchronized(ByteBufCodecs.BOOL));
-
     /** Modo do Vinculador; sem o componente, Vincular. */
     public static final Supplier<DataComponentType<LinkerMode>> LINKER_MODE =
             DATA_COMPONENTS.registerComponentType("linker_mode", builder -> builder
                     .persistent(LinkerModeCodecs.CODEC)
                     .networkSynchronized(LinkerModeCodecs.STREAM_CODEC));
-
-    /** Cantos da área marcados com o Vinculador ao vincular. */
-    public static final Supplier<DataComponentType<LinkerArea>> LINKER_AREA =
-            DATA_COMPONENTS.registerComponentType("linker_area", builder -> builder
-                    .persistent(LinkerArea.CODEC)
-                    .networkSynchronized(LinkerArea.STREAM_CODEC));
 
     /**
      * Roteador escolhido no Vinculador (posição e dimensão): o alvo dos vínculos de máquinas. Não é limpo quando o roteador some; o servidor confere a cada clique.
@@ -121,6 +108,8 @@ public final class ModDataComponents {
      */
     static {
         legacy("linker_type");
+        legacy("linker_unlink");
+        legacy("linker_area");
         legacy("linker_tabs");
         legacy("linker_faces");
         legacy("configurator_mode");

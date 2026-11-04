@@ -71,9 +71,6 @@ import io.github.matheusanbs.wirelessautomate.client.GuiThemes;
  *   <li>Tablet de rede: abre pelo item, acha o roteador B pela busca, cria um grupo com a rede dos
  *       itens, pausa o grupo e confere que as pedras param, retoma e confere que chegam, e abre o
  *       roteador B à distância pela lista (20 blocos, longe demais para a tela comum).</li>
- *   <li>Vinculador por área (por último): Shift + clique no ar passa para Área, Shift + clique em
- *       dois blocos marca os cantos em volta dos roteadores, clique no ar abre a tela, que escolhe a
- *       rede e o tipo Fluidos e vincula; confere no servidor que só a aba de fluidos dos dois mudou.</li>
  *   <li>Baú Wireless: os 12 milhões de pedregulho de um Baú para outro com roteadores Ultimate, a
  *       tela (lista, busca, pegar e devolver pelo clique, redimensionar pela alça, filtro de entrada e Voltar), o Cartão de
  *       Upgrade no bloco, quebrar e recolocar com o conteúdo e uma foto dos blocos.</li>

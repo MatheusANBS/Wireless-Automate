@@ -243,7 +243,7 @@ public class RouterMenu extends AbstractContainerMenu implements RouterEditHost 
      * não existe mais, na presa.
      */
     public static void open(ServerPlayer player, RouterBlockEntity router, EditTargetRef target) {
-        EditTargetRef fresh = target.refresh(router);
+        EditTargetRef fresh = skipHiddenAttached(router, target.refresh(router));
         RouterSnapshot snapshot = RouterSnapshot.capture(router, player, fresh.target());
         Component title = router.name().isEmpty()
                 ? router.getBlockState().getBlock().getName()
@@ -893,6 +893,21 @@ public class RouterMenu extends AbstractContainerMenu implements RouterEditHost 
      * tela, passaram {@link #SAMPLE_TICKS} ticks, e ele ficou diferente do último enviado; senão
      * {@code null}. Marca o novo como enviado. Só no servidor; público para os GameTests.
      */
+    /**
+     * Com o alcance valendo e a presa escondida (o bloco da frente não é máquina e não tem membro, como o chão ou a
+     * parede), o alvo que cai na presa passa para a primeira máquina vinculada, que a lista mostra no lugar dela. Sem
+     * máquina vinculada fica na presa. Consulta as capabilities da frente só quando um snapshot vai sair.
+     */
+    public static EditTargetRef skipHiddenAttached(RouterBlockEntity router, EditTargetRef target) {
+        if (!target.target().attached() || !router.rangeActive() || router.remoteMachines().machines().isEmpty()
+                || router.attachedCanHold()) {
+            return target;
+        }
+        BlockPos first = router.remoteMachines().machines().get(0).pos();
+        EditTargetRef machine = EditTargetRef.resolve(router, EditTarget.machine(0), first, null);
+        return machine == null ? target : machine;
+    }
+
     public @Nullable RouterSnapshot pollSnapshot() {
         if (router == null || viewer == null || router.isRemoved()) {
             return null;
@@ -912,8 +927,12 @@ public class RouterMenu extends AbstractContainerMenu implements RouterEditHost 
         sentChangeVersion = changeVersion;
         sentDataVersion = dataVersion;
         sentClipboard = clipboard;
-        targetChanged = false;
         rangeTick = now;
+        EditTargetRef shown = skipHiddenAttached(router, targetRef);
+        if (shown != targetRef && selectTarget(shown.target(), shown.pos(), null)) {
+            target = validTarget();
+        }
+        targetChanged = false;
         RouterSnapshot captured = RouterSnapshot.capture(router, viewer, target, selectedFace);
         bodyChanged = !captured.sameBody(snapshot);
         networksChanged = !captured.networks().equals(snapshot.networks());

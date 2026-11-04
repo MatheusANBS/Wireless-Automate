@@ -271,7 +271,7 @@ final class ScreenshotRouter {
         int differs = target.kind() == EditTarget.Kind.MACHINE
                 ? 1 << RangeView.differsBit(ResourceType.ITEM, io.github.matheusanbs.wirelessautomate.range.RemoteSide.TOP) : 0;
         RangeView range = new RangeView(16, 32, List.of(blast, smoker, furnace), machines, target, Direction.UP, differs,
-                false);
+                false, true);
         RouterSnapshot snapshot = s.withRange(range);
         Inventory inventory = new Inventory(null);
         RouterMenu menu = new RouterMenu(0, inventory, snapshot);

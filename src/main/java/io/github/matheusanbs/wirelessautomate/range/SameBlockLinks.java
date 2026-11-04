@@ -4,7 +4,6 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerProblem;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.range.RangeLinks.Result;
 import io.github.matheusanbs.wirelessautomate.range.RangeLinks.Status;
@@ -33,8 +32,9 @@ import net.minecraft.world.level.chunk.LevelChunkSection;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * O Ctrl + clique do Vinculador no modo Vincular ({@code LinkSameBlockPayload}): vincula ao roteador escolhido as
- * máquinas do mesmo bloco (o mesmo id de registro) da clicada que estão no raio do tier, da mais perto do roteador para
+ * O Ctrl + clique do Vinculador no modo Vincular ({@code LinkSameBlockPayload}). Com a clicada já vinculada ao
+ * roteador escolhido, desvincula todas as vinculadas do mesmo bloco ({@link #unlink}). Senão, vincula ao
+ * roteador escolhido as máquinas do mesmo bloco (o mesmo id de registro) da clicada que estão no raio do tier, da mais perto do roteador para
  * a mais longe (Chebyshev; empate pela posição), até o limite. O servidor não sabe do Ctrl, então o cliente cancela o
  * uso normal e manda o pacote; aqui se refazem todas as conferências do clique (item, modo, distância do jogador ao
  * bloco, roteador escolhido, {@code mayBuild}/{@code mayInteract}, as recusas do {@link RangeLinks}).
@@ -43,8 +43,8 @@ import org.jetbrains.annotations.Nullable;
  * seção, pulando a seção cuja paleta não tem o bloco ({@code maybeHas}) e lendo só o estado de cada posição (sem block
  * entity, sem capability). As seções vão da mais perto para a mais longe; a varredura para quando já há candidatas
  * para as vagas e a próxima seção não tem como ter uma mais perto, ou quando lê {@link #MAX_READS} posições (o aviso
- * diz "mais longe não foi procurado"). O evento de clique das proteções ({@link RangeLinks#clickAllowed}) só é postado
- * para as que de fato seriam vinculadas.
+ * diz "mais longe não foi procurado"). A capability ({@link RangeLinks#isMachine}) e o evento de clique das proteções
+ * ({@link RangeLinks#clickAllowed}) só são conferidos nas que de fato seriam vinculadas.
  */
 public final class SameBlockLinks {
     private static final String KEY = "item.wirelessautomate.linker.range.same.";
@@ -73,7 +73,8 @@ public final class SameBlockLinks {
     }
 
     /**
-     * O pacote do Ctrl + clique em {@code pos}. Sem o Vinculador no modo Vincular na mão principal, com o bloco
+     * O pacote do Ctrl + clique em {@code pos}. Sem o Vinculador no modo Vincular na mão principal (ou com uma Tela
+     * de Sinal escolhida nele, como o cliente confere), com o bloco
      * descarregado ou longe da mão do jogador, ou com o Vinculador no descanso ({@link #COOLDOWN_TICKS}), ignora
      * (devolve {@code null}, sem mensagem: o cliente não pediria).
      */
@@ -84,7 +85,7 @@ public final class SameBlockLinks {
         ItemStack stack = player.getMainHandItem();
         ServerLevel level = player.serverLevel();
         if (!(stack.getItem() instanceof LinkerItem) || LinkerItem.mode(stack) != LinkerMode.LINK
-                || !level.isLoaded(pos) || !player.canInteractWithBlock(pos, 1.0)
+                || LinkerItem.tv(stack) != null || !level.isLoaded(pos) || !player.canInteractWithBlock(pos, 1.0)
                 || player.getCooldowns().isOnCooldown(stack.getItem())) {
             return null;
         }
@@ -93,6 +94,9 @@ public final class SameBlockLinks {
         RouterBlockEntity router = RangeLinks.chosen(player, stack);
         if (router == null) {
             return RangeLinks.missing(player, stack);
+        }
+        if (router.remoteMachines().index(pos) >= 0) {
+            return unlink(player, router, pos);
         }
         if (!RangeLinks.mayEdit(player, pos) || !RangeLinks.mayEdit(player, router.getBlockPos())) {
             return RangeLinks.refuse(player, Result.refused(LinkRefusal.PROTECTED), router, 0);
@@ -131,6 +135,9 @@ public final class SameBlockLinks {
                 BlockPos machine = BlockPos.of(candidates.getLong(i));
                 if (counts[0] >= room) {
                     counts[1]++;
+                } else if (!RangeLinks.isMachine(level, machine, LoadedTypes.LIST)) {
+                    // o mesmo bloco sem capability nesta posição (o estado conta): não ocupa vaga
+                    continue;
                 } else if (!RangeLinks.clickAllowed(player, InteractionHand.MAIN_HAND, machine)) {
                     counts[2]++;
                 } else if (router.linkMachine(machine)) {
@@ -142,7 +149,7 @@ public final class SameBlockLinks {
             // todas as achadas recusadas pelo evento de clique das proteções
             return RangeLinks.refuse(player, Result.refused(LinkRefusal.PROTECTED), router, 0);
         }
-        Result result = new Result(Status.SAME_BLOCK_DONE, LinkRefusal.NONE, LinkerProblem.NONE, counts[0],
+        Result result = new Result(Status.SAME_BLOCK_DONE, LinkRefusal.NONE, counts[0],
                 scan.already(), 0, counts[1], scan.protectedCount() + counts[2], scan.unloadedChunks());
         boolean limit = counts[1] > 0;
         player.displayClientMessage(message(block, result, candidates.size(), scan, limit), true);
@@ -150,6 +157,47 @@ public final class SameBlockLinks {
             level.playSound(null, pos, SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.BLOCKS, 0.5F, 1.2F);
         }
         return result;
+    }
+
+    /**
+     * O Ctrl + clique numa máquina já vinculada: tira do roteador todas as máquinas vinculadas cujo grupo é do mesmo
+     * bloco da clicada (a presa fica). Como o desvincular de um clique, basta poder
+     * mexer no roteador, não exige o upgrade valendo e não lê mundo além do bloco clicado: os cartões dos grupos que
+     * esvaziam vão para o jogador.
+     */
+    private static Result unlink(ServerPlayer player, RouterBlockEntity router, BlockPos pos) {
+        if (!RangeLinks.mayEdit(player, router.getBlockPos())) {
+            return RangeLinks.refuse(player, Result.refused(LinkRefusal.PROTECTED), router, 0);
+        }
+        ServerLevel level = player.serverLevel();
+        Block block = level.getBlockState(pos).getBlock();
+        ResourceLocation id = BuiltInRegistries.BLOCK.getKey(block);
+        RemoteMachines remotes = router.remoteMachines();
+        List<BlockPos> same = new ArrayList<>();
+        for (RemoteMachine machine : remotes.machines()) {
+            MachineGroup group = remotes.group(machine.group());
+            if (group != null && group.block().equals(id)) {
+                same.add(machine.pos());
+            }
+        }
+        int[] cards = new int[1];
+        router.batchChanges(() -> {
+            for (BlockPos machine : same) {
+                cards[0] += Math.max(0, router.unlinkMachine(remotes.index(machine), player));
+            }
+        });
+        Component single = RouterBlock.machineName(block);
+        MutableComponent text = same.isEmpty()
+                ? Component.translatable(KEY + "unlinked.none", single, RangeLinks.routerName(router))
+                : Component.translatable(KEY + (same.size() == 1 ? "unlinked.one" : "unlinked"), same.size(),
+                        same.size() == 1 ? single : plural(block, single), RangeLinks.routerName(router),
+                        RangeLinks.used(router), RangeLinks.max(router));
+        player.displayClientMessage(RangeLinks.withCards(text, cards[0]), true);
+        if (!same.isEmpty()) {
+            level.playSound(null, pos, SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.BLOCKS, 0.5F, 0.8F);
+        }
+        return new Result(Status.SAME_BLOCK_UNLINKED, LinkRefusal.NONE, same.size(), 0, 0, 0, 0,
+                0);
     }
 
     /**

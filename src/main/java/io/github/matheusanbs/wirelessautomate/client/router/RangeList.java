@@ -122,7 +122,7 @@ final class RangeList {
         List<Row> rows = new ArrayList<>();
         int top = 0;
         int attachedGroup = view.attachedGroup();
-        if (attachedGroup < 0) {
+        if (attachedGroup < 0 && view.attachedShown()) {
             rows.add(new Row(Kind.ATTACHED, -1, -1, top, ATTACHED_H));
             top += ATTACHED_H;
         }
@@ -154,6 +154,10 @@ final class RangeList {
     }
 
     private static int contentHeight(List<Row> rows) {
+        if (rows.isEmpty()) {
+            // a presa escondida (não é máquina) e nenhuma vinculada: a lista fica vazia
+            return 0;
+        }
         Row last = rows.getLast();
         return last.top() + last.height();
     }

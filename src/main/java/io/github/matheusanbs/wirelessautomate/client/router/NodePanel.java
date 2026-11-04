@@ -104,7 +104,8 @@ public final class NodePanel {
 
     /**
      * O snapshot atual (a tela chama a cada quadro). Se o alvo de edição mudou, a face passa à que o
-     * servidor escolheu para ele, a lista aberta fecha e o aviso some (o Desfazer agiria no alvo novo).
+     * servidor escolheu para ele, a lista aberta fecha e o aviso com Desfazer some (o Desfazer agiria no alvo novo);
+     * o aviso sem Desfazer fica.
      */
     public void setSnapshot(RouterSnapshot snapshot) {
         if (snapshot != model.snapshot()) {
@@ -113,7 +114,11 @@ public final class NodePanel {
         if (model.setSnapshot(snapshot)) {
             label.finish(false);
             lists.close();
-            PanelNotices.clear();
+            // o aviso sem Desfazer ("Grupo apagado") chega junto com a troca de alvo que ele mesmo causou
+            PanelNoticePayload notice = PanelNotices.current();
+            if (notice != null && notice.undo() != PanelNoticePayload.Undo.NONE) {
+                PanelNotices.clear();
+            }
         }
     }
 

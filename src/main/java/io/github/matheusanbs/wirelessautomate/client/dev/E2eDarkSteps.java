@@ -11,7 +11,6 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 import io.github.matheusanbs.wirelessautomate.ClientConfig;
 import io.github.matheusanbs.wirelessautomate.GuiTheme;
 import io.github.matheusanbs.wirelessautomate.client.filter.FilterScreen;
-import io.github.matheusanbs.wirelessautomate.client.linker.LinkerScreen;
 import io.github.matheusanbs.wirelessautomate.client.recipe.RecipeEditorScreen;
 import io.github.matheusanbs.wirelessautomate.client.repairer.RepairerScreen;
 import io.github.matheusanbs.wirelessautomate.client.resonator.screen.ResonatorScreen;
@@ -78,10 +77,6 @@ final class E2eDarkSteps {
         list.add(useInAir("Escuro: abrir o Tablet", TabletScreen.class));
         darkShot(list, "escuro-tablet");
         list.add(close("Escuro: fechar o Tablet"));
-        list.add(handStep("Escuro: Vinculador na mão", playerId, new ItemStack(ModItems.LINKER.get())));
-        list.add(useInAir("Escuro: abrir o Vinculador", LinkerScreen.class));
-        darkShot(list, "escuro-vinculador");
-        list.add(close("Escuro: fechar o Vinculador"));
         list.add(handStep("Escuro: mão vazia de novo", playerId, ItemStack.EMPTY));
         list.add(new Step("Escuro: abrir o Baú", STEP_TIMEOUT_MS, () -> useOn(storageB),
                 () -> Minecraft.getInstance().screen instanceof StorageListScreen,
@@ -196,8 +191,6 @@ final class E2eDarkSteps {
         } else if (screen instanceof TabletScreen s) {
             return new int[] {s.themeX(), s.themeY()};
         } else if (screen instanceof FilterScreen s) {
-            return new int[] {s.themeX(), s.themeY()};
-        } else if (screen instanceof LinkerScreen s) {
             return new int[] {s.themeX(), s.themeY()};
         } else if (screen instanceof StorageListScreen s) {
             return new int[] {s.themeX(), s.themeY()};

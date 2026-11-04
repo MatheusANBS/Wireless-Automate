@@ -121,7 +121,7 @@ class GuidePagesRealTest {
         assertEquals(15, total.get("br"));
         assertEquals(2, total.get("Recipe"));
         assertEquals(1, total.get("SubPages"));
-        assertEquals(2, total.get("ItemLink"));
+        assertEquals(1, total.get("ItemLink"));
         assertEquals(1, total.get("BlockImage"));
     }
 

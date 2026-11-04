@@ -202,29 +202,6 @@ public class RouterBlockEntity extends BlockEntity {
     }
 
     /**
-     * Põe as faces absolutas da máquina presa marcadas em {@code absoluteFaceMask} (bit =
-     * {@link Direction#ordinal()}) dos tipos {@code types} na rede {@code network}, com um aviso só.
-     * Devolve quantas faces mudaram (Vinculador).
-     */
-    public int setAttachedFacesNetwork(Collection<ResourceType> types, int absoluteFaceMask, @Nullable UUID network) {
-        return targets.setAttachedNetwork(types, absoluteFaceMask, network);
-    }
-
-    /**
-     * Como {@link #setAttachedFacesNetwork(Collection, int, UUID)}, mas uma face numa rede de onde {@code canLeave}
-     * recusa tirar fica como está. Devolve quantas faces ficaram por causa disso.
-     */
-    public int setAttachedFacesNetwork(Collection<ResourceType> types, int absoluteFaceMask, @Nullable UUID network,
-            Predicate<UUID> canLeave) {
-        return targets.setAttachedNetwork(types, absoluteFaceMask, network, canLeave);
-    }
-
-    /** As faces absolutas da presa em {@code absoluteFaceMask} e {@code types} já estão em {@code network} (Vinculador). */
-    public boolean attachedFacesIn(Collection<ResourceType> types, int absoluteFaceMask, @Nullable UUID network) {
-        return attached.facesIn(types, absoluteFaceMask, network);
-    }
-
-    /**
      * Põe as seis faces da máquina presa, dos perfis de todos os grupos e das exceções, nos tipos
      * {@code types}, na rede {@code network} ({@code null} tira da rede), com um aviso só. Usado pelo
      * Tablet, pelo Vinculador e pelos atalhos {@link #setNetworkId}.
@@ -623,8 +600,9 @@ public class RouterBlockEntity extends BlockEntity {
     }
 
     /**
-     * A presa pode guardar configuração e cartões: tem membro, ou o bloco da frente está carregado e não é ar (a
-     * escrita cria o membro). Sem isso uma escrita na presa é ignorada; o slot de cartão recusa o cartão.
+     * A presa pode guardar configuração e cartões: tem membro, ou o bloco da frente está carregado e não é ar (com o
+     * alcance valendo, uma máquina) e a escrita cria o membro. Sem isso uma escrita na presa é ignorada; o slot de
+     * cartão recusa o cartão.
      */
     public boolean attachedCanHold() {
         return attached.canHold();

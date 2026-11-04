@@ -12,7 +12,6 @@ import io.github.matheusanbs.wirelessautomate.range.RemoteCapabilities;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -90,19 +89,6 @@ final class RouterAttached {
             }
         }
         return network;
-    }
-
-    /** Ver {@link RouterBlockEntity#attachedFacesIn}. */
-    boolean facesIn(Collection<ResourceType> types, int absoluteFaceMask, @Nullable UUID network) {
-        for (ResourceType type : types) {
-            for (Direction face : DIRECTIONS) {
-                if ((absoluteFaceMask & (1 << face.ordinal())) != 0
-                        && !Objects.equals(network, face(type, face).network())) {
-                    return false;
-                }
-            }
-        }
-        return true;
     }
 
     /** O cartão do grupo da presa no slot da face; vazio sem membro. */
@@ -222,24 +208,6 @@ final class RouterAttached {
         }
     }
 
-    /**
-     * Põe as faces absolutas marcadas em {@code absoluteFaceMask} dos tipos na rede, menos as que o
-     * {@code canLeave} segura (contadas em {@code kept}). Devolve quantas mudaram.
-     */
-    int setNetwork(Collection<ResourceType> types, int absoluteFaceMask, @Nullable UUID network,
-            Predicate<UUID> canLeave, int[] kept) {
-        int count = 0;
-        for (ResourceType type : types) {
-            for (Direction face : DIRECTIONS) {
-                if ((absoluteFaceMask & (1 << face.ordinal())) != 0
-                        && edit(type, face, config -> RouterFaces.moveFace(config, network, canLeave, kept))) {
-                    count++;
-                }
-            }
-        }
-        return count;
-    }
-
     /** Tira a exceção da presa: ela volta a seguir o perfil do grupo. Devolve se tinha. */
     boolean revertToProfile() {
         AttachedMember member = remotes.attached();
@@ -273,15 +241,16 @@ final class RouterAttached {
 
     /**
      * Garante o membro presa: se não há, converte o rascunho ou entra no grupo do bloco da frente. Só no
-     * servidor, com o chunk da máquina carregado e um bloco que não é ar. Devolve se o membro nasceu agora (quem
-     * chama avisa o motor de todos os tipos: o grupo em que ela entrou pode já estar configurado).
+     * servidor, com o chunk da máquina carregado e um bloco que pode ser a presa ({@link #canBeMember}). Devolve se
+     * o membro nasceu agora (quem chama avisa o motor de todos os tipos: o grupo em que ela entrou pode já estar
+     * configurado).
      */
     boolean ensureMember() {
         if (remotes.attached() != null) {
             return false;
         }
         BlockState state = machineState();
-        if (state == null || state.isAir()) {
+        if (!canBeMember(state)) {
             return false;
         }
         if (draft != null) {
@@ -292,31 +261,24 @@ final class RouterAttached {
         return true;
     }
 
-    /**
-     * Como {@link #ensureMember}, mas um roteador com o alcance valendo só ganha o membro se o bloco da frente é uma
-     * máquina (expõe alguma capability, {@link RemoteCapabilities#any}): o preso na parede, usado só pelo alcance,
-     * não ganha um grupo da pedra quando todas as faces vão para uma rede. Sem o alcance, a presa continua nascendo
-     * em qualquer bloco que não é ar, para a face esperar a máquina chegar. Consulta as capabilities da frente: só
-     * numa ação do jogador.
-     */
-    boolean ensureMachineMember() {
-        if (remotes.attached() != null) {
-            return false;
-        }
-        if (router.rangeActive()) {
-            Level level = router.getLevel();
-            BlockState state = machineState();
-            if (level == null || state == null || state.isAir() || !RemoteCapabilities.any(level, router.machinePos())) {
-                return false;
-            }
-        }
-        return ensureMember();
+    /** Ver {@link RouterBlockEntity#attachedCanHold()}: a escrita na presa criaria o membro ({@link #canBeMember}). */
+    boolean canHold() {
+        return remotes.attached() != null || canBeMember(machineState());
     }
 
-    /** Ver {@link RouterBlockEntity#attachedCanHold()}. */
-    boolean canHold() {
-        BlockState state = machineState();
-        return remotes.attached() != null || (state != null && !state.isAir());
+    /**
+     * O bloco da frente pode virar a presa: carregado e não ar; e, num roteador com o alcance valendo, uma máquina
+     * (expõe alguma capability, {@link RemoteCapabilities#any}): o preso na parede, usado só pelo alcance, não ganha
+     * um grupo da pedra por nenhuma escrita (rede, modo, cartão, colar, Afinador). Sem o alcance, a presa nasce em
+     * qualquer bloco que não é ar, para a face esperar a máquina chegar. Consulta as capabilities da frente: só numa
+     * ação do jogador, nunca por tick.
+     */
+    private boolean canBeMember(@Nullable BlockState state) {
+        if (state == null || state.isAir()) {
+            return false;
+        }
+        Level level = router.getLevel();
+        return !router.rangeActive() || level != null && RemoteCapabilities.any(level, router.machinePos());
     }
 
     /** O estado do bloco da frente, ou {@code null} fora do servidor ou com o chunk dele descarregado. */

@@ -3,19 +3,12 @@ package io.github.matheusanbs.wirelessautomate.range;
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerArea;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerBox;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerProblem;
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.Sources;
 import io.github.matheusanbs.wirelessautomate.range.RangeRules.LinkRefusal;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
-import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
@@ -30,7 +23,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.capabilities.BlockCapability;
@@ -42,8 +34,8 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Regras do servidor do modo Vincular do Vinculador: escolher o roteador
- * ({@code linker_router}), vincular ou desvincular uma máquina com um clique e vincular as máquinas
- * de uma área. Tudo validado aqui, a cada pedido; o item e a tela só pedem.
+ * ({@code linker_router}) e vincular ou desvincular uma máquina com um clique. Tudo validado aqui, a cada pedido; o
+ * item só pede.
  *
  * <p>Vínculos passam sempre por {@link RouterBlockEntity#linkMachine} e
  * {@link RouterBlockEntity#unlinkMachine(BlockPos)}, que mantêm o índice do mixin e os caches.
@@ -55,7 +47,7 @@ import org.jetbrains.annotations.Nullable;
  * tela.
  *
  * <p>Um clique numa máquina vinculada a desvincula; os cartões de um grupo que esvazia vão para quem clicou, e a
- * mensagem diz quantos. O Ctrl + clique (vincular as do mesmo bloco no raio) fica no {@link SameBlockLinks}.
+ * mensagem diz quantos. O Ctrl + clique (vincular ou desvincular as do mesmo bloco) fica no {@link SameBlockLinks}.
  */
 public final class RangeLinks {
     private static final String KEY = "item.wirelessautomate.linker.range.";
@@ -63,46 +55,46 @@ public final class RangeLinks {
     private RangeLinks() {
     }
 
-    /** O que um clique (ou o Vincular da área) fez. */
+    /** O que um clique fez. */
     public enum Status {
         /** Escolheu o roteador (clique num roteador). */
         CHOSEN,
+        /** Soltou o roteador escolhido (clique de novo nele): o Vinculador fica sem roteador. */
+        RELEASED,
         LINKED,
         UNLINKED,
-        /** Vincular da área aplicado (mesmo com zero vinculadas). */
-        AREA_DONE,
         /** Ctrl + clique aplicado ({@link SameBlockLinks}), mesmo com zero vinculadas. */
         SAME_BLOCK_DONE,
+        /** Ctrl + clique numa máquina vinculada aplicado ({@link SameBlockLinks}), mesmo com zero desvinculadas. */
+        SAME_BLOCK_UNLINKED,
         /** Nenhum roteador escolhido no Vinculador. */
         NO_ROUTER,
         /** O roteador escolhido está descarregado, quebrado ou em outra dimensão. */
         ROUTER_MISSING,
-        /** A área do Vinculador não serve ({@link Result#problem()}). */
-        AREA_PROBLEM,
         /** Recusado pela regra {@link Result#refusal()}. */
         REFUSED
     }
 
     /**
-     * Resultado de um pedido. Os números só valem no Vincular da área.
+     * Resultado de um pedido. Os números só valem no Ctrl + clique ({@link SameBlockLinks}).
      *
      * @param refusal no clique num roteador, por que ele ainda não vincula (sem upgrade, raio 0) ou
      *                {@code NONE}; recusado, o motivo
      */
-    public record Result(Status status, LinkRefusal refusal, LinkerProblem problem, int linked, int already,
+    public record Result(Status status, LinkRefusal refusal, int linked, int already,
             int outOfRange, int overLimit, int protectedCount, int unloadedChunks) {
         static Result of(Status status) {
-            return new Result(status, LinkRefusal.NONE, LinkerProblem.NONE, 0, 0, 0, 0, 0, 0);
+            return new Result(status, LinkRefusal.NONE, 0, 0, 0, 0, 0, 0);
         }
 
         static Result refused(LinkRefusal refusal) {
-            return new Result(Status.REFUSED, refusal, LinkerProblem.NONE, 0, 0, 0, 0, 0, 0);
+            return new Result(Status.REFUSED, refusal, 0, 0, 0, 0, 0, 0);
         }
 
-        /** O pedido foi aplicado (escolher, vincular, desvincular ou o Vincular da área). */
+        /** O pedido foi aplicado (escolher, vincular ou desvincular). */
         public boolean ok() {
             return status == Status.CHOSEN || status == Status.LINKED || status == Status.UNLINKED
-                    || status == Status.AREA_DONE || status == Status.SAME_BLOCK_DONE;
+                    || status == Status.SAME_BLOCK_DONE;
         }
     }
 
@@ -132,20 +124,32 @@ public final class RangeLinks {
 
     /**
      * Clique num roteador no modo Vincular: ele passa a ser o escolhido. A action bar diz o nome e as
-     * vagas ({@code Linha de Minério · 7/32 máquinas}) ou por que ele ainda não vincula.
+     * vagas ({@code Linha de Minério · 7/32 máquinas}) ou por que ele ainda não vincula. Clicar de novo no
+     * roteador já escolhido o solta: o Vinculador fica sem roteador.
      */
     public static Result choose(ServerPlayer player, ItemStack stack, RouterBlockEntity router) {
+        GlobalPos current = LinkerItem.router(stack);
+        if (current != null && current.dimension().equals(player.level().dimension())
+                && current.pos().equals(router.getBlockPos())) {
+            LinkerItem.setRouter(stack, null);
+            player.displayClientMessage(Component.translatable(KEY + "released", routerName(router)), true);
+            return Result.of(Status.RELEASED);
+        }
         if (!mayEdit(player, router.getBlockPos())) {
             return refuse(player, Result.refused(LinkRefusal.PROTECTED), router, 0);
         }
         LinkerItem.setRouter(stack, GlobalPos.of(player.level().dimension(), router.getBlockPos()));
         LinkerItem.setTv(stack, null);
+        player.displayClientMessage(chosenText(router), true);
+        return new Result(Status.CHOSEN, upgradeRefusal(router), 0, 0, 0, 0, 0, 0);
+    }
+
+    /** {@code Linha de Minério · 7/32 máquinas} ou, com o roteador ainda sem vincular, o que o impede. */
+    public static Component chosenText(RouterBlockEntity router) {
         LinkRefusal state = upgradeRefusal(router);
-        player.displayClientMessage(state == LinkRefusal.NONE
+        return state == LinkRefusal.NONE
                 ? Component.translatable(KEY + "chosen", routerName(router), used(router), max(router))
-                : Component.translatable(KEY + "chosen_inactive", routerName(router), refusalText(state, router, 0)),
-                true);
-        return new Result(Status.CHOSEN, state, LinkerProblem.NONE, 0, 0, 0, 0, 0, 0);
+                : Component.translatable(KEY + "chosen_inactive", routerName(router), refusalText(state, router, 0));
     }
 
     // ------------------------------------------------------------------ uma máquina
@@ -192,155 +196,12 @@ public final class RangeLinks {
         return Result.of(Status.LINKED);
     }
 
-    // ------------------------------------------------------------------ área
-
-    /**
-     * O Vincular da tela: vincula ao roteador escolhido as máquinas da área marcada
-     * (só block entities de chunks carregados) que têm capability de um tipo carregado. Pula as
-     * já vinculadas, as protegidas ({@code mayInteract} e o evento de clique, ver {@link #clickAllowed}),
-     * roteadores e a máquina presa; as de fora do raio e as que passam do
-     * limite ficam de fora e são contadas. As mais perto do roteador entram primeiro. Mostra o
-     * resultado na action bar ({@code Vinculadas 9 · 3 fora do alcance · 2 além do limite}).
-     */
-    public static Result linkArea(ServerPlayer player, ItemStack stack) {
-        LinkerArea area = LinkerItem.area(stack);
-        LinkerProblem problem = LinkerActions.checkArea(player, area);
-        if (problem == LinkerProblem.NONE && LinkerItem.unlink(stack)) {
-            return unlinkArea(player, stack, area);
-        }
-        Collection<ResourceType> types = LoadedTypes.LIST;
-        if (problem != LinkerProblem.NONE) {
-            // a tela já mostra o problema da área
-            return new Result(Status.AREA_PROBLEM, LinkRefusal.NONE, problem, 0, 0, 0, 0, 0, 0);
-        }
-        RouterBlockEntity router = chosen(player, stack);
-        if (router == null) {
-            return missing(player, stack);
-        }
-        ServerLevel level = player.serverLevel();
-        if (!mayEdit(player, router.getBlockPos())) {
-            return refuse(player, Result.refused(LinkRefusal.PROTECTED), router, 0);
-        }
-        LinkRefusal state = upgradeRefusal(router);
-        if (state != LinkRefusal.NONE) {
-            return refuse(player, Result.refused(state), router, 0);
-        }
-
-        LinkerBox box = area.box();
-        List<BlockPos> candidates = new ArrayList<>();
-        int unloaded = 0;
-        for (int cx = box.minChunkX(); cx <= box.maxChunkX(); cx++) {
-            for (int cz = box.minChunkZ(); cz <= box.maxChunkZ(); cz++) {
-                LevelChunk chunk = level.getChunkSource().getChunkNow(cx, cz);
-                if (chunk == null) {
-                    unloaded++;
-                    continue;
-                }
-                for (BlockEntity entity : chunk.getBlockEntities().values()) {
-                    BlockPos pos = entity.getBlockPos();
-                    if (!entity.isRemoved() && box.contains(pos.getX(), pos.getY(), pos.getZ())) {
-                        candidates.add(pos.immutable());
-                    }
-                }
-            }
-        }
-        // as mais perto do roteador ganham as vagas; empate pela posição, para ser estável
-        candidates.sort(Comparator.<BlockPos>comparingInt(pos -> distance(router, pos)).thenComparingLong(BlockPos::asLong));
-
-        int[] counts = new int[5]; // vinculadas, já, fora do raio, além do limite, protegidas
-        int radius = radius(router);
-        int max = max(router);
-        InteractionHand hand = player.getItemInHand(InteractionHand.MAIN_HAND) == stack
-                ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
-        router.batchChanges(() -> {
-            int used = used(router);
-            for (BlockPos pos : candidates) {
-                if (machineRefusal(level, router, pos, types) != LinkRefusal.NONE) {
-                    continue;
-                }
-                if (router.remoteMachines().contains(pos)) {
-                    counts[1]++;
-                } else if (!level.mayInteract(player, pos)) {
-                    counts[4]++;
-                } else if (distance(router, pos) > radius) {
-                    counts[2]++;
-                } else if (used >= max) {
-                    counts[3]++;
-                } else if (!clickAllowed(player, hand, pos)) {
-                    counts[4]++;
-                } else if (router.linkMachine(pos)) {
-                    counts[0]++;
-                    used++;
-                }
-            }
-        });
-        Result result = new Result(Status.AREA_DONE, LinkRefusal.NONE, LinkerProblem.NONE, counts[0], counts[1],
-                counts[2], counts[3], counts[4], unloaded);
-        player.displayClientMessage(areaMessage(result), true);
-        if (result.linked() > 0) {
-            level.playSound(null, player.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS,
-                    0.5F, 1.2F);
-        }
-        return result;
-    }
-
-    /**
-     * Com "Nenhuma (desvincular)": tira do roteador escolhido as máquinas vinculadas dentro da área.
-     * Percorre só a lista do roteador (nada de varrer o mundo, e vale com o chunk da máquina
-     * descarregado), tira a máquina inteira e não exige o upgrade valendo, para
-     * dar para limpar a lista depois de tirá-lo. Basta poder mexer no roteador: desvincular não toca
-     * na máquina. Os cartões dos grupos que esvaziam vão para o jogador, e a mensagem diz quantos.
-     */
-    private static Result unlinkArea(ServerPlayer player, ItemStack stack, LinkerArea area) {
-        RouterBlockEntity router = chosen(player, stack);
-        if (router == null) {
-            return missing(player, stack);
-        }
-        ServerLevel level = player.serverLevel();
-        if (!mayEdit(player, router.getBlockPos())) {
-            return refuse(player, Result.refused(LinkRefusal.PROTECTED), router, 0);
-        }
-        LinkerBox box = area.box();
-        List<BlockPos> inside = new ArrayList<>();
-        for (RemoteMachine machine : router.remoteMachines().machines()) {
-            BlockPos pos = machine.pos();
-            if (box.contains(pos.getX(), pos.getY(), pos.getZ())) {
-                inside.add(pos);
-            }
-        }
-        int[] cards = new int[1];
-        router.batchChanges(() -> {
-            for (BlockPos pos : inside) {
-                cards[0] += Math.max(0, router.unlinkMachine(router.remoteMachines().index(pos), player));
-            }
-        });
-        Result result = new Result(Status.AREA_DONE, LinkRefusal.NONE, LinkerProblem.NONE, inside.size(), 0, 0, 0, 0, 0);
-        player.displayClientMessage(withCards(Component.translatable(KEY + "area.unlinked", inside.size(),
-                routerName(router), used(router), max(router)), cards[0]), true);
-        if (!inside.isEmpty()) {
-            level.playSound(null, player.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS,
-                    0.5F, 0.8F);
-        }
-        return result;
-    }
-
     /** {@code text}, mais {@code · 2 cartões devolvidos} quando {@code cards} é maior que zero. */
-    private static MutableComponent withCards(MutableComponent text, int cards) {
+    static MutableComponent withCards(MutableComponent text, int cards) {
         if (cards > 0) {
             text.append(" · ").append(cards == 1 ? Component.translatable(KEY + "cards_returned.one")
                     : Component.translatable(KEY + "cards_returned", cards));
         }
-        return text;
-    }
-
-    /** {@code Vinculadas 9 · 2 já estavam · 3 fora do alcance · 2 além do limite · ...}. */
-    public static MutableComponent areaMessage(Result result) {
-        MutableComponent text = Component.translatable(KEY + "area.linked", result.linked());
-        appendCount(text, "area.already", result.already());
-        appendCount(text, "area.out_of_range", result.outOfRange());
-        appendCount(text, "area.over_limit", result.overLimit());
-        appendCount(text, "area.protected", result.protectedCount());
-        appendCount(text, "area.unloaded", result.unloadedChunks());
         return text;
     }
 
@@ -355,10 +216,10 @@ public final class RangeLinks {
      * cobre a proteção do spawn e a borda do mundo; claims (FTB Chunks e afins) agem no
      * {@link PlayerInteractEvent.RightClickBlock}. O clique de verdade num bloco já passa por esse
      * evento antes do {@code onItemUseFirst} do Vinculador (o {@code ServerPlayerGameMode.useItemOn} o
-     * posta e não chama o item se ele vem cancelado ou com {@code useItem} negado), mas o Vincular da
-     * área não clica em nada: por isso postamos o mesmo evento, como o jogo, para cada máquina que de
-     * fato seria vinculada (depois das recusas baratas, para não acordar listeners à toa). Cancelado,
-     * ou com {@code useBlock} ou {@code useItem} negados, conta como protegida.
+     * posta e não chama o item se ele vem cancelado ou com {@code useItem} negado), mas o Ctrl + clique
+     * vincula outras máquinas que ninguém clicou: por isso postamos o mesmo evento, como o jogo, para cada
+     * uma que de fato seria vinculada (depois das recusas baratas, para não acordar listeners à toa).
+     * Cancelado, ou com {@code useBlock} ou {@code useItem} negados, conta como protegida.
      */
     public static boolean clickAllowed(ServerPlayer player, InteractionHand hand, BlockPos pos) {
         BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(pos).add(0, 0.5, 0), Direction.UP, pos, false);

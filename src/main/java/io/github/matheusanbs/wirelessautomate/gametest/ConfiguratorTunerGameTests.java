@@ -169,8 +169,6 @@ public final class ConfiguratorTunerGameTests {
                     link(helper, router, FURNACE_A);
                     BlockPos furnace = helper.absolutePos(FURNACE_A);
                     ConfiguratorTuner.click(player, furnace, false);
-                    helper.assertTrue(player.getCooldowns().isOnCooldown(ModItems.CONFIGURATOR.get()),
-                            "o Configurador não descansou depois da análise");
                 })
                 .thenIdle(1)
                 .thenExecute(() -> {
@@ -445,11 +443,14 @@ public final class ConfiguratorTunerGameTests {
                     } finally {
                         NeoForge.EVENT_BUS.unregister(claim);
                     }
+                    // os cliques deste teste saem no mesmo tick: cada um vale como clique novo, não como o botão segurado
+                    TunerPending.leave(player.getUUID());
                     player.getAbilities().mayBuild = false;
                     helper.assertValueEqual(key(ConfiguratorTuner.click(player, furnace, false)), KEY + "protected",
                             "aviso de quem não constrói");
                     helper.assertTrue(TunerPending.get(player.getUUID()) == null, "analisou sem poder construir");
                     player.getAbilities().mayBuild = true;
+                    TunerPending.leave(player.getUUID());
                     ConfiguratorTuner.click(player, furnace, false);
                     helper.assertTrue(TunerPending.get(player.getUUID()) != null, "sem a proteção devia analisar");
                     TunerPending.forget(player.getUUID());
@@ -595,7 +596,6 @@ public final class ConfiguratorTunerGameTests {
         for (int tick = 1; tick <= 24; tick++) {
             boolean repeat = tick % 4 == 0;
             sequence = sequence.thenExecuteAfter(1, () -> {
-                player.getCooldowns().tick();
                 if (repeat) {
                     use(player, furnace);
                 }
@@ -629,7 +629,8 @@ public final class ConfiguratorTunerGameTests {
                     link(helper, router, FURNACE_A);
                     ConfiguratorTuner.click(player, helper.absolutePos(FURNACE_A), false);
                 })
-                .thenIdle(ConfiguratorTuner.COOLDOWN + 2)
+                // o botão segurado: a próxima tentativa vem 4 ticks depois
+                .thenIdle(4)
                 .thenExecute(() -> {
                     ConfiguratorTuner.useInAir(player);
                     helper.assertTrue(TunerPending.get(player.getUUID()) != null, "o uso segurado no ar apagou");
@@ -662,7 +663,7 @@ public final class ConfiguratorTunerGameTests {
                     ConfiguratorTuner.discard(player, helper.absolutePos(FURNACE_A));
                     helper.assertTrue(TunerPending.get(player.getUUID()) == null, "a proposta ficou no servidor");
                 })
-                .thenIdle(ConfiguratorTuner.COOLDOWN)
+                .thenIdle(TunerPending.HOLD_GAP + 1)
                 .thenExecute(() -> {
                     helper.assertValueEqual(key(ConfiguratorTuner.click(player, helper.absolutePos(FURNACE_A), false)),
                             KEY + "proposal", "o clique depois do descarte devia refazer a análise");
@@ -684,13 +685,14 @@ public final class ConfiguratorTunerGameTests {
                     helper.assertValueEqual(key(ConfiguratorTuner.click(player, helper.absolutePos(
                             new BlockPos(1, 1, 1)), false)), KEY + "failed", "aviso da análise que falhou");
                     helper.assertTrue(TunerPending.get(player.getUUID()) == null, "proposta da análise que falhou");
-                    helper.assertTrue(player.getCooldowns().isOnCooldown(ModItems.CONFIGURATOR.get()),
-                            "o Configurador não descansou depois da falha");
+                    // o botão segurado não refaz a análise
+                    helper.assertTrue(ConfiguratorTuner.click(player, helper.absolutePos(new BlockPos(1, 1, 1)),
+                            false) == null, "a repetição refez a análise que falhou");
                 })
                 .thenSucceed();
     }
 
-    /** Nada a configurar (a energia que não recebe nem dá): o aviso, e o Configurador descansa como numa análise. */
+    /** Nada a configurar (a energia que não recebe nem dá): o aviso, e o botão segurado não refaz a análise. */
     @GameTest(template = "empty")
     public static void nothingToConfigureRests(GameTestHelper helper) {
         RouterBlockEntity router = attached(helper, TestMachines.INERT_CELL);
@@ -700,8 +702,8 @@ public final class ConfiguratorTunerGameTests {
                 .thenExecute(() -> {
                     helper.assertValueEqual(key(ConfiguratorTuner.click(player, helper.absolutePos(
                             new BlockPos(1, 1, 1)), false)), KEY + "nothing", "aviso de nada a configurar");
-                    helper.assertTrue(player.getCooldowns().isOnCooldown(ModItems.CONFIGURATOR.get()),
-                            "o Configurador não descansou depois do nada");
+                    helper.assertTrue(ConfiguratorTuner.click(player, helper.absolutePos(new BlockPos(1, 1, 1)),
+                            false) == null, "a repetição refez a análise de nada a configurar");
                 })
                 .thenSucceed();
     }

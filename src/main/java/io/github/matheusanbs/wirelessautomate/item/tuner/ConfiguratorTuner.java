@@ -15,7 +15,6 @@ import io.github.matheusanbs.wirelessautomate.range.RemoteIndex;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
-import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -44,8 +43,6 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ConfiguratorTuner {
     private static final String KEY = "item.wirelessautomate.configurator.tuner.";
-    /** O Configurador descansa tanto depois de uma análise (o botão segurado não confirma sozinho). */
-    public static final int COOLDOWN = 10;
     private static final Direction[] DIRECTIONS = Direction.values();
     /** A ordem das faces no texto da proposta. */
     private static final RemoteSide[] TEXT_ORDER = {RemoteSide.TOP, RemoteSide.FRONT, RemoteSide.BACK,
@@ -78,7 +75,9 @@ public final class ConfiguratorTuner {
     public static @Nullable Component click(ServerPlayer player, BlockPos pos, boolean wholeGroup) {
         ServerLevel level = player.serverLevel();
         boolean fresh = TunerPending.attempt(player.getUUID(), level.getGameTime());
-        if (!level.isLoaded(pos)) {
+        // Segurar o botão repete o uso a cada 4 ticks: só um clique novo (com pausa desde a tentativa anterior) analisa
+        // ou aplica, e as repetições não custam nada.
+        if (!fresh || !level.isLoaded(pos)) {
             return null;
         }
         if (!player.mayBuild() || !level.mayInteract(player, pos)) {
@@ -93,9 +92,8 @@ public final class ConfiguratorTuner {
         Block block = level.getBlockState(pos).getBlock();
         TunerPending.Proposal pending = TunerPending.get(player.getUUID());
         if (pending != null && pending.matches(level, pos, block)) {
-            // Segurar o botão repete o uso a cada 4 ticks: o segundo clique só vale depois do intervalo mínimo e de
-            // uma pausa desde a tentativa anterior (inclusive as engolidas no descanso).
-            if (!fresh || !pending.confirmable(level)) {
+            // o segundo clique só vale depois do intervalo mínimo
+            if (!pending.confirmable(level)) {
                 return null;
             }
             // O roteador e a frente não são conferidos de novo: os modos da proposta são por face absoluta, e o
@@ -113,17 +111,14 @@ public final class ConfiguratorTuner {
             // só esta análise, não o servidor.
             WirelessAutomate.LOGGER.warn("Afinador: a análise de {} em {} falhou", BuiltInRegistries.BLOCK.getKey(block),
                     pos.toShortString(), e);
-            rest(player);
             return refuse(player, pos, "failed");
         }
         if (modes.isEmpty()) {
-            rest(player);
             return refuse(player, pos, "nothing");
         }
         long now = level.getGameTime();
         TunerPending.put(player.getUUID(), new TunerPending.Proposal(level.dimension(), pos.immutable(), block, now,
                 now + TunerPending.WINDOW, modes));
-        rest(player);
         send(player, new ConfiguratorProposalPayload(pos.immutable(), faces(modes), TunerPending.WINDOW));
         return show(player, Component.translatable(KEY + "proposal", describe(modes, front)));
     }
@@ -133,29 +128,15 @@ public final class ConfiguratorTuner {
         return message;
     }
 
-    /** Põe o Configurador em descanso depois de uma análise, com proposta ou não (o botão segurado não a repete). */
-    private static void rest(ServerPlayer player) {
-        player.getCooldowns().addCooldown(ModItems.CONFIGURATOR.get(), COOLDOWN);
-    }
-
-    /**
-     * Uma tentativa engolida no descanso do Configurador ({@code ConfiguratorItem.onItemUseFirst}): não faz nada, mas
-     * conta para a trava do botão segurado ({@link TunerPending#attempt}).
-     */
-    public static void held(ServerPlayer player) {
-        TunerPending.attempt(player.getUUID(), player.serverLevel().getGameTime());
-    }
-
     /**
      * O uso do Configurador no ar ou num bloco em que ele não age: com um clique novo (não o botão segurado desde a
-     * máquina), a proposta some. No descanso o jogo nem chama o {@code use} do item, então as repetições dele não
-     * contam como tentativas: a primeira depois do descanso só vale se veio uma pausa depois do fim dele.
+     * máquina, que repete as tentativas a cada 4 ticks), a proposta some.
      */
     public static void useInAir(ServerPlayer player) {
         long now = player.serverLevel().getGameTime();
         boolean fresh = TunerPending.attempt(player.getUUID(), now);
         TunerPending.Proposal pending = TunerPending.get(player.getUUID());
-        if (fresh && pending != null && now - (pending.created() + COOLDOWN) > TunerPending.HOLD_GAP) {
+        if (fresh && pending != null) {
             cancel(player);
         }
     }

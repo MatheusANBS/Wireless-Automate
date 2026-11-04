@@ -7,6 +7,7 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
 import io.github.matheusanbs.wirelessautomate.range.RangeLinks;
 import io.github.matheusanbs.wirelessautomate.range.RangeRules.LinkRefusal;
 import io.github.matheusanbs.wirelessautomate.range.SameBlockLinks;
@@ -84,7 +85,40 @@ public final class SameBlockLinkGameTests {
                 instanceof TranslatableContents c && c.getKey().equals(key));
     }
 
-    /** As duas fornalhas entram com um Ctrl + clique numa delas; o barril, outro bloco, não. */
+    /**
+     * Ctrl + clique numa fornalha já vinculada desvincula as duas fornalhas, e o barril, de outro bloco, fica; sem
+     * nenhuma vinculada, o mesmo clique vincula de novo.
+     */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void sameBlockUnlinksAllOfThatBlock(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    TestPlayers.MenuPlayer player = player(helper, router, true);
+                    ctrlClick(helper, player, FURNACE_A);
+                    router.linkMachine(helper.absolutePos(BARREL));
+                    helper.assertTrue(linked(helper, router, FURNACE_A) && linked(helper, router, FURNACE_B)
+                            && linked(helper, router, BARREL), "a montagem não vinculou");
+                    // a clicada está vinculada: o Ctrl + clique desvincula as do mesmo bloco
+                    RangeLinks.Result result = ctrlClick(helper, player, FURNACE_B);
+                    helper.assertTrue(result != null && result.status() == RangeLinks.Status.SAME_BLOCK_UNLINKED
+                            && result.linked() == 2, "resultado " + result);
+                    helper.assertFalse(linked(helper, router, FURNACE_A) || linked(helper, router, FURNACE_B),
+                            "uma fornalha ficou");
+                    helper.assertTrue(linked(helper, router, BARREL), "o barril saiu junto");
+                    TranslatableContents text = message(helper, player.actionBar, KEY + "unlinked");
+                    helper.assertValueEqual(text.getArgs()[0], 2, "a contagem");
+                    // sem nenhuma fornalha vinculada, o mesmo clique vincula as duas de novo
+                    result = ctrlClick(helper, player, FURNACE_A);
+                    helper.assertTrue(result != null && result.status() == RangeLinks.Status.SAME_BLOCK_DONE
+                            && result.linked() == 2, "segundo clique " + result);
+                    helper.assertTrue(linked(helper, router, BARREL), "o barril saiu no segundo clique");
+                })
+                .thenSucceed();
+    }
+
     @GameTest(template = "empty", timeoutTicks = 300)
     public static void sameBlockLinksOnlyThatBlock(GameTestHelper helper) {
         RouterBlockEntity router = routerWithMachines(helper);
@@ -135,7 +169,8 @@ public final class SameBlockLinkGameTests {
                             "resultado " + result);
                     helper.assertTrue(linked(helper, router, chestB), "o baú solto não entrou");
                     helper.assertFalse(linked(helper, router, CHEST), "a presa entrou como remota");
-                    result = ctrlClick(helper, player, chestB);
+                    // a presa não está vinculada: o clique nela vincula, e não há mais nenhuma nova
+                    result = ctrlClick(helper, player, CHEST);
                     helper.assertTrue(result != null && result.linked() == 0, "o segundo vinculou: " + result);
                     message(helper, player.actionBar, KEY + "none");
                 })
@@ -312,6 +347,49 @@ public final class SameBlockLinkGameTests {
                     } finally {
                         NeoForge.EVENT_BUS.unregister(claim);
                     }
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Shift + clique no ar solta o roteador escolhido (pelo {@code use} do item e por {@link LinkerActions#release}) e
+     * avisa; sem nada escolhido, só avisa; a Tela escolhida também sai. Sem Shift, o clique no ar mostra o roteador
+     * escolhido ou a dica do gesto, e não solta nada.
+     */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void shiftClickInTheAirReleasesTheChosen(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    TestPlayers.MenuPlayer player = player(helper, router, true);
+                    ItemStack stack = player.getMainHandItem();
+                    // sem Shift: mostra o roteador (nome e vagas) e o mantém
+                    stack.use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
+                    message(helper, player.actionBar, "item.wirelessautomate.linker.range.chosen");
+                    helper.assertTrue(LinkerItem.router(stack) != null, "o clique no ar sem Shift soltou");
+                    // com Shift: solta
+                    player.setShiftKeyDown(true);
+                    try {
+                        stack.use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
+                        message(helper, player.actionBar, "item.wirelessautomate.linker.released.router");
+                        helper.assertTrue(LinkerItem.router(stack) == null, "o roteador continuou escolhido");
+                        // sem nada escolhido: só o aviso
+                        helper.assertValueEqual(LinkerActions.release(player, stack), LinkerActions.Release.NOTHING,
+                                "soltar sem nada");
+                        message(helper, player.actionBar, "item.wirelessautomate.linker.released.nothing");
+                        // a Tela de Sinal escolhida também sai
+                        LinkerItem.setTv(stack, GlobalPos.of(helper.getLevel().dimension(), router.getBlockPos()));
+                        helper.assertValueEqual(LinkerActions.release(player, stack), LinkerActions.Release.TV,
+                                "soltar a Tela");
+                        helper.assertTrue(LinkerItem.tv(stack) == null, "a Tela continuou escolhida");
+                    } finally {
+                        player.setShiftKeyDown(false);
+                    }
+                    // sem Shift e sem nada escolhido: a dica
+                    stack.use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
+                    message(helper, player.actionBar, "item.wirelessautomate.linker.hint.choose");
                 })
                 .thenSucceed();
     }

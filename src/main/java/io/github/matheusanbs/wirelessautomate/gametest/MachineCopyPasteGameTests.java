@@ -518,6 +518,52 @@ public final class MachineCopyPasteGameTests {
     }
 
     /**
+     * A presa sem membro diante de um baú, com outro baú vinculado num grupo já configurado: o colar põe a presa no
+     * grupo com o que ela mostrava (nada) como exceção, e o Desfazer volta a isso, não ao perfil do grupo.
+     */
+    @GameTest(template = "empty")
+    public static void pasteOnAttachedJoiningConfiguredGroupUndoesToShown(GameTestHelper helper) {
+        RouterBlockEntity router = chestWithRouter(helper, RouterTier.ADVANCED);
+        helper.setBlock(FURNACE_A, Blocks.FURNACE.defaultBlockState()
+                .setValue(AbstractFurnaceBlock.FACING, Direction.EAST));
+        helper.setBlock(FURNACE_B, Blocks.CHEST);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    link(helper, router, FURNACE_A);
+                    link(helper, router, FURNACE_B);
+                    profile(helper, router, FURNACE_A, Direction.UP, PortMode.EXTRACT);
+                    profile(helper, router, FURNACE_B, Direction.DOWN, PortMode.INSERT);
+                    RemoteMachines remotes = router.remoteMachines();
+                    helper.assertTrue(remotes.attached() == null, "a presa nasceu com membro");
+                    ServerPlayer[] holder = new ServerPlayer[1];
+                    RouterMenu menu = openMenu(helper, router, holder);
+                    ServerPlayer player = holder[0];
+                    try {
+                        selectMachine(helper, player, router, FURNACE_A);
+                        helper.assertTrue(copy(player), "não copiou");
+                        selectAttached(helper, player);
+                        MachineCopyPaste.Pasted pasted = MachineCopyPaste.paste(player, menu, false);
+                        helper.assertTrue(pasted != null && pasted.changed(), "não colou na presa");
+                        helper.assertTrue(remotes.attached() != null
+                                && remotes.attached().group() == machine(helper, router, FURNACE_B).group(),
+                                "a presa não entrou no grupo do baú");
+                        helper.assertValueEqual(upOf(remotes.effectiveAttached()), PortMode.EXTRACT, "presa colada");
+                        helper.assertTrue(RangePayloads.handleMachinePaste(player, MachinePastePayload.undo(CONTAINER_ID)),
+                                "não desfez");
+                        helper.assertTrue(remotes.effectiveAttached().isDefault(),
+                                "o Desfazer não voltou ao que a presa mostrava");
+                        helper.assertValueEqual(remotes.attachedGroup().profile().face(ResourceType.ITEM,
+                                RemoteSide.BOTTOM).mode(), PortMode.INSERT, "o perfil do grupo mudou");
+                    } finally {
+                        cleanUp(player);
+                    }
+                })
+                .thenSucceed();
+    }
+
+    /**
      * A face de B numa rede de outro dono, que o jogador não edita: o colar não a tira de lá (canLeave), mesmo com a
      * rede da cópia sendo dele; o aviso conta a face.
      */

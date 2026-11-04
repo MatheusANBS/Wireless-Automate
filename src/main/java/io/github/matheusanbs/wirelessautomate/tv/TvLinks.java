@@ -31,6 +31,14 @@ public final class TvLinks {
     /** Clique numa Tela: ela passa a ser a escolhida e o roteador escolhido é esquecido. */
     public static void choose(ServerPlayer player, ItemStack stack, TvBlockEntity tv) {
         ServerLevel level = player.serverLevel();
+        GlobalPos current = LinkerItem.tv(stack);
+        if (current != null && current.dimension().equals(level.dimension()) && current.pos().equals(tv.getBlockPos())) {
+            // clicar de novo na Tela escolhida a solta
+            LinkerItem.setTv(stack, null);
+            player.displayClientMessage(Component.translatable(KEY + "released",
+                    LinkerActions.position(tv.getBlockPos())), true);
+            return;
+        }
         if (!tv.canEdit(player) || !level.mayInteract(player, tv.getBlockPos())) {
             player.displayClientMessage(Component.translatable(KEY + "no_permission"), true);
             return;

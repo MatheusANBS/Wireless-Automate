@@ -459,7 +459,8 @@ public record RouterSnapshot(
             }
         }
         RangeView view = new RangeView(Config.machineRadius(tier), Config.maxMachines(tier), List.copyOf(groups),
-                List.copyOf(machines), editing, face, differs, attached != null && attached.hasException());
+                List.copyOf(machines), editing, face, differs, attached != null && attached.hasException(),
+                router.attachedCanHold());
         return new Captured(view, viewed, group);
     }
 

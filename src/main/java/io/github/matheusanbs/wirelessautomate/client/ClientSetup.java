@@ -4,7 +4,6 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.client.filter.FilterScreen;
 import io.github.matheusanbs.wirelessautomate.client.guide.GuidePages;
 import io.github.matheusanbs.wirelessautomate.client.guide.GuideScreen;
-import io.github.matheusanbs.wirelessautomate.client.linker.LinkerScreen;
 import io.github.matheusanbs.wirelessautomate.client.recipe.RecipeEditorScreen;
 import io.github.matheusanbs.wirelessautomate.client.repairer.RepairerScreen;
 import io.github.matheusanbs.wirelessautomate.client.repairer.render.RepairerRenderer;
@@ -23,7 +22,6 @@ import io.github.matheusanbs.wirelessautomate.client.tv.render.TvRenderer;
 import io.github.matheusanbs.wirelessautomate.item.GuideClientHooks;
 import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
-import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RepairerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.ResonatorMenu;
@@ -121,8 +119,6 @@ public final class ClientSetup {
                 -> new StorageScalarScreen(menu, inventory, title));
         event.register(ModMenus.FILTER.get(),
                 (FilterMenu menu, Inventory inventory, Component title) -> new FilterScreen(menu, inventory, title));
-        event.register(ModMenus.LINKER.get(),
-                (LinkerMenu menu, Inventory inventory, Component title) -> new LinkerScreen(menu, inventory, title));
         event.register(ModMenus.NETWORK_TABLET.get(),
                 (TabletMenu menu, Inventory inventory, Component title) -> new TabletScreen(menu, inventory, title));
         event.register(ModMenus.RECIPE_EDITOR.get(), (RecipeEditorMenu menu, Inventory inventory, Component title)

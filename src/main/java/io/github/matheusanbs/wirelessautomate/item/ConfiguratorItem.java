@@ -36,9 +36,8 @@ public class ConfiguratorItem extends Item {
      * O clique num bloco é do Configurador antes de ser do bloco (senão clicar numa fornalha a abriria), com ou sem
      * Shift. Seguem o caminho normal, sem aviso: o Configurador na outra mão, um roteador (abre a tela dele) e um bloco
      * sem capability de nenhum tipo carregado (porta, alavanca, terra, e também os com block entity, como o atril, a
-     * mesa de encantamento e a placa). Em descanso depois de uma análise ({@code getCooldowns}, que o
-     * {@code onItemUseFirst} não confere sozinho), o clique é engolido, mas conta para a trava do botão segurado
-     * ({@link ConfiguratorTuner#held}).
+     * mesa de encantamento e a placa). O botão segurado é barrado no servidor
+     * ({@link ConfiguratorTuner#click}).
      */
     @Override
     public InteractionResult onItemUseFirst(ItemStack stack, UseOnContext context) {
@@ -48,12 +47,6 @@ public class ConfiguratorItem extends Item {
             return InteractionResult.PASS;
         }
         Player player = context.getPlayer();
-        if (player != null && player.getCooldowns().isOnCooldown(this)) {
-            if (player instanceof ServerPlayer serverPlayer) {
-                ConfiguratorTuner.held(serverPlayer);
-            }
-            return InteractionResult.sidedSuccess(level.isClientSide);
-        }
         if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
             ConfiguratorTuner.click(serverPlayer, pos, context.isSecondaryUseActive());
         }

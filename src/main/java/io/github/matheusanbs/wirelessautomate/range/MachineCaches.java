@@ -11,6 +11,8 @@ import io.github.matheusanbs.wirelessautomate.storage.BulkSource;
 import java.util.Arrays;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.TickTask;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.neoforge.capabilities.BlockCapability;
 import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
@@ -44,6 +46,8 @@ public final class MachineCaches {
     /** Muda a cada {@link #retarget}/{@link #discard}: os caches criados antes deixam de valer. */
     private int generation;
     private boolean discarded;
+    /** Um {@link #watchSoon} na fila do servidor, para não enfileirar outro no mesmo aviso. */
+    private boolean watchQueued;
 
     // Um arranjo por capability, [face absoluta], nulo até a primeira consulta daquela capability.
     private BlockCapabilityCache<IItemHandler, @Nullable Direction> @Nullable [] itemCaches;
@@ -124,6 +128,26 @@ public final class MachineCaches {
      */
     public void watch() {
         items(Direction.UP);
+    }
+
+    /**
+     * O {@link #watch} de dentro de um listener de invalidação: lá o {@code BlockCapabilityCache} não aceita consulta
+     * ({@code IllegalStateException}, que derruba o servidor), então ela vai para a fila do servidor e roda depois da
+     * troca do bloco, se os caches ainda valem.
+     */
+    public void watchSoon() {
+        if (watchQueued || discarded || !(router.getLevel() instanceof ServerLevel level)) {
+            return;
+        }
+        watchQueued = true;
+        int queued = generation;
+        MinecraftServer server = level.getServer();
+        server.tell(new TickTask(server.getTickCount(), () -> {
+            watchQueued = false;
+            if (generation == queued) {
+                watch();
+            }
+        }));
     }
 
     /** Para GameTests: quantas capabilities já têm o arranjo das faces criado. */

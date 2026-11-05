@@ -10,10 +10,11 @@ Comece por aqui para continuar o trabalho. Este arquivo é curto de propósito: 
 
 ## Próximo passo
 
-1. O dono testa à mão as etapas 1 a 4 e o Ctrl + clique do Vinculador (listas nas linhas de 02/11 do histórico) e decide o merge.
-2. Reidealizar as telas do Tablet do zero (criação de redes etc.), mockup primeiro para o ok do dono.
-3. Subir a 2.15.0 no CurseForge e no Modrinth; refazer as imagens do Vinculador na vitrine (sem a área) e a do livro (ver `pendencias.md`).
-4. Os menores que sobraram do alcance (`pendencias.md`, seção "Roteador de alcance").
+1. Fechar a 2.15.1 com a correção do crash ao quebrar uma máquina vinculada (ramo `ccr-17a32246-sotvm1`, histórico de 05/11), se o dono quiser.
+2. O dono testa à mão as etapas 1 a 4 e o Ctrl + clique do Vinculador (listas nas linhas de 02/11 do histórico) e decide o merge.
+3. Reidealizar as telas do Tablet do zero (criação de redes etc.), mockup primeiro para o ok do dono.
+4. Subir a 2.15.0 no CurseForge e no Modrinth; refazer as imagens do Vinculador na vitrine (sem a área) e a do livro (ver `pendencias.md`).
+5. Os menores que sobraram do alcance (`pendencias.md`, seção "Roteador de alcance").
 
 ## Os arquivos
 

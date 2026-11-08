@@ -90,7 +90,8 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 
 ## Docs, scripts e publicação
 
-- Changelog da próxima versão: o balanceamento 6 (fluido e químico ×4, Source ×10, capacidades de uma hora; tabela antes → depois na análise de 08/11 e na especificação) e as três correções do motor de 08/11 (cursor, tanque seletivo, isLoaded); uma remota vinculada ao lado da presa sozinha herda na hora a config dela (inclusive Extrair e a rede); avisar no changelog. (03/11)
+- Changelog da próxima versão: uma remota vinculada ao lado da presa sozinha herda na hora a config dela (inclusive Extrair e a rede); avisar no changelog. (03/11)
+- **(dono)** A 2.14.0 e a 2.15.1 não têm release no GitHub (só a v2.15.0 e, agora, a v2.16.0): decidir se vale criar as duas a posteriori. (08/11)
 - **(dono)** Quando o Modrinth aprovar, pôr o link no `README.md`, no `README.en.md` e na `descricao.md`. (30/10)
 - **(dono)** Decidir o destino da worktree `C:/wab` (fora do repositório, com 2 arquivos mudados). (30/10)
 - Portes (`docs/portes.md`): investigar o 26.1 NeoForge (ATM11); o 1.20.1 Forge espera o ok do dono e a decisão do Mekanism (só gás ou os quatro químicos). (10/10)

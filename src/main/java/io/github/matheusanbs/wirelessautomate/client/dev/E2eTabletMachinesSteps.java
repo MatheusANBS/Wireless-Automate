@@ -344,7 +344,7 @@ final class E2eTabletMachinesSteps {
                 RouterBlockEntity r = router(server, router);
                 r.removeRangeUpgrade();
                 while (!r.remoteMachines().machines().isEmpty()) {
-                    r.unlinkMachine(0);
+                    r.unlinkMachine(0, null);
                 }
                 ((Container) level.getBlockEntity(source)).clearContent();
                 ((Container) level.getBlockEntity(sink)).clearContent();

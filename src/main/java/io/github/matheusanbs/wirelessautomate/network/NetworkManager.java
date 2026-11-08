@@ -737,6 +737,8 @@ public final class NetworkManager {
             for (NodePorts ports : nodes.values()) {
                 if (ports.hasRemotes() || ports.node.rangeActive()) {
                     ports.invalidate(ALL_TYPES);
+                    // Raio ou limite menor: os caches (e listeners) das remotas que saíram não servem mais.
+                    ports.node.pruneRemoteCaches();
                 }
                 // O upgrade pode ter passado a valer ou deixado de valer (raio 0 no tier).
                 RemoteIndex.get().update(ports.node);

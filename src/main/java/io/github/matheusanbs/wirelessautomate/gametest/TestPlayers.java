@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.gametest;
 
 import com.mojang.authlib.GameProfile;
+import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import java.util.HashMap;
@@ -21,6 +22,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.level.GameType;
 import org.jetbrains.annotations.Nullable;
@@ -121,8 +123,19 @@ final class TestPlayers {
         }
     }
 
+    /**
+     * O login do jogador falso entrega o livro-guia (config padrão): tira o livro e a marca, para o inventário
+     * começar vazio como os testes esperam. O {@code GuideGameTests} testa a entrega por conta própria.
+     */
+    private static void withoutGuide(ServerPlayer player) {
+        player.getInventory().clearOrCountMatchingItems(stack -> stack.is(ModItems.GUIDE.get()), -1,
+                player.inventoryMenu.getCraftSlots());
+        player.getPersistentData().remove(Player.PERSISTED_NBT_TAG);
+    }
+
     /** Tira da lista, quando o teste termina, um jogador que o teste pôs lá por conta própria. */
     static <P extends ServerPlayer> P removedAtEnd(GameTestHelper helper, P player) {
+        withoutGuide(player);
         GameTestInfo test = helper.testInfo;
         OWNERS.put(player.getUUID(), test);
         test.addListener(new GameTestListener() {

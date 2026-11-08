@@ -1,10 +1,9 @@
 """Base do livro-guia: o que várias páginas usam (cabeçalho, imagens de item, tiers e tabelas).
 
-Cada página fica em paginas/<pagina>.py; o gerar_guia.py junta tudo. Regras do GuideME que valem a
-pena lembrar:
-- anotações de cena (BlockAnnotation, LineAnnotation...) com o texto em linha própria; numa linha
-  só, elas não aparecem;
-- o comando de teste é /guidemec wirelessautomate:guide open wirelessautomate:<página>.md;
+Cada página fica em paginas/<pagina>.py; o gerar_guia.py junta tudo. O que vale lembrar:
+- as páginas vão para assets/wirelessautomate/guide/<en_us|pt_br>/ e o livro é uma tela do próprio mod;
+- o cabeçalho de cada página traz o grupo (um dos sete de GRUPOS) como chave de topo;
+- os links de imagem no texto (images/port_x.png) são relativos a assets/wirelessautomate/guide/;
 - os números das tabelas são os padrões do ResourceType, do StorageKind e do RouterTier (mantenha em dia).
 """
 import os
@@ -13,18 +12,25 @@ import os
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')
 
 
-BASE = os.path.join(ROOT, 'src/main/resources/assets/wirelessautomate/guides/wirelessautomate/guide')
+BASE = os.path.join(ROOT, 'src/main/resources/assets/wirelessautomate/guide')
+
+
+GRUPOS = ('comecar', 'ferramentas', 'armazenamentos', 'energia', 'painel', 'integracoes', 'referencia')
+
+
+PASTAS = {'en': 'en_us', 'pt': 'pt_br'}
 
 
 def write(lang, name, text):
-    folder = BASE if lang == 'en' else os.path.join(BASE, '_pt_br')
+    folder = os.path.join(BASE, PASTAS[lang])
     os.makedirs(folder, exist_ok=True)
     with open(os.path.join(folder, name), 'w', encoding='utf-8', newline='\n') as fh:
         fh.write(text.strip('\n') + '\n')
 
 
-def front(title, icon, position=None, parent='index.md', item_ids=()):
-    lines = ['---', 'navigation:', f'  title: {title}', f'  icon: {icon}']
+def front(title, icon, group, position=None, parent='index.md', item_ids=()):
+    assert group in GRUPOS, f'grupo desconhecido: {group}'
+    lines = ['---', f'group: {group}', 'navigation:', f'  title: {title}', f'  icon: {icon}']
     if parent:
         lines.append(f'  parent: {parent}')
     if position is not None:
@@ -65,9 +71,9 @@ TIERS = [
 
 RATES = {  # por tier: itens/s, fluido e químico mB/s, energia FE/t, Source/s
     'item': [32, 256, 2_048, 16_384, 131_072, 1_048_576, 8_388_608, 0],
-    'fluid': [2_000, 16_000, 128_000, 1_024_000, 8_192_000, 65_536_000, 524_288_000, 0],
+    'fluid': [8_000, 64_000, 512_000, 4_096_000, 32_768_000, 262_144_000, 2_097_152_000, 0],
     'energy': [454, 29_100, 63_000, 1_350_000, 67_200_000, 84_500_000, 158_000_000, 0],
-    'source': [100, 800, 6_400, 51_200, 409_600, 3_276_800, 26_214_400, 0],
+    'source': [1_000, 8_000, 64_000, 512_000, 4_096_000, 32_768_000, 262_144_000, 0],
 }
 
 
@@ -78,11 +84,13 @@ RANGE = {
 
 
 CAPACITY = {
-    'chest': [32_768, 262_144, 2_097_152, 16_777_216, 134_217_728, 1_073_741_824, 8_589_934_592, 0],
-    'tank': [256_000, 2_048_000, 16_384_000, 131_072_000, 1_048_576_000, 8_388_608_000, 67_108_864_000, 0],
+    'chest': [115_200, 921_600, 7_372_800, 58_982_400, 471_859_200, 3_774_873_600, 30_198_988_800, 0],
+    'tank': [28_800_000, 230_400_000, 1_843_200_000, 14_745_600_000, 117_964_800_000, 943_718_400_000,
+             7_549_747_200_000, 0],
     'battery': [31_104_000, 1_990_656_000, 4_320_000_000, 92_160_000_000, 4_608_000_000_000,
                 5_788_800_000_000, 10_785_600_000_000, 0],
-    'source_tank': [10_000, 80_000, 640_000, 5_120_000, 40_960_000, 327_680_000, 2_621_440_000, 0],
+    'source_tank': [3_600_000, 28_800_000, 230_400_000, 1_843_200_000, 14_745_600_000, 117_964_800_000,
+                    943_718_400_000, 0],
 }
 
 

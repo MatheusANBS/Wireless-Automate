@@ -21,9 +21,12 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * O Mover com máquinas marcadas (etapa 3b), por roteador, num lote só: o roteador marcado vai inteiro, como sempre
- * (presa, perfis e exceções), e as máquinas dele marcadas não contam de novo; sem ele, a presa marcada e a máquina
- * marcada (D1) mudam a rede só nas faces com modo, a da máquina gravada como exceção; o grupo inteiro (D2) muda no
- * perfil, e as exceções dele ficam. A face numa rede de onde o jogador não pode tirar fica e é contada.
+ * (presa, perfis e exceções; a exceção que fica igual ao perfil some), e as máquinas dele marcadas não contam de
+ * novo; sem ele, a presa marcada e a máquina marcada (D1) mudam a rede só nas faces com modo, a da máquina gravada
+ * como exceção e a da presa pela regra de uma máquina do grupo (sozinha no grupo muda o perfil, senão vira exceção);
+ * o grupo inteiro (D2) muda no perfil, e as exceções dele ficam, a da presa inclusive (a presa marcada num grupo
+ * marcado é parte dele, {@link MarkedTargets#resolve}). A face numa rede de onde o jogador não pode tirar fica e é
+ * contada.
  */
 final class MarkedMove {
     private static final RelativeSide[] SIDES = RelativeSide.values();
@@ -96,7 +99,10 @@ final class MarkedMove {
         return new Result(routers, groups, machines, unloaded, kept[0]);
     }
 
-    /** As faces com modo da presa na rede; uma face sem modo não ganha rede. Devolve se alguma mudou. */
+    /**
+     * As faces com modo da presa na rede, pela API da presa do roteador (a regra de uma máquina do grupo); uma face
+     * sem modo não ganha rede. Devolve se alguma mudou.
+     */
     private static boolean moveAttached(RouterBlockEntity router, Collection<ResourceType> types,
             @Nullable UUID network, Predicate<UUID> canLeave, int[] kept) {
         boolean changed = false;

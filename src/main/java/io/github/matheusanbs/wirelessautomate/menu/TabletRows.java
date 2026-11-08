@@ -13,8 +13,9 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * As linhas da árvore na página do Tablet, abaixo dos nós abertos ({@link TabletTree}): a máquina presa, os grupos,
- * as máquinas dos grupos abertos e o "mais N" de um grupo cortado. Cada linha diz o nó de cima ({@code parent}, a
+ * As linhas da árvore na página do Tablet, abaixo dos nós abertos ({@link TabletTree}): os grupos, a máquina presa
+ * (primeira dentro do grupo dela, ou antes dos grupos sem grupo), as máquinas dos grupos abertos e o "mais N" de um
+ * grupo cortado. Cada linha diz o nó de cima ({@code parent}, a
  * posição dele em {@link TabletSnapshot.Page#nodes()}); as linhas de um nó vêm juntas, logo depois dele na tela, e
  * os nós vêm em ordem. Os nós e estas linhas dividem o teto de {@link TabletSnapshot#MAX_NODES} da página.
  *
@@ -52,12 +53,13 @@ public record TabletRows(List<Row> rows, List<MachineLive> lives) {
     }
 
     /**
-     * A máquina presa.
+     * A máquina presa: logo depois da linha do grupo dela, ou antes dos grupos se não tem grupo.
      *
-     * @param side de que lado do roteador ela fica (o oposto da face onde ele está preso); vazio com o roteador
-     *             descarregado
+     * @param side      de que lado do roteador ela fica (o oposto da face onde ele está preso); vazio com o roteador
+     *                  descarregado
+     * @param exception tem exceção (não segue o perfil do grupo)
      */
-    public record Attached(int parent, Optional<Direction> side) implements Row {
+    public record Attached(int parent, Optional<Direction> side, boolean exception) implements Row {
     }
 
     /**
@@ -65,8 +67,8 @@ public record TabletRows(List<Row> rows, List<MachineLive> lives) {
      *
      * @param id         o id do grupo no roteador (o do {@code EditTarget.group})
      * @param name       nome dado pelo jogador; vazio = o nome do bloco
-     * @param total      máquinas do grupo, inclusive as que não aparecem
-     * @param exceptions das máquinas guardadas no índice, quantas têm exceção
+     * @param total      máquinas do grupo, a presa e as que não aparecem inclusive
+     * @param exceptions das máquinas guardadas no índice e da presa, quantas têm exceção
      */
     public record Group(int parent, int id, ResourceLocation block, String name, int total, int exceptions,
             boolean collapsed, boolean showAll) implements Row {
@@ -185,7 +187,8 @@ public record TabletRows(List<Row> rows, List<MachineLive> lives) {
         int previous = -1;
         for (Row row : rows.rows) {
             int header = switch (row) {
-                case Attached attached -> KIND_ATTACHED | (attached.side.isPresent() ? FLAG_A : 0);
+                case Attached attached -> KIND_ATTACHED | (attached.side.isPresent() ? FLAG_A : 0)
+                        | (attached.exception ? FLAG_B : 0);
                 case Group group -> KIND_GROUP | (group.collapsed ? FLAG_A : 0) | (group.showAll ? FLAG_B : 0)
                         | (group.name.isEmpty() ? 0 : FLAG_C);
                 case Machine machine -> KIND_MACHINE | (machine.exception ? FLAG_A : 0)
@@ -241,7 +244,7 @@ public record TabletRows(List<Row> rows, List<MachineLive> lives) {
             }
             Row row = switch (header & 3) {
                 case KIND_ATTACHED -> new Attached(parent, (header & FLAG_A) == 0 ? Optional.empty()
-                        : Optional.of(direction(buf.readUnsignedByte())));
+                        : Optional.of(direction(buf.readUnsignedByte())), (header & FLAG_B) != 0);
                 case KIND_GROUP -> {
                     int id = buf.readVarInt();
                     int block = buf.readVarInt();

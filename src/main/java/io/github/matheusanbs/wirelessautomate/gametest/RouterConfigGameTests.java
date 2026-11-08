@@ -20,9 +20,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Vec3i;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.world.level.EmptyBlockGetter;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Mirror;
@@ -139,18 +141,19 @@ public final class RouterConfigGameTests {
             helper.assertValueEqual(RelativeSide.RIGHT.toAbsolute(facing, 0), expected[1].getOpposite(), "RIGHT");
         });
 
-        // A mesma configuração salva vale em relação ao facing de cada roteador.
+        // A configuração salva é da máquina presa, pelos lados dela: num roteador virado para outra face ela fica
+        // nas mesmas faces da máquina.
         HolderLookup.Provider registries = helper.getLevel().registryAccess();
-        RouterBlockEntity up = new RouterBlockEntity(BlockPos.ZERO, router(Direction.UP));
+        RouterBlockEntity up = placeOnChest(helper);
         up.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
         up.setMode(ResourceType.ITEM, Direction.SOUTH, PortMode.INSERT);
         CompoundTag tag = up.saveWithoutMetadata(registries);
 
         RouterBlockEntity east = new RouterBlockEntity(BlockPos.ZERO, router(Direction.EAST));
         east.loadWithComponents(tag, registries);
-        helper.assertValueEqual(east.face(ResourceType.ITEM, Direction.EAST).mode(), PortMode.EXTRACT, "FRONT girada");
-        helper.assertValueEqual(east.face(ResourceType.ITEM, Direction.UP).mode(), PortMode.INSERT, "TOP girada");
-        helper.assertValueEqual(east.face(ResourceType.ITEM, Direction.SOUTH).mode(), PortMode.NONE, "sobrou na face antiga");
+        helper.assertValueEqual(east.face(ResourceType.ITEM, Direction.UP).mode(), PortMode.EXTRACT, "Cima da máquina");
+        helper.assertValueEqual(east.face(ResourceType.ITEM, Direction.SOUTH).mode(), PortMode.INSERT, "Sul da máquina");
+        helper.assertValueEqual(east.face(ResourceType.ITEM, Direction.EAST).mode(), PortMode.NONE, "a face do roteador");
         helper.succeed();
     }
 
@@ -277,14 +280,19 @@ public final class RouterConfigGameTests {
                     helper.setBlock(MACHINE, Blocks.CHEST);
                     helper.assertTrue(node.items(Direction.UP) != null, "cache não viu o baú voltar");
 
-                    // Girar o roteador: a configuração relativa vai junto e a máquina passa a ser o funil.
+                    // Virar o roteador para o funil: a presa passa a ser o funil. Sozinha no grupo do baú e sem grupo
+                    // de funil, o grupo inteiro muda de bloco e a configuração continua, pelos lados da máquina.
                     node.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
                     helper.setBlock(hopper, Blocks.HOPPER);
                     helper.setBlock(ROUTER, router(Direction.SOUTH));
                     helper.assertTrue(helper.getBlockEntity(ROUTER) == node, "block entity trocado ao girar");
                     helper.assertValueEqual(node.machinePos(), helper.absolutePos(hopper), "máquina");
-                    helper.assertValueEqual(node.face(ResourceType.ITEM, Direction.SOUTH).mode(), PortMode.EXTRACT,
-                            "configuração não girou");
+                    helper.assertValueEqual(node.remoteMachines().attachedGroup().block(),
+                            BuiltInRegistries.BLOCK.getKey(Blocks.HOPPER), "o grupo da presa não passou para o funil");
+                    helper.assertValueEqual(node.face(ResourceType.ITEM, Direction.UP).mode(), PortMode.EXTRACT,
+                            "a configuração não seguiu para o funil");
+                    helper.assertTrue(node.remoteMachines().firstGroupOf(BuiltInRegistries.BLOCK.getKey(Blocks.CHEST)) == null,
+                            "sobrou um grupo do baú");
                     var items = node.items(Direction.SOUTH);
                     helper.assertTrue(items != null && items.getSlots() == 5, "cache não foi refeito para o funil");
                 })
@@ -310,7 +318,7 @@ public final class RouterConfigGameTests {
 
     /**
      * As chaves salvas por tipo continuam as de sempre, e um roteador salvo volta igual. A rede mora
-     * nas faces ({@code network} dentro de cada uma); a chave antiga {@code networks} não é mais escrita.
+     * nas faces ({@code network} dentro de cada uma); a chave {@code networks} do formato velho não é escrita.
      */
     @GameTest(template = "empty")
     public static void savedKeysStayTheSame(GameTestHelper helper) {
@@ -323,9 +331,11 @@ public final class RouterConfigGameTests {
 
         CompoundTag tag = node.saveWithoutMetadata(helper.getLevel().registryAccess());
         helper.assertFalse(tag.contains("networks"), "a chave antiga networks ainda é escrita");
-        Set<String> types = tag.getCompound("faces").getAllKeys();
-        helper.assertTrue(types.containsAll(Set.of("item", "fluid", "energy", "chemical")), "tipos nas faces: " + types);
-        helper.assertTrue(tag.getCompound("faces").contains("fluid"), "face de fluido salva fora da chave fluid");
+        helper.assertFalse(tag.contains("faces") || tag.contains("cards"), "a presa convertida gravou as chaves antigas");
+        helper.assertTrue(tag.contains("attached"), "sem o membro presa");
+        CompoundTag profile = tag.getList("groups", Tag.TAG_COMPOUND).getCompound(0).getCompound("profile");
+        Set<String> types = profile.getAllKeys();
+        helper.assertTrue(types.containsAll(Set.of("item", "fluid", "energy", "chemical")), "tipos no perfil: " + types);
 
         helper.setBlock(new BlockPos(2, 1, 2), Blocks.CHEST);
         helper.setBlock(new BlockPos(2, 2, 2), router(Direction.UP));

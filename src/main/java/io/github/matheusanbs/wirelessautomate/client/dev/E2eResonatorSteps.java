@@ -416,7 +416,7 @@ final class E2eResonatorSteps {
      * A chave do texto na action bar agora, ou o texto cru se ele não é traduzível. O campo do {@link Gui} é privado
      * e só serve a este teste (o jogo de dev roda com os nomes da Mojang).
      */
-    private static String overlayKey() {
+    static String overlayKey() {
         try {
             Field field = Gui.class.getDeclaredField("overlayMessageString");
             field.setAccessible(true);
@@ -428,6 +428,19 @@ final class E2eResonatorSteps {
                     : message.getString();
         } catch (ReflectiveOperationException e) {
             return "erro: " + e;
+        }
+    }
+
+    /** Os argumentos do texto traduzível da action bar agora; vazio se não há ou ele não é traduzível. */
+    static Object[] overlayArgs() {
+        try {
+            Field field = Gui.class.getDeclaredField("overlayMessageString");
+            field.setAccessible(true);
+            Component message = (Component) field.get(Minecraft.getInstance().gui);
+            return message != null && message.getContents() instanceof TranslatableContents contents
+                    ? contents.getArgs() : new Object[0];
+        } catch (ReflectiveOperationException e) {
+            return new Object[0];
         }
     }
 

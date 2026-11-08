@@ -13,8 +13,8 @@ import io.github.matheusanbs.wirelessautomate.network.NetworkStats;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.RouterPreset;
+import io.github.matheusanbs.wirelessautomate.preset.PresetPaste;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
-import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.netty.buffer.Unpooled;
 import java.util.List;
@@ -35,18 +35,14 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LayeredCauldronBlock;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluids;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.event.TagsUpdatedEvent;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.gametest.GameTestHolder;
@@ -508,7 +504,7 @@ public final class FilterGameTests {
     }
 
     @GameTest(template = "empty")
-    public static void filterSurvivesSaveLoadAndConfigurator(GameTestHelper helper) {
+    public static void filterSurvivesSaveLoadAndPresetPaste(GameTestHelper helper) {
         RegistryAccess registries = helper.getLevel().registryAccess();
         RouterBlockEntity node = place(helper, A, Blocks.CHEST.defaultBlockState(), null);
         RouterBlockEntity target = place(helper, B, Blocks.CHEST.defaultBlockState(), null);
@@ -561,13 +557,10 @@ public final class FilterGameTests {
             buf.release();
         }
 
-        // Configurador: copia de um roteador e cola no outro.
+        // Copiar de um roteador e colar no outro (a lógica do Tablet).
         ServerPlayer player = TestPlayers.inLevel(helper);
-        ItemStack configurator = new ItemStack(ModItems.CONFIGURATOR.get());
-        player.setItemInHand(InteractionHand.MAIN_HAND, configurator);
-        helper.assertTrue(use(player, node, true), "copiar não agiu");
-        helper.assertTrue(configurator.has(ModDataComponents.PRESET.get()), "nada copiado");
-        helper.assertTrue(use(player, target, false), "colar não agiu");
+        RouterPreset copied = PresetPaste.copy(player, node);
+        PresetPaste.paste(player, target, copied, null);
         helper.assertValueEqual(target.face(ResourceType.ITEM, Direction.UP).filter(), itemFilter, "filtro colado");
         helper.assertValueEqual(target.face(ResourceType.FLUID, Direction.NORTH).filter(), fluidFilter,
                 "filtro de fluido colado");
@@ -581,13 +574,5 @@ public final class FilterGameTests {
             }
         }
         return null;
-    }
-
-    private static boolean use(ServerPlayer player, RouterBlockEntity router, boolean sneak) {
-        player.setShiftKeyDown(sneak);
-        BlockPos pos = router.getBlockPos();
-        UseOnContext context = new UseOnContext(player, InteractionHand.MAIN_HAND,
-                new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false));
-        return ModItems.CONFIGURATOR.get().useOn(context).consumesAction();
     }
 }

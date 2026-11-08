@@ -17,12 +17,15 @@ import io.netty.buffer.Unpooled;
 import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -30,6 +33,10 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
 public final class MachineLabelGameTests {
+    /** O bloco do grupo das fornalhas, que o nome do grupo leva para o servidor conferir. */
+    private static final Optional<ResourceLocation> FURNACE_BLOCK =
+            Optional.of(BuiltInRegistries.BLOCK.getKey(Blocks.FURNACE));
+
     private static void linkTwo(GameTestHelper helper, RouterBlockEntity router) {
         router.setRangeUpgrade(rangeUpgrade());
         link(helper, router, FURNACE_A);
@@ -37,11 +44,11 @@ public final class MachineLabelGameTests {
     }
 
     private static RenameTargetPayload machine(RouterMenu menu, int index, BlockPos pos, String name) {
-        return new RenameTargetPayload(menu.containerId, EditTarget.Kind.MACHINE, index, Optional.of(pos), name);
+        return new RenameTargetPayload(menu.containerId, EditTarget.Kind.MACHINE, index, Optional.of(pos), Optional.empty(), name);
     }
 
     private static RenameTargetPayload group(RouterMenu menu, int id, String name) {
-        return new RenameTargetPayload(menu.containerId, EditTarget.Kind.GROUP, id, Optional.empty(), name);
+        return new RenameTargetPayload(menu.containerId, EditTarget.Kind.GROUP, id, Optional.empty(), FURNACE_BLOCK, name);
     }
 
     @GameTest(template = "empty", timeoutTicks = 300)
@@ -117,15 +124,16 @@ public final class MachineLabelGameTests {
                         helper.assertFalse(ModPayloads.handleRenameTarget(player,
                                 machine(menu, index, furnace, "x".repeat(RenameRouterPayload.MAX_LENGTH + 1))),
                                 "aceitou mais de 32 caracteres");
-                        helper.assertFalse(ModPayloads.handleRenameTarget(player, machine(menu, index, barrel, "Errado")),
-                                "aceitou a posição de outra máquina");
+                        helper.assertFalse(ModPayloads.handleRenameTarget(player,
+                                machine(menu, index, helper.absolutePos(FURNACE_B), "Errado")),
+                                "aceitou uma posição que não está vinculada");
                         helper.assertFalse(ModPayloads.handleRenameTarget(player, new RenameTargetPayload(menu.containerId,
-                                EditTarget.Kind.MACHINE, index, Optional.empty(), "Sem posição")), "aceitou sem posição");
+                                EditTarget.Kind.MACHINE, index, Optional.empty(), Optional.empty(), "Sem posição")), "aceitou sem posição");
                         helper.assertFalse(ModPayloads.handleRenameTarget(player, group(menu, 999, "Nenhum")),
                                 "aceitou um grupo que não existe");
                         helper.assertFalse(ModPayloads.handleRenameTarget(player,
                                 new RenameTargetPayload(menu.containerId + 1, EditTarget.Kind.GROUP, groupId,
-                                        Optional.empty(), "Outro menu")), "aceitou outro menu");
+                                        Optional.empty(), FURNACE_BLOCK, "Outro menu")), "aceitou outro menu");
                         helper.assertValueEqual(router.remoteMachines().machine(index).label(), "Forno 1",
                                 "uma recusa mudou o rótulo");
                         helper.assertValueEqual(router.remoteMachines().group(groupId).name(), "Fornos",
@@ -156,7 +164,7 @@ public final class MachineLabelGameTests {
     }
 
     private static RenameTargetPayload attached(RouterMenu menu, String name) {
-        return new RenameTargetPayload(menu.containerId, EditTarget.Kind.ATTACHED, 0, Optional.empty(), name);
+        return new RenameTargetPayload(menu.containerId, EditTarget.Kind.ATTACHED, 0, Optional.empty(), Optional.empty(), name);
     }
 
     /**
@@ -207,7 +215,7 @@ public final class MachineLabelGameTests {
                                 attached(menu, "x".repeat(RenameRouterPayload.MAX_LENGTH + 1))),
                                 "aceitou mais de 32 letras");
                         helper.assertFalse(ModPayloads.handleRenameTarget(player, new RenameTargetPayload(
-                                menu.containerId + 1, EditTarget.Kind.ATTACHED, 0, Optional.empty(), "Outro menu")),
+                                menu.containerId + 1, EditTarget.Kind.ATTACHED, 0, Optional.empty(), Optional.empty(), "Outro menu")),
                                 "aceitou outro menu");
                         helper.assertValueEqual(router.attachedLabel(), "Cofre do topo", "uma recusa mudou o nome");
 
@@ -279,7 +287,7 @@ public final class MachineLabelGameTests {
                     helper.assertTrue(router.changeVersion() != version, "a versão da tela não subiu");
                     helper.assertFalse(NetworkManager.get().isDirty(network, ResourceType.ITEM),
                             "renomear sujou as rotas");
-                    helper.assertTrue(router.unlinkMachine(index), "não desvinculou");
+                    helper.assertTrue(router.unlinkMachine(index, null) >= 0, "não desvinculou");
                     helper.assertTrue(NetworkManager.get().isDirty(network, ResourceType.ITEM),
                             "desvincular não sujou as rotas (o teste não prova nada)");
                 })

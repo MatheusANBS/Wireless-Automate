@@ -121,6 +121,31 @@ class ListTreeTest {
     }
 
     @Test
+    void attachedRightAfterItsGroupIsInsideIt() {
+        // nó 0: um grupo com a presa e uma máquina, e outro grupo; nó 1: a presa sem grupo, antes do grupo
+        ListTree tree = new ListTree(2, List.of(
+                new TreeRow(0, Kind.GROUP, false),
+                new TreeRow(0, Kind.ATTACHED, false),
+                new TreeRow(0, Kind.MACHINE, false),
+                new TreeRow(0, Kind.GROUP, true),
+                new TreeRow(1, Kind.ATTACHED, false),
+                new TreeRow(1, Kind.GROUP, true)));
+        List<Line> lines = tree.lines();
+        assertEquals(Kind.ATTACHED, lines.get(2).kind());
+        assertEquals(2, lines.get(2).depth());
+        assertEquals(1, tree.parentLine(2));
+        assertEquals(new ListTree.Arrow(ListTree.Step.MOVE_TO, 1), tree.left(2));
+        assertEquals(1, tree.parentLine(3));
+        assertEquals(Kind.ATTACHED, lines.get(6).kind());
+        assertEquals(1, lines.get(6).depth());
+        assertEquals(5, tree.parentLine(6));
+        assertTrue(tree.attachedInGroup(1));
+        assertFalse(tree.attachedInGroup(4));
+        assertFalse(tree.attachedInGroup(0));
+        assertFalse(tree.attachedInGroup(99));
+    }
+
+    @Test
     void rowsOfAnUnknownNodeAreIgnored() {
         ListTree tree = new ListTree(NODES, List.of(new TreeRow(9, Kind.ATTACHED, false)));
         assertEquals(NODES, tree.lines().size());

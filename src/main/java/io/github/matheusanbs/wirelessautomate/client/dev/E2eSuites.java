@@ -1,7 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client.dev;
 
 import static io.github.matheusanbs.wirelessautomate.client.dev.DevEndToEnd.*;
-import static io.github.matheusanbs.wirelessautomate.client.dev.E2eConfiguratorSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eLinkerSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2ePanelSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eRouterSteps.*;
@@ -12,7 +11,6 @@ import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
-import net.neoforged.fml.ModList;
 
 /**
  * O registro das suítes do e2e, na ordem do roteiro completo. Cada suíte roda sozinha, depois da abertura (e do que o
@@ -30,7 +28,7 @@ final class E2eSuites {
     }
 
     /**
-     * @param disponivel se a suíte existe nesta instalação (o Ars Nouveau e o GuideME são opcionais)
+     * @param disponivel se a suíte existe nesta instalação (o Ars Nouveau é opcional)
      * @param opcional fora do conjunto padrão; só roda pedida pelo nome ou no perfil completo
      */
     record Suite(String nome, String descricao, Prereq prereq, Consumer<List<Step>> passos, boolean opcional,
@@ -60,10 +58,9 @@ final class E2eSuites {
                 typeNetworkTransferSteps(list);
                 tabletSteps(list);
             }),
-            suite("vinculador", "Configurador e Vinculador", Prereq.REDES, list -> {
-                configuratorSteps(list);
-                linkerSteps(list);
-            }),
+            suite("vinculador", "Vinculador", Prereq.REDES, E2eLinkerSteps::linkerSteps),
+            suite("afinador", "Afinador do Configurador: a pintura da proposta e o segundo clique", Prereq.NENHUM,
+                    E2eTunerSteps::tunerSteps),
             optional("portugues", "telas em português (a variante pt de todas)", Prereq.REDES, E2ePortugueseSteps::portugueseSteps),
             suite(ARMAZENAMENTO, "Baú de armazenamento", Prereq.REDES, E2eStorageSteps::storageChestSteps),
             new Suite("source", "Tanque de Source (com o Ars Nouveau)", Prereq.REDES, E2eSourceTankSteps::sourceTankSteps,
@@ -89,8 +86,8 @@ final class E2eSuites {
             suite("tela", "Tela de Sinal: tamanho, conteúdo e o desenho no mundo", Prereq.NENHUM, E2eTvSteps::tvSteps),
             optional("tela-desempenho", "tempo de quadro e de redesenho com 8 Telas 32 x 32 (mede, não afirma)",
                     Prereq.NENHUM, E2eTvPerfSteps::perfSteps),
-            new Suite("guia", "páginas do guia (com o GuideME)", Prereq.NENHUM, E2eGuideSteps::guideSteps, false,
-                    () -> ModList.get().isLoaded("guideme")));
+            suite("guia", "o livro-guia: a abertura e todas as folhas de cada página", Prereq.NENHUM,
+                    E2eGuideSteps::guideSteps));
 
     private E2eSuites() {
     }

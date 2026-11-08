@@ -26,7 +26,7 @@ TABLE_REPAIR_EN = '''| Crystal | FE per repair |
 | Tuned Ultimate | 536,870,912 |'''
 
 
-PAGINA = page('crystal-repairer.md', front('Reparador de Cristais', 'wirelessautomate:crystal_repairer', 20, item_ids=[
+PAGINA = page('crystal-repairer.md', front('Reparador de Cristais', 'wirelessautomate:crystal_repairer', 'energia', 20, item_ids=[
     'wirelessautomate:crystal_repairer']) + '''
 # Reparador de Cristais
 
@@ -62,7 +62,7 @@ bloco no meio de um reparo **perde os 4 cristais e a energia** já gastos nele.
 ## Receita
 
 <RecipeFor id="wirelessautomate:crystal_repairer" />
-''', front('Crystal Repairer', 'wirelessautomate:crystal_repairer', 20, item_ids=[
+''', front('Crystal Repairer', 'wirelessautomate:crystal_repairer', 'energia', 20, item_ids=[
     'wirelessautomate:crystal_repairer']) + '''
 # Crystal Repairer
 

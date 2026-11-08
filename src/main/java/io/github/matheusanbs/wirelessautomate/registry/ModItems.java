@@ -6,6 +6,7 @@ import io.github.matheusanbs.wirelessautomate.item.ChestUpgradeItem;
 import io.github.matheusanbs.wirelessautomate.item.ChunkLoaderUpgradeItem;
 import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
+import io.github.matheusanbs.wirelessautomate.item.GuideBookItem;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.item.NetworkTabletItem;
 import io.github.matheusanbs.wirelessautomate.item.RangeUpgradeItem;
@@ -51,6 +52,8 @@ public final class ModItems {
             NetworkTabletItem::new, new Item.Properties().stacksTo(1));
     public static final DeferredItem<LinkerItem> LINKER = ITEMS.registerItem("linker",
             LinkerItem::new, new Item.Properties().stacksTo(1));
+    public static final DeferredItem<GuideBookItem> GUIDE = ITEMS.registerItem("guide",
+            GuideBookItem::new, new Item.Properties().stacksTo(1));
     public static final DeferredItem<FilterCardItem> FILTER_CARD = ITEMS.registerItem("filter_card",
             FilterCardItem::new, new Item.Properties().stacksTo(16));
     public static final DeferredItem<ChunkLoaderUpgradeItem> CHUNK_LOADER_UPGRADE = ITEMS.registerItem(

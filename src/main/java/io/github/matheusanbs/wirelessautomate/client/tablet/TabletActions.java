@@ -108,6 +108,11 @@ final class TabletActions {
                 Optional.empty(), "", paused ? 0 : 1));
     }
 
+    /** Troca o ícone do grupo pelo item {@code icon} (id), ou tira com {@code ""}. */
+    void groupIcon(UUID group, String icon) {
+        send(new TabletActionPayload(menu.containerId, Action.GROUP_ICON, Optional.of(group), Optional.empty(), icon, 0));
+    }
+
     /** Marca ou desmarca a rede no grupo. */
     void groupNetwork(UUID group, UUID network, boolean inGroup) {
         Action action = inGroup ? Action.GROUP_REMOVE_NETWORK : Action.GROUP_ADD_NETWORK;

@@ -17,7 +17,8 @@ import net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs;
  *
  * <p>{@code containerId}, {@code resource} e {@code face} só valem para {@code Undo.CLEAR_FACE_NETWORK}:
  * o cliente manda o {@link SetNetworkPayload} sem rede para aquela face, no quadro do alvo de edição. Com
- * {@code Undo.RESTORE_IDLE_NETWORKS}, o cliente manda o {@link ClearIdleNetworksPayload} com {@code undo}.
+ * {@code Undo.RESTORE_IDLE_NETWORKS}, o cliente manda o {@link ClearIdleNetworksPayload} com {@code undo}; com
+ * {@code Undo.UNDO_MACHINE_PASTE}, o {@link MachinePastePayload#undo(int)} do {@code containerId}.
  */
 public record PanelNoticePayload(Component message, Undo undo, int containerId, ResourceType resource, Direction face)
         implements CustomPacketPayload {
@@ -30,7 +31,9 @@ public record PanelNoticePayload(Component message, Undo undo, int containerId, 
         /** Tira a rede só da face citada (a regra D1 pôs a face na rede ativa). */
         CLEAR_FACE_NETWORK,
         /** Devolve a rede às faces sem modo que o último "Tirar a rede das faces sem modo" limpou. */
-        RESTORE_IDLE_NETWORKS
+        RESTORE_IDLE_NETWORKS,
+        /** Desfaz o último colar do perfil de uma máquina na tela do roteador. */
+        UNDO_MACHINE_PASTE
     }
 
     public static final Type<PanelNoticePayload> TYPE = new Type<>(WirelessAutomate.id("panel_notice"));

@@ -67,6 +67,24 @@ final class Port {
     /** Contagem da origem para o estoque do filtro; criada na primeira visita que precisar. */
     @Nullable ItemStockTally tally;
     /**
+     * O que este destino de itens recusou e recebeu ({@link ItemHints}); criado na primeira recusa de um item
+     * com lugar para outros, então só as máquinas seletivas têm.
+     */
+    @Nullable ItemHints hints;
+    /**
+     * Os fluidos ou químicos que este destino recusou pelo tipo ({@link RefusedKinds}); criado na primeira recusa de
+     * um tipo com lugar para outros, então só os tanques seletivos têm.
+     */
+    @Nullable RefusedKinds refusedKinds;
+    /**
+     * Este destino de itens recusou um item sem ter lugar para outros: está cheio de verdade, e a próxima recusa
+     * dorme sem reler os slots ({@link ItemInsertPlan#roomForOthers}). A mudança na máquina apaga; uma máquina que
+     * muda sem avisar não o deixa para sempre: ele vence no teto do sono do destino, contado de {@link #fullSince}.
+     */
+    boolean full;
+    /** O tick em que {@link #full} passou a valer. */
+    long fullSince;
+    /**
      * Motivo do último sono da origem, gravado onde ela dorme ({@link SourceSleep}): {@code true} se
      * todos os destinos dormiam ou se ela ofereceu algo e foi recusada (espera destino); {@code false}
      * se não tinha o que dar (vazia, filtro ou estoque da própria origem, sem máquina). Uma mudança na
@@ -157,6 +175,26 @@ final class Port {
         this.destinationBackoff = new Backoff(maxSleep);
         sourceBackoff.countChangesIn(flowChanges);
         destinationBackoff.countChangesIn(flowChanges);
+    }
+
+    /** As dicas deste destino, criadas na primeira vez. */
+    ItemHints hints() {
+        ItemHints made = hints;
+        if (made == null) {
+            made = new ItemHints();
+            hints = made;
+        }
+        return made;
+    }
+
+    /** Os tipos recusados por este destino, criados na primeira vez. */
+    RefusedKinds refusedKinds() {
+        RefusedKinds made = refusedKinds;
+        if (made == null) {
+            made = new RefusedKinds();
+            refusedKinds = made;
+        }
+        return made;
     }
 
     /** Soma ao que a porta entregou como origem; o primeiro desde a leitura avisa {@link #flowChanges}. */

@@ -23,23 +23,23 @@ SCENE_STORAGE = '''<GameScene zoom="3" interactive={true}>
   <LineAnnotation from="3.5 1.5 3.5" to="0.5 1.5 3.5" color="#3fc36b" thickness="0.08">
     {L2}
   </LineAnnotation>
-  <BlockAnnotation x="0" y="1" z="0" color="#4a8cff">
+  <BlockAnnotation x="0" y="0" z="0" color="#4a8cff">
     {FURNACE}
   </BlockAnnotation>
-  <BlockAnnotation x="3" y="1" z="0" color="#3fc36b">
+  <BlockAnnotation x="3" y="0" z="0" color="#3fc36b">
     {BARREL}
   </BlockAnnotation>
-  <BlockAnnotation x="3" y="1" z="3" color="#3fc36b">
+  <BlockAnnotation x="3" y="0" z="3" color="#3fc36b">
     {BARREL}
   </BlockAnnotation>
-  <BlockAnnotation x="0" y="1" z="3" color="#ff9a3c">
+  <BlockAnnotation x="0" y="0" z="3" color="#ff9a3c">
     {CHEST}
   </BlockAnnotation>
   <IsometricCamera yaw="210" pitch="35" />
 </GameScene>'''
 
 
-PAGINA = page('networks.md', front('Redes', 'wirelessautomate:linker', 4) + '''
+PAGINA = page('networks.md', front('Redes', 'wirelessautomate:linker', 'ferramentas', 4) + '''
 # Redes
 
 Roteadores não se ligam uns aos outros: cada **face**, em cada aba, entra numa **rede**. Tudo do
@@ -70,7 +70,6 @@ mesmo tipo na mesma rede troca entre si; o modo da face diz quem envia e quem re
 | --- | --- |
 | Linha **Rede** da face, na tela do roteador | Uma face, numa aba |
 | <ItemLink id="wirelessautomate:network_tablet" />, Selecionar | Todas as faces dos nós marcados, no tipo escolhido (ou em todos) |
-| <ItemLink id="wirelessautomate:configurator" /> | A rede vai junto com a configuração colada |
 
 ## Alcance e chunks
 
@@ -80,7 +79,7 @@ mesmo tipo na mesma rede troca entre si; o modo da face diz quem envia e quem re
 | Outra dimensão | Só com origem **Esmeralda** ou acima. |
 | Chunk descarregado | A rota pausa e volta sozinha quando o chunk carrega. |
 | Manter trabalhando longe | Use o [Upgrade de Chunk Loading](chunk-loading.md). |
-''', front('Networks', 'wirelessautomate:linker', 4) + '''
+''', front('Networks', 'wirelessautomate:linker', 'ferramentas', 4) + '''
 # Networks
 
 Routers don't link to each other: each **face**, on each tab, joins a **network**. Everything of the
@@ -111,7 +110,6 @@ same type on the same network trades; the face mode says who sends and who recei
 | --- | --- |
 | The face's **Network** row, on the router screen | One face, on one tab |
 | <ItemLink id="wirelessautomate:network_tablet" />, Select | All faces of the checked nodes, in the chosen type (or every type) |
-| <ItemLink id="wirelessautomate:configurator" /> | The network goes with the pasted configuration |
 
 ## Range and chunks
 

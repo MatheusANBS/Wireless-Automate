@@ -1,7 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.block;
 
 import com.mojang.serialization.MapCodec;
-import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
@@ -101,8 +100,8 @@ public class RouterBlock extends BaseEntityBlock {
     }
 
     /**
-     * O roteador nasce sem rede em nenhuma face: o jogador configura o primeiro (tela do roteador ou
-     * Vinculador) e replica com o Configurador. Se o item trouxe dados do block entity com alguma
+     * O roteador nasce sem rede em nenhuma face: o jogador configura (tela do roteador, Vinculador ou o colar
+     * de perfil do Tablet). Se o item trouxe dados do block entity com alguma
      * rede, eles já foram aplicados antes desta chamada e as redes que vieram são mantidas.
      */
     @Override
@@ -128,7 +127,7 @@ public class RouterBlock extends BaseEntityBlock {
     }
 
     /**
-     * Itens que agem no roteador pelo próprio {@code useOn} (Vinculador, Configurador e núcleos de
+     * Itens que agem no roteador pelo próprio {@code useOn} (Vinculador e núcleos de
      * tier) pulam a interação do bloco; senão o clique abriria a tela e o item não rodaria. Com
      * qualquer outro item, segue para {@link #useWithoutItem}, que abre a tela. Com Shift e um item
      * na mão o vanilla nem chama a interação do bloco: o giro é só com as mãos vazias.
@@ -137,7 +136,7 @@ public class RouterBlock extends BaseEntityBlock {
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
         Item item = stack.getItem();
-        if (item instanceof LinkerItem || item instanceof ConfiguratorItem || item instanceof TierCoreItem) {
+        if (item instanceof LinkerItem || item instanceof TierCoreItem) {
             return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
         }
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;

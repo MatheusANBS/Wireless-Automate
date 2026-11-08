@@ -14,7 +14,7 @@ import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Copiar e colar a configuração de um roteador, a lógica que o Configurador e o Tablet dividem: a cópia
+ * Copiar e colar a configuração de um roteador, a lógica do perfil do Tablet: a cópia
  * sem redes que não existem mais e a colagem pela regra das redes ({@link PresetApplier}). Quem chama
  * cuida do item que guarda a cópia, das mensagens e de conferir se o jogador pode mexer no roteador.
  */

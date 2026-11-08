@@ -981,13 +981,14 @@ public final class StorageGameTests {
     public static void sourceTankStoresAndShowsLevel(GameTestHelper helper) {
         StorageSourceTankBlockEntity tank = storageSourceTank(helper, A, RouterTier.BASIC);
         long capacity = Config.storageCapacity(StorageKind.SOURCE_TANK, RouterTier.BASIC);
-        helper.assertValueEqual(capacity, 10_000L, "capacidade do Básico");
-        helper.assertValueEqual(tank.store().insert(5_000, false), 5_000L, "metade");
+        // Uma hora de 1.000/s (balanceamento 6).
+        helper.assertValueEqual(capacity, 3_600_000L, "capacidade do Básico");
+        helper.assertValueEqual(tank.store().insert(capacity / 2, false), capacity / 2, "metade");
         helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 5, "nível na metade");
-        helper.assertValueEqual(tank.store().insert(999_999, false), 5_000L, "até a capacidade");
+        helper.assertValueEqual(tank.store().insert(capacity, false), capacity / 2, "até a capacidade");
         helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 10, "cheio");
         helper.assertValueEqual(tank.signal(), 15, "comparador cheio");
-        tank.store().extract(10_000, false);
+        tank.store().extract(capacity, false);
         helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 0, "vazio");
         helper.succeed();
     }
@@ -1001,14 +1002,14 @@ public final class StorageGameTests {
         var capacity = Config.STORAGE_CAPACITY.get(StorageKind.SOURCE_TANK).get(RouterTier.BASIC);
         long original = capacity.get();
         StorageSourceTankBlockEntity tank = storageSourceTank(helper, A, RouterTier.BASIC);
-        tank.store().insert(5_000, false);
+        tank.store().insert(original / 2, false);
         helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 5, "nível na metade");
         // O onLoad (que põe o tanque no conjunto) roda no tick seguinte à colocação.
         helper.startSequence()
                 .thenIdle(3)
                 .thenExecute(() -> {
                     try {
-                        capacity.set(100_000L);
+                        capacity.set(original * 10);
                         SourceTankLevels.refreshAll();
                         helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 1, "nível com a capacidade nova");
                     } finally {
@@ -1025,7 +1026,7 @@ public final class StorageGameTests {
     public static void sourceTankFixesWrongLevelOnLoad(GameTestHelper helper) {
         BlockPos abs = helper.absolutePos(A);
         StorageSourceTankBlockEntity tank = storageSourceTank(helper, A, RouterTier.BASIC);
-        tank.store().insert(5_000, false);
+        tank.store().insert(Config.storageCapacity(StorageKind.SOURCE_TANK, RouterTier.BASIC) / 2, false);
         // No mesmo tick da colocação (antes do onLoad): o conteúdo é de nível 5 e o bloco diz 9.
         helper.getLevel().setBlock(abs, helper.getLevel().getBlockState(abs).setValue(StorageSourceTankBlock.FILL, 9), 3);
         helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 9, "nível errado forçado");
@@ -1042,8 +1043,8 @@ public final class StorageGameTests {
         helper.assertTrue(StorageBlock.tryUpgrade(helper.getLevel(), helper.absolutePos(A), RouterTier.ADVANCED), "upgrade");
         StorageSourceTankBlockEntity upgraded = helper.getBlockEntity(A);
         helper.assertValueEqual(upgraded.store().stored(), 10_000L, "Source depois do upgrade");
-        // 10.000 de 80.000 (um oitavo): nível 2, arredondado para cima.
-        helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 2, "nível com a capacidade nova");
+        // 10.000 de 28.800.000 (o Avançado guarda uma hora de 8.000/s): nível 1, arredondado para cima.
+        helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 1, "nível com a capacidade nova");
         helper.succeed();
     }
 

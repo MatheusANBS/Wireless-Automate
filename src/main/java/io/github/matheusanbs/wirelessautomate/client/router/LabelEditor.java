@@ -181,9 +181,15 @@ public final class LabelEditor {
 
     // ------------------------------------------------------------------ o pedido
 
-    /** O pedido ao servidor para dar {@code name} ao alvo {@code target} da tela {@code containerId}. */
-    public static RenameTargetPayload payload(int containerId, EditTarget target, @Nullable BlockPos machinePos, String name) {
-        return new RenameTargetPayload(containerId, target.kind(), target.id(), Optional.ofNullable(machinePos), name);
+    /**
+     * O pedido ao servidor para dar {@code name} ao alvo {@code target} da tela {@code containerId}; num grupo, com o
+     * bloco dele em {@code range}, para o servidor conferir que o grupo é o visto.
+     */
+    public static RenameTargetPayload payload(int containerId, EditTarget target, @Nullable BlockPos machinePos,
+            RangeView range, String name) {
+        RangeView.GroupView group = target.kind() == EditTarget.Kind.GROUP ? range.group(target.id()) : null;
+        return new RenameTargetPayload(containerId, target.kind(), target.id(), Optional.ofNullable(machinePos),
+                Optional.ofNullable(group == null ? null : group.block()), name);
     }
 
     /** Captura sem servidor: o snapshot com o nome do pedido no grupo ou na máquina dele. */
@@ -196,13 +202,14 @@ public final class LabelEditor {
         List<RangeView.MachineView> machines = new ArrayList<>(range.machines());
         if (p.kind() == EditTarget.Kind.GROUP) {
             groups.replaceAll(g -> g.id() == p.id()
-                    ? new RangeView.GroupView(g.id(), g.block(), p.name(), g.count(), g.exceptions()) : g);
+                    ? new RangeView.GroupView(g.id(), g.block(), p.name(), g.count(), g.exceptions(),
+                            g.attached(), g.blank() && p.name().isEmpty()) : g);
         } else if (p.kind() == EditTarget.Kind.MACHINE && p.id() >= 0 && p.id() < machines.size()) {
             RangeView.MachineView m = machines.get(p.id());
             machines.set(p.id(), new RangeView.MachineView(m.pos(), m.group(), m.distance(), m.exception(), m.state(),
                     m.replacedBy(), p.name()));
         }
         return snapshot.withRange(new RangeView(range.radius(), range.max(), List.copyOf(groups), List.copyOf(machines),
-                range.target(), range.face(), range.differs()));
+                range.target(), range.face(), range.differs(), range.attachedException(), range.attachedShown()));
     }
 }

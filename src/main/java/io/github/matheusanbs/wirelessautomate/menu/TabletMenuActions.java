@@ -15,10 +15,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.StringUtil;
+import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -146,7 +149,8 @@ final class TabletMenuActions {
                     applyNetwork(action, data, target, text, value);
             case NETWORK_MEMBER_ADD, NETWORK_MEMBER_REMOVE, NETWORK_TEAM_ADD, NETWORK_TEAM_REMOVE ->
                     applyAccess(action, data, target, other, text);
-            case GROUP_CREATE, GROUP_RENAME, GROUP_REMOVE, GROUP_ADD_NETWORK, GROUP_REMOVE_NETWORK, GROUP_PAUSE ->
+            case GROUP_CREATE, GROUP_RENAME, GROUP_REMOVE, GROUP_ADD_NETWORK, GROUP_REMOVE_NETWORK, GROUP_PAUSE,
+                    GROUP_ICON ->
                     applyGroup(action, data, target, other, text, value);
         };
     }
@@ -316,6 +320,18 @@ final class TabletMenuActions {
                 }
                 yield data.updateGroup(action == TabletMenu.Action.GROUP_ADD_NETWORK
                         ? group.withNetwork(network.id()) : group.withoutNetwork(network.id()));
+            }
+            case GROUP_ICON -> {
+                WaGroup group = managedGroup(data, target);
+                if (group == null) {
+                    yield refuse("permission");
+                }
+                ResourceLocation icon = text.isEmpty() ? null : ResourceLocation.tryParse(text);
+                if (!text.isEmpty() && (icon == null || BuiltInRegistries.ITEM.getOptional(icon)
+                        .filter(item -> item != Items.AIR).isEmpty())) {
+                    yield refuse("icon");
+                }
+                yield data.updateGroup(group.withIcon(icon));
             }
             case GROUP_PAUSE -> {
                 WaGroup group = managedGroup(data, target);

@@ -2,7 +2,7 @@
 from guia_base import *  # noqa: F401,F403
 
 
-PAGINA = page('network-tablet.md', front('Tablet de Rede', 'wirelessautomate:network_tablet', 9, item_ids=['wirelessautomate:network_tablet']) + '''
+PAGINA = page('network-tablet.md', front('Tablet de Rede', 'wirelessautomate:network_tablet', 'painel', 9, item_ids=['wirelessautomate:network_tablet']) + '''
 # Tablet de Rede
 
 <ItemImage id="wirelessautomate:network_tablet" scale="2" float="left" />
@@ -156,6 +156,8 @@ Clique numa linha para ver na Lista só os roteadores daquele tipo ou rede; o ch
 | **Ctrl+V** | Cola. |
 | **Ctrl+Z** | Desfaz (o aviso depois de colar também traz **Desfazer**). |
 
+A cópia do Tablet fica guardada no item. A cópia de máquina da tela do roteador é outra: vale só até você sair do mundo.
+
 Os nós mostram "igual ao perfil" ou "N diferentes do perfil". Só entram as redes que você pode usar.
 
 O que o colar faz em cada coisa marcada:
@@ -175,7 +177,7 @@ dela (vira uma exceção); num grupo, o perfil do grupo.
 ## Receita
 
 <RecipeFor id="wirelessautomate:network_tablet" />
-''', front('Network Tablet', 'wirelessautomate:network_tablet', 9, item_ids=['wirelessautomate:network_tablet']) + '''
+''', front('Network Tablet', 'wirelessautomate:network_tablet', 'painel', 9, item_ids=['wirelessautomate:network_tablet']) + '''
 # Network Tablet
 
 <ItemImage id="wirelessautomate:network_tablet" scale="2" float="left" />
@@ -332,6 +334,8 @@ Click a row to list only the routers of that type or network; the "Only …" chi
 | **Ctrl+C** | Copies the chosen node's profile. |
 | **Ctrl+V** | Pastes. |
 | **Ctrl+Z** | Undoes (the notice after pasting also has **Undo**). |
+
+The Tablet copy is kept on the item. The router screen's machine copy is separate: it lasts only until you leave the world.
 
 Nodes show "same as the profile" or "N different from the profile". Only networks you can use are
 applied.

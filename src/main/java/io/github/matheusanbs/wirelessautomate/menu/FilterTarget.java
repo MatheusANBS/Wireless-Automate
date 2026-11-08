@@ -14,7 +14,7 @@ public interface FilterTarget {
 
     boolean stillValid(Player player);
 
-    /** Muda quando o filtro muda por fora (outro jogador, Configurador): o menu reenvia a visão. */
+    /** Muda quando o filtro muda por fora (outro jogador, o colar de perfil): o menu reenvia a visão. */
     int version();
 
     FilterView view(Player player);

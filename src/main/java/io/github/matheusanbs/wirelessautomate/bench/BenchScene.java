@@ -74,6 +74,8 @@ final class BenchScene {
     static final UUID OWNER = UUID.nameUUIDFromBytes("wirelessautomate:bench".getBytes(StandardCharsets.UTF_8));
     /** Slots livres no fim do destino quase cheio ({@link BenchScenario#BIG_FULL}). */
     static final int FREE_TAIL_SLOTS = 4;
+    /** Tamanho das pilhas de outros itens em cada slot do destino do {@link BenchScenario#PARTIAL_FULL}. */
+    static final int PARTIAL_STACK = 32;
     /** Estoque da lista branca do destino e quanto ele já tem ({@link BenchScenario#STOCK}). */
     static final int STOCK_LIMIT = 1_000;
     /** Tipos de papel (um nome por tipo) no Baú de destino do {@link BenchScenario#CHEST_TYPES}. */
@@ -722,6 +724,12 @@ final class BenchScene {
             int filled = handler.getSlots() - FREE_TAIL_SLOTS;
             for (int slot = 0; slot < filled; slot++) {
                 top(handler, slot, junkItems.get((slot + node.index()) % junkItems.size()));
+            }
+        } else if (scenario == BenchScenario.PARTIAL_FULL) {
+            // Nenhum slot vazio e todos com espaço, só para os próprios itens, que a origem não tem.
+            for (int slot = 0; slot < handler.getSlots(); slot++) {
+                Item junk = junkItems.get((slot + node.index()) % junkItems.size());
+                handler.insertItem(slot, new ItemStack(junk, PARTIAL_STACK), false);
             }
         }
     }

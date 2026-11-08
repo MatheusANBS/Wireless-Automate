@@ -249,7 +249,7 @@ public final class MachineView3D {
      * Blocos com renderizador de entidade (baú) vêm pelo caminho do item, que sem mundo desenha o
      * baú virado para o sul; gira o modelo para a direção do estado, como no mundo.
      */
-    private static void renderBlock(BlockRenderDispatcher blocks, PoseStack pose, MultiBufferSource buffers,
+    public static void renderBlock(BlockRenderDispatcher blocks, PoseStack pose, MultiBufferSource buffers,
             BlockState state) {
         boolean turn = state.getRenderShape() == RenderShape.ENTITYBLOCK_ANIMATED
                 && state.hasProperty(BlockStateProperties.HORIZONTAL_FACING);

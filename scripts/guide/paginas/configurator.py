@@ -2,97 +2,101 @@
 from guia_base import *  # noqa: F401,F403
 
 
-PAGINA = page('configurator.md', front('Configurador', 'wirelessautomate:configurator', 8, item_ids=['wirelessautomate:configurator']) + '''
+PAGINA = page('configurator.md', front('Configurador', 'wirelessautomate:configurator', 'ferramentas', 8, item_ids=['wirelessautomate:configurator']) + '''
 # Configurador
 
 <ItemImage id="wirelessautomate:configurator" scale="2" float="left" />
 
-Copia a configuração de um roteador e cola em outro.
+O **Afinador**: descobre sozinho o que cada face de uma máquina aceita e o que ela dá, e propõe os
+modos (Insere, Extrai, Armazém) para você conferir antes de aplicar.
 
 <br clear="all" />
 
-## Como usar
+## Como operar
 
-1. Shift + clique no roteador já configurado: copia faces, filtros, prioridades, redstone e redes.
-2. Clique em outro roteador: cola nele.
+1. Vincule a máquina a um roteador (preso nela ou de alcance, pelo [Vinculador](linker.md)).
+2. Clique na máquina com o Configurador. As faces com modo ganham uma moldura na cor do modo, e a
+   action bar resume a proposta.
+3. Confira a proposta. Se estiver boa, clique de novo na mesma máquina em até 10 segundos: os modos
+   são aplicados nela.
+4. Com **Shift**, o segundo clique aplica no perfil do grupo inteiro.
+5. Escolha a rede das faces na tela do roteador, se ainda não tiverem.
 
-O item guarda uma cópia só. O tooltip mostra o que está copiado.
+Clicar em outra máquina refaz a análise para ela. Clicar no ar, mirar outro bloco por 2 segundos ou
+esperar 10 segundos apaga a proposta, e o próximo clique na máquina faz uma análise nova. Segurar o
+botão não aplica nem apaga: solte e clique de novo.
 
-| Gesto | O que faz |
-| --- | --- |
-| Shift + clique num roteador | Copia |
-| Clique num roteador | Cola nele |
-| Shift + clique num bloco sem roteador | Limpa a varinha |
-| Shift + roda do mouse | Troca o tipo colado |
-| Segurar Alt esquerdo | Abre a roda do tipo colado |
+## O que muda
 
-## Tipo colado
+- Só os **modos** dos tipos que a análise achou. Prioridade, redstone, filtro e rede de cada face
+  ficam como estão.
+- Numa máquina de um grupo com outras, a mudança vira exceção dela; com Shift, vai para o perfil.
+- Baús, barris e tanques viram **Armazém** numa face só; as outras faces ficam em Nenhum. Uma máquina
+  só de energia ou de Source vira Armazém só se for a Bateria ou o Tanque de Source do mod: nas de
+  outros mods ela recebe Insere, porque uma máquina que consome lê igual a uma bateria, e Insere não a
+  esvazia.
+- Não há Desfazer: a moldura mostra a proposta antes, e o segundo clique é a confirmação.
 
-Copiar sempre copia tudo. O **tipo colado** escolhe o que vai para o roteador: **Todos** (padrão),
-Itens, Fluidos, Energia, Químicos (com o Mekanism) ou Source (com o Ars Nouveau). Num tipo só, as
-outras abas do roteador ficam como estavam.
+## Limites
 
-Exemplo: copie um roteador de fluidos, passe para **Fluidos** e cole nos outros sem mexer nos itens
-nem na energia deles.
+- A análise olha até **27 slots por face** e até 64 itens de prova (alguns comuns, os da máquina e os
+  do seu inventário). Uma máquina com mais slots, ou que só aceita um item raro, pode receber uma
+  proposta incompleta.
+- É uma proposta: confira antes de aplicar, principalmente em máquinas de outros mods.
+- Você precisa poder mexer na máquina e editar o roteador.
+- Numa máquina sem roteador aparece "Vincule a máquina a um roteador primeiro" e nada é analisado.
 
-Na roda (Alt esquerdo; a tecla muda em Controles), solte a tecla sobre a fatia para escolher. Soltar
-no centro ou Esc fecha sem mudar.
-
-## Bom saber
-
-- A cópia é relativa ao roteador: funciona com ele preso em qualquer face.
-- A rede só é colada se você puder usá-la, e a face só sai de uma rede que você gerencia (a sua, ou
-  qualquer uma se for operador). Senão, a face fica com a de antes. Uma face sem rede na cópia não mexe na rede do destino.
-- A rede vale para a máquina presa; as máquinas do Upgrade de Alcance ficam como estão.
-- Para colar em muitos roteadores de uma vez, use a seleção do [Tablet](network-tablet.md).
+Num roteador, o clique com o Configurador abre a tela dele.
 
 ## Receita
 
 <RecipeFor id="wirelessautomate:configurator" />
-''', front('Configurator', 'wirelessautomate:configurator', 8, item_ids=['wirelessautomate:configurator']) + '''
+''', front('Configurator', 'wirelessautomate:configurator', 'ferramentas', 8, item_ids=['wirelessautomate:configurator']) + '''
 # Configurator
 
 <ItemImage id="wirelessautomate:configurator" scale="2" float="left" />
 
-Copies a router's configuration and pastes it on another.
+The **Auto-Setup**: it finds out on its own what each face of a machine takes and what it gives, and
+proposes the modes (Insert, Extract, Storage) for you to check before applying them.
 
 <br clear="all" />
 
-## How to use it
+## How to operate it
 
-1. Shift + click the router that's already set up: copies faces, filters, priorities, redstone and
-   networks.
-2. Click another router: pastes on it.
+1. Link the machine to a router (attached to it, or a range router through the [Linker](linker.md)).
+2. Click the machine with the Configurator. The faces with a mode get a frame in the mode's color, and
+   the action bar sums up the proposal.
+3. Check the proposal. If it looks right, click the same machine again within 10 seconds: the modes
+   are applied to it.
+4. With **Shift**, the second click applies them to the whole group's profile.
+5. Pick the faces' network on the router screen, if they don't have one yet.
 
-The item holds a single copy. The tooltip shows what's copied.
+Clicking another machine analyzes that one instead. Clicking the air, aiming at another block for 2
+seconds or waiting 10 seconds clears the proposal, and the next click on the machine analyzes it
+again. Holding the button neither applies nor clears: let go and click again.
 
-| Gesture | What it does |
-| --- | --- |
-| Shift + click a router | Copy |
-| Click a router | Paste on it |
-| Shift + click a block without a router | Clear the wand |
-| Shift + mouse wheel | Change the pasted type |
-| Hold Left Alt | Open the pasted type wheel |
+## What changes
 
-## Pasted type
+- Only the **modes** of the types the analysis found. Each face's priority, redstone, filter and
+  network stay as they are.
+- On a machine in a group with others, the change becomes its exception; with Shift, it goes to the
+  profile.
+- Chests, barrels and tanks get **Storage** on a single face; the other faces go to None. A machine
+  with only energy or Source gets Storage only if it is this mod's Battery or Source Tank: on other
+  mods' it gets Insert, because a machine that consumes reads just like a battery, and Insert doesn't
+  drain it.
+- There is no Undo: the frame shows the proposal first, and the second click is the confirmation.
 
-Copying always copies everything. The **pasted type** picks what goes to the router: **All**
-(default), Items, Fluids, Energy, Chemicals (with Mekanism) or Source (with Ars Nouveau). On a single
-type, the router's other tabs stay as they were.
+## Limits
 
-Example: copy a fluids router, switch to **Fluids** and paste on the others without touching their
-items or energy.
+- The analysis looks at up to **27 slots per face** and up to 64 probe items (a few common ones, the
+  machine's own and your inventory's). A machine with more slots, or one that only takes a rare item,
+  may get an incomplete proposal.
+- It is a proposal: check it before applying, especially on other mods' machines.
+- You must be able to touch the machine and edit the router.
+- On a machine with no router, "Link the machine to a router first" shows up and nothing is analyzed.
 
-On the wheel (Left Alt; change the key in Controls), release the key over a slice to pick it.
-Releasing in the center or Esc closes without changing anything.
-
-## Good to know
-
-- The copy is relative to the router: it works with the router on any face.
-- A network is only pasted if you can use it, and a face only leaves a network you manage (your own,
-  or any if you are an operator). Otherwise the face keeps its own. A face with no network in the copy leaves the target's network alone.
-- The network applies to the attached machine; Range Upgrade machines stay as they are.
-- To paste on many routers at once, use the [Tablet](network-tablet.md) selection.
+On a router, clicking with the Configurator opens its screen.
 
 ## Recipe
 

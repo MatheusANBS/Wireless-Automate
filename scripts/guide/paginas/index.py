@@ -2,7 +2,7 @@
 from guia_base import *  # noqa: F401,F403
 
 
-PAGINA = page('index.md', front('Wireless Automate', 'wirelessautomate:router', parent=None) + '''
+PAGINA = page('index.md', front('Wireless Automate', 'wirelessautomate:router', 'comecar', parent=None) + '''
 # Wireless Automate
 
 <ItemImage id="wirelessautomate:router" scale="2" float="left" />
@@ -36,7 +36,7 @@ entre si, sem canos.
 | ''' + item('tier_core_advanced') + ''' [Cartões de Upgrade](upgrade-cards.md) | Sobem o tier do roteador: mais vazão e alcance. |
 | ''' + item('filter_card') + ''' [Cartão de Filtro](filter-card.md) | Um filtro pronto para várias faces. |
 | ''' + item('linker') + ''' [Vinculador](linker.md) | Liga máquinas a um roteador de alcance e abre o roteador de uma máquina. |
-| ''' + item('configurator') + ''' [Configurador](configurator.md) | Copia a configuração de um roteador para outro. |
+| ''' + item('configurator') + ''' [Configurador](configurator.md) | Propõe e aplica os modos das faces de uma máquina, com dois cliques. |
 | ''' + item('network_tablet') + ''' [Tablet de Rede](network-tablet.md) | Vê e gerencia suas redes de qualquer lugar. |
 | ''' + item('chunk_loader_upgrade') + ''' [Upgrade de Chunk Loading](chunk-loading.md) | O roteador trabalha com você longe. |
 | ''' + item('storage_chest') + ''' [Baú Wireless](wireless-chest.md) | Milhões de itens por tipo; entre dois deles, um tipo inteiro passa de uma vez. |
@@ -52,16 +52,22 @@ entre si, sem canos.
 
 ## Este guia
 
-Você ganha o livro ao entrar no mundo pela primeira vez; ele também está na aba criativa. Para fazer
-outro: livro + redstone, na bancada. Com o mouse sobre um item do mod (inventário ou JEI), segure
-**G** para abrir a página dele.
+Você ganha o livro ao entrar no mundo pela primeira vez; ele também está na aba criativa. Clique
+com o botão direito segurando o livro para abri-lo. Para fazer outro: livro + redstone, na bancada.
+
+- **Buscar:** na folha de rosto, comece a digitar (ou aperte **Ctrl + F**). **Enter** abre o primeiro
+  resultado e as setas ↑ ↓ andam pelos outros.
+- **Tecla G:** com o mouse sobre um item do mod (no inventário, num baú ou no JEI), aperte **G**
+  (o nome padrão da tecla; dá para trocá-la nos Controles) e o livro abre na página dele.
+- **Cenas 3D:** arraste com o botão esquerdo para girar; a roda do mouse dentro da cena dá zoom;
+  clique duplo volta ao ângulo da página. Passe o mouse numa anotação para ver o texto dela.
 
 <Recipe id="wirelessautomate:guide" />
 
 ## Todas as páginas
 
 <SubPages icons={true} />
-''', front('Wireless Automate', 'wirelessautomate:router', parent=None) + '''
+''', front('Wireless Automate', 'wirelessautomate:router', 'comecar', parent=None) + '''
 # Wireless Automate
 
 <ItemImage id="wirelessautomate:router" scale="2" float="left" />
@@ -95,7 +101,7 @@ other, with no pipes.
 | ''' + item('tier_core_advanced') + ''' [Upgrade Cards](upgrade-cards.md) | Raise the router's tier: more throughput and range. |
 | ''' + item('filter_card') + ''' [Filter Card](filter-card.md) | A ready-made filter for many faces. |
 | ''' + item('linker') + ''' [Linker](linker.md) | Links machines to a range router and opens the router of a machine. |
-| ''' + item('configurator') + ''' [Configurator](configurator.md) | Copies a router's configuration to another. |
+| ''' + item('configurator') + ''' [Configurator](configurator.md) | Proposes and applies a machine's face modes, in two clicks. |
 | ''' + item('network_tablet') + ''' [Network Tablet](network-tablet.md) | See and manage your networks from anywhere. |
 | ''' + item('chunk_loader_upgrade') + ''' [Chunk Loading Upgrade](chunk-loading.md) | The router keeps working while you're away. |
 | ''' + item('storage_chest') + ''' [Wireless Chest](wireless-chest.md) | Millions of items by type; between two of them, a whole type moves at once. |
@@ -111,9 +117,15 @@ other, with no pipes.
 
 ## This guide
 
-You get this book the first time you join the world; it's also in the creative tab. To make
-another: book + redstone, in a crafting table. With the mouse over one of the mod's items (inventory
-or JEI), hold **G** to open its page.
+You get this book the first time you join the world; it's also in the creative tab. Right-click
+while holding the book to open it. To make another: book + redstone, in a crafting table.
+
+- **Search:** on the cover page, just start typing (or press **Ctrl + F**). **Enter** opens the
+  first result and the ↑ ↓ arrows move through the others.
+- **G key:** with the mouse over one of the mod's items (in the inventory, in a chest or in JEI),
+  press **G** (the default key; you can change it in Controls) and the book opens on its page.
+- **3D scenes:** drag with the left button to rotate; the mouse wheel over a scene zooms; double
+  click goes back to the page's angle. Hover an annotation to see its text.
 
 <Recipe id="wirelessautomate:guide" />
 

@@ -10,7 +10,7 @@ Comece por aqui para continuar o trabalho. Este arquivo é curto de propósito: 
 
 ## Próximo passo
 
-1. O dono testa à mão as correções do motor de 08/11 (um Separador Eletrolítico ou uma máquina com saída secundária num roteador Básico; dois tanques de tipos diferentes diante de um tanque só de lava) e decide o merge; e responde às perguntas da linha de 08/11 do histórico (a máquina faladeira).
+1. O dono testa à mão as correções do motor de 08/11 (um Separador Eletrolítico ou uma máquina com saída secundária num roteador Básico; dois tanques de tipos diferentes diante de um tanque só de lava) e decide o merge; e responde às seis perguntas da análise de balanceamento (`docs/superpowers/specs/2026-11-08-balanceamento-vazao-analise.md`).
 2. O dono testa à mão as etapas 1 a 4 e o Ctrl + clique do Vinculador (listas nas linhas de 02/11 do histórico), já no main.
 3. Reidealizar as telas do Tablet do zero (criação de redes etc.), mockup primeiro para o ok do dono.
 4. Subir a 2.15.1 no CurseForge e no Modrinth; refazer as imagens do Vinculador na vitrine (sem a área) e a do livro (ver `pendencias.md`).

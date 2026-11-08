@@ -16,6 +16,7 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 
 - **(dono)** Decidir se a saída do Ressonador deve ser suavizada (hoje o lote de 20 ticks sai num tick só). (28/10)
 - **(dono)** Máquina que chama `setChanged` a cada tick (faladeira) acorda as portas dela a cada tick: a origem nunca dorme e os destinos re-simulam os recusados a cada tick (A13 do backlog da `wa-performance`). Decidir se o aviso repetido sem mudança útil passa a ser desconfiado (ver as perguntas de 08/11 no histórico). (08/11)
+- **(dono)** Responder às seis perguntas de `docs/superpowers/specs/2026-11-08-balanceamento-vazao-analise.md` (tempo de encher o armazenamento, equivalência balde × item, químico, Source, Ultimate, Básico de itens); depois, a migração 6 da config e a tabela nova. (08/11)
 - Bench: cenário com máquina de duas saídas (uma enchendo acima da vazão do tier) e tanque seletivo, para os M7 e M8 do backlog terem número além dos GameTests. (08/11)
 - Bench: um cenário de destino seletivo (Baú do mod com milhares de tipos diante de máquinas que recusam a maioria); hoje só os GameTests medem. (02/11)
 - Avaliar se o orçamento padrão de 1 ms deve subir em servidores com folga: com 1.000 máquinas ou no Sophisticated, o mod deixa de 14% a 55% da vazão para trás (`docs/benchmark-logistics-network.md`). (bench comparativo)

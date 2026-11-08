@@ -646,7 +646,7 @@ public final class TestMachines {
      * para servir de ralo nos testes de vazão.
      */
     static final class TypedTank implements IFluidHandler {
-        static final int CAPACITY = 100_000_000;
+        static final int CAPACITY = Integer.MAX_VALUE;
         private Fluid accepted = Fluids.EMPTY;
         private FluidStack stored = FluidStack.EMPTY;
 
@@ -656,6 +656,11 @@ public final class TestMachines {
 
         int amount() {
             return stored.getAmount();
+        }
+
+        /** Esvazia (as medições de vazão, para o tanque não encher). */
+        void clear() {
+            stored = FluidStack.EMPTY;
         }
 
         @Override

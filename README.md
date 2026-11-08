@@ -6,7 +6,7 @@ O **Wireless Automate** move itens, fluidos, energia, químicos do Mekanism e So
 
 Foi feito para modpacks grandes: em vez de cada bloco ter o próprio tick, um gerenciador central move tudo dentro de um orçamento de tempo pequeno por tick, então centenas de máquinas não viram lag.
 
-**Estado:** versão 2.13. O Baú Wireless ganha dois slots de upgrade: o **Upgrade de Mesa de Trabalho** (uma grade 3×3 dentro do Baú, que se repõe pelo estoque dele) e o **Upgrade de Compactação** (cadeias de itens como pepita, lingote e bloco compactadas e descompactadas sozinhas). O que mudou em cada versão está no [changelog](docs/curseforge/changelog-curseforge-2.13.0.md) e na [página de releases](https://github.com/MatheusANBS/Wireless-Automate/releases).
+**Estado:** versão 2.14. O mod ganha o **livro-guia próprio**, sem depender do GuideME: um livro aberto de duas folhas, com fitas por grupo, busca, receitas e cenas 3D que giram. O que mudou em cada versão está no [changelog](docs/curseforge/changelog-curseforge-2.14.0.md) e na [página de releases](https://github.com/MatheusANBS/Wireless-Automate/releases).
 
 Baixe no [CurseForge](https://www.curseforge.com/minecraft/mc-mods/wireless-automate) ou na [release mais recente do GitHub](https://github.com/MatheusANBS/Wireless-Automate/releases/latest). Requer NeoForge 21.1.248 ou mais novo (roda no ATM10).
 
@@ -61,13 +61,13 @@ Os tiers sobem a vazão e o alcance do roteador pela escada Básico → Avançad
 
 | Tier | Itens/s | Fluido e químico (mB/s) | Energia (FE/t) | Source/s | Alcance | Upgrade de Alcance |
 | --- | --- | --- | --- | --- | --- | --- |
-| Básico | 32 | 2.000 | 454 | 100 | 64 blocos | — |
-| Avançado | 256 | 16.000 | 29.100 | 800 | 512 blocos | 6 blocos, 8 máquinas |
-| Elite | 2.048 | 128.000 | 63.000 | 6.400 | Dimensão inteira | 12 blocos, 16 máquinas |
-| Esmeralda | 16.384 | 1.024.000 | 1.350.000 | 51.200 | Todas as dimensões | 16 blocos, 32 máquinas |
-| Allthemodium¹ | 131.072 | 8.192.000 | 67.200.000 | 409.600 | Todas as dimensões | 24 blocos, 48 máquinas |
-| Vibranium¹ | 1.048.576 | 65.536.000 | 84.500.000 | 3.276.800 | Todas as dimensões | 32 blocos, 64 máquinas |
-| Unobtainium¹ | 8.388.608 | 524.288.000 | 158.000.000 | 26.214.400 | Todas as dimensões | 48 blocos, 96 máquinas |
+| Básico | 32 | 8.000 | 454 | 1.000 | 64 blocos | — |
+| Avançado | 256 | 64.000 | 29.100 | 8.000 | 512 blocos | 6 blocos, 8 máquinas |
+| Elite | 2.048 | 512.000 | 63.000 | 64.000 | Dimensão inteira | 12 blocos, 16 máquinas |
+| Esmeralda | 16.384 | 4.096.000 | 1.350.000 | 512.000 | Todas as dimensões | 16 blocos, 32 máquinas |
+| Allthemodium¹ | 131.072 | 32.768.000 | 67.200.000 | 4.096.000 | Todas as dimensões | 24 blocos, 48 máquinas |
+| Vibranium¹ | 1.048.576 | 262.144.000 | 84.500.000 | 32.768.000 | Todas as dimensões | 32 blocos, 64 máquinas |
+| Unobtainium¹ | 8.388.608 | 2.097.152.000 | 158.000.000 | 262.144.000 | Todas as dimensões | 48 blocos, 96 máquinas |
 | Ultimate | Sem limite | Sem limite | Sem limite | Sem limite | Todas as dimensões | 64 blocos, 128 máquinas |
 
 *Por face e por tipo de recurso; cada máquina vinculada pelo Upgrade de Alcance tem a vazão cheia, e a energia de cada tier escoa a geração cheia do Ressonador de Sinal do mesmo tier. ¹ Só com o Allthemodium. Donos de servidor podem mudar todos os valores na config.*
@@ -84,13 +84,13 @@ Cinco armazenamentos feitos para o roteador: o **Baú Wireless** (tipos de item 
 
 | Tier | Baú (itens) | Tanque e Tanque Químico | Bateria | Tanque de Source |
 | --- | --- | --- | --- | --- |
-| Básico | 32.768 | 256 B | 31,1M FE | 10.000 |
-| Avançado | 262.144 | 2.048 B | 1,99G FE | 80.000 |
-| Elite | 2.097.152 | 16.384 B | 4,32G FE | 640.000 |
-| Esmeralda | 16.777.216 | 131.072 B | 92,2G FE | 5.120.000 |
-| Allthemodium¹ | 134.217.728 | 1.048.576 B | 4,61T FE | 40.960.000 |
-| Vibranium¹ | 1.073.741.824 | 8.388.608 B | 5,79T FE | 327.680.000 |
-| Unobtainium¹ | 8.589.934.592 | 67.108.864 B | 10,8T FE | 2.621.440.000 |
+| Básico | 115.200 | 28.800 B | 31,1M FE | 3.600.000 |
+| Avançado | 921.600 | 230.400 B | 1,99G FE | 28.800.000 |
+| Elite | 7.372.800 | 1.843.200 B | 4,32G FE | 230.400.000 |
+| Esmeralda | 58.982.400 | 14.745.600 B | 92,2G FE | 1.843.200.000 |
+| Allthemodium¹ | 471.859.200 | 117.964.800 B | 4,61T FE | 14.745.600.000 |
+| Vibranium¹ | 3.774.873.600 | 943.718.400 B | 5,79T FE | 117.964.800.000 |
+| Unobtainium¹ | 30.198.988.800 | 7.549.747.200 B | 10,8T FE | 943.718.400.000 |
 | Ultimate | Sem limite | Sem limite | Sem limite | Sem limite |
 
 - Uma Bateria guarda **uma hora do Ressonador de Sinal do tier dela** em geração cheia, e a vazão de energia de um roteador é a geração desse mesmo Ressonador mais 5% (Ultimate: sem limite).
@@ -122,7 +122,7 @@ Com o Ars Nouveau instalado, todo roteador ganha uma aba **Source**. Source Jars
 
 ![Source do Ars Nouveau](docs/curseforge/feature-11-source.png)
 
-O **Tanque de Source Wireless** guarda de 10.000 de Source (Básico) a sem limite (Ultimate) e mostra o nível no vidro. Sourcelinks a até 5 blocos depositam nele e as máquinas do Ars por perto tiram dele, como de uma Source Jar.
+O **Tanque de Source Wireless** guarda de 3.600.000 de Source (Básico) a sem limite (Ultimate) e mostra o nível no vidro. Sourcelinks a até 5 blocos depositam nele e as máquinas do Ars por perto tiram dele, como de uma Source Jar.
 
 ![Tanque de Source Wireless](docs/curseforge/feature-12-source-tank.png)
 
@@ -199,12 +199,10 @@ Um painel de parede que mostra **números ao vivo das suas redes e armazenamento
 
 ![Vincule uma área inteira](docs/curseforge/feature-5-area.png)
 
-- **Vinculador** (dois modos): **Vincular** escolhe um roteador com o Upgrade de Alcance (clique nele) e vincula as máquinas em que você clica, ou **uma área marcada inteira** de uma vez (Shift + clique em dois blocos; a mais perto primeiro, até o raio e o limite do tier); a chave **Desvincular** tira em vez de pôr. **Abrir** abre a tela do roteador que chega na máquina em que você clica, já editando aquela máquina; com vários roteadores, uma lista curta deixa você escolher. Ele confere o alcance, os claims e os mods de proteção no roteador. O Vinculador não mexe mais em redes: escolha a rede de cada face na tela do roteador ou no Tablet.
-- **Configurador** (o Pincel): Shift + clique num roteador copia a configuração dele (faces, filtros, prioridades, redstone e a rede de cada face), clique cola em outro, e Shift + clique num bloco sem roteador limpa a cópia. Cole todas as abas ou só um tipo, sem tocar nas outras abas. Segure **Alt esquerdo** para uma roda radial que escolhe o tipo colado. A rede de uma face só é colada se você puder usá-la, e uma face só sai de uma rede que você edita. Para configurar vários roteadores de uma vez, cole o perfil nos marcados do Tablet.
+- **Vinculador** (dois modos): **Vincular** escolhe um roteador com o Upgrade de Alcance (clique nele) e vincula ou desvincula as máquinas em que você clica, ou **todas as do mesmo bloco no raio** com Ctrl (Cmd no Mac) + clique numa delas (a mais perto primeiro, até o raio e o limite do tier; numa já vinculada, o mesmo gesto desvincula todas as do mesmo bloco); Shift + clique no ar solta o roteador escolhido. **Abrir** abre a tela do roteador que chega na máquina em que você clica, já editando aquela máquina; com vários roteadores, uma lista curta deixa você escolher. Ele confere o alcance, os claims e os mods de proteção no roteador. O Vinculador não mexe mais em redes: escolha a rede de cada face na tela do roteador ou no Tablet.
+- **Configurador** (o Afinador): clique numa máquina vinculada e ele descobre o que cada face aceita e dá, e pinta a proposta dos modos nas faces (Insere, Extrai, Armazém); clique de novo para aplicar, com Shift no grupo inteiro. Muda só os modos. Para copiar a configuração de um roteador para outros, use o perfil do Tablet.
 - **Upgrade de Chunk Loading:** mantém um roteador e a máquina dele trabalhando enquanto você está longe.
 - **Editor de receitas** (operadores): `/wa recipes` abre uma tela para trocar, desativar ou restaurar qualquer receita de bancada do mod, com itens do seu inventário ou do JEI, tags e a quantidade do resultado. Gravado como datapack em `config/wirelessautomate/recipes/`, então vale em todos os mundos e sobrevive a atualizações. Útil para packs que querem outra receita do Ultimate.
-
-![Pincel do Configurador](docs/curseforge/feature-16-wheel.png)
 
 ![Vincular ou abrir](docs/curseforge/feature-13-linker.png)
 
@@ -226,7 +224,7 @@ Todos os roteadores de todas as redes, de qualquer lugar: uma caixa de busca par
 
 ![Livro-guia embutido](docs/curseforge/feature-7-guide.png)
 
-Todo jogador recebe o livro-guia no primeiro login (ele também está na aba criativa, ou faça com um livro e redstone). Ele explica cada item com cenas 3D interativas e receitas, em **inglês e português**. Passe o mouse sobre qualquer item do mod e segure **G** para ir à página dele.
+Todo jogador recebe o livro-guia no primeiro login (ele também está na aba criativa, ou faça com um livro e redstone). Ele explica cada item com cenas 3D que giram (arraste para girar, a roda dá zoom, clique duplo volta ao ângulo, e as anotações mostram o texto ao passar o mouse) e receitas, em **inglês e português**. Passe o mouse sobre qualquer item do mod e aperte **G** para ir à página dele.
 
 ---
 
@@ -238,7 +236,7 @@ Todo jogador recebe o livro-guia no primeiro login (ele também está na aba cri
 4. No primeiro roteador, ponha a face **Cima** em **Extrai**.
 5. No segundo roteador, ponha a mesma face em **Insere**. Agora os itens vão do primeiro baú para o segundo.
 
-Com o primeiro roteador de uma linha configurado, copie-o com o Configurador (Shift + clique nele) e cole (clique) nos outros.
+Com o primeiro roteador de uma linha configurado, copie o perfil dele no Tablet e cole nos outros.
 
 As receitas usam itens vanilla, menos os tiers do Allthemodium (feitos com os metais do mod Allthemodium, só quando ele está instalado).
 
@@ -254,7 +252,6 @@ As receitas usam itens vanilla, menos os tiers do Allthemodium (feitos com os me
 | **Allthemodium** (opcional, como no ATM10) | Três tiers a mais (Allthemodium, Vibranium e Unobtainium) entre a Esmeralda e o Ultimate, para o roteador e todos os armazenamentos. Com o **All The Tweaks**, o anel do Ultimate pede fragmentos de ATM Star. |
 | **JEI** (opcional) | Arrastar e soltar (ou Shift + clique) ingredientes nos filtros sem ter o item, ou no inspetor de tags; as receitas de subir tier (bloco no anel, cartões com origem, bloco + cartão) aparecem no JEI. |
 | **FTB Teams** (opcional) | Acrescente um time de grupo a uma rede privada e cada membro ganha o acesso de convidado, ao vivo. Precisa do FTB Teams para 1.21.1 (com o FTB Library e o Architectury, que ele mesmo pede). |
-| **GuideME** (opcional) | O livro-guia no jogo. |
 
 ## Desempenho
 
@@ -289,7 +286,7 @@ O script instala o que faltar (JDK 21, git, curl, unzip) e roda o primeiro build
 | `./gradlew runGameTestServerSource` | GameTests de Source, num servidor com o Ars Nouveau (e GeckoLib e Curios) |
 | `./gradlew runGameTestServerAllthemodium` | GameTests dos tiers do ATM, com o Allthemodium, o All The Tweaks e o GeckoLib |
 | `./gradlew runGameTestServerTeams` | GameTests de times, num servidor com o FTB Teams, o FTB Library e o Architectury |
-| `./gradlew runClient` | Cliente de dev com JEI, Mekanism, Ars Nouveau, Allthemodium, GuideME e outros mods, para testar à mão |
+| `./gradlew runClient` | Cliente de dev com JEI, Mekanism, Ars Nouveau, Allthemodium e outros mods, para testar à mão |
 | `./gradlew runData` | Geradores de dados, saída em `src/generated/resources/` |
 | `./scripts/e2e.sh` | Teste de ponta a ponta num mundo real (ver `docs/e2e.md`) |
 | `./scripts/bench.sh <cenários>` | Benchmark num servidor dedicado com Sophisticated Storage (ver `docs/benchmark.md`) |

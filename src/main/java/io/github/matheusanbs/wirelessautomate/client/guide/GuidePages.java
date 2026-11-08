@@ -1,0 +1,192 @@
+package io.github.matheusanbs.wirelessautomate.client.guide;
+
+import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.client.guide.doc.GuideDoc;
+import io.github.matheusanbs.wirelessautomate.client.guide.doc.GuideHeader;
+import io.github.matheusanbs.wirelessautomate.client.guide.doc.GuideParser;
+import io.github.matheusanbs.wirelessautomate.client.guide.layout.GuideLayout;
+import io.github.matheusanbs.wirelessautomate.client.guide.layout.GuideMetrics;
+import io.github.matheusanbs.wirelessautomate.client.guide.layout.Sheet;
+import io.github.matheusanbs.wirelessautomate.client.guide.layout.TextMeasure;
+import java.io.IOException;
+import java.io.Reader;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import net.minecraft.client.Minecraft;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.Resource;
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
+import org.apache.commons.io.IOUtils;
+import org.jetbrains.annotations.Nullable;
+
+/**
+ * As páginas do livro no idioma do jogo: lidas pelo {@code ResourceManager} uma vez ({@code guide/<idioma>/*.md}, com o
+ * {@code en_us} como reserva por página), paginadas sob demanda e guardadas, com o índice por grupo e o mapa
+ * item → página. O recarregar de recursos esquece tudo; a próxima abertura do livro lê de novo.
+ */
+public final class GuidePages {
+    /** O recarregar de recursos do cliente (registrado no {@code ClientSetup}). */
+    public static final ResourceManagerReloadListener RELOAD = manager -> clear();
+
+    private static final String FALLBACK = "en_us";
+
+    /** O que foi lido, publicado de uma vez: outras threads (a dica) só veem o estado inteiro ou o vazio. */
+    private record Loaded(@Nullable String language, Map<String, GuideDoc> docs, List<String> order,
+            Map<String, String> itemPages) {
+        static final Loaded EMPTY = new Loaded(null, Map.of(), List.of(), Map.of());
+    }
+
+    private static volatile Loaded loaded = Loaded.EMPTY;
+    private static final Map<String, List<Sheet>> SHEETS = new HashMap<>();
+    private static @Nullable GuideIndex index;
+    private static @Nullable FontMeasure measure;
+    private static @Nullable List<GuideSearch.Page> searchPages;
+
+    private GuidePages() {
+    }
+
+    /** Esquece as páginas, as folhas e o índice (recarregar de recursos ou saída do mundo). */
+    public static void clear() {
+        loaded = Loaded.EMPTY;
+        SHEETS.clear();
+        index = null;
+        searchPages = null;
+        measure = null;
+    }
+
+    /** Lê as páginas se ainda não leu (ou se o idioma mudou). */
+    static void ensure() {
+        Minecraft mc = Minecraft.getInstance();
+        String want = mc.getLanguageManager().getSelected();
+        if (want.equals(loaded.language)) {
+            return;
+        }
+        clear();
+        ResourceManager rm = mc.getResourceManager();
+        measure = new FontMeasure(mc.font, rm);
+        Map<String, GuideDoc> read = new HashMap<>();
+        load(rm, FALLBACK, read);
+        if (!FALLBACK.equals(want)) {
+            load(rm, want, read);
+        }
+        List<String> ids = new ArrayList<>(read.keySet());
+        ids.sort(Comparator.comparingInt((String id) -> GuideIndex.groupOrder(read.get(id).group()))
+                .thenComparingInt(id -> position(read.get(id).header()))
+                .thenComparing(id -> id));
+        Map<String, GuideDoc> sorted = new LinkedHashMap<>();
+        Map<String, String> items = new HashMap<>();
+        for (String id : ids) {
+            GuideDoc doc = read.get(id);
+            sorted.put(id, doc);
+            for (String item : doc.header().itemIds()) {
+                items.putIfAbsent(item, id);
+            }
+        }
+        loaded = new Loaded(want, sorted, List.copyOf(ids), items);
+    }
+
+    /** A página sem pai (a raiz) vem antes das outras do grupo; sem {@code position}, depois das que têm. */
+    private static int position(GuideHeader h) {
+        return h.parent().isEmpty() ? Integer.MIN_VALUE : h.position();
+    }
+
+    private static void load(ResourceManager rm, String lang, Map<String, GuideDoc> out) {
+        String folder = "guide/" + lang;
+        Map<ResourceLocation, Resource> found = rm.listResources(folder,
+                loc -> loc.getNamespace().equals(WirelessAutomate.MODID) && loc.getPath().endsWith(".md"));
+        for (Map.Entry<ResourceLocation, Resource> e : found.entrySet()) {
+            String path = e.getKey().getPath();
+            String id = path.substring(folder.length() + 1, path.length() - ".md".length());
+            try (Reader reader = e.getValue().openAsReader()) {
+                GuideDoc doc = GuideParser.parse(IOUtils.toString(reader));
+                for (String w : doc.warnings()) {
+                    WirelessAutomate.LOGGER.warn("Livro: {}/{}.md, {}", lang, id, w);
+                }
+                out.put(id, doc);
+            } catch (IOException ex) {
+                WirelessAutomate.LOGGER.warn("Livro: não deu para ler {}", e.getKey(), ex);
+            }
+        }
+    }
+
+    /** As páginas na ordem do índice (grupo, depois posição). */
+    public static List<String> pageIds() {
+        ensure();
+        return loaded.order;
+    }
+
+    static boolean exists(String id) {
+        return loaded.docs.containsKey(id);
+    }
+
+    static String title(String id) {
+        GuideDoc doc = loaded.docs.get(id);
+        return doc == null || doc.title().isEmpty() ? id : doc.title();
+    }
+
+    static String group(String id) {
+        GuideDoc doc = loaded.docs.get(id);
+        return doc == null ? "" : doc.group();
+    }
+
+    /** A página do item (pelos {@code item_ids} das páginas), ou {@code null} se nenhuma o cita. */
+    public static @Nullable String pageForItem(String itemId) {
+        return loaded.itemPages.get(itemId);
+    }
+
+    /** As folhas da página, paginadas na primeira vez e guardadas. */
+    static List<Sheet> sheets(String id) {
+        List<Sheet> s = SHEETS.get(id);
+        if (s == null) {
+            GuideDoc doc = loaded.docs.get(id);
+            s = doc == null ? List.of() : GuideLayout.paginate(doc, GuideMetrics.SHEET_W, GuideMetrics.SHEET_H, measure);
+            SHEETS.put(id, s);
+        }
+        return s;
+    }
+
+    /** O texto de cada página para a busca, na ordem do índice: montado na primeira busca e guardado. */
+    static List<GuideSearch.Page> searchPages() {
+        if (searchPages == null) {
+            List<GuideSearch.Page> built = new ArrayList<>(loaded.order.size());
+            for (String id : loaded.order) {
+                built.add(GuideSearch.page(id, title(id), GuideSearch.textOf(loaded.docs.get(id))));
+            }
+            searchPages = List.copyOf(built);
+        }
+        return searchPages;
+    }
+
+    static TextMeasure measure() {
+        return measure;
+    }
+
+    static GuideIndex index() {
+        if (index == null) {
+            index = GuideIndex.build(loaded.order, loaded.docs, measure);
+        }
+        return index;
+    }
+
+    /**
+     * O destino de um link como está no texto ({@code networks.md}, {@code ./networks.md#x},
+     * {@code wirelessautomate:networks.md}) para o id da página, ou {@code null} se não há essa página.
+     */
+    static @Nullable String resolve(String target) {
+        String t = target;
+        int hash = t.indexOf('#');
+        if (hash >= 0) {
+            t = t.substring(0, hash);
+        }
+        t = t.substring(Math.max(t.lastIndexOf('/'), t.lastIndexOf(':')) + 1);
+        if (t.endsWith(".md")) {
+            t = t.substring(0, t.length() - 3);
+        }
+        return loaded.docs.containsKey(t) ? t : null;
+    }
+}

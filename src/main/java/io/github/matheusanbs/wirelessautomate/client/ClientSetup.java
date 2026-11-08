@@ -2,7 +2,8 @@ package io.github.matheusanbs.wirelessautomate.client;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.client.filter.FilterScreen;
-import io.github.matheusanbs.wirelessautomate.client.linker.LinkerScreen;
+import io.github.matheusanbs.wirelessautomate.client.guide.GuidePages;
+import io.github.matheusanbs.wirelessautomate.client.guide.GuideScreen;
 import io.github.matheusanbs.wirelessautomate.client.recipe.RecipeEditorScreen;
 import io.github.matheusanbs.wirelessautomate.client.repairer.RepairerScreen;
 import io.github.matheusanbs.wirelessautomate.client.repairer.render.RepairerRenderer;
@@ -18,9 +19,9 @@ import io.github.matheusanbs.wirelessautomate.client.tv.TvScreen;
 import io.github.matheusanbs.wirelessautomate.client.tv.editor.TvLibraryClient;
 import io.github.matheusanbs.wirelessautomate.client.tv.render.TvArtCache;
 import io.github.matheusanbs.wirelessautomate.client.tv.render.TvRenderer;
+import io.github.matheusanbs.wirelessautomate.item.GuideClientHooks;
 import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
-import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RepairerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.ResonatorMenu;
@@ -51,6 +52,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 import net.neoforged.neoforge.registries.DeferredItem;
@@ -103,6 +105,7 @@ public final class ClientSetup {
             TvClientHooks.storageContents = io.github.matheusanbs.wirelessautomate.client.tv.editor.TvStorageClient::receive;
             TvClientHooks.layoutAck = io.github.matheusanbs.wirelessautomate.client.tv.editor.TvEditorAck::receive;
             TvClientHooks.preview = io.github.matheusanbs.wirelessautomate.client.tv.TvPreviewValues::receive;
+            GuideClientHooks.open = GuideScreen::open;
         });
     }
 
@@ -116,8 +119,6 @@ public final class ClientSetup {
                 -> new StorageScalarScreen(menu, inventory, title));
         event.register(ModMenus.FILTER.get(),
                 (FilterMenu menu, Inventory inventory, Component title) -> new FilterScreen(menu, inventory, title));
-        event.register(ModMenus.LINKER.get(),
-                (LinkerMenu menu, Inventory inventory, Component title) -> new LinkerScreen(menu, inventory, title));
         event.register(ModMenus.NETWORK_TABLET.get(),
                 (TabletMenu menu, Inventory inventory, Component title) -> new TabletScreen(menu, inventory, title));
         event.register(ModMenus.RECIPE_EDITOR.get(), (RecipeEditorMenu menu, Inventory inventory, Component title)
@@ -128,6 +129,12 @@ public final class ClientSetup {
                 (RepairerMenu menu, Inventory inventory, Component title) -> new RepairerScreen(menu, inventory, title));
         event.register(ModMenus.SIGNAL_SCREEN.get(),
                 (TvMenu menu, Inventory inventory, Component title) -> new TvScreen(menu, inventory, title));
+    }
+
+    /** O livro-guia esquece as páginas lidas a cada recarga de recursos (e lê de novo ao abrir). */
+    @SubscribeEvent
+    static void registerReloadListeners(RegisterClientReloadListenersEvent event) {
+        event.registerReloadListener(GuidePages.RELOAD);
     }
 
     /** A câmara animada do Núcleo montado, a animação do Reparador de Cristais e a Tela de Sinal. */

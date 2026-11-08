@@ -4,6 +4,7 @@ import com.hollingsworth.arsnouveau.api.source.ISourceCap;
 import io.github.matheusanbs.wirelessautomate.range.MachineCaches;
 import io.github.matheusanbs.wirelessautomate.network.ScalarAccess;
 import io.github.matheusanbs.wirelessautomate.storage.BulkSource;
+import java.util.List;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.capabilities.BlockCapability;
@@ -61,6 +62,16 @@ public final class ArsSources {
         ISourceCap cap = (ISourceCap) handler;
         out[0] += cap.getSource();
         out[1] += cap.getMaxSource();
+    }
+
+    /**
+     * O que o Afinador do Configurador lê da {@link ISourceCap}: bit 1 se recebe, bit 2 se dá; a capacidade vai em
+     * {@code signature}.
+     */
+    public static int probe(Object handler, List<Long> signature) {
+        ISourceCap cap = (ISourceCap) handler;
+        signature.add((long) cap.getMaxSource());
+        return (cap.canReceive() ? 1 : 0) | (cap.canExtract() ? 2 : 0);
     }
 
     private static int clamp(long amount) {

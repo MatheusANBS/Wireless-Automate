@@ -20,8 +20,10 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -41,9 +43,10 @@ final class NetworkList {
      * @param mark  à direita: a marca da rede (ativa, pública) ou, no cabeçalho, Pausar ou "pausado"
      * @param pause o cabeçalho tem o botão de pausar e retomar (o grupo é do jogador e tem redes)
      * @param tip   a dica da linha: "também em …" numa rede em outros grupos
+     * @param icon  no cabeçalho, o ícone escolhido para o grupo (vazio sem ícone)
      */
     private record Line(Row row, @Nullable UUID id, Component name, int color, @Nullable Component mark, int markW,
-            int markColor, boolean pause, boolean paused, @Nullable Component tip) {
+            int markColor, boolean pause, boolean paused, @Nullable Component tip, ItemStack icon) {
     }
 
     private static final int CHEVRON_W = 10;
@@ -96,14 +99,16 @@ final class NetworkList {
 
     private Line header(Font font, TabletSnapshot s, Row row) {
         if (row.group() < 0) {
-            return new Line(row, null, tr("networks.no_group"), GuiPaint.MUTED, null, 0, 0, false, false, null);
+            return new Line(row, null, tr("networks.no_group"), GuiPaint.MUTED, null, 0, 0, false, false, null,
+                    ItemStack.EMPTY);
         }
         GroupView group = s.groups().get(row.group());
         boolean pause = group.manageable() && !group.networks().isEmpty();
         Component mark = pause && !group.paused() ? tr("networks.pause") : group.paused() ? tr("networks.paused") : null;
         int markColor = group.paused() ? GuiPaint.PAUSED : GuiPaint.FG;
+        ItemStack icon = group.icon().map(id -> new ItemStack(BuiltInRegistries.ITEM.get(id))).orElse(ItemStack.EMPTY);
         return new Line(row, group.id(), Component.literal(group.name()), GuiPaint.FG, mark,
-                mark == null ? 0 : font.width(mark), markColor, pause, group.paused(), null);
+                mark == null ? 0 : font.width(mark), markColor, pause, group.paused(), null, icon);
     }
 
     private Line network(Font font, TabletSnapshot s, Row row) {
@@ -119,7 +124,7 @@ final class NetworkList {
             tip = tr("networks.also_in", names);
         }
         return new Line(row, n.id(), Component.literal(n.name()), 0xFF000000 | n.color(), mark,
-                mark == null ? 0 : font.width(mark), GuiPaint.MUTED, false, false, tip);
+                mark == null ? 0 : font.width(mark), GuiPaint.MUTED, false, false, tip, ItemStack.EMPTY);
     }
 
     int count(Font font) {
@@ -284,6 +289,16 @@ final class NetworkList {
             GuiPaint.textRight(g, font, line.mark, right, y + 4, line.markColor);
             right -= line.markW + 3;
         }
-        GuiText.draw(g, font, line.name, x + CHEVRON_W + 1, y + 4, right - x - CHEVRON_W - 1, line.color);
+        int nameX = x + CHEVRON_W + 1;
+        if (!line.icon.isEmpty()) {
+            // o ícone em 12 px, para caber na linha de 14
+            g.pose().pushPose();
+            g.pose().translate(nameX, y + 1, 0);
+            g.pose().scale(0.75F, 0.75F, 1F);
+            g.renderItem(line.icon, 0, 0);
+            g.pose().popPose();
+            nameX += 14;
+        }
+        GuiText.draw(g, font, line.name, nameX, y + 4, right - nameX, line.color);
     }
 }

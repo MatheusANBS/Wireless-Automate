@@ -324,9 +324,13 @@ public record TabletSnapshot(
     public record Guest(UUID id, String name, boolean online) {
     }
 
-    /** Um grupo de redes do jogador (ou de qualquer um, para operador). */
+    /**
+     * Um grupo de redes do jogador (ou de qualquer um, para operador).
+     *
+     * @param icon o item escolhido para o grupo, ou vazio
+     */
     public record GroupView(UUID id, String name, String owner, boolean manageable, boolean paused,
-            List<UUID> networks) {
+            List<UUID> networks, Optional<ResourceLocation> icon) {
     }
 
     /**
@@ -521,6 +525,7 @@ public record TabletSnapshot(
             for (UUID id : g.networks) {
                 buf.writeUUID(id);
             }
+            buf.writeOptional(g.icon, (b, icon) -> b.writeResourceLocation(icon));
         }
         buf.writeVarInt(s.machineFacets.size());
         for (Facet<ResourceLocation> facet : s.machineFacets) {
@@ -581,7 +586,8 @@ public record TabletSnapshot(
             for (int j = 0; j < count; j++) {
                 members.add(buf.readUUID());
             }
-            groups.add(new GroupView(id, name, owner, manageable, paused, List.copyOf(members)));
+            Optional<ResourceLocation> icon = buf.readOptional(b -> b.readResourceLocation());
+            groups.add(new GroupView(id, name, owner, manageable, paused, List.copyOf(members), icon));
         }
         int machineCount = buf.readVarInt();
         List<Facet<ResourceLocation>> machineFacets = new ArrayList<>(machineCount);

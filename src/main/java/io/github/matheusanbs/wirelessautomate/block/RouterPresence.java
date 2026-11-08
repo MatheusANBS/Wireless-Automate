@@ -16,13 +16,15 @@ final class RouterPresence {
     private final RouterBlockEntity router;
     private final RouterNeighbors neighbors;
     private final RouterRange range;
+    private final RouterAttached attached;
     /** O chunk descarregou: o {@code setRemoved} que vem depois não é o roteador saindo do mundo. */
     private boolean chunkUnloading;
 
-    RouterPresence(RouterBlockEntity router, RouterNeighbors neighbors, RouterRange range) {
+    RouterPresence(RouterBlockEntity router, RouterNeighbors neighbors, RouterRange range, RouterAttached attached) {
         this.router = router;
         this.neighbors = neighbors;
         this.range = range;
+        this.attached = attached;
     }
 
     private @Nullable Level serverLevel() {
@@ -36,6 +38,10 @@ final class RouterPresence {
         if (level != null) {
             neighbors.loaded(level);
             NetworkManager.get().addNode(router);
+            // A presa confere o bloco da frente (e um mundo antigo converte o rascunho).
+            if (attached.sync()) {
+                router.changed(NetworkManager.ALL_TYPES);
+            }
             NodeIndex.track(router);
             chunkUnloading = false;
             RouterChunkLoader.get().loaded(router);
@@ -70,21 +76,22 @@ final class RouterPresence {
     /** O estado do bloco mudou ({@link RouterBlockEntity#setBlockState}); recebe o que valia antes. */
     void stateChanged(Direction oldFacing, RouterTier oldTier, int oldSpin) {
         boolean rotated = router.facing() != oldFacing;
-        // Girado no próprio eixo (spin): a máquina fica no lugar, então os caches valem; como o
-        // upgrade de tier, só as rotas e a tela precisam saber.
-        boolean changed = rotated || router.tier() != oldTier || router.spin() != oldSpin;
-        if (changed) {
+        // Girado no próprio eixo (spin): a máquina e a configuração dela ficam, então só a tela precisa saber.
+        boolean routes = rotated || router.tier() != oldTier;
+        if (routes || router.spin() != oldSpin) {
             router.bumpChangeVersion();
         }
         if (rotated) {
             neighbors.rotated();
+            // Outra máquina na frente: a presa vai para o grupo dela.
+            attached.sync();
             if (serverLevel() != null && router.hasChunkUpgrade()) {
                 // O chunk da máquina pode ser outro.
                 RouterChunkLoader.get().update(router);
             }
         }
-        // Upgrade de tier muda vazão e alcance das rotas; o giro muda o lado relativo de cada face.
-        if (changed && serverLevel() != null) {
+        // Upgrade de tier muda vazão e alcance das rotas; virar para outra face muda a máquina.
+        if (routes && serverLevel() != null) {
             NetworkManager.get().nodeChanged(router);
             NodeIndex.track(router);
             if (router.tier() != oldTier) {
@@ -102,6 +109,7 @@ final class RouterPresence {
         router.bumpChangeVersion();
         // Carga sobre um nó já no mundo (ex.: /data merge): as rotas mudam.
         if (serverLevel() != null) {
+            attached.sync();
             NetworkManager.get().nodeChanged(router);
             NodeIndex.track(router);
             if (!router.isRemoved()) {

@@ -47,6 +47,20 @@ public final class RangeRules {
         return result;
     }
 
+    /**
+     * As vagas usadas, o "7" de {@code 7/32}: as máquinas ativas do {@link #reach}. A conta única da tela, do Vinculador
+     * e da recusa {@link LinkRefusal#LIMIT}; com o limite baixado na config, as além dele não contam.
+     */
+    public static int used(Reach[] reach) {
+        int used = 0;
+        for (Reach state : reach) {
+            if (state == Reach.ACTIVE) {
+                used++;
+            }
+        }
+        return used;
+    }
+
     /** Por que um vínculo foi recusado. {@code NONE} quer dizer que pode vincular. */
     public enum LinkRefusal {
         NONE, NO_UPGRADE, NO_RANGE, OTHER_DIMENSION, OUT_OF_RANGE, LIMIT, NOT_A_MACHINE, SELF, ROUTER, ATTACHED, PROTECTED;

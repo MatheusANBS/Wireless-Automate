@@ -2,12 +2,10 @@ package io.github.matheusanbs.wirelessautomate.client.dev;
 
 import static io.github.matheusanbs.wirelessautomate.client.dev.ScreenshotFilter.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.ScreenshotGalleries.*;
-import static io.github.matheusanbs.wirelessautomate.client.dev.ScreenshotLinker.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.ScreenshotRepairer.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.ScreenshotResonator.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.ScreenshotRouter.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.ScreenshotTablet.*;
-import static io.github.matheusanbs.wirelessautomate.client.dev.ScreenshotWheel.*;
 
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -35,7 +33,6 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import org.lwjgl.opengl.GL11;
-import io.github.matheusanbs.wirelessautomate.client.GuiText;
 
 /**
  * Modo de captura para conferir a tela sem monitor. Só roda com a variável de ambiente
@@ -81,10 +78,10 @@ public final class DevScreenshot {
 
     /**
      * Todos os passos, na ordem: roteador, visor 3D, filtro, cartões, upgrade, Tablet, Vinculador, Núcleo do
-     * Ressonador, Reparador de Cristais e as galerias (giro, blocos, capa, roda).
+     * Ressonador, Reparador de Cristais e as galerias (giro, blocos, capa).
      */
     private static final List<Step> SEQUENCE = Stream.of(STEPS, viewSteps(), filterSteps(), cardSteps(),
-                    upgradeSteps(), rangeSteps(), tabletSteps(), linkerSteps(), resonatorSteps(), repairerSteps(), spinSteps(), blockSteps(), coverSteps(), wheelSteps())
+                    upgradeSteps(), rangeSteps(), tabletSteps(), resonatorSteps(), repairerSteps(), spinSteps(), blockSteps(), coverSteps())
             .flatMap(List::stream)
             .filter(step -> ONLY == null || step.file().startsWith(ONLY))
             .toList();
@@ -95,22 +92,6 @@ public final class DevScreenshot {
             return;
         }
         Minecraft minecraft = Minecraft.getInstance();
-        if (wheelGallery && wheelScreen != null) {
-            if (wheelScreen.width != title.width || wheelScreen.height != title.height) {
-                wheelScreen.init(minecraft, title.width, title.height);
-            }
-            event.getGuiGraphics().flush();
-            RenderSystem.clear(GL11.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
-            wheelScreen.render(event.getGuiGraphics(), mouseX, mouseY, event.getPartialTick());
-            if (GuiText.clipCount() > 0) {
-                WirelessAutomate.LOGGER.warn("Roda: {} texto(s) cortado(s)", GuiText.clipCount());
-            }
-            drawCursor(event.getGuiGraphics());
-            return;
-        }
-        if (wheelGallery) {
-            return;
-        }
         if (spinGallery || blockGallery || coverGallery) {
             event.getGuiGraphics().flush();
             RenderSystem.clear(GL11.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
@@ -131,7 +112,6 @@ public final class DevScreenshot {
         }
         AbstractContainerScreen<?> active = repairerScreen != null ? repairerScreen
                 : resonatorScreen != null ? resonatorScreen
-                : linkerScreen != null ? linkerScreen
                 : tabletScreen != null ? tabletScreen
                 : filterScreen != null ? filterScreen : screen;
         if (active.width != title.width || active.height != title.height) {
@@ -182,7 +162,7 @@ public final class DevScreenshot {
             // a flag acima chega tarde quando a tela já foi escolhida: troca pela de título
             minecraft.setScreen(new TitleScreen(true));
         }
-        if (screen == null && !spinGallery && !blockGallery && !coverGallery && !wheelGallery
+        if (screen == null && !spinGallery && !blockGallery && !coverGallery
                 || ready < 60 || ready % STEP_TICKS != 0) {
             return;
         }

@@ -15,7 +15,7 @@ Legenda: ✅ pronto e testado · 🟡 parcial · ⬜ não começado
 | Redes | ✅ | 1.9.0 (por face) | Rede por face, rede ativa, round-robin, grupos de redes, roteador nasce sem rede |
 | Acesso às redes privadas | ✅ | 2.7.0 | Convidados e times do FTB Teams (opcional) |
 | Filtros e Cartão de Filtro | ✅ | — | Sem limite de entradas, estoque em dois limites, tags, mod, propriedades, JEI |
-| Tiers e Cartões de Upgrade | ✅ | — | Oito tiers (três com o Allthemodium), ×8 por degrau, subir tier pelo anel ou pela bancada |
+| Tiers e Cartões de Upgrade | ✅ | 1.2.0 (escada ×8), 2.8.0 (energia pelo Ressonador), 2.16.0 (fluido, químico, Source e capacidades de uma hora) | Oito tiers (três com o Allthemodium), ×8 por degrau, subir tier pelo anel ou pela bancada |
 | Profiler e benchmark | ✅ | — | `/wa profile`, `/wa bench`, `scripts/bench.sh` e o comparativo com o Logistics Network |
 | Upgrade de Chunk Loading | ✅ | — | Mantém o roteador trabalhando com o jogador longe |
 
@@ -24,12 +24,12 @@ Legenda: ✅ pronto e testado · 🟡 parcial · ⬜ não começado
 | Funcionalidade | Estado | Versão | Resumo |
 | --- | --- | --- | --- |
 | Telas (GUI) | ✅ | 2.0.0 (tema escuro) | Tema claro e escuro, telas redimensionáveis, roteador com visor 3D e painel do nó |
-| Vinculador | ✅ | 2.7.0 (modos atuais) | Modos Vincular e Abrir, área com limites |
-| Configurador | ✅ | 1.6.0 (roda) | Pincel e área, sem tela, colar por tipo |
+| Vinculador | ✅ | 2.7.0 (modos atuais) | Modos Vincular e Abrir; Ctrl + clique age nas máquinas do mesmo bloco (a área e a tela saíram) |
+| Configurador | ✅ | 1.6.0; o Afinador no ramo do roteador de alcance (etapa 3) | O Afinador: clique numa máquina vinculada mostra a proposta dos modos pintada nas faces, o segundo clique aplica (Shift: no grupo); muda só os modos; copiar e colar perfis é pelo Tablet |
 | Tablet de Rede | ✅ | 1.0.0 (Fluxos e a Lista com máquinas da 2.2.0 à 2.4.0) | Lista (roteadores e máquinas), Fluxos, Mapa e Redes |
-| Roteador de alcance | 🟡 | 1.9.0 | Várias máquinas por roteador, grupos com perfil, lista e destaque no mundo; faltam pausar grupo, perfis no Configurador e a página no guia |
+| Roteador de alcance | 🟡 | 1.9.0 | Várias máquinas por roteador, grupos com perfil, lista e destaque no mundo; a presa é máquina do grupo do bloco dela e a vinculada segue o perfil (etapa 1) e dá para desvincular o grupo inteiro, copiar e colar o perfil por máquina e o Atualizar devolve os cartões (etapa 2), e a máquina trocada para de receber na hora (etapa 4), e o Vinculador vincula as do mesmo bloco no raio com Ctrl + clique e desvincula num clique, tudo no ramo; faltam pausar grupo e a página própria no guia |
 | Editor de receitas | ✅ | 1.7.0 | `/wa recipes` e tela para operadores |
-| Livro-guia (GuideME) | ✅ | — | 25 páginas pt e en geradas por `scripts/guide/`; reescritas mais simples em 30/10 |
+| Livro-guia | ✅ | 2.14.0 (livro próprio) | Livro próprio de duas folhas, sem dependência de outro mod: índice por grupos com fitas, busca, receitas, cenas 3D que giram (arrasto, zoom na roda, clique duplo volta) e mostram anotações, e a tecla G; 25 páginas pt e en geradas por `scripts/guide/` |
 
 ## Armazenamentos
 

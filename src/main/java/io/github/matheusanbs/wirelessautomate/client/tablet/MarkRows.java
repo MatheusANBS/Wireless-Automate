@@ -30,7 +30,7 @@ import org.jetbrains.annotations.Nullable;
 final class MarkRows {
     private final TabletList list;
     private @Nullable ListTree treeFor;
-    /** Por linha da árvore: a linha do grupo de cima (numa máquina) ou -1. */
+    /** Por linha da árvore: a linha do grupo de cima (numa máquina ou na presa dentro do grupo) ou -1. */
     private int[] groupLine = new int[0];
     private @Nullable TabletMachineRows pageFor;
     /** Por linha da visão por máquinas: o bloco dela. */
@@ -55,12 +55,14 @@ final class MarkRows {
             int group = -1;
             for (int i = 0; i < lines.size(); i++) {
                 Kind kind = lines.get(i).kind();
+                // a presa dentro do grupo marca como uma máquina dele
+                boolean member = kind == Kind.MACHINE || lines.get(i).attachedInGroup();
                 if (kind == Kind.GROUP) {
                     group = i;
-                } else if (kind != Kind.MACHINE && kind != Kind.MORE) {
+                } else if (!member && kind != Kind.MORE) {
                     group = -1;
                 }
-                groupLine[i] = kind == Kind.MACHINE ? group : -1;
+                groupLine[i] = member ? group : -1;
             }
         }
         return tree;
@@ -75,13 +77,16 @@ final class MarkRows {
                 ? new GroupKey(nodeOf(groupLineOf), group.id()) : null;
     }
 
-    /** As máquinas à vista abaixo da linha do grupo {@code group}. */
+    /** As máquinas à vista abaixo da linha do grupo {@code group}, a presa inclusive. */
     private List<MachineKey> machinesUnder(int group) {
         List<Line> lines = tree().lines();
         List<MachineKey> keys = new ArrayList<>();
         for (int i = group + 1; i < lines.size() && groupLine[i] == group; i++) {
-            if (list.model.row(lines.get(i)) instanceof TabletRows.Machine machine) {
-                keys.add(new MachineKey(nodeOf(lines.get(i)), machine.pos()));
+            switch (list.model.row(lines.get(i))) {
+                case TabletRows.Machine machine -> keys.add(new MachineKey(nodeOf(lines.get(i)), machine.pos()));
+                case TabletRows.Attached attached -> keys.add(MachineKey.attached(nodeOf(lines.get(i))));
+                default -> {
+                }
             }
         }
         return keys;
@@ -92,8 +97,11 @@ final class MarkRows {
         ListTree tree = tree();
         Line at = tree.lines().get(line);
         return switch (list.model.row(at)) {
-            case TabletRows.Attached attached -> marks().machine(MachineKey.attached(nodeOf(at)), null, null)
-                    ? Box.ALL : Box.NONE;
+            case TabletRows.Attached attached -> {
+                int g = groupLine[line];
+                GroupKey key = g < 0 ? null : groupKey(tree.lines().get(g));
+                yield marks().machine(MachineKey.attached(nodeOf(at)), key, null) ? Box.ALL : Box.NONE;
+            }
             case TabletRows.Group group -> marks().group(new GroupKey(nodeOf(at), group.id()));
             case TabletRows.Machine machine -> {
                 int g = groupLine[line];
@@ -113,8 +121,11 @@ final class MarkRows {
         ListTree tree = tree();
         Line at = tree.lines().get(line);
         switch (list.model.row(at)) {
-            case TabletRows.Attached attached -> marks().toggleMachine(MachineKey.attached(nodeOf(at)), null, null,
-                    List.of());
+            case TabletRows.Attached attached -> {
+                int g = groupLine[line];
+                marks().toggleMachine(MachineKey.attached(nodeOf(at)), g < 0 ? null : groupKey(tree.lines().get(g)),
+                        null, g < 0 ? List.of() : machinesUnder(g));
+            }
             case TabletRows.Group group -> marks().toggleGroup(new GroupKey(nodeOf(at), group.id()), group.total(),
                     machinesUnder(line));
             case TabletRows.Machine machine -> {

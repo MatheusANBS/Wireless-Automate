@@ -25,16 +25,41 @@ import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 final class ChemicalTestSupport {
     private static final Map<BlockPos, IChemicalTank> TANKS = new ConcurrentHashMap<>();
     private static final Map<BlockPos, IChemicalTank[]> MANY = new ConcurrentHashMap<>();
+    private static final Map<BlockPos, IChemicalTank> TYPED = new ConcurrentHashMap<>();
 
     static void register(RegisterCapabilitiesEvent event) {
         event.registerBlock(MekanismChemicals.BLOCK, (level, pos, state, be, side) -> handler(pos), ChemicalTestTanks.BLOCK);
         event.registerBlock(MekanismChemicals.BLOCK, (level, pos, state, be, side) -> manyHandler(pos),
                 ChemicalTestTanks.MANY_TANKS_BLOCK);
+        event.registerBlock(MekanismChemicals.BLOCK, (level, pos, state, be, side) -> typedHandler(pos),
+                ChemicalTestTanks.TYPED_TANK_BLOCK);
     }
 
     static void reset(BlockPos pos) {
         TANKS.remove(pos.immutable());
         MANY.remove(pos.immutable());
+        TYPED.remove(pos.immutable());
+    }
+
+    /** O tanque seletivo de {@code pos} passa a aceitar só {@code chemical} (chame antes da primeira consulta). */
+    static void acceptOnly(BlockPos pos, ResourceLocation chemical) {
+        TYPED.put(pos.immutable(), BasicChemicalTank.createModern(ChemicalTestTanks.CAPACITY,
+                stack -> MekanismChemicals.id(stack).equals(chemical), () -> {
+                }));
+    }
+
+    /** Quanto há no tanque seletivo de {@code pos}. */
+    static long typedAmount(BlockPos pos) {
+        IChemicalTank tank = TYPED.get(pos.immutable());
+        return tank == null ? 0 : tank.getStack().getAmount();
+    }
+
+    /** Um tanque só de entrada que só aceita um químico ({@link #acceptOnly}), como a entrada de uma máquina. */
+    private static IChemicalHandler typedHandler(BlockPos pos) {
+        IChemicalTank tank = TYPED.computeIfAbsent(pos.immutable(),
+                key -> BasicChemicalTank.createModern(ChemicalTestTanks.CAPACITY, stack -> false, () -> {
+                }));
+        return handler(tank);
     }
 
     /** Põe {@code amount} mB do químico no tanque {@code tank} do bloco de muitos tanques; devolve a sobra. */
@@ -124,9 +149,13 @@ final class ChemicalTestSupport {
     }
 
     private static IChemicalHandler handler(BlockPos pos) {
-        IChemicalTank tank = TANKS.computeIfAbsent(pos.immutable(),
+        return handler(TANKS.computeIfAbsent(pos.immutable(),
                 key -> BasicChemicalTank.createAllValid(ChemicalTestTanks.CAPACITY, () -> {
-                }));
+                })));
+    }
+
+    /** Um handler de um tanque só sobre {@code tank}. */
+    private static IChemicalHandler handler(IChemicalTank tank) {
         return new IChemicalHandler() {
             @Override
             public int getChemicalTanks() {

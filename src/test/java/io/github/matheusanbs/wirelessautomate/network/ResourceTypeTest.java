@@ -49,7 +49,15 @@ class ResourceTypeTest {
         assertEquals(2_048L, ResourceType.ITEM.defaultRate(2));
         assertEquals(16_384L, ResourceType.ITEM.defaultRate(3));
         assertEquals(8_388_608L, ResourceType.ITEM.defaultRate(6));
-        assertEquals(16_000L, ResourceType.FLUID.defaultRate(1));
+        // fluido e químico: o Básico no cano básico do Mekanism (8.000 mB/s), ×8 por degrau (balanceamento 6)
+        assertEquals(8_000L, ResourceType.FLUID.defaultRate(0));
+        assertEquals(64_000L, ResourceType.FLUID.defaultRate(1));
+        assertEquals(2_097_152_000L, ResourceType.FLUID.defaultRate(6));
+        assertEquals(ResourceType.FLUID.defaultRate(2), ResourceType.CHEMICAL.defaultRate(2));
+        // Source: o Básico no Source Relay do Ars (1.000/s), ×8 por degrau
+        assertEquals(1_000L, ResourceType.SOURCE.defaultRate(0));
+        assertEquals(262_144_000L, ResourceType.SOURCE.defaultRate(6));
+        assertEquals(0L, ResourceType.SOURCE.defaultRate(7));
         // a energia do roteador é a geração máxima do Ressonador do tier mais 5% (EnergyBalance)
         assertEquals(454L, ResourceType.ENERGY.defaultRate(0));
         assertEquals(29_100L, ResourceType.ENERGY.defaultRate(1));
@@ -60,10 +68,8 @@ class ResourceTypeTest {
         assertEquals(158_000_000L, ResourceType.ENERGY.defaultRate(6));
         assertEquals(0L, ResourceType.ENERGY.defaultRate(7));
         assertEquals(ResourceType.FLUID.defaultRate(1), ResourceType.CHEMICAL.defaultRate(1));
-        assertEquals(100L, ResourceType.SOURCE.defaultRate(0));
-        assertEquals(800L, ResourceType.SOURCE.defaultRate(1));
-        assertEquals(6_400L, ResourceType.SOURCE.defaultRate(2));
-        assertEquals(0L, ResourceType.SOURCE.defaultRate(7));
+        assertEquals(8_000L, ResourceType.SOURCE.defaultRate(1));
+        assertEquals(64_000L, ResourceType.SOURCE.defaultRate(2));
     }
 
     @Test

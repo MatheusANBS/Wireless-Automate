@@ -6,7 +6,7 @@
 
 It was built for large modpacks: instead of every block ticking on its own, one central manager moves everything within a small time budget per tick, so hundreds of machines don't turn into lag.
 
-**Status:** version 2.13. The Wireless Chest gets two upgrade slots: the **Crafting Upgrade** (a 3×3 grid inside the Chest that refills itself from its stock) and the **Compacting Upgrade** (item chains such as nugget, ingot and block packed and unpacked on their own). Every version's changes are in the [changelog](docs/curseforge/changelog-curseforge-2.13.0.md) and on the [releases page](https://github.com/MatheusANBS/Wireless-Automate/releases).
+**Status:** version 2.14. The mod gets its **own guide book**, with no GuideME dependency: an open two-page book with tabs per group, search, recipes and 3D scenes you can rotate. Every version's changes are in the [changelog](docs/curseforge/changelog-curseforge-2.14.0.md) and on the [releases page](https://github.com/MatheusANBS/Wireless-Automate/releases).
 
 Download it on [CurseForge](https://www.curseforge.com/minecraft/mc-mods/wireless-automate) or from the [latest GitHub release](https://github.com/MatheusANBS/Wireless-Automate/releases/latest). Requires NeoForge 21.1.248 or newer (runs on ATM10).
 
@@ -61,13 +61,13 @@ Tiers raise a router's throughput and range along the ladder Basic → Advanced 
 
 | Tier | Items/s | Fluid and chemical (mB/s) | Energy (FE/t) | Source/s | Range | Range Upgrade |
 | --- | --- | --- | --- | --- | --- | --- |
-| Basic | 32 | 2,000 | 454 | 100 | 64 blocks | — |
-| Advanced | 256 | 16,000 | 29,100 | 800 | 512 blocks | 6 blocks, 8 machines |
-| Elite | 2,048 | 128,000 | 63,000 | 6,400 | Whole dimension | 12 blocks, 16 machines |
-| Emerald | 16,384 | 1,024,000 | 1,350,000 | 51,200 | Every dimension | 16 blocks, 32 machines |
-| Allthemodium¹ | 131,072 | 8,192,000 | 67,200,000 | 409,600 | Every dimension | 24 blocks, 48 machines |
-| Vibranium¹ | 1,048,576 | 65,536,000 | 84,500,000 | 3,276,800 | Every dimension | 32 blocks, 64 machines |
-| Unobtainium¹ | 8,388,608 | 524,288,000 | 158,000,000 | 26,214,400 | Every dimension | 48 blocks, 96 machines |
+| Basic | 32 | 8,000 | 454 | 1,000 | 64 blocks | — |
+| Advanced | 256 | 64,000 | 29,100 | 8,000 | 512 blocks | 6 blocks, 8 machines |
+| Elite | 2,048 | 512,000 | 63,000 | 64,000 | Whole dimension | 12 blocks, 16 machines |
+| Emerald | 16,384 | 4,096,000 | 1,350,000 | 512,000 | Every dimension | 16 blocks, 32 machines |
+| Allthemodium¹ | 131,072 | 32,768,000 | 67,200,000 | 4,096,000 | Every dimension | 24 blocks, 48 machines |
+| Vibranium¹ | 1,048,576 | 262,144,000 | 84,500,000 | 32,768,000 | Every dimension | 32 blocks, 64 machines |
+| Unobtainium¹ | 8,388,608 | 2,097,152,000 | 158,000,000 | 262,144,000 | Every dimension | 48 blocks, 96 machines |
 | Ultimate | Unlimited | Unlimited | Unlimited | Unlimited | Every dimension | 64 blocks, 128 machines |
 
 *Per face and per resource type; every machine linked by the Range Upgrade gets the full rate, and each tier's energy carries the full output of the same tier's Signal Resonator. ¹ Only with Allthemodium. Server owners can change every value in the config.*
@@ -84,13 +84,13 @@ Five storage blocks made for the router: the **Wireless Chest** (unlimited item 
 
 | Tier | Chest (items) | Tank and Chemical Tank | Battery | Source Tank |
 | --- | --- | --- | --- | --- |
-| Basic | 32,768 | 256 B | 31.1M FE | 10,000 |
-| Advanced | 262,144 | 2,048 B | 1.99G FE | 80,000 |
-| Elite | 2,097,152 | 16,384 B | 4.32G FE | 640,000 |
-| Emerald | 16,777,216 | 131,072 B | 92.2G FE | 5,120,000 |
-| Allthemodium¹ | 134,217,728 | 1,048,576 B | 4.61T FE | 40,960,000 |
-| Vibranium¹ | 1,073,741,824 | 8,388,608 B | 5.79T FE | 327,680,000 |
-| Unobtainium¹ | 8,589,934,592 | 67,108,864 B | 10.8T FE | 2,621,440,000 |
+| Basic | 115,200 | 28,800 B | 31.1M FE | 3,600,000 |
+| Advanced | 921,600 | 230,400 B | 1.99G FE | 28,800,000 |
+| Elite | 7,372,800 | 1,843,200 B | 4.32G FE | 230,400,000 |
+| Emerald | 58,982,400 | 14,745,600 B | 92.2G FE | 1,843,200,000 |
+| Allthemodium¹ | 471,859,200 | 117,964,800 B | 4.61T FE | 14,745,600,000 |
+| Vibranium¹ | 3,774,873,600 | 943,718,400 B | 5.79T FE | 117,964,800,000 |
+| Unobtainium¹ | 30,198,988,800 | 7,549,747,200 B | 10.8T FE | 943,718,400,000 |
 | Ultimate | Unlimited | Unlimited | Unlimited | Unlimited |
 
 - A Battery holds **one hour of its tier's Signal Resonator** at full output, and a router's energy throughput is that same Resonator's output plus 5% (Ultimate: unlimited).
@@ -122,7 +122,7 @@ With Ars Nouveau installed, every router gets a **Source** tab. Source Jars, Rel
 
 ![Ars Nouveau Source](docs/curseforge/feature-11-source.png)
 
-The **Wireless Source Tank** holds from 10,000 Source (Basic) to unlimited (Ultimate) and shows its level in the glass. Sourcelinks within 5 blocks deposit into it and Ars machines nearby draw from it, as from a Source Jar.
+The **Wireless Source Tank** holds from 3,600,000 Source (Basic) to unlimited (Ultimate) and shows its level in the glass. Sourcelinks within 5 blocks deposit into it and Ars machines nearby draw from it, as from a Source Jar.
 
 ![Wireless Source Tank](docs/curseforge/feature-12-source-tank.png)
 
@@ -199,12 +199,10 @@ A wall display that shows **live numbers from your networks and storages**. Stic
 
 ![Link a whole area](docs/curseforge/feature-5-area.png)
 
-- **Linker** (two modes): **Link** picks a router with the Range Upgrade (click it) and links the machines you click, or **a whole marked area** at once (Shift + click two blocks; nearest first, up to the tier's radius and limit); the **Unlink** switch takes them out instead. **Open** opens the screen of the router that reaches the machine you click, already editing that machine; with several routers, a short list lets you pick. It checks range, claims and protection mods on the router. The Linker no longer touches networks: choose each face's network on the router screen or in the Tablet.
-- **Configurator** (the Brush): Shift + click a router copies its setup (faces, filters, priorities, redstone and the network of each face), click pastes it on another, and Shift + click on a block without a router clears the copy. Paste every tab or just one type, leaving the other tabs alone. Hold **Left Alt** for a radial wheel that picks the pasted type. A face's network is only pasted if you can use it, and a face only leaves a network you can edit. To configure many routers at once, paste the profile on the Tablet's marked ones.
+- **Linker** (two modes): **Link** picks a router with the Range Upgrade (click it) and links the machines you click, or **a whole marked area** at once (Shift + click two blocks; nearest first, up to the tier's radius and limit), or **all of the same block in range** with Ctrl (Cmd on Mac) + click on one of them; the **Unlink** switch takes them out instead. **Open** opens the screen of the router that reaches the machine you click, already editing that machine; with several routers, a short list lets you pick. It checks range, claims and protection mods on the router. The Linker no longer touches networks: choose each face's network on the router screen or in the Tablet.
+- **Configurator** (the Auto-Setup): click a linked machine and it finds out what each face takes and gives, and paints the proposed modes on the faces (Insert, Extract, Storage); click again to apply, with Shift on the whole group. It changes only the modes. To copy a router's setup to others, use the profile on the Tablet.
 - **Chunk Loading Upgrade:** keeps a router and its machine working while you're away.
 - **Recipe editor** (operators): `/wa recipes` opens a screen to change, disable or restore any of the mod's crafting recipes, with items from your inventory or JEI, tags and the result count. Saved as a datapack in `config/wirelessautomate/recipes/`, so it works in every world and survives updates. Handy for packs that want a different Ultimate recipe.
-
-![Configurator Brush](docs/curseforge/feature-16-wheel.png)
 
 ![Link or open](docs/curseforge/feature-13-linker.png)
 
@@ -226,7 +224,7 @@ Every router of every network, from anywhere: one search box for machine, networ
 
 ![Built-in guide book](docs/curseforge/feature-7-guide.png)
 
-Every player gets the guide book on their first join (it's also in the creative tab, or craft it with a book and redstone). It explains every item with interactive 3D scenes and recipes, in **English and Portuguese**. Hover any item of the mod and hold **G** to jump to its page.
+Every player gets the guide book on their first join (it's also in the creative tab, or craft it with a book and redstone). It explains every item with 3D scenes you can rotate (drag to rotate, the wheel zooms, double click goes back to the page's angle, and annotations show their text on hover) and recipes, in **English and Portuguese**. Hover any item of the mod and press **G** to jump to its page.
 
 ---
 
@@ -238,7 +236,7 @@ Every player gets the guide book on their first join (it's also in the creative 
 4. On the first router, set the **Up** face to **Extract**.
 5. On the second router, set the same face to **Insert**. Items now flow from the first chest to the second.
 
-Once the first router of a line is set up, copy it with the Configurator (Shift + click it) and paste (click) on the rest.
+Once the first router of a line is set up, copy its profile on the Tablet and paste it on the rest.
 
 Recipes use vanilla items, except the Allthemodium tiers (made from the Allthemodium mod's metals, only when it's installed).
 
@@ -254,7 +252,6 @@ Recipes use vanilla items, except the Allthemodium tiers (made from the Allthemo
 | **Allthemodium** (optional, as in ATM10) | Three extra tiers (Allthemodium, Vibranium and Unobtainium) between Emerald and Ultimate, for the router and every storage block. With **All The Tweaks**, the Ultimate ring takes ATM Star shards. |
 | **JEI** (optional) | Drag and drop (or Shift + click) ingredients into filters without having the item, or onto the tag inspector; the tier-up recipes (block in the ring, cards with an origin, block + card) show in JEI. |
 | **FTB Teams** (optional) | Add a party team to a private network and every member gets the access of a guest, live. Needs FTB Teams for 1.21.1 (with FTB Library and Architectury, which it asks for itself). |
-| **GuideME** (optional) | The in-game guide book. |
 
 ## Performance
 
@@ -289,7 +286,7 @@ The script installs whatever is missing (JDK 21, git, curl, unzip) and runs the 
 | `./gradlew runGameTestServerSource` | Source GameTests, on a server with Ars Nouveau (plus GeckoLib and Curios) |
 | `./gradlew runGameTestServerAllthemodium` | ATM tier GameTests, with Allthemodium, All The Tweaks and GeckoLib |
 | `./gradlew runGameTestServerTeams` | Team GameTests, on a server with FTB Teams, FTB Library and Architectury |
-| `./gradlew runClient` | Dev client with JEI, Mekanism, Ars Nouveau, Allthemodium, GuideME and other mods, for manual testing |
+| `./gradlew runClient` | Dev client with JEI, Mekanism, Ars Nouveau, Allthemodium and other mods, for manual testing |
 | `./gradlew runData` | Data generators, output in `src/generated/resources/` |
 | `./scripts/e2e.sh` | End-to-end test in a real world (see `docs/e2e.md`) |
 | `./scripts/bench.sh <scenarios>` | Benchmark on a dedicated server with Sophisticated Storage (see `docs/benchmark.md`) |

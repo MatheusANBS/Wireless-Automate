@@ -23,7 +23,7 @@ SCENE_TWO_CHESTS = '''<GameScene zoom="4" interactive={true}>
 </GameScene>'''
 
 
-PAGINA = page('getting-started.md', front('Primeiros passos', 'minecraft:chest', 1) + '''
+PAGINA = page('getting-started.md', front('Primeiros passos', 'minecraft:chest', 'comecar', 1) + '''
 # Primeiros passos
 
 Itens de um baú para outro, sem canos, em um minuto.
@@ -40,7 +40,7 @@ Itens de um baú para outro, sem canos, em um minuto.
 5. Ponha a face **Cima** em **Extrai** no A e em **Insere** no B.
 6. Ponha itens no baú A: eles aparecem no baú B.
 
-O [Configurador](configurator.md) copia a configuração, com as redes, para outros roteadores.
+Para copiar a configuração de um roteador, com as redes, para outros, use o [Tablet](network-tablet.md).
 
 O botão de lua, no canto de cima à direita, põe as telas no modo escuro.
 
@@ -57,7 +57,7 @@ O botão de lua, no canto de cima à direita, põe as telas no modo escuro.
 | Separar fábricas | [Redes](networks.md) |
 | Mais vazão ou alcance | [Cartões de Upgrade](upgrade-cards.md) |
 | Não funcionou | [Problemas comuns](troubleshooting.md) |
-''', front('Getting started', 'minecraft:chest', 1) + '''
+''', front('Getting started', 'minecraft:chest', 'comecar', 1) + '''
 # Getting started
 
 Items from one chest to another, without pipes, in a minute.
@@ -74,7 +74,7 @@ Items from one chest to another, without pipes, in a minute.
 5. Set the **Up** face to **Extract** on A and to **Insert** on B.
 6. Put items in chest A: they show up in chest B.
 
-The [Configurator](configurator.md) copies the setup, networks included, to other routers.
+To copy a router's setup, networks included, to other routers, use the [Tablet](network-tablet.md).
 
 The moon button, in the top-right corner, switches the screens to dark mode.
 

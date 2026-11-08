@@ -2,7 +2,7 @@
 from guia_base import *  # noqa: F401,F403
 
 
-PAGINA = page('chemicals.md', front('Químicos (Mekanism)', 'minecraft:glass_bottle', 15) + '''
+PAGINA = page('chemicals.md', front('Químicos (Mekanism)', 'minecraft:glass_bottle', 'integracoes', 15) + '''
 # Químicos do Mekanism
 
 Com o **Mekanism**, o roteador ganha a aba **Químicos**: gases, líquidos de infusão, pigmentos e slurries. Sem
@@ -30,7 +30,7 @@ do Mekanism, como para um tubo; senão o roteador não vê o químico e o modo d
 | **Inventário** | Shift + clique num tanque com o químico. |
 | **JEI** | Arraste o químico para a grade. |
 | **Digitando** | Em **Mais**, o id: `mekanism:hydrogen`... |
-''', front('Chemicals (Mekanism)', 'minecraft:glass_bottle', 15) + '''
+''', front('Chemicals (Mekanism)', 'minecraft:glass_bottle', 'integracoes', 15) + '''
 # Mekanism chemicals
 
 With **Mekanism**, the router gets a **Chemicals** tab: gases, infuse types, pigments and slurries. Without it,

@@ -15,7 +15,7 @@ memória: cada uma precisa de fonte (primer, notas, código do alvo) antes de en
 | Motor | `network/NetworkManager`, `TickBudget` etc. | Em geral não muda (lógica pura); confirme os eventos de tick do servidor |
 | Receitas | `recipe/`, `data/wirelessautomate/recipe/` | `RecipeInput`/`CraftingInput` (1.21+), o sistema de receitas do 1.21.2 (receitas só no servidor, exibição no livro), as condições (`neoforge:conditions` × `forge:conditions`), pastas de dados no plural no 1.20.1 (`recipes/`, `loot_tables/`, `tags/blocks/`) |
 | Modelos e texturas | `assets/wirelessautomate/`, `scripts/textures/` | Definições de modelo de item (pasta `items/` do 1.21.4 em diante), transformações raiz do blockstate (o giro do roteador depende delas), formato dos `.mcmeta` |
-| Telas | `client/` | `GuiGraphics` existe desde o 1.20; o 1.21.6 mudou o desenho da GUI (estados de render e desenho adiado, segundo os primers): pesa no `ConfiguratorWheelScreen` (triângulos com `BufferBuilder`), no `MachineView3D` (bloco 3D na tela) e no `DevScreenshot` |
+| Telas | `client/` | `GuiGraphics` existe desde o 1.20; o 1.21.6 mudou o desenho da GUI (estados de render e desenho adiado, segundo os primers): pesa no `MachineView3D` (bloco 3D na tela) e no `DevScreenshot` |
 | Mundo e render | `client/AreaRenderer`, `client/MachineView3D` | Eventos de render do nível, `RenderType`, `PoseStack` |
 | Chunk loading | `chunk/` | `TicketController` (NeoForge) × `ForgeChunkManager` (Forge) |
 | Config | `Config.java` | `ModConfigSpec` (NeoForge) × `ForgeConfigSpec` (Forge) |
@@ -24,6 +24,6 @@ memória: cada uma precisa de fonte (primer, notas, código do alvo) antes de en
 | Mekanism | `compat/mekanism/`, `network/ChemicalTransfer` | No 1.21 os químicos são um tipo só; no Mekanism do 1.20.1 eram gás, infusão, pigmento e lama, cada um com o seu handler. A aba Químicos pode virar quatro sub-tipos ou só o gás |
 | Ars Nouveau | `compat/arsnouveau/` | A capability de Source e o `SourceManager` mudam de versão para versão; confirmar se o pack do alvo traz o Ars |
 | JEI | `compat/jei/` | Versão da API do JEI do alvo |
-| GuideME | `assets/wirelessautomate/guideme_guides/`, `scripts/guide/` | Se existe GuideME para o alvo; senão, outro livro (Patchouli) ou nenhum |
+| Livro-guia | `client/guide/`, `item/GuideBook*`, `assets/wirelessautomate/guide/`, `scripts/guide/` | É do mod, sem dependência: vai junto. Conferir só as APIs de tela e de desenho (`GuiGraphics`, `RenderSystem`, recorte, `ItemTooltipEvent`) e as chaves de tecla do alvo |
 | Allthemodium | receitas e tiers | Ids dos itens e tags no alvo; se o pack traz All The Tweaks (ATM Star) |
 | Lado do cliente | tudo em `client/` | A regra de não referenciar classes de cliente vale em qualquer versão: o servidor dedicado dos GameTests prova |

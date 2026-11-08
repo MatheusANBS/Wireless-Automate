@@ -8,6 +8,7 @@ import io.github.matheusanbs.wirelessautomate.menu.RangeView;
 import io.github.matheusanbs.wirelessautomate.menu.RemoteRouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot;
+import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
@@ -23,6 +24,7 @@ import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.netty.buffer.Unpooled;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -117,6 +119,145 @@ public final class RangeReplaceGameTests {
                 .thenSucceed();
     }
 
+    /**
+     * A trocada perde as portas sem esperar o Atualizar (o aviso é a invalidação da capability da posição, que refaz
+     * as rotas do nó); com o bloco do grupo de volta (também depois de passar por outro bloco), ou depois do
+     * Atualizar, elas voltam.
+     */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void replacedMachineHasNoPorts(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    linkInNetwork(helper, router, FURNACE_A);
+                    profile(helper, router, FURNACE_A, Direction.DOWN, PortMode.EXTRACT);
+                })
+                .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, FURNACE_A, Direction.DOWN), "sem porta"))
+                .thenExecute(() -> blastAt(helper, FURNACE_A, Direction.EAST))
+                .thenWaitUntil(() -> helper.assertFalse(remotePort(helper, router, FURNACE_A, Direction.DOWN),
+                        "a trocada continua com porta"))
+                .thenExecute(() -> helper.setBlock(FURNACE_A,
+                        Blocks.FURNACE.defaultBlockState().setValue(AbstractFurnaceBlock.FACING, Direction.EAST)))
+                .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, FURNACE_A, Direction.DOWN),
+                        "a fornalha voltou e a porta não"))
+                .thenExecute(() -> blastAt(helper, FURNACE_A, Direction.EAST))
+                .thenWaitUntil(() -> helper.assertFalse(remotePort(helper, router, FURNACE_A, Direction.DOWN),
+                        "trocada de novo com porta"))
+                // de trocada para trocada (o aviso não muda o estado) e de volta: o aviso seguinte ainda chega
+                .thenExecute(() -> helper.setBlock(FURNACE_A, Blocks.STONE))
+                .thenIdle(3)
+                .thenExecute(() -> helper.setBlock(FURNACE_A,
+                        Blocks.FURNACE.defaultBlockState().setValue(AbstractFurnaceBlock.FACING, Direction.EAST)))
+                .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, FURNACE_A, Direction.DOWN),
+                        "a fornalha voltou depois da pedra e a porta não"))
+                .thenExecute(() -> blastAt(helper, FURNACE_A, Direction.EAST))
+                .thenWaitUntil(() -> helper.assertFalse(remotePort(helper, router, FURNACE_A, Direction.DOWN),
+                        "trocada pela terceira vez com porta"))
+                .thenExecute(() -> helper.assertFalse(router.updateReplaced(
+                        List.of(index(helper, router, FURNACE_A)), null).isEmpty(), "o Atualizar não moveu"))
+                .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, FURNACE_A, Direction.DOWN),
+                        "atualizada sem porta"))
+                .thenSucceed();
+    }
+
+    /**
+     * A trocada que continua trocada: um aviso novo do cache dela (a block entity do bloco novo invalida as
+     * capabilities) não remonta as rotas, só volta a vigiar a posição; a fornalha de volta ainda refaz a porta.
+     */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void stillReplacedMachineDoesNotRebuild(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        UUID[] network = new UUID[1];
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    linkInNetwork(helper, router, FURNACE_A);
+                    profile(helper, router, FURNACE_A, Direction.DOWN, PortMode.EXTRACT);
+                    network[0] = router.networkId(ResourceType.ITEM);
+                })
+                .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, FURNACE_A, Direction.DOWN), "sem porta"))
+                .thenExecute(() -> blastAt(helper, FURNACE_A, Direction.EAST))
+                .thenWaitUntil(() -> helper.assertFalse(remotePort(helper, router, FURNACE_A, Direction.DOWN),
+                        "a trocada continua com porta"))
+                .thenWaitUntil(() -> helper.assertFalse(NetworkManager.get().isDirty(network[0], ResourceType.ITEM),
+                        "a rede não assentou"))
+                .thenExecute(() -> {
+                    helper.assertTrue(machine(helper, router, FURNACE_A).replaced(), "não ficou trocada");
+                    BlockPos pos = helper.absolutePos(FURNACE_A);
+                    router.machineInvalidated(router.remoteCaches(pos), ResourceType.ITEM, Direction.UP);
+                    helper.assertFalse(NetworkManager.get().isDirty(network[0], ResourceType.ITEM),
+                            "o aviso da trocada que continua trocada remontou as rotas");
+                })
+                .thenExecute(() -> helper.setBlock(FURNACE_A,
+                        Blocks.FURNACE.defaultBlockState().setValue(AbstractFurnaceBlock.FACING, Direction.EAST)))
+                .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, FURNACE_A, Direction.DOWN),
+                        "a fornalha voltou e a porta não"))
+                .thenSucceed();
+    }
+
+    /**
+     * Quebrar a máquina vinculada com portas em várias faces não derruba o servidor: a quebra invalida todos os caches
+     * da posição de uma vez, e os avisos depois do primeiro (a máquina já trocada) voltam a vigiar fora do listener,
+     * onde o {@code BlockCapabilityCache} aceita a consulta. A fornalha de volta ainda refaz a porta.
+     */
+    @GameTest(template = "empty", timeoutTicks = 400)
+    public static void breakingLinkedMachineDoesNotCrash(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        var sequence = helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    linkInNetwork(helper, router, FURNACE_A);
+                    for (Direction side : Direction.values()) {
+                        profile(helper, router, FURNACE_A, side, PortMode.EXTRACT);
+                    }
+                });
+        for (int round = 0; round < 3; round++) {
+            int shown = round;
+            sequence = sequence
+                    .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, FURNACE_A, Direction.DOWN),
+                            "sem porta na volta " + shown))
+                    .thenExecute(() -> {
+                        // Como numa máquina com itens correndo: o cache de cada face já consultado e valendo.
+                        var caches = router.remoteCaches(helper.absolutePos(FURNACE_A));
+                        for (Direction face : Direction.values()) {
+                            caches.items(face);
+                        }
+                        helper.destroyBlock(FURNACE_A);
+                    })
+                    .thenWaitUntil(() -> helper.assertFalse(remotePort(helper, router, FURNACE_A, Direction.DOWN),
+                            "a quebrada continua com porta na volta " + shown))
+                    .thenExecute(() -> helper.setBlock(FURNACE_A,
+                            Blocks.FURNACE.defaultBlockState().setValue(AbstractFurnaceBlock.FACING, Direction.EAST)));
+        }
+        sequence.thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, FURNACE_A, Direction.DOWN),
+                "a fornalha voltou e a porta não")).thenSucceed();
+    }
+
+    /**
+     * A releitura da montagem ({@code rereadRemote}) conta a marca de trocada que mudou, mesmo com a frente igual:
+     * os outros tipos do nó também remontam.
+     */
+    @GameTest(template = "empty")
+    public static void rereadReportsReplacedChange(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    link(helper, router, FURNACE_A);
+                    RemoteMachine machine = machine(helper, router, FURNACE_A);
+                    helper.assertFalse(router.rereadRemote(machine), "nada mudou e a releitura disse que sim");
+                    machine.setReplaced(true);
+                    helper.assertTrue(router.rereadRemote(machine), "a marca de trocada mudou e a releitura não contou");
+                    helper.assertFalse(machine.replaced(), "a releitura não regravou a marca");
+                })
+                .thenSucceed();
+    }
+
     /** Sozinha no grupo: o grupo passa a ser do bloco novo, com id, nome, perfil e cartões; a frente é relida. */
     @GameTest(template = "empty")
     public static void updateLoneMachineMovesGroup(GameTestHelper helper) {
@@ -135,7 +276,7 @@ public final class RangeReplaceGameTests {
                     blastAt(helper, FURNACE_A, Direction.WEST);
 
                     int index = index(helper, router, FURNACE_A);
-                    RemoteMachines.Regroup result = router.updateReplaced(List.of(index));
+                    RemoteMachines.Regroup result = router.updateReplaced(List.of(index), null);
                     helper.assertValueEqual(result.destinations().get(index), furnaces, "destino");
                     helper.assertTrue(result.cards().isEmpty(), "cartões soltos");
                     helper.assertTrue(router.remoteMachines().group(furnaces) == group, "o grupo não é o mesmo");
@@ -166,7 +307,7 @@ public final class RangeReplaceGameTests {
                     router.setCard(EditTarget.group(furnaces), ResourceType.ITEM, Direction.SOUTH, 0, itemCard());
                     blastAt(helper, FURNACE_A, Direction.WEST);
 
-                    router.updateReplaced(List.of(index(helper, router, FURNACE_A)));
+                    router.updateReplaced(List.of(index(helper, router, FURNACE_A)), null);
                     int blasts = groupOf(router, helper.absolutePos(FURNACE_A));
                     MachineGroup group = router.remoteMachines().group(blasts);
                     helper.assertTrue(blasts != furnaces && group.block().equals(id(Blocks.BLAST_FURNACE)), "grupo novo");
@@ -215,7 +356,7 @@ public final class RangeReplaceGameTests {
                     blastAt(helper, FURNACE_A, Direction.EAST);
                     blastAt(helper, FURNACE_B, Direction.SOUTH);
 
-                    RemoteMachines.Regroup result = router.updateReplaced(List.of(indexA, index(helper, router, FURNACE_B)));
+                    RemoteMachines.Regroup result = router.updateReplaced(List.of(indexA, index(helper, router, FURNACE_B)), null);
                     helper.assertValueEqual(groupOf(router, helper.absolutePos(FURNACE_A)), blasts, "A no grupo existente");
                     helper.assertValueEqual(groupOf(router, helper.absolutePos(FURNACE_B)), blasts, "B no grupo existente");
                     helper.assertTrue(router.remoteMachines().group(furnaces) == null, "o grupo vazio ficou");
@@ -391,7 +532,7 @@ public final class RangeReplaceGameTests {
                         helper.assertValueEqual(groupOf(router, a), furnaces, "A mudou de grupo pela posição errada");
                         helper.assertFalse(ModPayloads.handleUpdateMachine(player,
                                 UpdateMachinePayload.machine(menu.containerId, indexB, b)), "atualizou a sumida");
-                        helper.assertTrue(router.updateReplaced(List.of(indexB)).isEmpty(), "o roteador atualizou a sumida");
+                        helper.assertTrue(router.updateReplaced(List.of(indexB), null).isEmpty(), "o roteador atualizou a sumida");
                         helper.assertValueEqual(groupOf(router, b), furnaces, "a sumida mudou de grupo");
                         helper.assertTrue(router.remoteMachines().group(furnaces).block().equals(id(Blocks.FURNACE)),
                                 "o grupo trocou de bloco com uma sumida");
@@ -418,7 +559,7 @@ public final class RangeReplaceGameTests {
                     blastAt(helper, FURNACE_A, Direction.EAST);
                     blastAt(helper, FURNACE_B, Direction.SOUTH);
 
-                    router.updateReplaced(List.of(index(helper, router, FURNACE_A), index(helper, router, FURNACE_B)));
+                    router.updateReplaced(List.of(index(helper, router, FURNACE_A), index(helper, router, FURNACE_B)), null);
                     int blasts = groupOf(router, helper.absolutePos(FURNACE_A));
                     helper.assertTrue(blasts != furnaces, "A ficou no grupo antigo");
                     helper.assertValueEqual(groupOf(router, helper.absolutePos(FURNACE_B)), blasts, "B noutro grupo novo");
@@ -521,7 +662,7 @@ public final class RangeReplaceGameTests {
                     router.setMode(ResourceType.ITEM, Direction.UP, PortMode.EXTRACT);
                     linkInNetwork(helper, router, REMOTE_CHEST);
                     blastAt(helper, REMOTE_CHEST, Direction.EAST);
-                    helper.assertFalse(router.updateReplaced(List.of(index(helper, router, REMOTE_CHEST))).isEmpty(),
+                    helper.assertFalse(router.updateReplaced(List.of(index(helper, router, REMOTE_CHEST)), null).isEmpty(),
                             "não atualizou");
                     // Trás, no quadro canônico (frente = Norte), é o Sul.
                     profile(helper, router, REMOTE_CHEST, Direction.SOUTH, PortMode.INSERT);

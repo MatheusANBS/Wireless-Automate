@@ -24,7 +24,7 @@ import org.jetbrains.annotations.Nullable;
  * Configuração copiável de um roteador: as faces da máquina presa de cada tipo, por
  * {@link RelativeSide}, cada uma com a sua rede (dentro da {@link FaceConfig}). Por ser relativa ao
  * {@code facing}, colar num roteador virado para outro lado gira a configuração junto. Imutável; vai
- * no componente de item do Configurador.
+ * no componente de item {@code preset} (o perfil guardado no Tablet).
  *
  * <p>Formato: {@code faces} (tipo → lado → face, com a rede no codec da face). Os campos antigos
  * {@code networks} (mapa tipo → rede) e {@code network} (rede única, de todos os tipos) são só lidos:

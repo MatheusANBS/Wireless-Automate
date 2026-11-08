@@ -65,6 +65,7 @@ Contêiner Linux x86-64 com 4 CPUs e 15 GB, **dividido com outros agentes que co
 | `raw` | 1 par de inventários grandes, tier Ultimate | Itens/s máximos ("Vazão bruta") | O máximo dentro de 0,5 ms |
 | `big` | Pares de inventários grandes: um item diferente por slot na origem, destino vazio | Custo por visita em inventário grande | Abaixo do orçamento |
 | `bigfull` | Como `big`, mas o destino está cheio de outros itens, exceto nos 4 últimos slots | Pior caso da inserção (varrer tudo para achar espaço) | Abaixo do orçamento |
+| `partialfull` | Como `big`, mas sem slot vazio no destino: 32 de outro item em cada slot, então ele recusa cada item da origem tendo lugar só para os próprios | O destino seletivo diante de mais tipos recusados que as dicas guardam (nada se move) | Perto do `full` |
 | `types` | Como `big`, com lista negra de centenas de itens na origem e lista branca de mais de mil entradas (itens e tags) no destino | Custo de filtro e varredura ("Muitos tipos") | Abaixo do orçamento |
 | `mixed` | Um terço de pares de itens (barris), um terço de fluidos e um terço de energia (máquinas de teste: fonte infinita e ralo, `bench/BenchCapabilities.java`) | Comportamento realista ("Misto") | Abaixo do orçamento |
 | `rebuild` | Como `many`, e a cada segundo um nó muda de prioridade | Custo de remontar as rotas | Abaixo do orçamento |
@@ -83,7 +84,7 @@ Contêiner Linux x86-64 com 4 CPUs e 15 GB, **dividido com outros agentes que co
 | `tablet-range` | n roteadores Ultimate (padrão 100) com o Upgrade de Alcance, cada um num barril cheio de pedregulho (Extrair) com 16 barris vinculados em volta, num grupo com o lado de cima em Inserir; tudo numa rede, com o reenchimento a cada 30 ticks (enche a presa e esvazia os vinculados; a cada 20, no ritmo da amostra do Tablet, a vazão de cada nó seria a mesma em toda amostra e a Lista não mudaria). A linha "Tablet:" da repetição conta os pacotes depois da abertura e os nós da página. Um jogador falso tem o Tablet aberto, como no `tablet`; quando a Lista mostrar as máquinas, ele abre 4 roteadores e um grupo com "Mostrar todas" (`BenchScene.openRangeRows`) | Custo do Tablet aberto e bytes por segundo com nós de alcance movendo (colunas "Tablet" e KB/s) | Bem abaixo do orçamento; bytes só das linhas à vista |
 | `tablet-machines` | A cena do `tablet-range` (padrão 100 roteadores, 16 máquinas vinculadas cada, alternando barril, baú, fornalha e alto-forno: quatro blocos, um grupo por bloco), com o jogador falso na visão por máquinas da Lista (`BenchTablet.openMachines`, pelo caminho do `TabletMachinesPayload`): a base inteira passa do teto da página, então os blocos começam recolhidos, e ele abre o dos barris. Mede a ordem por bloco compartilhada (`MachineOrder`), a passada da página por máquinas e o "live" das máquinas à vista | Custo do Tablet aberto e bytes por segundo na visão por máquinas (colunas "Tablet" e KB/s) | Bem abaixo do orçamento; a ordem por bloco só refeita quando o índice muda |
 
-Os inventários grandes são o baú duplo (54 slots) no vanilla e o barril de netherita do Sophisticated Storage (132 slots). Os pequenos são o barril vanilla e o barril de madeira do Sophisticated Storage, ambos com 27 slots. Com `wa`, o pequeno e o grande são o Baú do mod Elite (2.097.152 itens), que não tem slots de verdade (um por tipo, mais um vazio): a cena o enche pelo conteúdo com as mesmas pilhas de 64 dos vanilla (27 no pequeno, 54 no grande, um item por pilha no grande) e o esvazia inteiro; no `full`, o destino fica cheio de pedra até a capacidade. O `bigfull` não roda com `wa` (mede a varredura de slots). Os destinos do `hub` e do `chesttypes` são sempre o Baú do mod; o armazenamento escolhido vale para as origens.
+Os inventários grandes são o baú duplo (54 slots) no vanilla e o barril de netherita do Sophisticated Storage (132 slots). Os pequenos são o barril vanilla e o barril de madeira do Sophisticated Storage, ambos com 27 slots. Com `wa`, o pequeno e o grande são o Baú do mod Elite (2.097.152 itens), que não tem slots de verdade (um por tipo, mais um vazio): a cena o enche pelo conteúdo com as mesmas pilhas de 64 dos vanilla (27 no pequeno, 54 no grande, um item por pilha no grande) e o esvazia inteiro; no `full`, o destino fica cheio de pedra até a capacidade. O `bigfull` e o `partialfull` não rodam com `wa` (medem a varredura de slots). Os destinos do `hub` e do `chesttypes` são sempre o Baú do mod; o armazenamento escolhido vale para as origens.
 
 Detalhes dos cenários da auditoria de performance (`sparse`, `stock`, `bigstack`, `redstone` e `tablet`):
 
@@ -529,3 +530,71 @@ Ramo `bau-upgrades`. Antes: `dc0c239` (a Tarefa 3), num worktree à parte. Depoi
 
 - Sem o upgrade, o gancho é um teste de campo nulo por inserção e o `stockCount` uma chamada a mais com um `instanceof` antes da contagem de sempre: nenhum cenário piorou; as diferenças ficam dentro do ± ou a favor do depois, que é ruído da máquina (o código do depois só acrescenta).
 - O custo com o upgrade (um `get` no índice e um `add` no conjunto sujo por inserção de cadeia, O(formas) por cadeia suja no fim do tick) não tem cenário de bench; os GameTests do `ChestCompactingGameTests` cobrem o comportamento.
+
+## Destino seletivo: recusa de um item e busca pela chave (2 de novembro de 2026)
+
+Ramo `ccr-52410279-si07pg`. Antes: `54af020` (os arquivos do motor desse commit, no mesmo checkout). Depois: a recusa anotada por destino (`ItemHints`), o "cheio" guardado na porta (`Port.full`) e a busca pela chave no Baú do mod. Uma rodada de `./scripts/bench.sh "full:100:3,sparse:500:3,raw:2:3,bigfull:20:3,chesttypes:20:3:wa,many:500:3"` de cada lado (relatórios `run/bench/reports/20261102-004714.md`, antes, e `20261102-003919.md`, depois, fora do git); `bigfull` e `many` medidos de novo depois do ajuste do "cheio" (`20261102-005653.md`).
+
+| Cenário | mod antes (ms/tick) | mod depois | Outra medida antes → depois |
+| --- | --- | --- | --- |
+| full 100 | 0,0045 ± 0,0002 | 0,0057 ± 0,0016 | µs/visita 8,95 → 11,37 ± 3,30 |
+| sparse 500 | 0,0174 ± 0,0004 | 0,0184 ± 0,0011 | visitas/tick 4,1 → 4,1 |
+| raw 2 | 0,2181 ± 0,0403 | 0,1909 ± 0,0180 | 68.885 → 69.073 itens/s |
+| bigfull 20 | 0,0373 ± 0,0025 | 0,0374 ± 0,0040 | µs/visita 14,93 → 14,94 |
+| chesttypes 20 | 0,0297 ± 0,0103 | 0,0277 ± 0,0103 | µs/visita 9,84 → 9,12 |
+| many 500 | 0,8641 ± 0,0347 | 0,8818 ± 0,0452 | visitas/tick 51,4 → 50,7 |
+
+### Leitura
+
+- Nenhum cenário piorou além do ±. A primeira versão relia os slots do destino a cada recusa e pesava no `bigfull` (0,046 ms/tick); a versão final tira os vazios da própria simulação e guarda o "cheio" até a máquina mudar.
+- O ganho é no caso que nenhum cenário do bench tem, o destino seletivo; os GameTests do `SelectiveDestinationGameTests` medem em ticks: a verruga atrás de 26 pós que não cabem não chegava em 200 ticks e chega em menos de 20; atrás de 2.000 tipos de papel no Baú, de 63 ticks para menos de 40, e de volta em até 6 ticks pela chave.
+
+## Presa no grupo, etapa 1 (2 de novembro de 2026)
+
+Ramo `ccr-52410279-si07pg`. Antes: `b93bd29` (o plano, com o destino seletivo já no motor), num worktree à parte. Depois: `b885aaa` (as Tarefas 1 a 4). Uma rodada de `./scripts/bench.sh "many:500:3,full:100:3,raw:2:3,rebuild:500:3,mixed:498:3"` de cada lado (relatórios `20261102-035323.md`, antes, no worktree apagado, e `run/bench/reports/20261102-034630.md`, depois, fora do git).
+
+| Cenário | mod antes (ms/tick) | mod depois | Outra medida antes → depois |
+| --- | --- | --- | --- |
+| many 500 | 0,9028 ± 0,0560 | 0,8697 ± 0,1275 | µs/visita 18,18 → 16,83 ± 3,77 |
+| full 100 | 0,0045 ± 0,0001 | 0,0049 ± 0,0005 | µs/visita 8,94 → 9,88 ± 0,94 |
+| raw 2 | 0,1783 ± 0,0242 | 0,1951 ± 0,0230 | µs/visita 89,2 → 97,7 ± 11,6 |
+| rebuild 500 | 0,9430 ± 0,0267 | 0,9460 ± 0,0414 | µs/visita 20,15 → 23,33 ± 3,05 |
+| mixed 498 | 0,6321 ± 0,0270 | 0,6647 ± 0,0332 | visitas/tick 152,0 → 152,3 |
+
+### Leitura
+
+- Tudo dentro do ±: a presa passa pela fachada só na montagem das rotas (uma leitura do bloco da frente por tipo), nunca no tick. O `rebuild`, que remonta o tempo todo, fica igual na média do mod.
+
+## Destino seletivo que dorme e a remota trocada (3 de novembro de 2026)
+
+Ramo `ccr-52410279-si07pg`. Antes: `580addf` com o cenário novo `partialfull` (só o bench mudado). Depois: as correções da auditoria pré-PR (o destino que só tem lugar para outros dorme depois de 8 recusas seguidas na visita e guarda o "tem lugar" lido; a remota que continua trocada não remonta as rotas). `./scripts/bench.sh "bigfull:20:3:vanilla;chesttypes:20:3;full:100:3:vanilla;partialfull:20:3:vanilla"` de cada lado (relatórios `20261103-101733.md`, antes, e `20261103-102915.md`, depois, em `run/bench/reports/`, fora do git); o `partialfull` e o `full` depois foram medidos de novo em `20261103-103507.md` (5 repetições do `partialfull`), porque uma repetição da primeira rodada teve um pico de 10 ms fora do motor (o ± maior que a média).
+
+| Cenário | mod antes (ms/tick) | mod depois | Outra medida antes → depois |
+| --- | --- | --- | --- |
+| partialfull 20 | 0,0529 ± 0,0042 | 0,0052 ± 0,0016 | p99 0,865 → 0,147; µs/visita 96,3 → 34,4; visitas/tick 0,5 → 0,2 |
+| full 100 | 0,0038 ± 0,0001 | 0,0041 ± 0,0007 | µs/visita 7,59 → 8,15 ± 1,43 |
+| bigfull 20 | 0,0407 ± 0,0081 | 0,0374 ± 0,0103 | µs/visita 16,27 → 14,58 |
+| chesttypes 20 | 0,0383 ± 0,0072 | 0,0382 ± 0,0082 | µs/visita 12,55 → 12,55 |
+
+### Leitura
+
+- O `partialfull` caiu dez vezes e fica perto do `full`: antes o destino nunca dormia, e cada volta da origem re-simulava os 54 itens recusados (o anel das dicas guarda 8) com uma releitura dos slots por recusa; agora a visita para no oitavo e o destino dorme cada vez mais fundo, até a máquina mudar ou receber.
+- `full`, `bigfull` e `chesttypes` ficam dentro do ±: o sono depois das recusas só vale para o destino que tem lugar só para outros, e a recusa pelo tipo (a fornalha diante dos 2.000 papéis) segue sem dormir.
+
+## Auditoria do motor: cursor, destino seletivo por tanque e o `isLoaded` das remotas (8 de novembro de 2026)
+
+Ramo `ccr-6099bf57-xlgxhy`. Antes: o `main` (2.15.1). Depois: as três correções da auditoria (o cursor da origem segue do slot, tipo ou tanque seguinte quando o balde esvazia, M7; o tanque que recusa um fluido ou químico pelo tipo não dorme, `RefusedKinds`, M8; o `isLoaded` de uma remota lido uma vez por tick, A12). `./scripts/bench.sh "raw:2:3:vanilla;many:500:3:vanilla;mixed:498:3;range:200:3;tablet-range:100:3"` de cada lado (relatórios `run/bench/reports/20261108-182512.md`, antes, e `20261108-181931.md` mais `20261108-183121.md`, depois, fora do git). Mesmo contêiner, dividido com os GameTests que rodaram antes.
+
+| Cenário | mod antes (ms/tick) | mod depois | Outra medida antes → depois |
+| --- | --- | --- | --- |
+| raw 2 | 0,2050 ± 0,0588 | 0,1813 ± 0,0315 | µs/visita 102,8 ± 29,5 → 90,7 ± 15,8; itens/s 68.979 → 69.073 |
+| many 500 | 0,8204 ± 0,0300 | 0,8240 ± 0,0852 | µs/visita 15,94 → 15,62 ± 2,59 |
+| mixed 498 | 0,5919 ± 0,0162 | 0,5645 ± 0,0241 | µs/visita 3,83 → 3,59; p99 1,17 → 1,05 |
+| range 200 | 0,0017 ± 0,0003 | 0,0016 ± 0,0002 | heap retido 21,5 ± 7,3 → 21,7 ± 7,4 MB |
+| tablet-range 100 | 0,0015 ± 0,0002 | 0,0014 ± 0,0000 | p99 0,0076 → 0,0019 |
+
+### Leitura
+
+- Nada piorou além do ±. O `mixed` (fluidos e energia no meio) ficou um pouco abaixo, na borda do ruído: a recusa por tipo não acontece nele, então a diferença é só o cursor que anda.
+- O ganho das correções está no caso que nenhum cenário tem: uma máquina com duas saídas em que a primeira enche mais rápido que a vazão do tier (a segunda não saía nunca), e o tanque seletivo diante de dois fluidos. Os GameTests medem em ticks: a lava atrás da água chega em até 10 ticks (antes nunca, em 200), e os dois slots do baú saem lado a lado no Básico (antes o segundo esperava o primeiro esvaziar).
+- O `isLoaded` por tick não tem cenário que mova pelas remotas (`range` e `tablet-range` não movem nada); fica como ganho por raciocínio: uma busca no mapa de chunks a menos por consulta de capability, que na visita são duas por destino por slot.

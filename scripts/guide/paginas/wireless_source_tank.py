@@ -2,7 +2,7 @@
 from guia_base import *  # noqa: F401,F403
 
 
-PAGINA = page('wireless-source-tank.md', front('Tanque de Source Wireless', 'wirelessautomate:storage_source_tank', 17,
+PAGINA = page('wireless-source-tank.md', front('Tanque de Source Wireless', 'wirelessautomate:storage_source_tank', 'armazenamentos', 17,
                                       item_ids=['wirelessautomate:storage_source_tank']) + '''
 # Tanque de Source Wireless
 
@@ -41,7 +41,7 @@ Não tem filtro: Source é uma só.
 Um Tanque Wireless com gemas de Source e ferro (só com o Ars Nouveau).
 
 <RecipeFor id="wirelessautomate:storage_source_tank" />
-''', front('Wireless Source Tank', 'wirelessautomate:storage_source_tank', 17,
+''', front('Wireless Source Tank', 'wirelessautomate:storage_source_tank', 'armazenamentos', 17,
            item_ids=['wirelessautomate:storage_source_tank']) + '''
 # Wireless Source Tank
 

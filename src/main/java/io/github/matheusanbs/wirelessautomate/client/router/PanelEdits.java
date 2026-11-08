@@ -8,6 +8,7 @@ import io.github.matheusanbs.wirelessautomate.menu.RouterSnapshot.FaceView;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.packet.FaceActionPayload;
+import io.github.matheusanbs.wirelessautomate.packet.MachinePastePayload;
 import io.github.matheusanbs.wirelessautomate.packet.OpenFilterPayload;
 import io.github.matheusanbs.wirelessautomate.packet.PanelNoticePayload;
 import io.github.matheusanbs.wirelessautomate.packet.PanelNotices;
@@ -20,6 +21,7 @@ import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import org.lwjgl.glfw.GLFW;
 
@@ -153,6 +155,7 @@ final class PanelEdits {
                     notice.face(), Optional.empty()));
             case UNDO_PASTE -> actions.undoPaste();
             case RESTORE_IDLE_NETWORKS -> actions.clearIdleNetworks(true);
+            case UNDO_MACHINE_PASTE -> actions.send(MachinePastePayload.undo(notice.containerId()));
             case NONE -> {
             }
         }
@@ -203,7 +206,10 @@ final class PanelEdits {
             }
             case HIGHLIGHT -> targetLine.toggleHighlight();
             case REVERT -> {
-                if (edit && machine != null) {
+                BlockPos attached = model.attachedInGroup() ? model.targetPos() : null;
+                if (edit && attached != null) {
+                    actions.send(RevertMachinePayload.attached(actions.containerId(), attached));
+                } else if (edit && machine != null) {
                     actions.send(new RevertMachinePayload(actions.containerId(), model.snapshot().target().id(),
                             machine.pos()));
                 }

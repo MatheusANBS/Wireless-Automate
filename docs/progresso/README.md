@@ -4,13 +4,17 @@ Comece por aqui para continuar o trabalho. Este arquivo é curto de propósito: 
 
 ## Agora
 
-- **Versão atual:** 2.13.0 (30/10/2026), publicada no GitHub; os upgrades do Baú (Mesa de Trabalho e Compactação). Protocolo 40.
-- **Publicação:** a 2.13.0 está no CurseForge e no Modrinth (`modrinth.com/mod/wireless-automate`, em análise desde 30/10).
-- **Em andamento:** nada em ramo aberto. O ramo `mc/1.20.1-forge` (porte) está parado à espera do ok do dono (`docs/portes.md`).
+- **Versão atual:** 2.16.0 (08/11/2026): o balanceamento 6 (fluido e químico ×4, Source ×10, capacidades de uma hora, migração 6 da config) e as três correções do motor da auditoria de 08/11 (o cursor numa saída da máquina, o tanque seletivo, o `isLoaded` das remotas). Protocolo 49 (o mesmo da 2.15.0).
+- **Publicação:** a 2.14.0 está no CurseForge; no GitHub a última release é a v2.15.0 (a 2.14.0 e a 2.15.1 não têm release lá, apesar do que o histórico dizia). A 2.16.0 tem release com o jar e espera o dono subir no CurseForge e no Modrinth.
+- **Em andamento:** nada no código. A máquina faladeira (A13 do backlog da `wa-performance`) espera um cenário de bench antes da decisão. O ramo `mc/1.20.1-forge` (porte) está parado à espera do ok do dono (`docs/portes.md`).
 
 ## Próximo passo
 
-1. A próxima funcionalidade, a escolher com o dono: a lixeira do mod, o fim do roteador de alcance (pausar grupo, perfis no Configurador, página no guia) ou os atalhos de AE2/RS2.
+1. Subir a 2.16.0 no CurseForge e no Modrinth (jar em `build/libs/`, texto em `docs/curseforge/changelog-2.16.0.md`); conferir no jogo que um mundo antigo migra a config na primeira carga.
+2. O dono testa à mão as etapas 1 a 4 do alcance e o Ctrl + clique do Vinculador (listas nas linhas de 02/11 do histórico), já no main.
+3. Reidealizar as telas do Tablet do zero (criação de redes etc.), mockup primeiro para o ok do dono.
+4. Refazer as imagens do Vinculador na vitrine (sem a área) e a do livro (ver `pendencias.md`).
+5. Os menores que sobraram do alcance (`pendencias.md`, seção "Roteador de alcance").
 
 ## Os arquivos
 
@@ -19,7 +23,7 @@ Comece por aqui para continuar o trabalho. Este arquivo é curto de propósito: 
 | [pendencias.md](pendencias.md) | O que falta, por área, e o que depende do dono |
 | [estado.md](estado.md) | Cada funcionalidade: pronta ou não, e em que versão entrou |
 | [decisoes.md](decisoes.md) | As decisões em vigor, do dono e do código |
-| [historico/](historico/) | Uma linha por sessão, um arquivo por mês ([2026-10](historico/2026-10.md)) |
+| [historico/](historico/) | Uma linha por sessão, um arquivo por mês ([2026-11](historico/2026-11.md), [2026-10](historico/2026-10.md)) |
 
 O que mudou em cada versão está no changelog unificado (`docs/curseforge/changelog-curseforge-<versão>.md`); onde cada coisa fica no código, no [mapa](../mapa/).
 

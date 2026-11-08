@@ -1,15 +1,17 @@
 package io.github.matheusanbs.wirelessautomate.block;
 
 import io.github.matheusanbs.wirelessautomate.range.MachineCaches;
+import io.github.matheusanbs.wirelessautomate.range.RangeRules;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Os caches de capability das máquinas remotas de um {@link RouterBlockEntity}, por {@code pos.asLong()}:
- * criados sob demanda na leitura das portas e descartados (com os listeners) ao desvincular ou quando o
- * upgrade de alcance deixa de valer. Sem nenhuma remota, o mapa nem existe.
+ * criados sob demanda na leitura das portas e descartados (com os listeners) ao desvincular, quando o
+ * upgrade de alcance deixa de valer e quando a máquina sai do raio ou do limite. Sem nenhuma remota, o mapa nem existe.
  */
 final class RouterRemoteCaches {
     private final RouterBlockEntity router;
@@ -38,12 +40,21 @@ final class RouterRemoteCaches {
         return caches == null;
     }
 
-    /** Descarta os caches das remotas fora de {@code remotes}; sem {@code keepAny}, de todas. Só com {@link #isEmpty()} falso. */
-    void prune(boolean keepAny, RemoteMachines remotes) {
+    /**
+     * Descarta os caches das remotas que não estão ativas em {@code reach} (fora de {@code remotes}, do raio ou do
+     * limite); com {@code reach} nulo, de todas. Só com {@link #isEmpty()} falso.
+     */
+    void prune(RangeRules.Reach @Nullable [] reach, RemoteMachines remotes) {
+        LongOpenHashSet active = new LongOpenHashSet();
+        for (int i = 0; reach != null && i < reach.length; i++) {
+            if (reach[i] == RangeRules.Reach.ACTIVE) {
+                active.add(remotes.machine(i).pos().asLong());
+            }
+        }
         var iterator = caches.long2ObjectEntrySet().fastIterator();
         while (iterator.hasNext()) {
             var entry = iterator.next();
-            if (!keepAny || !remotes.contains(entry.getValue().pos())) {
+            if (!active.contains(entry.getLongKey())) {
                 entry.getValue().discard();
                 iterator.remove();
             }

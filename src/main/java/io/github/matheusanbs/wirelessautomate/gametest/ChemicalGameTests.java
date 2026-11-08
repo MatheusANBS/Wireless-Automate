@@ -1,10 +1,13 @@
 package io.github.matheusanbs.wirelessautomate.gametest;
 
+import com.mojang.authlib.GameProfile;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
+import io.github.matheusanbs.wirelessautomate.item.tuner.ConfiguratorTuner;
+import io.github.matheusanbs.wirelessautomate.item.tuner.TunerPending;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
@@ -30,9 +33,12 @@ import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.common.util.FakePlayerFactory;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.jetbrains.annotations.Nullable;
@@ -189,6 +195,64 @@ public final class ChemicalGameTests {
                 .thenSucceed();
     }
 
+    /**
+     * Origem com dois tanques que enchem sem parar (hidrogênio e oxigênio, como o Separador Eletrolítico), no Elite,
+     * diante de um tanque só de hidrogênio e de um só de oxigênio: a recusa do hidrogênio pelo tanque de oxigênio é
+     * pelo tipo, então ele não dorme como cheio e recebe o oxigênio do segundo tanque na mesma visita. Antes, o
+     * oxigênio nunca saía e o separador travava.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void secondChemicalTankIsNotStarvedByATypedDestination(GameTestHelper helper) {
+        if (!ChemicalTestTanks.enabled()) {
+            helper.succeed();
+            return;
+        }
+        UUID network = newNetwork(helper, "teste-quimico-dois-tanques-tipo");
+        BlockPos machine = helper.absolutePos(A);
+        BlockPos hydrogenPos = helper.absolutePos(B);
+        BlockPos oxygenPos = helper.absolutePos(new BlockPos(2, 1, 0));
+        ChemicalTestSupport.reset(machine);
+        ChemicalTestSupport.reset(hydrogenPos);
+        ChemicalTestSupport.reset(oxygenPos);
+        helper.setBlock(A, ChemicalTestTanks.MANY_TANKS_BLOCK);
+        helper.setBlock(A.above(), ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP)
+                .setValue(RouterBlock.TIER, RouterTier.ELITE));
+        RouterBlockEntity source = helper.getBlockEntity(A.above());
+        source.setNetworkId(network);
+        source.setMode(ResourceType.CHEMICAL, Direction.UP, PortMode.EXTRACT);
+        helper.assertValueEqual(ChemicalTestSupport.fillTank(machine, 0, HYDROGEN, 60_000), 0L, "sobra de hidrogênio");
+        helper.assertValueEqual(ChemicalTestSupport.fillTank(machine, 1, OXYGEN, 1_000), 0L, "sobra de oxigênio");
+        ChemicalTestSupport.acceptOnly(hydrogenPos, HYDROGEN);
+        ChemicalTestSupport.acceptOnly(oxygenPos, OXYGEN);
+        RouterBlockEntity hydrogen = typedTank(helper, B, network);
+        RouterBlockEntity oxygen = typedTank(helper, new BlockPos(2, 1, 0), network);
+        long[] started = new long[1];
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(source)
+                        && NetworkManager.get().contains(hydrogen) && NetworkManager.get().contains(oxygen),
+                        "roteadores não registrados"))
+                .thenExecute(() -> started[0] = helper.getTick())
+                .thenWaitUntil(() -> helper.assertValueEqual(ChemicalTestSupport.typedAmount(oxygenPos), 1_000L,
+                        "oxigênio no tanque de oxigênio"))
+                .thenExecute(() -> {
+                    long ticks = helper.getTick() - started[0];
+                    helper.assertTrue(ticks <= 10, "o oxigênio levou " + ticks + " ticks: o tanque dormiu no hidrogênio");
+                    helper.assertTrue(ChemicalTestSupport.typedAmount(hydrogenPos) > 0, "o hidrogênio não andou");
+                })
+                .thenSucceed();
+    }
+
+    /** Tanque seletivo de teste em {@code pos} (configure com {@code acceptOnly} antes), com um roteador em cima, Insere. */
+    private static RouterBlockEntity typedTank(GameTestHelper helper, BlockPos pos, UUID network) {
+        helper.setBlock(pos, ChemicalTestTanks.TYPED_TANK_BLOCK);
+        BlockPos routerPos = pos.above();
+        helper.setBlock(routerPos, ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.FACING, Direction.UP));
+        RouterBlockEntity router = helper.getBlockEntity(routerPos);
+        router.setNetworkId(network);
+        router.setMode(ResourceType.CHEMICAL, Direction.UP, PortMode.INSERT);
+        return router;
+    }
+
     /** A entrada de químico sobrevive aos dois codecs (salvo e rede) e o filtro casa por id e por mod. */
     @GameTest(template = "empty")
     public static void chemicalEntryCodecsAndMatching(GameTestHelper helper) {
@@ -275,6 +339,39 @@ public final class ChemicalGameTests {
         }
         TierUpgradeGameTests.directStorage(helper, StorageKind.CHEMICAL_TANK);
         helper.succeed();
+    }
+
+    /**
+     * O Afinador num tanque de químico da API do Mekanism com hidrogênio (sem prova de químico, o vazio fica de fora):
+     * aberto e igual em todas as faces, é armazenamento, Armazém em Cima e o resto Nenhum.
+     */
+    @GameTest(template = "empty")
+    public static void tunerProposesStorageOnAChemicalTank(GameTestHelper helper) {
+        if (!ChemicalTestTanks.enabled()) {
+            helper.succeed();
+            return;
+        }
+        RouterBlockEntity router = tank(helper, A, newNetwork(helper, "afinador-quimico"), PortMode.NONE);
+        // Um FakePlayer, fora da lista do servidor: tirar um jogador de teste da lista faz o Mekanism mandar um pacote
+        // dele a todos, e a conexão falsa derruba o servidor.
+        ServerPlayer player = FakePlayerFactory.get(helper.getLevel(), new GameProfile(UUID.randomUUID(), "[wa-afinador]"));
+        player.moveTo(Vec3.atCenterOf(router.getBlockPos().above()));
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(router), "roteador não registrado"))
+                .thenExecute(() -> {
+                    fill(helper, A, HYDROGEN, 2_000);
+                    ConfiguratorTuner.click(player, helper.absolutePos(A), false);
+                    TunerPending.Proposal proposal = TunerPending.get(player.getUUID());
+                    TunerPending.forget(player.getUUID());
+                    helper.assertTrue(proposal != null && proposal.modes().containsKey(ResourceType.CHEMICAL),
+                            "sem proposta de químico: " + (proposal == null ? null : proposal.modes().keySet()));
+                    PortMode[] modes = proposal.modes().get(ResourceType.CHEMICAL);
+                    for (int face = 0; face < modes.length; face++) {
+                        PortMode expected = face == Direction.UP.ordinal() ? PortMode.BOTH : PortMode.NONE;
+                        helper.assertTrue(modes[face] == expected, "proposta na face " + face + ": " + modes[face]);
+                    }
+                })
+                .thenSucceed();
     }
 
     /** Compara redes com {@code Objects.equals}: o {@code assertValueEqual} com nulo derruba o servidor. */

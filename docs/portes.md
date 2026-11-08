@@ -12,7 +12,7 @@ a skill `wa-porte` (`.claude/skills/wa-porte/`), que gera o relatório de impact
   nome `mc/<versão>-<loader>`, criados a partir do `main` e que **nunca voltam para ele**.
 - **Features descem do `main` para os ramos:** por `cherry-pick` quando der, à mão quando a API mudar.
   Um ramo pode ficar algumas versões atrás; a tabela abaixo diz qual versão do `main` cada um espelha.
-- **Lógica pura idêntica:** as classes puras com JUnit (`TickBudget`, `RoundRobinOrder`, `WheelLayout`,
+- **Lógica pura idêntica:** as classes puras com JUnit (`TickBudget`, `RoundRobinOrder`,
   `PasteMode`...) ficam iguais em todos os ramos. É a parte do mod que não depende de versão e a que
   mais custa reescrever.
 - **Versão e arquivos:** cada ramo usa o `mod_version` do `main` que espelha; o jar e a tag levam o jogo e
@@ -54,7 +54,7 @@ e dos payloads atuais: é o porte mais trabalhoso. Pontos que devem pesar:
 - capabilities pelo `LazyOptional`, com o cache feito pelo próprio mod;
 - pastas de dados no plural;
 - os químicos do Mekanism divididos em quatro tipos;
-- o GuideME pode não existir.
+- o livro-guia é do próprio mod (`client/guide/`), sem dependência de outro mod.
 
 O ATM9 é um pack grande e estável, com muito jogador.
 

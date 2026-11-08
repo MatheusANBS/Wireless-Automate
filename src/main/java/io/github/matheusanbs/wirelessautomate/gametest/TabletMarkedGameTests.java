@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.gametest;
 import static io.github.matheusanbs.wirelessautomate.gametest.RangeTestSupport.BARREL;
 import static io.github.matheusanbs.wirelessautomate.gametest.RangeTestSupport.FURNACE_A;
 import static io.github.matheusanbs.wirelessautomate.gametest.RangeTestSupport.FURNACE_B;
+import static io.github.matheusanbs.wirelessautomate.gametest.RangeTestSupport.REMOTE_CHEST;
 import static io.github.matheusanbs.wirelessautomate.gametest.RangeTestSupport.groupOf;
 import static io.github.matheusanbs.wirelessautomate.gametest.RangeTestSupport.rangeUpgrade;
 import static io.github.matheusanbs.wirelessautomate.gametest.RangeTestSupport.routerWithMachines;
@@ -405,6 +406,197 @@ public final class TabletMarkedGameTests {
             eq(helper, moved, 1, "o roteador e a máquina dele contados uma vez");
             eq(helper, target.remoteMachines().group(group).profile().face(ResourceType.ITEM, RemoteSide.FRONT).network(),
                     null, "o roteador inteiro saiu da rede");
+        });
+    }
+
+    /** Um baú vinculado (o grupo da presa) com o perfil só com a Frente em Extrair, sem rede; devolve o id do grupo. */
+    private static int chestGroupWithRemote(GameTestHelper helper, RouterBlockEntity target) {
+        helper.setBlock(REMOTE_CHEST, Blocks.CHEST);
+        helper.assertTrue(target.linkMachine(helper.absolutePos(REMOTE_CHEST)), "não vinculou o baú");
+        int chests = target.remoteMachines().attached().group();
+        eq(helper, groupOf(target, helper.absolutePos(REMOTE_CHEST)), chests, "o baú fora do grupo da presa");
+        MachineConfig profile = new MachineConfig();
+        profile.face(ResourceType.ITEM, RemoteSide.FRONT).setMode(PortMode.EXTRACT);
+        target.setGroupProfile(chests, profile);
+        return chests;
+    }
+
+    private static FaceConfig attachedFace(RouterBlockEntity router, RemoteSide side) {
+        return router.remoteMachines().effectiveAttached().face(ResourceType.ITEM, side);
+    }
+
+    /**
+     * Mover com a presa no grupo dela: a presa marcada sozinha vira exceção (o grupo tem uma remota); o roteador
+     * inteiro leva a presa e o perfil juntos, e a exceção que ficou igual ao perfil some; o grupo marcado com a presa
+     * a trata como parte dele: muda o perfil, conta só o grupo, e a exceção dela fica.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void moveWithTheAttachedInItsGroup(GameTestHelper helper) {
+        run(helper, scene -> {
+            RouterBlockEntity target = scene.target();
+            int chests = chestGroupWithRemote(helper, target);
+            RemoteMachines remotes = target.remoteMachines();
+            UUID net = scene.network().id();
+            MachineKey attached = MachineKey.attached(scene.targetKey());
+
+            int moved = TabletPayloads.handleMoveNodes(scene.player(), new TabletMoveNodesPayload(CONTAINER, List.of(),
+                    machines(attached), Optional.of(ResourceType.ITEM), Optional.of(net)));
+            eq(helper, moved, 1, "a presa movida");
+            helper.assertTrue(remotes.attached().hasException(), "a presa com remota no grupo não virou exceção");
+            eq(helper, attachedFace(target, RemoteSide.FRONT).network(), net, "a Frente da presa");
+            eq(helper, remotes.group(chests).profile().face(ResourceType.ITEM, RemoteSide.FRONT).network(), null,
+                    "a presa mudou o perfil");
+            eq(helper, effective(helper, target, REMOTE_CHEST, RemoteSide.FRONT).network(), null, "o baú vinculado");
+
+            // O roteador inteiro: perfil e exceção iguais depois, a exceção some.
+            moved = TabletPayloads.handleMoveNodes(scene.player(), new TabletMoveNodesPayload(CONTAINER,
+                    List.of(scene.targetKey()), TabletMarks.EMPTY, Optional.of(ResourceType.ITEM), Optional.empty()));
+            eq(helper, moved, 1, "o roteador");
+            helper.assertFalse(remotes.attached().hasException(), "sobrou exceção na presa com o roteador inteiro");
+            eq(helper, attachedFace(target, RemoteSide.FRONT).network(), null, "a Frente da presa fora da rede");
+
+            // A presa com uma exceção de verdade (Atrás em Inserir, sem rede), marcada junto com o grupo dela.
+            target.configureFace(EditTarget.ATTACHED_TARGET, ResourceType.ITEM, Direction.SOUTH, PortMode.INSERT, 0,
+                    RedstoneMode.IGNORE);
+            helper.assertTrue(remotes.attached().hasException(), "a presa sem exceção");
+            moved = TabletPayloads.handleMoveNodes(scene.player(), new TabletMoveNodesPayload(CONTAINER, List.of(),
+                    new TabletMarks(List.of(attached), List.of(new GroupKey(scene.targetKey(), chests)), List.of()),
+                    Optional.of(ResourceType.ITEM), Optional.of(net)));
+            eq(helper, moved, 1, "o grupo com a presa contado uma vez");
+            eq(helper, remotes.group(chests).profile().face(ResourceType.ITEM, RemoteSide.FRONT).network(), net,
+                    "o perfil do grupo");
+            helper.assertTrue(remotes.attached().hasException(), "a exceção da presa no grupo inteiro sumiu");
+            eq(helper, attachedFace(target, RemoteSide.BACK).network(), null,
+                    "a presa do grupo marcado foi movida como presa");
+        });
+    }
+
+    /**
+     * Colar com a presa no grupo dela: o grupo marcado com a presa a trata como parte dele, e a exceção dela que o
+     * perfil colado iguala some; o Desfazer a devolve com o perfil.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void pasteWithTheAttachedInItsGroupAndUndo(GameTestHelper helper) {
+        run(helper, scene -> {
+            RouterBlockEntity target = scene.target();
+            int chests = chestGroupWithRemote(helper, target);
+            RemoteMachines remotes = target.remoteMachines();
+            MachineKey attached = MachineKey.attached(scene.targetKey());
+
+            // Na presa sozinha: vira exceção, o perfil e o baú vinculado não mudam.
+            helper.assertTrue(paste(scene, List.of(), machines(attached)) == 1, "a presa: " + text(scene.menu()));
+            helper.assertTrue(remotes.attached().hasException(), "a presa colada não virou exceção");
+            MachineConfig exception = remotes.attached().exception().copy();
+            eq(helper, remotes.group(chests).profile().face(ResourceType.ITEM, RemoteSide.LEFT).mode(), PortMode.NONE,
+                    "o colar na presa mudou o perfil");
+
+            // O grupo com a presa: o perfil colado fica igual à exceção dela, que some.
+            helper.assertTrue(paste(scene, List.of(), new TabletMarks(List.of(attached),
+                    List.of(new GroupKey(scene.targetKey(), chests)), List.of())) == 1,
+                    "o grupo com a presa: " + text(scene.menu()));
+            helper.assertTrue(remotes.group(chests).profile().sameAs(exception),
+                    "o perfil colado no grupo difere do colado na presa");
+            helper.assertFalse(remotes.attached().hasException(), "a exceção igual ao perfil ficou");
+
+            helper.assertTrue(profile(scene.player(), Action.UNDO, null, List.of(), TabletMarks.EMPTY) >= 1,
+                    "não desfez: " + text(scene.menu()));
+            eq(helper, remotes.group(chests).profile().face(ResourceType.ITEM, RemoteSide.LEFT).mode(), PortMode.NONE,
+                    "o perfil depois de desfazer");
+            helper.assertTrue(remotes.attached().hasException() && remotes.attached().exception().sameAs(exception),
+                    "a exceção da presa não voltou");
+        });
+    }
+
+    /**
+     * O Desfazer não devolve a exceção da presa depois que o bloco da frente mudou: a presa foi para o grupo do bloco
+     * novo, e a exceção era do antigo.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void undoKeepsTheAttachedOutAfterTheBlockChanged(GameTestHelper helper) {
+        run(helper, scene -> {
+            RouterBlockEntity target = scene.target();
+            int chests = chestGroupWithRemote(helper, target);
+            RemoteMachines remotes = target.remoteMachines();
+            MachineKey attached = MachineKey.attached(scene.targetKey());
+            helper.assertTrue(paste(scene, List.of(), machines(attached)) == 1, "a presa: " + text(scene.menu()));
+            helper.assertTrue(remotes.attached().hasException(), "a presa colada não virou exceção");
+            helper.assertTrue(paste(scene, List.of(), new TabletMarks(List.of(attached),
+                    List.of(new GroupKey(scene.targetKey(), chests)), List.of())) == 1,
+                    "o grupo com a presa: " + text(scene.menu()));
+            helper.assertFalse(remotes.attached().hasException(), "a exceção igual ao perfil ficou");
+
+            helper.setBlock(RangeTestSupport.CHEST, Blocks.BARREL);
+            int barrels = remotes.attached().group();
+            helper.assertTrue(barrels != chests, "a presa não foi para o grupo do barril");
+            profile(scene.player(), Action.UNDO, null, List.of(), TabletMarks.EMPTY);
+            eq(helper, remotes.attached().group(), barrels, "a presa voltou de grupo");
+            helper.assertFalse(remotes.attached().hasException(),
+                    "o Desfazer pôs a exceção do baú na presa do grupo do barril");
+            eq(helper, remotes.group(chests).profile().face(ResourceType.ITEM, RemoteSide.LEFT).mode(), PortMode.NONE,
+                    "o perfil dos baús não voltou");
+        });
+    }
+
+    /**
+     * O roteador inteiro e o grupo da presa no mesmo colar: a exceção que a presa tinha antes não conta como mantida
+     * quando o colar a iguala ao perfil, e o Desfazer volta tudo ao que era (a presa, a exceção dela, os perfis e a
+     * remota).
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void pasteOnRouterAndAttachedGroupUndoesEverything(GameTestHelper helper) {
+        run(helper, scene -> {
+            RouterBlockEntity target = scene.target();
+            int chests = chestGroupWithRemote(helper, target);
+            RemoteMachines remotes = target.remoteMachines();
+            target.configureFace(EditTarget.ATTACHED_TARGET, ResourceType.ITEM, Direction.SOUTH, PortMode.INSERT, 0,
+                    RedstoneMode.IGNORE);
+            helper.assertTrue(remotes.attached().hasException(), "a presa sem exceção");
+            RouterPreset attachedBefore = RouterPreset.copyOf(target);
+            MachineConfig exceptionBefore = remotes.attached().exception().copy();
+            List<MachineConfig> profilesBefore = new ArrayList<>();
+            remotes.groups().forEach(group -> profilesBefore.add(group.profile().copy()));
+
+            helper.assertTrue(paste(scene, List.of(scene.targetKey()), new TabletMarks(List.of(),
+                    List.of(new GroupKey(scene.targetKey(), chests)), List.of())) == 2,
+                    "o roteador e o grupo: " + text(scene.menu()));
+            eq(helper, remotes.group(chests).profile().face(ResourceType.ITEM, RemoteSide.LEFT).mode(), PortMode.INSERT,
+                    "o perfil colado");
+            // A presa colada pelo roteador e o perfil colado no grupo ficam iguais: a exceção some e não é "mantida".
+            helper.assertFalse(remotes.attached().hasException(), "a exceção igual ao perfil ficou");
+            helper.assertFalse(text(scene.menu()).contains("exceptions_kept"),
+                    "contou como mantida a exceção que sumiu: " + text(scene.menu()));
+
+            helper.assertTrue(profile(scene.player(), Action.UNDO, null, List.of(), TabletMarks.EMPTY) >= 1,
+                    "não desfez: " + text(scene.menu()));
+            for (int g = 0; g < profilesBefore.size(); g++) {
+                helper.assertTrue(remotes.groupAt(g).profile().sameAs(profilesBefore.get(g)),
+                        "o perfil do grupo " + remotes.groupAt(g).id() + " não voltou");
+            }
+            helper.assertTrue(remotes.attached().hasException() && remotes.attached().exception().sameAs(exceptionBefore),
+                    "a exceção da presa não voltou");
+            helper.assertTrue(RouterPreset.copyOf(target).equals(attachedBefore), "a presa não voltou");
+            helper.assertFalse(remote(helper, target, REMOTE_CHEST).hasException(), "o baú vinculado ganhou exceção");
+        });
+    }
+
+    /** Origem sem o quadro (formato antigo): a presa marcada junto com o grupo dela recebe o colar como presa. */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void oldProfileStillPastesOnTheAttachedMarkedWithItsGroup(GameTestHelper helper) {
+        run(helper, scene -> {
+            ItemStack tablet = scene.player().getInventory().getItem(0);
+            ProfileSource from = tablet.get(ModDataComponents.PROFILE_SOURCE.get());
+            tablet.set(ModDataComponents.PROFILE_SOURCE.get(),
+                    new ProfileSource(from.nodeName(), from.machine(), from.origin()));
+            RouterBlockEntity target = scene.target();
+            int chests = chestGroupWithRemote(helper, target);
+            MachineKey attached = MachineKey.attached(scene.targetKey());
+            helper.assertTrue(paste(scene, List.of(), new TabletMarks(List.of(attached),
+                    List.of(new GroupKey(scene.targetKey(), chests)), List.of())) == 1,
+                    "a presa: " + text(scene.menu()));
+            eq(helper, target.face(ResourceType.ITEM, Direction.EAST).mode(), PortMode.INSERT, "a presa não recebeu");
+            eq(helper, target.remoteMachines().group(chests).profile().face(ResourceType.ITEM, RemoteSide.LEFT).mode(),
+                    PortMode.NONE, "colou no grupo sem o quadro");
+            helper.assertTrue(text(scene.menu()).contains("copy_again"), "aviso: " + text(scene.menu()));
         });
     }
 

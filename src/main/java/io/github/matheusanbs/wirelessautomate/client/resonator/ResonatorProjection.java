@@ -122,7 +122,7 @@ public final class ResonatorProjection {
 
     /**
      * Shift + roda com a projeção ligada, a mão principal vazia (o gesto que a ligou) e o jogador perto do Núcleo:
-     * troca Vitrine e Faixa. Com item na mão a roda fica para ele (o Vinculador e o Configurador usam Shift + roda).
+     * troca Vitrine e Faixa. Com item na mão a roda fica para ele (o Vinculador usa Shift + roda).
      */
     @SubscribeEvent
     static void onScroll(InputEvent.MouseScrollingEvent event) {

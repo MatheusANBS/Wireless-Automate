@@ -1,12 +1,11 @@
 package io.github.matheusanbs.wirelessautomate.packet;
 
+import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterEntry;
-import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
-import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerOpen;
 import io.github.matheusanbs.wirelessautomate.menu.CardFilterTarget;
@@ -17,7 +16,8 @@ import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.FilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.IdleNetworkUndo;
 import io.github.matheusanbs.wirelessautomate.client.linker.LinkerOpenClient;
-import io.github.matheusanbs.wirelessautomate.menu.LinkerMenu;
+import io.github.matheusanbs.wirelessautomate.client.tuner.TunerProposal;
+import io.github.matheusanbs.wirelessautomate.item.tuner.ConfiguratorTuner;
 import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RepairerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RemoteRouterMenu;
@@ -78,7 +78,12 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ModPayloads {
     /**
-     * Versão do protocolo (39: os payloads {@code CompactingStatePayload} e {@code CompactingRulePayload}, o painel da
+     * Versão do protocolo (49: a tela do Vinculador e a área saíram, com o {@code LinkerMenu}, o
+     * {@code LinkerSnapshotPayload} e o {@code LinkerActionPayload}; 48: o {@code attachedShown} da {@code RangeView} (a presa que não é máquina sai da lista
+     * do alcance); 47: o ícone do grupo no Tablet, a ação {@code GROUP_ICON}, o ícone no {@code GroupView} do
+     * cabeçalho e o texto de 256 do {@code TabletActionPayload}; 46: o {@code ConfiguratorCancelPayload}, a pintura do Afinador apagada no cliente; 45: o {@code LinkSameBlockPayload}, o Ctrl + clique do Vinculador; 43: o bloco do grupo no {@code RenameTargetPayload}; 42: os payloads {@code UnlinkGroupPayload}, {@code MachineCopyPayload} e
+     * {@code MachinePastePayload} ({@link RangePayloads}), o Desfazer {@code UNDO_MACHINE_PASTE} do aviso e o nome da
+     * cópia ({@code clipboard}) no snapshot do roteador; 39: os payloads {@code CompactingStatePayload} e {@code CompactingRulePayload}, o painel da
      * Compactação do Baú, e o {@code ChestCraftFillPayload}, o "+" do JEI na Mesa do Baú; 38: as pixel arts no layout da Tela de Sinal ({@code images}, a peça Imagem e o fundo em
      * mosaico) e na biblioteca do jogador ({@code TvLibraryPayload.arts}, as ações {@code SAVE_ART}, {@code RENAME_ART}
      * e {@code REMOVE_ART}); o update tag da Tela leva as artes só como referência e os pixels vão no
@@ -89,7 +94,7 @@ public final class ModPayloads {
      * {@code TvLibraryPayload}, {@code TvLibraryActionPayload}, {@code TvPreviewPayload} e {@code TvPreviewValuesPayload},
      * e o teto de bytes do layout no buffer de abertura da Tela); mude quando um payload mudar de formato.
      */
-    public static final String VERSION = "40";
+    public static final String VERSION = "49";
 
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(VERSION);
@@ -129,25 +134,25 @@ public final class ModPayloads {
                 (payload, context) -> handleRevertGroup(serverPlayer(context), payload));
         registrar.playToServer(ClearIdleNetworksPayload.TYPE, ClearIdleNetworksPayload.STREAM_CODEC,
                 (payload, context) -> handleClearIdleNetworks(serverPlayer(context), payload));
+        // Desvincular o grupo, copiar e colar por máquina e o Ctrl + clique do Vinculador (packet/RangePayloads).
+        RangePayloads.register(registrar);
         // Ingrediente fantasma do JEI (compat/jei); registrado sempre, com ou sem o JEI.
         registrar.playToServer(AddFilterEntryPayload.TYPE, AddFilterEntryPayload.STREAM_CODEC,
                 (payload, context) -> handleAddFilterEntry(serverPlayer(context), payload));
         registrar.playToServer(FilterEntriesPayload.TYPE, FilterEntriesPayload.STREAM_CODEC,
                 (payload, context) -> handleFilterEntries(serverPlayer(context), payload));
-        registrar.playToServer(CycleConfiguratorTypePayload.TYPE, CycleConfiguratorTypePayload.STREAM_CODEC,
-                (payload, context) -> handleCycleConfiguratorType(serverPlayer(context), payload));
         registrar.playToServer(CycleLinkerModePayload.TYPE, CycleLinkerModePayload.STREAM_CODEC,
                 (payload, context) -> handleCycleLinkerMode(serverPlayer(context), payload));
-        registrar.playToServer(ConfiguratorWheelPayload.TYPE, ConfiguratorWheelPayload.STREAM_CODEC,
-                (payload, context) -> handleConfiguratorWheel(serverPlayer(context), payload));
-        // Tela do Vinculador (handlers em LinkerActions e LinkerMenu).
-        registrar.playToClient(LinkerSnapshotPayload.TYPE, LinkerSnapshotPayload.STREAM_CODEC, LinkerMenu::onSnapshot);
-        registrar.playToServer(LinkerActionPayload.TYPE, LinkerActionPayload.STREAM_CODEC,
-                (payload, context) -> LinkerActions.handle(serverPlayer(context), payload));
+        // Modo Abrir do Vinculador.
         registrar.playToClient(LinkerOpenListPayload.TYPE, LinkerOpenListPayload.STREAM_CODEC,
                 (payload, context) -> LinkerOpenClient.show(payload));
         registrar.playToServer(LinkerOpenPickPayload.TYPE, LinkerOpenPickPayload.STREAM_CODEC,
                 (payload, context) -> LinkerOpen.pick(serverPlayer(context), payload.machine(), payload.router()));
+        // A proposta do Afinador do Configurador (o cliente só a guarda para a pintura) e a pintura apagada no cliente.
+        registrar.playToClient(ConfiguratorProposalPayload.TYPE, ConfiguratorProposalPayload.STREAM_CODEC,
+                (payload, context) -> TunerProposal.receive(payload));
+        registrar.playToServer(ConfiguratorCancelPayload.TYPE, ConfiguratorCancelPayload.STREAM_CODEC,
+                (payload, context) -> ConfiguratorTuner.discard(serverPlayer(context), payload.machine()));
         // Telas dos armazenamentos (handlers no StorageListMenu e no StorageScalarMenu).
         registrar.playToClient(StorageEntriesPayload.TYPE, StorageEntriesPayload.STREAM_CODEC, StorageListMenu::onEntries);
         registrar.playToServer(StorageActionPayload.TYPE, StorageActionPayload.STREAM_CODEC,
@@ -343,13 +348,20 @@ public final class ModPayloads {
         return selected;
     }
 
-    /** Voltar ao perfil: tira a exceção da máquina remota {@code index}, se ela ainda está na posição {@code pos}. */
+    /**
+     * Voltar ao perfil: tira a exceção da máquina remota em {@code pos} ({@link #machineIndex}; ou da presa, no
+     * {@link RevertMachinePayload#ATTACHED}, se a posição atrás do roteador ainda é {@code pos}).
+     */
     public static boolean handleRevertMachine(@Nullable ServerPlayer player, RevertMachinePayload payload) {
         RouterEditHost host = host(player, payload.containerId());
-        if (host == null || !sameMachine(host.editedRouter(), payload.index(), payload.pos())) {
+        RouterBlockEntity router = host == null ? null : host.editedRouter();
+        boolean attached = payload.index() == RevertMachinePayload.ATTACHED;
+        int index = router == null || attached ? -1 : machineIndex(router, payload.index(), payload.pos());
+        if (router == null || (attached ? !RouterBlock.attachedPos(router.getBlockState(), router.getBlockPos())
+                .equals(payload.pos()) : index < 0)) {
             return false;
         }
-        boolean reverted = host.editedRouter().revertToProfile(payload.index());
+        boolean reverted = attached ? router.revertAttachedToProfile() : router.revertToProfile(index);
         host.editApplied();
         return reverted;
     }
@@ -370,15 +382,16 @@ public final class ModPayloads {
     }
 
     /**
-     * Desvincula a máquina remota {@code index}, se ela ainda está na posição {@code pos}; os cartões de
-     * um grupo que esvazia caem no roteador. A máquina presa não tem índice e não sai por aqui.
+     * Desvincula a máquina remota em {@code pos} ({@link #machineIndex}); os cartões de um grupo que esvazia caem
+     * no roteador. A máquina presa não tem índice e não sai por aqui.
      */
     public static boolean handleUnlinkMachine(@Nullable ServerPlayer player, UnlinkMachinePayload payload) {
         RouterEditHost host = host(player, payload.containerId());
-        if (host == null || !sameMachine(host.editedRouter(), payload.index(), payload.pos())) {
+        int index = host == null ? -1 : machineIndex(host.editedRouter(), payload.index(), payload.pos());
+        if (index < 0) {
             return false;
         }
-        boolean unlinked = host.editedRouter().unlinkMachine(payload.index());
+        boolean unlinked = host.editedRouter().unlinkMachine(index, player) >= 0;
         // Os índices depois dela mudaram: o alvo segue pela posição, ou volta para a presa.
         host.validTarget();
         host.editApplied();
@@ -389,7 +402,8 @@ public final class ModPayloads {
      * Atualizar: passa para o grupo do bloco novo a máquina trocada do índice (conferida pela posição) ou as
      * trocadas do grupo (conferido pelo bloco). Depois, uma máquina escolhida continua, e um grupo escolhido
      * que só trocou de bloco também ({@link EditTargetRef#refresh} o segue pelo id); um que saiu dá lugar ao
-     * grupo de destino da primeira máquina atualizada.
+     * grupo de destino da primeira máquina atualizada. Os cartões devolvidos vão para o jogador, e o aviso diz
+     * quantas máquinas e quantos cartões ({@link RangePayloads#updatedNotice}).
      */
     public static boolean handleUpdateMachine(@Nullable ServerPlayer player, UpdateMachinePayload payload) {
         RouterEditHost host = host(player, payload.containerId());
@@ -399,7 +413,8 @@ public final class ModPayloads {
         RouterBlockEntity router = host.editedRouter();
         List<Integer> indices = updateIndices(router, payload);
         EditTargetRef before = host.targetRef();
-        RemoteMachines.Regroup result = indices.isEmpty() ? RemoteMachines.Regroup.EMPTY : router.updateReplaced(indices);
+        RemoteMachines.Regroup result = indices.isEmpty() ? RemoteMachines.Regroup.EMPTY
+                : router.updateReplaced(indices, player);
         if (result.isEmpty()) {
             return false;
         }
@@ -412,18 +427,18 @@ public final class ModPayloads {
             host.validTarget();
         }
         host.editApplied();
+        sendNotice(player, RangePayloads.updatedNotice(result));
         return true;
     }
 
     /**
-     * Os índices que o Atualizar pede: a máquina, se ainda está na posição; ou todas as do grupo, se ele
+     * Os índices que o Atualizar pede: a máquina na posição ({@link #machineIndex}); ou todas as do grupo, se ele
      * ainda é do bloco visto (o roteador ignora as que não estão trocadas).
      */
     private static List<Integer> updateIndices(RouterBlockEntity router, UpdateMachinePayload payload) {
         if (payload.kind() == EditTarget.Kind.MACHINE) {
-            return payload.pos().isPresent() && sameMachine(router, payload.id(), payload.pos().get())
-                    ? List.of(payload.id())
-                    : List.of();
+            int index = payload.pos().isPresent() ? machineIndex(router, payload.id(), payload.pos().get()) : -1;
+            return index < 0 ? List.of() : List.of(index);
         }
         MachineGroup group = payload.kind() == EditTarget.Kind.GROUP && router.rangeActive()
                 ? router.remoteMachines().group(payload.id())
@@ -487,19 +502,23 @@ public final class ModPayloads {
                 PanelNoticePayload.Undo.RESTORE_IDLE_NETWORKS, containerId, ResourceType.ITEM, Direction.UP);
     }
 
-    /** Com o Upgrade de Alcance valendo (como o {@code SelectTarget}), a máquina do índice está em {@code pos}. */
-    private static boolean sameMachine(RouterBlockEntity router, int index, net.minecraft.core.BlockPos pos) {
+    /**
+     * O índice da máquina remota em {@code pos}, com o Upgrade de Alcance valendo (como o {@code SelectTarget}):
+     * {@code index}, se ela ainda está nele; senão o de agora (a lista mudou entre o clique e o pedido); −1 se a
+     * posição não está mais vinculada ou sem o Upgrade.
+     */
+    private static int machineIndex(RouterBlockEntity router, int index, net.minecraft.core.BlockPos pos) {
         if (!router.rangeActive()) {
-            return false;
+            return -1;
         }
         RemoteMachine machine = router.remoteMachines().machine(index);
-        return machine != null && machine.pos().equals(pos);
+        return machine != null && machine.pos().equals(pos) ? index : router.remoteMachines().index(pos);
     }
 
     /**
      * Põe uma face do alvo de edição da tela (a presa, o perfil de um grupo ou uma máquina remota) numa
      * rede. Só aceita tipo carregado, rede que existe e que o jogador pode usar (dono, operador nível 2, convidado
-     * ou rede pública, a mesma regra do Configurador), ou vazio para tirar a face da rede; e só tira a face de uma
+     * ou rede pública, a mesma regra do colar de perfil), ou vazio para tirar a face da rede; e só tira a face de uma
      * rede que o jogador edita ({@link WaNetwork#canEdit}). Ignora a ação se o alvo deixou
      * de existir ({@link RouterEditHost#actionTarget()}).
      */
@@ -514,7 +533,7 @@ public final class ModPayloads {
             return false;
         }
         Optional<UUID> id = payload.network();
-        // sair de uma rede pede o mesmo que o Mover, o colar e o Configurador: editá-la (dono, operador ou convidado)
+        // sair de uma rede pede o mesmo que o Mover e o colar: editá-la (dono, operador ou convidado)
         UUID leaving = router.face(target, payload.resource(), payload.face()).network();
         if (leaving != null && !leaving.equals(id.orElse(null))) {
             WaNetwork from = NetworkSavedData.get(player.server).network(leaving);
@@ -556,8 +575,9 @@ public final class ModPayloads {
 
     /**
      * Dá nome ao grupo, rótulo à máquina remota ou nome à máquina presa. Recusa nomes maiores que
-     * {@link RenameRouterPayload#MAX_LENGTH} e, em grupo e máquina, o roteador sem o Upgrade de Alcance e, numa
-     * máquina, a posição que não bate com a do índice. A presa não exige o Upgrade nem posição.
+     * {@link RenameRouterPayload#MAX_LENGTH} e, em grupo e máquina, o roteador sem o Upgrade de Alcance; numa
+     * máquina, a posição que não está mais vinculada ({@link #machineIndex}); num grupo, um bloco diferente do
+     * visto. A presa não exige o Upgrade nem posição.
      */
     public static boolean handleRenameTarget(@Nullable ServerPlayer player, RenameTargetPayload payload) {
         RouterEditHost host = host(player, payload.containerId());
@@ -565,13 +585,22 @@ public final class ModPayloads {
             return false;
         }
         RouterBlockEntity router = host.editedRouter();
-        boolean attached = payload.kind() == EditTarget.Kind.ATTACHED;
-        if (!attached && (!router.rangeActive() || payload.kind() == EditTarget.Kind.MACHINE
-                && (payload.machinePos().isEmpty()
-                || !sameMachine(router, payload.id(), payload.machinePos().get())))) {
+        int id = payload.id();
+        switch (payload.kind()) {
+            case ATTACHED -> id = 0;
+            case MACHINE -> id = payload.machinePos().isEmpty() ? -1
+                    : machineIndex(router, payload.id(), payload.machinePos().get());
+            case GROUP -> {
+                MachineGroup group = router.rangeActive() ? router.remoteMachines().group(id) : null;
+                if (group == null || payload.block().isEmpty() || !group.block().equals(payload.block().get())) {
+                    id = -1;
+                }
+            }
+        }
+        if (id < 0) {
             return false;
         }
-        boolean renamed = router.renameTarget(new EditTarget(payload.kind(), payload.id()), payload.name());
+        boolean renamed = router.renameTarget(new EditTarget(payload.kind(), id), payload.name());
         if (renamed) {
             host.editApplied();
         }
@@ -592,25 +621,6 @@ public final class ModPayloads {
     }
 
     /**
-     * Shift + roda do mouse com o Configurador na mão principal: avança ou volta o tipo que ele cola
-     * e mostra o novo na action bar. Recusa direção 0 e outra coisa na mão.
-     */
-    public static boolean handleCycleConfiguratorType(@Nullable ServerPlayer player,
-            CycleConfiguratorTypePayload payload) {
-        if (player == null || payload.direction() == 0) {
-            return false;
-        }
-        ItemStack stack = player.getMainHandItem();
-        if (!(stack.getItem() instanceof ConfiguratorItem)) {
-            return false;
-        }
-        ResourceType type = ConfiguratorItem.cycleType(stack, payload.direction());
-        player.displayClientMessage(Component.translatable("item.wirelessautomate.configurator.type",
-                ConfiguratorItem.typeName(type)), true);
-        return true;
-    }
-
-    /**
      * Shift + roda do mouse com o Vinculador na mão principal: passa ao outro modo (Vincular ↔ Abrir) e o mostra
      * na action bar. Recusa direção 0 e outra coisa na mão principal.
      */
@@ -626,25 +636,6 @@ public final class ModPayloads {
         LinkerItem.setMode(stack, mode);
         player.displayClientMessage(Component.translatable("item.wirelessautomate.linker.mode",
                 LinkerItem.modeName(mode)), true);
-        return true;
-    }
-
-    /**
-     * Escolha na roda do Configurador: grava o tipo colado e o mostra na action bar. Recusa outra coisa
-     * na mão principal e um tipo que não está carregado.
-     */
-    public static boolean handleConfiguratorWheel(@Nullable ServerPlayer player, ConfiguratorWheelPayload payload) {
-        if (player == null) {
-            return false;
-        }
-        ItemStack stack = player.getMainHandItem();
-        ResourceType type = payload.pasteType().orElse(null);
-        if (!(stack.getItem() instanceof ConfiguratorItem) || (type != null && !LoadedTypes.LIST.contains(type))) {
-            return false;
-        }
-        ConfiguratorItem.setType(stack, type);
-        player.displayClientMessage(Component.translatable("item.wirelessautomate.configurator.type",
-                ConfiguratorItem.typeName(type)), true);
         return true;
     }
 

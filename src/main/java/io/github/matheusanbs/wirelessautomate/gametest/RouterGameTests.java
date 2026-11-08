@@ -160,7 +160,8 @@ public final class RouterGameTests {
             helper.assertValueEqual(elite.get(), 2_048L, "Elite itens/s");
             helper.assertValueEqual(advanced.get(), 9_999L, "valor do dono mudou");
             helper.assertValueEqual(basicRange.get(), 64, "alcance do Básico");
-            helper.assertValueEqual(chest.get(), 2_097_152L, "Baú Elite");
+            // A migração 1 leva direto ao padrão atual (o do balanceamento 6, uma hora de 2.048/s).
+            helper.assertValueEqual(chest.get(), StorageKind.CHEST.defaultCapacity(RouterTier.ELITE), "Baú Elite");
             helper.assertValueEqual(Config.BALANCE_VERSION.get(), Config.CURRENT_BALANCE, "versão");
             elite.set(131_072L);
             helper.assertValueEqual(Config.migrateBalance(), 0, "migrou duas vezes");

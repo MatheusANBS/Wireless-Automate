@@ -35,7 +35,6 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.material.Fluids;
-import net.neoforged.fml.ModList;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBatteryBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageChestBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
@@ -459,9 +458,7 @@ final class E2eShowcaseWorld {
      * de exibição, sempre de frente para a câmera e com luz cheia).
      */
     private static void showcaseDisplay(MinecraftServer server) {
-        String guide = ModList.get().isLoaded("guideme")
-                ? "{id:\"guideme:guide\",count:1,components:{\"guideme:guide_id\":\"wirelessautomate:guide\"}}"
-                : "{id:\"wirelessautomate:router\",count:1}";
+        String guide = "{id:\"wirelessautomate:guide\",count:1}";
         String[][] rows = {
                 {"{id:\"wirelessautomate:linker\",count:1}", "{id:\"wirelessautomate:configurator\",count:1}",
                         "{id:\"wirelessautomate:network_tablet\",count:1}", "{id:\"wirelessautomate:filter_card\",count:1}",

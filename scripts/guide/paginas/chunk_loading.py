@@ -2,7 +2,7 @@
 from guia_base import *  # noqa: F401,F403
 
 
-PAGINA = page('chunk-loading.md', front('Upgrade de Chunk Loading', 'wirelessautomate:chunk_loader_upgrade', 10, item_ids=['wirelessautomate:chunk_loader_upgrade']) + '''
+PAGINA = page('chunk-loading.md', front('Upgrade de Chunk Loading', 'wirelessautomate:chunk_loader_upgrade', 'ferramentas', 10, item_ids=['wirelessautomate:chunk_loader_upgrade']) + '''
 # Upgrade de Chunk Loading
 
 <ItemImage id="wirelessautomate:chunk_loader_upgrade" scale="2" float="left" />
@@ -30,7 +30,7 @@ Cada jogador mantém até 16 chunks. Vários roteadores no mesmo chunk contam um
 ## Receita
 
 <RecipeFor id="wirelessautomate:chunk_loader_upgrade" />
-''', front('Chunk Loading Upgrade', 'wirelessautomate:chunk_loader_upgrade', 10, item_ids=['wirelessautomate:chunk_loader_upgrade']) + '''
+''', front('Chunk Loading Upgrade', 'wirelessautomate:chunk_loader_upgrade', 'ferramentas', 10, item_ids=['wirelessautomate:chunk_loader_upgrade']) + '''
 # Chunk Loading Upgrade
 
 <ItemImage id="wirelessautomate:chunk_loader_upgrade" scale="2" float="left" />

@@ -57,7 +57,7 @@ final class E2eHighlightSteps {
             }
             click(routerScreen(), eye[0], eye[1]);
         }, () -> HighlightRenderer.isLit(Level.OVERWORLD, rangeFurnace) && HighlightRenderer.count() == 1
-                && routerScreen().litClearCenter() != null,
+                && routerScreen().footerCenter(false) != null,
                 () -> "acesas " + HighlightRenderer.count()));
         list.add(new Step(l + "a lista larga com o Olho aceso", STEP_TIMEOUT_MS,
                 () -> routerScreen().previewResize(Math.min(WIDE_W, routerScreen().width - 8), 280),
@@ -75,12 +75,12 @@ final class E2eHighlightSteps {
             if (!routerScreen().rangeListShown()) {
                 routerScreen().previewToggleList();
             }
-        }, () -> routerScreen().rangeListShown() && routerScreen().litClearCenter() != null && stepTicks >= 4,
+        }, () -> routerScreen().rangeListShown() && routerScreen().footerCenter(false) != null && stepTicks >= 4,
                 () -> "lista " + routerScreen().rangeListShown() + ", acesas " + HighlightRenderer.count()));
         list.add(new Step(l + "o Apagar todas apaga", STEP_TIMEOUT_MS, () -> {
-            int[] c = routerScreen().litClearCenter();
+            int[] c = routerScreen().footerCenter(false);
             click(routerScreen(), c[0], c[1]);
-        }, () -> HighlightRenderer.count() == 0 && routerScreen().litClearCenter() == null,
+        }, () -> HighlightRenderer.count() == 0 && routerScreen().footerCenter(false) == null,
                 () -> "acesas " + HighlightRenderer.count()));
         list.add(close(l + "fechar o roteador de novo"));
 

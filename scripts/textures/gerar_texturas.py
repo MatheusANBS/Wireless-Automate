@@ -32,6 +32,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import livro  # noqa: E402
 import reparador_modelo  # noqa: E402
 import tela_modelo  # noqa: E402
 from identidade import (  # noqa: E402
@@ -527,24 +528,25 @@ def compactacao(n: int = 16) -> Sprite:
     return animacao(quadros, 2, interpolar=True)
 
 
-# Guia: caderno de campo. Capa coral com o Olho em porcelana e uma etiqueta, páginas de porcelana
-# aparecendo à direita e embaixo, espiral de grafite na lombada.
+# Guia: o livro fechado. Capa de grafite com cantoneiras de latão nas pontas, o Olho de porcelana
+# pulsando no meio e as páginas de porcelana aparecendo embaixo.
 GUIA = [
     "................",
-    "................",
-    "..ghCCCCCCCCC...",
-    "...hCcccccccdq..",
-    "..ghCcccccccdq..",
-    "...hCccxxxccdq..",
-    "..ghCcxxxxxcdq..",
-    "...hCcxxxxxcdq..",
-    "..ghCcxxxxxcdq..",
-    "...hCccxxxccdq..",
-    "..ghCcccccccdq..",
-    "...hCcWpppqcdq..",
-    "..ghCcqqqqrcdq..",
-    "...hCdddddddeq..",
-    ".....qqqqqqqqr..",
+    "..LgggggggggL...",
+    "..gmhhhhhhhmiW..",
+    "..dhhhhhhhhhiq..",
+    "..ghhhhxhhhhiW..",
+    "..dhhhxxxhhhiq..",
+    "..ghhxxxxxhhiW..",
+    "..dhhhxxxhhhiq..",
+    "..ghhhhxhhhhiW..",
+    "..dhhhhhhhhhiq..",
+    "..ghhhhhhhhhiW..",
+    "..dhhhhhhhhhiq..",
+    "..gmhhhhhhhmiW..",
+    "..LiiiiiiiiiLq..",
+    "...WqWqWdeqWqr..",
+    "........de......",
 ]
 
 
@@ -552,7 +554,7 @@ def guia() -> Sprite:
     quadros = []
     for k in range(4):
         img = corpo(GUIA)
-        pulso(img, 8, 7, "porcelana", 2, k, 4)
+        pulso(img, 7, 6, "porcelana", 2, k, 4)
         quadros.append(img)
     return animacao(quadros, 8)
 
@@ -2171,7 +2173,7 @@ def main() -> None:
         modelos_itens()
         if blocos:
             blocos.modelos()
-        gerados = set(todos) | reparador_modelo.gerar() | tela_modelo.gerar()
+        gerados = set(todos) | reparador_modelo.gerar() | tela_modelo.gerar() | livro.gerar()
         pastas = ["item", "gui"] + (["block"] if blocos_sprites else [])
         apagados = limpar(gerados, pastas)
 

@@ -32,7 +32,7 @@ Responda com o dono, uma pergunta de cada vez, só o que não der para descobrir
 - **Versões exatas:** Minecraft, loader (Forge ou NeoForge) e build mínimo do loader. Tire do próprio
   pack: na pasta da instância do launcher (`minecraftinstance.json` e a pasta `mods/`) ou da página de
   dependências do arquivo do pack no CurseForge. Anote os jars de Mekanism, Ars Nouveau, Allthemodium,
-  All The Tweaks, JEI e GuideME que vêm no pack (ou que não vêm).
+  All The Tweaks e JEI que vêm no pack (ou que não vêm).
 - **Java e Gradle** exigidos pelo alvo (as notas do loader dizem).
 
 Dois packs na mesma versão de Minecraft e no mesmo loader são **um alvo só** (o ATM9 e o ATM9 To the Sky
@@ -47,7 +47,7 @@ Por ordem de confiança:
    o changelog do Forge e a documentação do Forge 1.20.x).
 3. **Código do jogo e do loader do alvo**, descompilado pelo próprio Gradle num projeto mínimo do alvo
    (passo 4). É a fonte final: o que compila vale mais que qualquer texto.
-4. **API de cada mod opcional na versão do alvo** (Mekanism, Ars Nouveau, JEI, GuideME): o jar da API,
+4. **API de cada mod opcional na versão do alvo** (Mekanism, Ars Nouveau, JEI): o jar da API,
    o repositório no GitHub na tag da versão, o Maven de onde o `build.gradle` baixa.
 5. **Mods grandes já portados** (AE2, Mekanism) como exemplo de como resolveram a mesma mudança.
 

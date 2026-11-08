@@ -20,7 +20,7 @@ SCENE_CHESTS = '''<GameScene zoom="4" interactive={true}>
 </GameScene>'''
 
 
-PAGINA = page('wireless-chest.md', front('Baú Wireless', 'wirelessautomate:storage_chest', 11,
+PAGINA = page('wireless-chest.md', front('Baú Wireless', 'wirelessautomate:storage_chest', 'armazenamentos', 11,
                                 item_ids=['wirelessautomate:storage_chest']) + '''
 # Baú Wireless
 
@@ -122,7 +122,7 @@ até no criativo ou numa explosão.
 ## Receita
 
 <RecipeFor id="wirelessautomate:storage_chest" />
-''', front('Wireless Chest', 'wirelessautomate:storage_chest', 11,
+''', front('Wireless Chest', 'wirelessautomate:storage_chest', 'armazenamentos', 11,
            item_ids=['wirelessautomate:storage_chest']) + '''
 # Wireless Chest
 

@@ -36,7 +36,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * A rede de uma face de máquina remota trocada e tirada pela tela do roteador, sempre pelo handler do
  * {@link SetNetworkPayload} (e do "Tirar redes"), nos caminhos em que a mudança poderia não pegar: índice da
- * máquina que muda, rede apagada, máquina isolada (com exceção) e o grupo dela, rede pública de outro dono,
+ * máquina que muda, rede apagada, máquina vinculada num grupo que já existe e o grupo dela, rede pública de outro dono,
  * máquina girada e o alvo trocado antes do snapshot.
  */
 @GameTestHolder(WirelessAutomate.MODID)
@@ -152,9 +152,9 @@ public final class RangeFaceNetworkGameTests {
                 .thenSucceed();
     }
 
-    /** Uma máquina que entrou isolada (com exceção vazia) troca e tira a rede da face pela tela. */
+    /** Uma máquina que entrou num grupo que já existe (seguindo o perfil) troca e tira a rede da face pela tela. */
     @GameTest(template = "empty")
-    public static void isolatedMachineSwitchesAndClearsItsNetwork(GameTestHelper helper) {
+    public static void linkedMachineSwitchesAndClearsItsNetwork(GameTestHelper helper) {
         RouterBlockEntity router = router(helper);
         helper.startSequence()
                 .thenWaitUntil(() -> RangeTestSupport.waitLoaded(helper, router))
@@ -165,9 +165,9 @@ public final class RangeFaceNetworkGameTests {
                     try {
                         BlockPos a = helper.absolutePos(FURNACE_A);
                         BlockPos b = helper.absolutePos(FURNACE_B);
-                        helper.assertTrue(router.linkMachineIsolated(a) && router.linkMachineIsolated(b), "não vinculou");
-                        helper.assertTrue(router.remoteMachines().machine(router.remoteMachines().index(b)).hasException(),
-                                "a B não entrou isolada");
+                        helper.assertTrue(router.linkMachine(a) && router.linkMachine(b), "não vinculou");
+                        helper.assertFalse(router.remoteMachines().machine(router.remoteMachines().index(b)).hasException(),
+                                "a B entrou com exceção");
                         NetworkSavedData data = NetworkSavedData.get(player.server);
                         UUID x = data.create(player.getUUID(), "x").id();
                         UUID y = data.create(player.getUUID(), "y").id();
@@ -187,12 +187,9 @@ public final class RangeFaceNetworkGameTests {
                 .thenSucceed();
     }
 
-    /**
-     * Retrato (hipótese "editar no grupo com a máquina em exceção"): a rede trocada no grupo não chega à máquina
-     * que entrou isolada pelo Vinculador, que tem exceção própria; só à primeira, que segue o perfil.
-     */
+    /** A rede trocada no grupo chega às duas máquinas: a segunda vinculada segue o perfil, como a primeira. */
     @GameTest(template = "empty")
-    public static void groupNetworkDoesNotReachTheIsolatedMachine(GameTestHelper helper) {
+    public static void groupNetworkReachesTheLinkedMachine(GameTestHelper helper) {
         RouterBlockEntity router = router(helper);
         helper.startSequence()
                 .thenWaitUntil(() -> RangeTestSupport.waitLoaded(helper, router))
@@ -203,14 +200,14 @@ public final class RangeFaceNetworkGameTests {
                     try {
                         BlockPos a = helper.absolutePos(FURNACE_A);
                         BlockPos b = helper.absolutePos(FURNACE_B);
-                        helper.assertTrue(router.linkMachineIsolated(a) && router.linkMachineIsolated(b), "não vinculou");
+                        helper.assertTrue(router.linkMachine(a) && router.linkMachine(b), "não vinculou");
                         UUID x = NetworkSavedData.get(player.server).create(player.getUUID(), "grupo").id();
                         helper.assertTrue(selectGroup(player, menu, router, a), "não escolheu o grupo");
                         helper.assertTrue(ModPayloads.handleSetNetwork(player, set(menu, Direction.NORTH, x)), "recusou");
                         assertNetwork(helper, router.faceNetwork(machine(router, a), ResourceType.ITEM, Direction.NORTH), x,
                                 "a A (sem exceção) não seguiu o perfil");
-                        assertNetwork(helper, router.faceNetwork(machine(router, b), ResourceType.ITEM, Direction.NORTH), null,
-                                "a B (isolada) seguiu o perfil");
+                        assertNetwork(helper, router.faceNetwork(machine(router, b), ResourceType.ITEM, Direction.NORTH), x,
+                                "a B (vinculada depois) não seguiu o perfil");
                     } finally {
                         player.containerMenu = player.inventoryMenu;
                     }
@@ -314,7 +311,7 @@ public final class RangeFaceNetworkGameTests {
                         helper.assertTrue(router.linkMachine(a), "não vinculou");
                         UUID own = NetworkSavedData.get(player.server).create(player.getUUID(), "girada").id();
                         helper.assertTrue(selectMachine(player, menu, router, a), "não escolheu a A");
-                        // canônica Sul = Trás, seja qual for a frente da máquina
+                        // no quadro canônico, o Sul é a Trás da máquina, qualquer que seja a frente dela
                         helper.assertTrue(ModPayloads.handleSetNetwork(player, set(menu, Direction.SOUTH, own)), "recusou");
                         assertNetwork(helper, shown(router, player, menu, Direction.SOUTH), own, "a tela não mostra na Trás");
                         RemoteMachines remotes = router.remoteMachines();

@@ -2,7 +2,7 @@
 from guia_base import *  # noqa: F401,F403
 
 
-PAGINA = page('wireless-battery.md', front('Bateria Wireless', 'wirelessautomate:storage_battery', 13,
+PAGINA = page('wireless-battery.md', front('Bateria Wireless', 'wirelessautomate:storage_battery', 'armazenamentos', 13,
                                   item_ids=['wirelessautomate:storage_battery']) + '''
 # Bateria Wireless
 
@@ -28,7 +28,7 @@ Clique na Bateria: a barra mostra a carga e se ela está **carregando**, **desca
 ## Receita
 
 <RecipeFor id="wirelessautomate:storage_battery" />
-''', front('Wireless Battery', 'wirelessautomate:storage_battery', 13,
+''', front('Wireless Battery', 'wirelessautomate:storage_battery', 'armazenamentos', 13,
            item_ids=['wirelessautomate:storage_battery']) + '''
 # Wireless Battery
 

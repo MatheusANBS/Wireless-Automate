@@ -21,6 +21,8 @@ public final class ChemicalTestTanks {
     public static final Block BLOCK = Blocks.LODESTONE;
     /** Bloco com {@link #MANY_TANKS} tanques, mais que a janela de uma visita (16). */
     public static final Block MANY_TANKS_BLOCK = Blocks.CRYING_OBSIDIAN;
+    /** Bloco com um tanque de entrada que só aceita um químico ({@code ChemicalTestSupport.acceptOnly}). */
+    public static final Block TYPED_TANK_BLOCK = Blocks.RESPAWN_ANCHOR;
     static final int MANY_TANKS = 20;
     static final long CAPACITY = 64_000;
     private static final boolean ENABLED = Boolean.getBoolean("wirelessautomate.chemicalTests");

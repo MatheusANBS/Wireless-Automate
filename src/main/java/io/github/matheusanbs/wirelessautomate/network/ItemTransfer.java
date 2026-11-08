@@ -175,8 +175,8 @@ final class ItemTransfer {
                 tokens -= amount;
                 moved += amount;
                 if (tokens <= 0) {
-                    // Sem saldo: o slot pode ter mais, continua dele no próximo tick.
-                    slot = current;
+                    // Sem saldo: a próxima visita segue do slot seguinte, para o slot que enche sem parar (a
+                    // saída principal de uma máquina) não tomar a vazão toda e deixar a outra saída travar a máquina.
                     break;
                 }
                 // Pilha maior que uma extração (gaveta, upgrade de pilha): entregou tudo o que

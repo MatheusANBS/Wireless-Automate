@@ -17,6 +17,8 @@ Da auditoria de eficiência de 17/10/2026 (cinco auditores, só leitura; relató
 | A9 | O cabeçalho do Tablet volta inteiro quando o jogador anda (leva a posição dele) | `TabletSnapshotBuilder:122` | médio (rede) | feito `0da992c` (o Mapa usa a posição local; protocolo 21) |
 | A10 | Recarregar qualquer chave da config remonta todas as redes | `NetworkManager:641` | baixo | feito `0da992c` (`Config.tiersFingerprint`: recarga sem tier mudado não remonta) |
 | A11 | `networks(type)` recalculado com `LinkedHashSet` a cada consulta | `RouterFaces:166` | baixo | descartado (só roda por evento: `addNode`, `nodeChanged` e o Vinculador) |
+| A12 | Auditoria de 08/11 (o resto do A7): toda consulta de capability de uma remota fazia `level.isLoaded(pos)` (busca no mapa de chunks), duas por destino por slot na visita (`bulkItems` e `items`) | `MachineCaches.queryLevel` | baixo-médio no `range` | feito nesta sessão (lido uma vez por tick do servidor e por `RemoteIndex.chunkEpoch`, que o `ChunkEvent.Unload` sobe) |
+| A13 | Auditoria de 08/11: máquina que chama `setChanged` a cada tick acorda as portas dela a cada tick (`NodePorts.wakePort`: zera `idleSlots`, `full` e as dicas), então a origem nunca dorme e os destinos alimentados por ela re-simulam os recusados a cada tick | `NodePorts.wakePort`, `RouterBlock.onNeighborChange` | médio com máquinas faladeiras | pendente (pede decisão do dono: desconfiar do aviso repetido sem mudança útil; ver a sessão de perguntas de 08/11 no histórico) |
 
 ## M · motor, ganho grande
 
@@ -28,6 +30,8 @@ Da auditoria de eficiência de 17/10/2026 (cinco auditores, só leitura; relató
 | M4 | Energia e Source consultam todos os destinos; parar nos grupos de prioridade menor quando o atual cobre | `ScalarTransfer:51-73` | médio | feito `4a3cc96` (sem mudança na divisão; não aparece nos cenários, que têm um grupo de prioridade só) |
 | M5 | Carregar ou descarregar chunk remonta a rede inteira (O(origens × destinos) com alcance); juntar avisos ou remontar só o membro | `NetworkManager:136-157, 706`, `NetworkRoutes:205` | alto (picos 1–3 ms) | feito `4a3cc96` (remontagem por entrada ou saída de nós adiada até 20 ticks, portas do nó que sai paradas na hora; sem cenário de chunk) |
 | M6 | O laço passa por todas as origens dormindo a cada tick; `wakeAt` em array paralelo ou roda de tempo | `NetworkManager:530-561` | médio com 10 mil portas | feito `4a3cc96` (idle 500: mod 0,0095 → 0,0030 ms/tick; full −54%) |
+| M7 | Auditoria de 08/11: o cursor da origem ficava no slot, tipo ou tanque em que o balde esvaziou; com uma saída que enche mais rápido que a vazão do tier, a outra saída da mesma máquina nunca saía e travava a máquina (Separador Eletrolítico, máquinas com saída secundária) | `ItemTransfer.move`, `ItemBulkTransfer.moveBulk`, `FluidTransfer.move`, `ChemicalTransfer.move` | alto nesse caso (vazão de uma saída = 0) | feito nesta sessão (a visita seguinte segue do seguinte; GameTests `slotsShareTheRateWhenTheBucketEmpties`, `secondTankIsNotStarvedByATypedDestination`, `secondChemicalTankIsNotStarvedByATypedDestination`) |
+| M8 | Auditoria de 08/11: destino de fluido ou químico que recusa pelo tipo (tanque de lava diante de água) dormia como cheio, e a origem de duas saídas nunca entregava a segunda (a mesma pendência de 02/11 dos itens, `ItemHints`) | `FluidTransfer.moveFluid`, `ChemicalTransfer.moveChemical` | alto nesse caso | feito nesta sessão (`RefusedKinds` na porta, `refusesFluid`/`refusesChemical`; os mesmos GameTests do M7) |
 
 ## T · Tablet e telas do roteador
 

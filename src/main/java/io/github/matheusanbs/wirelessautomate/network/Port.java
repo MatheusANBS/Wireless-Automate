@@ -72,6 +72,11 @@ final class Port {
      */
     @Nullable ItemHints hints;
     /**
+     * Os fluidos ou químicos que este destino recusou pelo tipo ({@link RefusedKinds}); criado na primeira recusa de
+     * um tipo com lugar para outros, então só os tanques seletivos têm.
+     */
+    @Nullable RefusedKinds refusedKinds;
+    /**
      * Este destino de itens recusou um item sem ter lugar para outros: está cheio de verdade, e a próxima recusa
      * dorme sem reler os slots ({@link ItemInsertPlan#roomForOthers}). A mudança na máquina apaga; uma máquina que
      * muda sem avisar não o deixa para sempre: ele vence no teto do sono do destino, contado de {@link #fullSince}.
@@ -178,6 +183,16 @@ final class Port {
         if (made == null) {
             made = new ItemHints();
             hints = made;
+        }
+        return made;
+    }
+
+    /** Os tipos recusados por este destino, criados na primeira vez. */
+    RefusedKinds refusedKinds() {
+        RefusedKinds made = refusedKinds;
+        if (made == null) {
+            made = new RefusedKinds();
+            refusedKinds = made;
         }
         return made;
     }

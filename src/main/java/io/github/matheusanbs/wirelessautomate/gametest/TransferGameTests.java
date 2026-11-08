@@ -542,6 +542,76 @@ public final class TransferGameTests {
                 .thenSucceed();
     }
 
+    /**
+     * Origem com dois tanques que enchem sem parar (água e lava), no Elite, diante de um tanque só de água e de um só
+     * de lava: a recusa da água pelo tanque de lava é pelo tipo, então ele não dorme como cheio e recebe a lava do
+     * segundo tanque na mesma visita. Antes, ele dormia na água, era pulado na lava, o tanque de água dormia na lava,
+     * e a lava nunca saía: a máquina de duas saídas travava na segunda.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void secondTankIsNotStarvedByATypedDestination(GameTestHelper helper) {
+        if (!TestMachines.enabled()) {
+            helper.succeed();
+            return;
+        }
+        UUID network = newNetwork(helper, "teste-dois-tanques-tipo");
+        BlockPos machine = helper.absolutePos(A);
+        TestMachines.reset(machine);
+        TestMachines.reset(helper.absolutePos(B));
+        TestMachines.reset(helper.absolutePos(C));
+        TestMachines.manyTanks(machine).set(0, new FluidStack(Fluids.WATER, 50_000_000));
+        TestMachines.manyTanks(machine).set(1, new FluidStack(Fluids.LAVA, 1_000));
+        RouterBlockEntity source = place(helper, A, TestMachines.MANY_TANKS.defaultBlockState(), network);
+        helper.setBlock(A.above(), helper.getBlockState(A.above()).setValue(RouterBlock.TIER, RouterTier.ELITE));
+        source.setMode(ResourceType.FLUID, Direction.UP, PortMode.EXTRACT);
+        TestMachines.typedTank(helper.absolutePos(B)).accept(Fluids.WATER);
+        RouterBlockEntity water = place(helper, B, TestMachines.TYPED_TANK.defaultBlockState(), network);
+        water.setMode(ResourceType.FLUID, Direction.UP, PortMode.INSERT);
+        TestMachines.typedTank(helper.absolutePos(C)).accept(Fluids.LAVA);
+        RouterBlockEntity lava = place(helper, C, TestMachines.TYPED_TANK.defaultBlockState(), network);
+        lava.setMode(ResourceType.FLUID, Direction.UP, PortMode.INSERT);
+        long[] started = new long[1];
+
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, source, water, lava))
+                .thenExecute(() -> started[0] = helper.getTick())
+                .thenWaitUntil(() -> helper.assertValueEqual(TestMachines.typedTank(helper.absolutePos(C)).amount(), 1_000,
+                        "lava no tanque de lava"))
+                .thenExecute(() -> {
+                    long ticks = helper.getTick() - started[0];
+                    helper.assertTrue(ticks <= 10, "a lava levou " + ticks + " ticks: o tanque de lava dormiu na água");
+                    helper.assertTrue(TestMachines.typedTank(helper.absolutePos(B)).amount() > 0, "a água não andou");
+                    helper.assertValueEqual(TestMachines.manyTanks(machine).amount(1), 0, "lava na origem");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Origem com dois slots e o balde do Básico (32 itens/s): quando o saldo acaba no meio de um slot, a visita
+     * seguinte segue do slot seguinte, e os dois saem lado a lado. Antes o cursor ficava no primeiro até ele
+     * esvaziar: numa máquina de duas saídas que enchem mais rápido que a vazão, a segunda nunca saía e travava a
+     * máquina.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void slotsShareTheRateWhenTheBucketEmpties(GameTestHelper helper) {
+        UUID network = newNetwork(helper, "teste-dois-slots-balde");
+        RouterBlockEntity source = chest(helper, A, network, PortMode.EXTRACT);
+        RouterBlockEntity target = chest(helper, B, network, PortMode.INSERT);
+        chestAt(helper, A).setItem(0, new ItemStack(Items.COBBLESTONE, 64));
+        chestAt(helper, A).setItem(1, new ItemStack(Items.DIRT, 64));
+
+        helper.onEachTick(() -> helper.assertValueEqual(count(helper, A, Items.COBBLESTONE) + count(helper, B, Items.COBBLESTONE)
+                + count(helper, A, Items.DIRT) + count(helper, B, Items.DIRT), 128, "itens"));
+        helper.startSequence()
+                .thenWaitUntil(() -> waitRegistered(helper, source, target))
+                // O balde começa cheio (32) e depois enche 1 ou 2 por tick: em 15 ticks saem uns 50 itens.
+                .thenExecuteAfter(15, () -> {
+                    helper.assertTrue(count(helper, B, Items.DIRT) > 0, "a terra não andou enquanto havia pedregulho");
+                    helper.assertTrue(count(helper, A, Items.COBBLESTONE) > 0, "o pedregulho esvaziou antes da terra andar");
+                })
+                .thenSucceed();
+    }
+
     private static @Nullable NetworkStats stats(GameTestHelper helper, UUID network) {
         for (NetworkStats stats : NetworkManager.get().stats(helper.getLevel().getServer())) {
             if (stats.id().equals(network)) {

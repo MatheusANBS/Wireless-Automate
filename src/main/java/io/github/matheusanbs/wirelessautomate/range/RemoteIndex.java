@@ -36,6 +36,12 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class RemoteIndex {
     private static @Nullable RemoteIndex instance;
+    /**
+     * Quantos chunks descarregaram no servidor ({@link #chunkUnloaded}, pelo {@code ChunkEvent.Unload}): os caches
+     * das remotas guardam o "chunk carregado" pelo tick e por este número ({@link MachineCaches}), e uma descarga no
+     * meio do tick invalida a resposta guardada.
+     */
+    private static long chunkEpoch;
 
     /** Índice de cada nível com alguma remota; um nível sem remotas sai do mapa. */
     private final Reference2ObjectOpenHashMap<Level, LevelIndex> levels = new Reference2ObjectOpenHashMap<>();
@@ -52,6 +58,16 @@ public final class RemoteIndex {
     /** Descarta o estado ao parar o servidor. */
     public static void reset() {
         instance = null;
+    }
+
+    /** Ver {@link #chunkEpoch}. */
+    public static long chunkEpoch() {
+        return chunkEpoch;
+    }
+
+    /** Um chunk do servidor descarregou (qualquer nível): as respostas de "chunk carregado" guardadas neste tick caem. */
+    public static void chunkUnloaded() {
+        chunkEpoch++;
     }
 
     /**

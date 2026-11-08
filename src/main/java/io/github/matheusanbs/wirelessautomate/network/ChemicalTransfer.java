@@ -82,8 +82,7 @@ final class ChemicalTransfer {
             tokens -= amount;
             moved += amount;
             if (tokens <= 0) {
-                // Sem saldo: o tanque pode ter mais, continua dele na próxima visita.
-                tank = current;
+                // Sem saldo: a próxima visita segue do tanque seguinte, como nos fluidos (FluidTransfer).
                 break;
             }
             if (destinationSlept && !NetworkManager.hasAwakeDestination(pass, now)) {
@@ -137,6 +136,11 @@ final class ChemicalTransfer {
             }
             // Passou no filtro do destino: a origem tem o que oferecer (motivo do sono).
             source.offered = true;
+            RefusedKinds refused = destination.refusedKinds;
+            if (refused != null && refused.contains(id, RefusedKinds.EQUALS, now, destination.destinationBackoff.maxTicks())) {
+                // Recusou este químico desde a última mudança: pula sem simular.
+                continue;
+            }
             IChemicalHandler target = (IChemicalHandler) destination.machine.chemicals(destination.face);
             if (target == null) {
                 // Destino sem máquina (ou com o chunk dela descarregado): dorme até a capability
@@ -156,6 +160,11 @@ final class ChemicalTransfer {
             // insertChemical devolve a sobra: aceito = oferecido − sobra.
             long accepts = want - target.insertChemical(offered.copyWithAmount(want), Action.SIMULATE).getAmount();
             if (accepts <= 0) {
+                if (refusesChemical(target, offered)) {
+                    // Recusa só deste químico: anota pelo id e segue, sem dormir (como nos fluidos).
+                    destination.refusedKinds().add(id, RefusedKinds.EQUALS, now);
+                    continue;
+                }
                 destination.destinationBackoff.sleep(now);
                 destinationSlept = true;
                 continue;
@@ -188,6 +197,28 @@ final class ChemicalTransfer {
             }
         }
         return moved;
+    }
+
+    /**
+     * O destino recusou o químico por ser ele, e não por falta de espaço: a regra do
+     * {@link FluidTransfer#refusesFluid}, com {@link IChemicalHandler#isValid} nos tanques vazios.
+     */
+    static boolean refusesChemical(IChemicalHandler target, ChemicalStack stack) {
+        boolean room = false;
+        for (int tank = 0, n = target.getChemicalTanks(); tank < n; tank++) {
+            ChemicalStack inTank = target.getChemicalInTank(tank);
+            if (inTank.isEmpty()) {
+                if (target.isValid(tank, stack)) {
+                    return false;
+                }
+                room = true;
+            } else if (ChemicalStack.isSameChemical(inTank, stack)) {
+                return false;
+            } else if (inTank.getAmount() < target.getChemicalTankCapacity(tank)) {
+                room = true;
+            }
+        }
+        return room;
     }
 
     /** Quanto do químico de {@code stack} há nos tanques. */

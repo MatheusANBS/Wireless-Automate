@@ -580,3 +580,21 @@ Ramo `ccr-52410279-si07pg`. Antes: `580addf` com o cenário novo `partialfull` (
 
 - O `partialfull` caiu dez vezes e fica perto do `full`: antes o destino nunca dormia, e cada volta da origem re-simulava os 54 itens recusados (o anel das dicas guarda 8) com uma releitura dos slots por recusa; agora a visita para no oitavo e o destino dorme cada vez mais fundo, até a máquina mudar ou receber.
 - `full`, `bigfull` e `chesttypes` ficam dentro do ±: o sono depois das recusas só vale para o destino que tem lugar só para outros, e a recusa pelo tipo (a fornalha diante dos 2.000 papéis) segue sem dormir.
+
+## Auditoria do motor: cursor, destino seletivo por tanque e o `isLoaded` das remotas (8 de novembro de 2026)
+
+Ramo `ccr-6099bf57-xlgxhy`. Antes: o `main` (2.15.1). Depois: as três correções da auditoria (o cursor da origem segue do slot, tipo ou tanque seguinte quando o balde esvazia, M7; o tanque que recusa um fluido ou químico pelo tipo não dorme, `RefusedKinds`, M8; o `isLoaded` de uma remota lido uma vez por tick, A12). `./scripts/bench.sh "raw:2:3:vanilla;many:500:3:vanilla;mixed:498:3;range:200:3;tablet-range:100:3"` de cada lado (relatórios `run/bench/reports/20261108-182512.md`, antes, e `20261108-181931.md` mais `20261108-183121.md`, depois, fora do git). Mesmo contêiner, dividido com os GameTests que rodaram antes.
+
+| Cenário | mod antes (ms/tick) | mod depois | Outra medida antes → depois |
+| --- | --- | --- | --- |
+| raw 2 | 0,2050 ± 0,0588 | 0,1813 ± 0,0315 | µs/visita 102,8 ± 29,5 → 90,7 ± 15,8; itens/s 68.979 → 69.073 |
+| many 500 | 0,8204 ± 0,0300 | 0,8240 ± 0,0852 | µs/visita 15,94 → 15,62 ± 2,59 |
+| mixed 498 | 0,5919 ± 0,0162 | 0,5645 ± 0,0241 | µs/visita 3,83 → 3,59; p99 1,17 → 1,05 |
+| range 200 | 0,0017 ± 0,0003 | 0,0016 ± 0,0002 | heap retido 21,5 ± 7,3 → 21,7 ± 7,4 MB |
+| tablet-range 100 | 0,0015 ± 0,0002 | 0,0014 ± 0,0000 | p99 0,0076 → 0,0019 |
+
+### Leitura
+
+- Nada piorou além do ±. O `mixed` (fluidos e energia no meio) ficou um pouco abaixo, na borda do ruído: a recusa por tipo não acontece nele, então a diferença é só o cursor que anda.
+- O ganho das correções está no caso que nenhum cenário tem: uma máquina com duas saídas em que a primeira enche mais rápido que a vazão do tier (a segunda não saía nunca), e o tanque seletivo diante de dois fluidos. Os GameTests medem em ticks: a lava atrás da água chega em até 10 ticks (antes nunca, em 200), e os dois slots do baú saem lado a lado no Básico (antes o segundo esperava o primeiro esvaziar).
+- O `isLoaded` por tick não tem cenário que mova pelas remotas (`range` e `tablet-range` não movem nada); fica como ganho por raciocínio: uma busca no mapa de chunks a menos por consulta de capability, que na visita são duas por destino por slot.

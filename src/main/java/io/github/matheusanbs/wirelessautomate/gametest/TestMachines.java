@@ -11,6 +11,8 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.Fluids;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.capabilities.Capabilities;
@@ -22,8 +24,9 @@ import net.neoforged.neoforge.items.IItemHandler;
 
 /**
  * Máquinas de teste dos GameTests que o vanilla não tem: um slot com pilha enorme (como uma gaveta
- * ou um barril com upgrade de pilha), uma máquina com mais tanques que a janela de uma visita e um
- * tanque que entrega a própria pilha interna e a encolhe ao drenar (como os do Mekanism), uma
+ * ou um barril com upgrade de pilha), uma máquina com mais tanques que a janela de uma visita, um
+ * tanque que entrega a própria pilha interna e a encolhe ao drenar (como os do Mekanism), um tanque de
+ * entrada que só aceita um fluido, uma
  * máquina com entrada e saída na mesma face, um destino que mente na simulação e, para o Afinador, um slot que lança
  * exceção e uma energia sem papel.
  * Presas a blocos vanilla sem capability, com o estado guardado por posição. Só existem com
@@ -37,6 +40,8 @@ public final class TestMachines {
     public static final Block MANY_TANKS = Blocks.WET_SPONGE;
     /** Um tanque de saída que devolve a pilha interna em {@code getFluidInTank} ({@link LiveTank}). */
     public static final Block LIVE_TANK = Blocks.SLIME_BLOCK;
+    /** Um tanque de entrada que só aceita um fluido, escolhido por posição ({@link TypedTank}). */
+    public static final Block TYPED_TANK = Blocks.BLUE_ICE;
     /** {@link NaiveSlots#SLOTS} slots com limite 64 que não limitam a pilha recebida ({@link NaiveSlots}). */
     public static final Block NAIVE_SLOTS = Blocks.CLAY;
     /**
@@ -64,6 +69,7 @@ public final class TestMachines {
     private static final Map<BlockPos, BigSlot> BIG_SLOTS = new ConcurrentHashMap<>();
     private static final Map<BlockPos, ManyTanks> TANKS = new ConcurrentHashMap<>();
     private static final Map<BlockPos, LiveTank> LIVE_TANKS = new ConcurrentHashMap<>();
+    private static final Map<BlockPos, TypedTank> TYPED_TANKS = new ConcurrentHashMap<>();
     private static final Map<BlockPos, NaiveSlots> NAIVE = new ConcurrentHashMap<>();
     private static final Map<BlockPos, TypedSlot> TYPED = new ConcurrentHashMap<>();
     private static final Map<BlockPos, Furnace> FURNACES = new ConcurrentHashMap<>();
@@ -84,6 +90,7 @@ public final class TestMachines {
         event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) -> bigSlot(pos), BIG_SLOT);
         event.registerBlock(Capabilities.FluidHandler.BLOCK, (level, pos, state, be, side) -> manyTanks(pos), MANY_TANKS);
         event.registerBlock(Capabilities.FluidHandler.BLOCK, (level, pos, state, be, side) -> liveTank(pos), LIVE_TANK);
+        event.registerBlock(Capabilities.FluidHandler.BLOCK, (level, pos, state, be, side) -> typedTank(pos), TYPED_TANK);
         event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) -> naiveSlots(pos), NAIVE_SLOTS);
         event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) ->
                 side == state.getValue(HorizontalDirectionalBlock.FACING).getOpposite() ? bigSlot(pos) : null, BACK_SLOT);
@@ -118,6 +125,11 @@ public final class TestMachines {
         return LIVE_TANKS.computeIfAbsent(pos.immutable(), key -> new LiveTank());
     }
 
+    /** O tanque seletivo da posição; o fluido aceito vem de {@link TypedTank#accept} (sem ele, não aceita nada). */
+    static TypedTank typedTank(BlockPos pos) {
+        return TYPED_TANKS.computeIfAbsent(pos.immutable(), key -> new TypedTank());
+    }
+
     static Furnace furnace(BlockPos pos) {
         return FURNACES.computeIfAbsent(pos.immutable(), key -> new Furnace());
     }
@@ -135,6 +147,7 @@ public final class TestMachines {
         BIG_SLOTS.remove(pos.immutable());
         TANKS.remove(pos.immutable());
         LIVE_TANKS.remove(pos.immutable());
+        TYPED_TANKS.remove(pos.immutable());
         NAIVE.remove(pos.immutable());
         TYPED.remove(pos.immutable());
         FURNACES.remove(pos.immutable());
@@ -624,6 +637,68 @@ public final class TestMachines {
                 stored.shrink(taken);
             }
             return out;
+        }
+    }
+
+    /**
+     * Um tanque de entrada que só aceita o fluido de {@link #accept} (como a entrada de lava de uma máquina diante
+     * de água): {@code isFluidValid} e {@code fill} recusam o resto, com o tanque vazio ou não. Capacidade grande,
+     * para servir de ralo nos testes de vazão.
+     */
+    static final class TypedTank implements IFluidHandler {
+        static final int CAPACITY = 100_000_000;
+        private Fluid accepted = Fluids.EMPTY;
+        private FluidStack stored = FluidStack.EMPTY;
+
+        void accept(Fluid fluid) {
+            accepted = fluid;
+        }
+
+        int amount() {
+            return stored.getAmount();
+        }
+
+        @Override
+        public int getTanks() {
+            return 1;
+        }
+
+        @Override
+        public FluidStack getFluidInTank(int tank) {
+            return stored;
+        }
+
+        @Override
+        public int getTankCapacity(int tank) {
+            return CAPACITY;
+        }
+
+        @Override
+        public boolean isFluidValid(int tank, FluidStack stack) {
+            return stack.getFluid() == accepted;
+        }
+
+        @Override
+        public int fill(FluidStack resource, FluidAction action) {
+            if (resource.isEmpty() || !isFluidValid(0, resource)
+                    || !stored.isEmpty() && !FluidStack.isSameFluidSameComponents(stored, resource)) {
+                return 0;
+            }
+            int filled = Math.min(resource.getAmount(), CAPACITY - stored.getAmount());
+            if (filled > 0 && action.execute()) {
+                stored = stored.isEmpty() ? resource.copyWithAmount(filled) : stored.copyWithAmount(stored.getAmount() + filled);
+            }
+            return filled;
+        }
+
+        @Override
+        public FluidStack drain(FluidStack resource, FluidAction action) {
+            return FluidStack.EMPTY;
+        }
+
+        @Override
+        public FluidStack drain(int maxDrain, FluidAction action) {
+            return FluidStack.EMPTY;
         }
     }
 

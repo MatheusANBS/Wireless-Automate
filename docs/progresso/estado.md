@@ -15,7 +15,7 @@ Legenda: ✅ pronto e testado · 🟡 parcial · ⬜ não começado
 | Redes | ✅ | 1.9.0 (por face) | Rede por face, rede ativa, round-robin, grupos de redes, roteador nasce sem rede |
 | Acesso às redes privadas | ✅ | 2.7.0 | Convidados e times do FTB Teams (opcional) |
 | Filtros e Cartão de Filtro | ✅ | — | Sem limite de entradas, estoque em dois limites, tags, mod, propriedades, JEI |
-| Tiers e Cartões de Upgrade | ✅ | — | Oito tiers (três com o Allthemodium), ×8 por degrau, subir tier pelo anel ou pela bancada |
+| Tiers e Cartões de Upgrade | ✅ | 1.2.0 (escada ×8), 2.8.0 (energia pelo Ressonador), 2.16.0 (fluido, químico, Source e capacidades de uma hora) | Oito tiers (três com o Allthemodium), ×8 por degrau, subir tier pelo anel ou pela bancada |
 | Profiler e benchmark | ✅ | — | `/wa profile`, `/wa bench`, `scripts/bench.sh` e o comparativo com o Logistics Network |
 | Upgrade de Chunk Loading | ✅ | — | Mantém o roteador trabalhando com o jogador longe |
 

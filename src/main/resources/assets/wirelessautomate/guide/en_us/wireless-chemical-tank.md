@@ -36,13 +36,13 @@ The [Tank](wireless-tank.md)'s, in mB, all chemicals added up.
 
 | Tier | mB |
 | --- | --- |
-| **Basic** | 256,000 |
-| **Advanced** | 2,048,000 |
-| **Elite** | 16,384,000 |
-| **Emerald** | 131,072,000 |
-| **Allthemodium¹** | 1,048,576,000 |
-| **Vibranium¹** | 8,388,608,000 |
-| **Unobtainium¹** | 67,108,864,000 |
+| **Basic** | 28,800,000 |
+| **Advanced** | 230,400,000 |
+| **Elite** | 1,843,200,000 |
+| **Emerald** | 14,745,600,000 |
+| **Allthemodium¹** | 117,964,800,000 |
+| **Vibranium¹** | 943,718,400,000 |
+| **Unobtainium¹** | 7,549,747,200,000 |
 | **Ultimate** | Unlimited |
 
 ¹ Only with the Allthemodium mod.

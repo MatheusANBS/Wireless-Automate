@@ -156,6 +156,74 @@ public final class ResonatorBalanceGameTests {
         RouterGameTests.succeedAfterReload(helper, reloadsBefore);
     }
 
+    private static final long[] BALANCE5_FLUID = {2_000L, 16_000L, 128_000L, 1_024_000L, 8_192_000L, 65_536_000L,
+            524_288_000L, 0};
+    private static final long[] BALANCE5_SOURCE = {100L, 800L, 6_400L, 51_200L, 409_600L, 3_276_800L, 26_214_400L, 0};
+    private static final long[] BALANCE5_CHEST = {32_768L, 262_144L, 2_097_152L, 16_777_216L, 134_217_728L,
+            1_073_741_824L, 8_589_934_592L, 0};
+    private static final long[] BALANCE5_TANK = {256_000L, 2_048_000L, 16_384_000L, 131_072_000L, 1_048_576_000L,
+            8_388_608_000L, 67_108_864_000L, 0};
+    private static final long[] BALANCE5_SOURCE_TANK = {10_000L, 80_000L, 640_000L, 5_120_000L, 40_960_000L,
+            327_680_000L, 2_621_440_000L, 0};
+
+    /** A migração 6: fluido, químico (a mesma chave) e Source, e as capacidades do Baú, dos Tanques e do Tanque de Source. */
+    @GameTest(template = "empty", timeoutTicks = RouterGameTests.RELOAD_TIMEOUT,
+            batch = "wirelessautomate_config_balance6")
+    public static void migracao6TrocaAsVazoesEAsCapacidadesAntigas(GameTestHelper helper) {
+        int reloadsBefore = ConfigReloadListener.fileReloads();
+        try {
+            for (RouterTier tier : RouterTier.values()) {
+                int i = tier.ordinal();
+                Config.TIERS.get(tier).rates().get(ResourceType.FLUID.rateKey()).set(BALANCE5_FLUID[i]);
+                Config.TIERS.get(tier).rates().get(ResourceType.SOURCE.rateKey()).set(BALANCE5_SOURCE[i]);
+                Config.STORAGE_CAPACITY.get(StorageKind.CHEST).get(tier).set(BALANCE5_CHEST[i]);
+                Config.STORAGE_CAPACITY.get(StorageKind.TANK).get(tier).set(BALANCE5_TANK[i]);
+                Config.STORAGE_CAPACITY.get(StorageKind.CHEMICAL_TANK).get(tier).set(BALANCE5_TANK[i]);
+                Config.STORAGE_CAPACITY.get(StorageKind.SOURCE_TANK).get(tier).set(BALANCE5_SOURCE_TANK[i]);
+            }
+            Config.BALANCE_VERSION.set(5);
+            // o Ultimate já é sem limite em tudo: 7 tiers × (2 vazões + 4 capacidades)
+            helper.assertValueEqual(Config.migrateBalance(), 42, "valores migrados");
+            for (RouterTier tier : RouterTier.values()) {
+                int i = tier.ordinal();
+                helper.assertValueEqual(Config.TIERS.get(tier).rate(ResourceType.FLUID), ResourceType.FLUID.defaultRate(i),
+                        "fluido, " + tier);
+                helper.assertValueEqual(Config.TIERS.get(tier).rate(ResourceType.CHEMICAL),
+                        ResourceType.CHEMICAL.defaultRate(i), "químico, " + tier);
+                helper.assertValueEqual(Config.TIERS.get(tier).rate(ResourceType.SOURCE), ResourceType.SOURCE.defaultRate(i),
+                        "Source, " + tier);
+                for (StorageKind kind : StorageKind.values()) {
+                    helper.assertValueEqual(Config.STORAGE_CAPACITY.get(kind).get(tier).get(), kind.defaultCapacity(tier),
+                            kind + ", " + tier);
+                }
+            }
+            helper.assertValueEqual(Config.BALANCE_VERSION.get(), Config.CURRENT_BALANCE, "versão");
+        } finally {
+            restore();
+        }
+        RouterGameTests.succeedAfterReload(helper, reloadsBefore);
+    }
+
+    @GameTest(template = "empty", timeoutTicks = RouterGameTests.RELOAD_TIMEOUT,
+            batch = "wirelessautomate_config_balance6_dono")
+    public static void migracao6MantemOQueODonoMudou(GameTestHelper helper) {
+        int reloadsBefore = ConfigReloadListener.fileReloads();
+        var basicFluid = Config.TIERS.get(RouterTier.BASIC).rates().get(ResourceType.FLUID.rateKey());
+        var eliteChest = Config.STORAGE_CAPACITY.get(StorageKind.CHEST).get(RouterTier.ELITE);
+        try {
+            basicFluid.set(777L);
+            eliteChest.set(123_456_789L);
+            Config.BALANCE_VERSION.set(5);
+            Config.migrateBalance();
+            helper.assertValueEqual(basicFluid.get(), 777L, "fluido do dono");
+            helper.assertValueEqual(eliteChest.get(), 123_456_789L, "capacidade do dono");
+            helper.assertValueEqual(Config.BALANCE_VERSION.get(), Config.CURRENT_BALANCE, "versão");
+        } finally {
+            restore();
+        }
+        RouterGameTests.succeedAfterReload(helper, reloadsBefore);
+    }
+
     @GameTest(template = "empty", timeoutTicks = 300, batch = "wirelessautomate_config")
     public static void chavesNovasTemPadrao(GameTestHelper helper) {
         helper.assertValueEqual(Config.crystalIntegrity(), 8, "integridade");
@@ -168,7 +236,12 @@ public final class ResonatorBalanceGameTests {
             Config.RESONATOR_FE_PER_CRYSTAL.get(tier).set(CoreMath.defaultFePerCrystal(tier.ordinal()));
             Config.TIERS.get(tier).rates().get(ResourceType.ENERGY.rateKey())
                     .set(ResourceType.ENERGY.defaultRate(tier.ordinal()));
-            Config.STORAGE_CAPACITY.get(StorageKind.BATTERY).get(tier).set(StorageKind.BATTERY.defaultCapacity(tier));
+            for (ResourceType type : new ResourceType[] {ResourceType.FLUID, ResourceType.SOURCE}) {
+                Config.TIERS.get(tier).rates().get(type.rateKey()).set(type.defaultRate(tier.ordinal()));
+            }
+            for (StorageKind kind : StorageKind.values()) {
+                Config.STORAGE_CAPACITY.get(kind).get(tier).set(kind.defaultCapacity(tier));
+            }
         }
         Config.BALANCE_VERSION.set(Config.CURRENT_BALANCE);
         Config.SPEC.save();

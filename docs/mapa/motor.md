@@ -24,5 +24,5 @@ Redes, rede ativa por jogador e grupos de redes (só para organizar no Tablet, c
 
 ## `network/ResourceType.java`, `LoadedTypes.java`
 
-O registro dos tipos de recurso (Itens, Fluidos, Energia, Químicos, Source): chave, se tem filtro e cartões, chave da vazão na config, vazão padrão e mod exigido. Tela, Vinculador, Tablet e config leem daqui; um tipo novo é uma entrada nova, mais o seu caso no `switch` sem `default` do `NetworkManager.visit`. `LoadedTypes` diz quais estão carregados (Químicos só com o Mekanism, Source só com o Ars Nouveau). As chaves de NBT, componentes e config não mudam
+O registro dos tipos de recurso (Itens, Fluidos, Energia, Químicos, Source): chave, se tem filtro e cartões, chave da vazão na config, vazão padrão e mod exigido. Tela, Vinculador, Tablet e config leem daqui; um tipo novo é uma entrada nova, mais o seu caso no `switch` sem `default` do `NetworkManager.visit`. `LoadedTypes` diz quais estão carregados (Químicos só com o Mekanism, Source só com o Ars Nouveau). As chaves de NBT, componentes e config não mudam. Vazões padrão por tier (balanceamento 6, 08/11): itens 32 ×8; fluido e químico 8.000 mB/s ×8 (o cano básico do Mekanism); Source 1.000/s ×8 (o Source Relay do Ars); energia pelo `EnergyBalance`; `defaultRates()` dá a tabela para o `StorageBalance`.
 

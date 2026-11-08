@@ -6,11 +6,11 @@ Comece por aqui para continuar o trabalho. Este arquivo é curto de propósito: 
 
 - **Versão atual:** 2.15.1 (05/11/2026): correção urgente da 2.15.0, quebrar uma máquina vinculada derrubava o servidor. Protocolo 49 (o mesmo da 2.15.0).
 - **Publicação:** a 2.14.0 está no CurseForge; a 2.15.1 tem release no GitHub com o jar e espera o dono subir no CurseForge e no Modrinth (no lugar da 2.15.0).
-- **Em andamento:** ramo `ccr-6099bf57-xlgxhy` (08/11): a auditoria de performance do motor, com três correções (o cursor que travava numa saída da máquina, o tanque seletivo que dormia como cheio, o `isLoaded` das remotas por tick), verificada e com bench; espera o teste à mão e o merge do dono, e a decisão sobre a máquina faladeira (A13 do backlog). O ramo `mc/1.20.1-forge` (porte) está parado à espera do ok do dono (`docs/portes.md`).
+- **Em andamento:** ramo `ccr-6099bf57-xlgxhy` (08/11): a auditoria de performance do motor, com três correções (o cursor que travava numa saída da máquina, o tanque seletivo que dormia como cheio, o `isLoaded` das remotas por tick), verificada e com bench, mais a medição da vazão por tier e o balanceamento 6 (fluido ×4, Source ×10, capacidades de uma hora, migração 6 da config); espera o teste à mão e o merge do dono. A máquina faladeira (A13) se mede antes de decidir. O ramo `mc/1.20.1-forge` (porte) está parado à espera do ok do dono (`docs/portes.md`).
 
 ## Próximo passo
 
-1. O dono testa à mão as correções do motor de 08/11 (um Separador Eletrolítico ou uma máquina com saída secundária num roteador Básico; dois tanques de tipos diferentes diante de um tanque só de lava) e decide o merge; e responde às seis perguntas da análise de balanceamento (`docs/superpowers/specs/2026-11-08-balanceamento-vazao-analise.md`).
+1. O dono testa à mão as correções do motor de 08/11 (um Separador Eletrolítico ou uma máquina com saída secundária num roteador Básico; dois tanques de tipos diferentes diante de um tanque só de lava) e decide o merge; e confere no jogo o balanceamento 6 (um mundo antigo migra a config na primeira carga; o Tanque de Source Básico agora guarda 3,6 milhões).
 2. O dono testa à mão as etapas 1 a 4 e o Ctrl + clique do Vinculador (listas nas linhas de 02/11 do histórico), já no main.
 3. Reidealizar as telas do Tablet do zero (criação de redes etc.), mockup primeiro para o ok do dono.
 4. Subir a 2.15.1 no CurseForge e no Modrinth; refazer as imagens do Vinculador na vitrine (sem a área) e a do livro (ver `pendencias.md`).

@@ -37,9 +37,12 @@ public final class Config {
      * 1 = a escada ×8 da Esmeralda e do Allthemodium (8/10/2026); 2 = a energia do roteador Unobtainium ×8 e o FE
      * por cristal do Ressonador (15/10/2026); 3 = a escada nova do Ressonador e a energia do roteador por tier
      * (21/10/2026); 4 = o FE por cristal do Unobtainium de 184 milhões para 10,7 milhões (22/10/2026); 5 = a energia
-     * do roteador e a capacidade da Bateria ligadas ao Ressonador do mesmo tier (22/10/2026, {@link EnergyBalance}).
+     * do roteador e a capacidade da Bateria ligadas ao Ressonador do mesmo tier (22/10/2026, {@link EnergyBalance});
+     * 6 = fluido e químico ×4 (o Básico em 8.000 mB/s, o cano básico do Mekanism), Source ×10 (o Básico em 1.000/s, o
+     * Source Relay do Ars) e as capacidades do Baú, dos Tanques e do Tanque de Source em uma hora da vazão do tier
+     * (08/11/2026, {@link io.github.matheusanbs.wirelessautomate.storage.StorageBalance}).
      */
-    public static final int CURRENT_BALANCE = 5;
+    public static final int CURRENT_BALANCE = 6;
     /** Capacidade dos armazenamentos do mod por tipo e tier (todos os tipos somados; 0 = sem limite). */
     public static final Map<StorageKind, Map<RouterTier, ModConfigSpec.LongValue>> STORAGE_CAPACITY =
             new EnumMap<>(StorageKind.class);
@@ -363,6 +366,7 @@ public final class Config {
         changed += version < 3 ? migrateBalance3() : 0;
         changed += version < 4 ? migrateBalance4() : 0;
         changed += version < 5 ? migrateBalance5() : 0;
+        changed += version < 6 ? migrateBalance6() : 0;
         BALANCE_VERSION.set(CURRENT_BALANCE);
         SPEC.save();
         return changed;
@@ -446,6 +450,55 @@ public final class Config {
             }
         }
         return changed;
+    }
+
+    /** A vazão de fluido e químico (chave `fluidPerSecond`) e de Source antes do balanceamento 6, pela posição do tier. */
+    private static final long[] BALANCE5_FLUID = {
+        2_000L, 16_000L, 128_000L, 1_024_000L, 8_192_000L, 65_536_000L, 524_288_000L, 0
+    };
+    private static final long[] BALANCE5_SOURCE = {
+        100L, 800L, 6_400L, 51_200L, 409_600L, 3_276_800L, 26_214_400L, 0
+    };
+    /** As capacidades do Baú, dos Tanques e do Tanque de Source antes do balanceamento 6, pela posição do tier. */
+    private static final Map<StorageKind, long[]> BALANCE5_CAPACITY = Map.of(
+            StorageKind.CHEST, new long[] {32_768L, 262_144L, 2_097_152L, 16_777_216L, 134_217_728L, 1_073_741_824L,
+                    8_589_934_592L, 0},
+            StorageKind.TANK, new long[] {256_000L, 2_048_000L, 16_384_000L, 131_072_000L, 1_048_576_000L,
+                    8_388_608_000L, 67_108_864_000L, 0},
+            StorageKind.CHEMICAL_TANK, new long[] {256_000L, 2_048_000L, 16_384_000L, 131_072_000L, 1_048_576_000L,
+                    8_388_608_000L, 67_108_864_000L, 0},
+            StorageKind.SOURCE_TANK, new long[] {10_000L, 80_000L, 640_000L, 5_120_000L, 40_960_000L, 327_680_000L,
+                    2_621_440_000L, 0});
+
+    /** Troca a vazão de fluido, químico e Source e as capacidades que ainda estão no padrão de antes pelos novos. */
+    private static int migrateBalance6() {
+        int changed = 0;
+        for (RouterTier tier : RouterTier.values()) {
+            int i = tier.ordinal();
+            changed += migrateRate(tier, ResourceType.FLUID, BALANCE5_FLUID[i]);
+            changed += migrateRate(tier, ResourceType.SOURCE, BALANCE5_SOURCE[i]);
+            for (Map.Entry<StorageKind, long[]> entry : BALANCE5_CAPACITY.entrySet()) {
+                StorageKind kind = entry.getKey();
+                ModConfigSpec.LongValue capacity = STORAGE_CAPACITY.get(kind).get(tier);
+                long target = kind.defaultCapacity(tier);
+                if (capacity.get() == entry.getValue()[i] && capacity.get() != target) {
+                    capacity.set(target);
+                    changed++;
+                }
+            }
+        }
+        return changed;
+    }
+
+    /** Troca a vazão de {@code type} no tier pelo padrão atual se ela ainda for {@code old}; devolve 1 se trocou. */
+    private static int migrateRate(RouterTier tier, ResourceType type, long old) {
+        ModConfigSpec.LongValue rate = TIERS.get(tier).rates().get(type.rateKey());
+        long target = type.defaultRate(tier.ordinal());
+        if (rate.get() == old && rate.get() != target) {
+            rate.set(target);
+            return 1;
+        }
+        return 0;
     }
 
     private static int migrateBalance1() {

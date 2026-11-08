@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.gametest;
 import com.mojang.authlib.GameProfile;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.item.tuner.ConfiguratorTuner;
 import io.github.matheusanbs.wirelessautomate.item.tuner.TunerPending;
@@ -228,7 +229,7 @@ public final class SourceGameTests {
                 .thenSucceed();
     }
 
-    /** Básico: 1.000 Source/s (o balde começa cheio com um segundo); nada se perde no caminho. */
+    /** Básico: a vazão da config por segundo (o balde começa cheio com um segundo); nada se perde no caminho. */
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void basicTierLimitsSourceRate(GameTestHelper helper) {
         if (!enabled()) {
@@ -245,9 +246,10 @@ public final class SourceGameTests {
                 .thenIdle(20)
                 .thenExecute(() -> {
                     int moved = amount(helper, B);
-                    helper.assertTrue(moved >= 100, "o limitador travou, passou só " + moved);
-                    // Um segundo de balde (100) + 20 ticks a 5 por tick (100), com folga de um tick.
-                    helper.assertTrue(moved <= 205, "passou do limite do tier: " + moved);
+                    long rate = Config.TIERS.get(RouterTier.BASIC).rate(ResourceType.SOURCE);
+                    helper.assertTrue(moved >= rate / 10, "o limitador travou, passou só " + moved);
+                    // Um segundo de balde (a vazão) + 20 ticks a um vigésimo por tick (outra vazão), com folga de um tick.
+                    helper.assertTrue(moved <= 2 * rate + rate / 20, "passou do limite do tier: " + moved);
                     helper.assertValueEqual(amount(helper, A) + moved, 10_000, "Source perdida ou criada");
                 })
                 .thenSucceed();
@@ -393,8 +395,9 @@ public final class SourceGameTests {
                 .thenExecute(() -> {
                     List<BlockPos> empty = SourceTestSupport.canGiveNearby(helper.getLevel(), center(helper), 5);
                     helper.assertTrue(empty.contains(tankPos), "o tanque vazio não aceita Source: " + empty);
-                    SourceTestSupport.set(helper.getLevel(), tankPos, 200_000);
-                    helper.assertValueEqual(tank(helper, A).store().stored(), 10_000L,
+                    long capacity = Config.storageCapacity(StorageKind.SOURCE_TANK, RouterTier.BASIC);
+                    SourceTestSupport.set(helper.getLevel(), tankPos, (int) capacity + 190_000);
+                    helper.assertValueEqual(tank(helper, A).store().stored(), capacity,
                             "setSource limitado à capacidade");
                     helper.assertValueEqual(helper.getBlockState(A).getValue(StorageSourceTankBlock.FILL), 10,
                             "nível depois do setSource");

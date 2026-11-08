@@ -48,13 +48,13 @@ Total de itens, todos os tipos somados.
 
 | Tier | Itens |
 | --- | --- |
-| **Básico** | 32.768 |
-| **Avançado** | 262.144 |
-| **Elite** | 2.097.152 |
-| **Esmeralda** | 16.777.216 |
-| **Allthemodium¹** | 134.217.728 |
-| **Vibranium¹** | 1.073.741.824 |
-| **Unobtainium¹** | 8.589.934.592 |
+| **Básico** | 115.200 |
+| **Avançado** | 921.600 |
+| **Elite** | 7.372.800 |
+| **Esmeralda** | 58.982.400 |
+| **Allthemodium¹** | 471.859.200 |
+| **Vibranium¹** | 3.774.873.600 |
+| **Unobtainium¹** | 30.198.988.800 |
 | **Ultimate** | Sem limite |
 
 ¹ Só com o mod Allthemodium.

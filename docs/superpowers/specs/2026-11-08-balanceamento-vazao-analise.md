@@ -118,3 +118,21 @@ Recomendação: B com dez minutos para os tanques e C só para a Source quando h
 - AE2: [Import Bus](https://guide.appliedenergistics.org/1.21/items-blocks-machines/import_bus) e [Upgrade Cards](https://guide.appliedenergistics.org/1.21/items-blocks-machines/upgrade_cards), guia oficial 1.21.
 - Mekanism: [Mechanical Pipe, wiki do Mekanism](https://wiki.aidancbrady.com/wiki/Mechanical_Pipe); [FTB wiki, Elite Mechanical Pipe](https://ftb.fandom.com/wiki/Elite_Mechanical_Pipe); [Minecraft Guides, Pipes and Tubes](https://www.minecraft-guides.com/mod/mekanism/wiki/pipes-and-tubes/).
 - Ars Nouveau: [All The Guides, Source](https://allthemods.github.io/alltheguides/atma/arsnouveau/source); [ars.guide, Source Relay](https://ars.guide/book/source/block.ars_nouveau.relay/).
+
+## 7. Decisão do dono e o que foi feito (08/11/2026)
+
+- Pergunta 1: **uma hora**, como a Bateria. Pergunta 2: **8.000 mB/s no Básico**. Pergunta 3: **o químico segue o fluido**. Pergunta 4: **medir no código do Ars**: o `RelayTile` tem buffer e taxa de 1.000 e transfere a cada 20 ticks (1.000 Source/s); o `RelaySplitterTile` 2.500 a cada 20 ticks; o `SourcelinkTile` guarda 20.000 e deposita até 10.000 a cada 100 ticks (2.000/s nas jarras); a `SourceJarTile` guarda 10.000; a máquina padrão do Ars (`AbstractSourceMachine`) aceita 1.000 por transferência. O Básico de Source foi para **1.000/s**, um Relay. Perguntas 5 e 6: Ultimate sem limite e itens em 32/s, como recomendado.
+- Balanceamento 6 aplicado (`Config.migrateBalance6`, `StorageBalance`):
+
+| Tier | Fluido e químico (mB/s), antes → depois | Source/s | Baú (itens) | Tanque e Tanque Químico (mB) | Tanque de Source |
+| --- | --- | --- | --- | --- | --- |
+| Básico | 2.000 → 8.000 | 100 → 1.000 | 32.768 → 115.200 | 256.000 → 28.800.000 | 10.000 → 3.600.000 |
+| Avançado | 16.000 → 64.000 | 800 → 8.000 | 262.144 → 921.600 | 2.048.000 → 230.400.000 | 80.000 → 28.800.000 |
+| Elite | 128.000 → 512.000 | 6.400 → 64.000 | 2.097.152 → 7.372.800 | 16.384.000 → 1.843.200.000 | 640.000 → 230.400.000 |
+| Esmeralda | 1.024.000 → 4.096.000 | 51.200 → 512.000 | 16.777.216 → 58.982.400 | 131.072.000 → 14.745.600.000 | 5.120.000 → 1.843.200.000 |
+| Allthemodium | 8.192.000 → 32.768.000 | 409.600 → 4.096.000 | 134.217.728 → 471.859.200 | 1.048.576.000 → 117.964.800.000 | 40.960.000 → 14.745.600.000 |
+| Vibranium | 65.536.000 → 262.144.000 | 3.276.800 → 32.768.000 | 1.073.741.824 → 3.774.873.600 | 8.388.608.000 → 943.718.400.000 | 327.680.000 → 117.964.800.000 |
+| Unobtainium | 524.288.000 → 2.097.152.000 | 26.214.400 → 262.144.000 | 8.589.934.592 → 30.198.988.800 | 67.108.864.000 → 7.549.747.200.000 | 2.621.440.000 → 943.718.400.000 |
+| Ultimate | sem limite | sem limite | sem limite | sem limite | sem limite |
+
+Itens e energia não mudam. A visão em `int` dos tanques de outros mods e do Ars continua limitada a 2,1 bilhões por chamada e por capacidade mostrada; o conteúdo é `long`.

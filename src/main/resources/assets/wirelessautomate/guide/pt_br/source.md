@@ -28,5 +28,5 @@ O roteador também liga direto nos Relays e na Imbuement Chamber. Um
 | Recurso | Source |
 | --- | --- |
 | Modo, prioridade, redstone e rede | Sim. |
-| Vazão | Básico 100/s, Avançado 800/s, Elite 6.400/s, Esmeralda 51.200/s, Ultimate sem limite ([Roteador](router.md)). |
+| Vazão | Básico 1.000/s (um Source Relay), Avançado 8.000/s, Elite 64.000/s, Esmeralda 512.000/s, Ultimate sem limite ([Roteador](router.md)). |
 | Filtro e Cartão de Filtro | Não: a Source não tem tipos. |

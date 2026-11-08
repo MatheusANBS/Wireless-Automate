@@ -17,16 +17,16 @@ import org.jetbrains.annotations.Nullable;
  */
 public enum ResourceType {
     ITEM("item", true, true, "itemsPerSecond", false, null, 32L, 256L, 2_048L, 16_384L, 131_072L, 1_048_576L, 8_388_608L, 0L),
-    FLUID("fluid", true, true, "fluidPerSecond", false, null, 2_000L, 16_000L, 128_000L, 1_024_000L, 8_192_000L, 65_536_000L, 524_288_000L, 0L),
+    FLUID("fluid", true, true, "fluidPerSecond", false, null, 8_000L, 64_000L, 512_000L, 4_096_000L, 32_768_000L, 262_144_000L, 2_097_152_000L, 0L),
     /**
      * A energia de cada tier escoa a geração cheia do Ressonador do mesmo tier por uma face, com 5% de folga (o
      * Ultimate não tem limite); a tabela vem do {@link EnergyBalance}.
      */
     ENERGY("energy", false, false, "energyPerTick", true, null, EnergyBalance.routerEnergyTable()),
     /** Só existe com o Mekanism instalado. Divide a vazão com os fluidos e não tem cartões. */
-    CHEMICAL("chemical", true, false, "fluidPerSecond", false, "mekanism", 2_000L, 16_000L, 128_000L, 1_024_000L, 8_192_000L, 65_536_000L, 524_288_000L, 0L),
+    CHEMICAL("chemical", true, false, "fluidPerSecond", false, "mekanism", 8_000L, 64_000L, 512_000L, 4_096_000L, 32_768_000L, 262_144_000L, 2_097_152_000L, 0L),
     /** Só existe com o Ars Nouveau instalado. Um valor só, como a energia: sem filtro e sem cartões. */
-    SOURCE("source", false, false, "sourcePerSecond", false, "ars_nouveau", 100L, 800L, 6_400L, 51_200L, 409_600L, 3_276_800L, 26_214_400L, 0L);
+    SOURCE("source", false, false, "sourcePerSecond", false, "ars_nouveau", 1_000L, 8_000L, 64_000L, 512_000L, 4_096_000L, 32_768_000L, 262_144_000L, 0L);
 
     private final String key;
     private final boolean filtered;
@@ -80,6 +80,11 @@ public enum ResourceType {
     /** Vazão padrão do tier ({@code RouterTier.ordinal()}); 0 = sem limite. */
     public long defaultRate(int tier) {
         return defaultRate[tier];
+    }
+
+    /** A tabela inteira das vazões padrão, pela posição do tier (uma cópia). */
+    public long[] defaultRates() {
+        return defaultRate.clone();
     }
 
     public static @Nullable ResourceType byKey(String key) {

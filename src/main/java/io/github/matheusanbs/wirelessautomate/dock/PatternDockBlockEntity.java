@@ -69,6 +69,11 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
         return machineAt.get(pos.asLong());
     }
 
+    /** O {@link #machineAt(BlockPos)} pela posição em {@code long}, sem criar a posição. */
+    @Nullable DockMachine machineAt(long pos) {
+        return machineAt.get(pos);
+    }
+
     /** Quantas máquinas a Doca tem vinculadas, somando os seis lados (dentro do alcance ou não). */
     public int machineCount() {
         return machineAt.size();
@@ -191,6 +196,7 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
             if (side == null) {
                 continue;
             }
+            int sideActive = 0;
             for (DockMachine machine : side.machines()) {
                 BlockPos pos = machine.pos();
                 boolean inReach = active.size() < max && RangeRules.chebyshev(worldPosition.getX(),
@@ -198,8 +204,10 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
                 machine.setActive(inReach);
                 if (inReach) {
                     active.add(machine.remote());
+                    sideActive++;
                 }
             }
+            side.setActiveMachines(sideActive);
         }
         RemoteIndex.get().update(this, active);
     }
@@ -217,10 +225,18 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
 
     /**
      * O ponto único dos avisos de uma máquina (o {@code setChanged} dela, a carga do chunk dela e um cache de
-     * capability invalidado): marca a máquina como mudada ({@link DockMachine#changed}).
+     * capability invalidado): marca a máquina como mudada ({@link DockMachine#changed}), a acorda para a entrega e,
+     * se ela tem o pendente do lado, enfileira uma tentativa dele ({@link DockPending#flushSoon}). A tentativa não
+     * roda aqui: o aviso chega de dentro do {@code setChanged} da máquina, de uma entrega do motor ou de um listener
+     * de cache, onde inserir nela reentraria (ver o {@code flushSoon}).
      */
     void machineChanged(DockMachine machine) {
         machine.markChanged();
+        machine.wake();
+        DockSide side = sides[machine.side()];
+        if (side != null && side.hasPending() && side.pendingAtKey() == machine.pos().asLong()) {
+            DockPending.flushSoon(this, side);
+        }
     }
 
     /** Larga no chão o pendente de itens de todos os lados (o bloco saiu); os fluidos pendentes se perdem. */

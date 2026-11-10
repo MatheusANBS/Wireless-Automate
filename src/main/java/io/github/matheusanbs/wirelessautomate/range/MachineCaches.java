@@ -214,6 +214,14 @@ public final class MachineCaches {
         return loaded;
     }
 
+    /**
+     * Pode consultar agora: o dono e a máquina valem e, numa remota, o chunk dela está carregado (a mesma resposta do
+     * tick, sem uma busca a mais). Para quem escolhe entre várias remotas pular a descarregada antes de tentar.
+     */
+    public boolean available() {
+        return queryLevel() != null;
+    }
+
     /** Inventário da máquina pela face {@code machineFace}. */
     public @Nullable IItemHandler items(Direction machineFace) {
         ServerLevel level = queryLevel();

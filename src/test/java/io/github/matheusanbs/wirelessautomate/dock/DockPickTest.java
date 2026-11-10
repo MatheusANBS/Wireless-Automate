@@ -67,4 +67,44 @@ class DockPickTest {
         }, 8));
         assertEquals(3, tries[0]);
     }
+
+    /** Bits na ordem do perfil (RemoteSide): 1 = Trás, 4 = Cima. */
+    private static final int BACK = 1 << 1;
+    private static final int TOP = 1 << 4;
+
+    @Test
+    void furnaceOreGoesOnTopAndCoalToTheBack() {
+        // minério: só Cima; carvão: Cima e Trás
+        int[] masks = {TOP, TOP | BACK};
+        int[] loads = new int[6];
+        DockPick.loads(masks, 2, loads);
+        assertEquals(2, loads[4]);
+        assertEquals(1, loads[1]);
+        assertEquals(4, DockPick.selectiveFace(masks[0], loads));
+        assertEquals(1, DockPick.selectiveFace(masks[1], loads));
+    }
+
+    @Test
+    void tieGoesToTheFirstFaceOfTheProfile() {
+        int[] masks = {TOP | BACK};
+        int[] loads = new int[6];
+        DockPick.loads(masks, 1, loads);
+        assertEquals(1, DockPick.selectiveFace(masks[0], loads));
+    }
+
+    @Test
+    void emptyMaskGivesMinusOne() {
+        int[] loads = new int[6];
+        DockPick.loads(new int[] {0, TOP}, 2, loads);
+        assertEquals(-1, DockPick.selectiveFace(0, loads));
+    }
+
+    @Test
+    void onlyTheFirstCountMasksAreCounted() {
+        int[] masks = {TOP, TOP | BACK, BACK, BACK};
+        int[] loads = new int[6];
+        DockPick.loads(masks, 2, loads);
+        assertEquals(1, loads[1]);
+        assertEquals(2, loads[4]);
+    }
 }

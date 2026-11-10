@@ -96,7 +96,7 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 
 ## Ideias (pedidos do dono, não começados)
 
-- Lixeira do mod: um bloco que some com itens, fluidos, energia, químicos e Source, para não depender do Trash Cans. (14/10)
+- Lixeira do mod: um bloco que some com itens, fluidos, energia, químicos e Source, para não depender do Trash Cans. Visual aprovado em 10/11 e spec pronta (`docs/superpowers/specs/2026-11-10-lixeira-design.md`, modelo em `docs/preview/lixeira.bbmodel`); falta o dono responder as cinco perguntas da spec (id e nome, quando o engolir toca, filtro, receita, textura) antes do plano. (14/10)
 - Atualizar sozinho a máquina que trocou de bloco (a remota já tem o ⟳ Atualizar): ver se a máquina presa precisa do mesmo e se dá para fazer sozinho quando o bloco novo é da mesma família. (14/10)
 - Atalhos de AE2 e RS2.
 - Balanceamento das receitas.

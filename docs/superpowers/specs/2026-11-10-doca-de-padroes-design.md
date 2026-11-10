@@ -1,6 +1,6 @@
 # Doca de Padrões (spec)
 
-Estado: **rascunho para o ok do dono (10/11/2026).** A regra, o alcance e a arte foram aprovados na proposta (`2026-11-10-ae2-rs2-proposta.md`, seções "Terceira crítica: simplificar", "O alcance da Doca" e "Arte e animação da Doca"). Esta spec junta essas decisões, corrige o que a conferência das APIs mudou (seção "O que a conferência mudou") e fecha a tela, cujo mockup está em `docs/preview/doca-de-padroes-tela.html`. Nada implementado. As perguntas que faltam estão no fim.
+Estado: **decisões fechadas pelo dono em 10/11/2026; falta o ok do mockup da tela.** A regra, o alcance e a arte foram aprovados na proposta (`2026-11-10-ae2-rs2-proposta.md`, seções "Terceira crítica: simplificar", "O alcance da Doca" e "Arte e animação da Doca"). Esta spec junta essas decisões, corrige o que a conferência das APIs mudou (seção "O que a conferência mudou") e fecha a tela, cujo mockup está em `docs/preview/doca-de-padroes-tela.html`. Nada implementado. As respostas do dono estão no fim.
 
 ## A regra
 
@@ -12,7 +12,7 @@ Palavras para o jogador (tela, guia, mensagens): "lado", "máquinas", "pedido", 
 
 O código foi lido nos ramos oficiais (AE2 `1.21.1`, RS2 `support/2.x`) e nos addons do ATM10; o resultado completo está na seção "A confirmar" da proposta. O que mexe na Doca:
 
-1. **O AE2 empurra uma execução do padrão por chamada.** A CPU de crafting chama `pushPattern` uma vez por execução, até (coprocessadores + 1) chamadas a cada 3 ticks (`CraftingCpuLogic`). O "empurrão de 1.920 minérios" da primeira crítica só existe com um padrão multiplicado. Um pedido grande ocupa as 30 máquinas mesmo assim, em poucos ticks, porque cada chamada vai para a próxima máquina livre. **Por isso a Doca deixa de repartir uma chamada entre várias máquinas** (o "lote divisível"): o padrão não diz qual é a receita mínima da máquina, e uma divisão errada deixa meia receita parada numa máquina para sempre (um padrão "2 X → 2 Y" de uma máquina que só trabalha de 2 em 2, dividido em dois "1 X"). O guia ensina a não multiplicar padrões na Doca e a pôr coprocessadores na CPU. **Pede o ok do dono** (pergunta 1).
+1. **O AE2 empurra uma execução do padrão por chamada.** A CPU de crafting chama `pushPattern` uma vez por execução, até (coprocessadores + 1) chamadas a cada 3 ticks (`CraftingCpuLogic`). O "empurrão de 1.920 minérios" da primeira crítica só existe com um padrão multiplicado. Um pedido grande ocupa as 30 máquinas mesmo assim, em poucos ticks, porque cada chamada vai para a próxima máquina livre. **Por isso a Doca deixa de repartir uma chamada entre várias máquinas** (o "lote divisível"): o padrão não diz qual é a receita mínima da máquina, e uma divisão errada deixa meia receita parada numa máquina para sempre (um padrão "2 X → 2 Y" de uma máquina que só trabalha de 2 em 2, dividido em dois "1 X"). O guia ensina a não multiplicar padrões na Doca e a pôr coprocessadores na CPU. **Decisão do dono (10/11/2026): tirar.**
 2. **O modo de bloqueio do Pattern Provider não vale para a Doca.** O AE2 só o aplica a inventários comuns; para um `ICraftingMachine` ele confia na resposta. Quem segura o pedido é a Doca. As travas por redstone e "até o resultado" do provedor continuam valendo.
 3. **Padrões de bancada também chegam.** O provedor oferece ao `ICraftingMachine` todo padrão, inclusive os de bancada, cortador e forja, que são do Molecular Assembler. A Doca recusa os padrões com `supportsPushInputsToExternalInventory() == false`, e a linha do lado diz por quê.
 4. **A Doca não pode expor inventário nenhum** (`IItemHandler`, `IFluidHandler`). No AE2, um lado que recusa o `ICraftingMachine` cairia no inventário comum e o provedor despejaria os ingredientes nele; no RS2, o sink de inventário comum é somado ao da Doca e o pedido entraria duas vezes.
@@ -29,7 +29,7 @@ O código foi lido nos ramos oficiais (AE2 `1.21.1`, RS2 `support/2.x`) e nos ad
 3. **Itens ou fluidos por pedido, não os dois juntos** nesta versão. Um pedido com item e fluido é recusado e a linha do lado avisa. Químicos e Source ficam para quando o Applied Mekanistics e o Refined Types forem lidos.
 4. **Mesma dimensão, dentro do cubo do tier.** A ligação pela rede do mod (outra base, outra dimensão) fica para depois.
 5. **Uma máquina pertence a um lado de uma Doca só.** Ela pode estar vinculada também a um roteador; o guia avisa que um roteador extraindo da mesma máquina disputa o resultado.
-6. **AE2 primeiro**, RS2 na etapa seguinte (pergunta 2).
+6. **AE2 primeiro**, RS2 na etapa seguinte (decisão do dono, 10/11/2026).
 
 ## O alcance (aprovado)
 
@@ -66,7 +66,7 @@ A tabela do roteador de alcance, um degrau acima. A Doca lê as chaves `machineR
 A Doca precisa saber em que face de cada máquina pôr os ingredientes e de qual tirar o resultado. Ela usa o Afinador do Configurador sem o jogador pedir:
 
 - **Ao vincular a primeira máquina de um lado**, a Doca roda a análise (`TunerProbe` + `TunerPlan`) nessa máquina e guarda o resultado como o perfil do lado: as faces Insere e as faces Extrai, por tipo. A action bar mostra "Lado Norte: Fornalha · Cima Insere · Baixo Extrai". As outras máquinas do lado usam o mesmo perfil, pela frente de cada uma (`RemoteSide`).
-- **Se o Afinador errar** (uma máquina de lados configuráveis, por exemplo), o jogador usa o Configurador numa máquina do lado, com o gesto de sempre (dois cliques), e o resultado vale para o lado inteiro. Proposta: **pergunta 3**.
+- **Se o Afinador errar** (uma máquina de lados configuráveis, por exemplo), o jogador usa o Configurador numa máquina do lado, com o gesto de sempre (dois cliques), e o resultado vale para o lado inteiro, sem exceção por máquina (decisão do dono, 10/11/2026).
 - **Máquina com duas entradas** (combustível e minério, ou dois ingredientes em lados diferentes): cada ingrediente vai para a primeira face Insere que o aceita.
 
 ## A entrega
@@ -129,7 +129,7 @@ Os estados, do mais grave ao mais leve (a linha mostra o primeiro que vale):
 ## Integração com os mods (sem quebrar sem eles)
 
 - Tipos do AE2 só em `compat/ae2`, tipos do RS2 só em `compat/refinedstorage`, nunca na assinatura de um método de classe `@EventBusSubscriber` ou `@GameTestHolder` (a regra do Mekanism). O bloco e a volta pelo lado do AE2 usam só capabilities do NeoForge.
-- Sem nenhum dos dois, a Doca existe, vincula e mostra "Sem provedor neste lado". A receita e a aba criativa: proposta na pergunta 4.
+- Sem nenhum dos dois, a Doca existe, vincula e mostra "Sem provedor neste lado". A receita fica para o balanceamento das receitas e só carrega com o AE2 ou o RS2; a Doca fica sempre na aba criativa (decisão do dono, 10/11/2026).
 - **Dependências:** AE2 `org.appliedenergistics:appliedenergistics2:19.2.18:api` (Maven Central) como `compileOnly`; RS2 `com.refinedmods.refinedstorage:refinedstorage-common-api:2.0.9` (com as APIs que ele traz, no `maven.creeperhost.net`) como `compileOnly`. Os mods inteiros (AE2 19.2.18 com o GuideME; `refinedstorage-neoforge` 2.0.9) só no `runClient` e nas runs de GameTest novas. São as versões do ATM10 8.5.
 - **Runs novas:** `runGameTestServerAe2` e `runGameTestServerRefined`, como a dos químicos. O `runGameTestServer` continua sem os dois e prova que o mod carrega sem eles.
 
@@ -163,9 +163,13 @@ Os estados, do mais grave ao mais leve (a linha mostra o primeiro que vale):
 
 Repartir uma chamada entre máquinas; a Doca guardando os próprios padrões; ligar a Doca pela rede do mod (outra dimensão); pedido de fabricação pelo estoque; químicos e Source; a Doca no Tablet e na Tela de Sinal.
 
-## Perguntas para o dono
+## Respostas do dono (10/11/2026)
 
-1. **O fim do "lote divisível".** Com o AE2 empurrando uma execução por vez, cada pedido vai inteiro para a próxima máquina livre e as 30 se enchem em poucos ticks; a divisão de uma chamada sai, porque pode deixar meia receita presa. Recomendado: tirar.
-2. **AE2 primeiro e o RS2 na etapa 2**, ou os dois na etapa 1? Recomendado: AE2 primeiro (é o do ATM10 com mais uso de padrões, e o RS2 reusa toda a Doca).
-3. **O Configurador numa máquina da Doca** refaz o perfil do lado inteiro (dois cliques, como hoje). Recomendado: sim, sem exceção por máquina.
-4. **A receita:** a proposta pede o custo de um roteador Avançado com o Upgrade de Alcance. Recomendado: deixar para o balanceamento das receitas, como a Lixeira, com a Doca sempre na aba criativa e a receita só com o AE2 ou o RS2 instalados.
+| Pergunta | Resposta |
+| --- | --- |
+| Repartir uma chamada entre máquinas (lote divisível) | Tirar: cada pedido inteiro numa máquina |
+| Ordem dos mods | AE2 na etapa 1, RS2 na etapa 2 |
+| Afinador que errou | O Configurador numa máquina refaz o perfil do lado inteiro |
+| Receita | Fica para o balanceamento das receitas, só com o AE2 ou o RS2 |
+
+Falta só o ok do mockup da tela (`docs/preview/doca-de-padroes-tela.html`); depois, o plano da etapa 1.

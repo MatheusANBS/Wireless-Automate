@@ -1,0 +1,284 @@
+<title>Tela da Doca de Padrões</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Mockup da tela da Doca de Padrões: a tela do mod no centro (operável pelos cenários), a legenda dos estados e o que a conferência das APIs mudou. Página no tema do leitor; a tela segue o GuiPaint do mod (claro e escuro). */
+:root {
+  --page: #ECE5D6; --page-fg: #2A2730; --page-mu: #6E675B; --page-line: #CFC5B0; --page-card: #F6F1E6;
+  --coral: #F0603E;
+  --pix: "Pixelify Sans", "Courier New", monospace;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  /* estados (ESTADO do identidade.py) */
+  --ok: #2F9D5C; --warn: #D88A1A; --err: #D5453A;
+  /* lente do tier (LENTE do identidade.py): Elite por padrão, trocada pelo script */
+  --t-hi: #8EE8E1; --t-mid: #1FA9A0; --t-lo: #136C66;
+  /* tela do mod, tema claro (GuiPaint) */
+  --g-panel: #F2EBDD; --g-sunk: #DDD3BF; --g-sunk-line: #BDB19A; --g-key: #FFFBF3; --g-ink: #2A2730; --g-mu: #7A7366; --g-off: #B5AC9D; --g-edge: #2A2730; --g-shadow: #BDB19A; --g-world: #7C8A93; --g-tip: #2A2730; --g-tip-fg: #F2EBDD;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --page: #19171C; --page-fg: #EDE6D8; --page-mu: #A79F90; --page-line: #3A363F; --page-card: #222026; color-scheme: dark } }
+:root[data-theme="dark"] { --page: #19171C; --page-fg: #EDE6D8; --page-mu: #A79F90; --page-line: #3A363F; --page-card: #222026; color-scheme: dark }
+/* tema escuro da tela do mod: vale só dentro de .gui.escuro, é a arte do jogo e não segue o tema da página */
+.gui.escuro { --g-panel: #26232B; --g-sunk: #1B1920; --g-sunk-line: #0F0E12; --g-key: #3E3B44; --g-ink: #EDE6D8; --g-mu: #A79F90; --g-off: #5A5660; --g-edge: #0F0E12; --g-shadow: #0F0E12; --g-tip: #0F0E12; --g-tip-fg: #EDE6D8 }
+* { box-sizing: border-box }
+body { background: var(--page); color: var(--page-fg); font-family: var(--body); font-size: 15px; line-height: 1.55; margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+.wrap { max-width: 1080px; margin: 0 auto; padding-block: 28px 64px }
+header { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: baseline }
+h1 { font-family: var(--pix); font-weight: 500; font-size: 32px; margin: 0; text-wrap: balance }
+h2 { font-family: var(--pix); font-weight: 500; font-size: 22px; margin: 0 0 8px; text-wrap: balance }
+.status { font-family: var(--pix); font-size: 14px; color: var(--coral); border: 1px solid var(--coral); padding: 1px 8px }
+.lede { color: var(--page-mu); max-width: 72ch; margin: 6px 0 0 }
+p, li { max-width: 74ch }
+section.part { border-top: 1px solid var(--page-line); margin-top: 36px; padding-top: 26px }
+.toolbar { display: flex; flex-wrap: wrap; gap: 14px 26px; margin-top: 18px }
+.grp { display: flex; flex-wrap: wrap; gap: 6px; align-items: center }
+.grp > span { font-family: var(--pix); font-size: 13px; color: var(--page-mu); margin-right: 2px }
+.toolbar button { font-family: var(--pix); font-size: 13px; padding: 3px 9px; background: var(--page-card); color: var(--page-fg); border: 1px solid var(--page-line); cursor: pointer }
+.toolbar button[aria-pressed="true"] { background: var(--page-fg); color: var(--page); border-color: var(--page-fg) }
+button:focus-visible, .row:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px }
+.main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 300px); gap: 26px; margin-top: 20px; align-items: start }
+@media (max-width: 760px) { .main { grid-template-columns: 1fr } }
+.stage { background: var(--g-world); padding: 26px 12px; display: grid; place-items: center; overflow-x: auto }
+.side-notes { display: grid; gap: 12px }
+.note { background: var(--page-card); border: 1px solid var(--page-line); padding: 12px 14px; min-width: 0 }
+.note b.t { display: block; font-family: var(--pix); font-weight: 500; font-size: 16px; margin-bottom: 2px }
+.note p { margin: 0; font-size: 14px }
+
+/* ---- a tela do mod ---- */
+.gui { font-family: var(--pix); color: var(--g-ink); background: var(--g-panel); border: 2px solid var(--g-edge); box-shadow: 4px 4px 0 var(--g-shadow); width: 360px; max-width: 100%; flex: none; position: relative }
+.gui .bar { height: 6px; background: var(--t-mid) }
+.gui .head { display: flex; align-items: center; gap: 8px; padding: 8px 10px 4px }
+.gui .olho { width: 16px; height: 16px; flex: none; background: var(--g-edge); display: grid; place-items: center; transform: rotate(45deg) scale(.82) }
+.gui .olho i { width: 8px; height: 8px; background: var(--t-mid); box-shadow: inset 2px 2px 0 var(--t-hi), inset -2px -2px 0 var(--t-lo) }
+.gui .head b { font-weight: 500; font-size: 18px; flex: 1; min-width: 0 }
+.gui .tier { font-size: 13px; color: var(--t-lo); background: var(--g-key); border: 2px solid var(--t-mid); padding: 0 5px; line-height: 16px }
+.gui.escuro .tier { color: var(--t-hi) }
+.gui .lua { width: 20px; height: 20px; flex: none; background: var(--g-key); border: 2px solid var(--g-edge); display: grid; place-items: center; font-size: 12px; line-height: 1 }
+.sum { display: flex; align-items: center; gap: 10px; padding: 2px 10px 8px; font-size: 14px; color: var(--g-mu) }
+.sum .n { font-size: 20px; color: var(--g-ink); font-variant-numeric: tabular-nums }
+.sum .meter { flex: 1; height: 6px; background: var(--g-sunk); box-shadow: inset 1px 1px 0 var(--g-sunk-line) }
+.sum .meter i { display: block; height: 100%; background: var(--t-mid) }
+.sum .meter.cheio i { background: var(--warn) }
+.rows { margin: 0 10px 10px; background: var(--g-sunk); box-shadow: inset 2px 2px 0 var(--g-sunk-line); display: grid }
+.row { display: grid; grid-template-columns: 54px 20px minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 8px; row-gap: 1px; align-items: center; padding: 6px 8px 6px 6px; border-bottom: 2px solid var(--g-sunk-line); cursor: default }
+.row:last-child { border-bottom: 0 }
+.row:hover { background: color-mix(in srgb, var(--g-key) 55%, transparent) }
+.tag { grid-row: 1 / 3; align-self: stretch; display: grid; place-items: center; font-size: 13px; color: #fff; background: var(--c); border: 2px solid var(--g-edge); box-shadow: inset -2px -2px 0 rgba(0,0,0,.22); text-shadow: 1px 1px 0 rgba(0,0,0,.35) }
+.mach { width: 20px; height: 20px; image-rendering: pixelated; display: block }
+.l1 { display: flex; align-items: baseline; gap: 8px; min-width: 0 }
+.l1 .nm { font-size: 16px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.l1 .ct { font-size: 13px; color: var(--g-mu); font-variant-numeric: tabular-nums; white-space: nowrap }
+.l2 { grid-column: 2 / 4; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; font-size: 13px }
+.st { display: inline-flex; align-items: center; gap: 5px; color: var(--g-ink) }
+.st svg { width: 9px; height: 9px; flex: none; display: block }
+.st.ok svg { color: var(--ok) } .st.warn svg { color: var(--warn) } .st.err svg { color: var(--err) } .st.idle svg { color: var(--g-mu) }
+.st.idle { color: var(--g-mu) }
+.extra { color: var(--g-mu) }
+.row.livre .tag { background: var(--g-off); color: var(--g-panel); text-shadow: none }
+.row.livre .nm { color: var(--g-mu) }
+.tip { position: absolute; left: 12px; right: 12px; z-index: 2; background: var(--g-tip); color: var(--g-tip-fg); border: 2px solid var(--t-mid); padding: 6px 8px; font-size: 13px; line-height: 1.35; pointer-events: none }
+.tip b { font-weight: 500 }
+
+/* legenda e listas */
+.legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px 22px; margin-top: 12px }
+.legend div { display: flex; gap: 10px; align-items: baseline; min-width: 0 }
+.legend .st { font-family: var(--pix); font-size: 15px; color: var(--page-fg); white-space: nowrap }
+.legend .st.idle { color: var(--page-mu) }
+.legend p { margin: 0; font-size: 14px; color: var(--page-mu) }
+ol.mud { margin: 10px 0 0; padding-left: 22px; display: grid; gap: 8px }
+ol.mud b { font-weight: 700 }
+.ask { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 12px }
+.ask > div { background: var(--page-card); border: 1px solid var(--page-line); padding: 12px 14px; min-width: 0 }
+.ask b.t { display: block; font-family: var(--pix); font-weight: 500; font-size: 16px }
+.ask p { margin: 4px 0 0; font-size: 14px }
+.ask .rec { display: block; margin-top: 6px; font-size: 13px; color: var(--ok); font-family: var(--pix) }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Tela da Doca de Padrões</h1>
+    <span class="status">para aprovar</span>
+  </header>
+  <p class="lede">Uma linha por lado, nenhuma opção para marcar. Troque o cenário e o provedor para ver os estados; passe o mouse numa linha para ver a dica, como no jogo.</p>
+
+  <div class="toolbar" role="group" aria-label="Variações do mockup">
+    <div class="grp"><span>Tema da tela</span><button id="t-claro" aria-pressed="true">Claro</button><button id="t-escuro" aria-pressed="false">Escuro</button></div>
+    <div class="grp"><span>Cenário</span><button id="c-uso" aria-pressed="true">Base em uso</button><button id="c-nova" aria-pressed="false">Recém-colocada</button><button id="c-config" aria-pressed="false">Config baixou</button></div>
+    <div class="grp"><span>Provedor</span><button id="p-ae" aria-pressed="true">AE2</button><button id="p-rs" aria-pressed="false">RS2</button></div>
+  </div>
+
+  <div class="main">
+    <div class="stage">
+      <div class="gui" id="gui">
+        <div class="bar"></div>
+        <div class="head"><span class="olho"><i></i></span><b>Doca de Padrões</b><span class="tier" id="tier"></span><span class="lua" aria-hidden="true">☾</span></div>
+        <div class="sum"><span class="n" id="sum-n"></span><span>máquinas</span><span class="meter" id="meter"><i></i></span><span id="sum-r"></span></div>
+        <div class="rows" id="rows"></div>
+        <div class="tip" id="tip" hidden></div>
+      </div>
+    </div>
+    <div class="side-notes">
+      <div class="note"><b class="t">O total no topo</b><p>Máquinas vinculadas na Doca inteira, somando os seis lados, contra o máximo do tier. A barra fica âmbar quando chega ao máximo.</p></div>
+      <div class="note"><b class="t">A linha de um lado</b><p>Etiqueta na cor do lado (a mesma da arte e das máquinas acesas no mundo), a máquina, quantas estão vinculadas e quantas trabalharam nos últimos 15 s, e o estado em uma frase.</p></div>
+      <div class="note"><b class="t">Estado sem depender da cor</b><p>Ponto cheio quando anda, anel quando espera, triângulo quando precisa do jogador. A frase diz o resto.</p></div>
+      <div class="note"><b class="t">No Pattern Access Terminal</b><p>O AE2 mostra o provedor do lado Norte como "Fornalha × 12": a Doca responde pela máquina do lado.</p></div>
+    </div>
+  </div>
+
+  <section class="part">
+    <h2>Os estados</h2>
+    <p class="lede">A linha mostra o primeiro que vale, do mais grave ao mais leve. Área descarregada e fora do alcance aparecem como nota ao lado do estado principal.</p>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <section class="part">
+    <h2>O que a conferência das APIs mudou</h2>
+    <ol class="mud">
+      <li><b>O AE2 empurra uma execução do padrão por vez</b>, até coprocessadores + 1 a cada 3 ticks. Cada pedido vai inteiro para a próxima máquina livre e as 30 se enchem em poucos ticks. Repartir uma chamada entre máquinas sai: o padrão não diz a receita mínima da máquina, e uma divisão errada deixa meia receita presa.</li>
+      <li><b>O modo de bloqueio do provedor não vale para a Doca.</b> Ela mesma segura o pedido quando todas estão cheias. As travas por redstone e "até o resultado" continuam valendo.</li>
+      <li><b>Padrões de bancada também chegam</b> e são recusados, com a frase na linha do lado.</li>
+      <li><b>A volta:</b> no AE2 pelo inventário de retorno do Pattern Provider (capability comum do NeoForge); no RS2 o Autocrafter não tem inventário, e a Doca insere direto na rede dele.</li>
+      <li><b>O RS2 simula e depois executa, e some com os ingredientes se a execução falhar.</b> A Doca decide na simulação e guarda num pendente por lado o que a máquina não engoliu.</li>
+      <li><b>Mais padrões por lado já existe:</b> ExtendedAE e Advanced AE (36 padrões) empurram do mesmo jeito; no RS2, Autocrafters encadeados somam padrões.</li>
+    </ol>
+  </section>
+
+  <section class="part">
+    <h2>Perguntas para o dono</h2>
+    <div class="ask">
+      <div><b class="t">1. Tirar o lote divisível?</b><p>Cada pedido inteiro numa máquina; a paralelização vem dos coprocessadores do AE2.</p><span class="rec">recomendado: tirar</span></div>
+      <div><b class="t">2. AE2 primeiro?</b><p>Etapa 1 só com o AE2; o RS2 reusa toda a Doca na etapa 2.</p><span class="rec">recomendado: AE2 primeiro</span></div>
+      <div><b class="t">3. Configurador refaz o lado?</b><p>Se o Afinador errar, dois cliques do Configurador numa máquina refazem o perfil do lado inteiro.</p><span class="rec">recomendado: sim</span></div>
+      <div><b class="t">4. Receita</b><p>Fica para o balanceamento das receitas, só com o AE2 ou o RS2 instalados.</p><span class="rec">recomendado: adiar</span></div>
+    </div>
+  </section>
+</div>
+
+<script>
+const TIERS = {
+  elite:    { nome: 'Elite',    hi: '#8EE8E1', mid: '#1FA9A0', lo: '#136C66', raio: 16, max: 32 },
+  basic:    { nome: 'Básico',   hi: '#B9BEC8', mid: '#6E7480', lo: '#454A54', raio: 6,  max: 8 },
+};
+const LADOS = [
+  { id: 'n', nome: 'Norte', cor: '#B57A3A' }, { id: 's', nome: 'Sul', cor: '#2F6FD6' },
+  { id: 'l', nome: 'Leste', cor: '#D9931A' }, { id: 'o', nome: 'Oeste', cor: '#5E9A2B' },
+  { id: 'c', nome: 'Cima', cor: '#8E4FC9' },  { id: 'b', nome: 'Baixo', cor: '#C2486B' },
+];
+/* ícones de máquina 8 × 8: 1 = contorno, 2 = corpo, 3 = detalhe, 4 = luz */
+const ICONES = {
+  fornalha:  { pal: ['', '#2A2730', '#8A8A8A', '#5A5A5A', '#F08A2B'], px: ['11111111','12222221','12333321','12222221','12111121','12144121','12144121','11111111'] },
+  triturador:{ pal: ['', '#2A2730', '#A8B4BE', '#56606A', '#E05A4E'], px: ['11111111','12222221','12322321','12233221','12233221','12322321','12444421','11111111'] },
+  camara:    { pal: ['', '#2A2730', '#B9C2C9', '#4E7FB0', '#7FC3F0'], px: ['11111111','12222221','12344321','12344321','12333321','12222221','12211221','11111111'] },
+  prensa:    { pal: ['', '#2A2730', '#C9C3B6', '#6E6658', '#8E4FC9'], px: ['11111111','13333331','11222211','12222221','12244221','12222221','13333331','11111111'] },
+};
+const CENARIOS = {
+  uso: { tier: 'elite', lados: {
+    n: { maq: 'fornalha', nome: 'Fornalha', v: 12, t: 9, st: 'ok', prov: 1 },
+    l: { maq: 'triturador', nome: 'Triturador', v: 8, t: 8, st: 'cheias', prov: 1 },
+    s: { maq: 'camara', nome: 'Câmara de Enriquecimento', v: 6, t: 0, st: 'semprov', prov: 0 },
+    o: { maq: 'prensa', nome: 'Prensa de Inscrição', v: 4, t: 1, st: 'ok', prov: 1, desc: 2 },
+    c: { maq: null, v: 0, t: 0, st: 'semmaq', prov: 1 },
+    b: { maq: null, v: 0, t: 0, st: 'livre', prov: 0 },
+  } },
+  nova: { tier: 'basic', lados: {
+    n: { maq: null, v: 0, t: 0, st: 'semmaq', prov: 1 }, s: { st: 'livre', v: 0 }, l: { st: 'livre', v: 0 },
+    o: { st: 'livre', v: 0 }, c: { st: 'livre', v: 0 }, b: { st: 'livre', v: 0 },
+  } },
+  config: { tier: 'elite', maxOverride: 24, lados: {
+    n: { maq: 'fornalha', nome: 'Fornalha', v: 12, t: 12, st: 'devolve', prov: 1, fora: 4 },
+    l: { maq: 'triturador', nome: 'Triturador', v: 8, t: 0, st: 'pronto', prov: 1, fora: 2 },
+    s: { maq: 'camara', nome: 'Câmara de Enriquecimento', v: 6, t: 0, st: 'bancada', prov: 1 },
+    o: { maq: 'prensa', nome: 'Prensa de Inscrição', v: 4, t: 0, st: 'misto', prov: 1 },
+    c: { st: 'livre', v: 0 }, b: { st: 'livre', v: 0 },
+  } },
+};
+const SINAIS = {
+  ok:  '<svg viewBox="0 0 9 9" aria-hidden="true"><circle cx="4.5" cy="4.5" r="4" fill="currentColor"/></svg>',
+  warn:'<svg viewBox="0 0 9 9" aria-hidden="true"><circle cx="4.5" cy="4.5" r="3" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
+  err: '<svg viewBox="0 0 9 9" aria-hidden="true"><path d="M4.5 0.5 L8.7 8.5 L0.3 8.5 Z" fill="currentColor"/></svg>',
+  idle:'<svg viewBox="0 0 9 9" aria-hidden="true"><circle cx="4.5" cy="4.5" r="2.5" fill="currentColor"/></svg>',
+};
+/* ordem = gravidade; frase curta na linha, frase longa na dica */
+const ESTADOS = {
+  semprov: { cls: 'err',  curta: 'Sem provedor neste lado', longa: 'Encoste um Pattern Provider ou um Autocrafter neste lado da Doca.' },
+  semmaq:  { cls: 'err',  curta: 'Nenhuma máquina vinculada', longa: 'Com o Vinculador, clique neste lado da Doca e dê Ctrl + clique numa máquina.' },
+  bancada: { cls: 'err',  curta: 'Padrão de bancada recusado', longa: 'Padrões de bancada, cortador e forja vão para o Molecular Assembler, não para a Doca.' },
+  misto:   { cls: 'err',  curta: 'Pedido com item e fluido recusado', longa: 'Por enquanto a Doca entrega pedidos só de itens ou só de fluidos.' },
+  devolve: { cls: 'warn', curta: 'Provedor cheio', longa: 'O resultado espera o provedor mandar o que já recebeu para a rede.' },
+  cheias:  { cls: 'warn', curta: 'Todas cheias', longa: 'Nenhuma máquina aceitou o último pedido. Ele fica com o provedor até alguma esvaziar.' },
+  ok:      { cls: 'ok',   curta: 'Trabalhando', longa: 'Os pedidos se revezam entre as máquinas livres.' },
+  pronto:  { cls: 'idle', curta: 'Pronto', longa: 'Esperando pedidos do provedor.' },
+  livre:   { cls: 'idle', curta: 'livre', longa: 'Nada encostado e nenhuma máquina vinculada.' },
+};
+const estado = { cen: 'uso', prov: 'ae' };
+
+function icone(id) {
+  const ic = ICONES[id]; let r = '';
+  ic.px.forEach((l, y) => [...l].forEach((c, x) => { if (c !== '0') r += `<rect x="${x}" y="${y}" width="1" height="1" fill="${ic.pal[+c]}"/>`; }));
+  return `<svg class="mach" viewBox="0 0 8 8" shape-rendering="crispEdges" aria-hidden="true">${r}</svg>`;
+}
+function provNome(n) {
+  if (!n) return 'nada encostado';
+  return estado.prov === 'ae' ? 'Pattern Provider' : (n > 1 ? `Autocrafter × ${n}` : 'Autocrafter');
+}
+function desenhar() {
+  const cen = CENARIOS[estado.cen], tier = TIERS[cen.tier], max = cen.maxOverride ?? tier.max;
+  const g = document.getElementById('gui').style;
+  g.setProperty('--t-hi', tier.hi); g.setProperty('--t-mid', tier.mid); g.setProperty('--t-lo', tier.lo);
+  document.getElementById('tier').textContent = tier.nome;
+  const total = LADOS.reduce((s, l) => s + (cen.lados[l.id].v || 0), 0);
+  document.getElementById('sum-n').textContent = `${total}/${max}`;
+  document.getElementById('sum-r').textContent = `raio ${cen.maxOverride ? 12 : tier.raio}`;
+  const meter = document.getElementById('meter');
+  meter.querySelector('i').style.width = `${Math.min(100, total / max * 100)}%`;
+  meter.classList.toggle('cheio', total >= max);
+  document.getElementById('rows').innerHTML = LADOS.map(l => {
+    const d = cen.lados[l.id], e = ESTADOS[d.st], livre = d.st === 'livre';
+    const prov = estado.prov === 'rs' && d.prov ? (l.id === 'n' ? 3 : 1) : d.prov;
+    const nome = d.maq ? d.nome : (livre ? '—' : 'Sem máquina');
+    const ct = d.maq ? `${d.v} · ${d.t} trabalhando` : '';
+    const extras = [d.desc ? `${d.desc} em área descarregada` : '', d.fora ? `${d.fora} fora do alcance` : ''].filter(Boolean);
+    const ex = extras.map(x => `<span class="extra st warn">${SINAIS.warn}${x}</span>`).join('');
+    const tip = `<b>Lado ${l.nome}</b> · ${provNome(prov)}<br>${e.longa}${extras.length ? '<br>' + extras.join(' · ') + ': não recebem até voltarem.' : ''}`;
+    return `<div class="row${livre ? ' livre' : ''}" tabindex="0" style="--c:${l.cor}" data-tip="${tip.replace(/"/g, '&quot;')}">
+      <span class="tag">${l.nome}</span>
+      ${d.maq ? icone(d.maq) : '<span></span>'}
+      <span class="l1"><span class="nm">${nome}</span><span class="ct">${ct}</span></span>
+      <span class="l2"><span class="st ${e.cls}">${SINAIS[e.cls]}${e.curta}</span>${ex}</span>
+    </div>`;
+  }).join('');
+}
+function legenda() {
+  const ordem = ['semprov', 'semmaq', 'bancada', 'misto', 'devolve', 'cheias', 'ok', 'pronto'];
+  const quando = {
+    semprov: 'Há máquinas e nada encostado que empurra.', semmaq: 'Há provedor e nenhuma máquina.',
+    bancada: 'O último pedido recusado era de bancada (AE2).', misto: 'O último pedido recusado misturava item e fluido.',
+    devolve: 'A volta parou porque o provedor recusou o resultado.', cheias: 'O último pedido não achou máquina livre.',
+    ok: 'Alguma máquina recebeu ou devolveu nos últimos 15 s.', pronto: 'Tem provedor e máquinas, e nada a fazer.',
+  };
+  document.getElementById('legend').innerHTML = ordem.map(k => {
+    const e = ESTADOS[k];
+    return `<div><span class="st ${e.cls}">${SINAIS[e.cls]}${e.curta}</span><p>${quando[k]}</p></div>`;
+  }).join('');
+}
+const tip = document.getElementById('tip');
+function mostrar(row) {
+  tip.innerHTML = row.dataset.tip; tip.hidden = false;
+  const gui = document.getElementById('gui').getBoundingClientRect(), r = row.getBoundingClientRect();
+  tip.style.top = `${r.bottom - gui.top + 2}px`;
+}
+document.getElementById('rows').addEventListener('mouseover', e => { const r = e.target.closest('.row'); if (r) mostrar(r); });
+document.getElementById('rows').addEventListener('mouseleave', () => { tip.hidden = true; });
+document.getElementById('rows').addEventListener('focusin', e => { const r = e.target.closest('.row'); if (r) mostrar(r); });
+document.getElementById('rows').addEventListener('focusout', () => { tip.hidden = true; });
+function grupo(ids, fn) {
+  ids.forEach(id => document.getElementById(id).addEventListener('click', () => {
+    ids.forEach(o => document.getElementById(o).setAttribute('aria-pressed', String(o === id))); fn(id);
+  }));
+}
+grupo(['t-claro', 't-escuro'], id => document.getElementById('gui').classList.toggle('escuro', id === 't-escuro'));
+grupo(['c-uso', 'c-nova', 'c-config'], id => { estado.cen = id.slice(2); desenhar(); });
+grupo(['p-ae', 'p-rs'], id => { estado.prov = id.slice(2); desenhar(); });
+legenda(); desenhar();
+</script>

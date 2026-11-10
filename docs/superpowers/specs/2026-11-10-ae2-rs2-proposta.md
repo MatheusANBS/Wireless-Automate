@@ -1,6 +1,6 @@
 # Integração com o Applied Energistics 2 e o Refined Storage 2 (proposta)
 
-Estado: **a Doca de Padrões e o alcance dela foram aprovados pelo dono em 10/11/2026** (as seções "Terceira crítica: simplificar" e "O alcance da Doca"); o resto é proposta. Nada implementado. As APIs citadas foram lidas no código dos ramos oficiais (AE2 ramo `1.21.1`, linha 19.x; RS2 ramo `support/2.x`, linha 2.0.x) por pesquisa na web, sem compilar nada; o que não deu para confirmar está em "A confirmar antes de qualquer plano".
+Estado: **a Doca de Padrões e o alcance dela foram aprovados pelo dono em 10/11/2026** (as seções "Terceira crítica: simplificar" e "O alcance da Doca"); o resto é proposta. Nada implementado. As APIs citadas foram lidas no código dos ramos oficiais (AE2 ramo `1.21.1`, linha 19.x; RS2 ramo `support/2.x`, linha 2.0.x), sem compilar nada; os pontos em aberto foram conferidos no código em 10/11/2026 (seção "A confirmar antes de qualquer plano"). A spec da Doca é `2026-11-10-doca-de-padroes-design.md`, que corrige o lote divisível e a volta no RS2.
 
 **Para a Doca de Padrões, vale a seção "Terceira crítica: simplificar"**; a feature 3 e as duas primeiras críticas ficam como o caminho que levou até ela.
 
@@ -322,14 +322,17 @@ A feature 7 acompanha cada etapa.
 - **Duas APIs diferentes para a mesma feature:** cada feature custa quase o dobro para cobrir os dois mods. Dá para entregar o AE2 primeiro em cada etapa e o RS2 em seguida.
 - **Protocolo e mundo:** a Doca é bloco novo com tela, logo payload novo e `ModPayloads.VERSION`.
 
-## A confirmar antes de qualquer plano
+## A confirmar antes de qualquer plano (conferido em 10/11/2026)
 
-1. As versões do AE2 e do RS2 no ATM10 (o manifesto do pack).
-2. Se a Interface do AE2 expõe `ME_STORAGE` a um vizinho comum, e em que condições.
-3. Por onde o resultado de uma máquina volta ao Pattern Provider do AE2 (qual capability o provedor expõe), para garantir que o caminho de volta pelas redes do mod fecha o pedido.
-4. Os valores de `ExternalPatternSink.Result` no RS2 e como o Autocrafter trata a recusa.
-5. Os identificadores Maven dos módulos de API do RS2 (`com.refinedmods.refinedstorage`, repositório `maven.creeperhost.net`; o do AE2 é `org.appliedenergistics:appliedenergistics2:<versão>:api`, no Maven Central).
-6. Como o Storage Bus do AE2 e o External Storage do RS2 tratam quantidades acima de `int` quando leem um `IItemHandler` (mede o ganho real da feature 1).
+Lido no código dos ramos oficiais (AE2 `1.21.1`, RS2 `support/2.x`), no ExtendedAE (`1.21.1-neoforge`), no Advanced AE (`forge/1.21.1`) e na lista de mods do repositório do ATM10. O que isso muda na Doca está na spec dela (`2026-11-10-doca-de-padroes-design.md`, seção "O que a conferência mudou").
+
+1. **Versões no ATM10 8.5** (`config/crash_assistant/modlist.json` do repositório do pack): AE2 19.2.18, RS2 2.0.9, ExtendedAE 2.2.43, Advanced AE 1.6.12, NeoForge 21.1.265 (acima do mínimo do mod, 21.1.248). O AE2 pede o GuideME para rodar.
+2. **A Interface do AE2 expõe `ME_STORAGE` a qualquer vizinho**, sem condição (`InitCapabilityProviders.initInterface`, bloco e parte). Sem slots configurados ela devolve o estoque da rede inteira; com algum slot configurado, só o inventário local dela. A feature 2 vale sem a Doca, e a regra "origem ME só com filtro de lista branca" continua necessária.
+3. **O Pattern Provider expõe o inventário de retorno** (`PatternProviderReturnInventory`, 9 espaços) pela `GENERIC_INTERNAL_INV`, que o AE2 adapta para `IItemHandler` e `IFluidHandler` comuns; o provedor manda o retorno para a rede no tick dele, e a trava "até o resultado" destrava por esse caminho. A volta pelo mod fecha o pedido com capabilities do NeoForge, sem tipo do AE2. Achados de passagem: o provedor tenta o `ICraftingMachine` de cada vizinho antes de qualquer inventário, **sem** aplicar o modo de bloqueio a ele, e oferece também os padrões de bancada; e a CPU empurra **uma execução do padrão por chamada**, até (coprocessadores + 1) a cada 3 ticks (`CraftingCpuLogic`).
+4. **`ExternalPatternSink.Result` no RS2:** `ACCEPTED`, `REJECTED`, `SKIPPED` e `LOCKED`. O Autocrafter devolve `SKIPPED` sem destino e `LOCKED` com a trava ligada; a tarefa simula (`SIMULATE`) e depois executa (`EXECUTE`), e se a execução não for `ACCEPTED` ela dá os ingredientes por entregues e só registra um aviso no log (`ExternalTaskPattern`). O destino do Autocrafter é criado uma vez, juntando os destinos de **todas** as fábricas registradas (`CompositePatternProviderExternalPatternSinkFactory`), e o resultado conta quando entra na rede por qualquer caminho (o Autocrafter não tem inventário). Autocrafters encadeados usam o destino do primeiro.
+5. **Maven:** AE2 `org.appliedenergistics:appliedenergistics2:19.2.18:api` no Maven Central (conferido). RS2 `com.refinedmods.refinedstorage:refinedstorage-common-api:2.0.9` (traz as APIs de rede, armazenamento e autocrafting) e o mod `refinedstorage-neoforge:2.0.9`, no `maven.creeperhost.net` (conferido). O `refinedstorage-neoforge-api` não é publicado lá: a capability dos nós fica de fora, e a Doca chega à rede pelo `AbstractNetworkNodeContainerBlockEntity` da `common-api`. A linha 3.x do RS2 no mesmo Maven é de outra versão do Minecraft.
+6. **Quantidades acima de `int`:** o Storage Bus do AE2 lê um `IItemHandler` slot por slot, com `Ints.saturatedCast` por chamada e o total relatado limitado a 2^42; o External Storage do RS2 também vai slot por slot, com a extração em `int`. Os dois varrem todos os slots para montar a lista. A feature 1 ganha o que prometia: a lista sem varredura e as quantidades em `long`.
+7. **Provedores dos addons:** o do ExtendedAE usa a `PatternProviderLogic` do AE2 com 36 padrões; o do Advanced AE tem lógica própria (36), mas também tenta o `ICraftingMachine` antes de tudo. A Doca enxerga os dois.
 
 ## Perguntas para o dono
 

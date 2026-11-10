@@ -115,6 +115,18 @@ piscam); nada de caixas a 45° cruzando o corpo. As galerias do jogo (`WA_SCREEN
 
 As quatro laterais de um armazenamento são iguais (o roteador se prende em qualquer face).
 
+### Blocos que trabalham: casco de porcelana, miolo escuro com luz (10/11/2026)
+
+Regra aprovada pelo dono para os blocos que fazem algo à vista (a Lixeira e a Doca de Padrões são os primeiros; o Ressonador já seguia a ideia, com a câmara escura e o plasma dentro do casco de porcelana):
+
+- **Por fora, o casco do mod:** vigas, bordas, pilares e montantes de porcelana, a linha coral, os contatos e parafusos de latão.
+- **Por dentro, o miolo escuro:** painéis de grafite com um **circuito de luz na cor da lente do tier**. O desenho do circuito é fixo; só o brilho anima, numa onda lenta (ciclo de 3 s), por textura animada. Peças móveis (anéis, cristal) ficam no miolo ou sobre ele, em latão, porcelana e na cor do tier.
+- **Nunca o bloco inteiro escuro.** Um bloco de grafite com luz, sem o casco, lê como de outro mod: foi testado na Doca e na Lixeira e reprovado.
+- **Sem destaque nos cantos do bloco** (nada de peças que pulsam ou brilham nas pontas) e sem arco-íris: a luz é sempre a do tier.
+- **Animações em laço que emendam**, calmas o bastante para rodar o tempo todo.
+
+Referências: `docs/preview/doca-de-padroes.bbmodel` e `docs/preview/lixeira.bbmodel`, com os GIFs ao lado.
+
 ## A interface
 
 Telas **claras**: porcelana com tinta de grafite, como um manual de instrumento. Uma cor de ação

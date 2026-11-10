@@ -23,7 +23,8 @@ import net.neoforged.neoforge.items.IItemHandler;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Os {@link BlockCapabilityCache} de uma máquina de um roteador, um por capability e por face absoluta
+ * Os {@link BlockCapabilityCache} de uma máquina de um roteador (ou de outro {@link CacheOwner}), um por capability e
+ * por face absoluta
  * da máquina, criados na primeira consulta. O arranjo das seis faces de cada capability também só nasce na
  * primeira consulta dela: uma máquina com faces só de itens paga os dois arranjos de itens, e não os nove.
  * A máquina presa tem uma instância só, que é apontada de novo ({@link #retarget}) quando o roteador gira;
@@ -37,14 +38,16 @@ import org.jetbrains.annotations.Nullable;
  * {@code ChunkMap}, e a contagem de descargas ({@link RemoteIndex#chunkEpoch}) invalida a resposta guardada
  * se alguma acontecer no meio do tick.
  *
- * <p>Cada cache avisa a própria invalidação ao roteador ({@link RouterBlockEntity#machineInvalidated})
+ * <p>Cada cache avisa a própria invalidação ao dono ({@link CacheOwner#machineInvalidated})
  * com esta instância, o tipo e a face. Um cache de antes de um {@link #retarget} ou {@link #discard}
  * deixa de valer e não avisa mais.
  */
 public final class MachineCaches {
     private static final int FACES = Direction.values().length;
 
-    private final RouterBlockEntity router;
+    private final CacheOwner owner;
+    /** O roteador da máquina presa, que segue o facing dele; nulo numa remota. */
+    private final @Nullable RouterBlockEntity attachedTo;
     private final boolean remote;
     private BlockPos pos;
     /** Muda a cada {@link #retarget}/{@link #discard}: os caches criados antes deixam de valer. */
@@ -71,20 +74,26 @@ public final class MachineCaches {
     /** Source do Ars Nouveau; o handler fica como {@code Object} para esta classe não depender dele. */
     private BlockCapabilityCache<Object, @Nullable Direction> @Nullable [] sourceCaches;
 
-    private MachineCaches(RouterBlockEntity router, BlockPos pos, boolean remote) {
-        this.router = router;
+    private MachineCaches(CacheOwner owner, @Nullable RouterBlockEntity attachedTo, BlockPos pos, boolean remote) {
+        this.owner = owner;
+        this.attachedTo = attachedTo;
         this.pos = pos.immutable();
         this.remote = remote;
     }
 
     /** A máquina presa: sem {@code isLoaded}, apontada de novo quando o roteador gira. */
     public static MachineCaches attached(RouterBlockEntity router, BlockPos pos) {
-        return new MachineCaches(router, pos, false);
+        return new MachineCaches(router, router, pos, false);
     }
 
-    /** Uma máquina remota vinculada: toda consulta confere o chunk antes. */
+    /** Uma máquina remota vinculada a um roteador: toda consulta confere o chunk antes. */
     public static MachineCaches remote(RouterBlockEntity router, BlockPos pos) {
-        return new MachineCaches(router, pos, true);
+        return new MachineCaches(router, null, pos, true);
+    }
+
+    /** Uma máquina remota de um dono que não é roteador: toda consulta confere o chunk antes. */
+    public static MachineCaches remote(CacheOwner owner, BlockPos pos) {
+        return new MachineCaches(owner, null, pos, true);
     }
 
     public BlockPos pos() {
@@ -130,9 +139,9 @@ public final class MachineCaches {
     }
 
     /**
-     * Garante que a troca do bloco desta remota avise o roteador antes da primeira consulta do motor e mesmo sem porta
+     * Garante que a troca do bloco desta remota avise o dono antes da primeira consulta do motor e mesmo sem porta
      * (a trocada, que a montagem pula): consulta o cache de itens da face de cima, criado na primeira vez, cujo listener
-     * chega no {@link RouterBlockEntity#machineInvalidated} quando a block entity sai ou entra. Depois de cada aviso o
+     * chega no {@link CacheOwner#machineInvalidated} quando a block entity sai ou entra. Depois de cada aviso o
      * listener só volta a valer com uma consulta, e é esta, na montagem seguinte. Só na montagem.
      */
     public void watch() {
@@ -145,7 +154,7 @@ public final class MachineCaches {
      * troca do bloco, se os caches ainda valem.
      */
     public void watchSoon() {
-        if (watchQueued || discarded || !(router.getLevel() instanceof ServerLevel level)) {
+        if (watchQueued || discarded || !(owner.ownerLevel() instanceof ServerLevel level)) {
             return;
         }
         watchQueued = true;
@@ -179,11 +188,11 @@ public final class MachineCaches {
     }
 
     /**
-     * O nível para consultar agora, ou {@code null}: só no servidor, com o roteador e a máquina valendo e,
+     * O nível para consultar agora, ou {@code null}: só no servidor, com o dono e a máquina valendo e,
      * numa remota, com o chunk dela carregado.
      */
     private @Nullable ServerLevel queryLevel() {
-        if (!(router.getLevel() instanceof ServerLevel serverLevel) || router.isRemoved() || discarded) {
+        if (!(owner.ownerLevel() instanceof ServerLevel serverLevel) || owner.ownerRemoved() || discarded) {
             return null;
         }
         // Antes de tocar no cache: um cache inválido lê o bloco, e isso carregaria o chunk.
@@ -322,17 +331,17 @@ public final class MachineCaches {
             BlockCapability<T, @Nullable Direction> capability, ResourceType type, Direction machineFace) {
         BlockCapabilityCache<T, @Nullable Direction> cache = caches[machineFace.ordinal()];
         if (cache == null) {
-            if (!remote) {
+            if (attachedTo != null) {
                 // A presa segue o facing: lido só ao criar um cache (girar já chama o retarget).
-                BlockPos machine = router.machinePos();
+                BlockPos machine = attachedTo.machinePos();
                 if (!machine.equals(pos)) {
                     retarget(machine);
                 }
             }
             int created = generation;
             cache = BlockCapabilityCache.create(capability, serverLevel, pos, machineFace,
-                    () -> !router.isRemoved() && generation == created,
-                    () -> router.machineInvalidated(this, type, machineFace));
+                    () -> !owner.ownerRemoved() && generation == created,
+                    () -> owner.machineInvalidated(this, type, machineFace));
             caches[machineFace.ordinal()] = cache;
         }
         return cache.getCapability();

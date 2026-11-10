@@ -19,11 +19,12 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * As máquinas remotas vinculadas, por nível, para acordar o roteador como a máquina presa acorda
- * (decisão 8 da spec do alcance). Um por servidor, como o {@link NetworkManager}, descartado na parada.
+ * (decisão 8 da spec do alcance), e qualquer outro dono de remotas ({@link RemoteListener}). Um por servidor,
+ * como o {@link NetworkManager}, descartado na parada.
  *
  * <ul>
- *   <li>posição da máquina → os vínculos (roteador e {@link RemoteMachine}): uma máquina pode estar
- *       em vários roteadores. O mixin em {@code Level.blockEntityChanged} consulta este mapa a cada
+ *   <li>posição da máquina → os vínculos (dono e {@link RemoteMachine}): uma máquina pode estar
+ *       em vários donos. O mixin em {@code Level.blockEntityChanged} consulta este mapa a cada
  *       {@code setChanged} de qualquer block entity, então ele só tem as remotas que viram porta de fato:
  *       roteador no motor, upgrade valendo e máquina ativa ({@link RouterBlockEntity#machineReach()}:
  *       dentro do raio e do limite). Uma de fora não acorda nada nem tem a frente relida;
@@ -32,7 +33,8 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>É mantido quando um nó entra ou sai do motor, quando uma máquina é vinculada ou desvinculada,
  * quando o upgrade entra ou sai, numa carga de NBT, numa troca de tier e numa recarga da config
- * ({@link #update}, que refaz o registro do roteador). Só a thread do servidor mexe nele.
+ * ({@link #update}, que refaz o registro do roteador). Outro dono registra pelo
+ * {@link #update(RemoteListener, Iterable)} as remotas que ele mesmo escolheu. Só a thread do servidor mexe nele.
  */
 public final class RemoteIndex {
     private static @Nullable RemoteIndex instance;
@@ -45,8 +47,8 @@ public final class RemoteIndex {
 
     /** Índice de cada nível com alguma remota; um nível sem remotas sai do mapa. */
     private final Reference2ObjectOpenHashMap<Level, LevelIndex> levels = new Reference2ObjectOpenHashMap<>();
-    /** O que cada roteador registrou, para tirar sem varrer os níveis. */
-    private final Reference2ObjectOpenHashMap<RouterBlockEntity, Registration> registered = new Reference2ObjectOpenHashMap<>();
+    /** O que cada dono registrou, para tirar sem varrer os níveis. */
+    private final Reference2ObjectOpenHashMap<RemoteListener, Registration> registered = new Reference2ObjectOpenHashMap<>();
 
     public static RemoteIndex get() {
         if (instance == null) {
@@ -73,7 +75,7 @@ public final class RemoteIndex {
     /**
      * Caminho quente, chamado pelo mixin a cada {@code setChanged} de um block entity no servidor: uma
      * consulta num mapa por nível e outra por posição, sem alocar. Só para uma máquina vinculada lê o
-     * estado do bloco (para reler a frente) e avisa os roteadores.
+     * estado do bloco (para reler a frente) e avisa os donos.
      */
     public static void blockEntityChanged(Level level, BlockPos pos) {
         RemoteIndex index = instance;
@@ -101,7 +103,7 @@ public final class RemoteIndex {
         BlockState state = chunk == null ? null : chunk.getBlockState(pos);
         for (int i = 0, n = links.size(); i < n; i++) {
             Link link = links.get(i);
-            link.router.remoteMachineChanged(link.machine, state);
+            link.listener.remoteMachineChanged(link.machine, state);
         }
     }
 
@@ -129,7 +131,7 @@ public final class RemoteIndex {
             BlockState state = chunk.getBlockState(pos.set(key));
             for (int i = 0, n = links.size(); i < n; i++) {
                 Link link = links.get(i);
-                link.router.remoteMachineChanged(link.machine, state);
+                link.listener.remoteMachineChanged(link.machine, state);
             }
         }
     }
@@ -157,11 +159,7 @@ public final class RemoteIndex {
         if (active == 0) {
             return;
         }
-        LevelIndex byLevel = levels.get(level);
-        if (byLevel == null) {
-            byLevel = new LevelIndex();
-            levels.put(level, byLevel);
-        }
+        LevelIndex byLevel = levelIndex(level);
         long[] positions = new long[active];
         int next = 0;
         for (int i = 0; i < reach.length; i++) {
@@ -176,9 +174,49 @@ public final class RemoteIndex {
         registered.put(router, new Registration(level, positions));
     }
 
+    /**
+     * Refaz o registro de {@code owner}, um dono que não é roteador: tira o anterior e registra {@code active}, as
+     * remotas que ele quer ouvir (quem chama já aplicou o alcance e o limite dele). Só num nível do servidor.
+     */
+    public void update(RemoteListener owner, Iterable<RemoteMachine> active) {
+        remove(owner);
+        Level level = owner.listenerLevel();
+        if (!(level instanceof ServerLevel)) {
+            return;
+        }
+        LevelIndex byLevel = null;
+        LongArrayList positions = null;
+        for (RemoteMachine machine : active) {
+            if (byLevel == null) {
+                byLevel = levelIndex(level);
+                positions = new LongArrayList();
+            }
+            long key = machine.pos().asLong();
+            positions.add(key);
+            byLevel.add(key, new Link(owner, machine));
+        }
+        if (positions != null) {
+            registered.put(owner, new Registration(level, positions.toLongArray()));
+        }
+    }
+
+    private LevelIndex levelIndex(Level level) {
+        LevelIndex byLevel = levels.get(level);
+        if (byLevel == null) {
+            byLevel = new LevelIndex();
+            levels.put(level, byLevel);
+        }
+        return byLevel;
+    }
+
     /** Tira tudo o que {@code router} registrou (saiu do motor, ou antes de registrar de novo). */
     public void remove(RouterBlockEntity router) {
-        Registration registration = registered.remove(router);
+        remove((RemoteListener) router);
+    }
+
+    /** Tira tudo o que {@code owner} registrou. */
+    public void remove(RemoteListener owner) {
+        Registration registration = registered.remove(owner);
         if (registration == null) {
             return;
         }
@@ -187,7 +225,7 @@ public final class RemoteIndex {
             return;
         }
         for (long key : registration.positions) {
-            byLevel.remove(key, router);
+            byLevel.remove(key, owner);
         }
         if (byLevel.byPos.isEmpty()) {
             levels.remove(registration.level);
@@ -206,28 +244,44 @@ public final class RemoteIndex {
         }
         List<RouterBlockEntity> routers = new ArrayList<>(links.size());
         for (Link link : links) {
-            routers.add(link.router);
+            if (link.listener instanceof RouterBlockEntity router) {
+                routers.add(router);
+            }
         }
         return routers;
     }
 
-    /** Para GameTests e diagnóstico: {@code router} está registrado para a máquina em {@code pos}. */
-    public boolean isIndexed(RouterBlockEntity router, BlockPos pos) {
-        Level level = router.getLevel();
+    /** Todos os donos (roteadores ou não) que têm a máquina em {@code pos} no índice, numa lista nova (só fora do motor). */
+    public List<RemoteListener> listenersAt(Level level, BlockPos pos) {
+        LevelIndex byLevel = levels.get(level);
+        List<Link> links = byLevel == null ? null : byLevel.byPos.get(pos.asLong());
+        if (links == null) {
+            return List.of();
+        }
+        List<RemoteListener> listeners = new ArrayList<>(links.size());
+        for (Link link : links) {
+            listeners.add(link.listener);
+        }
+        return listeners;
+    }
+
+    /** Para GameTests e diagnóstico: {@code owner} está registrado para a máquina em {@code pos}. */
+    public boolean isIndexed(RemoteListener owner, BlockPos pos) {
+        Level level = owner.listenerLevel();
         LevelIndex byLevel = level == null ? null : levels.get(level);
         List<Link> links = byLevel == null ? null : byLevel.byPos.get(pos.asLong());
         if (links == null) {
             return false;
         }
         for (Link link : links) {
-            if (link.router == router) {
+            if (link.listener == owner) {
                 return true;
             }
         }
         return false;
     }
 
-    private record Link(RouterBlockEntity router, RemoteMachine machine) {
+    private record Link(RemoteListener listener, RemoteMachine machine) {
     }
 
     private record Registration(Level level, long[] positions) {
@@ -253,12 +307,12 @@ public final class RemoteIndex {
             links.add(link);
         }
 
-        void remove(long key, RouterBlockEntity router) {
+        void remove(long key, RemoteListener owner) {
             List<Link> links = byPos.get(key);
             if (links == null) {
                 return;
             }
-            links.removeIf(link -> link.router == router);
+            links.removeIf(link -> link.listener == owner);
             if (!links.isEmpty()) {
                 return;
             }

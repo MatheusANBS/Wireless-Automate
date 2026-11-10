@@ -10,9 +10,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
 /**
- * Acorda o roteador quando uma máquina remota vinculada muda (decisão 8 da spec do alcance): uma
- * máquina remota não encosta no roteador, então o aviso de vizinho do {@code setChanged} dela não chega
- * a ele. {@code BlockEntity.setChanged} chama {@link Level#blockEntityChanged(BlockPos)}, e aqui o
+ * Acorda o roteador (ou outro dono de remotas) quando uma máquina remota vinculada muda (decisão 8 da
+ * spec do alcance): uma máquina remota não encosta no roteador, então o aviso de vizinho do
+ * {@code setChanged} dela não chega a ele. {@code BlockEntity.setChanged} chama {@link Level#blockEntityChanged(BlockPos)}, e aqui o
  * {@link RemoteIndex} confere a posição.
  *
  * <p>Caminho quente (todo {@code setChanged} do jogo): só o {@code isClientSide} e as consultas do

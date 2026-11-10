@@ -266,7 +266,7 @@ Arquivos, em `docs/preview/`: `doca-de-padroes.bbmodel` (formato genérico, 193 
 
 | Parte | O que é | No jogo |
 | --- | --- | --- |
-| Esqueleto | 12 vigas de grafite de 2 × 2 nas arestas do cubo, cantos lisos; uma linha coral por dentro das vigas de cima | Modelo de bloco, estático |
+| Esqueleto | 12 vigas de **porcelana** de 2 × 2 nas arestas do cubo, cantos lisos; uma linha coral por dentro das vigas de cima | Modelo de bloco, estático |
 | Painel (um por lado) | Placa escura recuada 0,6 dentro das vigas, com os traços do circuito pintados em volta da janela (um anel com ramais para as vigas e para a janela) | Modelo de bloco; os traços são a parte animada da textura |
 | Vigia (uma por lado) | Abertura de 6 × 6 com os cantos chanfrados, moldura saliente de grafite claro, quatro parafusos de latão, lábio interno recuado, duas dobradiças e um trinco de latão | Modelo de bloco, estático |
 | Contatos | Quatro pastilhas de latão por lado em volta da moldura (onde o provedor encosta); a de cima leva a etiqueta na cor do lado | Modelo de bloco; o fechar das garras, se entrar, é do renderer |
@@ -295,7 +295,7 @@ Dois laços de 6 segundos, pensados para rodar o tempo todo. A emenda foi confer
 - **193 caixas** é muito para um bloco; ver o que dá para fundir na conversão.
 - **As cores das etiquetas dos lados** são provisórias (tiradas da paleta de recursos).
 - **Só o lado leste tem a entrada do pacote animada** na demonstração; no jogo é o lado que estiver entregando.
-- **A identidade "Porcelana e Sinal"** evita brilho em fundo escuro; a Doca usa os materiais dela (grafite, latão, porcelana, coral, lente do tier), mas o conjunto é mais escuro que os outros blocos, por escolha do dono.
+- **Casco de porcelana (decisão do dono, 10/11/2026):** a primeira versão aprovada tinha as vigas de grafite e o dono achou que fugia da paleta do mod ("parece de outro mod"). As vigas passaram a porcelana e o estilo novo ficou só no miolo: é a regra dos blocos que trabalham, registrada em `docs/identidade-visual.md`. O anel de porcelana do giroscópio perdeu um pouco de destaque contra o casco.
 
 ## O que proponho não fazer
 

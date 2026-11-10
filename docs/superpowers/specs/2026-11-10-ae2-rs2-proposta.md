@@ -256,6 +256,47 @@ Uma regra, dois números por tier, nada para configurar.
 2. **O Ultimate tem 96 de raio e 256 máquinas**, com chave de config própria.
 3. **O Ctrl + clique do Vinculador pega todas as máquinas iguais do cubo**, como já faz no roteador de alcance (da mais perto para a mais longe, até o máximo); um clique simples tira as que sobraram.
 
+## Arte e animação da Doca (aprovadas pelo dono em 10/11/2026)
+
+Feitas no Blockbench pelo MCP, em nove versões criticadas por GIFs. O que o dono escolheu no caminho: a forma de esqueleto com o giroscópio no meio (e não uma caixa de porcelana com medidor), os materiais da identidade do mod sobre essa forma, nada de destaque nos cantos do bloco, o circuito de luz à maneira do ME Controller, painéis com janela, e o circuito **na cor do tier** (o arco-íris da referência foi testado e descartado).
+
+Arquivos, em `docs/preview/`: `doca-de-padroes.bbmodel` (formato genérico, 193 caixas, atlas 64 × 64 embutido, as duas animações), `doca-de-padroes-textura.png`, `doca-de-padroes-trabalhando.gif` e `doca-de-padroes-repouso.gif`. As coordenadas do modelo têm o bloco centrado em x e z; no jogo, somar 8.
+
+### O modelo
+
+| Parte | O que é | No jogo |
+| --- | --- | --- |
+| Esqueleto | 12 vigas de grafite de 2 × 2 nas arestas do cubo, cantos lisos; uma linha coral por dentro das vigas de cima | Modelo de bloco, estático |
+| Painel (um por lado) | Placa escura recuada 0,6 dentro das vigas, com os traços do circuito pintados em volta da janela (um anel com ramais para as vigas e para a janela) | Modelo de bloco; os traços são a parte animada da textura |
+| Vigia (uma por lado) | Abertura de 6 × 6 com os cantos chanfrados, moldura saliente de grafite claro, quatro parafusos de latão, lábio interno recuado, duas dobradiças e um trinco de latão | Modelo de bloco, estático |
+| Contatos | Quatro pastilhas de latão por lado em volta da moldura (onde o provedor encosta); a de cima leva a etiqueta na cor do lado | Modelo de bloco; o fechar das garras, se entrar, é do renderer |
+| Giroscópio | Três anéis quadrados (latão, porcelana e grafite claro, um em cada eixo) e o cristal na cor da lente do tier | Renderer |
+| Pacote e fragmentos | Uma caixa de latão com fita de porcelana e quatro fragmentos do cristal | Renderer, só no laço de trabalho |
+
+### As animações
+
+Dois laços de 6 segundos, pensados para rodar o tempo todo. A emenda foi conferida em número (diferença zero entre o fim e o começo de cada peça).
+
+- **Trabalhando:** os três anéis giram em velocidade constante (duas voltas, uma e uma por laço, em sentidos alternados) e o de latão balança 10°. A cada laço um pacote entra pela vigia do lado ativo e vai até o centro (0,2 a 1,2 s), o cristal o absorve e incha (1,05 a 1,45 s), solta quatro fragmentos que entram em órbita (1,4 a 2,3 s), os fragmentos saem e somem (2,3 a 2,8 s), voltam em espiral (3,3 a 4,4 s) e o pacote retorna à vigia (4,6 a 5,8 s).
+- **Repouso:** o mesmo giroscópio aberto, girando à metade da velocidade, e o cristal respirando. Sem pacote nem fragmentos. (Os anéis deitados um dentro do outro foram descartados: liam como o modelo duplicado.)
+- **O circuito:** o desenho é fixo; o brilho de cada traço oscila entre a sombra, a lente e o brilho da cor do tier, numa onda que cruza a face na diagonal a cada 3 segundos (duas voltas por laço).
+
+### Como levar ao jogo
+
+- **Circuito:** textura animada (`.mcmeta`), uma por tier, gerada pelo script de texturas. É como o AE2 faz no ME Controller (decomposição da referência: desenho fixo, só a cor muda) e custa zero. Um renderer ou um shader só entram se o dono quiser a cor reagindo ao trabalho.
+- **Giroscópio, pacote e fragmentos:** block entity renderer por fórmula a partir do `gameTime`, como o Ressonador e o Reparador (skill `wa-shaders`). Umas 15 peças móveis por Doca; limite de distância e medição de quadro antes de fechar.
+- **Parte estática:** converter para `java_block` e passar pelo `scripts/textures/bbmodel_json.py`.
+
+### Pendências da arte
+
+- **A passagem entre repouso e trabalhando** não está animada (só muda a velocidade e aparecem o pacote e os fragmentos).
+- **A janela de 6 × 6 mostra só o centro do giroscópio.** Abrir para 8 × 8 mostra mais e deixa menos painel para o circuito; fica para o dono decidir vendo no jogo.
+- **Sem vidro na vigia.** O vidro translúcido escondia o giroscópio no Blockbench; avaliar no jogo com o tipo de render de vidro.
+- **193 caixas** é muito para um bloco; ver o que dá para fundir na conversão.
+- **As cores das etiquetas dos lados** são provisórias (tiradas da paleta de recursos).
+- **Só o lado leste tem a entrada do pacote animada** na demonstração; no jogo é o lado que estiver entregando.
+- **A identidade "Porcelana e Sinal"** evita brilho em fundo escuro; a Doca usa os materiais dela (grafite, latão, porcelana, coral, lente do tier), mas o conjunto é mais escuro que os outros blocos, por escolha do dono.
+
 ## O que proponho não fazer
 
 - **Levar canais ME ou cabos RS pelo ar** (o roteador como ponte entre duas partes da rede). Concorre com a Ponte Quântica e com o transmissor do RS, obriga a manter conexões de rede entre chunks e dimensões, e foge do que o mod faz, que é mover recurso.

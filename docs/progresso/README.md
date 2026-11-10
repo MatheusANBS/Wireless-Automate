@@ -15,7 +15,7 @@ Comece por aqui para continuar o trabalho. Este arquivo é curto de propósito: 
 2. O dono testa à mão as etapas 1 a 4 do alcance e o Ctrl + clique do Vinculador (listas nas linhas de 02/11 do histórico), já no main.
 3. Reidealizar as telas do Tablet do zero (criação de redes etc.), mockup primeiro para o ok do dono.
 4. Refazer as imagens do Vinculador na vitrine (sem a área) e a do livro (ver `pendencias.md`). Os menores que sobraram do alcance (`pendencias.md`, seção "Roteador de alcance").
-5. **Lixeira:** executar o plano da etapa 1 (skill `wa-feature`, um subagente por tarefa) quando o dono der o ok; depois a etapa 2 (o anel, o cristal e o laço engolindo). **Doca de Padrões:** o dono aprova o mockup da tela e responde as quatro perguntas da spec (o lote divisível, AE2 primeiro, o Configurador no lado, a receita); depois o plano da etapa 1.
+5. **Lixeira:** executar o plano da etapa 1 (skill `wa-feature`, um subagente por tarefa) quando o dono der o ok; depois a etapa 2 (o anel, o cristal e o laço engolindo). **Doca de Padrões:** as quatro perguntas da spec respondidas (sem lote divisível, AE2 primeiro, o Configurador refaz o lado, receita no balanceamento); falta o ok do mockup da tela, depois o plano da etapa 1 (AE2).
 
 ## Os arquivos
 

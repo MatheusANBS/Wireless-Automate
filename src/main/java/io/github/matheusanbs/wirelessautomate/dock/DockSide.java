@@ -25,6 +25,8 @@ import org.jetbrains.annotations.Nullable;
  * {@code pending_at} (long, só com pendente).
  */
 public final class DockSide {
+    /** As faces de uma máquina no perfil ({@code RemoteSide}). */
+    static final int FACES = 6;
     /** O teto de {@code count} no codec do {@code ItemStack}: um pendente maior é salvo em partes. */
     private static final int SAVED_STACK_MAX = 99;
 
@@ -37,6 +39,26 @@ public final class DockSide {
     private final List<ItemStack> pendingItems = new ArrayList<>();
     private final List<FluidStack> pendingFluids = new ArrayList<>();
     private long pendingAt;
+
+    // O que não é salvo: o motivo da última recusa, a máquina escolhida por uma simulação, as ativas e o rascunho da
+    // entrega.
+    /** O motivo da última recusa ({@link DockStatus#NO_REFUSAL} depois de uma aceita). */
+    private int lastRefusal = DockStatus.NO_REFUSAL;
+    /** A máquina que a última simulação aceita escolheu, o índice dela e o tick do servidor em que vale. */
+    private @Nullable DockMachine planned;
+    private int plannedIndex;
+    private long plannedTick = Long.MIN_VALUE;
+    /** Quantas máquinas do lado estão ativas (no alcance e no limite); refeito com o registro no índice. */
+    private int activeMachines;
+    /** Uma tentativa do pendente na fila do servidor, para o aviso seguinte não enfileirar outra. */
+    private boolean flushQueued;
+    /**
+     * Rascunho da entrega: as faces Insere que aceitam cada ingrediente (um bit por face) e quantos ingredientes cada
+     * face aceita. Criado na primeira entrega e reaproveitado; só cresce com um pedido maior que os anteriores.
+     */
+    private int @Nullable [] masks;
+    private final int[] loads = new int[FACES];
+    private DockDelivery.@Nullable Attempt attempt;
 
     public DockSide(int side) {
         this(side, new MachineConfig());
@@ -140,6 +162,94 @@ public final class DockSide {
     public void clearPending() {
         pendingItems.clear();
         pendingFluids.clear();
+    }
+
+    /** Põe {@code stack} (que passa a ser do lado) no pendente do pedido entregue a {@code at}. */
+    void addPending(ItemStack stack, BlockPos at) {
+        pendingItems.add(stack);
+        pendingAt = at.asLong();
+    }
+
+    void addPending(FluidStack stack, BlockPos at) {
+        pendingFluids.add(stack);
+        pendingAt = at.asLong();
+    }
+
+    /** O pendente passa para a máquina em {@code at} (a que o recebeu saiu do lado). */
+    void movePending(BlockPos at) {
+        pendingAt = at.asLong();
+    }
+
+    /** {@link #pendingAt} como {@code long}, sem criar a posição. */
+    long pendingAtKey() {
+        return pendingAt;
+    }
+
+    /** O motivo da última recusa ({@code DockStatus}), ou {@link DockStatus#NO_REFUSAL}. */
+    public int lastRefusal() {
+        return lastRefusal;
+    }
+
+    void setLastRefusal(int reason) {
+        lastRefusal = reason;
+    }
+
+    /** Guarda a máquina escolhida por uma simulação aceita no tick {@code tick}. */
+    void plan(DockMachine machine, int index, long tick) {
+        planned = machine;
+        plannedIndex = index;
+        plannedTick = tick;
+    }
+
+    /** A máquina da simulação aceita neste tick, ou {@code null}; ver {@link #plannedIndex}. */
+    @Nullable DockMachine planned(long tick) {
+        return plannedTick == tick ? planned : null;
+    }
+
+    int plannedIndex() {
+        return plannedIndex;
+    }
+
+    void clearPlan() {
+        planned = null;
+        plannedTick = Long.MIN_VALUE;
+    }
+
+    /** Quantas máquinas do lado estão ativas. */
+    public int activeMachines() {
+        return activeMachines;
+    }
+
+    void setActiveMachines(int count) {
+        activeMachines = count;
+    }
+
+    boolean flushQueued() {
+        return flushQueued;
+    }
+
+    void setFlushQueued(boolean queued) {
+        flushQueued = queued;
+    }
+
+    /** O rascunho das faces por ingrediente, com lugar para {@code count} ingredientes. */
+    int[] masks(int count) {
+        if (masks == null || masks.length < count) {
+            masks = new int[Math.max(count, 9)];
+        }
+        return masks;
+    }
+
+    int[] loads() {
+        return loads;
+    }
+
+    /** Os testes da escolha, criados na primeira entrega do lado. */
+    DockDelivery.Attempt attempt() {
+        if (attempt == null) {
+            attempt = new DockDelivery.Attempt();
+        }
+        return attempt;
     }
 
     /** Sem bloco, sem máquinas e sem pendente: o lado pode deixar de existir. */

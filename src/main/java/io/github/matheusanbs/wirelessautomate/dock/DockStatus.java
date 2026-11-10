@@ -19,6 +19,16 @@ public final class DockStatus {
     public static final int CRAFTING_PATTERN = 1;
     /** O pedido misturava tipos que a máquina não aceita juntos. */
     public static final int MIXED = 2;
+    // Os motivos seguintes também são gravados no lado pela entrega (DockDelivery), mas não decidem o estado por
+    // aqui: cada um é um fato que a tela tira do próprio lado (as máquinas ativas, o pendente, as máquinas dormindo).
+    /** O lado não tinha máquina ativa (no alcance e no limite). */
+    public static final int NO_MACHINES = 3;
+    /** O lado tinha o resto de um pedido esperando lugar. */
+    public static final int PENDING = 4;
+    /** Nenhuma candidata aceitou o pedido inteiro. */
+    public static final int ALL_FULL = 5;
+    /** O orçamento do motor deste tick já tinha acabado. */
+    public static final int BUDGET = 6;
 
     private DockStatus() {
     }

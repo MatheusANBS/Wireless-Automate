@@ -31,9 +31,9 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * O Configurador numa máquina de um lado da Doca de Padrões ({@code dock/DockTuner}): os dois cliques refazem o perfil
- * do lado inteiro, que vale para todas as máquinas dele pela frente de cada uma; numa máquina de um roteador e de uma
- * Doca, vale o roteador.
+ * O Configurador numa máquina de um lado da Doca de Padrões ({@code dock/DockTuner}): a proposta diz o lado, e os dois
+ * cliques refazem o perfil do lado inteiro, que vale para todas as máquinas dele pela frente de cada uma; numa máquina
+ * de um roteador e de uma Doca, vale o roteador.
  */
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
@@ -79,7 +79,8 @@ public final class DockTunerGameTests {
         PatternDockBlockEntity dock = dock(helper, new BlockPos(1, 1, 1));
         BlockPos first = new BlockPos(0, 1, 1);
         BlockPos second = new BlockPos(2, 1, 1);
-        helper.setBlock(first, Blocks.FURNACE.defaultBlockState().setValue(AbstractFurnaceBlock.FACING, Direction.EAST));
+        helper.setBlock(first, Blocks.FURNACE.defaultBlockState()
+                .setValue(AbstractFurnaceBlock.FACING, Direction.EAST));
         helper.setBlock(second, Blocks.FURNACE.defaultBlockState()
                 .setValue(AbstractFurnaceBlock.FACING, Direction.SOUTH));
         ServerPlayer player = TestPlayers.inLevel(helper);
@@ -89,8 +90,12 @@ public final class DockTunerGameTests {
                     link(helper, dock, NORTH, first);
                     link(helper, dock, NORTH, second);
                     dock.side(NORTH).profile().face(ResourceType.ITEM, RemoteSide.BOTTOM).setMode(PortMode.INSERT);
-                    helper.assertValueEqual(key(ConfiguratorTuner.click(player, helper.absolutePos(second), false)),
-                            KEY + "proposal", "aviso do primeiro clique");
+                    Component proposal = ConfiguratorTuner.click(player, helper.absolutePos(second), false);
+                    helper.assertValueEqual(key(proposal), KEY + "proposal_dock", "aviso do primeiro clique");
+                    // o texto diz o lado da Doca, não o Shift do grupo
+                    Object side = ((TranslatableContents) proposal.getContents()).getArgs()[1];
+                    helper.assertValueEqual(key(side instanceof Component c ? c : null),
+                            "gui.wirelessautomate.pattern_dock.side.north", "o lado no texto da proposta");
                     helper.assertValueEqual(mode(dock.side(NORTH), Direction.SOUTH, Direction.DOWN), PortMode.INSERT,
                             "o primeiro clique mudou o perfil");
                 })

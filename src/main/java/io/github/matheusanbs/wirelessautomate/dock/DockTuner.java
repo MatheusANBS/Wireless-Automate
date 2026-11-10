@@ -10,6 +10,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -34,7 +35,8 @@ public final class DockTuner {
 
     /**
      * A primeira Doca carregada, no nível do jogador, que tem a máquina em {@code pos} num lado e em que o jogador
-     * pode mexer ({@code mayBuild} e {@code mayInteract} na Doca); {@code null} sem nenhuma. Só no clique: uma consulta
+     * pode mexer ({@code mayBuild}, {@code mayInteract} e as proteções de outros mods na Doca, como no roteador);
+     * {@code null} sem nenhuma. Só no clique: uma consulta
      * ao {@link RemoteIndex}.
      */
     public static @Nullable Target find(ServerPlayer player, ServerLevel level, BlockPos pos) {
@@ -61,7 +63,13 @@ public final class DockTuner {
 
     private static boolean accessible(ServerPlayer player, ServerLevel level, PatternDockBlockEntity dock) {
         BlockPos at = dock.getBlockPos();
-        return !dock.isRemoved() && dock.getLevel() == level && level.isLoaded(at) && RangeLinks.mayEdit(player, at);
+        return !dock.isRemoved() && dock.getLevel() == level && level.isLoaded(at) && RangeLinks.mayEdit(player, at)
+                && RangeLinks.clickAllowed(player, InteractionHand.MAIN_HAND, at);
+    }
+
+    /** O texto da proposta numa máquina do lado: as faces e "clique de novo para aplicar no lado Norte da Doca". */
+    public static Component proposal(Target target, Component faces) {
+        return Component.translatable(KEY + "proposal_dock", faces, DockLinks.sideName(target.machine().side()));
     }
 
     /**

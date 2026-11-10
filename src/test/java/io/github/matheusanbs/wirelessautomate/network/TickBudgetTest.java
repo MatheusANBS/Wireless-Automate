@@ -65,4 +65,46 @@ class TickBudgetTest {
     void rejectsNonPositiveBudget() {
         assertThrows(IllegalArgumentException.class, () -> new TickBudget(0L));
     }
+
+    @Test
+    void chargeBecomesDebtDiscountedFromTheNextTick() {
+        TickBudget budget = new TickBudget(HALF_MS);
+        budget.charge(200_000L);
+        budget.begin(1_000L);
+        assertTrue(budget.hasTime(1_000L + 299_999L));
+        assertFalse(budget.hasTime(1_000L + 300_000L));
+        budget.begin(5_000L);
+        assertTrue(budget.hasTime(5_000L + HALF_MS - 1));
+    }
+
+    @Test
+    void debtNeverPassesTheLimit() {
+        TickBudget budget = new TickBudget(HALF_MS);
+        budget.charge(HALF_MS * 10);
+        assertFalse(budget.outsideRoom());
+        budget.begin(1_000L);
+        assertFalse(budget.hasTime(1_000L));
+        budget.begin(2_000L);
+        assertTrue(budget.hasTime(2_000L));
+    }
+
+    @Test
+    void chargeIgnoresZeroAndNegative() {
+        TickBudget budget = new TickBudget(HALF_MS);
+        budget.charge(0);
+        budget.charge(-50L);
+        assertTrue(budget.outsideRoom());
+        budget.begin(0);
+        assertTrue(budget.hasTime(HALF_MS - 1));
+    }
+
+    @Test
+    void outsideRoomWhileDebtIsBelowTheLimit() {
+        TickBudget budget = new TickBudget(HALF_MS);
+        assertTrue(budget.outsideRoom());
+        budget.charge(HALF_MS - 1);
+        assertTrue(budget.outsideRoom());
+        budget.charge(1);
+        assertFalse(budget.outsideRoom());
+    }
 }

@@ -7,7 +7,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Cenários do benchmark (docs/especificacao.md, "Plano de benchmark", e docs/benchmark.md).
  * {@code n} é o número de roteadores; nos cenários em pares, metade origem e metade destino. Nos do
- * Ressonador ({@link #resonator()}), {@code n} é o número de Ressonadores.
+ * Ressonador ({@link #resonator()}), {@code n} é o número de Ressonadores; no da Doca ({@link #DOCK}), o de Docas.
  *
  * <p>Os cenários de muitos nós usam o Elite (2.048 itens/s por face).
  *
@@ -68,7 +68,9 @@ public enum BenchScenario {
     TABLET_RANGE("tablet-range", 100, RouterTier.ULTIMATE, 60, 30,
             "Tablet com alcance: roteadores Ultimate de alcance, cada um com 16 barris vinculados num grupo que recebe os itens da máquina presa, e um jogador falso com o Tablet aberto"),
     TABLET_MACHINES("tablet-machines", 100, RouterTier.ULTIMATE, 60, 30,
-            "Tablet por máquinas: a cena do tablet-range com as máquinas vinculadas alternando barril, baú, fornalha e alto-forno (um grupo por bloco), e o jogador falso na visão por máquinas da Lista, os blocos recolhidos e o dos barris aberto");
+            "Tablet por máquinas: a cena do tablet-range com as máquinas vinculadas alternando barril, baú, fornalha e alto-forno (um grupo por bloco), e o jogador falso na visão por máquinas da Lista, os blocos recolhidos e o dos barris aberto"),
+    DOCK("doca", 1, RouterTier.ELITE, 60, 20,
+            "Doca de Padrões: n Docas Elite, cada uma com 32 fornalhas num lado e um baú no lugar do provedor; até 32 pedidos de minério de ferro e carvão por tick e Doca, e o lingote volta ao baú (a cada 20 ticks o reenchimento esvazia o baú e as entradas e põe 8 lingotes na saída de cada fornalha)");
 
     public final String id;
     public final int defaultNodes;
@@ -104,7 +106,7 @@ public enum BenchScenario {
         return switch (this) {
             case MANY, IDLE, FULL, RAW, BIG, BIG_FULL, MIXED, SPARSE, REDSTONE, INFINITE, PAIRS -> true;
             case PARTIAL_FULL, TYPES, REBUILD, STOCK, BIG_STACK, TABLET, REDSTONE_FACE, HUB, CHEST_TYPES, RESONATOR_GEN, RESONATOR_IDLE,
-                    RESONATOR_EVENT, RANGE, TABLET_RANGE, TABLET_MACHINES -> false;
+                    RESONATOR_EVENT, RANGE, TABLET_RANGE, TABLET_MACHINES, DOCK -> false;
         };
     }
 

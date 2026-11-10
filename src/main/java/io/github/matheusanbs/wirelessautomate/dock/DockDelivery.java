@@ -212,6 +212,7 @@ public final class DockDelivery {
         int size = side.machines().size();
         side.setCursor(index < 0 || size == 0 ? 0 : (index + 1) % size);
         machine.setLastActive(now);
+        dock.returns().wake(machine);
         side.setLastRefusal(DockStatus.NO_REFUSAL);
         dock.saveChanged();
         return Result.ACCEPTED;

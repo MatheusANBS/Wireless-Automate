@@ -1,6 +1,6 @@
 # Lixeira (spec)
 
-Estado: **visual e mecânica aprovados pelo dono em 10/11/2026.** O visual, na segunda versão (a forma escolhida entre as quatro primeiras, refeita no mesmo dia nos moldes da Doca de Padrões: casco de porcelana, miolo escuro com luz, laços que emendam). A mecânica, pelas respostas da seção "Respostas do dono"; o que ainda está marcado com (a aprovar) espera o mockup da tela. Nada implementado.
+Estado: **visual e mecânica aprovados pelo dono em 10/11/2026.** O visual, na segunda versão (a forma escolhida entre as quatro primeiras, refeita no mesmo dia nos moldes da Doca de Padrões: casco de porcelana, miolo escuro com luz, laços que emendam). A mecânica, pelas respostas da seção "Respostas do dono"; o mockup da tela também foi aprovado. Nada implementado; o próximo passo é o plano.
 
 ## Motivação
 
@@ -17,7 +17,7 @@ Pedido do dono de 14/10/2026 (`docs/progresso/pendencias.md`, Ideias): um bloco 
    - Químicos: só com o Mekanism, registrada em `compat/mekanism` (a regra do `CLAUDE.md`: nenhum tipo do Mekanism fora de lá).
    - Source: só com o Ars Nouveau, em `compat/arsnouveau`, com a `BulkSource`.
 4. **Sem filtro próprio** (decisão do dono, 10/11/2026). O filtro que protege de jogar fora a coisa errada é o da face do roteador; o que a Lixeira tem é a chave de liga e desliga por tipo.
-5. **Tem tela, com uma chave por tipo** (decisão do dono, 10/11/2026; seção "A tela"). Sem contador do que foi descartado.
+5. **Tem tela, com uma tecla por tipo** (decisão do dono, 10/11/2026; seção "A tela"). Sem contador do que foi descartado.
 6. **Todos os lados iguais.** Sem `facing`: o modelo é simétrico nas quatro laterais.
 7. **A luz é da cor do Ultimate** (decisão do dono, 10/11/2026): como a Lixeira não tem tier, o circuito, o vórtice e o cristal usam a lente do Ultimate (`#7B4FE0`, brilho `#C7B0FA`, sombra `#4A2C92`, de `scripts/textures/identidade.py`), sempre.
 8. **A receita fica para o balanceamento das receitas** e **a textura fica como atlas pintado** (decisões do dono, 10/11/2026); a página do guia entra na etapa da mecânica.
@@ -39,7 +39,7 @@ Para virar bloco:
 - **A base** passa pelo `scripts/textures/bbmodel_json.py`, que espera o formato `java_block`: converter o projeto (ou só o grupo `base`) antes. Todas as caixas da base são alinhadas aos eixos e cabem em 0 a 16 (as escotilhas e os parafusos saem até 0,4 da face: conferir o limite na conversão).
 - **A paleta é a do mod** (`scripts/textures/identidade.py`): porcelana, grafite, coral, latão e a lente do Ultimate. A textura fica como atlas pintado, convertido como o do Reparador e o da Tela (decisão do dono, 10/11/2026).
 - **O circuito e o vórtice** levam o `neoforge_data` de luz cheia que o conversor já sabe gravar, para brilhar no escuro.
-- **Colisão:** caixa cheia de 0 a 13 e os quatro pilares de 13 a 16 (a aprovar; a alternativa é o cubo cheio).
+- **Colisão** (decisão do dono, 10/11/2026): segue o desenho, com a caixa cheia de 0 a 13 e os quatro pilares de 13 a 16.
 - **O cristal passa do topo do bloco** (chega a y 19 parado e a uns 21 no pico do engolir): o renderer precisa do `getRenderBoundingBox` maior, como os do Reparador, do Ressonador e da Tela.
 
 ## Animação
@@ -77,13 +77,16 @@ Entre 1,0 e 4,0 s o anel dá uma volta a mais e o cristal duas, sobre o giro con
 
 ## A tela
 
-Decisão do dono (10/11/2026): a Lixeira é para tudo (itens, fluidos, energia, químicos e Source) e tem uma tela própria com **uma chave de liga e desliga por tipo**. Mais nada: sem filtro por tipo e sem contador.
+Decisão do dono (10/11/2026): a Lixeira é para tudo (itens, fluidos, energia, químicos e Source) e tem uma tela própria com **uma tecla de liga e desliga por tipo**. Mais nada: sem filtro por tipo e sem contador. Mockup aprovado: `docs/preview/lixeira-tela.html` (o layout B, "Teclas"; a lista com chave ficou no arquivo só como a alternativa descartada).
 
-- **Cinco chaves**, uma por recurso, com o ícone de tipo do mod (`ResourceStyle`). Químicos e Source só aparecem com o Mekanism e o Ars Nouveau instalados (`LoadedTypes`).
+- **Cinco teclas de porcelana lado a lado**, no espírito das teclas de modo das faces do roteador: o crachá de tipo do mod (`ResourceStyle`), o nome curto embaixo e uma barrinha na cor do recurso. **Acesa aceita; apagada, com o contorno tracejado e o crachá cinza, recusa.** O nome inteiro vai na dica da tecla.
+- **Químicos e Source** só aparecem com o Mekanism e o Ars Nouveau instalados (`LoadedTypes`); sem eles a tela tem três teclas.
+- **Cabeçalho do mod:** a faixa e o Olho na cor do Ultimate, o título e o botão de tema. **Rodapé:** uma linha "Aceitando" com "tudo", "nada" ou "N de M".
+- **Sem inventário do jogador:** a tela não tem slots.
 - **Ligado, a Lixeira aceita e descarta aquele tipo. Desligado, ela não oferece a capability dele:** para o roteador, o funil ou o cabo, é como se o bloco não aceitasse aquele recurso. Assim uma Lixeira numa rede de itens não drena a energia de quem estiver ligado nela.
-- **Como nasce** (a aprovar): com os cinco tipos ligados, que é o pedido original ("lixeira para tudo"). A alternativa mais segura é nascer tudo desligado, para ninguém perder recurso ao colocar o bloco; fica para o dono decidir no mockup.
+- **Nasce com os cinco tipos ligados** (decisão do dono, 10/11/2026): é a "lixeira para tudo"; quem não quer um tipo desliga na tela.
 - **Abre com clique direito**, de mão vazia ou não, como os armazenamentos.
-- **Mockup antes do plano:** a tela pede o mockup em artifact para o dono aprovar (skill `wa-feature`), no estilo das telas do mod.
+- **Estado só por cor e contorno:** como a tecla não tem texto de estado, o apagado precisa ler também para quem não distingue cores. O contorno tracejado e o crachá cinza fazem esse papel; conferir no e2e nos dois temas.
 
 ## Custo de performance (lei por lei)
 
@@ -122,9 +125,8 @@ Perguntadas uma a uma no fim da sessão de 10/11:
 | Receita | Fica para o balanceamento das receitas |
 | Textura | Atlas pintado, como o Reparador e a Tela de Sinal |
 | Cor da luz | A da lente do Ultimate |
+| Layout da tela | B, as teclas (mockup `docs/preview/lixeira-tela.html`) |
+| Ao colocar o bloco | Os cinco tipos ligados |
+| Colisão | Segue o desenho |
 
-Falta, antes do plano:
-
-1. O mockup da tela, para o dono aprovar.
-2. Se a Lixeira nasce com os cinco tipos ligados ou desligados (seção "A tela").
-3. A colisão: caixa de 0 a 13 mais os pilares, ou cubo cheio.
+Não falta decisão nenhuma do dono: o próximo passo é o plano (skill `wa-feature`).

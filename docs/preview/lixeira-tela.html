@@ -1,0 +1,198 @@
+<title>Tela da Lixeira</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Mockup da tela da Lixeira: duas propostas de layout lado a lado, operáveis, sobre a página no tema do leitor. As telas seguem o GuiPaint do mod (claro e escuro). */
+:root {
+  --page: #ECE5D6; --page-fg: #2A2730; --page-mu: #6E675B; --page-line: #CFC5B0; --page-card: #F6F1E6;
+  --coral: #F0603E; --ok: #2F9D5C;
+  --pix: "Pixelify Sans", "Courier New", monospace;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  /* recursos (ResourceStyle.color) e a lente do Ultimate */
+  --r-item: #B57A3A; --r-fluid: #2F6FD6; --r-energy: #D9931A; --r-chem: #5E9A2B; --r-source: #8E4FC9; --ultimate: #7B4FE0;
+  /* tela do mod, tema claro (GuiPaint) */
+  --g-panel: #F2EBDD; --g-sunk: #DDD3BF; --g-sunk-line: #BDB19A; --g-key: #FFFBF3; --g-ink: #2A2730; --g-mu: #7A7366; --g-off: #B5AC9D; --g-edge: #2A2730; --g-shadow: #BDB19A; --g-world: #7C8A93;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --page: #19171C; --page-fg: #EDE6D8; --page-mu: #A79F90; --page-line: #3A363F; --page-card: #222026; color-scheme: dark } }
+:root[data-theme="dark"] { --page: #19171C; --page-fg: #EDE6D8; --page-mu: #A79F90; --page-line: #3A363F; --page-card: #222026; color-scheme: dark }
+/* tela do mod, tema escuro: vale só dentro de .gui.escuro, é a arte do jogo e não segue o tema da página */
+.gui.escuro { --g-panel: #26232B; --g-sunk: #1B1920; --g-sunk-line: #0F0E12; --g-key: #3E3B44; --g-ink: #EDE6D8; --g-mu: #A79F90; --g-off: #5A5660; --g-edge: #0F0E12; --g-shadow: #0F0E12 }
+* { box-sizing: border-box }
+body { background: var(--page); color: var(--page-fg); font-family: var(--body); font-size: 15px; line-height: 1.55; margin: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+.wrap { max-width: 1080px; margin: 0 auto; padding-block: 28px 64px }
+header { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: baseline }
+h1 { font-family: var(--pix); font-weight: 500; font-size: 32px; margin: 0; text-wrap: balance }
+h2 { font-family: var(--pix); font-weight: 500; font-size: 22px; margin: 0 0 8px; text-wrap: balance }
+h3 { font-family: var(--pix); font-weight: 500; font-size: 17px; margin: 0 0 4px }
+.status { font-family: var(--pix); font-size: 14px; color: var(--coral); border: 1px solid var(--coral); padding: 1px 8px }
+.lede { color: var(--page-mu); max-width: 72ch; margin: 6px 0 0 }
+p, li { max-width: 74ch }
+.mu { color: var(--page-mu) }
+section.part { border-top: 1px solid var(--page-line); margin-top: 36px; padding-top: 26px }
+.toolbar { display: flex; flex-wrap: wrap; gap: 14px 26px; margin-top: 18px }
+.grp { display: flex; flex-wrap: wrap; gap: 6px; align-items: center }
+.grp > span { font-family: var(--pix); font-size: 13px; color: var(--page-mu); margin-right: 2px }
+.toolbar button { font-family: var(--pix); font-size: 13px; padding: 3px 9px; background: var(--page-card); color: var(--page-fg); border: 1px solid var(--page-line); cursor: pointer }
+.toolbar button[aria-pressed="true"] { background: var(--page-fg); color: var(--page); border-color: var(--page-fg) }
+button:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px }
+.duo { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 26px; margin-top: 20px }
+.opt { min-width: 0 }
+.opt .rec { display: inline-block; font-family: var(--pix); font-size: 12px; letter-spacing: .04em; color: var(--ok); border: 1px solid var(--ok); padding: 0 6px; margin-left: 8px; text-transform: uppercase; vertical-align: 2px }
+.stage { background: var(--g-world); padding: 26px 14px; display: grid; place-items: center; margin-top: 10px; overflow-x: auto }
+.opt .why { font-size: 14px; color: var(--page-mu); margin: 8px 0 0 }
+
+/* ---- a tela do mod ---- */
+.gui { font-family: var(--pix); color: var(--g-ink); background: var(--g-panel); border: 2px solid var(--g-edge); box-shadow: 4px 4px 0 var(--g-shadow); width: 300px; max-width: 100%; flex: none }
+.gui .bar { height: 6px; background: var(--ultimate) }
+.gui .head { display: flex; align-items: center; gap: 8px; padding: 8px 10px 6px }
+.gui .olho { width: 16px; height: 16px; flex: none; background: var(--g-edge); display: grid; place-items: center; transform: rotate(45deg) scale(.82) }
+.gui .olho i { width: 8px; height: 8px; background: var(--ultimate); box-shadow: inset 2px 2px 0 #C7B0FA, inset -2px -2px 0 #4A2C92 }
+.gui .head b { font-weight: 500; font-size: 18px; flex: 1; min-width: 0 }
+.gui .lua { width: 20px; height: 20px; flex: none; background: var(--g-key); border: 2px solid var(--g-edge); display: grid; place-items: center; font-size: 12px; line-height: 1 }
+.gui .body { padding: 2px 10px 10px }
+.gui .foot { border-top: 2px solid var(--g-sunk-line); margin: 0 10px; padding: 6px 0 9px; font-size: 14px; color: var(--g-mu); display: flex; justify-content: space-between; gap: 8px }
+.gui .foot b { font-weight: 500; color: var(--g-ink) }
+.badge { width: 22px; height: 22px; flex: none; border-radius: 50%; border: 2px solid var(--g-edge); background: var(--c); box-shadow: inset -2px -2px 0 rgba(0,0,0,.25); display: grid; place-items: center }
+.badge svg { width: 12px; height: 12px; display: block; shape-rendering: crispEdges }
+[data-on="false"] > .badge, .key[data-on="false"] .badge { background: var(--g-off) }
+
+/* A: lista com chave */
+.rows { background: var(--g-sunk); box-shadow: inset 2px 2px 0 var(--g-sunk-line); display: grid }
+.rowa { display: flex; align-items: center; gap: 9px; width: 100%; padding: 7px 8px; font: inherit; color: inherit; background: none; border: 0; border-bottom: 2px solid var(--g-sunk-line); cursor: pointer; text-align: left }
+.rowa:last-child { border-bottom: 0 }
+.rowa .nm { font-size: 17px; flex: 1; min-width: 0 }
+.rowa .st { font-size: 13px; color: var(--g-mu); width: 62px; text-align: right }
+.rowa[data-on="false"] .nm { color: var(--g-mu) }
+.sw { width: 38px; height: 18px; flex: none; background: var(--g-off); border: 2px solid var(--g-edge); position: relative }
+.sw::after { content: ""; position: absolute; top: 0; left: 0; width: 14px; height: 14px; background: var(--g-key); box-shadow: inset -2px -2px 0 var(--g-shadow), 2px 0 0 var(--g-edge) }
+.rowa[data-on="true"] .sw { background: var(--c) }
+.rowa[data-on="true"] .sw::after { left: auto; right: 0; box-shadow: inset -2px -2px 0 var(--g-shadow), -2px 0 0 var(--g-edge) }
+.rowa:hover .sw { outline: 2px solid var(--coral); outline-offset: 1px }
+
+/* B: teclas */
+.keys { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; padding: 6px 0 2px }
+.key { width: 50px; padding: 7px 0 5px; font: inherit; color: inherit; background: var(--g-key); border: 2px solid var(--g-edge); box-shadow: inset 2px 2px 0 rgba(255,255,255,.55), inset -2px -2px 0 var(--g-shadow); display: grid; justify-items: center; gap: 5px; cursor: pointer }
+.key small { font-size: 12px; line-height: 1 }
+.key .led { width: 18px; height: 4px; background: var(--c) }
+.key[data-on="false"] { background: var(--g-sunk); box-shadow: none; border-style: dashed; border-color: var(--g-off) }
+.key[data-on="false"] small { color: var(--g-mu) }
+.key[data-on="false"] .led { background: var(--g-off) }
+.key:hover { border-color: var(--coral); border-style: solid }
+
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; margin-top: 14px }
+.cols > div { min-width: 0; background: var(--page-card); border: 1px solid var(--page-line); padding: 12px 16px }
+.cols b.t { display: block; font-family: var(--pix); font-weight: 500; font-size: 17px; margin-bottom: 2px }
+.cols p { margin: 0 }
+ul.tight { margin: 8px 0 0; padding-left: 18px } ul.tight li { margin-bottom: 5px }
+@media (prefers-reduced-motion: no-preference) { .sw::after { transition: none } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Tela da Lixeira</h1>
+    <span class="status">aprovado em 10/11/2026: layout B</span>
+  </header>
+  <p class="lede">A Lixeira some com os cinco recursos e tem uma chave por tipo. Desligado, ela deixa de aceitar aquele recurso: para o roteador, o funil ou o cabo, é como um bloco que não recebe aquilo. As duas telas abaixo funcionam: clique nas chaves.</p>
+
+  <div class="toolbar" role="group" aria-label="Variações do mockup">
+    <div class="grp"><span>Tema da tela</span><button id="t-claro" aria-pressed="true">Claro</button><button id="t-escuro" aria-pressed="false">Escuro</button></div>
+    <div class="grp"><span>Mods</span><button id="m-todos" aria-pressed="true">Com Mekanism e Ars</button><button id="m-base" aria-pressed="false">Só o mod</button></div>
+    <div class="grp"><span>Ao colocar o bloco</span><button id="n-on" aria-pressed="true">Tudo ligado</button><button id="n-off" aria-pressed="false">Tudo desligado</button></div>
+  </div>
+
+  <div class="duo">
+    <div class="opt">
+      <h2>A. Lista com chave</h2>
+      <div class="stage"><div class="gui" id="gui-a">
+        <div class="bar"></div>
+        <div class="head"><span class="olho"><i></i></span><b>Lixeira</b><span class="lua" aria-hidden="true">☾</span></div>
+        <div class="body"><div class="rows" id="rows"></div></div>
+        <div class="foot"><span>Aceitando</span><b class="count"></b></div>
+      </div></div>
+      <p class="why">Uma linha por recurso: o crachá de tipo do mod, o nome, o estado por escrito e a chave. Lê sem legenda, cabe o nome inteiro em qualquer idioma e a linha toda é clicável.</p>
+    </div>
+    <div class="opt">
+      <h2>B. Teclas <span class="rec">escolhida</span></h2>
+      <div class="stage"><div class="gui" id="gui-b">
+        <div class="bar"></div>
+        <div class="head"><span class="olho"><i></i></span><b>Lixeira</b><span class="lua" aria-hidden="true">☾</span></div>
+        <div class="body"><div class="keys" id="keys"></div></div>
+        <div class="foot"><span>Aceitando</span><b class="count"></b></div>
+      </div></div>
+      <p class="why">Cinco teclas de porcelana, como as teclas de modo das faces do roteador: acesa aceita, apagada e tracejada recusa. Mais compacta, mas o nome fica abreviado e o estado depende só da cor e do contorno.</p>
+    </div>
+  </div>
+
+  <section class="part">
+    <h2>O que as duas têm em comum</h2>
+    <div class="cols">
+      <div><b class="t">Só as chaves</b><p>Sem inventário do jogador, sem filtro e sem contador. A tela abre com clique direito no bloco e mostra apenas o que dá para mudar.</p></div>
+      <div><b class="t">Cabeçalho do mod</b><p>A faixa e o Olho na cor do Ultimate (a Lixeira não tem tier e usa essa lente), o título e o botão de tema, como nas outras telas.</p></div>
+      <div><b class="t">Tipos de outros mods</b><p>Químicos e Source só aparecem com o Mekanism e o Ars Nouveau instalados. Troque em "Mods" para ver a tela com três tipos.</p></div>
+      <div><b class="t">Rodapé</b><p>Uma linha com quantos tipos estão ligados, para ver o estado de relance sem ler chave por chave.</p></div>
+    </div>
+  </section>
+
+  <section class="part">
+    <h2>Decisões do dono (10/11/2026)</h2>
+    <ul class="tight">
+      <li><b>O layout:</b> B, as teclas. A lista com chave fica aqui só como registro da alternativa.</li>
+      <li><b>Como a Lixeira nasce:</b> com os cinco tipos ligados.</li>
+      <li><b>A colisão do bloco:</b> segue o desenho (caixa até a borda mais os quatro pilares).</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+const TIPOS = [
+  { id: 'item',   nome: 'Itens',    curto: 'Itens', cor: 'var(--r-item)',   mod: false, px: ['.###.', '..#..', '.###.', '#####', '.###.'] },
+  { id: 'fluid',  nome: 'Fluidos',  curto: 'Fluid', cor: 'var(--r-fluid)',  mod: false, px: ['..#..', '..#..', '.###.', '#####', '.###.'] },
+  { id: 'energy', nome: 'Energia',  curto: 'Energ', cor: 'var(--r-energy)', mod: false, px: ['...#.', '..#..', '.###.', '..#..', '.#...'] },
+  { id: 'chem',   nome: 'Químicos', curto: 'Quím',  cor: 'var(--r-chem)',   mod: true,  px: ['.###.', '..#..', '..#..', '.###.', '#####'] },
+  { id: 'source', nome: 'Source',   curto: 'Source', cor: 'var(--r-source)', mod: true, px: ['..#..', '..#..', '##.##', '..#..', '..#..'] },
+];
+const estado = { mods: true, on: Object.fromEntries(TIPOS.map(t => [t.id, true])) };
+
+function icone(px) {
+  let r = '';
+  px.forEach((linha, y) => [...linha].forEach((c, x) => { if (c === '#') r += `<rect x="${x}" y="${y}" width="1" height="1" fill="#fff"/>`; }));
+  return `<svg viewBox="0 0 5 5" aria-hidden="true">${r}</svg>`;
+}
+function visiveis() { return TIPOS.filter(t => estado.mods || !t.mod); }
+
+function desenhar() {
+  const vs = visiveis();
+  document.getElementById('rows').innerHTML = vs.map(t => {
+    const on = estado.on[t.id];
+    return `<button class="rowa" id="a-${t.id}" data-id="${t.id}" data-on="${on}" style="--c:${t.cor}" role="switch" aria-checked="${on}">
+      <span class="badge">${icone(t.px)}</span><span class="nm">${t.nome}</span><span class="st">${on ? 'Aceita' : 'Recusa'}</span><span class="sw"></span></button>`;
+  }).join('');
+  document.getElementById('keys').innerHTML = vs.map(t => {
+    const on = estado.on[t.id];
+    return `<button class="key" id="b-${t.id}" data-id="${t.id}" data-on="${on}" style="--c:${t.cor}" role="switch" aria-checked="${on}" aria-label="${t.nome}">
+      <span class="badge">${icone(t.px)}</span><small>${t.curto}</small><span class="led"></span></button>`;
+  }).join('');
+  const n = vs.filter(t => estado.on[t.id]).length;
+  document.querySelectorAll('.count').forEach(e => { e.textContent = n === 0 ? 'nada' : n === vs.length ? 'tudo' : `${n} de ${vs.length}`; });
+}
+function par(a, b, fn) {
+  const A = document.getElementById(a), B = document.getElementById(b);
+  A.addEventListener('click', () => { A.setAttribute('aria-pressed', 'true'); B.setAttribute('aria-pressed', 'false'); fn(true); });
+  B.addEventListener('click', () => { B.setAttribute('aria-pressed', 'true'); A.setAttribute('aria-pressed', 'false'); fn(false); });
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-id]');
+  if (!b) return;
+  const id = b.dataset.id, foco = b.id;
+  estado.on[id] = !estado.on[id];
+  desenhar();
+  const de = document.getElementById(foco);
+  if (de) de.focus();
+});
+par('t-claro', 't-escuro', claro => document.querySelectorAll('.gui').forEach(g => g.classList.toggle('escuro', !claro)));
+par('m-todos', 'm-base', todos => { estado.mods = todos; desenhar(); });
+par('n-on', 'n-off', on => { TIPOS.forEach(t => estado.on[t.id] = on); desenhar(); });
+desenhar();
+</script>

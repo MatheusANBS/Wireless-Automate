@@ -20,6 +20,8 @@ public final class TickBudget {
     private long startedAt;
     private long lastUsedNanos;
     private double averageUsedNanos;
+    /** Tempo gasto fora do laço (a entrega no tick do AE2), descontado do próximo {@link #begin}. */
+    private long debtNanos;
 
     public TickBudget(long baseNanos) {
         setBaseNanos(baseNanos);
@@ -53,8 +55,25 @@ public final class TickBudget {
         }
     }
 
+    /** Começa o tick já com a dívida gasta: o tempo gasto fora encurta o que sobra para o laço. */
     public void begin(long now) {
-        startedAt = now;
+        startedAt = now - debtNanos;
+        debtNanos = 0;
+    }
+
+    /**
+     * Registra {@code nanos} gastos fora do laço como dívida do próximo tick, sem passar do teto
+     * (uma dívida maior que o teto só zeraria o tick seguinte, não os outros).
+     */
+    public void charge(long nanos) {
+        if (nanos > 0) {
+            debtNanos = Math.min(debtNanos + nanos, limitNanos());
+        }
+    }
+
+    /** Há folga para gastar fora do laço: a dívida ainda está abaixo do teto. */
+    public boolean outsideRoom() {
+        return debtNanos < limitNanos();
     }
 
     public boolean hasTime(long now) {

@@ -28,7 +28,7 @@ O código foi lido nos ramos oficiais (AE2 `1.21.1`, RS2 `support/2.x`) e nos ad
 2. **Sem frente e sem giro.** Os seis lados são iguais e nomeados pela direção do mundo (Norte, Sul, Leste, Oeste, Cima, Baixo), como o jogador os vê com F3. Cada lado tem uma cor fixa de etiqueta (seção "Cores").
 3. **Itens ou fluidos por pedido, não os dois juntos** nesta versão. Um pedido com item e fluido é recusado e a linha do lado avisa. Químicos e Source ficam para quando o Applied Mekanistics e o Refined Types forem lidos.
 4. **Mesma dimensão, dentro do cubo do tier.** A ligação pela rede do mod (outra base, outra dimensão) fica para depois.
-5. **Uma máquina pertence a um lado de uma Doca só.** Ela pode estar vinculada também a um roteador; o guia avisa que um roteador extraindo da mesma máquina disputa o resultado.
+5. **Uma máquina pertence a um lado de uma Doca só.** Ela pode estar vinculada também a um roteador (decisão do dono, 10/11/2026): **o roteador leva a energia, a Doca leva só os pedidos**, e o combustível que a receita gasta vai dentro do padrão, como o AE2 faz. A Doca não gasta energia nem combustível. O guia ensina essa divisão. A unicidade é conferida contra as Docas carregadas; uma máquina de uma Doca descarregada pode entrar em outra (limite aceito pelo dono, 10/11/2026).
 6. **AE2 primeiro**, RS2 na etapa seguinte (decisão do dono, 10/11/2026).
 
 ## O alcance (aprovado)
@@ -67,7 +67,7 @@ A Doca precisa saber em que face de cada máquina pôr os ingredientes e de qual
 
 - **Ao vincular a primeira máquina de um lado**, a Doca roda a análise (`TunerProbe` + `TunerPlan`) nessa máquina e guarda o resultado como o perfil do lado: as faces Insere e as faces Extrai, por tipo. A action bar mostra "Lado Norte: Fornalha · Cima Insere · Baixo Extrai". As outras máquinas do lado usam o mesmo perfil, pela frente de cada uma (`RemoteSide`).
 - **Se o Afinador errar** (uma máquina de lados configuráveis, por exemplo), o jogador usa o Configurador numa máquina do lado, com o gesto de sempre (dois cliques), e o resultado vale para o lado inteiro, sem exceção por máquina (decisão do dono, 10/11/2026).
-- **Máquina com duas entradas** (combustível e minério, ou dois ingredientes em lados diferentes): cada ingrediente vai para a primeira face Insere que o aceita.
+- **Máquina com duas entradas** (combustível e minério, ou dois ingredientes em lados diferentes): cada ingrediente vai para a face Insere **mais seletiva** entre as que o aceitam, a que aceita menos ingredientes do pedido; no empate, a primeira pela ordem do perfil. Num pedido "minério + carvão" numa fornalha, a face de cima aceita os dois e a do lado só o carvão, então o carvão vai para o lado e o minério para cima.
 
 ## A entrega
 

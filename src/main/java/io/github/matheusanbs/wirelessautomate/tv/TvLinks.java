@@ -28,7 +28,7 @@ public final class TvLinks {
     private TvLinks() {
     }
 
-    /** Clique numa Tela: ela passa a ser a escolhida e o roteador escolhido é esquecido. */
+    /** Clique numa Tela: ela passa a ser a escolhida, e o roteador e a Doca escolhidos são esquecidos. */
     public static void choose(ServerPlayer player, ItemStack stack, TvBlockEntity tv) {
         ServerLevel level = player.serverLevel();
         GlobalPos current = LinkerItem.tv(stack);
@@ -45,6 +45,7 @@ public final class TvLinks {
         }
         LinkerItem.setTv(stack, GlobalPos.of(level.dimension(), tv.getBlockPos()));
         LinkerItem.setRouter(stack, null);
+        LinkerItem.setDock(stack, null);
         player.displayClientMessage(Component.translatable(KEY + "chosen", LinkerActions.position(tv.getBlockPos()),
                 tv.links().size(), Config.tvMaxLinks()), true);
     }

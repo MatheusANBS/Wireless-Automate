@@ -279,7 +279,7 @@ public final class ConfiguratorTuner {
      * "Cima Insere · Trás Insere · Baixo Extrai" pelos lados da máquina; com mais de um tipo, cada um com o nome
      * ("Itens: …; Energia: …").
      */
-    private static Component describe(Map<ResourceType, PortMode[]> modes, int front) {
+    public static Component describe(Map<ResourceType, PortMode[]> modes, int front) {
         MutableComponent text = Component.empty();
         boolean named = modes.size() > 1;
         boolean first = true;

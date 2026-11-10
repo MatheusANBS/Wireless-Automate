@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.client.linker;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import io.github.matheusanbs.wirelessautomate.dock.PatternDockBlockEntity;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.packet.LinkSameBlockPayload;
@@ -26,9 +27,9 @@ import net.neoforged.neoforge.network.PacketDistributor;
 /**
  * Ctrl (Cmd no Mac, o {@code Screen.hasControlDown}) + clique direito com o Vinculador na mão principal, no modo
  * Vincular, sem Shift e sem uma Tela de Sinal escolhida, numa máquina (bloco com a capability de algum tipo carregado,
- * como o {@code ConfiguratorItem.actsOn}) que não é roteador nem Tela: cancela o uso normal e manda o
- * {@link LinkSameBlockPayload} (o servidor vincula as máquinas do mesmo bloco no raio ou, se a clicada já está
- * vinculada ao roteador escolhido, desvincula todas as vinculadas do mesmo bloco, e refaz todas as conferências).
+ * como o {@code ConfiguratorItem.actsOn}) que não é roteador, Tela nem Doca: cancela o uso normal e manda o
+ * {@link LinkSameBlockPayload} (o servidor vincula as máquinas do mesmo bloco no raio do roteador ou no cubo da Doca
+ * escolhidos ou, se a clicada já é deles, desvincula, e refaz todas as conferências).
  * Uma vez por clique: segurando o botão, o jogo repete o uso a cada 4 ticks, e as repetições são canceladas sem pacote
  * até a tecla soltar. Correndo (andando com o Ctrl, que é a tecla padrão de correr), o gesto não vale e o clique segue como um
  * clique normal do Vinculador.
@@ -92,7 +93,8 @@ public final class LinkerSameBlockInput {
 
     /**
      * O gesto vale no bloco mirado: Vinculador na mão principal, modo Vincular, sem Shift, sem Tela escolhida, uma
-     * máquina (capability de algum tipo carregado) que não é roteador nem Tela. Não confere o Ctrl nem a corrida.
+     * máquina (capability de algum tipo carregado) que não é roteador, Tela nem Doca. Não confere o Ctrl nem a
+     * corrida. Com uma Doca escolhida o gesto vale igual: o servidor manda o pedido à Doca.
      */
     public static boolean applies(Minecraft minecraft, BlockHitResult hit) {
         if (minecraft.player == null || minecraft.level == null || hit.getType() != HitResult.Type.BLOCK
@@ -105,7 +107,7 @@ public final class LinkerSameBlockInput {
         }
         BlockEntity entity = minecraft.level.getBlockEntity(hit.getBlockPos());
         return !(entity instanceof RouterBlockEntity) && !(entity instanceof TvBlockEntity)
-                && RemoteCapabilities.any(minecraft.level, hit.getBlockPos());
+                && !(entity instanceof PatternDockBlockEntity) && RemoteCapabilities.any(minecraft.level, hit.getBlockPos());
     }
 
     /** Manda o pedido do bloco de {@code hit}; {@code false} se o servidor não conhece o pacote. */

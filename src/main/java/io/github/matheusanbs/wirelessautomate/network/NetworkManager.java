@@ -35,6 +35,9 @@ import org.jetbrains.annotations.Nullable;
  *       sem limite (e o Elite, acima de 32 pilhas por tick) é limitado pelo orçamento e não pelo teto
  *       de tentativas, sem passar na frente de quem ainda não teve a primeira visita do tick.
  * </ol>
+ * Os visitantes ({@link EngineVisitor}, {@link #addVisitor}) têm volta própria ({@link EngineVisitors}), depois da
+ * volta das portas e antes das voltas extras, no mesmo orçamento; se as portas o gastaram, a volta deles do tick
+ * seguinte vem antes das portas.
  *
  * <p>A rede é da face: cada porta (nó, face, tipo) está na rede da sua face ({@link Port#faceNetwork}),
  * ou em nenhuma. O nó é membro de toda rede que aparece em alguma face dele, de qualquer tipo
@@ -107,6 +110,7 @@ public final class NetworkManager {
     private final TickBudget budget = new TickBudget(500_000L);
     /** O amostrador dos Fluxos do Tablet: um balde de nós por tick, fora do orçamento do transporte. */
     private final FlowSampler flows = new FlowSampler();
+    private final EngineVisitors visitors = new EngineVisitors();
     private int cursor;
     private boolean dirty;
     /** Redes salvas do servidor atual e a versão delas já conferida ({@link #checkNetworks}). */
@@ -155,6 +159,25 @@ public final class NetworkManager {
         if (ports != null) {
             ports.poweredChanged(node.powered(), lastTick);
         }
+    }
+
+    /** Põe {@code visitor} no laço de transferência (ver {@link EngineVisitor}); repetir não duplica. */
+    public void addVisitor(EngineVisitor visitor) {
+        visitors.add(visitor);
+    }
+
+    /** Tira {@code visitor} do laço; pode ser chamado de dentro da visita dele. */
+    public void removeVisitor(EngineVisitor visitor) {
+        visitors.remove(visitor);
+    }
+
+    /** Acorda {@code visitor} para a próxima volta, seja qual for o {@link EngineVisitor#wakeAt()} dele. */
+    public void wakeVisitor(EngineVisitor visitor) {
+        visitors.wake(visitor);
+    }
+
+    public boolean hasVisitor(EngineVisitor visitor) {
+        return visitors.contains(visitor);
     }
 
     /** Ver {@link #lastTick}. */
@@ -593,8 +616,14 @@ public final class NetworkManager {
         flows.tick(server, now);
     }
 
-    /** Visita as origens a partir do cursor enquanto houver orçamento. Devolve o último {@code nanoTime}. */
+    /** Visita as origens a partir do cursor, e os visitantes, enquanto houver orçamento. Devolve o último {@code nanoTime}. */
     private long transfer(long now) {
+        boolean visitorsFirst = visitors.starved();
+        if (visitorsFirst) {
+            visitors.pass(now, budget, false);
+            // Alterna: mesmo que esta volta tenha esgotado o orçamento, o tick seguinte começa pelas portas.
+            visitors.fed();
+        }
         int count = sources.size();
         NetworkRoutes timed = null;
         long mark = 0;
@@ -617,6 +646,9 @@ public final class NetworkManager {
                     }
                     cursor = index;
                     hungry.clear();
+                    if (!visitorsFirst) {
+                        visitors.starve();
+                    }
                     return time;
                 }
                 if (timed != null) {
@@ -638,6 +670,15 @@ public final class NetworkManager {
             index = index + 1 == count ? 0 : index + 1;
         }
         cursor = SourceCursor.next(start, lastMover, count);
+        if (!visitorsFirst && !visitors.isEmpty()) {
+            // O tempo dos visitantes não entra na conta da rede da última origem.
+            long time = System.nanoTime();
+            if (timed != null) {
+                timed.tickNanos += time - mark;
+                timed = null;
+            }
+            visitors.pass(now, budget, visited > 0);
+        }
         // Voltas extras, na mesma ordem, só com quem ainda tem o que mover e saldo para isso, e só
         // se a visita (estimada pela última da origem) couber no que resta do orçamento.
         while (!hungry.isEmpty()) {

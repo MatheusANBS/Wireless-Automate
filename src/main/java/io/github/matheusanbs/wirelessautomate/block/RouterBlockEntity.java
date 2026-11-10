@@ -17,11 +17,13 @@ import io.github.matheusanbs.wirelessautomate.network.RedstoneMode;
 import io.github.matheusanbs.wirelessautomate.network.RelativeSide;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
+import io.github.matheusanbs.wirelessautomate.range.CacheOwner;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import io.github.matheusanbs.wirelessautomate.range.IdleNetworkFace;
 import io.github.matheusanbs.wirelessautomate.range.MachineCaches;
 import io.github.matheusanbs.wirelessautomate.range.MachineConfig;
 import io.github.matheusanbs.wirelessautomate.range.RemoteIndex;
+import io.github.matheusanbs.wirelessautomate.range.RemoteListener;
 import io.github.matheusanbs.wirelessautomate.range.RangeRules;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
@@ -45,6 +47,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -83,7 +86,7 @@ import org.jetbrains.annotations.Nullable;
  * ({@link RouterNeighbors}), a presença no motor, no índice e no chunk loading ({@link RouterPresence}), o aviso
  * das mudanças ({@link RouterChanges}) e o NBT ({@link RouterNbt}).
  */
-public class RouterBlockEntity extends BlockEntity {
+public class RouterBlockEntity extends BlockEntity implements RemoteListener, CacheOwner {
     private static final ResourceType[] TYPES = ResourceType.values();
 
     /** Nome do nó dado pelo jogador; vazio = sem nome. */
@@ -896,6 +899,26 @@ public class RouterBlockEntity extends BlockEntity {
             return;
         }
         range.invalidated(level, caches.pos(), type, machineFace);
+    }
+
+    @Override
+    public @Nullable Level listenerLevel() {
+        return level;
+    }
+
+    @Override
+    public BlockPos listenerPos() {
+        return worldPosition;
+    }
+
+    @Override
+    public @Nullable Level ownerLevel() {
+        return level;
+    }
+
+    @Override
+    public boolean ownerRemoved() {
+        return isRemoved();
     }
 
     /** O que a tela mostra mudou sem mexer nas rotas: a tela aberta remonta o snapshot. */

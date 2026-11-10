@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.compat.jei;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
+import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -14,7 +15,8 @@ import net.neoforged.neoforge.registries.DeferredItem;
 
 /**
  * Esconde do JEI os itens dos tiers que não carregaram (os do Allthemodium sem o mod): os Cristais Afinados, os Pós
- * Carregados, os Corações do Ressonador e os Cartões de Upgrade desses tiers. Eles ficam registrados para o mundo não
+ * Carregados, os Corações do Ressonador e os Cartões de Upgrade desses tiers, e a Doca de Padrões desses tiers (um
+ * item só, com o tier no componente do estado). Eles ficam registrados para o mundo não
  * perder nada quando o mod sai, e o JEI lista todo item registrado, mesmo fora da aba criativa.
  */
 final class UnloadedTiers {
@@ -31,11 +33,10 @@ final class UnloadedTiers {
                 }
             }
         }
-        if (hidden.isEmpty()) {
-            return;
-        }
+        Item dock = ModItems.PATTERN_DOCK.get();
         List<ItemStack> stacks = ingredients.getAllItemStacks().stream()
-                .filter(stack -> hidden.contains(stack.getItem())).toList();
+                .filter(stack -> hidden.contains(stack.getItem())
+                        || stack.is(dock) && !StorageBlockItem.tierOf(stack).loaded()).toList();
         if (!stacks.isEmpty()) {
             ingredients.removeIngredientsAtRuntime(VanillaTypes.ITEM_STACK, stacks);
         }

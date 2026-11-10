@@ -41,6 +41,7 @@ Pacote base: `src/main/java/io/github/matheusanbs/wirelessautomate/`. O mapa det
 | Ressonador de Sinal | [ressonador](docs/mapa/ressonador.md) | `resonator/`, tela do Núcleo e câmara animada |
 | Reparador de Cristais | [reparador](docs/mapa/reparador.md) | `repairer/` |
 | Tela de Sinal | [tela-de-sinal](docs/mapa/tela-de-sinal.md) | `tv/`, `client/tv/` (editor, peças, layouts, biblioteca, desenho) |
+| Doca de Padrões | [doca](docs/mapa/doca.md) | `dock/`: bloco, block entity, lados, alcance |
 | Livro-guia | [livro](docs/mapa/livro.md) | `client/guide/` (`doc/`, `layout/`), `item/GuideBook*`, `GuideClientHooks`, as páginas e a tecla G |
 | Integrações opcionais | [compat](docs/mapa/compat.md) | JEI, Mekanism, FTB Teams, Ars Nouveau |
 | Receitas e o editor de receitas | [receitas](docs/mapa/receitas.md) | `recipe/`, `recipe/edit/`, `client/recipe/` |

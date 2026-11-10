@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.registry;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import io.github.matheusanbs.wirelessautomate.dock.PatternDockBlockEntity;
 import io.github.matheusanbs.wirelessautomate.repairer.RepairerBlockEntity;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBatteryBlockEntity;
@@ -47,6 +48,9 @@ public final class ModBlockEntities {
     public static final Supplier<BlockEntityType<TvBlockEntity>> SIGNAL_SCREEN =
             BLOCK_ENTITY_TYPES.register("signal_screen", () -> BlockEntityType.Builder.of(
                     TvBlockEntity::new, ModBlocks.SIGNAL_SCREEN.get()).build(null));
+    public static final Supplier<BlockEntityType<PatternDockBlockEntity>> PATTERN_DOCK =
+            BLOCK_ENTITY_TYPES.register("pattern_dock", () -> BlockEntityType.Builder.of(
+                    PatternDockBlockEntity::new, ModBlocks.PATTERN_DOCK.get()).build(null));
 
     private ModBlockEntities() {
     }

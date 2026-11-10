@@ -1,0 +1,30 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1,
+      "bonus_rolls": 0,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "wirelessautomate:pattern_dock",
+          "functions": [
+            {
+              "function": "minecraft:copy_state",
+              "block": "wirelessautomate:pattern_dock",
+              "properties": [
+                "tier"
+              ]
+            }
+          ]
+        }
+      ],
+      "conditions": [
+        {
+          "condition": "minecraft:survives_explosion"
+        }
+      ]
+    }
+  ],
+  "random_sequence": "wirelessautomate:blocks/pattern_dock"
+}

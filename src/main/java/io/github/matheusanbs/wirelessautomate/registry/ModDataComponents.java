@@ -5,6 +5,7 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.Dynamic;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.dock.DockChoice;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterCodecs;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
@@ -95,6 +96,16 @@ public final class ModDataComponents {
             DATA_COMPONENTS.registerComponentType("linker_tv", builder -> builder
                     .persistent(GlobalPos.CODEC)
                     .networkSynchronized(GlobalPos.STREAM_CODEC));
+
+    /**
+     * Doca de Padrões escolhida no Vinculador (posição, dimensão e lado): o alvo dos vínculos de máquinas a um lado.
+     * Escolher uma Doca limpa {@link #LINKER_ROUTER} e {@link #LINKER_TV}, e escolher um roteador ou uma Tela limpa
+     * esta; o servidor confere a cada clique se a Doca ainda está lá.
+     */
+    public static final Supplier<DataComponentType<DockChoice>> LINKER_DOCK =
+            DATA_COMPONENTS.registerComponentType("linker_dock", builder -> builder
+                    .persistent(DockChoice.CODEC)
+                    .networkSynchronized(DockChoice.STREAM_CODEC));
 
     /** Bloco da máquina copiado pelo Configurador antigo; nada mais o lê nem grava, fica registrado para os itens que o levam. */
     public static final Supplier<DataComponentType<ResourceLocation>> CONFIGURATOR_MACHINE =

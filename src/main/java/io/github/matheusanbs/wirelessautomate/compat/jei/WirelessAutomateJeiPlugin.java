@@ -57,7 +57,7 @@ import io.github.matheusanbs.wirelessautomate.recipe.TierUpgradeRecipe;
  * carregado. Na tela de filtro: arrastar um ingrediente para a grade e Shift + clique nele na lista
  * acrescentam a entrada ({@link FilterGhostHandler}); as áreas extras do painel afastam o JEI. Na
  * bancada, mostra as três receitas de cada anel (cartão de um degrau, cartão que pula e receita direta) e o
- * upgrade bloco + cartão com a origem do cartão. O tier é subtipo do roteador e dos armazenamentos, e a origem
+ * upgrade bloco + cartão com a origem do cartão. O tier é subtipo do roteador, dos armazenamentos e da Doca, e a origem
  * é subtipo do cartão, para o JEI listar cada um separado, como a aba criativa. Os itens dos tiers que não carregaram
  * somem do JEI ({@link UnloadedTiers}).
  */
@@ -84,6 +84,7 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
             registration.registerSubtypeInterpreter(card.get(), OriginSubtype.INSTANCE);
         }
         registration.registerSubtypeInterpreter(ModItems.RESONANCE_CORE.get(), CoreTierSubtype.INSTANCE);
+        registration.registerSubtypeInterpreter(ModItems.PATTERN_DOCK.get(), TierSubtype.INSTANCE);
     }
 
     /**
@@ -106,7 +107,7 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
         }
     }
 
-    /** O roteador e os armazenamentos guardam o tier do mesmo jeito ({@link StorageBlockItem#tierOf}). */
+    /** O roteador, os armazenamentos e a Doca de Padrões guardam o tier do mesmo jeito ({@link StorageBlockItem#tierOf}). */
     private enum TierSubtype implements ISubtypeInterpreter<ItemStack> {
         INSTANCE;
 
@@ -204,6 +205,7 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
         registration.addRecipes(RecipeTypes.CRAFTING, shown);
         ResonatorJei.registerRecipes(registration);
         CrystalRepairerCategory.registerRecipes(registration);
+        DockInfo.register(registration);
         WirelessAutomate.LOGGER.info("JEI: {} receitas de exibição de upgrade registradas", shown.size());
     }
 

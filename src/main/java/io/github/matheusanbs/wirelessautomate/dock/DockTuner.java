@@ -1,0 +1,86 @@
+package io.github.matheusanbs.wirelessautomate.dock;
+
+import io.github.matheusanbs.wirelessautomate.network.PortMode;
+import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.range.RangeLinks;
+import io.github.matheusanbs.wirelessautomate.range.RemoteIndex;
+import io.github.matheusanbs.wirelessautomate.range.RemoteListener;
+import java.util.Map;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import org.jetbrains.annotations.Nullable;
+
+/**
+ * O Afinador do Configurador numa máquina de um lado da Doca de Padrões: o segundo clique refaz o perfil do lado
+ * inteiro, com Shift ou sem (sem exceção por máquina, decisão do dono, 10/11/2026). O gesto (análise, pintura, prazo)
+ * é o do {@code ConfiguratorTuner}, que só chega aqui quando nenhum roteador que o jogador pode editar alcança a
+ * máquina: numa máquina de um roteador e de uma Doca, vale o roteador.
+ */
+public final class DockTuner {
+    private static final String KEY = "item.wirelessautomate.configurator.tuner.";
+
+    private DockTuner() {
+    }
+
+    /** A Doca e a máquina do lado em que o clique caiu. */
+    public record Target(PatternDockBlockEntity dock, DockMachine machine) {
+        /** A frente guardada da máquina ({@code -1}: sem frente). */
+        public int front() {
+            return machine.front();
+        }
+    }
+
+    /**
+     * A primeira Doca carregada, no nível do jogador, que tem a máquina em {@code pos} num lado e em que o jogador
+     * pode mexer ({@code mayBuild} e {@code mayInteract} na Doca); {@code null} sem nenhuma. Só no clique: uma consulta
+     * ao {@link RemoteIndex}.
+     */
+    public static @Nullable Target find(ServerPlayer player, ServerLevel level, BlockPos pos) {
+        for (RemoteListener listener : RemoteIndex.get().listenersAt(level, pos)) {
+            if (listener instanceof PatternDockBlockEntity dock && accessible(player, level, dock)) {
+                DockMachine machine = dock.machineAt(pos);
+                if (machine != null && dock.side(machine.side()) != null) {
+                    return new Target(dock, machine);
+                }
+            }
+        }
+        return null;
+    }
+
+    /** Alguma Doca carregada tem a máquina em {@code pos} num lado, com acesso ou sem. */
+    public static boolean linked(ServerLevel level, BlockPos pos) {
+        for (RemoteListener listener : RemoteIndex.get().listenersAt(level, pos)) {
+            if (listener instanceof PatternDockBlockEntity dock && dock.machineAt(pos) != null) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean accessible(ServerPlayer player, ServerLevel level, PatternDockBlockEntity dock) {
+        BlockPos at = dock.getBlockPos();
+        return !dock.isRemoved() && dock.getLevel() == level && level.isLoaded(at) && RangeLinks.mayEdit(player, at);
+    }
+
+    /**
+     * Aplica os modos (por face absoluta da máquina clicada) no perfil do lado, convertidos pela frente dela; as faces
+     * sem modo ficam. Devolve o aviso da action bar.
+     */
+    public static Component apply(Target target, Map<ResourceType, PortMode[]> modes) {
+        int side = target.machine().side();
+        DockSide dockSide = target.dock().side(side);
+        Component name = DockLinks.sideName(side);
+        if (dockSide == null) {
+            return Component.translatable(KEY + "unchanged_dock", name);
+        }
+        int count = Integer.bitCount(DockLinks.applyModes(dockSide.profile(), modes, target.front()));
+        if (count == 0) {
+            return Component.translatable(KEY + "unchanged_dock", name);
+        }
+        target.dock().saveChanged();
+        return Component.translatable(KEY + "applied_dock", name,
+                Component.translatable(KEY + (count == 1 ? "faces.one" : "faces"), count));
+    }
+}

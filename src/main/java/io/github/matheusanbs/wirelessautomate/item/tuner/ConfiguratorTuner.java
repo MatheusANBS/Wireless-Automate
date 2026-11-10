@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.item.tuner;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import io.github.matheusanbs.wirelessautomate.dock.DockTuner;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerOpen;
 import io.github.matheusanbs.wirelessautomate.menu.TabletClick;
 import io.github.matheusanbs.wirelessautomate.network.FaceConfig;
@@ -39,7 +40,8 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>O roteador é o primeiro que o modo Abrir do Vinculador acharia ({@link LinkerOpen#candidates}: a presa antes,
  * depois os de alcance pela distância, com o alcance do tier, o {@code mayInteract} e as proteções conferidos no
- * roteador). Só muda o modo: prioridade, redstone, filtro e rede de cada face ficam.
+ * roteador). Só muda o modo: prioridade, redstone, filtro e rede de cada face ficam. Sem roteador, uma Doca de
+ * Padrões que tem a máquina num lado recebe os modos no perfil do lado inteiro ({@link DockTuner}).
  */
 public final class ConfiguratorTuner {
     private static final String KEY = "item.wirelessautomate.configurator.tuner.";
@@ -84,9 +86,11 @@ public final class ConfiguratorTuner {
             return refuse(player, pos, "protected");
         }
         Reach reach = reach(player, level, pos);
-        if (reach == null) {
+        // Só sem roteador a Doca é procurada: numa máquina de um roteador e de uma Doca, vale o roteador.
+        DockTuner.Target dock = reach == null ? DockTuner.find(player, level, pos) : null;
+        if (reach == null && dock == null) {
             boolean linked = !TabletClick.attachedRouters(level, pos).isEmpty()
-                    || !RemoteIndex.get().routersAt(level, pos).isEmpty();
+                    || !RemoteIndex.get().routersAt(level, pos).isEmpty() || DockTuner.linked(level, pos);
             return refuse(player, pos, linked ? "no_access" : "not_linked");
         }
         Block block = level.getBlockState(pos).getBlock();
@@ -97,12 +101,13 @@ public final class ConfiguratorTuner {
                 return null;
             }
             // O roteador e a frente não são conferidos de novo: os modos da proposta são por face absoluta, e o
-            // roteador de agora (o primeiro que o jogador pode editar) é quem recebe.
+            // roteador de agora (o primeiro que o jogador pode editar), ou a Doca, é quem recebe.
             TunerPending.forget(player.getUUID());
             send(player, ConfiguratorProposalPayload.clear(pos));
-            return show(player, apply(reach, pending.modes(), wholeGroup));
+            return show(player, reach != null ? apply(reach, pending.modes(), wholeGroup)
+                    : DockTuner.apply(dock, pending.modes()));
         }
-        int front = reach.front();
+        int front = reach != null ? reach.front() : dock.front();
         Map<ResourceType, PortMode[]> modes;
         try {
             modes = TunerProbe.analyze(level, pos, front, player);

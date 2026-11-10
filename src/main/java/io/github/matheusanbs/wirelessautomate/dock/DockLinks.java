@@ -256,18 +256,29 @@ public final class DockLinks {
             return Component.translatable(KEY + "profile", sideName(side), name,
                     Component.translatable("item.wirelessautomate.configurator.tuner.failed"));
         }
-        for (Map.Entry<ResourceType, PortMode[]> entry : modes.entrySet()) {
-            PortMode[] faces = entry.getValue();
-            for (int face = 0; face < faces.length; face++) {
-                if (faces[face] != null) {
-                    profile.face(entry.getKey(), RemoteSide.fromAbsolute(front, face)).setMode(faces[face]);
-                }
-            }
-        }
+        applyModes(profile, modes, front);
         dock.saveChanged();
         Component faces = modes.isEmpty() ? Component.translatable(KEY + "profile.none")
                 : ConfiguratorTuner.describe(modes, front);
         return Component.translatable(KEY + "profile", sideName(side), name, faces);
+    }
+
+    /**
+     * Os modos do Afinador ({@code null}: a face fica como está) no perfil {@code profile}, cada face absoluta
+     * convertida no lado relativo à frente {@code front}. Devolve as faces absolutas que mudaram, um bit por face.
+     */
+    static int applyModes(MachineConfig profile, Map<ResourceType, PortMode[]> modes, int front) {
+        int changed = 0;
+        for (Map.Entry<ResourceType, PortMode[]> entry : modes.entrySet()) {
+            PortMode[] faces = entry.getValue();
+            for (int face = 0; face < faces.length; face++) {
+                if (faces[face] != null
+                        && profile.face(entry.getKey(), RemoteSide.fromAbsolute(front, face)).setMode(faces[face])) {
+                    changed |= 1 << face;
+                }
+            }
+        }
+        return changed;
     }
 
     // ------------------------------------------------------------------ regras

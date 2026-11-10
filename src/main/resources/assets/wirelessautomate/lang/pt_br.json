@@ -77,6 +77,8 @@
   "item.wirelessautomate.configurator.tuner.applied_group": "Afinador aplicado no grupo %s · %s",
   "item.wirelessautomate.configurator.tuner.unchanged": "Afinador: %s já está assim",
   "item.wirelessautomate.configurator.tuner.unchanged_group": "Afinador: o grupo %s já está assim",
+  "item.wirelessautomate.configurator.tuner.applied_dock": "Afinador aplicado no lado %s da Doca · %s",
+  "item.wirelessautomate.configurator.tuner.unchanged_dock": "Afinador: o lado %s da Doca já está assim",
   "item.wirelessautomate.configurator.tuner.faces": "%s faces",
   "item.wirelessautomate.configurator.tuner.faces.one": "%s face",
   "item.wirelessautomate.configurator.tuner.choose_network": " · escolha a rede no painel",

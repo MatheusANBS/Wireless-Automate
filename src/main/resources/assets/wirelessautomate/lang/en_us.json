@@ -77,6 +77,8 @@
   "item.wirelessautomate.configurator.tuner.applied_group": "Auto-Setup applied to group %s · %s",
   "item.wirelessautomate.configurator.tuner.unchanged": "Auto-Setup: %s is already set like this",
   "item.wirelessautomate.configurator.tuner.unchanged_group": "Auto-Setup: group %s is already set like this",
+  "item.wirelessautomate.configurator.tuner.applied_dock": "Auto-Setup applied to the %s side of the Dock · %s",
+  "item.wirelessautomate.configurator.tuner.unchanged_dock": "Auto-Setup: the %s side of the Dock is already set like this",
   "item.wirelessautomate.configurator.tuner.faces": "%s faces",
   "item.wirelessautomate.configurator.tuner.faces.one": "%s face",
   "item.wirelessautomate.configurator.tuner.choose_network": " · pick the network in the panel",

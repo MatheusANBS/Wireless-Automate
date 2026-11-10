@@ -22,6 +22,16 @@ import org.jetbrains.annotations.Nullable;
  * dormir. O estoque soma os tanques do mesmo fluido (O(tanques), só para entradas com estoque):
  * a origem mantém N mB, o destino aceita até N mB.
  *
+ * <p>Destino seletivo, como nos itens ({@link ItemHints}): o tanque que recusa um fluido pelo tipo (tem outro
+ * fluido com espaço, ou um tanque vazio que não o aceita; {@link #refusesFluid}) não dorme, porque dormir como
+ * cheio o deixaria de fora também para o fluido que ele aceita, vindo de outro tanque da mesma origem ou de outra
+ * origem; a recusa fica anotada na porta ({@link RefusedKinds}) até a máquina mudar, e a visita pula o destino para
+ * esse fluido sem simular. Só o destino cheio de verdade dorme (tem o fluido e não cabe mais, ou um tanque vazio que
+ * o aceitaria e mesmo assim recusou).
+ *
+ * <p>Quando o balde da origem esvazia no meio de um tanque, a visita seguinte segue do tanque seguinte: o tanque
+ * que enche sem parar (a saída principal de uma máquina) não toma a vazão toda, e a outra saída não para a máquina.
+ *
  * <p>Tanque do mod ({@link BulkFluids}): o lado dele (origem ou destino) é em {@code long} e por
  * tipo, sem o teto de {@link Integer#MAX_VALUE} mB por chamada do {@link IFluidHandler}; como
  * origem, os "tanques" são os tipos guardados. Entre dois Tanques, bilhões de mB passam numa
@@ -33,6 +43,9 @@ final class FluidTransfer {
     static final int MAX_TANKS_PER_VISIT = 16;
     /** O último {@link #moveFluid} pôs algum destino para dormir. */
     private static boolean destinationSlept;
+    /** As chaves do {@link RefusedKinds} de um destino de fluido são pilhas de 1 mB, comparadas com componentes. */
+    private static final RefusedKinds.Same SAME_FLUID =
+            (stored, offered) -> FluidStack.isSameFluidSameComponents((FluidStack) stored, (FluidStack) offered);
 
     /**
      * Uma visita. Devolve {@code true} se moveu algo. Os tanques são varridos a partir do cursor da
@@ -96,8 +109,7 @@ final class FluidTransfer {
             tokens -= amount;
             moved += amount;
             if (tokens <= 0) {
-                // Sem saldo: o tanque pode ter mais, continua dele na próxima visita.
-                tank = current;
+                // Sem saldo: a próxima visita segue do tanque seguinte (ver a classe).
                 break;
             }
             if (destinationSlept && !NetworkManager.hasAwakeDestination(pass, now)) {
@@ -150,6 +162,11 @@ final class FluidTransfer {
             }
             // Passou no filtro do destino: a origem tem o que oferecer (motivo do sono).
             source.offered = true;
+            RefusedKinds refused = destination.refusedKinds;
+            if (refused != null && refused.contains(inTank, SAME_FLUID, now, destination.destinationBackoff.maxTicks())) {
+                // Recusou este fluido desde a última mudança: pula sem simular.
+                continue;
+            }
             BulkFluids bulkTarget = destination.machine.bulkFluids(destination.face);
             IFluidHandler target = bulkTarget == null ? destination.machine.fluids(destination.face) : null;
             if (bulkTarget == null && target == null) {
@@ -173,6 +190,11 @@ final class FluidTransfer {
             }
             long accepts = fill(bulkTarget, target, inTank, want, true);
             if (accepts <= 0) {
+                if (target != null && refusesFluid(target, inTank)) {
+                    // Recusa só deste fluido: anota e segue, sem dormir (ver a classe).
+                    destination.refusedKinds().add(inTank.copyWithAmount(1), SAME_FLUID, now);
+                    continue;
+                }
                 destination.destinationBackoff.sleep(now);
                 destinationSlept = true;
                 continue;
@@ -203,6 +225,30 @@ final class FluidTransfer {
             }
         }
         return moved;
+    }
+
+    /**
+     * O destino recusou {@code fluid} por ser ele, e não por falta de espaço: nenhum tanque tem esse fluido (com ele
+     * e sem caber mais, está cheio), nenhum tanque vazio o aceita ({@link IFluidHandler#isFluidValid}; o que aceita
+     * e mesmo assim recusou está travado, como cheio) e há lugar para outros fluidos (um tanque vazio ou um com outro
+     * fluido abaixo da capacidade). O(tanques), só na recusa.
+     */
+    static boolean refusesFluid(IFluidHandler target, FluidStack fluid) {
+        boolean room = false;
+        for (int tank = 0, n = target.getTanks(); tank < n; tank++) {
+            FluidStack inTank = target.getFluidInTank(tank);
+            if (inTank.isEmpty()) {
+                if (target.isFluidValid(tank, fluid)) {
+                    return false;
+                }
+                room = true;
+            } else if (FluidStack.isSameFluidSameComponents(inTank, fluid)) {
+                return false;
+            } else if (inTank.getAmount() < target.getTankCapacity(tank)) {
+                room = true;
+            }
+        }
+        return room;
     }
 
     /** Drena até {@code amount} do fluido de {@code key} pelo lado que existir; devolve quanto saiu. */

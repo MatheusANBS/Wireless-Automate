@@ -82,6 +82,7 @@ public final class WirelessAutomate {
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onRegisterCommands);
         // Carga de chunk: acorda as máquinas remotas vinculadas nele e tira do índice de nós os roteadores que sumiram.
         NeoForge.EVENT_BUS.addListener(WirelessAutomate::onChunkLoad);
+        NeoForge.EVENT_BUS.addListener(WirelessAutomate::onChunkUnload);
         // Chunk mandado a um jogador: as artes das Telas dele vão de novo (o cliente montou a Tela do zero).
         NeoForge.EVENT_BUS.addListener(io.github.matheusanbs.wirelessautomate.tv.TvArtSender::onChunkSent);
         // Fim de toda recarga (botão do editor ou /reload): zera as pendências do editor de receitas.
@@ -176,6 +177,12 @@ public final class WirelessAutomate {
         if (event.getLevel() instanceof ServerLevel level) {
             RemoteIndex.get().chunkLoaded(level, event.getChunk());
             NodeIndex.chunkLoaded(level, event.getChunk());
+        }
+    }
+
+    private static void onChunkUnload(ChunkEvent.Unload event) {
+        if (event.getLevel() instanceof ServerLevel) {
+            RemoteIndex.chunkUnloaded();
         }
     }
 

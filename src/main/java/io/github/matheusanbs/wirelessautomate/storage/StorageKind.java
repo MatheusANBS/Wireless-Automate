@@ -14,22 +14,18 @@ import net.minecraft.util.StringRepresentable;
 public enum StorageKind implements StringRepresentable {
     /** Itens por tipo. */
     CHEST("storage_chest", "chestCapacity", ResourceType.ITEM, "items",
-            new long[] {32_768L, 262_144L, 2_097_152L, 16_777_216L, 134_217_728L, 1_073_741_824L,
-                    8_589_934_592L, 0L}),
-    /** Fluidos por tipo, em mB. */
+            StorageBalance.hourOf(ResourceType.ITEM.defaultRates())),
+    /** Fluidos por tipo, em mB. As capacidades do Baú e dos Tanques são uma hora da vazão do tier ({@link StorageBalance}). */
     TANK("storage_tank", "tankCapacity", ResourceType.FLUID, "mb",
-            new long[] {256_000L, 2_048_000L, 16_384_000L, 131_072_000L, 1_048_576_000L,
-                    8_388_608_000L, 67_108_864_000L, 0L}),
+            StorageBalance.hourOf(ResourceType.FLUID.defaultRates())),
     /** Energia, em FE: uma hora da geração máxima do Ressonador do tier ({@link EnergyBalance}); o Ultimate não tem limite. */
     BATTERY("storage_battery", "batteryCapacity", ResourceType.ENERGY, "fe", EnergyBalance.batteryTable()),
     /** Químicos do Mekanism por tipo, em mB. */
     CHEMICAL_TANK("storage_chemical_tank", "chemicalTankCapacity", ResourceType.CHEMICAL, "mb",
-            new long[] {256_000L, 2_048_000L, 16_384_000L, 131_072_000L, 1_048_576_000L,
-                    8_388_608_000L, 67_108_864_000L, 0L}),
+            StorageBalance.hourOf(ResourceType.CHEMICAL.defaultRates())),
     /** Source do Ars Nouveau. Só aparece (aba, JEI, receita) com o Ars; o bloco existe sempre. */
     SOURCE_TANK("storage_source_tank", "sourceTankCapacity", ResourceType.SOURCE, "source",
-            new long[] {10_000L, 80_000L, 640_000L, 5_120_000L, 40_960_000L, 327_680_000L,
-                    2_621_440_000L, 0L});
+            StorageBalance.hourOf(ResourceType.SOURCE.defaultRates()));
 
     /** Id do bloco e do item. */
     public final String id;
@@ -50,6 +46,11 @@ public enum StorageKind implements StringRepresentable {
 
     public long defaultCapacity(RouterTier tier) {
         return defaultCapacity[tier.ordinal()];
+    }
+
+    /** O mesmo de {@link #defaultCapacity} pela posição do tier (para a lógica pura e os testes sem o enum do bloco). */
+    public long defaultCapacityAt(int tierOrdinal) {
+        return defaultCapacity[tierOrdinal];
     }
 
     /** Guarda vários tipos (lista na tela e filtro de entrada): o Baú e os Tanques de fluido e químico; a Bateria e o Tanque de Source não. */

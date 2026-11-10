@@ -11,6 +11,8 @@ import io.github.matheusanbs.wirelessautomate.storage.BulkSource;
 import java.util.Arrays;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.TickTask;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.neoforge.capabilities.BlockCapability;
 import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
@@ -29,7 +31,11 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>Numa remota, toda consulta confere antes {@code level.isLoaded(pos)}: o cache de capability lê o
  * bloco quando está inválido, e ler um chunk descarregado o carrega à força. A presa está colada no
- * roteador e não precisa disso.
+ * roteador e não precisa disso. A resposta vale pelo resto do tick do servidor ({@link #loadedTick}): uma
+ * visita consulta a mesma remota várias vezes (o Baú do mod e o inventário, slot a slot), e o
+ * {@code isLoaded} é uma busca no mapa de chunks por consulta. Um chunk só descarrega no tick do
+ * {@code ChunkMap}, e a contagem de descargas ({@link RemoteIndex#chunkEpoch}) invalida a resposta guardada
+ * se alguma acontecer no meio do tick.
  *
  * <p>Cada cache avisa a própria invalidação ao roteador ({@link RouterBlockEntity#machineInvalidated})
  * com esta instância, o tipo e a face. Um cache de antes de um {@link #retarget} ou {@link #discard}
@@ -44,6 +50,13 @@ public final class MachineCaches {
     /** Muda a cada {@link #retarget}/{@link #discard}: os caches criados antes deixam de valer. */
     private int generation;
     private boolean discarded;
+    /** Um {@link #watchSoon} na fila do servidor, para não enfileirar outro no mesmo aviso. */
+    private boolean watchQueued;
+    /** O tick do servidor e a contagem de descargas em que {@link #loaded} foi lido; só numa remota. */
+    private long loadedTick = Long.MIN_VALUE;
+    private long loadedEpoch;
+    /** O chunk da remota estava carregado na leitura de {@link #loadedTick}. */
+    private boolean loaded;
 
     // Um arranjo por capability, [face absoluta], nulo até a primeira consulta daquela capability.
     private BlockCapabilityCache<IItemHandler, @Nullable Direction> @Nullable [] itemCaches;
@@ -126,6 +139,26 @@ public final class MachineCaches {
         items(Direction.UP);
     }
 
+    /**
+     * O {@link #watch} de dentro de um listener de invalidação: lá o {@code BlockCapabilityCache} não aceita consulta
+     * ({@code IllegalStateException}, que derruba o servidor), então ela vai para a fila do servidor e roda depois da
+     * troca do bloco, se os caches ainda valem.
+     */
+    public void watchSoon() {
+        if (watchQueued || discarded || !(router.getLevel() instanceof ServerLevel level)) {
+            return;
+        }
+        watchQueued = true;
+        int queued = generation;
+        MinecraftServer server = level.getServer();
+        server.tell(new TickTask(server.getTickCount(), () -> {
+            watchQueued = false;
+            if (generation == queued) {
+                watch();
+            }
+        }));
+    }
+
     /** Para GameTests: quantas capabilities já têm o arranjo das faces criado. */
     public int capabilityArraysForTests() {
         Object[][] all = {itemCaches, bulkItemCaches, bulkEnergyCaches, bulkFluidCaches, bulkSourceCaches, fluidCaches,
@@ -154,10 +187,22 @@ public final class MachineCaches {
             return null;
         }
         // Antes de tocar no cache: um cache inválido lê o bloco, e isso carregaria o chunk.
-        if (remote && !serverLevel.isLoaded(pos)) {
+        if (remote && !isLoaded(serverLevel)) {
             return null;
         }
         return serverLevel;
+    }
+
+    /** {@code level.isLoaded(pos)} lido uma vez por tick do servidor (ver a classe). */
+    private boolean isLoaded(ServerLevel serverLevel) {
+        long tick = serverLevel.getServer().getTickCount();
+        long epoch = RemoteIndex.chunkEpoch();
+        if (tick != loadedTick || epoch != loadedEpoch) {
+            loaded = serverLevel.isLoaded(pos);
+            loadedTick = tick;
+            loadedEpoch = epoch;
+        }
+        return loaded;
     }
 
     /** Inventário da máquina pela face {@code machineFace}. */

@@ -199,6 +199,45 @@ public final class RangeReplaceGameTests {
     }
 
     /**
+     * Quebrar a máquina vinculada com portas em várias faces não derruba o servidor: a quebra invalida todos os caches
+     * da posição de uma vez, e os avisos depois do primeiro (a máquina já trocada) voltam a vigiar fora do listener,
+     * onde o {@code BlockCapabilityCache} aceita a consulta. A fornalha de volta ainda refaz a porta.
+     */
+    @GameTest(template = "empty", timeoutTicks = 400)
+    public static void breakingLinkedMachineDoesNotCrash(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        var sequence = helper.startSequence()
+                .thenWaitUntil(() -> waitLoaded(helper, router))
+                .thenExecute(() -> {
+                    router.setRangeUpgrade(rangeUpgrade());
+                    linkInNetwork(helper, router, FURNACE_A);
+                    for (Direction side : Direction.values()) {
+                        profile(helper, router, FURNACE_A, side, PortMode.EXTRACT);
+                    }
+                });
+        for (int round = 0; round < 3; round++) {
+            int shown = round;
+            sequence = sequence
+                    .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, FURNACE_A, Direction.DOWN),
+                            "sem porta na volta " + shown))
+                    .thenExecute(() -> {
+                        // Como numa máquina com itens correndo: o cache de cada face já consultado e valendo.
+                        var caches = router.remoteCaches(helper.absolutePos(FURNACE_A));
+                        for (Direction face : Direction.values()) {
+                            caches.items(face);
+                        }
+                        helper.destroyBlock(FURNACE_A);
+                    })
+                    .thenWaitUntil(() -> helper.assertFalse(remotePort(helper, router, FURNACE_A, Direction.DOWN),
+                            "a quebrada continua com porta na volta " + shown))
+                    .thenExecute(() -> helper.setBlock(FURNACE_A,
+                            Blocks.FURNACE.defaultBlockState().setValue(AbstractFurnaceBlock.FACING, Direction.EAST)));
+        }
+        sequence.thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, FURNACE_A, Direction.DOWN),
+                "a fornalha voltou e a porta não")).thenSucceed();
+    }
+
+    /**
      * A releitura da montagem ({@code rereadRemote}) conta a marca de trocada que mudou, mesmo com a frente igual:
      * os outros tipos do nó também remontam.
      */

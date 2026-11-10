@@ -44,13 +44,13 @@ Não tem filtro: Source é uma só.
 
 | Tier | Source |
 | --- | --- |
-| **Básico** | 10.000 |
-| **Avançado** | 80.000 |
-| **Elite** | 640.000 |
-| **Esmeralda** | 5.120.000 |
-| **Allthemodium¹** | 40.960.000 |
-| **Vibranium¹** | 327.680.000 |
-| **Unobtainium¹** | 2.621.440.000 |
+| **Básico** | 3.600.000 |
+| **Avançado** | 28.800.000 |
+| **Elite** | 230.400.000 |
+| **Esmeralda** | 1.843.200.000 |
+| **Allthemodium¹** | 14.745.600.000 |
+| **Vibranium¹** | 117.964.800.000 |
+| **Unobtainium¹** | 943.718.400.000 |
 | **Ultimate** | Sem limite |
 
 ¹ Só com o mod Allthemodium.

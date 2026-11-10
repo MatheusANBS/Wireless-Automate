@@ -48,13 +48,13 @@ Total items, all types added up.
 
 | Tier | Items |
 | --- | --- |
-| **Basic** | 32,768 |
-| **Advanced** | 262,144 |
-| **Elite** | 2,097,152 |
-| **Emerald** | 16,777,216 |
-| **Allthemodium¹** | 134,217,728 |
-| **Vibranium¹** | 1,073,741,824 |
-| **Unobtainium¹** | 8,589,934,592 |
+| **Basic** | 115,200 |
+| **Advanced** | 921,600 |
+| **Elite** | 7,372,800 |
+| **Emerald** | 58,982,400 |
+| **Allthemodium¹** | 471,859,200 |
+| **Vibranium¹** | 3,774,873,600 |
+| **Unobtainium¹** | 30,198,988,800 |
 | **Ultimate** | Unlimited |
 
 ¹ Only with the Allthemodium mod.

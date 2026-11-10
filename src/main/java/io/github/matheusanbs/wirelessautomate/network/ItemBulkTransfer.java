@@ -109,7 +109,7 @@ final class ItemBulkTransfer {
                 tokens -= amount;
                 moved += amount;
                 if (tokens <= 0) {
-                    index = current;
+                    // Sem saldo: a próxima visita segue do tipo seguinte, como no ItemTransfer.
                     break;
                 }
             }

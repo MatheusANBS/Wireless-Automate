@@ -4,17 +4,17 @@ Comece por aqui para continuar o trabalho. Este arquivo é curto de propósito: 
 
 ## Agora
 
-- **Versão atual:** 2.15.0 (04/11/2026): presa no grupo, alcance com desvincular grupo e copiar/colar por máquina, Ctrl + clique do Vinculador (sem a área), o Afinador do Configurador, ícone de grupo no Tablet. Protocolo 49.
-- **Publicação:** a 2.14.0 está no CurseForge; a 2.15.0 tem release no GitHub com o jar e espera o dono subir no CurseForge e no Modrinth.
-- **Em andamento:** ramo `ccr-52410279-si07pg`: o destino seletivo no motor e as etapas 1 a 4 do roteador de alcance (a presa no grupo; desvincular o grupo, copiar e colar por máquina, Atualizar com cartões; o Afinador do Configurador, com as correções da auditoria pré-PR de 03/11; os menores das revisões) e o Ctrl + clique do Vinculador, feitos; falta o teste à mão do dono. O ramo `mc/1.20.1-forge` (porte) está parado à espera do ok do dono (`docs/portes.md`).
-- **Desenhado em 10/11, sem código:** a **Lixeira** (spec e mockup da tela aprovados, plano da etapa 1 em `docs/superpowers/plans/2026-11-10-lixeira-etapa-1.md`) e a **Doca de Padrões**, a peça de crafting da proposta de integração com o AE2 e o RS2 (`docs/superpowers/specs/2026-11-10-ae2-rs2-proposta.md`: mecânica, alcance e arte aprovados). Modelos e GIFs em `docs/preview/`. A identidade ganhou a regra dos blocos que trabalham (casco de porcelana, miolo escuro com luz na cor do tier). Duas correções de defeitos esperam merge no ramo `correcoes-renomear-e-float`.
+- **Versão atual:** 2.16.0 (08/11/2026): o balanceamento 6 (fluido e químico ×4, Source ×10, capacidades de uma hora, migração 6 da config) e as três correções do motor da auditoria de 08/11 (o cursor numa saída da máquina, o tanque seletivo, o `isLoaded` das remotas). Protocolo 49 (o mesmo da 2.15.0).
+- **Publicação:** a 2.14.0 está no CurseForge; no GitHub a última release é a v2.15.0 (a 2.14.0 e a 2.15.1 não têm release lá, apesar do que o histórico dizia). A 2.16.0 tem release com o jar e espera o dono subir no CurseForge e no Modrinth.
+- **Em andamento:** nada no código. A máquina faladeira (A13 do backlog da `wa-performance`) espera um cenário de bench antes da decisão. O ramo `mc/1.20.1-forge` (porte) está parado à espera do ok do dono (`docs/portes.md`).
+- **Desenhado em 10/11, sem código:** a **Lixeira** (spec e mockup da tela aprovados, plano da etapa 1 em `docs/superpowers/plans/2026-11-10-lixeira-etapa-1.md`) e a **Doca de Padrões**, a peça de crafting da proposta de integração com o AE2 e o RS2 (`docs/superpowers/specs/2026-11-10-ae2-rs2-proposta.md`: mecânica, alcance e arte aprovados). Modelos e GIFs em `docs/preview/`. A identidade ganhou a regra dos blocos que trabalham (casco de porcelana, miolo escuro com luz na cor do tier). Duas correções de defeitos esperam merge no ramo `correcoes-renomear-e-float`; foram feitas sobre a 2.15.0 e precisam ser conferidas contra a 2.16.0. O plano da Lixeira também cita a 2.15.0 (protocolo e números de linha): conferir antes de executar.
 
 ## Próximo passo
 
-1. O dono testa à mão as etapas 1 a 4 e o Ctrl + clique do Vinculador (listas nas linhas de 02/11 do histórico) e decide o merge.
-2. Reidealizar as telas do Tablet do zero (criação de redes etc.), mockup primeiro para o ok do dono.
-3. Subir a 2.15.0 no CurseForge e no Modrinth; refazer as imagens do Vinculador na vitrine (sem a área) e a do livro (ver `pendencias.md`).
-4. Os menores que sobraram do alcance (`pendencias.md`, seção "Roteador de alcance").
+1. Subir a 2.16.0 no CurseForge e no Modrinth (jar em `build/libs/`, texto em `docs/curseforge/changelog-2.16.0.md`); conferir no jogo que um mundo antigo migra a config na primeira carga.
+2. O dono testa à mão as etapas 1 a 4 do alcance e o Ctrl + clique do Vinculador (listas nas linhas de 02/11 do histórico), já no main.
+3. Reidealizar as telas do Tablet do zero (criação de redes etc.), mockup primeiro para o ok do dono.
+4. Refazer as imagens do Vinculador na vitrine (sem a área) e a do livro (ver `pendencias.md`). Os menores que sobraram do alcance (`pendencias.md`, seção "Roteador de alcance").
 5. **Lixeira:** executar o plano da etapa 1 (skill `wa-feature`, um subagente por tarefa) quando o dono der o ok; depois a etapa 2 (o anel, o cristal e o laço engolindo). **Doca de Padrões:** conferir os pontos de API listados na proposta e escrever a spec.
 
 ## Os arquivos

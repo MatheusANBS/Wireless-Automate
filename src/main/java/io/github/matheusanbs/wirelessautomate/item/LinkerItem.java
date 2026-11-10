@@ -1,6 +1,9 @@
 package io.github.matheusanbs.wirelessautomate.item;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import io.github.matheusanbs.wirelessautomate.dock.DockChoice;
+import io.github.matheusanbs.wirelessautomate.dock.DockLinks;
+import io.github.matheusanbs.wirelessautomate.dock.PatternDockBlockEntity;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerOpen;
@@ -37,6 +40,10 @@ import org.jetbrains.annotations.Nullable;
  * <p>Com uma Tela de Sinal escolhida ({@link ModDataComponents#LINKER_TV}, por um clique nela, que esquece o
  * roteador), o clique num armazenamento do mod o liga ou desliga da Tela ({@link TvLinks}).
  *
+ * <p>Com uma Doca de Padrões escolhida ({@link ModDataComponents#LINKER_DOCK}, por um clique numa face dela, que
+ * escolhe aquele lado e esquece o roteador e a Tela), o clique numa máquina a vincula ou desvincula daquele lado, e o
+ * Ctrl + clique faz o mesmo com as do mesmo bloco ({@link DockLinks}, {@code dock/DockSameBlock}).
+ *
  * <p><b>Abrir</b>: clique numa máquina abre a tela do roteador que chega nela ({@link LinkerOpen}).
  */
 public class LinkerItem extends Item {
@@ -50,7 +57,8 @@ public class LinkerItem extends Item {
 
     /**
      * O clique (sem Shift) num bloco é do Vinculador antes de ser do bloco (senão clicar numa fornalha a
-     * abriria). Vincular: num roteador, escolhe o roteador; em outro bloco, vincula ou desvincula a máquina.
+     * abriria). Vincular: num roteador, escolhe o roteador; numa Doca, escolhe a Doca e o lado clicado; em outro
+     * bloco, vincula ou desvincula a máquina (da Tela, da Doca ou do roteador escolhido).
      * Abrir: abre o roteador que chega na máquina. Shift + clique vai para o {@link #useOn}.
      */
     @Override
@@ -66,8 +74,12 @@ public class LinkerItem extends Item {
                 RangeLinks.choose(player, stack, router);
             } else if (level.getBlockEntity(context.getClickedPos()) instanceof TvBlockEntity tv) {
                 TvLinks.choose(player, stack, tv);
+            } else if (level.getBlockEntity(context.getClickedPos()) instanceof PatternDockBlockEntity dock) {
+                DockLinks.choose(player, stack, dock, context.getClickedFace().ordinal());
             } else if (tv(stack) != null) {
                 TvLinks.toggle(player, stack, context.getClickedPos());
+            } else if (dock(stack) != null) {
+                DockLinks.toggle(player, stack, context.getClickedPos());
             } else {
                 RangeLinks.toggle(player, stack, context.getClickedPos());
             }
@@ -94,9 +106,9 @@ public class LinkerItem extends Item {
     }
 
     /**
-     * No ar. Vincular: com Shift solta o roteador e a Tela escolhidos ({@link LinkerActions#release}); sem Shift
-     * mostra o que está escolhido ({@link LinkerActions#showChosen}). Abrir: explica o gesto. O modo se troca com
-     * Shift + roda do mouse ({@code client/HeldScrollHandler}).
+     * No ar. Vincular: com Shift solta o roteador, a Tela ou a Doca escolhidos ({@link LinkerActions#release}); sem
+     * Shift mostra o que está escolhido ({@link LinkerActions#showChosen}). Abrir: explica o gesto. O modo se troca
+     * com Shift + roda do mouse ({@code client/HeldScrollHandler}).
      */
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
@@ -113,7 +125,7 @@ public class LinkerItem extends Item {
         return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
     }
 
-    // ------------------------------------------------------------------ modo, roteador e Tela
+    // ------------------------------------------------------------------ modo, roteador, Tela e Doca
 
     /** Modo do Vinculador; sem o componente, Vincular. */
     public static LinkerMode mode(ItemStack stack) {
@@ -160,6 +172,20 @@ public class LinkerItem extends Item {
         }
     }
 
+    /** Doca de Padrões e lado escolhidos ao vincular; {@code null} se nenhuma. */
+    public static @Nullable DockChoice dock(ItemStack stack) {
+        return stack.get(ModDataComponents.LINKER_DOCK.get());
+    }
+
+    /** {@code null} esquece a Doca escolhida. */
+    public static void setDock(ItemStack stack, @Nullable DockChoice dock) {
+        if (dock == null) {
+            stack.remove(ModDataComponents.LINKER_DOCK.get());
+        } else {
+            stack.set(ModDataComponents.LINKER_DOCK.get(), dock);
+        }
+    }
+
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, context, tooltip, flag);
@@ -177,6 +203,11 @@ public class LinkerItem extends Item {
             if (tv != null) {
                 tooltip.add(Component.translatable(KEY + "tooltip.tv", LinkerActions.position(tv.pos()),
                         tv.dimension().location().toString()).withStyle(ChatFormatting.GRAY));
+            }
+            DockChoice dock = dock(stack);
+            if (dock != null) {
+                tooltip.add(Component.translatable(KEY + "tooltip.dock", LinkerActions.position(dock.pos().pos()),
+                        DockLinks.sideName(dock.side())).withStyle(ChatFormatting.GRAY));
             }
             tooltip.add(Component.translatable(KEY + "tooltip.link_click").withStyle(ChatFormatting.DARK_GRAY));
             tooltip.add(Component.translatable(KEY + "tooltip.same_block").withStyle(ChatFormatting.DARK_GRAY));

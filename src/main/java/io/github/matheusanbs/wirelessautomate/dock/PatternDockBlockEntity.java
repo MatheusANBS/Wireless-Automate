@@ -47,6 +47,9 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
     private final DockSide[] sides = new DockSide[SIDES];
     /** Todas as máquinas da Doca, pela posição ({@code BlockPos.asLong}). */
     private final Long2ObjectOpenHashMap<DockMachine> machineAt = new Long2ObjectOpenHashMap<>();
+    /** Dentro de um {@link #batchChanges}: os vínculos só marcam {@link #batchDirty}, e o registro é refeito no fim. */
+    private boolean batching;
+    private boolean batchDirty;
 
     public PatternDockBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.PATTERN_DOCK.get(), pos, state);
@@ -69,6 +72,38 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
     /** Quantas máquinas a Doca tem vinculadas, somando os seis lados (dentro do alcance ou não). */
     public int machineCount() {
         return machineAt.size();
+    }
+
+    /** Quantas máquinas estão ativas (no alcance e dentro do máximo): as vagas usadas, como na tela. */
+    public int activeCount() {
+        int count = 0;
+        for (DockMachine machine : machineAt.values()) {
+            if (machine.active()) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /**
+     * Roda {@code changes} (vários vínculos e desvínculos, como os do Ctrl + clique) refazendo o registro no índice e
+     * salvando uma vez só, no fim, em vez de uma vez por máquina.
+     */
+    public void batchChanges(Runnable changes) {
+        if (batching) {
+            changes.run();
+            return;
+        }
+        batching = true;
+        try {
+            changes.run();
+        } finally {
+            batching = false;
+            if (batchDirty) {
+                batchDirty = false;
+                linksChanged();
+            }
+        }
     }
 
     /**
@@ -132,6 +167,10 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
     }
 
     private void linksChanged() {
+        if (batching) {
+            batchDirty = true;
+            return;
+        }
         saveChanged();
         refreshIndex();
     }

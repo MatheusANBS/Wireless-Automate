@@ -1,6 +1,8 @@
 package io.github.matheusanbs.wirelessautomate.packet;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
+import io.github.matheusanbs.wirelessautomate.dock.DockSameBlock;
+import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.menu.MachineCopyPaste;
 import io.github.matheusanbs.wirelessautomate.menu.RouterEditHost;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
@@ -17,7 +19,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Os pacotes do roteador de alcance que mexem num grupo inteiro ou no perfil por máquina: Desvincular o grupo e
  * Copiar e Colar (com o Desfazer), e os avisos deles e do Atualizar; e o Ctrl + clique do Vinculador
- * ({@link LinkSameBlockPayload}, que confere o item na mão e não um menu). Os da tela agem só com um {@link RouterEditHost}
+ * ({@link LinkSameBlockPayload}, que confere o item na mão e não um menu, para o roteador ou a Doca escolhidos). Os da tela agem só com um {@link RouterEditHost}
  * aberto ({@link ModPayloads#host}), no alvo conferido.
  */
 public final class RangePayloads {
@@ -34,7 +36,16 @@ public final class RangePayloads {
         registrar.playToServer(MachinePastePayload.TYPE, MachinePastePayload.STREAM_CODEC,
                 (payload, context) -> handleMachinePaste(serverPlayer(context), payload));
         registrar.playToServer(LinkSameBlockPayload.TYPE, LinkSameBlockPayload.STREAM_CODEC,
-                (payload, context) -> SameBlockLinks.link(serverPlayer(context), payload.pos()));
+                (payload, context) -> handleSameBlock(serverPlayer(context), payload));
+    }
+
+    /** O Ctrl + clique vai à Doca quando o Vinculador na mão tem uma escolhida; senão, ao roteador escolhido. */
+    static void handleSameBlock(@Nullable ServerPlayer player, LinkSameBlockPayload payload) {
+        if (player != null && LinkerItem.dock(player.getMainHandItem()) != null) {
+            DockSameBlock.link(player, payload.pos());
+        } else {
+            SameBlockLinks.link(player, payload.pos());
+        }
     }
 
     private static @Nullable ServerPlayer serverPlayer(IPayloadContext context) {

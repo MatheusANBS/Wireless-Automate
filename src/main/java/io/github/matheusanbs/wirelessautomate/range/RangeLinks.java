@@ -140,6 +140,7 @@ public final class RangeLinks {
         }
         LinkerItem.setRouter(stack, GlobalPos.of(player.level().dimension(), router.getBlockPos()));
         LinkerItem.setTv(stack, null);
+        LinkerItem.setDock(stack, null);
         player.displayClientMessage(chosenText(router), true);
         return new Result(Status.CHOSEN, upgradeRefusal(router), 0, 0, 0, 0, 0, 0);
     }
@@ -205,7 +206,7 @@ public final class RangeLinks {
         return text;
     }
 
-    static void appendCount(MutableComponent text, String key, int count) {
+    public static void appendCount(MutableComponent text, String key, int count) {
         if (count > 0) {
             text.append(" · ").append(Component.translatable(KEY + key, count));
         }
@@ -322,7 +323,7 @@ public final class RangeLinks {
      * O jogador pode mexer em {@code pos}: constrói ({@code mayBuild}: o modo aventura e o espectador não) e o
      * {@code mayInteract} deixa (proteção do spawn, borda do mundo).
      */
-    static boolean mayEdit(ServerPlayer player, BlockPos pos) {
+    public static boolean mayEdit(ServerPlayer player, BlockPos pos) {
         return player.mayBuild() && player.serverLevel().mayInteract(player, pos);
     }
 

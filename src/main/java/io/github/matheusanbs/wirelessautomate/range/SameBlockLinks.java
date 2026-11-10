@@ -8,13 +8,13 @@ import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.range.RangeLinks.Result;
 import io.github.matheusanbs.wirelessautomate.range.RangeLinks.Status;
 import io.github.matheusanbs.wirelessautomate.range.RangeRules.LinkRefusal;
+import io.github.matheusanbs.wirelessautomate.range.SameBlockScan.Scan;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.fastutil.longs.LongSets;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.SectionPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
@@ -27,8 +27,6 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraft.world.level.chunk.LevelChunkSection;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -39,37 +37,16 @@ import org.jetbrains.annotations.Nullable;
  * uso normal e manda o pacote; aqui se refazem todas as conferências do clique (item, modo, distância do jogador ao
  * bloco, roteador escolhido, {@code mayBuild}/{@code mayInteract}, as recusas do {@link RangeLinks}).
  *
- * <p>Custo, só no clique: o cubo do raio em volta do roteador, só dos chunks carregados ({@code getChunkNow}), seção a
- * seção, pulando a seção cuja paleta não tem o bloco ({@code maybeHas}) e lendo só o estado de cada posição (sem block
- * entity, sem capability). As seções vão da mais perto para a mais longe; a varredura para quando já há candidatas
- * para as vagas e a próxima seção não tem como ter uma mais perto, ou quando lê {@link #MAX_READS} posições (o aviso
- * diz "mais longe não foi procurado"). A capability ({@link RangeLinks#isMachine}) e o evento de clique das proteções
+ * <p>Custo, só no clique: a varredura do {@link SameBlockScan} no cubo do raio em volta do roteador, com o teto
+ * {@link SameBlockScan#MAX_READS}. A capability ({@link RangeLinks#isMachine}) e o evento de clique das proteções
  * ({@link RangeLinks#clickAllowed}) só são conferidos nas que de fato seriam vinculadas.
  */
 public final class SameBlockLinks {
     private static final String KEY = "item.wirelessautomate.linker.range.same.";
-    /**
-     * Teto de posições lidas por clique: 32 seções inteiras, menos de 1 ms. O raio do tier vai até 64 (o cubo tem
-     * 129³ ≈ 2,1 milhões de posições), mas só as seções que têm o bloco na paleta são lidas.
-     */
-    public static final int MAX_READS = 32 * 4096;
     /** O descanso do Vinculador depois de um Ctrl + clique aceito pelo servidor (meio segundo). */
     public static final int COOLDOWN_TICKS = 10;
 
     private SameBlockLinks() {
-    }
-
-    /** O que a varredura achou, já sem as vinculadas, a presa e as protegidas pelo {@code mayInteract}. */
-    record Scan(LongArrayList candidates, int already, int protectedCount, int unloadedChunks, boolean complete,
-            boolean capped, int reads) {
-    }
-
-    /** O cubo do raio, cortado na altura do mundo; limites inclusivos. */
-    private record Box(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
-    }
-
-    /** Uma seção que cruza o cubo e tem o bloco na paleta, com a menor distância de Chebyshev dela ao roteador. */
-    private record Section(LevelChunkSection section, int x, int y, int z, int distance) {
     }
 
     /**
@@ -89,7 +66,7 @@ public final class SameBlockLinks {
                 || player.getCooldowns().isOnCooldown(stack.getItem())) {
             return null;
         }
-        // o descanso segura um cliente que mande o pacote em rajada: a varredura custa até MAX_READS posições
+        // o descanso segura um cliente que mande o pacote em rajada: a varredura custa até SameBlockScan.MAX_READS posições
         player.getCooldowns().addCooldown(stack.getItem(), COOLDOWN_TICKS);
         RouterBlockEntity router = RangeLinks.chosen(player, stack);
         if (router == null) {
@@ -201,139 +178,16 @@ public final class SameBlockLinks {
     }
 
     /**
-     * As posições de {@code block} no cubo do raio do roteador que podem entrar, em ordem de distância (empate pela
-     * posição). Para quando já há {@code needed} candidatas e nenhuma seção que falta tem como ter uma mais perto que a
-     * {@code needed}-ésima.
+     * As posições de {@code block} no cubo do raio do roteador que podem entrar ({@link SameBlockScan}): as já
+     * vinculadas contam em {@code already} e a presa fica de fora.
      */
     static Scan scan(ServerPlayer player, RouterBlockEntity router, Block block, int needed) {
-        ServerLevel level = player.serverLevel();
-        BlockPos origin = router.getBlockPos();
-        int radius = RangeLinks.radius(router);
-        Box box = new Box(origin.getX() - radius, Math.max(level.getMinBuildHeight(), origin.getY() - radius),
-                origin.getZ() - radius, origin.getX() + radius,
-                Math.min(level.getMaxBuildHeight() - 1, origin.getY() + radius), origin.getZ() + radius);
-        int[] unloaded = new int[1];
-        List<Section> sections = sections(level, origin, box, block, unloaded);
-
         LongOpenHashSet linked = new LongOpenHashSet();
         for (RemoteMachine machine : router.remoteMachines().machines()) {
             linked.add(machine.pos().asLong());
         }
-        long attached = router.machinePos().asLong();
-        LongArrayList candidates = new LongArrayList();
-        // quantas candidatas há em cada distância: a needed-ésima mais perto sem ordenar a lista a cada seção
-        int[] atDistance = new int[radius + 1];
-        int already = 0;
-        int protectedCount = 0;
-        int reads = 0;
-        boolean complete = true;
-        boolean capped = false;
-        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
-        scan:
-        for (Section entry : sections) {
-            if (candidates.size() >= needed && entry.distance() > neededDistance(atDistance, needed)) {
-                complete = false;
-                break;
-            }
-            int x0 = Math.max(box.minX(), SectionPos.sectionToBlockCoord(entry.x()));
-            int x1 = Math.min(box.maxX(), SectionPos.sectionToBlockCoord(entry.x(), 15));
-            int y0 = Math.max(box.minY(), SectionPos.sectionToBlockCoord(entry.y()));
-            int y1 = Math.min(box.maxY(), SectionPos.sectionToBlockCoord(entry.y(), 15));
-            int z0 = Math.max(box.minZ(), SectionPos.sectionToBlockCoord(entry.z()));
-            int z1 = Math.min(box.maxZ(), SectionPos.sectionToBlockCoord(entry.z(), 15));
-            for (int y = y0; y <= y1; y++) {
-                for (int z = z0; z <= z1; z++) {
-                    for (int x = x0; x <= x1; x++) {
-                        if (++reads > MAX_READS) {
-                            complete = false;
-                            capped = true;
-                            break scan;
-                        }
-                        if (!entry.section().getBlockState(x & 15, y & 15, z & 15).is(block)) {
-                            continue;
-                        }
-                        long key = BlockPos.asLong(x, y, z);
-                        if (key == attached) {
-                            continue;
-                        }
-                        if (linked.contains(key)) {
-                            already++;
-                        } else if (!level.mayInteract(player, cursor.set(x, y, z))) {
-                            protectedCount++;
-                        } else {
-                            candidates.add(key);
-                            atDistance[RangeRules.chebyshev(origin.getX(), origin.getY(), origin.getZ(), x, y, z)]++;
-                        }
-                    }
-                }
-            }
-        }
-        sortByDistance(candidates, origin);
-        return new Scan(candidates, already, protectedCount, unloaded[0], complete, capped, Math.min(reads, MAX_READS));
-    }
-
-    /**
-     * As seções dos chunks carregados que cruzam {@code box} e têm {@code block} na paleta, da mais perto de
-     * {@code origin} para a mais longe; {@code unloaded[0]} conta os chunks descarregados (que não são lidos).
-     */
-    private static List<Section> sections(ServerLevel level, BlockPos origin, Box box, Block block, int[] unloaded) {
-        List<Section> sections = new ArrayList<>();
-        for (int cx = SectionPos.blockToSectionCoord(box.minX()); cx <= SectionPos.blockToSectionCoord(box.maxX()); cx++) {
-            for (int cz = SectionPos.blockToSectionCoord(box.minZ()); cz <= SectionPos.blockToSectionCoord(box.maxZ());
-                    cz++) {
-                LevelChunk chunk = level.getChunkSource().getChunkNow(cx, cz);
-                if (chunk == null) {
-                    unloaded[0]++;
-                    continue;
-                }
-                for (int sy = SectionPos.blockToSectionCoord(box.minY()); sy <= SectionPos.blockToSectionCoord(box.maxY());
-                        sy++) {
-                    LevelChunkSection section = chunk.getSection(chunk.getSectionIndexFromSectionY(sy));
-                    if (section.hasOnlyAir() || !section.maybeHas(state -> state.is(block))) {
-                        continue;
-                    }
-                    sections.add(new Section(section, cx, sy, cz, sectionDistance(origin, cx, sy, cz)));
-                }
-            }
-        }
-        sections.sort(Comparator.comparingInt(Section::distance));
-        return sections;
-    }
-
-    /** A distância da {@code needed}-ésima candidata mais perto, pela contagem por distância. */
-    private static int neededDistance(int[] atDistance, int needed) {
-        int seen = 0;
-        for (int d = 0; d < atDistance.length; d++) {
-            seen += atDistance[d];
-            if (seen >= needed) {
-                return d;
-            }
-        }
-        return atDistance.length;
-    }
-
-    /** A menor distância de Chebyshev de {@code origin} a algum bloco da seção. */
-    private static int sectionDistance(BlockPos origin, int sx, int sy, int sz) {
-        return Math.max(axisDistance(origin.getX(), sx), Math.max(axisDistance(origin.getY(), sy),
-                axisDistance(origin.getZ(), sz)));
-    }
-
-    private static int axisDistance(int coord, int section) {
-        int min = SectionPos.sectionToBlockCoord(section);
-        int max = min + 15;
-        return coord < min ? min - coord : coord > max ? coord - max : 0;
-    }
-
-    private static int distance(BlockPos origin, long pos) {
-        return RangeRules.chebyshev(origin.getX(), origin.getY(), origin.getZ(), BlockPos.getX(pos),
-                BlockPos.getY(pos), BlockPos.getZ(pos));
-    }
-
-    private static void sortByDistance(LongArrayList positions, BlockPos origin) {
-        positions.sort((a, b) -> {
-            int byDistance = Integer.compare(distance(origin, a), distance(origin, b));
-            return byDistance != 0 ? byDistance : Long.compare(a, b);
-        });
+        return SameBlockScan.scan(player, router.getBlockPos(), RangeLinks.radius(router), block, linked,
+                LongSets.singleton(router.machinePos().asLong()), needed);
     }
 
     // ------------------------------------------------------------------ mensagens
@@ -371,7 +225,7 @@ public final class SameBlockLinks {
      * O nome no plural ({@code Fornalhas}) se o idioma tem a chave
      * {@code item.wirelessautomate.linker.range.same.plural.<mod>.<bloco>}; senão {@code × Fornalha}.
      */
-    static Component plural(Block block, Component single) {
+    public static Component plural(Block block, Component single) {
         ResourceLocation id = BuiltInRegistries.BLOCK.getKey(block);
         String key = KEY + "plural." + id.getNamespace() + "." + id.getPath();
         return Language.getInstance().has(key) ? Component.translatable(key)

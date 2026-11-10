@@ -1,6 +1,6 @@
 # Lixeira (spec)
 
-Estado: **visual aprovado pelo dono em 10/11/2026**, na segunda versão: a forma escolhida entre as quatro primeiras, refeita no mesmo dia nos moldes da Doca de Padrões (casco de porcelana, miolo escuro com luz na cor do tier, laços que emendam). A mecânica abaixo é **proposta**: cada decisão marcada com (a aprovar) espera o ok do dono antes do plano. Nada implementado.
+Estado: **visual e mecânica aprovados pelo dono em 10/11/2026.** O visual, na segunda versão (a forma escolhida entre as quatro primeiras, refeita no mesmo dia nos moldes da Doca de Padrões: casco de porcelana, miolo escuro com luz, laços que emendam). A mecânica, pelas respostas da seção "Respostas do dono"; o que ainda está marcado com (a aprovar) espera o mockup da tela. Nada implementado.
 
 ## Motivação
 
@@ -8,19 +8,19 @@ Pedido do dono de 14/10/2026 (`docs/progresso/pendencias.md`, Ideias): um bloco 
 
 ## Decisões
 
-1. **Um bloco só, sem tier** (a aprovar). Some com os cinco recursos pelo mesmo bloco; não há capacidade nem vazão para escalar por tier. Id proposto `wirelessautomate:trash`, nome "Lixeira" / "Trash Bin" (a aprovar).
-2. **Aceita tudo, não guarda nada.** Cada capability aceita a quantidade inteira pedida e descarta; nada sai (extração sempre vazia, comparador sempre 0).
-3. **Cinco capabilities, registradas por bloco** (`event.registerBlock`, com handlers sem estado, um objeto por tipo para todas as Lixeiras). É o padrão que o bench já usa nos sumidouros (`bench/BenchCapabilities`: `ItemVoid`, `FluidVoid`, `EnergyVoid`); as classes da Lixeira são de produção, em pacote próprio (`trash/`), e o bench pode passar a usá-las.
+1. **Um bloco só, sem tier.** Some com os cinco recursos pelo mesmo bloco; não há capacidade nem vazão para escalar por tier. Id `wirelessautomate:trash`, nome "Lixeira" / "Trash Bin" (decisão do dono, 10/11/2026).
+2. **Aceita tudo o que está ligado, não guarda nada.** Cada capability de um tipo ligado na tela aceita a quantidade inteira pedida e descarta; nada sai (extração sempre vazia, comparador sempre 0).
+3. **Cinco capabilities, registradas por bloco** (`event.registerBlock`), com handlers que não guardam recurso (um objeto por tipo para todas as Lixeiras); o provedor só devolve o handler se o tipo está ligado na tela (seção "A tela"). É o padrão que o bench já usa nos sumidouros (`bench/BenchCapabilities`: `ItemVoid`, `FluidVoid`, `EnergyVoid`); as classes da Lixeira são de produção, em pacote próprio (`trash/`), e o bench pode passar a usá-las.
    - Itens: `Capabilities.ItemHandler.BLOCK` e a visão `BulkItems` (o roteador entrega em `long`, sem o limite de uma pilha por chamada).
    - Fluidos: `Capabilities.FluidHandler.BLOCK` e `BulkFluids`.
    - Energia: `Capabilities.EnergyStorage.BLOCK` e `BulkEnergy`.
    - Químicos: só com o Mekanism, registrada em `compat/mekanism` (a regra do `CLAUDE.md`: nenhum tipo do Mekanism fora de lá).
    - Source: só com o Ars Nouveau, em `compat/arsnouveau`, com a `BulkSource`.
-4. **Sem filtro na primeira etapa** (a aprovar). O filtro que protege de jogar fora a coisa errada já existe na face do roteador. Um filtro de entrada próprio (o `StorageFilterTarget` dos armazenamentos) fica para uma etapa 2, se o dono quiser.
-5. **Sem tela na primeira etapa** (a aprovar). Clique com a mão vazia não abre nada. Um contador do que foi descartado fica fora de escopo (teria de ser salvo e sincronizado).
+4. **Sem filtro próprio** (decisão do dono, 10/11/2026). O filtro que protege de jogar fora a coisa errada é o da face do roteador; o que a Lixeira tem é a chave de liga e desliga por tipo.
+5. **Tem tela, com uma chave por tipo** (decisão do dono, 10/11/2026; seção "A tela"). Sem contador do que foi descartado.
 6. **Todos os lados iguais.** Sem `facing`: o modelo é simétrico nas quatro laterais.
 7. **A luz é da cor do Ultimate** (decisão do dono, 10/11/2026): como a Lixeira não tem tier, o circuito, o vórtice e o cristal usam a lente do Ultimate (`#7B4FE0`, brilho `#C7B0FA`, sombra `#4A2C92`, de `scripts/textures/identidade.py`), sempre.
-8. **Receita, textura na paleta do mod e página do guia** entram na etapa da mecânica; a receita é a aprovar (sugestão: um balde de lava, quatro Ligas de Sinal e um Cristal de Sinal, a conferir com os itens que existem).
+8. **A receita fica para o balanceamento das receitas** e **a textura fica como atlas pintado** (decisões do dono, 10/11/2026); a página do guia entra na etapa da mecânica.
 
 ## Modelo 3D
 
@@ -37,7 +37,7 @@ Segue a regra da identidade para os blocos que trabalham (`docs/identidade-visua
 Para virar bloco:
 
 - **A base** passa pelo `scripts/textures/bbmodel_json.py`, que espera o formato `java_block`: converter o projeto (ou só o grupo `base`) antes. Todas as caixas da base são alinhadas aos eixos e cabem em 0 a 16 (as escotilhas e os parafusos saem até 0,4 da face: conferir o limite na conversão).
-- **A paleta é a do mod** (`scripts/textures/identidade.py`): porcelana, grafite, coral, latão e a lente do tier. Falta decidir se a textura passa a ser gerada pelo script ou fica como atlas pintado, como o Reparador e a Tela.
+- **A paleta é a do mod** (`scripts/textures/identidade.py`): porcelana, grafite, coral, latão e a lente do Ultimate. A textura fica como atlas pintado, convertido como o do Reparador e o da Tela (decisão do dono, 10/11/2026).
 - **O circuito e o vórtice** levam o `neoforge_data` de luz cheia que o conversor já sabe gravar, para brilhar no escuro.
 - **Colisão:** caixa cheia de 0 a 13 e os quatro pilares de 13 a 16 (a aprovar; a alternativa é o cubo cheio).
 - **O cristal passa do topo do bloco** (chega a y 19 parado e a uns 21 no pico do engolir): o renderer precisa do `getRenderBoundingBox` maior, como os do Reparador, do Ressonador e da Tela.
@@ -73,37 +73,58 @@ Entre 1,0 e 4,0 s o anel dá uma volta a mais e o cristal duas, sobre o giro con
 - **Circuito das paredes:** o desenho é fixo; o brilho de cada traço oscila entre a sombra, a lente e o brilho do Ultimate, numa onda que cruza a face na diagonal a cada 3 segundos. É a mesma técnica da Doca (textura animada `.mcmeta`, custo zero).
 - **Vórtice do fundo:** três braços na cor do Ultimate girando, uma volta a cada 3 segundos.
 
-**Quando o engolindo toca** (a aprovar): enquanto a Lixeira estiver descartando alguma coisa, com o laço sempre terminando a volta que começou. Sem descarte, o repouso.
+**Quando o engolindo toca** (decisão do dono, 10/11/2026): enquanto a Lixeira estiver descartando alguma coisa, com o laço sempre terminando a volta que começou. Sem descarte, o repouso.
+
+## A tela
+
+Decisão do dono (10/11/2026): a Lixeira é para tudo (itens, fluidos, energia, químicos e Source) e tem uma tela própria com **uma chave de liga e desliga por tipo**. Mais nada: sem filtro por tipo e sem contador.
+
+- **Cinco chaves**, uma por recurso, com o ícone de tipo do mod (`ResourceStyle`). Químicos e Source só aparecem com o Mekanism e o Ars Nouveau instalados (`LoadedTypes`).
+- **Ligado, a Lixeira aceita e descarta aquele tipo. Desligado, ela não oferece a capability dele:** para o roteador, o funil ou o cabo, é como se o bloco não aceitasse aquele recurso. Assim uma Lixeira numa rede de itens não drena a energia de quem estiver ligado nela.
+- **Como nasce** (a aprovar): com os cinco tipos ligados, que é o pedido original ("lixeira para tudo"). A alternativa mais segura é nascer tudo desligado, para ninguém perder recurso ao colocar o bloco; fica para o dono decidir no mockup.
+- **Abre com clique direito**, de mão vazia ou não, como os armazenamentos.
+- **Mockup antes do plano:** a tela pede o mockup em artifact para o dono aprovar (skill `wa-feature`), no estilo das telas do mod.
 
 ## Custo de performance (lei por lei)
 
-- **Nada de tick por bloco.** A Lixeira não tem ticker no servidor. Os handlers não têm estado.
-- **Sem busca de capability por tick.** O roteador chega nela pelo `BlockCapabilityCache`, como em qualquer máquina.
-- **Nada sincronizado com a tela fechada.** Não há tela nem contador. O único aviso ao cliente é o de entrar e sair do laço engolindo: um evento de bloco (`level.blockEvent`), que o jogo só manda a quem está perto, no máximo um a cada 120 ticks por bloco (a duração do laço). O limite pede um campo de "último aviso" por Lixeira: um block entity sem ticker e sem NBT, que o renderer também usa (a aprovar; a alternativa é só o repouso, sem block entity de estado). O circuito e o vórtice são textura animada e não pedem aviso nenhum.
+- **Nada de tick por bloco.** A Lixeira não tem ticker no servidor. Os handlers não guardam recurso nenhum.
+- **Sem busca de capability por tick.** O roteador chega nela pelo `BlockCapabilityCache`, como em qualquer máquina. Trocar uma chave na tela invalida as capabilities do bloco uma vez (`level.invalidateCapabilities`), e o cache de quem está ligado nela se refaz sozinho.
+- **Estado por bloco:** as cinco chaves (cinco bits) num block entity sem ticker, salvas no NBT e levadas no item ao quebrar. O provedor da capability lê o bit do tipo e devolve o handler comum (um objeto por tipo para todas as Lixeiras) ou nada.
+- **Nada sincronizado com a tela fechada.** A tela mostra só as cinco chaves, que vão na abertura do menu; cada clique é um pedido pequeno ao servidor, e a resposta só vai para quem está com a tela aberta. O único aviso com a tela fechada é o de entrar e sair do laço engolindo: um evento de bloco (`level.blockEvent`), que o jogo só manda a quem está perto, no máximo um a cada 120 ticks por bloco (a duração do laço), com um campo de "último aviso" no mesmo block entity. O circuito e o vórtice são textura animada e não pedem aviso nenhum.
 - **Motor:** um destino que sempre aceita nunca dorme como cheio, então uma Lixeira numa rede recebe todo tick enquanto houver origem com recurso. É o comportamento pedido, mas o guia precisa dizer para pôr a face dela na menor prioridade, senão ela disputa com os destinos de verdade. Medir no bench um cenário com Lixeira como transbordo antes de fechar.
 - **Cliente:** o renderer desenha 5 caixas (4 do anel e o cristal), sem alocar por quadro, e só a menos de 64 blocos. Além dessa distância fica só o modelo estático.
-- **Memória:** nada por bloco além do campo do último aviso.
+- **Protocolo:** a tela traz um menu e um payload novos, logo `ModPayloads.VERSION` sobe.
 
 ## Testes
 
-- **GameTests** (lote comum): um roteador com a face numa rede entrega itens, fluidos e energia à Lixeira e a origem esvazia; a Lixeira nunca devolve nada (extração vazia nas três capabilities); com um destino de prioridade maior na mesma rede, ele enche antes de a Lixeira receber; funil em cima entrega itens.
+- **GameTests** (lote comum): um roteador com a face numa rede entrega itens, fluidos e energia à Lixeira e a origem esvazia; a Lixeira nunca devolve nada (extração vazia nas três capabilities); com um destino de prioridade maior na mesma rede, ele enche antes de a Lixeira receber; funil em cima entrega itens; com um tipo desligado na tela, a capability dele some e o roteador para de entregar aquele tipo, e volta ao religar; as chaves sobrevivem a quebrar e recolocar o bloco.
 - **Runs dos opcionais:** o mesmo para químicos (`runGameTestServerChemicals`) e Source (`runGameTestServerSource`). O `runGameTestServer`, sem o Mekanism e sem o Ars, prova que o bloco carrega sem eles.
-- **e2e:** uma captura do bloco parado e uma no meio do engolir, com o tempo parado, para comparar com os GIFs.
+- **e2e:** a tela (abrir, desligar e religar um tipo, nos dois temas) e duas capturas do bloco, uma em repouso e uma no meio do engolindo, com o tempo parado, para comparar com os GIFs.
 
 ## Etapas
 
-1. **Mecânica e bloco:** bloco, as cinco capabilities, modelo estático da base, receita, traduções nos dois idiomas, loot table, tag de picareta, página do guia, JEI (informação), GameTests nas três runs, bench do transbordo.
-2. **Animação:** o renderer do anel e do cristal (skill `wa-shaders`), o evento do engolir e o e2e das capturas.
-3. **Opcional, se o dono quiser:** filtro de entrada próprio e tela.
+1. **Mecânica, bloco e tela:** bloco, block entity com as cinco chaves, as cinco capabilities, menu, tela e payload, modelo estático da base, traduções nos dois idiomas, loot table, tag de picareta, página do guia, JEI (informação), GameTests nas três runs, e2e da tela, bench do transbordo. A receita entra no balanceamento.
+2. **Animação:** o renderer do anel e do cristal (skill `wa-shaders`), o evento do laço engolindo e o e2e das capturas.
 
 ## Fora de escopo
 
-Tiers; contador do que foi descartado; lixeira como item de mão ou upgrade de outro bloco; efeitos por fora do bloco no engolir.
+Tiers; filtro por tipo; contador do que foi descartado; lixeira como item de mão ou upgrade de outro bloco; efeitos por fora do bloco no engolindo; a Lixeira no Tablet.
 
-## Perguntas em aberto para o dono
+## Respostas do dono (10/11/2026) e o que falta
 
-1. Id e nome do bloco (`trash`, "Lixeira" / "Trash Bin")?
-2. O laço engolindo toca enquanto houver descarte, ou só o repouso basta?
-3. Filtro de entrada próprio já na primeira versão, ou só o da face do roteador?
-4. A receita.
-5. A textura fica como atlas pintado ou passa a sair do `gerar_texturas.py`?
+Perguntadas uma a uma no fim da sessão de 10/11:
+
+| Pergunta | Resposta |
+| --- | --- |
+| Id e nome | `wirelessautomate:trash`, "Lixeira" / "Trash Bin" |
+| Quando o engolindo toca | Enquanto a Lixeira estiver descartando; no resto do tempo, o repouso |
+| Filtro próprio | Não. No lugar, uma tela com liga e desliga por tipo (a Lixeira é para os cinco recursos) |
+| Receita | Fica para o balanceamento das receitas |
+| Textura | Atlas pintado, como o Reparador e a Tela de Sinal |
+| Cor da luz | A da lente do Ultimate |
+
+Falta, antes do plano:
+
+1. O mockup da tela, para o dono aprovar.
+2. Se a Lixeira nasce com os cinco tipos ligados ou desligados (seção "A tela").
+3. A colisão: caixa de 0 a 13 mais os pilares, ou cubo cheio.

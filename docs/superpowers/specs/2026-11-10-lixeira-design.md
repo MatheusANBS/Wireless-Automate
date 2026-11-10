@@ -19,19 +19,20 @@ Pedido do dono de 14/10/2026 (`docs/progresso/pendencias.md`, Ideias): um bloco 
 4. **Sem filtro na primeira etapa** (a aprovar). O filtro que protege de jogar fora a coisa errada já existe na face do roteador. Um filtro de entrada próprio (o `StorageFilterTarget` dos armazenamentos) fica para uma etapa 2, se o dono quiser.
 5. **Sem tela na primeira etapa** (a aprovar). Clique com a mão vazia não abre nada. Um contador do que foi descartado fica fora de escopo (teria de ser salvo e sincronizado).
 6. **Todos os lados iguais.** Sem `facing`: o modelo é simétrico nas quatro laterais.
-7. **Receita, textura na paleta do mod e página do guia** entram na etapa da mecânica; a receita é a aprovar (sugestão: um balde de lava, quatro Ligas de Sinal e um Cristal de Sinal, a conferir com os itens que existem).
+7. **A luz é da cor do Ultimate** (decisão do dono, 10/11/2026): como a Lixeira não tem tier, o circuito, o vórtice e o cristal usam a lente do Ultimate (`#7B4FE0`, brilho `#C7B0FA`, sombra `#4A2C92`, de `scripts/textures/identidade.py`), sempre.
+8. **Receita, textura na paleta do mod e página do guia** entram na etapa da mecânica; a receita é a aprovar (sugestão: um balde de lava, quatro Ligas de Sinal e um Cristal de Sinal, a conferir com os itens que existem).
 
 ## Modelo 3D
 
 Pronto no Blockbench: `docs/preview/lixeira.bbmodel` (formato genérico, 43 caixas em três grupos, atlas 64 × 64 embutido, também em `docs/preview/lixeira-textura.png`). As coordenadas do arquivo têm o bloco centrado em x e z (-8 a 8); no jogo, somar 8.
 
-Segue a regra da identidade para os blocos que trabalham (`docs/identidade-visual.md`): **casco de porcelana, miolo escuro com luz na cor do tier**.
+Segue a regra da identidade para os blocos que trabalham (`docs/identidade-visual.md`): **casco de porcelana, miolo escuro com luz**. Como a Lixeira não tem tier, a luz é a da lente do Ultimate.
 
 | Grupo | Caixas | O que é | No jogo |
 | --- | --- | --- | --- |
 | `base` | 38 | Piso (y 0 a 4) com a faixa de alerta coral e grafite; quatro paredes (4 a 11) com montantes de porcelana nos cantos e o painel escuro com o circuito de luz; borda de porcelana saliente para dentro (11 a 13) com a linha coral embaixo e um rebite de latão no meio de cada lado; quatro pilares de porcelana de 3 × 3 (13 a 16); em cada parede, uma escotilha de grafite saliente com fenda e quatro parafusos de latão; a placa do vórtice no fundo (y 4 a 5) | Modelo de bloco, estático; o circuito e o vórtice são a parte animada da textura |
 | `anel` | 4 | Moldura quadrada de latão de 7 × 7, 1 de altura, em y 14,5 a 15,5; pivô (0, 15, 0) | Block entity renderer |
-| `nucleo` | 1 | Cristal na cor da lente do tier: cubo de 2,6 em pé sobre a ponta (rotação 45°, 0°, 35,264°), centro em y 16,5 | Block entity renderer |
+| `nucleo` | 1 | Cristal na cor da lente do Ultimate: cubo de 2,6 em pé sobre a ponta (rotação 45°, 0°, 35,264°), centro em y 16,5 | Block entity renderer |
 
 Para virar bloco:
 
@@ -69,8 +70,8 @@ Entre 1,0 e 4,0 s o anel dá uma volta a mais e o cristal duas, sobre o giro con
 
 **Textura animada (nos dois laços):**
 
-- **Circuito das paredes:** o desenho é fixo; o brilho de cada traço oscila entre a sombra, a lente e o brilho da cor do tier, numa onda que cruza a face na diagonal a cada 3 segundos. É a mesma técnica da Doca (textura animada `.mcmeta`, custo zero).
-- **Vórtice do fundo:** três braços na cor do tier girando, uma volta a cada 3 segundos.
+- **Circuito das paredes:** o desenho é fixo; o brilho de cada traço oscila entre a sombra, a lente e o brilho do Ultimate, numa onda que cruza a face na diagonal a cada 3 segundos. É a mesma técnica da Doca (textura animada `.mcmeta`, custo zero).
+- **Vórtice do fundo:** três braços na cor do Ultimate girando, uma volta a cada 3 segundos.
 
 **Quando o engolindo toca** (a aprovar): enquanto a Lixeira estiver descartando alguma coisa, com o laço sempre terminando a volta que começou. Sem descarte, o repouso.
 
@@ -106,4 +107,3 @@ Tiers; contador do que foi descartado; lixeira como item de mão ou upgrade de o
 3. Filtro de entrada próprio já na primeira versão, ou só o da face do roteador?
 4. A receita.
 5. A textura fica como atlas pintado ou passa a sair do `gerar_texturas.py`?
-6. A cor da luz: a Lixeira foi proposta sem tier, e o circuito, o vórtice e o cristal usam a cor da lente de um tier (o Elite, na demonstração). Uma cor fixa, ou a Lixeira passa a ter tier?

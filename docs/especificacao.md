@@ -34,18 +34,20 @@ Cinco tiers (oito com o Allthemodium), ×8 por degrau. Os tiers feitos com itens
 
 | Tier | Itens/s | Fluido e químico (mB/s) | Energia (FE/t) | Source/s | Alcance |
 | --- | --- | --- | --- | --- | --- |
-| Básico | 32 | 2.000 | 1.000 | 100 | 64 blocos |
-| Avançado | 256 | 16.000 | 32.768² | 800 | 512 blocos |
-| Elite | 2.048 | 128.000 | 64.000 | 6.400 | Dimensão inteira |
-| Esmeralda | 16.384 | 1.024.000 | 2.097.152² | 51.200 | Entre dimensões |
-| Allthemodium¹ | 131.072 | 8.192.000 | 67.108.864² | 409.600 | Entre dimensões |
-| Vibranium¹ | 1.048.576 | 65.536.000 | 134.217.728² | 3.276.800 | Entre dimensões |
-| Unobtainium¹ | 8.388.608 | 524.288.000 | 4.294.967.296² | 26.214.400 | Entre dimensões |
+| Básico | 32 | 8.000 | 1.000 | 1.000 | 64 blocos |
+| Avançado | 256 | 64.000 | 32.768² | 8.000 | 512 blocos |
+| Elite | 2.048 | 512.000 | 64.000 | 64.000 | Dimensão inteira |
+| Esmeralda | 16.384 | 4.096.000 | 2.097.152² | 512.000 | Entre dimensões |
+| Allthemodium¹ | 131.072 | 32.768.000 | 67.108.864² | 4.096.000 | Entre dimensões |
+| Vibranium¹ | 1.048.576 | 262.144.000 | 134.217.728² | 32.768.000 | Entre dimensões |
+| Unobtainium¹ | 8.388.608 | 2.097.152.000 | 4.294.967.296² | 262.144.000 | Entre dimensões |
 | Ultimate | Sem limite | Sem limite | Sem limite | Sem limite | Entre dimensões |
 
 ¹ Só com o mod Allthemodium; sem ele, a Esmeralda sobe direto para o Ultimate.
 
 ² A energia não segue o ×8: cada tier escoa por uma face a geração cheia do Ressonador de Sinal do mesmo tier (rebalanceamento de 21/10/2026, migração 3 da config; o Básico e o Elite já cobriam e ficaram).
+
+Fluido e químico partem do cano básico do Mekanism (8.000 mB/s = 400 mB/t) e a Source do Source Relay do Ars Nouveau (1.000/s, lido no código dele: 1.000 a cada 20 ticks; o Splitter move 2.500/s), ×8 por degrau (balanceamento 6, de 08/11/2026, migração 6 da config; análise em `docs/superpowers/specs/2026-11-08-balanceamento-vazao-analise.md`).
 
 A Source (Ars Nouveau) é opcional: sem filtro e sem cartões, como a energia; a vazão é a chave `sourcePerSecond` da config.
 
@@ -217,17 +219,17 @@ Decisões do dono (8/10/2026):
 - **O roteador continua sendo colocado na face, como em qualquer máquina.** Ele reconhece o armazenamento do mod e usa o atalho; a configuração por face, as redes e os filtros não mudam.
 - **Versão 0.2**, depois do envio da 0.1.1.
 
-Capacidade proposta por tier (ajustável na config do servidor, seção `storage`). A da Bateria é **uma hora (72.000 ticks) da geração máxima do Ressonador do tier** (`EnergyBalance`, balanceamento 5 de 22/10/2026) e a energia do roteador de cada tier é essa geração mais 5%, arredondada para cima em três algarismos (454; 29.100; 63.000; 1.350.000; 67.200.000; 84.500.000; 158.000.000 FE/t; o Ultimate sem limite):
+Capacidade por tier (ajustável na config do servidor, seção `storage`). **Todas guardam uma hora de uma face do mesmo tier**: o Baú, os Tanques e o Tanque de Source, uma hora da vazão do tier (`StorageBalance`, balanceamento 6 de 08/11/2026), e a Bateria **uma hora (72.000 ticks) da geração máxima do Ressonador do tier** (`EnergyBalance`, balanceamento 5 de 22/10/2026) e a energia do roteador de cada tier é essa geração mais 5%, arredondada para cima em três algarismos (454; 29.100; 63.000; 1.350.000; 67.200.000; 84.500.000; 158.000.000 FE/t; o Ultimate sem limite):
 
 | Tier | Baú (itens) | Tanque e Tanque Químico | Bateria | Tanque de Source |
 | --- | --- | --- | --- | --- |
-| Básico | 32.768 | 256.000 mB | 31.104.000 FE | 10.000 |
-| Avançado | 262.144 | 2.048.000 mB | 1.990.656.000 FE | 80.000 |
-| Elite | 2.097.152 | 16.384.000 mB | 4.320.000.000 FE | 640.000 |
-| Esmeralda | 16.777.216 | 131.072.000 mB | 92.160.000.000 FE | 5.120.000 |
-| Allthemodium¹ | 134.217.728 | 1.048.576.000 mB | 4.608.000.000.000 FE | 40.960.000 |
-| Vibranium¹ | 1.073.741.824 | 8.388.608.000 mB | 5.788.800.000.000 FE | 327.680.000 |
-| Unobtainium¹ | 8.589.934.592 | 67.108.864.000 mB | 10.785.600.000.000 FE | 2.621.440.000 |
+| Básico | 115.200 | 28.800.000 mB | 31.104.000 FE | 3.600.000 |
+| Avançado | 921.600 | 230.400.000 mB | 1.990.656.000 FE | 28.800.000 |
+| Elite | 7.372.800 | 1.843.200.000 mB | 4.320.000.000 FE | 230.400.000 |
+| Esmeralda | 58.982.400 | 14.745.600.000 mB | 92.160.000.000 FE | 1.843.200.000 |
+| Allthemodium¹ | 471.859.200 | 117.964.800.000 mB | 4.608.000.000.000 FE | 14.745.600.000 |
+| Vibranium¹ | 3.774.873.600 | 943.718.400.000 mB | 5.788.800.000.000 FE | 117.964.800.000 |
+| Unobtainium¹ | 30.198.988.800 | 7.549.747.200.000 mB | 10.785.600.000.000 FE | 943.718.400.000 |
 | Ultimate | Sem limite | Sem limite | Sem limite | Sem limite |
 
 Como a transferência usa o atalho:
@@ -252,7 +254,7 @@ Decididos pelo dono depois (8/10/2026):
 - **Receitas:** vanilla, só do tier Básico de cada bloco; os tiers seguintes vêm dos anéis (Cartões de Upgrade ou a receita direta), como no roteador.
 - **Texturas:** prontas em `scripts/textures/gerar_texturas.py` (ver "Armazenamento do mod" no pacote de design).
 - **Tanque, Bateria e Tanque Químico prontos (8/10/2026):** no mesmo molde do Baú. As APIs de fluido e energia do NeoForge são em `int` (até ~2,1 bilhões por chamada, e o motor faz uma por tipo por tick), então o Tanque e a Bateria têm capabilities próprias em `long` (`BulkFluids`, `BulkEnergy`) que o roteador usa quando a origem ou o destino é do mod; a de químico do Mekanism já é em `long`. O Tanque troca baldes no bloco e pela tela; a Bateria tem uma tela própria com a carga e a variação por tick, e não tem filtro.
-- **Tanque de Source pronto (8/10/2026, etapa 2):** guarda Source em `long` na base `ScalarStorageBlockEntity` (a mesma da Bateria, com o `ScalarStore`). Capacidade por tier na tabela acima (config `sourceTankCapacity`; de 10.000 no Básico, sem limite no Ultimate). Sem filtro nem lista: a tela (`StorageScalarScreen`) tem a barra roxa, a vazão em Source/s e uma linha de dica. O bloco mostra o nível na coluna de vidro (propriedade `fill`, 0 a 10, forma fina como a Source Jar). Para o roteador, a capability `wirelessautomate:bulk_source` (em `long`, entre dois tanques tudo passa de uma vez). Para o Ars, `ArsStorage` dá a `ISourceCap` (roteador e Relays) e registra o provider no `SourceManager`: Sourcelinks a 5 blocos depositam e as máquinas do Ars tiram, como de uma Source Jar; a visão em `int` fica limitada a `Integer.MAX_VALUE`. Receita vanilla `IGI/GTG/IGI` com ferro, gema de Source e um Tanque Wireless, só com o Ars. Sempre registrado; sem o Ars some da aba criativa e do JEI, e o tooltip diz que precisa do Ars.
+- **Tanque de Source pronto (8/10/2026, etapa 2):** guarda Source em `long` na base `ScalarStorageBlockEntity` (a mesma da Bateria, com o `ScalarStore`). Capacidade por tier na tabela acima (config `sourceTankCapacity`; de 3.600.000 no Básico, uma hora de uma face, sem limite no Ultimate). Sem filtro nem lista: a tela (`StorageScalarScreen`) tem a barra roxa, a vazão em Source/s e uma linha de dica. O bloco mostra o nível na coluna de vidro (propriedade `fill`, 0 a 10, forma fina como a Source Jar). Para o roteador, a capability `wirelessautomate:bulk_source` (em `long`, entre dois tanques tudo passa de uma vez). Para o Ars, `ArsStorage` dá a `ISourceCap` (roteador e Relays) e registra o provider no `SourceManager`: Sourcelinks a 5 blocos depositam e as máquinas do Ars tiram, como de uma Source Jar; a visão em `int` fica limitada a `Integer.MAX_VALUE`. Receita vanilla `IGI/GTG/IGI` com ferro, gema de Source e um Tanque Wireless, só com o Ars. Sempre registrado; sem o Ars some da aba criativa e do JEI, e o tooltip diz que precisa do Ars.
 - **Cores dos tipos:** Químicos `#97C853` (o verde do Tanque Químico) e Source `#B36DE0` (o roxo do Ars). Na barra do Tanque de Source: corpo `#9749C2`, sombra `#6B2F8F`, brilho `#EA8EF3`.
 - **Baú pronto (8/10/2026):** tudo o que está acima para o Baú, mais o filtro de entrada indo junto no item quebrado e o upgrade na bancada (a mesma receita do roteador). Na tela: clique pega uma pilha, botão direito meia, Shift + clique manda para o inventário; com item no cursor, clicar na lista guarda (botão direito, um). A tela recebe só as diferenças por tipo, no máximo a cada 5 ticks, e só aberta.
 - **Upgrades do Baú (30/10/2026, ramo `bau-upgrades`, spec `docs/superpowers/specs/2026-10-30-bau-upgrades-design.md`):** o Baú tem dois slots de upgrade, cada um aceito uma vez; Tanques, Bateria e Tanque de Source não os têm. O **Upgrade de Mesa de Trabalho** põe uma grade 3×3 na tela, que se repõe com o estoque (Shift no resultado repete até uma pilha, Devolver, "+" do JEI). O **Upgrade de Compactação** compacta e descompacta as cadeias de itens achadas pelas receitas de mesa (só com ida e volta), com um modo global (padrão Desligada) e um alvo por cadeia; a conversão é no fim do tick, ignora o filtro, descompacta só o que cabe, não conta no vigia, e o limite de estoque conta a cadeia inteira. Custo: parado zero, sem tick no Baú; índice montado no start e no `/reload`. Protocolo 39. Itens `crafting_upgrade` e `compacting_upgrade` (sem forma: mesa + Cristal de Sinal; pistão + Cristal de Sinal + bloco de ferro).

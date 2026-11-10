@@ -341,9 +341,9 @@ final class RouterRange {
      * Um cache de uma remota foi invalidado, no servidor: o bloco e a frente são relidos (só com o chunk carregado).
      * Se a frente mudou, ou se a troca é nova (a máquina virou outro bloco, ou o bloco do grupo voltou), as rotas do
      * nó são refeitas. Se ela continua trocada, nada muda nas rotas (a montagem já a pula): só o cache que a vigia é
-     * consultado de novo ({@link MachineCaches#watch}), sem o qual o próximo aviso não viria. Senão acorda a porta
-     * da face. A troca de um bloco com block entity sempre chega aqui: o NeoForge invalida as capabilities da
-     * posição quando a block entity sai e quando a nova entra.
+     * consultado de novo, depois do aviso ({@link MachineCaches#watchSoon}), sem o qual o próximo aviso não viria.
+     * Senão acorda a porta da face. A troca de um bloco com block entity sempre chega aqui: o NeoForge invalida as
+     * capabilities da posição quando a block entity sai e quando a nova entra.
      */
     void invalidated(Level level, BlockPos pos, ResourceType type, Direction machineFace) {
         if (level.isLoaded(pos)) {
@@ -356,7 +356,7 @@ final class RouterRange {
                     return;
                 }
                 if (machine.replaced()) {
-                    caches(pos).watch();
+                    caches(pos).watchSoon();
                     return;
                 }
             }

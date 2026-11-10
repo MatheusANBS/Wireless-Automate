@@ -23,7 +23,7 @@ O roteador também liga direto nos Relays e na Imbuement Chamber. Um
 | Recurso | Source |
 | --- | --- |
 | Modo, prioridade, redstone e rede | Sim. |
-| Vazão | Básico 100/s, Avançado 800/s, Elite 6.400/s, Esmeralda 51.200/s, Ultimate sem limite ([Roteador](router.md)). |
+| Vazão | Básico 1.000/s (um Source Relay), Avançado 8.000/s, Elite 64.000/s, Esmeralda 512.000/s, Ultimate sem limite ([Roteador](router.md)). |
 | Filtro e Cartão de Filtro | Não: a Source não tem tipos. |
 ''', front('Source (Ars Nouveau)', 'minecraft:amethyst_shard', 'integracoes', 16) + '''
 # Ars Nouveau Source
@@ -46,6 +46,6 @@ The router also connects straight to Relays and the Imbuement Chamber. A
 | Feature | Source |
 | --- | --- |
 | Mode, priority, redstone and network | Yes. |
-| Throughput | Basic 100/s, Advanced 800/s, Elite 6,400/s, Emerald 51,200/s, Ultimate unlimited ([Router](router.md)). |
+| Throughput | Basic 1,000/s (one Source Relay), Advanced 8,000/s, Elite 64,000/s, Emerald 512,000/s, Ultimate unlimited ([Router](router.md)). |
 | Filter and Filter Card | No: Source has no types. |
 ''')

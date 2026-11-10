@@ -61,13 +61,13 @@ Os tiers sobem a vazão e o alcance do roteador pela escada Básico → Avançad
 
 | Tier | Itens/s | Fluido e químico (mB/s) | Energia (FE/t) | Source/s | Alcance | Upgrade de Alcance |
 | --- | --- | --- | --- | --- | --- | --- |
-| Básico | 32 | 2.000 | 454 | 100 | 64 blocos | — |
-| Avançado | 256 | 16.000 | 29.100 | 800 | 512 blocos | 6 blocos, 8 máquinas |
-| Elite | 2.048 | 128.000 | 63.000 | 6.400 | Dimensão inteira | 12 blocos, 16 máquinas |
-| Esmeralda | 16.384 | 1.024.000 | 1.350.000 | 51.200 | Todas as dimensões | 16 blocos, 32 máquinas |
-| Allthemodium¹ | 131.072 | 8.192.000 | 67.200.000 | 409.600 | Todas as dimensões | 24 blocos, 48 máquinas |
-| Vibranium¹ | 1.048.576 | 65.536.000 | 84.500.000 | 3.276.800 | Todas as dimensões | 32 blocos, 64 máquinas |
-| Unobtainium¹ | 8.388.608 | 524.288.000 | 158.000.000 | 26.214.400 | Todas as dimensões | 48 blocos, 96 máquinas |
+| Básico | 32 | 8.000 | 454 | 1.000 | 64 blocos | — |
+| Avançado | 256 | 64.000 | 29.100 | 8.000 | 512 blocos | 6 blocos, 8 máquinas |
+| Elite | 2.048 | 512.000 | 63.000 | 64.000 | Dimensão inteira | 12 blocos, 16 máquinas |
+| Esmeralda | 16.384 | 4.096.000 | 1.350.000 | 512.000 | Todas as dimensões | 16 blocos, 32 máquinas |
+| Allthemodium¹ | 131.072 | 32.768.000 | 67.200.000 | 4.096.000 | Todas as dimensões | 24 blocos, 48 máquinas |
+| Vibranium¹ | 1.048.576 | 262.144.000 | 84.500.000 | 32.768.000 | Todas as dimensões | 32 blocos, 64 máquinas |
+| Unobtainium¹ | 8.388.608 | 2.097.152.000 | 158.000.000 | 262.144.000 | Todas as dimensões | 48 blocos, 96 máquinas |
 | Ultimate | Sem limite | Sem limite | Sem limite | Sem limite | Todas as dimensões | 64 blocos, 128 máquinas |
 
 *Por face e por tipo de recurso; cada máquina vinculada pelo Upgrade de Alcance tem a vazão cheia, e a energia de cada tier escoa a geração cheia do Ressonador de Sinal do mesmo tier. ¹ Só com o Allthemodium. Donos de servidor podem mudar todos os valores na config.*
@@ -84,13 +84,13 @@ Cinco armazenamentos feitos para o roteador: o **Baú Wireless** (tipos de item 
 
 | Tier | Baú (itens) | Tanque e Tanque Químico | Bateria | Tanque de Source |
 | --- | --- | --- | --- | --- |
-| Básico | 32.768 | 256 B | 31,1M FE | 10.000 |
-| Avançado | 262.144 | 2.048 B | 1,99G FE | 80.000 |
-| Elite | 2.097.152 | 16.384 B | 4,32G FE | 640.000 |
-| Esmeralda | 16.777.216 | 131.072 B | 92,2G FE | 5.120.000 |
-| Allthemodium¹ | 134.217.728 | 1.048.576 B | 4,61T FE | 40.960.000 |
-| Vibranium¹ | 1.073.741.824 | 8.388.608 B | 5,79T FE | 327.680.000 |
-| Unobtainium¹ | 8.589.934.592 | 67.108.864 B | 10,8T FE | 2.621.440.000 |
+| Básico | 115.200 | 28.800 B | 31,1M FE | 3.600.000 |
+| Avançado | 921.600 | 230.400 B | 1,99G FE | 28.800.000 |
+| Elite | 7.372.800 | 1.843.200 B | 4,32G FE | 230.400.000 |
+| Esmeralda | 58.982.400 | 14.745.600 B | 92,2G FE | 1.843.200.000 |
+| Allthemodium¹ | 471.859.200 | 117.964.800 B | 4,61T FE | 14.745.600.000 |
+| Vibranium¹ | 3.774.873.600 | 943.718.400 B | 5,79T FE | 117.964.800.000 |
+| Unobtainium¹ | 30.198.988.800 | 7.549.747.200 B | 10,8T FE | 943.718.400.000 |
 | Ultimate | Sem limite | Sem limite | Sem limite | Sem limite |
 
 - Uma Bateria guarda **uma hora do Ressonador de Sinal do tier dela** em geração cheia, e a vazão de energia de um roteador é a geração desse mesmo Ressonador mais 5% (Ultimate: sem limite).
@@ -122,7 +122,7 @@ Com o Ars Nouveau instalado, todo roteador ganha uma aba **Source**. Source Jars
 
 ![Source do Ars Nouveau](docs/curseforge/feature-11-source.png)
 
-O **Tanque de Source Wireless** guarda de 10.000 de Source (Básico) a sem limite (Ultimate) e mostra o nível no vidro. Sourcelinks a até 5 blocos depositam nele e as máquinas do Ars por perto tiram dele, como de uma Source Jar.
+O **Tanque de Source Wireless** guarda de 3.600.000 de Source (Básico) a sem limite (Ultimate) e mostra o nível no vidro. Sourcelinks a até 5 blocos depositam nele e as máquinas do Ars por perto tiram dele, como de uma Source Jar.
 
 ![Tanque de Source Wireless](docs/curseforge/feature-12-source-tank.png)
 

@@ -454,6 +454,9 @@ final class NodePorts {
         if (port.hints != null) {
             port.hints.clearRefused();
         }
+        if (port.refusedKinds != null) {
+            port.refusedKinds.clear();
+        }
     }
 
     private static void wakeFeeders(Port destination) {

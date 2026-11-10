@@ -89,9 +89,11 @@ public final class ConfiguratorTuner {
         // Só sem roteador a Doca é procurada: numa máquina de um roteador e de uma Doca, vale o roteador.
         DockTuner.Target dock = reach == null ? DockTuner.find(player, level, pos) : null;
         if (reach == null && dock == null) {
-            boolean linked = !TabletClick.attachedRouters(level, pos).isEmpty()
-                    || !RemoteIndex.get().routersAt(level, pos).isEmpty() || DockTuner.linked(level, pos);
-            return refuse(player, pos, linked ? "no_access" : "not_linked");
+            if (!TabletClick.attachedRouters(level, pos).isEmpty()
+                    || !RemoteIndex.get().routersAt(level, pos).isEmpty()) {
+                return refuse(player, pos, "no_access");
+            }
+            return refuse(player, pos, DockTuner.linked(level, pos) ? "no_access_dock" : "not_linked");
         }
         Block block = level.getBlockState(pos).getBlock();
         TunerPending.Proposal pending = TunerPending.get(player.getUUID());
@@ -125,7 +127,9 @@ public final class ConfiguratorTuner {
         TunerPending.put(player.getUUID(), new TunerPending.Proposal(level.dimension(), pos.immutable(), block, now,
                 now + TunerPending.WINDOW, modes));
         send(player, new ConfiguratorProposalPayload(pos.immutable(), faces(modes), TunerPending.WINDOW));
-        return show(player, Component.translatable(KEY + "proposal", describe(modes, front)));
+        Component faces = describe(modes, front);
+        return show(player, dock != null ? DockTuner.proposal(dock, faces)
+                : Component.translatable(KEY + "proposal", faces));
     }
 
     private static Component show(ServerPlayer player, Component message) {

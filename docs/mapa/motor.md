@@ -4,7 +4,7 @@ O gerenciador, as rotas e portas, as transferências por tipo, os Fluxos e as re
 
 ## `network/NetworkManager.java`
 
-Gerenciador central, um por servidor: remonta as rotas sujas e roda o laço de transferência dentro do orçamento. Além das portas, visita os `EngineVisitor` (`addVisitor`, `removeVisitor`, `wakeVisitor`; a volta da Doca de Padrões): `EngineVisitors` guarda a lista com cursor próprio, visita só os acordados (`wakeAt <= now` ou acordados pelo `wakeVisitor`) depois da volta das portas e antes das voltas extras, no mesmo orçamento, com voltas extras para quem devolve `MORE`; se as portas gastam o orçamento, a volta dos visitantes do tick seguinte vem antes delas, alternando. Sem visitante, um teste por tick
+Gerenciador central, um por servidor: remonta as rotas sujas e roda o laço de transferência dentro do orçamento. Além das portas, visita os `EngineVisitor` (`addVisitor`, `removeVisitor`, `wakeVisitor`; a volta da Doca de Padrões): `EngineVisitors` guarda a lista com cursor próprio, visita só os acordados (`wakeAt <= now` ou acordados pelo `wakeVisitor`) depois da volta das portas e antes das voltas extras, no mesmo orçamento, com voltas extras para quem devolve `MORE`; se as portas gastam o orçamento, a volta dos visitantes do tick seguinte vem antes delas, alternando. A recarga da config (`configChanged`, que o `ConfigReloadListener` chama) chega também aos visitantes no tick seguinte, fora da volta (`applyVisitorsConfig`, público para o GameTest conferir no mesmo passo; `EngineVisitor.configChanged`, sem nada por padrão). Sem visitante, um teste por tick
 
 ## `network/FlowSampler.java`, `FlowWindow.java`, `FlowStats.java`
 

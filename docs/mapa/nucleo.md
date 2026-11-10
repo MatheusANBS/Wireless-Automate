@@ -24,7 +24,7 @@ Upgrade de chunk loading: tickets do NeoForge (`RouterChunkLoader`), eventos de 
 
 ## `bench/`
 
-`/wa bench` e o modo automático do `scripts/bench.sh` (os cenários no `BenchScenario`; o `tablet-range` abre o Tablet sobre roteadores de alcance, com o gancho `BenchScene.openRangeRows` para as linhas que ele abre; o `BenchTablet` é o Tablet aberto pelo jogador falso, com o custo, os bytes e a contagem dos pacotes); o benchmark comparativo com o Logistics Network (`BenchTransport`, o adaptador `LogisticsNetworkBench`, só por reflexão, e `LnChannelPlan`, puro com JUnit; ver `docs/benchmark-logistics-network.md`)
+`/wa bench` e o modo automático do `scripts/bench.sh` (os cenários no `BenchScenario`; o `tablet-range` abre o Tablet sobre roteadores de alcance, com o gancho `BenchScene.openRangeRows` para as linhas que ele abre; o `BenchTablet` é o Tablet aberto pelo jogador falso, com o custo, os bytes e a contagem dos pacotes; o `BenchDock` é a cena do `doca`: Docas Elite com 32 fornalhas num lado e um baú no lugar do provedor, os pedidos pelo `DockDelivery.offer` no começo do tick, dentro do tempo medido, e a linha da repetição com os pedidos aceitos e recusados, o custo das ofertas e os itens devolvidos); o benchmark comparativo com o Logistics Network (`BenchTransport`, o adaptador `LogisticsNetworkBench`, só por reflexão, e `LnChannelPlan`, puro com JUnit; ver `docs/benchmark-logistics-network.md`)
 
 ## `command/WaCommand.java`
 

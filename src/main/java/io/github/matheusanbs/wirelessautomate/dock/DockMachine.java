@@ -22,6 +22,8 @@ public final class DockMachine {
     private long lastActive;
     /** A máquina avisou mudança (o {@code setChanged} dela, a carga do chunk ou um cache invalidado); não é salvo. */
     private boolean changed;
+    /** Está na fila da volta ({@link DockReturn}); não é salvo. */
+    private boolean returnAwake;
     /** Tick do servidor até o qual a máquina dorme (recusou um pedido); zerado quando ela muda. Não é salvo. */
     private long sleepUntil;
     /** Os caches de capability, criados na primeira consulta ({@link #caches}). */
@@ -82,6 +84,15 @@ public final class DockMachine {
 
     public void clearChanged() {
         changed = false;
+    }
+
+    /** Ver {@link #returnAwake}. */
+    boolean returnAwake() {
+        return returnAwake;
+    }
+
+    void setReturnAwake(boolean awake) {
+        returnAwake = awake;
     }
 
     /** Dorme (fica fora da escolha) até o tick {@code tick}, ou até mudar ({@link #wake}). */

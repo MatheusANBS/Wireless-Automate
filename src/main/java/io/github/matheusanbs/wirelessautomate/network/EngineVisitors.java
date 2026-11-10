@@ -77,6 +77,16 @@ final class EngineVisitors {
         return byVisitor.containsKey(visitor);
     }
 
+    /** Avisa cada visitante da recarga da config (fora de uma volta). */
+    void configChanged() {
+        for (int i = 0, n = list.size(); i < n; i++) {
+            Entry entry = list.get(i);
+            if (!entry.removed) {
+                entry.visitor.configChanged();
+            }
+        }
+    }
+
     /** Acorda {@code visitor} para a próxima volta, seja qual for o {@code wakeAt} dele. */
     void wake(EngineVisitor visitor) {
         Entry entry = byVisitor.get(visitor);

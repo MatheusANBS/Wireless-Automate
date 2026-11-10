@@ -40,8 +40,8 @@ public final class DockSide {
     private final List<FluidStack> pendingFluids = new ArrayList<>();
     private long pendingAt;
 
-    // O que não é salvo: o motivo da última recusa, a máquina escolhida por uma simulação, as ativas e o rascunho da
-    // entrega.
+    // O que não é salvo: o motivo da última recusa, a máquina escolhida por uma simulação, as ativas, o estado da volta
+    // e o rascunho da entrega.
     /** O motivo da última recusa ({@link DockStatus#NO_REFUSAL} depois de uma aceita). */
     private int lastRefusal = DockStatus.NO_REFUSAL;
     /** A máquina que a última simulação aceita escolheu, o índice dela e o tick do servidor em que vale. */
@@ -50,6 +50,11 @@ public final class DockSide {
     private long plannedTick = Long.MIN_VALUE;
     /** Quantas máquinas do lado estão ativas (no alcance e no limite); refeito com o registro no índice. */
     private int activeMachines;
+    /** O provedor deste lado recusou, na última visita da volta, o que uma máquina tinha para dar. */
+    private boolean providerFull;
+    /** Itens e mB que a volta deu ao provedor deste lado desde a carga da Doca. */
+    private long returned;
+    private long returnedFluid;
     /** Uma tentativa do pendente na fila do servidor, para o aviso seguinte não enfileirar outra. */
     private boolean flushQueued;
     /**
@@ -222,6 +227,33 @@ public final class DockSide {
 
     void setActiveMachines(int count) {
         activeMachines = count;
+    }
+
+    /** Ver {@link #providerFull}. */
+    public boolean providerFull() {
+        return providerFull;
+    }
+
+    void setProviderFull(boolean full) {
+        providerFull = full;
+    }
+
+    /** Itens devolvidos ao provedor deste lado desde a carga (não é salvo). */
+    public long returned() {
+        return returned;
+    }
+
+    /** mB de fluido devolvidos ao provedor deste lado desde a carga (não é salvo). */
+    public long returnedFluid() {
+        return returnedFluid;
+    }
+
+    void addReturned(long count) {
+        returned += count;
+    }
+
+    void addReturnedFluid(long amount) {
+        returnedFluid += amount;
     }
 
     boolean flushQueued() {

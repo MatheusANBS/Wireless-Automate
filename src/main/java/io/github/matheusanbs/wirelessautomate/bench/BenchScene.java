@@ -117,6 +117,8 @@ final class BenchScene {
     private final List<BlockPos> remoteSinks = new ArrayList<>();
     /** Os Ressonadores dos cenários {@code resonator-*}; {@code null} nos outros. */
     private @Nullable BenchResonators resonators;
+    /** As Docas do cenário {@code doca}; {@code null} nos outros. */
+    private @Nullable BenchDock dock;
     private final LongSet forcedChunks = new LongOpenHashSet();
     private final List<Item> sourceItems;
     private final List<Item> junkItems;
@@ -158,6 +160,11 @@ final class BenchScene {
     private void plan(int count) {
         if (scenario.resonator()) {
             planResonators(count);
+            return;
+        }
+        if (scenario == BenchScenario.DOCK) {
+            dock = new BenchDock(level, ORIGIN, count);
+            max = dock.max();
             return;
         }
         if (scenario.range()) {
@@ -234,6 +241,10 @@ final class BenchScene {
         return resonators;
     }
 
+    @Nullable BenchDock dock() {
+        return dock;
+    }
+
     /** Põe máquinas e roteadores, enche as máquinas e configura as faces. Os roteadores ficam sem rede. */
     void build() {
         for (int cx = min.getX() >> 4; cx <= max.getX() >> 4; cx++) {
@@ -248,6 +259,9 @@ final class BenchScene {
         }
         if (resonators != null) {
             resonators.build();
+        }
+        if (dock != null) {
+            dock.build();
         }
         BlockState router = ModBlocks.ROUTER.get().defaultBlockState()
                 .setValue(RouterBlock.FACING, Direction.UP)
@@ -533,7 +547,7 @@ final class BenchScene {
                 return false;
             }
         }
-        return true;
+        return dock == null || dock.registered();
     }
 
     @Nullable RouterBlockEntity router(Node node) {
@@ -580,7 +594,7 @@ final class BenchScene {
         if (type != ResourceType.ITEM) {
             return 0;
         }
-        long total = destinationCleared + BenchCapabilities.itemsReceived();
+        long total = destinationCleared + BenchCapabilities.itemsReceived() + (dock == null ? 0 : dock.delivered());
         for (Node node : nodes) {
             IItemHandler handler = node.source() ? null : items(node);
             if (handler != null) {
@@ -645,6 +659,9 @@ final class BenchScene {
 
     /** Reenche as origens e esvazia os destinos (ou só a cauda livre, no quase cheio). */
     void recycle() {
+        if (dock != null) {
+            dock.recycle();
+        }
         for (BlockPos pos : remoteSinks) {
             IItemHandler handler = remoteItems(pos);
             if (handler != null) {
@@ -861,6 +878,9 @@ final class BenchScene {
         network = null;
         if (resonators != null) {
             resonators.teardown();
+        }
+        if (dock != null) {
+            dock.teardown();
         }
         for (Node node : nodes) {
             IItemHandler handler = items(node);

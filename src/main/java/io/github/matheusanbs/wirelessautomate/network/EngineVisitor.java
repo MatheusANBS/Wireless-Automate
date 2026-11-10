@@ -16,4 +16,8 @@ public interface EngineVisitor {
 
     /** O tick do servidor em que quer ser visitado de novo; {@link Long#MAX_VALUE} acorda só pelo {@code wakeVisitor}. */
     long wakeAt();
+
+    /** A config do servidor recarregou ({@link NetworkManager#configChanged}); chamado no tick seguinte, fora da volta. */
+    default void configChanged() {
+    }
 }

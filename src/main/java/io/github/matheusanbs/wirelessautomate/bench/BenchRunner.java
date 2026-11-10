@@ -307,7 +307,9 @@ public final class BenchRunner {
                 WirelessAutomate.LOGGER.warn("Benchmark: pulando {}: {}", trimmed, problem);
                 continue;
             }
-            jobs.add(new BenchRun.Job(scenario, Math.max(2, nodes), Math.max(1, reps), storage, transport));
+            // Os cenários em pares pedem pelo menos 2 nós; o da Doca conta Docas, e 1 basta.
+            int least = scenario == BenchScenario.DOCK ? 1 : 2;
+            jobs.add(new BenchRun.Job(scenario, Math.max(least, nodes), Math.max(1, reps), storage, transport));
         }
         return jobs;
     }

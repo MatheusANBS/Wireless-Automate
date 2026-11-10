@@ -88,6 +88,8 @@ public final class NetworkManager {
     /** O tick do último {@code tick}: os avisos que chegam entre dois ticks contam como do mesmo. */
     private static long lastTick = -1;
     private static volatile boolean configChanged;
+    /** A recarga da config ainda não chegou aos visitantes ({@link #applyVisitorsConfig}). */
+    private static volatile boolean visitorsConfigChanged;
 
     // Visita em andamento; o laço roda numa thread só (a do servidor). Fora de uma visita, visitNode é null.
     private static @Nullable RouterBlockEntity visitNode;
@@ -148,6 +150,18 @@ public final class NetworkManager {
     /** A config dos tiers mudou: todas as redes serão remontadas no próximo tick. Seguro de qualquer thread. */
     public static void configChanged() {
         configChanged = true;
+        visitorsConfigChanged = true;
+    }
+
+    /**
+     * Passa aos visitantes uma recarga da config ainda não passada ({@link EngineVisitor#configChanged}). O tick chama;
+     * um GameTest que muda a config chama direto, para conferir no mesmo passo.
+     */
+    public void applyVisitorsConfig() {
+        if (visitorsConfigChanged) {
+            visitorsConfigChanged = false;
+            visitors.configChanged();
+        }
     }
 
     /**
@@ -602,6 +616,7 @@ public final class NetworkManager {
             flows.routesChanged();
             rebuildNanos += System.nanoTime() - started;
         }
+        applyVisitorsConfig();
         long end = transfer(now);
 
         for (int i = 0, n = networkList.size(); i < n; i++) {

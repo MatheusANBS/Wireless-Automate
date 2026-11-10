@@ -198,10 +198,17 @@ final class BenchRun {
 
     /**
      * Começo de um tick, dentro do tempo medido: o que roda no tick do jogo e não é do laço do mod.
-     * Hoje, só o Tablet aberto, que o {@code ServerPlayer} sincroniza a cada tick.
+     * O Tablet aberto, que o {@code ServerPlayer} sincroniza a cada tick, e os pedidos às Docas do cenário {@code doca}.
      */
     void preTick(MinecraftServer server) {
-        tabletNanos = !done && (phase == Phase.WARMUP || phase == Phase.MEASURE) ? scene.syncTablet() : 0;
+        boolean running = !done && (phase == Phase.WARMUP || phase == Phase.MEASURE);
+        tabletNanos = running ? scene.syncTablet() : 0;
+        BenchDock dock = scene.dock();
+        if (running && dock != null) {
+            // Os pedidos do provedor rodam no tick do AE2, fora do laço do mod: dentro do MSPT medido, e o tempo
+            // deles entra no do mod pela dívida do orçamento.
+            dock.offerOrders();
+        }
     }
 
     /** Fim de um tick: registra as amostras da fase em que o tick rodou e prepara o próximo. */
@@ -344,6 +351,10 @@ final class BenchRun {
         flowsNanosStart = flows.totalNanos();
         opsSum = 0;
         opsSeconds = 0;
+        BenchDock dock = scene.dock();
+        if (dock != null) {
+            dock.beginMeasure();
+        }
         if (job.scenario().measuresMemory()) {
             sceneHeapBytes = heapAfterGc() - heapBefore;
             long[] index = scene.nodeIndexSize();
@@ -436,6 +447,10 @@ final class BenchRun {
         out.accept(repLine(job, result));
         if (job.scenario().tablet()) {
             out.accept(scene.tabletPayloadLine());
+        }
+        BenchDock dock = scene.dock();
+        if (dock != null) {
+            out.accept(dock.repLine(rep + 1, ticks));
         }
         BenchResonators resonators = scene.resonators();
         if (resonators != null) {

@@ -37,8 +37,9 @@ import org.jetbrains.annotations.Nullable;
  * alcance do tier ({@link Config#dockRadius}, distância de Chebyshev) até o máximo ({@link Config#dockMaxMachines}),
  * contadas na ordem dos lados e, em cada lado, na ordem de vínculo.
  *
- * <p>O registro no índice muda só no carregamento ({@link #onLoad}), num vínculo ou desvínculo e numa troca de tier;
- * sai no {@link #setRemoved} e no {@link #onChunkUnloaded}. Os avisos das máquinas (o {@code setChanged} pelo mixin, a
+ * <p>O registro no índice muda só no carregamento ({@link #onLoad}), num vínculo ou desvínculo, numa troca de tier e
+ * na recarga da config; sai no {@link #setRemoved} e no {@link #onChunkUnloaded}. A volta do resultado
+ * ({@link DockReturn}) entra no laço do motor no mesmo {@code onLoad} e sai junto com o índice. Os avisos das máquinas (o {@code setChanged} pelo mixin, a
  * carga do chunk e um cache invalidado) chegam todos ao {@link #machineChanged}.
  */
 public class PatternDockBlockEntity extends BlockEntity implements RemoteListener, CacheOwner {
@@ -50,6 +51,8 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
     /** Dentro de um {@link #batchChanges}: os vínculos só marcam {@link #batchDirty}, e o registro é refeito no fim. */
     private boolean batching;
     private boolean batchDirty;
+    /** A volta do resultado, no laço do motor enquanto a Doca está carregada no servidor. */
+    private final DockReturn returns = new DockReturn(this);
 
     public PatternDockBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.PATTERN_DOCK.get(), pos, state);
@@ -159,9 +162,17 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
         return true;
     }
 
-    /** O tier mudou (Cartão de Upgrade): o alcance e o limite mudaram com ele. */
+    /** A volta do resultado desta Doca (o visitante do motor). */
+    public DockReturn returns() {
+        return returns;
+    }
+
+    /** O tier ou a config mudou (Cartão de Upgrade, recarga): o alcance, o limite e a vazão mudaram com ele. */
     public void reachChanged() {
         refreshIndex();
+        if (level != null && !level.isClientSide) {
+            returns.refreshRates();
+        }
     }
 
     /** O que só muda o NBT: marca o chunk sem avisar os vizinhos (ninguém lê a Doca por comparador). */
@@ -218,6 +229,8 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
             return;
         }
         RemoteIndex.get().remove(this);
+        NetworkManager.get().removeVisitor(returns);
+        returns.discard();
         for (DockMachine machine : machineAt.values()) {
             machine.discard();
         }
@@ -225,14 +238,15 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
 
     /**
      * O ponto único dos avisos de uma máquina (o {@code setChanged} dela, a carga do chunk dela e um cache de
-     * capability invalidado): marca a máquina como mudada ({@link DockMachine#changed}), a acorda para a entrega e,
-     * se ela tem o pendente do lado, enfileira uma tentativa dele ({@link DockPending#flushSoon}). A tentativa não
+     * capability invalidado): marca a máquina como mudada ({@link DockMachine#changed}), a acorda para a entrega e
+     * para a volta ({@link DockReturn#wake}) e, se ela tem o pendente do lado, enfileira uma tentativa dele ({@link DockPending#flushSoon}). A tentativa não
      * roda aqui: o aviso chega de dentro do {@code setChanged} da máquina, de uma entrega do motor ou de um listener
      * de cache, onde inserir nela reentraria (ver o {@code flushSoon}).
      */
     void machineChanged(DockMachine machine) {
         machine.markChanged();
         machine.wake();
+        returns.wake(machine);
         DockSide side = sides[machine.side()];
         if (side != null && side.hasPending() && side.pendingAtKey() == machine.pos().asLong()) {
             DockPending.flushSoon(this, side);
@@ -308,6 +322,10 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
     public void onLoad() {
         super.onLoad();
         refreshIndex();
+        if (level != null && !level.isClientSide) {
+            returns.refreshRates();
+            NetworkManager.get().addVisitor(returns);
+        }
     }
 
     @Override

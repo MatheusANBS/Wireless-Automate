@@ -1,0 +1,28 @@
+{
+  "variants": {
+    "tier=basic": {
+      "model": "wirelessautomate:block/pattern_dock/pattern_dock_basic"
+    },
+    "tier=advanced": {
+      "model": "wirelessautomate:block/pattern_dock/pattern_dock_advanced"
+    },
+    "tier=elite": {
+      "model": "wirelessautomate:block/pattern_dock/pattern_dock_elite"
+    },
+    "tier=emerald": {
+      "model": "wirelessautomate:block/pattern_dock/pattern_dock_emerald"
+    },
+    "tier=allthemodium": {
+      "model": "wirelessautomate:block/pattern_dock/pattern_dock_allthemodium"
+    },
+    "tier=vibranium": {
+      "model": "wirelessautomate:block/pattern_dock/pattern_dock_vibranium"
+    },
+    "tier=unobtainium": {
+      "model": "wirelessautomate:block/pattern_dock/pattern_dock_unobtainium"
+    },
+    "tier=ultimate": {
+      "model": "wirelessautomate:block/pattern_dock/pattern_dock_ultimate"
+    }
+  }
+}

@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.registry;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
+import io.github.matheusanbs.wirelessautomate.dock.PatternDockBlock;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlock;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import io.github.matheusanbs.wirelessautomate.storage.StorageSourceTankBlock;
@@ -114,6 +115,11 @@ public final class ModBlocks {
     public static final DeferredBlock<TvBlock> SIGNAL_SCREEN = BLOCKS.registerBlock("signal_screen", TvBlock::new,
             BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GRAY).strength(1.5F, 6.0F)
                     .sound(SoundType.METAL).pushReaction(PushReaction.DESTROY).noOcclusion());
+
+    /** A Doca de Padrões, com tiers: um bloco cheio de metal, que pede picareta. */
+    public static final DeferredBlock<PatternDockBlock> PATTERN_DOCK = BLOCKS.registerBlock("pattern_dock",
+            PatternDockBlock::new, BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(3.0F, 6.0F)
+                    .sound(SoundType.METAL).requiresCorrectToolForDrops());
 
     private static boolean never(BlockState state, BlockGetter level, BlockPos pos) {
         return false;

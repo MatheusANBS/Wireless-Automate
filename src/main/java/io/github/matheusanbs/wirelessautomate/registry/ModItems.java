@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.registry;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.dock.PatternDockItem;
 import io.github.matheusanbs.wirelessautomate.item.ChestUpgradeItem;
 import io.github.matheusanbs.wirelessautomate.item.ChunkLoaderUpgradeItem;
 import io.github.matheusanbs.wirelessautomate.item.ConfiguratorItem;
@@ -156,6 +157,9 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> CRYSTAL_REPAIRER =
             ITEMS.registerSimpleBlockItem(ModBlocks.CRYSTAL_REPAIRER);
     public static final DeferredItem<BlockItem> SIGNAL_SCREEN = ITEMS.registerSimpleBlockItem(ModBlocks.SIGNAL_SCREEN);
+    /** A Doca de Padrões; o tier vai no componente do estado, como no roteador. */
+    public static final DeferredItem<PatternDockItem> PATTERN_DOCK = ITEMS.register("pattern_dock",
+            () -> new PatternDockItem(ModBlocks.PATTERN_DOCK.get(), new Item.Properties()));
 
     /** Cartões de Upgrade de Avançado a Ultimate (os do Allthemodium sempre registrados); não há Básico (o roteador já nasce Básico). */
     public static final Map<RouterTier, DeferredItem<TierCoreItem>> TIER_CORES = new EnumMap<>(RouterTier.class);

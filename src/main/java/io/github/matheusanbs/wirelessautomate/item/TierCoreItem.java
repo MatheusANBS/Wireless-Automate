@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.item;
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.dock.PatternDockBlock;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.Sources;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
@@ -32,8 +33,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Cartão de Upgrade de tier: um item por tier de destino ({@code tier_core_<destino>}), com o tier de origem no
  * componente {@code upgrade_from} ({@link ModDataComponents#UPGRADE_FROM}). Shift + clique (vale também sem o
- * Shift) num roteador, armazenamento ou Núcleo de Ressonância colocado o leva ao tier do cartão no lugar, sem perder
- * a configuração nem o conteúdo; ou junte os dois na bancada ({@code RouterUpgradeRecipe}, só roteador e
+ * Shift) num roteador, armazenamento, Doca de Padrões ou Núcleo de Ressonância colocado o leva ao tier do cartão no
+ * lugar, sem perder a configuração nem o conteúdo; ou junte os dois na bancada ({@code RouterUpgradeRecipe}, só roteador e
  * armazenamento). O Núcleo pede também 1 Coração do Ressonador do tier de destino no inventário.
  *
  * <p>Um cartão com origem k ("k → destino") só vale num bloco exatamente do tier k; num bloco de outro tier, o
@@ -82,7 +83,8 @@ public class TierCoreItem extends Item {
         BlockState state = level.getBlockState(context.getClickedPos());
         Target target = state.getBlock() instanceof RouterBlock ? Target.ROUTER
                 : state.getBlock() instanceof StorageBlock ? Target.STORAGE
-                : state.getBlock() instanceof ResonanceCoreBlock ? Target.CORE : null;
+                : state.getBlock() instanceof ResonanceCoreBlock ? Target.CORE
+                : state.getBlock() instanceof PatternDockBlock ? Target.DOCK : null;
         if (target == null) {
             return InteractionResult.PASS;
         }
@@ -105,6 +107,7 @@ public class TierCoreItem extends Item {
             case ROUTER -> RouterBlock.tryUpgrade(level, context.getClickedPos(), tier, origin);
             case STORAGE -> StorageBlock.tryUpgrade(level, context.getClickedPos(), tier, origin);
             case CORE -> ResonanceCoreBlock.tryUpgrade(level, context.getClickedPos(), tier, origin, player);
+            case DOCK -> PatternDockBlock.tryUpgrade(level, context.getClickedPos(), tier, origin);
         };
         if (!upgraded) {
             // No Núcleo, a única recusa que sobra é a falta do Coração do Ressonador, já avisada na action bar.
@@ -162,6 +165,7 @@ public class TierCoreItem extends Item {
             tooltip.add(line("source", origin, t -> rate(t, Stat.SOURCE)));
         }
         tooltip.add(line("range", origin, TierCoreItem::range));
+        tooltip.add(dockLine(origin));
         for (StorageKind kind : StorageKind.values()) {
             if (kind.loaded()) {
                 tooltip.add(line(kind.id, origin, t -> capacity(kind, t)));
@@ -176,7 +180,8 @@ public class TierCoreItem extends Item {
     private enum Target {
         ROUTER("router"),
         STORAGE("storage"),
-        CORE("core");
+        CORE("core"),
+        DOCK("pattern_dock");
 
         final String key;
 
@@ -215,6 +220,20 @@ public class TierCoreItem extends Item {
     private static Component line(String key, Component value) {
         return Component.translatable(KEY + key, value.copy().withStyle(ChatFormatting.AQUA))
                 .withStyle(ChatFormatting.DARK_AQUA);
+    }
+
+    /** A linha da Doca de Padrões: "raio 6 → 12, máquinas 8 → 16" com origem, ou só os valores do destino. */
+    private Component dockLine(@Nullable RouterTier origin) {
+        Component radius = origin == null ? number(Config.dockRadius(tier))
+                : Component.translatable(KEY + "change", number(Config.dockRadius(origin)), number(Config.dockRadius(tier)));
+        Component machines = origin == null ? number(Config.dockMaxMachines(tier))
+                : Component.translatable(KEY + "change", number(Config.dockMaxMachines(origin)),
+                        number(Config.dockMaxMachines(tier)));
+        return Component.translatable(KEY + "dock", radius, machines).withStyle(ChatFormatting.DARK_AQUA);
+    }
+
+    private static Component number(int value) {
+        return Component.literal(grouped(value)).withStyle(ChatFormatting.AQUA);
     }
 
     /** Vazão do tier pela config (padrão se ela ainda não carregou); 0 = sem limite. */

@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.dock.DockReach;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.range.RangeTiers;
 import io.github.matheusanbs.wirelessautomate.resonator.CoreMath;
@@ -75,6 +76,11 @@ public final class Config {
     public static final ModConfigSpec.IntValue TV_MAX_LINKS;
     public static final ModConfigSpec.IntValue TV_MAX_ARTS;
     public static final ModConfigSpec.IntValue TV_MAX_IMAGE_PIXELS;
+    /** Raio da Doca de Padrões Ultimate, que não tem a linha de um tier acima para ler (ver {@link #dockRadius}). */
+    public static final ModConfigSpec.IntValue DOCK_ULTIMATE_RADIUS;
+    /** Máximo de máquinas da Doca de Padrões Ultimate (ver {@link #dockMaxMachines}). */
+    public static final ModConfigSpec.IntValue DOCK_ULTIMATE_MAX_MACHINES;
+    private static final RouterTier[] TIER_LIST = RouterTier.values();
     /** FE por tick que um cristal de rendimento 1 dá ao Núcleo de Ressonância, por tier. */
     public static final Map<RouterTier, ModConfigSpec.LongValue> RESONATOR_FE_PER_CRYSTAL = new EnumMap<>(RouterTier.class);
 
@@ -300,6 +306,17 @@ public final class Config {
                         + "está perto e não pesa no maxLayoutBytes: o padrão, 131072, são oito artes de 128 × 128 em 64 KB.")
                 .defineInRange("maxImagePixels", 131_072, 64, 262_144);
         io.github.matheusanbs.wirelessautomate.tv.TvImageConfig.define(builder);
+        builder.pop();
+
+        builder.push("patternDock");
+        DOCK_ULTIMATE_RADIUS = builder
+                .comment("Raio, em blocos (distância de Chebyshev), em que a Doca de Padrões Ultimate vincula máquinas. Os outros "
+                        + "tiers usam o machineRadius do tier seguinte em tiers.")
+                .defineInRange("ultimateRadius", DockReach.ULTIMATE_RADIUS, 0, DockReach.MAX_ULTIMATE_RADIUS);
+        DOCK_ULTIMATE_MAX_MACHINES = builder
+                .comment("Máximo de máquinas da Doca de Padrões Ultimate, somando os seis lados. Os outros tiers usam o "
+                        + "maxMachines do tier seguinte em tiers.")
+                .defineInRange("ultimateMaxMachines", DockReach.ULTIMATE_MACHINES, 0, RangeTiers.MAX_MACHINES);
         builder.pop();
 
         builder.push("guide");
@@ -661,7 +678,6 @@ public final class Config {
         return SPEC.isLoaded() ? STORAGE_CAPACITY.get(kind).get(tier).get() : kind.defaultCapacity(tier);
     }
 
-    /** Raio, em blocos, em que o Upgrade de Alcance vincula máquinas no tier (0 = o tier não aceita o upgrade). */
     /**
      * Um resumo dos valores dos tiers que as rotas leem (vazões, alcance, dimensão, raio e limite de máquinas): na
      * recarga da config, o gerenciador só remonta as redes se ele mudou.
@@ -680,6 +696,7 @@ public final class Config {
         return hash;
     }
 
+    /** Raio, em blocos, em que o Upgrade de Alcance vincula máquinas no tier (0 = o tier não aceita o upgrade). */
     public static int machineRadius(RouterTier tier) {
         return read(TIERS.get(tier).machineRadius());
     }
@@ -687,6 +704,25 @@ public final class Config {
     /** Máximo de máquinas vinculadas pelo Upgrade de Alcance no tier. */
     public static int maxMachines(RouterTier tier) {
         return read(TIERS.get(tier).maxMachines());
+    }
+
+    /**
+     * Raio da Doca de Padrões do tier: o {@code machineRadius} do tier de ordinal seguinte (não o {@code next()}, que
+     * pula os tiers sem o mod: a linha do Allthemodium existe na config mesmo sem ele), e no Ultimate a chave própria.
+     */
+    public static int dockRadius(RouterTier tier) {
+        return DockReach.radius(nextOrdinal(tier), ordinal -> machineRadius(TIER_LIST[ordinal]), read(DOCK_ULTIMATE_RADIUS));
+    }
+
+    /** Máximo de máquinas da Doca de Padrões do tier, somando os lados, pela mesma regra do {@link #dockRadius}. */
+    public static int dockMaxMachines(RouterTier tier) {
+        return DockReach.max(nextOrdinal(tier), ordinal -> maxMachines(TIER_LIST[ordinal]), read(DOCK_ULTIMATE_MAX_MACHINES));
+    }
+
+    /** O ordinal do tier seguinte, ou −1 no último (o Ultimate). */
+    private static int nextOrdinal(RouterTier tier) {
+        int next = tier.ordinal() + 1;
+        return next < TIER_LIST.length ? next : -1;
     }
 
     /** Capacidade do Baú no tier; 0 = sem limite. */

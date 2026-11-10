@@ -90,6 +90,11 @@ public final class ModCreativeTabs {
                         output.accept(ModItems.RESONATOR_CRYSTAL_PORT.get());
                         output.accept(ModItems.RESONATOR_TUNER.get());
                         output.accept(ModItems.CRYSTAL_REPAIRER.get());
+                        for (RouterTier tier : RouterTier.values()) {
+                            if (tier.loaded()) {
+                                output.accept(StorageBlockItem.withTier(ModItems.PATTERN_DOCK.get(), tier));
+                            }
+                        }
                         output.accept(ModItems.SIGNAL_SCREEN.get());
                         output.accept(GuideBook.create());
                     })

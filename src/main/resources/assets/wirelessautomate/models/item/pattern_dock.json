@@ -1,0 +1,47 @@
+{
+  "parent": "wirelessautomate:block/pattern_dock/pattern_dock_basic",
+  "overrides": [
+    {
+      "predicate": {
+        "wirelessautomate:tier": 1
+      },
+      "model": "wirelessautomate:block/pattern_dock/pattern_dock_advanced"
+    },
+    {
+      "predicate": {
+        "wirelessautomate:tier": 2
+      },
+      "model": "wirelessautomate:block/pattern_dock/pattern_dock_elite"
+    },
+    {
+      "predicate": {
+        "wirelessautomate:tier": 3
+      },
+      "model": "wirelessautomate:block/pattern_dock/pattern_dock_emerald"
+    },
+    {
+      "predicate": {
+        "wirelessautomate:tier": 4
+      },
+      "model": "wirelessautomate:block/pattern_dock/pattern_dock_allthemodium"
+    },
+    {
+      "predicate": {
+        "wirelessautomate:tier": 5
+      },
+      "model": "wirelessautomate:block/pattern_dock/pattern_dock_vibranium"
+    },
+    {
+      "predicate": {
+        "wirelessautomate:tier": 6
+      },
+      "model": "wirelessautomate:block/pattern_dock/pattern_dock_unobtainium"
+    },
+    {
+      "predicate": {
+        "wirelessautomate:tier": 7
+      },
+      "model": "wirelessautomate:block/pattern_dock/pattern_dock_ultimate"
+    }
+  ]
+}

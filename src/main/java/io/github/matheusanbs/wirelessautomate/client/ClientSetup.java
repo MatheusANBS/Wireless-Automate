@@ -66,8 +66,9 @@ public final class ClientSetup {
     }
 
     /**
-     * Propriedade {@code wirelessautomate:tier} dos itens do roteador, dos armazenamentos e do Núcleo de Ressonância (a
-     * posição no {@code RouterTier}: 0 = Básico ... 7 = Ultimate): os overrides dos modelos de item trocam o ícone pelo modelo do tier.
+     * Propriedade {@code wirelessautomate:tier} dos itens do roteador, dos armazenamentos, do Núcleo de Ressonância e da
+     * Doca de Padrões (a posição no {@code RouterTier}: 0 = Básico ... 7 = Ultimate): os overrides dos modelos de item
+     * trocam o ícone pelo modelo do tier.
      * Os cristais (o de Sinal, o Lapidado e os Afinados) ganham {@code wirelessautomate:dull} (1 quando Opacos) e
      * {@code wirelessautomate:cracked} (1 quando rachados), que trocam o modelo. Liga também o clique no
      * Núcleo de Ressonância à projeção da estrutura e as Telas de Sinal à imagem delas (layout novo e números novos
@@ -84,6 +85,8 @@ public final class ClientSetup {
             }
             ItemProperties.register(ModItems.RESONANCE_CORE.get(), WirelessAutomate.id("tier"),
                     (stack, level, entity, seed) -> ResonanceCoreItem.tierOf(stack).ordinal());
+            ItemProperties.register(ModItems.PATTERN_DOCK.get(), WirelessAutomate.id("tier"),
+                    (stack, level, entity, seed) -> StorageBlockItem.tierOf(stack).ordinal());
             List<DeferredItem<SignalCrystalItem>> crystals = new ArrayList<>(ModItems.TUNED_CRYSTALS.values());
             crystals.add(ModItems.SIGNAL_CRYSTAL);
             crystals.add(ModItems.CUT_SIGNAL_CRYSTAL);

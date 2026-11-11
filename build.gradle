@@ -476,6 +476,12 @@ neoForge.runs {
 // Ae2AddonDockGameTests). ./gradlew runGameTestServerAe2
 var prepareAe2TestMods = tasks.register('prepareAe2TestMods', Sync) {
     from configurations.ae2TestMods
+    // Só a medição do uso intenso com o Quantum Computer (gametest/DockQuantumMedida) junta o Mekanism ao AE2:
+    // WA_DOCK_MEDIDA=1 ./gradlew runGameTestServerAe2 -PdockMedida, que roda só o namespace da medição (abaixo). Sem a
+    // propriedade, o Sync tira o jar dele.
+    if (project.hasProperty('dockMedida')) {
+        from configurations.chemicalTestMods
+    }
     into layout.projectDirectory.dir('run/gametest-ae2/mods')
 }
 
@@ -483,7 +489,9 @@ neoForge.runs {
     gameTestServerAe2 {
         type = 'gameTestServer'
         gameDirectory = project.file('run/gametest-ae2')
-        systemProperty 'neoforge.enabledGameTestNamespaces', 'wirelessautomate_ae2'
+        // Com -PdockMedida, só a medição (namespace dela): os testes de jogador falso quebram com o Mekanism.
+        systemProperty 'neoforge.enabledGameTestNamespaces',
+                project.hasProperty('dockMedida') ? 'wirelessautomate_ae2medida' : 'wirelessautomate_ae2'
         systemProperty 'wirelessautomate.ae2Tests', 'true'
         // Liga as máquinas de teste (gametest/TestMachines), para a máquina de item e fluido da Doca.
         systemProperty 'wirelessautomate.gameTests', 'true'

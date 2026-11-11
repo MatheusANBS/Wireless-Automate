@@ -88,12 +88,25 @@ final class DockMinMaxMedida {
     long pendingTicks;
     long asleepTicks;
 
+    /**
+     * Com o baú no lugar do provedor e a CPU emulada; sem ele, quem chama monta o provedor de verdade ao norte da Doca e
+     * o {@link #tick} só acelera as fábricas e conta ({@link DockQuantumMedida}).
+     */
+    final boolean emulated;
+
     DockMinMaxMedida(GameTestHelper helper, RouterTier tier, int speed) {
+        this(helper, tier, speed, true);
+    }
+
+    DockMinMaxMedida(GameTestHelper helper, RouterTier tier, int speed, boolean emulated) {
         this.helper = helper;
         this.tier = tier;
         this.speed = speed;
+        this.emulated = emulated;
         helper.setBlock(DOCK, ModBlocks.PATTERN_DOCK.get().defaultBlockState().setValue(RouterBlock.TIER, tier));
-        helper.setBlock(CHEST, Blocks.CHEST.defaultBlockState());
+        if (emulated) {
+            helper.setBlock(CHEST, Blocks.CHEST.defaultBlockState());
+        }
         for (int i = 0; i < FACTORIES; i++) {
             BlockPos pos = new BlockPos(1 + 2 * i, 1, 5);
             helper.setBlock(pos, BuiltInRegistries.BLOCK.get(FACTORY_ID).defaultBlockState());
@@ -173,11 +186,13 @@ final class DockMinMaxMedida {
                 }
             }
         }
-        // A janela da CPU do AE2 (CraftingCpuLogic): as execuções dos últimos 3 ticks contam contra o limite.
-        usedOps[2] = usedOps[1];
-        usedOps[1] = usedOps[0];
-        usedOps[0] = orders(pushes - usedOps[1] - usedOps[2], measuring);
-        drainChest(measuring);
+        if (emulated) {
+            // A janela da CPU do AE2 (CraftingCpuLogic): as execuções dos últimos 3 ticks contam contra o limite.
+            usedOps[2] = usedOps[1];
+            usedOps[1] = usedOps[0];
+            usedOps[0] = orders(pushes - usedOps[1] - usedOps[2], measuring);
+            drainChest(measuring);
+        }
         if (!measuring) {
             return;
         }

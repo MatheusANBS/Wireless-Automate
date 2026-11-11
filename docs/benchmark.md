@@ -681,3 +681,37 @@ Ramo `ccr-71b175d3-weymk6`. O relato do dono: cinco Ultimate Smelting Factories 
 - A saída espera 1 tick em média de 32× a 2.560× (lei de Little): o recuo da volta não atrasa máquina que produz.
 - A 2.560× o que limita é a CPU do AE2 (cada empurrão leva 256: sem coprocessador, ~1.700 itens/s) e, com CPU de sobra, o pendente que segura o lado (92% do teto). Só aceitar onde o pedido somado coubesse foi medido e piorou (74% a 2.560×, 93% a 512×) e não entrou.
 - O cenário `doca` do `bench.sh`, antes (`run/bench/reports/20261111-180512.md`) e depois (`20261111-180259.md`), `./scripts/bench.sh doca:1:3`: mod 0,151 ± 0,034 → 0,149 ± 0,052 ms/tick, 640 pedidos aceitos/s e 256 itens/s devolvidos nos dois; no ruído (as fornalhas do cenário avisam pelo `setChanged`, e o acordar novo não muda nada para elas).
+
+## Doca: o uso intenso com o Quantum Computer (11 de novembro de 2026)
+
+Ramo `ccr-71b175d3-weymk6`. É o mesmo cenário da seção anterior, agora com o AE2 de verdade, num GameTest instrumentado:
+
+```
+WA_DOCK_MEDIDA=1 ./gradlew runGameTestServerAe2 -PdockMedida
+```
+
+- **A run:** a propriedade põe o Mekanism na pasta mods da run do AE2 e liga só o namespace da medição (`gametest/DockQuantumMedida`).
+- **A montagem:** as cinco fábricas reais a 2.560×, o Pattern Provider do AE2 na Doca e a rede ME (célula de 256k). A CPU é o Quantum Computer do Advanced AE de 7×7×7 (o Core, um Multi Threader e 123 Accelerators: 3.968 coprocessadores) ou só o Quantum Core (8).
+- **O pedido e a volta:** 100.000 lingotes pela CPU (391 execuções de 256). A volta vai direta à rede ME, e o pedido termina.
+- **De onde vem o custo:** do `dock/DockProbe`. A entrega é o tempo dentro do `pushPattern` da Doca; a volta é o `DockReturn.visit`, com a saída do pendente.
+- **Repetições:** 4 rodadas aquecidas do Q7 e 3 do Core. A primeira medição da run (fria, com a JIT) vai à parte.
+- **O teto** das fábricas é de 11.520 itens/s (1.152 a 256×).
+
+| Caso | Ticks (s) | Itens/s (% do teto) | Fábricas paradas | Empurrões por tick (máx.) | Recusas: pendente / cheias / orçamento | Entrega ms/tick (µs por oferta) | Volta ms/tick (ns por item) | Por tick p50 / p99 | Ticks > 1 ms |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Q7, aquecida | 190 (9,5) | 10.536 (91%) | 2% | 2,06 (11) | 0 / 0 / 0 | 0,021 a 0,023 (10 a 11) | 0,062 a 0,087 (118 a 166) | 0,080 / 0,24 a 1,8 ms | 0 a 2 de 190 |
+| Q7, fria (1ª da run) | 191 (9,6) | 10.481 (91%) | 2% | 2,05 (9) | 0 / 0 / 2 | 0,111 (54) | 0,320 (610) | 0,24 / 5,0 ms | 15 de 191 |
+| Core (8 coprocessadores) | 192 (9,6) | 10.427 (90%) | 2 a 3% | 2,04 (9) | 0 / 0 / 0 | 0,022 (11) | 0,065 (125) | 0,08 / 0,3 a 0,7 ms | 0 |
+| Q7, fábricas a 256× | 1.759 (88,0) | 1.138 (99%) | 1% | 0,22 (11) | 0 / 220 / 0 | 0,005 (15,5) | 0,056 (982) | 0,05 / 0,14 ms | 3 de 1.759 |
+
+- **A Doca aguenta o Quantum.**
+  - A CPU do Advanced AE empurra até a primeira recusa e para. A Doca recusa cedo e barato: o lado fica com pendente, e o `acceptsPlans` responde que não com uma leitura de campo.
+  - São ~2 empurrões aceitos e ~3 perguntas por tick, e a entrega fica em 2% do orçamento.
+  - Os picos isolados de ~2 ms nas rodadas aquecidas não viraram recusa. Têm a cara de GC, porque as fábricas aceleradas alocam muito, mas isso não foi conferido no log do GC.
+- **A volta direta à rede ME a ~10.500 itens/s custa 0,06 a 0,09 ms/tick.** É menos que o motor inteiro com o baú no mesmo ritmo (0,09 a 0,12 na seção anterior).
+- **A oferta recusada por "todas cheias"** custa 20,5 µs, contra 12,7 µs da aceita, porque simula as cinco máquinas. Só aparece a 256×, e aí soma 0,0026 ms/tick.
+- **O que falta para o teto (9%)** é o pendente que segura o lado, com pendente em 48% dos ticks: o mesmo número da CPU emulada (92%). Um Quantum Core sozinho já basta (90%).
+- **O cenário `doca` do `bench.sh`** (`./scripts/bench.sh doca:1:3`; o sensor fica nulo nele):
+  - antes (`run/bench/reports/20261111-191121.md`): mod 0,144 ± 0,039 ms/tick;
+  - depois (`20261111-191339.md`): 0,146 ± 0,039 ms/tick;
+  - 256 itens/s devolvidos nos dois. No ruído.

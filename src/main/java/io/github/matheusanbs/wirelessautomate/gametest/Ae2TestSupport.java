@@ -14,6 +14,7 @@ import appeng.api.networking.IGrid;
 import appeng.api.networking.IGridNode;
 import appeng.api.networking.IInWorldGridNodeHost;
 import appeng.api.networking.crafting.CalculationStrategy;
+import appeng.api.networking.crafting.ICraftingCPU;
 import appeng.api.networking.crafting.ICraftingPlan;
 import appeng.api.networking.crafting.ICraftingService;
 import appeng.api.networking.security.IActionSource;
@@ -340,6 +341,15 @@ final class Ae2TestSupport {
             names.append(names.isEmpty() ? "" : ",").append(cpu.getClass().getSimpleName());
         }
         return names.toString();
+    }
+
+    /** Os coprocessadores das CPUs de crafting da rede em {@code pos}, somados (o Quantum Computer conta os dele). */
+    static int coProcessors(ServerLevel level, BlockPos pos) {
+        int total = 0;
+        for (ICraftingCPU cpu : grid(level, pos).getCraftingService().getCpus()) {
+            total += cpu.getCoProcessors();
+        }
+        return total;
     }
 
     /** A rede ainda tem um pedido de {@code item} em andamento. */

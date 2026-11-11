@@ -10,6 +10,7 @@ import appeng.api.stacks.KeyCounter;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.dock.DockAe2;
 import io.github.matheusanbs.wirelessautomate.dock.DockDelivery;
+import io.github.matheusanbs.wirelessautomate.dock.DockProbe;
 import io.github.matheusanbs.wirelessautomate.dock.DockSide;
 import io.github.matheusanbs.wirelessautomate.dock.DockStatus;
 import io.github.matheusanbs.wirelessautomate.dock.PatternDockBlockEntity;
@@ -66,11 +67,29 @@ final class Ae2DockMachine implements ICraftingMachine {
     @Override
     public boolean acceptsPlans() {
         DockAe2.offered(dock, side);
-        return DockDelivery.acceptsOrders(dock, side);
+        boolean accepts = DockDelivery.acceptsOrders(dock, side);
+        DockProbe.Listener probe = DockProbe.listener;
+        if (probe != null) {
+            probe.asked(accepts);
+        }
+        return accepts;
     }
 
     @Override
     public boolean pushPattern(IPatternDetails patternDetails, KeyCounter[] inputs, Direction ejectionDirection) {
+        DockProbe.Listener probe = DockProbe.listener;
+        if (probe == null) {
+            return push(patternDetails, inputs);
+        }
+        long started = System.nanoTime();
+        boolean accepted = push(patternDetails, inputs);
+        long nanos = System.nanoTime() - started;
+        DockSide dockSide = dock.side(side);
+        probe.offered(accepted, dockSide == null ? DockStatus.NO_REFUSAL : dockSide.lastRefusal(), nanos);
+        return accepted;
+    }
+
+    private boolean push(IPatternDetails patternDetails, KeyCounter[] inputs) {
         DockAe2.offered(dock, side);
         if (!patternDetails.supportsPushInputsToExternalInventory()) {
             DockDelivery.refuse(dock, side, DockStatus.CRAFTING_PATTERN);

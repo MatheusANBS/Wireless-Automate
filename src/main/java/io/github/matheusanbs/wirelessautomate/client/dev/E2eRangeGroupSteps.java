@@ -124,19 +124,25 @@ final class E2eRangeGroupSteps {
      */
     private static void updateSteps(List<Step> list, String l, UUID playerId) {
         int[] cardsBefore = new int[1];
-        list.add(new Step(l + "um baú com cartão vira barril", STEP_TIMEOUT_MS, () -> onServer(server -> {
-            RouterBlockEntity router = router(server, rangeRouter);
-            router.linkMachine(rangeChestA);
-            var machines = router.remoteMachines();
-            int index = machines.index(rangeChestA);
-            int chests = machines.groupOf(machines.machine(index)).id();
-            router.setCard(EditTarget.group(chests), ResourceType.ITEM, Direction.NORTH, 0, itemCard());
-            server.overworld().setBlockAndUpdate(rangeChestA, Blocks.BARREL.defaultBlockState());
-            cardsBefore[0] = cards(server, playerId);
-            selectOnServer(server, playerId,
-                    id -> SelectTargetPayload.machine(id, index, rangeChestA));
-            return null;
-        }), () -> rangeView().machines().size() == 1
+        list.add(new Step(l + "um baú com cartão vira barril", STEP_TIMEOUT_MS, () -> {
+            int index = onServer(server -> {
+                RouterBlockEntity router = router(server, rangeRouter);
+                router.linkMachine(rangeChestA);
+                var machines = router.remoteMachines();
+                int linked = machines.index(rangeChestA);
+                int chests = machines.groupOf(machines.machine(linked)).id();
+                router.setCard(EditTarget.group(chests), ResourceType.ITEM, Direction.NORTH, 0, itemCard());
+                return linked;
+            });
+            // noutra tarefa do servidor, depois da conferência do vínculo novo (que tiraria o baú trocado à vista)
+            onServer(server -> {
+                E2eRangeReplaceSteps.swapUnseen(server, rangeRouter, rangeChestA, Blocks.BARREL.defaultBlockState());
+                cardsBefore[0] = cards(server, playerId);
+                selectOnServer(server, playerId,
+                        id -> SelectTargetPayload.machine(id, index, rangeChestA));
+                return null;
+            });
+        }, () -> rangeView().machines().size() == 1
                 && rangeView().machines().getFirst().state() == RangeView.MachineState.REPLACED
                 && routerScreen().rangeButtonCenter(RangeRowButtons.Action.UPDATE) != null,
                 () -> "alcance " + rangeView()));

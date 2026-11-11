@@ -6,6 +6,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.range.CacheOwner;
+import io.github.matheusanbs.wirelessautomate.range.GoneCheck;
 import io.github.matheusanbs.wirelessautomate.range.MachineCaches;
 import io.github.matheusanbs.wirelessautomate.range.RangeRules;
 import io.github.matheusanbs.wirelessautomate.range.RemoteIndex;
@@ -16,8 +17,6 @@ import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
-import it.unimi.dsi.fastutil.longs.LongIterator;
-import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -31,12 +30,10 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.TickTask;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Containers;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
@@ -55,7 +52,7 @@ import org.jetbrains.annotations.Nullable;
  * {@link #machineChanged}.
  *
  * <p>A máquina que sai do lugar (quebrada, trocada por outro bloco) é desvinculada sozinha pela conferência
- * {@link #checkGone}, na fila do servidor, a partir dos mesmos avisos e da carga da Doca; nada por tick.
+ * {@link GoneCheck}, na fila do servidor, a partir dos mesmos avisos e da carga da Doca; nada por tick.
  */
 public class PatternDockBlockEntity extends BlockEntity implements RemoteListener, CacheOwner {
     public static final int SIDES = 6;
@@ -89,15 +86,8 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
     private @Nullable DockWork work;
     /** A caixa de render (o bloco com uma folga de 0,1), feita uma vez: o renderer a pede a cada quadro. */
     private @Nullable AABB renderBox;
-    /**
-     * No servidor: as máquinas ({@code BlockPos.asLong}) cujo bloco pode ter saído, para a próxima {@link #checkGone};
-     * criado no primeiro aviso. Não é salvo.
-     */
-    private @Nullable LongOpenHashSet goneSuspects;
-    /** A próxima {@link #checkGone} confere todas as máquinas (a carga da Doca). */
-    private boolean checkAllGone;
-    /** Uma {@link #checkGone} na fila do servidor, para os avisos seguintes não enfileirarem outra. */
-    private boolean goneCheckQueued;
+    /** No servidor: a conferência das máquinas que saíram do lugar, pelos avisos e pela carga da Doca. */
+    private final GoneCheck gone = new GoneCheck(new GoneHost());
 
     public PatternDockBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.PATTERN_DOCK.get(), pos, state);
@@ -183,7 +173,7 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
         machineAt.put(pos.asLong(), machine);
         linksChanged();
         // a conferência liga a vigia do cache, que avisa quando a máquina sair do lugar
-        suspectGone(machine);
+        gone.suspect(pos);
         if (dockSide.loose() != null) {
             // o pendente solto (o do item da Doca, o de uma máquina que saiu) pode ir a esta
             DockPending.flushSoon(this, dockSide, null);
@@ -321,76 +311,45 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
         for (DockMachine machine : machineAt.values()) {
             machine.discard();
         }
-        if (goneSuspects != null) {
-            goneSuspects.clear();
-        }
-        checkAllGone = false;
+        gone.stop();
     }
 
     /**
-     * A máquina pode ter saído do lugar (um cache dela invalidado, um aviso com outro bloco, um vínculo novo, a máquina
-     * ainda sem vigia): entra na próxima {@link #checkGone}. Não lê o mundo aqui, porque o aviso pode vir de dentro de
-     * um listener de capability ou de uma descarga de chunk.
+     * O dono das máquinas na conferência das que saíram do lugar ({@link GoneCheck}): a máquina fica se o bloco no lugar
+     * é o do lado dela (e ganha a vigia do cache se está sem), e a que saiu é desvinculada pelo {@link #unlink}, o
+     * caminho do Vinculador (o índice, os caches, a fila da volta e o lado que solta o bloco sem máquinas e sem
+     * pendente).
      */
-    private void suspectGone(DockMachine machine) {
-        if (level == null || level.isClientSide || isRemoved()) {
-            return;
+    private final class GoneHost implements GoneCheck.Host {
+        @Override
+        public @Nullable Level goneLevel() {
+            return level;
         }
-        if (goneSuspects == null) {
-            goneSuspects = new LongOpenHashSet();
-        }
-        goneSuspects.add(machine.pos().asLong());
-        queueGoneCheck();
-    }
 
-    private void queueGoneCheck() {
-        if (goneCheckQueued || !(level instanceof ServerLevel serverLevel)) {
-            return;
+        @Override
+        public void allMachines(LongArrayList out) {
+            out.addAll(machineAt.keySet());
         }
-        goneCheckQueued = true;
-        MinecraftServer server = serverLevel.getServer();
-        server.tell(new TickTask(server.getTickCount(), this::checkGone));
-    }
 
-    /**
-     * Confere as máquinas suspeitas (ou todas, depois da carga), na fila do servidor: com o chunk carregado e outro
-     * bloco no lugar (ar, ou um bloco que não é o do lado), a máquina é desvinculada pelo {@link #unlink}, o caminho do
-     * Vinculador (o índice, os caches, a fila da volta e o lado que solta o bloco sem máquinas e sem pendente). Chunk
-     * descarregado não é quebra: a máquina fica e não é lida. A que está no lugar e sem vigia ganha a vigia do cache
-     * ({@link MachineCaches#watch}), cujo aviso traz a próxima conferência quando a block entity sair. Custo: uma
-     * leitura de bloco por suspeita, só depois de um aviso; O(máquinas) uma vez na carga.
-     */
-    private void checkGone() {
-        goneCheckQueued = false;
-        boolean all = checkAllGone;
-        checkAllGone = false;
-        LongOpenHashSet suspects = goneSuspects;
-        if (level == null || level.isClientSide || isRemoved()) {
-            if (suspects != null) {
-                suspects.clear();
+        @Override
+        public boolean stays(BlockPos pos, Block block) {
+            DockMachine machine = machineAt.get(pos.asLong());
+            if (machine == null) {
+                return true;
             }
-            return;
-        }
-        LongArrayList gone = null;
-        if (all) {
-            for (DockMachine machine : machineAt.values()) {
-                if (isGone(machine)) {
-                    gone = add(gone, machine);
-                }
+            DockSide side = sides[machine.side()];
+            if (side == null || !side.isSideBlock(block)) {
+                return false;
             }
-        } else if (suspects != null) {
-            for (LongIterator keys = suspects.iterator(); keys.hasNext(); ) {
-                DockMachine machine = machineAt.get(keys.nextLong());
-                if (machine != null && isGone(machine)) {
-                    gone = add(gone, machine);
-                }
+            if (!machine.watched()) {
+                machine.caches(PatternDockBlockEntity.this).watch();
+                machine.setWatched(true);
             }
+            return true;
         }
-        if (suspects != null) {
-            suspects.clear();
-        }
-        if (gone != null) {
-            LongArrayList positions = gone;
+
+        @Override
+        public void unlinkGone(LongArrayList positions) {
             batchChanges(() -> {
                 for (int i = 0, n = positions.size(); i < n; i++) {
                     DockMachine machine = machineAt.get(positions.getLong(i));
@@ -400,32 +359,6 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
                 }
             });
         }
-    }
-
-    private static LongArrayList add(@Nullable LongArrayList list, DockMachine machine) {
-        LongArrayList result = list == null ? new LongArrayList() : list;
-        result.add(machine.pos().asLong());
-        return result;
-    }
-
-    /**
-     * A máquina saiu do lugar: o chunk dela está carregado e o bloco ali não é o do lado. Se ela está no lugar e sem
-     * vigia, liga a vigia. Só fora de listener (a vigia consulta o cache).
-     */
-    private boolean isGone(DockMachine machine) {
-        BlockPos pos = machine.pos();
-        DockSide side = sides[machine.side()];
-        if (level == null || side == null || !level.isLoaded(pos)) {
-            return false;
-        }
-        if (!side.isSideBlock(level.getBlockState(pos).getBlock())) {
-            return true;
-        }
-        if (!machine.watched()) {
-            machine.caches(this).watch();
-            machine.setWatched(true);
-        }
-        return false;
     }
 
     /**
@@ -578,13 +511,13 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
         // Caminho quente (todo setChanged da máquina): uma leitura de flag e uma comparação de referência. Cobre a
         // carga do chunk dela (a vigia caiu na descarga) e o bloco trocado que avisa antes do cache.
         if (!machine.watched() || state != null && !sides[machine.side()].isSideBlock(state.getBlock())) {
-            suspectGone(machine);
+            gone.suspect(machine.pos());
         }
     }
 
     /**
      * Um cache de capability de uma máquina foi invalidado (a block entity saiu ou entrou, ou o chunk dela carregou ou
-     * descarregou): a máquina é acordada e conferida depois ({@link #suspectGone}), fora do listener.
+     * descarregou): a máquina é acordada e conferida depois ({@link GoneCheck#suspect}), fora do listener.
      */
     @Override
     public void machineInvalidated(MachineCaches caches, ResourceType type, Direction face) {
@@ -593,7 +526,7 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
             // a vigia só volta com uma consulta, que a conferência faz se a máquina continua no lugar
             machine.setWatched(false);
             machineChanged(machine);
-            suspectGone(machine);
+            gone.suspect(machine.pos());
         }
     }
 
@@ -686,10 +619,7 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
             NetworkManager.get().addVisitor(returns);
             wakeReturns();
             // uma máquina quebrada com a Doca descarregada (sem vigia) sai na carga
-            if (!machineAt.isEmpty()) {
-                checkAllGone = true;
-                queueGoneCheck();
-            }
+            gone.start(!machineAt.isEmpty());
         }
     }
 

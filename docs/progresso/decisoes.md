@@ -25,6 +25,9 @@ Decisões em vigor, do dono e do código. Quando uma decisão muda, reescreva a 
 - **Ficam como estão:** as imagens `feature-2-router` e `feature-6-tablet` do CurseForge com as telas antigas (14/10); o prazo do stash do `StorageSavedData` em 0, sem prazo (19/10); o bench do Baú com e sem vigia, dispensado (27/10).
 - **Visual acima de custo no cliente:** em efeito visual, um custo pequeno no cliente é aceitável se ficar mais bonito (ver a skill `wa-shaders`). O servidor segue as leis da `wa-performance`.
 - Doca de Padrões (11/11): a sobra de um pedido trava só a máquina que o recebeu, e sai só nela (a receita não se parte); a máquina que sai do lado passa a sobra a outra do lado. O pendente guarda uma linha por item com a quantidade em `long`, e o formato antigo é migrado ao carregar, sem perder nada.
+- **A remota quebrada ou trocada sai sozinha do roteador de alcance**, como a máquina da Doca: com o chunk carregado e outro bloco no lugar (ar ou outro id; girada fica), ela é desvinculada pelo caminho de sempre e a vaga volta; os cartões do grupo que esvazia caem no roteador. Chunk descarregado não é quebra. A tela segue com "sumida" e "trocada", o Desvincular e o Atualizar para os limites aceitos (a troca com o upgrade fora, a remota inativa). (11/11)
+- **Doca, a volta nos tiers baixos fica com a vazão do roteador por lado** (Básica 32 e Avançada 256 itens/s por lado): o tier é a escolha do jogador, sem vazão por máquina nem multiplicador na config. (11/11)
+- **Doca, a rajada acima de 1 ms do começo do pedido com o Quantum é aceita:** o orçamento já limita e a dívida sai no tick seguinte (0,53 ms/tick em média com cinco Infinite Factories). (11/11)
 
 ## No código
 

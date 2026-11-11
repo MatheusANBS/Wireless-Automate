@@ -6,6 +6,7 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eRouterSteps.*
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eUi.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
+import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.client.router.RangeRowButtons;
 import io.github.matheusanbs.wirelessautomate.menu.RangeView;
@@ -13,8 +14,11 @@ import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
 import java.util.List;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.AbstractFurnaceBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -101,8 +105,10 @@ final class E2eRangeReplaceSteps {
             groupUpdateSteps(list, label);
         }
         list.add(new Step(label + "a fornalha de volta, no perfil", STEP_TIMEOUT_MS, () -> {
-            setFurnace(Blocks.FURNACE);
+            // a troca e o Atualizar na mesma tarefa: a fornalha num grupo de outro bloco sairia na conferência
             onServer(server -> {
+                swapUnseen(server, rangeRouter, rangeFurnace, Blocks.FURNACE.defaultBlockState()
+                        .setValue(AbstractFurnaceBlock.FACING, Direction.SOUTH));
                 var router = router(server, rangeRouter);
                 int index = router.remoteMachines().index(rangeFurnace);
                 router.updateReplaced(List.of(index), null);
@@ -142,12 +148,30 @@ final class E2eRangeReplaceSteps {
                 () -> "fornalha " + furnace() + ", grupos " + rangeView().groups()));
     }
 
-    /** Troca no servidor o bloco da fornalha vinculada, de frente para o sul como ela (o barril, como vier). */
+    /**
+     * Troca no servidor o bloco da fornalha vinculada, de frente para o sul como ela (o barril, como vier), sem o
+     * roteador ver ({@link #swapUnseen}).
+     */
     private static void setFurnace(Block block) throws Exception {
         BlockState state = block.defaultBlockState();
         BlockState placed = state.hasProperty(AbstractFurnaceBlock.FACING)
                 ? state.setValue(AbstractFurnaceBlock.FACING, Direction.SOUTH) : state;
-        onServer(server -> server.overworld().setBlockAndUpdate(rangeFurnace, placed));
+        onServer(server -> {
+            swapUnseen(server, rangeRouter, rangeFurnace, placed);
+            return null;
+        });
+    }
+
+    /**
+     * Troca o bloco da remota em {@code pos} sem o roteador em {@code routerPos} ver, o limite aceito da remota que sai
+     * sozinha: com o upgrade fora, os caches e o índice das remotas caem e nenhum aviso chega; o upgrade volta na
+     * mesma tarefa do servidor. A remota fica "trocada" (ou "sumida") na tela, com o Atualizar e o Desvincular.
+     */
+    static void swapUnseen(MinecraftServer server, BlockPos routerPos, BlockPos pos, BlockState state) {
+        RouterBlockEntity router = router(server, routerPos);
+        ItemStack upgrade = router.removeRangeUpgrade();
+        server.overworld().setBlockAndUpdate(pos, state);
+        router.setRangeUpgrade(upgrade);
     }
 
     private static RangeView.MachineView furnace() throws StepFailure {

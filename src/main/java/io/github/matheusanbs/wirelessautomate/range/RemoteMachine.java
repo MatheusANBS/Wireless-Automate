@@ -20,6 +20,12 @@ public final class RemoteMachine {
     private String label = "";
     /** Na última leitura do bloco, ele não era o do grupo (a máquina foi trocada). Não é salvo. */
     private boolean replaced;
+    /**
+     * A conferência das que saíram do lugar ({@link GoneCheck}) achou a máquina no lugar e ligou a vigia do cache
+     * ({@link MachineCaches#watch}), que avisa quando a block entity sai; um aviso de invalidação, ou os caches
+     * descartados, a desligam. Não é salvo.
+     */
+    private boolean watched;
 
     public RemoteMachine(BlockPos pos, int group, @Nullable MachineConfig exception, int front) {
         this.pos = pos.immutable();
@@ -77,6 +83,15 @@ public final class RemoteMachine {
 
     public void setReplaced(boolean replaced) {
         this.replaced = replaced;
+    }
+
+    /** Ver {@link #watched}. */
+    public boolean watched() {
+        return watched;
+    }
+
+    public void setWatched(boolean watched) {
+        this.watched = watched;
     }
 
     /** Já limpo por quem chama ({@code RenameRouterPayload.clean}). Mude pelo roteador. */

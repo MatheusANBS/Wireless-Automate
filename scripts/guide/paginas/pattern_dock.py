@@ -58,6 +58,8 @@ sai o resultado. A action bar mostra o que ela achou.
   pedido o conta ali.
 - Um pedido pode ter **itens, fluidos e químicos juntos**: cada um entra pela face da máquina que o recebe, e o
   resultado volta à rede do mesmo jeito, seja item, fluido ou químico.
+- Se um pedido **não cabe inteiro**, o resto espera na máquina que o recebeu e entra conforme ela consome. Só ela
+  fica de fora dos próximos pedidos: as outras do lado continuam recebendo.
 - Quando **todas as máquinas estão cheias**, o pedido espera. **Nada se perde**: se você quebrar a Doca com um resto
   de pedido esperando, ele vai junto no item ("Pedido pendente") e volta ao mesmo lado quando você a recoloca.
 
@@ -114,7 +116,7 @@ e o estado:
 | Pedido com recurso que a Doca não conhece | O último pedido trazia algo que não é item, fluido nem químico |
 | Provedor cheio | O resultado espera lugar: a rede cheia, sem energia ou sem canal |
 | Todas cheias | Nenhuma máquina aceitou o último pedido; ele espera |
-| Pedido pendente | A máquina ainda não recebeu o resto do último pedido; o lado espera por ele |
+| Pedido pendente | Toda máquina do lado ainda tem o resto do último pedido dela; o lado espera uma terminar |
 | Trabalhando | Uma máquina recebeu um pedido ou devolveu um resultado há pouco |
 | Pronto | Tudo certo, esperando pedidos |
 | livre | Nada encostado e nenhuma máquina |
@@ -170,6 +172,8 @@ gives the result. The action bar shows what it found.
   and the order counts it there.
 - An order can carry **items, fluids and chemicals together**: each one goes in through the machine face that takes
   it, and the result comes back to the network the same way, be it an item, a fluid or a chemical.
+- If an order **does not fit whole**, the rest waits in the machine that took it and goes in as it consumes. Only
+  that machine sits out the next orders: the others on the side keep taking them.
 - When **all the machines are full**, the order waits. **Nothing is lost**: if you break the Dock while the rest of an
   order is waiting, it goes along in the item ("Order pending") and returns to the same side when you place it again.
 
@@ -226,7 +230,7 @@ working, and the state:
 | Order with a resource the Dock doesn't know | The last order brought something that is not an item, a fluid or a chemical |
 | Provider full | The result waits for room: the network is full, unpowered or without a channel |
 | All full | No machine took the last order; it waits |
-| Order pending | The machine has not taken the rest of the last order yet; the side waits for it |
+| Order pending | Every machine on the side still has the rest of its last order; the side waits for one to finish |
 | Working | A machine got an order or gave back a result a moment ago |
 | Ready | All good, waiting for orders |
 | free | Nothing attached and no machine |

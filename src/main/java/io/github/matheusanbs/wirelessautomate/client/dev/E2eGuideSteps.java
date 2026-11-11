@@ -64,7 +64,7 @@ final class E2eGuideSteps {
             "networks", "filters", "filter-card", "linker", "configurator", "chunk-loading", "wireless-chest",
             "wireless-tank", "wireless-battery", "wireless-chemical-tank", "wireless-source-tank", "signal-quartz",
             "signal-resonator", "crystal-repairer", "network-tablet", "signal-screen", "chemicals", "source",
-            "troubleshooting", "recipe-editor", "recipes");
+            "pattern-dock", "troubleshooting", "recipe-editor", "recipes");
 
     static void guideSteps(List<Step> list) {
         list.add(new Step("livro-guia entregue no primeiro login", STEP_TIMEOUT_MS, () -> {

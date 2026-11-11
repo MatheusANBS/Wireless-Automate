@@ -100,6 +100,8 @@ The machine attached to the router shows up **inside its block's group** and fol
   of the same block are there, it becomes an **exception**. The ↺ on its row goes back to the profile.
 - **Swap the machine** for another in the same place (a tier upgrade, for example): the configuration
   goes with it.
+- **Breaking a linked machine**, or replacing it with another block, unlinks it on its own: the slot
+  comes back. If its group ends up empty, the group's cards drop on the ground, next to the router.
 - **Unlink a whole group:** click the ✕ on the group row and click again to confirm. The group's cards
   come back to your inventory. In the attached machine's group, the machine stays and the group is reset.
 - **Update** (⟳): if the old group ends up empty, its cards come back to your inventory.

@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.packet.RenameRouterPayload;
 import io.github.matheusanbs.wirelessautomate.range.AttachedMember;
 import io.github.matheusanbs.wirelessautomate.range.EditTarget;
+import io.github.matheusanbs.wirelessautomate.range.GoneCheck;
 import io.github.matheusanbs.wirelessautomate.range.MachineCaches;
 import io.github.matheusanbs.wirelessautomate.range.MachineConfig;
 import io.github.matheusanbs.wirelessautomate.range.MachineGroup;
@@ -13,6 +14,7 @@ import io.github.matheusanbs.wirelessautomate.range.RemoteCapabilities;
 import io.github.matheusanbs.wirelessautomate.range.RemoteIndex;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
+import it.unimi.dsi.fastutil.longs.LongArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +27,7 @@ import net.minecraft.world.Containers;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
@@ -32,12 +35,15 @@ import org.jetbrains.annotations.Nullable;
  * O alcance de um {@link RouterBlockEntity} com o Upgrade de Alcance: vincular e desvincular máquinas remotas,
  * a exceção de uma máquina, a frente de cada remota (relida quando ela avisa ou quando um cache é
  * invalidado), os caches de capability delas ({@link RouterRemoteCaches}) e o registro no {@link RemoteIndex}.
- * Nenhuma remota é lida sem o chunk carregado.
+ * Nenhuma remota é lida sem o chunk carregado. A remota que sai do lugar (quebrada, trocada por outro bloco) é
+ * desvinculada sozinha pela conferência {@link GoneCheck}, a partir dos mesmos avisos e da carga do roteador.
  */
 final class RouterRange {
     private final RouterBlockEntity router;
     private final RemoteMachines remotes;
     private final RouterRemoteCaches caches;
+    /** No servidor: a conferência das remotas que saíram do lugar. */
+    private final GoneCheck gone = new GoneCheck(new GoneHost());
 
     RouterRange(RouterBlockEntity router, RemoteMachines remotes) {
         this.router = router;
@@ -63,6 +69,8 @@ final class RouterRange {
         }
         remotesChanged();
         router.changed(NetworkManager.ALL_TYPES);
+        // a conferência liga a vigia do cache, que avisa quando a máquina sair do lugar
+        gone.suspect(pos);
         return true;
     }
 
@@ -287,6 +295,11 @@ final class RouterRange {
             refreshFront(machine, state);
         }
         NetworkManager.get().wakeMachine(router, machine.pos());
+        // Caminho quente (todo setChanged da remota): uma leitura de flag. Cobre a carga do chunk dela (a vigia caiu
+        // na descarga) e a remota que ficou ativa sem vigia.
+        if (!machine.watched()) {
+            gone.suspect(machine.pos());
+        }
     }
 
     /**
@@ -343,11 +356,17 @@ final class RouterRange {
      * nó são refeitas. Se ela continua trocada, nada muda nas rotas (a montagem já a pula): só o cache que a vigia é
      * consultado de novo, depois do aviso ({@link MachineCaches#watchSoon}), sem o qual o próximo aviso não viria.
      * Senão acorda a porta da face. A troca de um bloco com block entity sempre chega aqui: o NeoForge invalida as
-     * capabilities da posição quando a block entity sai e quando a nova entra.
+     * capabilities da posição quando a block entity sai e quando a nova entra. Em todo aviso a remota é conferida
+     * depois ({@link GoneCheck#suspect}), fora do listener: a que saiu do lugar é desvinculada.
      */
     void invalidated(Level level, BlockPos pos, ResourceType type, Direction machineFace) {
+        RemoteMachine machine = remotes.machine(remotes.index(pos));
+        if (machine != null) {
+            // a vigia só volta com uma consulta, que a conferência faz se a remota continua no lugar
+            machine.setWatched(false);
+            gone.suspect(pos);
+        }
         if (level.isLoaded(pos)) {
-            RemoteMachine machine = remotes.machine(remotes.index(pos));
             if (machine != null) {
                 BlockState state = level.getBlockState(pos);
                 boolean swapped = storeReplaced(machine, state);
@@ -362,5 +381,61 @@ final class RouterRange {
             }
         }
         NetworkManager.get().capabilityChanged(router, pos, type, machineFace);
+    }
+
+    /** O roteador carregou ({@link RouterPresence#loaded}): confere todas as remotas. */
+    void goneStart() {
+        gone.start(remotes.size() > 0);
+    }
+
+    /** O roteador descarregou ou saiu do mundo: a conferência para até a próxima carga. */
+    void goneStop() {
+        gone.stop();
+    }
+
+    /**
+     * O roteador na conferência das remotas que saíram do lugar ({@link GoneCheck}). Fica a remota cujo bloco é o do
+     * grupo (o mesmo critério da trocada, {@link #storeReplaced}: girada ou com outro estado, fica); a ativa (no
+     * {@link RemoteIndex}) sem vigia ganha a vigia do cache. A que saiu é desvinculada como no Desvincular sem
+     * jogador ({@link #unlink}): o índice, os caches, e o grupo que esvazia sai com os cartões caindo no roteador.
+     */
+    private final class GoneHost implements GoneCheck.Host {
+        @Override
+        public @Nullable Level goneLevel() {
+            return router.getLevel();
+        }
+
+        @Override
+        public void allMachines(LongArrayList out) {
+            for (int i = 0, n = remotes.size(); i < n; i++) {
+                out.add(remotes.machine(i).pos().asLong());
+            }
+        }
+
+        @Override
+        public boolean stays(BlockPos pos, Block block) {
+            RemoteMachine machine = remotes.machine(remotes.index(pos));
+            if (machine == null) {
+                return true;
+            }
+            if (!BuiltInRegistries.BLOCK.getKey(block).equals(remotes.groupOf(machine).block())) {
+                return false;
+            }
+            // só a ativa: os caches das de fora do raio ou do limite são descartados (pruneCaches)
+            if (!machine.watched() && RemoteIndex.get().isIndexed(router, pos)) {
+                caches(pos).watch();
+                machine.setWatched(true);
+            }
+            return true;
+        }
+
+        @Override
+        public void unlinkGone(LongArrayList positions) {
+            router.batchChanges(() -> {
+                for (int i = 0, n = positions.size(); i < n; i++) {
+                    unlink(remotes.index(BlockPos.of(positions.getLong(i))), null);
+                }
+            });
+        }
     }
 }

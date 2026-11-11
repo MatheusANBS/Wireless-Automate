@@ -97,6 +97,8 @@ A máquina presa ao roteador aparece **dentro do grupo do bloco dela**, e segue 
 - **Editar a presa:** se ela está sozinha no grupo, você muda o perfil. Se há outras máquinas do mesmo
   bloco, a presa vira uma **exceção**. O ↺ na linha volta ao perfil.
 - **Trocar a máquina** por outra no mesmo lugar (um upgrade de tier, por exemplo): a configuração vai junto.
+- **Quebrar uma máquina vinculada**, ou trocá-la por outro bloco, a desvincula sozinha: a vaga volta. Se o
+  grupo dela esvazia, os cartões dele caem no chão, junto do roteador.
 - **Desvincular o grupo inteiro:** clique no ✕ da linha do grupo e clique de novo para confirmar. Os
   cartões do grupo voltam ao seu inventário. No grupo da presa, ela fica e o grupo é zerado.
 - **Atualizar** (⟳): se o grupo antigo esvazia, os cartões dele voltam ao seu inventário.

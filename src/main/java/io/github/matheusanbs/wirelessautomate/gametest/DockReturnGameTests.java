@@ -33,8 +33,8 @@ import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
- * A volta do resultado ({@code DockReturn}): o lingote da fornalha volta ao baú encostado no lado da Doca, o
- * combustível fica na fornalha, o baú cheio segura a volta (o lado marca "provedor cheio") e ela retoma quando ele
+ * A volta do resultado ({@code DockReturn}): o lingote da fornalha volta ao baú encostado no lado da Doca (também o
+ * que já estava na saída antes da carga da Doca), o combustível fica na fornalha, o baú cheio segura a volta (o lado marca "provedor cheio") e ela retoma quando ele
  * esvazia, a Doca sem pedido não é visitada e a recarga da config com o raio menor tira a máquina de fora do índice.
  */
 @GameTestHolder(WirelessAutomate.MODID)
@@ -125,6 +125,34 @@ public final class DockReturnGameTests {
                     helper.assertTrue(furnace(helper).getItem(2).isEmpty(), "o lingote ficou na fornalha");
                     helper.assertTrue(dock.machineAt(helper.absolutePos(FURNACE)).lastActive() > 0, "sem atividade");
                 })
+                .thenSucceed();
+    }
+
+    /**
+     * O lingote que já estava na saída de uma fornalha parada (que não avisa a Doca) volta ao baú depois da carga da
+     * Doca: o {@code onLoad} põe as máquinas ativas na fila da volta. A descarga e a carga do chunk são simuladas no
+     * block entity. Num lote só dele: um teste em paralelo que simula a carga de um chunk ({@code RangeWakeGameTests})
+     * avisa as máquinas do chunk inteiro, e a fornalha acordaria antes da hora.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200, batch = "wirelessautomate_dock_load")
+    public static void ingotReturnsAfterDockLoad(GameTestHelper helper) {
+        PatternDockBlockEntity dock = scene(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> registered(dock))
+                .thenExecute(() -> {
+                    link(helper, dock);
+                    // o setItem da saída não chama o setChanged: a fornalha fica parada e calada
+                    furnace(helper).setItem(2, new ItemStack(Items.IRON_INGOT, 2));
+                })
+                .thenIdle(10)
+                .thenExecute(() -> {
+                    helper.assertTrue(chestCount(helper, Items.IRON_INGOT) == 0, "voltou sem a carga");
+                    dock.onChunkUnloaded();
+                    dock.onLoad();
+                })
+                .thenWaitUntil(() -> helper.assertTrue(chestCount(helper, Items.IRON_INGOT) == 2,
+                        "o lingote não voltou depois da carga"))
+                .thenExecute(() -> helper.assertTrue(furnace(helper).getItem(2).isEmpty(), "sobrou na fornalha"))
                 .thenSucceed();
     }
 

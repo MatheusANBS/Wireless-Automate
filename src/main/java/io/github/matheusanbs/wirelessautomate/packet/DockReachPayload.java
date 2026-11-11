@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.packet;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.range.RangeTiers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -18,8 +19,8 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 public record DockReachPayload(BlockPos dock, int radius, int tier, long[] machines, byte[] sides, int ticks)
         implements CustomPacketPayload {
     public static final Type<DockReachPayload> TYPE = new Type<>(WirelessAutomate.id("dock_reach"));
-    /** O teto de máquinas num pacote: o máximo padrão da Doca Ultimate. */
-    public static final int MAX_MACHINES = 256;
+    /** O teto de máquinas num pacote: o maior limite de máquinas que a config aceita. */
+    public static final int MAX_MACHINES = RangeTiers.MAX_MACHINES;
     public static final StreamCodec<RegistryFriendlyByteBuf, DockReachPayload> STREAM_CODEC =
             StreamCodec.of(DockReachPayload::encode, DockReachPayload::decode);
 

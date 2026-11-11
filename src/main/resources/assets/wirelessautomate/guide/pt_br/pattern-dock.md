@@ -34,7 +34,8 @@ sai o resultado. A action bar mostra o que ela achou.
 - Entrega **cada pedido inteiro** a uma máquina livre do lado.
 - As máquinas **se revezam**: o próximo pedido vai para a seguinte.
 - O resultado **volta ao provedor**, e o provedor manda para a rede.
-- Quando **todas as máquinas estão cheias**, o pedido espera. **Nada se perde.**
+- Quando **todas as máquinas estão cheias**, o pedido espera. **Nada se perde**, com uma exceção: se você quebrar a
+  Doca com um resto de pedido de **fluido** esperando, esse fluido se perde (os itens caem no chão).
 
 ## Quem faz o quê
 
@@ -85,6 +86,7 @@ e o estado:
 | Pedido com item e fluido recusado | O último pedido misturava itens e fluidos |
 | Provedor cheio | O resultado espera o provedor mandar o que já recebeu |
 | Todas cheias | Nenhuma máquina aceitou o último pedido; ele espera |
+| Pedido pendente | A máquina ainda não recebeu o resto do último pedido; o lado espera por ele |
 | Trabalhando | Uma máquina recebeu um pedido ou devolveu um resultado há pouco |
 | Pronto | Tudo certo, esperando pedidos |
 | livre | Nada encostado e nenhuma máquina |

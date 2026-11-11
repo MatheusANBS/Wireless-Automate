@@ -51,7 +51,7 @@ A tabela do roteador de alcance, um degrau acima. A Doca lê as chaves `machineR
 - O limite é da Doca inteira, somando os seis lados. Máquina fora do cubo ou além do limite não vincula, com a mensagem do motivo.
 - A config baixou: as máquinas de fora continuam vinculadas, param de receber e a linha do lado avisa. Nada é desvinculado sozinho.
 - Máquina em chunk descarregado fica de fora até carregar (`level.isLoaded` antes de qualquer consulta); a Doca nunca carrega chunk.
-- **Ao colocar a Doca**, o cubo do alcance aparece por 5 segundos só para quem colocou. Depois, sempre que o jogador segura o Vinculador com a Doca escolhida, com as máquinas de cada lado acesas na cor do lado. É um desenho próprio da Doca (`client/dock/DockReachPaint`, pelo `DockReachPayload`); o roteador de alcance não tem um. O cliente guarda o último cubo e o mostra de novo ao pegar o Vinculador; sem cubo guardado (o jogador entrou no mundo de novo), pede um ao servidor (`DockReachRequestPayload`), no máximo um por segundo.
+- **Ao colocar a Doca**, o cubo do alcance aparece por 5 segundos só para quem colocou. Depois, sempre que o jogador segura o Vinculador com a Doca escolhida, com as máquinas de cada lado acesas na cor do lado. É um desenho próprio da Doca (`client/dock/DockReachPaint`, pelo `DockReachPayload`); o roteador de alcance não tem um. O cliente guarda o último cubo e o mostra de novo ao pegar o Vinculador; sem cubo guardado (o jogador entrou no mundo de novo), pede um ao servidor (`DockReachRequestPayload`): um pedido sem resposta dobra a espera até o próximo (de 1 s até 10 s), e depois do de 10 s os pedidos param até o Vinculador sair da mão. O pacote acende até `RangeTiers.MAX_MACHINES` máquinas, o maior limite que a config aceita.
 
 ## Vincular (o Vinculador)
 
@@ -79,7 +79,7 @@ Quando o provedor oferece um pedido a um lado:
 4. **Avança o cursor** para depois da máquina que recebeu: os pedidos se revezam entre as máquinas.
 
 - **Máquina que recusa dorme**, como os destinos do motor hoje: acorda quando ela muda (o `setChanged` dela, pelo mixin e o `RemoteIndex`, que passa a conhecer a Doca) ou no teto de sono. O custo de um pedido não cresce com o número de máquinas cheias.
-- **O pendente** é uma lista pequena por lado (o resto de um pedido, salvo no NBT e largado no chão ao quebrar a Doca). Enquanto existir, o lado recusa pedidos novos e tenta entregá-lo primeiro, na máquina que recebeu o pedido. É o que garante "espera quando todas estão cheias, sem perder nada".
+- **O pendente** é uma lista pequena por lado (o resto de um pedido, salvo no NBT; ao quebrar a Doca, os itens pendentes vão para o chão e **o fluido pendente se perde**, porque não dá para largar fluido no chão). Enquanto existir, o lado recusa pedidos novos e tenta entregá-lo primeiro, na máquina que recebeu o pedido; se ela saiu do lado, foi quebrada ou trocada por outro bloco, ou não tem mais inventário numa face Insere, ele passa para a próxima máquina ativa do lado. O lado com pendente guarda o bloco mesmo sem máquinas, até o pendente sair numa máquina daquele bloco. É o que garante "espera quando todas estão cheias, sem perder nada" (com a exceção do fluido pendente numa Doca quebrada). Um fluido que o provedor recusa depois de aceitar na simulação volta à máquina pela face Extrai, e o que ela não aceitar também se perde (um handler que mente na simulação).
 - **AE2:** a capability `AECapabilities.CRAFTING_MACHINE` em cada face; `acceptsPlans()` é falso no lado sem máquina ativa ou com pendente, e `pushPattern(padrão, entradas, lado)` faz os passos acima. O lado vem no último argumento.
 - **RS2:** um `PatternProviderExternalPatternSinkFactory` registrado no carregamento do mod. O Autocrafter cria o destino uma vez e o guarda, então o destino da Doca é preguiçoso: a cada pedido confere se ainda há uma Doca na posição (senão `SKIPPED`). `SIMULATE` faz os passos 1 e 2 e devolve `ACCEPTED` ou `REJECTED`; `EXECUTE` faz o 3 e sempre devolve `ACCEPTED`. `isEmpty()` diz se o lado está sem pendente e sem máquina trabalhando (a trava "até a máquina esvaziar" do Autocrafter).
 - **O orçamento:** a entrega roda dentro do tick do AE2 ou do RS2, fora do gerenciador. O tempo dela vira uma dívida no `TickBudget` (`charge`), descontada no começo do tick seguinte do motor; sem folga para a dívida (`outsideRoom`), a oferta é recusada e o provedor tenta no tick seguinte.
@@ -112,6 +112,7 @@ Os estados, do mais grave ao mais leve (a linha mostra o primeiro que vale):
 | Pedido com item e fluido recusado | O último pedido recusado misturava os dois | triângulo, erro |
 | Provedor cheio | A volta está parada porque o destino recusou | anel, atenção |
 | Todas cheias | O último pedido não achou máquina livre | anel, atenção |
+| Pedido pendente | O resto do último pedido espera a máquina receber (o lado recusa pedidos até lá) | anel, atenção |
 | N fora do alcance | A config baixou o raio ou o limite | anel, atenção, como nota ao lado do estado principal |
 | N em área descarregada | Máquinas em chunk descarregado | anel, atenção, como nota |
 | Trabalhando | Alguma máquina recebeu pedido ou devolveu nos últimos 15 s | ponto, ok |

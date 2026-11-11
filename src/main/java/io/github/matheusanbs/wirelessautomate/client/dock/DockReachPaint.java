@@ -38,7 +38,8 @@ import org.jetbrains.annotations.Nullable;
  * O cubo de colocar some quando o prazo vence. O do Vinculador fica guardado e aparece sempre que o Vinculador com
  * esta Doca escolhida está numa das mãos; sai quando um Vinculador na mão escolhe outra coisa, quando a Doca some, ao
  * trocar de mundo e no logout. Sem cubo guardado, o tick só lê os itens das mãos e, com uma Doca escolhida, pede o cubo
- * ao servidor ({@link DockReachRequestPayload}, um por segundo); o quadro volta na primeira linha.
+ * ao servidor ({@link DockReachRequestPayload}); o quadro volta na primeira linha. Um pedido sem resposta dobra o
+ * intervalo até o próximo (de 1 s até 10 s), e depois do de 10 s os pedidos param até o Vinculador sair da mão.
  */
 @EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
 public final class DockReachPaint {
@@ -51,8 +52,11 @@ public final class DockReachPaint {
      * ao cliente na sincronização do inventário, no fim do tick do servidor.
      */
     private static final int HOLD_GRACE_TICKS = 20;
-    /** O intervalo mínimo entre dois pedidos do cubo ao servidor. */
+    /** O intervalo depois do primeiro pedido do cubo ao servidor; cada pedido sem resposta o dobra. */
     private static final int REQUEST_INTERVAL_TICKS = 20;
+    /** O maior intervalo entre dois pedidos; o pedido feito com ele é o último até o Vinculador sair da mão. */
+    private static final int MAX_REQUEST_INTERVAL_TICKS = 200;
+    private static final long NO_DOCK = Long.MIN_VALUE;
     /** A moldura sai um pouco para fora do bloco. */
     private static final float INFLATE = 0.006f;
     private static final int CUBE_ALPHA = 0xFF;
@@ -70,8 +74,13 @@ public final class DockReachPaint {
     private static int grace;
     /** O cubo guardado está à mostra: o prazo corre, ou o Vinculador com esta Doca está numa das mãos. */
     private static boolean visible;
-    /** O tempo do mundo do último pedido ao servidor ({@link DockReachRequestPayload}): um por segundo. */
-    private static long lastRequest = -REQUEST_INTERVAL_TICKS;
+    // Os pedidos do cubo ao servidor ({@link DockReachRequestPayload}): a Doca pedida (BlockPos.asLong), o tempo do
+    // mundo em que o próximo pode sair, o intervalo depois dele, se ele é o último e se os pedidos pararam.
+    private static long requestedDock = NO_DOCK;
+    private static long nextRequest;
+    private static int requestInterval = REQUEST_INTERVAL_TICKS;
+    private static boolean lastTry;
+    private static boolean requestStopped;
     /** O cubo: limites (para a distância) e arestas, cada uma com as duas pontas. */
     private static float[] box = new float[6];
     private static float[] cubeEdges = new float[0];
@@ -127,6 +136,7 @@ public final class DockReachPaint {
         visible = true;
         level = here;
         dock = at;
+        resetRequests();
     }
 
     /** O cubo à mostra agora, para o e2e. */
@@ -220,7 +230,9 @@ public final class DockReachPaint {
 
     /**
      * Sem cubo guardado: se o Vinculador numa das mãos tem uma Doca desta dimensão escolhida (entrou no mundo de novo,
-     * ou o prazo de colocar venceu), pede o cubo ao servidor, no máximo uma vez por segundo. Sem Vinculador, só as
+     * ou o prazo de colocar venceu), pede o cubo ao servidor. O servidor não responde por uma Doca quebrada,
+     * descarregada ou sem acesso: cada pedido sem resposta dobra a espera até o próximo (1 s, 2 s, 4 s, 8 s, 10 s), e
+     * depois do de 10 s os pedidos param até o Vinculador sair da mão ou escolher outra Doca. Sem Vinculador, só as
      * duas leituras do item.
      */
     private static void request(Minecraft minecraft) {
@@ -233,12 +245,39 @@ public final class DockReachPaint {
         if (choice == null) {
             choice = choice(player.getOffhandItem(), here);
         }
-        long now = here.getGameTime();
-        if (choice == null || now - lastRequest < REQUEST_INTERVAL_TICKS && now >= lastRequest) {
+        if (choice == null) {
+            if (requestedDock != NO_DOCK) {
+                resetRequests();
+            }
             return;
         }
-        lastRequest = now;
+        long key = choice.pos().pos().asLong();
+        if (key != requestedDock) {
+            resetRequests();
+            requestedDock = key;
+        }
+        long now = here.getGameTime();
+        // o tempo do mundo volta ao trocar de mundo: um prazo longe demais no futuro não vale
+        if (requestStopped || now < nextRequest && nextRequest - now <= MAX_REQUEST_INTERVAL_TICKS) {
+            return;
+        }
+        if (lastTry) {
+            requestStopped = true;
+            return;
+        }
+        nextRequest = now + requestInterval;
+        lastTry = requestInterval == MAX_REQUEST_INTERVAL_TICKS;
+        requestInterval = Math.min(requestInterval * 2, MAX_REQUEST_INTERVAL_TICKS);
         PacketDistributor.sendToServer(new DockReachRequestPayload(choice.pos().pos()));
+    }
+
+    /** Os pedidos voltam ao começo: o cubo chegou, o Vinculador saiu da mão ou escolheu outra Doca, ou o logout. */
+    private static void resetRequests() {
+        requestedDock = NO_DOCK;
+        nextRequest = 0;
+        requestInterval = REQUEST_INTERVAL_TICKS;
+        lastTry = false;
+        requestStopped = false;
     }
 
     private static @Nullable DockChoice choice(ItemStack stack, ClientLevel here) {
@@ -257,7 +296,7 @@ public final class DockReachPaint {
     @SubscribeEvent
     static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
         clear();
-        lastRequest = -REQUEST_INTERVAL_TICKS;
+        resetRequests();
     }
 
     @SubscribeEvent

@@ -10,7 +10,7 @@ package io.github.matheusanbs.wirelessautomate.dock;
 public final class DockStatus {
     /** Da mais grave à menos grave; {@code FREE} fica por último por ser o lado sem uso. */
     public enum State {
-        NO_PROVIDER, NO_MACHINES, CRAFTING_PATTERN, MIXED, PROVIDER_FULL, ALL_FULL, WORKING, READY, FREE
+        NO_PROVIDER, NO_MACHINES, CRAFTING_PATTERN, MIXED, PROVIDER_FULL, ALL_FULL, PENDING, WORKING, READY, FREE
     }
 
     /** Nenhuma recusa recente. */
@@ -20,7 +20,7 @@ public final class DockStatus {
     /** O pedido misturava tipos que a máquina não aceita juntos. */
     public static final int MIXED = 2;
     // Os motivos seguintes também são gravados no lado pela entrega (DockDelivery), mas não decidem o estado por
-    // aqui: cada um é um fato que a tela tira do próprio lado (as máquinas ativas, o pendente, as máquinas dormindo).
+    // aqui: cada um é um fato que a tela tira do próprio lado (as máquinas ativas, o pendente, a última recusa).
     /** O lado não tinha máquina ativa (no alcance e no limite). */
     public static final int NO_MACHINES = 3;
     /** O lado tinha o resto de um pedido esperando lugar. */
@@ -35,8 +35,11 @@ public final class DockStatus {
     private DockStatus() {
     }
 
+    /**
+     * @param pending o lado guarda o resto de um pedido esperando lugar na máquina (e recusa pedidos até ele sair)
+     */
     public static State of(boolean provider, int machines, int lastRefusal, boolean returnBlocked,
-            boolean allFull, int working) {
+            boolean allFull, boolean pending, int working) {
         if (!provider && machines == 0) {
             return State.FREE;
         }
@@ -57,6 +60,9 @@ public final class DockStatus {
         }
         if (allFull) {
             return State.ALL_FULL;
+        }
+        if (pending) {
+            return State.PENDING;
         }
         return working > 0 ? State.WORKING : State.READY;
     }

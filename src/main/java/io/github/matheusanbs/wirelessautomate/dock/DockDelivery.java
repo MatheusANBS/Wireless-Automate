@@ -234,6 +234,17 @@ public final class DockDelivery {
         return DIRECTIONS[SIDES[face].toAbsolute(front)];
     }
 
+    /** A máquina tem inventário ({@code type} item) ou tanque (fluido) em alguma face Insere desse tipo no perfil. */
+    static boolean hasInsertFace(MachineCaches caches, MachineConfig profile, int front, ResourceType type) {
+        for (int face = 0; face < SIDES.length; face++) {
+            if (profile.face(type, SIDES[face]).mode().inserts() && (type == ResourceType.FLUID
+                    ? caches.fluids(absolute(face, front)) != null : caches.items(absolute(face, front)) != null)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * Simula cada item nas faces Insere de itens do perfil e escreve em {@code masks[i]} as faces que o aceitam (um bit
      * por face, na ordem do perfil): {@code whole}, a que aceita a pilha inteira; senão, a que aceita parte. Uma pilha

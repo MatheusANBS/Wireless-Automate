@@ -11,8 +11,7 @@ Entram só as partes que são modelo de bloco na spec (a tabela "O modelo" da pr
 (o grupo `base`: as 12 vigas de porcelana com a linha coral nas de cima), os seis lados (`lado_*`: o painel escuro
 com o circuito em volta da janela, a vigia com a moldura, os parafusos, o lábio, as dobradiças e o trinco) e os
 contatos (`garras_*`, quatro pastilhas de latão por lado). O giroscópio, o pacote e os fragmentos são do renderer
-(etapa 3): até lá, a vigia mostra o fundo do painel do lado oposto. As coordenadas do `.bbmodel` têm o bloco
-centrado em x e z; aqui somam 8.
+(`client/dock/render/`). As coordenadas do `.bbmodel` têm o bloco centrado em x e z; aqui somam 8.
 
 Nenhum par de caixas se junta numa caixa só (nem encostadas com as mesmas medidas, nem uma por cima da outra:
 conferido nas 174), então o número de elementos fica o do `.bbmodel`; o que baixa é o de faces. Sai toda face
@@ -38,20 +37,21 @@ escuro; o resto do bloco recebe a luz do mundo. A luz só nos traços pediria um
 As etiquetas ficam maiores que no `.bbmodel` (`ETIQUETA_*`), para se lerem de longe: a pastilha de cima de cada
 lado cresce no plano da face, entre a moldura da vigia e a borda do painel.
 
-A vigia é de 6 × 6 (a do `.bbmodel`); com `--vigia 8` (ou `gerar(vigia=8)`) o script grava a de 8 × 8 no lugar,
-para comparar no jogo: a janela do painel, a moldura, os parafusos, o lábio, as dobradiças, o trinco e as
-pastilhas se afastam do centro (`_abre`), e o uv do circuito acompanha a posição de cada peça. O padrão é 6.
+O miolo é escuro, como o fundo do Blockbench: atrás de cada vigia, logo para dentro do lábio, uma placa fina
+(`fundo_<lado>`) com uma face só, virada para dentro, no grafite escuro do painel (a casa `FUNDO` do atlas, pintada
+inteira). Quem olha por uma vigia vê o giroscópio contra a placa da vigia oposta, e não o céu e o chão do outro
+lado; de fora, a placa da própria vigia está de costas e não aparece (o jogo não desenha a face de trás). Seis
+faces a mais, nenhuma no caminho do giroscópio (o anel maior vai até 4,5 do centro; a placa fica a 6,2).
 
 Um modelo só com os elementos (`pattern_dock`, nas texturas do Básico) e um filho por tier que só troca as texturas;
 o blockstate escolhe pelo `tier` e o modelo do item pelas sobreposições do predicado `wirelessautomate:tier` (a
 posição do tier no enum). A colisão é a do bloco cheio, no Java.
 
-Uso isolado (na raiz): `python scripts/textures/doca_modelo.py [--vigia 8]`.
+Uso isolado (na raiz): `python scripts/textures/doca_modelo.py`.
 """
 
 from __future__ import annotations
 
-import argparse
 import copy
 import json
 import math
@@ -76,8 +76,8 @@ CHAVE = "#dock"
 CIRCUITO = "#circuit"
 ELEMENTOS_BBMODEL = 193
 ELEMENTOS_ESPERADOS = 174
-# As faces depois do corte, pela vigia (6 × 6 ou 8 × 8).
-FACES_ESPERADAS = {6: 794, 8: 776}
+# As faces depois do corte, com as seis do fundo do miolo.
+FACES_ESPERADAS = 800
 # O recorte do painel no atlas (x0, y0), de 16 × 16: o sprite do circuito.
 PAINEL = (32, 32)
 LADO_SPRITE = 16
@@ -89,9 +89,13 @@ TICKS_QUADRO = 3
 ETIQUETA_MEIA_LARGURA = 2.5
 ETIQUETA_FOLGA_MOLDURA = 0.3
 ETIQUETA_FOLGA_BORDA = 0.3
-# A distância da borda de fora da moldura ao centro da face, pela vigia.
-MOLDURA = {6: 3.5, 8: 4.5}
-VIGIAS = (6, 8)
+# A distância da borda de fora da moldura ao centro da face.
+MOLDURA = 3.5
+# O fundo do miolo: a casa de 4 × 4 do atlas (livre no .bbmodel) pintada no grafite mais escuro do painel e a
+# espessura da placa atrás de cada vigia.
+FUNDO = (0, 52)
+FUNDO_COR = (15, 14, 18, 255)
+FUNDO_ESPESSURA = 0.1
 # A rampa em que o circuito foi pintado e a distância (em RGB) até ela que ainda conta como circuito: os tons do
 # circuito ficam a menos de 1, o fundo escuro do painel a mais de 40.
 RAMPA_PINTADA = "elite"
@@ -198,78 +202,54 @@ def _uv_circuito(el: dict, direcao: str) -> list[float]:
             bb.num(no_sprite(c3, eu, su)), bb.num(no_sprite(c1, ev, sv))]
 
 
-def _move(el: dict, eixos, regra) -> None:
-    """Aplica `regra(c)` (c a partir do centro da face, 8) às duas pontas de `el` em cada eixo do plano."""
-    for i in eixos:
-        a, b = sorted((8 + regra(el["from"][i] - 8), 8 + regra(el["to"][i] - 8)))
-        el["from"][i], el["to"][i] = a, b
-
-
-def _janela_8(c: float) -> float:
-    """O painel da vigia de 8 × 8: a borda da janela (3) vai a 4 e a ponta do chanfro (2) a 3; a borda do painel fica."""
-    novo = {6: 6.0, 3: 4.0, 2: 3.0}.get(round(abs(c), 3))
-    if novo is None:
-        raise ModeloInvalido(f"painel com a coordenada {c} fora das medidas da vigia de 6 × 6")
-    return math.copysign(novo, c)
-
-
-def _afasta(c: float) -> float:
-    """Moldura, parafusos, lábio, dobradiças e trinco: o que está na borda da janela (|c| ≥ 2,7) se afasta 1."""
-    return c + math.copysign(1.0, c) if abs(c) >= 2.7 - 1e-6 else c
-
-
-def _contato_8(c: float) -> float:
-    """As pastilhas sem etiqueta: de 4,4..5,4 a 5,4..6,0, rentes à borda do painel e fora do trinco."""
-    return math.copysign(5.4 + (abs(c) - 4.4) * 0.6, c) if abs(c) >= 4.4 - 1e-6 else c
-
-
-def _etiqueta(el: dict, lado: str, vigia: int) -> None:
+def _etiqueta(el: dict, lado: str) -> None:
     """A pastilha da etiqueta cresce no plano da face: `ETIQUETA_MEIA_LARGURA` para cada lado no eixo comprido e, no
     curto, da moldura da vigia (com folga) até a borda do painel (com folga), do lado em que ela já estava."""
     a, b = _plano(lado)
     curto = a if el["to"][a] - el["from"][a] < el["to"][b] - el["from"][b] else b
     comprido = b if curto == a else a
     sinal = math.copysign(1.0, (el["from"][curto] + el["to"][curto]) / 2 - 8)
-    perto, longe = MOLDURA[vigia] + ETIQUETA_FOLGA_MOLDURA, 6 - ETIQUETA_FOLGA_BORDA
+    perto, longe = MOLDURA + ETIQUETA_FOLGA_MOLDURA, 6 - ETIQUETA_FOLGA_BORDA
     el["from"][curto], el["to"][curto] = sorted((8 + sinal * perto, 8 + sinal * longe))
     el["from"][comprido], el["to"][comprido] = 8 - ETIQUETA_MEIA_LARGURA, 8 + ETIQUETA_MEIA_LARGURA
 
 
-def _ajusta(fontes: list[dict], grupo: dict, rotulos: dict[str, str], vigia: int) -> None:
-    """A etiqueta maior em cada lado e, na vigia de 8 × 8, as peças do lado afastadas do centro."""
-    for el in fontes:
-        nome, g = el["name"], grupo[el["uuid"]]
-        if not g.startswith(("lado_", "garras_")):
-            continue
-        lado = g.split("_", 1)[1]
-        eixos = _plano(lado)
-        if el["uuid"] == rotulos[lado]:
-            _etiqueta(el, lado, vigia)
-            continue
-        if vigia == 6:
-            continue
-        if nome.startswith("painel_"):
-            _move(el, eixos, _janela_8)
-        elif nome.startswith("garra_"):
-            _move(el, eixos, _contato_8)
-        else:
-            _move(el, eixos, _afasta)
+def _fundo(convertidos: list[dict], lado: str) -> dict:
+    """A placa escura atrás da vigia do lado: logo para dentro do lábio, do tamanho da abertura dentro dele, com a
+    face só para dentro do bloco."""
+    k, sinal = EIXO[lado]
+    labios = [el for el in convertidos if el["name"].startswith(f"labio_{lado}_")]
+    if len(labios) != 4:
+        raise ModeloInvalido(f"lado {lado}: {len(labios)} peças do lábio, esperado 4")
+    de, ate = [0.0] * 3, [0.0] * 3
+    for i in _plano(lado):
+        espessura = min(el["to"][i] - el["from"][i] for el in labios)
+        de[i] = min(el["from"][i] for el in labios) + espessura
+        ate[i] = max(el["to"][i] for el in labios) - espessura
+    dentro = min(el["from"][k] for el in labios) if sinal > 0 else max(el["to"][k] for el in labios)
+    de[k], ate[k] = sorted((dentro, dentro - sinal * FUNDO_ESPESSURA))
+    contra = next(d for d, (eixo, s) in EIXO.items() if eixo == k and s == -sinal)
+    x, y = FUNDO
+    uv = [x / 4, y / 4, x / 4 + 1, y / 4 + 1]
+    return {"name": f"fundo_{lado}", "from": [bb.num(v) for v in de], "to": [bb.num(v) for v in ate],
+            "faces": {contra: {"uv": uv, "texture": CHAVE}}}
 
 
-def elementos(projeto: dict, vigia: int = 6) -> list[dict]:
+def elementos(projeto: dict) -> list[dict]:
     """As caixas do modelo de bloco já no formato do JSON, sem as faces cobertas e com o `cullface`, a luz e o
-    circuito na face de fora do painel."""
+    circuito na face de fora do painel, e o fundo escuro do miolo."""
     if len(projeto["elements"]) != ELEMENTOS_BBMODEL:
         raise ModeloInvalido(f"o .bbmodel tem {len(projeto['elements'])} caixas, esperado {ELEMENTOS_BBMODEL}")
-    if vigia not in VIGIAS:
-        raise ModeloInvalido(f"vigia de {vigia}, esperado uma de {VIGIAS}")
     grupo = _grupos(projeto)
     fontes = [_no_bloco(copy.deepcopy(el)) for el in projeto["elements"] if _do_bloco(grupo[el["uuid"]])]
     if len(fontes) != ELEMENTOS_ESPERADOS:
         raise ModeloInvalido(f"{len(fontes)} caixas do modelo de bloco, esperado {ELEMENTOS_ESPERADOS}")
     if any(any(el.get("rotation", [0, 0, 0])) for el in fontes):
         raise ModeloInvalido("uma caixa do modelo de bloco está girada; o corte das faces cobertas supõe caixas retas")
-    _ajusta(fontes, grupo, {lado: uuid for lado, (_, uuid) in _etiquetas(projeto).items()}, vigia)
+    rotulos = {uuid: lado for lado, (_, uuid) in _etiquetas(projeto).items()}
+    for el in fontes:
+        if el["uuid"] in rotulos:
+            _etiqueta(el, rotulos[el["uuid"]])
     convertidos = [bb.converter(el, ATLAS, CHAVE, lambda nome: False) for el in fontes]
     saida = []
     for el in convertidos:
@@ -289,9 +269,10 @@ def elementos(projeto: dict, vigia: int = 6) -> list[dict]:
         if not faces:
             raise ModeloInvalido(f"{el['name']}: todas as faces cobertas; tirar a caixa do .bbmodel")
         saida.append({**el, "faces": faces})
+    saida.extend(_fundo(convertidos, lado) for lado in LADOS)
     faces_total = sum(len(el["faces"]) for el in saida)
-    if faces_total != FACES_ESPERADAS[vigia]:
-        raise ModeloInvalido(f"{faces_total} faces depois do corte, esperado {FACES_ESPERADAS[vigia]}")
+    if faces_total != FACES_ESPERADAS:
+        raise ModeloInvalido(f"{faces_total} faces depois do corte, esperado {FACES_ESPERADAS}")
     bb.validar([{**el, "faces": {d: {**f, "texture": CHAVE} for d, f in el["faces"].items()}} for el in saida], CHAVE)
     for el in saida:
         if not all(0 <= v <= 16 for v in el["from"] + el["to"]):
@@ -423,12 +404,23 @@ def _grava_circuito(tier: str, tira: Image.Image) -> None:
                                                           newline="\n")
 
 
-def gerar(raiz_assets: Path = MODELOS, vigia: int = 6) -> set[str]:
+def _pinta_fundo(atlas: Image.Image) -> None:
+    """A casa do fundo do miolo, inteira na cor dele (para o mipmap não misturar com a vizinha); só numa casa vazia."""
+    x0, y0 = FUNDO
+    casa = [(x, y) for x in range(x0, x0 + 4) for y in range(y0, y0 + 4)]
+    if any(atlas.getpixel(p)[3] for p in casa):
+        raise ModeloInvalido(f"a casa do fundo {FUNDO} já está pintada no atlas do .bbmodel")
+    for p in casa:
+        atlas.putpixel(p, FUNDO_COR)
+
+
+def gerar(raiz_assets: Path = MODELOS) -> set[str]:
     """Grava as texturas dos tiers (o atlas e o circuito), o modelo base, um por tier, o blockstate e o modelo de
     item; devolve as chaves das texturas gravadas (relativas a `textures/`, como as do `limpar`)."""
     projeto = json.loads(BBMODEL.read_text(encoding="utf-8"))
     atlas = bb.atlas(projeto, ATLAS)
-    els = elementos(projeto, vigia)
+    _pinta_fundo(atlas)
+    els = elementos(projeto)
     faces_atlas = [f for el in els for f in el["faces"].values() if f["texture"] == CHAVE]
     if any(a != 255 for a in bb.alfas(atlas, faces_atlas)):
         raise ModeloInvalido("o modelo usa um texel com alfa")
@@ -459,6 +451,4 @@ def gerar(raiz_assets: Path = MODELOS, vigia: int = 6) -> set[str]:
 
 
 if __name__ == "__main__":
-    args = argparse.ArgumentParser()
-    args.add_argument("--vigia", type=int, choices=VIGIAS, default=6, help="a janela de 6 × 6 (padrão) ou 8 × 8")
-    print("texturas:", sorted(gerar(vigia=args.parse_args().vigia)))
+    print("texturas:", sorted(gerar()))

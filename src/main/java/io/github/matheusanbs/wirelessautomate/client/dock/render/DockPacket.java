@@ -1,9 +1,10 @@
 package io.github.matheusanbs.wirelessautomate.client.dock.render;
 
 /**
- * O que só existe no laço de trabalho: o pacote (caixa de latão com fita de porcelana) que entra pela vigia do lado
- * do último evento, vai ao cristal e volta, e os quatro fragmentos da cor da lente em órbita. O pacote do
- * {@code .bbmodel} entra pelo Leste; para os outros lados, o caminho gira em torno do centro do bloco.
+ * O que só existe no laço de trabalho: o pacote (caixa de latão com fita de porcelana, com a luz do mundo) que entra
+ * pela vigia do lado do último evento, vai ao cristal e volta, e os quatro fragmentos da cor da lente em órbita, com
+ * a luz cheia, como o cristal. O pacote do {@code .bbmodel} entra pelo Leste; para os outros lados, o caminho gira
+ * em torno do centro do bloco.
  */
 final class DockPacket {
     private static final float C = 8;
@@ -34,6 +35,7 @@ final class DockPacket {
     static int render(DockPose pose, int side) {
         int drawn = 0;
         if (pose.packetScale > HIDDEN) {
+            DockBoxes.glow(false);
             DockBoxes.reset();
             DockBoxes.rotate(C, C, C, 0, SIDE_Y[side], SIDE_Z[side]);
             DockBoxes.matrix().translate((float) pose.packetOffset, 0, 0);
@@ -45,6 +47,7 @@ final class DockPacket {
         if (pose.fragmentScale > HIDDEN) {
             float r = (float) pose.fragmentRadius;
             float s = (float) pose.fragmentScale;
+            DockBoxes.glow(true);
             for (int k = 0; k < FRAGMENT_X.length; k++) {
                 DockBoxes.reset();
                 DockBoxes.keyframe(C, C, C, 0, pose.fragmentSpin, 0);

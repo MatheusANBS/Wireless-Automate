@@ -117,8 +117,10 @@ public final class ModBlocks {
                     .sound(SoundType.METAL).pushReaction(PushReaction.DESTROY).noOcclusion());
 
     /**
-     * A Doca de Padrões, com tiers: um bloco cheio de metal, que pede picareta. Sem oclusão: pelas vigias dos lados
-     * opostos se vê através do bloco, e o vizinho não pode esconder a face encostada nela.
+     * A Doca de Padrões, com tiers: um bloco cheio de metal, que pede picareta. Sem oclusão, embora o miolo seja
+     * fechado (o fundo escuro atrás das vigias): um bloco que oclui não recebe luz na própria posição, e o
+     * giroscópio, desenhado com essa luz, e as faces de dentro ficariam pretos; também passaria a escurecer os
+     * vizinhos e a cortar a luz do céu.
      */
     public static final DeferredBlock<PatternDockBlock> PATTERN_DOCK = BLOCKS.registerBlock("pattern_dock",
             PatternDockBlock::new, BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(3.0F, 6.0F)

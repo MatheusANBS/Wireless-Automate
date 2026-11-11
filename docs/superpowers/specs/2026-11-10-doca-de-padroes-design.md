@@ -1,6 +1,6 @@
 # Doca de Padrões (spec)
 
-Estado: **etapas 1 (a Doca com o AE2) e 2 (o RS2) implementadas em 11/11/2026**, pelos planos `docs/superpowers/plans/2026-11-10-doca-de-padroes-etapa-1.md` e `2026-11-11-doca-de-padroes-etapa-2.md`; as seções abaixo descrevem o que foi feito, com os ajustes da execução. As etapas 3 (arte animada) e 4 (pedido com item e fluido) seguem como desenho. A regra, o alcance e a arte foram aprovados na proposta (`2026-11-10-ae2-rs2-proposta.md`, seções "Terceira crítica: simplificar", "O alcance da Doca" e "Arte e animação da Doca"). Esta spec junta essas decisões, corrige o que a conferência das APIs mudou (seção "O que a conferência mudou") e fecha a tela, cujo mockup (aprovado em 10/11/2026) está em `docs/preview/doca-de-padroes-tela.html`. As respostas do dono estão no fim.
+Estado: **etapas 1 (a Doca com o AE2), 2 (o RS2) e 3 (a arte animada) implementadas em 11/11/2026**, pelos planos `docs/superpowers/plans/2026-11-10-doca-de-padroes-etapa-1.md`, `2026-11-11-doca-de-padroes-etapa-2.md` e `2026-11-11-doca-de-padroes-etapa-3.md`; as seções abaixo descrevem o que foi feito, com os ajustes da execução. A etapa 4 (pedido com item e fluido) segue como desenho. A regra, o alcance e a arte foram aprovados na proposta (`2026-11-10-ae2-rs2-proposta.md`, seções "Terceira crítica: simplificar", "O alcance da Doca" e "Arte e animação da Doca"). Esta spec junta essas decisões, corrige o que a conferência das APIs mudou (seção "O que a conferência mudou") e fecha a tela, cujo mockup (aprovado em 10/11/2026) está em `docs/preview/doca-de-padroes-tela.html`. As respostas do dono estão no fim.
 
 ## A regra
 
@@ -226,7 +226,7 @@ A linha do tempo do laço de trabalho (6 s; os tempos são dos keyframes, os nom
 | Anel de latão (`anel_h`, 6,4 × 6,4, deitado) | 0 | 6 | 2 voltas em torno de y (+720°) e balança ±10° em x, período 3 s | giro linear; balanço `10° · sin(2πt/3)` |
 | Anel de porcelana (`anel_v`, 9 × 9, em pé no plano xy) | 0 | 6 | 1 volta em torno de y (−360°) | linear |
 | Anel de grafite claro (`anel_z`, 7,8 × 7,8 no plano yz) | 0 | 6 | 1 volta em torno de x (+360°) | linear |
-| Cristal (`nucleo`, cubo 3 × 3 × 3 em pé na ponta, cor da lente do tier) | 0 | 6 | 2 voltas em y (−720°), sobe e desce ±0,2 com período 3 s | linear; `0,2 · sin(2πt/3)` |
+| Cristal (`nucleo`, cubo 3 × 3 × 3 em pé na ponta, cor da lente do tier) | 0 | 6 | 2 voltas em y (−720°), sobe e desce ±0,25 com período 3 s | linear; `0,25 · sin(2πt/3)` |
 | Cristal: respira | 0 | 1,05 | 1,00 → 1,03 → 0,97 | suave |
 | Cristal: absorve o pacote | 1,05 | 1,45 | incha até 1,32 (em 1,25 s) e volta a 1,0 | pulso |
 | Cristal: solta os fragmentos | 1,7 | 4,0 | encolhe para 0,8 (2,5 s) e fica em 0,79 a 0,85 | suave |
@@ -243,7 +243,7 @@ A linha do tempo do laço de trabalho (6 s; os tempos são dos keyframes, os nom
 | Fragmentos: saem e somem | 2,3 | 2,8 | vão ao raio 6,6, escala 1 → 0 | suave |
 | Fragmentos: voltam em espiral | 3,3 | 4,4 | do raio 6,6 ao centro, escala 0,7 → 0,5 → 0 (a espiral é o giro do grupo somado ao raio que encolhe) | suave |
 
-O repouso (`animation.doca.idle`, 6 s): o anel de latão dá **uma** volta (+360°) e balança ±6° com período de 6 s; o cristal dá uma volta (−360°), sobe e desce ±0,3 com período 3 s e não muda de escala; sem pacote nem fragmentos. **Os anéis de porcelana e de grafite giram na mesma velocidade nos dois laços** (uma volta por laço): a "metade da velocidade" da proposta vale só para o anel de latão e o cristal. O jogo segue os keyframes.
+O repouso (`animation.doca.idle`, 6 s): o anel de latão dá **uma** volta (+360°) e balança ±6° com período de 6 s; o cristal dá uma volta (−360°), sobe e desce ±0,3 com período 3 s e **respira** (escala 1 ± 0,05, período 1,5 s); sem pacote nem fragmentos. **Os anéis de porcelana e de grafite giram na mesma velocidade nos dois laços** (uma volta por laço): a "metade da velocidade" da proposta vale só para o anel de latão e o cristal. O jogo segue os keyframes (ver "O que diverge da proposta", abaixo).
 
 O circuito: medido no GIF (os texels do circuito na face da frente, a transformada de Fourier do brilho de cada um ao longo dos 60 quadros), cada texel é uma senoide pura de período 3 s (a componente de 2 ciclos por laço é 50 vezes as outras), e a fase anda em linha reta pela face, da ponta de baixo à esquerda para a de cima à direita, com um comprimento de onda de uma face (coerência 0,94 com uma onda plana). As cores vão da sombra da lente até perto do brilho (a face da frente aparece com 0,67 da luz no GIF: a sombra (19, 108, 102) chega como (12, 72, 68)). As duas animações têm o mesmo circuito: a cor não reage ao trabalho.
 
@@ -297,7 +297,7 @@ Fontes: o código do Minecraft 1.21.1 e do NeoForge 21.1.248 (`SpriteContents`, 
 - **O sprite `circuit_<tier>`** (16 × 16, 20 quadros de 3 ticks com a interpolação do jogo) cobre a face de fora das oito peças do painel de cada lado, um texel por unidade, pela posição da peça (o canto 0 do `FaceInfo` no alto à esquerda). O uv do `.bbmodel` nos lados Leste, Norte e Baixo trocava as tiras laterais do painel de lugar no jogo (a regra de uv do Blockbench nessas faces não é a do jogo): o anel do circuito saía quebrado nesses lados desde a etapa 1. Pela posição, o desenho e a onda continuam de uma peça para a outra nos seis lados.
 - **A onda:** cada texel do circuito no ponto `1 + cos(2π(t/3 s − fase))` da rampa do tier (0 = sombra, 1 = lente, 2 = brilho), com a fase crescendo de baixo à esquerda para cima à direita, uma volta a cada 16 texels na diagonal. No GIF o brilho fica um pouco abaixo do brilho cheio da rampa (a luz da face no Blockbench); o jogo usa a rampa inteira, como diz a proposta.
 - **As etiquetas** passam de 2 × 1 para 5 × 1,9 unidades (a pastilha de cima de cada lado, entre a moldura da vigia e a borda do painel, com 0,3 de folga de cada lado); a casa de 4 × 4 do atlas em que cai a cor é pintada inteira, para o mipmap não misturar a cor do lado com a vizinha. De 16 blocos a cor se distingue (captura `doca-16` do e2e).
-- **A vigia de 8 × 8** (`python scripts/textures/doca_modelo.py --vigia 8`, para a comparação da tarefa 5): a janela do painel e as peças em volta dela se afastam 1 do centro, as pastilhas sem etiqueta vão para a borda do painel (0,6 de largura, fora do trinco) e a etiqueta fica com 1,0 de altura. 776 faces contra 794 da de 6 × 6.
+- **A vigia de 8 × 8** foi gerada só para a comparação da tarefa 5 (a janela e as peças em volta dela afastadas 1 do centro, 776 faces contra 794); o dono ficou com a de 6 × 6 e a opção saiu do `doca_modelo.py`.
 
 ### O sinal de trabalho (tarefa 3)
 
@@ -305,3 +305,29 @@ Fontes: o código do Minecraft 1.21.1 e do NeoForge 21.1.248 (`SpriteContents`, 
 - **No cliente:** o `triggerEvent` passa o tick do mundo e o lado ao `DockWork` do block entity. O laço da animação é o mesmo para todas as Docas (a fase pelo tempo do mundo); um laço é de trabalho quando começa trabalhando, então o pacote só entra no começo de um laço e sai pela vigia do lado do último evento que chegou até ali.
 - **A rampa:** a velocidade vai de 0 a 1 em 1 s ao começar e de 1 a 0 em 1 s depois dos 15 s; o renderer gira cada peça por `repouso × t + (trabalho − repouso) × extra(t)`, com o `extra` a integral da velocidade, em fórmula fechada: o ângulo não pula, nem quando um evento chega no meio da descida (o período novo começa na velocidade em que ela estava).
 - **Quem não estava a 64 blocos** quando o evento saiu vê a Doca em repouso até o evento seguinte (no máximo 5 s depois, enquanto ela trabalha).
+
+### O renderer (tarefa 4)
+
+`client/dock/render/`: o `DockTimeline` e o `DockPose` (puros, com JUnit que confere cada amostra das duas animações do `.bbmodel`) montam a pose do quadro pelo relógio do mundo e o `DockWork` do block entity; o `PatternDockRenderer` desenha 13 caixas no repouso e até 19 no trabalho, no `RenderType.entitySolid` do atlas de blocos, sem alocação por quadro, só a menos de 64 blocos. A câmera da referência olha o Leste (o lado por onde o pacote entra), não o Sul; os ângulos dos keyframes vão com os sinais como estão (conferido nos GIFs).
+
+### As decisões do dono sobre os GIFs (11/11/2026)
+
+Gravados do jogo quadro a quadro (suíte `doca-gif` do e2e), com a vigia de 6 × 6 e com a de 8 × 8, ao lado dos GIFs do Blockbench:
+
+1. **A animação está aprovada, com a vigia de 6 × 6** (a do `.bbmodel`). A opção de 8 × 8 do `doca_modelo.py` saiu.
+2. **O miolo é escuro**, como o fundo do Blockbench: pela vigia se via o céu e o chão pela vigia oposta. Atrás de cada vigia, logo para dentro do lábio, uma placa fina com uma face só, virada para dentro, no grafite mais escuro do painel (15, 14, 18): seis faces a mais no modelo estático (800), nenhuma no caminho do giroscópio (a placa fica a 6,2 do centro; o anel maior vai a 4,5). De fora, a placa da própria vigia está de costas e não aparece. **O bloco continua sem oclusão** (`noOcclusion`), mesmo com o miolo fechado: um bloco que oclui não recebe luz na própria posição, e o giroscópio (desenhado com essa luz) e as faces de dentro ficariam pretos; também passaria a escurecer os vizinhos e a cortar a luz do céu. A colisão não mudou.
+3. **O cristal e os fragmentos com a luz cheia:** brilham no escuro na cor do tier (captura `doca-anim-noite-2.0` do e2e). Os anéis e o pacote seguem com a luz do mundo.
+4. **As garras ficam fixas** (no `.bbmodel` as do lado ativo vão a 0,92 no trabalho; ficam no modelo estático, paradas).
+
+### O que diverge da proposta
+
+O jogo segue os keyframes do `.bbmodel` aprovado onde eles diferem do texto da proposta ("Arte e animação da Doca"):
+
+- **Os anéis de porcelana e de grafite giram igual nos dois laços** (uma volta por laço); só o anel de latão e o cristal vão à metade no repouso.
+- **O cristal respira no repouso** (1 ± 0,05 em 1,5 s); a proposta dizia que ele não mudava de escala.
+- **O sobe e desce do cristal no trabalho é ±0,25** (a proposta dizia 0,2); no repouso, ±0,3.
+- O laço de repouso do GIF de referência toca em 5,76 s (o arredondamento do GIF); o jogo segue os 6 s dos keyframes.
+
+### Custo medido (`doca-desempenho`)
+
+50 Docas Elite à vista, num cliente sob o Xvfb com renderização por software (sem GPU), o mesmo cliente nas duas rodadas, antes e depois do miolo escuro e da luz cheia: sem o renderer 40,9 → 37,2 ms por quadro; repouso 40,8 → 38,4; trabalho parado em 1,6 s 41,3 → 40,3; fora de vista 36,6 → 34,2. A diferença fica dentro do ruído da medida (de uma rodada para outra o mesmo caso varia até 6 ms): as seis faces vão na malha do chunk, feitas uma vez, e a luz cheia é a troca de um número. Shaderpack (Iris) e GPU de verdade não foram medidos: o cliente de dev não tem o Iris.

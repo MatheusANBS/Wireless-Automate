@@ -78,7 +78,8 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 
 ## Integrações
 
-- **Doca de Padrões, etapas 1 e 2** (ramo `ccr-71b175d3-weymk6`, 11/11): teste à mão no jogo com o AE2 (a linha de fornalhas, o Ctrl + clique, a tela, o cubo, um pedido grande pela CPU com o resultado direto na rede, o aviso da trava "até o resultado") e com o RS2 (o Autocrafter num lado, Autocrafters encadeados, o resultado na rede). (11/11)
+- **Doca de Padrões, etapas 1 a 3** (ramo `ccr-71b175d3-weymk6`, 11/11): teste à mão no jogo com o AE2 (a linha de fornalhas, o Ctrl + clique, a tela, o cubo, um pedido grande pela CPU com o resultado direto na rede, o aviso da trava "até o resultado") e com o RS2 (o Autocrafter num lado, Autocrafters encadeados, o resultado na rede), e a animação (o laço de trabalho quando entrega, o pacote pela vigia do lado certo, o cristal aceso à noite). (11/11)
+- Doca: a animação não foi vista com shaderpack (o cliente de dev não tem o Iris) nem medida numa GPU (o `doca-desempenho` roda por software, sob o Xvfb); conferir num cliente de verdade com 50 Docas à vista. (11/11)
 - Doca: a unicidade não vê uma Doca **descarregada**: uma máquina dela pode entrar em outra Doca (limite aceito pelo dono). Com a mesma máquina em duas Docas, o resultado pode voltar pela rede do provedor da outra; em redes ME diferentes o pedido não termina. (11/11)
 - Doca: o fluido que o provedor recusa na execução depois de aceitar na simulação volta à máquina pela face Extrai, e o que ela não aceitar se perde (raro: um handler que mente na simulação). (11/11)
 - Doca e RS2: o `ItemResource` e o `FluidResource` vêm da `refinedstorage-common` (interna, `@API(INTERNAL)`), não da API publicada; podem mudar entre versões do RS2. Conferir a cada versão nova do RS2 (o `versionRange` é `[2.0.9,)`, a conferida). (11/11)

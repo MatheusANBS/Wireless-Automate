@@ -154,6 +154,27 @@ public final class MekanismChemicals {
         return ((ChemicalStack) stack).copy();
     }
 
+    public static long amount(Object stack) {
+        return ((ChemicalStack) stack).getAmount();
+    }
+
+    public static Object copyWithAmount(Object stack, long amount) {
+        return ((ChemicalStack) stack).copyWithAmount(amount);
+    }
+
+    /** Insere {@code stack} no handler, por qualquer tanque; devolve quanto entrou. */
+    public static long insert(Object handler, Object stack, boolean simulate) {
+        ChemicalStack chemical = (ChemicalStack) stack;
+        ChemicalStack rest = ((IChemicalHandler) handler).insertChemical(chemical,
+                simulate ? Action.SIMULATE : Action.EXECUTE);
+        return chemical.getAmount() - rest.getAmount();
+    }
+
+    /** Tira até {@code amount} do tanque {@code tank}; devolve o que saiu (o {@code ChemicalStack}, vazio se nada). */
+    public static Object extract(Object handler, int tank, long amount, boolean simulate) {
+        return ((IChemicalHandler) handler).extractChemical(tank, amount, simulate ? Action.SIMULATE : Action.EXECUTE);
+    }
+
     private MekanismChemicals() {
     }
 }

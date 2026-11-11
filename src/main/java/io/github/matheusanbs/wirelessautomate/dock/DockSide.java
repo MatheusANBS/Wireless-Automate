@@ -66,6 +66,7 @@ public final class DockSide {
     /** Itens e mB que a volta deu ao provedor deste lado desde a carga da Doca. */
     private long returned;
     private long returnedFluid;
+    private long returnedChemical;
     /**
      * O tick do servidor da última oferta de um provedor do AE2 ou do RS2 a este lado ({@link DockAe2#hasProvider},
      * {@link DockRs2#hasProvider}).
@@ -332,12 +333,21 @@ public final class DockSide {
         return returnedFluid;
     }
 
+    /** mB de químico devolvidos ao provedor deste lado desde a carga (não é salvo). */
+    public long returnedChemical() {
+        return returnedChemical;
+    }
+
     void addReturned(long count) {
         returned += count;
     }
 
     void addReturnedFluid(long amount) {
         returnedFluid += amount;
+    }
+
+    void addReturnedChemical(long amount) {
+        returnedChemical += amount;
     }
 
     boolean flushQueued() {

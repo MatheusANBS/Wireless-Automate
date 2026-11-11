@@ -23,6 +23,11 @@ public final class ChemicalTestTanks {
     public static final Block MANY_TANKS_BLOCK = Blocks.CRYING_OBSIDIAN;
     /** Bloco com um tanque de entrada que só aceita um químico ({@code ChemicalTestSupport.acceptOnly}). */
     public static final Block TYPED_TANK_BLOCK = Blocks.RESPAWN_ANCHOR;
+    /**
+     * A máquina dos testes de químico da Doca ({@code DockChemicalGameTests}): item por cima, entrada de químico pelos
+     * lados e saída de químico por baixo.
+     */
+    public static final Block DOCK_MACHINE_BLOCK = Blocks.DRIED_KELP_BLOCK;
     static final int MANY_TANKS = 20;
     static final long CAPACITY = 64_000;
     private static final boolean ENABLED = Boolean.getBoolean("wirelessautomate.chemicalTests");

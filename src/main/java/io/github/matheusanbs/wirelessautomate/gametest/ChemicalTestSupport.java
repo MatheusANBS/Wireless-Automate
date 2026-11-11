@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.gametest;
 
 import io.github.matheusanbs.wirelessautomate.compat.mekanism.MekanismChemicals;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import mekanism.api.Action;
@@ -14,18 +15,22 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
+import net.neoforged.neoforge.items.ItemStackHandler;
 
 /**
  * A parte dos testes de químico que usa a API do Mekanism. Não é {@code @GameTestHolder} nem
  * {@code @EventBusSubscriber}: o NeoForge inspeciona essas classes por reflexão (as assinaturas dos
  * métodos), e um tipo do Mekanism numa assinatura impede o mod de carregar sem ele. Só é chamada
- * por {@link ChemicalTestTanks} e {@link ChemicalGameTests} com o Mekanism presente.
+ * por {@link ChemicalTestTanks}, {@link ChemicalGameTests} e {@link DockChemicalGameTests} com o Mekanism presente.
  */
 final class ChemicalTestSupport {
     private static final Map<BlockPos, IChemicalTank> TANKS = new ConcurrentHashMap<>();
     private static final Map<BlockPos, IChemicalTank[]> MANY = new ConcurrentHashMap<>();
     private static final Map<BlockPos, IChemicalTank> TYPED = new ConcurrentHashMap<>();
+    private static final Map<BlockPos, ChemicalMachine> DOCK_MACHINES = new ConcurrentHashMap<>();
 
     static void register(RegisterCapabilitiesEvent event) {
         event.registerBlock(MekanismChemicals.BLOCK, (level, pos, state, be, side) -> handler(pos), ChemicalTestTanks.BLOCK);
@@ -33,6 +38,81 @@ final class ChemicalTestSupport {
                 ChemicalTestTanks.MANY_TANKS_BLOCK);
         event.registerBlock(MekanismChemicals.BLOCK, (level, pos, state, be, side) -> typedHandler(pos),
                 ChemicalTestTanks.TYPED_TANK_BLOCK);
+        event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) ->
+                side == Direction.UP ? dockMachine(pos).items : null, ChemicalTestTanks.DOCK_MACHINE_BLOCK);
+        event.registerBlock(MekanismChemicals.BLOCK, (level, pos, state, be, side) -> side == Direction.DOWN
+                ? dockMachine(pos).outputHandler : side != null && side.getAxis().isHorizontal()
+                        ? dockMachine(pos).inputHandler : null, ChemicalTestTanks.DOCK_MACHINE_BLOCK);
+    }
+
+    // ------------------------------------------------------------------ a máquina dos testes da Doca
+
+    /** Esquece a máquina da Doca de {@code pos} (o mundo dos testes é reaproveitado entre lotes). */
+    static void resetDockMachine(BlockPos pos) {
+        DOCK_MACHINES.remove(pos.immutable());
+    }
+
+    /** A entrada de químico da máquina da Doca aceita na simulação e nada de verdade ({@code true}), ou volta ao normal. */
+    static void dockMachineLying(BlockPos pos, boolean lying) {
+        dockMachine(pos).lying = lying;
+    }
+
+    static ItemStack dockMachineItem(BlockPos pos) {
+        return dockMachine(pos).items.getStackInSlot(0);
+    }
+
+    /** Quanto do químico há na entrada da máquina da Doca. */
+    static long dockMachineInput(BlockPos pos, ResourceLocation chemical) {
+        ChemicalStack stack = dockMachine(pos).input.getStack();
+        return !stack.isEmpty() && MekanismChemicals.id(stack).equals(chemical) ? stack.getAmount() : 0;
+    }
+
+    /** Põe {@code amount} mB do químico na saída da máquina da Doca, como uma receita pronta. */
+    static void fillDockMachineOutput(BlockPos pos, ResourceLocation chemical, long amount) {
+        dockMachine(pos).output.insert(stack(chemical, amount), Action.EXECUTE, AutomationType.INTERNAL);
+    }
+
+    static long dockMachineOutput(BlockPos pos) {
+        return dockMachine(pos).output.getStack().getAmount();
+    }
+
+    /** Um pedido de um químico só, como a Doca recebe ({@code ChemicalStack} como {@code Object}). */
+    static List<Object> chemicalOrder(ResourceLocation chemical, long amount) {
+        return List.of(stack(chemical, amount));
+    }
+
+    private static ChemicalStack stack(ResourceLocation chemical, long amount) {
+        return new ChemicalStack(MekanismAPI.CHEMICAL_REGISTRY.getHolder(chemical).orElseThrow(), amount);
+    }
+
+    private static ChemicalMachine dockMachine(BlockPos pos) {
+        return DOCK_MACHINES.computeIfAbsent(pos.immutable(), key -> new ChemicalMachine());
+    }
+
+    /**
+     * Uma máquina de duas entradas e uma saída, como uma do Mekanism que pede item e químico: um slot de item pela face
+     * de cima, a entrada de químico pelas laterais (que pode mentir, {@link #lying}) e a saída de químico por baixo (só
+     * dá).
+     */
+    private static final class ChemicalMachine {
+        final ItemStackHandler items = new ItemStackHandler(1);
+        final IChemicalTank input = BasicChemicalTank.createAllValid(ChemicalTestTanks.CAPACITY, () -> {
+        });
+        final IChemicalTank output = BasicChemicalTank.createAllValid(ChemicalTestTanks.CAPACITY, () -> {
+        });
+        volatile boolean lying;
+        final IChemicalHandler inputHandler = new SingleTank(input) {
+            @Override
+            public ChemicalStack insertChemical(int index, ChemicalStack stack, Action action) {
+                return lying && action.execute() ? stack : super.insertChemical(index, stack, action);
+            }
+        };
+        final IChemicalHandler outputHandler = new SingleTank(output) {
+            @Override
+            public ChemicalStack insertChemical(int index, ChemicalStack stack, Action action) {
+                return stack;
+            }
+        };
     }
 
     static void reset(BlockPos pos) {
@@ -156,42 +236,51 @@ final class ChemicalTestSupport {
 
     /** Um handler de um tanque só sobre {@code tank}. */
     private static IChemicalHandler handler(IChemicalTank tank) {
-        return new IChemicalHandler() {
-            @Override
-            public int getChemicalTanks() {
-                return 1;
-            }
+        return new SingleTank(tank);
+    }
 
-            @Override
-            public ChemicalStack getChemicalInTank(int index) {
-                return tank.getStack();
-            }
+    /** O handler de um tanque só, pela automação externa. */
+    private static class SingleTank implements IChemicalHandler {
+        private final IChemicalTank tank;
 
-            @Override
-            public void setChemicalInTank(int index, ChemicalStack stack) {
-                tank.setStack(stack);
-            }
+        SingleTank(IChemicalTank tank) {
+            this.tank = tank;
+        }
 
-            @Override
-            public long getChemicalTankCapacity(int index) {
-                return tank.getCapacity();
-            }
+        @Override
+        public int getChemicalTanks() {
+            return 1;
+        }
 
-            @Override
-            public boolean isValid(int index, ChemicalStack stack) {
-                return tank.isValid(stack);
-            }
+        @Override
+        public ChemicalStack getChemicalInTank(int index) {
+            return tank.getStack();
+        }
 
-            @Override
-            public ChemicalStack insertChemical(int index, ChemicalStack stack, Action action) {
-                return tank.insert(stack, action, AutomationType.EXTERNAL);
-            }
+        @Override
+        public void setChemicalInTank(int index, ChemicalStack stack) {
+            tank.setStack(stack);
+        }
 
-            @Override
-            public ChemicalStack extractChemical(int index, long amount, Action action) {
-                return tank.extract(amount, action, AutomationType.EXTERNAL);
-            }
-        };
+        @Override
+        public long getChemicalTankCapacity(int index) {
+            return tank.getCapacity();
+        }
+
+        @Override
+        public boolean isValid(int index, ChemicalStack stack) {
+            return tank.isValid(stack);
+        }
+
+        @Override
+        public ChemicalStack insertChemical(int index, ChemicalStack stack, Action action) {
+            return tank.insert(stack, action, AutomationType.EXTERNAL);
+        }
+
+        @Override
+        public ChemicalStack extractChemical(int index, long amount, Action action) {
+            return tank.extract(amount, action, AutomationType.EXTERNAL);
+        }
     }
 
     private ChemicalTestSupport() {

@@ -10,6 +10,11 @@ import net.neoforged.neoforge.items.IItemHandler;
  * {@code compat/refinedstorage/Rs2DockNetwork}): um inventário e um tanque de um espaço, sempre vazios, que só aceitam
  * e inserem direto no armazenamento da rede. A volta ({@link DockReturn}) o usa no lugar do
  * {@code IItemHandler}/{@code IFluidHandler} do vizinho, sem conhecer os tipos do outro mod.
+ *
+ * <p>Químicos ({@code ChemicalStack} do Mekanism como {@code Object}, pela ponte {@code network.Chemicals}): por padrão
+ * a rede não os aceita ({@link #acceptsChemicals} falso), e a volta deixa o químico na máquina, sem marcar o provedor
+ * cheio. A rede que guarda químicos (com o addon do Mekanism dela) responde {@code true} e insere pelo
+ * {@link #insertChemical}.
  */
 public interface DockReturnNetwork extends IItemHandler, IFluidHandler {
     /** O vizinho mudou: esquece a rede guardada, achada de novo na próxima inserção. */
@@ -33,6 +38,24 @@ public interface DockReturnNetwork extends IItemHandler, IFluidHandler {
 
     /** O mesmo que {@link #reclaim(ItemStack)}, para fluido (mB). */
     default long reclaim(FluidStack stack) {
+        return 0;
+    }
+
+    /** A rede guarda químicos: só então a volta chama {@link #insertChemical} e {@link #reclaimChemical}. */
+    default boolean acceptsChemicals() {
+        return false;
+    }
+
+    /**
+     * Insere o químico {@code stack} ({@code ChemicalStack}) no armazenamento da rede, sem mudá-lo; devolve quanto
+     * entrou (mB). Por padrão, nada.
+     */
+    default long insertChemical(Object stack, boolean simulate) {
+        return 0;
+    }
+
+    /** O mesmo que {@link #reclaim(ItemStack)}, para químico ({@code ChemicalStack}, mB). */
+    default long reclaimChemical(Object stack) {
         return 0;
     }
 }

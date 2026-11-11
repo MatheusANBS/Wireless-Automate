@@ -156,7 +156,8 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
      * <ul>
      *   <li>a receita direta, o anel com o roteador (e cada armazenamento carregado) do degrau anterior no centro;</li>
      *   <li>um exemplo do cartão que pula por destino, com o cartão "Básico → degrau anterior" no centro;</li>
-     *   <li>bloco + cartão, um par por origem carregada e destino acima, com o cartão daquela origem.</li>
+     *   <li>bloco + cartão (roteador, cada armazenamento carregado e a Doca de Padrões), um par por origem carregada e
+     *   destino acima, com o cartão daquela origem.</li>
      * </ul>
      * Os anéis vêm das receitas carregadas no cliente, então um datapack que troca um anel troca também o que o
      * JEI mostra.
@@ -200,6 +201,12 @@ public final class WirelessAutomateJeiPlugin implements IModPlugin {
                             new ShapelessRecipe("router_upgrade", CraftingBookCategory.MISC,
                                     StorageBlockItem.withTier(item, to), storage)));
                 }
+                Item dock = ModItems.PATTERN_DOCK.get();
+                NonNullList<Ingredient> docks = NonNullList.of(Ingredient.EMPTY,
+                        Ingredient.of(StorageBlockItem.withTier(dock, from)), Ingredient.of(card));
+                shown.add(new RecipeHolder<>(WirelessAutomate.id("jei/pattern_dock_upgrade_" + ids),
+                        new ShapelessRecipe("router_upgrade", CraftingBookCategory.MISC,
+                                StorageBlockItem.withTier(dock, to), docks)));
             }
         }
         registration.addRecipes(RecipeTypes.CRAFTING, shown);

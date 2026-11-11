@@ -2,6 +2,8 @@ package io.github.matheusanbs.wirelessautomate.recipe;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.dock.PatternDockBlock;
+import io.github.matheusanbs.wirelessautomate.dock.PatternDockItem;
 import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
 import io.github.matheusanbs.wirelessautomate.registry.ModRecipes;
@@ -18,18 +20,20 @@ import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.level.Level;
 
 /**
- * Upgrade de tier na bancada, sem forma: exatamente um roteador (ou um armazenamento) e um Cartão de Upgrade que
- * vale para o tier do item, como o clique com o cartão no bloco colocado: um cartão com origem só vale num bloco
- * daquele tier; o antigo, sem origem, de qualquer tier abaixo (Básico + Esmeralda vale, como Avançado + Elite) ({@link RouterBlock#tryUpgrade}, {@link StorageBlock#tryUpgrade}).
- * O resultado é o mesmo item, com os outros componentes (o conteúdo e o filtro de um armazenamento cheio),
- * no tier novo. Os dois guardam o tier no {@code block_state}, com a mesma propriedade.
+ * Upgrade de tier na bancada, sem forma: exatamente um roteador (ou um armazenamento, ou uma Doca de Padrões) e um
+ * Cartão de Upgrade que vale para o tier do item, pela mesma regra do clique com o cartão no bloco colocado
+ * ({@link RouterTier#acceptsCard}): um cartão com origem só vale num bloco daquele tier; o antigo, sem origem, de
+ * qualquer tier abaixo (Básico + Esmeralda vale, como Avançado + Elite) ({@link RouterBlock#tryUpgrade},
+ * {@link StorageBlock#tryUpgrade}, {@link PatternDockBlock#tryUpgrade}). O resultado é o mesmo item, com os outros
+ * componentes (o conteúdo e o filtro de um armazenamento cheio, o {@code pattern_dock_pending} de uma Doca quebrada),
+ * no tier novo. Os três guardam o tier no {@code block_state}, com a mesma propriedade.
  */
 public class RouterUpgradeRecipe extends CustomRecipe {
     public RouterUpgradeRecipe(CraftingBookCategory category) {
         super(category);
     }
 
-    /** O roteador ou o armazenamento no tier novo, ou vazio se a grade não casa. */
+    /** O bloco no tier novo, ou vazio se a grade não casa. */
     public static ItemStack upgraded(CraftingInput input) {
         ItemStack router = ItemStack.EMPTY;
         ItemStack card = ItemStack.EMPTY;
@@ -38,8 +42,7 @@ public class RouterUpgradeRecipe extends CustomRecipe {
             if (stack.isEmpty()) {
                 continue;
             }
-            if ((stack.getItem() instanceof RouterBlockItem || stack.getItem() instanceof StorageBlockItem)
-                    && router.isEmpty()) {
+            if (upgradable(stack) && router.isEmpty()) {
                 router = stack;
             } else if (stack.getItem() instanceof TierCoreItem && card.isEmpty()) {
                 card = stack;
@@ -57,7 +60,13 @@ public class RouterUpgradeRecipe extends CustomRecipe {
         return withTier(router, core);
     }
 
-    /** Cópia de um do item do roteador ou do armazenamento, com todos os componentes, no {@code tier}. */
+    /** O item sobe de tier com o cartão: roteador, armazenamento ou Doca de Padrões. */
+    public static boolean upgradable(ItemStack stack) {
+        return stack.getItem() instanceof RouterBlockItem || stack.getItem() instanceof StorageBlockItem
+                || stack.getItem() instanceof PatternDockItem;
+    }
+
+    /** Cópia de um do item do roteador, do armazenamento ou da Doca, com todos os componentes, no {@code tier}. */
     public static ItemStack withTier(ItemStack block, RouterTier tier) {
         ItemStack result = block.copyWithCount(1);
         result.set(DataComponents.BLOCK_STATE, result

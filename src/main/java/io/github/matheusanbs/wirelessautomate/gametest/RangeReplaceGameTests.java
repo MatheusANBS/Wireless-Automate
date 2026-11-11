@@ -120,9 +120,9 @@ public final class RangeReplaceGameTests {
     }
 
     /**
-     * A trocada perde as portas sem esperar o Atualizar (o aviso é a invalidação da capability da posição, que refaz
-     * as rotas do nó); com o bloco do grupo de volta (também depois de passar por outro bloco), ou depois do
-     * Atualizar, elas voltam.
+     * A trocada que o roteador não viu ({@link RangeTestSupport#swapUnseen}: a vista sai da lista sozinha) perde as
+     * portas na montagem, sem esperar o Atualizar; com o bloco do grupo de volta (também depois de passar por outro
+     * bloco), ou depois do Atualizar, elas voltam.
      */
     @GameTest(template = "empty", timeoutTicks = 300)
     public static void replacedMachineHasNoPorts(GameTestHelper helper) {
@@ -135,24 +135,24 @@ public final class RangeReplaceGameTests {
                     profile(helper, router, FURNACE_A, Direction.DOWN, PortMode.EXTRACT);
                 })
                 .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, FURNACE_A, Direction.DOWN), "sem porta"))
-                .thenExecute(() -> blastAt(helper, FURNACE_A, Direction.EAST))
+                .thenExecute(() -> blastUnseen(helper, router))
                 .thenWaitUntil(() -> helper.assertFalse(remotePort(helper, router, FURNACE_A, Direction.DOWN),
                         "a trocada continua com porta"))
                 .thenExecute(() -> helper.setBlock(FURNACE_A,
                         Blocks.FURNACE.defaultBlockState().setValue(AbstractFurnaceBlock.FACING, Direction.EAST)))
                 .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, FURNACE_A, Direction.DOWN),
                         "a fornalha voltou e a porta não"))
-                .thenExecute(() -> blastAt(helper, FURNACE_A, Direction.EAST))
+                .thenExecute(() -> blastUnseen(helper, router))
                 .thenWaitUntil(() -> helper.assertFalse(remotePort(helper, router, FURNACE_A, Direction.DOWN),
                         "trocada de novo com porta"))
-                // de trocada para trocada (o aviso não muda o estado) e de volta: o aviso seguinte ainda chega
-                .thenExecute(() -> helper.setBlock(FURNACE_A, Blocks.STONE))
+                // de trocada para trocada e de volta: a fornalha volta e a porta também
+                .thenExecute(() -> swapUnseen(helper, router, FURNACE_A, Blocks.STONE.defaultBlockState()))
                 .thenIdle(3)
                 .thenExecute(() -> helper.setBlock(FURNACE_A,
                         Blocks.FURNACE.defaultBlockState().setValue(AbstractFurnaceBlock.FACING, Direction.EAST)))
                 .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, FURNACE_A, Direction.DOWN),
                         "a fornalha voltou depois da pedra e a porta não"))
-                .thenExecute(() -> blastAt(helper, FURNACE_A, Direction.EAST))
+                .thenExecute(() -> blastUnseen(helper, router))
                 .thenWaitUntil(() -> helper.assertFalse(remotePort(helper, router, FURNACE_A, Direction.DOWN),
                         "trocada pela terceira vez com porta"))
                 .thenExecute(() -> helper.assertFalse(router.updateReplaced(
@@ -162,9 +162,15 @@ public final class RangeReplaceGameTests {
                 .thenSucceed();
     }
 
+    /** A fornalha A vira alto-forno de frente Leste, sem o roteador ver ({@link RangeTestSupport#swapUnseen}). */
+    private static void blastUnseen(GameTestHelper helper, RouterBlockEntity router) {
+        swapUnseen(helper, router, FURNACE_A,
+                Blocks.BLAST_FURNACE.defaultBlockState().setValue(AbstractFurnaceBlock.FACING, Direction.EAST));
+    }
+
     /**
      * A trocada que continua trocada: um aviso novo do cache dela (a block entity do bloco novo invalida as
-     * capabilities) não remonta as rotas, só volta a vigiar a posição; a fornalha de volta ainda refaz a porta.
+     * capabilities) não remonta as rotas no aviso; a conferência das remotas, depois, a desvincula.
      */
     @GameTest(template = "empty", timeoutTicks = 300)
     public static void stillReplacedMachineDoesNotRebuild(GameTestHelper helper) {
@@ -179,7 +185,7 @@ public final class RangeReplaceGameTests {
                     network[0] = router.networkId(ResourceType.ITEM);
                 })
                 .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, FURNACE_A, Direction.DOWN), "sem porta"))
-                .thenExecute(() -> blastAt(helper, FURNACE_A, Direction.EAST))
+                .thenExecute(() -> blastUnseen(helper, router))
                 .thenWaitUntil(() -> helper.assertFalse(remotePort(helper, router, FURNACE_A, Direction.DOWN),
                         "a trocada continua com porta"))
                 .thenWaitUntil(() -> helper.assertFalse(NetworkManager.get().isDirty(network[0], ResourceType.ITEM),
@@ -191,33 +197,33 @@ public final class RangeReplaceGameTests {
                     helper.assertFalse(NetworkManager.get().isDirty(network[0], ResourceType.ITEM),
                             "o aviso da trocada que continua trocada remontou as rotas");
                 })
-                .thenExecute(() -> helper.setBlock(FURNACE_A,
-                        Blocks.FURNACE.defaultBlockState().setValue(AbstractFurnaceBlock.FACING, Direction.EAST)))
-                .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, FURNACE_A, Direction.DOWN),
-                        "a fornalha voltou e a porta não"))
+                .thenWaitUntil(() -> helper.assertTrue(index(helper, router, FURNACE_A) < 0,
+                        "a conferência não desvinculou a trocada"))
                 .thenSucceed();
     }
 
     /**
      * Quebrar a máquina vinculada com portas em várias faces não derruba o servidor: a quebra invalida todos os caches
-     * da posição de uma vez, e os avisos depois do primeiro (a máquina já trocada) voltam a vigiar fora do listener,
-     * onde o {@code BlockCapabilityCache} aceita a consulta. A fornalha de volta ainda refaz a porta.
+     * da posição de uma vez, e a conferência das remotas roda fora do listener, onde o {@code BlockCapabilityCache}
+     * aceita a consulta, e a desvincula. Três vezes: a fornalha de volta, vinculada de novo, ainda faz porta.
      */
     @GameTest(template = "empty", timeoutTicks = 400)
     public static void breakingLinkedMachineDoesNotCrash(GameTestHelper helper) {
         RouterBlockEntity router = routerWithMachines(helper);
         var sequence = helper.startSequence()
                 .thenWaitUntil(() -> waitLoaded(helper, router))
-                .thenExecute(() -> {
-                    router.setRangeUpgrade(rangeUpgrade());
-                    linkInNetwork(helper, router, FURNACE_A);
-                    for (Direction side : Direction.values()) {
-                        profile(helper, router, FURNACE_A, side, PortMode.EXTRACT);
-                    }
-                });
+                .thenExecute(() -> router.setRangeUpgrade(rangeUpgrade()));
         for (int round = 0; round < 3; round++) {
             int shown = round;
             sequence = sequence
+                    .thenExecute(() -> {
+                        helper.setBlock(FURNACE_A,
+                                Blocks.FURNACE.defaultBlockState().setValue(AbstractFurnaceBlock.FACING, Direction.EAST));
+                        linkInNetwork(helper, router, FURNACE_A);
+                        for (Direction side : Direction.values()) {
+                            profile(helper, router, FURNACE_A, side, PortMode.EXTRACT);
+                        }
+                    })
                     .thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, FURNACE_A, Direction.DOWN),
                             "sem porta na volta " + shown))
                     .thenExecute(() -> {
@@ -228,13 +234,12 @@ public final class RangeReplaceGameTests {
                         }
                         helper.destroyBlock(FURNACE_A);
                     })
-                    .thenWaitUntil(() -> helper.assertFalse(remotePort(helper, router, FURNACE_A, Direction.DOWN),
-                            "a quebrada continua com porta na volta " + shown))
-                    .thenExecute(() -> helper.setBlock(FURNACE_A,
-                            Blocks.FURNACE.defaultBlockState().setValue(AbstractFurnaceBlock.FACING, Direction.EAST)));
+                    .thenWaitUntil(() -> helper.assertTrue(index(helper, router, FURNACE_A) < 0,
+                            "a quebrada ficou vinculada na volta " + shown))
+                    .thenExecute(() -> helper.assertFalse(remotePort(helper, router, FURNACE_A, Direction.DOWN),
+                            "a quebrada continua com porta na volta " + shown));
         }
-        sequence.thenWaitUntil(() -> helper.assertTrue(remotePort(helper, router, FURNACE_A, Direction.DOWN),
-                "a fornalha voltou e a porta não")).thenSucceed();
+        sequence.thenSucceed();
     }
 
     /**

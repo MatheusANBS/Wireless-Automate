@@ -42,13 +42,17 @@ final class RouterRemoteCaches {
 
     /**
      * Descarta os caches das remotas que não estão ativas em {@code reach} (fora de {@code remotes}, do raio ou do
-     * limite); com {@code reach} nulo, de todas. Só com {@link #isEmpty()} falso.
+     * limite), e com eles a vigia delas ({@code RemoteMachine.watched}); com {@code reach} nulo, de todas. Só com
+     * {@link #isEmpty()} falso.
      */
     void prune(RangeRules.Reach @Nullable [] reach, RemoteMachines remotes) {
         LongOpenHashSet active = new LongOpenHashSet();
-        for (int i = 0; reach != null && i < reach.length; i++) {
-            if (reach[i] == RangeRules.Reach.ACTIVE) {
+        for (int i = 0, n = remotes.size(); i < n; i++) {
+            if (reach != null && i < reach.length && reach[i] == RangeRules.Reach.ACTIVE) {
                 active.add(remotes.machine(i).pos().asLong());
+            } else {
+                // sem os caches, a vigia dela também caiu: a conferência a liga de novo quando ela voltar a ser ativa
+                remotes.machine(i).setWatched(false);
             }
         }
         var iterator = caches.long2ObjectEntrySet().fastIterator();

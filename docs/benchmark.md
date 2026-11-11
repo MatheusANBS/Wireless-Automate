@@ -865,3 +865,14 @@ WA_DOCK_MEDIDA=1 ./gradlew runGameTestServerAe2 -PdockMedida
 
 `./scripts/bench.sh doca:1:3` (fornalhas e um baú; cada pedido cabe inteiro, sem pendente): mod 0,140 ± 0,049 ms/tick, 3,0 a 5,1 µs por oferta, 256 itens/s (`run/bench/reports/20261111-225529.md`, fora do git). No ruído das rodadas da seção anterior (0,145 ± 0,052 e 0,163 ± 0,037).
 
+
+## Roteador de alcance: a remota quebrada sai sozinha (11 de novembro de 2026)
+
+Ramo `ccr-71b175d3-weymk6`. `./scripts/bench.sh "range:200:3,idle:500:3:vanilla"`, máquina local. Antes: `12d9cd8`, pelo `git stash` das mudanças (`run/bench/reports/20261111-233703.md`); depois: as mudanças da conferência `range/GoneCheck` (`run/bench/reports/20261111-233306.md`); fora do git. No `range`, as repetições 2 e 3 (a 1 aquece a cena).
+
+| cenário | antes: mod (ms/tick) | depois: mod (ms/tick) | memória |
+| --- | --- | --- | --- |
+| range 200 (12.800 remotas vinculadas) | 0,0021 / 0,0023 | 0,0022 / 0,0023 | heap retido ~17,6 → ~17,9 MB |
+| idle 500 | 0,0055 ± 0,0003 | 0,0055 ± 0,0005 | — |
+
+Leitura: o caminho quente do mixin ganhou só a leitura de uma flag, e a conferência só roda depois de um aviso ou na carga; nada muda no tempo. Os +0,3 MB vêm da vigia e da conferência por roteador (no `range` as remotas já têm face ativa, então a montagem já criava o cache de itens que a vigia usa).

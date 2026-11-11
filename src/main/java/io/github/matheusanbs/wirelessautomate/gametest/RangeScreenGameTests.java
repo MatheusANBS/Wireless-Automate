@@ -388,11 +388,12 @@ public final class RangeScreenGameTests {
                     helper.assertValueEqual(range.machine(0).distance(), 7, "distância do barril longe");
                     helper.assertValueEqual(range.machine(1).state(), RangeView.MachineState.LOADED, "fornalha A");
                     helper.assertValueEqual(range.used(), 2, "vagas usadas");
-                    // A fornalha B vira pedra: sem mexer na versão do roteador, a tela vê em até 20 ticks.
-                    helper.setBlock(FURNACE_B, Blocks.STONE);
                 })
                 .thenExecuteAfter(RouterMenu.SAMPLE_TICKS + 1, () -> {
                     try {
+                        // A fornalha B vira pedra: sem mexer na versão do roteador, a amostra da tela a vê. No mesmo
+                        // tick, antes de a conferência das remotas desvinculá-la.
+                        helper.setBlock(FURNACE_B, Blocks.STONE);
                         menus[0].pollSnapshot();
                         RangeView range = menus[0].snapshot().range();
                         helper.assertValueEqual(range.machine(2).state(), RangeView.MachineState.MISSING, "fornalha que virou pedra");

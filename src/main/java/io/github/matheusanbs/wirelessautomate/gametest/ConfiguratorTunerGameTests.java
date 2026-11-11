@@ -381,8 +381,13 @@ public final class ConfiguratorTunerGameTests {
                 .thenExecute(() -> {
                     router.setRangeUpgrade(rangeUpgrade());
                     link(helper, router, FURNACE_A);
+                })
+                // a conferência do vínculo novo passa antes da troca
+                .thenIdle(1)
+                .thenExecute(() -> {
                     ConfiguratorTuner.click(player, helper.absolutePos(FURNACE_A), false);
-                    helper.setBlock(FURNACE_A, Blocks.BARREL);
+                    // sem o roteador ver: a trocada vista sai da lista sozinha
+                    swapUnseen(helper, router, FURNACE_A, Blocks.BARREL.defaultBlockState());
                 })
                 .thenIdle(TunerPending.CONFIRM_DELAY)
                 .thenExecute(() -> {

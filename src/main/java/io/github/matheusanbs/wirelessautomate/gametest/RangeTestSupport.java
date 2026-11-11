@@ -33,6 +33,7 @@ import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.block.AbstractFurnaceBlock;
 import net.minecraft.world.level.block.BarrelBlock;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
@@ -104,6 +105,17 @@ final class RangeTestSupport {
         UUID network = router.networkId(ResourceType.ITEM);
         helper.assertTrue(network != null, "o roteador não está numa rede");
         router.setNetworkId(network);
+    }
+
+    /**
+     * Troca o bloco da remota sem o roteador ver, o limite aceito da remota que sai sozinha: com o upgrade fora, os
+     * caches dela (e a vigia) e o índice das remotas caem, e nenhum aviso chega; o upgrade volta na mesma chamada. A
+     * remota fica vinculada, trocada ou sumida, até um aviso dela ou a próxima carga do roteador.
+     */
+    static void swapUnseen(GameTestHelper helper, RouterBlockEntity router, BlockPos relative, BlockState state) {
+        ItemStack upgrade = router.removeRangeUpgrade();
+        helper.setBlock(relative, state);
+        router.setRangeUpgrade(upgrade);
     }
 
     static ItemStack itemCard() {

@@ -45,6 +45,8 @@ final class RouterPresence {
             NodeIndex.track(router);
             chunkUnloading = false;
             RouterChunkLoader.get().loaded(router);
+            // uma remota quebrada com o roteador descarregado (sem vigia, sem aviso) sai na carga
+            range.goneStart();
         }
     }
 
@@ -70,6 +72,7 @@ final class RouterPresence {
         if (serverLevel() != null) {
             NetworkManager.get().removeNode(router);
             NodeIndex.untrack(router);
+            range.goneStop();
         }
     }
 

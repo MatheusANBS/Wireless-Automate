@@ -60,6 +60,8 @@ The Dock **spends no energy and no fuel**. It only carries the orders.
 - **The Autocrafter locks:** "lock until all outputs are received" works with the Dock. "Lock until the connected
   machine is empty" treats the whole side as one machine, which only counts as empty 15 s after its last move: one
   batch at a time on the side, with that gap between them. To use several machines at once, leave it unlocked.
+- **The final product on RS2 needs room on a disk.** RS2 only counts the order's final result after storing it: with
+  no room on the disks, it stays in the machine, the side shows "Provider full" and waits until there is space.
 - **Crafting patterns** (crafting table, stonecutter, smithing) belong to the Molecular Assembler. The Dock refuses
   them.
 - **Another kind of machine?** Use **another side**. A side handles one kind, and the Dock has six sides.

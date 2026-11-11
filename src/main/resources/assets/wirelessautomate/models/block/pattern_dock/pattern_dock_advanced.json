@@ -2,6 +2,7 @@
   "parent": "wirelessautomate:block/pattern_dock/pattern_dock",
   "textures": {
     "dock": "wirelessautomate:block/pattern_dock/advanced",
+    "circuit": "wirelessautomate:block/pattern_dock/circuit_advanced",
     "particle": "wirelessautomate:block/pattern_dock/advanced"
   }
 }

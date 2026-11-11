@@ -71,11 +71,12 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
     private boolean dropExpected;
     /** No servidor: o tick ({@code getTickCount}) do último evento de trabalho mandado, para o intervalo. Não é salvo. */
     private long lastWorkSent = DockWork.NEVER;
-    /** No servidor: quantos eventos de trabalho o jogo processou nesta Doca (para os testes). */
+    /** No servidor: quantos eventos de trabalho o jogo processou nesta Doca e o lado do último (para os testes). */
     private int workEvents;
-    /** No cliente: o relógio do laço de trabalho, alimentado pelos eventos. Não é salvo. */
-    private final DockWork work = new DockWork();
-    /** A caixa de render (o próprio bloco), feita uma vez: o renderer a pede a cada quadro. */
+    private int lastWorkSide = -1;
+    /** No cliente: o relógio do laço de trabalho, alimentado pelos eventos, feito no primeiro uso. Não é salvo. */
+    private @Nullable DockWork work;
+    /** A caixa de render (o bloco com uma folga de 0,1), feita uma vez: o renderer a pede a cada quadro. */
     private @Nullable AABB renderBox;
 
     public PatternDockBlockEntity(BlockPos pos, BlockState state) {
@@ -443,10 +444,13 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
     /**
      * Um lado entregou ou devolveu no tick {@code now} (o {@code getTickCount} do servidor): manda o evento de trabalho
      * com o lado, no máximo um a cada {@link DockWork#EVENT_INTERVAL} ticks por Doca. Custo: uma comparação; o evento
-     * vai para a fila de eventos de bloco do nível, que junta os iguais do mesmo tick.
+     * vai para a fila de eventos de bloco do nível, que junta os iguais do mesmo tick. Num chunk que não processa ticks
+     * (a borda preguiçosa) não manda: o jogo deixaria o evento na fila e ele acenderia a Doca, com o tick da chegada,
+     * quando um jogador se aproximasse.
      */
     public void signalWork(int side, long now) {
-        if (level == null || level.isClientSide || !DockWork.shouldSend(now, lastWorkSent)) {
+        if (level == null || level.isClientSide || !DockWork.shouldSend(now, lastWorkSent)
+                || !level.shouldTickBlocksAt(worldPosition)) {
             return;
         }
         lastWorkSent = now;
@@ -458,15 +462,23 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
         return workEvents;
     }
 
+    /** No servidor: o lado do último evento de trabalho processado, ou −1. */
+    public int lastWorkSide() {
+        return lastWorkSide;
+    }
+
     public AABB renderBox() {
         if (renderBox == null) {
-            renderBox = new AABB(worldPosition);
+            renderBox = new AABB(worldPosition).inflate(0.1);
         }
         return renderBox;
     }
 
     /** No cliente: o relógio do laço de trabalho (o tick e o lado do último evento). */
     public DockWork work() {
+        if (work == null) {
+            work = new DockWork();
+        }
         return work;
     }
 
@@ -476,9 +488,10 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
             return super.triggerEvent(id, param);
         }
         if (level != null && level.isClientSide) {
-            work.event(level.getGameTime(), param);
+            work().event(level.getGameTime(), param);
         } else {
             workEvents++;
+            lastWorkSide = param;
         }
         return true;
     }

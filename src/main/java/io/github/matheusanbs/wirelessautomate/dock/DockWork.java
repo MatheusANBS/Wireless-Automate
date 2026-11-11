@@ -8,7 +8,10 @@ package io.github.matheusanbs.wirelessautomate.dock;
  * <p>Trabalha enquanto o último evento tem menos de {@link #WORKING_TICKS} ticks, a mesma regra do "trabalhando" da
  * tela ({@link DockStatus#WORKING_TICKS}). O laço da animação dura {@link #LOOP_TICKS} (6 s) e é o mesmo para todas as
  * Docas (fase pelo tempo do mundo); um laço é de trabalho quando começa trabalhando, então o pacote só entra no começo
- * de um laço e o laço que começou trabalhando termina inteiro.
+ * de um laço e o laço que começou trabalhando termina inteiro. Para isso, o primeiro evento que chega depois do começo
+ * de um laço congela o estado dele (se é de trabalho e o lado, como estavam no começo): os eventos do meio do laço
+ * (com trabalho contínuo, quase todo laço recebe um, porque o intervalo é menor que o laço) só valem do laço seguinte
+ * em diante, e o pacote não troca de vigia no meio do caminho.
  *
  * <p>A velocidade ({@link #speed}, 0 no repouso e 1 no trabalho) sobe e desce em rampa de {@link #RAMP_TICKS} (1 s).
  * O renderer gira cada peça por {@code repouso × t + (trabalho − repouso) × extra(t)}, e o {@link #extra} é a integral
@@ -31,7 +34,10 @@ public final class DockWork {
 
     private long lastEvent = NEVER;
     private int side;
-    private int previousSide;
+    /** O laço congelado pelo primeiro evento depois do começo dele, e o estado dele no começo (trabalho e lado). */
+    private long frozenLoop = NEVER;
+    private boolean frozenWorking;
+    private int frozenSide;
     /** O começo do período de trabalho atual e a velocidade nele. */
     private long periodStart = NEVER;
     private double startSpeed;
@@ -45,7 +51,12 @@ public final class DockWork {
 
     /** Chegou um evento de trabalho no tick {@code tick}, do lado {@code side} ({@code Direction.ordinal()}). */
     public void event(long tick, int side) {
-        previousSide = lastEvent == NEVER ? side : this.side;
+        long start = loopStart(tick);
+        if (tick > start && start != frozenLoop) {
+            frozenLoop = start;
+            frozenWorking = working(start);
+            frozenSide = lastEvent == NEVER ? side : this.side;
+        }
         this.side = side;
         if (periodStart == NEVER || tick >= end()) {
             double now = speed(tick);
@@ -79,14 +90,18 @@ public final class DockWork {
         return (long) Math.floor(t / LOOP_TICKS) * LOOP_TICKS;
     }
 
-    /** O laço que toca no tempo {@code t} é de trabalho: ele começou trabalhando. */
+    /**
+     * O laço que toca no tempo {@code t} é de trabalho: ele começou trabalhando. Vale para o laço atual e os seguintes
+     * (o renderer só pergunta pelo tempo de agora).
+     */
     public boolean workLoop(double t) {
-        return working(loopStart(t));
+        long start = loopStart(t);
+        return start == frozenLoop ? frozenWorking : working(start);
     }
 
     /** O lado do pacote no laço do tempo {@code t}: o do último evento que chegou até o começo do laço. */
     public int loopSide(double t) {
-        return lastEvent <= loopStart(t) ? side : previousSide;
+        return loopStart(t) == frozenLoop ? frozenSide : side;
     }
 
     /** O lado do último evento. */

@@ -63,6 +63,63 @@ class DockWorkTest {
     }
 
     @Test
+    void continuousWorkNeverCutsALoop() {
+        // Um evento a cada 100 ticks, de lados alternados, aplicado quando o tempo chega nele, como no cliente: com o
+        // intervalo menor que o laço, quase todo laço recebe um evento no meio, e alguns recebem dois (1210 e 1310).
+        DockWork work = new DockWork();
+        WorkFeed feed = WorkFeed.every(1010, 100, 2010, 2, 3);
+        long loop = DockWork.NEVER;
+        boolean loopWork = false;
+        int loopSide = -1;
+        int workLoops = 0;
+        for (double t = 900; t < 2600; t += 0.25) {
+            feed.advance(work, t);
+            long start = DockWork.loopStart(t);
+            if (start != loop) {
+                loop = start;
+                loopWork = work.workLoop(t);
+                loopSide = work.loopSide(t);
+                if (loopWork) {
+                    workLoops++;
+                }
+                // Enquanto chegam eventos, todo laço que começa depois do primeiro é de trabalho.
+                assertEquals(start > 1010 && start < 2010 + DockWork.WORKING_TICKS, loopWork, "o laço de " + start);
+                continue;
+            }
+            assertEquals(loopWork, work.workLoop(t), "o laço de " + loop + " mudou em " + t);
+            // O lado só conta num laço de trabalho (o do pacote).
+            if (loopWork) {
+                assertEquals(loopSide, work.loopSide(t), "o lado do laço de " + loop + " mudou em " + t);
+            }
+        }
+        assertEquals(11, workLoops);
+    }
+
+    @Test
+    void twoEventsInOneLoopKeepTheSideUntilTheNextLoop() {
+        DockWork work = new DockWork();
+        work.event(1150, 1);
+        // O laço de 1200 começa trabalhando com o lado 1; os eventos de 1210 e de 1310 valem do laço de 1320 em diante.
+        assertTrue(work.workLoop(1200));
+        work.event(1210, 4);
+        assertTrue(work.workLoop(1250));
+        assertEquals(1, work.loopSide(1250));
+        work.event(1310, 5);
+        assertTrue(work.workLoop(1319));
+        assertEquals(1, work.loopSide(1319));
+        assertTrue(work.workLoop(1320));
+        assertEquals(5, work.loopSide(1320));
+    }
+
+    @Test
+    void anEventAtTheStartOfALoopCountsForIt() {
+        DockWork work = new DockWork();
+        work.event(1200, 3);
+        assertTrue(work.workLoop(1200));
+        assertEquals(3, work.loopSide(1260));
+    }
+
+    @Test
     void speedRampsUpAndDownInOneSecond() {
         DockWork work = new DockWork();
         assertEquals(0, work.speed(500), EPS);

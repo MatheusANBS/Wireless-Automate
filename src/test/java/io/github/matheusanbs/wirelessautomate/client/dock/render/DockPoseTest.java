@@ -8,6 +8,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.github.matheusanbs.wirelessautomate.dock.DockWork;
+import io.github.matheusanbs.wirelessautomate.dock.WorkFeed;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -61,11 +62,15 @@ class DockPoseTest {
 
     @Test
     void osLacosEmendam() {
+        // Um evento a cada 100 ticks de 1010 a 1610, aplicado quando o tempo chega nele: o laço de 960 é de repouso (o
+        // evento de 1010 chega no meio dele), os de 1080 a 1800 de trabalho (o de 1610 vale até 1910), o de 1920 em
+        // diante de repouso.
         DockWork work = new DockWork();
-        work.event(1000, 5);
-        // o laço de 960 é de repouso, os de 1080 e 1200 de trabalho (o evento de 1000 vale até 1300), o de 1320 em diante de repouso
-        for (long boundary : new long[] {960, 1080, 1200, 1320, 1440, 1560}) {
+        WorkFeed feed = WorkFeed.every(1010, 100, 1610, 2, 3);
+        for (long boundary = 960; boundary <= 2040; boundary += DockWork.LOOP_TICKS) {
+            feed.advance(work, boundary - 1e-6);
             double[] before = pose(work, boundary - 1e-6);
+            feed.advance(work, boundary + 1e-6);
             double[] after = pose(work, boundary + 1e-6);
             for (int i = 0; i < before.length; i++) {
                 assertEquals(0, wrap(after[i] - before[i]), 1e-3, "o campo " + i + " pula no fim do laço " + boundary);
@@ -82,21 +87,30 @@ class DockPoseTest {
 
     @Test
     void aRampaNaoPulaOAngulo() {
+        // Os eventos chegam quando o tempo passa por eles, como no cliente: três rajadas de um a cada 100 ticks (o
+        // intervalo do servidor, menor que o laço, então eventos no meio dos laços e dois no mesmo laço), a segunda no
+        // meio da descida da primeira e a terceira depois de um repouso.
         DockWork work = new DockWork();
-        work.event(1010, 2);
-        work.event(1290, 3);
-        work.event(1610, 4);
+        WorkFeed feed = new WorkFeed(
+                new long[] {1010, 1110, 1210, 1310, 1625, 1725, 2400, 2500},
+                new int[] {2, 3, 2, 3, 4, 5, 0, 1});
         double step = 0.05;
         // o mais rápido: o anel de latão e o cristal a 720° por laço de 120 ticks
         double limit = 720.0 / DockWork.LOOP_TICKS * step + 1e-6;
+        // os outros campos por passo de 0,05 tick: o balanço do latão (±10° em 3 s, mais a rampa), o sobe e desce, a
+        // escala do cristal (o maior salto da tabela é 0,13 por tick) e as do pacote e dos fragmentos (o trecho mais
+        // curto, 0 a 1 em 5 ticks). Um laço cortado no meio salta bem mais que isso.
+        double[] limits = {0.15, 0.005, 0.01, 0.02, 0.02};
+        feed.advance(work, 900);
         double[] last = pose(work, 900);
-        for (double t = 900 + step; t < 2300; t += step) {
+        for (double t = 900 + step; t < 3200; t += step) {
+            feed.advance(work, t);
             double[] now = pose(work, t);
             for (int i = 0; i < 4; i++) {
                 assertTrue(Math.abs(wrap(now[i] - last[i])) <= limit, "o giro " + i + " pulou em " + t);
             }
             for (int i = 4; i < now.length; i++) {
-                assertTrue(Math.abs(now[i] - last[i]) < 0.1, "o campo " + i + " pulou em " + t);
+                assertTrue(Math.abs(now[i] - last[i]) < limits[i - 4], "o campo " + i + " pulou em " + t);
             }
             last = now;
         }

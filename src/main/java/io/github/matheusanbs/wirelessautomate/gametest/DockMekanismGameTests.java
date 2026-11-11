@@ -248,6 +248,7 @@ public final class DockMekanismGameTests {
         }
         PatternDockBlockEntity dock = scene(helper);
         long[] refusedAt = {-1};
+        int[] accepted = {0};
         helper.startSequence()
                 .thenWaitUntil(() -> registered(dock))
                 .thenExecute(() -> {
@@ -255,11 +256,20 @@ public final class DockMekanismGameTests {
                     charge(helper);
                 })
                 .thenWaitUntil(DockMekanismGameTests::room)
-                .thenExecute(() -> {
-                    // três pilhas enchem os três slots de entrada; a quarta não cabe e a fábrica dorme
-                    for (int i = 0; i < INPUT_SLOTS; i++) {
+                .thenWaitUntil(() -> {
+                    // três pilhas enchem os três slots de entrada; a quarta não cabe e a fábrica dorme. O orçamento
+                    // do motor é dividido com os testes do lote: sem folga, a entrega recusa por ele, então cada
+                    // oferta espera a folga (e o tick seguinte, se ela acabar no meio).
+                    while (accepted[0] < INPUT_SLOTS) {
+                        if (!NetworkManager.get().budget().outsideRoom()) {
+                            throw new GameTestAssertException("sem folga no orçamento");
+                        }
                         helper.assertTrue(DockDelivery.offer(dock, NORTH, stack(), List.of(), false)
-                                == DockDelivery.Result.ACCEPTED, "recusou a pilha " + i);
+                                == DockDelivery.Result.ACCEPTED, "recusou a pilha " + accepted[0]);
+                        accepted[0]++;
+                    }
+                    if (!NetworkManager.get().budget().outsideRoom()) {
+                        throw new GameTestAssertException("sem folga no orçamento");
                     }
                     helper.assertTrue(DockDelivery.offer(dock, NORTH, stack(), List.of(), false)
                             == DockDelivery.Result.REFUSED, "a fábrica cheia aceitou");

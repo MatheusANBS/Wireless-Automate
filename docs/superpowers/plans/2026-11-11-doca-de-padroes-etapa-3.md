@@ -28,7 +28,7 @@ Valem as restrições globais das etapas 1 e 2 (idioma, cliente só em `client/`
 
 ### Tarefa 1: decompor a referência e escolher as técnicas
 
-- [ ] `scripts/quadros.py` nos dois GIFs: a folha de quadros e a tabela da linha do tempo (cada peça, quando nasce e some, rotação, escala, cor), conferida contra os keyframes do `.bbmodel`.
+- [ ] `.claude/skills/wa-shaders/scripts/quadros.py` nos dois GIFs: a folha de quadros e a tabela da linha do tempo (cada peça, quando nasce e some, rotação, escala, cor), conferida contra os keyframes do `.bbmodel`.
 - [ ] Para cada elemento (circuito, anéis, cristal, pacote, fragmentos), pelo menos duas técnicas comparadas (por exemplo: textura animada × renderer para o circuito; renderer por fórmula × GeckoLib × modelo animado do NeoForge para o giroscópio), com custo, fidelidade e compatibilidade, numa seção nova da spec ("A arte no jogo"). A escolha esperada é a da arquitetura acima; se a comparação apontar outra, parar e perguntar ao dono.
 - [ ] Commit: "Doca: a decomposição da animação e a escolha das técnicas".
 
@@ -51,7 +51,7 @@ Valem as restrições globais das etapas 1 e 2 (idioma, cliente só em `client/`
 
 - [ ] `client/dock/render/PatternDockRenderer` (e as peças em classes pequenas pela `wa-modular`): os três anéis quadrados (latão, porcelana e grafite claro), um em cada eixo, nas velocidades do repouso (metade) e do trabalho (duas voltas, uma e uma por laço, sentidos alternados; o de latão balançando 10°), o cristal na cor da lente do tier respirando; no trabalho, o pacote de latão com fita de porcelana entrando pela vigia do lado do último evento (0,2 a 1,2 s), o cristal absorvendo e inchando (1,05 a 1,45 s), os quatro fragmentos em órbita (1,4 a 2,3 s), saindo e sumindo (2,3 a 2,8 s), voltando em espiral (3,3 a 4,4 s) e o pacote voltando à vigia (4,6 a 5,8 s) — os tempos da proposta, conferidos na tabela da tarefa 1.
 - [ ] Os laços emendam (diferença zero entre o fim e o começo de cada peça, conferida em número, como no Blockbench); a rampa da velocidade não dá pulo de ângulo.
-- [ ] Ganchos do e2e para parar o tempo numa fase (como os do Reparador) e capturas nas fases da tabela; `scripts/lado_a_lado.py` contra os quadros da referência; corrigir a maior diferença primeiro.
+- [ ] Ganchos do e2e para parar o tempo numa fase (como os do Reparador) e capturas nas fases da tabela; `.claude/skills/wa-shaders/scripts/lado_a_lado.py` contra os quadros da referência; corrigir a maior diferença primeiro.
 - [ ] Medição de quadro com 50 Docas à vista, antes e depois, no relatório.
 - [ ] Commit (só depois do ok da tarefa 5): "Doca: o giroscópio, o pacote e os fragmentos no renderer".
 

@@ -146,8 +146,10 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
     }
 
     /**
-     * Desvincula a máquina em {@code pos} do lado {@code side} e refaz o registro no índice. Sem máquinas, o lado
-     * esquece o bloco (o próximo vínculo o escolhe de novo) e, sem pendente, deixa de existir.
+     * Desvincula a máquina em {@code pos} do lado {@code side} e refaz o registro no índice. Sem máquinas e sem
+     * pendente, o lado esquece o bloco (o próximo vínculo o escolhe de novo) e deixa de existir. Com pendente, o lado
+     * guarda o bloco: o resto do pedido só serve a uma máquina daquele bloco, e sai na próxima vinculada (ou no chão,
+     * ao quebrar a Doca).
      */
     public boolean unlink(int side, BlockPos pos) {
         DockSide dockSide = sides[side];
@@ -157,11 +159,9 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
         }
         machine.discard();
         machineAt.remove(pos.asLong());
-        if (dockSide.machines().isEmpty()) {
+        if (dockSide.machines().isEmpty() && !dockSide.hasPending()) {
             dockSide.assignBlock(null);
-            if (dockSide.isUnused()) {
-                sides[side] = null;
-            }
+            sides[side] = null;
         }
         linksChanged();
         return true;
@@ -184,11 +184,26 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
         ae2Faces[side] = face;
     }
 
-    /** O tier ou a config mudou (Cartão de Upgrade, recarga): o alcance, o limite e a vazão mudaram com ele. */
+    /**
+     * O tier ou a config mudou (Cartão de Upgrade, recarga): o alcance, o limite e a vazão mudaram com ele. As máquinas
+     * que ficaram ativas voltam à fila da volta, como no {@link #onLoad}.
+     */
     public void reachChanged() {
         refreshIndex();
         if (level != null && !level.isClientSide) {
             returns.refreshRates();
+            wakeReturns();
+        }
+    }
+
+    /**
+     * Põe na fila da volta cada máquina ativa: um resultado que já estava na saída de uma máquina parada (que não chama
+     * {@code setChanged} de novo) volta sem esperar ela mudar. O(máquinas) uma vez; as vazias saem da fila na primeira
+     * visita.
+     */
+    private void wakeReturns() {
+        for (DockMachine machine : machineAt.values()) {
+            returns.wake(machine);
         }
     }
 
@@ -287,8 +302,9 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
     }
 
     /**
-     * Uma máquina avisou mudança pelo índice. Com o estado do bloco, relê a frente, fora de uma visita do motor (o
-     * aviso de dentro de uma visita é uma entrega ou retirada, que nunca gira a máquina).
+     * Uma máquina avisou mudança pelo índice. Com o estado do bloco, relê a frente, menos durante a visita de uma porta
+     * de roteador ({@link NetworkManager#visiting()}), que é uma entrega ou retirada e nunca gira a máquina. Na visita da
+     * volta da Doca e numa entrega da Doca o {@code visiting()} é falso e a frente é relida, o que só custa a leitura.
      */
     @Override
     public void remoteMachineChanged(RemoteMachine remote, @Nullable BlockState state) {
@@ -342,6 +358,7 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
         if (level != null && !level.isClientSide) {
             returns.refreshRates();
             NetworkManager.get().addVisitor(returns);
+            wakeReturns();
         }
     }
 

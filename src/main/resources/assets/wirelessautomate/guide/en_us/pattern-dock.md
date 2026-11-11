@@ -34,7 +34,8 @@ gives the result. The action bar shows what it found.
 - It hands **each whole order** to a free machine of the side.
 - The machines **take turns**: the next order goes to the next one.
 - The result **goes back to the provider**, and the provider sends it to the network.
-- When **all the machines are full**, the order waits. **Nothing is lost.**
+- When **all the machines are full**, the order waits. **Nothing is lost**, with one exception: if you break the Dock
+  while the rest of a **fluid** order is waiting, that fluid is lost (items drop on the ground).
 
 ## Who does what
 
@@ -85,6 +86,7 @@ working, and the state:
 | Item and fluid order refused | The last order mixed items and fluids |
 | Provider full | The result waits for the provider to send what it already got |
 | All full | No machine took the last order; it waits |
+| Order pending | The machine has not taken the rest of the last order yet; the side waits for it |
 | Working | A machine got an order or gave back a result a moment ago |
 | Ready | All good, waiting for orders |
 | free | Nothing attached and no machine |

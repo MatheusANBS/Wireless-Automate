@@ -70,6 +70,7 @@ class DockLayoutTest {
         assertEquals(SIGNAL_ERROR, signal(DockStatus.State.MIXED));
         assertEquals(SIGNAL_WARN, signal(DockStatus.State.PROVIDER_FULL));
         assertEquals(SIGNAL_WARN, signal(DockStatus.State.ALL_FULL));
+        assertEquals(SIGNAL_WARN, signal(DockStatus.State.PENDING));
         assertEquals(SIGNAL_OK, signal(DockStatus.State.WORKING));
         assertEquals(SIGNAL_IDLE, signal(DockStatus.State.READY));
         assertEquals(SIGNAL_IDLE, signal(DockStatus.State.FREE));

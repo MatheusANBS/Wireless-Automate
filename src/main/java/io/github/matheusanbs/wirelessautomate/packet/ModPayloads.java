@@ -16,12 +16,9 @@ import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.FilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.IdleNetworkUndo;
 import io.github.matheusanbs.wirelessautomate.client.linker.LinkerOpenClient;
-import io.github.matheusanbs.wirelessautomate.client.dock.DockReachPaint;
 import io.github.matheusanbs.wirelessautomate.client.tuner.TunerProposal;
 import io.github.matheusanbs.wirelessautomate.item.tuner.ConfiguratorTuner;
 import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorMenu;
-import io.github.matheusanbs.wirelessautomate.dock.DockReachSync;
-import io.github.matheusanbs.wirelessautomate.menu.DockMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RepairerMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RemoteRouterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RouterEditHost;
@@ -179,13 +176,8 @@ public final class ModPayloads {
         ResonatorPayloads.register(registrar);
         // Tela do Reparador de Cristais (handler no RepairerMenu).
         registrar.playToClient(RepairerStatePayload.TYPE, RepairerStatePayload.STREAM_CODEC, RepairerMenu::onState);
-        // Tela da Doca de Padrões (handler no DockMenu).
-        registrar.playToClient(DockStatePayload.TYPE, DockStatePayload.STREAM_CODEC, DockMenu::onState);
-        // O cubo do alcance da Doca no mundo (o cliente só guarda e desenha).
-        registrar.playToClient(DockReachPayload.TYPE, DockReachPayload.STREAM_CODEC,
-                (payload, context) -> DockReachPaint.receive(payload));
-        registrar.playToServer(DockReachRequestPayload.TYPE, DockReachRequestPayload.STREAM_CODEC,
-                (payload, context) -> DockReachSync.request(serverPlayer(context), payload.dock()));
+        // Doca de Padrões: a tela e o cubo do alcance (packet/DockPayloads).
+        DockPayloads.register(registrar);
         // Números da Tela de Sinal (o cliente preenche o gancho).
         registrar.playToClient(TvValuesPayload.TYPE, TvValuesPayload.STREAM_CODEC,
                 (payload, context) -> TvClientHooks.values.accept(payload));

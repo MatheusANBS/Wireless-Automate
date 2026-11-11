@@ -1,9 +1,12 @@
 package io.github.matheusanbs.wirelessautomate.dock;
 
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
+import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.TickBudget;
 import io.github.matheusanbs.wirelessautomate.range.MachineCaches;
 import java.util.List;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.TickTask;
 import net.minecraft.server.level.ServerLevel;
@@ -22,8 +25,8 @@ final class DockPending {
     }
 
     /**
-     * Tenta o pendente de {@code side} na máquina que recebeu o pedido; se ela saiu do lado, na primeira ativa a partir
-     * do cursor, que passa a guardá-lo. Devolve {@code true} se o lado ficou sem pendente. Não cobra o orçamento.
+     * Tenta o pendente de {@code side} na máquina que recebeu o pedido; se ela saiu do lado, foi quebrada ou trocada
+     * por outro bloco, na primeira ativa a partir do cursor que o sirva, que passa a guardá-lo. Devolve {@code true} se o lado ficou sem pendente. Não cobra o orçamento.
      */
     static boolean flush(PatternDockBlockEntity dock, DockSide side, long now) {
         if (!side.hasPending()) {
@@ -88,25 +91,45 @@ final class DockPending {
     }
 
     /**
-     * A máquina que guarda o pendente: a que recebeu o pedido, se ainda é deste lado; senão a primeira ativa a partir
-     * do cursor (o pendente passa para ela). {@code null} sem nenhuma.
+     * A máquina que guarda o pendente: a que recebeu o pedido, se ainda é deste lado e ainda o serve; senão a primeira
+     * ativa a partir do cursor que o sirva (o pendente passa para ela). {@code null} sem nenhuma. A que recebeu fica
+     * com o pendente enquanto está descarregada (não dá para saber se ainda serve).
      */
     private static @Nullable DockMachine target(PatternDockBlockEntity dock, DockSide side) {
         DockMachine machine = dock.machineAt(side.pendingAtKey());
-        if (machine != null && machine.side() == side.side()) {
+        if (machine != null && machine.side() == side.side()
+                && (!machine.caches(dock).available() || serves(dock, side, machine))) {
             return machine;
         }
         List<DockMachine> machines = side.machines();
         int size = machines.size();
         for (int step = 0; step < size; step++) {
             DockMachine candidate = machines.get((side.cursor() + step) % size);
-            if (candidate.active()) {
+            if (candidate != machine && candidate.active() && candidate.caches(dock).available()
+                    && serves(dock, side, candidate)) {
                 side.movePending(candidate.pos());
                 dock.saveChanged();
                 return candidate;
             }
         }
         return null;
+    }
+
+    /**
+     * A máquina carregada ainda serve ao pendente: o bloco dela é o do lado (não foi quebrada nem trocada) e tem
+     * inventário (ou tanque) numa face Insere do perfil para cada tipo do pendente. Só com pendente, na tentativa.
+     */
+    private static boolean serves(PatternDockBlockEntity dock, DockSide side, DockMachine machine) {
+        ResourceLocation block = side.block();
+        if (block != null && dock.getLevel() != null && !block.equals(
+                BuiltInRegistries.BLOCK.getKey(dock.getLevel().getBlockState(machine.pos()).getBlock()))) {
+            return false;
+        }
+        MachineCaches caches = machine.caches(dock);
+        return (side.pendingItems().isEmpty()
+                        || DockDelivery.hasInsertFace(caches, side.profile(), machine.front(), ResourceType.ITEM))
+                && (side.pendingFluids().isEmpty()
+                        || DockDelivery.hasInsertFace(caches, side.profile(), machine.front(), ResourceType.FLUID));
     }
 
     /**

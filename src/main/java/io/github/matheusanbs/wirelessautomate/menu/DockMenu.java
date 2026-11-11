@@ -162,6 +162,7 @@ public class DockMenu extends AbstractContainerMenu {
             int outOfReach = 0;
             int refusal = DockStatus.NO_REFUSAL;
             boolean full = false;
+            boolean pending = false;
             if (side != null) {
                 for (DockMachine machine : side.machines()) {
                     linked++;
@@ -176,14 +177,15 @@ public class DockMenu extends AbstractContainerMenu {
                 }
                 refusal = side.lastRefusal();
                 full = side.providerFull();
+                pending = side.hasPending();
             }
             int at = i * FACTS;
             facts[at] = linked;
             facts[at + 1] = working;
             facts[at + 2] = unloaded;
             facts[at + 3] = outOfReach;
-            facts[at + 4] = DockStatus.of(provider, linked, refusal, full, refusal == DockStatus.ALL_FULL, working)
-                    .ordinal();
+            facts[at + 4] = DockStatus.of(provider, linked, refusal, full, refusal == DockStatus.ALL_FULL, pending,
+                    working).ordinal();
         }
     }
 

@@ -421,7 +421,7 @@ public final class DockLinkGameTests {
                 .thenSucceed();
     }
 
-    /** O pacote leva no máximo 256 máquinas, mesmo com a Doca acima disso. */
+    /** O pacote leva no máximo {@link DockReachPayload#MAX_MACHINES} máquinas, mesmo com a Doca acima disso. */
     @GameTest(template = "empty", timeoutTicks = 100)
     public static void reachPayloadCapped(GameTestHelper helper) {
         PatternDockBlockEntity dock = dock(helper, DOCK, RouterTier.ULTIMATE);

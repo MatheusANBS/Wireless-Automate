@@ -296,11 +296,6 @@ public final class DockSide {
         return attempt;
     }
 
-    /** Sem bloco, sem máquinas e sem pendente: o lado pode deixar de existir. */
-    public boolean isUnused() {
-        return block == null && machines.isEmpty() && !hasPending();
-    }
-
     CompoundTag save(HolderLookup.Provider registries) {
         CompoundTag tag = new CompoundTag();
         tag.putByte("side", (byte) side);

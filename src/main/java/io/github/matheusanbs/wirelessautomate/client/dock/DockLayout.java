@@ -87,7 +87,7 @@ final class DockLayout {
     static int signal(DockStatus.State state) {
         return switch (state) {
             case NO_PROVIDER, NO_MACHINES, CRAFTING_PATTERN, MIXED -> SIGNAL_ERROR;
-            case PROVIDER_FULL, ALL_FULL -> SIGNAL_WARN;
+            case PROVIDER_FULL, ALL_FULL, PENDING -> SIGNAL_WARN;
             case WORKING -> SIGNAL_OK;
             case READY, FREE -> SIGNAL_IDLE;
         };

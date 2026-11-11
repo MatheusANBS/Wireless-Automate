@@ -39,7 +39,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
  * A entrega de um pedido ({@link DockDelivery}) chamada direto, sem o AE2: o minério na entrada e o carvão no
  * combustível da fornalha (a face mais seletiva), o revezamento pelo cursor, a recusa com todas cheias sem perder nada,
  * o pedido misto, a simulação seguida da execução na mesma máquina, o pendente (que segura o lado e sai quando a
- * máquina esvazia), a máquina descarregada e a de fora do alcance puladas e a recusa sem orçamento.
+ * máquina esvazia, passa para outra máquina quando a dele é trocada e guarda o bloco do lado sem máquinas), a máquina descarregada e a de fora do alcance puladas e a recusa sem orçamento.
  *
  * <p>O orçamento é do motor inteiro e os testes do lote rodam no mesmo tick: cada oferta vem depois de um passo que
  * espera folga ({@link #room}), para a primeira oferta do lote (que carrega as classes) não recusar as dos outros.
@@ -316,6 +316,66 @@ public final class DockDeliveryGameTests {
                 })
                 .thenWaitUntil(() -> helper.assertFalse(dock.side(NORTH).hasPending(), "o pendente não saiu"))
                 .thenExecute(() -> assertSlot(helper, furnace, 0, Items.IRON_ORE, 16))
+                .thenSucceed();
+    }
+
+    /**
+     * O pendente numa fornalha que vira pedra (quebrada ou trocada, ainda vinculada) passa para a outra fornalha do lado
+     * e o lado volta a aceitar pedidos.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void pendingMovesOffReplacedMachine(GameTestHelper helper) {
+        PatternDockBlockEntity dock = dock(helper, RouterTier.BASIC);
+        BlockPos furnace = new BlockPos(3, 1, 1);
+        BlockPos other = new BlockPos(3, 1, 3);
+        furnace(helper, furnace);
+        furnace(helper, other);
+        helper.startSequence()
+                .thenIdle(1)
+                .thenExecute(() -> {
+                    link(helper, dock, furnace);
+                    link(helper, dock, other);
+                })
+                .thenWaitUntil(DockDeliveryGameTests::room)
+                .thenExecute(() -> makePending(helper, dock, furnace))
+                .thenWaitUntil(DockDeliveryGameTests::room)
+                .thenExecute(() -> helper.setBlock(furnace, Blocks.STONE))
+                .thenWaitUntil(() -> helper.assertFalse(dock.side(NORTH).hasPending(),
+                        "o pendente ficou na máquina trocada"))
+                .thenExecute(() -> {
+                    assertSlot(helper, other, 0, Items.IRON_ORE, 16);
+                    helper.assertTrue(DockDelivery.acceptsOrders(dock, NORTH), "o lado não voltou a aceitar");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Com pendente, desvincular a última máquina não faz o lado esquecer o bloco: outro bloco é recusado, e o pendente
+     * sai na próxima fornalha vinculada.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void pendingKeepsSideBlock(GameTestHelper helper) {
+        PatternDockBlockEntity dock = dock(helper, RouterTier.BASIC);
+        BlockPos furnace = new BlockPos(3, 1, 1);
+        BlockPos other = new BlockPos(3, 1, 3);
+        furnace(helper, furnace);
+        furnace(helper, other);
+        helper.startSequence()
+                .thenIdle(1)
+                .thenExecute(() -> link(helper, dock, furnace))
+                .thenWaitUntil(DockDeliveryGameTests::room)
+                .thenExecute(() -> makePending(helper, dock, furnace))
+                .thenExecute(() -> {
+                    helper.assertTrue(dock.unlink(NORTH, helper.absolutePos(furnace)), "não desvinculou");
+                    DockSide side = dock.side(NORTH);
+                    helper.assertTrue(side != null && FURNACE.equals(side.block()) && side.hasPending(),
+                            "o lado esqueceu o bloco ou o pendente");
+                    helper.assertFalse(dock.link(NORTH, helper.absolutePos(new BlockPos(5, 1, 1)),
+                            BuiltInRegistries.BLOCK.getKey(Blocks.CHEST), -1), "aceitou outro bloco");
+                    link(helper, dock, other);
+                    helper.assertTrue(DockDelivery.flushPending(dock, NORTH), "o pendente não saiu na fornalha nova");
+                    assertSlot(helper, other, 0, Items.IRON_ORE, 16);
+                })
                 .thenSucceed();
     }
 

@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.registry;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.menu.DockMenu;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RepairerMenu;
@@ -50,6 +51,10 @@ public final class ModMenus {
     /** Tela da Tela de Sinal (sem slots; tudo no buffer de abertura). */
     public static final Supplier<MenuType<TvMenu>> SIGNAL_SCREEN =
             MENU_TYPES.register("signal_screen", () -> IMenuTypeExtension.create(TvMenu::new));
+
+    /** Tela da Doca de Padrões (sem slots; a posição no buffer de abertura). */
+    public static final Supplier<MenuType<DockMenu>> PATTERN_DOCK =
+            MENU_TYPES.register("pattern_dock", () -> IMenuTypeExtension.create(DockMenu::new));
 
     private ModMenus() {
     }

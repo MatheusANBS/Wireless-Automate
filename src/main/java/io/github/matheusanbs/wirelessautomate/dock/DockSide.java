@@ -245,7 +245,8 @@ public final class DockSide {
         return providerFull;
     }
 
-    void setProviderFull(boolean full) {
+    /** Pela volta; público para o e2e da tela montar o estado "Provedor cheio". */
+    public void setProviderFull(boolean full) {
         providerFull = full;
     }
 

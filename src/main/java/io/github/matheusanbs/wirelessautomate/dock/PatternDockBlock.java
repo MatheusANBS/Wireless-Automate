@@ -5,8 +5,11 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
+import io.github.matheusanbs.wirelessautomate.menu.DockMenu;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -25,7 +28,7 @@ import org.jetbrains.annotations.Nullable;
  * A Doca de Padrões: um bloco cheio, sem frente e sem giro (os seis lados são iguais e nomeados pela direção do
  * mundo), com o tier do roteador ({@link RouterBlock#TIER}), que define o alcance ({@link
  * io.github.matheusanbs.wirelessautomate.Config#dockRadius}). Sobe de tier com o Cartão de Upgrade, sem perder os lados.
- * Quebrada, larga no chão o pendente de itens; o item leva só o tier.
+ * Clique direito abre a tela ({@link DockMenu}). Quebrada, larga no chão o pendente de itens; o item leva só o tier.
  */
 public class PatternDockBlock extends BaseEntityBlock {
     public static final MapCodec<PatternDockBlock> CODEC = simpleCodec(PatternDockBlock::new);
@@ -63,6 +66,17 @@ public class PatternDockBlock extends BaseEntityBlock {
             return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
         }
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+    }
+
+    /** Clique direito: a tela dos seis lados. O Vinculador e o Configurador agem antes, pelo {@code onItemUseFirst}. */
+    @Override
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
+            BlockHitResult hit) {
+        if (!level.isClientSide && player instanceof ServerPlayer serverPlayer
+                && level.getBlockEntity(pos) instanceof PatternDockBlockEntity dock) {
+            DockMenu.open(serverPlayer, dock);
+        }
+        return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
     /** Bloco saindo do mundo (não uma troca de tier, que só muda o estado): o pendente de itens cai no chão. */

@@ -92,6 +92,7 @@ final class E2eDockSteps {
         });
         reach(list, playerId, dock);
         models(list, playerId, dock);
+        E2eDockAnimSteps.animationSteps(list);
         list.add(new Step("Doca: tirar os blocos", STEP_TIMEOUT_MS, () -> onServer(server -> {
             restoreConfig();
             clear(server.overworld());

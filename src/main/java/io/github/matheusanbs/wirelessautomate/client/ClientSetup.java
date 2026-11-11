@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.client;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.client.dock.DockScreen;
+import io.github.matheusanbs.wirelessautomate.client.dock.render.PatternDockRenderer;
 import io.github.matheusanbs.wirelessautomate.client.filter.FilterScreen;
 import io.github.matheusanbs.wirelessautomate.client.guide.GuidePages;
 import io.github.matheusanbs.wirelessautomate.client.guide.GuideScreen;
@@ -150,6 +151,7 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.RESONANCE_CORE.get(), ResonatorRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.CRYSTAL_REPAIRER.get(), RepairerRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.SIGNAL_SCREEN.get(), TvRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.PATTERN_DOCK.get(), PatternDockRenderer::new);
     }
 
     /** Os core shaders da câmara: o Núcleo de plasma, as fitas e o cristal. */

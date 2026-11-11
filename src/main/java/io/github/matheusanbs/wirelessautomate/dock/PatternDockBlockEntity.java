@@ -31,6 +31,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.Nullable;
 
@@ -74,6 +75,8 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
     private int workEvents;
     /** No cliente: o relógio do laço de trabalho, alimentado pelos eventos. Não é salvo. */
     private final DockWork work = new DockWork();
+    /** A caixa de render (o próprio bloco), feita uma vez: o renderer a pede a cada quadro. */
+    private @Nullable AABB renderBox;
 
     public PatternDockBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.PATTERN_DOCK.get(), pos, state);
@@ -449,6 +452,13 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
     /** No servidor: quantos eventos de trabalho o jogo já processou nesta Doca. */
     public int workEvents() {
         return workEvents;
+    }
+
+    public AABB renderBox() {
+        if (renderBox == null) {
+            renderBox = new AABB(worldPosition);
+        }
+        return renderBox;
     }
 
     /** No cliente: o relógio do laço de trabalho (o tick e o lado do último evento). */

@@ -6,6 +6,7 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eUi.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
 import io.github.matheusanbs.wirelessautomate.client.FrameClock;
+import io.github.matheusanbs.wirelessautomate.client.dock.render.PatternDockRenderer;
 import io.github.matheusanbs.wirelessautomate.client.repairer.render.RepairerRenderer;
 import io.github.matheusanbs.wirelessautomate.client.resonator.ResonatorProjection;
 import io.github.matheusanbs.wirelessautomate.client.resonator.render.ResonatorRenderer;
@@ -366,6 +367,7 @@ final class E2eResonatorSteps {
     static void restoreFrameSettings() {
         restoreMeasure();
         E2eRepairerAnimSteps.restoreHooks();
+        E2eDockAnimSteps.restoreHooks();
     }
 
     /** O fim de uma medida: o vsync, o limite de FPS e os desenhos forçados; o tempo parado do Reparador fica. */
@@ -373,6 +375,7 @@ final class E2eResonatorSteps {
         ResonatorRenderer.forceLegacyForTests = false;
         ResonatorRenderer.forceBandForTests = -1;
         RepairerRenderer.forceLegacyForTests = false;
+        PatternDockRenderer.disabledForTests = false;
         if (!measuring) {
             return;
         }

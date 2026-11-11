@@ -1,6 +1,6 @@
 # Doca de Padrões (spec)
 
-Estado: **decisões fechadas pelo dono em 10/11/2026; falta o ok do mockup da tela.** A regra, o alcance e a arte foram aprovados na proposta (`2026-11-10-ae2-rs2-proposta.md`, seções "Terceira crítica: simplificar", "O alcance da Doca" e "Arte e animação da Doca"). Esta spec junta essas decisões, corrige o que a conferência das APIs mudou (seção "O que a conferência mudou") e fecha a tela, cujo mockup está em `docs/preview/doca-de-padroes-tela.html`. Nada implementado. As respostas do dono estão no fim.
+Estado: **etapa 1 (a Doca com o AE2) implementada em 11/11/2026**, pelo plano `docs/superpowers/plans/2026-11-10-doca-de-padroes-etapa-1.md`; as seções abaixo descrevem o que foi feito, com os ajustes da execução. As etapas 2 (RS2), 3 (arte animada) e 4 (pedido com item e fluido) seguem como desenho. A regra, o alcance e a arte foram aprovados na proposta (`2026-11-10-ae2-rs2-proposta.md`, seções "Terceira crítica: simplificar", "O alcance da Doca" e "Arte e animação da Doca"). Esta spec junta essas decisões, corrige o que a conferência das APIs mudou (seção "O que a conferência mudou") e fecha a tela, cujo mockup (aprovado em 10/11/2026) está em `docs/preview/doca-de-padroes-tela.html`. As respostas do dono estão no fim.
 
 ## A regra
 
@@ -51,7 +51,7 @@ A tabela do roteador de alcance, um degrau acima. A Doca lê as chaves `machineR
 - O limite é da Doca inteira, somando os seis lados. Máquina fora do cubo ou além do limite não vincula, com a mensagem do motivo.
 - A config baixou: as máquinas de fora continuam vinculadas, param de receber e a linha do lado avisa. Nada é desvinculado sozinho.
 - Máquina em chunk descarregado fica de fora até carregar (`level.isLoaded` antes de qualquer consulta); a Doca nunca carrega chunk.
-- **Ao colocar a Doca**, o cubo do alcance aparece por 5 segundos só para quem colocou (o mesmo desenho do Vinculador). Depois, só com o Vinculador na mão e a Doca escolhida, com as máquinas de cada lado acesas na cor do lado.
+- **Ao colocar a Doca**, o cubo do alcance aparece por 5 segundos só para quem colocou. Depois, sempre que o jogador segura o Vinculador com a Doca escolhida, com as máquinas de cada lado acesas na cor do lado. É um desenho próprio da Doca (`client/dock/DockReachPaint`, pelo `DockReachPayload`); o roteador de alcance não tem um. O cliente guarda o último cubo e o mostra de novo ao pegar o Vinculador; sem cubo guardado (o jogador entrou no mundo de novo), pede um ao servidor (`DockReachRequestPayload`), no máximo um por segundo.
 
 ## Vincular (o Vinculador)
 
@@ -82,11 +82,11 @@ Quando o provedor oferece um pedido a um lado:
 - **O pendente** é uma lista pequena por lado (o resto de um pedido, salvo no NBT e largado no chão ao quebrar a Doca). Enquanto existir, o lado recusa pedidos novos e tenta entregá-lo primeiro, na máquina que recebeu o pedido. É o que garante "espera quando todas estão cheias, sem perder nada".
 - **AE2:** a capability `AECapabilities.CRAFTING_MACHINE` em cada face; `acceptsPlans()` é falso no lado sem máquina ativa ou com pendente, e `pushPattern(padrão, entradas, lado)` faz os passos acima. O lado vem no último argumento.
 - **RS2:** um `PatternProviderExternalPatternSinkFactory` registrado no carregamento do mod. O Autocrafter cria o destino uma vez e o guarda, então o destino da Doca é preguiçoso: a cada pedido confere se ainda há uma Doca na posição (senão `SKIPPED`). `SIMULATE` faz os passos 1 e 2 e devolve `ACCEPTED` ou `REJECTED`; `EXECUTE` faz o 3 e sempre devolve `ACCEPTED`. `isEmpty()` diz se o lado está sem pendente e sem máquina trabalhando (a trava "até a máquina esvaziar" do Autocrafter).
-- **O orçamento:** a entrega roda dentro do tick do AE2 ou do RS2, fora do gerenciador, mas conta no `TickBudget` do mod, como se fosse uma visita. Sem orçamento, recusa.
+- **O orçamento:** a entrega roda dentro do tick do AE2 ou do RS2, fora do gerenciador. O tempo dela vira uma dívida no `TickBudget` (`charge`), descontada no começo do tick seguinte do motor; sem folga para a dívida (`outsideRoom`), a oferta é recusada e o provedor tenta no tick seguinte.
 
 ## A volta
 
-- **Cada lado vira uma rota interna do motor**, sem `WaNetwork` e fora do Tablet: as faces Extrai das máquinas do lado são as origens e o provedor encostado é o destino. Assim a volta herda o que o motor já tem: vazão do tier da Doca (a mesma tabela do roteador), sono das origens vazias, despertar pelo mixin quando a máquina muda, orçamento de 1 ms e cursor.
+- **A volta é um visitante do motor** (`dock/DockReturn`, um `EngineVisitor` por Doca, visitado no laço de transferência do `NetworkManager` sob o mesmo orçamento de 1 ms). Ela não é uma rota de rede: o motor é preso ao roteador em toda parte, e a Doca entra pelas costuras genéricas (`RemoteListener`, `CacheOwner`, `EngineVisitor`). O visitante guarda as máquinas acordadas (as que receberam pedido e as que avisaram pelo mixin) e dorme sem nenhuma; tira das faces Extrai até a vazão do tier da Doca (a tabela do roteador) e insere no vizinho do lado, simulando antes. Sob carga, a volta dos visitantes e a das portas se revezam na frente do orçamento.
 - **AE2:** o destino é o `IItemHandler`/`IFluidHandler` do Pattern Provider na face encostada (o inventário de retorno). Cheio, a volta dorme até o provedor esvaziar no tick dele.
 - **RS2:** o destino é a rede do Autocrafter: a Doca acha o nó pelo `AbstractNetworkNodeContainerBlockEntity` da `common-api` e insere pelo `StorageNetworkComponent`. Sem rede (Autocrafter desligado), a volta dorme.
 - Só sai o que a máquina dá pela face Extrai: o combustível e o que está nas entradas ficam.
@@ -99,6 +99,7 @@ Mockup: `docs/preview/doca-de-padroes-tela.html` (para o ok do dono). Clique dir
 - **Resumo:** "30/32 máquinas" com uma barra fina, e embaixo "raio 16".
 - **Seis linhas, uma por lado**, na ordem Norte, Sul, Leste, Oeste, Cima, Baixo. Cada uma: a etiqueta na cor do lado com o nome dele; o ícone e o nome da máquina; "12 máquinas · 9 trabalhando"; e o estado em uma frase com um sinal de forma (ponto cheio, anel, triângulo), para não depender só da cor.
 - **Lado sem nada** (sem provedor e sem máquina): a linha fica apagada, com "livre".
+- **"Tem provedor"** sem tipos fora da API do AE2: o vizinho do lado expõe a `GENERIC_INTERNAL_INV` e não a `ME_STORAGE` (o Pattern Provider tem o retorno; a Interface tem o estoque), ou o lado recebeu uma oferta do AE2 nos últimos 60 s (os provedores de addon).
 - **A dica da linha** (mouse em cima) diz o provedor encostado ("Pattern Provider", "Autocrafter × 3") e o motivo inteiro.
 
 Os estados, do mais grave ao mais leve (a linha mostra o primeiro que vale):
@@ -130,7 +131,7 @@ Os estados, do mais grave ao mais leve (a linha mostra o primeiro que vale):
 
 - Tipos do AE2 só em `compat/ae2`, tipos do RS2 só em `compat/refinedstorage`, nunca na assinatura de um método de classe `@EventBusSubscriber` ou `@GameTestHolder` (a regra do Mekanism). O bloco e a volta pelo lado do AE2 usam só capabilities do NeoForge.
 - Sem nenhum dos dois, a Doca existe, vincula e mostra "Sem provedor neste lado". A receita fica para o balanceamento das receitas e só carrega com o AE2 ou o RS2; a Doca fica sempre na aba criativa (decisão do dono, 10/11/2026).
-- **Dependências:** AE2 `org.appliedenergistics:appliedenergistics2:19.2.18:api` (Maven Central) como `compileOnly`; RS2 `com.refinedmods.refinedstorage:refinedstorage-common-api:2.0.9` (com as APIs que ele traz, no `maven.creeperhost.net`) como `compileOnly`. Os mods inteiros (AE2 19.2.18 com o GuideME; `refinedstorage-neoforge` 2.0.9) só no `runClient` e nas runs de GameTest novas. São as versões do ATM10 8.5.
+- **Dependências:** AE2 `org.appliedenergistics:appliedenergistics2:19.2.17:api` (Maven Central) como `compileOnly`, a mesma versão que o `runClient` já carregava (o ATM10 8.5 traz a 19.2.18; a API usada é a mesma); RS2 `com.refinedmods.refinedstorage:refinedstorage-common-api:2.0.9` (com as APIs que ele traz, no `maven.creeperhost.net`) como `compileOnly`. Os mods inteiros (AE2 com o GuideME; `refinedstorage-neoforge` 2.0.9) só no `runClient` e nas runs de GameTest novas. São as versões do ATM10 8.5.
 - **Runs novas:** `runGameTestServerAe2` e `runGameTestServerRefined`, como a dos químicos. O `runGameTestServer` continua sem os dois e prova que o mod carrega sem eles.
 
 ## Custo de performance (lei por lei)
@@ -141,8 +142,8 @@ Os estados, do mais grave ao mais leve (a linha mostra o primeiro que vale):
 - **Sem pico.** O Ctrl + clique é o de hoje (teto de leitura). No raio 96 do Ultimate ele olha uns 170 chunks contra uns 80 no 64: medir antes de fechar.
 - **Cliente só com o que muda.** Tela: 1 Hz e só com mudança. O cubo ao colocar: um payload só para quem colocou.
 - **Memória:** por lado, o perfil, a lista de máquinas (posição e o `long` da última atividade), o cursor e o pendente. Nada por pedido.
-- **Bench:** um cenário novo com 32 fornalhas numa Doca alimentada por um provedor do AE2 com CPU de 32 coprocessadores, antes e depois, no servidor dedicado do `bench.sh`.
-- **Protocolo:** menu e payloads novos, logo `ModPayloads.VERSION` sobe (49 → 50, ou o seguinte se a Lixeira sair antes).
+- **Bench:** o cenário `doca` do `bench.sh` (32 fornalhas numa Doca Elite, um baú no lugar do provedor, 32 pedidos por tick pela API da entrega): o mod de 0,059 para 0,083 ms/tick com a volta ligada, 640 pedidos aceitos e 256 itens devolvidos por segundo (`docs/benchmark.md`). O bench com o AE2 de verdade fica pendente: o servidor do bench não tem o AE2.
+- **Protocolo:** menu e payloads novos (`DockStatePayload`, `DockReachPayload`, `DockReachRequestPayload`): `ModPayloads.VERSION` foi de 49 para 50.
 
 ## Testes
 
@@ -173,3 +174,15 @@ Repartir uma chamada entre máquinas; a Doca guardando os próprios padrões; li
 | Receita | Fica para o balanceamento das receitas, só com o AE2 ou o RS2 |
 
 Falta só o ok do mockup da tela (`docs/preview/doca-de-padroes-tela.html`); depois, o plano da etapa 1.
+
+## Ajustes da execução (11/11/2026)
+
+O que a implementação da etapa 1 mudou em relação ao desenho, além do que já está nas seções acima:
+
+- **O bloco não esconde as faces dos vizinhos** (`noOcclusion`): as vigias de lados opostos se alinham, e com oclusão se veria o vazio pela vigia. A colisão continua cheia; a luz atravessa a Doca.
+- **O modelo estático** tem 174 elementos (das 193 caixas saíram o giroscópio, o cristal, o pacote e os fragmentos, da etapa 3); o circuito brilha no escuro e é estático até a textura animada da etapa 3.
+- **A face mais seletiva** vale para a entrega: num pedido "minério + carvão" a fornalha recebe o carvão na face do combustível.
+- **O primeiro vínculo de um lado** roda o Afinador e grava o perfil; o lado esquece o perfil quando a última máquina sai.
+- **Recarga da config:** o raio e o limite novos valem sem recolocar a Doca (os visitantes recebem o aviso da recarga).
+- **O Ctrl + clique no raio 96** (Ultimate) custa de 2,4 a 3,9 ms por clique (só no clique, com o descanso de 10 ticks).
+

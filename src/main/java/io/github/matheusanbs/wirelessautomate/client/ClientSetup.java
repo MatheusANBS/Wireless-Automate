@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.client;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.client.dock.DockScreen;
 import io.github.matheusanbs.wirelessautomate.client.filter.FilterScreen;
 import io.github.matheusanbs.wirelessautomate.client.guide.GuidePages;
 import io.github.matheusanbs.wirelessautomate.client.guide.GuideScreen;
@@ -21,6 +22,7 @@ import io.github.matheusanbs.wirelessautomate.client.tv.render.TvArtCache;
 import io.github.matheusanbs.wirelessautomate.client.tv.render.TvRenderer;
 import io.github.matheusanbs.wirelessautomate.item.GuideClientHooks;
 import io.github.matheusanbs.wirelessautomate.item.RouterBlockItem;
+import io.github.matheusanbs.wirelessautomate.menu.DockMenu;
 import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorMenu;
 import io.github.matheusanbs.wirelessautomate.menu.RepairerMenu;
@@ -130,6 +132,8 @@ public final class ClientSetup {
                 (ResonatorMenu menu, Inventory inventory, Component title) -> new ResonatorScreen(menu, inventory, title));
         event.register(ModMenus.CRYSTAL_REPAIRER.get(),
                 (RepairerMenu menu, Inventory inventory, Component title) -> new RepairerScreen(menu, inventory, title));
+        event.register(ModMenus.PATTERN_DOCK.get(),
+                (DockMenu menu, Inventory inventory, Component title) -> new DockScreen(menu, inventory, title));
         event.register(ModMenus.SIGNAL_SCREEN.get(),
                 (TvMenu menu, Inventory inventory, Component title) -> new TvScreen(menu, inventory, title));
     }

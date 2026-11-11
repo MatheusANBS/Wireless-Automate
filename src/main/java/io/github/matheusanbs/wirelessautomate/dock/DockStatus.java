@@ -29,6 +29,8 @@ public final class DockStatus {
     public static final int ALL_FULL = 5;
     /** O orçamento do motor deste tick já tinha acabado. */
     public static final int BUDGET = 6;
+    /** Uma máquina conta como trabalhando por 15 s (em ticks) depois da última entrega ou volta. */
+    public static final long WORKING_TICKS = 15 * 20;
 
     private DockStatus() {
     }

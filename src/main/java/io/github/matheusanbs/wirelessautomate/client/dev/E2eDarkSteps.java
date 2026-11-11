@@ -10,6 +10,7 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
 import io.github.matheusanbs.wirelessautomate.ClientConfig;
 import io.github.matheusanbs.wirelessautomate.GuiTheme;
+import io.github.matheusanbs.wirelessautomate.client.dock.DockScreen;
 import io.github.matheusanbs.wirelessautomate.client.filter.FilterScreen;
 import io.github.matheusanbs.wirelessautomate.client.recipe.RecipeEditorScreen;
 import io.github.matheusanbs.wirelessautomate.client.repairer.RepairerScreen;
@@ -201,6 +202,8 @@ final class E2eDarkSteps {
         } else if (screen instanceof ResonatorScreen s) {
             return new int[] {s.themeX(), s.themeY()};
         } else if (screen instanceof RepairerScreen s) {
+            return new int[] {s.themeX(), s.themeY()};
+        } else if (screen instanceof DockScreen s) {
             return new int[] {s.themeX(), s.themeY()};
         } else if (screen instanceof TvScreen s) {
             return new int[] {s.themeX(), s.themeY()};

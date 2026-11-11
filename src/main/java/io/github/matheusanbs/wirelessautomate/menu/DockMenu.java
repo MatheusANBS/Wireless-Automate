@@ -185,7 +185,9 @@ public class DockMenu extends AbstractContainerMenu {
             facts[at + 1] = working;
             facts[at + 2] = unloaded;
             facts[at + 3] = outOfReach;
-            facts[at + 4] = DockStatus.of(provider, linked, refusal, full, refusal == DockStatus.ALL_FULL, pending,
+            // a trava só se lê com provedor e máquinas: é o único caso em que ela decide o estado
+            boolean lock = provider && linked > 0 && DockAe2.lockedUntilResult(dock, i);
+            facts[at + 4] = DockStatus.of(provider, linked, lock, refusal, full, refusal == DockStatus.ALL_FULL, pending,
                     working).ordinal();
         }
     }

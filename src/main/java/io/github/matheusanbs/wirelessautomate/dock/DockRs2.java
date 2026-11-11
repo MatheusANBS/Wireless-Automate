@@ -8,8 +8,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.items.IItemHandler;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -24,16 +22,6 @@ public final class DockRs2 {
     private static final Direction[] DIRECTIONS = Direction.values();
 
     private DockRs2() {
-    }
-
-    /**
-     * O destino da volta num lado com Autocrafter: a rede dele, como um inventário e um tanque que só aceitam. A
-     * volta ({@link DockReturn}) o usa no lugar do {@code IItemHandler}/{@code IFluidHandler} do vizinho, que o
-     * Autocrafter não tem.
-     */
-    public interface Target extends IItemHandler, IFluidHandler {
-        /** O vizinho mudou: esquece a rede guardada, achada de novo na próxima inserção. */
-        void reset();
     }
 
     /**
@@ -73,10 +61,10 @@ public final class DockRs2 {
     }
 
     /**
-     * O destino da volta para o vizinho em {@code pos}, encostado num lado da Doca: a rede dele se é um Autocrafter,
-     * senão {@code null}. Só na troca do vizinho (a volta guarda o destino por lado).
+     * O destino da volta para o vizinho em {@code pos}, encostado num lado da Doca: a rede dele se é um Autocrafter
+     * (que não tem inventário), senão {@code null}. Só na troca do vizinho (a volta guarda o destino por lado).
      */
-    public static @Nullable Target target(ServerLevel level, BlockPos pos) {
+    public static @Nullable DockReturnNetwork target(ServerLevel level, BlockPos pos) {
         return LOADED && autocrafterAt(level, pos) ? Rs2Dock.target(level, pos) : null;
     }
 

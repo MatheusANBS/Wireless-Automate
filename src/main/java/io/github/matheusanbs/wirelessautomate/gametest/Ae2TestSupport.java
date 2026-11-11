@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.gametest;
 
 import appeng.api.AECapabilities;
+import appeng.api.behaviors.GenericInternalInventory;
 import appeng.api.config.Actionable;
 import appeng.api.config.LockCraftingMode;
 import appeng.api.config.Settings;
@@ -44,7 +45,7 @@ import org.jetbrains.annotations.Nullable;
  * NeoForge inspeciona essas classes por reflexão, e um tipo do AE2 numa assinatura impede o mod de carregar sem ele.
  * Só é chamada por {@link Ae2DockGameTests} com o AE2 presente.
  *
- * <p>O que o jar da API não tem (a lógica do Pattern Provider: o inventário de padrões e o motivo da trava) é lido por
+ * <p>O que o jar da API não tem (a lógica do Pattern Provider: o inventário de padrões) é lido por
  * reflexão, só aqui, para a compilação não depender do jar inteiro do AE2.
  */
 final class Ae2TestSupport {
@@ -152,9 +153,30 @@ final class Ae2TestSupport {
                 .putSetting(Settings.LOCK_CRAFTING_MODE, LockCraftingMode.LOCK_UNTIL_RESULT);
     }
 
-    /** O provedor está travado (por redstone ou até o resultado). */
-    static boolean locked(ServerLevel level, BlockPos provider) {
-        return call(logic(level, provider), "getCraftingLockedReason") != LockCraftingMode.NONE;
+    /** Tira a trava do provedor. */
+    static void unlock(ServerLevel level, BlockPos provider) {
+        ((IConfigurableObject) level.getBlockEntity(provider)).getConfigManager()
+                .putSetting(Settings.LOCK_CRAFTING_MODE, LockCraftingMode.NONE);
+    }
+
+    /** O retorno do provedor (os 9 espaços em que as máquinas devolvem) está vazio, visto pela face {@code face}. */
+    static boolean returnEmpty(ServerLevel level, BlockPos provider, Direction face) {
+        GenericInternalInventory inventory = level.getCapability(AECapabilities.GENERIC_INTERNAL_INV, provider, face);
+        if (inventory == null) {
+            throw new IllegalStateException("sem o retorno do provedor em " + provider.toShortString());
+        }
+        for (int slot = 0; slot < inventory.size(); slot++) {
+            if (inventory.getKey(slot) != null) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** O nó do bloco em {@code pos} está ativo (com energia e canal). */
+    static boolean active(ServerLevel level, BlockPos pos) {
+        IGridNode node = node(level, pos);
+        return node != null && node.isActive();
     }
 
     /** Põe uma célula de 1k no drive, pelo inventário exposto dele. */

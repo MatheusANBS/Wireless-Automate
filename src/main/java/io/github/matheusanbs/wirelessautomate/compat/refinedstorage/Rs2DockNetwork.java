@@ -10,7 +10,7 @@ import com.refinedmods.refinedstorage.common.api.support.network.AbstractNetwork
 import com.refinedmods.refinedstorage.common.api.support.network.InWorldNetworkNodeContainer;
 import com.refinedmods.refinedstorage.common.support.resource.FluidResource;
 import com.refinedmods.refinedstorage.common.support.resource.ItemResource;
-import io.github.matheusanbs.wirelessautomate.dock.DockRs2;
+import io.github.matheusanbs.wirelessautomate.dock.DockReturnNetwork;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
@@ -30,7 +30,7 @@ import org.jetbrains.annotations.Nullable;
  * do lado). Sem rede, aceita zero: a volta marca "provedor cheio" e dorme. Sem energia, o armazenamento da rede some
  * e a inserção também dá zero.
  */
-final class Rs2DockNetwork implements DockRs2.Target {
+final class Rs2DockNetwork implements DockReturnNetwork {
     /** Quem insere, para o RS2 (o histórico do armazenamento). */
     private static final Actor ACTOR = () -> "Pattern Dock";
 

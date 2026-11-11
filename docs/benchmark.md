@@ -631,3 +631,17 @@ Ramo `ccr-71b175d3-weymk6`. Nas rodadas com `doca-ae2`, o servidor do `bench.sh`
 - No `doca-ae2`, a Doca custa 0,02 a 0,05 ms/tick em média. O pico (máx 1,4 a 2,1 ms) é o tick do pedido: a CPU de 32 coprocessadores empurra até 33 execuções por tick e cada oferta escolhe a máquina e simula a pilha inteira; as 256 primeiras entram em poucos ticks (8 por Alto-forno, até encher a entrada de 64). Depois, as recusas da CPU (todas cheias) custam pouco porque as máquinas cheias dormem.
 - O lado do AE2 (o MSPT com a cena menos a base, menos o mod) não se isola: a base varia de 0,47 a 1,35 ms entre as repetições, mais que o custo inteiro da cena; na repetição mais limpa (a 1ª de 60 s), a cena toda custou 0,105 ms/tick, 0,037 deles do mod. Fica como teto: abaixo de ~0,1 ms/tick para a CPU, o provedor e a devolução à rede com 32 máquinas.
 - O AE2 e o GuideME só entram em `run/bench/mods` nas rodadas com uma tarefa `doca-ae2` (o `bench.sh` passa `-PbenchAe2` e o `prepareBenchMods` tira os jars sem ela), para os outros cenários seguirem comparáveis com as rodadas antigas. Conferido no mesmo dia: `./scripts/bench.sh many:500:1` sem os jars na pasta, servidor sem cena 0,878 ms (`20261111-085715.md`; as rodadas de 10/11 deram 0,55 a 0,74, e esta máquina dividida variou de 0,88 a 1,09 hoje, com ou sem o AE2: a diferença é a máquina); `./scripts/bench.sh doca-ae2:1:1` com os jars, servidor sem cena 1,087 ms, 256 execuções aceitas e 3,2 itens/s devolvidos, como antes (`20261111-085848.md`).
+
+## Doca: a volta do AE2 direto para a rede ME (11 de novembro de 2026)
+
+Ramo `ccr-71b175d3-weymk6`. A volta de um lado encostado num nó do AE2 insere direto no armazenamento da rede (o `Ae2DockNetwork`), e não mais no retorno de 9 espaços do Pattern Provider. `WA_BENCH_MEASURE=1200 ./scripts/bench.sh doca-ae2:1:3`, antes (`20261111-093546.md`) e depois (`20261111-094710.md`), na máquina dividida de sempre.
+
+| Cenário | MSPT base (ms) | MSPT com a cena (ms) | mod (ms/tick) | mod p99 / máx | Outra medida |
+| --- | --- | --- | --- | --- | --- |
+| doca-ae2 1 (60 s), antes | 0,947 ± 0,411 | 0,875 ± 0,176 | 0,0238 ± 0,0153 | 0,402 / 1,207 | 288 execuções aceitas (4,8/s); 5,87 itens/s devolvidos |
+| doca-ae2 1 (60 s), depois | 0,968 ± 0,377 | 0,831 ± 0,217 | 0,0262 ± 0,0170 | 0,450 / 2,155 | 288 execuções aceitas (4,8/s); 5,87 itens/s devolvidos |
+
+### Leitura
+
+- A vazão não muda: os 32 Altos-fornos são o gargalo (o teto deles é 6,4 itens/s), muito abaixo do teto do retorno do provedor (uns 576 itens por tick). O ganho da volta direta aparece com máquinas rápidas ou muitas máquinas num provedor, não neste cenário.
+- O custo do mod fica no ruído (0,024 → 0,026 ms/tick, com ± de 0,015). A inserção na rede confere o nó com três leituras por chamada; a busca do nó só na troca do vizinho ou da grade. O máximo (1,2 → 2,2 ms) é o tick do pedido (as ofertas da CPU), que a volta não toca, e varia entre as repetições (± 1,5).

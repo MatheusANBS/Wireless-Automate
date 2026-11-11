@@ -198,7 +198,10 @@ public final class DockLinks {
         }
         DockMachine owned = dock.machineAt(pos);
         if (owned != null && owned.side() == side) {
-            Component machine = RouterBlock.machineName(level.getBlockState(pos).getBlock());
+            // o nome do bloco do lado, não o do lugar: a máquina pode ter saído (ar, outro bloco)
+            ResourceLocation sideBlock = dock.side(side).block();
+            Component machine = RouterBlock.machineName(sideBlock != null ? BuiltInRegistries.BLOCK.get(sideBlock)
+                    : level.getBlockState(pos).getBlock());
             dock.unlink(side, pos);
             player.displayClientMessage(Component.translatable(KEY + "unlinked", machine, sideName(side),
                     dock.activeCount(), max(dock)), true);

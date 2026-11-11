@@ -7,11 +7,13 @@ import java.util.Collections;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.Nullable;
 
@@ -40,6 +42,8 @@ public final class DockSide {
 
     private final int side;
     private @Nullable ResourceLocation block;
+    /** O {@link #block} no registro, lido ao atribuir; nulo sem bloco ou com um id que não existe mais. Não é salvo. */
+    private @Nullable Block blockObject;
     private final MachineConfig profile;
     private final List<DockMachine> machines = new ArrayList<>();
     private final List<DockMachine> machinesView = Collections.unmodifiableList(machines);
@@ -103,6 +107,15 @@ public final class DockSide {
 
     void assignBlock(@Nullable ResourceLocation block) {
         this.block = block;
+        blockObject = block == null ? null : BuiltInRegistries.BLOCK.getOptional(block).orElse(null);
+    }
+
+    /**
+     * {@code candidate} é o bloco deste lado. Uma comparação de referência, para o caminho quente dos avisos das
+     * máquinas; um lado sem bloco, ou com um id que não existe mais no registro, não casa com nenhum.
+     */
+    boolean isSideBlock(Block candidate) {
+        return blockObject != null && candidate == blockObject;
     }
 
     /** O perfil das faces; mudar o devolvido muda o lado (quem muda salva a Doca). */
@@ -455,7 +468,8 @@ public final class DockSide {
             return null;
         }
         DockSide loaded = new DockSide(side, MachineConfig.load(tag.getCompound("profile"), registries));
-        loaded.block = tag.contains("block", Tag.TAG_STRING) ? ResourceLocation.tryParse(tag.getString("block")) : null;
+        loaded.assignBlock(tag.contains("block", Tag.TAG_STRING) ? ResourceLocation.tryParse(tag.getString("block"))
+                : null);
         ListTag list = tag.getList("machines", Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
             loaded.machines.add(DockMachine.load(side, list.getCompound(i)));

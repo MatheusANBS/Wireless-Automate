@@ -35,6 +35,11 @@ public final class DockMachine {
     private long sleepUntil;
     /** Os caches de capability, criados na primeira consulta ({@link #caches}). */
     private @Nullable MachineCaches caches;
+    /**
+     * A conferência da Doca achou a máquina no lugar e ligou a vigia do cache ({@link MachineCaches#watch}), que avisa
+     * quando a block entity sai; um aviso de invalidação a desliga. Não é salvo.
+     */
+    private boolean watched;
 
     public DockMachine(int side, BlockPos pos, int front) {
         this.side = side;
@@ -147,8 +152,18 @@ public final class DockMachine {
         return caches;
     }
 
+    /** Ver {@link #watched}. */
+    boolean watched() {
+        return watched;
+    }
+
+    void setWatched(boolean watched) {
+        this.watched = watched;
+    }
+
     /** A máquina saiu (desvinculada, ou a Doca saiu do mundo): os caches deixam de valer e de avisar. */
     void discard() {
+        watched = false;
         if (caches != null) {
             caches.discard();
             caches = null;

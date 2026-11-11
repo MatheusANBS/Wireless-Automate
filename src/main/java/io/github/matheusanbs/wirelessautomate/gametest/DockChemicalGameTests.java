@@ -59,12 +59,17 @@ public final class DockChemicalGameTests {
         return helper.getBlockEntity(DOCK);
     }
 
-    /**
-     * A máquina vinculada ao lado Norte, virada para o norte: item Insere em Cima, químico Insere em Trás e Extrai em
-     * Baixo. O químico tem também uma face Insere sem tanque (Cima), que a entrega pula.
-     */
     private static void link(GameTestHelper helper, PatternDockBlockEntity dock) {
-        helper.assertTrue(dock.link(NORTH, helper.absolutePos(MACHINE), MACHINE_ID, Direction.NORTH.ordinal()),
+        linkMachine(helper, dock, MACHINE);
+    }
+
+    /**
+     * A máquina em {@code machine} vinculada ao lado Norte, virada para o norte: item Insere em Cima, químico Insere em
+     * Trás e Extrai em Baixo. O químico tem também uma face Insere sem tanque (Cima), que a entrega pula. Também para
+     * os testes dos químicos nas redes ({@link DockChemicalAe2GameTests}).
+     */
+    static void linkMachine(GameTestHelper helper, PatternDockBlockEntity dock, BlockPos machine) {
+        helper.assertTrue(dock.link(NORTH, helper.absolutePos(machine), MACHINE_ID, Direction.NORTH.ordinal()),
                 "não vinculou a máquina");
         DockSide side = dock.side(NORTH);
         side.profile().face(ResourceType.ITEM, RemoteSide.TOP).setMode(PortMode.INSERT);

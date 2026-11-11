@@ -19,9 +19,11 @@ import appeng.api.networking.crafting.ICraftingService;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.AEFluidKey;
 import appeng.api.stacks.AEItemKey;
+import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
 import appeng.api.stacks.KeyCounter;
 import appeng.api.util.IConfigurableObject;
+import io.github.matheusanbs.wirelessautomate.compat.ae2.Ae2Chemicals;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import java.util.List;
 import java.util.concurrent.Future;
@@ -45,7 +47,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * A parte dos testes do AE2 que usa a API dele. Não é {@code @GameTestHolder} nem {@code @EventBusSubscriber}: o
  * NeoForge inspeciona essas classes por reflexão, e um tipo do AE2 numa assinatura impede o mod de carregar sem ele.
- * Só é chamada por {@link Ae2DockGameTests} com o AE2 presente.
+ * Só é chamada por {@link Ae2DockGameTests} e {@link DockChemicalAe2GameTests} com o AE2 presente.
  *
  * <p>O que o jar da API não tem (a lógica do Pattern Provider: o inventário de padrões) é lido por
  * reflexão, só aqui, para a compilação não depender do jar inteiro do AE2.
@@ -93,6 +95,28 @@ final class Ae2TestSupport {
         return PatternDetailsHelper.encodeProcessingPattern(
                 List.of(new GenericStack(AEItemKey.of(item), count), new GenericStack(AEFluidKey.of(fluid), mb)),
                 List.of(new GenericStack(AEItemKey.of(out), 1)));
+    }
+
+    /**
+     * A chave do AE2 do químico {@code chemical} (um {@code ChemicalStack} como {@code Object}, do
+     * {@link ChemicalTestSupport}): a {@code MekanismKey} do Applied Mekanistics, como {@code Object}.
+     */
+    static Object chemicalKey(Object chemical) {
+        AEKey key = Ae2Chemicals.key(chemical, null);
+        if (key == null) {
+            throw new IllegalStateException("sem a chave de químico do Applied Mekanistics");
+        }
+        return key;
+    }
+
+    /**
+     * Um padrão de processamento com uma entrada de item e uma de químico ({@code in}, uma chave de
+     * {@link #chemicalKey}, {@code inMb}) que dá o químico {@code out} ({@code outMb}).
+     */
+    static ItemStack itemAndChemicalPattern(Item item, int count, Object in, long inMb, Object out, long outMb) {
+        return PatternDetailsHelper.encodeProcessingPattern(
+                List.of(new GenericStack(AEItemKey.of(item), count), new GenericStack((AEKey) in, inMb)),
+                List.of(new GenericStack((AEKey) out, outMb)));
     }
 
     /** Um padrão de bancada (um tronco de carvalho dá quatro tábuas), que só o Molecular Assembler aceita. */
@@ -190,9 +214,14 @@ final class Ae2TestSupport {
 
     /** Põe uma célula de 1k no drive, pelo inventário exposto dele. */
     static boolean insertCell(ServerLevel level, BlockPos drive) {
+        return insertCell(level, drive, ResourceLocation.fromNamespaceAndPath("ae2", "item_storage_cell_1k"), 0);
+    }
+
+    /** Põe a célula {@code id} no espaço {@code slot} do drive, pelo inventário exposto dele. */
+    static boolean insertCell(ServerLevel level, BlockPos drive, ResourceLocation id, int slot) {
         IItemHandler handler = level.getCapability(Capabilities.ItemHandler.BLOCK, drive, null);
-        Item cell = BuiltInRegistries.ITEM.get(ResourceLocation.fromNamespaceAndPath("ae2", "item_storage_cell_1k"));
-        return handler != null && handler.insertItem(0, new ItemStack(cell), false).isEmpty();
+        Item cell = BuiltInRegistries.ITEM.get(id);
+        return handler != null && cell != Items.AIR && handler.insertItem(slot, new ItemStack(cell), false).isEmpty();
     }
 
     private static @Nullable IGridNode node(ServerLevel level, BlockPos pos) {
@@ -223,6 +252,11 @@ final class Ae2TestSupport {
      * conhecido e uma CPU; {@code null} quando está pronta.
      */
     static @Nullable String notReady(ServerLevel level, BlockPos pos, Item output) {
+        return notReadyFor(level, pos, AEItemKey.of(output));
+    }
+
+    /** O {@link #notReady(ServerLevel, BlockPos, Item)} de uma chave qualquer ({@code AEKey}, como a de químico). */
+    static @Nullable String notReadyFor(ServerLevel level, BlockPos pos, Object output) {
         IGridNode node = node(level, pos);
         if (node == null || node.getGrid() == null) {
             return "sem nó";
@@ -232,7 +266,7 @@ final class Ae2TestSupport {
                     + ", nós na rede " + node.getGrid().size() + ")";
         }
         ICraftingService crafting = node.getGrid().getCraftingService();
-        if (!crafting.isCraftable(AEItemKey.of(output))) {
+        if (!crafting.isCraftable((AEKey) output)) {
             return "o padrão não chegou à rede";
         }
         return crafting.getCpus().isEmpty() ? "sem CPU" : null;
@@ -240,23 +274,38 @@ final class Ae2TestSupport {
 
     /** Guarda {@code count} de {@code item} na rede; devolve quanto entrou. */
     static long stock(ServerLevel level, BlockPos pos, Item item, int count) {
+        return stockKey(level, pos, AEItemKey.of(item), count);
+    }
+
+    /** Guarda {@code amount} da chave {@code key} ({@code AEKey}) na rede; devolve quanto entrou. */
+    static long stockKey(ServerLevel level, BlockPos pos, Object key, long amount) {
         return grid(level, pos).getStorageService().getInventory()
-                .insert(AEItemKey.of(item), count, Actionable.MODULATE, IActionSource.empty());
+                .insert((AEKey) key, amount, Actionable.MODULATE, IActionSource.empty());
     }
 
     /** Quanto de {@code item} a rede tem guardado. */
     static long stored(ServerLevel level, BlockPos pos, Item item) {
+        return storedKey(level, pos, AEItemKey.of(item));
+    }
+
+    /** Quanto da chave {@code key} ({@code AEKey}) a rede tem guardado. */
+    static long storedKey(ServerLevel level, BlockPos pos, Object key) {
         return grid(level, pos).getStorageService().getInventory()
-                .extract(AEItemKey.of(item), Long.MAX_VALUE, Actionable.SIMULATE, IActionSource.empty());
+                .extract((AEKey) key, Long.MAX_VALUE, Actionable.SIMULATE, IActionSource.empty());
     }
 
     /** Começa o cálculo de um pedido de {@code amount} de {@code item} (numa thread do AE2); devolve o futuro. */
     static Object plan(ServerLevel level, BlockPos pos, Item item, long amount) {
+        return planKey(level, pos, AEItemKey.of(item), amount);
+    }
+
+    /** O {@link #plan} de uma chave qualquer ({@code AEKey}, como a de químico). */
+    static Object planKey(ServerLevel level, BlockPos pos, Object key, long amount) {
         IGridNode node = node(level, pos);
         // o cálculo só olha os padrões da rede do nó de quem pede
         IActionSource source = IActionSource.ofMachine(() -> node);
         return node.getGrid().getCraftingService().beginCraftingCalculation(level, () -> source,
-                AEItemKey.of(item), amount, CalculationStrategy.REPORT_MISSING_ITEMS);
+                (AEKey) key, amount, CalculationStrategy.REPORT_MISSING_ITEMS);
     }
 
     static boolean planned(Object future) {
@@ -295,6 +344,11 @@ final class Ae2TestSupport {
 
     /** A rede ainda tem um pedido de {@code item} em andamento. */
     static boolean requesting(ServerLevel level, BlockPos pos, Item item) {
-        return grid(level, pos).getCraftingService().isRequesting(AEItemKey.of(item));
+        return requestingKey(level, pos, AEItemKey.of(item));
+    }
+
+    /** A rede ainda tem um pedido da chave {@code key} ({@code AEKey}) em andamento. */
+    static boolean requestingKey(ServerLevel level, BlockPos pos, Object key) {
+        return grid(level, pos).getCraftingService().isRequesting((AEKey) key);
     }
 }

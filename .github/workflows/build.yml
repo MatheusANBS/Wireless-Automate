@@ -41,6 +41,9 @@ jobs:
       - name: GameTests do RS2 (Doca de Padrões)
         run: ./gradlew runGameTestServerRefined
 
+      - name: GameTests dos químicos da Doca (AE2 e RS2 com os addons do Mekanism)
+        run: ./gradlew runGameTestServerDockChemicals
+
       - uses: actions/upload-artifact@v4
         with:
           name: wirelessautomate

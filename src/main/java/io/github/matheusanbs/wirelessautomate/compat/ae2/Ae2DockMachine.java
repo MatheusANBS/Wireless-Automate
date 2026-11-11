@@ -30,15 +30,17 @@ import net.neoforged.neoforge.fluids.FluidStack;
  * {@link DockDelivery} (sem simular: o AE2 entrega numa chamada só) e responde aceito ou recusado, sem meio-termo.
  *
  * <p>Recusa o padrão que não vai a inventário comum (bancada, cortador, forja: {@link DockStatus#CRAFTING_PATTERN}) e
- * a chave que não é item nem fluido ({@link DockStatus#MIXED}). As chaves viram {@code ItemStack} partidos no tamanho
- * máximo do item (o contrato da entrega) e {@code FluidStack}, juntos no mesmo pedido; as listas são desta face e reaproveitadas, porque o AE2
- * chama na thread do servidor, um pedido por vez.
+ * a chave que a Doca não conhece ({@link DockStatus#MIXED}). As chaves viram {@code ItemStack} partidos no tamanho
+ * máximo do item (o contrato da entrega), {@code FluidStack} e, com o Applied Mekanistics, o químico da
+ * {@code MekanismKey} ({@code ChemicalStack} como {@code Object}, pela ponte {@link Ae2Chemicals}), juntos no mesmo
+ * pedido; as listas são desta face e reaproveitadas, porque o AE2 chama na thread do servidor, um pedido por vez.
  */
 final class Ae2DockMachine implements ICraftingMachine {
     private final PatternDockBlockEntity dock;
     private final int side;
     private final List<ItemStack> items = new ArrayList<>();
     private final List<FluidStack> fluids = new ArrayList<>();
+    private final List<Object> chemicals = new ArrayList<>();
 
     Ae2DockMachine(PatternDockBlockEntity dock, int side) {
         this.dock = dock;
@@ -79,14 +81,15 @@ final class Ae2DockMachine implements ICraftingMachine {
                 DockDelivery.refuse(dock, side, DockStatus.MIXED);
                 return false;
             }
-            return DockDelivery.offer(dock, side, items, fluids, false) == DockDelivery.Result.ACCEPTED;
+            return DockDelivery.offer(dock, side, items, fluids, chemicals, false) == DockDelivery.Result.ACCEPTED;
         } finally {
             items.clear();
             fluids.clear();
+            chemicals.clear();
         }
     }
 
-    /** Converte as entradas nas listas desta face; {@code false} com uma chave que não é item nem fluido. */
+    /** Converte as entradas nas listas desta face; {@code false} com uma chave que a Doca não conhece. */
     private boolean convert(KeyCounter[] inputs) {
         for (KeyCounter counter : inputs) {
             for (Object2LongMap.Entry<AEKey> entry : counter) {
@@ -105,7 +108,11 @@ final class Ae2DockMachine implements ICraftingMachine {
                         fluids.add(fluid.toStack((int) Math.min(amount, Integer.MAX_VALUE)));
                     }
                 } else {
-                    return false;
+                    Object chemical = Ae2Chemicals.chemical(key, amount);
+                    if (chemical == null) {
+                        return false;
+                    }
+                    chemicals.add(chemical);
                 }
             }
         }

@@ -35,8 +35,8 @@ import org.jetbrains.annotations.Nullable;
  * baixo da fornalha só dá o produto). A inserção é simulada antes de tirar da máquina, então nada sai sem caber.
  *
  * <p>Provedor cheio (recusou algo que a máquina tinha para dar): o lado marca {@link DockSide#providerFull} e dorme até
- * o cache do vizinho ser invalidado (o bloco trocou) ou o teto de sono do motor. Sem vizinho com inventário, o lado
- * também dorme até o teto.
+ * o vizinho mudar ({@link #providerChanged}, o {@code setChanged} dele; ou o cache invalidado, o bloco trocou) ou o teto
+ * de sono do motor. Sem vizinho com inventário, o lado dorme até o cache avisar ou o teto.
  *
  * <p>Custo: parado, nada (sem acordada, {@link #wakeAt} é nunca, e o laço só lê esse número). Por visita, proporcional
  * às acordadas, até {@link #MAX_MACHINES_PER_VISIT} (mais que isso pede outra volta, {@link #MORE}); por máquina, uma
@@ -91,6 +91,24 @@ public final class DockReturn implements EngineVisitor {
         machine.setReturnAwake(true);
         lane.queue.addLast(machine);
         awake++;
+    }
+
+    /**
+     * O block entity em {@code neighbor}, encostado na Doca em {@code dockPos}, mudou ({@link PatternDockBlock#onNeighborChange}):
+     * se o lado dele dorme com "provedor cheio", acorda para a próxima volta (o motor lê o {@link #wakeAt} a cada tick).
+     * Custo: uma conta de direção e duas leituras; nada com o lado acordado ou sem fila.
+     */
+    void providerChanged(BlockPos dockPos, BlockPos neighbor) {
+        Direction direction = Direction.fromDelta(neighbor.getX() - dockPos.getX(), neighbor.getY() - dockPos.getY(),
+                neighbor.getZ() - dockPos.getZ());
+        if (direction == null) {
+            return;
+        }
+        Lane lane = lanes[direction.ordinal()];
+        DockSide side = dock.side(direction.ordinal());
+        if (lane != null && lane.sleepUntil != 0 && side != null && side.providerFull()) {
+            lane.sleepUntil = 0;
+        }
     }
 
     /** Relê a vazão do tier da Doca (carga, troca de tier e recarga da config). */

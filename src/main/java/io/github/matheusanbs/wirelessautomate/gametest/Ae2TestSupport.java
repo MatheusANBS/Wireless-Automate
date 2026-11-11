@@ -275,6 +275,15 @@ final class Ae2TestSupport {
         return result.successful() ? null : "a CPU recusou: " + result.errorCode();
     }
 
+    /** As classes das CPUs de crafting da rede em {@code pos}, separadas por vírgula (para saber de quem é a CPU). */
+    static String cpus(ServerLevel level, BlockPos pos) {
+        StringBuilder names = new StringBuilder();
+        for (Object cpu : grid(level, pos).getCraftingService().getCpus()) {
+            names.append(names.isEmpty() ? "" : ",").append(cpu.getClass().getSimpleName());
+        }
+        return names.toString();
+    }
+
     /** A rede ainda tem um pedido de {@code item} em andamento. */
     static boolean requesting(ServerLevel level, BlockPos pos, Item item) {
         return grid(level, pos).getCraftingService().isRequesting(AEItemKey.of(item));

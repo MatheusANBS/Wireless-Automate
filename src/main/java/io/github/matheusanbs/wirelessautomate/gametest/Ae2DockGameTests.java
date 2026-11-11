@@ -54,7 +54,7 @@ public final class Ae2DockGameTests {
     private static final BlockPos PROVIDER = DOCK.north();
     /** A rede: o armazenamento de crafting a oeste do provedor, a energia e o drive longe dele. */
     private static final BlockPos CPU = PROVIDER.west();
-    private static final BlockPos ENERGY = CPU.west();
+    static final BlockPos ENERGY = CPU.west();
     private static final BlockPos DRIVE = ENERGY.north();
     private static final BlockPos[] FURNACES = {new BlockPos(4, 1, 1), new BlockPos(4, 1, 2), new BlockPos(4, 1, 3)};
     private static final int NORTH = Direction.NORTH.ordinal();
@@ -63,11 +63,11 @@ public final class Ae2DockGameTests {
     private Ae2DockGameTests() {
     }
 
-    private static boolean enabled() {
+    static boolean enabled() {
         return Boolean.getBoolean("wirelessautomate.ae2Tests") && ModList.get().isLoaded("ae2");
     }
 
-    private static Block ae2(String path) {
+    static Block ae2(String path) {
         return BuiltInRegistries.BLOCK.get(ResourceLocation.fromNamespaceAndPath("ae2", path));
     }
 
@@ -180,6 +180,38 @@ public final class Ae2DockGameTests {
                 .thenSucceed();
     }
 
+    /**
+     * Um pedido de {@code count} lingotes pela CPU {@code cpu}, numa rede com o provedor {@code provider} encostado no
+     * lado Norte e três Altos-fornos: a Doca recebe as execuções, e os lingotes vão direto para a rede (o retorno do
+     * provedor fica vazio o tempo todo), onde a CPU os conta e o pedido termina. A rede tem uma CPU só, cuja classe contém
+     * {@code cpuClass}. Para os provedores e as CPUs dos addons ({@link Ae2AddonDockGameTests}).
+     */
+    static void orderEndsInNetwork(GameTestHelper helper, Block provider, Block cpu, int count, String cpuClass) {
+        PatternDockBlockEntity dock = network(helper, provider, cpu);
+        Object[] plan = new Object[1];
+        helper.onEachTick(() -> returnEmpty(helper));
+        helper.startSequence()
+                .thenWaitUntil(() -> registered(dock))
+                .thenExecute(() -> linkFurnaces(helper, dock, FURNACES.length))
+                .thenWaitUntil(() -> ready(helper))
+                .thenExecute(() -> {
+                    String cpus = Ae2TestSupport.cpus(helper.getLevel(), helper.absolutePos(PROVIDER));
+                    helper.assertTrue(!cpus.contains(",") && cpus.contains(cpuClass), "CPUs da rede: " + cpus);
+                    stock(helper, count);
+                })
+                .thenIdle(2)
+                .thenExecute(() -> plan(helper, plan, count))
+                .thenWaitUntil(() -> helper.assertTrue(Ae2TestSupport.planned(plan[0]), "calculando"))
+                .thenExecute(() -> submit(helper, plan[0]))
+                .thenWaitUntil(() -> helper.assertTrue(stored(helper, Items.IRON_INGOT) == count,
+                        "lingotes na rede: " + stored(helper, Items.IRON_INGOT)))
+                .thenExecute(() -> helper.assertTrue(dock.side(NORTH).returned() >= count,
+                        "a Doca devolveu " + dock.side(NORTH).returned()))
+                .thenWaitUntil(() -> helper.assertFalse(Ae2TestSupport.requesting(helper.getLevel(),
+                        helper.absolutePos(PROVIDER), Items.IRON_INGOT), "o pedido não terminou"))
+                .thenSucceed();
+    }
+
     /** Neste tick, os três Altos-fornos têm minério na entrada ou estão acesos. */
     private static boolean allWorking(GameTestHelper helper) {
         for (BlockPos furnace : FURNACES) {
@@ -280,9 +312,14 @@ public final class Ae2DockGameTests {
 
     /** A Doca, o provedor ao norte com o padrão do lingote e a rede ligada a ele. */
     private static PatternDockBlockEntity network(GameTestHelper helper) {
+        return network(helper, ae2("pattern_provider"), ae2("1k_crafting_storage"));
+    }
+
+    /** A rede de {@link #network(GameTestHelper)} com outro provedor e outra CPU (os dos addons). */
+    private static PatternDockBlockEntity network(GameTestHelper helper, Block provider, Block cpu) {
         PatternDockBlockEntity dock = dock(helper);
-        helper.setBlock(PROVIDER, ae2("pattern_provider"));
-        helper.setBlock(CPU, ae2("1k_crafting_storage"));
+        helper.setBlock(PROVIDER, provider);
+        helper.setBlock(CPU, cpu);
         helper.setBlock(ENERGY, ae2("creative_energy_cell"));
         helper.setBlock(DRIVE, ae2("drive"));
         helper.assertTrue(Ae2TestSupport.insertCell(helper.getLevel(), helper.absolutePos(DRIVE)), "a célula não entrou");

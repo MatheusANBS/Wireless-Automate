@@ -57,6 +57,9 @@ The Dock **spends no energy and no fuel**. It only carries the orders.
   The side's row warns you ("Remove the provider lock").
 - **More patterns on RS2:** chain **Autocrafters** (one facing the other, the last one facing the Dock). The patterns
   of all of them reach the same side.
+- **The Autocrafter locks:** "lock until all outputs are received" works with the Dock. "Lock until the connected
+  machine is empty" treats the whole side as one machine, which only counts as empty 15 s after its last move: one
+  batch at a time on the side, with that gap between them. To use several machines at once, leave it unlocked.
 - **Crafting patterns** (crafting table, stonecutter, smithing) belong to the Molecular Assembler. The Dock refuses
   them.
 - **Another kind of machine?** Use **another side**. A side handles one kind, and the Dock has six sides.

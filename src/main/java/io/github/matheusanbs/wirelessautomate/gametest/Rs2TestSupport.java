@@ -12,7 +12,9 @@ import com.refinedmods.refinedstorage.common.api.RefinedStorageApi;
 import com.refinedmods.refinedstorage.common.api.autocrafting.PlatformPatternProviderExternalPatternSink;
 import com.refinedmods.refinedstorage.common.api.support.network.AbstractNetworkNodeContainerBlockEntity;
 import com.refinedmods.refinedstorage.common.api.support.network.InWorldNetworkNodeContainer;
+import com.refinedmods.refinedstorage.common.autocrafting.CraftingPatternState;
 import com.refinedmods.refinedstorage.common.autocrafting.ProcessingPatternState;
+import com.refinedmods.refinedstorage.common.autocrafting.autocrafter.LockMode;
 import com.refinedmods.refinedstorage.common.autocrafting.patterngrid.PatternGridBlockEntity;
 import com.refinedmods.refinedstorage.common.autocrafting.patterngrid.PatternType;
 import com.refinedmods.refinedstorage.common.content.DataComponents;
@@ -29,6 +31,7 @@ import net.minecraft.world.Container;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
@@ -107,16 +110,54 @@ final class Rs2TestSupport {
         return pattern;
     }
 
+    /** Um padrão de bancada com uma entrada só (num espaço de 1×1), como a Pattern Grid grava. */
+    static ItemStack craftingPattern(Item input) {
+        ItemStack pattern = PatternGridBlockEntity.createPatternStack(PatternType.CRAFTING);
+        pattern.set(DataComponents.INSTANCE.getCraftingPatternState(), new CraftingPatternState(false,
+                CraftingInput.ofPositioned(1, 1, List.of(new ItemStack(input)))));
+        return pattern;
+    }
+
     /** Põe {@code pattern} no primeiro espaço de padrões do Autocrafter em {@code pos}. */
     static boolean installPattern(ServerLevel level, BlockPos pos, ItemStack pattern) {
+        return installPattern(level, pos, pattern, 0);
+    }
+
+    /** Põe {@code pattern} no espaço {@code slot} dos padrões do Autocrafter em {@code pos}. */
+    static boolean installPattern(ServerLevel level, BlockPos pos, ItemStack pattern, int slot) {
         try {
             Object entity = level.getBlockEntity(pos);
             Method getter = entity.getClass().getDeclaredMethod("getPatternContainer");
             getter.setAccessible(true);
             Container container = (Container) getter.invoke(entity);
-            container.setItem(0, pattern);
-            return pattern.equals(container.getItem(0));
+            container.setItem(slot, pattern);
+            return pattern.equals(container.getItem(slot));
         } catch (ReflectiveOperationException | ClassCastException e) {
+            return false;
+        }
+    }
+
+    /** Liga a trava "até receber todos os resultados" no Autocrafter em {@code pos} (o RS2 não publica o setter). */
+    static boolean lockUntilAllOutputs(ServerLevel level, BlockPos pos) {
+        try {
+            Object entity = level.getBlockEntity(pos);
+            Method setter = entity.getClass().getDeclaredMethod("setLockMode", LockMode.class);
+            setter.setAccessible(true);
+            setter.invoke(entity, LockMode.LOCK_UNTIL_ALL_OUTPUTS_ARE_RECEIVED);
+            return true;
+        } catch (ReflectiveOperationException | ClassCastException e) {
+            return false;
+        }
+    }
+
+    /** O Autocrafter em {@code pos} está travado; {@code false} se não deu para ler. */
+    static boolean locked(ServerLevel level, BlockPos pos) {
+        try {
+            Object entity = level.getBlockEntity(pos);
+            Method getter = entity.getClass().getDeclaredMethod("isLocked");
+            getter.setAccessible(true);
+            return (boolean) getter.invoke(entity);
+        } catch (ReflectiveOperationException | ClassCastException | NullPointerException e) {
             return false;
         }
     }
@@ -158,6 +199,13 @@ final class Rs2TestSupport {
         Network network = network(level, pos);
         return network == null ? 0 : network.getComponent(StorageNetworkComponent.class)
                 .insert(new ItemResource(item), count, Action.EXECUTE, Actor.EMPTY);
+    }
+
+    /** Tira {@code count} de {@code item} da rede; devolve quanto saiu. */
+    static long take(ServerLevel level, BlockPos pos, Item item, int count) {
+        Network network = network(level, pos);
+        return network == null ? 0 : network.getComponent(StorageNetworkComponent.class)
+                .extract(new ItemResource(item), count, Action.EXECUTE, Actor.EMPTY);
     }
 
     /** Pede {@code count} de {@code item} à rede; devolve o nome do resultado ({@code TASK_CREATED} se começou). */

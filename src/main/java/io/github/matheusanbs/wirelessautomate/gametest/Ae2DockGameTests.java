@@ -36,10 +36,10 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 /**
  * A Doca com o AE2 de verdade: a capability {@code ae2:crafting_machine} nas seis faces, um pedido de uma CPU por um
  * Pattern Provider numa rede montada no teste (energia criativa, drive com célula, armazenamento de crafting) com a
- * volta direto para a rede, a rede sem energia que segura a volta, o aviso da trava "até o resultado", o padrão de
- * bancada recusado, as máquinas cheias que seguram o pedido sem perder nada, o nome do
- * lado no Pattern Access Terminal e o "tem provedor". Rodam só na run {@code runGameTestServerAe2}, que tem o AE2 na
- * pasta mods e liga o namespace {@value #NAMESPACE}.
+ * volta direto para a rede, a rede sem energia e o provedor quebrado que seguram a volta, o aviso da trava "até o
+ * resultado", o padrão de bancada recusado, as máquinas cheias que seguram o pedido sem perder nada, o nome do lado no
+ * Pattern Access Terminal e o "tem provedor". Rodam só na run {@code runGameTestServerAe2}, que tem o AE2 na pasta mods
+ * e liga o namespace {@value #NAMESPACE}.
  *
  * <p>As máquinas são Altos-fornos (100 ticks por item, metade da fornalha), para o pedido inteiro caber no limite de
  * 300 ticks do teste. Nenhum tipo do AE2 nas assinaturas: o que usa a API fica em {@link Ae2TestSupport}.
@@ -52,10 +52,13 @@ public final class Ae2DockGameTests {
     private static final BlockPos DOCK = new BlockPos(2, 1, 2);
     /** O provedor, encostado no lado Norte da Doca. */
     private static final BlockPos PROVIDER = DOCK.north();
-    /** A rede: o armazenamento de crafting a oeste do provedor, a energia e o drive longe dele. */
+    /**
+     * A rede: o armazenamento de crafting a oeste do provedor, a energia a oeste dele e o drive ao norte dele (encostado
+     * na CPU, não na energia: tirar a energia não separa o drive da grade).
+     */
     private static final BlockPos CPU = PROVIDER.west();
     static final BlockPos ENERGY = CPU.west();
-    private static final BlockPos DRIVE = ENERGY.north();
+    private static final BlockPos DRIVE = CPU.north();
     private static final BlockPos[] FURNACES = {new BlockPos(4, 1, 1), new BlockPos(4, 1, 2), new BlockPos(4, 1, 3)};
     private static final int NORTH = Direction.NORTH.ordinal();
     private static final ResourceLocation BLAST_ID = BuiltInRegistries.BLOCK.getKey(Blocks.BLAST_FURNACE);
@@ -271,7 +274,8 @@ public final class Ae2DockGameTests {
 
     /**
      * Sem energia, o nó do provedor fica inativo e a rede não recebe: o lingote fica no Alto-forno e o lado marca
-     * "provedor cheio"; com a energia de volta, o lingote vai para a rede (sem passar pelo retorno do provedor).
+     * "provedor cheio"; com a energia de volta, o lingote vai para a rede (sem passar pelo retorno do provedor). Só a
+     * energia cai: o drive encosta na CPU, e a grade continua com ele.
      */
     @GameTest(template = "empty", timeoutTicks = 400)
     public static void unpoweredNetworkHoldsTheReturn(GameTestHelper helper) {
@@ -306,6 +310,50 @@ public final class Ae2DockGameTests {
                     AbstractFurnaceBlockEntity furnace = helper.getBlockEntity(FURNACES[0]);
                     helper.assertTrue(furnace.getItem(2).isEmpty(), "o lingote ficou no Alto-forno");
                     helper.assertFalse(dock.side(NORTH).providerFull(), "o lado continuou cheio");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * O provedor quebrado com o resultado na máquina: o lado fica sem destino e espera, com o lingote no Alto-forno;
+     * com um provedor novo no lugar (o cache do lado avisa a troca), o lingote vai para a rede. Nada sai nem se perde
+     * no meio.
+     */
+    @GameTest(template = "empty", timeoutTicks = 400)
+    public static void brokenProviderHoldsAndResumes(GameTestHelper helper) {
+        if (!enabled()) {
+            helper.succeed();
+            return;
+        }
+        PatternDockBlockEntity dock = network(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> registered(dock))
+                .thenExecute(() -> linkFurnaces(helper, dock, 1))
+                .thenWaitUntil(() -> ready(helper))
+                .thenExecute(() -> {
+                    helper.setBlock(PROVIDER, Blocks.AIR);
+                    AbstractFurnaceBlockEntity furnace = helper.getBlockEntity(FURNACES[0]);
+                    furnace.setItem(2, new ItemStack(Items.IRON_INGOT));
+                    furnace.setChanged();
+                })
+                .thenIdle(40)
+                .thenExecute(() -> {
+                    AbstractFurnaceBlockEntity furnace = helper.getBlockEntity(FURNACES[0]);
+                    helper.assertTrue(furnace.getItem(2).is(Items.IRON_INGOT) && furnace.getItem(2).getCount() == 1,
+                            "o lingote saiu sem provedor: " + furnace.getItem(2));
+                    helper.assertTrue(dock.side(NORTH).returned() == 0, "devolvidos: " + dock.side(NORTH).returned());
+                    helper.assertItemEntityNotPresent(Items.IRON_INGOT);
+                    helper.setBlock(PROVIDER, ae2("pattern_provider"));
+                })
+                .thenWaitUntil(() -> helper.assertTrue(Ae2TestSupport.active(helper.getLevel(),
+                        helper.absolutePos(PROVIDER)), "o provedor novo não subiu"))
+                .thenWaitUntil(() -> helper.assertTrue(stored(helper, Items.IRON_INGOT) == 1,
+                        "lingotes na rede: " + stored(helper, Items.IRON_INGOT)))
+                .thenExecute(() -> {
+                    AbstractFurnaceBlockEntity furnace = helper.getBlockEntity(FURNACES[0]);
+                    helper.assertTrue(furnace.getItem(2).isEmpty(), "o lingote ficou no Alto-forno");
+                    helper.assertTrue(dock.side(NORTH).returned() == 1, "devolvidos: " + dock.side(NORTH).returned());
+                    helper.assertItemEntityNotPresent(Items.IRON_INGOT);
                 })
                 .thenSucceed();
     }

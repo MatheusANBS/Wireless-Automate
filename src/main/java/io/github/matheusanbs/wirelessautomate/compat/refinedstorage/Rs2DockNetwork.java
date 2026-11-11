@@ -23,6 +23,14 @@ import org.jetbrains.annotations.Nullable;
  * {@link StorageNetworkComponent}; nada sai). O resultado conta para a tarefa do RS2 ao entrar na rede por qualquer
  * caminho, então não precisa passar pelo Autocrafter, que não tem inventário.
  *
+ * <p>Mas só na execução: o RS2 passa a inserção pelas tarefas (o {@code beforeInsert}, que pega o resultado
+ * intermediário que uma tarefa espera, sem precisar de disco) só com {@code Action.EXECUTE}; a simulação vai direto ao
+ * armazenamento. Com os discos cheios ou sem disco, a simulação daria zero e a tarefa pararia. Por isso
+ * {@link #insertsFirst}: a volta insere de verdade e tira da máquina o que entrou, e o que a máquina não der sai da
+ * rede de novo ({@link #reclaim}). O produto final do pedido (a raiz) o RS2 só conta depois de guardado
+ * ({@code afterInsert}): sem lugar no disco, ele fica na máquina e o lado marca "provedor cheio", como com qualquer
+ * importador do RS2.
+ *
  * <p>A rede é achada pelo block entity do Autocrafter ({@link AbstractNetworkNodeContainerBlockEntity}: o nó de um
  * contêiner, a rede dele, o componente de armazenamento) e guardada com o nó. A cada inserção, só confere que o nó
  * continua na mesma rede (uma leitura): a rede troca quando o Controlador sai ou volta, e a velha não pode receber
@@ -39,6 +47,11 @@ final class Rs2DockNetwork implements DockReturnNetwork {
     private @Nullable NetworkNode node;
     private @Nullable Network network;
     private @Nullable StorageNetworkComponent storage;
+    /** A chave da última pilha inserida e a pilha (de um) que ela representa, reaproveitadas para a mesma saída. */
+    private @Nullable ItemResource itemKey;
+    private ItemStack itemKeyStack = ItemStack.EMPTY;
+    private @Nullable FluidResource fluidKey;
+    private FluidStack fluidKeyStack = FluidStack.EMPTY;
 
     Rs2DockNetwork(ServerLevel level, BlockPos pos) {
         this.level = level;
@@ -79,6 +92,41 @@ final class Rs2DockNetwork implements DockReturnNetwork {
         return target == null ? 0 : target.insert(resource, amount, simulate ? Action.SIMULATE : Action.EXECUTE, ACTOR);
     }
 
+    @Override
+    public boolean insertsFirst() {
+        return true;
+    }
+
+    @Override
+    public long reclaim(ItemStack stack) {
+        StorageNetworkComponent target = storage();
+        return target == null || stack.isEmpty() ? 0
+                : target.extract(itemKey(stack), stack.getCount(), Action.EXECUTE, ACTOR);
+    }
+
+    @Override
+    public long reclaim(FluidStack stack) {
+        StorageNetworkComponent target = storage();
+        return target == null || stack.isEmpty() ? 0
+                : target.extract(fluidKey(stack), stack.getAmount(), Action.EXECUTE, ACTOR);
+    }
+
+    private ItemResource itemKey(ItemStack stack) {
+        if (itemKey == null || !ItemStack.isSameItemSameComponents(itemKeyStack, stack)) {
+            itemKey = ItemResource.ofItemStack(stack);
+            itemKeyStack = stack.copyWithCount(1);
+        }
+        return itemKey;
+    }
+
+    private FluidResource fluidKey(FluidStack stack) {
+        if (fluidKey == null || !FluidStack.isSameFluidSameComponents(fluidKeyStack, stack)) {
+            fluidKey = new FluidResource(stack.getFluid(), stack.getComponentsPatch());
+            fluidKeyStack = stack.copyWithAmount(1);
+        }
+        return fluidKey;
+    }
+
     // ------------------------------------------------------------------ itens
 
     @Override
@@ -96,7 +144,7 @@ final class Rs2DockNetwork implements DockReturnNetwork {
         if (stack.isEmpty()) {
             return stack;
         }
-        long inserted = insert(ItemResource.ofItemStack(stack), stack.getCount(), simulate);
+        long inserted = insert(itemKey(stack), stack.getCount(), simulate);
         if (inserted <= 0) {
             return stack;
         }
@@ -145,8 +193,7 @@ final class Rs2DockNetwork implements DockReturnNetwork {
         if (resource.isEmpty()) {
             return 0;
         }
-        long inserted = insert(new FluidResource(resource.getFluid(), resource.getComponentsPatch()),
-                resource.getAmount(), action.simulate());
+        long inserted = insert(fluidKey(resource), resource.getAmount(), action.simulate());
         return (int) Math.min(inserted, resource.getAmount());
     }
 

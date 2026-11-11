@@ -35,7 +35,8 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
  * conjunto dos destinos de todas as fábricas, chamado direto, sem rede), a posição sem Doca, a simulação e a execução
  * na mesma fornalha, as fornalhas cheias e o pendente que recusam sem perder nada, o recurso que não é item nem fluido,
  * a trava "até a máquina esvaziar" e o "tem provedor"; e a volta pela rede do Autocrafter (um pedido de verdade numa
- * rede montada no teste, e a rede que some com o Controlador e volta). Rodam só na run {@code runGameTestServerRefined}, que tem o RS2
+ * rede montada no teste, a rede que some com o Controlador e volta, o resultado intermediário com o disco cheio e a
+ * trava "até receber todos os resultados"). Rodam só na run {@code runGameTestServerRefined}, que tem o RS2
  * na pasta mods e liga o namespace {@value #NAMESPACE}. Nenhum tipo do RS2 nas assinaturas: o que usa a API fica em
  * {@link Rs2TestSupport}.
  *
@@ -457,6 +458,116 @@ public final class Rs2DockGameTests {
                 .thenExecute(() -> {
                     assertSlot(helper, FURNACES[0], 2, Items.IRON_INGOT, 0);
                     helper.assertFalse(dock.side(NORTH).providerFull(), "o lado continuou cheio");
+                })
+                .thenSucceed();
+    }
+
+    /** {@code ores} minérios de ferro e carvões no armazenamento da rede. */
+    private static void stockOre(GameTestHelper helper, int ores) {
+        BlockPos autocrafter = helper.absolutePos(AUTOCRAFTER);
+        helper.assertTrue(Rs2TestSupport.stock(helper.getLevel(), autocrafter, Items.RAW_IRON, ores) == ores,
+                "o minério não coube");
+        helper.assertTrue(Rs2TestSupport.stock(helper.getLevel(), autocrafter, Items.COAL, ores) == ores,
+                "o carvão não coube");
+    }
+
+    private static void request(GameTestHelper helper, Item item, int count) {
+        String result = Rs2TestSupport.request(helper.getLevel(), helper.absolutePos(AUTOCRAFTER), item, count);
+        helper.assertTrue("TASK_CREATED".equals(result), "o pedido: " + result);
+    }
+
+    /**
+     * O resultado intermediário com o disco cheio: um pedido de 9 pepitas (padrão de bancada) precisa de um lingote do
+     * Alto-forno. Depois da entrega, o disco enche de pedregulho; o lingote sai do Alto-forno e vai para a tarefa (que
+     * o pega na inserção, sem disco), não para o armazenamento. A simulação do RS2 daria zero e o lado ficaria em
+     * "provedor cheio" para sempre. As pepitas, a raiz, ficam com a tarefa até abrir lugar; aí entram e ela termina.
+     */
+    @GameTest(template = "empty", timeoutTicks = 400)
+    public static void intermediateReachesTheTaskWithFullDisk(GameTestHelper helper) {
+        if (!enabled()) {
+            helper.succeed();
+            return;
+        }
+        PatternDockBlockEntity dock = network(helper, true);
+        BlockPos autocrafter = helper.absolutePos(AUTOCRAFTER);
+        helper.assertTrue(Rs2TestSupport.installPattern(helper.getLevel(), autocrafter,
+                Rs2TestSupport.craftingPattern(Items.IRON_INGOT), 1), "o padrão de bancada não entrou");
+        helper.startSequence()
+                .thenWaitUntil(() -> registered(dock))
+                .thenExecute(() -> linkBlastFurnaces(helper, dock, 1))
+                .thenWaitUntil(() -> stores(helper, true))
+                .thenWaitUntil(() -> helper.assertTrue(Rs2TestSupport.knows(helper.getLevel(), autocrafter,
+                        Items.IRON_NUGGET), "a rede não conhece o padrão de bancada"))
+                .thenExecute(() -> stockOre(helper, 1))
+                .thenIdle(1)
+                .thenExecute(() -> request(helper, Items.IRON_NUGGET, 9))
+                .thenWaitUntil(() -> helper.assertTrue(dock.machineAt(helper.absolutePos(FURNACES[0])).lastActive() > 0,
+                        "o Alto-forno não recebeu"))
+                .thenExecute(() -> {
+                    Rs2TestSupport.stock(helper.getLevel(), autocrafter, Items.COBBLESTONE, 2000);
+                    stores(helper, false);
+                })
+                .thenWaitUntil(() -> helper.assertTrue(dock.side(NORTH).returned() == 1,
+                        "devolvidos: " + dock.side(NORTH).returned()))
+                .thenExecute(() -> {
+                    assertSlot(helper, FURNACES[0], 2, Items.IRON_INGOT, 0);
+                    helper.assertTrue(stored(helper, Items.IRON_INGOT) == 0, "o lingote foi para o armazenamento");
+                    helper.assertFalse(dock.side(NORTH).providerFull(), "o lado marcou cheio");
+                    helper.assertTrue(Rs2TestSupport.take(helper.getLevel(), autocrafter, Items.COBBLESTONE, 64) == 64,
+                            "o pedregulho não saiu");
+                })
+                .thenWaitUntil(() -> helper.assertTrue(stored(helper, Items.IRON_NUGGET) == 9,
+                        "pepitas na rede: " + stored(helper, Items.IRON_NUGGET)))
+                .thenWaitUntil(() -> helper.assertTrue(Rs2TestSupport.tasks(helper.getLevel(), autocrafter) == 0,
+                        "a tarefa não terminou"))
+                .thenSucceed();
+    }
+
+    /**
+     * A trava "até receber todos os resultados" do Autocrafter com a volta direta: o resultado entra na rede pela Doca,
+     * o RS2 avisa o Autocrafter e ele destrava. Com a trava, um pedido de 2 lingotes vai uma execução por vez (nunca
+     * dois Altos-fornos com minério ao mesmo tempo), e termina: sem destravar, a segunda execução nunca sairia.
+     */
+    @GameTest(template = "empty", timeoutTicks = 400)
+    public static void lockUntilAllOutputsWithDirectReturn(GameTestHelper helper) {
+        if (!enabled()) {
+            helper.succeed();
+            return;
+        }
+        PatternDockBlockEntity dock = network(helper, true);
+        BlockPos autocrafter = helper.absolutePos(AUTOCRAFTER);
+        boolean[] sawLocked = new boolean[1];
+        helper.onEachTick(() -> {
+            if (Rs2TestSupport.locked(helper.getLevel(), autocrafter)) {
+                sawLocked[0] = true;
+            }
+            if (helper.getLevel().getBlockEntity(helper.absolutePos(FURNACES[0])) instanceof AbstractFurnaceBlockEntity first
+                    && helper.getLevel().getBlockEntity(helper.absolutePos(FURNACES[1]))
+                            instanceof AbstractFurnaceBlockEntity second
+                    && !first.getItem(0).isEmpty() && !second.getItem(0).isEmpty()) {
+                throw new GameTestAssertException("duas execuções ao mesmo tempo com a trava");
+            }
+        });
+        helper.startSequence()
+                .thenWaitUntil(() -> registered(dock))
+                .thenExecute(() -> {
+                    linkBlastFurnaces(helper, dock, 2);
+                    helper.assertTrue(Rs2TestSupport.lockUntilAllOutputs(helper.getLevel(), autocrafter),
+                            "não ligou a trava");
+                })
+                .thenWaitUntil(() -> stores(helper, true))
+                .thenWaitUntil(() -> helper.assertTrue(Rs2TestSupport.knows(helper.getLevel(), autocrafter,
+                        Items.IRON_INGOT), "a rede não conhece o padrão"))
+                .thenExecute(() -> stockOre(helper, 2))
+                .thenIdle(1)
+                .thenExecute(() -> request(helper, Items.IRON_INGOT, 2))
+                .thenWaitUntil(() -> helper.assertTrue(stored(helper, Items.IRON_INGOT) == 2,
+                        "lingotes na rede: " + stored(helper, Items.IRON_INGOT)))
+                .thenWaitUntil(() -> helper.assertTrue(Rs2TestSupport.tasks(helper.getLevel(), autocrafter) == 0,
+                        "a tarefa não terminou"))
+                .thenExecute(() -> {
+                    helper.assertTrue(sawLocked[0], "o Autocrafter nunca travou");
+                    helper.assertTrue(dock.side(NORTH).returned() == 2, "devolvidos: " + dock.side(NORTH).returned());
                 })
                 .thenSucceed();
     }

@@ -77,6 +77,9 @@ A Doca **não gasta energia nem combustível**. Ela só leva os pedidos.
   A linha do lado avisa ("Tire a trava do provedor").
 - **Mais padrões no RS2:** encadeie **Autocrafters** (um virado para o outro, o último virado para a Doca). Os padrões
   de todos chegam ao mesmo lado.
+- **As travas do Autocrafter:** "até receber todos os resultados" funciona com a Doca. "Até a máquina esvaziar" conta
+  o lado inteiro como uma máquina, que só fica vazia 15 s depois do último movimento: um lote por vez no lado, com
+  esse intervalo entre eles. Para usar várias máquinas ao mesmo tempo, deixe sem trava.
 - **Padrões de bancada** (bancada, cortador de pedra, forja) são do Molecular Assembler. A Doca os recusa.
 - **Outro tipo de máquina?** Use **outro lado**. Um lado só cuida de um tipo, e a Doca tem seis lados.
 - **Se a Doca errar as faces** de uma máquina, use o [Configurador](configurator.md) numa máquina do lado, com o gesto
@@ -169,6 +172,9 @@ The Dock **spends no energy and no fuel**. It only carries the orders.
   The side's row warns you ("Remove the provider lock").
 - **More patterns on RS2:** chain **Autocrafters** (one facing the other, the last one facing the Dock). The patterns
   of all of them reach the same side.
+- **The Autocrafter locks:** "lock until all outputs are received" works with the Dock. "Lock until the connected
+  machine is empty" treats the whole side as one machine, which only counts as empty 15 s after its last move: one
+  batch at a time on the side, with that gap between them. To use several machines at once, leave it unlocked.
 - **Crafting patterns** (crafting table, stonecutter, smithing) belong to the Molecular Assembler. The Dock refuses
   them.
 - **Another kind of machine?** Use **another side**. A side handles one kind, and the Dock has six sides.

@@ -14,17 +14,20 @@ item_ids:
 
 <ItemImage id="wirelessautomate:pattern_dock" scale="2" float="left" />
 
-Leva os pedidos de um **Pattern Provider** do AE2 até as máquinas que fazem a receita. Cada **lado** da Doca cuida de
-**um tipo de máquina**. Precisa do **AE2** para receber pedidos.
+Leva os pedidos de um **Pattern Provider** do AE2 ou de um **Autocrafter** do Refined Storage 2 até as máquinas que
+fazem a receita. Cada **lado** da Doca cuida de **um tipo de máquina**. Precisa do **AE2** ou do **RS2** para receber
+pedidos.
 
 <br clear="all" />
 
 ## Como usar
 
-1. Coloque a Doca e encoste um **Pattern Provider** do AE2 num lado dela.
+1. Coloque a Doca e encoste um **Pattern Provider** do AE2 (ou um **Autocrafter** do RS2, virado para ela) num lado
+   dela.
 2. Com o [Vinculador](linker.md), clique **nesse lado** da Doca. Depois dê **Ctrl + clique** numa máquina: as iguais
    que estão por perto entram naquele lado. Um clique simples vincula só uma máquina; numa já vinculada, desvincula.
-3. Ponha no provedor **os padrões dessas máquinas**. Pronto: a CPU de crafting do AE2 já pode pedir.
+3. Ponha no provedor **os padrões dessas máquinas**. Pronto: a CPU de crafting do AE2 (ou a rede do RS2) já pode
+   pedir.
 
 Quando você vincula a primeira máquina de um lado, a Doca descobre sozinha em que face entram os ingredientes e de qual
 sai o resultado. A action bar mostra o que ela achou.
@@ -33,7 +36,8 @@ sai o resultado. A action bar mostra o que ela achou.
 
 - Entrega **cada pedido inteiro** a uma máquina livre do lado.
 - As máquinas **se revezam**: o próximo pedido vai para a seguinte.
-- O resultado **volta ao provedor**, e o provedor manda para a rede.
+- O resultado vai **direto para a rede** do provedor (a ME do AE2 ou a do RS2), sem passar pelo inventário dele, e o
+  pedido o conta ali.
 - Quando **todas as máquinas estão cheias**, o pedido espera. **Nada se perde**: se você quebrar a Doca com um resto
   de pedido esperando, ele vai junto no item ("Pedido pendente") e volta ao mesmo lado quando você a recoloca.
 
@@ -47,8 +51,14 @@ A Doca **não gasta energia nem combustível**. Ela só leva os pedidos.
 
 ## Dicas
 
-- **Não multiplique os padrões.** Cada pedido vai inteiro para uma máquina, então um padrão grande ocupa uma só. Para
-  mais máquinas trabalharem juntas, ponha **coprocessadores** na CPU de crafting.
+- **Multiplique os padrões até um lote que a máquina faz num tempo bom** (×8, ×64). Cada empurrão da CPU vai inteiro
+  para uma máquina e a enche: com o padrão de 1 minério, cada máquina recebe um de cada vez; com o de 64, recebe um
+  lote que a mantém ocupada. **Mais coprocessadores** na CPU continuam ajudando: são mais empurrões por vez, e mais
+  máquinas trabalhando juntas. Um pedido pequeno ocupa poucas máquinas.
+- **Não use a trava "até o resultado"** do Pattern Provider: o resultado não passa por ele, então a trava nunca solta.
+  A linha do lado avisa ("Tire a trava do provedor").
+- **Mais padrões no RS2:** encadeie **Autocrafters** (um virado para o outro, o último virado para a Doca). Os padrões
+  de todos chegam ao mesmo lado.
 - **Padrões de bancada** (bancada, cortador de pedra, forja) são do Molecular Assembler. A Doca os recusa.
 - **Outro tipo de máquina?** Use **outro lado**. Um lado só cuida de um tipo, e a Doca tem seis lados.
 - **Se a Doca errar as faces** de uma máquina, use o [Configurador](configurator.md) numa máquina do lado, com o gesto
@@ -82,9 +92,10 @@ e o estado:
 | --- | --- |
 | Sem provedor neste lado | Há máquinas, mas nada encostado. Encoste um provedor |
 | Nenhuma máquina vinculada | Há provedor, mas nenhuma máquina. Vincule com o Vinculador |
+| Tire a trava do provedor | O provedor está em "travar até o resultado", que nunca solta com a Doca |
 | Padrão de bancada recusado | O último pedido era de bancada, cortador ou forja |
 | Pedido com item e fluido recusado | O último pedido misturava itens e fluidos |
-| Provedor cheio | O resultado espera o provedor mandar o que já recebeu |
+| Provedor cheio | O resultado espera lugar: a rede cheia, sem energia ou sem canal |
 | Todas cheias | Nenhuma máquina aceitou o último pedido; ele espera |
 | Pedido pendente | A máquina ainda não recebeu o resto do último pedido; o lado espera por ele |
 | Trabalhando | Uma máquina recebeu um pedido ou devolveu um resultado há pouco |
@@ -99,4 +110,4 @@ Ao lado do estado a tela avisa quantas máquinas estão **fora do alcance** ou *
 - **Pedidos só de itens ou só de fluidos**, nesta versão. Um pedido com os dois é recusado.
 - **Mesma dimensão** e dentro do raio do tier.
 - Uma máquina pertence a **um lado de uma Doca só**.
-- A Doca precisa do **AE2** para receber pedidos.
+- A Doca precisa do **AE2** ou do **RS2** para receber pedidos.

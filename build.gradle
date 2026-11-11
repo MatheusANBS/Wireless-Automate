@@ -164,8 +164,8 @@ tasks.named('test', Test).configure {
 }
 
 // --- Benchmark (docs/benchmark.md) ---
-// Sophisticated Storage (o banco de testes da especificação), o Spark e o AE2 (com o GuideME), pelo Modrinth e
-// pelo CurseMaven, copiados para run/bench/mods só para o run benchServer. Rode com ./scripts/bench.sh. O cliente de
+// Sophisticated Storage (o banco de testes da especificação) e o Spark, pelo Maven do Modrinth, e o AE2 (com o
+// GuideME) só nas rodadas com doca-ae2, copiados para run/bench/mods só para o run benchServer. Rode com ./scripts/bench.sh. O cliente de
 // dev (runClient, também o do e2e) carrega os mods de configurations.clientMods (abaixo), copiados para
 // run/mods, junto com o JEI; os GameTests não carregam nenhum deles.
 repositories {
@@ -182,6 +182,10 @@ repositories {
 
 configurations {
     benchMods {
+        canBeConsumed = false
+        transitive = false
+    }
+    benchAe2Mods {
         canBeConsumed = false
         transitive = false
     }
@@ -215,9 +219,10 @@ dependencies {
     benchMods 'maven.modrinth:sophisticated-storage:1.21.1-1.6.2.2159'
     benchMods 'maven.modrinth:sophisticated-core:1.21.1-1.5.7.2381'
     benchMods 'maven.modrinth:spark:1.10.124-neoforge-1.21.1'
-    // AE2 e GuideME (o mesmo do ae2TestMods): o cenário doca-ae2, com o Pattern Provider e a CPU de verdade.
-    benchMods "curse.maven:applied-energistics-2-223794:${ae2_file}"
-    benchMods 'maven.modrinth:guideme:21.1.19'
+    // AE2 e GuideME (o mesmo do ae2TestMods): o cenário doca-ae2, com o Pattern Provider e a CPU de verdade. Só vão
+    // para run/bench/mods com -PbenchAe2, que o scripts/bench.sh passa quando a lista de tarefas tem doca-ae2.
+    benchAe2Mods "curse.maven:applied-energistics-2-223794:${ae2_file}"
+    benchAe2Mods 'maven.modrinth:guideme:21.1.19'
     clientMods 'maven.modrinth:sophisticated-storage:1.21.1-1.6.2.2159'
     clientMods 'maven.modrinth:sophisticated-core:1.21.1-1.5.7.2381'
     // Observable (perfil de lag por bloco e entidade, desenhado no mundo) e as dependências dele.
@@ -286,6 +291,11 @@ dependencies {
 // classpath do source set ou na pasta mods.
 var prepareBenchMods = tasks.register('prepareBenchMods', Sync) {
     from configurations.benchMods
+    // Sem a propriedade, o Sync tira os jars do AE2 que sobraram de uma rodada com doca-ae2: as outras rodadas medem
+    // o servidor de sempre, comparável com as antigas.
+    if (project.hasProperty('benchAe2')) {
+        from configurations.benchAe2Mods
+    }
     into layout.projectDirectory.dir('run/bench/mods')
     // O jar do Logistics Network (benchmark comparativo, All Rights Reserved): o scripts/bench.sh põe e
     // tira, só na máquina local. Nunca vira dependência do build.

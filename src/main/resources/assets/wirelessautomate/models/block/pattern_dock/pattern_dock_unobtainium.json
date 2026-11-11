@@ -1,6 +1,7 @@
 {
-  "parent": "minecraft:block/cube_all",
+  "parent": "wirelessautomate:block/pattern_dock/pattern_dock",
   "textures": {
-    "all": "wirelessautomate:block/topo_unobtainium"
+    "dock": "wirelessautomate:block/pattern_dock/unobtainium",
+    "particle": "wirelessautomate:block/pattern_dock/unobtainium"
   }
 }

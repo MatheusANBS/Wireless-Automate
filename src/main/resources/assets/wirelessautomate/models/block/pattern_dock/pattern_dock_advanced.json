@@ -1,6 +1,7 @@
 {
-  "parent": "minecraft:block/cube_all",
+  "parent": "wirelessautomate:block/pattern_dock/pattern_dock",
   "textures": {
-    "all": "wirelessautomate:block/topo_advanced"
+    "dock": "wirelessautomate:block/pattern_dock/advanced",
+    "particle": "wirelessautomate:block/pattern_dock/advanced"
   }
 }

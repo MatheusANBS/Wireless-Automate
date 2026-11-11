@@ -1,0 +1,9997 @@
+{
+  "parent": "minecraft:block/block",
+  "render_type": "minecraft:solid",
+  "ambientocclusion": false,
+  "textures": {
+    "dock": "wirelessautomate:block/pattern_dock/basic",
+    "particle": "wirelessautomate:block/pattern_dock/basic"
+  },
+  "elements": [
+    {
+      "name": "viga_v",
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        2,
+        16,
+        2
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            0,
+            0,
+            0.5,
+            4
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            0.5,
+            4
+          ],
+          "texture": "#dock",
+          "cullface": "west"
+        },
+        "up": {
+          "uv": [
+            8,
+            4,
+            8.5,
+            4.5
+          ],
+          "texture": "#dock",
+          "cullface": "up"
+        },
+        "down": {
+          "uv": [
+            8,
+            4,
+            8.5,
+            4.5
+          ],
+          "texture": "#dock",
+          "cullface": "down"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            0.5,
+            4
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            0,
+            0,
+            0.5,
+            4
+          ],
+          "texture": "#dock",
+          "cullface": "north"
+        }
+      }
+    },
+    {
+      "name": "viga_v",
+      "from": [
+        0,
+        0,
+        14
+      ],
+      "to": [
+        2,
+        16,
+        16
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            3.5,
+            0,
+            4,
+            4
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            3.5,
+            0,
+            4,
+            4
+          ],
+          "texture": "#dock",
+          "cullface": "west"
+        },
+        "up": {
+          "uv": [
+            8,
+            7.5,
+            8.5,
+            8
+          ],
+          "texture": "#dock",
+          "cullface": "up"
+        },
+        "down": {
+          "uv": [
+            8,
+            7.5,
+            8.5,
+            8
+          ],
+          "texture": "#dock",
+          "cullface": "down"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            0.5,
+            4
+          ],
+          "texture": "#dock",
+          "cullface": "south"
+        },
+        "north": {
+          "uv": [
+            0,
+            0,
+            0.5,
+            4
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "viga_v",
+      "from": [
+        14,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        16,
+        2
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            0,
+            0,
+            0.5,
+            4
+          ],
+          "texture": "#dock",
+          "cullface": "east"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            0.5,
+            4
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            11.5,
+            4,
+            12,
+            4.5
+          ],
+          "texture": "#dock",
+          "cullface": "up"
+        },
+        "down": {
+          "uv": [
+            11.5,
+            4,
+            12,
+            4.5
+          ],
+          "texture": "#dock",
+          "cullface": "down"
+        },
+        "south": {
+          "uv": [
+            3.5,
+            0,
+            4,
+            4
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            3.5,
+            0,
+            4,
+            4
+          ],
+          "texture": "#dock",
+          "cullface": "north"
+        }
+      }
+    },
+    {
+      "name": "viga_v",
+      "from": [
+        14,
+        0,
+        14
+      ],
+      "to": [
+        16,
+        16,
+        16
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            3.5,
+            0,
+            4,
+            4
+          ],
+          "texture": "#dock",
+          "cullface": "east"
+        },
+        "west": {
+          "uv": [
+            3.5,
+            0,
+            4,
+            4
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            11.5,
+            7.5,
+            12,
+            8
+          ],
+          "texture": "#dock",
+          "cullface": "up"
+        },
+        "down": {
+          "uv": [
+            11.5,
+            7.5,
+            12,
+            8
+          ],
+          "texture": "#dock",
+          "cullface": "down"
+        },
+        "south": {
+          "uv": [
+            3.5,
+            0,
+            4,
+            4
+          ],
+          "texture": "#dock",
+          "cullface": "south"
+        },
+        "north": {
+          "uv": [
+            3.5,
+            0,
+            4,
+            4
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "viga_x",
+      "from": [
+        2,
+        0,
+        0
+      ],
+      "to": [
+        14,
+        2,
+        2
+      ],
+      "faces": {
+        "up": {
+          "uv": [
+            8.5,
+            4,
+            11.5,
+            4.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            8.5,
+            4,
+            11.5,
+            4.5
+          ],
+          "texture": "#dock",
+          "cullface": "down"
+        },
+        "south": {
+          "uv": [
+            8.5,
+            7.5,
+            11.5,
+            8
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            7.5,
+            11.5,
+            8
+          ],
+          "texture": "#dock",
+          "cullface": "north"
+        }
+      }
+    },
+    {
+      "name": "viga_x",
+      "from": [
+        2,
+        0,
+        14
+      ],
+      "to": [
+        14,
+        2,
+        16
+      ],
+      "faces": {
+        "up": {
+          "uv": [
+            8.5,
+            7.5,
+            11.5,
+            8
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            8.5,
+            7.5,
+            11.5,
+            8
+          ],
+          "texture": "#dock",
+          "cullface": "down"
+        },
+        "south": {
+          "uv": [
+            8.5,
+            7.5,
+            11.5,
+            8
+          ],
+          "texture": "#dock",
+          "cullface": "south"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            7.5,
+            11.5,
+            8
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "viga_x",
+      "from": [
+        2,
+        14,
+        0
+      ],
+      "to": [
+        14,
+        16,
+        2
+      ],
+      "faces": {
+        "up": {
+          "uv": [
+            8.5,
+            4,
+            11.5,
+            4.5
+          ],
+          "texture": "#dock",
+          "cullface": "up"
+        },
+        "down": {
+          "uv": [
+            8.5,
+            4,
+            11.5,
+            4.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0,
+            3.5,
+            0.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0,
+            3.5,
+            0.5
+          ],
+          "texture": "#dock",
+          "cullface": "north"
+        }
+      }
+    },
+    {
+      "name": "viga_x",
+      "from": [
+        2,
+        14,
+        14
+      ],
+      "to": [
+        14,
+        16,
+        16
+      ],
+      "faces": {
+        "up": {
+          "uv": [
+            8.5,
+            7.5,
+            11.5,
+            8
+          ],
+          "texture": "#dock",
+          "cullface": "up"
+        },
+        "down": {
+          "uv": [
+            8.5,
+            7.5,
+            11.5,
+            8
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0,
+            3.5,
+            0.5
+          ],
+          "texture": "#dock",
+          "cullface": "south"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0,
+            3.5,
+            0.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "viga_z",
+      "from": [
+        0,
+        0,
+        2
+      ],
+      "to": [
+        2,
+        2,
+        14
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            8.5,
+            7.5,
+            11.5,
+            8
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            8.5,
+            7.5,
+            11.5,
+            8
+          ],
+          "texture": "#dock",
+          "cullface": "west"
+        },
+        "up": {
+          "uv": [
+            8,
+            4.5,
+            8.5,
+            7.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            8,
+            4.5,
+            8.5,
+            7.5
+          ],
+          "texture": "#dock",
+          "cullface": "down"
+        }
+      }
+    },
+    {
+      "name": "viga_z",
+      "from": [
+        14,
+        0,
+        2
+      ],
+      "to": [
+        16,
+        2,
+        14
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            8.5,
+            7.5,
+            11.5,
+            8
+          ],
+          "texture": "#dock",
+          "cullface": "east"
+        },
+        "west": {
+          "uv": [
+            8.5,
+            7.5,
+            11.5,
+            8
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            11.5,
+            4.5,
+            12,
+            7.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            11.5,
+            4.5,
+            12,
+            7.5
+          ],
+          "texture": "#dock",
+          "cullface": "down"
+        }
+      }
+    },
+    {
+      "name": "viga_z",
+      "from": [
+        0,
+        14,
+        2
+      ],
+      "to": [
+        2,
+        16,
+        14
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            0.5,
+            0,
+            3.5,
+            0.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0,
+            3.5,
+            0.5
+          ],
+          "texture": "#dock",
+          "cullface": "west"
+        },
+        "up": {
+          "uv": [
+            8,
+            4.5,
+            8.5,
+            7.5
+          ],
+          "texture": "#dock",
+          "cullface": "up"
+        },
+        "down": {
+          "uv": [
+            8,
+            4.5,
+            8.5,
+            7.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "viga_z",
+      "from": [
+        14,
+        14,
+        2
+      ],
+      "to": [
+        16,
+        16,
+        14
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            0.5,
+            0,
+            3.5,
+            0.5
+          ],
+          "texture": "#dock",
+          "cullface": "east"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0,
+            3.5,
+            0.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            11.5,
+            4.5,
+            12,
+            7.5
+          ],
+          "texture": "#dock",
+          "cullface": "up"
+        },
+        "down": {
+          "uv": [
+            11.5,
+            4.5,
+            12,
+            7.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_north_0",
+      "from": [
+        2,
+        11,
+        0.6
+      ],
+      "to": [
+        14,
+        14,
+        1.6
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            8.5,
+            11.5,
+            9.25
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "painel_north_1",
+      "from": [
+        2,
+        2,
+        0.6
+      ],
+      "to": [
+        14,
+        5,
+        1.6
+      ],
+      "faces": {
+        "up": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            10.75,
+            11.5,
+            11.5
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "painel_north_2",
+      "from": [
+        2,
+        5,
+        0.6
+      ],
+      "to": [
+        5,
+        11,
+        1.6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            9.25,
+            9.25,
+            10.75
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "painel_north_3",
+      "from": [
+        11,
+        5,
+        0.6
+      ],
+      "to": [
+        14,
+        11,
+        1.6
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            10.75,
+            9.25,
+            11.5,
+            10.75
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "painel_north_4",
+      "from": [
+        5,
+        10,
+        0.6
+      ],
+      "to": [
+        6,
+        11,
+        1.6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            9.25,
+            9.25,
+            9.5,
+            9.5
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "painel_north_5",
+      "from": [
+        10,
+        10,
+        0.6
+      ],
+      "to": [
+        11,
+        11,
+        1.6
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            10.5,
+            9.25,
+            10.75,
+            9.5
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "painel_north_6",
+      "from": [
+        5,
+        5,
+        0.6
+      ],
+      "to": [
+        6,
+        6,
+        1.6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            9.25,
+            10.5,
+            9.5,
+            10.75
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "painel_north_7",
+      "from": [
+        10,
+        5,
+        0.6
+      ],
+      "to": [
+        11,
+        6,
+        1.6
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            10.5,
+            10.5,
+            10.75,
+            10.75
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "moldura_north_0",
+      "from": [
+        5,
+        11,
+        0.15
+      ],
+      "to": [
+        11,
+        11.5,
+        0.6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "moldura_north_1",
+      "from": [
+        5,
+        4.5,
+        0.15
+      ],
+      "to": [
+        11,
+        5,
+        0.6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "moldura_north_2",
+      "from": [
+        4.5,
+        5,
+        0.15
+      ],
+      "to": [
+        5,
+        11,
+        0.6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "moldura_north_3",
+      "from": [
+        11,
+        5,
+        0.15
+      ],
+      "to": [
+        11.5,
+        11,
+        0.6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "parafuso_north_0",
+      "from": [
+        4.4,
+        11,
+        0.3
+      ],
+      "to": [
+        5,
+        11.6,
+        0.6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "parafuso_north_1",
+      "from": [
+        11,
+        11,
+        0.3
+      ],
+      "to": [
+        11.6,
+        11.6,
+        0.6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "parafuso_north_2",
+      "from": [
+        4.4,
+        4.4,
+        0.3
+      ],
+      "to": [
+        5,
+        5,
+        0.6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "parafuso_north_3",
+      "from": [
+        11,
+        4.4,
+        0.3
+      ],
+      "to": [
+        11.6,
+        5,
+        0.6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "garra_north_0",
+      "from": [
+        7,
+        12.4,
+        0.2
+      ],
+      "to": [
+        9,
+        13.4,
+        0.6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            12,
+            0,
+            12.5,
+            0.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "garra_north_1",
+      "from": [
+        7,
+        2.6,
+        0.2
+      ],
+      "to": [
+        9,
+        3.6,
+        0.6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "garra_north_2",
+      "from": [
+        2.6,
+        7,
+        0.2
+      ],
+      "to": [
+        3.6,
+        9,
+        0.6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "garra_north_3",
+      "from": [
+        12.4,
+        7,
+        0.2
+      ],
+      "to": [
+        13.4,
+        9,
+        0.6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_south_0",
+      "from": [
+        2,
+        11,
+        14.4
+      ],
+      "to": [
+        14,
+        14,
+        15.4
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            8.5,
+            8.5,
+            11.5,
+            9.25
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_south_1",
+      "from": [
+        2,
+        2,
+        14.4
+      ],
+      "to": [
+        14,
+        5,
+        15.4
+      ],
+      "faces": {
+        "up": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            8.5,
+            10.75,
+            11.5,
+            11.5
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_south_2",
+      "from": [
+        2,
+        5,
+        14.4
+      ],
+      "to": [
+        5,
+        11,
+        15.4
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            8.5,
+            9.25,
+            9.25,
+            10.75
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_south_3",
+      "from": [
+        11,
+        5,
+        14.4
+      ],
+      "to": [
+        14,
+        11,
+        15.4
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10.75,
+            9.25,
+            11.5,
+            10.75
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_south_4",
+      "from": [
+        5,
+        10,
+        14.4
+      ],
+      "to": [
+        6,
+        11,
+        15.4
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            9.25,
+            9.25,
+            9.5,
+            9.5
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_south_5",
+      "from": [
+        10,
+        10,
+        14.4
+      ],
+      "to": [
+        11,
+        11,
+        15.4
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10.5,
+            9.25,
+            10.75,
+            9.5
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_south_6",
+      "from": [
+        5,
+        5,
+        14.4
+      ],
+      "to": [
+        6,
+        6,
+        15.4
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            9.25,
+            10.5,
+            9.5,
+            10.75
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_south_7",
+      "from": [
+        10,
+        5,
+        14.4
+      ],
+      "to": [
+        11,
+        6,
+        15.4
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10.5,
+            10.5,
+            10.75,
+            10.75
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "moldura_south_0",
+      "from": [
+        5,
+        11,
+        15.4
+      ],
+      "to": [
+        11,
+        11.5,
+        15.85
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "moldura_south_1",
+      "from": [
+        5,
+        4.5,
+        15.4
+      ],
+      "to": [
+        11,
+        5,
+        15.85
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "moldura_south_2",
+      "from": [
+        4.5,
+        5,
+        15.4
+      ],
+      "to": [
+        5,
+        11,
+        15.85
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "moldura_south_3",
+      "from": [
+        11,
+        5,
+        15.4
+      ],
+      "to": [
+        11.5,
+        11,
+        15.85
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "parafuso_south_0",
+      "from": [
+        4.4,
+        11,
+        15.4
+      ],
+      "to": [
+        5,
+        11.6,
+        15.7
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "parafuso_south_1",
+      "from": [
+        11,
+        11,
+        15.4
+      ],
+      "to": [
+        11.6,
+        11.6,
+        15.7
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "parafuso_south_2",
+      "from": [
+        4.4,
+        4.4,
+        15.4
+      ],
+      "to": [
+        5,
+        5,
+        15.7
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "parafuso_south_3",
+      "from": [
+        11,
+        4.4,
+        15.4
+      ],
+      "to": [
+        11.6,
+        5,
+        15.7
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "garra_south_0",
+      "from": [
+        7,
+        12.4,
+        15.4
+      ],
+      "to": [
+        9,
+        13.4,
+        15.8
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            13,
+            0,
+            13.5,
+            0.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "garra_south_1",
+      "from": [
+        7,
+        2.6,
+        15.4
+      ],
+      "to": [
+        9,
+        3.6,
+        15.8
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "garra_south_2",
+      "from": [
+        2.6,
+        7,
+        15.4
+      ],
+      "to": [
+        3.6,
+        9,
+        15.8
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "garra_south_3",
+      "from": [
+        12.4,
+        7,
+        15.4
+      ],
+      "to": [
+        13.4,
+        9,
+        15.8
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_east_0",
+      "from": [
+        14.4,
+        11,
+        2
+      ],
+      "to": [
+        15.4,
+        14,
+        14
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            8.5,
+            8.5,
+            11.5,
+            9.25
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_east_1",
+      "from": [
+        14.4,
+        2,
+        2
+      ],
+      "to": [
+        15.4,
+        5,
+        14
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            8.5,
+            10.75,
+            11.5,
+            11.5
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_east_2",
+      "from": [
+        14.4,
+        5,
+        2
+      ],
+      "to": [
+        15.4,
+        11,
+        5
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            8.5,
+            9.25,
+            9.25,
+            10.75
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_east_3",
+      "from": [
+        14.4,
+        5,
+        11
+      ],
+      "to": [
+        15.4,
+        11,
+        14
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10.75,
+            9.25,
+            11.5,
+            10.75
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_east_4",
+      "from": [
+        14.4,
+        10,
+        5
+      ],
+      "to": [
+        15.4,
+        11,
+        6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            9.25,
+            9.25,
+            9.5,
+            9.5
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_east_5",
+      "from": [
+        14.4,
+        10,
+        10
+      ],
+      "to": [
+        15.4,
+        11,
+        11
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10.5,
+            9.25,
+            10.75,
+            9.5
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_east_6",
+      "from": [
+        14.4,
+        5,
+        5
+      ],
+      "to": [
+        15.4,
+        6,
+        6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            9.25,
+            10.5,
+            9.5,
+            10.75
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_east_7",
+      "from": [
+        14.4,
+        5,
+        10
+      ],
+      "to": [
+        15.4,
+        6,
+        11
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10.5,
+            10.5,
+            10.75,
+            10.75
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "moldura_east_0",
+      "from": [
+        15.4,
+        11,
+        5
+      ],
+      "to": [
+        15.85,
+        11.5,
+        11
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "moldura_east_1",
+      "from": [
+        15.4,
+        4.5,
+        5
+      ],
+      "to": [
+        15.85,
+        5,
+        11
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "moldura_east_2",
+      "from": [
+        15.4,
+        5,
+        4.5
+      ],
+      "to": [
+        15.85,
+        11,
+        5
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "moldura_east_3",
+      "from": [
+        15.4,
+        5,
+        11
+      ],
+      "to": [
+        15.85,
+        11,
+        11.5
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "parafuso_east_0",
+      "from": [
+        15.4,
+        11,
+        4.4
+      ],
+      "to": [
+        15.7,
+        11.6,
+        5
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "parafuso_east_1",
+      "from": [
+        15.4,
+        11,
+        11
+      ],
+      "to": [
+        15.7,
+        11.6,
+        11.6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "parafuso_east_2",
+      "from": [
+        15.4,
+        4.4,
+        4.4
+      ],
+      "to": [
+        15.7,
+        5,
+        5
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "parafuso_east_3",
+      "from": [
+        15.4,
+        4.4,
+        11
+      ],
+      "to": [
+        15.7,
+        5,
+        11.6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "garra_east_0",
+      "from": [
+        15.4,
+        12.4,
+        7
+      ],
+      "to": [
+        15.8,
+        13.4,
+        9
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            14,
+            0,
+            14.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "garra_east_1",
+      "from": [
+        15.4,
+        2.6,
+        7
+      ],
+      "to": [
+        15.8,
+        3.6,
+        9
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "garra_east_2",
+      "from": [
+        15.4,
+        7,
+        2.6
+      ],
+      "to": [
+        15.8,
+        9,
+        3.6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "garra_east_3",
+      "from": [
+        15.4,
+        7,
+        12.4
+      ],
+      "to": [
+        15.8,
+        9,
+        13.4
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_west_0",
+      "from": [
+        0.6,
+        11,
+        2
+      ],
+      "to": [
+        1.6,
+        14,
+        14
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            8.5,
+            8.5,
+            11.5,
+            9.25
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_west_1",
+      "from": [
+        0.6,
+        2,
+        2
+      ],
+      "to": [
+        1.6,
+        5,
+        14
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            8.5,
+            10.75,
+            11.5,
+            11.5
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_west_2",
+      "from": [
+        0.6,
+        5,
+        2
+      ],
+      "to": [
+        1.6,
+        11,
+        5
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            8.5,
+            9.25,
+            9.25,
+            10.75
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_west_3",
+      "from": [
+        0.6,
+        5,
+        11
+      ],
+      "to": [
+        1.6,
+        11,
+        14
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            10.75,
+            9.25,
+            11.5,
+            10.75
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_west_4",
+      "from": [
+        0.6,
+        10,
+        5
+      ],
+      "to": [
+        1.6,
+        11,
+        6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            9.25,
+            9.25,
+            9.5,
+            9.5
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_west_5",
+      "from": [
+        0.6,
+        10,
+        10
+      ],
+      "to": [
+        1.6,
+        11,
+        11
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            10.5,
+            9.25,
+            10.75,
+            9.5
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_west_6",
+      "from": [
+        0.6,
+        5,
+        5
+      ],
+      "to": [
+        1.6,
+        6,
+        6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            9.25,
+            10.5,
+            9.5,
+            10.75
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_west_7",
+      "from": [
+        0.6,
+        5,
+        10
+      ],
+      "to": [
+        1.6,
+        6,
+        11
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            10.5,
+            10.5,
+            10.75,
+            10.75
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "moldura_west_0",
+      "from": [
+        0.15,
+        11,
+        5
+      ],
+      "to": [
+        0.6,
+        11.5,
+        11
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "moldura_west_1",
+      "from": [
+        0.15,
+        4.5,
+        5
+      ],
+      "to": [
+        0.6,
+        5,
+        11
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "moldura_west_2",
+      "from": [
+        0.15,
+        5,
+        4.5
+      ],
+      "to": [
+        0.6,
+        11,
+        5
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "moldura_west_3",
+      "from": [
+        0.15,
+        5,
+        11
+      ],
+      "to": [
+        0.6,
+        11,
+        11.5
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "parafuso_west_0",
+      "from": [
+        0.3,
+        11,
+        4.4
+      ],
+      "to": [
+        0.6,
+        11.6,
+        5
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "parafuso_west_1",
+      "from": [
+        0.3,
+        11,
+        11
+      ],
+      "to": [
+        0.6,
+        11.6,
+        11.6
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "parafuso_west_2",
+      "from": [
+        0.3,
+        4.4,
+        4.4
+      ],
+      "to": [
+        0.6,
+        5,
+        5
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "parafuso_west_3",
+      "from": [
+        0.3,
+        4.4,
+        11
+      ],
+      "to": [
+        0.6,
+        5,
+        11.6
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "garra_west_0",
+      "from": [
+        0.2,
+        12.4,
+        7
+      ],
+      "to": [
+        0.6,
+        13.4,
+        9
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            12,
+            1,
+            12.5,
+            1.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "garra_west_1",
+      "from": [
+        0.2,
+        2.6,
+        7
+      ],
+      "to": [
+        0.6,
+        3.6,
+        9
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "garra_west_2",
+      "from": [
+        0.2,
+        7,
+        2.6
+      ],
+      "to": [
+        0.6,
+        9,
+        3.6
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "garra_west_3",
+      "from": [
+        0.2,
+        7,
+        12.4
+      ],
+      "to": [
+        0.6,
+        9,
+        13.4
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_up_0",
+      "from": [
+        2,
+        14.4,
+        11
+      ],
+      "to": [
+        14,
+        15.4,
+        14
+      ],
+      "faces": {
+        "up": {
+          "uv": [
+            8.5,
+            10.75,
+            11.5,
+            11.5
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_up_1",
+      "from": [
+        2,
+        14.4,
+        2
+      ],
+      "to": [
+        14,
+        15.4,
+        5
+      ],
+      "faces": {
+        "up": {
+          "uv": [
+            8.5,
+            8.5,
+            11.5,
+            9.25
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_up_2",
+      "from": [
+        2,
+        14.4,
+        5
+      ],
+      "to": [
+        5,
+        15.4,
+        11
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            8.5,
+            9.25,
+            9.25,
+            10.75
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_up_3",
+      "from": [
+        11,
+        14.4,
+        5
+      ],
+      "to": [
+        14,
+        15.4,
+        11
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10.75,
+            9.25,
+            11.5,
+            10.75
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_up_4",
+      "from": [
+        5,
+        14.4,
+        10
+      ],
+      "to": [
+        6,
+        15.4,
+        11
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            9.25,
+            10.5,
+            9.5,
+            10.75
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_up_5",
+      "from": [
+        10,
+        14.4,
+        10
+      ],
+      "to": [
+        11,
+        15.4,
+        11
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10.5,
+            10.5,
+            10.75,
+            10.75
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_up_6",
+      "from": [
+        5,
+        14.4,
+        5
+      ],
+      "to": [
+        6,
+        15.4,
+        6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            9.25,
+            9.25,
+            9.5,
+            9.5
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_up_7",
+      "from": [
+        10,
+        14.4,
+        5
+      ],
+      "to": [
+        11,
+        15.4,
+        6
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10.5,
+            9.25,
+            10.75,
+            9.5
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "moldura_up_0",
+      "from": [
+        5,
+        15.4,
+        11
+      ],
+      "to": [
+        11,
+        15.85,
+        11.5
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "moldura_up_1",
+      "from": [
+        5,
+        15.4,
+        4.5
+      ],
+      "to": [
+        11,
+        15.85,
+        5
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "moldura_up_2",
+      "from": [
+        4.5,
+        15.4,
+        5
+      ],
+      "to": [
+        5,
+        15.85,
+        11
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "moldura_up_3",
+      "from": [
+        11,
+        15.4,
+        5
+      ],
+      "to": [
+        11.5,
+        15.85,
+        11
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "parafuso_up_0",
+      "from": [
+        4.4,
+        15.4,
+        11
+      ],
+      "to": [
+        5,
+        15.7,
+        11.6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "parafuso_up_1",
+      "from": [
+        11,
+        15.4,
+        11
+      ],
+      "to": [
+        11.6,
+        15.7,
+        11.6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "parafuso_up_2",
+      "from": [
+        4.4,
+        15.4,
+        4.4
+      ],
+      "to": [
+        5,
+        15.7,
+        5
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "parafuso_up_3",
+      "from": [
+        11,
+        15.4,
+        4.4
+      ],
+      "to": [
+        11.6,
+        15.7,
+        5
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "garra_up_0",
+      "from": [
+        7,
+        15.4,
+        12.4
+      ],
+      "to": [
+        9,
+        15.8,
+        13.4
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            13,
+            1,
+            13.5,
+            1.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "garra_up_1",
+      "from": [
+        7,
+        15.4,
+        2.6
+      ],
+      "to": [
+        9,
+        15.8,
+        3.6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "garra_up_2",
+      "from": [
+        2.6,
+        15.4,
+        7
+      ],
+      "to": [
+        3.6,
+        15.8,
+        9
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "garra_up_3",
+      "from": [
+        12.4,
+        15.4,
+        7
+      ],
+      "to": [
+        13.4,
+        15.8,
+        9
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_down_0",
+      "from": [
+        2,
+        0.6,
+        11
+      ],
+      "to": [
+        14,
+        1.6,
+        14
+      ],
+      "faces": {
+        "up": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            8.5,
+            10.75,
+            11.5,
+            11.5
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_down_1",
+      "from": [
+        2,
+        0.6,
+        2
+      ],
+      "to": [
+        14,
+        1.6,
+        5
+      ],
+      "faces": {
+        "up": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            8.5,
+            8.5,
+            11.5,
+            9.25
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_down_2",
+      "from": [
+        2,
+        0.6,
+        5
+      ],
+      "to": [
+        5,
+        1.6,
+        11
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            8.5,
+            9.25,
+            9.25,
+            10.75
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "painel_down_3",
+      "from": [
+        11,
+        0.6,
+        5
+      ],
+      "to": [
+        14,
+        1.6,
+        11
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            10.75,
+            9.25,
+            11.5,
+            10.75
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "painel_down_4",
+      "from": [
+        5,
+        0.6,
+        10
+      ],
+      "to": [
+        6,
+        1.6,
+        11
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            9.25,
+            10.5,
+            9.5,
+            10.75
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_down_5",
+      "from": [
+        10,
+        0.6,
+        10
+      ],
+      "to": [
+        11,
+        1.6,
+        11
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            10.5,
+            10.5,
+            10.75,
+            10.75
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_down_6",
+      "from": [
+        5,
+        0.6,
+        5
+      ],
+      "to": [
+        6,
+        1.6,
+        6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            9.25,
+            9.25,
+            9.5,
+            9.5
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "painel_down_7",
+      "from": [
+        10,
+        0.6,
+        5
+      ],
+      "to": [
+        11,
+        1.6,
+        6
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            10.5,
+            9.25,
+            10.75,
+            9.5
+          ],
+          "texture": "#dock",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            10,
+            10,
+            10.5,
+            10.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "moldura_down_0",
+      "from": [
+        5,
+        0.15,
+        11
+      ],
+      "to": [
+        11,
+        0.6,
+        11.5
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "moldura_down_1",
+      "from": [
+        5,
+        0.15,
+        4.5
+      ],
+      "to": [
+        11,
+        0.6,
+        5
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "moldura_down_2",
+      "from": [
+        4.5,
+        0.15,
+        5
+      ],
+      "to": [
+        5,
+        0.6,
+        11
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "moldura_down_3",
+      "from": [
+        11,
+        0.15,
+        5
+      ],
+      "to": [
+        11.5,
+        0.6,
+        11
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            12,
+            8,
+            13.5,
+            8.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "parafuso_down_0",
+      "from": [
+        4.4,
+        0.3,
+        11
+      ],
+      "to": [
+        5,
+        0.6,
+        11.6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "parafuso_down_1",
+      "from": [
+        11,
+        0.3,
+        11
+      ],
+      "to": [
+        11.6,
+        0.6,
+        11.6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "parafuso_down_2",
+      "from": [
+        4.4,
+        0.3,
+        4.4
+      ],
+      "to": [
+        5,
+        0.6,
+        5
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "parafuso_down_3",
+      "from": [
+        11,
+        0.3,
+        4.4
+      ],
+      "to": [
+        11.6,
+        0.6,
+        5
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "garra_down_0",
+      "from": [
+        7,
+        0.2,
+        12.4
+      ],
+      "to": [
+        9,
+        0.6,
+        13.4
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            14,
+            1,
+            14.5,
+            1.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "garra_down_1",
+      "from": [
+        7,
+        0.2,
+        2.6
+      ],
+      "to": [
+        9,
+        0.6,
+        3.6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "garra_down_2",
+      "from": [
+        2.6,
+        0.2,
+        7
+      ],
+      "to": [
+        3.6,
+        0.6,
+        9
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "garra_down_3",
+      "from": [
+        12.4,
+        0.2,
+        7
+      ],
+      "to": [
+        13.4,
+        0.6,
+        9
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            10,
+            0,
+            10.5,
+            0.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "labio_north_0",
+      "from": [
+        5,
+        10.7,
+        0.9
+      ],
+      "to": [
+        11,
+        11,
+        1.7
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "labio_north_1",
+      "from": [
+        5,
+        5,
+        0.9
+      ],
+      "to": [
+        11,
+        5.3,
+        1.7
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "labio_north_2",
+      "from": [
+        5,
+        5.3,
+        0.9
+      ],
+      "to": [
+        5.3,
+        10.7,
+        1.7
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "labio_north_3",
+      "from": [
+        10.7,
+        5.3,
+        0.9
+      ],
+      "to": [
+        11,
+        10.7,
+        1.7
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "dobradica_north_0",
+      "from": [
+        3.7,
+        9,
+        0.05
+      ],
+      "to": [
+        4.5,
+        10.2,
+        0.6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "dobradica_north_1",
+      "from": [
+        3.7,
+        5.8,
+        0.05
+      ],
+      "to": [
+        4.5,
+        7,
+        0.6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "trinco_north",
+      "from": [
+        11.5,
+        7.4,
+        0
+      ],
+      "to": [
+        12.3,
+        8.6,
+        0.6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock",
+          "cullface": "north"
+        }
+      }
+    },
+    {
+      "name": "labio_south_0",
+      "from": [
+        5,
+        10.7,
+        14.3
+      ],
+      "to": [
+        11,
+        11,
+        15.1
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "labio_south_1",
+      "from": [
+        5,
+        5,
+        14.3
+      ],
+      "to": [
+        11,
+        5.3,
+        15.1
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "labio_south_2",
+      "from": [
+        5,
+        5.3,
+        14.3
+      ],
+      "to": [
+        5.3,
+        10.7,
+        15.1
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "labio_south_3",
+      "from": [
+        10.7,
+        5.3,
+        14.3
+      ],
+      "to": [
+        11,
+        10.7,
+        15.1
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "dobradica_south_0",
+      "from": [
+        3.7,
+        9,
+        15.4
+      ],
+      "to": [
+        4.5,
+        10.2,
+        15.95
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "dobradica_south_1",
+      "from": [
+        3.7,
+        5.8,
+        15.4
+      ],
+      "to": [
+        4.5,
+        7,
+        15.95
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "trinco_south",
+      "from": [
+        11.5,
+        7.4,
+        15.4
+      ],
+      "to": [
+        12.3,
+        8.6,
+        16
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock",
+          "cullface": "south"
+        }
+      }
+    },
+    {
+      "name": "labio_east_0",
+      "from": [
+        14.3,
+        10.7,
+        5
+      ],
+      "to": [
+        15.1,
+        11,
+        11
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "labio_east_1",
+      "from": [
+        14.3,
+        5,
+        5
+      ],
+      "to": [
+        15.1,
+        5.3,
+        11
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "labio_east_2",
+      "from": [
+        14.3,
+        5.3,
+        5
+      ],
+      "to": [
+        15.1,
+        10.7,
+        5.3
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "labio_east_3",
+      "from": [
+        14.3,
+        5.3,
+        10.7
+      ],
+      "to": [
+        15.1,
+        10.7,
+        11
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "dobradica_east_0",
+      "from": [
+        15.4,
+        9,
+        3.7
+      ],
+      "to": [
+        15.95,
+        10.2,
+        4.5
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "dobradica_east_1",
+      "from": [
+        15.4,
+        5.8,
+        3.7
+      ],
+      "to": [
+        15.95,
+        7,
+        4.5
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "trinco_east",
+      "from": [
+        15.4,
+        7.4,
+        11.5
+      ],
+      "to": [
+        16,
+        8.6,
+        12.3
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock",
+          "cullface": "east"
+        },
+        "up": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "labio_west_0",
+      "from": [
+        0.9,
+        10.7,
+        5
+      ],
+      "to": [
+        1.7,
+        11,
+        11
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "labio_west_1",
+      "from": [
+        0.9,
+        5,
+        5
+      ],
+      "to": [
+        1.7,
+        5.3,
+        11
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "labio_west_2",
+      "from": [
+        0.9,
+        5.3,
+        5
+      ],
+      "to": [
+        1.7,
+        10.7,
+        5.3
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "labio_west_3",
+      "from": [
+        0.9,
+        5.3,
+        10.7
+      ],
+      "to": [
+        1.7,
+        10.7,
+        11
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "dobradica_west_0",
+      "from": [
+        0.05,
+        9,
+        3.7
+      ],
+      "to": [
+        0.6,
+        10.2,
+        4.5
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "dobradica_west_1",
+      "from": [
+        0.05,
+        5.8,
+        3.7
+      ],
+      "to": [
+        0.6,
+        7,
+        4.5
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "trinco_west",
+      "from": [
+        0,
+        7.4,
+        11.5
+      ],
+      "to": [
+        0.6,
+        8.6,
+        12.3
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock",
+          "cullface": "west"
+        },
+        "up": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "labio_up_0",
+      "from": [
+        5,
+        14.3,
+        10.7
+      ],
+      "to": [
+        11,
+        15.1,
+        11
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "labio_up_1",
+      "from": [
+        5,
+        14.3,
+        5
+      ],
+      "to": [
+        11,
+        15.1,
+        5.3
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "labio_up_2",
+      "from": [
+        5,
+        14.3,
+        5.3
+      ],
+      "to": [
+        5.3,
+        15.1,
+        10.7
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "labio_up_3",
+      "from": [
+        10.7,
+        14.3,
+        5.3
+      ],
+      "to": [
+        11,
+        15.1,
+        10.7
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "dobradica_up_0",
+      "from": [
+        3.7,
+        15.4,
+        9
+      ],
+      "to": [
+        4.5,
+        15.95,
+        10.2
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "dobradica_up_1",
+      "from": [
+        3.7,
+        15.4,
+        5.8
+      ],
+      "to": [
+        4.5,
+        15.95,
+        7
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "trinco_up",
+      "from": [
+        11.5,
+        15.4,
+        7.4
+      ],
+      "to": [
+        12.3,
+        16,
+        8.6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock",
+          "cullface": "up"
+        },
+        "south": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "labio_down_0",
+      "from": [
+        5,
+        0.9,
+        10.7
+      ],
+      "to": [
+        11,
+        1.7,
+        11
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "labio_down_1",
+      "from": [
+        5,
+        0.9,
+        5
+      ],
+      "to": [
+        11,
+        1.7,
+        5.3
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "labio_down_2",
+      "from": [
+        5,
+        0.9,
+        5.3
+      ],
+      "to": [
+        5.3,
+        1.7,
+        10.7
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "labio_down_3",
+      "from": [
+        10.7,
+        0.9,
+        5.3
+      ],
+      "to": [
+        11,
+        1.7,
+        10.7
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "up": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            0,
+            6,
+            1,
+            6.25
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "dobradica_down_0",
+      "from": [
+        3.7,
+        0.05,
+        9
+      ],
+      "to": [
+        4.5,
+        0.6,
+        10.2
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "dobradica_down_1",
+      "from": [
+        3.7,
+        0.05,
+        5.8
+      ],
+      "to": [
+        4.5,
+        0.6,
+        7
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "south": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            12,
+            8,
+            12.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    },
+    {
+      "name": "trinco_down",
+      "from": [
+        11.5,
+        0,
+        7.4
+      ],
+      "to": [
+        12.3,
+        0.6,
+        8.6
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "west": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "down": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock",
+          "cullface": "down"
+        },
+        "south": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        },
+        "north": {
+          "uv": [
+            14,
+            8,
+            14.5,
+            8.5
+          ],
+          "texture": "#dock"
+        }
+      }
+    }
+  ]
+}

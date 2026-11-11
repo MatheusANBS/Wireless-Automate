@@ -31,7 +31,7 @@ import net.neoforged.neoforge.fluids.FluidStack;
  *
  * <p>Recusa o padrão que não vai a inventário comum (bancada, cortador, forja: {@link DockStatus#CRAFTING_PATTERN}) e
  * a chave que não é item nem fluido ({@link DockStatus#MIXED}). As chaves viram {@code ItemStack} partidos no tamanho
- * máximo do item (o contrato da entrega) e {@code FluidStack}; as listas são desta face e reaproveitadas, porque o AE2
+ * máximo do item (o contrato da entrega) e {@code FluidStack}, juntos no mesmo pedido; as listas são desta face e reaproveitadas, porque o AE2
  * chama na thread do servidor, um pedido por vez.
  */
 final class Ae2DockMachine implements ICraftingMachine {

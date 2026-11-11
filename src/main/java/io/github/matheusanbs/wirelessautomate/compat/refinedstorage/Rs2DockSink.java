@@ -34,7 +34,7 @@ import org.jetbrains.annotations.Nullable;
  * {@code ACCEPTED}, e a execução que viesse depois sumiria com os ingredientes.
  *
  * <p>Os recursos viram {@code ItemStack} partidos no tamanho máximo do item (o contrato da entrega) e {@code FluidStack}
- * (o RS2 conta fluido em mB no NeoForge); outro tipo recusa com {@link DockStatus#MIXED}. As listas são deste destino e
+ * (o RS2 conta fluido em mB no NeoForge), juntos no mesmo pedido; outro tipo recusa com {@link DockStatus#MIXED}. As listas são deste destino e
  * reaproveitadas: o RS2 chama na thread do servidor, um pedido por vez.
  */
 final class Rs2DockSink implements PlatformPatternProviderExternalPatternSink {

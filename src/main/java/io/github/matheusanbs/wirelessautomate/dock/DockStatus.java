@@ -17,7 +17,7 @@ public final class DockStatus {
     public static final int NO_REFUSAL = 0;
     /** O provedor ofereceu um padrão de criação (bancada), que a Doca não entrega. */
     public static final int CRAFTING_PATTERN = 1;
-    /** O pedido misturava tipos que a máquina não aceita juntos. */
+    /** O pedido trazia um recurso que a Doca não sabe entregar (nem item nem fluido). */
     public static final int MIXED = 2;
     // Os motivos seguintes também são gravados no lado pela entrega (DockDelivery), mas não decidem o estado por
     // aqui: cada um é um fato que a tela tira do próprio lado (as máquinas ativas, o pendente, a última recusa).

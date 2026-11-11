@@ -98,7 +98,7 @@ working, and the state:
 | No machine linked | There is a provider, but no machine. Link them with the Linker |
 | Remove the provider lock | The provider is set to "lock until result", which never releases with the Dock |
 | Crafting pattern refused | The last order was a crafting, stonecutting or smithing one |
-| Item and fluid order refused | The last order mixed items and fluids |
+| Order with a resource the Dock doesn't know | The last order brought something that is neither an item nor a fluid |
 | Provider full | The result waits for room: the network is full, unpowered or without a channel |
 | All full | No machine took the last order; it waits |
 | Order pending | The machine has not taken the rest of the last order yet; the side waits for it |
@@ -111,7 +111,7 @@ Next to the state, the screen warns how many machines are **out of reach** or **
 ## Limits
 
 - **One kind of machine per side.** A Furnace side doesn't take a Blast Furnace.
-- **Orders of items only or fluids only**, in this version. An order with both is refused.
+- **Orders of items and fluids**, together or not: each goes to the machine face that takes it. Any other resource (a chemical, for instance) is refused in this version.
 - **Same dimension** and inside the tier's radius.
 - A machine belongs to **one side of one Dock**.
 - The Dock needs **AE2** or **RS2** to receive orders.

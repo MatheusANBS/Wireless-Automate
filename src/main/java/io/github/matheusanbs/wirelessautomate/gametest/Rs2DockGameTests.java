@@ -26,14 +26,17 @@ import net.minecraft.world.level.block.AbstractFurnaceBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
+import net.minecraft.world.level.material.Fluids;
 import net.neoforged.fml.ModList;
+import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
  * A Doca com o Refined Storage 2 de verdade: o destino que o Autocrafter recebe da fábrica registrada no RS2 (o
  * conjunto dos destinos de todas as fábricas, chamado direto, sem rede), a posição sem Doca, a simulação e a execução
- * na mesma fornalha, as fornalhas cheias e o pendente que recusam sem perder nada, o recurso que não é item nem fluido,
+ * na mesma fornalha, o pedido de item + fluido, as fornalhas cheias e o pendente que recusam sem perder nada, o
+ * recurso que não é item nem fluido,
  * a trava "até a máquina esvaziar" e o "tem provedor"; e a volta pela rede do Autocrafter (um pedido de verdade numa
  * rede montada no teste, a rede que some com o Controlador e volta, o resultado intermediário com o disco cheio e a
  * trava "até receber todos os resultados"). Rodam só na run {@code runGameTestServerRefined}, que tem o RS2
@@ -247,6 +250,51 @@ public final class Rs2DockGameTests {
                     helper.assertTrue(dock.side(NORTH).lastRefusal() == DockStatus.MIXED,
                             "motivo: " + dock.side(NORTH).lastRefusal());
                     assertSlot(helper, FURNACES[0], 0, Items.IRON_ORE, 0);
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Um pedido de item + fluido (um minério e um balde de água), simulado e executado como o Autocrafter faz, chega
+     * inteiro a uma máquina com uma face de item e outra de fluido ({@link TestDualMachine}, ligada nesta run pela
+     * {@code wirelessautomate.gameTests}).
+     */
+    @GameTest(template = "empty")
+    public static void itemAndFluidOrderReachesTheMachine(GameTestHelper helper) {
+        if (!enabled() || !TestMachines.enabled()) {
+            helper.succeed();
+            return;
+        }
+        PatternDockBlockEntity dock = dock(helper);
+        Object sink = sink(helper);
+        BlockPos machine = FURNACES[0];
+        TestDualMachine.reset(helper.absolutePos(machine));
+        helper.setBlock(machine, TestDualMachine.BLOCK);
+        List<ItemStack> items = List.of(new ItemStack(Items.IRON_ORE));
+        List<FluidStack> fluids = List.of(new FluidStack(Fluids.WATER, 1_000));
+        helper.startSequence()
+                .thenWaitUntil(() -> registered(dock))
+                .thenExecute(() -> {
+                    helper.assertTrue(dock.link(NORTH, helper.absolutePos(machine),
+                            BuiltInRegistries.BLOCK.getKey(TestDualMachine.BLOCK), Direction.NORTH.ordinal()),
+                            "não vinculou a máquina");
+                    TestDualMachine.profile(dock.side(NORTH));
+                })
+                .thenWaitUntil(Rs2DockGameTests::room)
+                .thenExecute(() -> {
+                    String simulated = Rs2TestSupport.accept(sink, items, fluids, false, true);
+                    helper.assertTrue(ACCEPTED.equals(simulated), "simulação: " + simulated + ", motivo "
+                            + dock.side(NORTH).lastRefusal());
+                    TestDualMachine.Dual dual = TestDualMachine.at(helper.absolutePos(machine));
+                    helper.assertTrue(dual.items.getStackInSlot(0).isEmpty() && dual.tank.isEmpty(),
+                            "a simulação entregou");
+                    String executed = Rs2TestSupport.accept(sink, items, fluids, false, false);
+                    helper.assertTrue(ACCEPTED.equals(executed), "execução: " + executed);
+                    ItemStack slot = dual.items.getStackInSlot(0);
+                    helper.assertTrue(slot.is(Items.IRON_ORE) && slot.getCount() == 1, "slot: " + slot);
+                    helper.assertTrue(dual.tank.getFluid().is(Fluids.WATER) && dual.tank.getFluidAmount() == 1_000,
+                            "tanque: " + dual.tank.getFluid());
+                    helper.assertFalse(dock.side(NORTH).hasPending(), "ficou pendente");
                 })
                 .thenSucceed();
     }

@@ -9,6 +9,7 @@ import io.github.matheusanbs.wirelessautomate.dock.DockMachine;
 import io.github.matheusanbs.wirelessautomate.dock.DockSide;
 import io.github.matheusanbs.wirelessautomate.dock.DockStatus;
 import io.github.matheusanbs.wirelessautomate.dock.PatternDockBlockEntity;
+import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
@@ -37,7 +38,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 /**
  * A entrega de um pedido ({@link DockDelivery}) chamada direto, sem o AE2: o minério na entrada e o carvão no
  * combustível da fornalha (a face mais seletiva), o revezamento pelo cursor, a recusa com todas cheias sem perder nada,
- * o pedido misto, a simulação seguida da execução na mesma máquina, o pendente (que segura o lado e sai quando a
+ * o recurso desconhecido, a simulação seguida da execução na mesma máquina, o pendente (que segura o lado e sai quando a
  * máquina esvazia, passa para outra máquina quando a dele é trocada e guarda o bloco do lado sem máquinas), a máquina descarregada e a de fora do alcance puladas e a recusa sem orçamento.
  *
  * <p>O orçamento é do motor inteiro e os testes do lote rodam no mesmo tick: cada oferta vem depois de um passo que
@@ -200,9 +201,13 @@ public final class DockDeliveryGameTests {
                 .thenSucceed();
     }
 
-    /** Pedido com item e fluido é recusado com o motivo; pedido vazio também, sem motivo novo. */
+    /**
+     * Pedido com item e fluido numa fornalha (sem face de fluido no perfil) é recusado como todas cheias, sem entregar
+     * nada; com um recurso que a Doca não conhece (um químico, sem o Mekanism), com o motivo dele; o vazio também, sem
+     * motivo novo.
+     */
     @GameTest(template = "empty", timeoutTicks = 100)
-    public static void mixedOrderRefused(GameTestHelper helper) {
+    public static void unknownResourceRefused(GameTestHelper helper) {
         PatternDockBlockEntity dock = dock(helper, RouterTier.BASIC);
         BlockPos furnace = new BlockPos(3, 1, 1);
         furnace(helper, furnace);
@@ -213,10 +218,19 @@ public final class DockDeliveryGameTests {
                 .thenExecute(() -> {
                     DockDelivery.Result result = DockDelivery.offer(dock, NORTH, List.of(new ItemStack(Items.IRON_ORE)),
                             List.of(new FluidStack(Fluids.WATER, 1000)), false);
-                    helper.assertTrue(result == DockDelivery.Result.REFUSED, "aceitou o misto");
-                    helper.assertTrue(dock.side(NORTH).lastRefusal() == DockStatus.MIXED,
+                    helper.assertTrue(result == DockDelivery.Result.REFUSED, "aceitou o fluido sem face de fluido");
+                    helper.assertTrue(dock.side(NORTH).lastRefusal() == DockStatus.ALL_FULL,
                             "motivo " + dock.side(NORTH).lastRefusal());
                     assertSlot(helper, furnace, 0, Items.IRON_ORE, 0);
+                    helper.assertFalse(dock.side(NORTH).hasPending(), "ficou pendente");
+                    if (!Chemicals.LOADED) {
+                        helper.assertTrue(DockDelivery.offer(dock, NORTH, List.of(new ItemStack(Items.IRON_ORE)),
+                                List.of(), List.of(new Object()), false) == DockDelivery.Result.REFUSED,
+                                "aceitou o recurso desconhecido");
+                        helper.assertTrue(dock.side(NORTH).lastRefusal() == DockStatus.MIXED,
+                                "motivo " + dock.side(NORTH).lastRefusal());
+                        assertSlot(helper, furnace, 0, Items.IRON_ORE, 0);
+                    }
                     helper.assertTrue(DockDelivery.offer(dock, NORTH, List.of(ItemStack.EMPTY), List.of(), false)
                             == DockDelivery.Result.REFUSED, "aceitou o vazio");
                 })

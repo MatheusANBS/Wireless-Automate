@@ -6,6 +6,8 @@ import io.github.matheusanbs.wirelessautomate.storage.ChemicalStorage;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
@@ -101,6 +103,29 @@ public final class Chemicals {
     /** Esvazia o recipiente do Mekanism no Tanque Químico; devolve quanto passou (0 sem ele). */
     public static long emptyContainer(ItemStack container, ChemicalStorage storage) {
         return LOADED && !container.isEmpty() ? MekanismStorage.emptyContainer(container, storage) : 0;
+    }
+
+    /**
+     * Um químico ({@code ChemicalStack}) lido do NBT, como {@code Object}; {@code null} sem o Mekanism, com o químico
+     * que não existe mais ou com a entrada vazia (quem guarda a entrada crua decide o que fazer com ela).
+     */
+    public static @Nullable Object parseStack(CompoundTag tag, HolderLookup.Provider registries) {
+        return LOADED ? MekanismChemicals.parseStack(tag, registries) : null;
+    }
+
+    /** Um químico que veio do {@link #parseStack} (ou de outra ponte com o Mekanism) em NBT. */
+    public static CompoundTag saveStack(Object stack, HolderLookup.Provider registries) {
+        return MekanismChemicals.saveStack(stack, registries);
+    }
+
+    /** O químico {@code stack} (um {@code ChemicalStack}) está vazio. Só com o Mekanism. */
+    public static boolean isEmptyStack(Object stack) {
+        return MekanismChemicals.isEmptyStack(stack);
+    }
+
+    /** Uma cópia do químico {@code stack} (um {@code ChemicalStack}). Só com o Mekanism. */
+    public static Object copyStack(Object stack) {
+        return MekanismChemicals.copyStack(stack);
     }
 
     /** Uma visita de uma origem de químicos; sem o Mekanism não há portas de químico. */

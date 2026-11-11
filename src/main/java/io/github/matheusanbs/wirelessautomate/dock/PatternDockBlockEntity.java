@@ -178,7 +178,7 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
         }
         machine.discard();
         machineAt.remove(pos.asLong());
-        if (dockSide.machines().isEmpty() && !dockSide.hasPending()) {
+        if (dockSide.machines().isEmpty() && !dockSide.keepsPending()) {
             dockSide.assignBlock(null);
             sides[side] = null;
         }
@@ -307,10 +307,10 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
         }
     }
 
-    /** Algum lado tem pendente: a quebra leva o item com o componente {@code pattern_dock_pending}. */
+    /** Algum lado guarda pendente: a quebra leva o item com o componente {@code pattern_dock_pending}. */
     public boolean hasPending() {
         for (DockSide side : sides) {
-            if (side != null && side.hasPending()) {
+            if (side != null && side.keepsPending()) {
                 return true;
             }
         }
@@ -324,7 +324,7 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
 
     /**
      * O bloco saiu do mundo sem um item da Doca com o pendente ({@code /setblock}, a remoção de outro mod sem loot, a
-     * Doca que a explosão destruiu sem drop): os itens pendentes caem no chão e os fluidos se perdem. Com o item feito
+     * Doca que a explosão destruiu sem drop): os itens pendentes caem no chão e os fluidos e os químicos se perdem. Com o item feito
      * ({@link #collectImplicitComponents}, ou o {@link #expectDrop} da quebra no sobrevivência), o pendente fica só
      * no item. Não esvazia os lados: a loot table do sobrevivência roda depois de tirar o bloco e lê este block entity.
      */
@@ -349,9 +349,10 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
         super.collectImplicitComponents(components);
         List<DockPendingContents.Side> pending = new ArrayList<>(0);
         for (DockSide side : sides) {
-            if (side != null && side.hasPending() && side.block() != null) {
+            if (side != null && side.keepsPending() && side.block() != null) {
                 pending.add(new DockPendingContents.Side(side.side(), side.block(), side.pendingItems(),
-                        side.pendingFluids()));
+                        side.pendingFluids(),
+                        level == null ? List.of() : side.pendingChemicalTags(level.registryAccess())));
             }
         }
         if (!pending.isEmpty()) {
@@ -380,7 +381,7 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
             }
             if (side.block() == null) {
                 side.assignBlock(saved.block());
-            } else if (!side.block().equals(saved.block()) || side.hasPending()) {
+            } else if (!side.block().equals(saved.block()) || side.keepsPending()) {
                 continue;
             }
             List<ItemStack> items = new ArrayList<>(saved.items().size());
@@ -393,6 +394,9 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
             }
             // a posição da própria Doca nunca é de uma máquina: o pendente vai à primeira ativa do lado que o sirva
             side.setPending(items, fluids, worldPosition);
+            if (!saved.chemicals().isEmpty() && level != null) {
+                side.addPendingChemicals(saved.chemicals(), level.registryAccess());
+            }
         }
     }
 

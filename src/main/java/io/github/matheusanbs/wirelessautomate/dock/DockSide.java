@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.dock;
 
+import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.range.MachineConfig;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -21,8 +22,13 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>Nasce no primeiro vínculo do lado. Mude as máquinas pelo {@link PatternDockBlockEntity}, que mantém o índice das
  * remotas. NBT: {@code side} (byte), {@code block} (id, só com bloco), {@code profile}, {@code machines} (lista de
- * {@link DockMachine}), {@code cursor}, {@code pending} (lista de {@code {item}} ou {@code {fluid}}) e
- * {@code pending_at} (long, só com pendente).
+ * {@link DockMachine}), {@code cursor}, {@code pending} (lista de {@code {item}}, {@code {fluid}} ou
+ * {@code {chemical}}) e {@code pending_at} (long, só com pendente).
+ *
+ * <p>Os químicos pendentes são {@code ChemicalStack} do Mekanism guardados como {@code Object} e passam pela ponte
+ * {@link Chemicals}. Uma entrada {@code {chemical}} que não dá para ler (sem o Mekanism, ou o químico que não existe
+ * mais) fica crua: volta igual ao NBT e ao item da Doca, nunca é descartada, e não segura o lado, porque não há como
+ * entregá-la; com o Mekanism de volta, a próxima carga a lê.
  */
 public final class DockSide {
     /** As faces de uma máquina no perfil ({@code RemoteSide}). */
@@ -40,6 +46,9 @@ public final class DockSide {
     private int cursor;
     private final List<ItemStack> pendingItems = new ArrayList<>();
     private final List<FluidStack> pendingFluids = new ArrayList<>();
+    private final List<Object> pendingChemicals = new ArrayList<>(0);
+    /** As entradas {@code {chemical}} que não deu para ler, guardadas como vieram. */
+    private final List<CompoundTag> rawChemicals = new ArrayList<>(0);
     private long pendingAt;
 
     // O que não é salvo: o motivo da última recusa, a máquina escolhida por uma simulação, as ativas, o estado da volta,
@@ -145,8 +154,22 @@ public final class DockSide {
         return pendingFluids;
     }
 
+    /** Os químicos pendentes ({@code ChemicalStack}, pela ponte {@link Chemicals}); vazio sem pendente. */
+    public List<Object> pendingChemicals() {
+        return pendingChemicals;
+    }
+
+    /** O lado tem o resto de um pedido para entregar (e recusa pedidos novos até ele sair). */
     public boolean hasPending() {
-        return !pendingItems.isEmpty() || !pendingFluids.isEmpty();
+        return !pendingItems.isEmpty() || !pendingFluids.isEmpty() || !pendingChemicals.isEmpty();
+    }
+
+    /**
+     * O lado guarda algo do pendente: o que {@link #hasPending} conta ou uma entrada de químico crua. É o que vai ao NBT
+     * e ao item da Doca, e o que faz o lado guardar o bloco sem máquinas.
+     */
+    public boolean keepsPending() {
+        return hasPending() || !rawChemicals.isEmpty();
     }
 
     /** A posição da máquina que recebeu o pedido pendente; só vale com {@link #hasPending}. */
@@ -154,10 +177,12 @@ public final class DockSide {
         return BlockPos.of(pendingAt);
     }
 
-    /** Guarda o pendente de um pedido entregue a {@code at}; listas vazias limpam. Os stacks passam a ser do lado. */
+    /**
+     * Guarda o pendente de itens e fluidos de um pedido entregue a {@code at}, no lugar de todo o pendente (os químicos
+     * também saem); listas vazias limpam. Os stacks passam a ser do lado.
+     */
     public void setPending(List<ItemStack> items, List<FluidStack> fluids, BlockPos at) {
-        pendingItems.clear();
-        pendingFluids.clear();
+        clearPending();
         for (ItemStack stack : items) {
             if (!stack.isEmpty()) {
                 pendingItems.add(stack);
@@ -174,6 +199,42 @@ public final class DockSide {
     public void clearPending() {
         pendingItems.clear();
         pendingFluids.clear();
+        pendingChemicals.clear();
+        rawChemicals.clear();
+    }
+
+    /**
+     * Acrescenta ao pendente os químicos salvos em {@code tags} (as entradas do {@link #pendingChemicalTags}); a que não
+     * dá para ler fica crua.
+     */
+    public void addPendingChemicals(List<CompoundTag> tags, HolderLookup.Provider registries) {
+        for (CompoundTag tag : tags) {
+            addPendingChemical(tag, registries);
+        }
+    }
+
+    private void addPendingChemical(CompoundTag tag, HolderLookup.Provider registries) {
+        Object stack = Chemicals.parseStack(tag, registries);
+        if (stack != null) {
+            pendingChemicals.add(stack);
+        } else if (!tag.isEmpty()) {
+            rawChemicals.add(tag.copy());
+        }
+    }
+
+    /** Os químicos pendentes em NBT, os lidos e os crus, para o item da Doca. */
+    public List<CompoundTag> pendingChemicalTags(HolderLookup.Provider registries) {
+        if (pendingChemicals.isEmpty() && rawChemicals.isEmpty()) {
+            return List.of();
+        }
+        List<CompoundTag> tags = new ArrayList<>(pendingChemicals.size() + rawChemicals.size());
+        for (Object stack : pendingChemicals) {
+            tags.add(Chemicals.saveStack(stack, registries));
+        }
+        for (CompoundTag raw : rawChemicals) {
+            tags.add(raw.copy());
+        }
+        return tags;
     }
 
     /** Põe {@code stack} (que passa a ser do lado) no pendente do pedido entregue a {@code at}. */
@@ -184,6 +245,12 @@ public final class DockSide {
 
     void addPending(FluidStack stack, BlockPos at) {
         pendingFluids.add(stack);
+        pendingAt = at.asLong();
+    }
+
+    /** Põe o químico {@code stack} ({@code ChemicalStack}, que passa a ser do lado) no pendente. */
+    void addPendingChemical(Object stack, BlockPos at) {
+        pendingChemicals.add(stack);
         pendingAt = at.asLong();
     }
 
@@ -314,7 +381,7 @@ public final class DockSide {
         }
         tag.put("machines", list);
         tag.putInt("cursor", cursor);
-        if (hasPending()) {
+        if (keepsPending()) {
             ListTag pending = new ListTag();
             for (ItemStack stack : pendingItems) {
                 savePendingItem(pending, stack, registries);
@@ -322,6 +389,11 @@ public final class DockSide {
             for (FluidStack stack : pendingFluids) {
                 CompoundTag entry = new CompoundTag();
                 entry.put("fluid", stack.save(registries));
+                pending.add(entry);
+            }
+            for (CompoundTag chemical : pendingChemicalTags(registries)) {
+                CompoundTag entry = new CompoundTag();
+                entry.put("chemical", chemical);
                 pending.add(entry);
             }
             tag.put("pending", pending);
@@ -369,6 +441,8 @@ public final class DockSide {
                 if (!stack.isEmpty()) {
                     loaded.pendingFluids.add(stack);
                 }
+            } else if (entry.contains("chemical", Tag.TAG_COMPOUND)) {
+                loaded.addPendingChemical(entry.getCompound("chemical"), registries);
             }
         }
         loaded.pendingAt = tag.getLong("pending_at");

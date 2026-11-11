@@ -29,6 +29,7 @@ import net.minecraft.world.level.block.AbstractFurnaceBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
+import net.minecraft.world.level.material.Fluids;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
@@ -37,7 +38,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
  * A Doca com o AE2 de verdade: a capability {@code ae2:crafting_machine} nas seis faces, um pedido de uma CPU por um
  * Pattern Provider numa rede montada no teste (energia criativa, drive com célula, armazenamento de crafting) com a
  * volta direto para a rede, a rede sem energia e o provedor quebrado que seguram a volta, o aviso da trava "até o
- * resultado", o padrão de bancada recusado, as máquinas cheias que seguram o pedido sem perder nada, o nome do lado no
+ * resultado", o padrão de bancada recusado, o padrão de item + fluido, as máquinas cheias que seguram o pedido sem perder nada, o nome do lado no
  * Pattern Access Terminal e o "tem provedor". Rodam só na run {@code runGameTestServerAe2}, que tem o AE2 na pasta mods
  * e liga o namespace {@value #NAMESPACE}.
  *
@@ -464,6 +465,44 @@ public final class Ae2DockGameTests {
                         helper.assertTrue(entity.getItem(0).is(Items.COBBLESTONE) && entity.getItem(0).getCount() == 64
                                 && entity.getItem(1).isEmpty(), "o alto-forno mudou");
                     }
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Um padrão de item + fluido (um minério e um balde de água) chega inteiro a uma máquina com uma face de item e
+     * outra de fluido ({@link TestDualMachine}, ligada nesta run pela {@code wirelessautomate.gameTests}).
+     */
+    @GameTest(template = "empty")
+    public static void itemAndFluidPatternReachesTheMachine(GameTestHelper helper) {
+        if (!enabled() || !TestMachines.enabled()) {
+            helper.succeed();
+            return;
+        }
+        PatternDockBlockEntity dock = dock(helper);
+        BlockPos machine = FURNACES[0];
+        TestDualMachine.reset(helper.absolutePos(machine));
+        helper.setBlock(machine, TestDualMachine.BLOCK);
+        long[] remaining = new long[1];
+        helper.startSequence()
+                .thenWaitUntil(() -> registered(dock))
+                .thenExecute(() -> {
+                    helper.assertTrue(dock.link(NORTH, helper.absolutePos(machine),
+                            BuiltInRegistries.BLOCK.getKey(TestDualMachine.BLOCK), Direction.NORTH.ordinal()),
+                            "não vinculou a máquina");
+                    TestDualMachine.profile(dock.side(NORTH));
+                })
+                .thenWaitUntil(Ae2DockGameTests::room)
+                .thenExecute(() -> {
+                    helper.assertTrue(Ae2TestSupport.push(helper.getLevel(), helper.absolutePos(DOCK), Direction.NORTH,
+                            Ae2TestSupport.itemAndFluidPattern(Items.IRON_INGOT, Items.RAW_IRON, 1, Fluids.WATER,
+                                    1_000), remaining), "recusou: motivo " + dock.side(NORTH).lastRefusal());
+                    TestDualMachine.Dual dual = TestDualMachine.at(helper.absolutePos(machine));
+                    ItemStack slot = dual.items.getStackInSlot(0);
+                    helper.assertTrue(slot.is(Items.RAW_IRON) && slot.getCount() == 1, "slot: " + slot);
+                    helper.assertTrue(dual.tank.getFluid().is(Fluids.WATER) && dual.tank.getFluidAmount() == 1_000,
+                            "tanque: " + dual.tank.getFluid());
+                    helper.assertFalse(dock.side(NORTH).hasPending(), "ficou pendente");
                 })
                 .thenSucceed();
     }

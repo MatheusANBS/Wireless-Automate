@@ -47,7 +47,7 @@ final class DockPending {
         if (!items.isEmpty()) {
             int count = items.size();
             int[] masks = side.masks(count);
-            DockDelivery.itemMasks(caches, side.profile(), front, items, count, masks, false);
+            DockDelivery.itemMasks(caches, side.profile(), front, items, 0, masks, false);
             DockPick.loads(masks, count, loads);
             for (int i = count - 1; i >= 0; i--) {
                 ItemStack stack = items.get(i);
@@ -67,7 +67,7 @@ final class DockPending {
         if (!fluids.isEmpty()) {
             int count = fluids.size();
             int[] masks = side.masks(count);
-            DockDelivery.fluidMasks(caches, side.profile(), front, fluids, count, masks, false);
+            DockDelivery.fluidMasks(caches, side.profile(), front, fluids, 0, masks, false);
             DockPick.loads(masks, count, loads);
             for (int i = count - 1; i >= 0; i--) {
                 FluidStack stack = fluids.get(i);

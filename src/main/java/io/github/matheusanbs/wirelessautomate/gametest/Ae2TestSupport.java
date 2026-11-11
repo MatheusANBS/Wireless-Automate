@@ -17,6 +17,7 @@ import appeng.api.networking.crafting.CalculationStrategy;
 import appeng.api.networking.crafting.ICraftingPlan;
 import appeng.api.networking.crafting.ICraftingService;
 import appeng.api.networking.security.IActionSource;
+import appeng.api.stacks.AEFluidKey;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.GenericStack;
 import appeng.api.stacks.KeyCounter;
@@ -36,6 +37,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.material.Fluid;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.items.IItemHandler;
 import org.jetbrains.annotations.Nullable;
@@ -84,6 +86,13 @@ final class Ae2TestSupport {
         }
         return PatternDetailsHelper.encodeProcessingPattern(List.of(stacks),
                 List.of(new GenericStack(AEItemKey.of(out), outCount)));
+    }
+
+    /** Um padrão de processamento com uma entrada de item e uma de fluido ({@code mb}) que dá um {@code out}. */
+    static ItemStack itemAndFluidPattern(Item out, Item item, int count, Fluid fluid, int mb) {
+        return PatternDetailsHelper.encodeProcessingPattern(
+                List.of(new GenericStack(AEItemKey.of(item), count), new GenericStack(AEFluidKey.of(fluid), mb)),
+                List.of(new GenericStack(AEItemKey.of(out), 1)));
     }
 
     /** Um padrão de bancada (um tronco de carvalho dá quatro tábuas), que só o Molecular Assembler aceita. */

@@ -457,6 +457,8 @@ neoForge.runs {
         gameDirectory = project.file('run/gametest-ae2')
         systemProperty 'neoforge.enabledGameTestNamespaces', 'wirelessautomate_ae2'
         systemProperty 'wirelessautomate.ae2Tests', 'true'
+        // Liga as máquinas de teste (gametest/TestMachines), para a máquina de item e fluido da Doca.
+        systemProperty 'wirelessautomate.gameTests', 'true'
         taskBefore prepareAe2TestMods
     }
 }
@@ -474,6 +476,8 @@ neoForge.runs {
         gameDirectory = project.file('run/gametest-refined')
         systemProperty 'neoforge.enabledGameTestNamespaces', 'wirelessautomate_refined'
         systemProperty 'wirelessautomate.refinedTests', 'true'
+        // Liga as máquinas de teste (gametest/TestMachines), para a máquina de item e fluido da Doca.
+        systemProperty 'wirelessautomate.gameTests', 'true'
         taskBefore prepareRefinedTestMods
     }
 }

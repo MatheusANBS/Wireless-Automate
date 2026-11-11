@@ -34,8 +34,8 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
  * A volta do resultado ({@code DockReturn}): o lingote da fornalha volta ao baú encostado no lado da Doca (também o
- * que já estava na saída antes da carga da Doca), o combustível fica na fornalha, o baú cheio segura a volta (o lado marca "provedor cheio") e ela retoma quando ele
- * esvazia, a Doca sem pedido não é visitada e a recarga da config com o raio menor tira a máquina de fora do índice.
+ * que já estava na saída antes da carga da Doca), o combustível fica na fornalha, o baú cheio segura a volta (o lado marca "provedor cheio") e ela retoma poucos ticks
+ * depois que ele esvazia (o aviso do vizinho), a Doca sem pedido não é visitada e a recarga da config com o raio menor tira a máquina de fora do índice.
  */
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
@@ -175,10 +175,14 @@ public final class DockReturnGameTests {
                 .thenSucceed();
     }
 
-    /** O baú cheio segura a volta (o lado marca o provedor cheio, nada sai da fornalha) e ela retoma quando esvazia. */
+    /**
+     * O baú cheio segura a volta (o lado marca o provedor cheio, nada sai da fornalha) e ela retoma quando esvazia: o
+     * {@code setChanged} do baú acorda o lado em poucos ticks, bem antes do teto de sono de 100.
+     */
     @GameTest(template = "empty", timeoutTicks = 300)
     public static void fullChestHoldsThenResumes(GameTestHelper helper) {
         PatternDockBlockEntity dock = scene(helper);
+        long[] emptied = new long[1];
         helper.startSequence()
                 .thenWaitUntil(() -> registered(dock))
                 .thenExecute(() -> {
@@ -193,12 +197,19 @@ public final class DockReturnGameTests {
                 .thenExecute(() -> {
                     ItemStack out = furnace(helper).getItem(2);
                     helper.assertTrue(out.is(Items.IRON_INGOT) && out.getCount() == 5, "saiu da fornalha: " + out);
-                    ChestBlockEntity chest = helper.getBlockEntity(CHEST);
-                    chest.setItem(0, ItemStack.EMPTY);
                 })
-                // O baú não avisa a Doca: a volta retoma no fim do sono do lado (até 100 ticks).
+                // Espera alguns ticks para o lado já estar dormindo pelo teto quando o baú esvazia.
+                .thenIdle(3)
+                .thenExecute(() -> {
+                    ChestBlockEntity chest = helper.getBlockEntity(CHEST);
+                    chest.removeItemNoUpdate(0);
+                    chest.setChanged();
+                    emptied[0] = helper.getLevel().getGameTime();
+                })
                 .thenWaitUntil(() -> helper.assertTrue(chestCount(helper, Items.IRON_INGOT) == 5, "não retomou"))
                 .thenExecute(() -> {
+                    long ticks = helper.getLevel().getGameTime() - emptied[0];
+                    helper.assertTrue(ticks <= 20, "retomou só depois de " + ticks + " ticks");
                     helper.assertFalse(dock.side(NORTH).providerFull(), "o lado continua cheio");
                     helper.assertTrue(furnace(helper).getItem(2).isEmpty(), "sobrou na fornalha");
                 })

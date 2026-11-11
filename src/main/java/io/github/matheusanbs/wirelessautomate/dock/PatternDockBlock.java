@@ -130,6 +130,19 @@ public class PatternDockBlock extends BaseEntityBlock {
     }
 
     /** Clique do meio (criativo): a Doca no tier dela. */
+    /**
+     * Um block entity encostado mudou ({@code setChanged} dele, pelo {@code Level.updateNeighbourForOutputSignal}, nas
+     * seis direções): o lado com "provedor cheio" acorda ({@link DockReturn#providerChanged}). É o aviso do vizinho que
+     * só a Doca escuta, sem custo para quem não é Doca; o baú e o Pattern Provider (o {@code saveChanges} do AE2, no
+     * fim do tick) avisam assim. Fora da thread do servidor o {@code getBlockEntity} devolve nulo.
+     */
+    @Override
+    public void onNeighborChange(BlockState state, LevelReader level, BlockPos pos, BlockPos neighbor) {
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof PatternDockBlockEntity dock) {
+            dock.returns().providerChanged(pos, neighbor);
+        }
+    }
+
     @Override
     public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state) {
         return StorageBlockItem.withTier(asItem(), state.getValue(RouterBlock.TIER));

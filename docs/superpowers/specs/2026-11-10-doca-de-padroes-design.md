@@ -73,14 +73,14 @@ A Doca precisa saber em que face de cada máquina pôr os ingredientes e de qual
 
 Quando o provedor oferece um pedido a um lado:
 
-1. **Recusa logo** se o lado não tem máquina ativa, se tem pendente, se o pedido traz um recurso que a Doca não conhece (nem item, nem fluido, nem químico com o Mekanism), se é um padrão de bancada (AE2), ou se o orçamento do motor deste tick acabou. O provedor tenta de novo no tick seguinte.
+1. **Recusa logo** se o lado não tem máquina ativa, se toda máquina ativa tem pendente (ver "O pendente por máquina e por item"), se o pedido traz um recurso que a Doca não conhece (nem item, nem fluido, nem químico com o Mekanism), se é um padrão de bancada (AE2), ou se o orçamento do motor deste tick acabou. O provedor tenta de novo no tick seguinte.
 2. **Escolhe a máquina** a partir do cursor do lado: pula as dormindo, as descarregadas e as de fora do alcance; para cada candidata, simula cada ingrediente nas faces Insere do tipo dele (primeiro os itens, depois os fluidos, por último os químicos; cada tipo só se o anterior coube). A primeira que aceita tudo recebe. No máximo 8 candidatas por pedido; se nenhuma aceita, recusa.
-3. **Executa** na máquina escolhida. O que ela não aceitar na execução (a simulação que não soma) vai para o **pendente do lado**, e o pedido conta como aceito.
+3. **Executa** na máquina escolhida. O que ela não aceitar na execução (a simulação que não soma) vai para o **pendente dela**, e o pedido conta como aceito.
 4. **Avança o cursor** para depois da máquina que recebeu: os pedidos se revezam entre as máquinas.
 
 - **Máquina que recusa dorme**, como os destinos do motor hoje: acorda quando ela muda (o `setChanged` dela, pelo mixin e o `RemoteIndex`, que passa a conhecer a Doca) ou no teto de sono. O custo de um pedido não cresce com o número de máquinas cheias.
-- **O pendente** é uma lista pequena por lado (o resto de um pedido, salvo no NBT; ao quebrar a Doca, o pendente inteiro, itens, fluidos e químicos de todos os lados, vai no item da Doca, no componente `pattern_dock_pending` com o bloco de cada lado, e volta aos mesmos lados ao recolocá-la). Enquanto existir, o lado recusa pedidos novos e tenta entregá-lo primeiro, na máquina que recebeu o pedido; se ela saiu do lado, foi quebrada ou trocada por outro bloco, ou não tem mais inventário numa face Insere, ele passa para a próxima máquina ativa do lado. O lado com pendente guarda o bloco mesmo sem máquinas, até o pendente sair numa máquina daquele bloco. É o que garante "espera quando todas estão cheias, sem perder nada". Um fluido que o provedor recusa depois de aceitar na simulação volta à máquina pela face Extrai, e o que ela não aceitar também se perde (um handler que mente na simulação).
-- **AE2:** a capability `AECapabilities.CRAFTING_MACHINE` em cada face; `acceptsPlans()` é falso no lado sem máquina ativa ou com pendente, e `pushPattern(padrão, entradas, lado)` faz os passos acima. O lado vem no último argumento.
+- **O pendente** (o desenho original; desde 11/11 é por máquina e por item, ver "O pendente por máquina e por item") é uma lista pequena por lado (o resto de um pedido, salvo no NBT; ao quebrar a Doca, o pendente inteiro, itens, fluidos e químicos de todos os lados, vai no item da Doca, no componente `pattern_dock_pending` com o bloco de cada lado, e volta aos mesmos lados ao recolocá-la). Enquanto existir, o lado recusa pedidos novos e tenta entregá-lo primeiro, na máquina que recebeu o pedido; se ela saiu do lado, foi quebrada ou trocada por outro bloco, ou não tem mais inventário numa face Insere, ele passa para a próxima máquina ativa do lado. O lado com pendente guarda o bloco mesmo sem máquinas, até o pendente sair numa máquina daquele bloco. É o que garante "espera quando todas estão cheias, sem perder nada". Um fluido que o provedor recusa depois de aceitar na simulação volta à máquina pela face Extrai, e o que ela não aceitar também se perde (um handler que mente na simulação).
+- **AE2:** a capability `AECapabilities.CRAFTING_MACHINE` em cada face; `acceptsPlans()` é falso no lado sem máquina ativa sem pendente, e `pushPattern(padrão, entradas, lado)` faz os passos acima. O lado vem no último argumento.
 - **RS2:** um `PatternProviderExternalPatternSinkFactory` registrado no carregamento do mod. O Autocrafter cria o destino uma vez e o guarda, então o destino da Doca é preguiçoso: a cada pedido confere se ainda há uma Doca na posição (senão `SKIPPED`). `SIMULATE` faz os passos 1 e 2 e devolve `ACCEPTED` ou `REJECTED`; `EXECUTE` faz o 3 e sempre devolve `ACCEPTED`. `isEmpty()` diz se o lado está sem pendente e sem máquina trabalhando (a trava "até a máquina esvaziar" do Autocrafter).
 - **O orçamento:** a entrega roda dentro do tick do AE2 ou do RS2, fora do gerenciador. O tempo dela vira uma dívida no `TickBudget` (`charge`), descontada no começo do tick seguinte do motor; sem folga para a dívida (`outsideRoom`), a oferta é recusada e o provedor tenta no tick seguinte.
 
@@ -309,6 +309,64 @@ O que a implementação da etapa 1 mudou em relação ao desenho, além do que j
 - **Custo:** no caminho quente do mixin, uma leitura de flag e uma comparação de referência (o `Block` do lado fica resolvido no `DockSide`); depois de um aviso, uma leitura de bloco por máquina suspeita, numa tarefa só por Doca; na carga, O(máquinas) uma vez. Memória: a vigia cria os caches de itens de cada máquina no lugar (o arranjo de 6), como o roteador faz com as remotas.
 - **O roteador de alcance:** tem a mesma raiz (a remota quebrada fica vinculada e conta no limite), mas a tela dele mostra a máquina como "sumida" ou "trocada", com o Desvincular e o Atualizar; ficou registrado em `pendencias.md`, sem correção.
 - **Testes:** `DockGoneGameTests`, na run comum (ver o mapa da Doca); os seis que testam a correção falhavam antes dela.
+
+## O pendente por máquina e por item (11/11/2026)
+
+- **O pedido do dono:** "gastar o mínimo possível, entregando o mais extremo possível". Duas mudanças, aprovadas por ele (via ferramenta de perguntas), que substituem o que "A entrega" dizia do pendente do lado.
+- **1. O pendente trava só a máquina dele.** A sobra de um pedido fica presa à máquina que o recebeu (`DockMachine.pending`). Só ela deixa de receber pedidos novos até a sobra entrar; as outras do lado continuam recebendo.
+  - Continua valendo: a sobra sai só na máquina dela, conforme ela consome (a receita não se parte entre máquinas); se a máquina sair do lado, quebrar ou for trocada (o caminho do `a20f27e`, que a desvincula sozinha), ou não tiver mais inventário numa face Insere de um tipo da sobra, a sobra fica **solta** no lado (`DockSide.loose`) e vai à próxima máquina ativa que a sirva, de preferência uma sem pendente (senão junto ao pendente de uma ocupada); descarregada, a máquina fica com a sobra; o lado guarda o bloco enquanto houver sobra.
+  - O pendente que vem no item da Doca recolocada também é solto. Ele vai a uma máquina no vínculo seguinte, na próxima oferta, no visitante da volta ou no aviso de uma máquina do lado.
+  - **O AE2 e o RS2 recusam só sem máquina livre:** o `acceptsPlans` é `DockSide.freeMachines() > 0` (ativas menos ativas com pendente), e a oferta recusa com `PENDING` só quando toda máquina ativa tem sobra. A escolha pula a máquina com pendente. O `isEmpty` do RS2 (a trava "até a máquina esvaziar") continua pelo lado inteiro: qualquer pendente o faz falso.
+  - **A tela:** o estado "Pedido pendente" só aparece quando toda máquina ativa tem sobra (`DockSide.waitingOnPending`); a dica diz isso. O payload da tela não mudou.
+- **2. Uma linha por item, em `long`.** O pendente (`DockPendingLot`) guarda uma linha por item (item e componentes iguais), por fluido e por químico, com a quantidade total em `long`. As 7.680 pilhas do padrão de 524.288 viram 1 linha. A sobra das pilhas juntadas no Mekanism entra numa linha (não é mais repartida no tamanho do item).
+
+| Onde | Formato até o `7470507` | Formato novo |
+| --- | --- | --- |
+| NBT do lado (`DockSide`) | `pending`: lista de `{item}` (pilhas de até 99), `{fluid}`, `{chemical}`; `pending_at`: a posição da máquina | `machines[i].pending` (o lote da máquina) e `loose_pending` (o solto, com os químicos crus), só com algum |
+| NBT do lote (`DockPendingLot`) | | `items`: `{item (tamanho 1), count (long)}`; `fluids`: `{fluid (1 mB), amount (long)}`; `chemicals`: um por químico, salvo pelo Mekanism com a quantidade inteira (já é long), e as entradas cruas |
+| Componente `pattern_dock_pending` (por lado) | `side`, `block`, `items` (pilhas de até 99), `fluids`, `chemicals` | `side`, `block`, `item_lines` (`{item, count}`), `fluid_lines` (`{fluid, amount}`), `chemicals` (um por químico) |
+| Rede (`STREAM_CODEC` do componente) | pilhas | linhas; `ModPayloads.VERSION` 50 → 51 |
+
+- **A migração é obrigatória e não perde nada:**
+  - **NBT:** o lado com a lista `pending` antiga é lido pelo `DockSide.loadLegacyPending`. As pilhas iguais viram uma linha, e o lote vai à máquina de `pending_at`, se ela é do lado; senão fica solto (é o caso da posição da própria Doca, que o item recolocado gravava). Salvo de novo, sai só o formato novo.
+  - **Componente:** o codec lê também `items` e `fluids` e os junta em linhas; escreve só `item_lines` e `fluid_lines`.
+  - **Químico cru:** sem o Mekanism, a entrada continua guardada como veio (no `loose_pending` do NBT e no `chemicals` do componente). Nunca é descartada e não segura nada.
+- **Custo (wa-performance):**
+  - "Esta máquina tem sobra?" é um campo (`DockMachine.pending`).
+  - "Existe máquina livre?" é uma conta de dois contadores do lado, mantidos nas transições (o lote que nasce, sai, passa a outra máquina ou fica solto) e refeitos no registro do índice (`refreshIndex`). Nem o `acceptsPlans` nem a escolha percorrem as máquinas por isso.
+  - O pendente é tentado onde já era, só que por máquina: o visitante da volta tenta o de cada máquina que visita (e o solto, no começo do lado), e o aviso de uma máquina enfileira a tentativa dela.
+  - Com uma linha só do tipo, a tentativa não simula antes: vai às faces Insere do tipo na ordem do perfil, como a simulação daria.
+  - Ficam a pilha juntada, a dica de slot e a volta juntada do `7470507`.
+- **Medido** (`docs/benchmark.md`, "Doca: o pendente por máquina e por item"; 3 rodadas de cada lado, o Quantum a 2.560×: 9):
+
+| Caso | Vazão até o último lingote, antes → depois | Doca ms/tick (entrega + volta), antes → depois | p50 / p99 por tick |
+| --- | --- | --- | --- |
+| 5 Ultimate a 2.560×, Quantum (100.000) | 91,9% → **97,6%** (189 → 178 ticks) | 0,087 → 0,096 (o pedido inteiro: 16,6 → 17,2 ms) | 0,079 / 0,44 → 0,088 / 0,47 ms |
+| 5 Infinite, Quantum | 94,1% → igual (100% no regime nos dois) | 0,135 → 0,142 | 0,086 / 1,43 → 0,116 / 1,03 ms |
+| 5 Infinite, CPU de 16 | 76,9% → igual (a CPU limita) | 0,090 → 0,123 | 0,064 / 0,25 → 0,063 / 1,40 ms |
+| 1 Infinite, Quantum | 99,0% → igual | 0,303 → 0,281 | 0,197 / 2,75 → 0,185 / 2,70 ms |
+| 1 Infinite, padrão de 524.288 | 97,9% → igual | 0,085 → 0,070 | 0,072 / 0,34 → 0,051 / 0,29 ms |
+
+  - Nas Infinite, as diferenças de custo ficam dentro do desvio entre rodadas.
+  - **O padrão de 524.288:** o NBT da Doca no pico do pendente vai de 353.513 para 283 bytes, e o componente de 291.929 para 156. A visita da volta com pendente vai de 72 para 58 µs. A oferta única continua em ~1 ms, dominada pela conversão das 8.192 pilhas no AE2.
+- **O que fica:**
+  - Os 2,4% que faltam a 2.560× são o começo e o fim do pedido (a primeira rajada e a última sobra), não o pendente.
+  - A tentativa enfileirada por um aviso (`flushSoon`) que não acha folga no orçamento não se refaz sozinha, como antes: fica para o próximo aviso, a próxima oferta ou o visitante da volta.
+  - O `isEmpty` do RS2 continua pelo lado.
+- **Testes:**
+  - `DockPendingGameTests` (run comum, 5 testes): a migração do NBT e do componente antigos montados à mão, a linha só no NBT, o `freeMachines` depois de salvar e carregar, o pendente da desvinculada que vai à outra, e o químico cru do NBT antigo sem o Mekanism.
+  - `DockDeliveryGameTests.pendingHoldsOnlyItsMachine`: com uma fornalha com sobra, a outra recebe; com as duas, o lado recusa.
+  - Os testes antigos do pendente foram ajustados ao formato novo: a quebra e a recolocação, salvar e carregar, a máquina trocada por pedra, o desvínculo da última, a máquina que mente (item e fluido, item e químico), o químico cru sem o Mekanism e o RS2 com pendente.
+  - **Cada teste novo foi conferido falhando com o erro injetado:**
+
+| Erro injetado | Teste que falhou |
+| --- | --- |
+| o pendente segura o lado inteiro | `pendingholdsonlyitsmachine`, `unlinkedbusymachinepassespending` |
+| sem a migração do NBT | `legacynbtbecomeslines`, `legacyrawchemicalkept` |
+| sem a migração do componente | `legacycomponentbecomeslines` |
+| o desvínculo que perde o lote | `unlinkedbusymachinepassespending`, `pendingkeepssideblock`, `pendingmovesoffreplacedmachine` |
+| o contador sem o registro no índice | `legacynbtbecomeslines`, `hugerestsavesoneline`, `unlinkedbusymachinepassespending` |
+| a linha que não junta | `legacynbtbecomeslines`, `legacycomponentbecomeslines`, `hugeordercostdoesnotgrow` |
 
 ## A arte no jogo (etapa 3)
 

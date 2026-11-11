@@ -178,7 +178,7 @@ public class DockMenu extends AbstractContainerMenu {
                 }
                 refusal = side.lastRefusal();
                 full = side.providerFull();
-                pending = side.hasPending();
+                pending = side.waitingOnPending();
             }
             int at = i * FACTS;
             facts[at] = linked;

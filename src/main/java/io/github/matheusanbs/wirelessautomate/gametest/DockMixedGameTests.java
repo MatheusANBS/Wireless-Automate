@@ -4,7 +4,7 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.dock.DockDelivery;
-import io.github.matheusanbs.wirelessautomate.dock.DockSide;
+import io.github.matheusanbs.wirelessautomate.dock.DockPendingLot;
 import io.github.matheusanbs.wirelessautomate.dock.DockStatus;
 import io.github.matheusanbs.wirelessautomate.dock.PatternDockBlockEntity;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
@@ -122,11 +122,10 @@ public final class DockMixedGameTests {
                     TestDualMachine.Dual machine = machine(helper);
                     helper.assertTrue(machine.items.getStackInSlot(0).is(Items.IRON_ORE), "o item não entrou");
                     helper.assertTrue(machine.tank.isEmpty(), "o tanque encheu");
-                    DockSide side = dock.side(NORTH);
-                    helper.assertTrue(side.pendingItems().isEmpty() && side.pendingFluids().size() == 1
-                            && side.pendingFluids().get(0).is(Fluids.WATER)
-                            && side.pendingFluids().get(0).getAmount() == 1_000, "pendente: " + side.pendingFluids());
-                    helper.assertTrue(side.pendingAt().equals(helper.absolutePos(MACHINE)), "pendente em outra posição");
+                    DockPendingLot lot = dock.machineAt(helper.absolutePos(MACHINE)).pending();
+                    helper.assertTrue(lot != null && lot.items().isEmpty() && lot.fluids().size() == 1
+                            && lot.amount(Fluids.WATER) == 1_000, "pendente: " + (lot == null ? null : lot.fluids()));
+                    helper.assertTrue(dock.side(NORTH).loose() == null, "pendente solto");
                     helper.assertFalse(DockDelivery.acceptsOrders(dock, NORTH), "o lado com pendente aceita pedidos");
                 })
                 .thenWaitUntil(DockMixedGameTests::room)

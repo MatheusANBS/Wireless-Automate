@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -14,16 +15,19 @@ import net.neoforged.neoforge.fluids.FluidStack;
 
 /**
  * O pendente de uma Doca quebrada (componente {@code wirelessautomate:pattern_dock_pending}): por lado com pendente, o
- * bloco do lado, os itens, os fluidos e os químicos. Os químicos vão em NBT, como o {@link DockSide} os salva (pela
- * ponte do Mekanism, ou a entrada crua que não deu para ler), para o componente não depender do Mekanism. Volta aos
- * mesmos lados ao recolocar a Doca; sem máquinas, o lado guarda o bloco até o pendente sair numa máquina dele. Só
- * existe com pendente, para Docas vazias empilharem. O pendente é o resto de um pedido (poucas pilhas), então vai
- * inteiro no item, sem referência a dados do servidor.
+ * bloco do lado e o pendente do lado inteiro (o de todas as máquinas e o solto, juntos), uma linha por item e por
+ * fluido, com a quantidade em {@code long}, e os químicos. Os químicos vão em NBT, um por químico com a quantidade
+ * inteira (o {@code ChemicalStack} do Mekanism já salva em long), pela ponte do Mekanism, ou a entrada crua que não deu
+ * para ler, para o componente não depender do Mekanism. Volta aos mesmos lados ao recolocar a Doca, solto; sem
+ * máquinas, o lado guarda o bloco até o pendente sair numa máquina dele. Só existe com pendente, para Docas vazias
+ * empilharem.
+ *
+ * <p>Campos de cada lado: {@code side}, {@code block}, {@code item_lines} ({@code {item, count}}, o item de tamanho 1),
+ * {@code fluid_lines} ({@code {fluid, amount}}, o fluido de 1 mB) e {@code chemicals}. O formato antigo (até o 7470507:
+ * {@code items} e {@code fluids}, listas de pilhas, o item partido em pilhas de até 99) é lido e convertido em linhas;
+ * o item salvo de novo sai só no formato novo.
  */
 public record DockPendingContents(List<Side> sides) {
-    /** O teto de {@code count} no codec do {@code ItemStack}: um pendente maior vai em partes. */
-    private static final int STACK_MAX = 99;
-
     public static final Codec<DockPendingContents> CODEC = Side.CODEC.listOf()
             .xmap(DockPendingContents::new, DockPendingContents::sides);
 
@@ -34,78 +38,174 @@ public record DockPendingContents(List<Side> sides) {
         sides = List.copyOf(sides);
     }
 
-    /** O pendente de um lado ({@code Direction.ordinal()}); as pilhas são cópias e não mudam. */
-    public record Side(int side, ResourceLocation block, List<ItemStack> items, List<FluidStack> fluids,
-            List<CompoundTag> chemicals) {
-        static final Codec<Side> CODEC = RecordCodecBuilder.create(i -> i.group(
-                Codec.intRange(0, 5).fieldOf("side").forGetter(Side::side),
-                ResourceLocation.CODEC.fieldOf("block").forGetter(Side::block),
-                ItemStack.CODEC.listOf().optionalFieldOf("items", List.of()).forGetter(Side::items),
-                FluidStack.CODEC.listOf().optionalFieldOf("fluids", List.of()).forGetter(Side::fluids),
-                CompoundTag.CODEC.listOf().optionalFieldOf("chemicals", List.of()).forGetter(Side::chemicals))
-                .apply(i, Side::new));
+    /** Uma linha de item: o item (de tamanho 1, com os componentes) e quantos. */
+    public record ItemLine(ItemStack item, long count) {
+        static final Codec<ItemLine> CODEC = RecordCodecBuilder.create(i -> i.group(
+                ItemStack.CODEC.fieldOf("item").forGetter(ItemLine::item),
+                Codec.LONG.fieldOf("count").forGetter(ItemLine::count))
+                .apply(i, ItemLine::new));
 
-        static final StreamCodec<RegistryFriendlyByteBuf, Side> STREAM_CODEC = StreamCodec.composite(
-                ByteBufCodecs.VAR_INT, Side::side,
-                ResourceLocation.STREAM_CODEC, Side::block,
-                ItemStack.STREAM_CODEC.apply(ByteBufCodecs.list()), Side::items,
-                FluidStack.STREAM_CODEC.apply(ByteBufCodecs.list()), Side::fluids,
-                ByteBufCodecs.COMPOUND_TAG.apply(ByteBufCodecs.list()), Side::chemicals,
-                Side::new);
+        static final StreamCodec<RegistryFriendlyByteBuf, ItemLine> STREAM_CODEC = StreamCodec.composite(
+                ItemStack.STREAM_CODEC, ItemLine::item,
+                ByteBufCodecs.VAR_LONG, ItemLine::count,
+                ItemLine::new);
 
-        public Side {
-            List<ItemStack> parts = new ArrayList<>(items.size());
-            for (ItemStack stack : items) {
-                int left = stack.getCount();
-                while (left > 0) {
-                    int part = Math.min(left, STACK_MAX);
-                    parts.add(stack.copyWithCount(part));
-                    left -= part;
-                }
-            }
-            items = List.copyOf(parts);
-            List<FluidStack> fluidCopies = new ArrayList<>(fluids.size());
-            for (FluidStack stack : fluids) {
-                if (!stack.isEmpty()) {
-                    fluidCopies.add(stack.copy());
-                }
-            }
-            fluids = List.copyOf(fluidCopies);
-            List<CompoundTag> chemicalCopies = new ArrayList<>(chemicals.size());
-            for (CompoundTag tag : chemicals) {
-                chemicalCopies.add(tag.copy());
-            }
-            chemicals = List.copyOf(chemicalCopies);
+        public ItemLine {
+            item = item.copyWithCount(1);
         }
 
-        // O ItemStack e o FluidStack não têm equals: sem estes, dois itens iguais não empilhariam e o servidor
-        // reenviaria o slot a cada conferência.
+        // O ItemStack não tem equals: sem estes, dois itens iguais não empilhariam e o servidor reenviaria o slot.
         @Override
         public boolean equals(Object other) {
-            if (this == other) {
-                return true;
-            }
-            if (!(other instanceof Side that) || side != that.side || !block.equals(that.block)
-                    || !ItemStack.listMatches(items, that.items) || fluids.size() != that.fluids.size()
-                    || !chemicals.equals(that.chemicals)) {
-                return false;
-            }
-            for (int i = 0; i < fluids.size(); i++) {
-                if (!FluidStack.matches(fluids.get(i), that.fluids.get(i))) {
-                    return false;
-                }
-            }
-            return true;
+            return other instanceof ItemLine that && count == that.count
+                    && ItemStack.isSameItemSameComponents(item, that.item);
         }
 
         @Override
         public int hashCode() {
-            int hash = 31 * side + block.hashCode();
-            hash = 31 * hash + ItemStack.hashStackList(items);
-            for (FluidStack stack : fluids) {
-                hash = 31 * hash + FluidStack.hashFluidAndComponents(stack) * 31 + stack.getAmount();
+            return 31 * ItemStack.hashItemAndComponents(item) + Long.hashCode(count);
+        }
+    }
+
+    /** Uma linha de fluido: o fluido (de 1 mB, com os componentes) e quantos mB. */
+    public record FluidLine(FluidStack fluid, long amount) {
+        static final Codec<FluidLine> CODEC = RecordCodecBuilder.create(i -> i.group(
+                FluidStack.CODEC.fieldOf("fluid").forGetter(FluidLine::fluid),
+                Codec.LONG.fieldOf("amount").forGetter(FluidLine::amount))
+                .apply(i, FluidLine::new));
+
+        static final StreamCodec<RegistryFriendlyByteBuf, FluidLine> STREAM_CODEC = StreamCodec.composite(
+                FluidStack.STREAM_CODEC, FluidLine::fluid,
+                ByteBufCodecs.VAR_LONG, FluidLine::amount,
+                FluidLine::new);
+
+        public FluidLine {
+            fluid = fluid.copyWithAmount(1);
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            return other instanceof FluidLine that && amount == that.amount
+                    && FluidStack.isSameFluidSameComponents(fluid, that.fluid);
+        }
+
+        @Override
+        public int hashCode() {
+            return 31 * FluidStack.hashFluidAndComponents(fluid) + Long.hashCode(amount);
+        }
+    }
+
+    /** O pendente de um lado ({@code Direction.ordinal()}); as linhas são cópias e não mudam. */
+    public record Side(int side, ResourceLocation block, List<ItemLine> items, List<FluidLine> fluids,
+            List<CompoundTag> chemicals) {
+        static final Codec<Side> CODEC = RecordCodecBuilder.create(i -> i.group(
+                Codec.intRange(0, 5).fieldOf("side").forGetter(Side::side),
+                ResourceLocation.CODEC.fieldOf("block").forGetter(Side::block),
+                ItemLine.CODEC.listOf().optionalFieldOf("item_lines", List.of()).forGetter(Side::items),
+                FluidLine.CODEC.listOf().optionalFieldOf("fluid_lines", List.of()).forGetter(Side::fluids),
+                CompoundTag.CODEC.listOf().optionalFieldOf("chemicals", List.of()).forGetter(Side::chemicals),
+                // o formato antigo, só lido: o getter vazio não é escrito
+                ItemStack.CODEC.listOf().optionalFieldOf("items", List.of()).forGetter(side -> List.of()),
+                FluidStack.CODEC.listOf().optionalFieldOf("fluids", List.of()).forGetter(side -> List.of()))
+                .apply(i, Side::decode));
+
+        static final StreamCodec<RegistryFriendlyByteBuf, Side> STREAM_CODEC = StreamCodec.composite(
+                ByteBufCodecs.VAR_INT, Side::side,
+                ResourceLocation.STREAM_CODEC, Side::block,
+                ItemLine.STREAM_CODEC.apply(ByteBufCodecs.list()), Side::items,
+                FluidLine.STREAM_CODEC.apply(ByteBufCodecs.list()), Side::fluids,
+                ByteBufCodecs.COMPOUND_TAG.apply(ByteBufCodecs.list()), Side::chemicals,
+                Side::new);
+
+        /** Junta as linhas iguais e tira as vazias: o mesmo pendente dá sempre o mesmo componente. */
+        public Side {
+            DockPendingLot lot = new DockPendingLot();
+            for (ItemLine line : items) {
+                lot.addItem(line.item(), line.count());
             }
-            return 31 * hash + chemicals.hashCode();
+            for (FluidLine line : fluids) {
+                lot.addFluid(line.fluid(), line.amount());
+            }
+            items = itemLines(lot);
+            fluids = fluidLines(lot);
+            List<CompoundTag> chemicalCopies = new ArrayList<>(chemicals.size());
+            for (CompoundTag tag : chemicals) {
+                if (!tag.isEmpty()) {
+                    chemicalCopies.add(tag.copy());
+                }
+            }
+            chemicals = List.copyOf(chemicalCopies);
+        }
+
+        /** O lado lido do NBT: as linhas do formato novo e as pilhas do antigo, juntas em linhas. */
+        private static Side decode(int side, ResourceLocation block, List<ItemLine> items, List<FluidLine> fluids,
+                List<CompoundTag> chemicals, List<ItemStack> legacyItems, List<FluidStack> legacyFluids) {
+            if (legacyItems.isEmpty() && legacyFluids.isEmpty()) {
+                return new Side(side, block, items, fluids, chemicals);
+            }
+            List<ItemLine> allItems = new ArrayList<>(items);
+            for (ItemStack stack : legacyItems) {
+                if (!stack.isEmpty()) {
+                    allItems.add(new ItemLine(stack, stack.getCount()));
+                }
+            }
+            List<FluidLine> allFluids = new ArrayList<>(fluids);
+            for (FluidStack stack : legacyFluids) {
+                if (!stack.isEmpty()) {
+                    allFluids.add(new FluidLine(stack, stack.getAmount()));
+                }
+            }
+            return new Side(side, block, allItems, allFluids, chemicals);
+        }
+
+        /**
+         * O lado {@code side} com o bloco {@code block}, o pendente {@code lot} (os químicos dele gravados um por
+         * linha) e as entradas cruas {@code raw}.
+         */
+        static Side of(int side, ResourceLocation block, DockPendingLot lot, List<CompoundTag> raw,
+                HolderLookup.Provider registries) {
+            List<CompoundTag> chemicals = new ArrayList<>(lot.chemicalLines().size() + raw.size());
+            chemicals.addAll(lot.chemicalTags(registries));
+            chemicals.addAll(raw);
+            return new Side(side, block, itemLines(lot), fluidLines(lot), chemicals);
+        }
+
+        /** Os itens e os fluidos deste lado num lote novo (os químicos ficam no {@link #chemicals}, em NBT). */
+        DockPendingLot lot() {
+            DockPendingLot lot = new DockPendingLot();
+            for (ItemLine line : items) {
+                lot.addItem(line.item(), line.count());
+            }
+            for (FluidLine line : fluids) {
+                lot.addFluid(line.fluid(), line.amount());
+            }
+            return lot;
+        }
+
+        /** Quantos itens iguais a {@code stack} (item e componentes) o lado guarda. */
+        public long count(ItemStack stack) {
+            for (ItemLine line : items) {
+                if (ItemStack.isSameItemSameComponents(line.item(), stack)) {
+                    return line.count();
+                }
+            }
+            return 0;
+        }
+
+        private static List<ItemLine> itemLines(DockPendingLot lot) {
+            List<ItemLine> lines = new ArrayList<>(lot.itemLines().size());
+            for (DockPendingLot.Line<ItemStack> line : lot.itemLines()) {
+                lines.add(new ItemLine(line.key(), line.amount()));
+            }
+            return List.copyOf(lines);
+        }
+
+        private static List<FluidLine> fluidLines(DockPendingLot lot) {
+            List<FluidLine> lines = new ArrayList<>(lot.fluidLines().size());
+            for (DockPendingLot.Line<FluidStack> line : lot.fluidLines()) {
+                lines.add(new FluidLine(line.key(), line.amount()));
+            }
+            return List.copyOf(lines);
         }
     }
 }

@@ -169,6 +169,10 @@ public final class MekanismChemicals {
         return ((ChemicalStack) stack).getAmount();
     }
 
+    public static boolean sameChemical(Object a, Object b) {
+        return ChemicalStack.isSameChemical((ChemicalStack) a, (ChemicalStack) b);
+    }
+
     public static Object copyWithAmount(Object stack, long amount) {
         return ((ChemicalStack) stack).copyWithAmount(amount);
     }

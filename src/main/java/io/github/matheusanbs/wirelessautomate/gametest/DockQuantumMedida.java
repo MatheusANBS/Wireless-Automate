@@ -196,7 +196,7 @@ final class DockQuantumMedida implements DockProbe.Listener {
         asks++;
         if (!accepts) {
             DockSide side = scene.dock.side(DockMinMaxMedida.NORTH);
-            if (side != null && side.hasPending()) {
+            if (side != null && side.waitingOnPending()) {
                 asksPending++;
             } else {
                 asksOther++;

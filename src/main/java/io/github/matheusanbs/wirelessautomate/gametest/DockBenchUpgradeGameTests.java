@@ -96,8 +96,8 @@ public final class DockBenchUpgradeGameTests {
     public static void dockPendingSurvivesBench(GameTestHelper helper) {
         DockPendingContents pending = new DockPendingContents(List.of(new DockPendingContents.Side(
                 Direction.NORTH.ordinal(), BuiltInRegistries.BLOCK.getKey(Blocks.FURNACE),
-                List.of(new ItemStack(Items.IRON_INGOT, 7)),
-                List.of(new FluidStack(Fluids.WATER, 500)),
+                List.of(new DockPendingContents.ItemLine(new ItemStack(Items.IRON_INGOT), 7)),
+                List.of(new DockPendingContents.FluidLine(new FluidStack(Fluids.WATER, 1), 500)),
                 List.of())));
         ItemStack basic = dock(RouterTier.BASIC);
         basic.set(ModDataComponents.PATTERN_DOCK_PENDING.get(), pending);
@@ -108,9 +108,9 @@ public final class DockBenchUpgradeGameTests {
         DockPendingContents carried = out.get(ModDataComponents.PATTERN_DOCK_PENDING.get());
         helper.assertTrue(carried != null && carried.sides().size() == 1, "pendente perdido: " + carried);
         DockPendingContents.Side side = carried.sides().get(0);
-        helper.assertTrue(side.items().size() == 1 && side.items().get(0).is(Items.IRON_INGOT)
-                && side.items().get(0).getCount() == 7, "itens do pendente: " + side.items());
-        helper.assertTrue(side.fluids().size() == 1 && side.fluids().get(0).getAmount() == 500,
+        helper.assertTrue(side.items().size() == 1 && side.items().get(0).item().is(Items.IRON_INGOT)
+                && side.items().get(0).count() == 7, "itens do pendente: " + side.items());
+        helper.assertTrue(side.fluids().size() == 1 && side.fluids().get(0).amount() == 500,
                 "fluido do pendente: " + side.fluids());
         helper.assertTrue(out.getHoverName().getString().equals("Doca 1"), "nome perdido");
         helper.assertTrue(ItemStack.isSameItemSameComponents(basic, before) && basic.getCount() == 1,

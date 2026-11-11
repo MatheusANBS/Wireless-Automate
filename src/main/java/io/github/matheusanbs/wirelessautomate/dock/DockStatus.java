@@ -23,7 +23,7 @@ public final class DockStatus {
     // aqui: cada um é um fato que a tela tira do próprio lado (as máquinas ativas, o pendente, a última recusa).
     /** O lado não tinha máquina ativa (no alcance e no limite). */
     public static final int NO_MACHINES = 3;
-    /** O lado tinha o resto de um pedido esperando lugar. */
+    /** Toda máquina ativa do lado guardava o resto de um pedido esperando lugar (nenhuma livre). */
     public static final int PENDING = 4;
     /** Nenhuma candidata aceitou o pedido inteiro. */
     public static final int ALL_FULL = 5;
@@ -38,7 +38,8 @@ public final class DockStatus {
     /**
      * @param lock    o provedor está em "travar até o resultado" do AE2, que com a Doca nunca destrava (o resultado vai
      *                direto para a rede, sem passar pelo retorno dele)
-     * @param pending o lado guarda o resto de um pedido esperando lugar na máquina (e recusa pedidos até ele sair)
+     * @param pending toda máquina ativa do lado guarda o resto de um pedido esperando lugar nela (e o lado recusa
+     *                pedidos até uma delas terminar)
      */
     public static State of(boolean provider, int machines, boolean lock, int lastRefusal, boolean returnBlocked,
             boolean allFull, boolean pending, int working) {

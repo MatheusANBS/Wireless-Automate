@@ -1176,7 +1176,7 @@
   "gui.wirelessautomate.pattern_dock.state.all_full": "Todas cheias",
   "gui.wirelessautomate.pattern_dock.state.all_full.hint": "Nenhuma máquina aceitou o último pedido. Ele fica com o provedor até alguma esvaziar.",
   "gui.wirelessautomate.pattern_dock.state.pending": "Pedido pendente",
-  "gui.wirelessautomate.pattern_dock.state.pending.hint": "Esperando a máquina receber o resto do último pedido. O lado não aceita outro até lá.",
+  "gui.wirelessautomate.pattern_dock.state.pending.hint": "Toda máquina do lado espera receber o resto do último pedido dela. O lado não aceita outro até uma delas terminar.",
   "gui.wirelessautomate.pattern_dock.state.working": "Trabalhando",
   "gui.wirelessautomate.pattern_dock.state.working.hint": "Os pedidos se revezam entre as máquinas livres.",
   "gui.wirelessautomate.pattern_dock.state.ready": "Pronto",

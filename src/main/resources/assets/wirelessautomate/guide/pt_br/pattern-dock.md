@@ -40,6 +40,8 @@ sai o resultado. A action bar mostra o que ela achou.
   pedido o conta ali.
 - Um pedido pode ter **itens, fluidos e químicos juntos**: cada um entra pela face da máquina que o recebe, e o
   resultado volta à rede do mesmo jeito, seja item, fluido ou químico.
+- Se um pedido **não cabe inteiro**, o resto espera na máquina que o recebeu e entra conforme ela consome. Só ela
+  fica de fora dos próximos pedidos: as outras do lado continuam recebendo.
 - Quando **todas as máquinas estão cheias**, o pedido espera. **Nada se perde**: se você quebrar a Doca com um resto
   de pedido esperando, ele vai junto no item ("Pedido pendente") e volta ao mesmo lado quando você a recoloca.
 
@@ -105,7 +107,7 @@ e o estado:
 | Pedido com recurso que a Doca não conhece | O último pedido trazia algo que não é item, fluido nem químico |
 | Provedor cheio | O resultado espera lugar: a rede cheia, sem energia ou sem canal |
 | Todas cheias | Nenhuma máquina aceitou o último pedido; ele espera |
-| Pedido pendente | A máquina ainda não recebeu o resto do último pedido; o lado espera por ele |
+| Pedido pendente | Toda máquina do lado ainda tem o resto do último pedido dela; o lado espera uma terminar |
 | Trabalhando | Uma máquina recebeu um pedido ou devolveu um resultado há pouco |
 | Pronto | Tudo certo, esperando pedidos |
 | livre | Nada encostado e nenhuma máquina |

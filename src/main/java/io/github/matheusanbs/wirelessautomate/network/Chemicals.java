@@ -138,6 +138,11 @@ public final class Chemicals {
         return MekanismChemicals.amount(stack);
     }
 
+    /** {@code a} e {@code b} ({@code ChemicalStack}) são o mesmo químico, sem olhar a quantidade. Só com o Mekanism. */
+    public static boolean sameChemical(Object a, Object b) {
+        return MekanismChemicals.sameChemical(a, b);
+    }
+
     /** Uma cópia do químico {@code stack} com {@code amount} mB. Só com o Mekanism. */
     public static Object copyWithAmount(Object stack, long amount) {
         return MekanismChemicals.copyWithAmount(stack, amount);

@@ -19,26 +19,29 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Um lado da Doca de Padrões: o bloco das máquinas (todas do mesmo bloco), o perfil das faces (o {@link MachineConfig}
- * de sempre, que vale para todas pela frente de cada uma), as máquinas, o cursor da próxima candidata e o pendente (o
- * que sobrou de um pedido que não coube inteiro, com a posição da máquina que o recebeu).
+ * de sempre, que vale para todas pela frente de cada uma), as máquinas, o cursor da próxima candidata e o pendente.
+ *
+ * <p>O pendente é por máquina ({@link DockMachine#pending}): o resto de um pedido que não coube fica na máquina que o
+ * recebeu, e só ela deixa de receber pedidos até ele sair; as outras do lado continuam. O lado conta as máquinas com
+ * pendente nas transições, para o "tem máquina livre?" ({@link #freeMachines}) ser uma conta, sem laço. O pendente de
+ * uma máquina que saiu do lado fica solto ({@link #loose}) até outra máquina ativa que o sirva.
  *
  * <p>Nasce no primeiro vínculo do lado. Mude as máquinas pelo {@link PatternDockBlockEntity}, que mantém o índice das
  * remotas. NBT: {@code side} (byte), {@code block} (id, só com bloco), {@code profile}, {@code machines} (lista de
- * {@link DockMachine}), {@code cursor}, {@code pending} (lista de {@code {item}}, {@code {fluid}} ou
- * {@code {chemical}}) e {@code pending_at} (long, só com pendente).
+ * {@link DockMachine}, cada uma com o {@code pending} dela, um {@link DockPendingLot}), {@code cursor} e
+ * {@code loose_pending} (o lote solto, com os químicos crus junto; só com algum). O formato antigo ({@code pending},
+ * uma lista de pilhas, e {@code pending_at}) é lido e convertido ({@link #loadLegacyPending}).
  *
  * <p>Os químicos pendentes são {@code ChemicalStack} do Mekanism guardados como {@code Object} e passam pela ponte
- * {@link Chemicals}. Uma entrada {@code {chemical}} que não dá para ler (sem o Mekanism, ou o químico que não existe
- * mais) fica crua: volta igual ao NBT e ao item da Doca, nunca é descartada, e não segura o lado, porque não há como
- * entregá-la; com o Mekanism de volta, a próxima carga a lê.
+ * {@link Chemicals}. Uma entrada de químico que não dá para ler (sem o Mekanism, ou o químico que não existe mais) fica
+ * crua: volta igual ao NBT e ao item da Doca, nunca é descartada, e não segura nada, porque não há como entregá-la; com
+ * o Mekanism de volta, a próxima carga a lê e ela vai ao pendente solto.
  */
 public final class DockSide {
     /** As faces de uma máquina no perfil ({@code RemoteSide}). */
     static final int FACES = 6;
     /** Por quanto tempo uma oferta de um provedor conta como "tem provedor" no lado (60 s). */
     static final long OFFER_TICKS = 60 * 20;
-    /** O teto de {@code count} no codec do {@code ItemStack}: um pendente maior é salvo em partes. */
-    private static final int SAVED_STACK_MAX = 99;
 
     private final int side;
     private @Nullable ResourceLocation block;
@@ -48,15 +51,21 @@ public final class DockSide {
     private final List<DockMachine> machines = new ArrayList<>();
     private final List<DockMachine> machinesView = Collections.unmodifiableList(machines);
     private int cursor;
-    private final List<ItemStack> pendingItems = new ArrayList<>();
-    private final List<FluidStack> pendingFluids = new ArrayList<>();
-    private final List<Object> pendingChemicals = new ArrayList<>(0);
-    /** As entradas {@code {chemical}} que não deu para ler, guardadas como vieram. */
+    /**
+     * O pendente sem máquina: o que veio no item da Doca, o que os químicos crus viraram ao serem lidos e o de uma
+     * máquina que saiu do lado ou não o serve mais. Vai à próxima máquina ativa que o sirva
+     * ({@link DockPending#adopt}).
+     */
+    private @Nullable DockPendingLot loose;
+    /** As entradas de químico que não deu para ler (sem o Mekanism), guardadas como vieram. */
     private final List<CompoundTag> rawChemicals = new ArrayList<>(0);
-    private long pendingAt;
+    /** Quantas máquinas do lado guardam pendente (ativas ou não). */
+    private int pendingMachines;
+    /** Quantas máquinas ativas do lado guardam pendente ({@link #freeMachines} é a diferença das ativas). */
+    private int busyActive;
 
-    // O que não é salvo: o motivo da última recusa, a máquina escolhida por uma simulação, as ativas, o estado da volta,
-    // a última oferta de um provedor e o rascunho da entrega.
+    // O que não é salvo: o motivo da última recusa, a máquina escolhida por uma simulação, as ativas, o estado da
+    // volta, a última oferta de um provedor e o rascunho da entrega.
     /** O motivo da última recusa ({@link DockStatus#NO_REFUSAL} depois de uma aceita). */
     private int lastRefusal = DockStatus.NO_REFUSAL;
     /** A máquina que a última simulação aceita escolheu, o índice dela e o tick do servidor em que vale. */
@@ -76,7 +85,7 @@ public final class DockSide {
      * {@link DockRs2#hasProvider}).
      */
     private long providerOfferTick = Long.MIN_VALUE;
-    /** Uma tentativa do pendente na fila do servidor, para o aviso seguinte não enfileirar outra. */
+    /** Uma tentativa do pendente solto na fila do servidor, para o aviso seguinte não enfileirar outra. */
     private boolean flushQueued;
     /**
      * Rascunho da entrega: as faces Insere que aceitam cada ingrediente (um bit por face) e quantos ingredientes cada
@@ -137,6 +146,8 @@ public final class DockSide {
         long key = pos.asLong();
         for (int i = 0; i < machines.size(); i++) {
             if (machines.get(i).pos().asLong() == key) {
+                // o pendente dela fica no lado, solto, até outra máquina ativa que o sirva
+                loosen(machines.get(i));
                 DockMachine removed = machines.remove(i);
                 if (cursor > i) {
                     cursor--;
@@ -159,78 +170,183 @@ public final class DockSide {
         this.cursor = cursor;
     }
 
-    /** Os itens pendentes; vazio sem pendente. */
-    public List<ItemStack> pendingItems() {
-        return pendingItems;
-    }
-
-    /** Os fluidos pendentes; vazio sem pendente. */
-    public List<FluidStack> pendingFluids() {
-        return pendingFluids;
-    }
-
-    /** Os químicos pendentes ({@code ChemicalStack}, pela ponte {@link Chemicals}); vazio sem pendente. */
-    public List<Object> pendingChemicals() {
-        return pendingChemicals;
-    }
-
-    /** O lado tem o resto de um pedido para entregar (e recusa pedidos novos até ele sair). */
+    /**
+     * O lado guarda o resto de algum pedido para entregar: uma máquina com pendente ou o pendente solto. Uma leitura de
+     * campo. Não recusa pedidos por isso: quem recusa é o lado sem máquina livre ({@link #freeMachines}).
+     */
     public boolean hasPending() {
-        return !pendingItems.isEmpty() || !pendingFluids.isEmpty() || !pendingChemicals.isEmpty();
+        return pendingMachines > 0 || loose != null;
     }
 
     /**
-     * O lado guarda algo do pendente: o que {@link #hasPending} conta ou uma entrada de químico crua. É o que vai ao NBT
-     * e ao item da Doca, e o que faz o lado guardar o bloco sem máquinas.
+     * O lado guarda algo do pendente: o que {@link #hasPending} conta ou uma entrada de químico crua. É o que vai ao
+     * NBT e ao item da Doca, e o que faz o lado guardar o bloco sem máquinas.
      */
     public boolean keepsPending() {
         return hasPending() || !rawChemicals.isEmpty();
     }
 
-    /** A posição da máquina que recebeu o pedido pendente; só vale com {@link #hasPending}. */
-    public BlockPos pendingAt() {
-        return BlockPos.of(pendingAt);
+    /**
+     * Quantas máquinas ativas não têm pendente e podem receber um pedido. Uma conta de dois campos, mantidos nas
+     * transições (o pendente que entra ou sai, o registro no índice): o {@code acceptsPlans} do AE2 pergunta a cada
+     * tick, sem laço.
+     */
+    public int freeMachines() {
+        return activeMachines - busyActive;
     }
 
     /**
-     * Guarda o pendente de itens e fluidos de um pedido entregue a {@code at}, no lugar de todo o pendente (os químicos
-     * também saem); listas vazias limpam. Os stacks passam a ser do lado.
+     * Todas as máquinas ativas do lado guardam o resto de um pedido (e o lado espera uma delas terminar): o estado
+     * "Pedido pendente" da tela.
      */
-    public void setPending(List<ItemStack> items, List<FluidStack> fluids, BlockPos at) {
-        clearPending();
-        for (ItemStack stack : items) {
-            if (!stack.isEmpty()) {
-                pendingItems.add(stack);
-            }
-        }
-        for (FluidStack stack : fluids) {
-            if (!stack.isEmpty()) {
-                pendingFluids.add(stack);
-            }
-        }
-        pendingAt = at.asLong();
+    public boolean waitingOnPending() {
+        return busyActive > 0 && freeMachines() <= 0;
     }
 
+    /** O pendente solto: o que veio no item da Doca ou o de uma máquina que saiu do lado; {@code null} sem nenhum. */
+    public @Nullable DockPendingLot loose() {
+        return loose;
+    }
+
+    /**
+     * O pendente de {@code machine} (deste lado), criado se ela ainda não tem: para a sobra de um pedido que ela
+     * recebeu. Crie só com algo a guardar (um lote vazio conta a máquina como ocupada até a próxima tentativa).
+     */
+    DockPendingLot lotFor(DockMachine machine) {
+        DockPendingLot lot = machine.pending();
+        if (lot == null) {
+            lot = new DockPendingLot();
+            attach(machine, lot);
+        }
+        return lot;
+    }
+
+    /** {@code lot} passa a ser o pendente de {@code machine} (junto ao que ela já tinha). */
+    void adopt(DockMachine machine, DockPendingLot lot) {
+        DockPendingLot current = machine.pending();
+        if (current == null) {
+            attach(machine, lot);
+        } else {
+            current.merge(lot);
+        }
+    }
+
+    private void attach(DockMachine machine, DockPendingLot lot) {
+        machine.setPending(lot);
+        pendingMachines++;
+        if (machine.active()) {
+            busyActive++;
+        }
+    }
+
+    /** {@code machine} fica sem pendente (o dela saiu inteiro, ou foi para outro lugar). */
+    void release(DockMachine machine) {
+        if (machine.pending() == null) {
+            return;
+        }
+        machine.setPending(null);
+        pendingMachines--;
+        if (machine.active()) {
+            busyActive--;
+        }
+    }
+
+    /** O pendente de {@code machine} vira solto (ela saiu do lado, foi quebrada ou trocada, ou não serve mais). */
+    void loosen(DockMachine machine) {
+        DockPendingLot lot = machine.pending();
+        if (lot == null) {
+            return;
+        }
+        release(machine);
+        addLoose(lot);
+    }
+
+    private void addLoose(DockPendingLot lot) {
+        if (lot.isEmpty()) {
+            return;
+        }
+        if (loose == null) {
+            loose = lot;
+        } else {
+            loose.merge(lot);
+        }
+    }
+
+    /** O pendente solto foi para uma máquina, ou saiu inteiro. */
+    void clearLoose() {
+        loose = null;
+    }
+
+    /**
+     * Guarda o pendente de itens e fluidos na máquina em {@code at} deste lado (ou solto, sem ela), no lugar de todo o
+     * pendente do lado (os químicos também saem); listas vazias limpam. Para os testes e o e2e montarem o estado.
+     */
+    public void setPending(List<ItemStack> items, List<FluidStack> fluids, @Nullable BlockPos at) {
+        clearPending();
+        DockPendingLot lot = new DockPendingLot();
+        for (ItemStack stack : items) {
+            lot.addItem(stack, stack.getCount());
+        }
+        for (FluidStack stack : fluids) {
+            lot.addFluid(stack, stack.getAmount());
+        }
+        if (lot.isEmpty()) {
+            return;
+        }
+        DockMachine machine = at == null ? null : machineAt(at.asLong());
+        if (machine != null) {
+            attach(machine, lot);
+        } else {
+            loose = lot;
+        }
+    }
+
+    /** Esvazia o pendente do lado inteiro: o das máquinas, o solto e os químicos crus. */
     public void clearPending() {
-        pendingItems.clear();
-        pendingFluids.clear();
-        pendingChemicals.clear();
+        for (DockMachine machine : machines) {
+            release(machine);
+        }
+        loose = null;
         rawChemicals.clear();
     }
 
+    private @Nullable DockMachine machineAt(long key) {
+        for (DockMachine machine : machines) {
+            if (machine.pos().asLong() == key) {
+                return machine;
+            }
+        }
+        return null;
+    }
+
     /**
-     * Acrescenta ao pendente os químicos salvos em {@code tags} (as entradas do {@link #pendingChemicalTags}); a que não
-     * dá para ler fica crua.
+     * O pendente do lado inteiro num lote novo: o de cada máquina e o solto (sem os crus). Para o item da Doca, a tela
+     * dos testes e o drop; O(máquinas).
      */
-    public void addPendingChemicals(List<CompoundTag> tags, HolderLookup.Provider registries) {
-        for (CompoundTag tag : tags) {
-            addPendingChemical(tag, registries);
+    public DockPendingLot pendingTotal() {
+        DockPendingLot total = new DockPendingLot();
+        for (DockMachine machine : machines) {
+            if (machine.pending() != null) {
+                total.merge(machine.pending());
+            }
+        }
+        if (loose != null) {
+            total.merge(loose);
+        }
+        return total;
+    }
+
+    /** Põe {@code lot} no pendente solto do lado (o lote passa a ser do lado); os químicos crus vão à parte. */
+    void addLooseLot(DockPendingLot lot, List<CompoundTag> raw) {
+        addLoose(lot);
+        for (CompoundTag tag : raw) {
+            rawChemicals.add(tag.copy());
         }
     }
 
     /**
-     * Acrescenta ao pendente os químicos salvos em {@code tags} sem lê-los, como entradas cruas: a Doca recolocada fora
-     * do mundo, sem os registros. O {@link #readRawChemicals} os lê quando ela entra no mundo.
+     * Acrescenta ao pendente solto os químicos salvos em {@code tags} sem lê-los, como entradas cruas: a Doca
+     * recolocada fora do mundo, sem os registros. O {@link #readRawChemicals} os lê quando ela entra no mundo.
      */
     public void keepRawChemicals(List<CompoundTag> tags) {
         for (CompoundTag tag : tags) {
@@ -240,67 +356,23 @@ public final class DockSide {
         }
     }
 
-    /** Tenta ler as entradas cruas de químico; a que continua ilegível (sem o Mekanism) fica crua. */
+    /** Tenta ler as entradas cruas de químico, que vão ao pendente solto; a que continua ilegível fica crua. */
     public void readRawChemicals(HolderLookup.Provider registries) {
         if (rawChemicals.isEmpty()) {
             return;
         }
         List<CompoundTag> raw = new ArrayList<>(rawChemicals);
         rawChemicals.clear();
+        DockPendingLot lot = new DockPendingLot();
         for (CompoundTag tag : raw) {
-            addPendingChemical(tag, registries);
+            lot.addChemicalTag(tag, registries, rawChemicals::add);
         }
+        addLoose(lot);
     }
 
-    private void addPendingChemical(CompoundTag tag, HolderLookup.Provider registries) {
-        Object stack = Chemicals.parseStack(tag, registries);
-        if (stack != null) {
-            pendingChemicals.add(stack);
-        } else if (!tag.isEmpty()) {
-            rawChemicals.add(tag.copy());
-        }
-    }
-
-    /** Os químicos pendentes em NBT, os lidos e os crus, para o item da Doca. */
-    public List<CompoundTag> pendingChemicalTags(HolderLookup.Provider registries) {
-        if (pendingChemicals.isEmpty() && rawChemicals.isEmpty()) {
-            return List.of();
-        }
-        List<CompoundTag> tags = new ArrayList<>(pendingChemicals.size() + rawChemicals.size());
-        for (Object stack : pendingChemicals) {
-            tags.add(Chemicals.saveStack(stack, registries));
-        }
-        for (CompoundTag raw : rawChemicals) {
-            tags.add(raw.copy());
-        }
-        return tags;
-    }
-
-    /** Põe {@code stack} (que passa a ser do lado) no pendente do pedido entregue a {@code at}. */
-    void addPending(ItemStack stack, BlockPos at) {
-        pendingItems.add(stack);
-        pendingAt = at.asLong();
-    }
-
-    void addPending(FluidStack stack, BlockPos at) {
-        pendingFluids.add(stack);
-        pendingAt = at.asLong();
-    }
-
-    /** Põe o químico {@code stack} ({@code ChemicalStack}, que passa a ser do lado) no pendente. */
-    void addPendingChemical(Object stack, BlockPos at) {
-        pendingChemicals.add(stack);
-        pendingAt = at.asLong();
-    }
-
-    /** O pendente passa para a máquina em {@code at} (a que o recebeu saiu do lado). */
-    void movePending(BlockPos at) {
-        pendingAt = at.asLong();
-    }
-
-    /** {@link #pendingAt} como {@code long}, sem criar a posição. */
-    long pendingAtKey() {
-        return pendingAt;
+    /** As entradas de químico cruas (sem o Mekanism), guardadas como vieram. */
+    public List<CompoundTag> rawChemicals() {
+        return Collections.unmodifiableList(rawChemicals);
     }
 
     /** O motivo da última recusa ({@code DockStatus}), ou {@link DockStatus#NO_REFUSAL}. */
@@ -347,8 +419,10 @@ public final class DockSide {
         return activeMachines;
     }
 
-    void setActiveMachines(int count) {
+    /** As ativas e, entre elas, as que guardam pendente: refeito com o registro no índice. */
+    void setActiveMachines(int count, int busy) {
         activeMachines = count;
+        busyActive = busy;
     }
 
     /** Ver {@link #providerFull}. */
@@ -433,41 +507,18 @@ public final class DockSide {
         tag.put("profile", profile.save(registries));
         ListTag list = new ListTag();
         for (DockMachine machine : machines) {
-            list.add(machine.save());
+            CompoundTag saved = machine.save();
+            if (machine.pending() != null) {
+                saved.put("pending", machine.pending().save(registries, List.of()));
+            }
+            list.add(saved);
         }
         tag.put("machines", list);
         tag.putInt("cursor", cursor);
-        if (keepsPending()) {
-            ListTag pending = new ListTag();
-            for (ItemStack stack : pendingItems) {
-                savePendingItem(pending, stack, registries);
-            }
-            for (FluidStack stack : pendingFluids) {
-                CompoundTag entry = new CompoundTag();
-                entry.put("fluid", stack.save(registries));
-                pending.add(entry);
-            }
-            for (CompoundTag chemical : pendingChemicalTags(registries)) {
-                CompoundTag entry = new CompoundTag();
-                entry.put("chemical", chemical);
-                pending.add(entry);
-            }
-            tag.put("pending", pending);
-            tag.putLong("pending_at", pendingAt);
+        if (loose != null || !rawChemicals.isEmpty()) {
+            tag.put("loose_pending", (loose != null ? loose : new DockPendingLot()).save(registries, rawChemicals));
         }
         return tag;
-    }
-
-    /** Um item pendente, em partes de até {@link #SAVED_STACK_MAX} (o codec não aceita mais que isso num stack). */
-    private static void savePendingItem(ListTag pending, ItemStack stack, HolderLookup.Provider registries) {
-        int left = stack.getCount();
-        while (left > 0) {
-            int part = Math.min(left, SAVED_STACK_MAX);
-            CompoundTag entry = new CompoundTag();
-            entry.put("item", stack.copyWithCount(part).save(registries));
-            pending.add(entry);
-            left -= part;
-        }
     }
 
     /** O lado salvo em {@code tag}, ou {@code null} com um lado fora de 0 a 5. */
@@ -481,28 +532,58 @@ public final class DockSide {
                 : null);
         ListTag list = tag.getList("machines", Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
-            loaded.machines.add(DockMachine.load(side, list.getCompound(i)));
+            CompoundTag saved = list.getCompound(i);
+            DockMachine machine = DockMachine.load(side, saved);
+            loaded.machines.add(machine);
+            if (saved.contains("pending", Tag.TAG_COMPOUND)) {
+                DockPendingLot lot = DockPendingLot.load(saved.getCompound("pending"), registries,
+                        loaded.rawChemicals::add);
+                if (!lot.isEmpty()) {
+                    loaded.attach(machine, lot);
+                }
+            }
         }
         int cursor = tag.getInt("cursor");
         loaded.cursor = cursor >= 0 && cursor < loaded.machines.size() ? cursor : 0;
+        if (tag.contains("loose_pending", Tag.TAG_COMPOUND)) {
+            loaded.addLoose(DockPendingLot.load(tag.getCompound("loose_pending"), registries,
+                    loaded.rawChemicals::add));
+        }
+        if (tag.contains("pending", Tag.TAG_LIST)) {
+            loaded.loadLegacyPending(tag, registries);
+        }
+        return loaded;
+    }
+
+    /**
+     * A migração do formato antigo (até o 7470507): {@code pending}, uma lista de {@code {item}} (pilhas de até 99),
+     * {@code {fluid}} ou {@code {chemical}}, e {@code pending_at}, a posição da máquina que recebeu o pedido. Vira um
+     * lote com uma linha por item, na máquina de {@code pending_at} se ela é deste lado, senão solto (como a posição da
+     * Doca que o item recolocado gravava). O químico que não dá para ler fica cru.
+     */
+    private void loadLegacyPending(CompoundTag tag, HolderLookup.Provider registries) {
+        DockPendingLot lot = new DockPendingLot();
         ListTag pending = tag.getList("pending", Tag.TAG_COMPOUND);
         for (int i = 0; i < pending.size(); i++) {
             CompoundTag entry = pending.getCompound(i);
             if (entry.contains("item", Tag.TAG_COMPOUND)) {
                 ItemStack stack = ItemStack.parseOptional(registries, entry.getCompound("item"));
-                if (!stack.isEmpty()) {
-                    loaded.pendingItems.add(stack);
-                }
+                lot.addItem(stack, stack.getCount());
             } else if (entry.contains("fluid", Tag.TAG_COMPOUND)) {
                 FluidStack stack = FluidStack.parseOptional(registries, entry.getCompound("fluid"));
-                if (!stack.isEmpty()) {
-                    loaded.pendingFluids.add(stack);
-                }
+                lot.addFluid(stack, stack.getAmount());
             } else if (entry.contains("chemical", Tag.TAG_COMPOUND)) {
-                loaded.addPendingChemical(entry.getCompound("chemical"), registries);
+                lot.addChemicalTag(entry.getCompound("chemical"), registries, rawChemicals::add);
             }
         }
-        loaded.pendingAt = tag.getLong("pending_at");
-        return loaded;
+        if (lot.isEmpty()) {
+            return;
+        }
+        DockMachine machine = tag.contains("pending_at", Tag.TAG_LONG) ? machineAt(tag.getLong("pending_at")) : null;
+        if (machine != null) {
+            adopt(machine, lot);
+        } else {
+            addLoose(lot);
+        }
     }
 }

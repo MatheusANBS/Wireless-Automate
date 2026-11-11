@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.gametest;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.dock.DockPendingContents;
 import io.github.matheusanbs.wirelessautomate.dock.DockProbe;
 import io.github.matheusanbs.wirelessautomate.dock.DockSide;
 import io.github.matheusanbs.wirelessautomate.dock.DockStatus;
@@ -13,8 +14,13 @@ import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
+import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongArrays;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -23,9 +29,12 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -108,6 +117,11 @@ final class DockDefinitivoMedida implements DockProbe.Listener {
     long pendingMax;
     long pendingRun;
     long pendingRunMax;
+    /** Ticks com toda máquina ativa do lado com pendente (o lado recusa pedidos). */
+    long waitingTicks;
+    /** O maior NBT da Doca (o block entity) e do componente {@code pattern_dock_pending} com o pendente, em bytes. */
+    long nbtMax;
+    long componentMax;
     /** O que as fábricas fizeram em cada tick acelerado, para o regime (do 5º tick ao do último empurrão). */
     final LongArrayList madePerTick = new LongArrayList();
     long lastPushTick;
@@ -253,13 +267,16 @@ final class DockDefinitivoMedida implements DockProbe.Listener {
             pendingTicks++;
             pendingRun++;
             pendingRunMax = Math.max(pendingRunMax, pendingRun);
-            long items = 0;
-            for (ItemStack stack : side.pendingItems()) {
-                items += stack.getCount();
+            long items = side.pendingTotal().itemCount();
+            if (items > pendingMax) {
+                pendingMax = items;
+                measureNbt();
             }
-            pendingMax = Math.max(pendingMax, items);
         } else {
             pendingRun = 0;
+        }
+        if (side.waitingOnPending()) {
+            waitingTicks++;
         }
         for (BlockPos rel : factories) {
             BlockPos pos = helper.absolutePos(rel);
@@ -322,7 +339,7 @@ final class DockDefinitivoMedida implements DockProbe.Listener {
         asks++;
         if (!accepts) {
             DockSide side = dock.side(NORTH);
-            if (side != null && side.hasPending()) {
+            if (side != null && side.waitingOnPending()) {
                 asksPending++;
             }
         }
@@ -371,11 +388,13 @@ final class DockDefinitivoMedida implements DockProbe.Listener {
                         + " ticks (%.1f s), %.1f itens/s (teto %.0f/s, %.1f%%); feito %d (%.1f%% do teto);"
                         + " fabricas paradas %.1f%% dos ticks; processos sem entrada %.1f%%; saidas cheias %.1f%%;"
                         + " media nas saidas %.0f itens; lado com pendente %.1f%% dos ticks (max %d itens, %d ticks"
-                        + " seguidos)",
+                        + " seguidos); lado esperando (toda maquina com pendente) %.1f%% dos ticks; NBT da Doca max"
+                        + " %d bytes, componente max %d bytes",
                 name, count, perJob, coProcessors, upgrades, returned, ticks, seconds, rate, ceiling,
                 100 * rate / ceiling, made, 100.0 * made / (ticks * ceiling / 20), 100.0 * idleFactoryTicks
                         / (ticks * count), 100.0 * emptyInputSlotTicks / slots, 100.0 * fullOutputSlotTicks / slots,
-                heldSum / (double) ticks, 100.0 * pendingTicks / ticks, pendingMax, pendingRunMax));
+                heldSum / (double) ticks, 100.0 * pendingTicks / ticks, pendingMax, pendingRunMax,
+                100.0 * waitingTicks / ticks, nbtMax, componentMax));
         long regimeMade = 0;
         int regimeTicks = 0;
         for (int t = 5; t < lastPushTick && t < madePerTick.size(); t++) {
@@ -414,6 +433,33 @@ final class DockDefinitivoMedida implements DockProbe.Listener {
                 returned == 0 ? 0 : returnNanos / (double) returned, percentile(sorted, 0.5) / 1e6,
                 percentile(sorted, 0.99) / 1e6, sorted.length == 0 ? 0 : sorted[sorted.length - 1] / 1e6, over,
                 sorted.length));
+    }
+
+    /**
+     * Mede o NBT da Doca e o do componente do item (o pendente que iria no item, se ela quebrasse agora), em bytes.
+     * Só quando o pendente cresce: o custo fica fora dos cronômetros da entrega e da volta.
+     */
+    private void measureNbt() {
+        var registries = helper.getLevel().registryAccess();
+        nbtMax = Math.max(nbtMax, bytes(dock.saveWithoutMetadata(registries)));
+        var contents = dock.collectComponents().get(ModDataComponents.PATTERN_DOCK_PENDING.get());
+        if (contents != null) {
+            Tag tag = DockPendingContents.CODEC.encodeStart(registries.createSerializationContext(NbtOps.INSTANCE),
+                    contents).getOrThrow();
+            CompoundTag wrapper = new CompoundTag();
+            wrapper.put("c", tag);
+            componentMax = Math.max(componentMax, bytes(wrapper));
+        }
+    }
+
+    private static long bytes(CompoundTag tag) {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (DataOutputStream data = new DataOutputStream(out)) {
+            NbtIo.write(tag, data);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        return out.size();
     }
 
     private static long percentile(long[] sorted, double p) {

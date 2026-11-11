@@ -34,8 +34,8 @@ sai o resultado. A action bar mostra o que ela achou.
 - Entrega **cada pedido inteiro** a uma máquina livre do lado.
 - As máquinas **se revezam**: o próximo pedido vai para a seguinte.
 - O resultado **volta ao provedor**, e o provedor manda para a rede.
-- Quando **todas as máquinas estão cheias**, o pedido espera. **Nada se perde**, com uma exceção: se você quebrar a
-  Doca com um resto de pedido de **fluido** esperando, esse fluido se perde (os itens caem no chão).
+- Quando **todas as máquinas estão cheias**, o pedido espera. **Nada se perde**: se você quebrar a Doca com um resto
+  de pedido esperando, ele vai junto no item ("Pedido pendente") e volta ao mesmo lado quando você a recoloca.
 
 ## Quem faz o quê
 

@@ -186,7 +186,7 @@ public class StorageBlock extends BaseEntityBlock {
      * A quebra vai rodar a loot table? A mesma pergunta do {@code ServerPlayerGameMode.destroyBlock}:
      * fora do criativo (pelo modo de jogo do servidor) e com a ferramenta certa.
      */
-    private static boolean lootWillDrop(Player player, BlockState state, Level level, BlockPos pos) {
+    public static boolean lootWillDrop(Player player, BlockState state, Level level, BlockPos pos) {
         boolean creative = player instanceof ServerPlayer serverPlayer ? serverPlayer.gameMode.isCreative() : player.isCreative();
         return !creative && state.canHarvestBlock(level, pos, player);
     }

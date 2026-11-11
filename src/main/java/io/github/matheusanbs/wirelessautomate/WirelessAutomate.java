@@ -4,6 +4,7 @@ import com.mojang.logging.LogUtils;
 import io.github.matheusanbs.wirelessautomate.chunk.ChunkLoaderEvents;
 import io.github.matheusanbs.wirelessautomate.command.WaCommand;
 import io.github.matheusanbs.wirelessautomate.dock.DockAe2;
+import io.github.matheusanbs.wirelessautomate.dock.DockIndex;
 import io.github.matheusanbs.wirelessautomate.item.tuner.TunerPending;
 import io.github.matheusanbs.wirelessautomate.menu.IdleNetworkUndo;
 import io.github.matheusanbs.wirelessautomate.menu.MachineClipboard;
@@ -156,6 +157,7 @@ public final class WirelessAutomate {
     private static void onServerStopped(ServerStoppedEvent event) {
         NetworkManager.reset();
         RemoteIndex.reset();
+        DockIndex.reset();
         SourceTankLevels.reset();
         RepairerManager.reset();
         TvManager.reset();

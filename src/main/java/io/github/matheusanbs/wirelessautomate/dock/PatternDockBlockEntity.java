@@ -13,6 +13,7 @@ import io.github.matheusanbs.wirelessautomate.range.RemoteListener;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
+import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -20,6 +21,7 @@ import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -29,6 +31,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -58,6 +61,8 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
      * capability; {@code Object} para esta classe carregar sem o AE2.
      */
     private Object @Nullable [] ae2Faces;
+    /** Um item da Doca com o pendente foi feito ou vai ser feito pela quebra ({@link #dropPendingWithoutItem}). */
+    private boolean dropExpected;
 
     public PatternDockBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.PATTERN_DOCK.get(), pos, state);
@@ -148,8 +153,8 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
     /**
      * Desvincula a máquina em {@code pos} do lado {@code side} e refaz o registro no índice. Sem máquinas e sem
      * pendente, o lado esquece o bloco (o próximo vínculo o escolhe de novo) e deixa de existir. Com pendente, o lado
-     * guarda o bloco: o resto do pedido só serve a uma máquina daquele bloco, e sai na próxima vinculada (ou no chão,
-     * ao quebrar a Doca).
+     * guarda o bloco: o resto do pedido só serve a uma máquina daquele bloco, e sai na próxima vinculada (ou vai no
+     * item, ao quebrar a Doca).
      */
     public boolean unlink(int side, BlockPos pos) {
         DockSide dockSide = sides[side];
@@ -225,7 +230,8 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
 
     /**
      * Refaz o registro no {@link RemoteIndex} e a marca {@link DockMachine#active} de cada máquina: no alcance do tier
-     * e até o máximo, na ordem dos lados e de vínculo. Só no servidor e com a Doca no mundo.
+     * e até o máximo, na ordem dos lados e de vínculo. Todas as vinculadas, ativas ou não, vão ao {@link DockIndex}
+     * (a unicidade entre Docas). Só no servidor e com a Doca no mundo.
      */
     private void refreshIndex() {
         if (level == null || level.isClientSide || isRemoved()) {
@@ -253,6 +259,7 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
             side.setActiveMachines(sideActive);
         }
         RemoteIndex.get().update(this, active);
+        DockIndex.get().update(this, level, machineAt.keySet().toLongArray());
     }
 
     /** A Doca saiu do mundo ou o chunk dela descarregou: sai do índice, e os caches das máquinas deixam de valer. */
@@ -261,6 +268,7 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
             return;
         }
         RemoteIndex.get().remove(this);
+        DockIndex.get().remove(this);
         NetworkManager.get().removeVisitor(returns);
         returns.discard();
         for (DockMachine machine : machineAt.values()) {
@@ -285,9 +293,29 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
         }
     }
 
-    /** Larga no chão o pendente de itens de todos os lados (o bloco saiu); os fluidos pendentes se perdem. */
-    public void dropPending() {
-        if (level == null || level.isClientSide) {
+    /** Algum lado tem pendente: a quebra leva o item com o componente {@code pattern_dock_pending}. */
+    public boolean hasPending() {
+        for (DockSide side : sides) {
+            if (side != null && side.hasPending()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** A quebra vai rodar a loot table depois de tirar o bloco (sobrevivência com a ferramenta certa). */
+    void expectDrop() {
+        dropExpected = true;
+    }
+
+    /**
+     * O bloco saiu do mundo sem um item da Doca com o pendente ({@code /setblock}, a remoção de outro mod sem loot, a
+     * Doca que a explosão destruiu sem drop): os itens pendentes caem no chão e os fluidos se perdem. Com o item feito
+     * ({@link #collectImplicitComponents}, ou o {@link #expectDrop} da quebra no sobrevivência), o pendente fica só
+     * no item. Não esvazia os lados: a loot table do sobrevivência roda depois de tirar o bloco e lê este block entity.
+     */
+    void dropPendingWithoutItem() {
+        if (dropExpected || level == null || level.isClientSide) {
             return;
         }
         for (DockSide side : sides) {
@@ -295,9 +323,62 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
                 continue;
             }
             for (ItemStack stack : side.pendingItems()) {
-                Containers.dropItemStack(level, worldPosition.getX(), worldPosition.getY(), worldPosition.getZ(), stack);
+                Containers.dropItemStack(level, worldPosition.getX(), worldPosition.getY(), worldPosition.getZ(),
+                        stack.copy());
             }
-            side.clearPending();
+        }
+    }
+
+    /** O drop leva o pendente de todos os lados, com o bloco de cada um; sem pendente, nada (e empilha). */
+    @Override
+    protected void collectImplicitComponents(DataComponentMap.Builder components) {
+        super.collectImplicitComponents(components);
+        List<DockPendingContents.Side> pending = new ArrayList<>(0);
+        for (DockSide side : sides) {
+            if (side != null && side.hasPending() && side.block() != null) {
+                pending.add(new DockPendingContents.Side(side.side(), side.block(), side.pendingItems(),
+                        side.pendingFluids()));
+            }
+        }
+        if (!pending.isEmpty()) {
+            components.set(ModDataComponents.PATTERN_DOCK_PENDING.get(), new DockPendingContents(pending));
+            // um item com o pendente existe: se o bloco sair agora, nada cai no chão
+            dropExpected = true;
+        }
+    }
+
+    /**
+     * Colocada a partir de um item com pendente: cada lado volta com o bloco e o pendente. Sem máquinas, o lado guarda
+     * o bloco até o pendente sair na primeira máquina daquele bloco vinculada a ele.
+     */
+    @Override
+    protected void applyImplicitComponents(DataComponentInput input) {
+        super.applyImplicitComponents(input);
+        DockPendingContents contents = input.get(ModDataComponents.PATTERN_DOCK_PENDING.get());
+        if (contents == null) {
+            return;
+        }
+        for (DockPendingContents.Side saved : contents.sides()) {
+            DockSide side = sides[saved.side()];
+            if (side == null) {
+                side = new DockSide(saved.side());
+                sides[saved.side()] = side;
+            }
+            if (side.block() == null) {
+                side.assignBlock(saved.block());
+            } else if (!side.block().equals(saved.block()) || side.hasPending()) {
+                continue;
+            }
+            List<ItemStack> items = new ArrayList<>(saved.items().size());
+            for (ItemStack stack : saved.items()) {
+                items.add(stack.copy());
+            }
+            List<FluidStack> fluids = new ArrayList<>(saved.fluids().size());
+            for (FluidStack stack : saved.fluids()) {
+                fluids.add(stack.copy());
+            }
+            // a posição da própria Doca nunca é de uma máquina: o pendente vai à primeira ativa do lado que o sirva
+            side.setPending(items, fluids, worldPosition);
         }
     }
 

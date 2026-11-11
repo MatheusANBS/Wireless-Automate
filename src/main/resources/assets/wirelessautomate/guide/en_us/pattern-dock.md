@@ -34,8 +34,8 @@ gives the result. The action bar shows what it found.
 - It hands **each whole order** to a free machine of the side.
 - The machines **take turns**: the next order goes to the next one.
 - The result **goes back to the provider**, and the provider sends it to the network.
-- When **all the machines are full**, the order waits. **Nothing is lost**, with one exception: if you break the Dock
-  while the rest of a **fluid** order is waiting, that fluid is lost (items drop on the ground).
+- When **all the machines are full**, the order waits. **Nothing is lost**: if you break the Dock while the rest of an
+  order is waiting, it goes along in the item ("Order pending") and returns to the same side when you place it again.
 
 ## Who does what
 

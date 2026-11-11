@@ -14,8 +14,6 @@ import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.range.MachineConfig;
 import io.github.matheusanbs.wirelessautomate.range.RangeLinks;
 import io.github.matheusanbs.wirelessautomate.range.RangeRules;
-import io.github.matheusanbs.wirelessautomate.range.RemoteIndex;
-import io.github.matheusanbs.wirelessautomate.range.RemoteListener;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import java.util.Map;
@@ -45,7 +43,7 @@ import org.jetbrains.annotations.Nullable;
  * <p>Ordem das recusas de uma máquina: a Doca escolhida presente e na dimensão do jogador; {@code mayBuild} e
  * {@code mayInteract} na máquina e na Doca ({@link Refusal#PROTECTED}); a máquina já é deste lado (desvincula) ou de
  * outro lado desta Doca; não é máquina (um roteador, uma Doca, um bloco sem capability de um tipo carregado); o lado é
- * de outro bloco; a máquina é de outra Doca carregada (o {@link RemoteIndex}); fora do cubo do tier; o limite do tier.
+ * de outro bloco; a máquina é de outra Doca carregada (o {@link DockIndex}, ativa ou não); fora do cubo do tier; o limite do tier.
  * Uma máquina vinculada a um roteador pode entrar num lado, e vice-versa (decisão do dono, 10/11/2026).
  *
  * <p>O primeiro vínculo de um lado preenche o perfil dele pelo Afinador ({@link #tune}); as outras máquinas usam o
@@ -325,12 +323,13 @@ public final class DockLinks {
     }
 
     /**
-     * Outra Doca carregada que tem a máquina em {@code pos} no índice das remotas, ou {@code null}. Uma Doca num chunk
-     * descarregado não é vista (limite aceito pelo dono: sem índice salvo).
+     * Outra Doca carregada que tem a máquina em {@code pos} vinculada ({@link DockIndex}: ativa, fora do alcance ou
+     * além do limite), ou {@code null}. Uma Doca num chunk descarregado não é vista (limite aceito pelo dono: sem
+     * índice salvo).
      */
     static @Nullable PatternDockBlockEntity otherDock(Level level, PatternDockBlockEntity dock, BlockPos pos) {
-        for (RemoteListener listener : RemoteIndex.get().listenersAt(level, pos)) {
-            if (listener instanceof PatternDockBlockEntity other && other != dock && other.machineAt(pos) != null) {
+        for (PatternDockBlockEntity other : DockIndex.get().docksAt(level, pos)) {
+            if (other != dock && !other.isRemoved() && other.machineAt(pos) != null) {
                 return other;
             }
         }

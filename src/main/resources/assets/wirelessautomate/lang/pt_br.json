@@ -25,6 +25,7 @@
   "block.wirelessautomate.signal_screen": "Tela de Sinal",
   "block.wirelessautomate.pattern_dock": "Doca de Padrões",
   "block.wirelessautomate.pattern_dock.reach": "Raio de %s blocos, até %s máquinas",
+  "block.wirelessautomate.pattern_dock.pending": "Pedido pendente",
   "block.wirelessautomate.resonance_core.tooltip": "%s · %s câmaras de cristal",
   "block.wirelessautomate.resonance_core.tooltip.eco": "Eco Ressonante %s",
   "block.wirelessautomate.resonance_core.formed": "Ressonador montado",

@@ -6,6 +6,7 @@ import com.mojang.serialization.Dynamic;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.dock.DockChoice;
+import io.github.matheusanbs.wirelessautomate.dock.DockPendingContents;
 import io.github.matheusanbs.wirelessautomate.filter.Filter;
 import io.github.matheusanbs.wirelessautomate.filter.FilterCodecs;
 import io.github.matheusanbs.wirelessautomate.item.FilterCardItem;
@@ -106,6 +107,15 @@ public final class ModDataComponents {
             DATA_COMPONENTS.registerComponentType("linker_dock", builder -> builder
                     .persistent(DockChoice.CODEC)
                     .networkSynchronized(DockChoice.STREAM_CODEC));
+
+    /**
+     * O pendente de uma Doca de Padrões quebrada (por lado: o bloco, os itens e os fluidos), que volta aos lados ao
+     * recolocar; só existe com pendente.
+     */
+    public static final Supplier<DataComponentType<DockPendingContents>> PATTERN_DOCK_PENDING =
+            DATA_COMPONENTS.registerComponentType("pattern_dock_pending", builder -> builder
+                    .persistent(DockPendingContents.CODEC)
+                    .networkSynchronized(DockPendingContents.STREAM_CODEC));
 
     /** Bloco da máquina copiado pelo Configurador antigo; nada mais o lê nem grava, fica registrado para os itens que o levam. */
     public static final Supplier<DataComponentType<ResourceLocation>> CONFIGURATOR_MACHINE =

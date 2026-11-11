@@ -4,6 +4,7 @@ import com.mojang.serialization.MapCodec;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
+import io.github.matheusanbs.wirelessautomate.storage.StorageBlock;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
 import io.github.matheusanbs.wirelessautomate.menu.DockMenu;
 import net.minecraft.core.BlockPos;
@@ -12,6 +13,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -29,7 +31,8 @@ import org.jetbrains.annotations.Nullable;
  * A Doca de Padrões: um bloco cheio, sem frente e sem giro (os seis lados são iguais e nomeados pela direção do
  * mundo), com o tier do roteador ({@link RouterBlock#TIER}), que define o alcance ({@link
  * io.github.matheusanbs.wirelessautomate.Config#dockRadius}). Sobe de tier com o Cartão de Upgrade, sem perder os lados.
- * Clique direito abre a tela ({@link DockMenu}). Quebrada, larga no chão o pendente de itens; o item leva só o tier.
+ * Clique direito abre a tela ({@link DockMenu}). Quebrada, o item leva o tier e o pendente dos lados
+ * ({@code pattern_dock_pending}), que volta ao recolocar.
  */
 public class PatternDockBlock extends BaseEntityBlock {
     public static final MapCodec<PatternDockBlock> CODEC = simpleCodec(PatternDockBlock::new);
@@ -91,11 +94,37 @@ public class PatternDockBlock extends BaseEntityBlock {
         }
     }
 
-    /** Bloco saindo do mundo (não uma troca de tier, que só muda o estado): o pendente de itens cai no chão. */
+    /**
+     * Com pendente, a Doca nunca some sem virar item, como a caixa de shulker: se a quebra não vai dropar nada
+     * (criativo, ou sem a ferramenta certa), o próprio bloco solta o item com o pendente. Com a picareta, no
+     * sobrevivência, quem dropa é a loot table (que copia o {@code pattern_dock_pending}), e aqui só se avisa o block
+     * entity de que o drop vem.
+     */
+    @Override
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        if (!level.isClientSide && level.getBlockEntity(pos) instanceof PatternDockBlockEntity dock
+                && dock.hasPending()) {
+            if (StorageBlock.lootWillDrop(player, state, level, pos)) {
+                dock.expectDrop();
+            } else {
+                ItemStack stack = StorageBlockItem.withTier(asItem(), state.getValue(RouterBlock.TIER));
+                stack.applyComponents(dock.collectComponents());
+                ItemEntity drop = new ItemEntity(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, stack);
+                drop.setDefaultPickUpDelay();
+                level.addFreshEntity(drop);
+            }
+        }
+        return super.playerWillDestroy(level, pos, state, player);
+    }
+
+    /**
+     * Bloco saindo do mundo (não uma troca de tier, que só muda o estado): sem um item com o pendente, os itens
+     * pendentes caem no chão ({@link PatternDockBlockEntity#dropPendingWithoutItem}).
+     */
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
         if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof PatternDockBlockEntity dock) {
-            dock.dropPending();
+            dock.dropPendingWithoutItem();
         }
         super.onRemove(state, level, pos, newState, movedByPiston);
     }

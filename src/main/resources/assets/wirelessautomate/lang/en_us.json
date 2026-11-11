@@ -25,6 +25,7 @@
   "block.wirelessautomate.signal_screen": "Signal Screen",
   "block.wirelessautomate.pattern_dock": "Pattern Dock",
   "block.wirelessautomate.pattern_dock.reach": "Radius %s blocks, up to %s machines",
+  "block.wirelessautomate.pattern_dock.pending": "Order pending",
   "block.wirelessautomate.resonance_core.tooltip": "%s · %s crystal chambers",
   "block.wirelessautomate.resonance_core.tooltip.eco": "Resonant Echo %s",
   "block.wirelessautomate.resonance_core.formed": "Resonator formed",

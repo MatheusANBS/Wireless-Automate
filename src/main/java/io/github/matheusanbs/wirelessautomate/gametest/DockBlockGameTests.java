@@ -189,7 +189,10 @@ public final class DockBlockGameTests {
         helper.succeed();
     }
 
-    /** O pendente de itens cai no chão quando a Doca é quebrada. */
+    /**
+     * Quebrada sem drop (o {@code destroyBlock} sem loot, como o {@code /setblock}), sem um item que leve o pendente, os
+     * itens pendentes caem no chão.
+     */
     @GameTest(template = "empty", timeoutTicks = 100)
     public static void pendingDropsOnBreak(GameTestHelper helper) {
         PatternDockBlockEntity dock = dock(helper, RouterTier.BASIC);

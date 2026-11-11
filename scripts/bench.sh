@@ -17,7 +17,7 @@
 #
 # O que ele faz:
 #   - prepara run/bench: eula, server.properties com mundo plano novo, porta 25599, sem mobs;
-#   - sobe ./gradlew runBenchServer (com Sophisticated Storage, Spark e AE2; ver build.gradle) com WA_BENCH;
+#   - sobe ./gradlew runBenchServer (com Sophisticated Storage e Spark, e o AE2 só com doca-ae2; ver build.gradle) com WA_BENCH;
 #   - o mod mede o servidor vazio, roda as tarefas em sequência e para o servidor no fim;
 #   - o relatório fica em run/bench/reports/<data>.md e o log do servidor ao lado.
 # Cenários e números em docs/benchmark.md. Use uma máquina sem outra carga: os tempos são de parede.
@@ -96,6 +96,12 @@ fi
 log "Tarefas: $SPEC"
 log "Relatório: $REPORT"
 EXTRA=()
+# O AE2 e o GuideME só entram em run/bench/mods com uma tarefa doca-ae2 (o prepareBenchMods tira os jars sem ela),
+# para as outras rodadas medirem o servidor de sempre.
+if printf '%s' "$SPEC" | grep -Eq '(^|[;,])doca-ae2(:|[;,]|$)'; then
+    EXTRA+=("-PbenchAe2")
+    log "AE2 e GuideME em run/bench/mods (tarefa doca-ae2)"
+fi
 if [ -n "${WA_BENCH_JFR:-}" ]; then
     EXTRA+=("-PbenchJfr=$RUN_DIR/reports/$STAMP.jfr")
     log "Perfil JFR: $RUN_DIR/reports/$STAMP.jfr"

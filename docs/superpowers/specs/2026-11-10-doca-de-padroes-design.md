@@ -206,3 +206,88 @@ O que a implementação da etapa 1 mudou em relação ao desenho, além do que j
 - **As travas do Autocrafter com a Doca:** "até receber todos os resultados" funciona com a volta direta (a tarefa avisa o Autocrafter ao pegar o resultado inserido na rede; GameTest). "Até a máquina esvaziar" lê o lado como vazio só sem pendente e sem entrega ou volta nos últimos 15 s (`DockStatus.WORKING_TICKS`): depois de cada movimento o lado inteiro fica travado 15 s, mesmo com as máquinas já vazias, e só um lote por vez circula nele.
 - **O mínimo do RS2 no `neoforge.mods.toml` é 2.0.9**: o `ItemResource`, o `FluidResource` e o `PlatformPatternProviderExternalPatternSink` só foram conferidos nela.
 - **A captura do e2e com um lado de Autocrafter ficou de fora** (plano da etapa 2, tarefa 4): o `E2eDockSteps` não monta um Autocrafter. O "tem provedor" com o Autocrafter tem GameTest (`providerDetection` do RS2); a captura fica para quando a tela da Doca mudar.
+
+## A arte no jogo (etapa 3)
+
+Plano: `docs/superpowers/plans/2026-11-11-doca-de-padroes-etapa-3.md`. Método da skill `wa-shaders`: decompor a referência, comparar as técnicas, conferir lado a lado e gravar o GIF do jogo para o dono.
+
+### A decomposição da referência (11/11/2026)
+
+Quadros tirados com `python -I .claude/skills/wa-shaders/scripts/quadros.py <gif> <pasta>`, conferidos contra os keyframes do `docs/preview/doca-de-padroes.bbmodel` (as duas animações estão assadas de 0,05 em 0,05 s, interpolação linear entre as amostras, laço de 6 s, `snapping` 20).
+
+- `doca-de-padroes-trabalhando.gif`: 60 quadros de 100 ms, 6,0 s, 240 × 240. Bate quadro a quadro com a animação `animation.doca.trabalhando`.
+- `doca-de-padroes-repouso.gif`: 48 quadros de 120 ms, **5,76 s**. O GIF guarda o tempo em centésimos e os 125 ms do Blockbench (8 por segundo) viraram 120: o laço de 6 s toca 4% mais rápido no GIF. O jogo segue os 6 s dos keyframes.
+- O pacote entra pela vigia do lado leste (o grupo `pacote` nasce em x = 7,5 e anda −7,5 até o centro): no jogo, o lado do último evento.
+
+A linha do tempo do laço de trabalho (6 s; os tempos são dos keyframes, os nomes dos grupos são os do `.bbmodel`):
+
+| Peça | De | Até | O que faz | Curva (conferida nas amostras) |
+| --- | --- | --- | --- | --- |
+| Anel de latão (`anel_h`, 6,4 × 6,4, deitado) | 0 | 6 | 2 voltas em torno de y (+720°) e balança ±10° em x, período 3 s | giro linear; balanço `10° · sin(2πt/3)` |
+| Anel de porcelana (`anel_v`, 9 × 9, em pé no plano xy) | 0 | 6 | 1 volta em torno de y (−360°) | linear |
+| Anel de grafite claro (`anel_z`, 7,8 × 7,8 no plano yz) | 0 | 6 | 1 volta em torno de x (+360°) | linear |
+| Cristal (`nucleo`, cubo 3 × 3 × 3 em pé na ponta, cor da lente do tier) | 0 | 6 | 2 voltas em y (−720°), sobe e desce ±0,2 com período 3 s | linear; `0,2 · sin(2πt/3)` |
+| Cristal: respira | 0 | 1,05 | 1,00 → 1,03 → 0,97 | suave |
+| Cristal: absorve o pacote | 1,05 | 1,45 | incha até 1,32 (em 1,25 s) e volta a 1,0 | pulso |
+| Cristal: solta os fragmentos | 1,7 | 4,0 | encolhe para 0,8 (2,5 s) e fica em 0,79 a 0,85 | suave |
+| Cristal: reabsorve | 4,0 | 4,6 | incha até 1,09 (4,45 s) e volta a 1,0; respira até 6 s | pulso |
+| Pacote (`pacote`: caixa de latão 1,6 com fita de porcelana) | 0,05 | 0,3 | aparece na vigia (escala 0 → 1) | suave |
+| Pacote: entra | 0,2 | 1,2 | anda da vigia ao centro (7,5 unidades) | `smoothstep` exato (0,3 s: −0,21; 0,45 s: −1,17) |
+| Pacote: é absorvido | 1,0 | 1,25 | escala 0,9 → 0 | suave |
+| Pacote: volta | 4,55 | 5,7 | reaparece no centro (4,55 a 4,75 s) e anda até a vigia (`smoothstep` de 4,6 a 5,7 s) | suave |
+| Pacote: some | 5,45 | 5,8 | escala 1 → 0 na vigia | suave |
+| Pacote: gira | 0 | 6 | 6 voltas em y (+2160°) enquanto visível | linear |
+| Fragmentos (`sat_0..3`: quatro losangos 1,7 da cor da lente, a 3 do centro em ±x e ±z) | 0 | 6 | o grupo `satelites` dá 2 voltas em y (+720°) | linear |
+| Fragmentos: nascem | 1,4 | 1,75 | saem do centro para o raio 3, escala 0 → 1 | suave |
+| Fragmentos: orbitam | 1,75 | 2,3 | no raio 3, escala 1 | — |
+| Fragmentos: saem e somem | 2,3 | 2,8 | vão ao raio 6,6, escala 1 → 0 | suave |
+| Fragmentos: voltam em espiral | 3,3 | 4,4 | do raio 6,6 ao centro, escala 0,7 → 0,5 → 0 (a espiral é o giro do grupo somado ao raio que encolhe) | suave |
+
+O repouso (`animation.doca.idle`, 6 s): o anel de latão dá **uma** volta (+360°) e balança ±6° com período de 6 s; o cristal dá uma volta (−360°), sobe e desce ±0,3 com período 3 s e não muda de escala; sem pacote nem fragmentos. **Os anéis de porcelana e de grafite giram na mesma velocidade nos dois laços** (uma volta por laço): a "metade da velocidade" da proposta vale só para o anel de latão e o cristal. O jogo segue os keyframes.
+
+O circuito: medido no GIF (os texels do circuito na face da frente, a transformada de Fourier do brilho de cada um ao longo dos 60 quadros), cada texel é uma senoide pura de período 3 s (a componente de 2 ciclos por laço é 50 vezes as outras), e a fase anda em linha reta pela face, da ponta de baixo à esquerda para a de cima à direita, com um comprimento de onda de uma face (coerência 0,94 com uma onda plana). As cores vão da sombra da lente até perto do brilho (a face da frente aparece com 0,67 da luz no GIF: a sombra (19, 108, 102) chega como (12, 72, 68)). As duas animações têm o mesmo circuito: a cor não reage ao trabalho.
+
+### As técnicas por elemento
+
+Critérios: fidelidade à tabela acima, custo por quadro e por tick (com 50 Docas à vista), compatibilidade com o Iris (shaderpack) e o Embeddium/Sodium do ATM10, dependência e esforço.
+
+**Circuito**
+
+| Técnica | Fidelidade | Custo | Iris / Embeddium | Fica? |
+| --- | --- | --- | --- | --- |
+| **Textura animada (`.mcmeta`) por tier**, como o ME Controller do AE2 (`ae2:block/controller_lights`, 16 × 192, `interpolate`, `frametime` 25) | A onda por texel, com a cor exata da rampa do tier em cada quadro | O vanilla (`SpriteContents.Ticker`) troca ou mistura o quadro do sprite uma vez por tick, para todos os blocos que o usam de uma vez; com a interpolação, mistura os 256 texels de um sprite de 16 × 16 (e os mipmaps) por tick. Zero código Java, zero por bloco | Passa pelo atlas de blocos, como a água e o fogo: os dois a tratam. O Embeddium pula o sprite que não está à vista ("Animate Only Visible Textures", ligado por padrão) | **Sim** |
+| Renderer desenhando os traços com cor por vértice | Igual, e poderia reagir ao trabalho | Por Doca e por quadro (~50 quads por face), e só perto: de longe o circuito ficaria parado | `RenderType` de entidade: tratado | Não: custo por bloco para o mesmo resultado |
+| Core shader no bloco (a cor calculada no fragment) | Igual | Exige um `RenderType` próprio no chunk, fora do caminho do Embeddium | Shaderpack do Iris substitui o programa do terreno: o efeito some | Não |
+
+Um sprite à parte só para o circuito (16 × 16, o recorte do painel no atlas) em vez do atlas inteiro animado: o mesmo resultado com 1/16 da mistura por tick (o atlas de 64 × 64 misturaria 4.096 texels por tier). Os painéis passam a usar a textura `#circuit` só na face de fora; o resto do bloco fica no `#dock`.
+
+A luz cheia só nos traços pede uma segunda camada: o AE2 faz assim (`controller_block_lights`: um cubo inteiro de `#lights` em `cutout` com `block_light` 15 por cima do bloco). Aqui seriam 48 faces a mais (uma por peça de painel), contra a regra de não pôr elemento a mais: a luz cheia continua na face inteira do painel, cujo fundo é grafite escuro (27, 25, 32) e quase não muda com a luz.
+
+**Giroscópio (os três anéis e o cristal)**
+
+| Técnica | Fidelidade | Custo | Iris / Embeddium | Fica? |
+| --- | --- | --- | --- | --- |
+| **`BlockEntityRenderer` por fórmula** a partir do `gameTime` e do `partialTick`, como o Reparador e o Ressonador | Os giros e o balanço são lineares e senoides; a escala do cristal é a única curva irregular, e cabe numa tabela de poucos pontos tirada dos keyframes | ~19 caixas (os 12 pedaços dos anéis, o cristal, o pacote em 2, os 4 fragmentos), ~100 quads por Doca por quadro, só a menos de 64 blocos; sem alocação; a rampa entre repouso e trabalho é uma conta na fase | `RenderType` do vanilla (`entitySolid`/`entityTranslucent` no atlas de blocos): o Iris desenha os block entities no programa dele; o Embeddium não muda o caminho dos BERs | **Sim** |
+| Keyframes do vanilla (`AnimationDefinition` + `KeyframeAnimations.animate` sobre `ModelPart`) | Os keyframes do Blockbench exatos (exportados pelo formato de entidade, não pelo genérico em que o `.bbmodel` está) | O `animate` acha cada osso por `getAnyDescendantWithName`, que monta um `Stream` a cada chamada: alocação por osso por quadro. Duas animações sem mistura entre elas: a passagem suave é à mão de qualquer jeito | Igual ao renderer | Não: aloca por quadro e não dá a transição |
+| GeckoLib 4 (MIT; já no ATM10) com `GeoBlockEntity` e `GeoBlockRenderer`, os arquivos exportados pelo plugin do Blockbench | Os keyframes exatos; a transição entre animações pronta (`transitionLength`) | Um controlador de animação por block entity e o processamento dos ossos por quadro, mais pesado que a fórmula; os 174 elementos estáticos continuam no modelo de bloco | Tratado pelo Iris (o GeckoLib desenha com `RenderType` de entidade) | Não: dependência obrigatória (o mod não tem nenhuma) para algo que a fórmula faz; opcional, sem ela a Doca ficaria parada |
+| Blockstates por quadro (um modelo por fase) | Passos discretos | Refaz o chunk a cada troca: proibido | — | Não |
+
+**Pacote** e **fragmentos** (só no laço de trabalho)
+
+| Técnica | Fidelidade | Custo | Iris / Embeddium | Fica? |
+| --- | --- | --- | --- | --- |
+| **No mesmo renderer, pela fórmula** (`smoothstep` do pacote, raio e escala dos fragmentos pela tabela, o giro do grupo) | A tabela inteira, emendando no laço | 6 caixas a mais só enquanto trabalha | Como o giroscópio | **Sim** |
+| Partículas do vanilla | Sem órbita nem espiral presas ao centro; somem atrás de vidro fora do Fabulous; pacote não é partícula | Uma partícula por fragmento, criada e destruída a cada laço (alocação) | Partículas translúcidas variam com o shaderpack | Não |
+| GeckoLib ou keyframes do vanilla | Exatos | Os do giroscópio; o lado do pacote ainda pede girar o osso na mão | — | Não, pelos motivos do giroscópio |
+
+**O sinal "trabalhando" para o cliente**
+
+| Técnica | Custo | Fica? |
+| --- | --- | --- |
+| **Evento de bloco** (`level.blockEvent`, o `triggerEvent` do block entity no cliente), no máximo um a cada 100 ticks por Doca, com o lado | O servidor junta os eventos iguais do mesmo tick (`ServerLevel.blockEvents` é um conjunto) e manda um `ClientboundBlockEventPacket` de ~12 bytes só a quem está a menos de 64 blocos (`PlayerList.broadcast`, o mesmo raio do renderer); não é payload do mod, o protocolo não muda | **Sim** |
+| Sincronia do block entity (`getUpdatePacket` com o tick no NBT) | Manda o NBT inteiro do block entity a todos que veem o chunk, e o tick seria chave nova de NBT | Não |
+| Payload próprio | Muda o `ModPayloads.VERSION` e repete o que o evento de bloco já dá | Não |
+
+**Escolha:** a da arquitetura do plano, sem troca: o circuito em textura animada por tier (num sprite próprio de 16 × 16), o giroscópio, o pacote e os fragmentos num `BlockEntityRenderer` por fórmula com os `RenderType` do vanilla, e o "trabalhando" pelo evento de bloco. Nenhuma técnica comparada tem ganho claro sobre essas: as de keyframes acertam a curva de graça, mas custam alocação ou uma dependência e não fazem a passagem suave que o dono pediu.
+
+Fontes: o código do Minecraft 1.21.1 e do NeoForge 21.1.248 (`SpriteContents`, `KeyframeAnimations`, `HierarchicalModel`, `ServerLevel.runBlockEvents`); o jar do AE2 19.2 (o modelo e a `.mcmeta` do ME Controller); a lista de opções do Sodium (wiki "Sodium video settings") e a issue do Fog (IMB11/Fog#23) para o "Animate Only Visible Textures"; a `references/dependencias.md` da `wa-shaders` (GeckoLib: MIT, no ATM10).

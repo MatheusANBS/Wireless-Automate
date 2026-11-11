@@ -81,6 +81,7 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 - **Doca de Padrões, etapa 1** (ramo `ccr-71b175d3-weymk6`, 11/11): teste à mão no jogo com o AE2 (a linha de fornalhas, o Ctrl + clique, a tela, o cubo, um pedido grande pela CPU, a trava "até o resultado"). (11/11)
 - Doca: a unicidade não vê uma Doca **descarregada**: uma máquina dela pode entrar em outra Doca (limite aceito pelo dono). Com a mesma máquina em duas Docas, o resultado pode voltar pelo provedor da outra; em redes ME diferentes o pedido não termina. (11/11)
 - Doca: o fluido que o provedor recusa na execução depois de aceitar na simulação volta à máquina pela face Extrai, e o que ela não aceitar se perde (raro: um handler que mente na simulação). (11/11)
+- Doca e RS2: o `ItemResource` e o `FluidResource` vêm da `refinedstorage-common` (interna, `@API(INTERNAL)`), não da API publicada; podem mudar entre versões do RS2. Conferir a cada versão nova do RS2 (o `versionRange` é `[2.0.0,)`). (11/11)
 - Doca: o Ctrl + clique no raio 96 (Ultimate) custa de 2,4 a 3,9 ms por clique; avaliar baixar o teto de leitura só para a Doca. (11/11)
 - Doca: as etiquetas dos lados no modelo têm 2 × 1 texels e de longe quase não se distinguem; rever na etapa 3. (11/11)
 - Doca: com pendente, o lado guarda o bloco mesmo sem máquinas (para trocar de máquina, vincular uma do bloco antigo ou quebrar a Doca); decidir se o pendente vai ao chão ao desvincular a última. (11/11)

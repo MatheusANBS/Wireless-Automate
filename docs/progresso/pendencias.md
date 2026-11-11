@@ -78,6 +78,18 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 
 ## Integrações
 
+- **Doca de Padrões, etapa 1** (ramo `ccr-71b175d3-weymk6`, 11/11): teste à mão no jogo com o AE2 (a linha de fornalhas, o Ctrl + clique, a tela, o cubo, um pedido grande pela CPU, a trava "até o resultado"). (11/11)
+- Doca: a unicidade só olha as máquinas **ativas** das Docas **carregadas**: uma máquina fora do alcance ou além do limite da Doca A pode entrar na Doca B, e a de uma Doca descarregada também (limite aceito pelo dono). Fechar a primeira brecha na etapa 2 (conferir todas as vinculadas). Com a mesma máquina em duas Docas, o resultado pode voltar pelo provedor da outra; em redes ME diferentes o pedido não termina. (11/11)
+- Doca: o fluido pendente se perde ao quebrar a Doca, e o fluido que o provedor recusa na execução depois de aceitar na simulação também (raro). (11/11)
+- Doca: bench com o AE2 de verdade (provedor e CPU com 32 coprocessadores); o servidor do `bench.sh` não tem o AE2. Hoje só o cenário `doca` pela API da entrega. (11/11)
+- Doca: o baú do provedor que esvazia não acorda o lado com "provedor cheio" (ele volta pelo listener do cache ou pelo teto de sono de 100 ticks). (11/11)
+- Doca: o Ctrl + clique no raio 96 (Ultimate) custa de 2,4 a 3,9 ms por clique; avaliar baixar o teto de leitura só para a Doca. (11/11)
+- Doca: as etiquetas dos lados no modelo têm 2 × 1 texels e de longe quase não se distinguem; rever na etapa 3. (11/11)
+- Doca: GameTests que provam menos do que dizem: o pedido pela CPU não prova as três máquinas trabalhando ao mesmo tempo; a máquina "descarregada" é uma posição abaixo do mundo, não um chunk descarregado. (11/11)
+- Doca: com pendente, o lado guarda o bloco mesmo sem máquinas (para trocar de máquina, vincular uma do bloco antigo ou quebrar a Doca); decidir se o pendente vai ao chão ao desvincular a última. (11/11)
+- **(dono)** Doca: a receita (fica para o balanceamento das receitas). (10/11)
+- `RouterBlockEntity` em 999 linhas: qualquer linha nova exige dividir antes. (11/11)
+
 
 ## Testes, e2e e bench
 

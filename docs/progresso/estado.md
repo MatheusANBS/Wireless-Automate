@@ -59,7 +59,7 @@ Legenda: ✅ pronto e testado · 🟡 parcial · ⬜ não começado
 | JEI | ✅ | — | Filtros, receitas, estrutura do Ressonador, "+" da Mesa (opcional) |
 | Químicos do Mekanism | ✅ | — | Aba Químicos e Tanque Químico (opcional) |
 | Source do Ars Nouveau | ✅ | — | Aba Source e Tanque de Source (opcional) |
-| Doca de Padrões (AE2 e RS2) | 🟡 | etapas 1 e 2 no ramo `ccr-71b175d3-weymk6` | Bloco com oito tiers e alcance próprio; cada lado cuida de um tipo de máquina, vinculado pelo Vinculador com o perfil pelo Afinador; recebe pedidos de um Pattern Provider do AE2 ou de um Autocrafter do RS2 (os dois opcionais), entrega cada pedido inteiro a uma máquina livre e devolve o resultado direto à rede do provedor (ME ou RS2); a tela avisa a trava "até o resultado" do AE2; tela de seis linhas, cubo do alcance no mundo, modelo estático; faltam a arte animada (etapa 3) e o pedido com item e fluido (etapa 4) |
+| Doca de Padrões (AE2 e RS2) | 🟡 | etapas 1 e 2 no ramo `ccr-71b175d3-weymk6` | Bloco com oito tiers e alcance próprio; cada lado cuida de um tipo de máquina, vinculado pelo Vinculador com o perfil pelo Afinador; recebe pedidos de um Pattern Provider do AE2 (também os do ExtendedAE e do Advanced AE, e a CPU quântica) ou de um Autocrafter do RS2 (todos opcionais), entrega cada pedido inteiro a uma máquina livre e devolve o resultado direto à rede do provedor (ME ou RS2); a tela avisa a trava "até o resultado" do AE2; tela de seis linhas, cubo do alcance no mundo, modelo estático; faltam a arte animada (etapa 3) e o pedido com item e fluido (etapa 4) |
 | FTB Teams | ✅ | 2.7.0 | Times nas redes privadas (opcional) |
 | Allthemodium | ✅ | — | Três tiers a mais, só com o mod |
 | Occultism | ✅ | 2.8.1 | Os mineiros dão Cristais de Sinal |

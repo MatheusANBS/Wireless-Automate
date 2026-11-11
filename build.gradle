@@ -280,6 +280,11 @@ dependencies {
     // (com o AE2), Draconic Evolution (com o Brandon's Core e o CodeChicken Lib) e Modern Industrialization.
     // Só no cliente de dev: sem eles carregam as receitas de antes; os GameTests não os carregam.
     clientMods "curse.maven:applied-energistics-2-223794:${ae2_file}"
+    // Os addons do AE2 que a Doca de Padrões atende: Advanced AE (a CPU quântica e o Advanced Pattern Provider) e
+    // ExtendedAE (o Extended Pattern Provider), com o Glodium que o ExtendedAE pede (o GeckoLib e o GuideME já estão aqui).
+    clientMods "curse.maven:advanced-ae-1084104:${advancedae_file}"
+    clientMods "curse.maven:extendedae-892005:${extendedae_file}"
+    clientMods "curse.maven:glodium-957920:${glodium_file}"
     clientMods "curse.maven:mega-cells-622112:${megacells_file}"
     clientMods "curse.maven:draconic-evolution-223565:${draconicevolution_file}"
     clientMods "curse.maven:brandons-core-231382:${brandonscore_file}"
@@ -306,6 +311,11 @@ dependencies {
     // AE2 (a Doca de Padrões) e o GuideME, que ele exige.
     ae2TestMods "curse.maven:applied-energistics-2-223794:${ae2_file}"
     ae2TestMods 'maven.modrinth:guideme:21.1.19'
+    // Os addons do AE2 (gametest/Ae2AddonDockGameTests) e o que eles pedem: o GeckoLib (Advanced AE) e o Glodium (ExtendedAE).
+    ae2TestMods "curse.maven:advanced-ae-1084104:${advancedae_file}"
+    ae2TestMods "curse.maven:extendedae-892005:${extendedae_file}"
+    ae2TestMods "curse.maven:glodium-957920:${glodium_file}"
+    ae2TestMods "maven.modrinth:geckolib:${geckolib_version}"
     // Refined Storage 2 (a Doca de Padrões); o jar traz as APIs dentro e só exige o NeoForge.
     clientMods "com.refinedmods.refinedstorage:refinedstorage-neoforge:${refinedstorage_version}"
     refinedTestMods "com.refinedmods.refinedstorage:refinedstorage-neoforge:${refinedstorage_version}"
@@ -340,7 +350,7 @@ var prepareClientMods = tasks.register('prepareClientMods', Sync) {
                 'allthemodium-*.jar', 'all-the-tweaks-*.jar', 'mouse-tweaks-*.jar', 'ftb-teams-*.jar',
                 'ftb-library-*.jar', 'allthecompressed-*.jar', 'occultism-*.jar', 'modonomicon-*.jar',
                 'smartbrainlib-*.jar', 'just-dire-things-*.jar', 'applied-energistics-2-*.jar',
-                'refinedstorage-neoforge-*.jar'
+                'refinedstorage-neoforge-*.jar', 'advanced-ae-*.jar', 'extendedae-*.jar', 'glodium-*.jar'
     }
 }
 
@@ -431,8 +441,9 @@ neoForge.runs {
     }
 }
 
-// GameTests do AE2: um servidor de testes próprio, com o AE2 (e o GuideME) na pasta mods, que roda só o namespace
-// wirelessautomate_ae2 (gametest/Ae2DockGameTests). ./gradlew runGameTestServerAe2
+// GameTests do AE2: um servidor de testes próprio, com o AE2 (e o GuideME) e os addons Advanced AE e ExtendedAE (com o
+// GeckoLib e o Glodium) na pasta mods, que roda só o namespace wirelessautomate_ae2 (gametest/Ae2DockGameTests e
+// Ae2AddonDockGameTests). ./gradlew runGameTestServerAe2
 var prepareAe2TestMods = tasks.register('prepareAe2TestMods', Sync) {
     from configurations.ae2TestMods
     into layout.projectDirectory.dir('run/gametest-ae2/mods')

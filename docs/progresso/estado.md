@@ -59,6 +59,7 @@ Legenda: ✅ pronto e testado · 🟡 parcial · ⬜ não começado
 | JEI | ✅ | — | Filtros, receitas, estrutura do Ressonador, "+" da Mesa (opcional) |
 | Químicos do Mekanism | ✅ | — | Aba Químicos e Tanque Químico (opcional) |
 | Source do Ars Nouveau | ✅ | — | Aba Source e Tanque de Source (opcional) |
+| Doca de Padrões (AE2) | 🟡 | etapa 1 no ramo `ccr-71b175d3-weymk6` | Bloco com oito tiers e alcance próprio; cada lado cuida de um tipo de máquina, vinculado pelo Vinculador com o perfil pelo Afinador; recebe pedidos de um Pattern Provider do AE2 (opcional), entrega cada pedido inteiro a uma máquina livre e devolve o resultado ao provedor; tela de seis linhas, cubo do alcance no mundo, modelo estático; faltam o RS2 (etapa 2), a arte animada (etapa 3) e o pedido com item e fluido (etapa 4) |
 | FTB Teams | ✅ | 2.7.0 | Times nas redes privadas (opcional) |
 | Allthemodium | ✅ | — | Três tiers a mais, só com o mod |
 | Occultism | ✅ | 2.8.1 | Os mineiros dão Cristais de Sinal |

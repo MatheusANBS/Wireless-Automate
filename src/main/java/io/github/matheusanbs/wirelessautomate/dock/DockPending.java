@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.dock;
 
+import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.TickBudget;
@@ -83,6 +84,27 @@ final class DockPending {
                 }
             }
         }
+        List<Object> chemicals = side.pendingChemicals();
+        if (!chemicals.isEmpty()) {
+            int count = chemicals.size();
+            int[] masks = side.masks(count);
+            DockDelivery.chemicalMasks(caches, side.profile(), front, chemicals, 0, masks, false);
+            DockPick.loads(masks, count, loads);
+            for (int i = count - 1; i >= 0; i--) {
+                Object stack = chemicals.get(i);
+                long amount = Chemicals.amount(stack);
+                long rest = DockDelivery.placeChemical(caches, front, stack, masks[i], loads);
+                if (rest == amount) {
+                    continue;
+                }
+                moved = true;
+                if (rest <= 0) {
+                    chemicals.remove(i);
+                } else {
+                    chemicals.set(i, Chemicals.copyWithAmount(stack, rest));
+                }
+            }
+        }
         if (moved) {
             machine.setLastActive(now);
             dock.saveChanged();
@@ -118,7 +140,7 @@ final class DockPending {
 
     /**
      * A máquina carregada ainda serve ao pendente: o bloco dela é o do lado (não foi quebrada nem trocada) e tem
-     * inventário (ou tanque) numa face Insere do perfil para cada tipo do pendente. Só com pendente, na tentativa.
+     * inventário (ou tanque, ou tanque de químico) numa face Insere do perfil para cada tipo do pendente. Só com pendente, na tentativa.
      */
     private static boolean serves(PatternDockBlockEntity dock, DockSide side, DockMachine machine) {
         ResourceLocation block = side.block();
@@ -130,7 +152,9 @@ final class DockPending {
         return (side.pendingItems().isEmpty()
                         || DockDelivery.hasInsertFace(caches, side.profile(), machine.front(), ResourceType.ITEM))
                 && (side.pendingFluids().isEmpty()
-                        || DockDelivery.hasInsertFace(caches, side.profile(), machine.front(), ResourceType.FLUID));
+                        || DockDelivery.hasInsertFace(caches, side.profile(), machine.front(), ResourceType.FLUID))
+                && (side.pendingChemicals().isEmpty()
+                        || DockDelivery.hasInsertFace(caches, side.profile(), machine.front(), ResourceType.CHEMICAL));
     }
 
     /**

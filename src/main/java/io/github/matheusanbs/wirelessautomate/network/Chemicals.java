@@ -128,6 +128,29 @@ public final class Chemicals {
         return MekanismChemicals.copyStack(stack);
     }
 
+    /** A quantidade (mB) do químico {@code stack}. Só com o Mekanism. */
+    public static long amount(Object stack) {
+        return MekanismChemicals.amount(stack);
+    }
+
+    /** Uma cópia do químico {@code stack} com {@code amount} mB. Só com o Mekanism. */
+    public static Object copyWithAmount(Object stack, long amount) {
+        return MekanismChemicals.copyWithAmount(stack, amount);
+    }
+
+    /**
+     * Insere o químico {@code stack} no handler {@code handler} (um {@code IChemicalHandler}, como o de
+     * {@code MachineCaches.chemicals}); devolve quanto entrou. Não muda {@code stack}. Só com o Mekanism.
+     */
+    public static long insert(Object handler, Object stack, boolean simulate) {
+        return MekanismChemicals.insert(handler, stack, simulate);
+    }
+
+    /** Tira até {@code amount} mB do tanque {@code tank} do handler; devolve o químico que saiu. Só com o Mekanism. */
+    public static Object extract(Object handler, int tank, long amount, boolean simulate) {
+        return MekanismChemicals.extract(handler, tank, amount, simulate);
+    }
+
     /** Uma visita de uma origem de químicos; sem o Mekanism não há portas de químico. */
     static boolean move(Port source, long now) {
         return LOADED && ChemicalTransfer.move(source, now);

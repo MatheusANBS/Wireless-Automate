@@ -141,7 +141,8 @@ public final class Ae2DockGameTests {
 
     /**
      * A rede de verdade: um pedido de 3 lingotes pela CPU passa pelo provedor, a Doca reparte as três execuções entre
-     * os três Altos-fornos, os lingotes voltam pelo provedor e terminam na rede.
+     * os três Altos-fornos, que trabalham ao mesmo tempo (num mesmo tick, os três com minério na entrada ou acesos), os
+     * lingotes voltam pelo provedor e terminam na rede.
      */
     @GameTest(template = "empty", timeoutTicks = 300)
     public static void cpuOrderUsesThreeFurnaces(GameTestHelper helper) {
@@ -160,6 +161,7 @@ public final class Ae2DockGameTests {
                 .thenExecute(() -> plan(helper, plan, 3))
                 .thenWaitUntil(() -> helper.assertTrue(Ae2TestSupport.planned(plan[0]), "calculando"))
                 .thenExecute(() -> submit(helper, plan[0]))
+                .thenWaitUntil(() -> helper.assertTrue(allWorking(helper), "os três altos-fornos não trabalharam juntos"))
                 .thenWaitUntil(() -> helper.assertTrue(stored(helper, Items.IRON_INGOT) == 3,
                         "lingotes na rede: " + stored(helper, Items.IRON_INGOT)))
                 .thenExecute(() -> {
@@ -172,6 +174,17 @@ public final class Ae2DockGameTests {
                 .thenWaitUntil(() -> helper.assertFalse(Ae2TestSupport.requesting(helper.getLevel(),
                         helper.absolutePos(PROVIDER), Items.IRON_INGOT), "o pedido não terminou"))
                 .thenSucceed();
+    }
+
+    /** Neste tick, os três Altos-fornos têm minério na entrada ou estão acesos. */
+    private static boolean allWorking(GameTestHelper helper) {
+        for (BlockPos furnace : FURNACES) {
+            AbstractFurnaceBlockEntity entity = helper.getBlockEntity(furnace);
+            if (entity.getItem(0).isEmpty() && !entity.getBlockState().getValue(AbstractFurnaceBlock.LIT)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** Com a trava "até o resultado", o provedor trava depois do pedido e destrava quando o lingote volta. */

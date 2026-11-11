@@ -28,7 +28,7 @@ import net.minecraft.world.level.block.Blocks;
  * de trabalho tocar, e o tempo parado ({@link DockClock}) em cada fase da linha do tempo da spec, com a conferência de
  * quantas caixas o renderer pôs e a captura na câmera dos GIFs do Blockbench ({@code doca-anim-<laço>-<segundo>}),
  * mais o pacote pelo Norte e o trabalho à meia-noite ({@code doca-anim-noite-2.0}: o cristal e os fragmentos
- * acesos). A suíte {@code doca-gif} grava os dois laços quadro a quadro pelo {@link E2eDockGif} (montados em GIF fora
+ * acesos). A suíte {@code doca-gif} grava os dois laços e 12 s de trabalho contínuo quadro a quadro pelo {@link E2eDockGif} (montados em GIF fora
  * do jogo) e a {@code doca-desempenho} mede o tempo de quadro com 50 Docas à vista, sem e com o renderer. Tudo volta
  * no fim (e em qualquer saída, pelo {@link E2eResonatorSteps#restoreFrameSettings()}).
  */
@@ -78,7 +78,7 @@ final class E2eDockAnimSteps {
         list.add(new Step("Doca animada: o evento de trabalho do Leste chega ao cliente", STEP_TIMEOUT_MS,
                 () -> onServer(server -> {
                     dock(server.overworld(), pos[0]).signalWork(Direction.EAST.ordinal(),
-                            server.overworld().getGameTime());
+                            server.getTickCount());
                     return null;
                 }), () -> client(pos) != null && client(pos).work().lastEvent() != DockWork.NEVER
                         && client(pos).work().side() == Direction.EAST.ordinal(),
@@ -105,7 +105,7 @@ final class E2eDockAnimSteps {
         list.add(end("Doca animada", playerId, pos));
     }
 
-    /** Os dois GIFs (repouso e trabalho), quadro a quadro, na câmera da referência. */
+    /** Os GIFs (repouso, trabalho e trabalho contínuo), quadro a quadro, na câmera da referência. */
     static void gifSteps(List<Step> list) {
         UUID playerId = Minecraft.getInstance().player.getUUID();
         BlockPos[] pos = new BlockPos[1];
@@ -113,7 +113,7 @@ final class E2eDockAnimSteps {
         list.add(begin("Doca GIF", playerId));
         list.add(place(playerId, pos));
         list.add(new Step("Doca GIF: evento do Leste", STEP_TIMEOUT_MS, () -> onServer(server -> {
-            dock(server.overworld(), pos[0]).signalWork(Direction.EAST.ordinal(), server.overworld().getGameTime());
+            dock(server.overworld(), pos[0]).signalWork(Direction.EAST.ordinal(), server.getTickCount());
             return null;
         }), () -> client(pos) != null && client(pos).work().side() == Direction.EAST.ordinal()
                 && client(pos).work().lastEvent() != DockWork.NEVER, () -> "evento no cliente"));
@@ -125,7 +125,7 @@ final class E2eDockAnimSteps {
         float[] ang = new float[2];
         list.add(new Step("Doca GIF: o ângulo da câmera", STEP_TIMEOUT_MS,
                 () -> aim(pos[0], REF_VIEW, new double[3], ang), () -> true, () -> ""));
-        list.add(E2eDockGif.record(ang));
+        list.add(E2eDockGif.record(ang, () -> client(pos).work()));
         list.add(end("Doca GIF", playerId, pos));
     }
 

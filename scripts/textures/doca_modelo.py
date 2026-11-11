@@ -414,6 +414,22 @@ def _pinta_fundo(atlas: Image.Image) -> None:
         atlas.putpixel(p, FUNDO_COR)
 
 
+def recortes_do_renderer(projeto: dict) -> list[tuple[int, int, int, int]]:
+    """Os recortes do atlas (em pixels) das caixas do `.bbmodel` fora do modelo de bloco, que o renderer desenha."""
+    grupo = _grupos(projeto)
+    return [bb.retangulo(f["uv"]) for el in projeto["elements"] if not _do_bloco(grupo[el["uuid"]])
+            for f in el["faces"].values() if f.get("texture") is not None]
+
+
+def _confere_recortes(pintada: Image.Image, final: Image.Image, recortes: list, tier: str) -> None:
+    """A folga não mudou nenhum texel dos recortes do renderer."""
+    for x0, y0, x1, y1 in recortes:
+        for x in range(x0, x1):
+            for y in range(y0, y1):
+                if pintada.getpixel((x, y)) != final.getpixel((x, y)):
+                    raise ModeloInvalido(f"{tier}: a folga pintou o texel ({x}, {y}) de um recorte do renderer")
+
+
 def gerar(raiz_assets: Path = MODELOS) -> set[str]:
     """Grava as texturas dos tiers (o atlas e o circuito), o modelo base, um por tier, o blockstate e o modelo de
     item; devolve as chaves das texturas gravadas (relativas a `textures/`, como as do `limpar`)."""
@@ -425,11 +441,17 @@ def gerar(raiz_assets: Path = MODELOS) -> set[str]:
     if any(a != 255 for a in bb.alfas(atlas, faces_atlas)):
         raise ModeloInvalido("o modelo usa um texel com alfa")
     retangulos = [bb.retangulo([v * ATLAS / 16 for v in f["uv"]]) for f in faces_atlas]
+    # Os recortes que o renderer lê (anéis, cristal, pacote e fragmentos) também são faces: a folga não escreve neles.
+    do_renderer = recortes_do_renderer(projeto)
+    retangulos += do_renderer
     rotulos, cores = etiquetas(projeto), cores_dos_lados()
     for tier in TIERS:
         destino = ASSETS / f"{_textura(tier)}.png"
         destino.parent.mkdir(parents=True, exist_ok=True)
-        bb.com_folga(textura(atlas, tier, rotulos, cores), retangulos).save(destino)
+        pintada = textura(atlas, tier, rotulos, cores)
+        final = bb.com_folga(pintada, retangulos)
+        _confere_recortes(pintada, final, do_renderer, tier)
+        final.save(destino)
         _grava_circuito(tier, circuito(atlas, tier))
 
     modelos = raiz_assets / "models/block" / PASTA

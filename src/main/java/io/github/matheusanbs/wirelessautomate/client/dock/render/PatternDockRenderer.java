@@ -78,7 +78,10 @@ public final class PatternDockRenderer implements BlockEntityRenderer<PatternDoc
         return false;
     }
 
-    /** Tudo cabe no bloco: o pacote nasce na vigia e os fragmentos vão no máximo a 6,6 px do centro. */
+    /**
+     * O bloco com uma folga de 0,1: os fragmentos vão no máximo a 6,6 px do centro, mas o pacote nasce na vigia e, girando,
+     * a quina da fita sai uns 0,05 bloco da face.
+     */
     @Override
     public AABB getRenderBoundingBox(PatternDockBlockEntity dock) {
         return dock.renderBox();

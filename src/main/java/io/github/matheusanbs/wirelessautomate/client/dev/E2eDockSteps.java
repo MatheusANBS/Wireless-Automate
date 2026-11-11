@@ -30,6 +30,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -50,7 +51,8 @@ import net.minecraft.world.level.block.Blocks;
  * fatos que só um pedido do AE2 faria (a recusa, a última atividade, o provedor cheio) vão direto no lado. Em cada
  * foto, nenhum texto cortado. Depois, o cubo do alcance no mundo ({@code doca-cubo}): a Doca Básica escolhida no
  * Vinculador, com uma fileira de fornalhas no Norte e outra no Sul, vista de fora do cubo com o HUD; guardado o Vinculador,
- * o cubo some, e volta ao pegá-lo de novo (e pelo pedido ao servidor, sem o cubo no cliente). No fim, os blocos saem e a config volta.
+ * o cubo some, e volta ao pegá-lo de novo (e pelo pedido ao servidor, sem o cubo no cliente). Por último, o modelo das
+ * Docas de cada tier no mundo ({@code doca-blocos} e {@code doca-perto}). No fim, os blocos saem e a config volta.
  */
 final class E2eDockSteps {
     private static final int OPEN_RETRY_TICKS = 40;
@@ -83,6 +85,7 @@ final class E2eDockSteps {
             list.add(language("en_us"));
         });
         reach(list, playerId, dock);
+        models(list, playerId, dock);
         list.add(new Step("Doca: tirar os blocos", STEP_TIMEOUT_MS, () -> onServer(server -> {
             restoreConfig();
             clear(server.overworld());
@@ -179,6 +182,64 @@ final class E2eDockSteps {
             player.teleportTo(player.serverLevel(), back[0].x, back[0].y, back[0].z, player.getYRot(), 0);
             return null;
         }), () -> !DockReachPaint.shown(), () -> "o cubo continua à mostra"));
+    }
+
+    /**
+     * O modelo no mundo: as Docas dos tiers carregados lado a lado, da Básica à Ultimate, com um bloco de folga, vistas
+     * do Sul e de cima, longe dos roteadores do preparo ({@code doca-blocos}), e a Elite (a cor do {@code .bbmodel}) de perto, pela quina Norte-Leste
+     * ({@code doca-perto}), também à noite, com o circuito aceso ({@code doca-noite}).
+     */
+    private static void models(List<Step> list, UUID playerId, BlockPos[] dock) {
+        Vec3[] back = new Vec3[1];
+        BlockPos[] elite = new BlockPos[1];
+        list.add(build("Doca: os blocos dos tiers", playerId, dock, (server, level, at) -> {
+            List<RouterTier> tiers = new ArrayList<>();
+            for (RouterTier tier : RouterTier.values()) {
+                if (tier.loaded()) {
+                    tiers.add(tier);
+                }
+            }
+            for (int i = 0; i < tiers.size(); i++) {
+                BlockPos pos = at.offset(2 * (i - tiers.size() / 2), 0, 0);
+                placeDock(level, pos, tiers.get(i));
+                if (tiers.get(i) == RouterTier.ELITE) {
+                    elite[0] = pos;
+                }
+            }
+        }));
+        list.add(new Step("Doca: guardar a posição do jogador", STEP_TIMEOUT_MS,
+                () -> {
+                    back[0] = Minecraft.getInstance().player.position();
+                    Minecraft.getInstance().gui.setOverlayMessage(Component.empty(), false);
+                }, () -> true, () -> ""));
+        list.add(E2eRepairerSteps.cameraShot("doca-blocos", playerId, () -> dock[0].offset(-1, 0, 0),
+                new double[] {1, 3.5, 7}, 0.5));
+        list.add(E2eRepairerSteps.cameraShot("doca-perto", playerId, () -> elite[0], new double[] {1.4, 1.1, -1.7},
+                0.5));
+        long[] day = new long[1];
+        list.add(new Step("Doca: noite, para o circuito aceso", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            day[0] = server.overworld().getDayTime();
+            server.overworld().setDayTime(18000);
+            return null;
+        }), () -> Minecraft.getInstance().level.getDayTime() % 24000 == 18000 && stepTicks >= 20,
+                () -> "hora no cliente " + Minecraft.getInstance().level.getDayTime()));
+        list.add(new Step("captura doca-noite", STEP_TIMEOUT_MS, () -> {
+        }, () -> {
+            capture(Minecraft.getInstance(), "doca-noite");
+            return true;
+        }, () -> "doca-noite.png"));
+        list.add(new Step("Doca: dia de volta", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            server.overworld().setDayTime(day[0]);
+            return null;
+        }), () -> true, () -> ""));
+        list.add(new Step("Doca: devolver o jogador depois dos blocos", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+            player.getAbilities().flying = false;
+            player.onUpdateAbilities();
+            player.teleportTo(player.serverLevel(), back[0].x, back[0].y, back[0].z, player.getYRot(), 0);
+            return null;
+        }), () -> Minecraft.getInstance().player.position().distanceToSqr(back[0]) < 0.01,
+                () -> "jogador em " + Minecraft.getInstance().player.position()));
     }
 
     /** Um cenário: a Doca de antes sai, a nova entra no lugar e {@code setUp} a monta; espera o cliente ver a Doca. */

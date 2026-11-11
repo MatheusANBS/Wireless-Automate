@@ -116,10 +116,13 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GRAY).strength(1.5F, 6.0F)
                     .sound(SoundType.METAL).pushReaction(PushReaction.DESTROY).noOcclusion());
 
-    /** A Doca de Padrões, com tiers: um bloco cheio de metal, que pede picareta. */
+    /**
+     * A Doca de Padrões, com tiers: um bloco cheio de metal, que pede picareta. Sem oclusão: pelas vigias dos lados
+     * opostos se vê através do bloco, e o vizinho não pode esconder a face encostada nela.
+     */
     public static final DeferredBlock<PatternDockBlock> PATTERN_DOCK = BLOCKS.registerBlock("pattern_dock",
             PatternDockBlock::new, BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(3.0F, 6.0F)
-                    .sound(SoundType.METAL).requiresCorrectToolForDrops());
+                    .sound(SoundType.METAL).requiresCorrectToolForDrops().noOcclusion());
 
     private static boolean never(BlockState state, BlockGetter level, BlockPos pos) {
         return false;

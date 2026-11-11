@@ -34,7 +34,7 @@ O bloco que recebe os pedidos de um Pattern Provider do AE2 encostado num lado e
 - `client/dock/DockRows`: as linhas na ordem do `DockColors.ORDER`: a etiqueta na cor do lado (apagada no lado livre), o ícone e o nome da máquina ("Sem máquina", ou "—" no livre) com "12 · 9 trabalhando" à direita, o estado com o sinal de forma desenhado em retângulos (7 × 7) e as notas "N em área descarregada" e "N fora do alcance" com o anel; a dica da linha (o lado e o provedor, ou "nada encostado", a frase longa do estado e, com notas, "...: não recebem até voltarem."). Os textos são medidos e a dica montada só quando chega um estado novo.
 - `client/dock/DockScreen`: a anfitriã: o cabeçalho (faixa e Olho na cor do tier, título, pílula do tier, `ThemeToggle`), o resumo "30/32 máquinas" com a barra (âmbar com o total no máximo) e "raio 16", e as dicas (tema, texto cortado, linha). `rowCenter` para o e2e.
 - Frases em `gui.wirelessautomate.pattern_dock.*` (`machines`, `radius`, `count`, `no_machine`, `unloaded`, `out_of_reach`, `notes`, `tip_side`, `nothing_attached`, `state.<estado>` e `state.<estado>.hint`); título `container.wirelessautomate.pattern_dock`.
-- e2e `doca` (`client/dev/E2eDockSteps`, ver `docs/e2e.md`), com o cubo do alcance no mundo (`doca-cubo`).
+- e2e `doca` (`client/dev/E2eDockSteps`, ver `docs/e2e.md`), com o cubo do alcance no mundo (`doca-cubo`) e o modelo das Docas dos tiers (`doca-blocos`, `doca-perto` e `doca-noite`).
 
 ## O cubo do alcance no mundo (`packet/DockReachPayload`, `client/dock/`)
 
@@ -44,7 +44,7 @@ O bloco que recebe os pedidos de um Pattern Provider do AE2 encostado num lado e
 
 ## Recursos
 
-Blockstate `pattern_dock` por `tier`, modelos provisórios em `models/block/pattern_dock/` (um `cube_all` com a textura `topo_<tier>` do roteador; fora da pasta que o `blocos.py` limpa), o modelo do item com as sobreposições por tier, a loot table (`copy_state` do `tier`), a tag de picareta, os nomes nos dois `lang` e a informação do JEI (`compat/jei/DockInfo`).
+Blockstate `pattern_dock` por `tier`, o modelo estático em `models/block/pattern_dock/` (o `pattern_dock` com os elementos e um `pattern_dock_<tier>` por tier, que só troca a textura `block/pattern_dock/<tier>`; fora da pasta que o `blocos.py` limpa) e o modelo do item com as sobreposições por tier, todos gerados pelo `scripts/textures/doca_modelo.py` (ver [scripts e recursos](scripts-e-recursos.md)): vigas de porcelana, painéis escuros com o circuito na cor da lente do tier (estático; a luz cheia só na face de fora do painel), vigias com moldura e parafusos de latão e as pastilhas com a etiqueta na cor do lado. O giroscópio, o pacote e os fragmentos são da etapa 3 (renderer): até lá a vigia mostra o painel do lado oposto. O bloco é `noOcclusion` (pelas vigias se vê através dele) com a colisão cheia. Ainda: a loot table (`copy_state` do `tier`), a tag de picareta, os nomes nos dois `lang` e a informação do JEI (`compat/jei/DockInfo`).
 
 ## Testes
 

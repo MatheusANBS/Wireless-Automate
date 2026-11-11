@@ -270,6 +270,9 @@ dependencies {
     clientMods 'maven.modrinth:kotlin-for-forge:5.12.0'
     clientMods 'maven.modrinth:architectury-api:13.0.11+neoforge'
     clientMods "mekanism:Mekanism:${minecraft_version}-${mekanism_version}"
+    // Mekanism Extras: fábricas e máquinas acima do Ultimate (Absolute a Infinite), as do Infinity Legacy II, para
+    // testar a Doca no uso intenso. Pede o Mekanism 10.7.19 ou mais novo.
+    clientMods 'maven.modrinth:mekanism_extra:1.21.1-1.4.1'
     // GuideME: só porque o AE2 e o Modern Industrialization (abaixo) o exigem; o livro do mod não usa.
     clientMods 'maven.modrinth:guideme:21.1.19'
     // Mouse Tweaks: para testar a lista do Baú junto com os arrastos dele nos slots.

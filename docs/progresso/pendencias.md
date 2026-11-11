@@ -84,7 +84,6 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 - Doca e RS2: o `ItemResource` e o `FluidResource` vêm da `refinedstorage-common` (interna, `@API(INTERNAL)`), não da API publicada; podem mudar entre versões do RS2. Conferir a cada versão nova do RS2 (o `versionRange` é `[2.0.9,)`, a conferida). (11/11)
 - Doca e RS2: a dica do provedor mostra "Autocrafter", sem o "× N" de uma corrente: contar a corrente pede a direção do Autocrafter, que está numa classe interna do RS2 (`AbstractDirectionalBlock`), fora da `common-api`. (11/11)
 - Doca: o Ctrl + clique no raio 96 (Ultimate) custa de 2,4 a 3,9 ms por clique; avaliar baixar o teto de leitura só para a Doca. (11/11)
-- Doca: as etiquetas dos lados no modelo têm 2 × 1 texels e de longe quase não se distinguem; rever na etapa 3. (11/11)
 - Doca: com pendente, o lado guarda o bloco mesmo sem máquinas (para trocar de máquina, vincular uma do bloco antigo ou quebrar a Doca); decidir se o pendente vai ao chão ao desvincular a última. (11/11)
 - **(dono)** Doca: a receita (fica para o balanceamento das receitas). (10/11)
 - `RouterBlockEntity` em 999 linhas: qualquer linha nova exige dividir antes. (11/11)

@@ -62,6 +62,8 @@ A Doca **não gasta energia nem combustível**. Ela só leva os pedidos.
 - **As travas do Autocrafter:** "até receber todos os resultados" funciona com a Doca. "Até a máquina esvaziar" conta
   o lado inteiro como uma máquina, que só fica vazia 15 s depois do último movimento: um lote por vez no lado, com
   esse intervalo entre eles. Para usar várias máquinas ao mesmo tempo, deixe sem trava.
+- **O produto final no RS2 precisa de lugar no disco.** O RS2 só conta o resultado final do pedido depois de guardá-lo:
+  sem lugar nos discos, ele fica na máquina, o lado mostra "Provedor cheio" e espera até abrir espaço.
 - **Padrões de bancada** (bancada, cortador de pedra, forja) são do Molecular Assembler. A Doca os recusa.
 - **Outro tipo de máquina?** Use **outro lado**. Um lado só cuida de um tipo, e a Doca tem seis lados.
 - **Se a Doca errar as faces** de uma máquina, use o [Configurador](configurator.md) numa máquina do lado, com o gesto

@@ -4,7 +4,8 @@
   "ambientocclusion": false,
   "textures": {
     "dock": "wirelessautomate:block/pattern_dock/basic",
-    "particle": "wirelessautomate:block/pattern_dock/basic"
+    "particle": "wirelessautomate:block/pattern_dock/basic",
+    "circuit": "wirelessautomate:block/pattern_dock/circuit_basic"
   },
   "elements": [
     {
@@ -756,12 +757,12 @@
         },
         "north": {
           "uv": [
-            8.5,
-            8.5,
-            11.5,
-            9.25
+            2,
+            2,
+            14,
+            5
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -802,12 +803,12 @@
         },
         "north": {
           "uv": [
-            8.5,
-            10.75,
-            11.5,
-            11.5
+            2,
+            11,
+            14,
+            14
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -848,12 +849,12 @@
         },
         "north": {
           "uv": [
-            8.5,
-            9.25,
-            9.25,
-            10.75
+            11,
+            5,
+            14,
+            11
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -894,12 +895,12 @@
         },
         "north": {
           "uv": [
-            10.75,
-            9.25,
-            11.5,
-            10.75
+            2,
+            5,
+            5,
+            11
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -949,12 +950,12 @@
         },
         "north": {
           "uv": [
-            9.25,
-            9.25,
-            9.5,
-            9.5
+            10,
+            5,
+            11,
+            6
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -1004,12 +1005,12 @@
         },
         "north": {
           "uv": [
-            10.5,
-            9.25,
-            10.75,
-            9.5
+            5,
+            5,
+            6,
+            6
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -1059,12 +1060,12 @@
         },
         "north": {
           "uv": [
-            9.25,
-            10.5,
-            9.5,
-            10.75
+            10,
+            10,
+            11,
+            11
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -1114,12 +1115,12 @@
         },
         "north": {
           "uv": [
-            10.5,
-            10.5,
-            10.75,
-            10.75
+            5,
+            10,
+            6,
+            11
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -1610,13 +1611,13 @@
     {
       "name": "garra_north_0",
       "from": [
-        7,
-        12.4,
+        5.5,
+        11.8,
         0.2
       ],
       "to": [
-        9,
-        13.4,
+        10.5,
+        13.7,
         0.6
       ],
       "faces": {
@@ -1871,12 +1872,12 @@
         },
         "south": {
           "uv": [
-            8.5,
-            8.5,
-            11.5,
-            9.25
+            2,
+            2,
+            14,
+            5
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -1917,12 +1918,12 @@
         },
         "south": {
           "uv": [
-            8.5,
-            10.75,
-            11.5,
-            11.5
+            2,
+            11,
+            14,
+            14
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -1963,12 +1964,12 @@
         },
         "south": {
           "uv": [
-            8.5,
-            9.25,
-            9.25,
-            10.75
+            2,
+            5,
+            5,
+            11
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -2009,12 +2010,12 @@
         },
         "south": {
           "uv": [
-            10.75,
-            9.25,
-            11.5,
-            10.75
+            11,
+            5,
+            14,
+            11
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -2064,12 +2065,12 @@
         },
         "south": {
           "uv": [
-            9.25,
-            9.25,
-            9.5,
-            9.5
+            5,
+            5,
+            6,
+            6
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -2119,12 +2120,12 @@
         },
         "south": {
           "uv": [
-            10.5,
-            9.25,
-            10.75,
-            9.5
+            10,
+            5,
+            11,
+            6
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -2174,12 +2175,12 @@
         },
         "south": {
           "uv": [
-            9.25,
-            10.5,
-            9.5,
-            10.75
+            5,
+            10,
+            6,
+            11
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -2229,12 +2230,12 @@
         },
         "south": {
           "uv": [
-            10.5,
-            10.5,
-            10.75,
-            10.75
+            10,
+            10,
+            11,
+            11
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -2734,13 +2735,13 @@
     {
       "name": "garra_south_0",
       "from": [
-        7,
-        12.4,
+        5.5,
+        11.8,
         15.4
       ],
       "to": [
-        9,
-        13.4,
+        10.5,
+        13.7,
         15.8
       ],
       "faces": {
@@ -2986,12 +2987,12 @@
       "faces": {
         "east": {
           "uv": [
-            8.5,
-            8.5,
-            11.5,
-            9.25
+            2,
+            2,
+            14,
+            5
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -3032,12 +3033,12 @@
       "faces": {
         "east": {
           "uv": [
-            8.5,
-            10.75,
-            11.5,
-            11.5
+            2,
+            11,
+            14,
+            14
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -3078,12 +3079,12 @@
       "faces": {
         "east": {
           "uv": [
-            8.5,
-            9.25,
-            9.25,
-            10.75
+            11,
+            5,
+            14,
+            11
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -3124,12 +3125,12 @@
       "faces": {
         "east": {
           "uv": [
-            10.75,
-            9.25,
-            11.5,
-            10.75
+            2,
+            5,
+            5,
+            11
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -3170,12 +3171,12 @@
       "faces": {
         "east": {
           "uv": [
-            9.25,
-            9.25,
-            9.5,
-            9.5
+            10,
+            5,
+            11,
+            6
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -3225,12 +3226,12 @@
       "faces": {
         "east": {
           "uv": [
-            10.5,
-            9.25,
-            10.75,
-            9.5
+            5,
+            5,
+            6,
+            6
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -3280,12 +3281,12 @@
       "faces": {
         "east": {
           "uv": [
-            9.25,
-            10.5,
-            9.5,
-            10.75
+            10,
+            10,
+            11,
+            11
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -3335,12 +3336,12 @@
       "faces": {
         "east": {
           "uv": [
-            10.5,
-            10.5,
-            10.75,
-            10.75
+            5,
+            10,
+            6,
+            11
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -3859,13 +3860,13 @@
       "name": "garra_east_0",
       "from": [
         15.4,
-        12.4,
-        7
+        11.8,
+        5.5
       ],
       "to": [
         15.8,
-        13.4,
-        9
+        13.7,
+        10.5
       ],
       "faces": {
         "east": {
@@ -4119,12 +4120,12 @@
         },
         "west": {
           "uv": [
-            8.5,
-            8.5,
-            11.5,
-            9.25
+            2,
+            2,
+            14,
+            5
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -4165,12 +4166,12 @@
         },
         "west": {
           "uv": [
-            8.5,
-            10.75,
-            11.5,
-            11.5
+            2,
+            11,
+            14,
+            14
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -4211,12 +4212,12 @@
         },
         "west": {
           "uv": [
-            8.5,
-            9.25,
-            9.25,
-            10.75
+            2,
+            5,
+            5,
+            11
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -4257,12 +4258,12 @@
         },
         "west": {
           "uv": [
-            10.75,
-            9.25,
-            11.5,
-            10.75
+            11,
+            5,
+            14,
+            11
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -4303,12 +4304,12 @@
         },
         "west": {
           "uv": [
-            9.25,
-            9.25,
-            9.5,
-            9.5
+            5,
+            5,
+            6,
+            6
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -4358,12 +4359,12 @@
         },
         "west": {
           "uv": [
-            10.5,
-            9.25,
-            10.75,
-            9.5
+            10,
+            5,
+            11,
+            6
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -4413,12 +4414,12 @@
         },
         "west": {
           "uv": [
-            9.25,
-            10.5,
-            9.5,
-            10.75
+            5,
+            10,
+            6,
+            11
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -4468,12 +4469,12 @@
         },
         "west": {
           "uv": [
-            10.5,
-            10.5,
-            10.75,
-            10.75
+            10,
+            10,
+            11,
+            11
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -4983,13 +4984,13 @@
       "name": "garra_west_0",
       "from": [
         0.2,
-        12.4,
-        7
+        11.8,
+        5.5
       ],
       "to": [
         0.6,
-        13.4,
-        9
+        13.7,
+        10.5
       ],
       "faces": {
         "west": {
@@ -5234,12 +5235,12 @@
       "faces": {
         "up": {
           "uv": [
-            8.5,
-            10.75,
-            11.5,
-            11.5
+            2,
+            11,
+            14,
+            14
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -5280,12 +5281,12 @@
       "faces": {
         "up": {
           "uv": [
-            8.5,
-            8.5,
-            11.5,
-            9.25
+            2,
+            2,
+            14,
+            5
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -5335,12 +5336,12 @@
         },
         "up": {
           "uv": [
-            8.5,
-            9.25,
-            9.25,
-            10.75
+            2,
+            5,
+            5,
+            11
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -5381,12 +5382,12 @@
         },
         "up": {
           "uv": [
-            10.75,
-            9.25,
-            11.5,
-            10.75
+            11,
+            5,
+            14,
+            11
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -5427,12 +5428,12 @@
         },
         "up": {
           "uv": [
-            9.25,
-            10.5,
-            9.5,
-            10.75
+            5,
+            10,
+            6,
+            11
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -5482,12 +5483,12 @@
         },
         "up": {
           "uv": [
-            10.5,
-            10.5,
-            10.75,
-            10.75
+            10,
+            10,
+            11,
+            11
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -5537,12 +5538,12 @@
         },
         "up": {
           "uv": [
-            9.25,
-            9.25,
-            9.5,
-            9.5
+            5,
+            5,
+            6,
+            6
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -5592,12 +5593,12 @@
         },
         "up": {
           "uv": [
-            10.5,
-            9.25,
-            10.75,
-            9.5
+            10,
+            5,
+            11,
+            6
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -6106,14 +6107,14 @@
     {
       "name": "garra_up_0",
       "from": [
-        7,
+        5.5,
         15.4,
-        12.4
+        11.8
       ],
       "to": [
-        9,
+        10.5,
         15.8,
-        13.4
+        13.7
       ],
       "faces": {
         "east": {
@@ -6367,12 +6368,12 @@
         },
         "down": {
           "uv": [
-            8.5,
-            10.75,
-            11.5,
-            11.5
+            2,
+            2,
+            14,
+            5
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -6413,12 +6414,12 @@
         },
         "down": {
           "uv": [
-            8.5,
-            8.5,
-            11.5,
-            9.25
+            2,
+            11,
+            14,
+            14
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -6468,12 +6469,12 @@
         },
         "down": {
           "uv": [
-            8.5,
-            9.25,
-            9.25,
-            10.75
+            2,
+            5,
+            5,
+            11
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -6514,12 +6515,12 @@
         },
         "down": {
           "uv": [
-            10.75,
-            9.25,
-            11.5,
-            10.75
+            11,
+            5,
+            14,
+            11
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -6560,12 +6561,12 @@
         },
         "down": {
           "uv": [
-            9.25,
-            10.5,
-            9.5,
-            10.75
+            5,
+            5,
+            6,
+            6
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -6615,12 +6616,12 @@
         },
         "down": {
           "uv": [
-            10.5,
-            10.5,
-            10.75,
-            10.75
+            10,
+            5,
+            11,
+            6
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -6670,12 +6671,12 @@
         },
         "down": {
           "uv": [
-            9.25,
-            9.25,
-            9.5,
-            9.5
+            5,
+            10,
+            6,
+            11
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -6725,12 +6726,12 @@
         },
         "down": {
           "uv": [
-            10.5,
-            9.25,
-            10.75,
-            9.5
+            10,
+            10,
+            11,
+            11
           ],
-          "texture": "#dock",
+          "texture": "#circuit",
           "neoforge_data": {
             "block_light": 15,
             "sky_light": 15
@@ -7230,14 +7231,14 @@
     {
       "name": "garra_down_0",
       "from": [
-        7,
+        5.5,
         0.2,
-        12.4
+        11.8
       ],
       "to": [
-        9,
+        10.5,
         0.6,
-        13.4
+        13.7
       ],
       "faces": {
         "east": {

@@ -55,7 +55,8 @@ import net.minecraft.world.level.block.entity.BlockEntity;
  * foto, nenhum texto cortado. Depois, o cubo do alcance no mundo ({@code doca-cubo}): a Doca Básica escolhida no
  * Vinculador, com uma fileira de fornalhas no Norte e outra no Sul, vista de fora do cubo com o HUD; guardado o Vinculador,
  * o cubo some, e volta ao pegá-lo de novo (e pelo pedido ao servidor, sem o cubo no cliente). Por último, o modelo das
- * Docas de cada tier no mundo ({@code doca-blocos} e {@code doca-perto}). No fim, os blocos saem e a config volta.
+ * Docas de cada tier no mundo ({@code doca-blocos}, {@code doca-perto}, {@code doca-8} e {@code doca-16}). No fim, os
+ * blocos saem e a config volta.
  */
 final class E2eDockSteps {
     private static final int OPEN_RETRY_TICKS = 40;
@@ -193,7 +194,8 @@ final class E2eDockSteps {
     /**
      * O modelo no mundo: as Docas dos tiers carregados lado a lado, da Básica à Ultimate, com um bloco de folga, vistas
      * do Sul e de cima, longe dos roteadores do preparo ({@code doca-blocos}), e a Elite (a cor do {@code .bbmodel}) de perto, pela quina Norte-Leste
-     * ({@code doca-perto}), também à noite, com o circuito aceso ({@code doca-noite}).
+     * ({@code doca-perto}) e à noite, com o circuito aceso ({@code doca-noite}), e de dia de 8 e de 16 blocos pelo Sul,
+     * para as etiquetas dos lados ({@code doca-8} e {@code doca-16}).
      */
     private static void models(List<Step> list, UUID playerId, BlockPos[] dock) {
         Vec3[] back = new Vec3[1];
@@ -238,6 +240,8 @@ final class E2eDockSteps {
             server.overworld().setDayTime(day[0]);
             return null;
         }), () -> true, () -> ""));
+        list.add(E2eRepairerSteps.cameraShot("doca-8", playerId, () -> elite[0], new double[] {2, 2, 7.5}, 0.5));
+        list.add(E2eRepairerSteps.cameraShot("doca-16", playerId, () -> elite[0], new double[] {4, 4, 15}, 0.5));
         list.add(new Step("Doca: devolver o jogador depois dos blocos", STEP_TIMEOUT_MS, () -> onServer(server -> {
             ServerPlayer player = server.getPlayerList().getPlayer(playerId);
             player.getAbilities().flying = false;

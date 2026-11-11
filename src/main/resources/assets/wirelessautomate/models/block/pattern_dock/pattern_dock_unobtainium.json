@@ -2,6 +2,7 @@
   "parent": "wirelessautomate:block/pattern_dock/pattern_dock",
   "textures": {
     "dock": "wirelessautomate:block/pattern_dock/unobtainium",
+    "circuit": "wirelessautomate:block/pattern_dock/circuit_unobtainium",
     "particle": "wirelessautomate:block/pattern_dock/unobtainium"
   }
 }

@@ -11,6 +11,7 @@ import io.github.matheusanbs.wirelessautomate.dock.DockColors;
 import io.github.matheusanbs.wirelessautomate.dock.PatternDockBlock;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.packet.DockReachPayload;
+import io.github.matheusanbs.wirelessautomate.packet.DockReachRequestPayload;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
@@ -24,6 +25,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -33,9 +35,10 @@ import org.jetbrains.annotations.Nullable;
  * {@link #REACH} blocos da câmera.
  *
  * <p>Os vértices (relativos ao canto da Doca) são montados quando o pacote chega; o quadro só soma a câmera e desenha.
- * O cubo some quando o prazo vence (ao colocar a Doca), quando o Vinculador com esta Doca escolhida sai das duas mãos
- * ou escolhe outra coisa, quando a Doca some, ao trocar de mundo e no logout. Sem cubo, o tick e o quadro voltam na
- * primeira linha.
+ * O cubo de colocar some quando o prazo vence. O do Vinculador fica guardado e aparece sempre que o Vinculador com
+ * esta Doca escolhida está numa das mãos; sai quando um Vinculador na mão escolhe outra coisa, quando a Doca some, ao
+ * trocar de mundo e no logout. Sem cubo guardado, o tick só lê os itens das mãos e, com uma Doca escolhida, pede o cubo
+ * ao servidor ({@link DockReachRequestPayload}, um por segundo); o quadro volta na primeira linha.
  */
 @EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
 public final class DockReachPaint {
@@ -48,6 +51,8 @@ public final class DockReachPaint {
      * ao cliente na sincronização do inventário, no fim do tick do servidor.
      */
     private static final int HOLD_GRACE_TICKS = 20;
+    /** O intervalo mínimo entre dois pedidos do cubo ao servidor. */
+    private static final int REQUEST_INTERVAL_TICKS = 20;
     /** A moldura sai um pouco para fora do bloco. */
     private static final float INFLATE = 0.006f;
     private static final int CUBE_ALPHA = 0xFF;
@@ -63,6 +68,10 @@ public final class DockReachPaint {
     /** Prazo restante em ticks; 0: enquanto o Vinculador com esta Doca está na mão. */
     private static int ticksLeft;
     private static int grace;
+    /** O cubo guardado está à mostra: o prazo corre, ou o Vinculador com esta Doca está numa das mãos. */
+    private static boolean visible;
+    /** O tempo do mundo do último pedido ao servidor ({@link DockReachRequestPayload}): um por segundo. */
+    private static long lastRequest = -REQUEST_INTERVAL_TICKS;
     /** O cubo: limites (para a distância) e arestas, cada uma com as duas pontas. */
     private static float[] box = new float[6];
     private static float[] cubeEdges = new float[0];
@@ -115,12 +124,18 @@ public final class DockReachPaint {
         veils = veilVertices;
         ticksLeft = Math.max(payload.ticks(), 0);
         grace = HOLD_GRACE_TICKS;
+        visible = true;
         level = here;
         dock = at;
     }
 
     /** O cubo à mostra agora, para o e2e. */
     public static boolean shown() {
+        return dock != null && visible;
+    }
+
+    /** Há um cubo guardado, à mostra ou não, para o e2e. */
+    public static boolean stored() {
         return dock != null;
     }
 
@@ -131,6 +146,7 @@ public final class DockReachPaint {
 
     public static void clear() {
         dock = null;
+        visible = false;
         level = null;
         cubeEdges = new float[0];
         centers = new float[0];
@@ -143,11 +159,12 @@ public final class DockReachPaint {
 
     @SubscribeEvent
     static void onTick(ClientTickEvent.Post event) {
+        Minecraft minecraft = Minecraft.getInstance();
         BlockPos at = dock;
         if (at == null) {
+            request(minecraft);
             return;
         }
-        Minecraft minecraft = Minecraft.getInstance();
         ClientLevel here = minecraft.level;
         if (here == null || here != level || minecraft.player == null
                 || here.isLoaded(at) && !(here.getBlockState(at).getBlock() instanceof PatternDockBlock)) {
@@ -160,37 +177,93 @@ public final class DockReachPaint {
             }
             return;
         }
-        if (holding(minecraft.player, here, at)) {
-            grace = 0;
-        } else if (grace > 0) {
-            grace--;
-        } else {
-            clear();
+        switch (hands(minecraft.player, here, at)) {
+            case THIS_DOCK -> {
+                visible = true;
+                grace = 0;
+            }
+            case OTHER_CHOICE -> {
+                // logo depois do pacote o item ainda pode não ter a escolha nova
+                if (grace > 0) {
+                    grace--;
+                } else {
+                    clear();
+                }
+            }
+            case NO_LINKER -> {
+                visible = false;
+                if (grace > 0) {
+                    grace--;
+                }
+            }
         }
     }
 
-    /** O Vinculador numa das mãos tem esta Doca escolhida. */
-    private static boolean holding(LocalPlayer player, ClientLevel here, BlockPos at) {
-        return chose(player.getMainHandItem(), here, at) || chose(player.getOffhandItem(), here, at);
+    private enum Hands {
+        /** O Vinculador numa das mãos tem esta Doca escolhida. */
+        THIS_DOCK,
+        /** Um Vinculador na mão escolheu outra coisa (ou nada): o cubo guardado não vale mais. */
+        OTHER_CHOICE,
+        /** Nenhum Vinculador nas mãos: o cubo fica guardado, sem desenhar. */
+        NO_LINKER
+    }
+
+    private static Hands hands(LocalPlayer player, ClientLevel here, BlockPos at) {
+        ItemStack main = player.getMainHandItem();
+        ItemStack off = player.getOffhandItem();
+        if (chose(main, here, at) || chose(off, here, at)) {
+            return Hands.THIS_DOCK;
+        }
+        return main.getItem() instanceof LinkerItem || off.getItem() instanceof LinkerItem ? Hands.OTHER_CHOICE
+                : Hands.NO_LINKER;
+    }
+
+    /**
+     * Sem cubo guardado: se o Vinculador numa das mãos tem uma Doca desta dimensão escolhida (entrou no mundo de novo,
+     * ou o prazo de colocar venceu), pede o cubo ao servidor, no máximo uma vez por segundo. Sem Vinculador, só as
+     * duas leituras do item.
+     */
+    private static void request(Minecraft minecraft) {
+        LocalPlayer player = minecraft.player;
+        ClientLevel here = minecraft.level;
+        if (player == null || here == null) {
+            return;
+        }
+        DockChoice choice = choice(player.getMainHandItem(), here);
+        if (choice == null) {
+            choice = choice(player.getOffhandItem(), here);
+        }
+        long now = here.getGameTime();
+        if (choice == null || now - lastRequest < REQUEST_INTERVAL_TICKS && now >= lastRequest) {
+            return;
+        }
+        lastRequest = now;
+        PacketDistributor.sendToServer(new DockReachRequestPayload(choice.pos().pos()));
+    }
+
+    private static @Nullable DockChoice choice(ItemStack stack, ClientLevel here) {
+        if (!(stack.getItem() instanceof LinkerItem)) {
+            return null;
+        }
+        DockChoice choice = LinkerItem.dock(stack);
+        return choice != null && choice.pos().dimension().equals(here.dimension()) ? choice : null;
     }
 
     private static boolean chose(ItemStack stack, ClientLevel here, BlockPos at) {
-        if (!(stack.getItem() instanceof LinkerItem)) {
-            return false;
-        }
-        DockChoice choice = LinkerItem.dock(stack);
-        return choice != null && choice.pos().pos().equals(at) && choice.pos().dimension().equals(here.dimension());
+        DockChoice choice = choice(stack, here);
+        return choice != null && choice.pos().pos().equals(at);
     }
 
     @SubscribeEvent
     static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
         clear();
+        lastRequest = -REQUEST_INTERVAL_TICKS;
     }
 
     @SubscribeEvent
     static void onRender(RenderLevelStageEvent event) {
         BlockPos at = dock;
-        if (at == null || event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) {
+        if (at == null || !visible || event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) {
             return;
         }
         Vec3 camera = event.getCamera().getPosition();

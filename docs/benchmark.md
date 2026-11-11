@@ -658,3 +658,26 @@ Ramo `ccr-71b175d3-weymk6`. A máquina sem nada para dar não sai mais da fila d
 ### Leitura
 
 - No ruído (o ± é do tamanho da diferença). No `doca`, as 32 fornalhas recebem pedido a cada tick, então quase todas ficam na fila de qualquer jeito; as que esvaziam passam pelo recuo, com uma visita a cada intervalo, e o carvão na face Insere as segura no teto (uma visita a cada 100 ticks), como uma porta remota do roteador.
+
+## Doca: o uso intenso (11 de novembro de 2026)
+
+Ramo `ccr-71b175d3-weymk6`. O relato do dono: cinco Ultimate Smelting Factories (8 Speed Upgrades, 256× com a Time Wand) numa Doca Ultimate, um pedido de 100.000 minérios brutos em execuções de 256, e as fábricas que "não ficavam todas trabalhando". A medição é um GameTest instrumentado, não o `bench.sh`: `WA_DOCK_MEDIDA=1 ./gradlew runGameTestServerChemicals` (`gametest/DockMinMaxMedida`, as fábricas reais do Mekanism, aceleradas pelo ticker do bloco; 2.560× sem upgrades é o ritmo de 8 Speed Upgrades + 256×, porque o Mekanism faz a operação de 200 em 20 ticks com eles; a CPU do AE2 emulada pela janela de 3 ticks, `pushes` = coprocessadores + 1; um baú no lugar do provedor, esvaziado a cada tick). Janelas fixas de 800 ticks depois de 100 de aquecimento, ou o pedido inteiro (391 execuções) do primeiro empurrão ao último lingote; 3 repetições por caso (1 nos de 2.560×), a medição é determinística (± 0). "Teto" é o controle: as mesmas fábricas sem a Doca, a entrada cheia e a saída vazia a cada tick. "Ociosa" é a fração dos ticks em que a fábrica não fez nada.
+
+| Caso (Doca, ritmo, CPU) | Antes: itens/s (% do teto) | Depois | Fábricas ociosas, antes → depois | Dormindo na entrega | Motor ms/tick (antes / depois) |
+| --- | --- | --- | --- | --- | --- |
+| Ultimate, 256×, 100.000 com 3 coprocessadores | 704 (61%), 2.845 ticks | 1.137 (99%), 1.760 ticks | 36% → 1% | 67% → 2% | 0,034 / 0,050 |
+| Ultimate, 256×, 100.000 sem coprocessador | 1.131 (98%), 1.770 ticks | 1.131 (98%), 1.770 ticks | 1% → 1% | 0% → 0% | 0,053 / 0,053 |
+| Ultimate, 256×, sem fim, 3 coprocessadores | 691 ± 36 (60%) | 1.152 (100%) | | 66% → 2% | 0,048 / 0,065 |
+| Ultimate, 128×, sem fim | 530 (92%) | 576 (100%) | | 68% → 8% | 0,029 / 0,037 |
+| Elite, 256×, sem fim | 665 (58%) | 1.152 (100%) | | 68% → 2% | 0,033 / 0,059 |
+| Ultimate, 2.560×, 100.000, 11 ou 31 coprocessadores | 10.592 (92%), 189 ticks | igual | 1% | 0% | 0,10 a 0,12 |
+| Ultimate, 2.560×, 100.000, 6 coprocessadores | 10.319 (90%), 194 ticks | 10.373 (90%), 193 ticks | 2% | 0% | 0,09 / 0,12 |
+| Ultimate, 2.560×, 100.000, 3 coprocessadores | 6.718 (58%), 298 ticks | igual | 8% | 0% | 0,075 / 0,053 |
+| Ultimate, 2.560×, 100.000, sem coprocessador | 1.701 (15%), 1.177 ticks | igual | 67% | 0% | 0,024 / 0,026 |
+| Avançada, 256× | 256 (22%) | 256 (22%) | | | |
+| Básica, 256× | 32 (3%) | 32 (3%) | | | |
+
+- O defeito era o sono da entrega: a fábrica que recusa (cheia) dormia até o teto (100 ticks), porque o Mekanism nunca avisa; com coprocessadores, as recusas se multiplicam e as fábricas dormem com a entrada vazia. A correção (a volta que tira algo acorda a máquina para a entrega) leva o pedido de 100.000 a 256× de 142 s para 88 s (o teto é 86,9 s). O custo é uma escrita de campo por máquina que deu algo; o motor fica abaixo de 0,13 ms/tick a 10.600 itens/s.
+- A saída espera 1 tick em média de 32× a 2.560× (lei de Little): o recuo da volta não atrasa máquina que produz.
+- A 2.560× o que limita é a CPU do AE2 (cada empurrão leva 256: sem coprocessador, ~1.700 itens/s) e, com CPU de sobra, o pendente que segura o lado (92% do teto). Só aceitar onde o pedido somado coubesse foi medido e piorou (74% a 2.560×, 93% a 512×) e não entrou.
+- O cenário `doca` do `bench.sh`, antes (`run/bench/reports/20261111-180512.md`) e depois (`20261111-180259.md`), `./scripts/bench.sh doca:1:3`: mod 0,151 ± 0,034 → 0,149 ± 0,052 ms/tick, 640 pedidos aceitos/s e 256 itens/s devolvidos nos dois; no ruído (as fornalhas do cenário avisam pelo `setChanged`, e o acordar novo não muda nada para elas).

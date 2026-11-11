@@ -23,6 +23,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.capabilities.Capabilities;
@@ -206,6 +208,77 @@ public final class DockMekanismGameTests {
                         held |= input.getStackInSlot(slot).is(Items.RAW_IRON);
                     }
                     helper.assertTrue(held, "o minério saiu da entrada");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Ticks extras da fábrica no tick do servidor (o que a Time Wand faz: o ticker do block entity mais vezes), com a
+     * energia cheia antes de cada um.
+     */
+    @SuppressWarnings("unchecked")
+    private static void accelerate(GameTestHelper helper, int extra) {
+        BlockPos pos = helper.absolutePos(FACTORY);
+        BlockEntity be = helper.getLevel().getBlockEntity(pos);
+        BlockState state = helper.getLevel().getBlockState(pos);
+        BlockEntityTicker<BlockEntity> ticker = (BlockEntityTicker<BlockEntity>) state.getTicker(helper.getLevel(),
+                be.getType());
+        for (int i = 0; i < extra && ticker != null; i++) {
+            charge(helper);
+            ticker.tick(helper.getLevel(), pos, state, be);
+        }
+        charge(helper);
+    }
+
+    private static List<ItemStack> stack() {
+        return List.of(new ItemStack(Items.RAW_IRON, 64));
+    }
+
+    /**
+     * A fábrica acelerada (256 ticks dela por tick do servidor) enche a entrada, recusa o pedido seguinte e dorme na
+     * entrega; ela nunca avisa a Doca, mas a volta tira a saída dela, e isso a acorda: o pedido seguinte entra assim
+     * que cabe, bem antes do teto do sono (100 ticks). Sem o acordar pela volta, a fábrica ficava fora da escolha até o
+     * teto, ociosa com a entrada vazia (o uso intenso: 5 Ultimate a 256×, 20 a 45% do tempo paradas).
+     */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void returnWakesSleepingFactory(GameTestHelper helper) {
+        if (!ChemicalTestTanks.enabled()) {
+            helper.succeed();
+            return;
+        }
+        PatternDockBlockEntity dock = scene(helper);
+        long[] refusedAt = {-1};
+        helper.startSequence()
+                .thenWaitUntil(() -> registered(dock))
+                .thenExecute(() -> {
+                    link(helper, dock);
+                    charge(helper);
+                })
+                .thenWaitUntil(DockMekanismGameTests::room)
+                .thenExecute(() -> {
+                    // três pilhas enchem os três slots de entrada; a quarta não cabe e a fábrica dorme
+                    for (int i = 0; i < INPUT_SLOTS; i++) {
+                        helper.assertTrue(DockDelivery.offer(dock, NORTH, stack(), List.of(), false)
+                                == DockDelivery.Result.ACCEPTED, "recusou a pilha " + i);
+                    }
+                    helper.assertTrue(DockDelivery.offer(dock, NORTH, stack(), List.of(), false)
+                            == DockDelivery.Result.REFUSED, "a fábrica cheia aceitou");
+                    long now = helper.getLevel().getServer().getTickCount();
+                    helper.assertTrue(dock.machineAt(helper.absolutePos(FACTORY)).asleep(now),
+                            "a fábrica que recusou não dormiu");
+                    refusedAt[0] = now;
+                })
+                .thenWaitUntil(() -> {
+                    accelerate(helper, 255);
+                    long now = helper.getLevel().getServer().getTickCount();
+                    if (now - refusedAt[0] >= 60) {
+                        helper.fail("a fábrica não recebeu de novo em 60 ticks (devolvidos "
+                                + dock.side(NORTH).returned() + "): " + state(helper, dock));
+                    }
+                    if (!NetworkManager.get().budget().outsideRoom() || DockDelivery.offer(dock, NORTH, stack(),
+                            List.of(), false) != DockDelivery.Result.ACCEPTED) {
+                        throw new GameTestAssertException("ainda recusa");
+                    }
                 })
                 .thenSucceed();
     }

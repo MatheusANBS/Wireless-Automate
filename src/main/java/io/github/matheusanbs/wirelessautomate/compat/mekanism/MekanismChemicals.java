@@ -9,6 +9,9 @@ import mekanism.api.chemical.ChemicalStack;
 import mekanism.api.chemical.IChemicalHandler;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
@@ -129,6 +132,26 @@ public final class MekanismChemicals {
     public static int tint(ResourceLocation id) {
         Chemical chemical = chemical(id);
         return chemical == null ? 0xFFFFFF : chemical.getTint();
+    }
+
+    /** Um {@link ChemicalStack} lido do NBT, ou {@code null} se o químico não existe (ou a entrada está vazia). */
+    public static @Nullable Object parseStack(CompoundTag tag, HolderLookup.Provider registries) {
+        ChemicalStack stack = ChemicalStack.parseOptional(registries, tag);
+        return stack.isEmpty() ? null : stack;
+    }
+
+    /** O {@link ChemicalStack} {@code stack} em NBT, como o {@link #parseStack} lê. */
+    public static CompoundTag saveStack(Object stack, HolderLookup.Provider registries) {
+        Tag saved = ((ChemicalStack) stack).save(registries);
+        return saved instanceof CompoundTag compound ? compound : new CompoundTag();
+    }
+
+    public static boolean isEmptyStack(Object stack) {
+        return ((ChemicalStack) stack).isEmpty();
+    }
+
+    public static Object copyStack(Object stack) {
+        return ((ChemicalStack) stack).copy();
     }
 
     private MekanismChemicals() {

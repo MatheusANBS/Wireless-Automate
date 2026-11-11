@@ -6,6 +6,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.dock.DockPendingContents;
 import io.github.matheusanbs.wirelessautomate.dock.DockSide;
 import io.github.matheusanbs.wirelessautomate.dock.PatternDockBlockEntity;
+import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
@@ -16,6 +17,9 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -38,9 +42,9 @@ import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
- * A Doca quebrada com pendente: o item leva o {@code pattern_dock_pending} (itens e fluidos de todos os lados, com o
- * bloco de cada um), a dica diz "Pedido pendente", e recolocada a Doca devolve o pendente aos mesmos lados. Sem
- * pendente, o item não leva o componente e empilha.
+ * A Doca quebrada com pendente: o item leva o {@code pattern_dock_pending} (itens, fluidos e químicos de todos os
+ * lados, com o bloco de cada um; o químico sem o Mekanism, cru), a dica diz "Pedido pendente", e recolocada a Doca
+ * devolve o pendente aos mesmos lados. Sem pendente, o item não leva o componente e empilha.
  */
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
@@ -187,6 +191,38 @@ public final class DockBreakGameTests {
         helper.assertFalse(item.has(ModDataComponents.PATTERN_DOCK_PENDING.get()), "a Doca sem pendente ganhou o componente");
         ItemStack fresh = StorageBlockItem.withTier(ModBlocks.PATTERN_DOCK.get().asItem(), RouterTier.ELITE);
         helper.assertTrue(ItemStack.isSameItemSameComponents(item, fresh), "não empilha com uma Doca nova");
+        helper.succeed();
+    }
+
+    /**
+     * Sem o Mekanism, um químico pendente que veio no item (a entrada {@code {chemical}}) fica cru: não segura o lado,
+     * mas o lado guarda o bloco, o NBT o salva igual e o item da Doca o leva de novo, sem descartar.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void rawChemicalKeptWithoutMekanism(GameTestHelper helper) {
+        if (Chemicals.LOADED) {
+            helper.succeed();
+            return;
+        }
+        PatternDockBlockEntity dock = dock(helper);
+        CompoundTag chemical = new CompoundTag();
+        chemical.putString("id", "mekanism:hydrogen");
+        chemical.putLong("amount", 100);
+        ItemStack item = StorageBlockItem.withTier(ModBlocks.PATTERN_DOCK.get().asItem(), RouterTier.ELITE);
+        item.set(ModDataComponents.PATTERN_DOCK_PENDING.get(), new DockPendingContents(List.of(
+                new DockPendingContents.Side(NORTH, FURNACE, List.of(), List.of(), List.of(chemical)))));
+        dock.applyComponentsFromItemStack(item);
+        DockSide side = dock.side(NORTH);
+        helper.assertTrue(side != null && FURNACE.equals(side.block()), "o lado não guardou o bloco");
+        helper.assertFalse(side.hasPending(), "a entrada crua segura o lado");
+        helper.assertTrue(side.keepsPending() && dock.hasPending(), "a entrada crua sumiu");
+        CompoundTag saved = dock.saveWithoutMetadata(helper.getLevel().registryAccess());
+        ListTag pending = saved.getList("sides", Tag.TAG_COMPOUND).getCompound(0).getList("pending", Tag.TAG_COMPOUND);
+        helper.assertTrue(pending.size() == 1 && chemical.equals(pending.getCompound(0).getCompound("chemical")),
+                "NBT: " + pending);
+        DockPendingContents contents = dock.collectComponents().get(ModDataComponents.PATTERN_DOCK_PENDING.get());
+        helper.assertTrue(contents != null && contents.sides().size() == 1
+                && contents.sides().get(0).chemicals().equals(List.of(chemical)), "componente: " + contents);
         helper.succeed();
     }
 }

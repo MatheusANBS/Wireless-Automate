@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -13,7 +14,8 @@ import net.neoforged.neoforge.fluids.FluidStack;
 
 /**
  * O pendente de uma Doca quebrada (componente {@code wirelessautomate:pattern_dock_pending}): por lado com pendente, o
- * bloco do lado, os itens e os fluidos. Volta aos mesmos lados ao recolocar a Doca; sem máquinas, o lado guarda o
+ * bloco do lado, os itens, os fluidos e os químicos. Os químicos vão em NBT, como o {@link DockSide} os salva (pela
+ * ponte do Mekanism, ou a entrada crua que não deu para ler), para o componente não depender do Mekanism. Volta aos mesmos lados ao recolocar a Doca; sem máquinas, o lado guarda o
  * bloco até o pendente sair numa máquina dele. Só existe com pendente, para Docas vazias empilharem. O pendente é o
  * resto de um pedido (poucas pilhas), então vai inteiro no item, sem referência a dados do servidor.
  */
@@ -32,12 +34,14 @@ public record DockPendingContents(List<Side> sides) {
     }
 
     /** O pendente de um lado ({@code Direction.ordinal()}); as pilhas são cópias e não mudam. */
-    public record Side(int side, ResourceLocation block, List<ItemStack> items, List<FluidStack> fluids) {
+    public record Side(int side, ResourceLocation block, List<ItemStack> items, List<FluidStack> fluids,
+            List<CompoundTag> chemicals) {
         static final Codec<Side> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Codec.intRange(0, 5).fieldOf("side").forGetter(Side::side),
                 ResourceLocation.CODEC.fieldOf("block").forGetter(Side::block),
                 ItemStack.CODEC.listOf().optionalFieldOf("items", List.of()).forGetter(Side::items),
-                FluidStack.CODEC.listOf().optionalFieldOf("fluids", List.of()).forGetter(Side::fluids))
+                FluidStack.CODEC.listOf().optionalFieldOf("fluids", List.of()).forGetter(Side::fluids),
+                CompoundTag.CODEC.listOf().optionalFieldOf("chemicals", List.of()).forGetter(Side::chemicals))
                 .apply(i, Side::new));
 
         static final StreamCodec<RegistryFriendlyByteBuf, Side> STREAM_CODEC = StreamCodec.composite(
@@ -45,6 +49,7 @@ public record DockPendingContents(List<Side> sides) {
                 ResourceLocation.STREAM_CODEC, Side::block,
                 ItemStack.STREAM_CODEC.apply(ByteBufCodecs.list()), Side::items,
                 FluidStack.STREAM_CODEC.apply(ByteBufCodecs.list()), Side::fluids,
+                ByteBufCodecs.COMPOUND_TAG.apply(ByteBufCodecs.list()), Side::chemicals,
                 Side::new);
 
         public Side {
@@ -65,6 +70,11 @@ public record DockPendingContents(List<Side> sides) {
                 }
             }
             fluids = List.copyOf(fluidCopies);
+            List<CompoundTag> chemicalCopies = new ArrayList<>(chemicals.size());
+            for (CompoundTag tag : chemicals) {
+                chemicalCopies.add(tag.copy());
+            }
+            chemicals = List.copyOf(chemicalCopies);
         }
 
         // O ItemStack e o FluidStack não têm equals: sem estes, dois itens iguais não empilhariam e o servidor
@@ -75,7 +85,8 @@ public record DockPendingContents(List<Side> sides) {
                 return true;
             }
             if (!(other instanceof Side that) || side != that.side || !block.equals(that.block)
-                    || !ItemStack.listMatches(items, that.items) || fluids.size() != that.fluids.size()) {
+                    || !ItemStack.listMatches(items, that.items) || fluids.size() != that.fluids.size()
+                    || !chemicals.equals(that.chemicals)) {
                 return false;
             }
             for (int i = 0; i < fluids.size(); i++) {
@@ -93,7 +104,7 @@ public record DockPendingContents(List<Side> sides) {
             for (FluidStack stack : fluids) {
                 hash = 31 * hash + FluidStack.hashFluidAndComponents(stack) * 31 + stack.getAmount();
             }
-            return hash;
+            return 31 * hash + chemicals.hashCode();
         }
     }
 }

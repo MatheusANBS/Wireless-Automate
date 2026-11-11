@@ -107,4 +107,18 @@ class DockPickTest {
         assertEquals(1, loads[1]);
         assertEquals(2, loads[4]);
     }
+
+    @Test
+    void eachTypeCountsOnlyItsOwnMasks() {
+        // itens 0 e 1, fluido 2: a carga do fluido em Trás não pesa na escolha do item
+        int[] masks = {TOP, TOP | BACK, BACK};
+        int[] loads = new int[6];
+        DockPick.loads(masks, 0, 2, loads);
+        assertEquals(1, loads[1]);
+        assertEquals(1, DockPick.selectiveFace(masks[1], loads));
+        DockPick.loads(masks, 2, 1, loads);
+        assertEquals(1, loads[1]);
+        assertEquals(0, loads[4]);
+        assertEquals(1, DockPick.selectiveFace(masks[2], loads));
+    }
 }

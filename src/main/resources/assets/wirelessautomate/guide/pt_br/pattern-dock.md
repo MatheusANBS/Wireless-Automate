@@ -99,7 +99,7 @@ e o estado:
 | Nenhuma máquina vinculada | Há provedor, mas nenhuma máquina. Vincule com o Vinculador |
 | Tire a trava do provedor | O provedor está em "travar até o resultado", que nunca solta com a Doca |
 | Padrão de bancada recusado | O último pedido era de bancada, cortador ou forja |
-| Pedido com item e fluido recusado | O último pedido misturava itens e fluidos |
+| Pedido com recurso que a Doca não conhece | O último pedido trazia algo que não é item nem fluido |
 | Provedor cheio | O resultado espera lugar: a rede cheia, sem energia ou sem canal |
 | Todas cheias | Nenhuma máquina aceitou o último pedido; ele espera |
 | Pedido pendente | A máquina ainda não recebeu o resto do último pedido; o lado espera por ele |
@@ -112,7 +112,7 @@ Ao lado do estado a tela avisa quantas máquinas estão **fora do alcance** ou *
 ## Limites
 
 - **Um tipo de máquina por lado.** Um lado de Fornalha não aceita Alto-forno.
-- **Pedidos só de itens ou só de fluidos**, nesta versão. Um pedido com os dois é recusado.
+- **Pedidos de itens e fluidos**, juntos ou não: cada um vai para a face da máquina que o recebe. Outro recurso (um químico, por exemplo) é recusado nesta versão.
 - **Mesma dimensão** e dentro do raio do tier.
 - Uma máquina pertence a **um lado de uma Doca só**.
 - A Doca precisa do **AE2** ou do **RS2** para receber pedidos.

@@ -44,7 +44,7 @@ class DockStatusTest {
     }
 
     @Test
-    void mixedBeatsFullAndWorking() {
+    void unknownResourceBeatsFullAndWorking() {
         assertEquals(MIXED, DockStatus.of(true, 2, false, DockStatus.MIXED, true, true, false, 3));
     }
 

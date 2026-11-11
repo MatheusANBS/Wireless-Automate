@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.dock;
 
+import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.TickBudget;
@@ -22,14 +23,19 @@ import org.jetbrains.annotations.Nullable;
  * chamam por aqui). Estática: o estado (a máquina da simulação, o cursor, o sono de cada máquina, o motivo da última
  * recusa e o pendente) fica no {@link DockSide} e na {@link DockMachine}.
  *
- * <p>Os passos da spec ("A entrega"): recusa logo um pedido vazio, um pedido com item e fluido
+ * <p>Um pedido traz itens e fluidos juntos (o caso comum das máquinas de duas entradas) e uma lista de químicos
+ * ({@code ChemicalStack} do Mekanism como {@code Object}, pela ponte {@link Chemicals}), que a entrega ainda não sabe
+ * pôr numa máquina: um pedido com químico é recusado como recurso desconhecido ({@link DockStatus#MIXED}).
+ *
+ * <p>Os passos da spec ("A entrega"): recusa logo um pedido vazio, um pedido com recurso que a Doca não conhece
  * ({@link DockStatus#MIXED}), um lado sem máquina ativa ({@link DockStatus#NO_MACHINES}) e um tick sem orçamento
  * ({@link DockStatus#BUDGET}); tenta o pendente e, se ele
  * fica, recusa ({@link DockStatus#PENDING}); escolhe a máquina pelo cursor ({@link DockPick#pick}, no máximo
  * {@link #MAX_TRIES} candidatas, pulando as dormindo, as descarregadas e as de fora do alcance) simulando cada
- * ingrediente nas faces Insere do perfil; executa nela, cada ingrediente na face mais seletiva
- * ({@link DockPick#selectiveFace}); o que não couber (a simulação não soma) vai para o pendente do lado e o pedido conta
- * como aceito; e o cursor passa para depois dela. A máquina que recusa dorme até mudar
+ * ingrediente nas faces Insere do tipo dele no perfil; executa nela, cada ingrediente na face mais seletiva do tipo
+ * dele ({@link DockPick#selectiveFace}, com a carga de cada face contada só entre os ingredientes do mesmo tipo); o que
+ * não couber (a simulação não soma) vai para o pendente do lado e o pedido conta como aceito; e o cursor passa para
+ * depois dela. A máquina que recusa dorme até mudar
  * ({@link PatternDockBlockEntity#machineChanged}) ou até o teto de sono do motor.
  *
  * <p>Simular e executar: {@code simulate} faz até a escolha e guarda a máquina no lado, valendo só no mesmo tick do
@@ -41,9 +47,10 @@ import org.jetbrains.annotations.Nullable;
  * são mudados; o que vai ao pendente é uma cópia ou a sobra que a máquina devolveu.
  *
  * <p>Custo: o tempo de cada oferta vai para o orçamento do motor ({@link TickBudget#charge}); por oferta, no máximo
- * {@link #MAX_TRIES} candidatas, cada uma com uma simulação por ingrediente e por face Insere, pelos caches de capability
- * da máquina ({@link MachineCaches}, que conferem o chunk antes). Sem alocação além das sobras das simulações e do que
- * vai ao pendente: os rascunhos (faces por ingrediente, a tentativa) ficam no lado.
+ * {@link #MAX_TRIES} candidatas, cada uma com uma simulação por ingrediente e por face Insere do tipo dele, pelos caches
+ * de capability da máquina ({@link MachineCaches}, que conferem o chunk antes); a simulação dos fluidos só roda se os
+ * itens couberam. Sem alocação além das sobras das simulações e do que vai ao pendente: os rascunhos (faces por
+ * ingrediente, itens e depois fluidos no mesmo vetor, e a tentativa) ficam no lado.
  */
 public final class DockDelivery {
     /** Candidatas tentadas por pedido, no máximo. */
@@ -68,25 +75,32 @@ public final class DockDelivery {
         return dockSide != null && !dockSide.hasPending() && dockSide.activeMachines() > 0;
     }
 
+    /** O {@link #offer(PatternDockBlockEntity, int, List, List, List, boolean)} de um pedido sem químicos. */
+    public static Result offer(PatternDockBlockEntity dock, int side, List<ItemStack> items, List<FluidStack> fluids,
+            boolean simulate) {
+        return offer(dock, side, items, fluids, List.of(), simulate);
+    }
+
     /**
-     * Oferece um pedido ao lado {@code side}: itens ou fluidos, nunca os dois. Grava no lado o motivo de uma recusa.
+     * Oferece um pedido ao lado {@code side}: itens e fluidos, juntos ou não. Grava no lado o motivo de uma recusa.
      *
+     * @param chemicals os químicos do pedido ({@code ChemicalStack}, vazia sem o Mekanism); com algum, recusa
      * @param simulate só escolhe a máquina (e a guarda para a execução deste tick); nada entra nela
      */
     public static Result offer(PatternDockBlockEntity dock, int side, List<ItemStack> items, List<FluidStack> fluids,
-            boolean simulate) {
+            List<?> chemicals, boolean simulate) {
         DockSide dockSide = dock.side(side);
         if (dockSide == null || dock.isRemoved() || !(dock.getLevel() instanceof ServerLevel level)) {
             return Result.REFUSED;
+        }
+        if (hasChemical(chemicals)) {
+            // a simulação do mesmo pedido já recusaria: nunca há máquina guardada para um pedido com químico
+            return refuse(dockSide, DockStatus.MIXED);
         }
         boolean hasItems = hasItem(items);
         boolean hasFluids = hasFluid(fluids);
         if (!hasItems && !hasFluids) {
             return Result.REFUSED;
-        }
-        if (hasItems && hasFluids) {
-            // a simulação do mesmo pedido já recusaria: nunca há máquina guardada para um misto
-            return refuse(dockSide, DockStatus.MIXED);
         }
         long now = level.getServer().getTickCount();
         DockMachine planned = simulate ? null : dockSide.planned(now);
@@ -105,9 +119,8 @@ public final class DockDelivery {
         }
         long started = System.nanoTime();
         try {
-            return planned == null ? choose(dock, dockSide, items, fluids, hasItems, simulate, now)
-                    : execute(dock, dockSide, planned, plannedIndex(dockSide, planned), items, fluids, hasItems, now,
-                            false);
+            return planned == null ? choose(dock, dockSide, items, fluids, hasFluids, simulate, now)
+                    : execute(dock, dockSide, planned, plannedIndex(dockSide, planned), items, fluids, now, false);
         } finally {
             budget.charge(System.nanoTime() - started);
         }
@@ -143,13 +156,13 @@ public final class DockDelivery {
 
     /** Os passos 1 (o pendente) e 2 (a escolha) e, sem simular, o 3 na escolhida. */
     private static Result choose(PatternDockBlockEntity dock, DockSide side, List<ItemStack> items,
-            List<FluidStack> fluids, boolean hasItems, boolean simulate, long now) {
+            List<FluidStack> fluids, boolean hasFluids, boolean simulate, long now) {
         if (side.hasPending() && !DockPending.flush(dock, side, now)) {
             return refuse(side, DockStatus.PENDING);
         }
         List<DockMachine> machines = side.machines();
         Attempt attempt = side.attempt();
-        attempt.start(dock, side, hasItems ? items : null, hasItems ? null : fluids, now);
+        attempt.start(dock, side, items, fluids, hasFluids, now);
         int index;
         try {
             index = DockPick.pick(machines.size(), side.cursor(), attempt.usable, attempt.accepts, MAX_TRIES);
@@ -165,7 +178,7 @@ public final class DockDelivery {
             side.setLastRefusal(DockStatus.NO_REFUSAL);
             return Result.ACCEPTED;
         }
-        return execute(dock, side, machine, index, items, fluids, hasItems, now, true);
+        return execute(dock, side, machine, index, items, fluids, now, true);
     }
 
     /** O índice da máquina da simulação na lista do lado (o guardado, ou procurado se a lista mudou). */
@@ -176,29 +189,27 @@ public final class DockDelivery {
     }
 
     /**
-     * O passo 3: entrega o pedido em {@code machine}, cada ingrediente na face mais seletiva, e o que sobra vai ao
-     * pendente. {@code masksReady}: as faces por ingrediente já estão no rascunho do lado (a escolha acabou de
+     * O passo 3: entrega o pedido em {@code machine}, cada ingrediente na face mais seletiva do tipo dele, e o que sobra
+     * vai ao pendente. {@code masksReady}: as faces por ingrediente já estão no rascunho do lado (a escolha acabou de
      * simular nesta máquina); senão são simuladas de novo, aceitando parte (a execução nunca recusa).
      */
     private static Result execute(PatternDockBlockEntity dock, DockSide side, DockMachine machine, int index,
-            List<ItemStack> items, List<FluidStack> fluids, boolean hasItems, long now, boolean masksReady) {
+            List<ItemStack> items, List<FluidStack> fluids, long now, boolean masksReady) {
         side.clearPlan();
         MachineCaches caches = machine.caches(dock);
         MachineConfig profile = side.profile();
         int front = machine.front();
-        int count = hasItems ? items.size() : fluids.size();
-        int[] masks = side.masks(count);
+        int itemCount = items.size();
+        int fluidCount = fluids.size();
+        int[] masks = side.masks(itemCount + fluidCount);
         if (!masksReady) {
-            if (hasItems) {
-                itemMasks(caches, profile, front, items, count, masks, false);
-            } else {
-                fluidMasks(caches, profile, front, fluids, count, masks, false);
-            }
+            itemMasks(caches, profile, front, items, 0, masks, false);
+            fluidMasks(caches, profile, front, fluids, itemCount, masks, false);
         }
         int[] loads = side.loads();
-        DockPick.loads(masks, count, loads);
-        for (int i = 0; i < count; i++) {
-            if (hasItems) {
+        if (itemCount > 0) {
+            DockPick.loads(masks, 0, itemCount, loads);
+            for (int i = 0; i < itemCount; i++) {
                 ItemStack stack = items.get(i);
                 if (stack.isEmpty()) {
                     continue;
@@ -207,12 +218,16 @@ public final class DockDelivery {
                 if (!rest.isEmpty()) {
                     side.addPending(rest == stack ? stack.copy() : rest, machine.pos());
                 }
-            } else {
+            }
+        }
+        if (fluidCount > 0) {
+            DockPick.loads(masks, itemCount, fluidCount, loads);
+            for (int i = 0; i < fluidCount; i++) {
                 FluidStack stack = fluids.get(i);
                 if (stack.isEmpty()) {
                     continue;
                 }
-                FluidStack rest = placeFluid(caches, front, stack, masks[i], loads);
+                FluidStack rest = placeFluid(caches, front, stack, masks[itemCount + i], loads);
                 if (!rest.isEmpty()) {
                     side.addPending(rest == stack ? stack.copy() : rest, machine.pos());
                 }
@@ -247,14 +262,19 @@ public final class DockDelivery {
     }
 
     /**
-     * Simula cada item nas faces Insere de itens do perfil e escreve em {@code masks[i]} as faces que o aceitam (um bit
-     * por face, na ordem do perfil): {@code whole}, a que aceita a pilha inteira; senão, a que aceita parte. Uma pilha
-     * vazia fica com a máscara 0 e não conta. Devolve {@code true} se toda pilha não vazia tem face.
+     * Simula cada item nas faces Insere de itens do perfil e escreve em {@code masks[offset + i]} as faces que aceitam o
+     * item {@code i} (um bit por face, na ordem do perfil): {@code whole}, a que aceita a pilha inteira; senão, a que
+     * aceita parte. Uma pilha vazia fica com a máscara 0 e não conta. Devolve {@code true} se toda pilha não vazia tem
+     * face; sem itens, {@code true} sem consultar a máquina.
      */
-    static boolean itemMasks(MachineCaches caches, MachineConfig profile, int front, List<ItemStack> items, int count,
+    static boolean itemMasks(MachineCaches caches, MachineConfig profile, int front, List<ItemStack> items, int offset,
             int[] masks, boolean whole) {
+        int count = items.size();
+        if (count == 0) {
+            return true;
+        }
         for (int i = 0; i < count; i++) {
-            masks[i] = 0;
+            masks[offset + i] = 0;
         }
         for (int face = 0; face < SIDES.length; face++) {
             if (!profile.face(ResourceType.ITEM, SIDES[face]).mode().inserts()) {
@@ -271,12 +291,12 @@ public final class DockDelivery {
                 }
                 ItemStack rest = ItemHandlerHelper.insertItemStacked(handler, stack, true);
                 if (whole ? rest.isEmpty() : rest.getCount() < stack.getCount()) {
-                    masks[i] |= 1 << face;
+                    masks[offset + i] |= 1 << face;
                 }
             }
         }
         for (int i = 0; i < count; i++) {
-            if (masks[i] == 0 && !items.get(i).isEmpty()) {
+            if (masks[offset + i] == 0 && !items.get(i).isEmpty()) {
                 return false;
             }
         }
@@ -285,9 +305,13 @@ public final class DockDelivery {
 
     /** O {@link #itemMasks} dos fluidos, pelo {@code fill} simulado nas faces Insere de fluidos. */
     static boolean fluidMasks(MachineCaches caches, MachineConfig profile, int front, List<FluidStack> fluids,
-            int count, int[] masks, boolean whole) {
+            int offset, int[] masks, boolean whole) {
+        int count = fluids.size();
+        if (count == 0) {
+            return true;
+        }
         for (int i = 0; i < count; i++) {
-            masks[i] = 0;
+            masks[offset + i] = 0;
         }
         for (int face = 0; face < SIDES.length; face++) {
             if (!profile.face(ResourceType.FLUID, SIDES[face]).mode().inserts()) {
@@ -304,12 +328,12 @@ public final class DockDelivery {
                 }
                 int filled = handler.fill(stack, IFluidHandler.FluidAction.SIMULATE);
                 if (whole ? filled >= stack.getAmount() : filled > 0) {
-                    masks[i] |= 1 << face;
+                    masks[offset + i] |= 1 << face;
                 }
             }
         }
         for (int i = 0; i < count; i++) {
-            if (masks[i] == 0 && !fluids.get(i).isEmpty()) {
+            if (masks[offset + i] == 0 && !fluids.get(i).isEmpty()) {
                 return false;
             }
         }
@@ -381,6 +405,16 @@ public final class DockDelivery {
         return false;
     }
 
+    /** O pedido traz algum químico; sem o Mekanism, qualquer entrada conta (não há como saber se está vazia). */
+    private static boolean hasChemical(List<?> chemicals) {
+        for (int i = 0; i < chemicals.size(); i++) {
+            if (!Chemicals.LOADED || !Chemicals.isEmptyStack(chemicals.get(i))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * Os dois testes da escolha ({@link DockPick#pick}) com o pedido em curso, um por lado e reaproveitado, para a
      * escolha não criar lambdas por pedido. Larga o pedido no fim ({@link #clear}).
@@ -392,14 +426,16 @@ public final class DockDelivery {
         private @Nullable DockSide side;
         private @Nullable List<ItemStack> items;
         private @Nullable List<FluidStack> fluids;
+        private boolean hasFluids;
         private long now;
 
-        void start(PatternDockBlockEntity dock, DockSide side, @Nullable List<ItemStack> items,
-                @Nullable List<FluidStack> fluids, long now) {
+        void start(PatternDockBlockEntity dock, DockSide side, List<ItemStack> items, List<FluidStack> fluids,
+                boolean hasFluids, long now) {
             this.dock = dock;
             this.side = side;
             this.items = items;
             this.fluids = fluids;
+            this.hasFluids = hasFluids;
             this.now = now;
         }
 
@@ -416,23 +452,19 @@ public final class DockDelivery {
             return machine.active() && !machine.asleep(now) && machine.caches(dock).available();
         }
 
-        /** Aceita o pedido inteiro (cada pilha numa face); senão dorme. Deixa as faces no rascunho do lado. */
+        /**
+         * Aceita o pedido inteiro (cada pilha numa face Insere do tipo dela); senão dorme, pelo teto de sono dos fluidos
+         * se o pedido tem fluido (o mais curto). Deixa as faces no rascunho do lado: os itens e depois os fluidos.
+         */
         private boolean accepts(int index) {
             DockMachine machine = side.machines().get(index);
             MachineCaches caches = machine.caches(dock);
-            boolean accepted;
-            ResourceType type;
-            if (items != null) {
-                accepted = itemMasks(caches, side.profile(), machine.front(), items, items.size(),
-                        side.masks(items.size()), true);
-                type = ResourceType.ITEM;
-            } else {
-                accepted = fluidMasks(caches, side.profile(), machine.front(), fluids, fluids.size(),
-                        side.masks(fluids.size()), true);
-                type = ResourceType.FLUID;
-            }
+            int[] masks = side.masks(items.size() + fluids.size());
+            boolean accepted = itemMasks(caches, side.profile(), machine.front(), items, 0, masks, true)
+                    && fluidMasks(caches, side.profile(), machine.front(), fluids, items.size(), masks, true);
             if (!accepted) {
-                machine.sleepUntil(now + NetworkManager.maxSleepTicks(type));
+                machine.sleepUntil(now + NetworkManager.maxSleepTicks(hasFluids ? ResourceType.FLUID
+                        : ResourceType.ITEM));
             }
             return accepted;
         }

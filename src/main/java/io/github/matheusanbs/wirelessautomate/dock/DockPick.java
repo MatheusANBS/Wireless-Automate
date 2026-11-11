@@ -50,10 +50,18 @@ public final class DockPick {
      * valem. Escreve em {@code loads[f]}, para as {@code loads.length} faces.
      */
     public static void loads(int[] masks, int count, int[] loads) {
+        loads(masks, 0, count, loads);
+    }
+
+    /**
+     * O {@link #loads} dos ingredientes {@code from} a {@code from + count - 1}: num pedido com mais de um tipo, as
+     * máscaras de cada tipo ficam em sequência no mesmo rascunho e a carga de uma face conta só os do tipo dela.
+     */
+    public static void loads(int[] masks, int from, int count, int[] loads) {
         for (int f = 0; f < loads.length; f++) {
             int bit = 1 << f;
             int load = 0;
-            for (int i = 0; i < count; i++) {
+            for (int i = from; i < from + count; i++) {
                 if ((masks[i] & bit) != 0) {
                     load++;
                 }

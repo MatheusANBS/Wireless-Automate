@@ -16,7 +16,7 @@ Comece por aqui para continuar o trabalho. Este arquivo é curto de propósito: 
 2. O dono testa à mão as etapas 1 a 4 do alcance e o Ctrl + clique do Vinculador (listas nas linhas de 02/11 do histórico), já no main.
 3. Reidealizar as telas do Tablet do zero (criação de redes etc.), mockup primeiro para o ok do dono.
 4. Refazer as imagens do Vinculador na vitrine (sem a área) e a do livro (ver `pendencias.md`). Os menores que sobraram do alcance (`pendencias.md`, seção "Roteador de alcance").
-5. **Lixeira:** executar o plano da etapa 1 quando o dono der o ok. **Doca de Padrões:** as etapas 1 a 4 estão prontas no ramo `ccr-71b175d3-weymk6` (todas as runs e o e2e da `doca` OK); com a receita, o próximo é o teste à mão do dono no jogo com o AE2 e o RS2 (a lista em `pendencias.md`, com um padrão do Mekanism de item, fluido e químico, e a receita na bancada e no JEI) e o merge com o ok dele.
+5. **Lixeira:** executar o plano da etapa 1 quando o dono der o ok. **Doca de Padrões:** as etapas 1 a 4 estão prontas no ramo `ccr-71b175d3-weymk6` (todas as runs e o e2e da `doca` OK); com a receita e o Cartão de Upgrade na bancada, o próximo é o teste à mão do dono no jogo com o AE2 e o RS2 (a lista em `pendencias.md`, com um padrão do Mekanism de item, fluido e químico, a receita e a Doca + cartão na bancada e no JEI) e o merge com o ok dele.
 
 ## Os arquivos
 

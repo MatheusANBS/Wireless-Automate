@@ -34,8 +34,8 @@ import org.jetbrains.annotations.Nullable;
  * Cartão de Upgrade de tier: um item por tier de destino ({@code tier_core_<destino>}), com o tier de origem no
  * componente {@code upgrade_from} ({@link ModDataComponents#UPGRADE_FROM}). Shift + clique (vale também sem o
  * Shift) num roteador, armazenamento, Doca de Padrões ou Núcleo de Ressonância colocado o leva ao tier do cartão no
- * lugar, sem perder a configuração nem o conteúdo; ou junte os dois na bancada ({@code RouterUpgradeRecipe}, só roteador e
- * armazenamento). O Núcleo pede também 1 Coração do Ressonador do tier de destino no inventário.
+ * lugar, sem perder a configuração nem o conteúdo; ou junte os dois na bancada ({@code RouterUpgradeRecipe}: roteador,
+ * armazenamento e Doca). O Núcleo pede também 1 Coração do Ressonador do tier de destino no inventário.
  *
  * <p>Um cartão com origem k ("k → destino") só vale num bloco exatamente do tier k; num bloco de outro tier, o
  * cartão fica na mão e a action bar avisa. O cartão sem origem é o cartão antigo, de antes desta regra: sobe de

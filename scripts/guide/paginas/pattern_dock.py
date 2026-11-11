@@ -92,7 +92,8 @@ A Doca **não gasta energia nem combustível**. Ela só leva os pedidos.
 ## Alcance
 
 O raio e o máximo de máquinas dependem do tier da Doca. As máquinas ficam dentro do raio, medido em cada eixo, e o
-máximo conta a **Doca inteira**, somando os **seis lados**. O Cartão de Upgrade sobe o tier.
+máximo conta a **Doca inteira**, somando os **seis lados**. Ela sobe de tier com o Cartão de Upgrade, no mundo ou na
+bancada.
 
 ''' + TABLE_REACH_PT + '''
 
@@ -203,7 +204,8 @@ The Dock **spends no energy and no fuel**. It only carries the orders.
 ## Reach
 
 The radius and the maximum number of machines depend on the Dock's tier. Machines must be inside the radius, measured on
-each axis, and the maximum counts the **whole Dock**, adding up the **six sides**. The Upgrade Card raises the tier.
+each axis, and the maximum counts the **whole Dock**, adding up the **six sides**. It goes up a tier with the Upgrade
+Card, in the world or at the crafting table.
 
 ''' + TABLE_REACH_EN + '''
 

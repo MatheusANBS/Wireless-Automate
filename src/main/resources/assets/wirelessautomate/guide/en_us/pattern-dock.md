@@ -73,7 +73,8 @@ The Dock **spends no energy and no fuel**. It only carries the orders.
 ## Reach
 
 The radius and the maximum number of machines depend on the Dock's tier. Machines must be inside the radius, measured on
-each axis, and the maximum counts the **whole Dock**, adding up the **six sides**. The Upgrade Card raises the tier.
+each axis, and the maximum counts the **whole Dock**, adding up the **six sides**. It goes up a tier with the Upgrade
+Card, in the world or at the crafting table.
 
 | Tier | Radius | Machines |
 | --- | --- | --- |

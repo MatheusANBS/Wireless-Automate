@@ -74,6 +74,17 @@ public final class DockChemicalAe2GameTests {
         helper.succeed();
     }
 
+    /** Com o AE2 e o RS2 juntos, só a receita da Doca do AE2 carrega. */
+    @GameTest(template = "empty")
+    public static void onlyAe2DockRecipeWithBoth(GameTestHelper helper) {
+        if (!enabled()) {
+            helper.succeed();
+            return;
+        }
+        DockRecipes.assertOnly(helper, DockRecipes.AE2);
+        helper.succeed();
+    }
+
     /**
      * A rede de verdade: um pedido de 1.000 mB de oxigênio pela CPU. O provedor empurra o minério e o hidrogênio à
      * Doca, que os põe na máquina (o minério em cima, o hidrogênio na entrada do lado); o oxigênio da saída volta à

@@ -91,6 +91,18 @@ public final class Ae2DockGameTests {
         helper.succeed();
     }
 
+    /** Com o AE2 carrega a receita da Doca do AE2 (e não a do RS2), e a grade dela faz a Doca Básica. */
+    @GameTest(template = "empty")
+    public static void dockRecipeLoadsWithAe2(GameTestHelper helper) {
+        if (!enabled()) {
+            helper.succeed();
+            return;
+        }
+        DockRecipes.assertOnly(helper, DockRecipes.AE2);
+        DockRecipes.assertCrafts(helper, DockRecipes.AE2, "ae2:engineering_processor", "ae2:pattern_provider");
+        helper.succeed();
+    }
+
     private static PatternDockBlockEntity dock(GameTestHelper helper) {
         helper.setBlock(DOCK, ModBlocks.PATTERN_DOCK.get().defaultBlockState().setValue(RouterBlock.TIER, RouterTier.BASIC));
         return helper.getBlockEntity(DOCK);

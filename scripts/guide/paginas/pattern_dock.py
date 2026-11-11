@@ -129,6 +129,15 @@ Ao lado do estado a tela avisa quantas máquinas estão **fora do alcance** ou *
 - **Mesma dimensão** e dentro do raio do tier.
 - Uma máquina pertence a **um lado de uma Doca só**.
 - A Doca precisa do **AE2** ou do **RS2** para receber pedidos.
+
+## Receita
+
+Um Roteador Wireless no meio de Carcaças de Porcelana, com Lingotes de Liga de Sinal, um **Pattern Provider** e um
+**Processador de Engenharia** do AE2 (só com o AE2 ou o RS2). Sem o AE2, num pack só com o RS2, a receita troca o
+provedor por um **Autocrafter** (de qualquer cor) e o processador pelo **Processador Avançado** do RS2. Ela faz a Doca
+Básica; o Cartão de Upgrade sobe o tier, como no roteador.
+
+<RecipeFor id="wirelessautomate:pattern_dock" />
 ''', front('Pattern Dock', 'wirelessautomate:pattern_dock', 'integracoes', 17, item_ids=[
     'wirelessautomate:pattern_dock']) + '''
 # Pattern Dock
@@ -231,4 +240,13 @@ Next to the state, the screen warns how many machines are **out of reach** or **
 - **Same dimension** and inside the tier's radius.
 - A machine belongs to **one side of one Dock**.
 - The Dock needs **AE2** or **RS2** to receive orders.
+
+## Recipe
+
+A Wireless Router among Porcelain Casings, with Signal Alloy Ingots, an AE2 **Pattern Provider** and an AE2
+**Engineering Processor** (only with AE2 or RS2). Without AE2, in a pack with only RS2, the recipe swaps the provider for
+an **Autocrafter** (any color) and the processor for the RS2 **Advanced Processor**. It makes the Basic Dock; the
+Upgrade Card raises the tier, as with the router.
+
+<RecipeFor id="wirelessautomate:pattern_dock" />
 ''')

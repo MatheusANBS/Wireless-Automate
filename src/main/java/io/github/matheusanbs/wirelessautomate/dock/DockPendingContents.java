@@ -15,9 +15,10 @@ import net.neoforged.neoforge.fluids.FluidStack;
 /**
  * O pendente de uma Doca quebrada (componente {@code wirelessautomate:pattern_dock_pending}): por lado com pendente, o
  * bloco do lado, os itens, os fluidos e os químicos. Os químicos vão em NBT, como o {@link DockSide} os salva (pela
- * ponte do Mekanism, ou a entrada crua que não deu para ler), para o componente não depender do Mekanism. Volta aos mesmos lados ao recolocar a Doca; sem máquinas, o lado guarda o
- * bloco até o pendente sair numa máquina dele. Só existe com pendente, para Docas vazias empilharem. O pendente é o
- * resto de um pedido (poucas pilhas), então vai inteiro no item, sem referência a dados do servidor.
+ * ponte do Mekanism, ou a entrada crua que não deu para ler), para o componente não depender do Mekanism. Volta aos
+ * mesmos lados ao recolocar a Doca; sem máquinas, o lado guarda o bloco até o pendente sair numa máquina dele. Só
+ * existe com pendente, para Docas vazias empilharem. O pendente é o resto de um pedido (poucas pilhas), então vai
+ * inteiro no item, sem referência a dados do servidor.
  */
 public record DockPendingContents(List<Side> sides) {
     /** O teto de {@code count} no codec do {@code ItemStack}: um pendente maior vai em partes. */

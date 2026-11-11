@@ -214,6 +214,30 @@ public final class DockSide {
         }
     }
 
+    /**
+     * Acrescenta ao pendente os químicos salvos em {@code tags} sem lê-los, como entradas cruas: a Doca recolocada fora
+     * do mundo, sem os registros. O {@link #readRawChemicals} os lê quando ela entra no mundo.
+     */
+    public void keepRawChemicals(List<CompoundTag> tags) {
+        for (CompoundTag tag : tags) {
+            if (!tag.isEmpty()) {
+                rawChemicals.add(tag.copy());
+            }
+        }
+    }
+
+    /** Tenta ler as entradas cruas de químico; a que continua ilegível (sem o Mekanism) fica crua. */
+    public void readRawChemicals(HolderLookup.Provider registries) {
+        if (rawChemicals.isEmpty()) {
+            return;
+        }
+        List<CompoundTag> raw = new ArrayList<>(rawChemicals);
+        rawChemicals.clear();
+        for (CompoundTag tag : raw) {
+            addPendingChemical(tag, registries);
+        }
+    }
+
     private void addPendingChemical(CompoundTag tag, HolderLookup.Provider registries) {
         Object stack = Chemicals.parseStack(tag, registries);
         if (stack != null) {

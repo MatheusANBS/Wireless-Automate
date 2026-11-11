@@ -25,8 +25,8 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
  * integração, que responde {@code SKIPPED}); e um pedido de uma rede de verdade com item e químico (um minério e
  * 1.000 mB de hidrogênio dão 1.000 mB de oxigênio) que chega inteiro à máquina de químico de teste
  * ({@link ChemicalTestTanks#DOCK_MACHINE_BLOCK}), com o oxigênio de volta à rede como {@code ChemicalResource} e a
- * tarefa terminada. Rodam só na run {@code runGameTestServerDockChemicals}, no namespace de
- * {@link DockChemicalAe2GameTests}.
+ * tarefa terminada; e a máquina que dá menos do que ofereceu, com o que entrou a mais na rede tirado de novo. Rodam
+ * só na run {@code runGameTestServerDockChemicals}, no namespace de {@link DockChemicalAe2GameTests}.
  *
  * <p>Nenhum tipo do RS2 nem do Mekanism nas assinaturas: os recursos passam como {@code Object} pelo
  * {@link Rs2TestSupport} e pelo {@link ChemicalTestSupport}.
@@ -176,6 +176,59 @@ public final class DockChemicalRs2GameTests {
                 })
                 .thenWaitUntil(() -> helper.assertTrue(Rs2TestSupport.tasks(helper.getLevel(), autocrafter) == 0,
                         "a tarefa não terminou"))
+                .thenSucceed();
+    }
+
+    /** A rede guarda só o que saiu da máquina ({@code returned} mB), e o resto dos 2.000 mB continua na saída. */
+    private static void reclaimed(GameTestHelper helper, PatternDockBlockEntity dock, BlockPos autocrafter,
+            BlockPos machine, Object oxygen, long returned) {
+        long stored = Rs2TestSupport.stored(helper.getLevel(), autocrafter, oxygen);
+        long output = ChemicalTestSupport.dockMachineOutput(machine);
+        long counted = dock.side(NORTH).returnedChemical();
+        helper.assertTrue(stored == returned && counted == returned && output == 2_000 - returned, "na rede "
+                + stored + ", na saída " + output + ", devolvidos " + counted + " (esperado " + returned + ")");
+    }
+
+    /**
+     * A saída da máquina oferece 2.000 mB de oxigênio na simulação e dá só 500 mB por extração. A volta insere antes
+     * na rede (sem tarefa, o oxigênio vai ao armazenamento de químicos) o que a máquina ofereceu e tira de novo o que
+     * ela não deu ({@code reclaimChemical}): a cada visita a rede guarda só o que saiu da máquina.
+     */
+    @GameTest(template = "empty", timeoutTicks = 400)
+    public static void stingyMachineChemicalReclaimedFromNetwork(GameTestHelper helper) {
+        if (!DockChemicalAe2GameTests.enabled()) {
+            helper.succeed();
+            return;
+        }
+        PatternDockBlockEntity dock = dock(helper);
+        helper.setBlock(CONTROLLER, block("refinedstorage", "creative_controller"));
+        helper.setBlock(STORAGE, block("refinedstorage", "1k_storage_block"));
+        helper.setBlock(CHEMICAL_STORAGE, block("refinedstorage_mekanism_integration", "64b_chemical_storage_block"));
+        helper.setBlock(AUTOCRAFTER, Rs2TestSupport.facing(block("refinedstorage", "autocrafter"), Direction.SOUTH));
+        BlockPos autocrafter = helper.absolutePos(AUTOCRAFTER);
+        BlockPos machine = helper.absolutePos(MACHINE);
+        ChemicalTestSupport.dockMachineStingy(machine, 500);
+        Object oxygen = Rs2TestSupport.chemicalResource(ChemicalTestSupport.chemical(OXYGEN, 1));
+        helper.startSequence()
+                .thenWaitUntil(() -> registered(dock))
+                .thenWaitUntil(() -> helper.assertTrue(Rs2TestSupport.stores(helper.getLevel(), autocrafter),
+                        "a rede ainda não guarda"))
+                .thenExecute(() -> {
+                    DockChemicalGameTests.linkMachine(helper, dock, MACHINE);
+                    ChemicalTestSupport.fillDockMachineOutput(machine, OXYGEN, 2_000);
+                    // a máquina de teste não tem block entity: o aviso que acorda a volta vai à mão
+                    helper.getLevel().blockEntityChanged(machine);
+                })
+                .thenWaitUntil(() -> helper.assertTrue(dock.side(NORTH).returnedChemical() > 0,
+                        "nada voltou; provedor cheio " + dock.side(NORTH).providerFull()))
+                .thenExecute(() -> {
+                    reclaimed(helper, dock, autocrafter, machine, oxygen, 500);
+                    // sem block entity, a máquina não avisa a extração: o aviso da sobra vai à mão
+                    helper.getLevel().blockEntityChanged(machine);
+                })
+                .thenWaitUntil(() -> helper.assertTrue(dock.side(NORTH).returnedChemical() >= 1_000,
+                        "a segunda visita não devolveu"))
+                .thenExecute(() -> reclaimed(helper, dock, autocrafter, machine, oxygen, 1_000))
                 .thenSucceed();
     }
 }

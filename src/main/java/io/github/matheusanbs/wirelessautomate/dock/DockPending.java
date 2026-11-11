@@ -27,7 +27,8 @@ final class DockPending {
 
     /**
      * Tenta o pendente de {@code side} na máquina que recebeu o pedido; se ela saiu do lado, foi quebrada ou trocada
-     * por outro bloco, na primeira ativa a partir do cursor que o sirva, que passa a guardá-lo. Devolve {@code true} se o lado ficou sem pendente. Não cobra o orçamento.
+     * por outro bloco, na primeira ativa a partir do cursor que o sirva, que passa a guardá-lo. Devolve {@code true}
+     * se o lado ficou sem pendente. Não cobra o orçamento.
      */
     static boolean flush(PatternDockBlockEntity dock, DockSide side, long now) {
         if (!side.hasPending()) {
@@ -140,7 +141,8 @@ final class DockPending {
 
     /**
      * A máquina carregada ainda serve ao pendente: o bloco dela é o do lado (não foi quebrada nem trocada) e tem
-     * inventário (ou tanque, ou tanque de químico) numa face Insere do perfil para cada tipo do pendente. Só com pendente, na tentativa.
+     * inventário (ou tanque, ou tanque de químico) numa face Insere do perfil para cada tipo do pendente. Só com
+     * pendente, na tentativa.
      */
     private static boolean serves(PatternDockBlockEntity dock, DockSide side, DockMachine machine) {
         ResourceLocation block = side.block();

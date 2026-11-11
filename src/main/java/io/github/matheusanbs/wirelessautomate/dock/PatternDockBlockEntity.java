@@ -21,6 +21,8 @@ import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -43,8 +45,9 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>O registro no índice muda só no carregamento ({@link #onLoad}), num vínculo ou desvínculo, numa troca de tier e
  * na recarga da config; sai no {@link #setRemoved} e no {@link #onChunkUnloaded}. A volta do resultado
- * ({@link DockReturn}) entra no laço do motor no mesmo {@code onLoad} e sai junto com o índice. Os avisos das máquinas (o {@code setChanged} pelo mixin, a
- * carga do chunk e um cache invalidado) chegam todos ao {@link #machineChanged}.
+ * ({@link DockReturn}) entra no laço do motor no mesmo {@code onLoad} e sai junto com o índice. Os avisos das
+ * máquinas (o {@code setChanged} pelo mixin, a carga do chunk e um cache invalidado) chegam todos ao
+ * {@link #machineChanged}.
  */
 public class PatternDockBlockEntity extends BlockEntity implements RemoteListener, CacheOwner {
     public static final int SIDES = 6;
@@ -294,9 +297,10 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
     /**
      * O ponto único dos avisos de uma máquina (o {@code setChanged} dela, a carga do chunk dela e um cache de
      * capability invalidado): marca a máquina como mudada ({@link DockMachine#changed}), a acorda para a entrega e
-     * para a volta ({@link DockReturn#wake}) e, se ela tem o pendente do lado, enfileira uma tentativa dele ({@link DockPending#flushSoon}). A tentativa não
-     * roda aqui: o aviso chega de dentro do {@code setChanged} da máquina, de uma entrega do motor ou de um listener
-     * de cache, onde inserir nela reentraria (ver o {@code flushSoon}).
+     * para a volta ({@link DockReturn#wake}) e, se ela tem o pendente do lado, enfileira uma tentativa dele
+     * ({@link DockPending#flushSoon}). A tentativa não roda aqui: o aviso chega de dentro do {@code setChanged} da
+     * máquina, de uma entrega do motor ou de um listener de cache, onde inserir nela reentraria (ver o
+     * {@code flushSoon}).
      */
     void machineChanged(DockMachine machine) {
         machine.markChanged();
@@ -325,9 +329,10 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
 
     /**
      * O bloco saiu do mundo sem um item da Doca com o pendente ({@code /setblock}, a remoção de outro mod sem loot, a
-     * Doca que a explosão destruiu sem drop): os itens pendentes caem no chão e os fluidos e os químicos se perdem. Com o item feito
-     * ({@link #collectImplicitComponents}, ou o {@link #expectDrop} da quebra no sobrevivência), o pendente fica só
-     * no item. Não esvazia os lados: a loot table do sobrevivência roda depois de tirar o bloco e lê este block entity.
+     * Doca que a explosão destruiu sem drop): os itens pendentes caem no chão e os fluidos e os químicos se perdem.
+     * Com o item feito ({@link #collectImplicitComponents}, ou o {@link #expectDrop} da quebra no sobrevivência), o
+     * pendente fica só no item. Não esvazia os lados: a loot table do sobrevivência roda depois de tirar o bloco e lê
+     * este block entity.
      */
     void dropPendingWithoutItem() {
         if (dropExpected || level == null || level.isClientSide) {
@@ -344,6 +349,15 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
         }
     }
 
+    /**
+     * Os registros do mundo; fora dele, os estáticos, que bastam para gravar um químico (o registro de químicos do
+     * Mekanism não é de datapack), para o item de um block entity solto não perder o pendente químico.
+     */
+    private HolderLookup.Provider registries() {
+        return level != null ? level.registryAccess()
+                : RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY);
+    }
+
     /** O drop leva o pendente de todos os lados, com o bloco de cada um; sem pendente, nada (e empilha). */
     @Override
     protected void collectImplicitComponents(DataComponentMap.Builder components) {
@@ -352,8 +366,7 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
         for (DockSide side : sides) {
             if (side != null && side.keepsPending() && side.block() != null) {
                 pending.add(new DockPendingContents.Side(side.side(), side.block(), side.pendingItems(),
-                        side.pendingFluids(),
-                        level == null ? List.of() : side.pendingChemicalTags(level.registryAccess())));
+                        side.pendingFluids(), side.pendingChemicalTags(registries())));
             }
         }
         if (!pending.isEmpty()) {
@@ -395,8 +408,11 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
             }
             // a posição da própria Doca nunca é de uma máquina: o pendente vai à primeira ativa do lado que o sirva
             side.setPending(items, fluids, worldPosition);
-            if (!saved.chemicals().isEmpty() && level != null) {
+            if (level != null) {
                 side.addPendingChemicals(saved.chemicals(), level.registryAccess());
+            } else {
+                // fora do mundo, sem os registros: o químico fica cru até o onLoad lê-lo
+                side.keepRawChemicals(saved.chemicals());
             }
         }
     }
@@ -511,6 +527,11 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
         super.onLoad();
         refreshIndex();
         if (level != null && !level.isClientSide) {
+            for (DockSide side : sides) {
+                if (side != null) {
+                    side.readRawChemicals(level.registryAccess());
+                }
+            }
             returns.refreshRates();
             NetworkManager.get().addVisitor(returns);
             wakeReturns();

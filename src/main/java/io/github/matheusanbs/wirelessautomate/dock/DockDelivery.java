@@ -48,10 +48,10 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>Custo: o tempo de cada oferta vai para o orçamento do motor ({@link TickBudget#charge}); por oferta, no máximo
  * {@link #MAX_TRIES} candidatas, cada uma com uma simulação por ingrediente e por face Insere do tipo dele, pelos caches
- * de capability da máquina ({@link MachineCaches}, que conferem o chunk antes); a simulação dos fluidos só roda se os
- * itens couberam (e a dos químicos, se os fluidos couberam). Sem alocação além das sobras das simulações e do que vai ao pendente: os rascunhos (faces por
- * ingrediente, itens, fluidos e químicos no mesmo vetor, e a tentativa) ficam no lado. A simulação de cada tipo só
- * roda se os anteriores couberam, e a de um tipo ausente volta sem consultar a máquina.
+ * de capability da máquina ({@link MachineCaches}, que conferem o chunk antes); a simulação de cada tipo só roda se os
+ * anteriores couberam (itens, depois fluidos, depois químicos), e a de um tipo ausente volta sem consultar a máquina.
+ * Sem alocação além das sobras das simulações e do que vai ao pendente: os rascunhos (faces por ingrediente, itens,
+ * fluidos e químicos no mesmo vetor, e a tentativa) ficam no lado.
  */
 public final class DockDelivery {
     /** Candidatas tentadas por pedido, no máximo. */

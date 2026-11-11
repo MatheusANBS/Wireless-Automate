@@ -34,6 +34,7 @@ import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.ItemLike;
+import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -247,6 +248,17 @@ public final class RecipeGameTests {
         helper.assertTrue(fluid.has(ModDataComponents.CARD_FILTER.get()), "cartão de fluidos sem componente");
         CraftingInput input = CraftingInput.of(2, 1, List.of(fluid, blank.copy()));
         helper.assertTrue(find(helper, input).isPresent(), "cartão de fluidos não copiou");
+        helper.succeed();
+    }
+
+    /** Sem o AE2 e sem o RS2 (a run comum), nenhuma das duas receitas da Doca de Padrões carrega. */
+    @GameTest(template = "empty")
+    public static void dockRecipesNeedAe2OrRs2(GameTestHelper helper) {
+        if (ModList.get().isLoaded("ae2") || ModList.get().isLoaded("refinedstorage")) {
+            helper.succeed();
+            return;
+        }
+        DockRecipes.assertOnly(helper, null);
         helper.succeed();
     }
 }

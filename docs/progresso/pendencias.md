@@ -78,7 +78,7 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 
 ## Integrações
 
-- **Doca de Padrões, etapas 1 a 4** (ramo `ccr-71b175d3-weymk6`, 11/11): teste à mão no jogo com o AE2 (a linha de fornalhas, o Ctrl + clique, a tela, o cubo, um pedido grande pela CPU com o resultado direto na rede, o aviso da trava "até o resultado") e com o RS2 (o Autocrafter num lado, Autocrafters encadeados, o resultado na rede), e a animação (o laço de trabalho quando entrega, o pacote pela vigia do lado certo, o cristal aceso à noite); da etapa 4, um padrão do Mekanism com item, fluido e químico pela CPU do AE2 (com o Applied Mekanistics) e pelo Autocrafter do RS2 (com a integração), e o químico de volta à rede. (11/11)
+- **Doca de Padrões, etapas 1 a 4** (ramo `ccr-71b175d3-weymk6`, 11/11): teste à mão no jogo com o AE2 (a linha de fornalhas, o Ctrl + clique, a tela, o cubo, um pedido grande pela CPU com o resultado direto na rede, o aviso da trava "até o resultado") e com o RS2 (o Autocrafter num lado, Autocrafters encadeados, o resultado na rede), e a animação (o laço de trabalho quando entrega, o pacote pela vigia do lado certo, o cristal aceso à noite); da etapa 4, um padrão do Mekanism com item, fluido e químico pela CPU do AE2 (com o Applied Mekanistics) e pelo Autocrafter do RS2 (com a integração), e o químico de volta à rede. Também a receita na bancada e no JEI (com o AE2; num pack só com o RS2, a do RS2). (11/11)
 - Doca: o Applied Mekanistics e a Refined Storage Mekanism Integration não estão no `runClient` (só na run `gameTestServerDockChemicals`); para o teste à mão com químicos, pô-los no `clientMods` do `build.gradle` ou testar num pack. (11/11)
 - Doca: o químico que o destino recusa de verdade e a máquina não aceita de volta (uma saída que só dá) se perde e vai para o log, como no `ChemicalTransfer` e no fluido. (11/11)
 - Doca, e2e: na variante `pt`, a captura `doca-config-pt` falha a conferência "nenhum texto cortado": a nota "2 fora do alcance" do Leste sai cortada ("2 fora do alca…") ao lado de "Tire a trava do provedor". Vem da etapa 2 (os textos não mudaram na etapa 4) e só aparece com `--variants pt`; encurtar um dos dois textos ou dar mais largura à nota. (11/11)
@@ -91,7 +91,7 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 - Doca: o Ctrl + clique no raio 96 (Ultimate) custa de 2,4 a 3,9 ms por clique; avaliar baixar o teto de leitura só para a Doca. (11/11)
 - Doca: com pendente, o lado guarda o bloco mesmo sem máquinas (para trocar de máquina, vincular uma do bloco antigo ou quebrar a Doca); decidir se o pendente vai ao chão ao desvincular a última. (11/11)
 - **(dono)** Doca: um químico guardado cru (o item da Doca com pendente de químico num mundo sem o Mekanism, ou com o químico de um mod removido) nunca é descartado e prende o lado ao bloco mesmo sem máquinas, mas nada na tela explica por quê (o `hasPending` é falso; só o `keepsPending` o vê). Sugestão da revisão final da etapa 4: uma linha de estado ou dica ("Químico guardado sem o Mekanism") e, se o dono quiser, um jeito explícito de descartar a entrada. Decidir. (11/11)
-- **(dono)** Doca: a receita (fica para o balanceamento das receitas). (10/11)
+- Doca: o Cartão de Upgrade sobe o tier da Doca só no mundo; na bancada (bloco + cartão, o `RouterUpgradeRecipe`) não, porque a receita só aceita o roteador e os armazenamentos. Decidir se entra, como no roteador. (11/11)
 - `RouterBlockEntity` em 999 linhas: qualquer linha nova exige dividir antes. (11/11)
 
 

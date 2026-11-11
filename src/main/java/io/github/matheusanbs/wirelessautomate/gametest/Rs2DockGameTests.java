@@ -86,6 +86,23 @@ public final class Rs2DockGameTests {
         helper.succeed();
     }
 
+    /**
+     * Com o RS2 e sem o AE2 carrega a receita da Doca do RS2 (e não a do AE2), e a grade dela faz a Doca Básica com um
+     * Autocrafter colorido (a tag {@code refinedstorage:autocrafters}).
+     */
+    @GameTest(template = "empty")
+    public static void dockRecipeLoadsWithRs2WithoutAe2(GameTestHelper helper) {
+        if (!enabled()) {
+            helper.succeed();
+            return;
+        }
+        helper.assertFalse(ModList.get().isLoaded("ae2"), "o AE2 está na run do RS2");
+        DockRecipes.assertOnly(helper, DockRecipes.RS2);
+        DockRecipes.assertCrafts(helper, DockRecipes.RS2, "refinedstorage:advanced_processor",
+                "refinedstorage:red_autocrafter");
+        helper.succeed();
+    }
+
     private static PatternDockBlockEntity dock(GameTestHelper helper) {
         helper.setBlock(DOCK, ModBlocks.PATTERN_DOCK.get().defaultBlockState().setValue(RouterBlock.TIER, RouterTier.BASIC));
         return helper.getBlockEntity(DOCK);

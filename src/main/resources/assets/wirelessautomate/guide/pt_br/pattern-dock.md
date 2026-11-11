@@ -120,3 +120,12 @@ Ao lado do estado a tela avisa quantas máquinas estão **fora do alcance** ou *
 - **Mesma dimensão** e dentro do raio do tier.
 - Uma máquina pertence a **um lado de uma Doca só**.
 - A Doca precisa do **AE2** ou do **RS2** para receber pedidos.
+
+## Receita
+
+Um Roteador Wireless no meio de Carcaças de Porcelana, com Lingotes de Liga de Sinal, um **Pattern Provider** e um
+**Processador de Engenharia** do AE2 (só com o AE2 ou o RS2). Sem o AE2, num pack só com o RS2, a receita troca o
+provedor por um **Autocrafter** (de qualquer cor) e o processador pelo **Processador Avançado** do RS2. Ela faz a Doca
+Básica; o Cartão de Upgrade sobe o tier, como no roteador.
+
+<RecipeFor id="wirelessautomate:pattern_dock" />

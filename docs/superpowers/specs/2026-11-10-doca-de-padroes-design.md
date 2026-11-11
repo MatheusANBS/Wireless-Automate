@@ -1,6 +1,6 @@
 # Doca de Padrões (spec)
 
-Estado: **etapas 1 (a Doca com o AE2), 2 (o RS2), 3 (a arte animada) e 4 (pedidos com item, fluido e químico juntos) implementadas em 11/11/2026**, pelos planos `docs/superpowers/plans/2026-11-10-doca-de-padroes-etapa-1.md`, `2026-11-11-doca-de-padroes-etapa-2.md`, `2026-11-11-doca-de-padroes-etapa-3.md` e `2026-11-11-doca-de-padroes-etapa-4.md`; as seções abaixo descrevem o que foi feito, com os ajustes da execução (os da etapa 4 em "Ajustes da execução da etapa 4"). Falta o teste do dono no jogo com o AE2 e o RS2. A regra, o alcance e a arte foram aprovados na proposta (`2026-11-10-ae2-rs2-proposta.md`, seções "Terceira crítica: simplificar", "O alcance da Doca" e "Arte e animação da Doca"). Esta spec junta essas decisões, corrige o que a conferência das APIs mudou (seção "O que a conferência mudou") e fecha a tela, cujo mockup (aprovado em 10/11/2026) está em `docs/preview/doca-de-padroes-tela.html`. As respostas do dono estão no fim.
+Estado: **etapas 1 (a Doca com o AE2), 2 (o RS2), 3 (a arte animada) e 4 (pedidos com item, fluido e químico juntos) implementadas em 11/11/2026**, pelos planos `docs/superpowers/plans/2026-11-10-doca-de-padroes-etapa-1.md`, `2026-11-11-doca-de-padroes-etapa-2.md`, `2026-11-11-doca-de-padroes-etapa-3.md` e `2026-11-11-doca-de-padroes-etapa-4.md`; as seções abaixo descrevem o que foi feito, com os ajustes da execução (os da etapa 4 em "Ajustes da execução da etapa 4"). A receita entrou em 11/11/2026 (seção "A receita"). Falta o teste do dono no jogo com o AE2 e o RS2. A regra, o alcance e a arte foram aprovados na proposta (`2026-11-10-ae2-rs2-proposta.md`, seções "Terceira crítica: simplificar", "O alcance da Doca" e "Arte e animação da Doca"). Esta spec junta essas decisões, corrige o que a conferência das APIs mudou (seção "O que a conferência mudou") e fecha a tela, cujo mockup (aprovado em 10/11/2026) está em `docs/preview/doca-de-padroes-tela.html`. As respostas do dono estão no fim.
 
 ## A regra
 
@@ -133,7 +133,7 @@ Os estados, do mais grave ao mais leve (a linha mostra o primeiro que vale):
 ## Integração com os mods (sem quebrar sem eles)
 
 - Tipos do AE2 só em `compat/ae2`, tipos do RS2 só em `compat/refinedstorage`, nunca na assinatura de um método de classe `@EventBusSubscriber` ou `@GameTestHolder` (a regra do Mekanism). O bloco e a volta pelo lado do AE2 usam só capabilities do NeoForge.
-- Sem nenhum dos dois, a Doca existe, vincula e mostra "Sem provedor neste lado". A receita fica para o balanceamento das receitas e só carrega com o AE2 ou o RS2; a Doca fica sempre na aba criativa (decisão do dono, 10/11/2026).
+- Sem nenhum dos dois, a Doca existe, vincula e mostra "Sem provedor neste lado". A receita só carrega com o AE2 ou o RS2 (seção "A receita"); a Doca fica sempre na aba criativa (decisão do dono, 10/11/2026).
 - **Dependências:** AE2 `org.appliedenergistics:appliedenergistics2:19.2.17:api` (Maven Central) como `compileOnly`, a mesma versão que o `runClient` já carregava (o ATM10 8.5 traz a 19.2.18; a API usada é a mesma); RS2 `com.refinedmods.refinedstorage:refinedstorage-common-api:2.0.9` (com as APIs que ele traz, no `maven.creeperhost.net`) como `compileOnly`. Os mods inteiros (AE2 com o GuideME; `refinedstorage-neoforge` 2.0.9) só no `runClient` e nas runs de GameTest novas. São as versões do ATM10 8.5.
 - **Runs novas:** `runGameTestServerAe2` e `runGameTestServerRefined`, como a dos químicos. O `runGameTestServer` continua sem os dois e prova que o mod carrega sem eles. Na etapa 4 entrou a `runGameTestServerDockChemicals`, com o Mekanism e os addons de químico das duas redes; tipos do Mekanism nos addons só em `compat/appmek` e `compat/rsmek`.
 - **Os addons do AE2 do ATM10** (Advanced AE 1.6.12 e ExtendedAE 1.21-2.2.43, com o GeckoLib e o Glodium; os dois trazem o `ae2wtlib_api` e o Advanced AE o `ae2addonlib` dentro do jar) estão no `runClient` e na run `runGameTestServerAe2`, sem código nem dependência de compilação: o Extended Pattern Provider usa a `PatternProviderLogic` do AE2; o Advanced Pattern Provider tem lógica própria (`AdvPatternProviderLogic`), mas tenta o `ICraftingMachine` antes de tudo; a CPU quântica (`AdvCraftingCPULogic`) recebe a inserção na rede por um mixin no `CraftingService.insertIntoCpus`, então conta a volta direta da Doca. Os três têm GameTest com um pedido de verdade pela CPU (`Ae2AddonDockGameTests`; a CPU quântica é um Quantum Core sozinho, que já forma o multibloco).
@@ -177,7 +177,7 @@ Repartir uma chamada entre máquinas; a Doca guardando os próprios padrões; li
 | Repartir uma chamada entre máquinas (lote divisível) | Tirar: cada pedido inteiro numa máquina |
 | Ordem dos mods | AE2 na etapa 1, RS2 na etapa 2 |
 | Afinador que errou | O Configurador numa máquina refaz o perfil do lado inteiro |
-| Receita | Fica para o balanceamento das receitas, só com o AE2 ou o RS2 |
+| Receita | `KLK / SPS / KRK`, a Doca Básica (decisão do dono, 11/11/2026): com o AE2, Processador de Engenharia e Pattern Provider; só com o RS2, Processador Avançado e Autocrafter (seção "A receita") |
 
 Falta só o ok do mockup da tela (`docs/preview/doca-de-padroes-tela.html`); depois, o plano da etapa 1.
 
@@ -346,3 +346,27 @@ O jogo segue os keyframes do `.bbmodel` aprovado onde eles diferem do texto da p
 ### Custo medido (`doca-desempenho`)
 
 50 Docas Elite à vista, num cliente sob o Xvfb com renderização por software (sem GPU), o mesmo cliente nas duas rodadas, antes e depois do miolo escuro e da luz cheia: sem o renderer 40,9 → 37,2 ms por quadro; repouso 40,8 → 38,4; trabalho parado em 1,6 s 41,3 → 40,3; fora de vista 36,6 → 34,2. A diferença fica dentro do ruído da medida (de uma rodada para outra o mesmo caso varia até 6 ms): as seis faces vão na malha do chunk, feitas uma vez, e a luz cheia é a troca de um número. Shaderpack (Iris) e GPU de verdade não foram medidos: o cliente de dev não tem o Iris.
+
+## A receita (11/11/2026)
+
+Decisão do dono: a receita usa itens do mod e do AE2, e a do RS2 vale só sem o AE2. Dois arquivos em `data/wirelessautomate/recipe/`, `minecraft:crafting_shaped`, categoria `redstone`, e só um carrega por vez. Os dois fazem a Doca Básica; os tiers seguintes sobem pelo Cartão de Upgrade, como o roteador.
+
+```
+KLK
+SPS
+KRK
+```
+
+| | `pattern_dock.json` (com o AE2) | `pattern_dock_rs2.json` (com o RS2, sem o AE2) |
+| --- | --- | --- |
+| Condição | `mod_loaded` `ae2` | `neoforge:and`: `mod_loaded` `refinedstorage` e `not` `mod_loaded` `ae2` |
+| K | `wirelessautomate:resonator_casing` (a Carcaça de Porcelana, que combina com a arte) | o mesmo |
+| L | `ae2:engineering_processor` | `refinedstorage:advanced_processor` |
+| S | `wirelessautomate:signal_alloy_ingot` | o mesmo |
+| P | `ae2:pattern_provider` | a tag `refinedstorage:autocrafters` (as 16 cores e o padrão) |
+| R | `wirelessautomate:router` | o mesmo |
+
+Sem o arquivo do RS2, um pack só com o RS2 ficaria sem a Doca. A do AE2 é a principal: com os dois mods, só ela carrega. O JEI mostra a que carregou (é `crafting_shaped`), o editor `/wa recipes` a lista como as outras do mod e o livro a mostra na página da Doca (`<RecipeFor>`, a do AE2 ou, sem ela, a do RS2). Testes (`gametest/DockRecipes`): a run comum não carrega nenhuma, a do AE2 carrega só a `pattern_dock` e a grade faz a Doca, a do RS2 (sem o AE2) carrega só a `pattern_dock_rs2` e a grade com um Autocrafter vermelho faz a Doca, e a dos químicos da Doca, com os dois mods, carrega só a do AE2.
+
+O Cartão de Upgrade sobe o tier da Doca no mundo (`TierCoreItem` → `PatternDockBlock.tryUpgrade`, com a dica do alcance; `DockBlockGameTests`), como a spec diz. Na bancada, não: o `RouterUpgradeRecipe` (bloco + cartão) só aceita o roteador e os armazenamentos, não o item da Doca (pendência registrada).
+

@@ -1,0 +1,48 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:and",
+      "values": [
+        {
+          "type": "neoforge:mod_loaded",
+          "modid": "refinedstorage"
+        },
+        {
+          "type": "neoforge:not",
+          "value": {
+            "type": "neoforge:mod_loaded",
+            "modid": "ae2"
+          }
+        }
+      ]
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "pattern": [
+    "KLK",
+    "SPS",
+    "KRK"
+  ],
+  "key": {
+    "K": {
+      "item": "wirelessautomate:resonator_casing"
+    },
+    "L": {
+      "item": "refinedstorage:advanced_processor"
+    },
+    "S": {
+      "item": "wirelessautomate:signal_alloy_ingot"
+    },
+    "P": {
+      "tag": "refinedstorage:autocrafters"
+    },
+    "R": {
+      "item": "wirelessautomate:router"
+    }
+  },
+  "result": {
+    "id": "wirelessautomate:pattern_dock",
+    "count": 1
+  }
+}

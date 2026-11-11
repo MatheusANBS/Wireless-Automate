@@ -80,7 +80,7 @@ class GuidePagesRealTest {
         assertEquals(10, scenes);
         assertEquals(143, sceneBlocks);
         assertEquals(29, notes);
-        assertEquals(53, recipeFor);
+        assertEquals(54, recipeFor);
     }
 
     /** O que o texto-fonte tem, contado sem o parser, contra o que o parser extraiu: nada pulado em silêncio. */

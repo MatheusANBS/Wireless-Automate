@@ -86,6 +86,7 @@ final class DockPending {
         if (moved) {
             machine.setLastActive(now);
             dock.saveChanged();
+            dock.signalWork(side.side(), now);
         }
         return !side.hasPending();
     }

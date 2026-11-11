@@ -257,6 +257,9 @@ public final class DockReturn implements EngineVisitor {
         if (full) {
             lane.sleepUntil = now + sleepTicks(wantsFluids);
         }
+        if (moved) {
+            dock.signalWork(lane.side, now);
+        }
         return moved;
     }
 

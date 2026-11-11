@@ -224,6 +224,7 @@ public final class DockDelivery {
         dock.returns().wake(machine);
         side.setLastRefusal(DockStatus.NO_REFUSAL);
         dock.saveChanged();
+        dock.signalWork(side.side(), now);
         return Result.ACCEPTED;
     }
 

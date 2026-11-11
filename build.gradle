@@ -171,6 +171,8 @@ dependencies {
     // Testes de unidade da lógica pura (sem classes do Minecraft).
     testImplementation platform("org.junit:junit-bom:${junit_version}")
     testImplementation 'org.junit.jupiter:junit-jupiter'
+    // O Gson (o mesmo do Minecraft) para os testes que leem o .bbmodel da Doca (DockPoseTest).
+    testImplementation 'com.google.code.gson:gson:2.10.1'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 

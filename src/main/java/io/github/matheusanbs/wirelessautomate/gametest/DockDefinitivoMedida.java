@@ -111,6 +111,12 @@ final class DockDefinitivoMedida implements DockProbe.Listener {
     /** O que as fábricas fizeram em cada tick acelerado, para o regime (do 5º tick ao do último empurrão). */
     final LongArrayList madePerTick = new LongArrayList();
     long lastPushTick;
+    /**
+     * O tick em que o último lingote voltou à rede (0 antes disso). O pedido só acaba quando a rede também deixa de
+     * pedir, e o Advanced AE pode levar um tick a mais para isso (o {@code isRequesting} vem do fim do tick do AE2, e
+     * depende de quantas inserções passaram pelas CPUs): a vazão da Doca é contada até aqui.
+     */
+    long allReturnedTick;
 
     DockDefinitivoMedida(GameTestHelper helper, int count, int perJob, long target, boolean quantum) {
         this.helper = helper;
@@ -239,6 +245,9 @@ final class DockDefinitivoMedida implements DockProbe.Listener {
         }
         madePerTick.add(tickMade);
         ticks++;
+        if (allReturnedTick == 0 && returnedSince() >= orders * perJob) {
+            allReturnedTick = ticks;
+        }
         DockSide side = dock.side(NORTH);
         if (side.hasPending()) {
             pendingTicks++;
@@ -375,6 +384,10 @@ final class DockDefinitivoMedida implements DockProbe.Listener {
         }
         // Nos ticks acelerados a fábrica faz 255 das 256 chamadas do tick; a do tick normal fica fora desta conta.
         double regimeCeiling = (double) count * PROCESSES * (SPEED - 1);
+        double returnRate = allReturnedTick == 0 ? 0 : returned / (allReturnedTick / 20.0);
+        WirelessAutomate.LOGGER.info(String.format(Locale.ROOT,
+                "MEDIDA doca-definitivo %s tudo devolvido no tick %d: %.1f itens/s ate a ultima volta (%.1f%% do teto)",
+                name, allReturnedTick, returnRate, 100 * returnRate / ceiling));
         WirelessAutomate.LOGGER.info(String.format(Locale.ROOT,
                 "MEDIDA doca-definitivo %s regime (tick 5 ao %d, o do ultimo empurrao): %.0f%% do teto dos ticks"
                         + " acelerados",

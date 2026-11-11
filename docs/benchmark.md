@@ -756,3 +756,69 @@ O "antes" é o sintoma do dono: a volta tirava uma pilha (64) por slot por visit
 - **O pedido maior que a máquina** (131.072 e 524.288; a entrada da Infinite é de 69.632) entra no que cabe e o resto sai pelo pendente, na mesma máquina: não trava. Antes da correção do custo, a oferta de 524.288 levava 27 ms e cada visita da volta 2,4 ms (o pendente inteiro a cada tentativa); depois, 3 ms numa vez e 0,31 ms por visita.
 - **Picos:** os máximos de 2 a 5 ms caem em ticks isolados, com a mesma cara de GC das medições anteriores (as fábricas aceleradas alocam muito); não conferido no log do GC.
 - **O cenário `doca` do `bench.sh`** (`./scripts/bench.sh doca:1:3`: fornalhas e um baú, uma saída de um item por slot, onde a extração múltipla não entra): antes (`run/bench/reports/20261111-195431.md`) mod 0,136 ± 0,041 ms/tick; depois (`20261111-195219.md`) 0,157 ± 0,049 ms/tick; 256 itens/s devolvidos nos dois. No ruído.
+
+## Doca: a volta extrema mais barata (11 de novembro de 2026)
+
+Ramo `ccr-71b175d3-weymk6`. O pedido do dono: gastar o mínimo sem perder a vazão do min-max (spec da Doca, "Otimização da volta extrema"). A medição é a do teste definitivo, com o Quantum de 5 Ultimate Smelting Factories a 2.560× junto:
+
+```
+WA_DOCK_MEDIDA=1 WA_DOCK_MEDIDA_CASOS=aquece,um_cpu16,cinco_cpu16,um_q7,cinco_q7 ./gradlew runGameTestServerAe2 -PdockMedida
+```
+
+- **Antes × depois:** 5 rodadas de cada lado, intercaladas. O "antes" é o código da Doca do `6440f4f` (pelo `git stash` só de `dock/` e `compat/`), com a mesma medição.
+- **"Vazão até o último lingote"** é a métrica nova (`allReturnedTick`): os itens sobre os ticks até o último lingote voltar à rede. O fim do pedido espera também o `isRequesting` do AE2, que o Advanced AE vira um tick depois com menos inserções (ver a spec).
+
+### O perfil (5 Infinite Factories, Quantum, um pedido de 1.000.000; cronômetros por etapa, só nesta medição)
+
+| Etapa | Antes: total (chamadas, µs por chamada) | Depois |
+| --- | --- | --- |
+| Inserção na ME, simulação | 21,2 ms (3.910; 5,4) | 2,1 ms (47; 45) |
+| Inserção na ME, de verdade | 15,7 ms (3.910; 4,0) | 2,4 ms (47; 51) |
+| Extração do Mekanism, simulada | 1,7 ms (7.922; 0,21) | 0,8 ms (4.182; 0,20) |
+| Extração do Mekanism, de verdade | 2,8 ms (15.725 extrações) | 2,2 ms (15.725) |
+| `getStackInSlot` e cópia | 0,55 ms (3.910; 0,14) | 0,31 ms (3.995; 0,08), sem cópia |
+| Pendente na volta | 1,1 ms (18; 63) | 1,4 ms (28; 49) |
+| Entrega: `placeItem` | 15,4 ms (15.680; 0,98) | na execução: 3,9 ms (245 ofertas; 16) |
+| Entrega: escolha | 3,2 ms (245; 13) | 3,2 ms (245; 13) |
+| Entrega: conversão do AE2 (64 pilhas) | 1,0 ms (259; 3,9) | 1,4 ms (248; 5,5) |
+| `acceptsPlans` | 0,34 ms (277; 1,2) | 0,38 ms (276; 1,4) |
+
+O AE2 custava 37 ns por lingote em chamadas de 256 e passou a 4,5 ns em chamadas de ~20.000. Com uma fábrica, ele já custava ~10 ns por lingote nas duas formas (sem ganho de juntar).
+
+### O resultado
+
+| Caso (5 rodadas; Quantum a 2.560×: 15) | Vazão até o último lingote (% do teto) | Volta ms/tick (ns por lingote), antes → depois | Entrega ms/tick, antes → depois | Por tick p50 / p99 (medianas), antes → depois | Ticks > 1 ms (mediana), antes → depois |
+| --- | --- | --- | --- | --- | --- |
+| 1 Infinite, CPU de 16 | 86.139 (99,0%) → igual | 0,050 ± 0,005 (11,5) → 0,063 ± 0,007 (14,6) | 0,040 → 0,019 | 0,086 / 0,28 → 0,073 / 0,25 ms | 0 → 0 de 233 |
+| 1 Infinite, Quantum | 86.139 (99,0%) → igual | 0,075 ± 0,008 (17,3) → 0,117 ± 0,022 (27,3) | 0,041 → 0,030 | 0,107 / 0,47 → 0,114 / 0,37 ms | 0 → 1 de 233 |
+| 5 Infinite, CPU de 16 | 334.507 (76,9%) → igual | 0,240 ± 0,019 (14,6) → 0,145 ± 0,010 (8,8) | 0,103 → 0,087 | 0,277 / 1,45 → 0,181 / 0,83 ms | 1 → 0 de 61 |
+| 5 Infinite, Quantum | 409.600 (94,1%) → igual | 0,603 ± 0,037 (29,8) → 0,301 ± 0,027 (15,0) | 0,609 ± 0,284 → 0,227 ± 0,021 | 0,721 / 6,7 → 0,346 / 2,3 ms | 17 → 7 de 50 |
+| 5 Ultimate a 2.560×, Quantum (100.000) | 10.570 (91,8%) → igual | 0,099 ± 0,018 (188) → 0,105 ± 0,009 (201) | 0,030 → 0,033 | 0,107 / 0,41 → 0,121 / 0,43 ms | 1 → 1 de 190 |
+
+- **O caso extremo caiu à metade:**
+  - Cinco Infinite Factories e o Quantum: a Doca custa 0,53 ms/tick (volta + entrega), contra 1,21 antes.
+  - O p50 por tick caiu de 0,72 para 0,35 ms.
+  - Os picos de 13 e 38 ms das rodadas do antes (ofertas de 13 e 37 ms com a máquina sobrecarregada) não aparecem no depois; o pior p99 do depois é 4,3 ms.
+- **A vazão não mudou:** em todos os casos, o último lingote volta no mesmo tick (233, 233, 60, 49 e 189). Com o Quantum, o fim do pedido conta um tick a mais (ver a spec): 404.685 → 401.408 itens/s no "até o fim do pedido" do `cinco_q7`.
+- **Os ticks acima de 1 ms que sobraram** são a rajada do começo do pedido:
+  - Com a oferta mais barata, o orçamento deixa o Quantum empurrar 25 a 39 execuções num tick, contra 15 a 20 antes.
+  - As recusas por orçamento caíram de 8 a 11 para 3 a 5 por pedido.
+  - A entrega no pior tick fica em 1,3 a 1,5 ms.
+- **Com uma fábrica:**
+  - A entrega caiu (a dica de slot e a pilha juntada).
+  - A volta subiu 0,01 a 0,04 ms/tick, e o p50 por tick fica no ruído.
+  - Os perfis instrumentados dão o mesmo custo por visita antes e depois (~100 µs no `um_q7`); a diferença sem instrumento não tem causa isolada.
+  - A versão que só junta com duas máquinas ou mais foi pior (0,167 ms/tick no `um_q7`) e saiu.
+- **Os passos, isolados** (3 rodadas cada; o ruído entre builds é de 10 a 20%):
+  - A volta juntada sozinha levou a volta do `cinco_q7` de 0,53 para 0,21 a 0,28 ms/tick.
+  - A dica de slot levou a entrega do `um_cpu16` de 0,036 para 0,021 ms/tick.
+  - A pilha juntada levou a entrega do `cinco_q7` de 0,38 a 0,53 para 0,19 ms/tick.
+  - A junção no pendente não mudou o custo por tentativa (28 a 33 µs) e saiu.
+
+### O bench `doca`
+
+`./scripts/bench.sh doca:1:3` (fornalhas e um baú; a volta juntada não entra, e a dica de slot sim): antes (`run/bench/reports/20261111-211219.md`) mod 0,145 ± 0,052 ms/tick, 2,8 a 5,3 µs por oferta; depois (`20261111-211426.md`) 0,163 ± 0,037 ms/tick, 3,8 a 6,0 µs por oferta; 256 itens/s nos dois. No ruído.
+
+### O bench geral
+
+`./scripts/bench.sh` (o cenário padrão), antes (código da Doca do `6440f4f`, `run/bench/reports/20261111-212344.md`) e depois (interrompido no fim, sem `redstone` e `tablet`; as linhas ficaram no log da rodada). Nos 19 cenários das duas rodadas, o mod ms/tick fica no ruído da máquina, sem direção: `many` 500 vanilla 0,766 ± 0,040 → 0,793 ± 0,035, `mixed` 498 0,657 ± 0,026 → 0,587 ± 0,014, `raw` vanilla 0,186 ± 0,043 → 0,171 ± 0,015, `idle` vanilla 0,0052 → 0,0059, `big` soph 0,760 → 0,671, `rebuild` 0,817 → 0,856. Nenhum deles tem Doca: a mudança não toca o motor do roteador.

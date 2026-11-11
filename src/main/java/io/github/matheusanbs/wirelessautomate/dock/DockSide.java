@@ -85,6 +85,7 @@ public final class DockSide {
     private int @Nullable [] masks;
     private final int[] loads = new int[FACES];
     private DockDelivery.@Nullable Attempt attempt;
+    private @Nullable DockStacker stacker;
 
     public DockSide(int side) {
         this(side, new MachineConfig());
@@ -405,6 +406,14 @@ public final class DockSide {
 
     int[] loads() {
         return loads;
+    }
+
+    /** A inserção com a dica de slot da entrega e do pendente, criada na primeira entrega do lado. */
+    DockStacker stacker() {
+        if (stacker == null) {
+            stacker = new DockStacker();
+        }
+        return stacker;
     }
 
     /** Os testes da escolha, criados na primeira entrega do lado. */

@@ -15,7 +15,6 @@ import java.util.ArrayList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.Containers;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.capabilities.BlockCapability;
 import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
@@ -46,9 +45,11 @@ import org.jetbrains.annotations.Nullable;
  * atividade foi há mais de {@link #IDLE_GRACE_TICKS} (a folga de uma receita que consome a entrada no começo). O aviso
  * da máquina e uma entrega nova a trazem de volta na hora e zeram o recuo. Só sai o que a face Extrai entrega: o
  * combustível e as entradas ficam (a face de baixo da fornalha só dá o produto). A inserção é simulada antes de tirar
- * da máquina, então nada sai sem caber. Na rede do RS2 a simulação não vale (a tarefa só pega o resultado que espera
- * na execução, e com os discos cheios a simulação daria zero): ali a volta simula a extração, insere de verdade e
- * tira da máquina o que entrou ({@link DockReturnNetwork#insertsFirst}).
+ * da máquina, então nada sai sem caber. Na rede que simula (a ME), os itens de todas as máquinas da visita do lado vão
+ * juntos ({@link DockReturnItems}): uma simulação e uma inserção por item, e a conta de cada máquina (a fila, o recuo)
+ * fecha depois disso. Na rede do RS2 a simulação não vale (a tarefa só pega o resultado que espera na execução, e com
+ * os discos cheios a simulação daria zero): ali a volta simula a extração, insere de verdade e tira da máquina o que
+ * entrou ({@link DockReturnNetwork#insertsFirst}), slot a slot.
  *
  * <p>Provedor cheio (o destino recusou algo que a máquina tinha para dar: o inventário cheio, a rede sem espaço ou o
  * nó dela sem energia ou canal): o lado marca {@link DockSide#providerFull} e dorme até o vizinho mudar
@@ -60,10 +61,11 @@ import org.jetbrains.annotations.Nullable;
  * fornalha, fica no teto: uma visita a cada 100 ticks, 20 com fluido ou químico, como uma porta do roteador). A
  * passagem do recuo para a fila percorre o recuo do lado só quando o primeiro prazo dele vence. Por visita,
  * proporcional às acordadas, até {@link #MAX_MACHINES_PER_VISIT} (mais que isso pede outra volta, {@link #MORE});
- * por máquina, uma simulação de extração e uma de inserção por pilha tirada de cada slot (ou tanque) da face Extrai
- * (um slot maior que uma extração rende até {@link #MAX_EXTRACTIONS_PER_SLOT} por visita), pelos caches de
- * capability da máquina ({@link MachineCaches}) e do vizinho ({@link BlockCapabilityCache}, um por lado e tipo,
- * criado na primeira visita).
+ * por máquina, uma simulação de extração por slot (ou tanque) da face Extrai e as extrações do que sai (um slot maior
+ * que uma extração rende até {@link #MAX_EXTRACTIONS_PER_SLOT} por visita), pelos caches de capability da máquina
+ * ({@link MachineCaches}) e do vizinho ({@link BlockCapabilityCache}, um por lado e tipo, criado na primeira visita);
+ * a inserção no destino é uma simulação e uma de verdade por slot, ou por item e visita do lado na rede que simula
+ * (com cinco Infinite Factories e o Quantum Computer, 170 chamadas à ME por tick viram 2).
  * Só a thread do servidor mexe aqui.
  */
 public final class DockReturn implements EngineVisitor {
@@ -99,6 +101,13 @@ public final class DockReturn implements EngineVisitor {
     private int left;
     /** Visitas desde a carga; só para os testes. */
     private long visits;
+    /**
+     * A volta juntada dos itens ({@link #joinedItems()}) e, durante a visita de um lado com ela, as máquinas olhadas e o
+     * resultado de cada uma, que só fecha depois do commit.
+     */
+    private @Nullable DockReturnItems joinedItems;
+    private DockMachine @Nullable [] visited;
+    private int @Nullable [] outcomes;
 
     DockReturn(PatternDockBlockEntity dock) {
         this.dock = dock;
@@ -291,6 +300,16 @@ public final class DockReturn implements EngineVisitor {
             side.setProviderFull(false);
             return false;
         }
+        // A rede que simula (a ME) recebe os itens da visita juntos: a conta de cada máquina espera o commit.
+        DockReturnNetwork joined = itemsOut instanceof DockReturnNetwork network && !network.insertsFirst()
+                ? network : null;
+        DockReturnItems batch = joined != null ? joinedItems() : null;
+        DockMachine[] visited = this.visited;
+        int[] outcomes = this.outcomes;
+        if (batch != null) {
+            batch.start(lane.items.available(now));
+        }
+        int deferred = 0;
         boolean moved = false;
         boolean full = false;
         int count = Math.min(lane.queue.size(), left);
@@ -311,7 +330,9 @@ public final class DockReturn implements EngineVisitor {
                 DockDelivery.flushPending(dock, lane.side);
             }
             int outcome = 0;
-            if (itemsOut != null) {
+            if (batch != null) {
+                outcome = batch.gather(caches, profile, machine.front(), deferred);
+            } else if (itemsOut != null) {
                 outcome = giveItems(level, side, caches, profile, machine.front(), lane, itemsOut, now);
             }
             if (fluidOut != null && (outcome & FULL) == 0) {
@@ -320,18 +341,11 @@ public final class DockReturn implements EngineVisitor {
             if (chemicalOut != null && (outcome & FULL) == 0) {
                 outcome |= giveChemicals(side, caches, profile, machine.front(), lane, chemicalOut, now);
             }
-            if ((outcome & GAVE) != 0) {
-                moved = true;
-                machine.setLastActive(now);
-                // A saída andou, então a entrada também: a máquina que recusou um pedido volta à escolha da entrega
-                // (a do Mekanism nunca avisa pelo setChanged, e sem isto dormiria o teto inteiro com lugar livre).
-                machine.wake();
-            }
-            if ((outcome & HAS_MORE) != 0) {
-                machine.setReturnInterval(0);
-                lane.queue.addLast(machine);
+            if (batch != null) {
+                visited[deferred] = machine;
+                outcomes[deferred++] = outcome;
             } else {
-                rest(lane, machine, caches, profile, (outcome & GAVE) != 0, scalar, now);
+                moved |= settle(lane, machine, caches, profile, outcome, scalar, now);
             }
             if ((outcome & FULL) != 0) {
                 full = true;
@@ -342,6 +356,21 @@ public final class DockReturn implements EngineVisitor {
                 break;
             }
         }
+        if (batch != null) {
+            batch.commit(level, dock.getBlockPos(), joined, outcomes);
+            long gave = batch.returned();
+            if (gave > 0) {
+                lane.items.consume(gave);
+                side.addReturned(gave);
+            }
+            for (int m = 0; m < deferred; m++) {
+                DockMachine machine = visited[m];
+                visited[m] = null;
+                int outcome = outcomes[m];
+                full |= (outcome & FULL) != 0;
+                moved |= settle(lane, machine, machine.caches(dock), profile, outcome, scalar, now);
+            }
+        }
         side.setProviderFull(full);
         if (full) {
             lane.sleepUntil = now + sleepTicks(scalar);
@@ -350,6 +379,38 @@ public final class DockReturn implements EngineVisitor {
             dock.signalWork(lane.side, now);
         }
         return moved;
+    }
+
+    /**
+     * A conta de uma máquina depois de dar: a que deu algo fica ativa e acorda para a entrega; a que ainda tem o que dar
+     * volta ao fim da fila, e a outra vai ao recuo ({@link #rest}). Devolve se ela deu algo.
+     */
+    private boolean settle(Lane lane, DockMachine machine, MachineCaches caches, MachineConfig profile, int outcome,
+            boolean scalar, long now) {
+        boolean gave = (outcome & GAVE) != 0;
+        if (gave) {
+            machine.setLastActive(now);
+            // A saída andou, então a entrada também: a máquina que recusou um pedido volta à escolha da entrega
+            // (a do Mekanism nunca avisa pelo setChanged, e sem isto dormiria o teto inteiro com lugar livre).
+            machine.wake();
+        }
+        if ((outcome & HAS_MORE) != 0) {
+            machine.setReturnInterval(0);
+            lane.queue.addLast(machine);
+        } else {
+            rest(lane, machine, caches, profile, gave, scalar, now);
+        }
+        return gave;
+    }
+
+    /** A volta juntada dos itens, criada na primeira visita a um lado com uma rede que simula. */
+    private DockReturnItems joinedItems() {
+        if (joinedItems == null) {
+            joinedItems = new DockReturnItems();
+            visited = new DockMachine[MAX_MACHINES_PER_VISIT];
+            outcomes = new int[MAX_MACHINES_PER_VISIT];
+        }
+        return joinedItems;
     }
 
     /**
@@ -453,20 +514,23 @@ public final class DockReturn implements EngineVisitor {
     }
 
     /** Devolveu algo. */
-    private static final int GAVE = 1;
+    static final int GAVE = 1;
     /** A máquina ainda tem o que dar (não coube, ou o balde acabou): fica na fila. */
-    private static final int HAS_MORE = 2;
+    static final int HAS_MORE = 2;
     /** O provedor recusou algo que a máquina tinha para dar. */
-    private static final int FULL = 4;
+    static final int FULL = 4;
     /** O balde de um tipo acabou no meio da máquina. */
-    private static final int NO_RATE = 8;
+    static final int NO_RATE = 8;
 
+    /**
+     * Os itens de uma máquina para o inventário do vizinho ou para a rede que insere antes (a do RS2), slot a slot: a
+     * rede que simula vai pela volta juntada ({@link DockReturnItems}).
+     */
     private int giveItems(ServerLevel level, DockSide side, MachineCaches caches, MachineConfig profile, int front,
             Lane lane, IItemHandler out, long now) {
         int outcome = 0;
         long limit = lane.items.available(now);
-        DockReturnNetwork network = out instanceof DockReturnNetwork net ? net : null;
-        boolean first = network != null && network.insertsFirst();
+        DockReturnNetwork first = out instanceof DockReturnNetwork net && net.insertsFirst() ? net : null;
         for (int face = 0; face < FACES.length; face++) {
             if (!profile.face(ResourceType.ITEM, FACES[face]).mode().extracts()) {
                 continue;
@@ -497,7 +561,7 @@ public final class DockReturn implements EngineVisitor {
                         slotLeft = offer.getCount() * MAX_EXTRACTIONS_PER_SLOT;
                     }
                     int want = Math.min(offer.getCount(), slotLeft);
-                    if (network != null) {
+                    if (first != null) {
                         // A rede aceita uma pilha de qualquer tamanho: o que o slot guarda além de uma extração vai
                         // numa inserção só (o custo da rede é por chamada, não por item).
                         ItemStack inSlot = handler.getStackInSlot(slot);
@@ -508,27 +572,25 @@ public final class DockReturn implements EngineVisitor {
                     }
                     int fits;
                     int gave;
-                    if (first) {
-                        fits = want - network.insertItem(0, offer, false).getCount();
+                    if (first != null) {
+                        fits = want - first.insertItem(0, offer, false).getCount();
                         if (fits <= 0) {
                             return outcome | HAS_MORE | FULL;
                         }
-                        gave = takeInserted(level, network, handler, slot, offer, fits);
+                        gave = takeInserted(level, first, handler, slot, offer, fits);
                     } else {
-                        fits = want - (network != null ? network.insertItem(0, offer, true)
-                                : ItemHandlerHelper.insertItemStacked(out, offer, true)).getCount();
+                        fits = want - ItemHandlerHelper.insertItemStacked(out, offer, true).getCount();
                         if (fits <= 0) {
                             return outcome | HAS_MORE | FULL;
                         }
-                        ItemStack taken = take(level, handler, slot, offer, fits);
+                        ItemStack taken = DockReturnItems.take(level, dock.getBlockPos(), handler, slot, offer, fits);
                         if (taken.isEmpty()) {
                             break;
                         }
-                        ItemStack rest = network != null ? network.insertItem(0, taken, false)
-                                : ItemHandlerHelper.insertItemStacked(out, taken, false);
+                        ItemStack rest = ItemHandlerHelper.insertItemStacked(out, taken, false);
                         if (!rest.isEmpty()) {
                             // O provedor aceitou na simulação e recusou de verdade: volta para a máquina, ou para o chão.
-                            keep(level, handler, rest);
+                            DockReturnItems.keep(level, dock.getBlockPos(), handler, rest);
                         }
                         gave = taken.getCount() - rest.getCount();
                     }
@@ -715,49 +777,11 @@ public final class DockReturn implements EngineVisitor {
      */
     private int takeInserted(ServerLevel level, DockReturnNetwork network, IItemHandler handler, int slot,
             ItemStack offer, int fits) {
-        int gave = take(level, handler, slot, offer, fits).getCount();
+        int gave = DockReturnItems.take(level, dock.getBlockPos(), handler, slot, offer, fits).getCount();
         if (gave < fits) {
             reclaimItems(network, offer.copyWithCount(fits - gave));
         }
         return gave;
-    }
-
-    /**
-     * Tira {@code amount} de {@code offer} do slot, em quantas extrações a máquina pedir (a do Mekanism dá uma pilha
-     * por chamada); devolve o que saiu, numa pilha só (maior que uma pilha, se a rede é o destino). Para no que vier
-     * vazio; o que sair de outro item volta para a máquina, ou para o chão.
-     */
-    private ItemStack take(ServerLevel level, IItemHandler handler, int slot, ItemStack offer, int amount) {
-        ItemStack taken = handler.extractItem(slot, amount, false);
-        if (taken.isEmpty() || taken.getCount() >= amount) {
-            return sameOrKeep(level, handler, offer, taken);
-        }
-        if (!ItemStack.isSameItemSameComponents(taken, offer)) {
-            keep(level, handler, taken);
-            return ItemStack.EMPTY;
-        }
-        int total = taken.getCount();
-        while (total < amount) {
-            ItemStack more = handler.extractItem(slot, amount - total, false);
-            if (more.isEmpty()) {
-                break;
-            }
-            if (!ItemStack.isSameItemSameComponents(more, offer)) {
-                keep(level, handler, more);
-                break;
-            }
-            total += more.getCount();
-        }
-        return offer.copyWithCount(total);
-    }
-
-    /** {@code taken}, se é o item de {@code offer}; senão volta para a máquina, ou para o chão, e não saiu nada. */
-    private ItemStack sameOrKeep(ServerLevel level, IItemHandler handler, ItemStack offer, ItemStack taken) {
-        if (taken.isEmpty() || ItemStack.isSameItemSameComponents(taken, offer)) {
-            return taken;
-        }
-        keep(level, handler, taken);
-        return ItemStack.EMPTY;
     }
 
     /**
@@ -777,20 +801,6 @@ public final class DockReturn implements EngineVisitor {
         if (back < extra.getAmount()) {
             WirelessAutomate.LOGGER.warn("Doca: a máquina deu menos que ofereceu, e {} mB de {} ficaram a mais na rede",
                     extra.getAmount() - back, extra.getFluid());
-        }
-    }
-
-    /** O que o provedor recusou depois de aceitar na simulação: de volta na máquina, e o que não voltar, no chão. */
-    private void keep(ServerLevel level, IItemHandler machine, ItemStack rest) {
-        // Em pilhas do tamanho do item: o que voltou da rede pode ser maior que uma pilha.
-        int max = rest.getMaxStackSize();
-        for (int count = rest.getCount(); count > 0; count -= max) {
-            ItemStack left = ItemHandlerHelper.insertItemStacked(machine, rest.copyWithCount(Math.min(count, max)),
-                    false);
-            if (!left.isEmpty()) {
-                BlockPos pos = dock.getBlockPos();
-                Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), left);
-            }
         }
     }
 

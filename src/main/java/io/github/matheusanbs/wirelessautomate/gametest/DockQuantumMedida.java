@@ -160,6 +160,9 @@ final class DockQuantumMedida implements DockProbe.Listener {
         }
     }
 
+    /** O tick em que o último lingote voltou (ver {@code DockDefinitivoMedida#allReturnedTick}); 0 antes disso. */
+    long allReturnedTick;
+
     /** O pedido acabou: todos os lingotes voltaram e a rede não pede mais nada. */
     boolean done() {
         return scene.returnedSince() >= (long) ORDERS * PER_JOB
@@ -170,6 +173,9 @@ final class DockQuantumMedida implements DockProbe.Listener {
     void tick() {
         scene.tick(true);
         ticks++;
+        if (allReturnedTick == 0 && scene.returnedSince() >= (long) ORDERS * PER_JOB) {
+            allReturnedTick = ticks;
+        }
         engineNanos += NetworkManager.get().budget().lastUsedNanos();
         if (tickAccepted > 0) {
             ticksWithPush++;
@@ -257,6 +263,9 @@ final class DockQuantumMedida implements DockProbe.Listener {
             }
         }
         long refused = offers - accepted;
+        WirelessAutomate.LOGGER.info(String.format(Locale.ROOT,
+                "MEDIDA doca-quantum %s tudo devolvido no tick %d: %.1f itens/s ate a ultima volta", name,
+                allReturnedTick, allReturnedTick == 0 ? 0 : returned / (allReturnedTick / 20.0)));
         WirelessAutomate.LOGGER.info(String.format(Locale.ROOT,
                 "MEDIDA doca-quantum %s por tick (entrega + volta): p50 %.4f ms, p99 %.4f ms, max %.3f ms, acima de 1 ms"
                         + " em %d de %d ticks; oferta recusada %.1f µs cada (%d), aceita %.1f µs cada",

@@ -29,6 +29,20 @@ public interface DockReturnNetwork extends IItemHandler, IFluidHandler {
     }
 
     /**
+     * Insere {@code amount} do item de {@code item} (a quantidade dele não conta, e ele não muda) no armazenamento da
+     * rede; devolve quanto entrou. A volta juntada ({@link DockReturnItems}) chama uma vez por item por visita, com a
+     * soma de todos os slots e máquinas: a rede que guarda em {@code long} sobrescreve sem criar pilha. Por padrão,
+     * pelo {@link #insertItem} com uma cópia do tamanho pedido (até {@code Integer.MAX_VALUE}).
+     */
+    default long insertItems(ItemStack item, long amount, boolean simulate) {
+        int count = (int) Math.min(amount, Integer.MAX_VALUE);
+        if (count <= 0 || item.isEmpty()) {
+            return 0;
+        }
+        return count - insertItem(0, item.copyWithCount(count), simulate).getCount();
+    }
+
+    /**
      * Tira da rede {@code stack} (o que entrou a mais quando a máquina deu menos do que ofereceu, com
      * {@link #insertsFirst}); devolve quanto saiu.
      */

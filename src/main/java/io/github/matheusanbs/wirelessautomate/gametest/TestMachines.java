@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.gametest;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.dock.DockReturnNetwork;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,8 +28,8 @@ import net.neoforged.neoforge.items.IItemHandler;
  * ou um barril com upgrade de pilha), uma máquina com mais tanques que a janela de uma visita, um
  * tanque que entrega a própria pilha interna e a encolhe ao drenar (como os do Mekanism), um tanque de
  * entrada que só aceita um fluido, uma
- * máquina com entrada e saída na mesma face, um destino que mente na simulação e, para o Afinador, um slot que lança
- * exceção e uma energia sem papel.
+ * máquina com entrada e saída na mesma face, um destino que mente na simulação, uma rede da volta da Doca (que aceita
+ * só parte ou mente) e, para o Afinador, um slot que lança exceção e uma energia sem papel.
  * Presas a blocos vanilla sem capability, com o estado guardado por posição. Só existem com
  * {@code -Dwirelessautomate.gameTests=true} (a run {@code gameTestServer} liga).
  */
@@ -64,6 +65,8 @@ public final class TestMachines {
     public static final Block THROWING_SLOT = Blocks.RAW_GOLD_BLOCK;
     /** Energia que não recebe nem dá: tem a capability e nada que o Afinador configure. */
     public static final Block INERT_CELL = Blocks.RAW_IRON_BLOCK;
+    /** Uma rede da volta da Doca que simula, como a ME ({@link FakeNetwork}). */
+    public static final Block FAKE_NETWORK = Blocks.PACKED_MUD;
 
     private static final boolean ENABLED = Boolean.getBoolean("wirelessautomate.gameTests");
     private static final Map<BlockPos, BigSlot> BIG_SLOTS = new ConcurrentHashMap<>();
@@ -75,6 +78,7 @@ public final class TestMachines {
     private static final Map<BlockPos, Furnace> FURNACES = new ConcurrentHashMap<>();
     private static final Map<BlockPos, VoidSink> VOID_SINKS = new ConcurrentHashMap<>();
     private static final Map<BlockPos, SilentCell> SILENT_CELLS = new ConcurrentHashMap<>();
+    private static final Map<BlockPos, FakeNetwork> NETWORKS = new ConcurrentHashMap<>();
     private static final EnergyStorage INERT = new EnergyStorage(1_000, 0, 0);
 
     public static boolean enabled() {
@@ -102,6 +106,8 @@ public final class TestMachines {
         event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) -> ThrowingSlot.INSTANCE,
                 THROWING_SLOT);
         event.registerBlock(Capabilities.EnergyStorage.BLOCK, (level, pos, state, be, side) -> INERT, INERT_CELL);
+        event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) -> fakeNetwork(pos),
+                FAKE_NETWORK);
     }
 
     /** O slot da posição absoluta {@code pos} (criado vazio na primeira consulta). */
@@ -138,6 +144,10 @@ public final class TestMachines {
         return SILENT_CELLS.computeIfAbsent(pos.immutable(), key -> new SilentCell());
     }
 
+    static FakeNetwork fakeNetwork(BlockPos pos) {
+        return NETWORKS.computeIfAbsent(pos.immutable(), key -> new FakeNetwork());
+    }
+
     static VoidSink voidSink(BlockPos pos) {
         return VOID_SINKS.computeIfAbsent(pos.immutable(), key -> new VoidSink());
     }
@@ -153,6 +163,7 @@ public final class TestMachines {
         FURNACES.remove(pos.immutable());
         VOID_SINKS.remove(pos.immutable());
         SILENT_CELLS.remove(pos.immutable());
+        NETWORKS.remove(pos.immutable());
     }
 
     /**
@@ -299,6 +310,99 @@ public final class TestMachines {
         @Override
         public boolean isItemValid(int slot, ItemStack stack) {
             return true;
+        }
+    }
+
+    /**
+     * Uma rede da volta que simula (sem {@code insertsFirst}, como a ME do AE2): guarda até {@link #capacity} itens, e
+     * a inserção de verdade só até {@link #realCapacity} (abaixo da outra, a rede mente: aceita na simulação o que
+     * recusa de verdade, como uma ME que perde a energia entre as duas). Conta as chamadas que pediram algo.
+     */
+    static final class FakeNetwork implements DockReturnNetwork {
+        long capacity = Long.MAX_VALUE;
+        long realCapacity = Long.MAX_VALUE;
+        long stored;
+        int simulations;
+        int inserts;
+
+        @Override
+        public void reset() {
+        }
+
+        @Override
+        public int getSlots() {
+            return 1;
+        }
+
+        @Override
+        public ItemStack getStackInSlot(int slot) {
+            return ItemStack.EMPTY;
+        }
+
+        @Override
+        public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+            if (stack.isEmpty()) {
+                return stack;
+            }
+            long accepted = Math.max(0, Math.min(stack.getCount(), capacity - stored));
+            if (simulate) {
+                simulations++;
+            } else {
+                inserts++;
+                accepted = Math.max(0, Math.min(accepted, realCapacity - stored));
+                stored += accepted;
+            }
+            return stack.copyWithCount(stack.getCount() - (int) accepted);
+        }
+
+        @Override
+        public ItemStack extractItem(int slot, int amount, boolean simulate) {
+            return ItemStack.EMPTY;
+        }
+
+        @Override
+        public int getSlotLimit(int slot) {
+            return Integer.MAX_VALUE;
+        }
+
+        @Override
+        public boolean isItemValid(int slot, ItemStack stack) {
+            return true;
+        }
+
+        @Override
+        public int getTanks() {
+            return 1;
+        }
+
+        @Override
+        public FluidStack getFluidInTank(int tank) {
+            return FluidStack.EMPTY;
+        }
+
+        @Override
+        public int getTankCapacity(int tank) {
+            return 0;
+        }
+
+        @Override
+        public boolean isFluidValid(int tank, FluidStack stack) {
+            return false;
+        }
+
+        @Override
+        public int fill(FluidStack resource, FluidAction action) {
+            return 0;
+        }
+
+        @Override
+        public FluidStack drain(FluidStack resource, FluidAction action) {
+            return FluidStack.EMPTY;
+        }
+
+        @Override
+        public FluidStack drain(int maxDrain, FluidAction action) {
+            return FluidStack.EMPTY;
         }
     }
 

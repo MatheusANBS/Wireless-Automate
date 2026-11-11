@@ -28,7 +28,7 @@ class GuideLayoutRealPagesTest {
         try (Stream<Path> s = Files.list(GUIDE.resolve(lang))) {
             pages = s.filter(p -> p.toString().endsWith(".md")).sorted().toList();
         }
-        assertEquals(25, pages.size());
+        assertEquals(26, pages.size());
         List<String> problems = new ArrayList<>();
         StringBuilder counts = new StringBuilder();
         for (Path page : pages) {

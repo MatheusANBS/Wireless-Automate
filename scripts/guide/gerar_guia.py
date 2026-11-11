@@ -43,6 +43,7 @@ PAGINAS = [
     'signal_quartz',
     'signal_resonator',
     'crystal_repairer',
+    'pattern_dock',
     'signal_screen',
     'troubleshooting',
     'recipe_editor',

@@ -86,6 +86,15 @@ config="${mod_id}.mixins.json"
     ordering="NONE"
     side="BOTH"
 
+# Refined Storage Mekanism Integration: os químicos (ChemicalResource) nos pedidos do Autocrafter para a Doca de Padrões
+# e na volta para a rede do RS2. Mínimo 1.2.0, a versão conferida (a do ATM10).
+[[dependencies.${mod_id}]]
+    modId="refinedstorage_mekanism_integration"
+    type="optional"
+    versionRange="[1.2.0,)"
+    ordering="NONE"
+    side="BOTH"
+
 # JEI 19 é a linha do 1.21.1. Arrastar funciona em toda ela; Shift + clique na lista pede 19.28+.
 [[dependencies.${mod_id}]]
     modId="jei"

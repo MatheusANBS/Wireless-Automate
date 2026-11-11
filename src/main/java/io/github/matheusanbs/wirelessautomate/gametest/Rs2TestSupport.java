@@ -20,6 +20,7 @@ import com.refinedmods.refinedstorage.common.autocrafting.patterngrid.PatternTyp
 import com.refinedmods.refinedstorage.common.content.DataComponents;
 import com.refinedmods.refinedstorage.common.support.resource.FluidResource;
 import com.refinedmods.refinedstorage.common.support.resource.ItemResource;
+import io.github.matheusanbs.wirelessautomate.compat.refinedstorage.Rs2Chemicals;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,7 +44,9 @@ import org.jetbrains.annotations.Nullable;
  * Os tipos do RS2 dos GameTests da Doca ({@link Rs2DockGameTests}), que não podem aparecer nas assinaturas da classe
  * de teste: o destino vai e volta como {@code Object}. A rede é a do bloco do RS2 em {@code pos} (o Autocrafter), achada
  * pelo nó dele; o padrão de processamento é montado como a Pattern Grid monta e posto no Autocrafter pelo contêiner
- * dele, que o RS2 não publica (reflexão). Só carrega na run do RS2.
+ * dele, que o RS2 não publica (reflexão). Os recursos de químico ({@link #chemicalResource}) passam como {@code Object}
+ * pela ponte {@code Rs2Chemicals}. Só carrega nas runs do RS2 e dos químicos da Doca
+ * ({@link DockChemicalRs2GameTests}).
  */
 final class Rs2TestSupport {
     /** Um recurso que não é item nem fluido (como um químico de um addon). */
@@ -80,6 +83,51 @@ final class Rs2TestSupport {
         }
         return ((PlatformPatternProviderExternalPatternSink) sink)
                 .accept(resources, simulate ? Action.SIMULATE : Action.EXECUTE).name();
+    }
+
+    /**
+     * O recurso do RS2 do químico {@code chemical} (um {@code ChemicalStack} como {@code Object}, do
+     * {@link ChemicalTestSupport}): o {@code ChemicalResource} da integração, como {@code Object}.
+     */
+    static Object chemicalResource(Object chemical) {
+        return Rs2Chemicals.resource(chemical, null);
+    }
+
+    /**
+     * Oferece ao destino {@code resources}, recursos (de {@link #chemicalResource} ou de um item, como {@code Item}) e
+     * quantidades alternados; devolve o nome do resultado.
+     */
+    static String acceptResources(Object sink, boolean simulate, Object... resources) {
+        List<ResourceAmount> list = new ArrayList<>();
+        for (int i = 0; i < resources.length; i += 2) {
+            list.add(new ResourceAmount(key(resources[i]), ((Number) resources[i + 1]).longValue()));
+        }
+        return ((PlatformPatternProviderExternalPatternSink) sink)
+                .accept(list, simulate ? Action.SIMULATE : Action.EXECUTE).name();
+    }
+
+    /** O recurso de {@code what}: um {@code Item} vira {@code ItemResource}; o resto já é um {@code ResourceKey}. */
+    private static ResourceKey key(Object what) {
+        return what instanceof Item item ? new ItemResource(item) : (ResourceKey) what;
+    }
+
+    /**
+     * Um padrão de processamento com uma entrada de item e uma de químico ({@code in}, um recurso de
+     * {@link #chemicalResource}, {@code inAmount}) que dá o químico {@code out} ({@code outAmount}).
+     */
+    static ItemStack itemAndChemicalPattern(Item item, int count, Object in, long inAmount, Object out,
+            long outAmount) {
+        ItemStack pattern = PatternGridBlockEntity.createPatternStack(PatternType.PROCESSING);
+        List<Optional<ProcessingPatternState.ProcessingIngredient>> ingredients = List.of(
+                Optional.of(new ProcessingPatternState.ProcessingIngredient(
+                        new ResourceAmount(new ItemResource(item), count), List.of())),
+                Optional.of(new ProcessingPatternState.ProcessingIngredient(
+                        new ResourceAmount((ResourceKey) in, inAmount), List.of())));
+        List<Optional<ResourceAmount>> outputs = List.of(Optional.of(new ResourceAmount((ResourceKey) out,
+                outAmount)));
+        pattern.set(DataComponents.INSTANCE.getProcessingPatternState(), new ProcessingPatternState(ingredients,
+                outputs));
+        return pattern;
     }
 
     static boolean isEmpty(Object sink) {
@@ -182,23 +230,24 @@ final class Rs2TestSupport {
                 .insert(new ItemResource(Items.COBBLESTONE), 1, Action.SIMULATE, Actor.EMPTY) == 1;
     }
 
-    /** A rede do bloco em {@code pos} conhece um padrão que dá {@code output}. */
-    static boolean knows(ServerLevel level, BlockPos pos, Item output) {
+    /** A rede do bloco em {@code pos} conhece um padrão que dá {@code output} (um {@code Item} ou um recurso). */
+    static boolean knows(ServerLevel level, BlockPos pos, Object output) {
         Network network = network(level, pos);
         return network != null && network.getComponent(AutocraftingNetworkComponent.class).getOutputs()
-                .contains(new ItemResource(output));
+                .contains(key(output));
     }
 
-    static long stored(ServerLevel level, BlockPos pos, Item item) {
+    /** Quanto de {@code what} (um {@code Item} ou um recurso) a rede guarda. */
+    static long stored(ServerLevel level, BlockPos pos, Object what) {
         Network network = network(level, pos);
-        return network == null ? 0 : network.getComponent(StorageNetworkComponent.class).get(new ItemResource(item));
+        return network == null ? 0 : network.getComponent(StorageNetworkComponent.class).get(key(what));
     }
 
-    /** Insere {@code count} de {@code item} na rede; devolve quanto entrou. */
-    static long stock(ServerLevel level, BlockPos pos, Item item, int count) {
+    /** Insere {@code count} de {@code what} (um {@code Item} ou um recurso) na rede; devolve quanto entrou. */
+    static long stock(ServerLevel level, BlockPos pos, Object what, long count) {
         Network network = network(level, pos);
         return network == null ? 0 : network.getComponent(StorageNetworkComponent.class)
-                .insert(new ItemResource(item), count, Action.EXECUTE, Actor.EMPTY);
+                .insert(key(what), count, Action.EXECUTE, Actor.EMPTY);
     }
 
     /** Tira {@code count} de {@code item} da rede; devolve quanto saiu. */
@@ -208,13 +257,13 @@ final class Rs2TestSupport {
                 .extract(new ItemResource(item), count, Action.EXECUTE, Actor.EMPTY);
     }
 
-    /** Pede {@code count} de {@code item} à rede; devolve o nome do resultado ({@code TASK_CREATED} se começou). */
-    static String request(ServerLevel level, BlockPos pos, Item item, int count) {
+    /** Pede {@code count} de {@code item} (um {@code Item} ou um recurso) à rede; devolve o nome do resultado ({@code TASK_CREATED} se começou). */
+    static String request(ServerLevel level, BlockPos pos, Object item, long count) {
         Network network = network(level, pos);
         if (network == null) {
             return "sem rede";
         }
-        return network.getComponent(AutocraftingNetworkComponent.class).ensureTask(new ItemResource(item), count,
+        return network.getComponent(AutocraftingNetworkComponent.class).ensureTask(key(item), count,
                 Actor.EMPTY, CancellationToken.NONE).name();
     }
 

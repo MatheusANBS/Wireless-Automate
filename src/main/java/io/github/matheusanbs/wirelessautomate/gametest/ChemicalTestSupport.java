@@ -25,7 +25,7 @@ import net.neoforged.neoforge.items.ItemStackHandler;
  * {@code @EventBusSubscriber}: o NeoForge inspeciona essas classes por reflexão (as assinaturas dos
  * métodos), e um tipo do Mekanism numa assinatura impede o mod de carregar sem ele. Só é chamada
  * por {@link ChemicalTestTanks}, {@link ChemicalGameTests}, {@link DockChemicalGameTests} e os testes dos químicos da
- * Doca na rede ME ({@link DockChemicalAe2GameTests}) com o Mekanism presente.
+ * Doca nas redes ({@link DockChemicalAe2GameTests}, {@link DockChemicalRs2GameTests}) com o Mekanism presente.
  */
 final class ChemicalTestSupport {
     private static final Map<BlockPos, IChemicalTank> TANKS = new ConcurrentHashMap<>();

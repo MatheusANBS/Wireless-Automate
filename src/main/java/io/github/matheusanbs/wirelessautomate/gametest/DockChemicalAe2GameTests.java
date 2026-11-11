@@ -27,7 +27,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
  * teste ({@link ChemicalTestTanks#DOCK_MACHINE_BLOCK}); o oxigênio que ela "produz" volta direto à rede ME como
  * {@code MekanismKey}, a CPU o conta e o pedido termina. Rodam só na run {@code runGameTestServerDockChemicals}, que
  * tem o Mekanism, o AE2, o Applied Mekanistics, o RS2 e a integração do RS2 na pasta mods e liga o namespace
- * {@value #NAMESPACE} (o mesmo dos testes do RS2, {@code DockChemicalRs2GameTests}).
+ * {@value #NAMESPACE} (o mesmo dos testes do RS2, {@link DockChemicalRs2GameTests}).
  *
  * <p>Nenhum tipo do AE2 nem do Mekanism nas assinaturas: as chaves passam como {@code Object} pelo
  * {@link Ae2TestSupport} e pelo {@link ChemicalTestSupport}.

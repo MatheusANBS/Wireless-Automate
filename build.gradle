@@ -173,6 +173,14 @@ dependencies {
     // compat/appmek e só carrega com ele e o Mekanism presentes (a ponte é o compat/ae2/Ae2Chemicals).
     compileOnly "maven.modrinth:applied-mekanistics:${appmek_version}"
 
+    // Refined Storage Mekanism Integration (os químicos da Doca na rede do RS2, o ChemicalResource): o jar do mod só na
+    // compilação, do maven.creeperhost.net, sem as transitivas (o RS2 e o Mekanism já estão acima). O mod vai para a
+    // pasta mods da run gameTestServerDockChemicals. Tudo que toca nele fica em compat/rsmek e só carrega com ele e o
+    // Mekanism presentes (a ponte é o compat/refinedstorage/Rs2Chemicals).
+    compileOnly("com.refinedmods.refinedstorage:refinedstorage-mekanism-integration:${rsmek_version}") {
+        transitive = false
+    }
+
     // Testes de unidade da lógica pura (sem classes do Minecraft).
     testImplementation platform("org.junit:junit-bom:${junit_version}")
     testImplementation 'org.junit.jupiter:junit-jupiter'

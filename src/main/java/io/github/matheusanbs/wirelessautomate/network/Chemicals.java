@@ -47,6 +47,11 @@ public final class Chemicals {
         return MekanismChemicals.probe(handler, maxTanks, signature);
     }
 
+    /** Algum tanque do handler de químico guarda algo. Só com o Mekanism. */
+    public static boolean holdsAny(Object handler) {
+        return MekanismChemicals.holdsAny(handler);
+    }
+
     /** Soma o guardado e a capacidade dos tanques do handler em {@code out[0]} e {@code out[1]}. */
     static void held(Object handler, long[] out) {
         MekanismChemicals.held(handler, out);

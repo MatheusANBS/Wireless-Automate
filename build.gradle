@@ -509,7 +509,8 @@ neoForge.runs {
 
 // GameTests dos químicos da Doca nas redes: um servidor de testes próprio, com o Mekanism, o AE2 (e o GuideME), o
 // Applied Mekanistics, o RS2 e a integração dele com o Mekanism na pasta mods, que roda só o namespace
-// wirelessautomate_dockchem (gametest/DockChemicalNetworkGameTests). ./gradlew runGameTestServerDockChemicals
+// wirelessautomate_dockchem (gametest/DockChemicalAe2GameTests e DockChemicalRs2GameTests).
+// ./gradlew runGameTestServerDockChemicals
 var prepareDockChemicalTestMods = tasks.register('prepareDockChemicalTestMods', Sync) {
     from configurations.dockChemicalTestMods
     into layout.projectDirectory.dir('run/gametest-dockchem/mods')

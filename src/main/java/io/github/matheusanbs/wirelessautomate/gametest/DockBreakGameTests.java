@@ -64,7 +64,7 @@ public final class DockBreakGameTests {
     }
 
     /** As Docas no chão perto de {@code relative}, tiradas do mundo; o teste confere quantas são. */
-    private static List<ItemStack> takeDocks(GameTestHelper helper, BlockPos relative) {
+    static List<ItemStack> takeDocks(GameTestHelper helper, BlockPos relative) {
         List<ItemEntity> drops = helper.getLevel().getEntitiesOfClass(ItemEntity.class,
                 new AABB(helper.absolutePos(relative)).inflate(2),
                 entity -> entity.getItem().is(ModBlocks.PATTERN_DOCK.get().asItem()));
@@ -84,7 +84,7 @@ public final class DockBreakGameTests {
     }
 
     /** Coloca o item da Doca em {@code relative} como o {@code BlockItem} faz, clicando na pedra embaixo. */
-    private static PatternDockBlockEntity place(GameTestHelper helper, ItemStack stack, BlockPos relative) {
+    static PatternDockBlockEntity place(GameTestHelper helper, ItemStack stack, BlockPos relative) {
         helper.setBlock(relative.below(), Blocks.STONE);
         BlockPos floor = helper.absolutePos(relative).below();
         BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(floor).add(0, 0.5, 0), Direction.UP, floor, false);

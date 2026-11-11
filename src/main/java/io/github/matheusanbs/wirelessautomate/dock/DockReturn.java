@@ -106,9 +106,10 @@ public final class DockReturn implements EngineVisitor {
     }
 
     /**
-     * O block entity em {@code neighbor}, encostado na Doca em {@code dockPos}, mudou ({@link PatternDockBlock#onNeighborChange}):
-     * se o lado dele dorme com "provedor cheio", acorda para a próxima volta (o motor lê o {@link #wakeAt} a cada tick).
-     * Custo: uma conta de direção e duas leituras; nada com o lado acordado ou sem fila.
+     * O block entity em {@code neighbor}, encostado na Doca em {@code dockPos}, mudou
+     * ({@link PatternDockBlock#onNeighborChange}): se o lado dele dorme com "provedor cheio", acorda para a próxima
+     * volta (o motor lê o {@link #wakeAt} a cada tick). Custo: uma conta de direção e duas leituras; nada com o lado
+     * acordado ou sem fila.
      */
     void providerChanged(BlockPos dockPos, BlockPos neighbor) {
         Direction direction = Direction.fromDelta(neighbor.getX() - dockPos.getX(), neighbor.getY() - dockPos.getY(),

@@ -4,6 +4,7 @@ import io.github.matheusanbs.wirelessautomate.compat.mekanism.MekanismChemicals;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
 import mekanism.api.MekanismAPI;
@@ -19,6 +20,7 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.items.ItemStackHandler;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * A parte dos testes de químico que usa a API do Mekanism. Não é {@code @GameTestHolder} nem
@@ -32,6 +34,8 @@ final class ChemicalTestSupport {
     private static final Map<BlockPos, IChemicalTank[]> MANY = new ConcurrentHashMap<>();
     private static final Map<BlockPos, IChemicalTank> TYPED = new ConcurrentHashMap<>();
     private static final Map<BlockPos, ChemicalMachine> DOCK_MACHINES = new ConcurrentHashMap<>();
+    /** Os tanques que mentem ({@link #tankLying}), com quantas inserções de verdade recusaram. */
+    private static final Map<BlockPos, AtomicInteger> LYING = new ConcurrentHashMap<>();
 
     static void register(RegisterCapabilitiesEvent event) {
         event.registerBlock(MekanismChemicals.BLOCK, (level, pos, state, be, side) -> handler(pos), ChemicalTestTanks.BLOCK);
@@ -41,9 +45,10 @@ final class ChemicalTestSupport {
                 ChemicalTestTanks.TYPED_TANK_BLOCK);
         event.registerBlock(Capabilities.ItemHandler.BLOCK, (level, pos, state, be, side) ->
                 side == Direction.UP ? dockMachine(pos).items : null, ChemicalTestTanks.DOCK_MACHINE_BLOCK);
-        event.registerBlock(MekanismChemicals.BLOCK, (level, pos, state, be, side) -> side == Direction.DOWN
-                ? dockMachine(pos).outputHandler : side != null && side.getAxis().isHorizontal()
-                        ? dockMachine(pos).inputHandler : null, ChemicalTestTanks.DOCK_MACHINE_BLOCK);
+        event.registerBlock(MekanismChemicals.BLOCK, (level, pos, state, be, side) -> side == Direction.UP
+                ? dockMachine(pos).top : side == Direction.DOWN ? dockMachine(pos).outputHandler
+                        : side != null && side.getAxis().isHorizontal() ? dockMachine(pos).inputHandler : null,
+                ChemicalTestTanks.DOCK_MACHINE_BLOCK);
     }
 
     // ------------------------------------------------------------------ a máquina dos testes da Doca
@@ -56,6 +61,33 @@ final class ChemicalTestSupport {
     /** A entrada de químico da máquina da Doca aceita na simulação e nada de verdade ({@code true}), ou volta ao normal. */
     static void dockMachineLying(BlockPos pos, boolean lying) {
         dockMachine(pos).lying = lying;
+    }
+
+    /**
+     * A máquina da Doca ganha uma entrada de químico na face de cima, ao lado do slot de item, que só aceita
+     * {@code chemical} (chame antes do vínculo).
+     */
+    static void dockMachineSelectiveTop(BlockPos pos, ResourceLocation chemical) {
+        dockMachine(pos).top = handler(BasicChemicalTank.createModern(ChemicalTestTanks.CAPACITY,
+                stack -> MekanismChemicals.id(stack).equals(chemical), () -> {
+                }));
+    }
+
+    /** Quanto do químico há na entrada de cima da máquina da Doca ({@link #dockMachineSelectiveTop}). */
+    static long dockMachineTop(BlockPos pos, ResourceLocation chemical) {
+        IChemicalHandler top = dockMachine(pos).top;
+        ChemicalStack stack = top == null ? ChemicalStack.EMPTY : top.getChemicalInTank(0);
+        return !stack.isEmpty() && MekanismChemicals.id(stack).equals(chemical) ? stack.getAmount() : 0;
+    }
+
+    /** A saída da máquina da Doca aceita de volta o que saiu dela (o químico que o destino recusou). */
+    static void dockMachineTakesBack(BlockPos pos) {
+        dockMachine(pos).takesBack = true;
+    }
+
+    /** A saída da máquina da Doca oferece tudo na simulação e dá no máximo {@code max} mB por extração de verdade. */
+    static void dockMachineStingy(BlockPos pos, long max) {
+        dockMachine(pos).stingy = max;
     }
 
     static ItemStack dockMachineItem(BlockPos pos) {
@@ -75,6 +107,12 @@ final class ChemicalTestSupport {
 
     static long dockMachineOutput(BlockPos pos) {
         return dockMachine(pos).output.getStack().getAmount();
+    }
+
+    /** {@code stack} ({@code ChemicalStack}) é {@code amount} mB do químico {@code chemical}. */
+    static boolean isChemical(Object stack, ResourceLocation chemical, long amount) {
+        return stack instanceof ChemicalStack chemicalStack && !chemicalStack.isEmpty()
+                && MekanismChemicals.id(chemicalStack).equals(chemical) && chemicalStack.getAmount() == amount;
     }
 
     /** Um pedido de um químico só, como a Doca recebe ({@code ChemicalStack} como {@code Object}). */
@@ -98,7 +136,8 @@ final class ChemicalTestSupport {
     /**
      * Uma máquina de duas entradas e uma saída, como uma do Mekanism que pede item e químico: um slot de item pela face
      * de cima, a entrada de químico pelas laterais (que pode mentir, {@link #lying}) e a saída de químico por baixo (só
-     * dá).
+     * dá, menos com {@link #takesBack}). Opcionais: uma entrada de químico seletiva em cima ({@link #top}) e a saída que
+     * dá menos que ofereceu ({@link #stingy}).
      */
     private static final class ChemicalMachine {
         final ItemStackHandler items = new ItemStackHandler(1);
@@ -107,6 +146,10 @@ final class ChemicalTestSupport {
         final IChemicalTank output = BasicChemicalTank.createAllValid(ChemicalTestTanks.CAPACITY, () -> {
         });
         volatile boolean lying;
+        volatile @Nullable IChemicalHandler top;
+        volatile boolean takesBack;
+        /** O máximo por extração de verdade da saída; 0 sem teto. */
+        volatile long stingy;
         final IChemicalHandler inputHandler = new SingleTank(input) {
             @Override
             public ChemicalStack insertChemical(int index, ChemicalStack stack, Action action) {
@@ -116,15 +159,37 @@ final class ChemicalTestSupport {
         final IChemicalHandler outputHandler = new SingleTank(output) {
             @Override
             public ChemicalStack insertChemical(int index, ChemicalStack stack, Action action) {
-                return stack;
+                return takesBack ? super.insertChemical(index, stack, action) : stack;
+            }
+
+            @Override
+            public ChemicalStack extractChemical(int index, long amount, Action action) {
+                long max = stingy;
+                return super.extractChemical(index, action.execute() && max > 0 ? Math.min(amount, max) : amount,
+                        action);
             }
         };
     }
 
     static void reset(BlockPos pos) {
+        LYING.remove(pos.immutable());
         TANKS.remove(pos.immutable());
         MANY.remove(pos.immutable());
         TYPED.remove(pos.immutable());
+    }
+
+    /**
+     * O tanque de {@code pos} aceita na simulação e recusa toda inserção de verdade, contando as recusas (chame
+     * depois do {@link #reset}).
+     */
+    static void tankLying(BlockPos pos) {
+        LYING.put(pos.immutable(), new AtomicInteger());
+    }
+
+    /** Quantas inserções de verdade o tanque que mente de {@code pos} recusou. */
+    static int tankRefusals(BlockPos pos) {
+        AtomicInteger refusals = LYING.get(pos.immutable());
+        return refusals == null ? 0 : refusals.get();
     }
 
     /** O tanque seletivo de {@code pos} passa a aceitar só {@code chemical} (chame antes da primeira consulta). */
@@ -235,9 +300,21 @@ final class ChemicalTestSupport {
     }
 
     private static IChemicalHandler handler(BlockPos pos) {
-        return handler(TANKS.computeIfAbsent(pos.immutable(),
-                key -> BasicChemicalTank.createAllValid(ChemicalTestTanks.CAPACITY, () -> {
-                })));
+        BlockPos key = pos.immutable();
+        IChemicalTank tank = TANKS.computeIfAbsent(key,
+                created -> BasicChemicalTank.createAllValid(ChemicalTestTanks.CAPACITY, () -> {
+                }));
+        return new SingleTank(tank) {
+            @Override
+            public ChemicalStack insertChemical(int index, ChemicalStack stack, Action action) {
+                AtomicInteger refusals = LYING.get(key);
+                if (refusals != null && action.execute()) {
+                    refusals.incrementAndGet();
+                    return stack;
+                }
+                return super.insertChemical(index, stack, action);
+            }
+        };
     }
 
     /** Um handler de um tanque só sobre {@code tank}. */

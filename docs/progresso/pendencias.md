@@ -91,6 +91,7 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 - Doca e RS2: a dica do provedor mostra "Autocrafter", sem o "× N" de uma corrente: contar a corrente pede a direção do Autocrafter, que está numa classe interna do RS2 (`AbstractDirectionalBlock`), fora da `common-api`. (11/11)
 - Doca: o Ctrl + clique no raio 96 (Ultimate) custa de 2,4 a 3,9 ms por clique; avaliar baixar o teto de leitura só para a Doca. (11/11)
 - Doca: com pendente, o lado guarda o bloco mesmo sem máquinas (para trocar de máquina, vincular uma do bloco antigo ou quebrar a Doca); decidir se o pendente vai ao chão ao desvincular a última. (11/11)
+- **(dono)** Doca: um químico guardado cru (o item da Doca com pendente de químico num mundo sem o Mekanism, ou com o químico de um mod removido) nunca é descartado e prende o lado ao bloco mesmo sem máquinas, mas nada na tela explica por quê (o `hasPending` é falso; só o `keepsPending` o vê). Sugestão da revisão final da etapa 4: uma linha de estado ou dica ("Químico guardado sem o Mekanism") e, se o dono quiser, um jeito explícito de descartar a entrada. Decidir. (11/11)
 - **(dono)** Doca: a receita (fica para o balanceamento das receitas). (10/11)
 - `RouterBlockEntity` em 999 linhas: qualquer linha nova exige dividir antes. (11/11)
 

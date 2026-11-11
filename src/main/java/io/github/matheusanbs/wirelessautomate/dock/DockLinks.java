@@ -43,7 +43,8 @@ import org.jetbrains.annotations.Nullable;
  * <p>Ordem das recusas de uma máquina: a Doca escolhida presente e na dimensão do jogador; {@code mayBuild} e
  * {@code mayInteract} na máquina e na Doca ({@link Refusal#PROTECTED}); a máquina já é deste lado (desvincula) ou de
  * outro lado desta Doca; não é máquina (um roteador, uma Doca, um bloco sem capability de um tipo carregado); o lado é
- * de outro bloco; a máquina é de outra Doca carregada (o {@link DockIndex}, ativa ou não); fora do cubo do tier; o limite do tier.
+ * de outro bloco; a máquina é de outra Doca carregada (o {@link DockIndex}, ativa ou não); fora do cubo do tier; o
+ * limite do tier.
  * Uma máquina vinculada a um roteador pode entrar num lado, e vice-versa (decisão do dono, 10/11/2026).
  *
  * <p>O primeiro vínculo de um lado preenche o perfil dele pelo Afinador ({@link #tune}); as outras máquinas usam o

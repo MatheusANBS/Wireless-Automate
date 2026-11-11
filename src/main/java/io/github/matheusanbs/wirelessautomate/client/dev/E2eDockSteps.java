@@ -12,6 +12,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
 import io.github.matheusanbs.wirelessautomate.client.dock.DockReachPaint;
 import io.github.matheusanbs.wirelessautomate.client.dock.DockScreen;
+import io.github.matheusanbs.wirelessautomate.dock.DockAe2;
 import io.github.matheusanbs.wirelessautomate.dock.DockColors;
 import io.github.matheusanbs.wirelessautomate.dock.DockDelivery;
 import io.github.matheusanbs.wirelessautomate.dock.DockLinks;
@@ -30,6 +31,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -40,12 +42,13 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntity;
 
 /**
  * A tela da Doca de Padrões nos três cenários do mockup, nos dois temas: a base em uso (Elite, 30/32, um lado
  * trabalhando, um com todas cheias, um sem provedor, um com duas máquinas em área descarregada, um com provedor e sem
  * máquina, um livre), a recém-colocada (Básica, só o provedor no Norte) e a config baixada (raio 12 e limite 24: o
- * provedor cheio e as máquinas fora do alcance, o padrão de bancada e o pedido misto). Cada cenário monta a Doca do
+ * provedor cheio e as máquinas fora do alcance, a trava do provedor, o padrão de bancada e o pedido misto). Cada cenário monta a Doca do
  * zero, ao lado do jogador, com máquinas de verdade (as do Mekanism e do AE2 que o cliente de dev traz) e o Pattern
  * Provider do AE2 encostado; as máquinas "descarregadas" ficam abaixo do mundo, onde o {@code isLoaded} é falso. Os
  * fatos que só um pedido do AE2 faria (a recusa, a última atividade, o provedor cheio) vão direto no lado. Em cada
@@ -63,6 +66,8 @@ final class E2eDockSteps {
     private static final int EAST = Direction.EAST.ordinal();
     private static final int WEST = Direction.WEST.ordinal();
     private static final int UP = Direction.UP.ordinal();
+    /** O cliente de dev traz o AE2: os provedores existem e a trava do Leste vale no cenário da config baixada. */
+    private static final boolean AE2 = DockAe2.LOADED;
     /** O raio e o limite da linha da Esmeralda, a que a Doca Elite lê, no cenário da config baixada. */
     private static final int LOW_RADIUS = 12;
     private static final int LOW_MAX = 24;
@@ -117,7 +122,8 @@ final class E2eDockSteps {
                 && state.radius() == LOW_RADIUS && line(state, NORTH).outOfReach() == 4
                 && line(state, EAST).outOfReach() == 2 && state(state, NORTH) == DockStatus.State.PROVIDER_FULL
                 && state(state, SOUTH) == DockStatus.State.CRAFTING_PATTERN
-                && state(state, WEST) == DockStatus.State.MIXED));
+                && state(state, WEST) == DockStatus.State.MIXED
+                && (!AE2 || state(state, EAST) == DockStatus.State.PROVIDER_LOCK)));
         shot(list, "doca-config" + suffix);
         list.add(close("Doca: fechar a config baixada" + suffix));
         list.add(new Step("Doca: config de volta" + suffix, STEP_TIMEOUT_MS, () -> onServer(server -> {
@@ -301,8 +307,8 @@ final class E2eDockSteps {
 
     /**
      * Elite com o raio 12 e o limite 24: Norte com 12 fornalhas trabalhando, 4 fora do alcance e o provedor cheio,
-     * Leste com 8 trituradores parados (2 fora do alcance), Sul com o padrão de bancada recusado, Oeste com o pedido
-     * misto recusado; Cima e Baixo livres.
+     * Leste com 8 trituradores parados (2 fora do alcance) e o provedor em "travar até o resultado", Sul com o padrão
+     * de bancada recusado, Oeste com o pedido misto recusado; Cima e Baixo livres.
      */
     private static void lowConfig(MinecraftServer server, ServerLevel level, BlockPos at) {
         savedRadius = Config.TIERS.get(RouterTier.EMERALD).machineRadius().get();
@@ -327,6 +333,22 @@ final class E2eDockSteps {
         dock.side(NORTH).setProviderFull(true);
         DockDelivery.refuse(dock, SOUTH, DockStatus.CRAFTING_PATTERN);
         DockDelivery.refuse(dock, WEST, DockStatus.MIXED);
+        lockUntilResult(level, at.relative(Direction.EAST));
+    }
+
+    /**
+     * Põe o Pattern Provider em {@code pos} em "travar até o resultado" sem tipos do AE2: pelo NBT do block entity, onde
+     * o AE2 guarda cada configuração com o nome dela ({@code lock_crafting_mode}). Sem o AE2, nada.
+     */
+    private static void lockUntilResult(ServerLevel level, BlockPos pos) {
+        BlockEntity entity = level.getBlockEntity(pos);
+        if (!AE2 || entity == null) {
+            return;
+        }
+        CompoundTag tag = entity.saveWithoutMetadata(level.registryAccess());
+        tag.putString("lock_crafting_mode", "LOCK_UNTIL_RESULT");
+        entity.loadWithComponents(tag, level.registryAccess());
+        entity.setChanged();
     }
 
     private static PatternDockBlockEntity placeDock(ServerLevel level, BlockPos at, RouterTier tier) {

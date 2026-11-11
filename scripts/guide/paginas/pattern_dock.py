@@ -32,17 +32,20 @@ PAGINA = page('pattern-dock.md', front('Doca de Padrões', 'wirelessautomate:pat
 
 <ItemImage id="wirelessautomate:pattern_dock" scale="2" float="left" />
 
-Leva os pedidos de um **Pattern Provider** do AE2 até as máquinas que fazem a receita. Cada **lado** da Doca cuida de
-**um tipo de máquina**. Precisa do **AE2** para receber pedidos.
+Leva os pedidos de um **Pattern Provider** do AE2 ou de um **Autocrafter** do Refined Storage 2 até as máquinas que
+fazem a receita. Cada **lado** da Doca cuida de **um tipo de máquina**. Precisa do **AE2** ou do **RS2** para receber
+pedidos.
 
 <br clear="all" />
 
 ## Como usar
 
-1. Coloque a Doca e encoste um **Pattern Provider** do AE2 num lado dela.
+1. Coloque a Doca e encoste um **Pattern Provider** do AE2 (ou um **Autocrafter** do RS2, virado para ela) num lado
+   dela.
 2. Com o [Vinculador](linker.md), clique **nesse lado** da Doca. Depois dê **Ctrl + clique** numa máquina: as iguais
    que estão por perto entram naquele lado. Um clique simples vincula só uma máquina; numa já vinculada, desvincula.
-3. Ponha no provedor **os padrões dessas máquinas**. Pronto: a CPU de crafting do AE2 já pode pedir.
+3. Ponha no provedor **os padrões dessas máquinas**. Pronto: a CPU de crafting do AE2 (ou a rede do RS2) já pode
+   pedir.
 
 Quando você vincula a primeira máquina de um lado, a Doca descobre sozinha em que face entram os ingredientes e de qual
 sai o resultado. A action bar mostra o que ela achou.
@@ -51,7 +54,8 @@ sai o resultado. A action bar mostra o que ela achou.
 
 - Entrega **cada pedido inteiro** a uma máquina livre do lado.
 - As máquinas **se revezam**: o próximo pedido vai para a seguinte.
-- O resultado **volta ao provedor**, e o provedor manda para a rede.
+- O resultado vai **direto para a rede** do provedor (a ME do AE2 ou a do RS2), sem passar pelo inventário dele, e o
+  pedido o conta ali.
 - Quando **todas as máquinas estão cheias**, o pedido espera. **Nada se perde**: se você quebrar a Doca com um resto
   de pedido esperando, ele vai junto no item ("Pedido pendente") e volta ao mesmo lado quando você a recoloca.
 
@@ -65,8 +69,14 @@ A Doca **não gasta energia nem combustível**. Ela só leva os pedidos.
 
 ## Dicas
 
-- **Não multiplique os padrões.** Cada pedido vai inteiro para uma máquina, então um padrão grande ocupa uma só. Para
-  mais máquinas trabalharem juntas, ponha **coprocessadores** na CPU de crafting.
+- **Multiplique os padrões até um lote que a máquina faz num tempo bom** (×8, ×64). Cada empurrão da CPU vai inteiro
+  para uma máquina e a enche: com o padrão de 1 minério, cada máquina recebe um de cada vez; com o de 64, recebe um
+  lote que a mantém ocupada. **Mais coprocessadores** na CPU continuam ajudando: são mais empurrões por vez, e mais
+  máquinas trabalhando juntas. Um pedido pequeno ocupa poucas máquinas.
+- **Não use a trava "até o resultado"** do Pattern Provider: o resultado não passa por ele, então a trava nunca solta.
+  A linha do lado avisa ("Tire a trava do provedor").
+- **Mais padrões no RS2:** encadeie **Autocrafters** (um virado para o outro, o último virado para a Doca). Os padrões
+  de todos chegam ao mesmo lado.
 - **Padrões de bancada** (bancada, cortador de pedra, forja) são do Molecular Assembler. A Doca os recusa.
 - **Outro tipo de máquina?** Use **outro lado**. Um lado só cuida de um tipo, e a Doca tem seis lados.
 - **Se a Doca errar as faces** de uma máquina, use o [Configurador](configurator.md) numa máquina do lado, com o gesto
@@ -91,9 +101,10 @@ e o estado:
 | --- | --- |
 | Sem provedor neste lado | Há máquinas, mas nada encostado. Encoste um provedor |
 | Nenhuma máquina vinculada | Há provedor, mas nenhuma máquina. Vincule com o Vinculador |
+| Tire a trava do provedor | O provedor está em "travar até o resultado", que nunca solta com a Doca |
 | Padrão de bancada recusado | O último pedido era de bancada, cortador ou forja |
 | Pedido com item e fluido recusado | O último pedido misturava itens e fluidos |
-| Provedor cheio | O resultado espera o provedor mandar o que já recebeu |
+| Provedor cheio | O resultado espera lugar: a rede cheia, sem energia ou sem canal |
 | Todas cheias | Nenhuma máquina aceitou o último pedido; ele espera |
 | Pedido pendente | A máquina ainda não recebeu o resto do último pedido; o lado espera por ele |
 | Trabalhando | Uma máquina recebeu um pedido ou devolveu um resultado há pouco |
@@ -108,24 +119,26 @@ Ao lado do estado a tela avisa quantas máquinas estão **fora do alcance** ou *
 - **Pedidos só de itens ou só de fluidos**, nesta versão. Um pedido com os dois é recusado.
 - **Mesma dimensão** e dentro do raio do tier.
 - Uma máquina pertence a **um lado de uma Doca só**.
-- A Doca precisa do **AE2** para receber pedidos.
+- A Doca precisa do **AE2** ou do **RS2** para receber pedidos.
 ''', front('Pattern Dock', 'wirelessautomate:pattern_dock', 'integracoes', 17, item_ids=[
     'wirelessautomate:pattern_dock']) + '''
 # Pattern Dock
 
 <ItemImage id="wirelessautomate:pattern_dock" scale="2" float="left" />
 
-Takes the orders of an AE2 **Pattern Provider** to the machines that make the recipe. Each **side** of the Dock handles
-**one kind of machine**. It needs **AE2** to receive orders.
+Takes the orders of an AE2 **Pattern Provider** or a Refined Storage 2 **Autocrafter** to the machines that make the
+recipe. Each **side** of the Dock handles **one kind of machine**. It needs **AE2** or **RS2** to receive orders.
 
 <br clear="all" />
 
 ## How to use
 
-1. Place the Dock and put an AE2 **Pattern Provider** against one of its sides.
+1. Place the Dock and put an AE2 **Pattern Provider** (or an RS2 **Autocrafter**, facing it) against one of its
+   sides.
 2. With the [Linker](linker.md), click **that side** of the Dock. Then **Ctrl + click** a machine: the matching ones
    nearby join that side. A plain click links just one machine; on an already linked one, it unlinks it.
-3. Put **the patterns for those machines** in the provider. Done: the AE2 crafting CPU can now ask for them.
+3. Put **the patterns for those machines** in the provider. Done: the AE2 crafting CPU (or the RS2 network) can now
+   ask for them.
 
 When you link the first machine of a side, the Dock works out on its own which face takes the ingredients and which one
 gives the result. The action bar shows what it found.
@@ -134,7 +147,8 @@ gives the result. The action bar shows what it found.
 
 - It hands **each whole order** to a free machine of the side.
 - The machines **take turns**: the next order goes to the next one.
-- The result **goes back to the provider**, and the provider sends it to the network.
+- The result goes **straight to the provider's network** (AE2's ME or RS2's), without passing through its inventory,
+  and the order counts it there.
 - When **all the machines are full**, the order waits. **Nothing is lost**: if you break the Dock while the rest of an
   order is waiting, it goes along in the item ("Order pending") and returns to the same side when you place it again.
 
@@ -147,8 +161,14 @@ The Dock **spends no energy and no fuel**. It only carries the orders.
 
 ## Tips
 
-- **Don't multiply the patterns.** Each order goes whole to one machine, so a big pattern keeps just one busy. For more
-  machines working together, put **co-processors** on the crafting CPU.
+- **Multiply the patterns up to a batch a machine finishes in good time** (×8, ×64). Each push of the CPU goes whole
+  to one machine and fills it: with a 1-ore pattern, each machine gets one at a time; with a 64 one, it gets a batch
+  that keeps it busy. **More co-processors** on the CPU still help: more pushes at once, more machines working
+  together. A small order keeps few machines busy.
+- **Don't use the provider's "lock until result"**: the result doesn't pass through it, so the lock never releases.
+  The side's row warns you ("Remove the provider lock").
+- **More patterns on RS2:** chain **Autocrafters** (one facing the other, the last one facing the Dock). The patterns
+  of all of them reach the same side.
 - **Crafting patterns** (crafting table, stonecutter, smithing) belong to the Molecular Assembler. The Dock refuses
   them.
 - **Another kind of machine?** Use **another side**. A side handles one kind, and the Dock has six sides.
@@ -174,9 +194,10 @@ working, and the state:
 | --- | --- |
 | No provider on this side | There are machines, but nothing attached. Place a provider |
 | No machine linked | There is a provider, but no machine. Link them with the Linker |
+| Remove the provider lock | The provider is set to "lock until result", which never releases with the Dock |
 | Crafting pattern refused | The last order was a crafting, stonecutting or smithing one |
 | Item and fluid order refused | The last order mixed items and fluids |
-| Provider full | The result waits for the provider to send what it already got |
+| Provider full | The result waits for room: the network is full, unpowered or without a channel |
 | All full | No machine took the last order; it waits |
 | Order pending | The machine has not taken the rest of the last order yet; the side waits for it |
 | Working | A machine got an order or gave back a result a moment ago |
@@ -191,5 +212,5 @@ Next to the state, the screen warns how many machines are **out of reach** or **
 - **Orders of items only or fluids only**, in this version. An order with both is refused.
 - **Same dimension** and inside the tier's radius.
 - A machine belongs to **one side of one Dock**.
-- The Dock needs **AE2** to receive orders.
+- The Dock needs **AE2** or **RS2** to receive orders.
 ''')

@@ -60,12 +60,14 @@ final class DockPending {
             int[] masks = side.masks(count - from);
             DockDelivery.itemMasks(caches, side.profile(), front, items, from, 0, masks, false);
             DockPick.loads(masks, count - from, loads);
+            DockStacker stacker = side.stacker();
+            stacker.reset();
             ItemStack refused = ItemStack.EMPTY;
             for (int i = count - 1; i >= from; i--) {
                 ItemStack stack = items.get(i);
                 // O item que a máquina já recusou nesta tentativa não cabe na pilha igual seguinte.
                 ItemStack rest = refused.isEmpty() || !ItemStack.isSameItemSameComponents(stack, refused)
-                        ? DockDelivery.placeItem(caches, front, stack, masks[i - from], loads) : stack;
+                        ? DockDelivery.placeItem(caches, front, stack, masks[i - from], loads, stacker) : stack;
                 if (!rest.isEmpty()) {
                     refused = stack;
                 }

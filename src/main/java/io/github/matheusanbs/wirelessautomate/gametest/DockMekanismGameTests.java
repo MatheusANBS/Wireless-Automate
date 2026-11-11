@@ -213,6 +213,46 @@ public final class DockMekanismGameTests {
     }
 
     /**
+     * Um pedido de cinco pilhas iguais de 64 entra junto na fábrica (o inventário dela é do Mekanism, que limita cada
+     * slot sozinho): os três slots de entrada ficam com 64, e os 128 que não couberam vão ao pendente em duas pilhas de
+     * 64, nunca numa pilha maior que o tamanho do item (o pendente vai ao NBT).
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void joinedStacksIntoFactory(GameTestHelper helper) {
+        if (!ChemicalTestTanks.enabled()) {
+            helper.succeed();
+            return;
+        }
+        PatternDockBlockEntity dock = scene(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> registered(dock))
+                .thenExecute(() -> link(helper, dock))
+                .thenWaitUntil(DockMekanismGameTests::room)
+                .thenExecute(() -> {
+                    IItemHandler input = inputFace(helper);
+                    helper.assertTrue(input.getClass().getName().startsWith("mekanism."),
+                            "o inventário da fábrica não é do Mekanism: " + input.getClass().getName());
+                    List<ItemStack> order = List.of(new ItemStack(Items.RAW_IRON, 64), new ItemStack(Items.RAW_IRON, 64),
+                            new ItemStack(Items.RAW_IRON, 64), new ItemStack(Items.RAW_IRON, 64),
+                            new ItemStack(Items.RAW_IRON, 64));
+                    helper.assertTrue(DockDelivery.offer(dock, NORTH, order, List.of(), false)
+                            == DockDelivery.Result.ACCEPTED, "recusou: motivo " + dock.side(NORTH).lastRefusal());
+                    int inside = 0;
+                    for (int slot = 0; slot < input.getSlots(); slot++) {
+                        inside += input.getStackInSlot(slot).getCount();
+                    }
+                    helper.assertValueEqual(inside, INPUT_SLOTS * 64, "na entrada da fábrica");
+                    List<ItemStack> pending = dock.side(NORTH).pendingItems();
+                    helper.assertValueEqual(pending.size(), 2, "pilhas no pendente");
+                    for (ItemStack stack : pending) {
+                        helper.assertTrue(stack.is(Items.RAW_IRON) && stack.getCount() == 64,
+                                "pilha do pendente: " + stack);
+                    }
+                })
+                .thenSucceed();
+    }
+
+    /**
      * Ticks extras da fábrica no tick do servidor (o que a Time Wand faz: o ticker do block entity mais vezes), com a
      * energia cheia antes de cada um.
      */

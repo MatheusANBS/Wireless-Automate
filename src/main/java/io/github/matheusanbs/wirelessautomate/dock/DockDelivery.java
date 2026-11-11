@@ -219,9 +219,12 @@ public final class DockDelivery {
         int[] loads = side.loads();
         if (itemCount > 0) {
             DockPick.loads(masks, 0, itemCount, loads);
+            DockStacker stacker = side.stacker();
+            stacker.reset();
             // O item que a máquina já recusou (não coube inteiro) não cabe na pilha igual seguinte, e depois de
             // DockPending.FLUSH_WINDOW pilhas o resto espera as tentativas do pendente: vai direto ao pendente, sem
-            // tentar (o pedido de 524.288 são 8.192 pilhas iguais).
+            // tentar (o pedido de 524.288 são 8.192 pilhas iguais). As pilhas iguais seguidas entram juntas na
+            // máquina que aceita a pilha maior (o run): as 64 de um pedido de 4.096 numa inserção só.
             ItemStack refused = ItemStack.EMPTY;
             int tried = 0;
             for (int i = 0; i < itemCount; i++) {
@@ -231,14 +234,31 @@ public final class DockDelivery {
                 }
                 boolean attempt = tried < DockPending.FLUSH_WINDOW
                         && (refused.isEmpty() || !ItemStack.isSameItemSameComponents(stack, refused));
-                ItemStack rest = attempt ? placeItem(caches, front, stack, masks[i], loads) : stack;
-                if (attempt) {
-                    tried++;
+                if (!attempt) {
+                    side.addPending(stack.copy(), machine.pos());
+                    continue;
                 }
+                int run = run(caches, front, items, masks, i,
+                        Math.min(itemCount, i + DockPending.FLUSH_WINDOW - tried));
+                tried += run;
+                if (run == 1) {
+                    ItemStack rest = placeItem(caches, front, stack, masks[i], loads, stacker);
+                    if (!rest.isEmpty()) {
+                        refused = stack;
+                        side.addPending(rest == stack ? stack.copy() : rest, machine.pos());
+                    }
+                    continue;
+                }
+                int total = 0;
+                for (int j = i; j < i + run; j++) {
+                    total += items.get(j).getCount();
+                }
+                ItemStack rest = placeItem(caches, front, stack.copyWithCount(total), masks[i], loads, stacker);
                 if (!rest.isEmpty()) {
                     refused = stack;
-                    side.addPending(rest == stack ? stack.copy() : rest, machine.pos());
+                    addPendingSplit(side, rest, machine);
                 }
+                i += run - 1;
             }
         }
         if (fluidCount > 0) {
@@ -276,6 +296,50 @@ public final class DockDelivery {
         dock.saveChanged();
         dock.signalWork(side.side(), now);
         return Result.ACCEPTED;
+    }
+
+    /**
+     * Quantas pilhas a partir de {@code from} (até {@code to}) entram juntas: a {@code from}, se o item empilha, e as
+     * seguintes iguais a ela (item, componentes), com a mesma máscara, se toda face da máscara é de um inventário que
+     * aceita a pilha maior que o tamanho do item ({@link DockStacker#takesOversized}); senão 1. O pedido multiplicado
+     * do AE2 chega partido no tamanho do item, e a máquina do Mekanism recebe a soma numa inserção, em vez de uma por
+     * pilha.
+     */
+    private static int run(MachineCaches caches, int front, List<ItemStack> items, int[] masks, int from, int to) {
+        ItemStack first = items.get(from);
+        if (!first.isStackable()) {
+            return 1;
+        }
+        int mask = masks[from];
+        int end = from + 1;
+        while (end < to && masks[end] == mask && ItemStack.isSameItemSameComponents(items.get(end), first)) {
+            end++;
+        }
+        return end - from == 1 || !oversizedFaces(caches, front, mask) ? 1 : end - from;
+    }
+
+    /**
+     * Toda face de {@code mask} é de um inventário que aceita a pilha maior que o tamanho do item
+     * ({@link DockStacker#takesOversized}): as pilhas iguais podem entrar juntas.
+     */
+    private static boolean oversizedFaces(MachineCaches caches, int front, int mask) {
+        for (int face = 0; face < SIDES.length; face++) {
+            if ((mask & (1 << face)) != 0) {
+                IItemHandler handler = caches.items(absolute(face, front));
+                if (handler == null || !DockStacker.takesOversized(handler)) {
+                    return false;
+                }
+            }
+        }
+        return mask != 0;
+    }
+
+    /** A sobra de pilhas juntadas vai ao pendente em pilhas do tamanho do item (o pendente vai ao NBT). */
+    private static void addPendingSplit(DockSide side, ItemStack rest, DockMachine machine) {
+        int max = rest.getMaxStackSize();
+        for (int count = rest.getCount(); count > 0; count -= max) {
+            side.addPending(rest.copyWithCount(Math.min(count, max)), machine.pos());
+        }
     }
 
     // ------------------------------------------------------------------ faces
@@ -448,25 +512,28 @@ public final class DockDelivery {
 
     /**
      * Insere {@code stack} de verdade: primeiro na face mais seletiva de {@code mask}, e a sobra nas outras faces da
-     * máscara, na ordem do perfil. Devolve a sobra ({@code stack} mesmo, se nada entrou).
+     * máscara, na ordem do perfil, pelo {@code stacker} (o helper empilhado com a dica do slot da pilha anterior).
+     * Devolve a sobra ({@code stack} mesmo, se nada entrou).
      */
-    static ItemStack placeItem(MachineCaches caches, int front, ItemStack stack, int mask, int[] loads) {
+    static ItemStack placeItem(MachineCaches caches, int front, ItemStack stack, int mask, int[] loads,
+            DockStacker stacker) {
         int first = DockPick.selectiveFace(mask, loads);
         if (first < 0) {
             return stack;
         }
-        ItemStack rest = insertItem(caches, front, first, stack);
+        ItemStack rest = insertItem(caches, front, first, stack, stacker);
         for (int face = 0; face < SIDES.length && !rest.isEmpty(); face++) {
             if (face != first && (mask & (1 << face)) != 0) {
-                rest = insertItem(caches, front, face, rest);
+                rest = insertItem(caches, front, face, rest, stacker);
             }
         }
         return rest;
     }
 
-    private static ItemStack insertItem(MachineCaches caches, int front, int face, ItemStack stack) {
+    private static ItemStack insertItem(MachineCaches caches, int front, int face, ItemStack stack,
+            DockStacker stacker) {
         IItemHandler handler = caches.items(absolute(face, front));
-        return handler == null ? stack : ItemHandlerHelper.insertItemStacked(handler, stack, false);
+        return handler == null ? stack : stacker.insert(handler, stack);
     }
 
     /** O {@link #placeItem} dos fluidos. */

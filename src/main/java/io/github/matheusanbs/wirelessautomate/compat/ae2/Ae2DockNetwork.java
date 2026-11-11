@@ -157,6 +157,17 @@ final class Ae2DockNetwork implements DockReturnNetwork {
     }
 
     @Override
+    public long insertItems(ItemStack item, long amount, boolean simulate) {
+        if (item.isEmpty() || amount <= 0) {
+            return 0;
+        }
+        if (itemKey == null || !itemKey.matches(item)) {
+            itemKey = AEItemKey.of(item);
+        }
+        return insert(itemKey, amount, simulate);
+    }
+
+    @Override
     public ItemStack extractItem(int slot, int amount, boolean simulate) {
         return ItemStack.EMPTY;
     }

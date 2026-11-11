@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.dock.DockAe2;
 import io.github.matheusanbs.wirelessautomate.dock.DockMachine;
+import io.github.matheusanbs.wirelessautomate.dock.DockRs2;
 import io.github.matheusanbs.wirelessautomate.dock.DockSide;
 import io.github.matheusanbs.wirelessautomate.dock.DockStatus;
 import io.github.matheusanbs.wirelessautomate.dock.PatternDockBlockEntity;
@@ -154,7 +155,7 @@ public class DockMenu extends AbstractContainerMenu {
     private void measure(Level level, long now) {
         for (int i = 0; i < SIDES; i++) {
             DockSide side = dock.side(i);
-            boolean provider = DockAe2.hasProvider(dock, i);
+            boolean provider = DockAe2.hasProvider(dock, i) || DockRs2.hasProvider(dock, i);
             providers[i] = provider ? providerBlock(level, i) : null;
             int linked = 0;
             int working = 0;

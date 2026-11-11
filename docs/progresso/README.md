@@ -16,7 +16,7 @@ Comece por aqui para continuar o trabalho. Este arquivo é curto de propósito: 
 2. O dono testa à mão as etapas 1 a 4 do alcance e o Ctrl + clique do Vinculador (listas nas linhas de 02/11 do histórico), já no main.
 3. Reidealizar as telas do Tablet do zero (criação de redes etc.), mockup primeiro para o ok do dono.
 4. Refazer as imagens do Vinculador na vitrine (sem a área) e a do livro (ver `pendencias.md`). Os menores que sobraram do alcance (`pendencias.md`, seção "Roteador de alcance").
-5. **Lixeira:** executar o plano da etapa 1 quando o dono der o ok. **Doca de Padrões:** a etapa 1 (AE2) está pronta no ramo `ccr-71b175d3-weymk6` (13 tarefas, todas as runs e o e2e OK): o dono testa à mão no jogo, decide o merge e depois vem o plano da etapa 2 (RS2).
+5. **Lixeira:** executar o plano da etapa 1 quando o dono der o ok. **Doca de Padrões:** a etapa 1 (AE2) está pronta no ramo `ccr-71b175d3-weymk6` (13 tarefas, todas as runs e o e2e OK; as três pendências técnicas resolvidas em 11/11): o dono testa à mão no jogo, decide o merge e depois vem o plano da etapa 2 (RS2).
 
 ## Os arquivos
 

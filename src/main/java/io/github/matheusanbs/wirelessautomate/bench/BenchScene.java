@@ -117,7 +117,7 @@ final class BenchScene {
     private final List<BlockPos> remoteSinks = new ArrayList<>();
     /** Os Ressonadores dos cenários {@code resonator-*}; {@code null} nos outros. */
     private @Nullable BenchResonators resonators;
-    /** As Docas do cenário {@code doca}; {@code null} nos outros. */
+    /** As Docas dos cenários {@code doca} e {@code doca-ae2}; {@code null} nos outros. */
     private @Nullable BenchDock dock;
     private final LongSet forcedChunks = new LongOpenHashSet();
     private final List<Item> sourceItems;
@@ -162,8 +162,8 @@ final class BenchScene {
             planResonators(count);
             return;
         }
-        if (scenario == BenchScenario.DOCK) {
-            dock = new BenchDock(level, ORIGIN, count);
+        if (scenario == BenchScenario.DOCK || scenario == BenchScenario.DOCK_AE2) {
+            dock = new BenchDock(level, ORIGIN, count, scenario == BenchScenario.DOCK_AE2);
             max = dock.max();
             return;
         }

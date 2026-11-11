@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.bench;
 
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.dock.DockAe2;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -307,8 +308,8 @@ public final class BenchRunner {
                 WirelessAutomate.LOGGER.warn("Benchmark: pulando {}: {}", trimmed, problem);
                 continue;
             }
-            // Os cenários em pares pedem pelo menos 2 nós; o da Doca conta Docas, e 1 basta.
-            int least = scenario == BenchScenario.DOCK ? 1 : 2;
+            // Os cenários em pares pedem pelo menos 2 nós; os da Doca contam Docas, e 1 basta.
+            int least = scenario == BenchScenario.DOCK || scenario == BenchScenario.DOCK_AE2 ? 1 : 2;
             jobs.add(new BenchRun.Job(scenario, Math.max(least, nodes), Math.max(1, reps), storage, transport));
         }
         return jobs;
@@ -318,6 +319,9 @@ public final class BenchRunner {
     static @Nullable String problem(BenchScenario scenario, BenchStorage storage, BenchTransport transport) {
         if (!storage.available()) {
             return "o Sophisticated Storage não está carregado";
+        }
+        if (scenario == BenchScenario.DOCK_AE2 && !DockAe2.LOADED) {
+            return "o AE2 não está carregado";
         }
         if (transport.logisticsNetwork()) {
             if (!LogisticsNetworkBench.loaded()) {

@@ -53,6 +53,11 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
     private boolean batchDirty;
     /** A volta do resultado, no laço do motor enquanto a Doca está carregada no servidor. */
     private final DockReturn returns = new DockReturn(this);
+    /**
+     * A máquina de crafting do AE2 de cada face ({@code compat/ae2/Ae2DockMachine}), criada na primeira consulta da
+     * capability; {@code Object} para esta classe carregar sem o AE2.
+     */
+    private Object @Nullable [] ae2Faces;
 
     public PatternDockBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.PATTERN_DOCK.get(), pos, state);
@@ -165,6 +170,18 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
     /** A volta do resultado desta Doca (o visitante do motor). */
     public DockReturn returns() {
         return returns;
+    }
+
+    /** O objeto do AE2 da face {@code side} ({@link DockAe2}), ou {@code null} antes da primeira consulta. */
+    public @Nullable Object ae2Face(int side) {
+        return ae2Faces == null ? null : ae2Faces[side];
+    }
+
+    public void setAe2Face(int side, Object face) {
+        if (ae2Faces == null) {
+            ae2Faces = new Object[SIDES];
+        }
+        ae2Faces[side] = face;
     }
 
     /** O tier ou a config mudou (Cartão de Upgrade, recarga): o alcance, o limite e a vazão mudaram com ele. */

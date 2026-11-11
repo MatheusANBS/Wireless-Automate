@@ -35,6 +35,9 @@ jobs:
       - name: GameTests de times (FTB Teams)
         run: ./gradlew runGameTestServerTeams
 
+      - name: GameTests do AE2 (Doca de Padrões)
+        run: ./gradlew runGameTestServerAe2
+
       - uses: actions/upload-artifact@v4
         with:
           name: wirelessautomate

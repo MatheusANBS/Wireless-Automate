@@ -61,6 +61,7 @@ Pacote base: `src/main/java/io/github/matheusanbs/wirelessautomate/`. O mapa det
 ./gradlew runGameTestServerSource # GameTests de Source, num servidor com o Ars Nouveau (e GeckoLib e Curios) na pasta mods
 ./gradlew runGameTestServerAllthemodium # GameTests dos tiers do ATM, com o Allthemodium, o All The Tweaks e o GeckoLib (cursemaven)
 ./gradlew runGameTestServerTeams # GameTests de times, num servidor com o FTB Teams, o FTB Library e o Architectury na pasta mods (maven.ftb.dev)
+./gradlew runGameTestServerAe2 # GameTests da Doca de Padrões com o AE2, num servidor com o AE2 e o GuideME na pasta mods (cursemaven e Modrinth)
 ./gradlew runClient         # cliente de dev com JEI, Sophisticated Storage, Observable, Mekanism, Ars Nouveau (com GeckoLib e Curios), Allthemodium, All The Tweaks, Apotheosis (com as dependências dele), Mouse Tweaks, AllTheCompressed, Occultism (com Modonomicon e SmartBrainLib) e Just Dire Things, para testar à mão
 ./gradlew runData           # datagen para src/generated/resources/
 WA_SCREENSHOT=run/shots xvfb-run -a -s "-screen 0 1280x800x24" ./gradlew runClient  # capturas das telas (roteador, visor 3D, filtro), sem monitor
@@ -69,7 +70,7 @@ WA_SCREENSHOT=run/shots xvfb-run -a -s "-screen 0 1280x800x24" ./gradlew runClie
 ./scripts/bench.sh comparativo # o mesmo contra o Logistics Network (baixa o jar dele para run/bench-ln, fora do git; ver docs/benchmark-logistics-network.md)
 ```
 
-Antes de commitar, rode `./gradlew build runGameTestServer runGameTestServerChemicals runGameTestServerSource runGameTestServerAllthemodium runGameTestServerTeams` (e o `./scripts/e2e.sh` se mexeu em tela ou payload). O CI (`.github/workflows/build.yml`) roda os GameTests.
+Antes de commitar, rode `./gradlew build runGameTestServer runGameTestServerChemicals runGameTestServerSource runGameTestServerAllthemodium runGameTestServerTeams runGameTestServerAe2` (e o `./scripts/e2e.sh` se mexeu em tela ou payload). O CI (`.github/workflows/build.yml`) roda os GameTests.
 
 ## Convenções e armadilhas
 
@@ -83,6 +84,7 @@ Antes de commitar, rode `./gradlew build runGameTestServer runGameTestServerChem
 - **Mekanism é opcional:** tipos da API dele (`IChemicalHandler`, `ChemicalStack`...) só em `compat/mekanism`, `ChemicalTransfer` e `gametest/ChemicalTestSupport`, e **nunca na assinatura de um método** de classe `@EventBusSubscriber` ou `@GameTestHolder`: o NeoForge inspeciona essas classes por reflexão e o mod deixa de carregar sem o Mekanism. O `runGameTestServer` roda sem ele e pega isso.
 - **Ars Nouveau é opcional:** tipos da API dele só em `compat/arsnouveau` e `gametest/SourceTestSupport`, e nunca na assinatura de um método de classe `@EventBusSubscriber` ou `@GameTestHolder` (mesmo motivo do Mekanism).
 - **FTB Teams é opcional:** tipos da API dele só em `compat/ftbteams` e `gametest/TeamTestSupport`, e nunca na assinatura de um método de classe `@EventBusSubscriber` ou `@GameTestHolder` (mesmo motivo do Mekanism). O resto passa pela ponte `TeamAccess`. A dependência é `compileOnly` (FTB Teams e FTB Library, sem transitivas); o mod completo vai para o `runClient` e a run `gameTestServerTeams`.
+- **AE2 é opcional:** tipos da API dele só em `compat/ae2` e `gametest/Ae2TestSupport`, e nunca na assinatura de um método de classe `@EventBusSubscriber` ou `@GameTestHolder` (mesmo motivo do Mekanism). O resto passa pela ponte `dock/DockAe2`. A dependência é `compileOnly` do jar `:api` (Maven Central); o mod completo, com o GuideME, vai para o `runClient` e a run `gameTestServerAe2`.
 - **Allthemodium é opcional e sem código:** os tiers Allthemodium, Vibranium e Unobtainium existem sempre no enum (o bloco continua valendo se o mod sair) e só entram na escada, na aba criativa e nas receitas com o mod (`RouterTier.loaded()`). Receitas por tags `c:` e `neoforge:conditions`; o Ultimate tem três arquivos e só um carrega (sem ATM, com ATM, com ATM + All The Tweaks). Nada de tipos ou `compileOnly` desses mods.
 - **Tiers:** vazão e capacidade padrão vêm de arrays pela posição do `RouterTier` (`ResourceType`, `StorageKind`), ×8 por degrau, menos a energia do roteador e a capacidade da Bateria, que vêm do `EnergyBalance` (a geração máxima do Ressonador do tier mais 5% e uma hora dela, o Ultimate sem limite); um tier novo pede um valor em cada array, a cor no `GuiPaint.tierColor` e a paleta no `gerar_texturas.py`, que gera também os modelos e blockstates por tier.
 - **Lado do cliente:** classes de tela só em `client/`, nunca referenciadas por código comum (o `runGameTestServer` é um servidor dedicado e quebra se carregar uma).

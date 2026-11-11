@@ -10,14 +10,18 @@ import io.github.matheusanbs.wirelessautomate.GuiTheme;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
+import io.github.matheusanbs.wirelessautomate.client.dock.DockReachPaint;
 import io.github.matheusanbs.wirelessautomate.client.dock.DockScreen;
 import io.github.matheusanbs.wirelessautomate.dock.DockColors;
 import io.github.matheusanbs.wirelessautomate.dock.DockDelivery;
+import io.github.matheusanbs.wirelessautomate.dock.DockLinks;
 import io.github.matheusanbs.wirelessautomate.dock.DockSide;
 import io.github.matheusanbs.wirelessautomate.dock.DockStatus;
 import io.github.matheusanbs.wirelessautomate.dock.PatternDockBlockEntity;
+import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.packet.DockStatePayload;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
+import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -30,6 +34,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
@@ -43,7 +48,9 @@ import net.minecraft.world.level.block.Blocks;
  * zero, ao lado do jogador, com máquinas de verdade (as do Mekanism e do AE2 que o cliente de dev traz) e o Pattern
  * Provider do AE2 encostado; as máquinas "descarregadas" ficam abaixo do mundo, onde o {@code isLoaded} é falso. Os
  * fatos que só um pedido do AE2 faria (a recusa, a última atividade, o provedor cheio) vão direto no lado. Em cada
- * foto, nenhum texto cortado. No fim, os blocos saem e a config volta.
+ * foto, nenhum texto cortado. Depois, o cubo do alcance no mundo ({@code doca-cubo}): a Doca Básica escolhida no
+ * Vinculador, com uma fileira de fornalhas no Norte e outra no Sul, vista de fora do cubo com o HUD; com a mão vazia, o
+ * cubo some. No fim, os blocos saem e a config volta.
  */
 final class E2eDockSteps {
     private static final int OPEN_RETRY_TICKS = 40;
@@ -73,6 +80,7 @@ final class E2eDockSteps {
             round(list, playerId, dock, "-pt");
             list.add(language("en_us"));
         });
+        reach(list, playerId, dock);
         list.add(new Step("Doca: tirar os blocos", STEP_TIMEOUT_MS, () -> onServer(server -> {
             restoreConfig();
             clear(server.overworld());
@@ -111,6 +119,44 @@ final class E2eDockSteps {
             restoreConfig();
             return null;
         }), () -> true, () -> ""));
+    }
+
+    /**
+     * O cubo do alcance: a Doca Básica com quatro fornalhas no Norte e quatro no Sul, o Vinculador na mão com o lado
+     * Norte escolhido pelo {@link DockLinks#choose} (que manda o cubo), a foto de fora do cubo e a mão vazia apagando.
+     */
+    private static void reach(List<Step> list, UUID playerId, BlockPos[] dock) {
+        Vec3[] back = new Vec3[1];
+        list.add(build("Doca: cubo do alcance", playerId, dock, (server, level, at) -> {
+            PatternDockBlockEntity built = placeDock(level, at, RouterTier.BASIC);
+            built.batchChanges(() -> {
+                link(level, built, NORTH, Blocks.FURNACE, row(at, -3, 2, 4));
+                link(level, built, SOUTH, Blocks.FURNACE, row(at, -3, 4, 4));
+            });
+        }));
+        list.add(new Step("Doca: Vinculador com a Doca escolhida", STEP_TIMEOUT_MS, () -> {
+            back[0] = Minecraft.getInstance().player.position();
+            onServer(server -> {
+                ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+                ItemStack linker = new ItemStack(ModItems.LINKER.get());
+                player.setItemInHand(InteractionHand.MAIN_HAND, linker);
+                DockLinks.choose(player, linker, (PatternDockBlockEntity) player.serverLevel()
+                        .getBlockEntity(dock[0]), NORTH);
+                return null;
+            });
+        }, () -> DockReachPaint.shown() && DockReachPaint.machineCount() == 8
+                && LinkerItem.dock(Minecraft.getInstance().player.getMainHandItem()) != null && stepTicks >= 4,
+                () -> "cubo " + DockReachPaint.shown() + ", máquinas " + DockReachPaint.machineCount() + ", mão "
+                        + Minecraft.getInstance().player.getMainHandItem()));
+        list.add(E2eRepairerSteps.cameraShot("doca-cubo", playerId, () -> dock[0], new double[] {9, 8, -13}, 0.5));
+        list.add(new Step("Doca: mão vazia apaga o cubo", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+            player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            player.getAbilities().flying = false;
+            player.onUpdateAbilities();
+            player.teleportTo(player.serverLevel(), back[0].x, back[0].y, back[0].z, player.getYRot(), 0);
+            return null;
+        }), () -> !DockReachPaint.shown(), () -> "o cubo continua à mostra"));
     }
 
     /** Um cenário: a Doca de antes sai, a nova entra no lugar e {@code setUp} a monta; espera o cliente ver a Doca. */

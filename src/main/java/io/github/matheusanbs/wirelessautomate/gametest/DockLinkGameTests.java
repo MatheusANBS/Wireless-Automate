@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.gametest;
 
+import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
@@ -7,12 +8,14 @@ import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.dock.DockChoice;
 import io.github.matheusanbs.wirelessautomate.dock.DockLinks;
 import io.github.matheusanbs.wirelessautomate.dock.DockMachine;
+import io.github.matheusanbs.wirelessautomate.dock.DockReachSync;
 import io.github.matheusanbs.wirelessautomate.dock.DockSameBlock;
 import io.github.matheusanbs.wirelessautomate.dock.DockSide;
 import io.github.matheusanbs.wirelessautomate.dock.PatternDockBlockEntity;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
+import io.github.matheusanbs.wirelessautomate.packet.DockReachPayload;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.range.RemoteIndex;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
@@ -23,6 +26,7 @@ import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
@@ -41,7 +45,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * O Vinculador na Doca de Padrões ({@link DockLinks} e {@link DockSameBlock}): escolher o lado clicando na face,
  * vincular e desvincular uma máquina, o perfil do lado pelo Afinador, o Ctrl + clique até o limite do tier e as
- * recusas (outro bloco, outro lado, outra Doca, fora do cubo). Uma máquina de um roteador também entra num lado.
+ * recusas (outro bloco, outro lado, outra Doca, fora do cubo). Uma máquina de um roteador também entra num lado. O
+ * cubo do alcance ({@link DockReachSync}): o pacote montado na escolha, depois dos vínculos e ao colocar a Doca.
  */
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
@@ -364,6 +369,75 @@ public final class DockLinkGameTests {
                             "a fornalha saiu do roteador");
                     helper.assertTrue(RemoteIndex.get().isIndexed(dock, helper.absolutePos(RangeTestSupport.FURNACE_A)),
                             "a fornalha não está no índice pela Doca");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * O cubo do alcance que o servidor monta para quem agiu: na escolha, só a Doca (raio e tier, sem máquinas); depois
+     * de vincular uma fornalha no Norte e outra no Sul, as duas com os lados, na ordem dos lados; ao colocar, o prazo
+     * de 5 s (e o {@code setPlacedBy} com um jogador não quebra).
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void reachPayloadAfterChooseAndLink(GameTestHelper helper) {
+        PatternDockBlockEntity dock = dock(helper, DOCK, RouterTier.BASIC);
+        BlockPos north = new BlockPos(0, 1, 1);
+        BlockPos south = new BlockPos(2, 1, 1);
+        furnace(helper, north, Direction.EAST);
+        furnace(helper, south, Direction.EAST);
+        TestPlayers.MenuPlayer player = player(helper);
+        helper.startSequence()
+                .thenIdle(1)
+                .thenExecute(() -> {
+                    click(helper, player, DOCK, Direction.NORTH);
+                    DockReachPayload chosen = DockReachSync.payload(dock, 0);
+                    helper.assertValueEqual(chosen.dock(), helper.absolutePos(DOCK), "a Doca do cubo");
+                    helper.assertValueEqual(chosen.radius(), Config.dockRadius(RouterTier.BASIC), "o raio");
+                    helper.assertValueEqual(chosen.tier(), RouterTier.BASIC.ordinal(), "o tier");
+                    helper.assertValueEqual(chosen.machines().length, 0, "máquinas na escolha");
+                    helper.assertValueEqual(chosen.ticks(), 0, "o prazo com o Vinculador");
+
+                    click(helper, player, north, Direction.UP);
+                    click(helper, player, DOCK, Direction.SOUTH);
+                    click(helper, player, south, Direction.UP);
+                    DockReachPayload linked = DockReachSync.payload(dock, 0);
+                    helper.assertValueEqual(linked.machines().length, 2, "as máquinas depois dos vínculos");
+                    helper.assertValueEqual(linked.machines()[0], helper.absolutePos(north).asLong(), "a do Norte");
+                    helper.assertValueEqual((int) linked.sides()[0], NORTH, "o lado da do Norte");
+                    helper.assertValueEqual(linked.machines()[1], helper.absolutePos(south).asLong(), "a do Sul");
+                    helper.assertValueEqual((int) linked.sides()[1], SOUTH, "o lado da do Sul");
+
+                    click(helper, player, south, Direction.UP);
+                    helper.assertValueEqual(DockReachSync.payload(dock, 0).machines().length, 1,
+                            "a desvinculada ficou no cubo");
+                    helper.assertValueEqual(DockReachSync.payload(dock, DockReachSync.PLACED_TICKS).ticks(), 100,
+                            "o prazo ao colocar");
+                    dock.getBlockState().getBlock().setPlacedBy(helper.getLevel(), dock.getBlockPos(),
+                            dock.getBlockState(), player, new ItemStack(ModItems.PATTERN_DOCK.get()));
+                })
+                .thenSucceed();
+    }
+
+    /** O pacote leva no máximo 256 máquinas, mesmo com a Doca acima disso. */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void reachPayloadCapped(GameTestHelper helper) {
+        PatternDockBlockEntity dock = dock(helper, DOCK, RouterTier.ULTIMATE);
+        helper.startSequence()
+                .thenIdle(1)
+                .thenExecute(() -> {
+                    // numa coluna abaixo do mundo, embaixo da Doca: fora do alcance, nada vai ao índice dos vizinhos
+                    BlockPos origin = helper.absolutePos(DOCK);
+                    int below = helper.getLevel().getMinBuildHeight() - 1;
+                    dock.batchChanges(() -> {
+                        for (int i = 0; i < DockReachPayload.MAX_MACHINES + 4; i++) {
+                            dock.link(NORTH, new BlockPos(origin.getX(), below - i, origin.getZ()),
+                                    BuiltInRegistries.BLOCK.getKey(Blocks.FURNACE), -1);
+                        }
+                    });
+                    DockReachPayload payload = DockReachSync.payload(dock, 0);
+                    helper.assertValueEqual(dock.machineCount(), DockReachPayload.MAX_MACHINES + 4, "as vinculadas");
+                    helper.assertValueEqual(payload.machines().length, DockReachPayload.MAX_MACHINES, "o teto");
+                    helper.assertValueEqual(payload.sides().length, DockReachPayload.MAX_MACHINES, "os lados");
                 })
                 .thenSucceed();
     }

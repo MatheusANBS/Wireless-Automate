@@ -13,7 +13,7 @@ import org.lwjgl.opengl.GL11;
  * até o roteador) e as faces do véu, os dois sem teste e sem gravação de profundidade, para aparecerem através dos
  * blocos e não esconderem nada que venha depois.
  */
-final class HighlightRenderTypes extends RenderType {
+public final class HighlightRenderTypes extends RenderType {
     /**
      * O teste de profundidade sempre passa durante o desenho e volta ao padrão do jogo depois. O {@code NO_DEPTH_TEST}
      * do jogo só não liga o teste: no estágio depois dos translúcidos ele continua ligado pelo tipo dos blocos
@@ -49,11 +49,11 @@ final class HighlightRenderTypes extends RenderType {
         super(name, format, mode, bufferSize, crumbling, sort, setup, clear);
     }
 
-    static RenderType highlightLines() {
+    public static RenderType highlightLines() {
         return LINES;
     }
 
-    static RenderType highlightVeil() {
+    public static RenderType highlightVeil() {
         return VEIL;
     }
 }

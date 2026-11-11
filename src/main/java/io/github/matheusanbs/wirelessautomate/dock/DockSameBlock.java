@@ -161,6 +161,7 @@ public final class DockSameBlock {
         if (result.linked() > 0) {
             level.playSound(null, pos, SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.BLOCKS, 0.5F, 1.2F);
         }
+        DockReachSync.send(player, dock, 0);
         return result;
     }
 
@@ -192,6 +193,7 @@ public final class DockSameBlock {
                 count == 1 ? single : SameBlockLinks.plural(block, single), DockLinks.sideName(side),
                 dock.activeCount(), DockLinks.max(dock)), true);
         level.playSound(null, pos, SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.BLOCKS, 0.5F, 0.8F);
+        DockReachSync.send(player, dock, 0);
         return new Result(Status.SAME_BLOCK_UNLINKED, Refusal.NONE, count, 0, 0, 0, 0, 0);
     }
 

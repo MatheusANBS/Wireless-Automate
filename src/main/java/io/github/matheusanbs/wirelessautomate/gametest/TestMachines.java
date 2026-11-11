@@ -161,6 +161,8 @@ public final class TestMachines {
      */
     static final class Furnace implements IItemHandler {
         final ItemStack[] slots = {ItemStack.EMPTY, ItemStack.EMPTY};
+        /** Chamadas de {@code insertItem}, simuladas ou não: o custo de quem entrega. */
+        int insertCalls;
 
         @Override
         public int getSlots() {
@@ -174,6 +176,7 @@ public final class TestMachines {
 
         @Override
         public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+            insertCalls++;
             ItemStack inSlot = slots[slot];
             if (slot != 0 || stack.isEmpty() || !inSlot.isEmpty() && !ItemStack.isSameItemSameComponents(inSlot, stack)) {
                 return stack;

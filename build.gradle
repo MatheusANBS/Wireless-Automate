@@ -253,6 +253,10 @@ configurations {
         canBeConsumed = false
         transitive = false
     }
+    dockMedidaMods {
+        canBeConsumed = false
+        transitive = false
+    }
 }
 
 dependencies {
@@ -278,6 +282,8 @@ dependencies {
     // Mouse Tweaks: para testar a lista do Baú junto com os arrastos dele nos slots.
     clientMods 'maven.modrinth:mouse-tweaks:1.21-2.26.1-neoforge'
     chemicalTestMods "mekanism:Mekanism:${minecraft_version}-${mekanism_version}"
+    // Mekanism Extras só na medição da Doca (-PdockMedida): a Infinite Smelting Factory do teste definitivo.
+    dockMedidaMods 'maven.modrinth:mekanism_extra:1.21.1-1.4.1'
     // Ars Nouveau (Source) e as dependências obrigatórias dele.
     clientMods "com.hollingsworth.ars_nouveau:ars_nouveau-${minecraft_version}:${ars_version}"
     clientMods "maven.modrinth:geckolib:${geckolib_version}"
@@ -481,6 +487,7 @@ var prepareAe2TestMods = tasks.register('prepareAe2TestMods', Sync) {
     // propriedade, o Sync tira o jar dele.
     if (project.hasProperty('dockMedida')) {
         from configurations.chemicalTestMods
+        from configurations.dockMedidaMods
     }
     into layout.projectDirectory.dir('run/gametest-ae2/mods')
 }

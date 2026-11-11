@@ -16,12 +16,20 @@ import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * O pendente de um lado: o resto de um pedido que não coube na execução (a simulação não soma). Enquanto existe, o
- * lado recusa pedidos novos ({@link DockDelivery#acceptsOrders}). Sai na máquina que recebeu o pedido, cada pilha na
- * face mais seletiva entre as que aceitam parte dela, e é tentado em três momentos: no começo de cada oferta, no
+ * O pendente de um lado: o resto de um pedido que não coube na execução (a simulação não soma, ou o pedido é maior
+ * que a máquina inteira). Enquanto existe, o lado recusa pedidos novos ({@link DockDelivery#acceptsOrders}). Sai na
+ * máquina que recebeu o pedido, cada pilha na face mais seletiva entre as que aceitam parte dela, as últimas
+ * {@link #FLUSH_WINDOW} pilhas de item por tentativa, e é tentado em três momentos: no começo de cada oferta, no
  * visitante da volta ({@link DockDelivery#flushPending}) e logo depois de um aviso dessa máquina ({@link #flushSoon}).
  */
 final class DockPending {
+    /**
+     * Pilhas de item olhadas por tentativa, no máximo (as últimas da lista): 256 pilhas de 64, 16.384 itens. Um padrão
+     * muito maior que a máquina (o de 524.288 numa Infinite Factory deixa 7.104 pilhas pendentes) não faz cada
+     * tentativa custar o pendente inteiro; o resto entra nas tentativas seguintes, conforme a máquina consome.
+     */
+    static final int FLUSH_WINDOW = 256;
+
     private DockPending() {
     }
 
@@ -48,12 +56,19 @@ final class DockPending {
         List<ItemStack> items = side.pendingItems();
         if (!items.isEmpty()) {
             int count = items.size();
-            int[] masks = side.masks(count);
-            DockDelivery.itemMasks(caches, side.profile(), front, items, 0, masks, false);
-            DockPick.loads(masks, count, loads);
-            for (int i = count - 1; i >= 0; i--) {
+            int from = Math.max(0, count - FLUSH_WINDOW);
+            int[] masks = side.masks(count - from);
+            DockDelivery.itemMasks(caches, side.profile(), front, items, from, 0, masks, false);
+            DockPick.loads(masks, count - from, loads);
+            ItemStack refused = ItemStack.EMPTY;
+            for (int i = count - 1; i >= from; i--) {
                 ItemStack stack = items.get(i);
-                ItemStack rest = DockDelivery.placeItem(caches, front, stack, masks[i], loads);
+                // O item que a máquina já recusou nesta tentativa não cabe na pilha igual seguinte.
+                ItemStack rest = refused.isEmpty() || !ItemStack.isSameItemSameComponents(stack, refused)
+                        ? DockDelivery.placeItem(caches, front, stack, masks[i - from], loads) : stack;
+                if (!rest.isEmpty()) {
+                    refused = stack;
+                }
                 if (rest == stack) {
                     continue;
                 }

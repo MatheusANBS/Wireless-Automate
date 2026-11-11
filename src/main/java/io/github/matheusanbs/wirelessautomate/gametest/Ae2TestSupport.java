@@ -274,7 +274,7 @@ final class Ae2TestSupport {
     }
 
     /** Guarda {@code count} de {@code item} na rede; devolve quanto entrou. */
-    static long stock(ServerLevel level, BlockPos pos, Item item, int count) {
+    static long stock(ServerLevel level, BlockPos pos, Item item, long count) {
         return stockKey(level, pos, AEItemKey.of(item), count);
     }
 

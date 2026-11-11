@@ -406,6 +406,37 @@ final class ChemicalTestSupport {
         }
     }
 
+    /**
+     * Instala na máquina do Mekanism em {@code be} os upgrades {@code upgrades} (o nome do {@code Upgrade} e a
+     * quantidade, alternados), pelo componente de upgrades ({@code TileComponentUpgrade.addUpgrades}, que recalcula a
+     * máquina como o slot de upgrade faz); o {@code CREATIVE} é do Mekanism Extras, que o põe no enum do Mekanism. Liga
+     * também a ordenação automática da fábrica ({@code toggleSorting}), se ela tiver. Por reflexão, como o
+     * {@link #mekanismSides}. Devolve quantos upgrades entraram no total.
+     */
+    static int mekanismUpgrades(Object be, Object... upgrades) {
+        try {
+            ClassLoader loader = be.getClass().getClassLoader();
+            Class<?> upgrade = Class.forName("mekanism.api.Upgrade", true, loader);
+            Object component = be.getClass().getMethod("getComponent").invoke(be);
+            var add = component.getClass().getMethod("addUpgrades", upgrade, int.class);
+            int added = 0;
+            for (int i = 0; i < upgrades.length; i += 2) {
+                added += (Integer) add.invoke(component, enumConstant(upgrade, (String) upgrades[i]),
+                        (Integer) upgrades[i + 1]);
+            }
+            try {
+                if (!(Boolean) be.getClass().getMethod("isSorting").invoke(be)) {
+                    be.getClass().getMethod("toggleSorting").invoke(be);
+                }
+            } catch (NoSuchMethodException e) {
+                // não é fábrica: nada a ordenar
+            }
+            return added;
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("o componente de upgrades do Mekanism mudou", e);
+        }
+    }
+
     private static Object enumConstant(Class<?> type, String name) {
         for (Object constant : type.getEnumConstants()) {
             if (((Enum<?>) constant).name().equals(name)) {

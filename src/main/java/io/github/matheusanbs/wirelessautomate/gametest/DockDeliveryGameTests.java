@@ -13,7 +13,6 @@ import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.TickBudget;
-import io.github.matheusanbs.wirelessautomate.range.RangeRules;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import java.util.List;
@@ -380,9 +379,12 @@ public final class DockDeliveryGameTests {
     }
 
     /**
-     * A máquina com o chunk descarregado é pulada sem gastar tentativa. Descarregar um chunk no meio de um GameTest
-     * não é confiável (os vizinhos do template ficam carregados), então a máquina fica logo abaixo da altura mínima do
-     * mundo, onde {@code level.isLoaded} é falso como num chunk descarregado; a Doca Ultimate a deixa no alcance.
+     * A máquina num chunk descarregado de verdade é pulada sem gastar tentativa, e a oferta não carrega o chunk dela.
+     * O servidor de GameTest só carrega os chunks dos testes e uma borda pequena em volta; a máquina vai a 96 blocos da
+     * Doca Ultimate (no limite do alcance), na primeira de oito direções cujo chunk está descarregado
+     * ({@code level.isLoaded} conferido na hora do vínculo e de novo depois da oferta). Vinculada pelo {@code link}
+     * direto, sem ler o mundo. Se as oito estiverem carregadas (a grade dos testes em volta), o teste falha dizendo
+     * isso, em vez de provar menos.
      */
     @GameTest(template = "empty", timeoutTicks = 100)
     public static void unloadedMachineSkipped(GameTestHelper helper) {
@@ -390,24 +392,32 @@ public final class DockDeliveryGameTests {
         BlockPos furnace = new BlockPos(3, 1, 1);
         furnace(helper, furnace);
         BlockPos dockPos = helper.absolutePos(DOCK);
-        BlockPos unloaded = new BlockPos(dockPos.getX(), helper.getLevel().getMinBuildHeight() - 1, dockPos.getZ());
+        BlockPos[] unloaded = new BlockPos[1];
         helper.startSequence()
                 .thenIdle(1)
                 .thenExecute(() -> {
-                    helper.assertFalse(helper.getLevel().isLoaded(unloaded), "a posição de teste está carregada");
-                    helper.assertTrue(RangeRules.chebyshev(dockPos.getX(), dockPos.getY(), dockPos.getZ(),
-                            unloaded.getX(), unloaded.getY(), unloaded.getZ()) <= Config.dockRadius(RouterTier.ULTIMATE),
-                            "a posição de teste está fora do alcance");
+                    int reach = Config.dockRadius(RouterTier.ULTIMATE);
+                    for (int i = 0; i < 8 && unloaded[0] == null; i++) {
+                        int dx = i == 0 || i == 4 || i == 5 ? -reach : i == 1 || i == 6 || i == 7 ? reach : 0;
+                        int dz = i == 2 || i == 4 || i == 6 ? -reach : i == 3 || i == 5 || i == 7 ? reach : 0;
+                        BlockPos candidate = dockPos.offset(dx, 0, dz);
+                        if (!helper.getLevel().isLoaded(candidate)) {
+                            unloaded[0] = candidate;
+                        }
+                    }
+                    helper.assertTrue(unloaded[0] != null, "os oito chunks a " + reach + " blocos estão carregados");
                     // a descarregada primeiro, no cursor
-                    helper.assertTrue(dock.link(NORTH, unloaded, FURNACE, Direction.NORTH.ordinal()), "não vinculou");
+                    helper.assertTrue(dock.link(NORTH, unloaded[0], FURNACE, Direction.NORTH.ordinal()), "não vinculou");
                     link(helper, dock, furnace);
-                    helper.assertTrue(dock.machineAt(unloaded).active(), "a descarregada não está ativa");
+                    helper.assertTrue(dock.machineAt(unloaded[0]).active(), "a descarregada não está ativa");
                 })
                 .thenWaitUntil(DockDeliveryGameTests::room)
                 .thenExecute(() -> {
+                    helper.assertFalse(helper.getLevel().isLoaded(unloaded[0]), "o chunk da máquina carregou antes da oferta");
                     helper.assertTrue(offer(dock, oreAndCoal(), false) == DockDelivery.Result.ACCEPTED, "recusou");
                     assertSlot(helper, furnace, 0, Items.IRON_ORE, 1);
-                    helper.assertFalse(dock.machineAt(unloaded).asleep(now(helper)), "a descarregada foi tentada");
+                    helper.assertFalse(dock.machineAt(unloaded[0]).asleep(now(helper)), "a descarregada foi tentada");
+                    helper.assertFalse(helper.getLevel().isLoaded(unloaded[0]), "a oferta carregou o chunk da máquina");
                 })
                 .thenSucceed();
     }

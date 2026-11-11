@@ -32,7 +32,7 @@ class GuidePagesRealTest {
     @ValueSource(strings = {"en_us", "pt_br"})
     void paginasReaisSemAvisos(String lang) throws IOException {
         List<Path> pages = pages(lang);
-        assertEquals(25, pages.size());
+        assertEquals(26, pages.size());
         List<String> problems = new ArrayList<>();
         for (Path page : pages) {
             GuideDoc doc = GuideParser.parse(Files.readString(page, StandardCharsets.UTF_8));
@@ -116,9 +116,9 @@ class GuidePagesRealTest {
         for (Path page : pages("en_us")) {
             fromText(Files.readString(page, StandardCharsets.UTF_8)).forEach((k, v) -> total.merge(k, v, Integer::sum));
         }
-        assertEquals(114, total.get("ItemImage"));
+        assertEquals(115, total.get("ItemImage"));
         assertEquals(6, total.get("Row"));
-        assertEquals(15, total.get("br"));
+        assertEquals(16, total.get("br"));
         assertEquals(2, total.get("Recipe"));
         assertEquals(1, total.get("SubPages"));
         assertEquals(1, total.get("ItemLink"));

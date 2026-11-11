@@ -15,7 +15,7 @@ O modelo e o `GuideParser`: `GuideParser.parse(String)` devolve `GuideDoc(header
 
 - `GuideDoc`, `GuideHeader` (`title`, `icon`, `parent`, `position`, `group`, `itemIds`; sem cabeçalho vira `EMPTY` com um aviso), `Block` (`Heading`, `Paragraph`, `ListBlock`, `Table`, `ItemImage`, `BlockImage`, `Row`, `RecipeFor`, `Recipe`, `Image`, `Scene`, `SubPages`, `Break`), `Span` (`Text`, `Bold`, `Code`, `Link`, `ItemIcon`, `ItemLink`, `InlineImage`), `Flow` (o `float`), `SceneBlock`, `SceneNote` (`OnBlock`, `OnLine`), `SceneCamera` (yaw e pitch; padrão 200 e 30).
 - `Source` (linhas, cursor e avisos com o número da linha; aceita CRLF e BOM), `HeaderParser` (o YAML simples à mão), `BlockParser` (títulos, parágrafos, listas planas, tabelas, tags de bloco), `TableParser` (divide por `|` fora de código, `\|`), `InlineParser` (uma passada por caractere, sem regex), `SceneParser` (o interior do `GameScene`), `Tag` (`<Nome a="x" b={y} />` e os helpers de atributo).
-- Tag desconhecida, fechamento sem abertura, tag sem fechar ou atributo ilegível: aviso e o item é pulado, o resto da página segue. `GuidePagesRealTest` lê as 25 páginas dos dois idiomas, sem nenhum aviso, e confere as contagens do texto-fonte contra as do parser (nada some em silêncio).
+- Tag desconhecida, fechamento sem abertura, tag sem fechar ou atributo ilegível: aviso e o item é pulado, o resto da página segue. `GuidePagesRealTest` lê as 26 páginas dos dois idiomas, sem nenhum aviso, e confere as contagens do texto-fonte contra as do parser (nada some em silêncio).
 
 ## `client/guide/layout/` (puro, com JUnit)
 
@@ -73,6 +73,6 @@ O livro não usa a escala de interface do jogo: cada pixel da textura vale `k` p
 
 ## Testes
 
-- JUnit (`src/test/java/.../client/guide/`): `GuideParserTest`, `GuidePagesRealTest` (as 25 páginas dos dois idiomas), `GuideLayoutTest`, `GuideLayoutRealPagesTest` (nenhuma folha vazia nem operação fora de 232 × 280), `BookScaleTest`, `GuideSearchTest`, `SceneViewTest`, `SceneHitTest`.
+- JUnit (`src/test/java/.../client/guide/`): `GuideParserTest`, `GuidePagesRealTest` (as 26 páginas dos dois idiomas), `GuideLayoutTest`, `GuideLayoutRealPagesTest` (nenhuma folha vazia nem operação fora de 232 × 280), `BookScaleTest`, `GuideSearchTest`, `SceneViewTest`, `SceneHitTest`.
 - GameTest (`gametest/GuideGameTests`): a receita dá o item; jogador novo recebe um livro e só um; a marca antiga sem a nova recebe um. O `TestPlayers.removedAtEnd` tira o livro e o NBT persistente do jogador falso.
 - e2e (suíte `guia`, `client/dev/E2eGuideSteps`): ver [testes](testes.md) e `docs/e2e.md`.

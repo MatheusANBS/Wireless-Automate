@@ -37,6 +37,8 @@ gives the result. The action bar shows what it found.
 - The machines **take turns**: the next order goes to the next one.
 - The result goes **straight to the provider's network** (AE2's ME or RS2's), without passing through its inventory,
   and the order counts it there.
+- An order can carry **items, fluids and chemicals together**: each one goes in through the machine face that takes
+  it, and the result comes back to the network the same way, be it an item, a fluid or a chemical.
 - When **all the machines are full**, the order waits. **Nothing is lost**: if you break the Dock while the rest of an
   order is waiting, it goes along in the item ("Order pending") and returns to the same side when you place it again.
 
@@ -98,7 +100,7 @@ working, and the state:
 | No machine linked | There is a provider, but no machine. Link them with the Linker |
 | Remove the provider lock | The provider is set to "lock until result", which never releases with the Dock |
 | Crafting pattern refused | The last order was a crafting, stonecutting or smithing one |
-| Order with a resource the Dock doesn't know | The last order brought something that is neither an item nor a fluid |
+| Order with a resource the Dock doesn't know | The last order brought something that is not an item, a fluid or a chemical |
 | Provider full | The result waits for room: the network is full, unpowered or without a channel |
 | All full | No machine took the last order; it waits |
 | Order pending | The machine has not taken the rest of the last order yet; the side waits for it |
@@ -111,7 +113,9 @@ Next to the state, the screen warns how many machines are **out of reach** or **
 ## Limits
 
 - **One kind of machine per side.** A Furnace side doesn't take a Blast Furnace.
-- **Orders of items and fluids**, together or not: each goes to the machine face that takes it. Any other resource (a chemical, for instance) is refused in this version.
+- **Items, fluids and chemicals**, together or not. **Chemicals** need **Mekanism** and, for the network, **Applied
+  Mekanistics** (on AE2) or **Refined Storage Mekanism Integration** (on RS2). An order with a resource the Dock
+  doesn't know is refused.
 - **Same dimension** and inside the tier's radius.
 - A machine belongs to **one side of one Dock**.
 - The Dock needs **AE2** or **RS2** to receive orders.

@@ -38,6 +38,8 @@ sai o resultado. A action bar mostra o que ela achou.
 - As máquinas **se revezam**: o próximo pedido vai para a seguinte.
 - O resultado vai **direto para a rede** do provedor (a ME do AE2 ou a do RS2), sem passar pelo inventário dele, e o
   pedido o conta ali.
+- Um pedido pode ter **itens, fluidos e químicos juntos**: cada um entra pela face da máquina que o recebe, e o
+  resultado volta à rede do mesmo jeito, seja item, fluido ou químico.
 - Quando **todas as máquinas estão cheias**, o pedido espera. **Nada se perde**: se você quebrar a Doca com um resto
   de pedido esperando, ele vai junto no item ("Pedido pendente") e volta ao mesmo lado quando você a recoloca.
 
@@ -99,7 +101,7 @@ e o estado:
 | Nenhuma máquina vinculada | Há provedor, mas nenhuma máquina. Vincule com o Vinculador |
 | Tire a trava do provedor | O provedor está em "travar até o resultado", que nunca solta com a Doca |
 | Padrão de bancada recusado | O último pedido era de bancada, cortador ou forja |
-| Pedido com recurso que a Doca não conhece | O último pedido trazia algo que não é item nem fluido |
+| Pedido com recurso que a Doca não conhece | O último pedido trazia algo que não é item, fluido nem químico |
 | Provedor cheio | O resultado espera lugar: a rede cheia, sem energia ou sem canal |
 | Todas cheias | Nenhuma máquina aceitou o último pedido; ele espera |
 | Pedido pendente | A máquina ainda não recebeu o resto do último pedido; o lado espera por ele |
@@ -112,7 +114,9 @@ Ao lado do estado a tela avisa quantas máquinas estão **fora do alcance** ou *
 ## Limites
 
 - **Um tipo de máquina por lado.** Um lado de Fornalha não aceita Alto-forno.
-- **Pedidos de itens e fluidos**, juntos ou não: cada um vai para a face da máquina que o recebe. Outro recurso (um químico, por exemplo) é recusado nesta versão.
+- **Itens, fluidos e químicos**, juntos ou não. Os **químicos** pedem o **Mekanism** e, para a rede, o **Applied
+  Mekanistics** (no AE2) ou o **Refined Storage Mekanism Integration** (no RS2). Um pedido com um recurso que a Doca
+  não conhece é recusado.
 - **Mesma dimensão** e dentro do raio do tier.
 - Uma máquina pertence a **um lado de uma Doca só**.
 - A Doca precisa do **AE2** ou do **RS2** para receber pedidos.

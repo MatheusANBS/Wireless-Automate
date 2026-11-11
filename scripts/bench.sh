@@ -17,7 +17,7 @@
 #
 # O que ele faz:
 #   - prepara run/bench: eula, server.properties com mundo plano novo, porta 25599, sem mobs;
-#   - sobe ./gradlew runBenchServer (com Sophisticated Storage e Spark; ver build.gradle) com WA_BENCH;
+#   - sobe ./gradlew runBenchServer (com Sophisticated Storage, Spark e AE2; ver build.gradle) com WA_BENCH;
 #   - o mod mede o servidor vazio, roda as tarefas em sequência e para o servidor no fim;
 #   - o relatório fica em run/bench/reports/<data>.md e o log do servidor ao lado.
 # Cenários e números em docs/benchmark.md. Use uma máquina sem outra carga: os tempos são de parede.

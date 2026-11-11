@@ -7,7 +7,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Cenários do benchmark (docs/especificacao.md, "Plano de benchmark", e docs/benchmark.md).
  * {@code n} é o número de roteadores; nos cenários em pares, metade origem e metade destino. Nos do
- * Ressonador ({@link #resonator()}), {@code n} é o número de Ressonadores; no da Doca ({@link #DOCK}), o de Docas.
+ * Ressonador ({@link #resonator()}), {@code n} é o número de Ressonadores; nos da Doca ({@link #DOCK}, {@link #DOCK_AE2}), o de
+ * Docas.
  *
  * <p>Os cenários de muitos nós usam o Elite (2.048 itens/s por face).
  *
@@ -70,7 +71,9 @@ public enum BenchScenario {
     TABLET_MACHINES("tablet-machines", 100, RouterTier.ULTIMATE, 60, 30,
             "Tablet por máquinas: a cena do tablet-range com as máquinas vinculadas alternando barril, baú, fornalha e alto-forno (um grupo por bloco), e o jogador falso na visão por máquinas da Lista, os blocos recolhidos e o dos barris aberto"),
     DOCK("doca", 1, RouterTier.ELITE, 60, 20,
-            "Doca de Padrões: n Docas Elite, cada uma com 32 fornalhas num lado e um baú no lugar do provedor; até 32 pedidos de minério de ferro e carvão por tick e Doca, e o lingote volta ao baú (a cada 20 ticks o reenchimento esvazia o baú e as entradas e põe 8 lingotes na saída de cada fornalha)");
+            "Doca de Padrões: n Docas Elite, cada uma com 32 fornalhas num lado e um baú no lugar do provedor; até 32 pedidos de minério de ferro e carvão por tick e Doca, e o lingote volta ao baú (a cada 20 ticks o reenchimento esvazia o baú e as entradas e põe 8 lingotes na saída de cada fornalha)"),
+    DOCK_AE2("doca-ae2", 1, RouterTier.ELITE, 20, 0,
+            "Doca com o AE2 de verdade: n Docas Elite, cada uma com 32 Altos-fornos num lado e um Pattern Provider (padrão de 8 minérios de ferro e 1 carvão) numa rede com CPU de 32 coprocessadores; no começo da medição, um pedido de 8.192 lingotes pela CPU");
 
     public final String id;
     public final int defaultNodes;
@@ -106,7 +109,7 @@ public enum BenchScenario {
         return switch (this) {
             case MANY, IDLE, FULL, RAW, BIG, BIG_FULL, MIXED, SPARSE, REDSTONE, INFINITE, PAIRS -> true;
             case PARTIAL_FULL, TYPES, REBUILD, STOCK, BIG_STACK, TABLET, REDSTONE_FACE, HUB, CHEST_TYPES, RESONATOR_GEN, RESONATOR_IDLE,
-                    RESONATOR_EVENT, RANGE, TABLET_RANGE, TABLET_MACHINES, DOCK -> false;
+                    RESONATOR_EVENT, RANGE, TABLET_RANGE, TABLET_MACHINES, DOCK, DOCK_AE2 -> false;
         };
     }
 

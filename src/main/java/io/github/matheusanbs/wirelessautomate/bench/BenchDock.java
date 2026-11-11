@@ -38,6 +38,11 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>Conta as ofertas aceitas e recusadas, o tempo delas e os itens que voltaram ao baú (pelo contador do lado e pela
  * contagem neutra do baú).
+ *
+ * <p>No cenário {@code doca-ae2} ({@link BenchScenario#DOCK_AE2}), o AE2 de verdade ({@link BenchDockAe2}): o Pattern
+ * Provider no lugar do baú, a CPU de 32 coprocessadores atrás dele, Altos-fornos no lugar das fornalhas, sem pedidos
+ * falsos nem reenchimento. O pedido grande vai à CPU no começo da medição, e o provedor oferece as execuções à Doca no
+ * tick do AE2. Os pedidos aceitos saem da contagem neutra das máquinas ({@link #ae2Orders}).
  */
 final class BenchDock {
     /** Fornalhas por Doca: o máximo da Doca Elite (o da Esmeralda, um degrau acima). */
@@ -57,7 +62,7 @@ final class BenchDock {
     private static final List<ItemStack> ORDER = List.of(new ItemStack(Items.IRON_ORE), new ItemStack(Items.COAL));
 
     /** Uma Doca da cena: ela, o baú do provedor e as fornalhas. */
-    record Cell(BlockPos dock, BlockPos chest, List<BlockPos> furnaces) {
+    record Cell(BlockPos dock, BlockPos chest, List<BlockPos> furnaces, @Nullable BenchDockAe2 ae2) {
     }
 
     private final ServerLevel level;
@@ -74,19 +79,25 @@ final class BenchDock {
     private long offerNanosStart;
     private long returnedStart;
     private long deliveredStart;
+    /** Com o AE2 de verdade ({@link BenchDockAe2}). */
+    private final boolean ae2;
+    private long ae2OrdersStart;
 
-    BenchDock(ServerLevel level, BlockPos origin, int count) {
+    BenchDock(ServerLevel level, BlockPos origin, int count, boolean ae2) {
         this.level = level;
+        this.ae2 = ae2;
+        // com o AE2, a rede vai ao norte do provedor: a cena desce em z para ela caber a partir da origem
+        int shift = ae2 ? BenchDockAe2.NORTH_REACH + 1 : 0;
         for (int i = 0; i < count; i++) {
-            BlockPos base = origin.offset(i * CELL, 0, 0);
+            BlockPos base = origin.offset(i * CELL, 0, shift);
             BlockPos dock = base.offset(ROW / 2, 0, 1);
             List<BlockPos> furnaces = new ArrayList<>(FURNACES);
             for (int f = 0; f < FURNACES; f++) {
                 furnaces.add(base.offset(f % ROW, 0, 3 + f / ROW));
             }
-            cells.add(new Cell(dock, dock.north(), furnaces));
+            cells.add(new Cell(dock, dock.north(), furnaces, ae2 ? new BenchDockAe2(level, dock.north()) : null));
         }
-        max = origin.offset(count * CELL, 1, 3 + FURNACES / ROW);
+        max = origin.offset(count * CELL, ae2 ? 4 : 1, shift + 3 + FURNACES / ROW);
     }
 
     BlockPos max() {
@@ -95,13 +106,18 @@ final class BenchDock {
 
     /** Põe as Docas, os baús e as fornalhas, e vincula as fornalhas ao lado Norte com o perfil da fornalha. */
     void build() {
-        ResourceLocation furnaceId = BuiltInRegistries.BLOCK.getKey(Blocks.FURNACE);
+        Block machine = ae2 ? Blocks.BLAST_FURNACE : Blocks.FURNACE;
+        ResourceLocation furnaceId = BuiltInRegistries.BLOCK.getKey(machine);
         for (Cell cell : cells) {
             level.setBlock(cell.dock(), ModBlocks.PATTERN_DOCK.get().defaultBlockState()
                     .setValue(RouterBlock.TIER, RouterTier.ELITE), PLACE_FLAGS);
-            level.setBlock(cell.chest(), Blocks.CHEST.defaultBlockState(), PLACE_FLAGS);
+            if (cell.ae2() != null) {
+                cell.ae2().build();
+            } else {
+                level.setBlock(cell.chest(), Blocks.CHEST.defaultBlockState(), PLACE_FLAGS);
+            }
             for (BlockPos pos : cell.furnaces()) {
-                level.setBlock(pos, Blocks.FURNACE.defaultBlockState()
+                level.setBlock(pos, machine.defaultBlockState()
                         .setValue(AbstractFurnaceBlock.FACING, Direction.NORTH), PLACE_FLAGS);
             }
             PatternDockBlockEntity dock = dock(cell);
@@ -122,19 +138,28 @@ final class BenchDock {
         }
     }
 
-    /** Toda Doca está no mundo com as {@link #FURNACES} fornalhas ativas. */
+    /**
+     * Toda Doca está no mundo com as {@link #FURNACES} fornalhas ativas e, com o AE2, a rede pronta e o pedido
+     * calculado ({@link BenchDockAe2#prepare}, um passo por chamada).
+     */
     boolean registered() {
+        boolean ready = true;
         for (Cell cell : cells) {
             PatternDockBlockEntity dock = dock(cell);
             if (dock == null || dock.activeCount() < FURNACES) {
-                return false;
+                ready = false;
+            } else if (cell.ae2() != null && !cell.ae2().prepare()) {
+                ready = false;
             }
         }
-        return true;
+        return ready;
     }
 
-    /** Os pedidos do tick: em cada Doca, até {@link #ORDERS_PER_TICK} ou a primeira recusa. */
+    /** Os pedidos do tick: em cada Doca, até {@link #ORDERS_PER_TICK} ou a primeira recusa (com o AE2, é ele quem pede). */
     void offerOrders() {
+        if (ae2) {
+            return;
+        }
         long started = System.nanoTime();
         for (Cell cell : cells) {
             PatternDockBlockEntity dock = dock(cell);
@@ -162,6 +187,9 @@ final class BenchDock {
      * medição só veria recusas; assim os dois caminhos, a entrega e a volta, andam na medição.
      */
     void recycle() {
+        if (ae2) {
+            return;
+        }
         for (Cell cell : cells) {
             IItemHandler chest = chest(cell);
             if (chest != null) {
@@ -183,6 +211,9 @@ final class BenchDock {
 
     /** Contagem neutra: itens que chegaram aos baús até agora (os que estão lá e os já tirados). */
     long delivered() {
+        if (ae2) {
+            return returned();
+        }
         long total = cleared;
         for (Cell cell : cells) {
             IItemHandler chest = chest(cell);
@@ -215,11 +246,45 @@ final class BenchDock {
         offerMaxNanos = 0;
         returnedStart = returned();
         deliveredStart = delivered();
+        if (ae2) {
+            for (Cell cell : cells) {
+                cell.ae2().submit();
+            }
+            ae2OrdersStart = ae2Orders();
+        }
+    }
+
+    /**
+     * Contagem neutra dos pedidos aceitos com o AE2, em minérios: o que está na entrada e na saída das máquinas mais o
+     * que a volta devolveu. Cada execução aceita soma {@link BenchDockAe2#ORE_PER_ORDER}; cozinhar e devolver não mudam
+     * a soma.
+     */
+    private long ae2Orders() {
+        long total = returned();
+        for (Cell cell : cells) {
+            for (BlockPos pos : cell.furnaces()) {
+                if (level.getBlockEntity(pos) instanceof AbstractFurnaceBlockEntity furnace) {
+                    total += furnace.getItem(0).getCount() + furnace.getItem(2).getCount();
+                }
+            }
+        }
+        return total;
     }
 
     /** A linha da repetição: pedidos aceitos e recusados por segundo, o custo das ofertas e a volta. */
     String repLine(int rep, int ticks) {
         double seconds = Math.max(1, ticks) / 20.0;
+        if (ae2) {
+            StringBuilder line = new StringBuilder(String.format(Locale.ROOT,
+                    "    Doca + AE2, rep %d: %.2f pedidos aceitos/s (%d execuções de %d minérios) | volta: %.2f itens/s pelo lado",
+                    rep, (ae2Orders() - ae2OrdersStart) / (double) BenchDockAe2.ORE_PER_ORDER / seconds,
+                    (ae2Orders() - ae2OrdersStart) / BenchDockAe2.ORE_PER_ORDER, BenchDockAe2.ORE_PER_ORDER,
+                    (returned() - returnedStart) / seconds));
+            for (Cell cell : cells) {
+                line.append(" | ").append(cell.ae2().describe());
+            }
+            return line.toString();
+        }
         long offers = accepted - acceptedStart + refused - refusedStart;
         long nanos = offerNanos - offerNanosStart;
         return String.format(Locale.ROOT,
@@ -239,13 +304,17 @@ final class BenchDock {
                 }
                 level.setBlock(pos, Blocks.AIR.defaultBlockState(), REMOVE_FLAGS);
             }
-            IItemHandler chest = chest(cell);
-            if (chest != null) {
-                for (int slot = 0, n = chest.getSlots(); slot < n; slot++) {
-                    chest.extractItem(slot, Integer.MAX_VALUE, false);
+            if (cell.ae2() != null) {
+                cell.ae2().teardown();
+            } else {
+                IItemHandler chest = chest(cell);
+                if (chest != null) {
+                    for (int slot = 0, n = chest.getSlots(); slot < n; slot++) {
+                        chest.extractItem(slot, Integer.MAX_VALUE, false);
+                    }
                 }
+                level.setBlock(cell.chest(), Blocks.AIR.defaultBlockState(), REMOVE_FLAGS);
             }
-            level.setBlock(cell.chest(), Blocks.AIR.defaultBlockState(), REMOVE_FLAGS);
             level.setBlock(cell.dock(), Blocks.AIR.defaultBlockState(), REMOVE_FLAGS);
         }
     }

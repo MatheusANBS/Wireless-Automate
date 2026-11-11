@@ -60,7 +60,8 @@ import org.jetbrains.annotations.Nullable;
  * fornalha, fica no teto: uma visita a cada 100 ticks, 20 com fluido ou químico, como uma porta do roteador). A
  * passagem do recuo para a fila percorre o recuo do lado só quando o primeiro prazo dele vence. Por visita,
  * proporcional às acordadas, até {@link #MAX_MACHINES_PER_VISIT} (mais que isso pede outra volta, {@link #MORE});
- * por máquina, uma simulação de extração e uma de inserção por slot (ou tanque) da face Extrai, pelos caches de
+ * por máquina, uma simulação de extração e uma de inserção por pilha tirada de cada slot (ou tanque) da face Extrai
+ * (um slot maior que uma extração rende até {@link #MAX_EXTRACTIONS_PER_SLOT} por visita), pelos caches de
  * capability da máquina ({@link MachineCaches}) e do vizinho ({@link BlockCapabilityCache}, um por lado e tipo,
  * criado na primeira visita).
  * Só a thread do servidor mexe aqui.
@@ -68,6 +69,11 @@ import org.jetbrains.annotations.Nullable;
 public final class DockReturn implements EngineVisitor {
     /** Máquinas olhadas por visita, somando os lados; com mais acordadas, a visita para e pede outra volta. */
     static final int MAX_MACHINES_PER_VISIT = 32;
+    /**
+     * Extrações por slot da face Extrai numa visita, no máximo: 64 pilhas de 64, um slot de saída inteiro da Infinite
+     * Factory do Mekanism Extras (4.096), que entrega uma pilha por chamada e a 256× produz 256 por slot por tick.
+     */
+    static final int MAX_EXTRACTIONS_PER_SLOT = 64;
     /**
      * A folga desde a última entrega ou volta da máquina antes que ela possa sair da fila (1 min): cobre a receita
      * longa de uma máquina que consome a entrada no começo, com as faces Insere já vazias e a saída ainda por vir.
@@ -459,7 +465,8 @@ public final class DockReturn implements EngineVisitor {
             Lane lane, IItemHandler out, long now) {
         int outcome = 0;
         long limit = lane.items.available(now);
-        DockReturnNetwork first = out instanceof DockReturnNetwork network && network.insertsFirst() ? network : null;
+        DockReturnNetwork network = out instanceof DockReturnNetwork net ? net : null;
+        boolean first = network != null && network.insertsFirst();
         for (int face = 0; face < FACES.length; face++) {
             if (!profile.face(ResourceType.ITEM, FACES[face]).mode().extracts()) {
                 continue;
@@ -469,49 +476,76 @@ public final class DockReturn implements EngineVisitor {
                 continue;
             }
             for (int slot = 0, slots = handler.getSlots(); slot < slots; slot++) {
-                if (limit <= 0) {
-                    return outcome | HAS_MORE | NO_RATE;
-                }
-                ItemStack offer = handler.extractItem(slot, (int) Math.min(limit, Integer.MAX_VALUE), true);
-                if (offer.isEmpty()) {
-                    continue;
-                }
-                int fits;
-                int gave;
-                if (first != null) {
-                    fits = offer.getCount() - first.insertItem(0, offer, false).getCount();
-                    if (fits <= 0) {
+                // Um slot maior que uma extração (a saída de 4.096 da Infinite Factory, que dá uma pilha por chamada;
+                // uma gaveta) sai em várias, até MAX_EXTRACTIONS_PER_SLOT pilhas: o resto fica para a próxima visita.
+                int slotLeft = -1;
+                while (true) {
+                    if (limit <= 0) {
+                        return outcome | HAS_MORE | NO_RATE;
+                    }
+                    if (slotLeft == 0) {
+                        if (!handler.extractItem(slot, 1, true).isEmpty()) {
+                            outcome |= HAS_MORE;
+                        }
+                        break;
+                    }
+                    ItemStack offer = handler.extractItem(slot, (int) Math.min(limit, Integer.MAX_VALUE), true);
+                    if (offer.isEmpty()) {
+                        break;
+                    }
+                    if (slotLeft < 0) {
+                        slotLeft = offer.getCount() * MAX_EXTRACTIONS_PER_SLOT;
+                    }
+                    int want = Math.min(offer.getCount(), slotLeft);
+                    if (network != null) {
+                        // A rede aceita uma pilha de qualquer tamanho: o que o slot guarda além de uma extração vai
+                        // numa inserção só (o custo da rede é por chamada, não por item).
+                        ItemStack inSlot = handler.getStackInSlot(slot);
+                        if (inSlot.getCount() > want && ItemStack.isSameItemSameComponents(inSlot, offer)) {
+                            want = (int) Math.min(Math.min(inSlot.getCount(), limit), slotLeft);
+                            offer = offer.copyWithCount(want);
+                        }
+                    }
+                    int fits;
+                    int gave;
+                    if (first) {
+                        fits = want - network.insertItem(0, offer, false).getCount();
+                        if (fits <= 0) {
+                            return outcome | HAS_MORE | FULL;
+                        }
+                        gave = takeInserted(level, network, handler, slot, offer, fits);
+                    } else {
+                        fits = want - (network != null ? network.insertItem(0, offer, true)
+                                : ItemHandlerHelper.insertItemStacked(out, offer, true)).getCount();
+                        if (fits <= 0) {
+                            return outcome | HAS_MORE | FULL;
+                        }
+                        ItemStack taken = take(level, handler, slot, offer, fits);
+                        if (taken.isEmpty()) {
+                            break;
+                        }
+                        ItemStack rest = network != null ? network.insertItem(0, taken, false)
+                                : ItemHandlerHelper.insertItemStacked(out, taken, false);
+                        if (!rest.isEmpty()) {
+                            // O provedor aceitou na simulação e recusou de verdade: volta para a máquina, ou para o chão.
+                            keep(level, handler, rest);
+                        }
+                        gave = taken.getCount() - rest.getCount();
+                    }
+                    if (gave > 0) {
+                        lane.items.consume(gave);
+                        limit -= gave;
+                        slotLeft = Math.max(0, slotLeft - gave);
+                        side.addReturned(gave);
+                        outcome |= GAVE;
+                    }
+                    if (fits < want) {
                         return outcome | HAS_MORE | FULL;
                     }
-                    gave = takeInserted(level, first, handler, slot, offer, fits);
-                } else {
-                    fits = offer.getCount() - ItemHandlerHelper.insertItemStacked(out, offer, true).getCount();
-                    if (fits <= 0) {
-                        return outcome | HAS_MORE | FULL;
+                    if (gave < fits) {
+                        // A máquina deu menos do que ofereceu: o slot não rende mais nesta visita.
+                        break;
                     }
-                    ItemStack taken = handler.extractItem(slot, fits, false);
-                    if (taken.isEmpty()) {
-                        continue;
-                    }
-                    ItemStack rest = ItemHandlerHelper.insertItemStacked(out, taken, false);
-                    if (!rest.isEmpty()) {
-                        // O provedor aceitou na simulação e recusou de verdade: volta para a máquina, ou para o chão.
-                        keep(level, handler, rest);
-                    }
-                    gave = taken.getCount() - rest.getCount();
-                }
-                if (gave > 0) {
-                    lane.items.consume(gave);
-                    limit -= gave;
-                    side.addReturned(gave);
-                    outcome |= GAVE;
-                }
-                if (fits < offer.getCount()) {
-                    return outcome | HAS_MORE | FULL;
-                }
-                if (!handler.extractItem(slot, 1, true).isEmpty()) {
-                    // Um slot maior que uma extração (gaveta, barril grande): fica para a próxima visita.
-                    outcome |= HAS_MORE;
                 }
             }
         }
@@ -681,17 +715,49 @@ public final class DockReturn implements EngineVisitor {
      */
     private int takeInserted(ServerLevel level, DockReturnNetwork network, IItemHandler handler, int slot,
             ItemStack offer, int fits) {
-        ItemStack taken = handler.extractItem(slot, fits, false);
-        int gave = taken.getCount();
-        if (!taken.isEmpty() && !ItemStack.isSameItemSameComponents(taken, offer)) {
-            // Saiu outro item do slot, que não entrou na rede: volta para a máquina, ou para o chão.
-            keep(level, handler, taken);
-            gave = 0;
-        }
+        int gave = take(level, handler, slot, offer, fits).getCount();
         if (gave < fits) {
             reclaimItems(network, offer.copyWithCount(fits - gave));
         }
         return gave;
+    }
+
+    /**
+     * Tira {@code amount} de {@code offer} do slot, em quantas extrações a máquina pedir (a do Mekanism dá uma pilha
+     * por chamada); devolve o que saiu, numa pilha só (maior que uma pilha, se a rede é o destino). Para no que vier
+     * vazio; o que sair de outro item volta para a máquina, ou para o chão.
+     */
+    private ItemStack take(ServerLevel level, IItemHandler handler, int slot, ItemStack offer, int amount) {
+        ItemStack taken = handler.extractItem(slot, amount, false);
+        if (taken.isEmpty() || taken.getCount() >= amount) {
+            return sameOrKeep(level, handler, offer, taken);
+        }
+        if (!ItemStack.isSameItemSameComponents(taken, offer)) {
+            keep(level, handler, taken);
+            return ItemStack.EMPTY;
+        }
+        int total = taken.getCount();
+        while (total < amount) {
+            ItemStack more = handler.extractItem(slot, amount - total, false);
+            if (more.isEmpty()) {
+                break;
+            }
+            if (!ItemStack.isSameItemSameComponents(more, offer)) {
+                keep(level, handler, more);
+                break;
+            }
+            total += more.getCount();
+        }
+        return offer.copyWithCount(total);
+    }
+
+    /** {@code taken}, se é o item de {@code offer}; senão volta para a máquina, ou para o chão, e não saiu nada. */
+    private ItemStack sameOrKeep(ServerLevel level, IItemHandler handler, ItemStack offer, ItemStack taken) {
+        if (taken.isEmpty() || ItemStack.isSameItemSameComponents(taken, offer)) {
+            return taken;
+        }
+        keep(level, handler, taken);
+        return ItemStack.EMPTY;
     }
 
     /**
@@ -716,10 +782,15 @@ public final class DockReturn implements EngineVisitor {
 
     /** O que o provedor recusou depois de aceitar na simulação: de volta na máquina, e o que não voltar, no chão. */
     private void keep(ServerLevel level, IItemHandler machine, ItemStack rest) {
-        ItemStack left = ItemHandlerHelper.insertItemStacked(machine, rest, false);
-        if (!left.isEmpty()) {
-            BlockPos pos = dock.getBlockPos();
-            Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), left);
+        // Em pilhas do tamanho do item: o que voltou da rede pode ser maior que uma pilha.
+        int max = rest.getMaxStackSize();
+        for (int count = rest.getCount(); count > 0; count -= max) {
+            ItemStack left = ItemHandlerHelper.insertItemStacked(machine, rest.copyWithCount(Math.min(count, max)),
+                    false);
+            if (!left.isEmpty()) {
+                BlockPos pos = dock.getBlockPos();
+                Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), left);
+            }
         }
     }
 

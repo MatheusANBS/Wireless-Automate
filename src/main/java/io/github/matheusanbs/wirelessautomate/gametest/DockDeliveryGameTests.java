@@ -16,6 +16,7 @@ import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.network.TickBudget;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
+import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -487,6 +488,56 @@ public final class DockDeliveryGameTests {
                     assertSlot(helper, furnace, 0, Items.IRON_ORE, 0);
                     helper.assertFalse(dock.machineAt(helper.absolutePos(furnace)).asleep(now(helper)),
                             "a máquina foi consultada");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Um pedido muito maior que a máquina (256 pilhas de pedregulho numa entrada de 64, como o padrão de 524.288 numa
+     * Infinite Factory) entra no que cabe e o resto vai ao pendente, sem travar; e o custo não cresce com o tamanho do
+     * pedido: a escolha simula uma vez as pilhas iguais seguidas (a simulação não soma, então dá a mesma resposta), a
+     * execução para de tentar o item que a máquina já recusou, e cada tentativa do pendente olha só as últimas
+     * {@code DockPending.FLUSH_WINDOW} pilhas e para no primeiro item recusado.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void hugeOrderCostDoesNotGrow(GameTestHelper helper) {
+        PatternDockBlockEntity dock = dock(helper, RouterTier.ULTIMATE);
+        BlockPos machine = new BlockPos(3, 1, 1);
+        helper.setBlock(machine, TestMachines.FURNACE);
+        TestMachines.Furnace furnace = TestMachines.furnace(helper.absolutePos(machine));
+        List<ItemStack> order = new ArrayList<>();
+        for (int i = 0; i < 256; i++) {
+            order.add(new ItemStack(Items.COBBLESTONE, 64));
+        }
+        helper.startSequence()
+                .thenExecute(() -> {
+                    helper.assertTrue(dock.link(NORTH, helper.absolutePos(machine),
+                            BuiltInRegistries.BLOCK.getKey(TestMachines.FURNACE), Direction.NORTH.ordinal()),
+                            "não vinculou");
+                    DockSide side = dock.side(NORTH);
+                    side.profile().face(ResourceType.ITEM, RemoteSide.TOP).setMode(PortMode.INSERT);
+                    side.profile().face(ResourceType.ITEM, RemoteSide.BOTTOM).setMode(PortMode.EXTRACT);
+                })
+                .thenWaitUntil(DockDeliveryGameTests::room)
+                .thenExecute(() -> {
+                    furnace.insertCalls = 0;
+                    helper.assertTrue(offer(dock, order, false) == DockDelivery.Result.ACCEPTED, "recusou");
+                    DockSide side = dock.side(NORTH);
+                    helper.assertTrue(furnace.slots[0].getCount() == 64 && side.pendingItems().size() == 255,
+                            "na máquina " + furnace.slots[0] + ", pendente " + side.pendingItems().size());
+                    helper.assertTrue(furnace.insertCalls <= 16, "a oferta chamou insertItem " + furnace.insertCalls
+                            + " vezes");
+                    furnace.insertCalls = 0;
+                    helper.assertFalse(DockDelivery.flushPending(dock, NORTH), "a cheia recebeu o pendente");
+                    helper.assertTrue(furnace.insertCalls <= 16, "a tentativa do pendente chamou insertItem "
+                            + furnace.insertCalls + " vezes");
+                    furnace.slots[0] = ItemStack.EMPTY;
+                    furnace.insertCalls = 0;
+                    helper.assertFalse(DockDelivery.flushPending(dock, NORTH), "o pendente saiu inteiro");
+                    helper.assertTrue(furnace.slots[0].getCount() == 64 && side.pendingItems().size() == 254,
+                            "depois: na máquina " + furnace.slots[0] + ", pendente " + side.pendingItems().size());
+                    helper.assertTrue(furnace.insertCalls <= 16, "a tentativa com lugar chamou insertItem "
+                            + furnace.insertCalls + " vezes");
                 })
                 .thenSucceed();
     }

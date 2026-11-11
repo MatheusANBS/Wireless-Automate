@@ -88,19 +88,19 @@ final class DockQuantumMedida implements DockProbe.Listener {
                 Ae2TestSupport.processingPattern(Items.IRON_INGOT, PER_JOB, Items.RAW_IRON, PER_JOB)),
                 "o padrão não entrou no provedor");
         if (fullComputer) {
-            buildComputer();
+            buildComputer(helper);
         } else {
             // o Quantum Core sozinho só se liga por cima e por baixo: em cima do provedor
             helper.setBlock(PROVIDER.above(), quantum("quantum_core"));
         }
     }
 
-    private static Block quantum(String path) {
+    static Block quantum(String path) {
         return BuiltInRegistries.BLOCK.get(ResourceLocation.fromNamespaceAndPath("advanced_ae", path));
     }
 
     /** A casca de Quantum Structure, o Core no centro, um Multi Threader num canto do miolo e o resto Accelerators. */
-    private void buildComputer() {
+    static void buildComputer(GameTestHelper helper) {
         Block structure = quantum("quantum_structure");
         Block core = quantum("quantum_core");
         Block threader = quantum("quantum_multi_threader");

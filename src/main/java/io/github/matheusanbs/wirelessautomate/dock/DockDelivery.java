@@ -47,7 +47,10 @@ import org.jetbrains.annotations.Nullable;
  * são mudados; o que vai ao pendente é uma cópia ou a sobra que a máquina devolveu.
  *
  * <p>Custo: o tempo de cada oferta vai para o orçamento do motor ({@link TickBudget#charge}); por oferta, no máximo
- * {@link #MAX_TRIES} candidatas, cada uma com uma simulação por ingrediente e por face Insere do tipo dele, pelos caches
+ * {@link #MAX_TRIES} candidatas, cada uma com uma simulação por ingrediente e por face Insere do tipo dele (uma pilha
+ * igual à anterior não é simulada de novo, e na execução o item que a máquina já recusou e o que passa de
+ * {@link DockPending#FLUSH_WINDOW} pilhas vão direto ao pendente: o custo de um padrão multiplicado não cresce com as
+ * pilhas dele), pelos caches
  * de capability da máquina ({@link MachineCaches}, que conferem o chunk antes); a simulação de cada tipo só roda se os
  * anteriores couberam (itens, depois fluidos, depois químicos), e a de um tipo ausente volta sem consultar a máquina.
  * Sem alocação além das sobras das simulações e do que vai ao pendente: os rascunhos (faces por ingrediente, itens,
@@ -216,13 +219,24 @@ public final class DockDelivery {
         int[] loads = side.loads();
         if (itemCount > 0) {
             DockPick.loads(masks, 0, itemCount, loads);
+            // O item que a máquina já recusou (não coube inteiro) não cabe na pilha igual seguinte, e depois de
+            // DockPending.FLUSH_WINDOW pilhas o resto espera as tentativas do pendente: vai direto ao pendente, sem
+            // tentar (o pedido de 524.288 são 8.192 pilhas iguais).
+            ItemStack refused = ItemStack.EMPTY;
+            int tried = 0;
             for (int i = 0; i < itemCount; i++) {
                 ItemStack stack = items.get(i);
                 if (stack.isEmpty()) {
                     continue;
                 }
-                ItemStack rest = placeItem(caches, front, stack, masks[i], loads);
+                boolean attempt = tried < DockPending.FLUSH_WINDOW
+                        && (refused.isEmpty() || !ItemStack.isSameItemSameComponents(stack, refused));
+                ItemStack rest = attempt ? placeItem(caches, front, stack, masks[i], loads) : stack;
+                if (attempt) {
+                    tried++;
+                }
                 if (!rest.isEmpty()) {
+                    refused = stack;
                     side.addPending(rest == stack ? stack.copy() : rest, machine.pos());
                 }
             }
@@ -300,12 +314,23 @@ public final class DockDelivery {
      */
     static boolean itemMasks(MachineCaches caches, MachineConfig profile, int front, List<ItemStack> items, int offset,
             int[] masks, boolean whole) {
+        return itemMasks(caches, profile, front, items, 0, offset, masks, whole);
+    }
+
+    /**
+     * O {@link #itemMasks(MachineCaches, MachineConfig, int, List, int, int[], boolean)} só das pilhas a partir de
+     * {@code from}: a pilha {@code i} vai em {@code masks[offset + i - from]}. A pilha igual à anterior (item,
+     * componentes e quantidade) não é simulada de novo: a simulação não soma, então a resposta é a mesma.
+     */
+    static boolean itemMasks(MachineCaches caches, MachineConfig profile, int front, List<ItemStack> items, int from,
+            int offset, int[] masks, boolean whole) {
         int count = items.size();
-        if (count == 0) {
+        if (count <= from) {
             return true;
         }
-        for (int i = 0; i < count; i++) {
-            masks[offset + i] = 0;
+        int base = offset - from;
+        for (int i = from; i < count; i++) {
+            masks[base + i] = 0;
         }
         for (int face = 0; face < SIDES.length; face++) {
             if (!profile.face(ResourceType.ITEM, SIDES[face]).mode().inserts()) {
@@ -315,19 +340,29 @@ public final class DockDelivery {
             if (handler == null) {
                 continue;
             }
-            for (int i = 0; i < count; i++) {
+            ItemStack previous = ItemStack.EMPTY;
+            boolean previousFits = false;
+            for (int i = from; i < count; i++) {
                 ItemStack stack = items.get(i);
                 if (stack.isEmpty()) {
                     continue;
                 }
-                ItemStack rest = ItemHandlerHelper.insertItemStacked(handler, stack, true);
-                if (whole ? rest.isEmpty() : rest.getCount() < stack.getCount()) {
-                    masks[offset + i] |= 1 << face;
+                boolean fits;
+                if (!previous.isEmpty() && ItemStack.matches(stack, previous)) {
+                    fits = previousFits;
+                } else {
+                    ItemStack rest = ItemHandlerHelper.insertItemStacked(handler, stack, true);
+                    fits = whole ? rest.isEmpty() : rest.getCount() < stack.getCount();
+                    previous = stack;
+                    previousFits = fits;
+                }
+                if (fits) {
+                    masks[base + i] |= 1 << face;
                 }
             }
         }
-        for (int i = 0; i < count; i++) {
-            if (masks[offset + i] == 0 && !items.get(i).isEmpty()) {
+        for (int i = from; i < count; i++) {
+            if (masks[base + i] == 0 && !items.get(i).isEmpty()) {
                 return false;
             }
         }

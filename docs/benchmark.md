@@ -715,3 +715,44 @@ WA_DOCK_MEDIDA=1 ./gradlew runGameTestServerAe2 -PdockMedida
   - antes (`run/bench/reports/20261111-191121.md`): mod 0,144 ± 0,039 ms/tick;
   - depois (`20261111-191339.md`): 0,146 ± 0,039 ms/tick;
   - 256 itens/s devolvidos nos dois. No ruído.
+
+## Doca: o teste definitivo (11 de novembro de 2026)
+
+Ramo `ccr-71b175d3-weymk6`. O cenário do dono: uma Infinity (Infinite) Smelting Factory do Mekanism Extras com o Creative Upgrade, 8 Speed e 8 Energy, a 256× com a Time Wand; uma CPU do AE2 com 16 coprocessadores; o padrão de 4.096 minérios brutos → 4.096 lingotes; o pedido de 1.000.000 (245 execuções; o AE2 arredonda para 1.003.520).
+
+```
+WA_DOCK_MEDIDA=definitivo ./gradlew runGameTestServerAe2 -PdockMedida
+```
+
+- **A run:** a propriedade põe o Mekanism e o Mekanism Extras na pasta mods da run do AE2 (`gametest/DockDefinitivoMedida`). `WA_DOCK_MEDIDA_CASOS=um_cpu16,cinco_q7` escolhe os casos.
+- **A fábrica é real, com os upgrades instalados** pelo componente do Mekanism (`addUpgrades`) e a ordenação ligada. Com o Creative Upgrade, a receita leva 0 tick e não gasta energia: uma operação por processo a cada chamada do ticker. O ticker é chamado 255 vezes a mais por tick (a Time Wand). Teto: 17 processos × 256 = 4.352 lingotes por tick, **87.040 por segundo por fábrica**.
+- **A CPU:** a do AE2, 3×3×3 (11 Crafting Storage de 256k, porque o pedido de 1.000.000 não cabe em 2, e 16 Crafting Accelerators), ou o Quantum Computer de 7×7×7 (3.968 coprocessadores). A rede tem duas células de 256k e energia criativa; a volta vai direta à rede ME.
+- **Regime:** do 5º tick ao do último empurrão aceito, sobre as 255 chamadas aceleradas.
+
+### Antes × depois da correção da volta (1 fábrica, CPU de 16)
+
+| | Tempo (ticks) | Itens/s (% do teto) | Saídas cheias | Fábrica parada | Volta ms/tick (ns por item) |
+| --- | --- | --- | --- | --- | --- |
+| Antes | 46,3 s (925) | 21.698 (24,9%) | 90,7% dos slots | 7,0% dos ticks | 0,054 (50) |
+| Depois, uma extração por chamada à rede | 11,7 s (233) | 86.139 (99,0%) | 0% | 0,9% | 0,152 (35) |
+| Depois, com a inserção agrupada | 11,7 s (233) | 86.139 (99,0%) | 0% | 0,9% | 0,039 a 0,046 (9 a 11) |
+
+O "antes" é o sintoma do dono: a volta tirava uma pilha (64) por slot por visita, porque a extração do Mekanism dá uma pilha por chamada; 17 × 64 = 1.088 por tick, 25% da produção.
+
+### Os casos, depois
+
+| Caso | Ticks (s) | Itens/s (% do teto) | Regime | Fábricas paradas | Empurrões por tick (máx.) | Recusas: cheias / orçamento | Lado com pendente | Entrega ms/tick (µs por oferta) | Volta ms/tick (ns por item) | Por tick p50 / p99 / máx. | Ticks > 1 ms |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 fábrica, CPU de 16 | 233 (11,7) | 86.139 (99%) | 100% | 0,9% | 1,05 (17) | 1 / 0 | 45% (máx. 3.840 itens, 1 tick) | 0,036 (34) | 0,046 (11) | 0,07 / 0,38 / 0,67 ms | 0 de 233 |
+| 1 fábrica, Quantum | 233 (11,7) | 86.139 (99%) | 100% | 0,9% | 1,05 (17) | 3 / 0 | 46% | 0,040 (37) | 0,065 (15) | 0,10 / 0,35 / 1,03 ms | 1 de 233 |
+| 5 fábricas, CPU de 16 | 61 (3,1) | 329.023 (76%) | 80% | 19,7% | 4,02 (17) | 0 / 0 | 0% | 0,117 (29) | 0,159 (10) | 0,19 / 0,80 / 0,80 ms | 0 de 61 |
+| 5 fábricas, Quantum | 49 (2,5) | 409.600 (94%) | 100% | 4,1% | 5,00 (23) | 1 / 6 | 25% | 0,28 a 0,34 (55 a 67) | 0,36 a 0,57 (18 a 28) | 0,45 a 0,80 / 2,8 a 3,3 ms | 9 a 17 de 49 |
+| Padrão de 131.072, 1 fábrica | 64 (3,2) | 81.920 (94%) | 100% | 4,7% | 2 execuções | 0 / 0 | 69% (máx. 122.880 itens, 29 ticks) | 0,018 (585) | 0,19 (45) | 0,18 / 0,82 ms | 0 de 64 |
+| Padrão de 524.288, 1 fábrica | 124 (6,2) | 84.563 (97%) | n/a | 2,4% | 1 execução | 0 / 0 | 85% (máx. 491.520 itens, 105 ticks) | 0,024 (2.996) | 0,32 (75) | 0,20 / 3,8 / 4,5 ms | 5 de 124 |
+
+- **A saída não enche mais:** 0% dos slots cheios em todos os casos, e a média nas saídas fica em ~4.300 por fábrica (um tick de produção).
+- **A volta direta à rede ME a ~400.000 itens/s** custa 0,36 a 0,57 ms/tick, com a inserção agrupada por slot (antes dela, 1,13 ms/tick, 55 ns por item). Com o Quantum, a inserção na rede custa mais por chamada que com a CPU comum (18 a 28 contra 10 ns por item): o AE2 passa o que entra pelas CPUs que esperam o item.
+- **A CPU de 16 com 5 fábricas** fica em ~4,3 empurrões por tick no regime, abaixo da janela de 17 a cada 3 ticks (5,67): a Doca não recusou nenhum (0 recusas, 0 "não" no `acceptsPlans`). As fábricas pedem 5,3 por tick. Com o Quantum, 5,0, e 100% em regime.
+- **O pedido maior que a máquina** (131.072 e 524.288; a entrada da Infinite é de 69.632) entra no que cabe e o resto sai pelo pendente, na mesma máquina: não trava. Antes da correção do custo, a oferta de 524.288 levava 27 ms e cada visita da volta 2,4 ms (o pendente inteiro a cada tentativa); depois, 3 ms numa vez e 0,31 ms por visita.
+- **Picos:** os máximos de 2 a 5 ms caem em ticks isolados, com a mesma cara de GC das medições anteriores (as fábricas aceleradas alocam muito); não conferido no log do GC.
+- **O cenário `doca` do `bench.sh`** (`./scripts/bench.sh doca:1:3`: fornalhas e um baú, uma saída de um item por slot, onde a extração múltipla não entra): antes (`run/bench/reports/20261111-195431.md`) mod 0,136 ± 0,041 ms/tick; depois (`20261111-195219.md`) 0,157 ± 0,049 ms/tick; 256 itens/s devolvidos nos dois. No ruído.

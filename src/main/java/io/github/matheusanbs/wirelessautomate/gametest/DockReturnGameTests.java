@@ -340,4 +340,39 @@ public final class DockReturnGameTests {
                 })
                 .thenSucceed();
     }
+
+    /**
+     * Uma saída maior que uma extração (o slot de 4.096 da Infinite Factory do Mekanism Extras, que entrega no máximo
+     * uma pilha por chamada, aqui o {@link TestMachines#BIG_SLOT}) sai inteira na mesma visita, até o teto de extrações
+     * por slot ({@code DockReturn.MAX_EXTRACTIONS_PER_SLOT}): 1.000 pedregulhos chegam ao baú no primeiro tick em que
+     * algum chega: com uma pilha por slot por tick, a fábrica a 256× enche a saída e para.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void bigOutputSlotReturnsInOneVisit(GameTestHelper helper) {
+        helper.setBlock(DOCK, ModBlocks.PATTERN_DOCK.get().defaultBlockState().setValue(RouterBlock.TIER,
+                RouterTier.ULTIMATE));
+        helper.setBlock(CHEST, Blocks.CHEST.defaultBlockState());
+        helper.setBlock(FURNACE, TestMachines.BIG_SLOT);
+        PatternDockBlockEntity dock = helper.getBlockEntity(DOCK);
+        BlockPos pos = helper.absolutePos(FURNACE);
+        int[] first = {0};
+        helper.startSequence()
+                .thenWaitUntil(() -> registered(dock))
+                .thenExecute(() -> {
+                    TestMachines.bigSlot(pos).set(Items.COBBLESTONE, 1000);
+                    helper.assertTrue(dock.link(NORTH, pos, BuiltInRegistries.BLOCK.getKey(TestMachines.BIG_SLOT),
+                            Direction.NORTH.ordinal()), "não vinculou");
+                    dock.side(NORTH).profile().face(ResourceType.ITEM, RemoteSide.BOTTOM).setMode(PortMode.EXTRACT);
+                    helper.getLevel().blockEntityChanged(pos);
+                })
+                .thenWaitUntil(() -> {
+                    int count = chestCount(helper, Items.COBBLESTONE);
+                    if (count == 0) {
+                        throw new GameTestAssertException("nada voltou ainda");
+                    }
+                    first[0] = count;
+                })
+                .thenExecute(() -> helper.assertValueEqual(first[0], 1000, "pedregulhos no baú no primeiro tick"))
+                .thenSucceed();
+    }
 }

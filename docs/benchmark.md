@@ -645,3 +645,16 @@ Ramo `ccr-71b175d3-weymk6`. A volta de um lado encostado num nó do AE2 insere d
 
 - A vazão não muda: os 32 Altos-fornos são o gargalo (o teto deles é 6,4 itens/s), muito abaixo do teto do retorno do provedor (uns 576 itens por tick). O ganho da volta direta aparece com máquinas rápidas ou muitas máquinas num provedor, não neste cenário.
 - O custo do mod fica no ruído (0,024 → 0,026 ms/tick, com ± de 0,015). A inserção na rede confere o nó com três leituras por chamada; a busca do nó só na troca do vizinho ou da grade. O máximo (1,2 → 2,2 ms) é o tick do pedido (as ofertas da CPU), que a volta não toca, e varia entre as repetições (± 1,5).
+
+## Doca: a volta revisita com recuo (11 de novembro de 2026)
+
+Ramo `ccr-71b175d3-weymk6`. A máquina sem nada para dar não sai mais da fila da volta: fica em recuo (o intervalo dobra até o teto do motor) e só sai com as faces Insere vazias e 1 min sem atividade (ver a spec da Doca, "Ajuste do teste à mão"). `./scripts/bench.sh doca:1:3`, antes (`run/bench/reports/20261111-163601.md`) e depois (`20261111-163341.md`), na máquina dividida de sempre.
+
+| Cenário | MSPT base (ms) | MSPT com a cena (ms) | mod (ms/tick) | mod p99 / máx | Outra medida |
+| --- | --- | --- | --- | --- | --- |
+| doca 1, antes | 0,411 ± 0,059 | 0,584 ± 0,065 | 0,1876 ± 0,0368 | 0,737 / 1,021 | 640 pedidos aceitos/s; ofertas 4,9 a 6,1 µs cada; 256 itens/s devolvidos |
+| doca 1, depois | 0,376 ± 0,014 | 0,557 ± 0,074 | 0,1555 ± 0,0372 | 0,482 / 0,852 | 640 pedidos aceitos/s; ofertas 3,5 a 4,9 µs cada; 256 itens/s devolvidos |
+
+### Leitura
+
+- No ruído (o ± é do tamanho da diferença). No `doca`, as 32 fornalhas recebem pedido a cada tick, então quase todas ficam na fila de qualquer jeito; as que esvaziam passam pelo recuo, com uma visita a cada intervalo, e o carvão na face Insere as segura no teto (uma visita a cada 100 ticks), como uma porta remota do roteador.

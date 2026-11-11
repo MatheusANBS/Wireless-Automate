@@ -6,6 +6,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.dock.DockDelivery;
 import io.github.matheusanbs.wirelessautomate.dock.DockMachine;
+import io.github.matheusanbs.wirelessautomate.dock.DockReturn;
 import io.github.matheusanbs.wirelessautomate.dock.DockSide;
 import io.github.matheusanbs.wirelessautomate.dock.PatternDockBlockEntity;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
@@ -34,8 +35,10 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
  * A volta do resultado ({@code DockReturn}): o lingote da fornalha volta ao baú encostado no lado da Doca (também o
- * que já estava na saída antes da carga da Doca), o combustível fica na fornalha, o baú cheio segura a volta (o lado marca "provedor cheio") e ela retoma poucos ticks
- * depois que ele esvazia (o aviso do vizinho), a Doca sem pedido não é visitada e a recarga da config com o raio menor tira a máquina de fora do índice.
+ * que já estava na saída antes da carga da Doca), o combustível fica na fornalha (e a segura no recuo), o baú cheio
+ * segura a volta (o lado marca "provedor cheio") e ela retoma poucos ticks depois que ele esvazia (o aviso do
+ * vizinho), a saída de uma máquina que não avisa volta pelo recuo, a ociosa de faces vazias sai da fila depois do teto
+ * e da folga, a Doca sem pedido não é visitada e a recarga da config com o raio menor tira a máquina de fora do índice.
  */
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
@@ -156,6 +159,76 @@ public final class DockReturnGameTests {
                 .thenSucceed();
     }
 
+    /**
+     * Uma máquina lenta que não avisa (como as do Mekanism, cujo {@code setChanged} não chama
+     * {@code Level.blockEntityChanged}): recebe o pedido, a volta a visita antes de a saída ficar pronta e não acha
+     * nada; a saída aparece em silêncio 60 ticks depois e tem de voltar ao baú. A fornalha recebe terra (sem receita e
+     * sem combustível, ela não acende nem avisa), e trocar a terra por um lingote sem {@code setChanged} faz o papel do
+     * fim da receita. Num lote só dele: a carga de chunk simulada em paralelo ({@code RangeWakeGameTests}) acordaria
+     * a fornalha.
+     */
+    @GameTest(template = "empty", timeoutTicks = 300, batch = "wirelessautomate_dock_silent")
+    public static void silentMachineOutputReturns(GameTestHelper helper) {
+        PatternDockBlockEntity dock = scene(helper);
+        helper.startSequence()
+                .thenWaitUntil(() -> registered(dock))
+                .thenExecute(() -> link(helper, dock))
+                .thenWaitUntil(DockReturnGameTests::room)
+                .thenExecute(() -> {
+                    helper.assertTrue(DockDelivery.offer(dock, NORTH, List.of(new ItemStack(Items.DIRT)), List.of(),
+                            false) == DockDelivery.Result.ACCEPTED, "recusou o pedido");
+                    helper.assertTrue(furnace(helper).getItem(0).is(Items.DIRT), "a terra não entrou em cima");
+                })
+                .thenIdle(60)
+                .thenExecute(() -> {
+                    // o removeItemNoUpdate e o setItem da saída não chamam o setChanged: ninguém avisa a Doca
+                    AbstractFurnaceBlockEntity entity = furnace(helper);
+                    entity.removeItemNoUpdate(0);
+                    entity.setItem(2, new ItemStack(Items.IRON_INGOT));
+                })
+                .thenWaitUntil(() -> helper.assertTrue(chestCount(helper, Items.IRON_INGOT) == 1,
+                        "a saída da máquina calada não voltou"))
+                .thenExecute(() -> helper.assertTrue(furnace(helper).getItem(2).isEmpty(), "sobrou na fornalha"))
+                .thenSucceed();
+    }
+
+    /**
+     * O custo da revisita: uma máquina ociosa, de faces Insere vazias, fica no recuo (poucas visitas, o intervalo
+     * dobra) e sai da fila depois do teto e da folga desde a última atividade; dali em diante a Doca não é visitada.
+     * A folga é encurtada recuando o {@code lastActive} da fornalha.
+     */
+    @GameTest(template = "empty", timeoutTicks = 300, batch = "wirelessautomate_dock_silent")
+    public static void idleMachineLeavesQueue(GameTestHelper helper) {
+        PatternDockBlockEntity dock = scene(helper);
+        long[] visits = new long[1];
+        helper.startSequence()
+                .thenWaitUntil(() -> registered(dock))
+                .thenExecute(() -> link(helper, dock))
+                .thenExecute(() -> fillFurnace(helper, 0, 1))
+                .thenWaitUntil(() -> helper.assertTrue(chestCount(helper, Items.IRON_INGOT) == 1,
+                        "o lingote não voltou"))
+                .thenExecute(() -> {
+                    helper.assertTrue(dock.returns().awakeCount() == 1, "saiu da fila logo depois de dar");
+                    long now = helper.getLevel().getServer().getTickCount();
+                    dock.machineAt(helper.absolutePos(FURNACE)).setLastActive(now - DockReturn.IDLE_GRACE_TICKS);
+                    visits[0] = dock.returns().visits();
+                })
+                .thenWaitUntil(() -> helper.assertTrue(dock.returns().awakeCount() == 0, "a fornalha ociosa ficou"))
+                .thenExecute(() -> {
+                    long during = dock.returns().visits() - visits[0];
+                    // 1, 2, 4, ..., 64, 100, 100: umas 9 visitas em ~230 ticks, não uma por tick
+                    helper.assertTrue(during <= 12, "visitas no recuo: " + during);
+                    visits[0] = dock.returns().visits();
+                })
+                .thenIdle(30)
+                .thenExecute(() -> {
+                    helper.assertTrue(dock.returns().wakeAt() == Long.MAX_VALUE,
+                            "acordada: " + dock.returns().wakeAt());
+                    helper.assertTrue(dock.returns().visits() == visits[0], "visitada depois de sair");
+                })
+                .thenSucceed();
+    }
+
     /** A face de baixo da fornalha dá só o produto: o carvão do combustível fica. */
     @GameTest(template = "empty", timeoutTicks = 100)
     public static void fuelStaysInFurnace(GameTestHelper helper) {
@@ -170,7 +243,10 @@ public final class DockReturnGameTests {
                     ItemStack fuel = furnace(helper).getItem(1);
                     helper.assertTrue(fuel.is(Items.COAL) && fuel.getCount() == 10, "combustível: " + fuel);
                     helper.assertTrue(chestCount(helper, Items.COAL) == 0, "o carvão foi ao baú");
-                    helper.assertTrue(dock.returns().awakeCount() == 0, "a fornalha ficou acordada");
+                    // o carvão numa face Insere segura a fornalha no recuo, sem visita a cada tick
+                    helper.assertTrue(dock.returns().awakeCount() == 1, "a fornalha saiu da fila com combustível");
+                    helper.assertTrue(dock.returns().wakeAt() > helper.getLevel().getServer().getTickCount(),
+                            "a fornalha não está no recuo");
                 })
                 .thenSucceed();
     }

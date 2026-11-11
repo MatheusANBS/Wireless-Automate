@@ -11,6 +11,7 @@ import io.github.matheusanbs.wirelessautomate.range.MachineCaches;
 import io.github.matheusanbs.wirelessautomate.range.MachineConfig;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -37,27 +38,41 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>Acordadas são as máquinas que receberam um pedido ({@link DockDelivery}) ou avisaram mudança
  * ({@link PatternDockBlockEntity#machineChanged}), numa fila por lado. Numa visita, cada uma dá até a vazão do tier por
- * tipo (um balde por lado e tipo, a mesma tabela do roteador): a que não tem nada para dar pelas faces Extrai sai da
- * fila; a que deu volta ao fim dela. Só sai o que a face Extrai entrega: o combustível e as entradas ficam (a face de
- * baixo da fornalha só dá o produto). A inserção é simulada antes de tirar da máquina, então nada sai sem caber. Na
- * rede do RS2 a simulação não vale (a tarefa só pega o resultado que espera na execução, e com os discos cheios a
- * simulação daria zero): ali a volta simula a extração, insere de verdade e tira da máquina o que entrou
- * ({@link DockReturnNetwork#insertsFirst}).
+ * tipo (um balde por lado e tipo, a mesma tabela do roteador): a que ainda tem o que dar volta ao fim da fila; a que
+ * não tem nada para dar pelas faces Extrai vai ao recuo ({@link Lane#resting}): é revisitada depois de um intervalo
+ * que dobra a cada visita vazia, de 1 tick até o teto de sono do motor. Uma máquina lenta pode não avisar quando a
+ * saída fica pronta (as do Mekanism nunca chamam {@code Level.blockEntityChanged}, então o mixin não as vê), e por
+ * isso só sai da fila quando o recuo chegou ao teto, as faces Insere estão vazias (nada mais para processar) e a última
+ * atividade foi há mais de {@link #IDLE_GRACE_TICKS} (a folga de uma receita que consome a entrada no começo). O aviso
+ * da máquina e uma entrega nova a trazem de volta na hora e zeram o recuo. Só sai o que a face Extrai entrega: o
+ * combustível e as entradas ficam (a face de baixo da fornalha só dá o produto). A inserção é simulada antes de tirar
+ * da máquina, então nada sai sem caber. Na rede do RS2 a simulação não vale (a tarefa só pega o resultado que espera
+ * na execução, e com os discos cheios a simulação daria zero): ali a volta simula a extração, insere de verdade e
+ * tira da máquina o que entrou ({@link DockReturnNetwork#insertsFirst}).
  *
  * <p>Provedor cheio (o destino recusou algo que a máquina tinha para dar: o inventário cheio, a rede sem espaço ou o
  * nó dela sem energia ou canal): o lado marca {@link DockSide#providerFull} e dorme até o vizinho mudar
  * ({@link #providerChanged}, o {@code setChanged} dele; ou o cache invalidado, o bloco trocou) ou o teto de sono do
  * motor. Sem destino, o lado dorme até o cache avisar ou o teto.
  *
- * <p>Custo: parado, nada (sem acordada, {@link #wakeAt} é nunca, e o laço só lê esse número). Por visita, proporcional
- * às acordadas, até {@link #MAX_MACHINES_PER_VISIT} (mais que isso pede outra volta, {@link #MORE}); por máquina, uma
- * simulação de extração e uma de inserção por slot (ou tanque) da face Extrai, pelos caches de capability da máquina
- * ({@link MachineCaches}) e do vizinho ({@link BlockCapabilityCache}, um por lado e tipo, criado na primeira visita).
+ * <p>Custo: parado, nada (sem acordada, {@link #wakeAt} é nunca, e o laço só lê esse número). Em recuo, uma visita
+ * por intervalo, que dobra até o teto (uma máquina ociosa que guarda algo nas faces Insere, como o combustível da
+ * fornalha, fica no teto: uma visita a cada 100 ticks, 20 com fluido ou químico, como uma porta do roteador). A
+ * passagem do recuo para a fila percorre o recuo do lado só quando o primeiro prazo dele vence. Por visita,
+ * proporcional às acordadas, até {@link #MAX_MACHINES_PER_VISIT} (mais que isso pede outra volta, {@link #MORE});
+ * por máquina, uma simulação de extração e uma de inserção por slot (ou tanque) da face Extrai, pelos caches de
+ * capability da máquina ({@link MachineCaches}) e do vizinho ({@link BlockCapabilityCache}, um por lado e tipo,
+ * criado na primeira visita).
  * Só a thread do servidor mexe aqui.
  */
 public final class DockReturn implements EngineVisitor {
     /** Máquinas olhadas por visita, somando os lados; com mais acordadas, a visita para e pede outra volta. */
     static final int MAX_MACHINES_PER_VISIT = 32;
+    /**
+     * A folga desde a última entrega ou volta da máquina antes que ela possa sair da fila (1 min): cobre a receita
+     * longa de uma máquina que consome a entrada no começo, com as faces Insere já vazias e a saída ainda por vir.
+     */
+    public static final int IDLE_GRACE_TICKS = 1200;
 
     private static final RemoteSide[] FACES = RemoteSide.values();
     private static final Direction[] DIRECTIONS = Direction.values();
@@ -65,7 +80,10 @@ public final class DockReturn implements EngineVisitor {
     private final PatternDockBlockEntity dock;
     /** A fila e o destino de cada lado ({@code Direction.ordinal()}), criados na primeira máquina acordada dele. */
     private final Lane[] lanes = new Lane[PatternDockBlockEntity.SIDES];
-    /** Máquinas acordadas somando os lados (as filas podem ter também desvinculadas, largadas na visita). */
+    /**
+     * Máquinas acordadas somando os lados, na fila ou em recuo (as filas podem ter também desvinculadas, largadas na
+     * visita).
+     */
     private int awake;
     /** A vazão do tier por segundo (0 = sem limite), lida da config no {@link #refreshRates}. */
     private long itemRate;
@@ -85,14 +103,28 @@ public final class DockReturn implements EngineVisitor {
         return visits;
     }
 
-    /** Quantas máquinas estão na fila da volta, somando os lados. */
+    /** Quantas máquinas estão na fila da volta (para já ou em recuo), somando os lados. */
     public int awakeCount() {
         return awake;
     }
 
-    /** Põe {@code machine} na fila da volta do lado dela, se ainda não está (só as ativas). */
+    /**
+     * Põe {@code machine} na fila da volta do lado dela (só as ativas) e zera o recuo; a que está em recuo volta na
+     * próxima visita do lado.
+     */
     void wake(DockMachine machine) {
-        if (machine.returnAwake() || !machine.active()) {
+        if (!machine.active()) {
+            return;
+        }
+        machine.setReturnInterval(0);
+        if (machine.returnAwake()) {
+            if (machine.returnAt() != 0) {
+                machine.setReturnAt(0);
+                Lane lane = lanes[machine.side()];
+                if (lane != null) {
+                    lane.restingDue = 0;
+                }
+            }
             return;
         }
         Lane lane = lanes[machine.side()];
@@ -149,6 +181,11 @@ public final class DockReturn implements EngineVisitor {
             for (DockMachine machine : lane.queue) {
                 machine.setReturnAwake(false);
             }
+            for (int m = 0, n = lane.resting.size(); m < n; m++) {
+                DockMachine machine = lane.resting.get(m);
+                machine.setReturnAwake(false);
+                machine.setReturnAt(0);
+            }
             lane.generation++;
             lanes[i] = null;
         }
@@ -168,9 +205,19 @@ public final class DockReturn implements EngineVisitor {
         }
         long at = Long.MAX_VALUE;
         for (Lane lane : lanes) {
-            if (lane != null && !lane.queue.isEmpty() && lane.sleepUntil < at) {
-                at = lane.sleepUntil;
+            if (lane == null) {
+                continue;
             }
+            long laneAt;
+            if (!lane.queue.isEmpty()) {
+                laneAt = lane.sleepUntil;
+            } else if (!lane.resting.isEmpty()) {
+                // O lado que dorme (provedor cheio) segura também o recuo.
+                laneAt = Math.max(lane.sleepUntil, lane.restingDue);
+            } else {
+                continue;
+            }
+            at = Math.min(at, laneAt);
         }
         return at;
     }
@@ -184,7 +231,13 @@ public final class DockReturn implements EngineVisitor {
         left = MAX_MACHINES_PER_VISIT;
         int result = 0;
         for (Lane lane : lanes) {
-            if (lane == null || lane.queue.isEmpty() || now < lane.sleepUntil) {
+            if (lane == null || now < lane.sleepUntil) {
+                continue;
+            }
+            if (now >= lane.restingDue) {
+                promote(lane, now);
+            }
+            if (lane.queue.isEmpty()) {
                 continue;
             }
             if (left == 0) {
@@ -253,10 +306,11 @@ public final class DockReturn implements EngineVisitor {
                 moved = true;
                 machine.setLastActive(now);
             }
-            if ((outcome & HAS_MORE) == 0) {
-                forget(machine);
-            } else {
+            if ((outcome & HAS_MORE) != 0) {
+                machine.setReturnInterval(0);
                 lane.queue.addLast(machine);
+            } else {
+                rest(lane, machine, caches, profile, (outcome & GAVE) != 0, scalar, now);
             }
             if ((outcome & FULL) != 0) {
                 full = true;
@@ -283,6 +337,88 @@ public final class DockReturn implements EngineVisitor {
      */
     private static int sleepTicks(boolean scalar) {
         return NetworkManager.maxSleepTicks(scalar ? ResourceType.FLUID : ResourceType.ITEM);
+    }
+
+    /**
+     * Passa as máquinas do recuo de {@code lane} cujo prazo venceu para o fim da fila e refaz o
+     * {@link Lane#restingDue}. O(recuo do lado), só quando o primeiro prazo vence; sem alocar (troca com o último).
+     */
+    private static void promote(Lane lane, long now) {
+        ArrayList<DockMachine> resting = lane.resting;
+        long due = Long.MAX_VALUE;
+        for (int i = resting.size() - 1; i >= 0; i--) {
+            DockMachine machine = resting.get(i);
+            if (machine.returnAt() <= now) {
+                int last = resting.size() - 1;
+                resting.set(i, resting.get(last));
+                resting.remove(last);
+                machine.setReturnAt(0);
+                lane.queue.addLast(machine);
+            } else if (machine.returnAt() < due) {
+                due = machine.returnAt();
+            }
+        }
+        lane.restingDue = due;
+    }
+
+    /**
+     * A visita não achou nada para dar em {@code machine}: vai ao recuo pelo intervalo seguinte (1 tick depois de dar
+     * algo, senão o dobro do último, até o teto do lado), ou sai da fila se o último intervalo já foi o teto, a última
+     * atividade passou da folga ({@link #IDLE_GRACE_TICKS}) e as faces Insere estão vazias ({@link #inputsEmpty}, lido
+     * só nesse caso).
+     */
+    private void rest(Lane lane, DockMachine machine, MachineCaches caches, MachineConfig profile, boolean gave,
+            boolean scalar, long now) {
+        int cap = sleepTicks(scalar);
+        int interval = gave ? 0 : machine.returnInterval();
+        if (interval >= cap && now - machine.lastActive() >= IDLE_GRACE_TICKS
+                && inputsEmpty(caches, profile, machine.front())) {
+            machine.setReturnInterval(0);
+            forget(machine);
+            return;
+        }
+        int next = interval == 0 ? 1 : Math.min(interval * 2, cap);
+        machine.setReturnInterval(next);
+        machine.setReturnAt(now + next);
+        lane.resting.add(machine);
+        lane.restingDue = Math.min(lane.restingDue, now + next);
+    }
+
+    /**
+     * As faces Insere do perfil não guardam nada: todos os slots e tanques (itens, fluidos e, com o Mekanism,
+     * químicos) vazios, pela frente da máquina. Uma face sem handler conta como vazia.
+     */
+    private static boolean inputsEmpty(MachineCaches caches, MachineConfig profile, int front) {
+        for (RemoteSide face : FACES) {
+            boolean items = profile.face(ResourceType.ITEM, face).mode().inserts();
+            boolean fluids = profile.face(ResourceType.FLUID, face).mode().inserts();
+            boolean chemicals = Chemicals.LOADED && profile.face(ResourceType.CHEMICAL, face).mode().inserts();
+            if (!items && !fluids && !chemicals) {
+                continue;
+            }
+            Direction direction = DIRECTIONS[face.toAbsolute(front)];
+            IItemHandler itemHandler = items ? caches.items(direction) : null;
+            if (itemHandler != null) {
+                for (int slot = 0, slots = itemHandler.getSlots(); slot < slots; slot++) {
+                    if (!itemHandler.getStackInSlot(slot).isEmpty()) {
+                        return false;
+                    }
+                }
+            }
+            IFluidHandler fluidHandler = fluids ? caches.fluids(direction) : null;
+            if (fluidHandler != null) {
+                for (int tank = 0, tanks = fluidHandler.getTanks(); tank < tanks; tank++) {
+                    if (!fluidHandler.getFluidInTank(tank).isEmpty()) {
+                        return false;
+                    }
+                }
+            }
+            Object chemicalHandler = chemicals ? caches.chemicals(direction) : null;
+            if (chemicalHandler != null && Chemicals.holdsAny(chemicalHandler)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** O perfil tem alguma face Extrai de {@code type}. */
@@ -574,6 +710,7 @@ public final class DockReturn implements EngineVisitor {
 
     private void forget(DockMachine machine) {
         machine.setReturnAwake(false);
+        machine.setReturnAt(0);
         awake--;
     }
 
@@ -581,6 +718,11 @@ public final class DockReturn implements EngineVisitor {
         while (!lane.queue.isEmpty()) {
             forget(lane.queue.pollFirst());
         }
+        for (int i = 0, n = lane.resting.size(); i < n; i++) {
+            forget(lane.resting.get(i));
+        }
+        lane.resting.clear();
+        lane.restingDue = Long.MAX_VALUE;
     }
 
     /**
@@ -644,10 +786,14 @@ public final class DockReturn implements EngineVisitor {
         return lane.chemicalCache.getCapability();
     }
 
-    /** Um lado na volta: a fila das acordadas, o sono, os baldes da vazão e os caches do vizinho. */
+    /** Um lado na volta: a fila das acordadas, o recuo, o sono, os baldes da vazão e os caches do vizinho. */
     private static final class Lane {
         final int side;
         final ArrayDeque<DockMachine> queue = new ArrayDeque<>();
+        /** As máquinas em recuo (a última visita não achou nada), cada uma com o prazo em {@code returnAt}. */
+        final ArrayList<DockMachine> resting = new ArrayList<>();
+        /** O menor prazo do {@link #resting} ({@link Long#MAX_VALUE} sem nenhuma; 0 com uma acordada pelo aviso). */
+        long restingDue = Long.MAX_VALUE;
         final RateLimiter items;
         final RateLimiter fluid;
         final RateLimiter chemical;

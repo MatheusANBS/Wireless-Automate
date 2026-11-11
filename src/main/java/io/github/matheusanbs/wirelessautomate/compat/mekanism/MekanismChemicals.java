@@ -39,6 +39,17 @@ public final class MekanismChemicals {
         return ((IChemicalHandler) handler).getChemicalTanks();
     }
 
+    /** Algum tanque do handler guarda químico. */
+    public static boolean holdsAny(Object handler) {
+        IChemicalHandler chemicals = (IChemicalHandler) handler;
+        for (int tank = 0, n = chemicals.getChemicalTanks(); tank < n; tank++) {
+            if (!chemicals.getChemicalInTank(tank).isEmpty()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** Soma em {@code out[0]} o que há nos tanques e em {@code out[1]} a capacidade deles. */
     public static void held(Object handler, long[] out) {
         IChemicalHandler chemicals = (IChemicalHandler) handler;

@@ -22,8 +22,15 @@ public final class DockMachine {
     private long lastActive;
     /** A máquina avisou mudança (o {@code setChanged} dela, a carga do chunk ou um cache invalidado); não é salvo. */
     private boolean changed;
-    /** Está na fila da volta ({@link DockReturn}); não é salvo. */
+    /** Está na fila da volta ({@link DockReturn}), para já ou em recuo; não é salvo. */
     private boolean returnAwake;
+    /**
+     * Tick do servidor da próxima revisita da volta, com a máquina em recuo (a última visita não achou nada); 0 para
+     * já. Não é salvo: na carga, a Doca põe todas as ativas na fila de novo.
+     */
+    private long returnAt;
+    /** O intervalo do recuo da volta, em ticks: dobra a cada visita vazia, até o teto; 0 recomeça. Não é salvo. */
+    private int returnInterval;
     /** Tick do servidor até o qual a máquina dorme (recusou um pedido); zerado quando ela muda. Não é salvo. */
     private long sleepUntil;
     /** Os caches de capability, criados na primeira consulta ({@link #caches}). */
@@ -93,6 +100,24 @@ public final class DockMachine {
 
     void setReturnAwake(boolean awake) {
         returnAwake = awake;
+    }
+
+    /** Ver {@link #returnAt}. */
+    long returnAt() {
+        return returnAt;
+    }
+
+    void setReturnAt(long tick) {
+        returnAt = tick;
+    }
+
+    /** Ver {@link #returnInterval}. */
+    int returnInterval() {
+        return returnInterval;
+    }
+
+    void setReturnInterval(int ticks) {
+        returnInterval = ticks;
     }
 
     /** Dorme (fica fora da escolha) até o tick {@code tick}, ou até mudar ({@link #wake}). */

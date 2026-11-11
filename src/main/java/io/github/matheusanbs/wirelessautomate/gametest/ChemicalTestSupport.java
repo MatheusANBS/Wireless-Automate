@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import mekanism.api.Action;
 import mekanism.api.AutomationType;
 import mekanism.api.MekanismAPI;
+import mekanism.api.RelativeSide;
 import mekanism.api.chemical.BasicChemicalTank;
 import mekanism.api.chemical.ChemicalStack;
 import mekanism.api.chemical.IChemicalHandler;
@@ -27,7 +28,8 @@ import org.jetbrains.annotations.Nullable;
  * {@code @EventBusSubscriber}: o NeoForge inspeciona essas classes por reflexão (as assinaturas dos
  * métodos), e um tipo do Mekanism numa assinatura impede o mod de carregar sem ele. Só é chamada
  * por {@link ChemicalTestTanks}, {@link ChemicalGameTests}, {@link DockChemicalGameTests} e os testes dos químicos da
- * Doca nas redes ({@link DockChemicalAe2GameTests}, {@link DockChemicalRs2GameTests}) com o Mekanism presente.
+ * Doca nas redes ({@link DockChemicalAe2GameTests}, {@link DockChemicalRs2GameTests}) e {@link DockMekanismGameTests}
+ * com o Mekanism presente.
  */
 final class ChemicalTestSupport {
     private static final Map<BlockPos, IChemicalTank> TANKS = new ConcurrentHashMap<>();
@@ -367,5 +369,49 @@ final class ChemicalTestSupport {
     }
 
     private ChemicalTestSupport() {
+    }
+
+    // ------------------------------------------------------------------ uma máquina de verdade do Mekanism
+
+    /**
+     * Liga as faces da máquina do Mekanism em {@code be} (que vêm todas desligadas): a entrada de item em Cima, a
+     * saída em Baixo e a energia pelos quatro lados. A configuração de lados é do jar inteiro do Mekanism, fora da API
+     * que compila aqui, então vai por reflexão ({@code ISideConfiguration.getConfig()}, {@code ConfigInfo.setDataType},
+     * {@code sideChanged}).
+     */
+    static void mekanismSides(Object be) {
+        try {
+            ClassLoader loader = be.getClass().getClassLoader();
+            Class<?> transmission = Class.forName("mekanism.common.lib.transmitter.TransmissionType", true, loader);
+            Class<?> dataType = Class.forName("mekanism.common.tile.component.config.DataType", true, loader);
+            Object item = enumConstant(transmission, "ITEM");
+            Object config = be.getClass().getMethod("getConfig").invoke(be);
+            Object info = config.getClass().getMethod("getConfig", transmission).invoke(config, item);
+            var setDataType = info.getClass().getMethod("setDataType", dataType, RelativeSide.class);
+            var sideChanged = config.getClass().getMethod("sideChanged", transmission, RelativeSide.class);
+            setDataType.invoke(info, enumConstant(dataType, "INPUT"), RelativeSide.TOP);
+            setDataType.invoke(info, enumConstant(dataType, "OUTPUT"), RelativeSide.BOTTOM);
+            sideChanged.invoke(config, item, RelativeSide.TOP);
+            sideChanged.invoke(config, item, RelativeSide.BOTTOM);
+            // a energia entra pelos lados (Frente, Trás, Esquerda e Direita)
+            Object energy = enumConstant(transmission, "ENERGY");
+            Object energyInfo = config.getClass().getMethod("getConfig", transmission).invoke(config, energy);
+            for (RelativeSide side : new RelativeSide[] {RelativeSide.FRONT, RelativeSide.BACK, RelativeSide.LEFT,
+                    RelativeSide.RIGHT}) {
+                setDataType.invoke(energyInfo, enumConstant(dataType, "INPUT"), side);
+                sideChanged.invoke(config, energy, side);
+            }
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("a configuração de lados do Mekanism mudou", e);
+        }
+    }
+
+    private static Object enumConstant(Class<?> type, String name) {
+        for (Object constant : type.getEnumConstants()) {
+            if (((Enum<?>) constant).name().equals(name)) {
+                return constant;
+            }
+        }
+        throw new IllegalStateException(type.getName() + " sem " + name);
     }
 }

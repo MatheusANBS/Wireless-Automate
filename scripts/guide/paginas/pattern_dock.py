@@ -52,8 +52,8 @@ sai o resultado. A action bar mostra o que ela achou.
 - Entrega **cada pedido inteiro** a uma máquina livre do lado.
 - As máquinas **se revezam**: o próximo pedido vai para a seguinte.
 - O resultado **volta ao provedor**, e o provedor manda para a rede.
-- Quando **todas as máquinas estão cheias**, o pedido espera. **Nada se perde**, com uma exceção: se você quebrar a
-  Doca com um resto de pedido de **fluido** esperando, esse fluido se perde (os itens caem no chão).
+- Quando **todas as máquinas estão cheias**, o pedido espera. **Nada se perde**: se você quebrar a Doca com um resto
+  de pedido esperando, ele vai junto no item ("Pedido pendente") e volta ao mesmo lado quando você a recoloca.
 
 ## Quem faz o quê
 
@@ -135,8 +135,8 @@ gives the result. The action bar shows what it found.
 - It hands **each whole order** to a free machine of the side.
 - The machines **take turns**: the next order goes to the next one.
 - The result **goes back to the provider**, and the provider sends it to the network.
-- When **all the machines are full**, the order waits. **Nothing is lost**, with one exception: if you break the Dock
-  while the rest of a **fluid** order is waiting, that fluid is lost (items drop on the ground).
+- When **all the machines are full**, the order waits. **Nothing is lost**: if you break the Dock while the rest of an
+  order is waiting, it goes along in the item ("Order pending") and returns to the same side when you place it again.
 
 ## Who does what
 

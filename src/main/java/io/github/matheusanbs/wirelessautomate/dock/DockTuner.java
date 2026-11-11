@@ -3,8 +3,6 @@ package io.github.matheusanbs.wirelessautomate.dock;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.range.RangeLinks;
-import io.github.matheusanbs.wirelessautomate.range.RemoteIndex;
-import io.github.matheusanbs.wirelessautomate.range.RemoteListener;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -36,12 +34,12 @@ public final class DockTuner {
     /**
      * A primeira Doca carregada, no nível do jogador, que tem a máquina em {@code pos} num lado e em que o jogador
      * pode mexer ({@code mayBuild}, {@code mayInteract} e as proteções de outros mods na Doca, como no roteador);
-     * {@code null} sem nenhuma. Só no clique: uma consulta
-     * ao {@link RemoteIndex}.
+     * {@code null} sem nenhuma. Vale para a máquina ativa ou não (fora do alcance, além do limite). Só no clique: uma
+     * consulta ao {@link DockIndex}.
      */
     public static @Nullable Target find(ServerPlayer player, ServerLevel level, BlockPos pos) {
-        for (RemoteListener listener : RemoteIndex.get().listenersAt(level, pos)) {
-            if (listener instanceof PatternDockBlockEntity dock && accessible(player, level, dock)) {
+        for (PatternDockBlockEntity dock : DockIndex.get().docksAt(level, pos)) {
+            if (accessible(player, level, dock)) {
                 DockMachine machine = dock.machineAt(pos);
                 if (machine != null && dock.side(machine.side()) != null) {
                     return new Target(dock, machine);
@@ -53,8 +51,8 @@ public final class DockTuner {
 
     /** Alguma Doca carregada tem a máquina em {@code pos} num lado, com acesso ou sem. */
     public static boolean linked(ServerLevel level, BlockPos pos) {
-        for (RemoteListener listener : RemoteIndex.get().listenersAt(level, pos)) {
-            if (listener instanceof PatternDockBlockEntity dock && dock.machineAt(pos) != null) {
+        for (PatternDockBlockEntity dock : DockIndex.get().docksAt(level, pos)) {
+            if (!dock.isRemoved() && dock.machineAt(pos) != null) {
                 return true;
             }
         }

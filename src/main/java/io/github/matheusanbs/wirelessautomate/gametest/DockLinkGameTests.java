@@ -321,6 +321,53 @@ public final class DockLinkGameTests {
                 .thenSucceed();
     }
 
+    /**
+     * Uma fornalha vinculada à Doca A e fora do alcance dela (o raio baixado na config) continua dela: a Doca B recusa,
+     * com a posição da A, e o Ctrl + clique da B a deixa de fora e vincula a livre.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100, batch = "wirelessautomate_config_dock")
+    public static void refusesInactiveMachineOfOtherDock(GameTestHelper helper) {
+        // a Doca Avançada lê o raio do Elite, a Básica o do Avançado: só a A perde o alcance, e a B varre o cubo
+        // pequeno da Básica
+        PatternDockBlockEntity first = dock(helper, new BlockPos(0, 1, 0), RouterTier.ADVANCED);
+        PatternDockBlockEntity second = dock(helper, new BlockPos(2, 1, 2), RouterTier.BASIC);
+        BlockPos taken = new BlockPos(2, 1, 0);
+        BlockPos free = new BlockPos(4, 1, 2);
+        furnace(helper, taken, Direction.NORTH);
+        furnace(helper, free, Direction.NORTH);
+        TestPlayers.MenuPlayer player = player(helper);
+        var radius = Config.TIERS.get(RouterTier.ELITE).machineRadius();
+        helper.startSequence()
+                .thenIdle(1)
+                .thenExecute(() -> {
+                    chooseDock(helper, player, new BlockPos(0, 1, 0), NORTH);
+                    click(helper, player, taken, Direction.UP);
+                    helper.assertTrue(machine(helper, first, taken) != null, "a primeira Doca não vinculou");
+                    int before = radius.get();
+                    try {
+                        radius.set(1);
+                        first.reachChanged();
+                        DockMachine inactive = machine(helper, first, taken);
+                        helper.assertTrue(inactive != null && !inactive.active(), "a fornalha continua ativa na A");
+                        chooseDock(helper, player, new BlockPos(2, 1, 2), NORTH);
+                        click(helper, player, taken, Direction.UP);
+                        helper.assertTrue(machine(helper, second, taken) == null, "entrou em duas Docas");
+                        TranslatableContents text = message(helper, player.actionBar, KEY + "refusal.other_dock");
+                        helper.assertValueEqual(((Component) text.getArgs()[2]).getString(),
+                                LinkerActions.position(first.getBlockPos()).getString(), "a posição da outra Doca");
+                        DockLinks.Result result = ctrlClick(helper, player, free);
+                        helper.assertTrue(result != null && result.linked() == 1 && result.otherDock() == 1,
+                                "Ctrl + clique: " + result);
+                        helper.assertTrue(machine(helper, second, free) != null, "a livre não entrou");
+                        helper.assertTrue(machine(helper, second, taken) == null, "a da outra Doca entrou");
+                    } finally {
+                        radius.set(before);
+                        first.reachChanged();
+                    }
+                })
+                .thenSucceed();
+    }
+
     /** Uma fornalha a 7 blocos da Doca Básica (raio 6) fica fora do cubo, no clique e no Ctrl + clique. */
     @GameTest(template = "empty", timeoutTicks = 100)
     public static void refusesOutsideCube(GameTestHelper helper) {

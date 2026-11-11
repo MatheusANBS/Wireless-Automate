@@ -20,7 +20,7 @@ Upgrade de chunk loading: tickets do NeoForge (`RouterChunkLoader`), eventos de 
 
 ## `registry/`
 
-`ModBlocks`, `ModItems`, `ModBlockEntities`, `ModCreativeTabs`, `ModDataComponents` (inclusive o `linker_dock`, a Doca e o lado escolhidos no Vinculador, `dock/DockChoice`), `ModMenus`, `ModRecipes`
+`ModBlocks`, `ModItems`, `ModBlockEntities`, `ModCreativeTabs`, `ModDataComponents` (inclusive o `linker_dock`, a Doca e o lado escolhidos no Vinculador, `dock/DockChoice`, e o `pattern_dock_pending`, o pendente de uma Doca quebrada, `dock/DockPendingContents`), `ModMenus`, `ModRecipes`
 
 ## `bench/`
 

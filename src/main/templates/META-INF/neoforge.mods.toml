@@ -68,6 +68,15 @@ config="${mod_id}.mixins.json"
     ordering="NONE"
     side="BOTH"
 
+# Refined Storage 2: o Autocrafter entrega pedidos à Doca de Padrões pela fábrica de destinos externos (API estável
+# desde a 2.0.0).
+[[dependencies.${mod_id}]]
+    modId="refinedstorage"
+    type="optional"
+    versionRange="[2.0.0,)"
+    ordering="NONE"
+    side="BOTH"
+
 # JEI 19 é a linha do 1.21.1. Arrastar funciona em toda ela; Shift + clique na lista pede 19.28+.
 [[dependencies.${mod_id}]]
     modId="jei"

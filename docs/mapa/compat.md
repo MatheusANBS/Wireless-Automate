@@ -22,6 +22,10 @@ Source do Ars Nouveau (só a API dele, em `ArsSources`: a capability `ars_nouvea
 
 O AE2 (mod opcional, id `ae2`; compilado contra o jar `:api` do Maven Central) entrega pedidos à Doca de Padrões. A ponte `DockAe2` (`LOADED`, `register`, `hasProvider`, `offered`) é a única classe fora do `compat` que conhece o `Ae2Dock`. `Ae2Dock` registra a `AECapabilities.CRAFTING_MACHINE` no block entity da Doca (uma `Ae2DockMachine` por face, criada na primeira consulta e guardada no block entity como `Object`, `PatternDockBlockEntity.ae2Face`) e diz se o vizinho de um lado parece um Pattern Provider (`GENERIC_INTERNAL_INV` sem `ME_STORAGE`, com `level.isLoaded` antes). `Ae2DockMachine`: `acceptsPlans` é o `DockDelivery.acceptsOrders`; `pushPattern` recusa o padrão de bancada (`supportsPushInputsToExternalInventory` falso, motivo `CRAFTING_PATTERN`) e a chave que não é item nem fluido (`MIXED`), converte o `KeyCounter[]` em `ItemStack` partidos no tamanho máximo e `FluidStack` (listas da face, reaproveitadas) e chama o `DockDelivery.offer` sem simular; as duas marcam a última oferta do AE2 no lado. `getCraftingMachineInfo` dá ao Pattern Access Terminal o ícone e o nome das máquinas do lado (`gui.wirelessautomate.pattern_dock.ae2_group`, "Alto-forno × 3"), ou os da Doca no lado sem bloco.
 
+## `compat/refinedstorage/`
+
+O Refined Storage 2 (mod opcional, id `refinedstorage`; compilado contra a `refinedstorage-common-api` e a `refinedstorage-common`, esta só pelo `ItemResource` e o `FluidResource`, do `maven.creeperhost.net`) vai entregar pedidos do Autocrafter à Doca de Padrões (etapa 2). O mod completo só no `runClient` e na run `gameTestServerRefined`.
+
 ## `compat/sodium/`
 
 `SodiumSprites`: ponte por reflexão (sem `compileOnly`) para o `SpriteUtil` público do Sodium (0.6.9 ou mais novo). O Sodium só anima a textura marcada como ativa no quadro; a Tela de Sinal desenha o Ícone animado só a cada 2 ticks num framebuffer, então `TvCanvases.onFrame` marca a cada quadro as texturas dos Ícones animados à vista (`TvCanvas.sprites`, juntadas pelo `TvPaintIcon`). `AVAILABLE` é falso sem o Sodium ou sem a API, e nada roda

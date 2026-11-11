@@ -38,6 +38,9 @@ jobs:
       - name: GameTests do AE2 (Doca de Padrões)
         run: ./gradlew runGameTestServerAe2
 
+      - name: GameTests do RS2 (Doca de Padrões)
+        run: ./gradlew runGameTestServerRefined
+
       - uses: actions/upload-artifact@v4
         with:
           name: wirelessautomate

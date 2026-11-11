@@ -40,8 +40,8 @@ public final class DockSide {
     private final List<FluidStack> pendingFluids = new ArrayList<>();
     private long pendingAt;
 
-    // O que não é salvo: o motivo da última recusa, a máquina escolhida por uma simulação, as ativas, o estado da volta
-    // e o rascunho da entrega.
+    // O que não é salvo: o motivo da última recusa, a máquina escolhida por uma simulação, as ativas, o estado da volta,
+    // a última oferta do AE2 e o rascunho da entrega.
     /** O motivo da última recusa ({@link DockStatus#NO_REFUSAL} depois de uma aceita). */
     private int lastRefusal = DockStatus.NO_REFUSAL;
     /** A máquina que a última simulação aceita escolheu, o índice dela e o tick do servidor em que vale. */
@@ -55,6 +55,8 @@ public final class DockSide {
     /** Itens e mB que a volta deu ao provedor deste lado desde a carga da Doca. */
     private long returned;
     private long returnedFluid;
+    /** O tick do servidor da última oferta de um provedor do AE2 a este lado ({@link DockAe2#hasProvider}). */
+    private long providerOfferTick = Long.MIN_VALUE;
     /** Uma tentativa do pendente na fila do servidor, para o aviso seguinte não enfileirar outra. */
     private boolean flushQueued;
     /**
@@ -197,6 +199,15 @@ public final class DockSide {
 
     void setLastRefusal(int reason) {
         lastRefusal = reason;
+    }
+
+    /** O tick do servidor da última oferta do AE2, ou {@code Long.MIN_VALUE}. */
+    long providerOfferTick() {
+        return providerOfferTick;
+    }
+
+    void setProviderOfferTick(long tick) {
+        providerOfferTick = tick;
     }
 
     /** Guarda a máquina escolhida por uma simulação aceita no tick {@code tick}. */

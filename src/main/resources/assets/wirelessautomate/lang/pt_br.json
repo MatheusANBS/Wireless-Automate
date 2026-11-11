@@ -1149,6 +1149,7 @@
   "gui.wirelessautomate.pattern_dock.side.south": "Sul",
   "gui.wirelessautomate.pattern_dock.side.west": "Oeste",
   "gui.wirelessautomate.pattern_dock.side.east": "Leste",
+  "gui.wirelessautomate.pattern_dock.ae2_group": "%s × %s",
   "gui.wirelessautomate.recipes.error.not_editable": "Esta receita não pode ser editada",
   "gui.wirelessautomate.recipes.error.empty": "A receita precisa de pelo menos um ingrediente",
   "gui.wirelessautomate.recipes.error.unknown_item": "Item desconhecido: %s",

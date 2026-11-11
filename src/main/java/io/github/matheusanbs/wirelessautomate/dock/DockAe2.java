@@ -1,0 +1,52 @@
+package io.github.matheusanbs.wirelessautomate.dock;
+
+import io.github.matheusanbs.wirelessautomate.compat.ae2.Ae2Dock;
+import net.minecraft.server.level.ServerLevel;
+import net.neoforged.fml.ModList;
+import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
+
+/**
+ * Ponte da Doca para o AE2 sem tipos dele: só esta classe, fora do {@code compat/ae2}, conhece o {@link Ae2Dock}, e só
+ * o chama com {@link #LOADED}. Assim a JVM nunca carrega uma classe com tipos do AE2 quando ele não está instalado.
+ */
+public final class DockAe2 {
+    /** O AE2 está instalado: a Doca expõe a {@code ae2:crafting_machine} nas seis faces. */
+    public static final boolean LOADED = ModList.get() != null && ModList.get().isLoaded("ae2");
+    /** Por quanto tempo uma oferta do AE2 conta como "tem provedor" no lado (60 s). */
+    static final long OFFER_TICKS = 60 * 20;
+
+    private DockAe2() {
+    }
+
+    /** Registra a capability de máquina de crafting do AE2 na Doca; sem o AE2, nada. */
+    public static void register(RegisterCapabilitiesEvent event) {
+        if (LOADED) {
+            Ae2Dock.register(event);
+        }
+    }
+
+    /**
+     * O lado {@code side} tem um provedor do AE2: o vizinho expõe o inventário interno genérico sem expor o
+     * armazenamento ME (o Pattern Provider sim, a Interface não), ou um provedor ofereceu um pedido a ele nos últimos
+     * 60 s (os provedores de addon). Consulta o vizinho a cada chamada: só para a tela, nunca por tick.
+     */
+    public static boolean hasProvider(PatternDockBlockEntity dock, int side) {
+        if (!LOADED || !(dock.getLevel() instanceof ServerLevel level)) {
+            return false;
+        }
+        DockSide dockSide = dock.side(side);
+        if (dockSide != null && dockSide.providerOfferTick() != Long.MIN_VALUE
+                && level.getServer().getTickCount() - dockSide.providerOfferTick() < OFFER_TICKS) {
+            return true;
+        }
+        return Ae2Dock.providerNextTo(dock, side);
+    }
+
+    /** Um provedor do AE2 falou com o lado {@code side} (perguntou se aceita ou ofereceu um pedido). */
+    public static void offered(PatternDockBlockEntity dock, int side) {
+        DockSide dockSide = dock.side(side);
+        if (dockSide != null && dock.getLevel() instanceof ServerLevel level) {
+            dockSide.setProviderOfferTick(level.getServer().getTickCount());
+        }
+    }
+}

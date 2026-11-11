@@ -127,6 +127,15 @@ public final class DockDelivery {
                 && DockPending.flush(dock, dockSide, level.getServer().getTickCount());
     }
 
+    /**
+     * Recusa um pedido antes da oferta, por um motivo que só quem chama conhece (o padrão de bancada do AE2), e o grava
+     * no lado, se ele existe.
+     */
+    public static Result refuse(PatternDockBlockEntity dock, int side, int reason) {
+        DockSide dockSide = dock.side(side);
+        return dockSide == null ? Result.REFUSED : refuse(dockSide, reason);
+    }
+
     private static Result refuse(DockSide side, int reason) {
         side.setLastRefusal(reason);
         return Result.REFUSED;

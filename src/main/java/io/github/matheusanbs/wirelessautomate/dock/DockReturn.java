@@ -305,6 +305,9 @@ public final class DockReturn implements EngineVisitor {
             if ((outcome & GAVE) != 0) {
                 moved = true;
                 machine.setLastActive(now);
+                // A saída andou, então a entrada também: a máquina que recusou um pedido volta à escolha da entrega
+                // (a do Mekanism nunca avisa pelo setChanged, e sem isto dormiria o teto inteiro com lugar livre).
+                machine.wake();
             }
             if ((outcome & HAS_MORE) != 0) {
                 machine.setReturnInterval(0);

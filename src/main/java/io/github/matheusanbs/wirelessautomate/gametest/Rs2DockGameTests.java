@@ -34,7 +34,8 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
  * A Doca com o Refined Storage 2 de verdade: o destino que o Autocrafter recebe da fábrica registrada no RS2 (o
  * conjunto dos destinos de todas as fábricas, chamado direto, sem rede), a posição sem Doca, a simulação e a execução
  * na mesma fornalha, as fornalhas cheias e o pendente que recusam sem perder nada, o recurso que não é item nem fluido,
- * a trava "até a máquina esvaziar" e o "tem provedor". Rodam só na run {@code runGameTestServerRefined}, que tem o RS2
+ * a trava "até a máquina esvaziar" e o "tem provedor"; e a volta pela rede do Autocrafter (um pedido de verdade numa
+ * rede montada no teste, e a rede que some com o Controlador e volta). Rodam só na run {@code runGameTestServerRefined}, que tem o RS2
  * na pasta mods e liga o namespace {@value #NAMESPACE}. Nenhum tipo do RS2 nas assinaturas: o que usa a API fica em
  * {@link Rs2TestSupport}.
  *
@@ -49,6 +50,11 @@ public final class Rs2DockGameTests {
     private static final BlockPos[] FURNACES = {new BlockPos(4, 1, 1), new BlockPos(4, 1, 2), new BlockPos(4, 1, 3)};
     private static final int NORTH = Direction.NORTH.ordinal();
     private static final ResourceLocation FURNACE_ID = BuiltInRegistries.BLOCK.getKey(Blocks.FURNACE);
+    private static final ResourceLocation BLAST_ID = BuiltInRegistries.BLOCK.getKey(Blocks.BLAST_FURNACE);
+    /** A rede do RS2: o Autocrafter ao norte da Doca, virado para ela; o armazenamento e o Controlador a oeste. */
+    private static final BlockPos AUTOCRAFTER = DOCK.north();
+    private static final BlockPos STORAGE = AUTOCRAFTER.west();
+    private static final BlockPos CONTROLLER = STORAGE.west();
     private static final String ACCEPTED = "ACCEPTED";
     private static final String REJECTED = "REJECTED";
 
@@ -330,6 +336,127 @@ public final class Rs2DockGameTests {
                     Rs2TestSupport.accept(Rs2TestSupport.sink(helper.getLevel(), helper.absolutePos(DOCK), Direction.WEST),
                             oreAndCoal(), List.of(), false, true);
                     helper.assertTrue(DockRs2.hasProvider(dock, west), "a oferta recente não conta");
+                })
+                .thenSucceed();
+    }
+
+    // ------------------------------------------------------------------ a volta pela rede do RS2
+
+    /**
+     * A rede de verdade: Controlador Criativo, um bloco de armazenamento de 1k e o Autocrafter virado para a Doca, com o
+     * padrão de processamento do lingote; os Altos-fornos vinculados ao lado Norte.
+     */
+    private static PatternDockBlockEntity network(GameTestHelper helper, boolean pattern) {
+        PatternDockBlockEntity dock = dock(helper);
+        helper.setBlock(CONTROLLER, rs2("creative_controller"));
+        helper.setBlock(STORAGE, rs2("1k_storage_block"));
+        helper.setBlock(AUTOCRAFTER, Rs2TestSupport.facing(rs2("autocrafter"), Direction.SOUTH));
+        if (pattern) {
+            helper.assertTrue(Rs2TestSupport.installPattern(helper.getLevel(), helper.absolutePos(AUTOCRAFTER),
+                    Rs2TestSupport.processingPattern(Items.IRON_INGOT, 1, Items.RAW_IRON, 1, Items.COAL, 1)),
+                    "o padrão não entrou no Autocrafter");
+        }
+        return dock;
+    }
+
+    private static void linkBlastFurnaces(GameTestHelper helper, PatternDockBlockEntity dock, int count) {
+        for (int i = 0; i < count; i++) {
+            helper.setBlock(FURNACES[i], Blocks.BLAST_FURNACE.defaultBlockState()
+                    .setValue(AbstractFurnaceBlock.FACING, Direction.NORTH));
+            helper.assertTrue(dock.link(NORTH, helper.absolutePos(FURNACES[i]), BLAST_ID, Direction.NORTH.ordinal()),
+                    "não vinculou o alto-forno " + i);
+        }
+        DockSide side = dock.side(NORTH);
+        side.profile().face(ResourceType.ITEM, RemoteSide.TOP).setMode(PortMode.INSERT);
+        side.profile().face(ResourceType.ITEM, RemoteSide.BACK).setMode(PortMode.INSERT);
+        side.profile().face(ResourceType.ITEM, RemoteSide.BOTTOM).setMode(PortMode.EXTRACT);
+    }
+
+    private static long stored(GameTestHelper helper, Item item) {
+        return Rs2TestSupport.stored(helper.getLevel(), helper.absolutePos(AUTOCRAFTER), item);
+    }
+
+    private static void stores(GameTestHelper helper, boolean expected) {
+        if (Rs2TestSupport.stores(helper.getLevel(), helper.absolutePos(AUTOCRAFTER)) != expected) {
+            throw new GameTestAssertException(expected ? "a rede ainda não guarda" : "a rede ainda guarda");
+        }
+    }
+
+    /**
+     * Um pedido de 3 lingotes pela rede do RS2: o Autocrafter entrega as três execuções à Doca, que as reparte entre os
+     * três Altos-fornos; os lingotes voltam pela rede do Autocrafter e a tarefa termina.
+     */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void networkOrderReturnsToNetwork(GameTestHelper helper) {
+        if (!enabled()) {
+            helper.succeed();
+            return;
+        }
+        PatternDockBlockEntity dock = network(helper, true);
+        BlockPos autocrafter = helper.absolutePos(AUTOCRAFTER);
+        helper.startSequence()
+                .thenWaitUntil(() -> registered(dock))
+                .thenExecute(() -> linkBlastFurnaces(helper, dock, 3))
+                .thenWaitUntil(() -> stores(helper, true))
+                .thenWaitUntil(() -> helper.assertTrue(Rs2TestSupport.knows(helper.getLevel(), autocrafter,
+                        Items.IRON_INGOT), "a rede não conhece o padrão"))
+                .thenExecute(() -> {
+                    helper.assertTrue(Rs2TestSupport.stock(helper.getLevel(), autocrafter, Items.RAW_IRON, 3) == 3,
+                            "o minério não coube");
+                    helper.assertTrue(Rs2TestSupport.stock(helper.getLevel(), autocrafter, Items.COAL, 3) == 3,
+                            "o carvão não coube");
+                })
+                .thenIdle(1)
+                .thenExecute(() -> {
+                    String result = Rs2TestSupport.request(helper.getLevel(), autocrafter, Items.IRON_INGOT, 3);
+                    helper.assertTrue("TASK_CREATED".equals(result), "o pedido: " + result);
+                })
+                .thenWaitUntil(() -> helper.assertTrue(stored(helper, Items.IRON_INGOT) == 3,
+                        "lingotes na rede: " + stored(helper, Items.IRON_INGOT)))
+                .thenExecute(() -> {
+                    for (BlockPos furnace : FURNACES) {
+                        helper.assertTrue(dock.machineAt(helper.absolutePos(furnace)).lastActive() > 0,
+                                "o alto-forno " + furnace.toShortString() + " não trabalhou");
+                    }
+                    helper.assertTrue(stored(helper, Items.RAW_IRON) == 0, "sobrou minério na rede");
+                    helper.assertTrue(dock.side(NORTH).returned() == 3, "devolvidos: " + dock.side(NORTH).returned());
+                })
+                .thenWaitUntil(() -> helper.assertTrue(Rs2TestSupport.tasks(helper.getLevel(), autocrafter) == 0,
+                        "a tarefa não terminou"))
+                .thenSucceed();
+    }
+
+    /**
+     * Sem o Controlador, a rede não guarda: o lingote fica no Alto-forno e o lado marca "provedor cheio"; com o
+     * Controlador de volta, o lingote entra na rede (pelo teto de sono da volta).
+     */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void networkGoneAndBack(GameTestHelper helper) {
+        if (!enabled()) {
+            helper.succeed();
+            return;
+        }
+        PatternDockBlockEntity dock = network(helper, false);
+        helper.startSequence()
+                .thenWaitUntil(() -> registered(dock))
+                .thenExecute(() -> linkBlastFurnaces(helper, dock, 1))
+                .thenWaitUntil(() -> stores(helper, true))
+                .thenExecute(() -> helper.setBlock(CONTROLLER, Blocks.AIR))
+                .thenWaitUntil(() -> stores(helper, false))
+                .thenExecute(() -> {
+                    AbstractFurnaceBlockEntity furnace = helper.getBlockEntity(FURNACES[0]);
+                    furnace.setItem(2, new ItemStack(Items.IRON_INGOT));
+                    furnace.setChanged();
+                })
+                .thenWaitUntil(() -> helper.assertTrue(dock.side(NORTH).providerFull(), "o lado não marcou cheio"))
+                .thenExecute(() -> {
+                    assertSlot(helper, FURNACES[0], 2, Items.IRON_INGOT, 1);
+                    helper.setBlock(CONTROLLER, rs2("creative_controller"));
+                })
+                .thenWaitUntil(() -> helper.assertTrue(stored(helper, Items.IRON_INGOT) == 1, "o lingote não voltou"))
+                .thenExecute(() -> {
+                    assertSlot(helper, FURNACES[0], 2, Items.IRON_INGOT, 0);
+                    helper.assertFalse(dock.side(NORTH).providerFull(), "o lado continuou cheio");
                 })
                 .thenSucceed();
     }

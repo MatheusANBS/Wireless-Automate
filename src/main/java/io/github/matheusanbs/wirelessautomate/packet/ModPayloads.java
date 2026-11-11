@@ -16,6 +16,7 @@ import io.github.matheusanbs.wirelessautomate.menu.FilterMenu;
 import io.github.matheusanbs.wirelessautomate.menu.FilterTarget;
 import io.github.matheusanbs.wirelessautomate.menu.IdleNetworkUndo;
 import io.github.matheusanbs.wirelessautomate.client.linker.LinkerOpenClient;
+import io.github.matheusanbs.wirelessautomate.client.dock.DockReachPaint;
 import io.github.matheusanbs.wirelessautomate.client.tuner.TunerProposal;
 import io.github.matheusanbs.wirelessautomate.item.tuner.ConfiguratorTuner;
 import io.github.matheusanbs.wirelessautomate.menu.RecipeEditorMenu;
@@ -79,7 +80,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ModPayloads {
     /**
-     * Versão do protocolo (50: Doca de Padrões, o {@code DockStatePayload} da tela; 49: a tela do Vinculador e a área saíram, com o {@code LinkerMenu}, o
+     * Versão do protocolo (50: Doca de Padrões, o {@code DockStatePayload} da tela e o {@code DockReachPayload} do cubo do alcance; 49: a tela do Vinculador e a área saíram, com o {@code LinkerMenu}, o
      * {@code LinkerSnapshotPayload} e o {@code LinkerActionPayload}; 48: o {@code attachedShown} da {@code RangeView} (a presa que não é máquina sai da lista
      * do alcance); 47: o ícone do grupo no Tablet, a ação {@code GROUP_ICON}, o ícone no {@code GroupView} do
      * cabeçalho e o texto de 256 do {@code TabletActionPayload}; 46: o {@code ConfiguratorCancelPayload}, a pintura do Afinador apagada no cliente; 45: o {@code LinkSameBlockPayload}, o Ctrl + clique do Vinculador; 43: o bloco do grupo no {@code RenameTargetPayload}; 42: os payloads {@code UnlinkGroupPayload}, {@code MachineCopyPayload} e
@@ -179,6 +180,9 @@ public final class ModPayloads {
         registrar.playToClient(RepairerStatePayload.TYPE, RepairerStatePayload.STREAM_CODEC, RepairerMenu::onState);
         // Tela da Doca de Padrões (handler no DockMenu).
         registrar.playToClient(DockStatePayload.TYPE, DockStatePayload.STREAM_CODEC, DockMenu::onState);
+        // O cubo do alcance da Doca no mundo (o cliente só guarda e desenha).
+        registrar.playToClient(DockReachPayload.TYPE, DockReachPayload.STREAM_CODEC,
+                (payload, context) -> DockReachPaint.receive(payload));
         // Números da Tela de Sinal (o cliente preenche o gancho).
         registrar.playToClient(TvValuesPayload.TYPE, TvValuesPayload.STREAM_CODEC,
                 (payload, context) -> TvClientHooks.values.accept(payload));

@@ -135,7 +135,8 @@ public final class DockLinks {
     /**
      * Clique numa face da Doca: ela e o lado clicado passam a ser os escolhidos (o roteador e a Tela escolhidos saem).
      * Clicar de novo no lado escolhido solta a Doca. A action bar diz
-     * {@code Doca de Padrões · lado Norte (Fornalha) · 30/32}.
+     * {@code Doca de Padrões · lado Norte (Fornalha) · 30/32}, e o cubo do alcance vai ao cliente
+     * ({@link DockReachSync}).
      */
     public static Result choose(ServerPlayer player, ItemStack stack, PatternDockBlockEntity dock, int side) {
         DockChoice current = LinkerItem.dock(stack);
@@ -153,6 +154,7 @@ public final class DockLinks {
         LinkerItem.setRouter(stack, null);
         LinkerItem.setTv(stack, null);
         player.displayClientMessage(chosenText(dock, side), true);
+        DockReachSync.send(player, dock, 0);
         return Result.of(Status.CHOSEN);
     }
 
@@ -181,7 +183,8 @@ public final class DockLinks {
 
     /**
      * Clique numa máquina com a Doca escolhida: vincula ao lado escolhido ou, se já é desse lado, desvincula. O
-     * primeiro vínculo do lado preenche o perfil pelo Afinador. Mostra o resultado na action bar.
+     * primeiro vínculo do lado preenche o perfil pelo Afinador. Mostra o resultado na action bar e manda o cubo com o
+     * estado novo ({@link DockReachSync}).
      */
     public static Result toggle(ServerPlayer player, ItemStack stack, BlockPos pos) {
         DockChoice choice = LinkerItem.dock(stack);
@@ -201,6 +204,7 @@ public final class DockLinks {
             player.displayClientMessage(Component.translatable(KEY + "unlinked", machine, sideName(side),
                     dock.activeCount(), max(dock)), true);
             level.playSound(null, pos, SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.BLOCKS, 0.5F, 0.8F);
+            DockReachSync.send(player, dock, 0);
             return Result.of(Status.UNLINKED);
         }
         Refusal refusal = machineRefusal(level, dock, side, pos);
@@ -220,6 +224,7 @@ public final class DockLinks {
         player.displayClientMessage(first ? tune(player, dock, side, pos)
                 : Component.translatable(KEY + "linked", machine, sideName(side), dock.activeCount(), max(dock)), true);
         level.playSound(null, pos, SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.BLOCKS, 0.5F, 1.4F);
+        DockReachSync.send(player, dock, 0);
         return Result.of(Status.LINKED);
     }
 

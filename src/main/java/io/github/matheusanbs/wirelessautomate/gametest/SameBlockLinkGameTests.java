@@ -188,10 +188,14 @@ public final class SameBlockLinkGameTests {
             helper.setBlock(pos, Blocks.FURNACE);
         }
         int before = Config.TIERS.get(RouterTier.ADVANCED).maxMachines().get();
+        int radiusBefore = Config.TIERS.get(RouterTier.ADVANCED).machineRadius().get();
         helper.startSequence()
                 .thenWaitUntil(() -> waitLoaded(helper, router))
                 .thenExecute(() -> {
                     Config.TIERS.get(RouterTier.ADVANCED).maxMachines().set(3);
+                    // raio 2: só as cinco do teste no cubo; uma fornalha de outro teste numa seção vizinha pararia a
+                    // varredura cedo, e o aviso perderia o "de 5"
+                    Config.TIERS.get(RouterTier.ADVANCED).machineRadius().set(2);
                     try {
                         router.setRangeUpgrade(rangeUpgrade());
                         TestPlayers.MenuPlayer player = player(helper, router, true);
@@ -213,6 +217,7 @@ public final class SameBlockLinkGameTests {
                                 "sem o limite: " + player.actionBar.getString());
                     } finally {
                         Config.TIERS.get(RouterTier.ADVANCED).maxMachines().set(before);
+                        Config.TIERS.get(RouterTier.ADVANCED).machineRadius().set(radiusBefore);
                     }
                 })
                 .thenSucceed();

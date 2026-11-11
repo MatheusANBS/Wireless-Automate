@@ -11,6 +11,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -77,6 +78,17 @@ public class PatternDockBlock extends BaseEntityBlock {
             DockMenu.open(serverPlayer, dock);
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
+    }
+
+    /** Colocada por um jogador: o cubo do alcance aparece por 5 s só para ele ({@link DockReachSync}). */
+    @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer,
+            ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        if (!level.isClientSide && placer instanceof ServerPlayer player
+                && level.getBlockEntity(pos) instanceof PatternDockBlockEntity dock) {
+            DockReachSync.send(player, dock, DockReachSync.PLACED_TICKS);
+        }
     }
 
     /** Bloco saindo do mundo (não uma troca de tier, que só muda o estado): o pendente de itens cai no chão. */

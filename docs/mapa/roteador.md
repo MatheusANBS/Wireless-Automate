@@ -56,7 +56,7 @@ A tela do roteador e o painel do nó, em partes. Anfitriãs: `RouterScreen` (tam
 
 ## `client/highlight/`
 
-O destaque no mundo, só cliente (nada de pacote nem de tick). `MachineHighlights` (puro, com JUnit: o conjunto das acesas, no máximo 64 (`LIMIT`), por dimensão e máquina, com o roteador de cada uma; `toggle` liga ou apaga e `clear` apaga todas), `HighlightRenderer` (o desenho por quadro, só com acesas: o contorno da máquina através dos blocos e a linha contínua até o roteador; a 0,5 µs sem acesas e ~90 µs com 64) e `HighlightRenderTypes` (os tipos de render, com `depthFunc` ALWAYS). O Olho ◉ da linha da lista do alcance e o **No mundo** do painel do Tablet ligam, o **Apagar todas** apaga, e sair do mundo limpa. Testado com os gráficos Fabulous
+O destaque no mundo, só cliente (nada de pacote nem de tick). `MachineHighlights` (puro, com JUnit: o conjunto das acesas, no máximo 64 (`LIMIT`), por dimensão e máquina, com o roteador de cada uma; `toggle` liga ou apaga e `clear` apaga todas), `HighlightRenderer` (o desenho por quadro, só com acesas: o contorno da máquina através dos blocos e a linha contínua até o roteador; a 0,5 µs sem acesas e ~90 µs com 64) e `HighlightRenderTypes` (os tipos de render, com `depthFunc` ALWAYS; públicos, o cubo da Doca, `client/dock/DockReachPaint`, usa os mesmos). O Olho ◉ da linha da lista do alcance e o **No mundo** do painel do Tablet ligam, o **Apagar todas** apaga, e sair do mundo limpa. Testado com os gráficos Fabulous
 
 ## `client/tuner/`
 

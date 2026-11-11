@@ -47,6 +47,11 @@ import org.jetbrains.annotations.Nullable;
  */
 public class PatternDockBlockEntity extends BlockEntity implements RemoteListener, CacheOwner {
     public static final int SIDES = 6;
+    /**
+     * O evento de bloco "um lado entregou ou devolveu" ({@link #signalWork}), com o lado no parâmetro: o cliente anima
+     * o laço de trabalho ({@link DockWork}). Não é payload do mod: o jogo manda só a quem está a menos de 64 blocos.
+     */
+    public static final int EVENT_WORK = 1;
 
     private final DockSide[] sides = new DockSide[SIDES];
     /** Todas as máquinas da Doca, pela posição ({@code BlockPos.asLong}). */
@@ -63,6 +68,12 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
     private Object @Nullable [] ae2Faces;
     /** Um item da Doca com o pendente foi feito ou vai ser feito pela quebra ({@link #dropPendingWithoutItem}). */
     private boolean dropExpected;
+    /** No servidor: o tick ({@code getTickCount}) do último evento de trabalho mandado, para o intervalo. Não é salvo. */
+    private long lastWorkSent = DockWork.NEVER;
+    /** No servidor: quantos eventos de trabalho o jogo processou nesta Doca (para os testes). */
+    private int workEvents;
+    /** No cliente: o relógio do laço de trabalho, alimentado pelos eventos. Não é salvo. */
+    private final DockWork work = new DockWork();
 
     public PatternDockBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.PATTERN_DOCK.get(), pos, state);
@@ -420,6 +431,42 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
     @Override
     public BlockPos listenerPos() {
         return worldPosition;
+    }
+
+    /**
+     * Um lado entregou ou devolveu no tick {@code now} (o {@code getTickCount} do servidor): manda o evento de trabalho
+     * com o lado, no máximo um a cada {@link DockWork#EVENT_INTERVAL} ticks por Doca. Custo: uma comparação; o evento
+     * vai para a fila de eventos de bloco do nível, que junta os iguais do mesmo tick.
+     */
+    public void signalWork(int side, long now) {
+        if (level == null || level.isClientSide || !DockWork.shouldSend(now, lastWorkSent)) {
+            return;
+        }
+        lastWorkSent = now;
+        level.blockEvent(worldPosition, getBlockState().getBlock(), EVENT_WORK, side);
+    }
+
+    /** No servidor: quantos eventos de trabalho o jogo já processou nesta Doca. */
+    public int workEvents() {
+        return workEvents;
+    }
+
+    /** No cliente: o relógio do laço de trabalho (o tick e o lado do último evento). */
+    public DockWork work() {
+        return work;
+    }
+
+    @Override
+    public boolean triggerEvent(int id, int param) {
+        if (id != EVENT_WORK || param < 0 || param >= SIDES) {
+            return super.triggerEvent(id, param);
+        }
+        if (level != null && level.isClientSide) {
+            work.event(level.getGameTime(), param);
+        } else {
+            workEvents++;
+        }
+        return true;
     }
 
     @Override

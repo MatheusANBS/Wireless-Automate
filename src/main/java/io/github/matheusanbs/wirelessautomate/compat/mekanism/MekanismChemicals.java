@@ -111,7 +111,7 @@ public final class MekanismChemicals {
 
     /** Existe um químico registrado com esse id (o vazio não conta). */
     public static boolean exists(ResourceLocation id) {
-        return !id.equals(MekanismAPI.EMPTY_CHEMICAL_KEY.location()) && MekanismAPI.CHEMICAL_REGISTRY.containsKey(id);
+        return !id.equals(MekanismAPI.CHEMICAL_REGISTRY.getDefaultKey()) && MekanismAPI.CHEMICAL_REGISTRY.containsKey(id);
     }
 
     private static @Nullable Chemical chemical(ResourceLocation id) {

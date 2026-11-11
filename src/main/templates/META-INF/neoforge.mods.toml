@@ -28,7 +28,11 @@ config="${mod_id}.mixins.json"
     ordering="NONE"
     side="BOTH"
 
-# Integrações opcionais: carregam só se o mod estiver presente.
+# Integrações opcionais: carregam só se o mod estiver presente. Cada mínimo é a primeira versão para 1.21.1 em que a
+# API que o mod usa existe e os GameTests da run dela passam com o jar dessa versão na pasta mods.
+
+# Mekanism: os químicos. 10.7.0 é a primeira para 1.21.1 (a dos químicos unificados); compilado contra ela, os GameTests
+# de químicos passam.
 [[dependencies.${mod_id}]]
     modId="mekanism"
     type="optional"
@@ -44,7 +48,8 @@ config="${mod_id}.mixins.json"
     ordering="NONE"
     side="BOTH"
 
-# FTB Teams: os times de grupo como acesso a uma rede privada (API 2101.x, a do 1.21.1).
+# FTB Teams: os times de grupo como acesso a uma rede privada (API 2101.x, a do 1.21.1; o que o mod usa é o mesmo da
+# 2101.1.0 à 2101.1.11).
 [[dependencies.${mod_id}]]
     modId="ftbteams"
     type="optional"
@@ -60,7 +65,8 @@ config="${mod_id}.mixins.json"
     ordering="NONE"
     side="BOTH"
 
-# AE2: a Doca de Padrões recebe pedidos pela capability ae2:crafting_machine (API da linha 19, a do 1.21.1).
+# AE2: a Doca de Padrões recebe pedidos pela capability ae2:crafting_machine. A linha 19 só pede o 1.21.1 a partir da
+# 19.0.20-beta, e a API que o mod usa é a mesma dela à 19.2.x (os GameTests de químicos da Doca passam com a 19.0.20-beta).
 [[dependencies.${mod_id}]]
     modId="ae2"
     type="optional"
@@ -68,30 +74,33 @@ config="${mod_id}.mixins.json"
     ordering="NONE"
     side="BOTH"
 
-# Refined Storage 2: o Autocrafter entrega pedidos à Doca de Padrões pela fábrica de destinos externos. Mínimo 2.0.9:
-# os recursos de item e fluido e o destino de plataforma, que a API não publica, só foram conferidos nela.
+# Refined Storage 2: o Autocrafter entrega pedidos à Doca de Padrões pela fábrica de destinos externos. Mínimo
+# 2.0.0-milestone.4.14: antes dela, o RS2 não passa a inserção pelas tarefas antes de guardar (beforeInsert), e a volta
+# da Doca depende disso. Os recursos de item e fluido e o destino de plataforma são os mesmos dela à 2.0.9. Na ordem de
+# versões do Maven, milestone vem depois de beta: a primeira faixa aceita as betas e a segunda, os milestones da 4.14 em
+# diante e as versões finais.
 [[dependencies.${mod_id}]]
     modId="refinedstorage"
     type="optional"
-    versionRange="[2.0.9,)"
+    versionRange="[2.0.0-beta.1,2.0.0-milestone),[2.0.0-milestone.4.14,)"
     ordering="NONE"
     side="BOTH"
 
 # Applied Mekanistics: os químicos (MekanismKey) nos pedidos do AE2 para a Doca de Padrões e na volta para a rede ME.
-# Mínimo 1.6.3, a versão conferida (a do ATM10).
+# Mínimo 1.6.0, a primeira para 1.21.1: MekanismKey.of, withAmount e getStack são os mesmos dela à 1.6.3.
 [[dependencies.${mod_id}]]
     modId="appmek"
     type="optional"
-    versionRange="[1.6.3,)"
+    versionRange="[1.6.0,)"
     ordering="NONE"
     side="BOTH"
 
 # Refined Storage Mekanism Integration: os químicos (ChemicalResource) nos pedidos do Autocrafter para a Doca de Padrões
-# e na volta para a rede do RS2. Mínimo 1.2.0, a versão conferida (a do ATM10).
+# e na volta para a rede do RS2. Mínimo 0.1.0, a primeira: o ChemicalResource é o mesmo dela à 1.2.0.
 [[dependencies.${mod_id}]]
     modId="refinedstorage_mekanism_integration"
     type="optional"
-    versionRange="[1.2.0,)"
+    versionRange="[0.1.0,)"
     ordering="NONE"
     side="BOTH"
 

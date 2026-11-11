@@ -10,7 +10,7 @@ package io.github.matheusanbs.wirelessautomate.dock;
 public final class DockStatus {
     /** Da mais grave à menos grave; {@code FREE} fica por último por ser o lado sem uso. */
     public enum State {
-        NO_PROVIDER, NO_MACHINES, CRAFTING_PATTERN, MIXED, PROVIDER_FULL, ALL_FULL, PENDING, WORKING, READY, FREE
+        NO_PROVIDER, NO_MACHINES, PROVIDER_LOCK, CRAFTING_PATTERN, MIXED, PROVIDER_FULL, ALL_FULL, PENDING, WORKING, READY, FREE
     }
 
     /** Nenhuma recusa recente. */
@@ -36,9 +36,11 @@ public final class DockStatus {
     }
 
     /**
+     * @param lock    o provedor está em "travar até o resultado" do AE2, que com a Doca nunca destrava (o resultado vai
+     *                direto para a rede, sem passar pelo retorno dele)
      * @param pending o lado guarda o resto de um pedido esperando lugar na máquina (e recusa pedidos até ele sair)
      */
-    public static State of(boolean provider, int machines, int lastRefusal, boolean returnBlocked,
+    public static State of(boolean provider, int machines, boolean lock, int lastRefusal, boolean returnBlocked,
             boolean allFull, boolean pending, int working) {
         if (!provider && machines == 0) {
             return State.FREE;
@@ -48,6 +50,9 @@ public final class DockStatus {
         }
         if (machines == 0) {
             return State.NO_MACHINES;
+        }
+        if (lock) {
+            return State.PROVIDER_LOCK;
         }
         if (lastRefusal == CRAFTING_PATTERN) {
             return State.CRAFTING_PATTERN;

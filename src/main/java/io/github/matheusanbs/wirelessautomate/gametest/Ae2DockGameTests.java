@@ -6,9 +6,11 @@ import io.github.matheusanbs.wirelessautomate.dock.DockAe2;
 import io.github.matheusanbs.wirelessautomate.dock.DockSide;
 import io.github.matheusanbs.wirelessautomate.dock.DockStatus;
 import io.github.matheusanbs.wirelessautomate.dock.PatternDockBlockEntity;
+import io.github.matheusanbs.wirelessautomate.menu.DockMenu;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
+import io.github.matheusanbs.wirelessautomate.packet.DockStatePayload;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import net.minecraft.core.BlockPos;
@@ -33,8 +35,9 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
  * A Doca com o AE2 de verdade: a capability {@code ae2:crafting_machine} nas seis faces, um pedido de uma CPU por um
- * Pattern Provider numa rede montada no teste (energia criativa, drive com célula, armazenamento de crafting), a trava
- * "até o resultado", o padrão de bancada recusado, as máquinas cheias que seguram o pedido sem perder nada, o nome do
+ * Pattern Provider numa rede montada no teste (energia criativa, drive com célula, armazenamento de crafting) com a
+ * volta direto para a rede, a rede sem energia que segura a volta, o aviso da trava "até o resultado", o padrão de
+ * bancada recusado, as máquinas cheias que seguram o pedido sem perder nada, o nome do
  * lado no Pattern Access Terminal e o "tem provedor". Rodam só na run {@code runGameTestServerAe2}, que tem o AE2 na
  * pasta mods e liga o namespace {@value #NAMESPACE}.
  *
@@ -141,8 +144,8 @@ public final class Ae2DockGameTests {
 
     /**
      * A rede de verdade: um pedido de 3 lingotes pela CPU passa pelo provedor, a Doca reparte as três execuções entre
-     * os três Altos-fornos, que trabalham ao mesmo tempo (num mesmo tick, os três com minério na entrada ou acesos), os
-     * lingotes voltam pelo provedor e terminam na rede.
+     * os três Altos-fornos, que trabalham ao mesmo tempo (num mesmo tick, os três com minério na entrada ou acesos), e
+     * os lingotes vão direto para a rede, onde a CPU os conta: o retorno do provedor fica vazio o tempo todo.
      */
     @GameTest(template = "empty", timeoutTicks = 300)
     public static void cpuOrderUsesThreeFurnaces(GameTestHelper helper) {
@@ -152,6 +155,7 @@ public final class Ae2DockGameTests {
         }
         PatternDockBlockEntity dock = network(helper);
         Object[] plan = new Object[1];
+        helper.onEachTick(() -> returnEmpty(helper));
         helper.startSequence()
                 .thenWaitUntil(() -> registered(dock))
                 .thenExecute(() -> linkFurnaces(helper, dock, 3))
@@ -187,32 +191,90 @@ public final class Ae2DockGameTests {
         return true;
     }
 
-    /** Com a trava "até o resultado", o provedor trava depois do pedido e destrava quando o lingote volta. */
-    @GameTest(template = "empty", timeoutTicks = 300)
-    public static void lockUntilResultUnlocks(GameTestHelper helper) {
+    /** O retorno do provedor está vazio neste tick (a volta não passa por ele). */
+    private static void returnEmpty(GameTestHelper helper) {
+        if (helper.getBlockEntity(PROVIDER) != null && !Ae2TestSupport.returnEmpty(helper.getLevel(),
+                helper.absolutePos(PROVIDER), Direction.SOUTH)) {
+            throw new GameTestAssertException("o resultado passou pelo retorno do provedor");
+        }
+    }
+
+    /**
+     * A trava "até o resultado" nunca destrava com a Doca (o resultado não passa pelo retorno do provedor): com ela, a
+     * linha do lado mostra "Tire a trava do provedor"; sem ela, o lado volta a ficar pronto.
+     */
+    @GameTest(template = "empty")
+    public static void lockUntilResultShowsOnTheLine(GameTestHelper helper) {
         if (!enabled()) {
             helper.succeed();
             return;
         }
         PatternDockBlockEntity dock = network(helper);
-        Object[] plan = new Object[1];
+        DockMenu menu = new DockMenu(1, TestPlayers.inLevel(helper).getInventory(), dock);
+        BlockPos provider = helper.absolutePos(PROVIDER);
+        helper.startSequence()
+                .thenWaitUntil(() -> registered(dock))
+                .thenExecute(() -> linkFurnaces(helper, dock, 1))
+                .thenExecute(() -> {
+                    DockStatus.State free = state(menu, 0);
+                    helper.assertTrue(free == DockStatus.State.READY, "sem trava: " + free);
+                    Ae2TestSupport.lockUntilResult(helper.getLevel(), provider);
+                    DockStatus.State locked = state(menu, DockMenu.SYNC_INTERVAL);
+                    helper.assertTrue(locked == DockStatus.State.PROVIDER_LOCK, "com a trava: " + locked);
+                    Ae2TestSupport.unlock(helper.getLevel(), provider);
+                    DockStatus.State unlocked = state(menu, 2L * DockMenu.SYNC_INTERVAL);
+                    helper.assertTrue(unlocked == DockStatus.State.READY, "sem a trava de novo: " + unlocked);
+                })
+                .thenSucceed();
+    }
+
+    /** O estado da linha Norte na conferência do menu em {@code now} (um estado novo a cada mudança). */
+    private static DockStatus.State state(DockMenu menu, long now) {
+        DockStatePayload payload = menu.pollState(now);
+        if (payload == null) {
+            throw new GameTestAssertException("o estado não mudou em " + now);
+        }
+        return DockStatus.State.values()[payload.lines().get(NORTH).state()];
+    }
+
+    /**
+     * Sem energia, o nó do provedor fica inativo e a rede não recebe: o lingote fica no Alto-forno e o lado marca
+     * "provedor cheio"; com a energia de volta, o lingote vai para a rede (sem passar pelo retorno do provedor).
+     */
+    @GameTest(template = "empty", timeoutTicks = 400)
+    public static void unpoweredNetworkHoldsTheReturn(GameTestHelper helper) {
+        if (!enabled()) {
+            helper.succeed();
+            return;
+        }
+        PatternDockBlockEntity dock = network(helper);
+        helper.onEachTick(() -> returnEmpty(helper));
+        BlockPos provider = helper.absolutePos(PROVIDER);
         helper.startSequence()
                 .thenWaitUntil(() -> registered(dock))
                 .thenExecute(() -> linkFurnaces(helper, dock, 1))
                 .thenWaitUntil(() -> ready(helper))
+                .thenExecute(() -> helper.setBlock(ENERGY, Blocks.AIR))
+                .thenWaitUntil(() -> helper.assertFalse(Ae2TestSupport.active(helper.getLevel(), provider),
+                        "o nó continua ativo sem energia"))
                 .thenExecute(() -> {
-                    Ae2TestSupport.lockUntilResult(helper.getLevel(), helper.absolutePos(PROVIDER));
-                    stock(helper, 1);
+                    AbstractFurnaceBlockEntity furnace = helper.getBlockEntity(FURNACES[0]);
+                    furnace.setItem(2, new ItemStack(Items.IRON_INGOT));
+                    furnace.setChanged();
                 })
-                .thenIdle(2)
-                .thenExecute(() -> plan(helper, plan, 1))
-                .thenWaitUntil(() -> helper.assertTrue(Ae2TestSupport.planned(plan[0]), "calculando"))
-                .thenExecute(() -> submit(helper, plan[0]))
-                .thenWaitUntil(() -> helper.assertTrue(Ae2TestSupport.locked(helper.getLevel(),
-                        helper.absolutePos(PROVIDER)), "o provedor não travou depois do pedido"))
-                .thenWaitUntil(() -> helper.assertTrue(stored(helper, Items.IRON_INGOT) == 1, "o lingote não voltou"))
-                .thenExecute(() -> helper.assertFalse(Ae2TestSupport.locked(helper.getLevel(),
-                        helper.absolutePos(PROVIDER)), "o provedor continuou travado"))
+                .thenWaitUntil(() -> helper.assertTrue(dock.side(NORTH).providerFull(), "o lado não marcou cheio"))
+                .thenExecute(() -> {
+                    AbstractFurnaceBlockEntity furnace = helper.getBlockEntity(FURNACES[0]);
+                    helper.assertTrue(furnace.getItem(2).is(Items.IRON_INGOT), "o lingote saiu sem rede");
+                    helper.setBlock(ENERGY, ae2("creative_energy_cell"));
+                })
+                .thenWaitUntil(() -> helper.assertTrue(stored(helper, Items.IRON_INGOT) == 1,
+                        "lingotes na rede: " + stored(helper, Items.IRON_INGOT)))
+                .thenExecute(() -> {
+                    AbstractFurnaceBlockEntity furnace = helper.getBlockEntity(FURNACES[0]);
+                    helper.assertTrue(furnace.getItem(2).isEmpty(), "o lingote ficou no Alto-forno");
+                    helper.assertFalse(dock.side(NORTH).providerFull(), "o lado continuou cheio");
+                })
                 .thenSucceed();
     }
 

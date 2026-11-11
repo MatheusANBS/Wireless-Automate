@@ -25,9 +25,10 @@ import org.jetbrains.annotations.Nullable;
 /**
  * A volta do resultado: o visitante da Doca no laço de transferência do {@link NetworkManager} (um por Doca, posto no
  * {@code onLoad} do servidor e tirado quando ela sai do mundo). Tira das faces Extrai do perfil de cada máquina
- * acordada (itens e fluidos) e põe no {@link IItemHandler}/{@link IFluidHandler} do vizinho daquele lado da Doca (o
- * provedor), pela face encostada nela. Um vizinho sem inventário que é um Autocrafter do RS2 recebe pela rede dele
- * ({@link DockRs2#target}), guardada no lado e esquecida quando o vizinho muda.
+ * acordada (itens e fluidos) e põe no destino daquele lado da Doca: direto na rede ME, se o vizinho é um nó do AE2
+ * ({@link DockAe2#target}: a CPU conta o resultado ali, sem o retorno de 9 espaços do Pattern Provider); na rede do
+ * Autocrafter, se é um do RS2 ({@link DockRs2#target}); senão no {@link IItemHandler}/{@link IFluidHandler} do vizinho,
+ * pela face encostada nela. A rede é guardada no lado e esquecida quando o vizinho muda.
  *
  * <p>Acordadas são as máquinas que receberam um pedido ({@link DockDelivery}) ou avisaram mudança
  * ({@link PatternDockBlockEntity#machineChanged}), numa fila por lado. Numa visita, cada uma dá até a vazão do tier por
@@ -35,9 +36,10 @@ import org.jetbrains.annotations.Nullable;
  * fila; a que deu volta ao fim dela. Só sai o que a face Extrai entrega: o combustível e as entradas ficam (a face de
  * baixo da fornalha só dá o produto). A inserção é simulada antes de tirar da máquina, então nada sai sem caber.
  *
- * <p>Provedor cheio (recusou algo que a máquina tinha para dar): o lado marca {@link DockSide#providerFull} e dorme até
- * o vizinho mudar ({@link #providerChanged}, o {@code setChanged} dele; ou o cache invalidado, o bloco trocou) ou o teto
- * de sono do motor. Sem vizinho com inventário, o lado dorme até o cache avisar ou o teto.
+ * <p>Provedor cheio (o destino recusou algo que a máquina tinha para dar: o inventário cheio, a rede sem espaço ou o
+ * nó dela sem energia ou canal): o lado marca {@link DockSide#providerFull} e dorme até o vizinho mudar
+ * ({@link #providerChanged}, o {@code setChanged} dele; ou o cache invalidado, o bloco trocou) ou o teto de sono do
+ * motor. Sem destino, o lado dorme até o cache avisar ou o teto.
  *
  * <p>Custo: parado, nada (sem acordada, {@link #wakeAt} é nunca, e o laço só lê esse número). Por visita, proporcional
  * às acordadas, até {@link #MAX_MACHINES_PER_VISIT} (mais que isso pede outra volta, {@link #MORE}); por máquina, uma
@@ -403,7 +405,11 @@ public final class DockReturn implements EngineVisitor {
         }
     }
 
-    /** O inventário do vizinho do lado, pela face encostada na Doca; {@code null} sem ele ou com o chunk descarregado. */
+    /**
+     * O destino dos itens do lado: a rede do vizinho ({@link Lane#network}) ou o inventário dele pela face encostada na
+     * Doca; {@code null} sem nenhum dos dois ou com o chunk descarregado. O cache do inventário é criado mesmo com a
+     * rede: é ele que avisa a troca do vizinho.
+     */
     private @Nullable IItemHandler destinationItems(ServerLevel level, Lane lane) {
         BlockPos pos = lane.neighbor(dock.getBlockPos());
         if (!level.isLoaded(pos)) {
@@ -415,8 +421,8 @@ public final class DockReturn implements EngineVisitor {
                     DIRECTIONS[lane.side].getOpposite(), () -> !dock.isRemoved() && lane.generation == created,
                     lane::neighborChanged);
         }
-        IItemHandler handler = lane.itemCache.getCapability();
-        return handler != null ? handler : lane.rs2(level, pos);
+        DockReturnNetwork network = lane.network(level, pos);
+        return network != null ? network : lane.itemCache.getCapability();
     }
 
     /** O {@link #destinationItems} dos fluidos. */
@@ -431,8 +437,8 @@ public final class DockReturn implements EngineVisitor {
                     DIRECTIONS[lane.side].getOpposite(), () -> !dock.isRemoved() && lane.generation == created,
                     lane::neighborChanged);
         }
-        IFluidHandler handler = lane.fluidCache.getCapability();
-        return handler != null ? handler : lane.rs2(level, pos);
+        DockReturnNetwork network = lane.network(level, pos);
+        return network != null ? network : lane.fluidCache.getCapability();
     }
 
     /** Um lado na volta: a fila das acordadas, o sono, os baldes da vazão e os caches do vizinho. */
@@ -448,9 +454,9 @@ public final class DockReturn implements EngineVisitor {
         @Nullable BlockCapabilityCache<IItemHandler, @Nullable Direction> itemCache;
         @Nullable BlockCapabilityCache<IFluidHandler, @Nullable Direction> fluidCache;
         private @Nullable BlockPos neighbor;
-        /** A rede do RS2 do vizinho, se ele é um Autocrafter; {@link #rs2Known}: já olhou este vizinho. */
-        private DockRs2.@Nullable Target rs2;
-        private boolean rs2Known;
+        /** A rede do vizinho (um nó do AE2 ou um Autocrafter do RS2); {@link #networkKnown}: já olhou este vizinho. */
+        private @Nullable DockReturnNetwork network;
+        private boolean networkKnown;
 
         Lane(int side, long itemRate, long fluidRate) {
             this.side = side;
@@ -465,22 +471,29 @@ public final class DockReturn implements EngineVisitor {
             return neighbor;
         }
 
-        /** O destino do RS2 no vizinho em {@code pos}, olhado uma vez por vizinho; {@code null} se não é um Autocrafter. */
-        DockRs2.@Nullable Target rs2(ServerLevel level, BlockPos pos) {
-            if (!rs2Known) {
-                rs2Known = true;
-                rs2 = DockRs2.target(level, pos);
+        /**
+         * A rede do vizinho em {@code pos}, olhada uma vez por vizinho: a ME de um nó do AE2 (antes do inventário, que
+         * no Pattern Provider é o retorno de 9 espaços dele) ou a de um Autocrafter do RS2 (que não tem inventário);
+         * {@code null} para um vizinho comum.
+         */
+        @Nullable DockReturnNetwork network(ServerLevel level, BlockPos pos) {
+            if (!networkKnown) {
+                networkKnown = true;
+                network = DockAe2.target(level, pos, DIRECTIONS[side].getOpposite());
+                if (network == null) {
+                    network = DockRs2.target(level, pos);
+                }
             }
-            return rs2;
+            return network;
         }
 
-        /** O bloco do vizinho mudou (o cache foi invalidado): acorda o lado e esquece o destino do RS2. */
+        /** O bloco do vizinho mudou (o cache foi invalidado): acorda o lado e esquece a rede dele. */
         void neighborChanged() {
             sleepUntil = 0;
-            rs2Known = false;
-            if (rs2 != null) {
-                rs2.reset();
-                rs2 = null;
+            networkKnown = false;
+            if (network != null) {
+                network.reset();
+                network = null;
             }
         }
     }

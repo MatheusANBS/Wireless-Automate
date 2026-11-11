@@ -1,9 +1,12 @@
 package io.github.matheusanbs.wirelessautomate.dock;
 
 import io.github.matheusanbs.wirelessautomate.compat.ae2.Ae2Dock;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Ponte da Doca para o AE2 sem tipos dele: só esta classe, fora do {@code compat/ae2}, conhece o {@link Ae2Dock}, e só
@@ -45,5 +48,23 @@ public final class DockAe2 {
         if (dockSide != null && dock.getLevel() instanceof ServerLevel level) {
             dockSide.setProviderOfferTick(level.getServer().getTickCount());
         }
+    }
+
+    /**
+     * O destino da volta para o vizinho em {@code pos}, encostado na Doca pela face {@code face} dele: a rede ME se ele
+     * é um nó do AE2 (o Pattern Provider, a Interface, um cabo), senão {@code null}. O resultado entra direto no
+     * armazenamento da rede, e a CPU que espera por ele o conta ali. Só na troca do vizinho (a volta guarda o destino
+     * por lado).
+     */
+    public static @Nullable DockReturnNetwork target(ServerLevel level, BlockPos pos, Direction face) {
+        return LOADED ? Ae2Dock.target(level, pos, face) : null;
+    }
+
+    /**
+     * O provedor do lado {@code side} está em "travar até o resultado", que com a Doca nunca destrava (o resultado não
+     * passa pelo retorno dele). Só para a tela, nunca por tick.
+     */
+    public static boolean lockedUntilResult(PatternDockBlockEntity dock, int side) {
+        return LOADED && Ae2Dock.lockedUntilResult(dock, side);
     }
 }

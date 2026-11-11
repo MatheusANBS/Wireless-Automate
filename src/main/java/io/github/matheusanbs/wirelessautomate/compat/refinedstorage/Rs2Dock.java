@@ -1,7 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.compat.refinedstorage;
 
 import com.refinedmods.refinedstorage.common.api.RefinedStorageApi;
-import io.github.matheusanbs.wirelessautomate.dock.DockRs2;
+import io.github.matheusanbs.wirelessautomate.dock.DockReturnNetwork;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 
@@ -20,7 +20,7 @@ public final class Rs2Dock {
     }
 
     /** O destino da volta para a rede do Autocrafter em {@code pos} ({@link Rs2DockNetwork}). */
-    public static DockRs2.Target target(ServerLevel level, BlockPos pos) {
+    public static DockReturnNetwork target(ServerLevel level, BlockPos pos) {
         return new Rs2DockNetwork(level, pos);
     }
 }

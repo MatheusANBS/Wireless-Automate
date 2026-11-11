@@ -66,6 +66,7 @@ class DockLayoutTest {
     void signalByState() {
         assertEquals(SIGNAL_ERROR, signal(DockStatus.State.NO_PROVIDER));
         assertEquals(SIGNAL_ERROR, signal(DockStatus.State.NO_MACHINES));
+        assertEquals(SIGNAL_ERROR, signal(DockStatus.State.PROVIDER_LOCK));
         assertEquals(SIGNAL_ERROR, signal(DockStatus.State.CRAFTING_PATTERN));
         assertEquals(SIGNAL_ERROR, signal(DockStatus.State.MIXED));
         assertEquals(SIGNAL_WARN, signal(DockStatus.State.PROVIDER_FULL));

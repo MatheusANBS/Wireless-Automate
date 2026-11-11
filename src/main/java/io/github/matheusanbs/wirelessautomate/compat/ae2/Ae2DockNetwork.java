@@ -43,6 +43,12 @@ final class Ae2DockNetwork implements DockReturnNetwork {
     private @Nullable IGrid grid;
     private @Nullable MEStorage storage;
     private @Nullable IActionSource source;
+    /**
+     * A chave da última pilha inserida, reaproveitada enquanto o item (ou o fluido) e os componentes são os mesmos: a
+     * volta simula e executa com a mesma pilha, e a saída de uma máquina costuma se repetir.
+     */
+    private @Nullable AEItemKey itemKey;
+    private @Nullable AEFluidKey fluidKey;
 
     Ae2DockNetwork(ServerLevel level, BlockPos pos, Direction face) {
         this.level = level;
@@ -122,7 +128,10 @@ final class Ae2DockNetwork implements DockReturnNetwork {
         if (stack.isEmpty()) {
             return stack;
         }
-        long inserted = insert(AEItemKey.of(stack), stack.getCount(), simulate);
+        if (itemKey == null || !itemKey.matches(stack)) {
+            itemKey = AEItemKey.of(stack);
+        }
+        long inserted = insert(itemKey, stack.getCount(), simulate);
         if (inserted <= 0) {
             return stack;
         }
@@ -171,7 +180,10 @@ final class Ae2DockNetwork implements DockReturnNetwork {
         if (resource.isEmpty()) {
             return 0;
         }
-        long inserted = insert(AEFluidKey.of(resource), resource.getAmount(), action.simulate());
+        if (fluidKey == null || !fluidKey.matches(resource)) {
+            fluidKey = AEFluidKey.of(resource);
+        }
+        long inserted = insert(fluidKey, resource.getAmount(), action.simulate());
         return (int) Math.min(inserted, resource.getAmount());
     }
 

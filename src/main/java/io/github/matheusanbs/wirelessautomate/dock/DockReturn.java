@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.dock;
 
 import io.github.matheusanbs.wirelessautomate.Config;
+import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.network.EngineVisitor;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.RateLimiter;
@@ -34,7 +35,10 @@ import org.jetbrains.annotations.Nullable;
  * ({@link PatternDockBlockEntity#machineChanged}), numa fila por lado. Numa visita, cada uma dá até a vazão do tier por
  * tipo (um balde por lado e tipo, a mesma tabela do roteador): a que não tem nada para dar pelas faces Extrai sai da
  * fila; a que deu volta ao fim dela. Só sai o que a face Extrai entrega: o combustível e as entradas ficam (a face de
- * baixo da fornalha só dá o produto). A inserção é simulada antes de tirar da máquina, então nada sai sem caber.
+ * baixo da fornalha só dá o produto). A inserção é simulada antes de tirar da máquina, então nada sai sem caber. Na
+ * rede do RS2 a simulação não vale (a tarefa só pega o resultado que espera na execução, e com os discos cheios a
+ * simulação daria zero): ali a volta simula a extração, insere de verdade e tira da máquina o que entrou
+ * ({@link DockReturnNetwork#insertsFirst}).
  *
  * <p>Provedor cheio (o destino recusou algo que a máquina tinha para dar: o inventário cheio, a rede sem espaço ou o
  * nó dela sem energia ou canal): o lado marca {@link DockSide#providerFull} e dorme até o vizinho mudar
@@ -284,6 +288,7 @@ public final class DockReturn implements EngineVisitor {
             Lane lane, IItemHandler out, long now) {
         int outcome = 0;
         long limit = lane.items.available(now);
+        DockReturnNetwork first = out instanceof DockReturnNetwork network && network.insertsFirst() ? network : null;
         for (int face = 0; face < FACES.length; face++) {
             if (!profile.face(ResourceType.ITEM, FACES[face]).mode().extracts()) {
                 continue;
@@ -300,20 +305,30 @@ public final class DockReturn implements EngineVisitor {
                 if (offer.isEmpty()) {
                     continue;
                 }
-                int fits = offer.getCount() - ItemHandlerHelper.insertItemStacked(out, offer, true).getCount();
-                if (fits <= 0) {
-                    return outcome | HAS_MORE | FULL;
+                int fits;
+                int gave;
+                if (first != null) {
+                    fits = offer.getCount() - first.insertItem(0, offer, false).getCount();
+                    if (fits <= 0) {
+                        return outcome | HAS_MORE | FULL;
+                    }
+                    gave = takeInserted(level, first, handler, slot, offer, fits);
+                } else {
+                    fits = offer.getCount() - ItemHandlerHelper.insertItemStacked(out, offer, true).getCount();
+                    if (fits <= 0) {
+                        return outcome | HAS_MORE | FULL;
+                    }
+                    ItemStack taken = handler.extractItem(slot, fits, false);
+                    if (taken.isEmpty()) {
+                        continue;
+                    }
+                    ItemStack rest = ItemHandlerHelper.insertItemStacked(out, taken, false);
+                    if (!rest.isEmpty()) {
+                        // O provedor aceitou na simulação e recusou de verdade: volta para a máquina, ou para o chão.
+                        keep(level, handler, rest);
+                    }
+                    gave = taken.getCount() - rest.getCount();
                 }
-                ItemStack taken = handler.extractItem(slot, fits, false);
-                if (taken.isEmpty()) {
-                    continue;
-                }
-                ItemStack rest = ItemHandlerHelper.insertItemStacked(out, taken, false);
-                if (!rest.isEmpty()) {
-                    // O provedor aceitou na simulação e recusou de verdade: volta para a máquina, ou para o chão.
-                    keep(level, handler, rest);
-                }
-                int gave = taken.getCount() - rest.getCount();
                 if (gave > 0) {
                     lane.items.consume(gave);
                     limit -= gave;
@@ -336,6 +351,7 @@ public final class DockReturn implements EngineVisitor {
             IFluidHandler out, long now) {
         int outcome = 0;
         long limit = lane.fluid.available(now);
+        DockReturnNetwork first = out instanceof DockReturnNetwork network && network.insertsFirst() ? network : null;
         for (int face = 0; face < FACES.length; face++) {
             if (!profile.face(ResourceType.FLUID, FACES[face]).mode().extracts()) {
                 continue;
@@ -358,18 +374,28 @@ public final class DockReturn implements EngineVisitor {
                     outcome |= HAS_MORE;
                     break;
                 }
-                int fits = out.fill(offer, IFluidHandler.FluidAction.SIMULATE);
+                // Na rede que insere antes, o que cabe já entrou: falta tirar da máquina.
+                int fits = out.fill(offer, first != null ? IFluidHandler.FluidAction.EXECUTE
+                        : IFluidHandler.FluidAction.SIMULATE);
                 if (fits <= 0) {
                     return outcome | HAS_MORE | FULL;
                 }
                 FluidStack taken = handler.drain(offer.copyWithAmount(fits), IFluidHandler.FluidAction.EXECUTE);
+                int gave;
+                if (first != null) {
+                    gave = taken.getAmount();
+                    if (gave < fits) {
+                        reclaimFluid(first, offer.copyWithAmount(fits - gave));
+                    }
+                } else {
+                    gave = taken.isEmpty() ? 0 : out.fill(taken, IFluidHandler.FluidAction.EXECUTE);
+                    if (gave < taken.getAmount()) {
+                        // Recusou de verdade o que aceitou na simulação: o resto volta para a máquina.
+                        handler.fill(taken.copyWithAmount(taken.getAmount() - gave), IFluidHandler.FluidAction.EXECUTE);
+                    }
+                }
                 if (taken.isEmpty()) {
                     break;
-                }
-                int gave = out.fill(taken, IFluidHandler.FluidAction.EXECUTE);
-                if (gave < taken.getAmount()) {
-                    // Recusou de verdade o que aceitou na simulação: o resto volta para a máquina.
-                    handler.fill(taken.copyWithAmount(taken.getAmount() - gave), IFluidHandler.FluidAction.EXECUTE);
                 }
                 if (gave > 0) {
                     lane.fluid.consume(gave);
@@ -383,6 +409,46 @@ public final class DockReturn implements EngineVisitor {
             }
         }
         return outcome;
+    }
+
+    /**
+     * A volta para uma rede que insere antes ({@link DockReturnNetwork#insertsFirst}): {@code fits} de {@code offer} já
+     * entraram na rede; tira esse tanto da máquina e devolve quanto saiu. A máquina dá o que a simulação ofereceu (mesmo
+     * slot, mesmo tick, nada no meio); se der menos, o que entrou a mais sai da rede de novo ({@link #reclaimItems}).
+     */
+    private int takeInserted(ServerLevel level, DockReturnNetwork network, IItemHandler handler, int slot,
+            ItemStack offer, int fits) {
+        ItemStack taken = handler.extractItem(slot, fits, false);
+        int gave = taken.getCount();
+        if (!taken.isEmpty() && !ItemStack.isSameItemSameComponents(taken, offer)) {
+            // Saiu outro item do slot, que não entrou na rede: volta para a máquina, ou para o chão.
+            keep(level, handler, taken);
+            gave = 0;
+        }
+        if (gave < fits) {
+            reclaimItems(network, offer.copyWithCount(fits - gave));
+        }
+        return gave;
+    }
+
+    /**
+     * Tira da rede o que entrou nela e a máquina não deu. O que uma tarefa já pegou não volta (só o armazenamento
+     * devolve): fica registrado no log, porque só acontece com uma máquina que promete na simulação e não cumpre.
+     */
+    private static void reclaimItems(DockReturnNetwork network, ItemStack extra) {
+        long back = network.reclaim(extra);
+        if (back < extra.getCount()) {
+            WirelessAutomate.LOGGER.warn("Doca: a máquina deu menos que ofereceu, e {} {} ficaram a mais na rede",
+                    extra.getCount() - back, extra.getItem());
+        }
+    }
+
+    private static void reclaimFluid(DockReturnNetwork network, FluidStack extra) {
+        long back = network.reclaim(extra);
+        if (back < extra.getAmount()) {
+            WirelessAutomate.LOGGER.warn("Doca: a máquina deu menos que ofereceu, e {} mB de {} ficaram a mais na rede",
+                    extra.getAmount() - back, extra.getFluid());
+        }
     }
 
     /** O que o provedor recusou depois de aceitar na simulação: de volta na máquina, e o que não voltar, no chão. */

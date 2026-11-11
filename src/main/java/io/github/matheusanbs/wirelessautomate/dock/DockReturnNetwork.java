@@ -1,5 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.dock;
 
+import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.items.IItemHandler;
 
@@ -12,4 +14,25 @@ import net.neoforged.neoforge.items.IItemHandler;
 public interface DockReturnNetwork extends IItemHandler, IFluidHandler {
     /** O vizinho mudou: esquece a rede guardada, achada de novo na próxima inserção. */
     void reset();
+
+    /**
+     * A simulação da inserção não vale para esta rede (no RS2, as tarefas só pegam o resultado que esperam na execução):
+     * a volta insere de verdade o que a máquina oferece e depois tira dela o que entrou ({@link DockReturn}).
+     */
+    default boolean insertsFirst() {
+        return false;
+    }
+
+    /**
+     * Tira da rede {@code stack} (o que entrou a mais quando a máquina deu menos do que ofereceu, com
+     * {@link #insertsFirst}); devolve quanto saiu.
+     */
+    default long reclaim(ItemStack stack) {
+        return 0;
+    }
+
+    /** O mesmo que {@link #reclaim(ItemStack)}, para fluido (mB). */
+    default long reclaim(FluidStack stack) {
+        return 0;
+    }
 }

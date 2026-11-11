@@ -68,12 +68,12 @@ config="${mod_id}.mixins.json"
     ordering="NONE"
     side="BOTH"
 
-# Refined Storage 2: o Autocrafter entrega pedidos à Doca de Padrões pela fábrica de destinos externos (API estável
-# desde a 2.0.0).
+# Refined Storage 2: o Autocrafter entrega pedidos à Doca de Padrões pela fábrica de destinos externos. Mínimo 2.0.9:
+# os recursos de item e fluido e o destino de plataforma, que a API não publica, só foram conferidos nela.
 [[dependencies.${mod_id}]]
     modId="refinedstorage"
     type="optional"
-    versionRange="[2.0.0,)"
+    versionRange="[2.0.9,)"
     ordering="NONE"
     side="BOTH"
 

@@ -4,6 +4,7 @@ import com.mojang.logging.LogUtils;
 import io.github.matheusanbs.wirelessautomate.chunk.ChunkLoaderEvents;
 import io.github.matheusanbs.wirelessautomate.command.WaCommand;
 import io.github.matheusanbs.wirelessautomate.dock.DockAe2;
+import io.github.matheusanbs.wirelessautomate.dock.DockRs2;
 import io.github.matheusanbs.wirelessautomate.dock.DockIndex;
 import io.github.matheusanbs.wirelessautomate.item.tuner.TunerPending;
 import io.github.matheusanbs.wirelessautomate.menu.IdleNetworkUndo;
@@ -73,6 +74,7 @@ public final class WirelessAutomate {
         modEventBus.addListener(io.github.matheusanbs.wirelessautomate.repairer.RepairerCapabilities::register);
         modEventBus.addListener(ResonatorCapabilities::register);
         modEventBus.addListener(DockAe2::register);
+        modEventBus.addListener(DockRs2::register);
         modEventBus.addListener(RecipeOverridePack::onAddPackFinders);
 
         modContainer.registerConfig(ModConfig.Type.SERVER, Config.SPEC);

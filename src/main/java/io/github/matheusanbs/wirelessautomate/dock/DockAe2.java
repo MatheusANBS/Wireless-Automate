@@ -12,8 +12,6 @@ import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 public final class DockAe2 {
     /** O AE2 está instalado: a Doca expõe a {@code ae2:crafting_machine} nas seis faces. */
     public static final boolean LOADED = ModList.get() != null && ModList.get().isLoaded("ae2");
-    /** Por quanto tempo uma oferta do AE2 conta como "tem provedor" no lado (60 s). */
-    static final long OFFER_TICKS = 60 * 20;
 
     private DockAe2() {
     }
@@ -35,8 +33,7 @@ public final class DockAe2 {
             return false;
         }
         DockSide dockSide = dock.side(side);
-        if (dockSide != null && dockSide.providerOfferTick() != Long.MIN_VALUE
-                && level.getServer().getTickCount() - dockSide.providerOfferTick() < OFFER_TICKS) {
+        if (dockSide != null && dockSide.offeredWithin(level.getServer().getTickCount())) {
             return true;
         }
         return Ae2Dock.providerNextTo(dock, side);

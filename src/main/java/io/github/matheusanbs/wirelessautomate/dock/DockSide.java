@@ -27,6 +27,8 @@ import org.jetbrains.annotations.Nullable;
 public final class DockSide {
     /** As faces de uma máquina no perfil ({@code RemoteSide}). */
     static final int FACES = 6;
+    /** Por quanto tempo uma oferta de um provedor conta como "tem provedor" no lado (60 s). */
+    static final long OFFER_TICKS = 60 * 20;
     /** O teto de {@code count} no codec do {@code ItemStack}: um pendente maior é salvo em partes. */
     private static final int SAVED_STACK_MAX = 99;
 
@@ -41,7 +43,7 @@ public final class DockSide {
     private long pendingAt;
 
     // O que não é salvo: o motivo da última recusa, a máquina escolhida por uma simulação, as ativas, o estado da volta,
-    // a última oferta do AE2 e o rascunho da entrega.
+    // a última oferta de um provedor e o rascunho da entrega.
     /** O motivo da última recusa ({@link DockStatus#NO_REFUSAL} depois de uma aceita). */
     private int lastRefusal = DockStatus.NO_REFUSAL;
     /** A máquina que a última simulação aceita escolheu, o índice dela e o tick do servidor em que vale. */
@@ -55,7 +57,10 @@ public final class DockSide {
     /** Itens e mB que a volta deu ao provedor deste lado desde a carga da Doca. */
     private long returned;
     private long returnedFluid;
-    /** O tick do servidor da última oferta de um provedor do AE2 a este lado ({@link DockAe2#hasProvider}). */
+    /**
+     * O tick do servidor da última oferta de um provedor do AE2 ou do RS2 a este lado ({@link DockAe2#hasProvider},
+     * {@link DockRs2#hasProvider}).
+     */
     private long providerOfferTick = Long.MIN_VALUE;
     /** Uma tentativa do pendente na fila do servidor, para o aviso seguinte não enfileirar outra. */
     private boolean flushQueued;
@@ -201,9 +206,9 @@ public final class DockSide {
         lastRefusal = reason;
     }
 
-    /** O tick do servidor da última oferta do AE2, ou {@code Long.MIN_VALUE}. */
-    long providerOfferTick() {
-        return providerOfferTick;
+    /** Um provedor ofereceu um pedido a este lado nos últimos {@link #OFFER_TICKS}, contados até {@code now}. */
+    boolean offeredWithin(long now) {
+        return providerOfferTick != Long.MIN_VALUE && now - providerOfferTick < OFFER_TICKS;
     }
 
     void setProviderOfferTick(long tick) {

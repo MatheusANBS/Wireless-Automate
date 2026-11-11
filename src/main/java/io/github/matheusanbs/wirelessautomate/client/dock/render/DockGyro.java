@@ -2,9 +2,9 @@ package io.github.matheusanbs.wirelessautomate.client.dock.render;
 
 /**
  * O giroscópio no miolo da Doca: os três anéis quadrados (latão deitado, porcelana em pé no plano xy, grafite claro
- * no plano yz), cada um em quatro caixas, e o cristal (um cubo de 3 em pé na ponta, no recorte da lente do tier). As
- * caixas e os recortes são os do {@code .bbmodel}, com o x e o z somados de 8 (o bloco de 0 a 16); todos giram em
- * torno do centro do bloco.
+ * no plano yz), cada um em quatro caixas, com a luz do mundo, e o cristal (um cubo de 3 em pé na ponta, no recorte da
+ * lente do tier), com a luz cheia: brilha no escuro na cor do tier. As caixas e os recortes são os do
+ * {@code .bbmodel}, com o x e o z somados de 8 (o bloco de 0 a 16); todos giram em torno do centro do bloco.
  */
 final class DockGyro {
     private static final float C = 8;
@@ -45,6 +45,7 @@ final class DockGyro {
 
     /** Desenha os anéis e o cristal na pose do quadro e devolve quantas caixas. */
     static int render(DockPose pose) {
+        DockBoxes.glow(false);
         DockBoxes.reset();
         DockBoxes.keyframe(C, C, C, pose.brassTilt, pose.brassSpin, 0);
         int drawn = ring(BRASS, BRASS_UV);
@@ -54,6 +55,7 @@ final class DockGyro {
         DockBoxes.reset();
         DockBoxes.keyframe(C, C, C, pose.graphiteSpin, 0, 0);
         drawn += ring(GRAPHITE, GRAPHITE_UV);
+        DockBoxes.glow(true);
         DockBoxes.reset().translate(0, (float) pose.crystalLift, 0);
         DockBoxes.keyframe(C, C, C, 0, pose.crystalSpin, 0);
         DockBoxes.scale(C, C, C, (float) pose.crystalScale);

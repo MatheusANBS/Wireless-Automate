@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.client.dock.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import org.joml.Matrix3f;
@@ -32,18 +33,25 @@ final class DockBoxes {
 
     private static VertexConsumer out;
     private static TextureAtlasSprite sprite;
+    private static int worldLight;
     private static int light;
 
     private DockBoxes() {
     }
 
-    /** O começo de um bloco: a matriz dele em pixels, o buffer, o atlas do tier e a luz. */
+    /** O começo de um bloco: a matriz dele em pixels, o buffer, o atlas do tier e a luz do mundo. */
     static void begin(PoseStack.Pose pose, VertexConsumer buffer, TextureAtlasSprite atlas, int packedLight) {
         BASE.set(pose.pose()).scale(PIXEL);
         BASE_NORMAL.set(pose.normal());
         out = buffer;
         sprite = atlas;
+        worldLight = packedLight;
         light = packedLight;
+    }
+
+    /** As próximas caixas com a luz cheia (acesas, brilham no escuro) ou com a luz do mundo. */
+    static void glow(boolean on) {
+        light = on ? LightTexture.FULL_BRIGHT : worldLight;
     }
 
     /** A matriz da peça volta à do bloco. */

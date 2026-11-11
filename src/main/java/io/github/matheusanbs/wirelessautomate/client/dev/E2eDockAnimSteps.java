@@ -27,10 +27,10 @@ import net.minecraft.world.level.block.Blocks;
  * A animação da Doca no mundo: uma Doca Elite no ar, o evento de trabalho do Leste que chega ao cliente e faz o laço
  * de trabalho tocar, e o tempo parado ({@link DockClock}) em cada fase da linha do tempo da spec, com a conferência de
  * quantas caixas o renderer pôs e a captura na câmera dos GIFs do Blockbench ({@code doca-anim-<laço>-<segundo>}),
- * mais o pacote pelo Norte. A suíte {@code doca-gif} grava os dois laços quadro a quadro pelo {@link E2eDockGif}
- * (montados em GIF fora do jogo) e a {@code doca-desempenho} mede o tempo de quadro com 50 Docas
- * à vista, sem e com o renderer. Tudo volta no fim (e em qualquer saída, pelo
- * {@link E2eResonatorSteps#restoreFrameSettings()}).
+ * mais o pacote pelo Norte e o trabalho à meia-noite ({@code doca-anim-noite-2.0}: o cristal e os fragmentos
+ * acesos). A suíte {@code doca-gif} grava os dois laços quadro a quadro pelo {@link E2eDockGif} (montados em GIF fora
+ * do jogo) e a {@code doca-desempenho} mede o tempo de quadro com 50 Docas à vista, sem e com o renderer. Tudo volta
+ * no fim (e em qualquer saída, pelo {@link E2eResonatorSteps#restoreFrameSettings()}).
  */
 final class E2eDockAnimSteps {
     /** As fases paradas: os segundos do laço de repouso e do de trabalho, e quantas caixas cada uma desenha. */
@@ -46,6 +46,7 @@ final class E2eDockAnimSteps {
      */
     static final double[] REF_VIEW = {1.75, 0.14, 1.08};
     private static final double CENTER_Y = 0.5;
+    private static final long MIDNIGHT = 18000;
     private static final int LIFT = 3;
     /** Quadros desenhados com a fase nova antes da captura. */
     private static final int SETTLE_FRAMES = 3;
@@ -97,6 +98,10 @@ final class E2eDockAnimSteps {
             client(pos).work().event(Minecraft.getInstance().level.getGameTime(), Direction.NORTH.ordinal());
         }, () -> true, () -> ""));
         phase(list, playerId, pos, true, 0.7, 15, "doca-anim-norte-0.7", new double[] {1.08, 0.14, -1.75});
+        long[] day = {-1};
+        list.add(dayTime("noite, para o cristal e os fragmentos acesos", day, true));
+        phase(list, playerId, pos, true, 2.0, 17, "doca-anim-noite-2.0", REF_VIEW);
+        list.add(dayTime("dia de volta", day, false));
         list.add(end("Doca animada", playerId, pos));
     }
 
@@ -204,6 +209,20 @@ final class E2eDockAnimSteps {
                     }
                     return true;
                 }, () -> PatternDockRenderer.lastBoxesForTests + " caixas"));
+    }
+
+    /** Põe o mundo à meia-noite, guardando a hora de antes em {@code saved[0]}, ou volta à guardada. */
+    private static Step dayTime(String what, long[] saved, boolean night) {
+        return new Step("Doca animada: " + what, STEP_TIMEOUT_MS, () -> onServer(server -> {
+            ServerLevel level = server.overworld();
+            if (night) {
+                saved[0] = level.getDayTime();
+                level.setDayTime(MIDNIGHT);
+            } else {
+                level.setDayTime(saved[0]);
+            }
+            return null;
+        }), () -> stepTicks >= 20, () -> "hora no cliente " + Minecraft.getInstance().level.getDayTime());
     }
 
     private static String seconds(double s) {

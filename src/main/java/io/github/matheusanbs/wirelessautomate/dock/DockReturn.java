@@ -26,7 +26,8 @@ import org.jetbrains.annotations.Nullable;
  * A volta do resultado: o visitante da Doca no laço de transferência do {@link NetworkManager} (um por Doca, posto no
  * {@code onLoad} do servidor e tirado quando ela sai do mundo). Tira das faces Extrai do perfil de cada máquina
  * acordada (itens e fluidos) e põe no {@link IItemHandler}/{@link IFluidHandler} do vizinho daquele lado da Doca (o
- * provedor), pela face encostada nela.
+ * provedor), pela face encostada nela. Um vizinho sem inventário que é um Autocrafter do RS2 recebe pela rede dele
+ * ({@link DockRs2#target}), guardada no lado e esquecida quando o vizinho muda.
  *
  * <p>Acordadas são as máquinas que receberam um pedido ({@link DockDelivery}) ou avisaram mudança
  * ({@link PatternDockBlockEntity#machineChanged}), numa fila por lado. Numa visita, cada uma dá até a vazão do tier por
@@ -414,7 +415,8 @@ public final class DockReturn implements EngineVisitor {
                     DIRECTIONS[lane.side].getOpposite(), () -> !dock.isRemoved() && lane.generation == created,
                     lane::neighborChanged);
         }
-        return lane.itemCache.getCapability();
+        IItemHandler handler = lane.itemCache.getCapability();
+        return handler != null ? handler : lane.rs2(level, pos);
     }
 
     /** O {@link #destinationItems} dos fluidos. */
@@ -429,7 +431,8 @@ public final class DockReturn implements EngineVisitor {
                     DIRECTIONS[lane.side].getOpposite(), () -> !dock.isRemoved() && lane.generation == created,
                     lane::neighborChanged);
         }
-        return lane.fluidCache.getCapability();
+        IFluidHandler handler = lane.fluidCache.getCapability();
+        return handler != null ? handler : lane.rs2(level, pos);
     }
 
     /** Um lado na volta: a fila das acordadas, o sono, os baldes da vazão e os caches do vizinho. */
@@ -445,6 +448,9 @@ public final class DockReturn implements EngineVisitor {
         @Nullable BlockCapabilityCache<IItemHandler, @Nullable Direction> itemCache;
         @Nullable BlockCapabilityCache<IFluidHandler, @Nullable Direction> fluidCache;
         private @Nullable BlockPos neighbor;
+        /** A rede do RS2 do vizinho, se ele é um Autocrafter; {@link #rs2Known}: já olhou este vizinho. */
+        private DockRs2.@Nullable Target rs2;
+        private boolean rs2Known;
 
         Lane(int side, long itemRate, long fluidRate) {
             this.side = side;
@@ -459,9 +465,23 @@ public final class DockReturn implements EngineVisitor {
             return neighbor;
         }
 
-        /** O bloco do vizinho mudou (o cache foi invalidado): acorda o lado. */
+        /** O destino do RS2 no vizinho em {@code pos}, olhado uma vez por vizinho; {@code null} se não é um Autocrafter. */
+        DockRs2.@Nullable Target rs2(ServerLevel level, BlockPos pos) {
+            if (!rs2Known) {
+                rs2Known = true;
+                rs2 = DockRs2.target(level, pos);
+            }
+            return rs2;
+        }
+
+        /** O bloco do vizinho mudou (o cache foi invalidado): acorda o lado e esquece o destino do RS2. */
         void neighborChanged() {
             sleepUntil = 0;
+            rs2Known = false;
+            if (rs2 != null) {
+                rs2.reset();
+                rs2 = null;
+            }
         }
     }
 }

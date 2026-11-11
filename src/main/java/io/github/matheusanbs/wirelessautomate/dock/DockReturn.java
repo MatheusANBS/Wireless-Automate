@@ -224,6 +224,18 @@ public final class DockReturn implements EngineVisitor {
 
     @Override
     public int visit(long now) {
+        DockProbe.Listener probe = DockProbe.listener;
+        if (probe == null) {
+            return visitLanes(now);
+        }
+        long started = System.nanoTime();
+        int result = visitLanes(now);
+        probe.returned(System.nanoTime() - started);
+        return result;
+    }
+
+    /** A visita: as filas de cada lado, até {@link #MAX_MACHINES_PER_VISIT} máquinas. */
+    private int visitLanes(long now) {
         visits++;
         if (dock.isRemoved() || !(dock.getLevel() instanceof ServerLevel level)) {
             return 0;

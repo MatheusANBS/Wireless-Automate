@@ -241,6 +241,25 @@ O que a implementação da etapa 1 mudou em relação ao desenho, além do que j
 - **A CPU do AE2:** (coprocessadores + 1) empurrões a cada 3 ticks, 256 itens cada: ~1.700 itens/s sem coprocessador. As cinco fábricas a 2.560× pedem 11.520 itens/s, 6,75 empurrões por janela: medido, 3 coprocessadores dão 58%, 6 dão 90%, 11 ou mais dão o máximo (92%).
 - **Teste:** `DockMekanismGameTests.returnWakesSleepingFactory` (run `runGameTestServerChemicals`): a Basic Smelting Factory a 256×, cheia, recusa e dorme; o pedido seguinte tem de entrar em menos de 60 ticks. Falha sem a correção ("a fábrica não recebeu de novo em 60 ticks", com os 192 lingotes já devolvidos e a entrada vazia).
 
+## Uso intenso com o Quantum Computer (11/11/2026)
+
+- **A pergunta do dono:** a medição anterior emulou a CPU e achou o AE2 como gargalo. Com o Quantum Computer do Advanced AE, que empurra muitas execuções em paralelo, a Doca aguenta?
+- **A medição** (`gametest/DockQuantumMedida`; números no `docs/benchmark.md`, "Doca: o uso intenso com o Quantum Computer"): `WA_DOCK_MEDIDA=1 ./gradlew runGameTestServerAe2 -PdockMedida`.
+  - A propriedade põe o Mekanism na pasta mods da run do AE2 e liga só o namespace da medição (`wirelessautomate_ae2medida`): os testes comuns do AE2 usam jogadores falsos, e o logout deles quebra com o Mekanism. Sem ela, a run é a de sempre.
+  - **A montagem:** as cinco Ultimate Smelting Factories reais a 2.560× (o ritmo de 8 Speed Upgrades e 256×, pelo ticker do bloco, como antes); o Pattern Provider do AE2 encostado na Doca, com o padrão 256 minérios brutos → 256 lingotes; e o maior Quantum Computer que a config padrão do Advanced AE deixa montar, de 7×7×7 (o Core, um Multi Threader e 123 Accelerators: 3.968 coprocessadores). Para comparar, também o Quantum Core sozinho (8).
+  - **O pedido e a volta:** 100.000 lingotes calculados e enviados pela CPU, e a volta direta à rede ME.
+  - **O sensor:** as contas vêm do `dock/DockProbe`, um ouvinte estático, nulo fora da medição, avisado pelo `Ae2DockMachine` e pelo `DockReturn.visit`.
+- **O resultado: a Doca aguenta.**
+  - Os 100.000 levam 190 ticks (9,5 s): 10.536 itens/s, 91% do teto das fábricas, com as fábricas paradas 2% do tempo. A CPU emulada dava 92%.
+  - **O custo, contra o orçamento de 1 ms:** a entrega custa 0,021 ms/tick (10 µs por oferta) e a volta direta à rede ME 0,06 a 0,09 ms/tick (120 a 170 ns por lingote, abaixo do motor com o baú, 0,09 a 0,12). Por tick, p50 de 0,08 ms.
+  - **As recusas por `BUDGET`:** nenhuma com a JIT aquecida. Só a primeira medição da run teve 2, quando uma oferta isolada levou 3,8 ms.
+- **Por que o Quantum não gasta o orçamento:** a CPU do Advanced AE (`AdvCraftingCPULogic`) empurra até a primeira recusa e para.
+  - A Doca aceita até um pedido não caber inteiro numa fábrica. A sobra vira pendente, e o `acceptsPlans` responde que não com uma leitura de campo.
+  - Na média são 2,06 empurrões aceitos por tick (no máximo 11, no primeiro tick, com as fábricas vazias) e ~3 perguntas por tick.
+  - A oferta recusada por "todas cheias" custa mais que a aceita (20,5 contra 12,7 µs, porque simula as cinco máquinas), mas só acontece a 256×: 220 em 1.759 ticks, 0,0026 ms/tick. Recusar já no `acceptsPlans` pediria um laço pelas máquinas a cada pergunta; não vale.
+- **A CPU deixa de limitar com ~8 coprocessadores:** o Quantum Core sozinho já dá 90%.
+- **O que fica:** os ~9% são o limite de design já registrado: o pendente segura o lado, que fica com pendente em 48% dos ticks. As opções e o custo de cada uma estão nas pendências da Doca. Sem correção de código.
+
 ## Ajuste do teste à mão: a máquina quebrada sai do lado sozinha (11/11/2026)
 
 - **O defeito:** "Se eu quebrar as máquinas que estavam vinculadas sem desvincular antes, não tem como limpar a face. Só colocando elas de volta e desvinculando com o Vinculador." A quebrada continuava vinculada, ocupava vaga do limite do tier e, com todas as do lado quebradas, o lado seguia preso ao bloco antigo e recusava outro tipo. A Doca não tem a lista de máquinas na tela (o roteador tem, com o Desvincular), e o Vinculador não clica no ar.

@@ -66,7 +66,7 @@ public final class DockChemicalGameTests {
     /**
      * A máquina em {@code machine} vinculada ao lado Norte, virada para o norte: item Insere em Cima, químico Insere em
      * Trás e Extrai em Baixo. O químico tem também uma face Insere sem tanque (Cima), que a entrega pula. Também para
-     * os testes dos químicos nas redes ({@link DockChemicalAe2GameTests}).
+     * os testes dos químicos nas redes ({@link DockChemicalAe2GameTests}, {@link DockChemicalRs2GameTests}).
      */
     static void linkMachine(GameTestHelper helper, PatternDockBlockEntity dock, BlockPos machine) {
         helper.assertTrue(dock.link(NORTH, helper.absolutePos(machine), MACHINE_ID, Direction.NORTH.ordinal()),

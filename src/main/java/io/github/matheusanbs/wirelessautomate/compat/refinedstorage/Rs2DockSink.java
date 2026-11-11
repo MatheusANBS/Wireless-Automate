@@ -33,9 +33,13 @@ import org.jetbrains.annotations.Nullable;
  * {@code LOCKED} seguido de um {@code SKIPPED} (o destino de inventário, que não acha nada na Doca) vira
  * {@code ACCEPTED}, e a execução que viesse depois sumiria com os ingredientes.
  *
- * <p>Os recursos viram {@code ItemStack} partidos no tamanho máximo do item (o contrato da entrega) e {@code FluidStack}
- * (o RS2 conta fluido em mB no NeoForge), juntos no mesmo pedido; outro tipo recusa com {@link DockStatus#MIXED}. As listas são deste destino e
- * reaproveitadas: o RS2 chama na thread do servidor, um pedido por vez.
+ * <p>Os recursos viram {@code ItemStack} partidos no tamanho máximo do item (o contrato da entrega), {@code FluidStack}
+ * (o RS2 conta fluido em mB no NeoForge) e, com a integração do RS2 com o Mekanism, o químico do
+ * {@code ChemicalResource} ({@code ChemicalStack} como {@code Object}, pela ponte {@link Rs2Chemicals}), juntos no
+ * mesmo pedido; outro tipo recusa com {@link DockStatus#MIXED}. O RS2 entrega o pedido inteiro a todos os destinos da
+ * posição: o de químico da integração procura a capability de químico da Doca, que não existe, e responde
+ * {@code SKIPPED}, então é este que trata o químico. As listas são deste destino e reaproveitadas: o RS2 chama na
+ * thread do servidor, um pedido por vez.
  */
 final class Rs2DockSink implements PlatformPatternProviderExternalPatternSink {
     private final ServerLevel level;
@@ -43,6 +47,7 @@ final class Rs2DockSink implements PlatformPatternProviderExternalPatternSink {
     private final int side;
     private final List<ItemStack> items = new ArrayList<>();
     private final List<FluidStack> fluids = new ArrayList<>();
+    private final List<Object> chemicals = new ArrayList<>();
 
     Rs2DockSink(ServerLevel level, BlockPos pos, Direction direction) {
         this.level = level;
@@ -62,19 +67,24 @@ final class Rs2DockSink implements PlatformPatternProviderExternalPatternSink {
                 DockDelivery.refuse(dock, side, DockStatus.MIXED);
                 return ExternalPatternSink.Result.REJECTED;
             }
-            return DockDelivery.offer(dock, side, items, fluids, action == Action.SIMULATE)
+            return DockDelivery.offer(dock, side, items, fluids, chemicals, action == Action.SIMULATE)
                     == DockDelivery.Result.ACCEPTED ? ExternalPatternSink.Result.ACCEPTED
                     : ExternalPatternSink.Result.REJECTED;
         } finally {
             items.clear();
             fluids.clear();
+            chemicals.clear();
         }
     }
 
-    /** Ordena os destinos do RS2 por tipo: este só leva itens e fluidos. */
+    /**
+     * Ordena os destinos do RS2 por tipo: este leva itens, fluidos e, com a integração, químicos. O RS2 só chama os
+     * destinos que se aplicam a algum recurso do pedido, então sem o químico aqui um pedido só de químico nunca chegaria.
+     */
     @Override
     public boolean applies(ResourceKey resource) {
-        return resource instanceof ItemResource || resource instanceof FluidResource;
+        return resource instanceof ItemResource || resource instanceof FluidResource
+                || Rs2Chemicals.isChemical(resource);
     }
 
     /** A trava "até a máquina esvaziar" do Autocrafter; sem Doca, vazio. */
@@ -90,7 +100,7 @@ final class Rs2DockSink implements PlatformPatternProviderExternalPatternSink {
                 && !dock.isRemoved() ? dock : null;
     }
 
-    /** Converte os recursos nas listas deste destino; {@code false} com um que não é item nem fluido. */
+    /** Converte os recursos nas listas deste destino; {@code false} com um que a Doca não conhece. */
     private boolean convert(Collection<ResourceAmount> resources) {
         for (ResourceAmount resourceAmount : resources) {
             long amount = resourceAmount.amount();
@@ -106,7 +116,11 @@ final class Rs2DockSink implements PlatformPatternProviderExternalPatternSink {
                             (int) Math.min(amount, Integer.MAX_VALUE), fluid.components()));
                 }
             } else {
-                return false;
+                Object chemical = Rs2Chemicals.chemical(resourceAmount.resource(), amount);
+                if (chemical == null) {
+                    return false;
+                }
+                chemicals.add(chemical);
             }
         }
         return true;

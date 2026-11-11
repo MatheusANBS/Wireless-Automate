@@ -11,6 +11,7 @@ import com.refinedmods.refinedstorage.common.api.support.network.InWorldNetworkN
 import com.refinedmods.refinedstorage.common.support.resource.FluidResource;
 import com.refinedmods.refinedstorage.common.support.resource.ItemResource;
 import io.github.matheusanbs.wirelessautomate.dock.DockReturnNetwork;
+import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
@@ -37,6 +38,10 @@ import org.jetbrains.annotations.Nullable;
  * nada. A busca só se repete quando a rede trocou ou quando o vizinho mudou ({@link #reset}, pelo cache de capability
  * do lado). Sem rede, aceita zero: a volta marca "provedor cheio" e dorme. Sem energia, o armazenamento da rede some
  * e a inserção também dá zero.
+ *
+ * <p>Com a integração do RS2 com o Mekanism ({@link Rs2Chemicals#LOADED}), a rede guarda químicos: o
+ * {@code ChemicalStack} entra como {@code ChemicalResource} pelo mesmo caminho (insere antes, tira depois, e o que a
+ * máquina der a menos sai da rede de novo pelo {@link #reclaimChemical}).
  */
 final class Rs2DockNetwork implements DockReturnNetwork {
     /** Quem insere, para o RS2 (o histórico do armazenamento). */
@@ -52,6 +57,7 @@ final class Rs2DockNetwork implements DockReturnNetwork {
     private ItemStack itemKeyStack = ItemStack.EMPTY;
     private @Nullable FluidResource fluidKey;
     private FluidStack fluidKeyStack = FluidStack.EMPTY;
+    private @Nullable ResourceKey chemicalKey;
 
     Rs2DockNetwork(ServerLevel level, BlockPos pos) {
         this.level = level;
@@ -109,6 +115,28 @@ final class Rs2DockNetwork implements DockReturnNetwork {
         StorageNetworkComponent target = storage();
         return target == null || stack.isEmpty() ? 0
                 : target.extract(fluidKey(stack), stack.getAmount(), Action.EXECUTE, ACTOR);
+    }
+
+    @Override
+    public boolean acceptsChemicals() {
+        return Rs2Chemicals.LOADED;
+    }
+
+    @Override
+    public long insertChemical(Object stack, boolean simulate) {
+        return insert(chemicalKey(stack), Chemicals.amount(stack), simulate);
+    }
+
+    @Override
+    public long reclaimChemical(Object stack) {
+        StorageNetworkComponent target = storage();
+        return target == null ? 0
+                : target.extract(chemicalKey(stack), Chemicals.amount(stack), Action.EXECUTE, ACTOR);
+    }
+
+    private ResourceKey chemicalKey(Object stack) {
+        chemicalKey = Rs2Chemicals.resource(stack, chemicalKey);
+        return chemicalKey;
     }
 
     private ItemResource itemKey(ItemStack stack) {

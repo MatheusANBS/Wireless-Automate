@@ -376,7 +376,7 @@ public final class DockLinkGameTests {
     /**
      * O cubo do alcance que o servidor monta para quem agiu: na escolha, só a Doca (raio e tier, sem máquinas); depois
      * de vincular uma fornalha no Norte e outra no Sul, as duas com os lados, na ordem dos lados; ao colocar, o prazo
-     * de 5 s (e o {@code setPlacedBy} com um jogador não quebra).
+     * de 5 s (e o {@code setPlacedBy} e o pedido do cliente com um jogador não quebram).
      */
     @GameTest(template = "empty", timeoutTicks = 100)
     public static void reachPayloadAfterChooseAndLink(GameTestHelper helper) {
@@ -412,6 +412,9 @@ public final class DockLinkGameTests {
                             "a desvinculada ficou no cubo");
                     helper.assertValueEqual(DockReachSync.payload(dock, DockReachSync.PLACED_TICKS).ticks(), 100,
                             "o prazo ao colocar");
+                    // o pedido do cliente que segura o Vinculador com a Doca, e um de quem não a escolheu: sem erro
+                    DockReachSync.request(player, dock.getBlockPos());
+                    DockReachSync.request(player, dock.getBlockPos().above());
                     dock.getBlockState().getBlock().setPlacedBy(helper.getLevel(), dock.getBlockPos(),
                             dock.getBlockState(), player, new ItemStack(ModItems.PATTERN_DOCK.get()));
                 })

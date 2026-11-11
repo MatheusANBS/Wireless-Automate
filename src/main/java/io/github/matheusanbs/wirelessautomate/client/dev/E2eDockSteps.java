@@ -49,11 +49,13 @@ import net.minecraft.world.level.block.Blocks;
  * Provider do AE2 encostado; as máquinas "descarregadas" ficam abaixo do mundo, onde o {@code isLoaded} é falso. Os
  * fatos que só um pedido do AE2 faria (a recusa, a última atividade, o provedor cheio) vão direto no lado. Em cada
  * foto, nenhum texto cortado. Depois, o cubo do alcance no mundo ({@code doca-cubo}): a Doca Básica escolhida no
- * Vinculador, com uma fileira de fornalhas no Norte e outra no Sul, vista de fora do cubo com o HUD; com a mão vazia, o
- * cubo some. No fim, os blocos saem e a config volta.
+ * Vinculador, com uma fileira de fornalhas no Norte e outra no Sul, vista de fora do cubo com o HUD; guardado o Vinculador,
+ * o cubo some, e volta ao pegá-lo de novo (e pelo pedido ao servidor, sem o cubo no cliente). No fim, os blocos saem e a config volta.
  */
 final class E2eDockSteps {
     private static final int OPEN_RETRY_TICKS = 40;
+    /** Onde o Vinculador fica guardado no passo que o tira da mão. */
+    private static final int STASH_SLOT = 8;
     private static final int NORTH = Direction.NORTH.ordinal();
     private static final int SOUTH = Direction.SOUTH.ordinal();
     private static final int EAST = Direction.EAST.ordinal();
@@ -123,7 +125,8 @@ final class E2eDockSteps {
 
     /**
      * O cubo do alcance: a Doca Básica com quatro fornalhas no Norte e quatro no Sul, o Vinculador na mão com o lado
-     * Norte escolhido pelo {@link DockLinks#choose} (que manda o cubo), a foto de fora do cubo e a mão vazia apagando.
+     * Norte escolhido pelo {@link DockLinks#choose} (que manda o cubo), a foto de fora do cubo, o Vinculador guardado e
+     * pego de novo e o cubo esquecido no cliente que volta pelo pedido.
      */
     private static void reach(List<Step> list, UUID playerId, BlockPos[] dock) {
         Vec3[] back = new Vec3[1];
@@ -149,7 +152,26 @@ final class E2eDockSteps {
                 () -> "cubo " + DockReachPaint.shown() + ", máquinas " + DockReachPaint.machineCount() + ", mão "
                         + Minecraft.getInstance().player.getMainHandItem()));
         list.add(E2eRepairerSteps.cameraShot("doca-cubo", playerId, () -> dock[0], new double[] {9, 8, -13}, 0.5));
-        list.add(new Step("Doca: mão vazia apaga o cubo", STEP_TIMEOUT_MS, () -> onServer(server -> {
+        list.add(new Step("Doca: guardar o Vinculador esconde o cubo", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+            ItemStack linker = player.getMainHandItem().copy();
+            player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            player.getInventory().setItem(STASH_SLOT, linker);
+            return null;
+        }), () -> !DockReachPaint.shown() && DockReachPaint.stored() && stepTicks >= 4,
+                () -> "à mostra " + DockReachPaint.shown() + ", guardado " + DockReachPaint.stored()));
+        list.add(new Step("Doca: pegar o Vinculador de novo mostra o cubo", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+            player.setItemInHand(InteractionHand.MAIN_HAND, player.getInventory().getItem(STASH_SLOT).copy());
+            player.getInventory().setItem(STASH_SLOT, ItemStack.EMPTY);
+            return null;
+        }), () -> DockReachPaint.shown() && DockReachPaint.machineCount() == 8,
+                () -> "à mostra " + DockReachPaint.shown() + ", máquinas " + DockReachPaint.machineCount()));
+        // sem o cubo no cliente (como ao entrar no mundo de novo), o Vinculador na mão o pede ao servidor
+        list.add(new Step("Doca: o cubo esquecido volta pelo pedido", STEP_TIMEOUT_MS, DockReachPaint::clear,
+                () -> DockReachPaint.shown() && DockReachPaint.machineCount() == 8,
+                () -> "à mostra " + DockReachPaint.shown() + ", máquinas " + DockReachPaint.machineCount()));
+        list.add(new Step("Doca: devolver o jogador", STEP_TIMEOUT_MS, () -> onServer(server -> {
             ServerPlayer player = server.getPlayerList().getPlayer(playerId);
             player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
             player.getAbilities().flying = false;

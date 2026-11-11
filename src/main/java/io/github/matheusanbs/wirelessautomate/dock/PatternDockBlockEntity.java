@@ -40,7 +40,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
-import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -185,14 +184,18 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
         linksChanged();
         // a conferência liga a vigia do cache, que avisa quando a máquina sair do lugar
         suspectGone(machine);
+        if (dockSide.loose() != null) {
+            // o pendente solto (o do item da Doca, o de uma máquina que saiu) pode ir a esta
+            DockPending.flushSoon(this, dockSide, null);
+        }
         return true;
     }
 
     /**
-     * Desvincula a máquina em {@code pos} do lado {@code side} e refaz o registro no índice. Sem máquinas e sem
-     * pendente, o lado esquece o bloco (o próximo vínculo o escolhe de novo) e deixa de existir. Com pendente, o lado
-     * guarda o bloco: o resto do pedido só serve a uma máquina daquele bloco, e sai na próxima vinculada (ou vai no
-     * item, ao quebrar a Doca).
+     * Desvincula a máquina em {@code pos} do lado {@code side} e refaz o registro no índice. O pendente dela fica solto
+     * no lado e vai a outra máquina ativa que o sirva. Sem máquinas e sem pendente, o lado esquece o bloco (o próximo
+     * vínculo o escolhe de novo) e deixa de existir. Com pendente, o lado guarda o bloco: o resto do pedido só serve a
+     * uma máquina daquele bloco, e sai na próxima vinculada (ou vai no item, ao quebrar a Doca).
      */
     public boolean unlink(int side, BlockPos pos) {
         DockSide dockSide = sides[side];
@@ -205,6 +208,8 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
         if (dockSide.machines().isEmpty() && !dockSide.keepsPending()) {
             dockSide.assignBlock(null);
             sides[side] = null;
+        } else if (dockSide.loose() != null) {
+            DockPending.flushSoon(this, dockSide, null);
         }
         linksChanged();
         return true;
@@ -284,6 +289,7 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
                 continue;
             }
             int sideActive = 0;
+            int sideBusy = 0;
             for (DockMachine machine : side.machines()) {
                 BlockPos pos = machine.pos();
                 boolean inReach = active.size() < max && RangeRules.chebyshev(worldPosition.getX(),
@@ -292,9 +298,12 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
                 if (inReach) {
                     active.add(machine.remote());
                     sideActive++;
+                    if (machine.pending() != null) {
+                        sideBusy++;
+                    }
                 }
             }
-            side.setActiveMachines(sideActive);
+            side.setActiveMachines(sideActive, sideBusy);
         }
         RemoteIndex.get().update(this, active);
         DockIndex.get().update(this, level, machineAt.keySet().toLongArray());
@@ -421,19 +430,25 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
 
     /**
      * O ponto único dos avisos de uma máquina (o {@code setChanged} dela, a carga do chunk dela e um cache de
-     * capability invalidado): marca a máquina como mudada ({@link DockMachine#changed}), a acorda para a entrega e
-     * para a volta ({@link DockReturn#wake}) e, se ela tem o pendente do lado, enfileira uma tentativa dele
-     * ({@link DockPending#flushSoon}). A tentativa não roda aqui: o aviso chega de dentro do {@code setChanged} da
-     * máquina, de uma entrega do motor ou de um listener de cache, onde inserir nela reentraria (ver o
-     * {@code flushSoon}).
+     * capability invalidado): marca a máquina como mudada ({@link DockMachine#changed}), a acorda para a entrega e para
+     * a volta ({@link DockReturn#wake}) e, se ela tem pendente, enfileira uma tentativa dele
+     * ({@link DockPending#flushSoon}); com o pendente solto no lado, também uma tentativa dele. A tentativa não roda
+     * aqui: o aviso chega de dentro do {@code setChanged} da máquina, de uma entrega do motor ou de um listener de
+     * cache, onde inserir nela reentraria (ver o {@code flushSoon}).
      */
     void machineChanged(DockMachine machine) {
         machine.markChanged();
         machine.wake();
         returns.wake(machine);
         DockSide side = sides[machine.side()];
-        if (side != null && side.hasPending() && side.pendingAtKey() == machine.pos().asLong()) {
-            DockPending.flushSoon(this, side);
+        if (side == null) {
+            return;
+        }
+        if (machine.pending() != null) {
+            DockPending.flushSoon(this, side, machine);
+        }
+        if (side.loose() != null) {
+            DockPending.flushSoon(this, side, null);
         }
     }
 
@@ -467,9 +482,12 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
             if (side == null || !side.hasPending()) {
                 continue;
             }
-            for (ItemStack stack : side.pendingItems()) {
-                Containers.dropItemStack(level, worldPosition.getX(), worldPosition.getY(), worldPosition.getZ(),
-                        stack.copy());
+            for (DockPendingLot.Line<ItemStack> line : side.pendingTotal().items()) {
+                int max = line.key().getMaxStackSize();
+                for (long left = line.amount(); left > 0; left -= max) {
+                    Containers.dropItemStack(level, worldPosition.getX(), worldPosition.getY(),
+                            worldPosition.getZ(), line.key().copyWithCount((int) Math.min(left, max)));
+                }
             }
         }
     }
@@ -490,8 +508,8 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
         List<DockPendingContents.Side> pending = new ArrayList<>(0);
         for (DockSide side : sides) {
             if (side != null && side.keepsPending() && side.block() != null) {
-                pending.add(new DockPendingContents.Side(side.side(), side.block(), side.pendingItems(),
-                        side.pendingFluids(), side.pendingChemicalTags(registries())));
+                pending.add(DockPendingContents.Side.of(side.side(), side.block(), side.pendingTotal(),
+                        side.rawChemicals(), registries()));
             }
         }
         if (!pending.isEmpty()) {
@@ -523,21 +541,17 @@ public class PatternDockBlockEntity extends BlockEntity implements RemoteListene
             } else if (!side.block().equals(saved.block()) || side.keepsPending()) {
                 continue;
             }
-            List<ItemStack> items = new ArrayList<>(saved.items().size());
-            for (ItemStack stack : saved.items()) {
-                items.add(stack.copy());
-            }
-            List<FluidStack> fluids = new ArrayList<>(saved.fluids().size());
-            for (FluidStack stack : saved.fluids()) {
-                fluids.add(stack.copy());
-            }
-            // a posição da própria Doca nunca é de uma máquina: o pendente vai à primeira ativa do lado que o sirva
-            side.setPending(items, fluids, worldPosition);
+            // o pendente volta solto: vai à primeira máquina ativa do lado que o sirva
+            DockPendingLot lot = saved.lot();
             if (level != null) {
-                side.addPendingChemicals(saved.chemicals(), level.registryAccess());
+                List<CompoundTag> raw = new ArrayList<>(0);
+                for (CompoundTag tag : saved.chemicals()) {
+                    lot.addChemicalTag(tag, level.registryAccess(), raw::add);
+                }
+                side.addLooseLot(lot, raw);
             } else {
                 // fora do mundo, sem os registros: o químico fica cru até o onLoad lê-lo
-                side.keepRawChemicals(saved.chemicals());
+                side.addLooseLot(lot, saved.chemicals());
             }
         }
     }

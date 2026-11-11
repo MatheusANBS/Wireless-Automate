@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.gametest;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.dock.DockDelivery;
+import io.github.matheusanbs.wirelessautomate.dock.DockPendingLot;
 import io.github.matheusanbs.wirelessautomate.dock.DockReturn;
 import io.github.matheusanbs.wirelessautomate.dock.DockSide;
 import io.github.matheusanbs.wirelessautomate.dock.PatternDockBlockEntity;
@@ -214,8 +215,7 @@ public final class DockMekanismGameTests {
 
     /**
      * Um pedido de cinco pilhas iguais de 64 entra junto na fábrica (o inventário dela é do Mekanism, que limita cada
-     * slot sozinho): os três slots de entrada ficam com 64, e os 128 que não couberam vão ao pendente em duas pilhas de
-     * 64, nunca numa pilha maior que o tamanho do item (o pendente vai ao NBT).
+     * slot sozinho): os três slots de entrada ficam com 64, e os 128 que não couberam vão ao pendente numa linha só.
      */
     @GameTest(template = "empty", timeoutTicks = 100)
     public static void joinedStacksIntoFactory(GameTestHelper helper) {
@@ -242,12 +242,9 @@ public final class DockMekanismGameTests {
                         inside += input.getStackInSlot(slot).getCount();
                     }
                     helper.assertValueEqual(inside, INPUT_SLOTS * 64, "na entrada da fábrica");
-                    List<ItemStack> pending = dock.side(NORTH).pendingItems();
-                    helper.assertValueEqual(pending.size(), 2, "pilhas no pendente");
-                    for (ItemStack stack : pending) {
-                        helper.assertTrue(stack.is(Items.RAW_IRON) && stack.getCount() == 64,
-                                "pilha do pendente: " + stack);
-                    }
+                    DockPendingLot pending = dock.side(NORTH).pendingTotal();
+                    helper.assertValueEqual(pending.items().size(), 1, "linhas no pendente");
+                    helper.assertValueEqual(pending.count(Items.RAW_IRON), 128L, "minério no pendente");
                 })
                 .thenSucceed();
     }

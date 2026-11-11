@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.dock.DockMachine;
+import io.github.matheusanbs.wirelessautomate.dock.DockPendingLot;
 import io.github.matheusanbs.wirelessautomate.dock.DockSide;
 import io.github.matheusanbs.wirelessautomate.dock.PatternDockBlock;
 import io.github.matheusanbs.wirelessautomate.dock.PatternDockBlockEntity;
@@ -112,22 +113,20 @@ public final class DockBlockGameTests {
         helper.assertTrue(loaded.profile().face(ResourceType.ITEM, RemoteSide.TOP).mode() == PortMode.INSERT,
                 "o perfil não voltou");
         helper.assertTrue(loaded.cursor() == 1, "cursor: " + loaded.cursor());
-        int total = 0;
-        for (ItemStack stack : loaded.pendingItems()) {
-            helper.assertTrue(stack.is(Items.COBBLESTONE), "pendente com outro item: " + stack);
-            total += stack.getCount();
-        }
-        helper.assertTrue(total == 150, "pendente: " + total);
-        helper.assertTrue(loaded.pendingAt().equals(first), "pending_at: " + loaded.pendingAt());
+        // o pendente volta na máquina dele, numa linha
+        helper.assertTrue(a.pending() != null && a.pending().items().size() == 1
+                && a.pending().count(Items.COBBLESTONE) == 150 && b.pending() == null && loaded.loose() == null,
+                "pendente: " + (a.pending() == null ? null : a.pending().items()));
         helper.assertTrue(copy.side(Direction.SOUTH.ordinal()) == null, "apareceu um lado sul");
 
         // Fluido no pendente: salva e volta pela chave fluid.
         side.setPending(List.of(), List.of(new FluidStack(Fluids.WATER, 1_000)), second);
         PatternDockBlockEntity fluidCopy = new PatternDockBlockEntity(dock.getBlockPos(), dock.getBlockState());
         fluidCopy.loadWithComponents(dock.saveWithoutMetadata(registries), registries);
-        DockSide fluidSide = fluidCopy.side(NORTH);
-        helper.assertTrue(fluidSide.pendingItems().isEmpty() && fluidSide.pendingFluids().size() == 1
-                && fluidSide.pendingFluids().get(0).getAmount() == 1_000, "o pendente de fluido não voltou");
+        DockPendingLot fluidLot = fluidCopy.machineAt(second).pending();
+        helper.assertTrue(fluidCopy.machineAt(first).pending() == null && fluidLot != null
+                && fluidLot.items().isEmpty() && fluidLot.amount(Fluids.WATER) == 1_000,
+                "o pendente de fluido não voltou");
         helper.succeed();
     }
 

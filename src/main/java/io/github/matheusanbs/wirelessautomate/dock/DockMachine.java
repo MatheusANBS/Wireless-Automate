@@ -9,8 +9,9 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Uma máquina vinculada a um lado da Doca: a posição e a última frente conhecida, guardadas num {@link RemoteMachine}
- * (o mesmo objeto que vai ao {@code RemoteIndex}, que avisa por ele). Salva só {@code pos} (long) e {@code front}
- * (byte, −1 sem frente); o resto é de tempo de execução.
+ * (o mesmo objeto que vai ao {@code RemoteIndex}, que avisa por ele), e o pendente dela. Salva {@code pos} (long),
+ * {@code front} (byte, −1 sem frente) e, com pendente, {@code pending} (o {@link DockPendingLot}, salvo pelo
+ * {@link DockSide}); o resto é de tempo de execução.
  */
 public final class DockMachine {
     private final RemoteMachine remote;
@@ -40,6 +41,14 @@ public final class DockMachine {
      * quando a block entity sai; um aviso de invalidação a desliga. Não é salvo.
      */
     private boolean watched;
+    /**
+     * O resto de um pedido que ela recebeu e não coube ({@code null} sem pendente). Enquanto existe, ela não recebe
+     * pedidos novos, e o pendente sai só nela, conforme consome. Mude pelo {@link DockSide}, que conta as máquinas com
+     * pendente.
+     */
+    private @Nullable DockPendingLot pending;
+    /** Uma tentativa do pendente dela na fila do servidor ({@link DockPending#flushSoon}); não é salvo. */
+    private boolean flushQueued;
 
     public DockMachine(int side, BlockPos pos, int front) {
         this.side = side;
@@ -137,6 +146,23 @@ public final class DockMachine {
     /** Está dormindo no tick {@code now}. */
     public boolean asleep(long now) {
         return now < sleepUntil;
+    }
+
+    /** O pendente dela, ou {@code null}: ver {@link #pending}. Uma leitura de campo. */
+    public @Nullable DockPendingLot pending() {
+        return pending;
+    }
+
+    void setPending(@Nullable DockPendingLot lot) {
+        pending = lot;
+    }
+
+    boolean flushQueued() {
+        return flushQueued;
+    }
+
+    void setFlushQueued(boolean queued) {
+        flushQueued = queued;
     }
 
     /** Os caches de capability da máquina, criados na primeira chamada; toda consulta confere o chunk antes. */

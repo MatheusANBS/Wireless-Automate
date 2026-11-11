@@ -94,11 +94,11 @@ public final class DockBreakGameTests {
         return helper.getBlockEntity(relative);
     }
 
-    private static int count(List<ItemStack> stacks, Item item) {
-        int count = 0;
-        for (ItemStack stack : stacks) {
-            if (stack.is(item)) {
-                count += stack.getCount();
+    private static long count(List<DockPendingContents.ItemLine> lines, Item item) {
+        long count = 0;
+        for (DockPendingContents.ItemLine line : lines) {
+            if (line.item().is(item)) {
+                count += line.count();
             }
         }
         return count;
@@ -131,11 +131,12 @@ public final class DockBreakGameTests {
         for (DockPendingContents.Side saved : contents.sides()) {
             helper.assertTrue(saved.block().equals(FURNACE), "o bloco do lado: " + saved.block());
             if (saved.side() == NORTH) {
-                helper.assertTrue(count(saved.items(), Items.COBBLESTONE) == 150
+                // uma linha por item: os 150 pedregulhos não vão mais em partes
+                helper.assertTrue(saved.items().size() == 2 && count(saved.items(), Items.COBBLESTONE) == 150
                         && count(saved.items(), Items.COAL) == 3 && saved.fluids().isEmpty(), "Norte: " + saved);
             } else {
                 helper.assertTrue(saved.side() == SOUTH && saved.items().isEmpty() && saved.fluids().size() == 1
-                        && saved.fluids().get(0).is(Fluids.WATER) && saved.fluids().get(0).getAmount() == 1_000,
+                        && saved.fluids().get(0).fluid().is(Fluids.WATER) && saved.fluids().get(0).amount() == 1_000,
                         "Sul: " + saved);
             }
         }
@@ -149,11 +150,11 @@ public final class DockBreakGameTests {
         DockSide placedNorth = placed.side(NORTH);
         DockSide placedSouth = placed.side(SOUTH);
         helper.assertTrue(placedNorth != null && FURNACE.equals(placedNorth.block())
-                && placedNorth.machines().isEmpty() && count(placedNorth.pendingItems(), Items.COBBLESTONE) == 150
-                && count(placedNorth.pendingItems(), Items.COAL) == 3, "Norte recolocado");
-        helper.assertTrue(placedSouth != null && FURNACE.equals(placedSouth.block())
-                && placedSouth.pendingFluids().size() == 1
-                && placedSouth.pendingFluids().get(0).getAmount() == 1_000, "Sul recolocado");
+                && placedNorth.machines().isEmpty() && placedNorth.loose() != null
+                && placedNorth.loose().count(Items.COBBLESTONE) == 150 && placedNorth.loose().count(Items.COAL) == 3,
+                "Norte recolocado");
+        helper.assertTrue(placedSouth != null && FURNACE.equals(placedSouth.block()) && placedSouth.loose() != null
+                && placedSouth.loose().amount(Fluids.WATER) == 1_000, "Sul recolocado");
         helper.assertFalse(placed.link(NORTH, helper.absolutePos(new BlockPos(5, 1, 3)),
                 BuiltInRegistries.BLOCK.getKey(Blocks.BLAST_FURNACE), -1), "o lado com pendente aceitou outro bloco");
         helper.succeed();
@@ -174,8 +175,8 @@ public final class DockBreakGameTests {
         helper.assertValueEqual(docks.size(), 1, "Docas no chão");
         DockPendingContents contents = docks.get(0).get(ModDataComponents.PATTERN_DOCK_PENDING.get());
         helper.assertTrue(contents != null && contents.sides().size() == 1
-                && contents.sides().get(0).fluids().get(0).is(Fluids.LAVA)
-                && contents.sides().get(0).fluids().get(0).getAmount() == 250, "componente: " + contents);
+                && contents.sides().get(0).fluids().get(0).fluid().is(Fluids.LAVA)
+                && contents.sides().get(0).fluids().get(0).amount() == 250, "componente: " + contents);
         helper.succeed();
     }
 
@@ -217,9 +218,9 @@ public final class DockBreakGameTests {
         helper.assertFalse(side.hasPending(), "a entrada crua segura o lado");
         helper.assertTrue(side.keepsPending() && dock.hasPending(), "a entrada crua sumiu");
         CompoundTag saved = dock.saveWithoutMetadata(helper.getLevel().registryAccess());
-        ListTag pending = saved.getList("sides", Tag.TAG_COMPOUND).getCompound(0).getList("pending", Tag.TAG_COMPOUND);
-        helper.assertTrue(pending.size() == 1 && chemical.equals(pending.getCompound(0).getCompound("chemical")),
-                "NBT: " + pending);
+        ListTag pending = saved.getList("sides", Tag.TAG_COMPOUND).getCompound(0).getCompound("loose_pending")
+                .getList("chemicals", Tag.TAG_COMPOUND);
+        helper.assertTrue(pending.size() == 1 && chemical.equals(pending.getCompound(0)), "NBT: " + pending);
         DockPendingContents contents = dock.collectComponents().get(ModDataComponents.PATTERN_DOCK_PENDING.get());
         helper.assertTrue(contents != null && contents.sides().size() == 1
                 && contents.sides().get(0).chemicals().equals(List.of(chemical)), "componente: " + contents);

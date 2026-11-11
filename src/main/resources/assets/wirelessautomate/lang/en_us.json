@@ -1176,7 +1176,7 @@
   "gui.wirelessautomate.pattern_dock.state.all_full": "All full",
   "gui.wirelessautomate.pattern_dock.state.all_full.hint": "No machine took the last order. It stays with the provider until one empties.",
   "gui.wirelessautomate.pattern_dock.state.pending": "Order pending",
-  "gui.wirelessautomate.pattern_dock.state.pending.hint": "Waiting for the machine to take the rest of the last order. The side takes no other until then.",
+  "gui.wirelessautomate.pattern_dock.state.pending.hint": "Every machine on this side is waiting to take the rest of its last order. The side takes no other until one of them finishes.",
   "gui.wirelessautomate.pattern_dock.state.working": "Working",
   "gui.wirelessautomate.pattern_dock.state.working.hint": "Orders take turns among the free machines.",
   "gui.wirelessautomate.pattern_dock.state.ready": "Ready",

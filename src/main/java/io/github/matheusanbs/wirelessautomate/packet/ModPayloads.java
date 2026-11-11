@@ -78,7 +78,9 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ModPayloads {
     /**
-     * Versão do protocolo (50: Doca de Padrões, o {@code DockStatePayload} da tela e o {@code DockReachPayload} do cubo do alcance, com o pedido {@code DockReachRequestPayload}; 49: a tela do Vinculador e a área saíram, com o {@code LinkerMenu}, o
+     * Versão do protocolo (51: o componente {@code pattern_dock_pending} da Doca leva uma linha por item e por fluido,
+     * com a quantidade em long, no lugar das pilhas;
+     * 50: Doca de Padrões, o {@code DockStatePayload} da tela e o {@code DockReachPayload} do cubo do alcance, com o pedido {@code DockReachRequestPayload}; 49: a tela do Vinculador e a área saíram, com o {@code LinkerMenu}, o
      * {@code LinkerSnapshotPayload} e o {@code LinkerActionPayload}; 48: o {@code attachedShown} da {@code RangeView} (a presa que não é máquina sai da lista
      * do alcance); 47: o ícone do grupo no Tablet, a ação {@code GROUP_ICON}, o ícone no {@code GroupView} do
      * cabeçalho e o texto de 256 do {@code TabletActionPayload}; 46: o {@code ConfiguratorCancelPayload}, a pintura do Afinador apagada no cliente; 45: o {@code LinkSameBlockPayload}, o Ctrl + clique do Vinculador; 43: o bloco do grupo no {@code RenameTargetPayload}; 42: os payloads {@code UnlinkGroupPayload}, {@code MachineCopyPayload} e
@@ -94,7 +96,7 @@ public final class ModPayloads {
      * {@code TvLibraryPayload}, {@code TvLibraryActionPayload}, {@code TvPreviewPayload} e {@code TvPreviewValuesPayload},
      * e o teto de bytes do layout no buffer de abertura da Tela); mude quando um payload mudar de formato.
      */
-    public static final String VERSION = "50";
+    public static final String VERSION = "51";
 
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(VERSION);

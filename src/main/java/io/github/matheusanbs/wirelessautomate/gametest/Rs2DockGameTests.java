@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.gametest;
 
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.dock.DockPendingLot;
 import io.github.matheusanbs.wirelessautomate.dock.DockRs2;
 import io.github.matheusanbs.wirelessautomate.dock.DockSide;
 import io.github.matheusanbs.wirelessautomate.dock.DockStatus;
@@ -343,9 +344,9 @@ public final class Rs2DockGameTests {
                     helper.assertTrue(REJECTED.equals(result), "com pendente: " + result);
                     helper.assertTrue(dock.side(NORTH).lastRefusal() == DockStatus.PENDING,
                             "motivo: " + dock.side(NORTH).lastRefusal());
-                    List<ItemStack> pending = dock.side(NORTH).pendingItems();
-                    helper.assertTrue(pending.size() == 1 && pending.get(0).is(Items.COBBLESTONE)
-                            && pending.get(0).getCount() == 10, "o pendente mudou: " + pending);
+                    DockPendingLot pending = dock.side(NORTH).pendingTotal();
+                    helper.assertTrue(pending.items().size() == 1 && pending.count(Items.COBBLESTONE) == 10,
+                            "o pendente mudou: " + pending.items());
                     assertFurnacesUntouched(helper, 1);
                     helper.assertFalse(Rs2TestSupport.isEmpty(sink), "vazio com pendente");
                 })

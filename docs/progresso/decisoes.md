@@ -24,6 +24,7 @@ Decisões em vigor, do dono e do código. Quando uma decisão muda, reescreva a 
 - **Ressonador:** sem comparador, sem controle por redstone (a automação é o Sintonizador) e sem Tablet. (15/10)
 - **Ficam como estão:** as imagens `feature-2-router` e `feature-6-tablet` do CurseForge com as telas antigas (14/10); o prazo do stash do `StorageSavedData` em 0, sem prazo (19/10); o bench do Baú com e sem vigia, dispensado (27/10).
 - **Visual acima de custo no cliente:** em efeito visual, um custo pequeno no cliente é aceitável se ficar mais bonito (ver a skill `wa-shaders`). O servidor segue as leis da `wa-performance`.
+- Doca de Padrões (11/11): a sobra de um pedido trava só a máquina que o recebeu, e sai só nela (a receita não se parte); a máquina que sai do lado passa a sobra a outra do lado. O pendente guarda uma linha por item com a quantidade em `long`, e o formato antigo é migrado ao carregar, sem perder nada.
 
 ## No código
 

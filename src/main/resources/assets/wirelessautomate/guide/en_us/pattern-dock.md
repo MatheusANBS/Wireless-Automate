@@ -39,6 +39,8 @@ gives the result. The action bar shows what it found.
   and the order counts it there.
 - An order can carry **items, fluids and chemicals together**: each one goes in through the machine face that takes
   it, and the result comes back to the network the same way, be it an item, a fluid or a chemical.
+- If an order **does not fit whole**, the rest waits in the machine that took it and goes in as it consumes. Only
+  that machine sits out the next orders: the others on the side keep taking them.
 - When **all the machines are full**, the order waits. **Nothing is lost**: if you break the Dock while the rest of an
   order is waiting, it goes along in the item ("Order pending") and returns to the same side when you place it again.
 
@@ -104,7 +106,7 @@ working, and the state:
 | Order with a resource the Dock doesn't know | The last order brought something that is not an item, a fluid or a chemical |
 | Provider full | The result waits for room: the network is full, unpowered or without a channel |
 | All full | No machine took the last order; it waits |
-| Order pending | The machine has not taken the rest of the last order yet; the side waits for it |
+| Order pending | Every machine on the side still has the rest of its last order; the side waits for one to finish |
 | Working | A machine got an order or gave back a result a moment ago |
 | Ready | All good, waiting for orders |
 | free | Nothing attached and no machine |

@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.dock.DockDelivery;
 import io.github.matheusanbs.wirelessautomate.dock.DockPendingContents;
+import io.github.matheusanbs.wirelessautomate.dock.DockPendingLot;
 import io.github.matheusanbs.wirelessautomate.dock.DockSide;
 import io.github.matheusanbs.wirelessautomate.dock.DockStatus;
 import io.github.matheusanbs.wirelessautomate.dock.PatternDockBlockEntity;
@@ -155,12 +156,10 @@ public final class DockChemicalGameTests {
                             "o item não entrou");
                     helper.assertTrue(ChemicalTestSupport.dockMachineInput(machine, HYDROGEN) == 0,
                             "a entrada encheu");
-                    DockSide side = dock.side(NORTH);
-                    List<Object> pending = side.pendingChemicals();
-                    helper.assertTrue(pending.size() == 1 && Chemicals.amount(pending.get(0)) == 1_000,
-                            "pendente: " + pending);
-                    helper.assertTrue(side.pendingItems().isEmpty() && side.pendingFluids().isEmpty(),
-                            "pendente de outro tipo");
+                    DockPendingLot lot = dock.machineAt(machine).pending();
+                    helper.assertTrue(lot != null && lot.chemicals().size() == 1
+                            && lot.chemicals().get(0).amount() == 1_000, "pendente: " + lot);
+                    helper.assertTrue(lot.items().isEmpty() && lot.fluids().isEmpty(), "pendente de outro tipo");
                     helper.assertFalse(DockDelivery.acceptsOrders(dock, NORTH), "o lado com pendente aceita pedidos");
                 })
                 .thenWaitUntil(DockChemicalGameTests::room)
@@ -216,9 +215,11 @@ public final class DockChemicalGameTests {
     /** O pendente químico do lado Norte é 1.000 mB de hidrogênio, lido pelo Mekanism. */
     private static void pendingHydrogen(GameTestHelper helper, PatternDockBlockEntity dock, String where) {
         DockSide side = dock.side(NORTH);
-        helper.assertTrue(side != null && side.hasPending() && side.pendingChemicals().size() == 1
-                && ChemicalTestSupport.isChemical(side.pendingChemicals().get(0), HYDROGEN, 1_000),
-                where + ": " + (side == null ? null : side.pendingChemicals()));
+        DockPendingLot total = side == null ? null : side.pendingTotal();
+        helper.assertTrue(side != null && side.hasPending() && total.chemicals().size() == 1
+                && ChemicalTestSupport.isChemical(Chemicals.copyWithAmount(total.chemicals().get(0).key(),
+                        total.chemicals().get(0).amount()), HYDROGEN, 1_000),
+                where + ": " + (total == null ? null : total.chemicals().size()));
     }
 
     /** O componente do item tem, no Norte, só 1.000 mB de hidrogênio, em NBT. */
@@ -337,8 +338,7 @@ public final class DockChemicalGameTests {
                     helper.assertTrue(top == 1_000, "oxigênio na entrada de cima: " + top);
                     long back = ChemicalTestSupport.dockMachineInput(machine, HYDROGEN);
                     helper.assertTrue(back == 1_000, "hidrogênio na entrada de trás: " + back);
-                    helper.assertFalse(dock.side(NORTH).hasPending(), "sobrou pendente: "
-                            + dock.side(NORTH).pendingChemicals());
+                    helper.assertFalse(dock.side(NORTH).hasPending(), "sobrou pendente");
                 })
                 .thenSucceed();
     }

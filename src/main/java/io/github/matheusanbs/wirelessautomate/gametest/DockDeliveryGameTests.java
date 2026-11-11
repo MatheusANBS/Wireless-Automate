@@ -6,6 +6,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.dock.DockDelivery;
 import io.github.matheusanbs.wirelessautomate.dock.DockMachine;
+import io.github.matheusanbs.wirelessautomate.dock.DockPendingLot;
 import io.github.matheusanbs.wirelessautomate.dock.DockSide;
 import io.github.matheusanbs.wirelessautomate.dock.DockStatus;
 import io.github.matheusanbs.wirelessautomate.dock.PatternDockBlockEntity;
@@ -268,20 +269,28 @@ public final class DockDeliveryGameTests {
                 .thenSucceed();
     }
 
-    /** Duas pilhas de 40 minérios: as duas cabem simuladas uma a uma, e as 16 que sobram vão ao pendente. */
+    /**
+     * Duas pilhas de 40 minérios na fornalha do cursor: as duas cabem simuladas uma a uma, e as 16 que sobram vão ao
+     * pendente dela, numa linha.
+     */
     private static void makePending(GameTestHelper helper, PatternDockBlockEntity dock, BlockPos furnace) {
         List<ItemStack> order = List.of(new ItemStack(Items.IRON_ORE, 40), new ItemStack(Items.IRON_ORE, 40));
         helper.assertTrue(offer(dock, order, false) == DockDelivery.Result.ACCEPTED, "recusou");
-        DockSide side = dock.side(NORTH);
         assertSlot(helper, furnace, 0, Items.IRON_ORE, 64);
-        helper.assertTrue(side.pendingItems().size() == 1 && side.pendingItems().get(0).getCount() == 16
-                && side.pendingAt().equals(helper.absolutePos(furnace)), "pendente " + side.pendingItems());
-        helper.assertFalse(DockDelivery.acceptsOrders(dock, NORTH), "o lado com pendente aceita pedidos");
+        DockMachine machine = dock.machineAt(helper.absolutePos(furnace));
+        DockPendingLot lot = machine == null ? null : machine.pending();
+        helper.assertTrue(lot != null && lot.items().size() == 1 && lot.count(Items.IRON_ORE) == 16,
+                "pendente " + (lot == null ? null : lot.items()));
+        helper.assertTrue(dock.side(NORTH).loose() == null, "pendente solto");
     }
 
-    /** O pendente segura o lado (recusa {@code PENDING}) e sai pelo {@code flushPending} quando a máquina esvazia. */
+    /**
+     * O pendente segura só a máquina dele: com uma fornalha com sobra, a outra do lado recebe o pedido seguinte; com
+     * as duas com sobra, o lado recusa ({@code PENDING}); o pendente sai pelo {@code flushPending} quando a máquina
+     * esvazia, e o lado volta a aceitar.
+     */
     @GameTest(template = "empty", timeoutTicks = 100)
-    public static void pendingHoldsSideUntilFlushed(GameTestHelper helper) {
+    public static void pendingHoldsOnlyItsMachine(GameTestHelper helper) {
         PatternDockBlockEntity dock = dock(helper, RouterTier.BASIC);
         BlockPos furnace = new BlockPos(3, 1, 1);
         BlockPos other = new BlockPos(3, 1, 3);
@@ -297,17 +306,44 @@ public final class DockDeliveryGameTests {
                 .thenExecute(() -> makePending(helper, dock, furnace))
                 .thenWaitUntil(DockDeliveryGameTests::room)
                 .thenExecute(() -> {
-                    // a outra fornalha está vazia, mas o lado espera o pendente
+                    DockSide side = dock.side(NORTH);
+                    helper.assertTrue(DockDelivery.acceptsOrders(dock, NORTH), "a outra fornalha não recebe");
+                    helper.assertFalse(side.waitingOnPending(), "o lado espera com uma máquina livre");
+                    // o cursor na que tem sobra: ela é pulada, e a outra recebe
+                    side.setCursor(0);
+                    helper.assertTrue(offer(dock, oreAndCoal(), false) == DockDelivery.Result.ACCEPTED,
+                            "a outra fornalha não recebeu: motivo " + side.lastRefusal());
+                    assertSlot(helper, other, 0, Items.IRON_ORE, 1);
+                    assertSlot(helper, furnace, 0, Items.IRON_ORE, 64);
+                })
+                .thenWaitUntil(DockDeliveryGameTests::room)
+                .thenExecute(() -> {
+                    // agora a outra também fica com sobra: 63 cabem, 17 esperam
+                    DockSide side = dock.side(NORTH);
+                    List<ItemStack> order = List.of(new ItemStack(Items.IRON_ORE, 40),
+                            new ItemStack(Items.IRON_ORE, 40));
+                    helper.assertTrue(offer(dock, order, false) == DockDelivery.Result.ACCEPTED, "recusou");
+                    assertSlot(helper, other, 0, Items.IRON_ORE, 64);
+                    DockMachine second = dock.machineAt(helper.absolutePos(other));
+                    helper.assertTrue(second.pending() != null && second.pending().count(Items.IRON_ORE) == 17,
+                            "pendente da outra " + (second.pending() == null ? null : second.pending().items()));
+                    helper.assertFalse(DockDelivery.acceptsOrders(dock, NORTH), "o lado sem máquina livre aceita");
+                    helper.assertTrue(side.waitingOnPending(), "o lado não espera");
+                })
+                .thenWaitUntil(DockDeliveryGameTests::room)
+                .thenExecute(() -> {
+                    DockSide side = dock.side(NORTH);
                     helper.assertTrue(offer(dock, oreAndCoal(), false) == DockDelivery.Result.REFUSED,
-                            "aceitou com pendente");
-                    helper.assertTrue(dock.side(NORTH).lastRefusal() == DockStatus.PENDING,
-                            "motivo " + dock.side(NORTH).lastRefusal());
-                    assertSlot(helper, other, 0, Items.IRON_ORE, 0);
+                            "aceitou sem máquina livre");
+                    helper.assertTrue(side.lastRefusal() == DockStatus.PENDING, "motivo " + side.lastRefusal());
                     helper.assertFalse(DockDelivery.flushPending(dock, NORTH), "a cheia recebeu o pendente");
                     furnaceAt(helper, furnace).setItem(0, ItemStack.EMPTY);
-                    helper.assertTrue(DockDelivery.flushPending(dock, NORTH), "o pendente não saiu");
+                    helper.assertFalse(DockDelivery.flushPending(dock, NORTH), "o pendente da outra saiu");
                     assertSlot(helper, furnace, 0, Items.IRON_ORE, 16);
-                    helper.assertTrue(DockDelivery.acceptsOrders(dock, NORTH), "o lado sem pendente não aceita");
+                    helper.assertTrue(dock.machineAt(helper.absolutePos(furnace)).pending() == null,
+                            "sobrou pendente na primeira");
+                    helper.assertTrue(DockDelivery.acceptsOrders(dock, NORTH), "a máquina sem pendente não aceita");
+                    assertSlot(helper, other, 0, Items.IRON_ORE, 64);
                 })
                 .thenSucceed();
     }
@@ -496,8 +532,8 @@ public final class DockDeliveryGameTests {
      * Um pedido muito maior que a máquina (256 pilhas de pedregulho numa entrada de 64, como o padrão de 524.288 numa
      * Infinite Factory) entra no que cabe e o resto vai ao pendente, sem travar; e o custo não cresce com o tamanho do
      * pedido: a escolha simula uma vez as pilhas iguais seguidas (a simulação não soma, então dá a mesma resposta), a
-     * execução para de tentar o item que a máquina já recusou, e cada tentativa do pendente olha só as últimas
-     * {@code DockPending.FLUSH_WINDOW} pilhas e para no primeiro item recusado.
+     * execução para de tentar o item que a máquina já recusou, o pendente guarda uma linha por item, e cada tentativa
+     * dele põe no máximo {@code DockPending.FLUSH_WINDOW} pilhas e para na primeira recusada.
      */
     @GameTest(template = "empty", timeoutTicks = 100)
     public static void hugeOrderCostDoesNotGrow(GameTestHelper helper) {
@@ -522,9 +558,11 @@ public final class DockDeliveryGameTests {
                 .thenExecute(() -> {
                     furnace.insertCalls = 0;
                     helper.assertTrue(offer(dock, order, false) == DockDelivery.Result.ACCEPTED, "recusou");
-                    DockSide side = dock.side(NORTH);
-                    helper.assertTrue(furnace.slots[0].getCount() == 64 && side.pendingItems().size() == 255,
-                            "na máquina " + furnace.slots[0] + ", pendente " + side.pendingItems().size());
+                    DockPendingLot lot = dock.machineAt(helper.absolutePos(machine)).pending();
+                    // uma linha só para as 255 pilhas que sobraram
+                    helper.assertTrue(furnace.slots[0].getCount() == 64 && lot != null && lot.items().size() == 1
+                            && lot.count(Items.COBBLESTONE) == 255 * 64,
+                            "na máquina " + furnace.slots[0] + ", pendente " + (lot == null ? null : lot.items()));
                     helper.assertTrue(furnace.insertCalls <= 16, "a oferta chamou insertItem " + furnace.insertCalls
                             + " vezes");
                     furnace.insertCalls = 0;
@@ -534,8 +572,8 @@ public final class DockDeliveryGameTests {
                     furnace.slots[0] = ItemStack.EMPTY;
                     furnace.insertCalls = 0;
                     helper.assertFalse(DockDelivery.flushPending(dock, NORTH), "o pendente saiu inteiro");
-                    helper.assertTrue(furnace.slots[0].getCount() == 64 && side.pendingItems().size() == 254,
-                            "depois: na máquina " + furnace.slots[0] + ", pendente " + side.pendingItems().size());
+                    helper.assertTrue(furnace.slots[0].getCount() == 64 && lot.count(Items.COBBLESTONE) == 254 * 64,
+                            "depois: na máquina " + furnace.slots[0] + ", pendente " + lot.items());
                     helper.assertTrue(furnace.insertCalls <= 16, "a tentativa com lugar chamou insertItem "
                             + furnace.insertCalls + " vezes");
                 })

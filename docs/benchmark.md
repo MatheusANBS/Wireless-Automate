@@ -822,3 +822,46 @@ O AE2 custava 37 ns por lingote em chamadas de 256 e passou a 4,5 ns em chamadas
 ### O bench geral
 
 `./scripts/bench.sh` (o cenário padrão), antes (código da Doca do `6440f4f`, `run/bench/reports/20261111-212344.md`) e depois (interrompido no fim, sem `redstone` e `tablet`; as linhas ficaram no log da rodada). Nos 19 cenários das duas rodadas, o mod ms/tick fica no ruído da máquina, sem direção: `many` 500 vanilla 0,766 ± 0,040 → 0,793 ± 0,035, `mixed` 498 0,657 ± 0,026 → 0,587 ± 0,014, `raw` vanilla 0,186 ± 0,043 → 0,171 ± 0,015, `idle` vanilla 0,0052 → 0,0059, `big` soph 0,760 → 0,671, `rebuild` 0,817 → 0,856. Nenhum deles tem Doca: a mudança não toca o motor do roteador.
+
+## Doca: o pendente por máquina e por item (11 de novembro de 2026)
+
+Ramo `ccr-71b175d3-weymk6`, sobre o `7470507`. As duas decisões do dono (spec da Doca, "O pendente por máquina e por item"): a sobra de um pedido trava só a máquina que o recebeu, e o pendente guarda uma linha por item com a quantidade em `long`. A medição é a do teste definitivo com a do Quantum (5 Ultimate Smelting Factories a 2.560×) junto, com todos os casos:
+
+```
+WA_DOCK_MEDIDA=1 ./gradlew runGameTestServerAe2 -PdockMedida
+```
+
+- **Antes × depois:** 3 rodadas de cada lado (o Quantum a 2.560×: 9), na mesma máquina, o antes primeiro. O antes é o `7470507` com a mesma medição; a linha do teste definitivo ganhou o tamanho do NBT da Doca e do componente `pattern_dock_pending` no pico do pendente, e "lado esperando" (toda máquina ativa com sobra, o que faz o `acceptsPlans` dizer não).
+- **Compare só dentro desta seção:** a máquina estava mais folgada que na seção anterior (o `cinco_q7` do mesmo código mediu 0,085 ms/tick de volta aqui e 0,30 lá).
+- Médias ± desvio. Os logs ficam no scratchpad da sessão (`antes?.log`, `final?.log`, `resumo.py`), fora do git.
+
+| Caso | Vazão até o último lingote (% do teto) | Volta ms/tick (ns por lingote), antes → depois | Entrega ms/tick | Por tick p50 / p99 | Ticks > 1 ms |
+| --- | --- | --- | --- | --- | --- |
+| 1 Infinite, CPU de 16 | 86.139 (99,0%) → igual | 0,038 ± 0,003 (8,8) → 0,037 ± 0,010 (8,5) | 0,015 → 0,019 | 0,048 / 0,16 → 0,046 / 0,19 ms | 0 → 0,7 de 233 |
+| 1 Infinite, Quantum | 86.139 (99,0%) → igual | 0,198 ± 0,006 (46) → 0,184 ± 0,020 (43) | 0,105 → 0,097 | 0,197 / 2,75 → 0,185 / 2,70 ms | 6,7 → 5,7 de 234 |
+| 5 Infinite, CPU de 16 | 334.507 (76,9%) → igual | 0,059 ± 0,006 (3,6) → 0,092 ± 0,036 (5,6) | 0,031 → 0,031 | 0,064 / 0,25 → 0,063 / 1,40 ms | 0 → 0,7 de 61 |
+| 5 Infinite, Quantum | 409.600 (94,1%) → igual | 0,085 ± 0,036 (4,3) → 0,081 ± 0,021 (4,0) | 0,050 → 0,061 | 0,086 / 1,43 → 0,116 / 1,03 ms | 1,0 → 0,7 de 50 |
+| 1 Infinite, padrão de 131.072 | 83.220 (95,6%) → igual | 0,177 ± 0,033 (43) → 0,138 ± 0,014 (34) | 0,017 → 0,012 | 0,158 / 0,93 → 0,100 / 2,18 ms | 0,7 → 0,7 de 64 |
+| 1 Infinite, padrão de 524.288 | 85.250 (97,9%) → igual | 0,077 ± 0,014 (18) → 0,061 ± 0,004 (14) | 0,008 → 0,009 | 0,072 / 0,34 → 0,051 / 0,29 ms | 0,7 → 1,0 de 124 |
+| **5 Ultimate a 2.560×, Quantum (100.000)** | **10.586 (91,9%) → 11.247 (97,6%)**, tudo devolvido no tick 189 → 178 | 0,062 ± 0,010 (119) → 0,074 ± 0,009 (132) | 0,025 → 0,022 | 0,079 / 0,44 → 0,088 / 0,47 ms | 0,4 → 0,4 de 191 / 179 |
+
+**O padrão de 524.288** (uma Infinite, CPU de 16; o pendente chega a 491.520 lingotes):
+
+| | Antes | Depois |
+| --- | --- | --- |
+| NBT da Doca no pico do pendente | 353.513 bytes (7.680 entradas) | 283 bytes (1 linha) |
+| Componente `pattern_dock_pending` (se ela quebrasse ali) | 291.929 bytes | 156 bytes |
+| A oferta (uma por rodada, com a conversão das 8.192 pilhas pelo AE2) | 949 ± 210 µs | 1.157 ± 180 µs |
+| A visita da volta, com a tentativa do pendente | 72,5 ± 12,6 µs | 58,2 ± 3,2 µs |
+
+### Leitura
+
+- **O caso que o pendente segurava subiu de 91,9% para 97,6% do teto.** Cinco Ultimate a 2.560× com o Quantum: os 100.000 voltam em 178 ticks em vez de 189, e os processos sem entrada caem de 11,8% para 3,4% dos ticks. As outras fábricas recebem enquanto uma consome a sobra; o lado só espera quando todas têm sobra (170 dos 561 "não" do `acceptsPlans`, antes 182 de 573).
+- **O custo por tick fica onde estava.** A Doca inteira nesse caso custa 0,096 ms/tick (antes 0,087), com 6% a mais de itens por tick; somado, o pedido inteiro custa 17,2 ms (antes 16,6). O p99 e os ticks acima de 1 ms não mudam. Nos casos das Infinite, as diferenças ficam dentro do desvio entre rodadas.
+- **Os outros casos não mudam de vazão:** neles o pendente já não limitava. O `cinco_q7` faz 100% do teto no regime (do 5º tick ao último empurrão) antes e depois; os 6% que faltam são o começo (a CPU calcula, as fábricas esperam o primeiro pedido) e o fim. A CPU de 16 limita o `cinco_cpu16` (76,9%), sem recusa da Doca.
+- **O pendente por item:** o NBT do padrão de 524.288 cai de 353 KB para 283 bytes, e o componente de 292 KB para 156 bytes. A visita da volta com pendente fica mais barata (uma linha, e com uma linha só a tentativa não simula antes). A oferta única do padrão gigante continua em ~1 ms, dominada pela conversão das 8.192 pilhas no AE2; a diferença entre os lados é de uma amostra por rodada.
+
+### O bench `doca`
+
+`./scripts/bench.sh doca:1:3` (fornalhas e um baú; cada pedido cabe inteiro, sem pendente): mod 0,140 ± 0,049 ms/tick, 3,0 a 5,1 µs por oferta, 256 itens/s (`run/bench/reports/20261111-225529.md`, fora do git). No ruído das rodadas da seção anterior (0,145 ± 0,052 e 0,163 ± 0,037).
+

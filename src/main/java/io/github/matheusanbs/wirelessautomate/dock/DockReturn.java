@@ -309,6 +309,9 @@ public final class DockReturn implements EngineVisitor {
         if (batch != null) {
             batch.start(lane.items.available(now));
         }
+        if (side.loose() != null) {
+            DockPending.adopt(dock, side, now);
+        }
         int deferred = 0;
         boolean moved = false;
         boolean full = false;
@@ -326,8 +329,8 @@ public final class DockReturn implements EngineVisitor {
                 forget(machine);
                 continue;
             }
-            if (side.hasPending() && side.pendingAtKey() == machine.pos().asLong()) {
-                DockDelivery.flushPending(dock, lane.side);
+            if (machine.pending() != null) {
+                DockPending.flush(dock, side, machine, now);
             }
             int outcome = 0;
             if (batch != null) {

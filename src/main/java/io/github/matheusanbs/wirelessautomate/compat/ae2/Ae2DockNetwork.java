@@ -14,6 +14,7 @@ import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
 import appeng.api.storage.MEStorage;
 import io.github.matheusanbs.wirelessautomate.dock.DockReturnNetwork;
+import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -34,6 +35,9 @@ import org.jetbrains.annotations.Nullable;
  * se junta, e a velha não pode receber nada. A busca (uma consulta de capability) só se repete então ou no
  * {@link #reset}, pelo cache de capability do lado. Sem nó ativo ou sem espaço na rede, aceita zero: a volta marca
  * "provedor cheio" e dorme.
+ *
+ * <p>Com o Applied Mekanistics ({@link Ae2Chemicals#LOADED}), a rede guarda químicos: o {@code ChemicalStack} entra
+ * como {@code MekanismKey} pelo mesmo {@code insert}, e a CPU que espera o químico o conta como conta um item.
  */
 final class Ae2DockNetwork implements DockReturnNetwork {
     private final ServerLevel level;
@@ -49,6 +53,7 @@ final class Ae2DockNetwork implements DockReturnNetwork {
      */
     private @Nullable AEItemKey itemKey;
     private @Nullable AEFluidKey fluidKey;
+    private @Nullable AEKey chemicalKey;
 
     Ae2DockNetwork(ServerLevel level, BlockPos pos, Direction face) {
         this.level = level;
@@ -109,6 +114,19 @@ final class Ae2DockNetwork implements DockReturnNetwork {
         MEStorage target = key == null ? null : storage();
         return target == null ? 0 : target.insert(key, amount, simulate ? Actionable.SIMULATE : Actionable.MODULATE,
                 source);
+    }
+
+    // ------------------------------------------------------------------ químicos (mB, com o Applied Mekanistics)
+
+    @Override
+    public boolean acceptsChemicals() {
+        return Ae2Chemicals.LOADED;
+    }
+
+    @Override
+    public long insertChemical(Object stack, boolean simulate) {
+        chemicalKey = Ae2Chemicals.key(stack, chemicalKey);
+        return insert(chemicalKey, Chemicals.amount(stack), simulate);
     }
 
     // ------------------------------------------------------------------ itens

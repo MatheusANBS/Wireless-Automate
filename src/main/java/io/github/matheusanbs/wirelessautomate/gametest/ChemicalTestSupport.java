@@ -24,7 +24,8 @@ import net.neoforged.neoforge.items.ItemStackHandler;
  * A parte dos testes de químico que usa a API do Mekanism. Não é {@code @GameTestHolder} nem
  * {@code @EventBusSubscriber}: o NeoForge inspeciona essas classes por reflexão (as assinaturas dos
  * métodos), e um tipo do Mekanism numa assinatura impede o mod de carregar sem ele. Só é chamada
- * por {@link ChemicalTestTanks}, {@link ChemicalGameTests} e {@link DockChemicalGameTests} com o Mekanism presente.
+ * por {@link ChemicalTestTanks}, {@link ChemicalGameTests}, {@link DockChemicalGameTests} e os testes dos químicos da
+ * Doca na rede ME ({@link DockChemicalAe2GameTests}) com o Mekanism presente.
  */
 final class ChemicalTestSupport {
     private static final Map<BlockPos, IChemicalTank> TANKS = new ConcurrentHashMap<>();
@@ -79,6 +80,11 @@ final class ChemicalTestSupport {
     /** Um pedido de um químico só, como a Doca recebe ({@code ChemicalStack} como {@code Object}). */
     static List<Object> chemicalOrder(ResourceLocation chemical, long amount) {
         return List.of(stack(chemical, amount));
+    }
+
+    /** {@code amount} mB do químico, como {@code Object} ({@code ChemicalStack}), para as chaves das redes. */
+    static Object chemical(ResourceLocation chemical, long amount) {
+        return stack(chemical, amount);
     }
 
     private static ChemicalStack stack(ResourceLocation chemical, long amount) {

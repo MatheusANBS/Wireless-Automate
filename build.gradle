@@ -168,6 +168,11 @@ dependencies {
         transitive = false
     }
 
+    // Applied Mekanistics (os químicos da Doca na rede ME, a MekanismKey): o jar do mod só na compilação, pelo Maven do
+    // Modrinth. O mod vai para a pasta mods da run gameTestServerDockChemicals (abaixo). Tudo que toca nele fica em
+    // compat/appmek e só carrega com ele e o Mekanism presentes (a ponte é o compat/ae2/Ae2Chemicals).
+    compileOnly "maven.modrinth:applied-mekanistics:${appmek_version}"
+
     // Testes de unidade da lógica pura (sem classes do Minecraft).
     testImplementation platform("org.junit:junit-bom:${junit_version}")
     testImplementation 'org.junit.jupiter:junit-jupiter'
@@ -233,6 +238,10 @@ configurations {
         transitive = false
     }
     refinedTestMods {
+        canBeConsumed = false
+        transitive = false
+    }
+    dockChemicalTestMods {
         canBeConsumed = false
         transitive = false
     }
@@ -321,6 +330,14 @@ dependencies {
     // Refined Storage 2 (a Doca de Padrões); o jar traz as APIs dentro e só exige o NeoForge.
     clientMods "com.refinedmods.refinedstorage:refinedstorage-neoforge:${refinedstorage_version}"
     refinedTestMods "com.refinedmods.refinedstorage:refinedstorage-neoforge:${refinedstorage_version}"
+    // Químicos da Doca nas duas redes: o Mekanism, o AE2 (com o GuideME) e o Applied Mekanistics, o RS2 e a integração
+    // dele com o Mekanism.
+    dockChemicalTestMods "mekanism:Mekanism:${minecraft_version}-${mekanism_version}"
+    dockChemicalTestMods "curse.maven:applied-energistics-2-223794:${ae2_file}"
+    dockChemicalTestMods 'maven.modrinth:guideme:21.1.19'
+    dockChemicalTestMods "maven.modrinth:applied-mekanistics:${appmek_version}"
+    dockChemicalTestMods "com.refinedmods.refinedstorage:refinedstorage-neoforge:${refinedstorage_version}"
+    dockChemicalTestMods "com.refinedmods.refinedstorage:refinedstorage-mekanism-integration:${rsmek_version}"
 }
 
 // Mods na pasta mods/ do jogo, e não no classpath: o FML só descobre como mod o que está no
@@ -482,6 +499,26 @@ neoForge.runs {
     }
 }
 
+// GameTests dos químicos da Doca nas redes: um servidor de testes próprio, com o Mekanism, o AE2 (e o GuideME), o
+// Applied Mekanistics, o RS2 e a integração dele com o Mekanism na pasta mods, que roda só o namespace
+// wirelessautomate_dockchem (gametest/DockChemicalNetworkGameTests). ./gradlew runGameTestServerDockChemicals
+var prepareDockChemicalTestMods = tasks.register('prepareDockChemicalTestMods', Sync) {
+    from configurations.dockChemicalTestMods
+    into layout.projectDirectory.dir('run/gametest-dockchem/mods')
+}
+
+neoForge.runs {
+    gameTestServerDockChemicals {
+        type = 'gameTestServer'
+        gameDirectory = project.file('run/gametest-dockchem')
+        systemProperty 'neoforge.enabledGameTestNamespaces', 'wirelessautomate_dockchem'
+        systemProperty 'wirelessautomate.dockChemicalTests', 'true'
+        // Liga a máquina de químico de teste (gametest/ChemicalTestTanks).
+        systemProperty 'wirelessautomate.chemicalTests', 'true'
+        taskBefore prepareDockChemicalTestMods
+    }
+}
+
 neoForge.runs {
     // Servidor dedicado de benchmark num diretório próprio (run/bench), com mundo plano preparado
     // pelo scripts/bench.sh. A propriedade wirelessautomate.bench liga as máquinas de teste de
@@ -584,20 +621,28 @@ tasks.matching { it.name == 'runGameTestServerRefined' }.configureEach {
     }
 }
 
+def dockChemicalTestWorld = layout.projectDirectory.dir('run/gametest-dockchem/world').asFile
+tasks.matching { it.name == 'runGameTestServerDockChemicals' }.configureEach {
+    doFirst {
+        dockChemicalTestWorld.deleteDir()
+    }
+}
+
 // Cada servidor ou cliente de dev usa ~3 GB, e o org.gradle.parallel poderia rodá-los juntos numa mesma
 // invocação. Este serviço tem uma vaga só: as tarefas que sobem o jogo rodam uma de cada vez.
 abstract class OneGame implements BuildService<BuildServiceParameters.None> {}
 def oneGame = gradle.sharedServices.registerIfAbsent('oneGame', OneGame) { maxParallelUsages = 1 }
 tasks.matching { it.name in ['runGameTestServer', 'runGameTestServerChemicals', 'runGameTestServerSource',
         'runGameTestServerAllthemodium', 'runGameTestServerTeams', 'runGameTestServerAe2',
-        'runGameTestServerRefined', 'runClient', 'runBenchServer'] }
+        'runGameTestServerRefined', 'runGameTestServerDockChemicals', 'runClient', 'runBenchServer'] }
         .configureEach { usesService(oneGame) }
 
 // O servidor de GameTests que trava ao carregar (um mod que não sobe) sai sem erro para o Gradle.
 // Por isso o build confere no log que a rodada chegou ao fim com todos os testes passando.
 [runGameTestServer: 'run/gametest', runGameTestServerChemicals: 'run/gametest-chemicals', runGameTestServerSource: 'run/gametest-source',
  runGameTestServerAllthemodium: 'run/gametest-atm', runGameTestServerTeams: 'run/gametest-teams',
- runGameTestServerAe2: 'run/gametest-ae2', runGameTestServerRefined: 'run/gametest-refined'].each { name, dir ->
+ runGameTestServerAe2: 'run/gametest-ae2', runGameTestServerRefined: 'run/gametest-refined',
+ runGameTestServerDockChemicals: 'run/gametest-dockchem'].each { name, dir ->
     def log = layout.projectDirectory.file("${dir}/logs/latest.log").asFile
     tasks.matching { it.name == name }.configureEach {
         doFirst {

@@ -26,7 +26,7 @@ It was built for large modpacks: instead of every block ticking on its own, one 
 
 ### Range Upgrade
 
-One router moves to and from every machine you link in its radius (6 blocks and 8 machines on Advanced, up to 64 blocks and 128 machines on Ultimate). Linked machines of the same block form a group with one profile, with exceptions per machine, and their sides follow each machine's front. Machines wake the router as soon as they change, and nothing scans the world while it runs. Linked machines start without a network: choose each face's network explicitly in the panel's Network row. Changing its action keeps its network. **Clear networks** removes the network from every face set to None, with Undo. Give machines and groups their own names, and light any machine up **in the world**, through blocks, with a line to its router; right-click a machine with the Network Tablet to jump straight to it.
+One router moves to and from every machine you link in its radius (6 blocks and 8 machines on Advanced, up to 64 blocks and 128 machines on Ultimate). Linked machines of the same block form a group with one profile, with exceptions per machine, and their sides follow each machine's front. Machines wake the router as soon as they change, and nothing scans the world while it runs. A linked machine that is broken or replaced by another block unlinks itself and frees its slot. Linked machines start without a network: choose each face's network explicitly in the panel's Network row. Changing its action keeps its network. **Clear networks** removes the network from every face set to None, with Undo. Give machines and groups their own names, and light any machine up **in the world**, through blocks, with a line to its router; right-click a machine with the Network Tablet to jump straight to it.
 
 ![One router, many machines](https://media.forgecdn.net/attachments/2125/320/feature-17-range-png.png)
 
@@ -187,6 +187,33 @@ A wall display that shows **live numbers from your networks and storages**. Stic
 - **Export and import as text:** arts, images and whole layouts copy as a short code or as readable text, so you can share a Screen or let a chat AI draw for you: paste the [pixel art guide for AIs](https://github.com/MatheusANBS/Wireless-Automate/blob/main/docs/pixel-art-ai-guide.md) into the chat, ask for a drawing and import the answer.
 - **Access:** on the Access tab, invite players or, with FTB Teams, whole teams to edit a Screen like its owner (size, layout and links). Anyone can still look at it.
 
+### Pattern Dock (AE2 and Refined Storage 2)
+
+Pattern automation without pipes. Place an AE2 **Pattern Provider** or a Refined Storage 2 **Autocrafter** against a side of the Dock, link the machines of one block type to that side with the Linker, and put their processing patterns in the provider. The Dock hands **each order whole to a free machine** of that side, rotating between them, and the result goes **straight back to the network** (ME or RS2). Each side handles one kind of machine, so one Dock serves up to six production lines.
+
+- **Items, fluids and chemicals in the same order.** Chemicals need Mekanism plus Applied Mekanistics (AE2) or Refined Storage Mekanism Integration (RS2).
+- **Works with the AE2 addons of ATM10:** the Extended Pattern Provider (ExtendedAE), the Advanced Pattern Provider and the Quantum Computer (Advanced AE).
+- **Linking per side:** with the Linker, click a face of the Dock, then a machine, or Ctrl + click to link every machine of the same block in reach. The first machine sets, through the Auto-Setup, which faces take and which give. The Dock uses no energy: a machine can also sit on a router, which brings the energy.
+- **Reach per tier** (default config; the limit counts all six sides, same dimension):
+
+| Tier | Radius | Machines |
+| --- | --- | --- |
+| Basic | 6 blocks | 8 |
+| Advanced | 12 blocks | 16 |
+| Elite | 16 blocks | 32 |
+| Emerald | 24 blocks | 48 |
+| Allthemodium¹ | 32 blocks | 64 |
+| Vibranium¹ | 48 blocks | 96 |
+| Unobtainium¹ | 64 blocks | 128 |
+| Ultimate | 96 blocks | 256 |
+
+*¹ Only with Allthemodium.*
+
+- **Its own screen** with one row per side (the machine, how many are linked and working, and the state in one line), the reach cube in the world while you hold the Linker, and animated art in the tier's color.
+- **A leftover only holds its own machine:** an order that doesn't fit whole waits for that machine to consume it, and the others keep taking orders. Breaking the Dock keeps what is pending in the item. A broken machine leaves its side on its own.
+- **Built for heavy use:** measured with the real factories, one Mekanism Extras Infinity Smelting Factory at 256× runs at 99% of what it can smelt (86,139 items/s), and five of them with the Quantum Computer reach **409,600 items/s**, inside the engine's 1 ms tick budget (only the burst at the start of a very large order goes over, paid back on the next tick).
+- **Recipe** with Porcelain Casing, Signal Alloy Ingot and a router, plus an Engineering Processor and a Pattern Provider with AE2, or, with Refined Storage 2 only, an Advanced Processor and an Autocrafter. Tier it up with the Upgrade Card, in the world or in the crafting table.
+
 ### Tools for big builds
 
 ![The toolkit](https://media.forgecdn.net/attachments/2125/317/feature-14-toolkit-png.png)
@@ -232,7 +259,7 @@ Every player gets the guide book on their first join (it's also in the creative 
 
 Once the first router of a line is set up, copy its profile on the Tablet and paste it on the rest.
 
-Recipes use vanilla items, except the Allthemodium tiers (made from the Allthemodium mod's metals, only when it's installed).
+Recipes use vanilla items, except the Allthemodium tiers (made from the Allthemodium mod's metals, only when it's installed) and the Pattern Dock (with AE2 or Refined Storage 2 items, only with one of them installed).
 
 ---
 
@@ -246,6 +273,8 @@ Recipes use vanilla items, except the Allthemodium tiers (made from the Allthemo
 | **Allthemodium** (optional, as in ATM10) | Three extra tiers (Allthemodium, Vibranium and Unobtainium) between Emerald and Ultimate, for the router and every storage block. With **All The Tweaks**, the Ultimate ring takes ATM Star shards. |
 | **JEI** (optional) | Drag and drop (or Shift + click) ingredients into filters without having the item, or onto the tag inspector; the tier-up recipes (block in the ring, cards with an origin, block + card) show in JEI. |
 | **FTB Teams** (optional) | Add a party team to a private network and every member gets the access of a guest, live. Needs FTB Teams for 1.21.1 (with FTB Library and Architectury, which it asks for itself). |
+| **AE2** (optional) | The **Pattern Dock** takes orders from the Pattern Provider (also ExtendedAE's and Advanced AE's, with the Quantum Computer) and returns the result to the ME network. Needs AE2 19 for 1.21.1. With **Applied Mekanistics** 1.6.0 or newer, orders carry chemicals. |
+| **Refined Storage 2** (optional) | The **Pattern Dock** takes orders from the Autocrafter and returns the result to the network. Needs Refined Storage 2.0.0-milestone.4.14 or newer. With **Refined Storage Mekanism Integration** 0.1.0 or newer, orders carry chemicals. |
 
 ## Performance
 

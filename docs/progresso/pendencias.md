@@ -101,8 +101,7 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 
 ## Testes, e2e e bench
 
-- O passo "Baú: filtro, adicionar a tag" do e2e falha às vezes no e2e completo ("Adicionar está desativado"): corrida de 1 tick entre marcar a tag e clicar em Adicionar; sozinho (`--only armazenamento`) passa. (02/11)
-- O e2e completo padrão passa de 600 s neste ambiente (~615 s): sem `E2E_TIMEOUT=1200` ele estoura na suíte `guia` com tudo `OK` até ali. (02/11)
+- O e2e rápido padrão passa de 600 s neste ambiente desde as suítes da Doca e da Tela (~490 s só de passos, com as capturas delas): sem `E2E_TIMEOUT=1200` ele estoura na suíte `guia` com tudo `OK` até ali; na 2.17.0 rodou em três partes com `--only`. Subir o padrão do `scripts/e2e.sh` ou tirar as capturas das suítes no modo rápido. (02/11, de novo em 12/11)
 - GameTest próprio para `/wa network invite` e `team`. (22/10)
 - Rodar as variantes `pt` e `escuro` do e2e (não rodaram na 2.12 nem na 2.13, por decisão do dono). (29/10)
 - O passo "alcance: tema escuro" do e2e falhou uma vez sem causa achada; ficar de olho. (22/10)
@@ -110,6 +109,7 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 
 ## Docs, scripts e publicação
 
+- A descrição do `neoforge.mods.toml` sai em mojibake no jar ("quÃ­micos"): provavelmente o `gradle.properties` lido como ISO-8859-1 (o padrão do `java.util.Properties`) antes da expansão do template. Já era assim na 2.16.0; aparece na lista de mods do jogo. (12/11)
 - Changelog da próxima versão: uma remota vinculada ao lado da presa sozinha herda na hora a config dela (inclusive Extrair e a rede); avisar no changelog. (03/11)
 - **(dono)** A 2.14.0 e a 2.15.1 não têm release no GitHub (só a v2.15.0 e, agora, a v2.16.0): decidir se vale criar as duas a posteriori. (08/11)
 - **(dono)** Quando o Modrinth aprovar, pôr o link no `README.md`, no `README.en.md` e na `descricao.md`. (30/10)

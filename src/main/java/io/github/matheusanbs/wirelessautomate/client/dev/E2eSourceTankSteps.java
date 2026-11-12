@@ -39,7 +39,7 @@ final class E2eSourceTankSteps {
     /** Os Tanques de Source das fotos: Básico vazio, Avançado a 30%, Elite a 60% e Ultimate (níveis 0, 3, 6 e 10). */
     private static final RouterTier[] SOURCE_TANK_TIERS = {RouterTier.BASIC, RouterTier.ADVANCED, RouterTier.ELITE,
             RouterTier.ULTIMATE};
-    private static final long[] SOURCE_TANK_CONTENTS = {0L, 24_000L, 384_000L, 3_000_000_000L};
+    private static final long[] SOURCE_TANK_CONTENTS = {0L, 8_640_000L, 138_240_000L, 3_000_000_000L};
 
     /**
      * A tela de um valor só do Tanque de Source (Avançado, 1.640.000 de Source): em inglês e, depois de

@@ -20,6 +20,7 @@ import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import java.util.List;
 import java.util.UUID;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -248,7 +249,9 @@ final class E2eStorageSteps {
         list.add(new Step("Baú: filtro, marcar a tag", STEP_TIMEOUT_MS, () -> {
             int[] row = E2eFilterSteps.filterScreen().candidateCenter(E2eFilterSteps.filterScreen().candidateLabels().indexOf("#c:stones"));
             click(Minecraft.getInstance().screen, row[0], row[1]);
-        }, () -> E2eFilterSteps.filterScreen().checkedLabels().equals(java.util.List.of("#c:stones")),
+        }, () -> E2eFilterSteps.filterScreen().checkedLabels().equals(java.util.List.of("#c:stones"))
+                && find(byMessage(Component.translatable("gui.wirelessautomate.filter.tags.add.action"))) instanceof AbstractWidget add
+                && add.active,
                 () -> "marcadas " + E2eFilterSteps.filterScreen().checkedLabels()));
         list.add(new Step("Baú: filtro, adicionar a tag", STEP_TIMEOUT_MS,
                 () -> click(widget(byMessage(Component.translatable("gui.wirelessautomate.filter.tags.add.action")), "Adicionar")),

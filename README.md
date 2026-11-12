@@ -6,7 +6,7 @@ O **Wireless Automate** move itens, fluidos, energia, químicos do Mekanism e So
 
 Foi feito para modpacks grandes: em vez de cada bloco ter o próprio tick, um gerenciador central move tudo dentro de um orçamento de tempo pequeno por tick, então centenas de máquinas não viram lag.
 
-**Estado:** versão 2.14. O mod ganha o **livro-guia próprio**, sem depender do GuideME: um livro aberto de duas folhas, com fitas por grupo, busca, receitas e cenas 3D que giram. O que mudou em cada versão está no [changelog](docs/curseforge/changelog-curseforge-2.14.0.md) e na [página de releases](https://github.com/MatheusANBS/Wireless-Automate/releases).
+**Estado:** versão 2.17. O mod ganha a **Doca de Padrões**, que leva os pedidos dos padrões de processamento do AE2 e do Refined Storage 2 às máquinas vinculadas, sem canos, e devolve o resultado direto à rede. O que mudou em cada versão está no [changelog](docs/curseforge/changelog-curseforge-2.17.0.md) e na [página de releases](https://github.com/MatheusANBS/Wireless-Automate/releases).
 
 Baixe no [CurseForge](https://www.curseforge.com/minecraft/mc-mods/wireless-automate) ou na [release mais recente do GitHub](https://github.com/MatheusANBS/Wireless-Automate/releases/latest). Requer NeoForge 21.1.248 ou mais novo (roda no ATM10).
 
@@ -32,7 +32,7 @@ Baixe no [CurseForge](https://www.curseforge.com/minecraft/mc-mods/wireless-auto
 
 ### Upgrade de Alcance
 
-Um roteador move de e para todas as máquinas que você vincula no raio dele (6 blocos e 8 máquinas no Avançado, até 64 blocos e 128 máquinas no Ultimate). Máquinas vinculadas do mesmo bloco formam um grupo com um perfil, com exceções por máquina, e os lados seguem a frente de cada máquina. As máquinas acordam o roteador assim que mudam, e nada varre o mundo enquanto ele roda. Máquinas vinculadas começam sem rede: escolha a rede de cada face explicitamente na linha Rede do painel. Trocar a ação da face mantém a rede dela. **Tirar redes** tira a rede de todas as faces com Nenhum, com Desfazer. Dê nomes às máquinas e aos grupos, e acenda qualquer máquina **no mundo**, através dos blocos, com uma linha até o roteador; clique direito numa máquina com o Tablet de Rede vai direto para ela.
+Um roteador move de e para todas as máquinas que você vincula no raio dele (6 blocos e 8 máquinas no Avançado, até 64 blocos e 128 máquinas no Ultimate). Máquinas vinculadas do mesmo bloco formam um grupo com um perfil, com exceções por máquina, e os lados seguem a frente de cada máquina. As máquinas acordam o roteador assim que mudam, e nada varre o mundo enquanto ele roda. Uma máquina vinculada quebrada ou trocada por outro bloco sai sozinha e libera a vaga. Máquinas vinculadas começam sem rede: escolha a rede de cada face explicitamente na linha Rede do painel. Trocar a ação da face mantém a rede dela. **Tirar redes** tira a rede de todas as faces com Nenhum, com Desfazer. Dê nomes às máquinas e aos grupos, e acenda qualquer máquina **no mundo**, através dos blocos, com uma linha até o roteador; clique direito numa máquina com o Tablet de Rede vai direto para ela.
 
 ![Um roteador, várias máquinas](docs/curseforge/feature-17-range.png)
 
@@ -193,6 +193,33 @@ Um painel de parede que mostra **números ao vivo das suas redes e armazenamento
 - **Exportar e importar como texto:** artes, imagens e layouts inteiros se copiam como um código curto ou como texto legível, então você pode compartilhar uma Tela ou deixar uma IA de chat desenhar por você: cole o [guia de pixel art para IAs](docs/guia-pixel-art-com-ia.md) no chat, peça um desenho e importe a resposta.
 - **Acesso:** na aba Acesso, convide jogadores ou, com o FTB Teams, times inteiros para editar uma Tela como o dono (tamanho, layout e ligações). Qualquer um continua podendo olhar.
 
+### Doca de Padrões (AE2 e Refined Storage 2)
+
+Automação de padrões sem canos. Encoste um **Pattern Provider** do AE2 ou um **Autocrafter** do Refined Storage 2 num lado da Doca, vincule a esse lado as máquinas de um tipo de bloco com o Vinculador e ponha os padrões de processamento delas no provedor. A Doca entrega **cada pedido inteiro a uma máquina livre** do lado, revezando entre elas, e o resultado volta **direto à rede** (ME ou RS2). Cada lado cuida de um tipo de máquina, então uma Doca atende até seis linhas de produção.
+
+- **Itens, fluidos e químicos no mesmo pedido.** O químico precisa do Mekanism e do Applied Mekanistics (AE2) ou da Refined Storage Mekanism Integration (RS2).
+- **Funciona com os addons do AE2 do ATM10:** o Extended Pattern Provider (ExtendedAE), o Advanced Pattern Provider e o Quantum Computer (Advanced AE).
+- **Vincular por lado:** com o Vinculador, clique numa face da Doca e depois numa máquina, ou Ctrl + clique para vincular todas as do mesmo bloco no alcance. A primeira máquina define pelo Afinador quais faces recebem e quais dão. A Doca não gasta energia: a máquina pode estar também num roteador, que leva a energia.
+- **Alcance por tier** (config padrão; o limite soma os seis lados, mesma dimensão):
+
+| Tier | Raio | Máquinas |
+| --- | --- | --- |
+| Básico | 6 blocos | 8 |
+| Avançado | 12 blocos | 16 |
+| Elite | 16 blocos | 32 |
+| Esmeralda | 24 blocos | 48 |
+| Allthemodium¹ | 32 blocos | 64 |
+| Vibranium¹ | 48 blocos | 96 |
+| Unobtainium¹ | 64 blocos | 128 |
+| Ultimate | 96 blocos | 256 |
+
+*¹ Só com o Allthemodium.*
+
+- **Tela própria** com uma linha por lado (a máquina, quantas estão vinculadas e trabalhando, e o estado numa frase), o cubo do alcance no mundo ao segurar o Vinculador e arte animada na cor do tier.
+- **A sobra prende só a máquina dela:** o pedido que não cabe inteiro espera aquela máquina consumir, e as outras continuam recebendo. Quebrar a Doca leva o que está pendente no item. A máquina quebrada sai do lado sozinha.
+- **Feita para o uso intenso:** medida com as fábricas reais, uma Infinity Smelting Factory do Mekanism Extras a 256× roda a 99% do que ela consegue fundir (86.139 itens/s), e cinco delas com o Quantum Computer chegam a **409.600 itens/s**, dentro do orçamento de 1 ms por tick do motor (só a rajada do começo de um pedido muito grande passa, e é paga no tick seguinte).
+- **Receita** com a Carcaça de Porcelana, o Lingote de Liga de Sinal e um roteador, mais o Processador de Engenharia e o Pattern Provider com o AE2, ou, só com o RS2, o Processador Avançado e um Autocrafter. Sobe de tier com o Cartão de Upgrade, no mundo ou na bancada.
+
 ### Ferramentas para construções grandes
 
 ![O kit de ferramentas](docs/curseforge/feature-14-toolkit.png)
@@ -238,7 +265,7 @@ Todo jogador recebe o livro-guia no primeiro login (ele também está na aba cri
 
 Com o primeiro roteador de uma linha configurado, copie o perfil dele no Tablet e cole nos outros.
 
-As receitas usam itens vanilla, menos os tiers do Allthemodium (feitos com os metais do mod Allthemodium, só quando ele está instalado).
+As receitas usam itens vanilla, menos os tiers do Allthemodium (feitos com os metais do mod Allthemodium, só quando ele está instalado) e a Doca de Padrões (com itens do AE2 ou do Refined Storage 2, só com um deles instalado).
 
 ---
 
@@ -252,6 +279,8 @@ As receitas usam itens vanilla, menos os tiers do Allthemodium (feitos com os me
 | **Allthemodium** (opcional, como no ATM10) | Três tiers a mais (Allthemodium, Vibranium e Unobtainium) entre a Esmeralda e o Ultimate, para o roteador e todos os armazenamentos. Com o **All The Tweaks**, o anel do Ultimate pede fragmentos de ATM Star. |
 | **JEI** (opcional) | Arrastar e soltar (ou Shift + clique) ingredientes nos filtros sem ter o item, ou no inspetor de tags; as receitas de subir tier (bloco no anel, cartões com origem, bloco + cartão) aparecem no JEI. |
 | **FTB Teams** (opcional) | Acrescente um time de grupo a uma rede privada e cada membro ganha o acesso de convidado, ao vivo. Precisa do FTB Teams para 1.21.1 (com o FTB Library e o Architectury, que ele mesmo pede). |
+| **AE2** (opcional) | A **Doca de Padrões** recebe os pedidos do Pattern Provider (também o do ExtendedAE e o do Advanced AE, com o Quantum Computer) e devolve o resultado à rede ME. Precisa do AE2 19 para 1.21.1. Com o **Applied Mekanistics** 1.6.0 ou mais novo, os pedidos levam químicos. |
+| **Refined Storage 2** (opcional) | A **Doca de Padrões** recebe os pedidos do Autocrafter e devolve o resultado à rede. Precisa do Refined Storage 2.0.0-milestone.4.14 ou mais novo. Com a **Refined Storage Mekanism Integration** 0.1.0 ou mais nova, os pedidos levam químicos. |
 
 ## Desempenho
 

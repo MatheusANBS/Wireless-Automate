@@ -25,14 +25,14 @@ Wireless Automate 2.17.0 adds the **Pattern Dock**, a block that takes processin
 
 **Range Upgrade**
 
-- **A broken or replaced remote machine unlinks itself** and frees its slot in the tier's limit; the cards of a group that empties go back into the router. An unloaded chunk is not treated as broken.
+- **A broken or replaced remote machine unlinks itself** and frees its slot in the tier's limit; the cards of a group that empties drop next to the router. An unloaded chunk is not treated as broken.
 
 **Other changes**
 
 - **Chemicals work with Mekanism 10.7.0 to 10.7.10 too:** the mod no longer uses a constant that only arrived in 10.7.11.
 - Spec, guide, README and config comments updated for the Dock.
 
-**Compatibility note:** the network protocol changed (**49 → 51**), so the server and every client must run 2.17.0. Worlds from 2.16.x load as they are. NeoForge 21.1.248 or newer is still required. Every other mod is optional: Mekanism 10.7+, Ars Nouveau 5.2+, FTB Teams 2101.x, Allthemodium 2+ (with All The Tweaks), JEI 19+, and for the Pattern Dock AE2 19 (1.21.1 builds) or Refined Storage 2.0.0-milestone.4.14+, with Applied Mekanistics 1.6.0+ or Refined Storage Mekanism Integration 0.1.0+ for chemicals.
+**Compatibility note:** the network protocol changed (**49 → 51**), so the server and every client must run 2.17.0. Worlds from 2.16.x load as they are. NeoForge 21.1.248 or newer is still required. Every other mod is optional: Mekanism 10.7+, Ars Nouveau 5.2+, FTB Teams 2101.x, Allthemodium 2+ (with All The Tweaks), JEI 19+, and for the Pattern Dock AE2 19 (1.21.1 builds) or Refined Storage 2 2.0.0-beta.1+ (except milestones 4.12 and 4.13), with Applied Mekanistics 1.6.0+ or Refined Storage Mekanism Integration 0.1.0+ for chemicals.
 
 ## 2.16.0
 

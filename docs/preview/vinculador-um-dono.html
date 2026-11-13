@@ -1,0 +1,214 @@
+<title>Vinculador de um dono</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Pixelify+Sans:wght@500&display=swap">
+<style>
+/* página de ideia: coluna única, diagrama hoje × depois lado a lado, textos da action bar como no jogo */
+:root {
+  --page: #ECE5D6; --page-fg: #2A2730; --page-mu: #6E675B; --page-line: #CFC5B0; --page-card: #F6F1E6;
+  --coral: #F0603E;
+  --pix: "Pixelify Sans", "Courier New", monospace;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --t-hi: #8EE8E1; --t-mid: #1FA9A0; --t-lo: #136C66;
+  --cell-off: #D8CFBD; --cell-off-line: #B9AE97; --grid: #E2DACA; --ink: #2A2730;
+  --bar: #2A2730; --bar-fg: #F2EBDD;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --page: #19171C; --page-fg: #EDE6D8; --page-mu: #A79F90; --page-line: #3A363F; --page-card: #222026;
+  --cell-off: #3A363F; --cell-off-line: #55505B; --grid: #27242B; --ink: #EDE6D8; --bar: #0F0E12; --bar-fg: #EDE6D8;
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --page: #19171C; --page-fg: #EDE6D8; --page-mu: #A79F90; --page-line: #3A363F; --page-card: #222026;
+  --cell-off: #3A363F; --cell-off-line: #55505B; --grid: #27242B; --ink: #EDE6D8; --bar: #0F0E12; --bar-fg: #EDE6D8;
+  color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--page); color: var(--page-fg); font-family: var(--body); font-size: 15px; line-height: 1.55; margin: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+.wrap { max-width: 1000px; margin: 0 auto; padding-block: 28px 64px }
+header { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: baseline }
+h1 { font-family: var(--pix); font-weight: 500; font-size: 32px; margin: 0; text-wrap: balance }
+h2 { font-family: var(--pix); font-weight: 500; font-size: 22px; margin: 0 0 8px; text-wrap: balance }
+h3 { font-size: 15px; margin: 0 0 4px }
+.status { font-family: var(--pix); font-size: 14px; color: var(--coral); border: 1px solid var(--coral); padding: 1px 8px }
+.lede { color: var(--page-mu); max-width: 72ch; margin: 6px 0 0 }
+p, li { max-width: 74ch }
+section.part { border-top: 1px solid var(--page-line); margin-top: 36px; padding-top: 26px }
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 20px }
+.rule { background: var(--page-card); border: 1px solid var(--page-line); padding: 16px 18px; min-width: 0 }
+.rule .tag { font-family: var(--pix); font-size: 13px; color: var(--t-mid); letter-spacing: .04em }
+.rule p { margin: 6px 0 0 }
+.answers { margin: 14px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 8px }
+.answers li { font-size: 13px; border: 1px solid var(--page-line); padding: 2px 10px; color: var(--page-mu) }
+.answers b { color: var(--page-fg); font-weight: 700 }
+.panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 14px }
+figure { margin: 0; min-width: 0 }
+figure svg { width: 100%; height: auto; display: block; background: var(--page-card); border: 1px solid var(--page-line) }
+figcaption { font-family: var(--pix); font-size: 16px; margin-bottom: 6px; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap }
+figcaption span { font-family: var(--body); font-size: 13px; color: var(--page-mu) }
+.bar { background: var(--bar); color: var(--bar-fg); font-family: var(--pix); font-size: 14px; padding: 6px 10px; margin-top: 8px; overflow-wrap: anywhere }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 14px; font-size: 13px; color: var(--page-mu) }
+.legend i { display: inline-block; width: 14px; height: 14px; vertical-align: -2px; margin-right: 6px }
+.lg-on { background: var(--t-mid); border: 2px solid var(--t-lo) }
+.lg-off { background: var(--cell-off); border: 2px solid var(--cell-off-line) }
+.lg-other { background: var(--cell-off); border: 2px solid var(--coral) }
+.lg-radius { border: 2px dashed var(--t-mid) }
+.lg-click { border: 2px solid var(--ink); border-radius: 50% }
+.note { font-size: 13px; color: var(--page-mu); margin-top: 8px }
+.msgs { width: 100%; border-collapse: collapse; margin-top: 10px }
+.msgs-wrap { overflow-x: auto }
+.msgs th, .msgs td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--page-line); vertical-align: top }
+.msgs th { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--page-mu); font-weight: 700 }
+.msgs td.game { font-family: var(--pix); font-size: 14px; background: var(--bar); color: var(--bar-fg); white-space: nowrap }
+.msgs td.was { color: var(--page-mu); font-size: 13px }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px 28px }
+.cols ul { padding-left: 18px; margin: 6px 0 0 }
+.cols li + li { margin-top: 6px }
+.cost { font-variant-numeric: tabular-nums }
+.cost td:first-child { font-weight: 700; white-space: nowrap }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Vinculador de um dono</h1>
+    <span class="status">ideia · espera o seu ok</span>
+  </header>
+  <p class="lede">Duas mudanças no modo Vincular. Uma máquina passa a ter um roteador só, e o Ctrl + clique pega só as máquinas do mesmo bloco que se tocam com a clicada, em vez de todas do raio.</p>
+
+  <div class="rules">
+    <div class="rule">
+      <div class="tag">REGRA 1 · UM DONO</div>
+      <h3>Máquina de outro roteador é recusada</h3>
+      <p>Vale no clique e no Ctrl + clique. Conta a máquina vinculada de longe a outro roteador (ativa ou fora do raio) e a presa de outro roteador, a que fica encostada na frente dele.</p>
+    </div>
+    <div class="rule">
+      <div class="tag">REGRA 2 · AS QUE SE TOCAM</div>
+      <h3>Ctrl + clique segue o grupo encostado</h3>
+      <p>Da clicada, segue pelas máquinas do mesmo bloco encostadas pela face ou pela quina, em qualquer direção, dentro do raio. Vale para vincular e para desvincular, no roteador e na Doca.</p>
+    </div>
+  </div>
+  <ul class="answers">
+    <li>Presa de outro roteador: <b>conta</b></li>
+    <li>Tocar: <b>faces e quinas</b></li>
+    <li>Desvincular em massa: <b>só as que se tocam</b></li>
+    <li>Doca: <b>mesma regra</b></li>
+  </ul>
+
+  <section class="part">
+    <h2>Ctrl + clique numa fornalha, visto de cima</h2>
+    <p>O roteador escolhido é o <b>R</b>, com raio 6. A fornalha do meio da fileira de cima é de outro roteador, o <b>R2</b>. Em 3D vale igual para cima, para baixo e nas quinas.</p>
+    <div class="panels">
+      <figure>
+        <figcaption>Hoje <span>todas do raio</span></figcaption>
+        <svg id="hoje" viewBox="0 0 396 264" role="img" aria-label="Hoje: dez fornalhas vinculadas, inclusive a de outro roteador e as soltas"></svg>
+        <div class="bar">Vinculou 10 Fornalhas</div>
+      </figure>
+      <figure>
+        <figcaption>Depois <span>só as que se tocam</span></figcaption>
+        <svg id="depois" viewBox="0 0 396 264" role="img" aria-label="Depois: cinco fornalhas da fileira clicada vinculadas, a de outro roteador fica de fora"></svg>
+        <div class="bar">Vinculou 5 Fornalhas · 1 de outro roteador ficaram de fora</div>
+      </figure>
+    </div>
+    <div class="legend">
+      <span><i class="lg-on"></i>vinculada ao R</span>
+      <span><i class="lg-off"></i>fornalha que fica de fora</span>
+      <span><i class="lg-other"></i>já é de outro roteador</span>
+      <span><i class="lg-click"></i>a clicada</span>
+      <span><i class="lg-radius"></i>raio do R</span>
+    </div>
+    <p class="note">O grupo passa pela fornalha do R2 (ela toca as vizinhas) e continua até a ponta da fileira, mas ela mesma não entra. A ponta que sai do raio não entra e o grupo não continua por ela. A fornalha da diagonal entra porque encosta pela quina.</p>
+  </section>
+
+  <section class="part">
+    <h2>O que aparece na action bar</h2>
+    <div class="msgs-wrap">
+    <table class="msgs">
+      <thead><tr><th>Quando</th><th>Texto novo</th><th>Hoje</th></tr></thead>
+      <tbody>
+        <tr><td>Clique numa máquina de outro roteador (ou na presa dele)</td><td class="game">Fornalha já é de Forja Norte em 812, 64, -230</td><td class="was">vinculava</td></tr>
+        <tr><td>Ctrl + clique com máquinas de outro roteador no grupo</td><td class="game">Vinculou 5 Fornalhas · 1 de outro roteador ficaram de fora</td><td class="was">vinculava todas</td></tr>
+        <tr><td>Ctrl + clique num grupo todo vinculado</td><td class="game">Fornalha: todas as que se tocam já estão vinculadas</td><td class="was">…todas as do raio…</td></tr>
+        <tr><td>Grupo grande demais (o teto de leituras)</td><td class="game">… · o resto do grupo não foi procurado</td><td class="was">mais longe não foi procurado</td></tr>
+        <tr><td>Ctrl + clique numa vinculada ao R</td><td class="game">Desvinculou 5 Fornalhas de Forja Sul · 3/32 máquinas</td><td class="was">tirava todas do mesmo bloco</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p class="note">O "1 de outro roteador ficaram de fora" segue o padrão das outras contagens ("2 protegidas ficaram de fora", "3 de outra Doca ficaram de fora"). Os textos em inglês acompanham.</p>
+  </section>
+
+  <section class="part cols">
+    <div>
+      <h2>Fica como está</h2>
+      <ul>
+        <li>Máquina que já está em dois roteadores num mundo de hoje continua nos dois. Nada é desfeito sozinho; um clique a tira do roteador escolhido, como sempre.</li>
+        <li>Pôr um roteador encostado numa máquina que já é de outro continua possível: o Vinculador não participa disso.</li>
+        <li>Doca e roteador continuam podendo dividir a mesma máquina (sua decisão de 10/11); entre Docas a regra de um dono já existe.</li>
+        <li>O clique simples e as outras recusas (raio, limite, proteção, upgrade) não mudam.</li>
+      </ul>
+    </div>
+    <div>
+      <h2>Muda junto</h2>
+      <ul>
+        <li>Com o limite do tier, entram primeiro as mais perto da clicada (hoje são as mais perto do roteador).</li>
+        <li>Na Doca, o Ctrl + clique para desvincular tira só as do lado que se tocam com a clicada (hoje tira o lado inteiro).</li>
+        <li><b>Limite:</b> um roteador descarregado não é visto. Uma máquina dele pode entrar em outro roteador, o mesmo limite que você aceitou para a Doca.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="part">
+    <h2>Custo</h2>
+    <div class="msgs-wrap">
+    <table class="msgs cost">
+      <tbody>
+        <tr><td>Por tick</td><td>Zero. Nada entra no motor nem no mixin do <code>setChanged</code>.</td></tr>
+        <tr><td>Memória</td><td>Um índice das máquinas vinculadas aos roteadores carregados, ativas ou não, igual ao que a Doca já tem: uma entrada por máquina, refeita só ao vincular, desvincular, carregar ou descarregar o roteador.</td></tr>
+        <tr><td>Clique simples</td><td>Uma consulta no índice e a leitura dos 6 vizinhos da máquina, para achar a presa de outro roteador.</td></tr>
+        <tr><td>Ctrl + clique</td><td>Até 26 leituras por máquina do grupo, no lugar do cubo inteiro do raio de hoje (até 131.072 posições lidas). Fica mais barato.</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  var C = 22, W = 18, H = 12;
+  var R = [4, 6], R2 = [16, 1], RADIUS = 6, CLICK = [7, 3], OTHER = [9, 3];
+  var furnaces = [[5,4],[6,3],[7,3],[8,3],[9,3],[10,3],[11,3],[12,3],[6,8],[7,8],[8,8],[2,10],[14,8]];
+  var touching = { '5,4':1, '6,3':1, '7,3':1, '8,3':1, '10,3':1 };
+  var NS = 'http://www.w3.org/2000/svg';
+  function el(name, attrs, parent) {
+    var e = document.createElementNS(NS, name);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    parent.appendChild(e);
+    return e;
+  }
+  function inRadius(p) { return Math.max(Math.abs(p[0] - R[0]), Math.abs(p[1] - R[1])) <= RADIUS; }
+  function draw(svg, mode) {
+    for (var x = 0; x <= W; x++) el('line', { x1: x * C, y1: 0, x2: x * C, y2: H * C, stroke: 'var(--grid)', 'stroke-width': 1 }, svg);
+    for (var y = 0; y <= H; y++) el('line', { x1: 0, y1: y * C, x2: W * C, y2: y * C, stroke: 'var(--grid)', 'stroke-width': 1 }, svg);
+    var x0 = Math.max(0, R[0] - RADIUS), x1 = Math.min(W, R[0] + RADIUS + 1);
+    var y0 = Math.max(0, R[1] - RADIUS), y1 = Math.min(H, R[1] + RADIUS + 1);
+    el('rect', { x: x0 * C + 1.5, y: y0 * C + 1.5, width: (x1 - x0) * C - 3, height: (y1 - y0) * C - 3, fill: 'none',
+      stroke: 'var(--t-mid)', 'stroke-width': 2, 'stroke-dasharray': '6 4' }, svg);
+    el('line', { x1: R2[0] * C + C / 2, y1: R2[1] * C + C / 2, x2: OTHER[0] * C + C / 2, y2: OTHER[1] * C + C / 2,
+      stroke: 'var(--coral)', 'stroke-width': 1.5, 'stroke-dasharray': '2 3' }, svg);
+    furnaces.forEach(function (p) {
+      var key = p[0] + ',' + p[1];
+      var other = p[0] === OTHER[0] && p[1] === OTHER[1];
+      var on = mode === 'hoje' ? inRadius(p) : !!touching[key];
+      el('rect', { x: p[0] * C + 3, y: p[1] * C + 3, width: C - 6, height: C - 6,
+        fill: on ? 'var(--t-mid)' : 'var(--cell-off)',
+        stroke: other ? 'var(--coral)' : (on ? 'var(--t-lo)' : 'var(--cell-off-line)'), 'stroke-width': other ? 2.5 : 2 }, svg);
+    });
+    el('circle', { cx: CLICK[0] * C + C / 2, cy: CLICK[1] * C + C / 2, r: C / 2 + 1, fill: 'none', stroke: 'var(--ink)', 'stroke-width': 2 }, svg);
+    [[R, 'R', 'var(--ink)'], [R2, 'R2', 'var(--coral)']].forEach(function (r) {
+      el('rect', { x: r[0][0] * C + 1, y: r[0][1] * C + 1, width: C - 2, height: C - 2, fill: r[2] }, svg);
+      var t = el('text', { x: r[0][0] * C + C / 2, y: r[0][1] * C + C / 2 + 4, 'text-anchor': 'middle',
+        'font-family': 'Pixelify Sans, monospace', 'font-size': r[1].length > 1 ? 10 : 13, fill: 'var(--page)' }, svg);
+      t.textContent = r[1];
+    });
+  }
+  draw(document.getElementById('hoje'), 'hoje');
+  draw(document.getElementById('depois'), 'depois');
+})();
+</script>

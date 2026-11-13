@@ -200,6 +200,9 @@ final class E2eLinkerSteps {
                         + ReachPaint.machineCount()));
         list.add(E2eRepairerSteps.cameraShot("vinculador-cubo", playerId, () -> linkRouter,
                 new double[] {20, 14, -30}, 0.5));
+        // de perto, pelo Sul: os dois funis na frente dos baús, com a moldura e o véu na cor do grupo
+        list.add(E2eRepairerSteps.cameraShot("vinculador-cubo-perto", playerId, () -> linkHopper,
+                new double[] {2.5, 2.5, 4.5}, 0.5));
         list.add(new Step("Vinculador: guardar o Vinculador esconde o cubo do roteador", STEP_TIMEOUT_MS,
                 () -> onServer(server -> {
                     ServerPlayer player = server.getPlayerList().getPlayer(playerId);

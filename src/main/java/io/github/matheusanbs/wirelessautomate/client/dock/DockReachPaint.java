@@ -10,8 +10,8 @@ import io.github.matheusanbs.wirelessautomate.dock.DockChoice;
 import io.github.matheusanbs.wirelessautomate.dock.DockColors;
 import io.github.matheusanbs.wirelessautomate.dock.PatternDockBlock;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
-import io.github.matheusanbs.wirelessautomate.packet.DockReachPayload;
-import io.github.matheusanbs.wirelessautomate.packet.DockReachRequestPayload;
+import io.github.matheusanbs.wirelessautomate.packet.LinkerReachPayload;
+import io.github.matheusanbs.wirelessautomate.packet.LinkerReachRequestPayload;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
@@ -29,7 +29,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * O cubo do alcance da Doca de Padrões no mundo ({@link DockReachPayload}): as arestas do cubo na cor do tier,
+ * O cubo do alcance da Doca de Padrões no mundo ({@link LinkerReachPayload}): as arestas do cubo na cor do tier,
  * recortadas na altura do mundo ({@link DockReachBox}), e cada máquina vinculada com moldura e um véu leve na cor do
  * lado dela ({@link DockColors}), desenhados através dos blocos, como o destaque do Olho. Só o que está a menos de
  * {@link #REACH} blocos da câmera.
@@ -38,7 +38,7 @@ import org.jetbrains.annotations.Nullable;
  * O cubo de colocar some quando o prazo vence. O do Vinculador fica guardado e aparece sempre que o Vinculador com
  * esta Doca escolhida está numa das mãos; sai quando um Vinculador na mão escolhe outra coisa, quando a Doca some, ao
  * trocar de mundo e no logout. Sem cubo guardado, o tick só lê os itens das mãos e, com uma Doca escolhida, pede o cubo
- * ao servidor ({@link DockReachRequestPayload}); o quadro volta na primeira linha. Um pedido sem resposta dobra o
+ * ao servidor ({@link LinkerReachRequestPayload}); o quadro volta na primeira linha. Um pedido sem resposta dobra o
  * intervalo até o próximo (de 1 s até 10 s), e depois do de 10 s os pedidos param até o Vinculador sair da mão.
  */
 @EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
@@ -74,7 +74,7 @@ public final class DockReachPaint {
     private static int grace;
     /** O cubo guardado está à mostra: o prazo corre, ou o Vinculador com esta Doca está numa das mãos. */
     private static boolean visible;
-    // Os pedidos do cubo ao servidor ({@link DockReachRequestPayload}): a Doca pedida (BlockPos.asLong), o tempo do
+    // Os pedidos do cubo ao servidor ({@link LinkerReachRequestPayload}): a Doca pedida (BlockPos.asLong), o tempo do
     // mundo em que o próximo pode sair, o intervalo depois dele, se ele é o último e se os pedidos pararam.
     private static long requestedDock = NO_DOCK;
     private static long nextRequest;
@@ -97,18 +97,21 @@ public final class DockReachPaint {
     }
 
     /** Guarda o cubo do pacote e monta os vértices; chamado na thread do cliente. */
-    public static void receive(DockReachPayload payload) {
+    public static void receive(LinkerReachPayload payload) {
+        if (payload.kind() != LinkerReachPayload.DOCK) {
+            return;
+        }
         Minecraft minecraft = Minecraft.getInstance();
         ClientLevel here = minecraft.level;
         if (here == null) {
             return;
         }
         int tier = Math.clamp(payload.tier(), 0, TIERS.length - 1);
-        BlockPos at = payload.dock();
+        BlockPos at = payload.origin();
         box = DockReachBox.bounds(payload.radius(), at.getY(), here.getMinBuildHeight(), here.getMaxBuildHeight());
         cubeEdges = DockReachBox.edges(box);
         cubeColor = CUBE_ALPHA << 24 | GuiPaint.tierColor(TIERS[tier]) & 0xFFFFFF;
-        int count = Math.min(payload.machines().length, payload.sides().length);
+        int count = Math.min(payload.machines().length, payload.colors().length);
         float[] middle = new float[count * 3];
         int[] colors = new int[count];
         float[] frameVertices = new float[count * FRAME_FLOATS];
@@ -121,7 +124,7 @@ public final class DockReachPaint {
             middle[i * 3] = x + 0.5f;
             middle[i * 3 + 1] = y + 0.5f;
             middle[i * 3 + 2] = z + 0.5f;
-            colors[i] = DockColors.side(Math.clamp(payload.sides()[i], 0, 5)) & 0xFFFFFF;
+            colors[i] = DockColors.side(Math.clamp(payload.colors()[i], 0, 5)) & 0xFFFFFF;
             float[] edges = DockReachBox.edges(new float[] {x - INFLATE, y - INFLATE, z - INFLATE, x + 1 + INFLATE,
                     y + 1 + INFLATE, z + 1 + INFLATE});
             System.arraycopy(edges, 0, frameVertices, i * FRAME_FLOATS, FRAME_FLOATS);
@@ -268,7 +271,7 @@ public final class DockReachPaint {
         nextRequest = now + requestInterval;
         lastTry = requestInterval == MAX_REQUEST_INTERVAL_TICKS;
         requestInterval = Math.min(requestInterval * 2, MAX_REQUEST_INTERVAL_TICKS);
-        PacketDistributor.sendToServer(new DockReachRequestPayload(choice.pos().pos()));
+        PacketDistributor.sendToServer(new LinkerReachRequestPayload(LinkerReachPayload.DOCK, choice.pos().pos()));
     }
 
     /** Os pedidos voltam ao começo: o cubo chegou, o Vinculador saiu da mão ou escolheu outra Doca, ou o logout. */

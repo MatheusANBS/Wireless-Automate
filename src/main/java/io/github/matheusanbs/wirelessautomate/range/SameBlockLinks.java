@@ -145,6 +145,7 @@ public final class SameBlockLinks {
         if (result.linked() > 0) {
             level.playSound(null, pos, SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.BLOCKS, 0.5F, 1.2F);
         }
+        RouterReachSync.send(player, router);
         return result;
     }
 
@@ -181,6 +182,7 @@ public final class SameBlockLinks {
         if (!same.isEmpty()) {
             level.playSound(null, pos, SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.BLOCKS, 0.5F, 0.8F);
         }
+        RouterReachSync.send(player, router);
         return new Result(Status.SAME_BLOCK_UNLINKED, LinkRefusal.NONE, same.size(), 0, 0, 0, 0, 0, 0);
     }
 

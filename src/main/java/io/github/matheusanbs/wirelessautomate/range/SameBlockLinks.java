@@ -33,7 +33,9 @@ import org.jetbrains.annotations.Nullable;
  * O Ctrl + clique do Vinculador no modo Vincular ({@code LinkSameBlockPayload}). Com a clicada já vinculada ao
  * roteador escolhido, desvincula todas as vinculadas do mesmo bloco ({@link #unlink}). Senão, vincula ao
  * roteador escolhido as máquinas do mesmo bloco (o mesmo id de registro) da clicada que estão no raio do tier, da mais perto do roteador para
- * a mais longe (Chebyshev; empate pela posição), até o limite. O servidor não sabe do Ctrl, então o cliente cancela o
+ * a mais longe (Chebyshev; empate pela posição), até o limite. As que já são de outro roteador
+ * ({@link RouterOwners#otherRouter}) ficam de fora, não ocupam vaga e contam no aviso {@code same.other_router}; a
+ * clicada de outro roteador não recusa o pedido: ela fica de fora e as outras entram. O servidor não sabe do Ctrl, então o cliente cancela o
  * uso normal e manda o pacote; aqui se refazem todas as conferências do clique (item, modo, distância do jogador ao
  * bloco, roteador escolhido, {@code mayBuild}/{@code mayInteract}, as recusas do {@link RangeLinks}).
  *
@@ -106,7 +108,7 @@ public final class SameBlockLinks {
             return RangeLinks.refuse(player, Result.refused(LinkRefusal.LIMIT), router, 0);
         }
 
-        int[] counts = new int[3]; // vinculadas, além do limite, protegidas pelo evento de clique
+        int[] counts = new int[4]; // vinculadas, além do limite, protegidas pelo evento de clique, de outro roteador
         router.batchChanges(() -> {
             for (int i = 0; i < candidates.size(); i++) {
                 BlockPos machine = BlockPos.of(candidates.getLong(i));
@@ -115,6 +117,9 @@ public final class SameBlockLinks {
                 } else if (!RangeLinks.isMachine(level, machine, LoadedTypes.LIST)) {
                     // o mesmo bloco sem capability nesta posição (o estado conta): não ocupa vaga
                     continue;
+                } else if (RouterOwners.otherRouter(level, router, machine) != null) {
+                    // já é de outro roteador: não ocupa vaga
+                    counts[3]++;
                 } else if (!RangeLinks.clickAllowed(player, InteractionHand.MAIN_HAND, machine)) {
                     counts[2]++;
                 } else if (router.linkMachine(machine)) {
@@ -127,7 +132,7 @@ public final class SameBlockLinks {
             return RangeLinks.refuse(player, Result.refused(LinkRefusal.PROTECTED), router, 0);
         }
         Result result = new Result(Status.SAME_BLOCK_DONE, LinkRefusal.NONE, counts[0],
-                scan.already(), 0, counts[1], scan.protectedCount() + counts[2], scan.unloadedChunks());
+                scan.already(), 0, counts[1], scan.protectedCount() + counts[2], counts[3], scan.unloadedChunks());
         boolean limit = counts[1] > 0;
         player.displayClientMessage(message(block, result, candidates.size(), scan, limit), true);
         if (result.linked() > 0) {
@@ -173,8 +178,7 @@ public final class SameBlockLinks {
         if (!same.isEmpty()) {
             level.playSound(null, pos, SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.BLOCKS, 0.5F, 0.8F);
         }
-        return new Result(Status.SAME_BLOCK_UNLINKED, LinkRefusal.NONE, same.size(), 0, 0, 0, 0,
-                0);
+        return new Result(Status.SAME_BLOCK_UNLINKED, LinkRefusal.NONE, same.size(), 0, 0, 0, 0, 0, 0);
     }
 
     /**
@@ -214,6 +218,7 @@ public final class SameBlockLinks {
             }
         }
         RangeLinks.appendCount(text, "area.protected", result.protectedCount());
+        RangeLinks.appendCount(text, "same.other_router", result.otherRouter());
         RangeLinks.appendCount(text, "area.unloaded", result.unloadedChunks());
         if (scan.capped()) {
             text.append(" · ").append(Component.translatable(KEY + "capped"));

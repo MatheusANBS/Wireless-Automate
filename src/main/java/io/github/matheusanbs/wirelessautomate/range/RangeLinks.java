@@ -1,8 +1,10 @@
 package io.github.matheusanbs.wirelessautomate.range;
 
 import io.github.matheusanbs.wirelessautomate.Config;
+import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
 import io.github.matheusanbs.wirelessautomate.network.Chemicals;
 import io.github.matheusanbs.wirelessautomate.network.LoadedTypes;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
@@ -42,8 +44,9 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>Ordem das recusas de uma máquina: roteador escolhido presente; {@code mayBuild} do jogador (o modo aventura não
  * vincula) e {@code mayInteract} na máquina e no roteador ({@link LinkRefusal#PROTECTED}); o próprio roteador, outro
- * roteador, a máquina presa e um bloco sem capability de um tipo carregado; depois {@link RangeRules#check} (upgrade,
- * raio do tier, distância e limite). As vagas do limite são as máquinas ativas ({@link RangeRules#used}), a conta da
+ * roteador, a máquina presa e um bloco sem capability de um tipo carregado; a máquina que já é de outro roteador
+ * ({@link LinkRefusal#OTHER_ROUTER}, pelo {@link RouterOwners}); depois {@link RangeRules#check} (upgrade, raio do
+ * tier, distância e limite). As vagas do limite são as máquinas ativas ({@link RangeRules#used}), a conta da
  * tela.
  *
  * <p>Um clique numa máquina vinculada a desvincula; os cartões de um grupo que esvazia vão para quem clicou, e a
@@ -78,17 +81,18 @@ public final class RangeLinks {
     /**
      * Resultado de um pedido. Os números só valem no Ctrl + clique ({@link SameBlockLinks}).
      *
+     * @param otherRouter no Ctrl + clique, quantas de outro roteador ficaram de fora
      * @param refusal no clique num roteador, por que ele ainda não vincula (sem upgrade, raio 0) ou
      *                {@code NONE}; recusado, o motivo
      */
     public record Result(Status status, LinkRefusal refusal, int linked, int already,
-            int outOfRange, int overLimit, int protectedCount, int unloadedChunks) {
+            int outOfRange, int overLimit, int protectedCount, int otherRouter, int unloadedChunks) {
         static Result of(Status status) {
-            return new Result(status, LinkRefusal.NONE, 0, 0, 0, 0, 0, 0);
+            return new Result(status, LinkRefusal.NONE, 0, 0, 0, 0, 0, 0, 0);
         }
 
         static Result refused(LinkRefusal refusal) {
-            return new Result(Status.REFUSED, refusal, 0, 0, 0, 0, 0, 0);
+            return new Result(Status.REFUSED, refusal, 0, 0, 0, 0, 0, 0, 0);
         }
 
         /** O pedido foi aplicado (escolher, vincular ou desvincular). */
@@ -142,7 +146,7 @@ public final class RangeLinks {
         LinkerItem.setTv(stack, null);
         LinkerItem.setDock(stack, null);
         player.displayClientMessage(chosenText(router), true);
-        return new Result(Status.CHOSEN, upgradeRefusal(router), 0, 0, 0, 0, 0, 0);
+        return new Result(Status.CHOSEN, upgradeRefusal(router), 0, 0, 0, 0, 0, 0, 0);
     }
 
     /** {@code Linha de Minério · 7/32 máquinas} ou, com o roteador ainda sem vincular, o que o impede. */
@@ -180,6 +184,15 @@ public final class RangeLinks {
             return Result.of(Status.UNLINKED);
         }
         LinkRefusal refusal = machineRefusal(level, router, pos, LoadedTypes.LIST);
+        if (refusal == LinkRefusal.NONE) {
+            RouterBlockEntity other = RouterOwners.otherRouter(level, router, pos);
+            if (other != null) {
+                player.displayClientMessage(Component.translatable(KEY + "refusal.other_router",
+                        RouterBlock.machineName(level.getBlockState(pos).getBlock()), routerName(other),
+                        LinkerActions.position(other.getBlockPos())), true);
+                return Result.refused(LinkRefusal.OTHER_ROUTER);
+            }
+        }
         int distance = distance(router, pos);
         if (refusal == LinkRefusal.NONE) {
             refusal = rangeRefusal(router, distance, used(router));

@@ -137,11 +137,12 @@ public final class SameBlockScan {
     /**
      * @param linkedPositions as posições do grupo que estão em {@code linked}, na ordem da busca
      * @param candidates      as que podem entrar, na ordem da busca (da mais perto da clicada)
+     * @param taken           as do grupo que o {@code taken} da chamada recusou (de outro dono)
      * @param complete        o grupo inteiro foi lido (sem parar cedo nem no teto)
      * @param capped          parou no {@link #MAX_READS}
      * @param reads           quantas leituras de vizinho fez
      */
-    public record Scan(LongArrayList candidates, LongArrayList linkedPositions, int protectedCount,
+    public record Scan(LongArrayList candidates, LongArrayList linkedPositions, int taken, int protectedCount,
             int unloadedChunks, boolean complete, boolean capped, int reads) {
         public int already() { return linkedPositions.size(); }
     }
@@ -150,25 +151,27 @@ public final class SameBlockScan {
      * O grupo de {@code block} que se toca com {@code start} (os 26 vizinhos), em largura a partir dele; só dentro
      * do cubo de Chebyshev {@code radius} em volta de {@code origin} ({@link #NO_RADIUS}: sem corte) e na altura do
      * mundo; só em chunks carregados. Cada posição do grupo: em {@code excluded}, nada; em {@code linked}, vai para
-     * {@code linkedPositions}; sem {@code mayInteract}, conta em {@code protectedCount}; senão é candidata. O grupo
-     * passa por todas elas. Para quando já há {@code needed} candidatas ou no {@link #MAX_READS}.
+     * {@code linkedPositions}; com {@code taken.test(pos)} (outro dono), conta em {@code taken}; sem
+     * {@code mayInteract}, conta em {@code protectedCount}; senão é candidata. O grupo passa por todas elas. Para
+     * quando já há {@code needed} candidatas ou no {@link #MAX_READS}.
      */
     public static Scan scan(ServerPlayer player, BlockPos start, BlockPos origin, int radius, Block block,
-            LongSet linked, LongSet excluded, int needed);
+            LongSet linked, LongSet excluded, LongPredicate taken, int needed);
 }
 ```
 
 **Passos:**
 
 1. Reescreva o `SameBlockScan` como busca em largura: fila `LongArrayFIFOQueue`, visitadas num `LongOpenHashSet`, os 26 deslocamentos numa constante (ordem fixa, para a ordem do resultado ser determinística); o `start` entra primeiro (classificado como os outros). Para cada vizinho: conte a leitura (no teto, `capped`); fora da altura do mundo ou do raio, pule; chunk por `level.getChunkSource().getChunkNow(cx, cz)` com um cache do último chunk (o grupo fica quase sempre no mesmo), e um descarregado conta uma vez por chunk (`LongOpenHashSet` das chaves de chunk) em `unloadedChunks` e é pulado; o estado pela seção (`chunk.getSection(chunk.getSectionIndex(y)).getBlockState(x & 15, y & 15, z & 15)`), sem block entity. Mesmo bloco e não visitada: entra na fila e é classificada. Com `candidates.size() >= needed`, para com `complete = false`. Tire o que era do cubo (`Box`, `Section`, `sections`, `neededDistance`, `sortByDistance`). Javadoc novo (o custo: até 26 leituras por posição do grupo).
-2. `SameBlockLinks.link`: `SameBlockScan.scan(player, pos, router.getBlockPos(), RangeLinks.radius(router), block, linked, presa, room + 1)` (o `scan(...)` interno ganha o `start`). Javadoc: as que se tocam, da mais perto da clicada.
-3. `SameBlockLinks.unlink`: o grupo pela varredura a partir da clicada, `NO_RADIUS`, `linked` = as posições das remotas do roteador, `excluded` vazio, `needed = Integer.MAX_VALUE`; desvincula as `linkedPositions()` (dentro do `batchChanges`), com a mesma mensagem e os cartões de hoje. Javadoc: só as que se tocam, sem o corte do raio; agora lê o grupo.
-4. `DockSameBlock.link`: `SameBlockScan.scan(player, pos, dock.getBlockPos(), DockLinks.radius(dock), block, inSide, otherSides, room + 1)`. `DockSameBlock.unlink`: o grupo a partir da clicada, `NO_RADIUS`, `linked` = as do lado escolhido, desvincula só as `linkedPositions()`. Javadocs.
+2. `SameBlockLinks.link`: `SameBlockScan.scan(player, pos, router.getBlockPos(), RangeLinks.radius(router), block, linked, presa, taken, room + 1)` (o `scan(...)` interno ganha o `start`), com `taken` = `p -> RouterOwners.otherRouter(level, router, BlockPos.of(p)) != null`. **A conferência de outro roteador sai do laço das candidatas e vai para a varredura**: assim as de outro roteador não contam para o `needed` (com elas entre as candidatas, a varredura podia parar antes de achar as livres) e uma de outro roteador além das vagas conta como "de outro roteador", não como "além do limite". O `Result.otherRouter` vem do `scan.taken()`. Javadoc: as que se tocam, da mais perto da clicada.
+3. `SameBlockLinks.unlink`: o grupo pela varredura a partir da clicada, `NO_RADIUS`, `linked` = as posições das remotas do roteador, `excluded` vazio, `taken` sempre falso, `needed = Integer.MAX_VALUE`; desvincula as `linkedPositions()` (dentro do `batchChanges`), com a mesma mensagem e os cartões de hoje. Javadoc: só as que se tocam, sem o corte do raio; agora lê o grupo.
+4. `DockSameBlock.link`: `SameBlockScan.scan(player, pos, dock.getBlockPos(), DockLinks.radius(dock), block, inSide, otherSides, taken, room + 1)`, com `taken` = `p -> DockLinks.otherDock(level, dock, BlockPos.of(p)) != null`; a conferência de outra Doca sai do laço (o `counts[3]`) do mesmo jeito, e o `otherDock` do `Result` vem do `scan.taken()`. `DockSameBlock.unlink`: o grupo a partir da clicada, `NO_RADIUS`, `linked` = as do lado escolhido, desvincula só as `linkedPositions()`. Javadocs.
 5. `lang`, só o texto: `range.same.none` = `%s: todas as que se tocam já estão vinculadas` / `%s: all the touching ones are already linked`; `range.same.none.capped` = `%s: nenhuma nova no grupo lido` / `%s: no new ones in the part of the group read`; `range.same.capped` = `o resto do grupo não foi procurado` / `the rest of the group was not searched`.
 6. Testes que já existem: passe por **todos** os do Ctrl + clique em `SameBlockLinkGameTests` e `DockLinkGameTests` (e qualquer outro que chame `SameBlockLinks.link`, `DockSameBlock.link` ou `SameBlockScan.scan`; procure com `grep`) e ponha as máquinas encostadas onde o teste quer que elas entrem, mantendo o que cada um prova. O `sameBlockNearestFirstUpToTheLimit` passa a provar "da mais perto da clicada". O `sameBlockUnlinksAllOfThatBlock` passa a provar que só o grupo sai. Renomeie o que ficar com nome mentiroso.
 7. `gametest/TouchingLinkGameTests` (run comum, o que for de config num lote próprio):
    - faces e quinas: a clicada, uma encostada pela face, uma pela aresta (diagonal no plano) e uma pela ponta (diagonal em 3D) entram; uma separada por um bloco de ar fica;
    - passa por quem não entra: numa fila, depois de uma já vinculada, da presa e de uma protegida (ou de outro roteador), as seguintes entram;
+   - outro dono não gasta a busca: com vagas para 1 e as duas mais perto da clicada de outro roteador, a livre logo depois delas entra (`taken` = 2, nada "além do limite");
    - o raio corta: numa fila que sai do raio, as de fora não entram e o grupo não continua por elas (uma que volta para dentro do raio só por elas também não entra);
    - ordem com o limite: com vagas para 2, entram as duas mais perto da clicada, não as mais perto do roteador;
    - desvincular: dois grupos do mesmo bloco vinculados ao mesmo roteador; o Ctrl + clique num tira só o dele; uma vinculada encostada fora do raio sai junto;

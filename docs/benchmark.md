@@ -888,5 +888,20 @@ Ramo `ccr-5c420ef0-t951t5`. `./scripts/bench.sh "range:200:3,idle:500:3"`, máqu
 | range 200, 1ª montagem (ms, reps 1 a 3) | 37,2 / 28,1 / 23,2 | 39,6 / 42,9 / 24,0 | 38,4 / 47,3 / 49,4 |
 | idle 500, mod (ms/tick) | 0,0065 ± 0,0012 | 0,0055 ± 0,0003 | 0,0060 ± 0,0004 |
 
-Leitura: nada roda por tick (o tempo do mod fica no ruído). O índice custa ~1 MB com uma lista por posição (~80 bytes por máquina vinculada) e ~0,4 MB com o dono direto (~30 bytes). A 1ª montagem (o tick depois de ligar a rede, a montagem das rotas) subiu nas duas últimas repetições da última rodada; o índice não entra nesse caminho (ele só é refeito no vínculo, no desvínculo e na carga do roteador, antes da medida), e a mesma rodada intermediária tem 24 ms. Fica para conferir com uma comparação intercalada base × final com mais repetições no fim do cubo do roteador.
+Leitura: nada roda por tick (o tempo do mod fica no ruído). O índice custa ~1 MB com uma lista por posição (~80 bytes por máquina vinculada) e ~0,4 MB com o dono direto (~30 bytes). A 1ª montagem (o tick depois de ligar a rede, a montagem das rotas) subiu nas duas últimas repetições da última rodada; o índice não entra nesse caminho (ele só é refeito no vínculo, no desvínculo e na carga do roteador, antes da medida), e a mesma rodada intermediária tem 24 ms. Conferido logo abaixo.
+
+### Conferência intercalada da 1ª montagem e do heap (13 de novembro de 2026)
+
+`./scripts/bench.sh "range:200:3"` quatro vezes, alternando a base (`76f6f71`, a 2.17.0) e o ramo final (`25eab0b`, com o Vinculador de um dono e o cubo do roteador), pelo `git checkout` na mesma pasta; depois, mais uma rodada de `a69a42e` (o índice com o dono direto, sem o cubo) e do final, para o heap. Relatórios em `run/bench/reports/`, fora do git.
+
+| rodada | 1ª montagem (ms, reps 1 a 3) | mod (ms/tick, reps 2 e 3) | heap retido (reps 2 e 3) |
+| --- | --- | --- | --- |
+| base | 38,7 / 32,1 / 26,0 | 0,0033 / 0,0029 | ~17,96 / ~17,81 MB |
+| final | 39,7 / 25,4 / 22,1 | 0,0021 / 0,0022 | ~18,32 / ~19,30 MB |
+| base | 61,7 / 25,7 / 16,1 | 0,0022 / 0,0022 | ~18,00 / ~17,85 MB |
+| final | 46,3 / 30,3 / 25,3 | 0,0022 / 0,0025 | ~18,40 / ~19,30 MB |
+| `a69a42e` | — | — | ~18,35 / ~18,32 MB |
+| final | — | — | ~18,38 / ~18,30 MB |
+
+Leitura: a 1ª montagem tem média 33,4 ms na base e 31,5 ms no final (seis repetições cada), sem regressão; a subida da medida anterior era ruído. O tempo do mod é o mesmo. O índice de donos custa ~0,4 MB com 12.800 remotas (a base fica em ~17,9 MB, o final e o `a69a42e` em ~18,3 MB); os ~19,30 MB da repetição 3 nas duas primeiras rodadas do final não se repetiram na terceira, e a etapa do cubo não guarda nada no servidor (os pacotes são montados na hora e o bench não passa por eles).
 

@@ -196,8 +196,8 @@ public final class SameBlockLinks {
     // ------------------------------------------------------------------ mensagens
 
     /**
-     * {@code Vinculou 7 Fornalhas}, {@code Vinculou 32 Fornalhas · limite do tier}, {@code Vinculou 32 de 33 …} (só
-     * com o grupo inteiro lido) ou, sem nenhuma nova, {@code Fornalha: todas as que se tocam já estão vinculadas} ou
+     * {@code Vinculou 7 Fornalhas}, {@code Vinculou 32 Fornalhas · limite do tier} (a busca para numa além das vagas,
+     * então não sabe o tamanho do grupo) ou, sem nenhuma nova, {@code Fornalha: todas as que se tocam já estão vinculadas} ou
      * {@code Fornalha: nenhuma nova no grupo lido} (parada no teto); mais as protegidas, as de outro roteador, os
      * chunks descarregados e o teto.
      */
@@ -208,11 +208,8 @@ public final class SameBlockLinks {
         if (found == 0) {
             text = Component.translatable(KEY + (scan.capped() ? "none.capped" : "none"), single);
         } else {
-            boolean of = limit && scan.complete() && found > linked;
-            Component name = linked == 1 && !of ? single : plural(block, single);
-            String key = of ? (linked == 1 ? "linked_of.one" : "linked_of") : (linked == 1 ? "linked.one" : "linked");
-            text = of ? Component.translatable(KEY + key, linked, found, name)
-                    : Component.translatable(KEY + key, linked, name);
+            text = Component.translatable(KEY + (linked == 1 ? "linked.one" : "linked"), linked,
+                    linked == 1 ? single : plural(block, single));
             if (limit) {
                 text.append(" · ").append(Component.translatable(KEY + "limit"));
             }

@@ -10,8 +10,8 @@ import io.github.matheusanbs.wirelessautomate.GuiTheme;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.client.GuiText;
-import io.github.matheusanbs.wirelessautomate.client.dock.DockReachPaint;
 import io.github.matheusanbs.wirelessautomate.client.dock.DockScreen;
+import io.github.matheusanbs.wirelessautomate.client.linker.ReachPaint;
 import io.github.matheusanbs.wirelessautomate.dock.DockAe2;
 import io.github.matheusanbs.wirelessautomate.dock.DockColors;
 import io.github.matheusanbs.wirelessautomate.dock.DockDelivery;
@@ -158,9 +158,9 @@ final class E2eDockSteps {
                         .getBlockEntity(dock[0]), NORTH);
                 return null;
             });
-        }, () -> DockReachPaint.shown() && DockReachPaint.machineCount() == 8
+        }, () -> ReachPaint.shown() && ReachPaint.machineCount() == 8
                 && LinkerItem.dock(Minecraft.getInstance().player.getMainHandItem()) != null && stepTicks >= 4,
-                () -> "cubo " + DockReachPaint.shown() + ", máquinas " + DockReachPaint.machineCount() + ", mão "
+                () -> "cubo " + ReachPaint.shown() + ", máquinas " + ReachPaint.machineCount() + ", mão "
                         + Minecraft.getInstance().player.getMainHandItem()));
         list.add(E2eRepairerSteps.cameraShot("doca-cubo", playerId, () -> dock[0], new double[] {9, 8, -13}, 0.5));
         list.add(new Step("Doca: guardar o Vinculador esconde o cubo", STEP_TIMEOUT_MS, () -> onServer(server -> {
@@ -169,19 +169,19 @@ final class E2eDockSteps {
             player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
             player.getInventory().setItem(STASH_SLOT, linker);
             return null;
-        }), () -> !DockReachPaint.shown() && DockReachPaint.stored() && stepTicks >= 4,
-                () -> "à mostra " + DockReachPaint.shown() + ", guardado " + DockReachPaint.stored()));
+        }), () -> !ReachPaint.shown() && ReachPaint.stored() && stepTicks >= 4,
+                () -> "à mostra " + ReachPaint.shown() + ", guardado " + ReachPaint.stored()));
         list.add(new Step("Doca: pegar o Vinculador de novo mostra o cubo", STEP_TIMEOUT_MS, () -> onServer(server -> {
             ServerPlayer player = server.getPlayerList().getPlayer(playerId);
             player.setItemInHand(InteractionHand.MAIN_HAND, player.getInventory().getItem(STASH_SLOT).copy());
             player.getInventory().setItem(STASH_SLOT, ItemStack.EMPTY);
             return null;
-        }), () -> DockReachPaint.shown() && DockReachPaint.machineCount() == 8,
-                () -> "à mostra " + DockReachPaint.shown() + ", máquinas " + DockReachPaint.machineCount()));
+        }), () -> ReachPaint.shown() && ReachPaint.machineCount() == 8,
+                () -> "à mostra " + ReachPaint.shown() + ", máquinas " + ReachPaint.machineCount()));
         // sem o cubo no cliente (como ao entrar no mundo de novo), o Vinculador na mão o pede ao servidor
-        list.add(new Step("Doca: o cubo esquecido volta pelo pedido", STEP_TIMEOUT_MS, DockReachPaint::clear,
-                () -> DockReachPaint.shown() && DockReachPaint.machineCount() == 8,
-                () -> "à mostra " + DockReachPaint.shown() + ", máquinas " + DockReachPaint.machineCount()));
+        list.add(new Step("Doca: o cubo esquecido volta pelo pedido", STEP_TIMEOUT_MS, ReachPaint::clear,
+                () -> ReachPaint.shown() && ReachPaint.machineCount() == 8,
+                () -> "à mostra " + ReachPaint.shown() + ", máquinas " + ReachPaint.machineCount()));
         list.add(new Step("Doca: devolver o jogador", STEP_TIMEOUT_MS, () -> onServer(server -> {
             ServerPlayer player = server.getPlayerList().getPlayer(playerId);
             player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
@@ -189,7 +189,7 @@ final class E2eDockSteps {
             player.onUpdateAbilities();
             player.teleportTo(player.serverLevel(), back[0].x, back[0].y, back[0].z, player.getYRot(), 0);
             return null;
-        }), () -> !DockReachPaint.shown(), () -> "o cubo continua à mostra"));
+        }), () -> !ReachPaint.shown(), () -> "o cubo continua à mostra"));
     }
 
     /**

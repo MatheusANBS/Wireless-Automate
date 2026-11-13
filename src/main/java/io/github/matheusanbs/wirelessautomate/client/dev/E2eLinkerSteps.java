@@ -11,6 +11,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlockEntity;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.client.linker.LinkerOpenScreen;
 import io.github.matheusanbs.wirelessautomate.client.linker.LinkerSameBlockInput;
+import io.github.matheusanbs.wirelessautomate.client.linker.ReachPaint;
 import io.github.matheusanbs.wirelessautomate.client.router.RouterScreen;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerMode;
@@ -47,6 +48,8 @@ final class E2eLinkerSteps {
     private E2eLinkerSteps() {
     }
 
+    /** O espaço da barra onde o passo do cubo guarda o Vinculador. */
+    private static final int REACH_STASH_SLOT = 8;
     private static BlockPos linkRouter;
     /** O baú que o Abrir usa, com um roteador preso nele (os dois chegam na mesma máquina). */
     static BlockPos linkChest;
@@ -105,6 +108,7 @@ final class E2eLinkerSteps {
                 () -> "roteador no servidor " + serverLinker(stack -> String.valueOf(LinkerItem.router(stack)))));
         ctrlClickSteps(list);
         list.add(capture("9c-vinculador-ctrl-clique"));
+        reachSteps(list, playerId);
         openSteps(list);
     }
 
@@ -178,6 +182,51 @@ final class E2eLinkerSteps {
                 && !Minecraft.getInstance().player.getCooldowns().isOnCooldown(ModItems.LINKER.get()),
                 () -> "pedidos " + (LinkerSameBlockInput.sentCount() - sentBefore[0]) + ", descanso "
                         + Minecraft.getInstance().player.getCooldowns().isOnCooldown(ModItems.LINKER.get())));
+    }
+
+    /**
+     * O cubo do alcance do roteador no mundo, com o Vinculador na mão e o roteador escolhido: o cubo à mostra com as
+     * duas máquinas do Ctrl + clique ({@code vinculador-cubo}, a câmera de longe, em cima e de lado); guardado o
+     * Vinculador o cubo some, e pego de novo volta. Termina com o jogador de volta perto do baú.
+     */
+    private static void reachSteps(List<Step> list, UUID playerId) {
+        Vec3[] near = new Vec3[1];
+        float[][] rot = new float[1][];
+        list.add(new Step("Vinculador: o cubo do roteador", STEP_TIMEOUT_MS, () -> {
+            near[0] = Minecraft.getInstance().player.position();
+            rot[0] = new float[] {Minecraft.getInstance().player.getYRot(), Minecraft.getInstance().player.getXRot()};
+        }, () -> ReachPaint.shown() && ReachPaint.isRouter() && ReachPaint.machineCount() == 2 && stepTicks >= 4,
+                () -> "cubo " + ReachPaint.shown() + ", do roteador " + ReachPaint.isRouter() + ", máquinas "
+                        + ReachPaint.machineCount()));
+        list.add(E2eRepairerSteps.cameraShot("vinculador-cubo", playerId, () -> linkRouter,
+                new double[] {20, 14, -30}, 0.5));
+        list.add(new Step("Vinculador: guardar o Vinculador esconde o cubo do roteador", STEP_TIMEOUT_MS,
+                () -> onServer(server -> {
+                    ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+                    ItemStack linker = player.getMainHandItem().copy();
+                    player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+                    player.getInventory().setItem(REACH_STASH_SLOT, linker);
+                    return null;
+                }), () -> !ReachPaint.shown() && ReachPaint.stored() && stepTicks >= 4,
+                () -> "à mostra " + ReachPaint.shown() + ", guardado " + ReachPaint.stored()));
+        list.add(new Step("Vinculador: pegar o Vinculador de novo mostra o cubo do roteador", STEP_TIMEOUT_MS,
+                () -> onServer(server -> {
+                    ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+                    player.setItemInHand(InteractionHand.MAIN_HAND,
+                            player.getInventory().getItem(REACH_STASH_SLOT).copy());
+                    player.getInventory().setItem(REACH_STASH_SLOT, ItemStack.EMPTY);
+                    return null;
+                }), () -> ReachPaint.shown() && ReachPaint.isRouter() && ReachPaint.machineCount() == 2,
+                () -> "à mostra " + ReachPaint.shown() + ", máquinas " + ReachPaint.machineCount()));
+        list.add(new Step("Vinculador: de volta perto do baú", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+            player.getAbilities().flying = false;
+            player.onUpdateAbilities();
+            player.teleportTo(player.serverLevel(), near[0].x, near[0].y, near[0].z, rot[0][0], rot[0][1]);
+            return null;
+        }), () -> Minecraft.getInstance().player.position().distanceTo(near[0]) < 0.5
+                && Minecraft.getInstance().player.getMainHandItem().is(ModItems.LINKER.get()),
+                () -> "jogador longe: " + Minecraft.getInstance().player.position().distanceTo(near[0])));
     }
 
     /**

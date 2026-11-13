@@ -10,7 +10,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
 /**
  * Servidor → cliente: o cubo do alcance de um roteador ({@link #ROUTER}) ou de uma Doca de Padrões ({@link #DOCK}) e as
- * máquinas dele, para o desenho no mundo ({@code client/dock/DockReachPaint}). {@code origin} é o bloco do dono,
+ * máquinas dele, para o desenho no mundo ({@code client/linker/ReachPaint}). {@code origin} é o bloco do dono,
  * {@code radius} o raio de Chebyshev (ou {@link #NO_CUBE}: sem o cubo, só as máquinas), {@code tier} o ordinal do
  * {@code RouterTier} (a cor do cubo sai dele no cliente), {@code machines} as posições ({@code BlockPos.asLong}) e
  * {@code colors} o índice da cor de cada uma, no mesmo índice: 0 a 5 são as cores de {@code DockColors.side} (o lado

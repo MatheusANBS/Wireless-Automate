@@ -33,7 +33,7 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p><b>Vincular</b>: clique num roteador o escolhe ({@link ModDataComponents#LINKER_ROUTER}; de novo nele, solta);
  * clique em outro bloco vincula ou desvincula essa máquina a ele ({@link RangeLinks}); Ctrl + clique numa máquina
- * vincula as do mesmo bloco no raio, ou, se ela já está vinculada, desvincula as do mesmo bloco
+ * vincula as do mesmo bloco que se tocam com ela, no raio, ou, se ela já está vinculada, desvincula as que se tocam
  * ({@code client/linker/LinkerSameBlockInput} e {@link io.github.matheusanbs.wirelessautomate.range.SameBlockLinks}).
  * O clique no ar mostra o que está escolhido, e Shift + clique no ar o solta ({@link LinkerActions}).
  *
@@ -42,7 +42,7 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>Com uma Doca de Padrões escolhida ({@link ModDataComponents#LINKER_DOCK}, por um clique numa face dela, que
  * escolhe aquele lado e esquece o roteador e a Tela), o clique numa máquina a vincula ou desvincula daquele lado, e o
- * Ctrl + clique faz o mesmo com as do mesmo bloco ({@link DockLinks}, {@code dock/DockSameBlock}).
+ * Ctrl + clique faz o mesmo com as do mesmo bloco que se tocam com ela ({@link DockLinks}, {@code dock/DockSameBlock}).
  *
  * <p><b>Abrir</b>: clique numa máquina abre a tela do roteador que chega nela ({@link LinkerOpen}).
  */

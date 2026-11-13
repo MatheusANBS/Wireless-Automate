@@ -12,8 +12,6 @@ import io.github.matheusanbs.wirelessautomate.range.SameBlockScan.Scan;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSets;
-import java.util.ArrayList;
-import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.locale.Language;
@@ -31,16 +29,19 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * O Ctrl + clique do Vinculador no modo Vincular ({@code LinkSameBlockPayload}). Com a clicada já vinculada ao
- * roteador escolhido, desvincula todas as vinculadas do mesmo bloco ({@link #unlink}). Senão, vincula ao
- * roteador escolhido as máquinas do mesmo bloco (o mesmo id de registro) da clicada que estão no raio do tier, da mais perto do roteador para
- * a mais longe (Chebyshev; empate pela posição), até o limite. As que já são de outro roteador
- * ({@link RouterOwners#otherRouter}) ficam de fora, não ocupam vaga e contam no aviso {@code same.other_router}; a
- * clicada de outro roteador não recusa o pedido: ela fica de fora e as outras entram. O servidor não sabe do Ctrl, então o cliente cancela o
- * uso normal e manda o pacote; aqui se refazem todas as conferências do clique (item, modo, distância do jogador ao
- * bloco, roteador escolhido, {@code mayBuild}/{@code mayInteract}, as recusas do {@link RangeLinks}).
+ * roteador escolhido, desvincula as do grupo que se toca com ela ({@link #unlink}). Senão, vincula ao roteador
+ * escolhido as máquinas do mesmo bloco (o mesmo id de registro) que se tocam com a clicada (pela face, pela aresta ou
+ * pela ponta, {@link SameBlockScan}) dentro do raio do tier, da mais perto da clicada para a mais longe, até o limite.
+ * O grupo passa pelas que não entram: as já vinculadas, a presa e as que já são de outro roteador
+ * ({@link RouterOwners#otherRouter}), que não ocupam vaga e contam no aviso {@code same.other_router}; a clicada de
+ * outro roteador não recusa o pedido: ela fica de fora e as que se tocam com ela entram. O servidor não sabe do Ctrl,
+ * então o cliente cancela o uso normal e manda o pacote; aqui se refazem todas as conferências do clique (item, modo,
+ * distância do jogador ao bloco, roteador escolhido, {@code mayBuild}/{@code mayInteract}, as recusas do
+ * {@link RangeLinks}).
  *
- * <p>Custo, só no clique: a varredura do {@link SameBlockScan} no cubo do raio em volta do roteador, com o teto
- * {@link SameBlockScan#MAX_READS}. A capability ({@link RangeLinks#isMachine}) e o evento de clique das proteções
+ * <p>Custo, só no clique: a busca do {@link SameBlockScan} pelo grupo, até 26 leituras por posição, com o teto
+ * {@link SameBlockScan#MAX_READS}; o outro roteador é conferido em cada uma do grupo que não está vinculada nem é a
+ * presa. A capability ({@link RangeLinks#isMachine}) e o evento de clique das proteções
  * ({@link RangeLinks#clickAllowed}) só são conferidos nas que de fato seriam vinculadas.
  */
 public final class SameBlockLinks {
@@ -68,7 +69,7 @@ public final class SameBlockLinks {
                 || player.getCooldowns().isOnCooldown(stack.getItem())) {
             return null;
         }
-        // o descanso segura um cliente que mande o pacote em rajada: a varredura custa até SameBlockScan.MAX_READS posições
+        // o descanso segura um cliente que mande o pacote em rajada: a varredura custa até SameBlockScan.MAX_READS leituras
         player.getCooldowns().addCooldown(stack.getItem(), COOLDOWN_TICKS);
         RouterBlockEntity router = RangeLinks.chosen(player, stack);
         if (router == null) {
@@ -99,7 +100,7 @@ public final class SameBlockLinks {
         Block block = level.getBlockState(pos).getBlock();
         int room = RangeLinks.max(router) - RangeLinks.used(router);
         // uma além das vagas: o "limite do tier" só aparece quando há de fato uma que ficou de fora
-        Scan scan = scan(player, router, block, Math.max(1, room + 1));
+        Scan scan = scan(player, router, pos, block, Math.max(1, room + 1));
         LongArrayList candidates = scan.candidates();
         if (candidates.isEmpty() && scan.protectedCount() > 0) {
             return RangeLinks.refuse(player, Result.refused(LinkRefusal.PROTECTED), router, 0);
@@ -108,7 +109,7 @@ public final class SameBlockLinks {
             return RangeLinks.refuse(player, Result.refused(LinkRefusal.LIMIT), router, 0);
         }
 
-        int[] counts = new int[4]; // vinculadas, além do limite, protegidas pelo evento de clique, de outro roteador
+        int[] counts = new int[3]; // vinculadas, além do limite, protegidas pelo evento de clique
         router.batchChanges(() -> {
             for (int i = 0; i < candidates.size(); i++) {
                 BlockPos machine = BlockPos.of(candidates.getLong(i));
@@ -117,9 +118,6 @@ public final class SameBlockLinks {
                 } else if (!RangeLinks.isMachine(level, machine, LoadedTypes.LIST)) {
                     // o mesmo bloco sem capability nesta posição (o estado conta): não ocupa vaga
                     continue;
-                } else if (RouterOwners.otherRouter(level, router, machine) != null) {
-                    // já é de outro roteador: não ocupa vaga
-                    counts[3]++;
                 } else if (!RangeLinks.clickAllowed(player, InteractionHand.MAIN_HAND, machine)) {
                     counts[2]++;
                 } else if (router.linkMachine(machine)) {
@@ -132,7 +130,7 @@ public final class SameBlockLinks {
             return RangeLinks.refuse(player, Result.refused(LinkRefusal.PROTECTED), router, 0);
         }
         Result result = new Result(Status.SAME_BLOCK_DONE, LinkRefusal.NONE, counts[0],
-                scan.already(), 0, counts[1], scan.protectedCount() + counts[2], counts[3], scan.unloadedChunks());
+                scan.already(), 0, counts[1], scan.protectedCount() + counts[2], scan.taken(), scan.unloadedChunks());
         boolean limit = counts[1] > 0;
         player.displayClientMessage(message(block, result, candidates.size(), scan, limit), true);
         if (result.linked() > 0) {
@@ -142,10 +140,10 @@ public final class SameBlockLinks {
     }
 
     /**
-     * O Ctrl + clique numa máquina já vinculada: tira do roteador todas as máquinas vinculadas cujo grupo é do mesmo
-     * bloco da clicada (a presa fica). Como o desvincular de um clique, basta poder
-     * mexer no roteador, não exige o upgrade valendo e não lê mundo além do bloco clicado: os cartões dos grupos que
-     * esvaziam vão para o jogador.
+     * O Ctrl + clique numa máquina já vinculada: tira do roteador as vinculadas do grupo que se toca com a clicada
+     * ({@link SameBlockScan}, sem o corte do raio: uma encostada fora do raio também sai; a presa fica). Como o
+     * desvincular de um clique, basta poder mexer no roteador e não exige o upgrade valendo; os cartões dos grupos que
+     * esvaziam vão para o jogador. Lê o grupo, com o teto {@link SameBlockScan#MAX_READS}.
      */
     private static Result unlink(ServerPlayer player, RouterBlockEntity router, BlockPos pos) {
         if (!RangeLinks.mayEdit(player, router.getBlockPos())) {
@@ -153,19 +151,13 @@ public final class SameBlockLinks {
         }
         ServerLevel level = player.serverLevel();
         Block block = level.getBlockState(pos).getBlock();
-        ResourceLocation id = BuiltInRegistries.BLOCK.getKey(block);
+        LongArrayList same = SameBlockScan.scan(player, pos, router.getBlockPos(), SameBlockScan.NO_RADIUS, block,
+                linked(router), LongSets.EMPTY_SET, key -> false, Integer.MAX_VALUE).linkedPositions();
         RemoteMachines remotes = router.remoteMachines();
-        List<BlockPos> same = new ArrayList<>();
-        for (RemoteMachine machine : remotes.machines()) {
-            MachineGroup group = remotes.group(machine.group());
-            if (group != null && group.block().equals(id)) {
-                same.add(machine.pos());
-            }
-        }
         int[] cards = new int[1];
         router.batchChanges(() -> {
-            for (BlockPos machine : same) {
-                cards[0] += Math.max(0, router.unlinkMachine(remotes.index(machine), player));
+            for (int i = 0; i < same.size(); i++) {
+                cards[0] += Math.max(0, router.unlinkMachine(remotes.index(BlockPos.of(same.getLong(i))), player));
             }
         });
         Component single = RouterBlock.machineName(block);
@@ -182,24 +174,32 @@ public final class SameBlockLinks {
     }
 
     /**
-     * As posições de {@code block} no cubo do raio do roteador que podem entrar ({@link SameBlockScan}): as já
-     * vinculadas contam em {@code already} e a presa fica de fora.
+     * As que se tocam com {@code start} no raio do roteador ({@link SameBlockScan}): as já vinculadas contam em
+     * {@code already}, a presa fica de fora e as de outro roteador contam em {@code taken}.
      */
-    static Scan scan(ServerPlayer player, RouterBlockEntity router, Block block, int needed) {
+    static Scan scan(ServerPlayer player, RouterBlockEntity router, BlockPos start, Block block, int needed) {
+        ServerLevel level = player.serverLevel();
+        return SameBlockScan.scan(player, start, router.getBlockPos(), RangeLinks.radius(router), block,
+                linked(router), LongSets.singleton(router.machinePos().asLong()),
+                key -> RouterOwners.otherRouter(level, router, BlockPos.of(key)) != null, needed);
+    }
+
+    /** As posições das remotas do roteador. */
+    private static LongOpenHashSet linked(RouterBlockEntity router) {
         LongOpenHashSet linked = new LongOpenHashSet();
         for (RemoteMachine machine : router.remoteMachines().machines()) {
             linked.add(machine.pos().asLong());
         }
-        return SameBlockScan.scan(player, router.getBlockPos(), RangeLinks.radius(router), block, linked,
-                LongSets.singleton(router.machinePos().asLong()), needed);
+        return linked;
     }
 
     // ------------------------------------------------------------------ mensagens
 
     /**
-     * {@code Vinculou 7 Fornalhas}, {@code Vinculou 32 de 47 Fornalhas · limite do tier} ou, sem nenhuma nova,
-     * {@code Fornalha: todas as do raio já estão vinculadas} (com a varredura inteira) ou {@code Fornalha: nenhuma nova
-     * nas posições lidas} (parada no teto); mais as protegidas, os chunks descarregados e o teto.
+     * {@code Vinculou 7 Fornalhas}, {@code Vinculou 32 Fornalhas · limite do tier}, {@code Vinculou 32 de 33 …} (só
+     * com o grupo inteiro lido) ou, sem nenhuma nova, {@code Fornalha: todas as que se tocam já estão vinculadas} ou
+     * {@code Fornalha: nenhuma nova no grupo lido} (parada no teto); mais as protegidas, as de outro roteador, os
+     * chunks descarregados e o teto.
      */
     static MutableComponent message(Block block, Result result, int found, Scan scan, boolean limit) {
         Component single = RouterBlock.machineName(block);

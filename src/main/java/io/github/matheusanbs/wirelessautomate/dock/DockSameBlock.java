@@ -14,8 +14,7 @@ import io.github.matheusanbs.wirelessautomate.range.SameBlockScan;
 import io.github.matheusanbs.wirelessautomate.range.SameBlockScan.Scan;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
-import java.util.ArrayList;
-import java.util.List;
+import it.unimi.dsi.fastutil.longs.LongSets;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -33,15 +32,18 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * O Ctrl + clique do Vinculador com uma Doca escolhida ({@code LinkSameBlockPayload}). Com a clicada já no lado
- * escolhido, desvincula todas as máquinas do lado (são todas do mesmo bloco). Senão, vincula ao lado as máquinas do
- * mesmo bloco da clicada no cubo do tier, da mais perto da Doca para a mais longe, até o limite. Refaz as conferências
- * do clique (item, modo, distância do jogador ao bloco, Doca escolhida, {@code mayBuild}/{@code mayInteract} e as
- * recusas do {@link DockLinks}), com o mesmo descanso do roteador ({@link SameBlockLinks#COOLDOWN_TICKS}).
+ * escolhido, desvincula as do lado que se tocam com ela ({@link #unlink}). Senão, vincula ao lado as máquinas do mesmo
+ * bloco que se tocam com a clicada (pela face, pela aresta ou pela ponta, {@link SameBlockScan}) dentro do cubo do
+ * tier, da mais perto da clicada para a mais longe, até o limite. O grupo passa pelas que não entram: as já no lado,
+ * as dos outros lados desta Doca e as de outra Doca ({@link DockLinks#otherDock}, que contam no aviso
+ * {@code same.other_dock}). Refaz as conferências do clique (item, modo, distância do jogador ao bloco, Doca
+ * escolhida, {@code mayBuild}/{@code mayInteract} e as recusas do {@link DockLinks}), com o mesmo descanso do
+ * roteador ({@link SameBlockLinks#COOLDOWN_TICKS}).
  *
- * <p>Custo, só no clique: a varredura do {@link SameBlockScan} no cubo do tier (até o raio 96 do Ultimate), com o teto
- * {@link SameBlockScan#MAX_READS}. As máquinas dos outros lados desta Doca ficam de fora da varredura; a capability, a
- * outra Doca (o {@code RemoteIndex}) e o evento de clique das proteções só são conferidos nas que de fato seriam
- * vinculadas, e o registro no índice é refeito uma vez, no fim ({@link PatternDockBlockEntity#batchChanges}).
+ * <p>Custo, só no clique: a busca do {@link SameBlockScan} pelo grupo, até 26 leituras por posição, com o teto
+ * {@link SameBlockScan#MAX_READS}; a outra Doca é conferida em cada uma do grupo que não é desta Doca. A capability e
+ * o evento de clique das proteções só são conferidos nas que de fato seriam vinculadas, e o registro no índice é
+ * refeito uma vez, no fim ({@link PatternDockBlockEntity#batchChanges}).
  */
 public final class DockSameBlock {
     private static final String KEY = "item.wirelessautomate.linker.dock.same.";
@@ -66,7 +68,7 @@ public final class DockSameBlock {
                 || !player.canInteractWithBlock(pos, 1.0) || player.getCooldowns().isOnCooldown(stack.getItem())) {
             return null;
         }
-        // o descanso segura um cliente que mande o pacote em rajada: a varredura custa até MAX_READS posições
+        // o descanso segura um cliente que mande o pacote em rajada: a varredura custa até MAX_READS leituras
         player.getCooldowns().addCooldown(stack.getItem(), SameBlockLinks.COOLDOWN_TICKS);
         DockChoice choice = LinkerItem.dock(stack);
         PatternDockBlockEntity dock = DockLinks.chosen(player, stack);
@@ -81,7 +83,7 @@ public final class DockSameBlock {
         if (!RangeLinks.mayEdit(player, pos) || !RangeLinks.mayEdit(player, dock.getBlockPos())) {
             return DockLinks.refuse(player, Result.refused(Refusal.PROTECTED), dock, side, pos, 0);
         }
-        // a clicada serve de modelo: se ela é de outra Doca, fica de fora, e as outras do mesmo bloco entram
+        // a clicada serve de modelo: se ela é de outra Doca, fica de fora, e as que se tocam com ela entram
         Refusal refusal = DockLinks.machineRefusal(level, dock, side, pos);
         if (refusal == Refusal.OTHER_DOCK) {
             refusal = Refusal.NONE;
@@ -107,8 +109,8 @@ public final class DockSameBlock {
             }
         }
         // uma além das vagas: o "limite do tier" só aparece quando há de fato uma que ficou de fora
-        Scan scan = SameBlockScan.scan(player, dock.getBlockPos(), DockLinks.radius(dock), block, inSide, otherSides,
-                Math.max(1, room + 1));
+        Scan scan = SameBlockScan.scan(player, pos, dock.getBlockPos(), DockLinks.radius(dock), block, inSide,
+                otherSides, key -> DockLinks.otherDock(level, dock, BlockPos.of(key)) != null, Math.max(1, room + 1));
         LongArrayList candidates = scan.candidates();
         if (candidates.isEmpty() && scan.protectedCount() > 0) {
             return DockLinks.refuse(player, Result.refused(Refusal.PROTECTED), dock, side, pos, 0);
@@ -119,8 +121,8 @@ public final class DockSameBlock {
 
         boolean first = DockLinks.isEmpty(dock.side(side));
         ResourceLocation id = BuiltInRegistries.BLOCK.getKey(block);
-        // vinculadas, além do limite, protegidas pelo evento de clique, de outra Doca; e a primeira vinculada
-        int[] counts = new int[4];
+        // vinculadas, além do limite, protegidas pelo evento de clique; e a primeira vinculada
+        int[] counts = new int[3];
         long[] firstLinked = {Long.MIN_VALUE};
         dock.batchChanges(() -> {
             for (int i = 0; i < candidates.size(); i++) {
@@ -130,8 +132,6 @@ public final class DockSameBlock {
                 } else if (!RangeLinks.isMachine(level, machine, LoadedTypes.LIST)) {
                     // o mesmo bloco sem capability nesta posição (o estado conta): não ocupa vaga
                     continue;
-                } else if (DockLinks.otherDock(level, dock, machine) != null) {
-                    counts[3]++;
                 } else if (!RangeLinks.clickAllowed(player, InteractionHand.MAIN_HAND, machine)) {
                     counts[2]++;
                 } else {
@@ -152,7 +152,7 @@ public final class DockSameBlock {
         Component profile = first && counts[0] > 0
                 ? DockLinks.tune(player, dock, side, BlockPos.of(firstLinked[0])) : null;
         Result result = new Result(Status.SAME_BLOCK_DONE, Refusal.NONE, counts[0], scan.already(), counts[1],
-                scan.protectedCount() + counts[2], counts[3], scan.unloadedChunks());
+                scan.protectedCount() + counts[2], scan.taken(), scan.unloadedChunks());
         MutableComponent text = message(dock, side, block, result, candidates.size(), scan);
         if (profile != null) {
             text.append(" · ").append(profile);
@@ -166,8 +166,9 @@ public final class DockSameBlock {
     }
 
     /**
-     * O Ctrl + clique numa máquina do lado escolhido: tira todas as máquinas do lado. Como o desvincular de um clique,
-     * basta poder mexer na Doca, e não lê mundo além do bloco clicado.
+     * O Ctrl + clique numa máquina do lado escolhido: tira do lado as do grupo que se toca com a clicada
+     * ({@link SameBlockScan}, sem o corte do raio: uma encostada fora do cubo também sai). Como o desvincular de um
+     * clique, basta poder mexer na Doca. Lê o grupo, com o teto {@link SameBlockScan#MAX_READS}.
      */
     private static Result unlink(ServerPlayer player, PatternDockBlockEntity dock, int side, BlockPos pos) {
         if (!RangeLinks.mayEdit(player, dock.getBlockPos())) {
@@ -175,16 +176,18 @@ public final class DockSameBlock {
         }
         ServerLevel level = player.serverLevel();
         Block block = level.getBlockState(pos).getBlock();
+        LongOpenHashSet inSide = new LongOpenHashSet();
         DockSide dockSide = dock.side(side);
-        List<BlockPos> machines = new ArrayList<>();
         if (dockSide != null) {
             for (DockMachine machine : dockSide.machines()) {
-                machines.add(machine.pos());
+                inSide.add(machine.pos().asLong());
             }
         }
+        LongArrayList machines = SameBlockScan.scan(player, pos, dock.getBlockPos(), SameBlockScan.NO_RADIUS, block,
+                inSide, LongSets.EMPTY_SET, key -> false, Integer.MAX_VALUE).linkedPositions();
         dock.batchChanges(() -> {
-            for (BlockPos machine : machines) {
-                dock.unlink(side, machine);
+            for (int i = 0; i < machines.size(); i++) {
+                dock.unlink(side, BlockPos.of(machines.getLong(i)));
             }
         });
         Component single = RouterBlock.machineName(block);
@@ -200,8 +203,8 @@ public final class DockSameBlock {
     // ------------------------------------------------------------------ mensagens
 
     /**
-     * {@code Vinculou 8 Fornalhas ao lado Norte · 8/8 máquinas · limite do tier}, {@code Vinculou 8 de 10 …} (com o
-     * cubo inteiro lido) ou, sem nenhuma nova, as chaves {@code none} do roteador; mais as protegidas, as de outra
+     * {@code Vinculou 8 Fornalhas ao lado Norte · 8/8 máquinas · limite do tier}, {@code Vinculou 8 de 9 …} (com o
+     * grupo inteiro lido) ou, sem nenhuma nova, as chaves {@code none} do roteador; mais as protegidas, as de outra
      * Doca, os chunks descarregados e o teto.
      */
     static MutableComponent message(PatternDockBlockEntity dock, int side, Block block, Result result, int found,

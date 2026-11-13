@@ -8,7 +8,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
 /**
  * Cliente → servidor: o Ctrl + clique do Vinculador no modo Vincular numa máquina em {@code pos} (o servidor não sabe
- * do Ctrl). O servidor refaz todas as conferências do clique e vincula as do mesmo bloco no raio
+ * do Ctrl). O servidor refaz todas as conferências do clique e vincula as do mesmo bloco que se tocam com ela, no raio
  * ({@code range/SameBlockLinks}).
  */
 public record LinkSameBlockPayload(BlockPos pos) implements CustomPacketPayload {

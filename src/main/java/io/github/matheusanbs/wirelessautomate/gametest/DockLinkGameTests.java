@@ -198,8 +198,9 @@ public final class DockLinkGameTests {
     }
 
     /**
-     * Ctrl + clique numa fileira de 10 fornalhas com a Doca Básica (8 máquinas): vincula 8, diz o limite do tier e faz
-     * o perfil; o Ctrl + clique numa delas desvincula o lado inteiro.
+     * Ctrl + clique num bloco de 10 fornalhas encostadas com a Doca Básica (8 máquinas): vincula 8, diz o limite do
+     * tier e faz o perfil; o Ctrl + clique numa delas desvincula as do lado que se tocam com ela (aqui, o lado
+     * inteiro).
      */
     @GameTest(template = "empty", timeoutTicks = 100)
     public static void ctrlClickLinksUpToTierLimit(GameTestHelper helper) {
@@ -225,7 +226,7 @@ public final class DockLinkGameTests {
                     helper.assertTrue(dock.side(SOUTH).machines().size() == 8, "máquinas no lado: "
                             + dock.side(SOUTH).machines().size());
                     helper.assertTrue(dock.activeCount() == 8, "ativas: " + dock.activeCount());
-                    // "Vinculou 8 Fornalhas" ou, com o cubo lido inteiro, "Vinculou 8 de 10 Fornalhas"
+                    // "Vinculou 8 Fornalhas": a busca para numa além das vagas, sem ler o grupo inteiro
                     helper.assertTrue(player.actionBar != null && player.actionBar.getContents()
                             instanceof TranslatableContents c && c.getKey().startsWith(KEY + "same.linked"),
                             "a mensagem: " + player.actionBar);
@@ -323,16 +324,16 @@ public final class DockLinkGameTests {
 
     /**
      * Uma fornalha vinculada à Doca A e fora do alcance dela (o raio baixado na config) continua dela: a Doca B recusa,
-     * com a posição da A, e o Ctrl + clique da B a deixa de fora e vincula a livre.
+     * com a posição da A, e o Ctrl + clique da B numa livre encostada nela a deixa de fora e vincula a livre.
      */
     @GameTest(template = "empty", timeoutTicks = 100, batch = "wirelessautomate_config_dock")
     public static void refusesInactiveMachineOfOtherDock(GameTestHelper helper) {
-        // a Doca Avançada lê o raio do Elite, a Básica o do Avançado: só a A perde o alcance, e a B varre o cubo
-        // pequeno da Básica
+        // a Doca Avançada lê o raio do Elite, a Básica o do Avançado: só a A perde o alcance
         PatternDockBlockEntity first = dock(helper, new BlockPos(0, 1, 0), RouterTier.ADVANCED);
         PatternDockBlockEntity second = dock(helper, new BlockPos(2, 1, 2), RouterTier.BASIC);
         BlockPos taken = new BlockPos(2, 1, 0);
-        BlockPos free = new BlockPos(4, 1, 2);
+        // encostada na de A pela aresta: o grupo do Ctrl + clique chega nela
+        BlockPos free = new BlockPos(3, 1, 1);
         furnace(helper, taken, Direction.NORTH);
         furnace(helper, free, Direction.NORTH);
         TestPlayers.MenuPlayer player = player(helper);

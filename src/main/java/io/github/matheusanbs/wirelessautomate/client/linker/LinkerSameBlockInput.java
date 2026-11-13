@@ -28,8 +28,9 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * Ctrl (Cmd no Mac, o {@code Screen.hasControlDown}) + clique direito com o Vinculador na mão principal, no modo
  * Vincular, sem Shift e sem uma Tela de Sinal escolhida, numa máquina (bloco com a capability de algum tipo carregado,
  * como o {@code ConfiguratorItem.actsOn}) que não é roteador, Tela nem Doca: cancela o uso normal e manda o
- * {@link LinkSameBlockPayload} (o servidor vincula as máquinas do mesmo bloco no raio do roteador ou no cubo da Doca
- * escolhidos ou, se a clicada já é deles, desvincula, e refaz todas as conferências).
+ * {@link LinkSameBlockPayload} (o servidor vincula as máquinas do mesmo bloco que se tocam com a clicada, no raio do
+ * roteador ou no cubo da Doca escolhidos, ou, se a clicada já é deles, desvincula as que se tocam, e refaz todas as
+ * conferências).
  * Uma vez por clique: segurando o botão, o jogo repete o uso a cada 4 ticks, e as repetições são canceladas sem pacote
  * até a tecla soltar. Correndo (andando com o Ctrl, que é a tecla padrão de correr), o gesto não vale e o clique segue como um
  * clique normal do Vinculador.

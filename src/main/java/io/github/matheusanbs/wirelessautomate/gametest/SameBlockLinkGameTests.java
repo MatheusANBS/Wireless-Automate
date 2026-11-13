@@ -12,7 +12,6 @@ import io.github.matheusanbs.wirelessautomate.range.RangeLinks;
 import io.github.matheusanbs.wirelessautomate.range.RangeRules.LinkRefusal;
 import io.github.matheusanbs.wirelessautomate.range.SameBlockLinks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
-import java.util.Comparator;
 import java.util.List;
 import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
@@ -34,19 +33,32 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * O Ctrl + clique do Vinculador ({@link SameBlockLinks}, pelo handler do {@code LinkSameBlockPayload}): vincula as
- * máquinas do mesmo bloco no raio, das mais perto para as mais longe, até o limite; deixa de fora as já vinculadas, a
- * presa e as de fora do raio; recusa sem roteador escolhido, no modo aventura e no descanso do item; o limite do tier só
- * aparece com alguma de fora.
+ * máquinas do mesmo bloco que se tocam com a clicada, da mais perto da clicada para a mais longe, até o limite; deixa
+ * de fora as já vinculadas, a presa e as de fora do raio; desvincula só o grupo da clicada; recusa sem roteador
+ * escolhido, no modo aventura e no descanso do item; o limite do tier só aparece com alguma de fora. Os casos da busca
+ * pelas que se tocam (quinas, o raio, o outro dono, o custo) ficam em {@link TouchingLinkGameTests}.
  */
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
 public final class SameBlockLinkGameTests {
     private static final String KEY = "item.wirelessautomate.linker.range.same.";
-    /** No chão do template: a 2 blocos (Chebyshev) do roteador em (1, 2, 1); as fornalhas A e B ficam a 1. */
+    /**
+     * No chão do template: a 2 blocos (Chebyshev) do roteador em (1, 2, 1); as fornalhas A e B ficam a 1. As duas
+     * primeiras ficam embaixo de A e de B (encostadas pela face); a terceira não toca nenhuma.
+     */
     private static final List<BlockPos> FAR_FURNACES = List.of(new BlockPos(0, 0, 0), new BlockPos(2, 0, 0),
             new BlockPos(2, 0, 2));
+    /** Entre as fornalhas A e B: com ela, A, ponte e B são uma fila que se toca pelas faces. */
+    private static final BlockPos BRIDGE = new BlockPos(1, 1, 0);
 
     private SameBlockLinkGameTests() {
+    }
+
+    /** O roteador de {@link RangeTestSupport#routerWithMachines} com a fornalha que liga A e B (a fila A, ponte, B). */
+    private static RouterBlockEntity routerWithRow(GameTestHelper helper) {
+        RouterBlockEntity router = routerWithMachines(helper);
+        helper.setBlock(BRIDGE, Blocks.FURNACE);
+        return router;
     }
 
     /** Um jogador em sobrevivência ao lado do roteador, com o Vinculador já com o roteador escolhido. */
@@ -86,34 +98,42 @@ public final class SameBlockLinkGameTests {
     }
 
     /**
-     * Ctrl + clique numa fornalha já vinculada desvincula as duas fornalhas, e o barril, de outro bloco, fica; sem
-     * nenhuma vinculada, o mesmo clique vincula de novo.
+     * Dois grupos de fornalhas vinculados (A com a de baixo dela, B com a de baixo dela, sem se tocar): o Ctrl + clique
+     * em B desvincula só o grupo de B, e o de A e o barril ficam; com o grupo de B solto, o mesmo clique o vincula de
+     * novo, sem contar as de A como já vinculadas.
      */
     @GameTest(template = "empty", timeoutTicks = 300)
-    public static void sameBlockUnlinksAllOfThatBlock(GameTestHelper helper) {
+    public static void sameBlockUnlinksOnlyTheTouchingGroup(GameTestHelper helper) {
         RouterBlockEntity router = routerWithMachines(helper);
+        BlockPos underA = FAR_FURNACES.get(0);
+        BlockPos underB = FAR_FURNACES.get(1);
+        helper.setBlock(underA, Blocks.FURNACE);
+        helper.setBlock(underB, Blocks.FURNACE);
         helper.startSequence()
                 .thenWaitUntil(() -> waitLoaded(helper, router))
                 .thenExecute(() -> {
                     router.setRangeUpgrade(rangeUpgrade());
+                    for (BlockPos pos : List.of(FURNACE_A, underA, FURNACE_B, underB, BARREL)) {
+                        link(helper, router, pos);
+                    }
                     TestPlayers.MenuPlayer player = player(helper, router, true);
-                    ctrlClick(helper, player, FURNACE_A);
-                    router.linkMachine(helper.absolutePos(BARREL));
-                    helper.assertTrue(linked(helper, router, FURNACE_A) && linked(helper, router, FURNACE_B)
-                            && linked(helper, router, BARREL), "a montagem não vinculou");
-                    // a clicada está vinculada: o Ctrl + clique desvincula as do mesmo bloco
+                    // a clicada está vinculada: o Ctrl + clique desvincula as que se tocam com ela
                     RangeLinks.Result result = ctrlClick(helper, player, FURNACE_B);
                     helper.assertTrue(result != null && result.status() == RangeLinks.Status.SAME_BLOCK_UNLINKED
                             && result.linked() == 2, "resultado " + result);
-                    helper.assertFalse(linked(helper, router, FURNACE_A) || linked(helper, router, FURNACE_B),
-                            "uma fornalha ficou");
+                    helper.assertFalse(linked(helper, router, FURNACE_B) || linked(helper, router, underB),
+                            "uma fornalha do grupo de B ficou");
+                    helper.assertTrue(linked(helper, router, FURNACE_A) && linked(helper, router, underA),
+                            "o grupo de A saiu junto");
                     helper.assertTrue(linked(helper, router, BARREL), "o barril saiu junto");
                     TranslatableContents text = message(helper, player.actionBar, KEY + "unlinked");
                     helper.assertValueEqual(text.getArgs()[0], 2, "a contagem");
-                    // sem nenhuma fornalha vinculada, o mesmo clique vincula as duas de novo
-                    result = ctrlClick(helper, player, FURNACE_A);
+                    // com o grupo de B solto, o mesmo clique vincula as duas de novo; as de A não se tocam com elas
+                    result = ctrlClick(helper, player, FURNACE_B);
                     helper.assertTrue(result != null && result.status() == RangeLinks.Status.SAME_BLOCK_DONE
-                            && result.linked() == 2, "segundo clique " + result);
+                            && result.linked() == 2 && result.already() == 0, "segundo clique " + result);
+                    helper.assertTrue(linked(helper, router, FURNACE_B) && linked(helper, router, underB),
+                            "o grupo de B não voltou");
                     helper.assertTrue(linked(helper, router, BARREL), "o barril saiu no segundo clique");
                 })
                 .thenSucceed();
@@ -121,7 +141,7 @@ public final class SameBlockLinkGameTests {
 
     @GameTest(template = "empty", timeoutTicks = 300)
     public static void sameBlockLinksOnlyThatBlock(GameTestHelper helper) {
-        RouterBlockEntity router = routerWithMachines(helper);
+        RouterBlockEntity router = routerWithRow(helper);
         helper.startSequence()
                 .thenWaitUntil(() -> waitLoaded(helper, router))
                 .thenExecute(() -> {
@@ -129,12 +149,12 @@ public final class SameBlockLinkGameTests {
                     TestPlayers.MenuPlayer player = player(helper, router, true);
                     RangeLinks.Result result = ctrlClick(helper, player, FURNACE_A);
                     helper.assertTrue(result != null && result.status() == RangeLinks.Status.SAME_BLOCK_DONE
-                            && result.linked() == 2, "resultado " + result);
-                    helper.assertTrue(linked(helper, router, FURNACE_A) && linked(helper, router, FURNACE_B),
-                            "as fornalhas não entraram");
+                            && result.linked() == 3, "resultado " + result);
+                    helper.assertTrue(linked(helper, router, FURNACE_A) && linked(helper, router, BRIDGE)
+                            && linked(helper, router, FURNACE_B), "as fornalhas não entraram");
                     helper.assertFalse(linked(helper, router, BARREL), "o barril entrou");
                     TranslatableContents text = message(helper, player.actionBar, KEY + "linked");
-                    helper.assertValueEqual(text.getArgs()[0], 2, "a contagem");
+                    helper.assertValueEqual(text.getArgs()[0], 3, "a contagem");
                     // logo em seguida, o Vinculador está no descanso: o pacote é ignorado
                     helper.assertTrue(player.getCooldowns().isOnCooldown(ModItems.LINKER.get()), "sem descanso");
                     helper.assertTrue(SameBlockLinks.link(player, helper.absolutePos(FURNACE_A)) == null,
@@ -148,8 +168,8 @@ public final class SameBlockLinkGameTests {
     }
 
     /**
-     * A já vinculada e a presa ficam de fora (o baú preso é o modelo, mas não entra); com todas vinculadas, o aviso diz
-     * que não há nada novo.
+     * A já vinculada e a presa ficam de fora (o baú preso é o modelo, mas não entra; o grupo passa por ele até os dois
+     * baús encostados); com todas vinculadas, o aviso diz que não há nada novo.
      */
     @GameTest(template = "empty", timeoutTicks = 300)
     public static void sameBlockSkipsLinkedAndAttached(GameTestHelper helper) {
@@ -178,55 +198,54 @@ public final class SameBlockLinkGameTests {
     }
 
     /**
-     * Com o limite em 3 e cinco fornalhas, entram as duas a 1 bloco e a primeira (pela posição) das três a 2; o aviso
-     * diz "3 de 5" e o limite do tier.
+     * Com o limite em 3 e uma fila de seis fornalhas que vai do roteador para longe (A, ponte e B a 1 bloco, as outras a
+     * 2, 3 e 4), o Ctrl + clique na ponta mais longe vincula as três mais perto da clicada, não as mais perto do
+     * roteador; o aviso diz o limite do tier.
      */
     @GameTest(template = "empty", timeoutTicks = 300, batch = "wirelessautomate_config_sameblock_limit")
     public static void sameBlockNearestFirstUpToTheLimit(GameTestHelper helper) {
-        RouterBlockEntity router = routerWithMachines(helper);
-        for (BlockPos pos : FAR_FURNACES) {
+        RouterBlockEntity router = routerWithRow(helper);
+        List<BlockPos> far = List.of(new BlockPos(3, 1, 0), new BlockPos(4, 1, 0), new BlockPos(5, 1, 0));
+        for (BlockPos pos : far) {
             helper.setBlock(pos, Blocks.FURNACE);
         }
         int before = Config.TIERS.get(RouterTier.ADVANCED).maxMachines().get();
-        int radiusBefore = Config.TIERS.get(RouterTier.ADVANCED).machineRadius().get();
         helper.startSequence()
                 .thenWaitUntil(() -> waitLoaded(helper, router))
                 .thenExecute(() -> {
                     Config.TIERS.get(RouterTier.ADVANCED).maxMachines().set(3);
-                    // raio 2: só as cinco do teste no cubo; uma fornalha de outro teste numa seção vizinha pararia a
-                    // varredura cedo, e o aviso perderia o "de 5"
-                    Config.TIERS.get(RouterTier.ADVANCED).machineRadius().set(2);
                     try {
                         router.setRangeUpgrade(rangeUpgrade());
                         TestPlayers.MenuPlayer player = player(helper, router, true);
-                        RangeLinks.Result result = ctrlClick(helper, player, FURNACE_B);
-                        helper.assertTrue(result != null && result.linked() == 3 && result.overLimit() == 2,
+                        RangeLinks.Result result = ctrlClick(helper, player, far.get(2));
+                        helper.assertTrue(result != null && result.linked() == 3 && result.overLimit() == 1,
                                 "resultado " + result);
-                        helper.assertTrue(linked(helper, router, FURNACE_A) && linked(helper, router, FURNACE_B),
-                                "as mais perto ficaram de fora");
-                        BlockPos first = FAR_FURNACES.stream()
-                                .min(Comparator.comparingLong(pos -> helper.absolutePos(pos).asLong())).orElseThrow();
-                        for (BlockPos pos : FAR_FURNACES) {
-                            helper.assertValueEqual(linked(helper, router, pos), pos.equals(first),
-                                    "a fornalha " + pos + " (empate pela posição)");
+                        for (BlockPos pos : far) {
+                            helper.assertTrue(linked(helper, router, pos), "a fornalha " + pos + " ficou de fora");
                         }
-                        TranslatableContents text = message(helper, player.actionBar, KEY + "linked_of");
+                        for (BlockPos pos : List.of(FURNACE_A, BRIDGE, FURNACE_B)) {
+                            helper.assertFalse(linked(helper, router, pos), "a fornalha " + pos
+                                    + ", mais perto do roteador e mais longe da clicada, entrou");
+                        }
+                        // a busca para numa além das vagas, antes de ler o grupo inteiro: sem o "de N"
+                        TranslatableContents text = message(helper, player.actionBar, KEY + "linked");
                         helper.assertValueEqual(text.getArgs()[0], 3, "as vinculadas");
-                        helper.assertValueEqual(text.getArgs()[1], 5, "as achadas");
                         helper.assertTrue(hasPart(player.actionBar, KEY + "limit"),
                                 "sem o limite: " + player.actionBar.getString());
                     } finally {
                         Config.TIERS.get(RouterTier.ADVANCED).maxMachines().set(before);
-                        Config.TIERS.get(RouterTier.ADVANCED).machineRadius().set(radiusBefore);
                     }
                 })
                 .thenSucceed();
     }
 
-    /** Com o raio em 1, as fornalhas a 2 blocos ficam de fora e as a 1 entram. */
+    /**
+     * Com o raio em 1, as fornalhas a 2 blocos ficam de fora, mesmo as encostadas na fila (embaixo de A e de B), e as
+     * a 1 entram.
+     */
     @GameTest(template = "empty", timeoutTicks = 300, batch = "wirelessautomate_config_sameblock_radius")
     public static void sameBlockOutOfRadiusStaysOut(GameTestHelper helper) {
-        RouterBlockEntity router = routerWithMachines(helper);
+        RouterBlockEntity router = routerWithRow(helper);
         for (BlockPos pos : FAR_FURNACES) {
             helper.setBlock(pos, Blocks.FURNACE);
         }
@@ -239,7 +258,7 @@ public final class SameBlockLinkGameTests {
                         router.setRangeUpgrade(rangeUpgrade());
                         TestPlayers.MenuPlayer player = player(helper, router, true);
                         RangeLinks.Result result = ctrlClick(helper, player, FURNACE_A);
-                        helper.assertTrue(result != null && result.linked() == 2, "resultado " + result);
+                        helper.assertTrue(result != null && result.linked() == 3, "resultado " + result);
                         for (BlockPos pos : FAR_FURNACES) {
                             helper.assertFalse(linked(helper, router, pos), "a fornalha " + pos + " fora do raio entrou");
                         }
@@ -281,31 +300,20 @@ public final class SameBlockLinkGameTests {
     }
 
     /**
-     * Com exatamente as vagas em candidatas (as duas fornalhas a 1) e uma seção mais longe com fornalha na paleta,
-     * mas já vinculada, o aviso não acusa o limite do tier: não ficou nenhuma de fora.
+     * Com exatamente as vagas em candidatas (A e a ponte, com o limite em 3 e B já vinculada na ponta da fila), o grupo
+     * é lido inteiro e o aviso não acusa o limite do tier: não ficou nenhuma de fora.
      */
     @GameTest(template = "empty", timeoutTicks = 300, batch = "wirelessautomate_config_sameblock_exact")
     public static void sameBlockExactRoomIsNotTheLimit(GameTestHelper helper) {
-        RouterBlockEntity router = routerWithMachines(helper);
-        BlockPos origin = router.getBlockPos();
-        // o começo da seção de cima, ou da seguinte se ela começa logo acima: a seção fica a 2 ou mais
-        int sectionStart = ((origin.getY() >> 4) + 1) << 4;
-        if (sectionStart - origin.getY() < 2) {
-            sectionStart += 16;
-        }
-        int far = sectionStart - origin.getY();
-        BlockPos farFurnace = helper.relativePos(origin.above(far));
-        helper.setBlock(farFurnace, Blocks.FURNACE);
+        RouterBlockEntity router = routerWithRow(helper);
         int beforeMax = Config.TIERS.get(RouterTier.ADVANCED).maxMachines().get();
-        int beforeRadius = Config.TIERS.get(RouterTier.ADVANCED).machineRadius().get();
         helper.startSequence()
                 .thenWaitUntil(() -> waitLoaded(helper, router))
                 .thenExecute(() -> {
                     Config.TIERS.get(RouterTier.ADVANCED).maxMachines().set(3);
-                    Config.TIERS.get(RouterTier.ADVANCED).machineRadius().set(far);
                     try {
                         router.setRangeUpgrade(rangeUpgrade());
-                        link(helper, router, farFurnace);
+                        link(helper, router, FURNACE_B);
                         TestPlayers.MenuPlayer player = player(helper, router, true);
                         RangeLinks.Result result = ctrlClick(helper, player, FURNACE_A);
                         helper.assertTrue(result != null && result.linked() == 2 && result.overLimit() == 0
@@ -315,8 +323,6 @@ public final class SameBlockLinkGameTests {
                                 "acusou o limite: " + player.actionBar.getString());
                     } finally {
                         Config.TIERS.get(RouterTier.ADVANCED).maxMachines().set(beforeMax);
-                        Config.TIERS.get(RouterTier.ADVANCED).machineRadius().set(beforeRadius);
-                        helper.setBlock(farFurnace, Blocks.AIR);
                     }
                 })
                 .thenSucceed();
@@ -325,7 +331,7 @@ public final class SameBlockLinkGameTests {
     /** Todas as achadas recusadas pelo evento de clique das proteções: a recusa de área protegida, nada entra. */
     @GameTest(template = "empty", timeoutTicks = 300)
     public static void sameBlockAllRefusedByTheEvent(GameTestHelper helper) {
-        RouterBlockEntity router = routerWithMachines(helper);
+        RouterBlockEntity router = routerWithRow(helper);
         TestPlayers.MenuPlayer player = player(helper, router, true);
         int[] posted = new int[1];
         Consumer<PlayerInteractEvent.RightClickBlock> claim = event -> {
@@ -343,9 +349,9 @@ public final class SameBlockLinkGameTests {
                         RangeLinks.Result result = ctrlClick(helper, player, FURNACE_A);
                         helper.assertTrue(result != null && result.refusal() == LinkRefusal.PROTECTED,
                                 "resultado " + result);
-                        helper.assertValueEqual(posted[0], 2, "eventos postados");
-                        helper.assertFalse(linked(helper, router, FURNACE_A) || linked(helper, router, FURNACE_B),
-                                "vinculou recusada pelo evento");
+                        helper.assertValueEqual(posted[0], 3, "eventos postados");
+                        helper.assertFalse(linked(helper, router, FURNACE_A) || linked(helper, router, BRIDGE)
+                                || linked(helper, router, FURNACE_B), "vinculou recusada pelo evento");
                         helper.assertFalse(player.actionBar != null
                                 && player.actionBar.getContents() instanceof TranslatableContents c
                                 && c.getKey().startsWith(KEY + "linked"), "aviso de vinculadas: " + player.actionBar);

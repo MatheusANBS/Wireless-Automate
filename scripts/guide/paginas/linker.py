@@ -15,7 +15,8 @@ roteador que chega numa máquina.
 ## Como usar
 
 1. Ponha o Upgrade de Alcance num roteador e clique nele com o Vinculador. Clique nele de novo para
-   soltá-lo.
+   soltá-lo. Com o Vinculador na mão, o cubo do raio do roteador aparece no mundo, e as máquinas
+   vinculadas acendem na cor do grupo; as que estão fora do raio ou além do limite ficam cinza.
 2. Clique numa máquina para vinculá-la. Clique nela de novo para desvincular. Se o grupo dela fica
    vazio, os cartões dele voltam para o seu inventário. Uma máquina é de um roteador só: se ela já é de
    outro (vinculada ou presa nele), a action bar diz de qual.
@@ -77,6 +78,8 @@ the router that reaches a machine.
 ## How to use it
 
 1. Put the Range Upgrade in a router and click it with the Linker. Click it again to release it.
+   With the Linker in hand, the router's range cube shows in the world, and the linked machines light
+   up in their group's color; the ones out of range or over the limit show in gray.
 2. Click a machine to link it. Click it again to unlink it. If its group ends up empty, the group's
    cards go back to your inventory. A machine belongs to one router only: if it already belongs to
    another (linked or attached to it), the action bar says which.

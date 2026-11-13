@@ -22,6 +22,8 @@ the router that reaches a machine.
 ## How to use it
 
 1. Put the Range Upgrade in a router and click it with the Linker. Click it again to release it.
+   With the Linker in hand, the router's range cube shows in the world, and the linked machines light
+   up in their group's color; the ones out of range or over the limit show in gray.
 2. Click a machine to link it. Click it again to unlink it. If its group ends up empty, the group's
    cards go back to your inventory. A machine belongs to one router only: if it already belongs to
    another (linked or attached to it), the action bar says which.

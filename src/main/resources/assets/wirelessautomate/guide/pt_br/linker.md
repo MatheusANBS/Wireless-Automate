@@ -24,12 +24,14 @@ roteador que chega numa máquina.
 1. Ponha o Upgrade de Alcance num roteador e clique nele com o Vinculador. Clique nele de novo para
    soltá-lo.
 2. Clique numa máquina para vinculá-la. Clique nela de novo para desvincular. Se o grupo dela fica
-   vazio, os cartões dele voltam para o seu inventário.
+   vazio, os cartões dele voltam para o seu inventário. Uma máquina é de um roteador só: se ela já é de
+   outro (vinculada ou presa nele), a action bar diz de qual.
 3. Para vincular todas as máquinas iguais de uma vez, segure **Ctrl** (**Cmd** no Mac) e clique numa
-   delas: entram as do mesmo bloco no raio do roteador, as mais perto primeiro, até o limite do
-   tier. A action bar diz quantas, por exemplo **Vinculou 7 Fornalhas**. Correndo, o Ctrl é o da
+   delas: entram as do mesmo bloco **encostadas nela** (pela face ou pela quina) e dentro do raio do
+   roteador, as mais perto primeiro, até o limite do tier. A action bar diz quantas, por exemplo
+   **Vinculou 7 Fornalhas**; se o limite cortou, **Vinculou 32 Fornalhas · limite do tier**. Correndo, o Ctrl é o da
    corrida e o clique vale como um clique normal.
-4. Para desvincular todas as iguais de uma vez, faça o mesmo gesto numa máquina que já está
+4. Para desvincular as encostadas de uma vez, faça o mesmo gesto numa máquina que já está
    vinculada.
 5. Clique no ar para ver o roteador escolhido. **Shift** + clique no ar o solta.
 6. Passe para o modo **Abrir** (Shift + roda do mouse) e clique numa máquina para configurar a face
@@ -44,7 +46,7 @@ pelo [Tablet](network-tablet.md).
 | --- | --- | --- |
 | Clique num roteador | Escolhe o roteador | — |
 | Clique numa máquina | Vincula ou desvincula | Abre o roteador que chega nela |
-| Ctrl (Cmd no Mac) + clique numa máquina | Vincula as do mesmo bloco no raio; se ela já está vinculada, desvincula todas as do mesmo bloco | — |
+| Ctrl (Cmd no Mac) + clique numa máquina | Vincula as do mesmo bloco encostadas nela, no raio; se ela já está vinculada, desvincula as encostadas | — |
 | Clique numa Tela de Sinal | Escolhe a Tela | — |
 | Clique num Baú, Bateria ou Tanque do mod | Com uma Tela escolhida, liga ou desliga | Abre o roteador que chega nele |
 | Clique no ar | Mostra o roteador escolhido | Mostra a dica do modo |

@@ -10,8 +10,9 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * A presença de um {@link RouterBlockEntity} no mundo: entrar e sair do {@link NetworkManager}, do
- * {@link NodeIndex} e do {@link RouterChunkLoader} quando o nó carrega, descarrega ou sai, e quem avisar quando
- * o estado do bloco muda (giro, tier) ou o NBT é lido sobre um nó já no mundo. Só no servidor.
+ * {@link NodeIndex}, do índice de donos ({@link RouterOwners}) e do {@link RouterChunkLoader} quando o nó carrega,
+ * descarrega ou sai, e quem avisar quando o estado do bloco muda (giro, tier) ou o NBT é lido sobre um nó já no mundo.
+ * Só no servidor.
  */
 final class RouterPresence {
     private final RouterBlockEntity router;

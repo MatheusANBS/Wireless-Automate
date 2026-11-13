@@ -10,8 +10,10 @@ import io.github.matheusanbs.wirelessautomate.range.RouterOwners;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.gametest.GameTestHolder;
@@ -19,7 +21,8 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
  * O índice de donos dos roteadores ({@link RouterOwners}): a máquina vinculada (ativa, fora do raio ou de um roteador
- * sem o upgrade), a presa de um roteador encostado e a saída do roteador que quebra.
+ * sem o upgrade), a presa de um roteador encostado, o NBT relido sobre um roteador no mundo e a saída do roteador que
+ * quebra.
  */
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
@@ -89,16 +92,21 @@ public final class RouterOwnersGameTests {
                     waitLoaded(helper, b);
                 })
                 .thenExecute(() -> {
-                    a.setRangeUpgrade(rangeUpgrade());
-                    // fora do raio de A: inativa para o motor, mas vinculada
-                    link(helper, a, FAR_FURNACE);
-                    eq(helper, other(helper, b, FAR_FURNACE), a, "fora do raio");
-                    // A sem o upgrade com a remota guardada
-                    link(helper, a, FURNACE);
-                    a.setRangeUpgrade(ItemStack.EMPTY);
-                    helper.assertFalse(a.rangeActive(), "o upgrade ainda vale");
-                    eq(helper, other(helper, b, FURNACE), a, "sem o upgrade");
-                    eq(helper, other(helper, b, FAR_FURNACE), a, "fora do raio, sem o upgrade");
+                    try {
+                        a.setRangeUpgrade(rangeUpgrade());
+                        // fora do raio de A: inativa para o motor, mas vinculada
+                        link(helper, a, FAR_FURNACE);
+                        eq(helper, other(helper, b, FAR_FURNACE), a, "fora do raio");
+                        // A sem o upgrade com a remota guardada
+                        link(helper, a, FURNACE);
+                        a.setRangeUpgrade(ItemStack.EMPTY);
+                        helper.assertFalse(a.rangeActive(), "o upgrade ainda vale");
+                        eq(helper, other(helper, b, FURNACE), a, "sem o upgrade");
+                        eq(helper, other(helper, b, FAR_FURNACE), a, "fora do raio, sem o upgrade");
+                    } finally {
+                        // acima da área que o GameTest limpa
+                        helper.setBlock(FAR_FURNACE, Blocks.AIR);
+                    }
                 })
                 .thenSucceed();
     }
@@ -120,6 +128,44 @@ public final class RouterOwnersGameTests {
                     eq(helper, a.machinePos(), helper.absolutePos(FURNACE), "presa de A");
                     eq(helper, other(helper, b, FURNACE), a, "outro dono para B");
                     eq(helper, other(helper, a, FURNACE), null, "outro dono para A");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * O NBT relido sobre um roteador no mundo (como o {@code /data merge}) com outras remotas: a antiga sai do índice e
+     * a nova entra.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void nbtReloadedInTheWorldMovesTheIndex(GameTestHelper helper) {
+        RouterBlockEntity a = routerOn(helper, CHEST_A);
+        RouterBlockEntity b = routerOn(helper, CHEST_B);
+        BlockPos second = FURNACE.east();
+        helper.setBlock(FURNACE, Blocks.FURNACE);
+        helper.setBlock(second, Blocks.FURNACE);
+        helper.startSequence()
+                .thenWaitUntil(() -> {
+                    waitLoaded(helper, a);
+                    waitLoaded(helper, b);
+                })
+                .thenExecute(() -> {
+                    HolderLookup.Provider registries = helper.getLevel().registryAccess();
+                    a.setRangeUpgrade(rangeUpgrade());
+                    link(helper, a, second);
+                    CompoundTag withSecond = a.saveWithoutMetadata(registries);
+                    helper.assertTrue(a.unlinkMachine(helper.absolutePos(second)), "não desvinculou");
+                    link(helper, a, FURNACE);
+                    eq(helper, other(helper, b, FURNACE), a, "antes de reler");
+                    eq(helper, other(helper, b, second), null, "a outra antes de reler");
+
+                    a.loadWithComponents(withSecond, registries);
+                    helper.assertTrue(a.remoteMachines().contains(helper.absolutePos(second))
+                            && !a.remoteMachines().contains(helper.absolutePos(FURNACE)), "o NBT relido");
+                    eq(helper, other(helper, b, FURNACE), null, "a antiga depois de reler");
+                    helper.assertFalse(
+                            RouterOwners.get().at(helper.getLevel(), helper.absolutePos(FURNACE)).contains(a),
+                            "a antiga ficou no índice");
+                    eq(helper, other(helper, b, second), a, "a nova depois de reler");
                 })
                 .thenSucceed();
     }

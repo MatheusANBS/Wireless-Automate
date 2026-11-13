@@ -26,8 +26,9 @@ the router that reaches a machine.
    cards go back to your inventory. A machine belongs to one router only: if it already belongs to
    another (linked or attached to it), the action bar says which.
 3. To link all the matching machines at once, hold **Ctrl** (**Cmd** on Mac) and click one of them:
-   the ones of the same block **touching it** (by a face or an edge) and within the router's radius
-   go in, nearest first, up to the tier's limit. The action bar says how many, for example
+   the ones of the same block **touching it or each other** (by a face, an edge or a corner), like a
+   row or a wall, and within the router's radius go in, nearest **to the clicked one** first, up to the
+   tier's limit. The action bar says how many, for example
    **Linked 7 Furnaces**; if the limit cut it, **Linked 32 Furnaces · tier limit**. While sprinting, Ctrl is
    the sprint key and the click counts as a normal click.
 4. To unlink the touching ones at once, do the same gesture on a machine that is already linked.

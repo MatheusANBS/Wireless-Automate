@@ -43,7 +43,9 @@ pedidos.
 1. Coloque a Doca e encoste um **Pattern Provider** do AE2 (ou um **Autocrafter** do RS2, virado para ela) num lado
    dela.
 2. Com o [Vinculador](linker.md), clique **nesse lado** da Doca. Depois dê **Ctrl + clique** numa máquina: as iguais
-   **encostadas nela** entram naquele lado. Um clique simples vincula só uma máquina; numa já vinculada, desvincula.
+   **encostadas nela ou umas nas outras** (pela face, pela aresta ou pela ponta), como uma fila ou uma parede, entram
+   naquele lado, as mais perto **da clicada** primeiro. Um clique simples vincula só uma máquina; numa já vinculada,
+   desvincula.
 3. Ponha no provedor **os padrões dessas máquinas**. Pronto: a CPU de crafting do AE2 (ou a rede do RS2) já pode
    pedir.
 
@@ -157,7 +159,8 @@ recipe. Each **side** of the Dock handles **one kind of machine**. It needs **AE
 1. Place the Dock and put an AE2 **Pattern Provider** (or an RS2 **Autocrafter**, facing it) against one of its
    sides.
 2. With the [Linker](linker.md), click **that side** of the Dock. Then **Ctrl + click** a machine: the matching ones
-   **touching it** join that side. A plain click links just one machine; on an already linked one, it unlinks it.
+   **touching it or each other** (by a face, an edge or a corner), like a row or a wall, join that side, nearest
+   **to the clicked one** first. A plain click links just one machine; on an already linked one, it unlinks it.
 3. Put **the patterns for those machines** in the provider. Done: the AE2 crafting CPU (or the RS2 network) can now
    ask for them.
 

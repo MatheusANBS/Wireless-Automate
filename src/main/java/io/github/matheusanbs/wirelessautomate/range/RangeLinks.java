@@ -42,12 +42,12 @@ import org.jetbrains.annotations.Nullable;
  * <p>Vínculos passam sempre por {@link RouterBlockEntity#linkMachine} e
  * {@link RouterBlockEntity#unlinkMachine(BlockPos)}, que mantêm o índice do mixin e os caches.
  *
- * <p>Ordem das recusas de uma máquina: roteador escolhido presente; {@code mayBuild} do jogador (o modo aventura não
- * vincula) e {@code mayInteract} na máquina e no roteador ({@link LinkRefusal#PROTECTED}); o próprio roteador, outro
- * roteador, a máquina presa e um bloco sem capability de um tipo carregado; a máquina que já é de outro roteador
- * ({@link LinkRefusal#OTHER_ROUTER}, pelo {@link RouterOwners}); depois {@link RangeRules#check} (upgrade, raio do
- * tier, distância e limite). As vagas do limite são as máquinas ativas ({@link RangeRules#used}), a conta da
- * tela.
+ * <p>Ordem das recusas de uma máquina, a mesma no clique e no Ctrl + clique: roteador escolhido presente;
+ * {@code mayBuild} do jogador (o modo aventura não vincula) e {@code mayInteract} na máquina e no roteador
+ * ({@link LinkRefusal#PROTECTED}); o próprio roteador, outro roteador, a máquina presa e um bloco sem capability de um
+ * tipo carregado; o upgrade ({@link #upgradeRefusal}: sem upgrade, raio 0); a máquina que já é de outro roteador
+ * ({@link LinkRefusal#OTHER_ROUTER}, pelo {@link RouterOwners}); depois o raio do tier, a distância e o limite
+ * ({@link RangeRules#check}). As vagas do limite são as máquinas ativas ({@link RangeRules#used}), a conta da tela.
  *
  * <p>Um clique numa máquina vinculada a desvincula; os cartões de um grupo que esvazia vão para quem clicou, e a
  * mensagem diz quantos. O Ctrl + clique (vincular ou desvincular as do mesmo bloco) fica no {@link SameBlockLinks}.
@@ -185,12 +185,12 @@ public final class RangeLinks {
         }
         LinkRefusal refusal = machineRefusal(level, router, pos, LoadedTypes.LIST);
         if (refusal == LinkRefusal.NONE) {
+            refusal = upgradeRefusal(router);
+        }
+        if (refusal == LinkRefusal.NONE) {
             RouterBlockEntity other = RouterOwners.otherRouter(level, router, pos);
             if (other != null) {
-                player.displayClientMessage(Component.translatable(KEY + "refusal.other_router",
-                        RouterBlock.machineName(level.getBlockState(pos).getBlock()), routerName(other),
-                        LinkerActions.position(other.getBlockPos())), true);
-                return Result.refused(LinkRefusal.OTHER_ROUTER);
+                return refuseOtherRouter(player, pos, other);
             }
         }
         int distance = distance(router, pos);
@@ -208,6 +208,17 @@ public final class RangeLinks {
                 routerName(router), used(router), max(router)), true);
         level.playSound(null, pos, SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.BLOCKS, 0.5F, 1.4F);
         return Result.of(Status.LINKED);
+    }
+
+    /**
+     * A recusa da máquina em {@code pos}, que já é de {@code other}: {@code Fornalha já é de Forja Norte em 812, 64,
+     * -230}. No clique e no Ctrl + clique num grupo todo de outro dono.
+     */
+    static Result refuseOtherRouter(ServerPlayer player, BlockPos pos, RouterBlockEntity other) {
+        player.displayClientMessage(Component.translatable(KEY + "refusal.other_router",
+                RouterBlock.machineName(player.serverLevel().getBlockState(pos).getBlock()), routerName(other),
+                LinkerActions.position(other.getBlockPos())), true);
+        return Result.refused(LinkRefusal.OTHER_ROUTER);
     }
 
     /** {@code text}, mais {@code · 2 cartões devolvidos} quando {@code cards} é maior que zero. */

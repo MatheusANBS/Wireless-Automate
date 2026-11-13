@@ -1092,6 +1092,7 @@
   "item.wirelessautomate.linker.range.same.linked": "Linked %s %s",
   "item.wirelessautomate.linker.range.same.none": "%s: all the touching ones are already linked",
   "item.wirelessautomate.linker.range.same.none.capped": "%s: no new ones in the part of the group read",
+  "item.wirelessautomate.linker.range.same.none.taken": "%s: the touching ones already belong to another owner",
   "item.wirelessautomate.linker.range.same.unlinked": "Unlinked %s %s from %s · %s/%s machines",
   "item.wirelessautomate.linker.range.same.unlinked.one": "Unlinked %s %s from %s · %s/%s machines",
   "item.wirelessautomate.linker.range.same.unlinked.none": "%s: none linked to %s",

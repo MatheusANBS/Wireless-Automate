@@ -20,8 +20,9 @@ roteador que chega numa máquina.
    vazio, os cartões dele voltam para o seu inventário. Uma máquina é de um roteador só: se ela já é de
    outro (vinculada ou presa nele), a action bar diz de qual.
 3. Para vincular todas as máquinas iguais de uma vez, segure **Ctrl** (**Cmd** no Mac) e clique numa
-   delas: entram as do mesmo bloco **encostadas nela** (pela face ou pela quina) e dentro do raio do
-   roteador, as mais perto primeiro, até o limite do tier. A action bar diz quantas, por exemplo
+   delas: entram as do mesmo bloco **encostadas nela ou umas nas outras** (pela face, pela aresta ou
+   pela ponta), como uma fila ou uma parede, e dentro do raio do roteador, as mais perto **da clicada**
+   primeiro, até o limite do tier. A action bar diz quantas, por exemplo
    **Vinculou 7 Fornalhas**; se o limite cortou, **Vinculou 32 Fornalhas · limite do tier**. Correndo, o Ctrl é o da
    corrida e o clique vale como um clique normal.
 4. Para desvincular as encostadas de uma vez, faça o mesmo gesto numa máquina que já está
@@ -80,8 +81,9 @@ the router that reaches a machine.
    cards go back to your inventory. A machine belongs to one router only: if it already belongs to
    another (linked or attached to it), the action bar says which.
 3. To link all the matching machines at once, hold **Ctrl** (**Cmd** on Mac) and click one of them:
-   the ones of the same block **touching it** (by a face or an edge) and within the router's radius
-   go in, nearest first, up to the tier's limit. The action bar says how many, for example
+   the ones of the same block **touching it or each other** (by a face, an edge or a corner), like a
+   row or a wall, and within the router's radius go in, nearest **to the clicked one** first, up to the
+   tier's limit. The action bar says how many, for example
    **Linked 7 Furnaces**; if the limit cut it, **Linked 32 Furnaces · tier limit**. While sprinting, Ctrl is
    the sprint key and the click counts as a normal click.
 4. To unlink the touching ones at once, do the same gesture on a machine that is already linked.

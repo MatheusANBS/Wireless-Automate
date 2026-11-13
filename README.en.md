@@ -6,7 +6,7 @@
 
 It was built for large modpacks: instead of every block ticking on its own, one central manager moves everything within a small time budget per tick, so hundreds of machines don't turn into lag.
 
-**Status:** version 2.17. The mod gets the **Pattern Dock**, which takes AE2 and Refined Storage 2 processing pattern orders to linked machines, without pipes, and returns the result straight to the network. Every version's changes are in the [changelog](docs/curseforge/changelog-curseforge-2.17.0.md) and on the [releases page](https://github.com/MatheusANBS/Wireless-Automate/releases).
+**Status:** version 2.18. The Linker gets clearer: a machine belongs to one router, Ctrl + click takes only the machines touching the clicked one, and the chosen router's range cube shows in the world. 2.17 brought the **Pattern Dock**, which takes AE2 and Refined Storage 2 processing pattern orders to linked machines, without pipes, and returns the result straight to the network. Every version's changes are in the [changelog](docs/curseforge/changelog-curseforge-2.18.0.md) and on the [releases page](https://github.com/MatheusANBS/Wireless-Automate/releases).
 
 Download it on [CurseForge](https://www.curseforge.com/minecraft/mc-mods/wireless-automate) or from the [latest GitHub release](https://github.com/MatheusANBS/Wireless-Automate/releases/latest). Requires NeoForge 21.1.248 or newer (runs on ATM10).
 
@@ -199,7 +199,7 @@ Pattern automation without pipes. Place an AE2 **Pattern Provider** or a Refined
 
 - **Items, fluids and chemicals in the same order.** Chemicals need Mekanism plus Applied Mekanistics (AE2) or Refined Storage Mekanism Integration (RS2).
 - **Works with the AE2 addons of ATM10:** the Extended Pattern Provider (ExtendedAE), the Advanced Pattern Provider and the Quantum Computer (Advanced AE).
-- **Linking per side:** with the Linker, click a face of the Dock, then a machine, or Ctrl + click to link every machine of the same block in reach. The first machine sets, through the Auto-Setup, which faces take and which give. The Dock uses no energy: a machine can also sit on a router, which brings the energy.
+- **Linking per side:** with the Linker, click a face of the Dock, then a machine, or Ctrl + click to link the machines of the same block touching it, in reach. The first machine sets, through the Auto-Setup, which faces take and which give. The Dock uses no energy: a machine can also sit on a router, which brings the energy.
 - **Reach per tier** (default config; the limit counts all six sides, same dimension):
 
 | Tier | Radius | Machines |
@@ -226,7 +226,7 @@ Pattern automation without pipes. Place an AE2 **Pattern Provider** or a Refined
 
 ![Link a whole area](docs/curseforge/feature-5-area.png)
 
-- **Linker** (two modes): **Link** picks a router with the Range Upgrade (click it) and links the machines you click, or **a whole marked area** at once (Shift + click two blocks; nearest first, up to the tier's radius and limit), or **all of the same block in range** with Ctrl (Cmd on Mac) + click on one of them; the **Unlink** switch takes them out instead. **Open** opens the screen of the router that reaches the machine you click, already editing that machine; with several routers, a short list lets you pick. It checks range, claims and protection mods on the router. The Linker no longer touches networks: choose each face's network on the router screen or in the Tablet.
+- **Linker** (two modes): **Link** picks a router with the Range Upgrade (click it) and links the machines you click, or **the touching ones of the same block** (by a face, an edge or a corner, like a row or a wall) with Ctrl (Cmd on Mac) + click on one of them (nearest to the clicked one first, up to the tier's radius and limit; on a linked one, the same gesture unlinks that group); a machine belongs to one router only, and the Linker refuses another router's machine and says which; with the Linker in hand, the chosen router's range cube shows in the world, with the linked machines in their group's color; Shift + click in the air releases the chosen router. **Open** opens the screen of the router that reaches the machine you click, already editing that machine; with several routers, a short list lets you pick. It checks range, claims and protection mods on the router. The Linker no longer touches networks: choose each face's network on the router screen or in the Tablet.
 - **Configurator** (the Auto-Setup): click a linked machine and it finds out what each face takes and gives, and paints the proposed modes on the faces (Insert, Extract, Storage); click again to apply, with Shift on the whole group. It changes only the modes. To copy a router's setup to others, use the profile on the Tablet.
 - **Chunk Loading Upgrade:** keeps a router and its machine working while you're away.
 - **Recipe editor** (operators): `/wa recipes` opens a screen to change, disable or restore any of the mod's crafting recipes, with items from your inventory or JEI, tags and the result count. Saved as a datapack in `config/wirelessautomate/recipes/`, so it works in every world and survives updates. Handy for packs that want a different Ultimate recipe.

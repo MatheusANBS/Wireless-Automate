@@ -876,3 +876,17 @@ Ramo `ccr-71b175d3-weymk6`. `./scripts/bench.sh "range:200:3,idle:500:3:vanilla"
 | idle 500 | 0,0055 ± 0,0003 | 0,0055 ± 0,0005 | — |
 
 Leitura: o caminho quente do mixin ganhou só a leitura de uma flag, e a conferência só roda depois de um aviso ou na carga; nada muda no tempo. Os +0,3 MB vêm da vigia e da conferência por roteador (no `range` as remotas já têm face ativa, então a montagem já criava o cache de itens que a vigia usa).
+
+## Vinculador de um dono: o índice de donos dos roteadores (13 de novembro de 2026)
+
+Ramo `ccr-5c420ef0-t951t5`. `./scripts/bench.sh "range:200:3,idle:500:3"`, máquina local (4 CPUs, heap 2 GB). Antes: `76f6f71`, a 2.17.0 (`run/bench/reports/20261113-091547.md`); depois, com o índice guardando uma lista por posição: `9f8ee78` (`20261113-100744.md`); depois, com o dono guardado direto quando a posição tem um só: `a69a42e` (`20261113-103922.md`); fora do git. No `range`, o heap das repetições 2 e 3 (a 1 aquece a cena).
+
+| cenário | antes | uma lista por posição | o dono direto |
+| --- | --- | --- | --- |
+| range 200 (12.800 remotas), mod (ms/tick) | 0,0029 ± 0,0006 | 0,0031 ± 0,0011 | 0,0035 ± 0,0012 |
+| range 200, heap retido pela cena | ~18,1 / ~17,8 MB | ~19,0 / ~18,9 MB | ~18,4 / ~18,3 MB |
+| range 200, 1ª montagem (ms, reps 1 a 3) | 37,2 / 28,1 / 23,2 | 39,6 / 42,9 / 24,0 | 38,4 / 47,3 / 49,4 |
+| idle 500, mod (ms/tick) | 0,0065 ± 0,0012 | 0,0055 ± 0,0003 | 0,0060 ± 0,0004 |
+
+Leitura: nada roda por tick (o tempo do mod fica no ruído). O índice custa ~1 MB com uma lista por posição (~80 bytes por máquina vinculada) e ~0,4 MB com o dono direto (~30 bytes). A 1ª montagem (o tick depois de ligar a rede, a montagem das rotas) subiu nas duas últimas repetições da última rodada; o índice não entra nesse caminho (ele só é refeito no vínculo, no desvínculo e na carga do roteador, antes da medida), e a mesma rodada intermediária tem 24 ms. Fica para conferir com uma comparação intercalada base × final com mais repetições no fim do cubo do roteador.
+

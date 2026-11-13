@@ -2,7 +2,7 @@ package io.github.matheusanbs.wirelessautomate.dock;
 
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
-import io.github.matheusanbs.wirelessautomate.packet.DockReachPayload;
+import io.github.matheusanbs.wirelessautomate.packet.LinkerReachPayload;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -12,7 +12,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * O cubo do alcance da Doca no cliente de quem agiu ({@link DockReachPayload}): um pacote ao colocar a Doca (por
+ * O cubo do alcance da Doca no cliente de quem agiu ({@link LinkerReachPayload}): um pacote ao colocar a Doca (por
  * {@link #PLACED_TICKS}), ao escolhê-la no Vinculador e depois de cada vínculo, desvínculo ou Ctrl + clique, com o
  * estado novo, e quando o cliente pede ({@link #request}). Só para aquele jogador; nada por tick.
  */
@@ -25,12 +25,13 @@ public final class DockReachSync {
 
     /**
      * O pacote da Doca {@code dock} com o prazo {@code ticks} (0: enquanto o Vinculador com ela está na mão): o raio do
-     * tier, as máquinas dos lados na ordem dos lados e de vínculo, até {@link DockReachPayload#MAX_MACHINES}.
+     * tier, as máquinas dos lados na ordem dos lados e de vínculo, até {@link LinkerReachPayload#MAX_MACHINES}, cada
+     * uma com o ordinal do lado como cor.
      */
-    public static DockReachPayload payload(PatternDockBlockEntity dock, int ticks) {
-        int count = Math.min(dock.machineCount(), DockReachPayload.MAX_MACHINES);
+    public static LinkerReachPayload payload(PatternDockBlockEntity dock, int ticks) {
+        int count = Math.min(dock.machineCount(), LinkerReachPayload.MAX_MACHINES);
         long[] machines = new long[count];
-        byte[] sides = new byte[count];
+        byte[] colors = new byte[count];
         int n = 0;
         for (int side = 0; side < 6 && n < count; side++) {
             DockSide dockSide = dock.side(side);
@@ -42,12 +43,12 @@ public final class DockReachSync {
                     break;
                 }
                 machines[n] = machine.pos().asLong();
-                sides[n] = (byte) side;
+                colors[n] = (byte) side;
                 n++;
             }
         }
-        return new DockReachPayload(dock.getBlockPos(), Config.dockRadius(dock.tier()), dock.tier().ordinal(),
-                machines, sides, ticks);
+        return new LinkerReachPayload(LinkerReachPayload.DOCK, dock.getBlockPos(), Config.dockRadius(dock.tier()),
+                dock.tier().ordinal(), machines, colors, ticks);
     }
 
     /** Manda o cubo da Doca a {@code player}; jogadores falsos (GameTests, outro mod) não negociam os canais. */
@@ -55,7 +56,7 @@ public final class DockReachSync {
         if (player instanceof FakePlayer || player.connection == null) {
             return;
         }
-        DockReachPayload payload = payload(dock, ticks);
+        LinkerReachPayload payload = payload(dock, ticks);
         if (player.connection.hasChannel(payload)) {
             PacketDistributor.sendToPlayer(player, payload);
         }

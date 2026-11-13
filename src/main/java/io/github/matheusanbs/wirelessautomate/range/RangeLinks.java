@@ -146,6 +146,7 @@ public final class RangeLinks {
         LinkerItem.setTv(stack, null);
         LinkerItem.setDock(stack, null);
         player.displayClientMessage(chosenText(router), true);
+        RouterReachSync.send(player, router);
         return new Result(Status.CHOSEN, upgradeRefusal(router), 0, 0, 0, 0, 0, 0, 0);
     }
 
@@ -181,6 +182,7 @@ public final class RangeLinks {
                     used(router), max(router));
             player.displayClientMessage(withCards(text, cards), true);
             level.playSound(null, pos, SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.BLOCKS, 0.5F, 0.8F);
+            RouterReachSync.send(player, router);
             return Result.of(Status.UNLINKED);
         }
         LinkRefusal refusal = machineRefusal(level, router, pos, LoadedTypes.LIST);
@@ -207,6 +209,7 @@ public final class RangeLinks {
                 MachineNames.machine(router.remoteMachines(), pos), MachineNames.groupOf(router.remoteMachines(), pos),
                 routerName(router), used(router), max(router)), true);
         level.playSound(null, pos, SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.BLOCKS, 0.5F, 1.4F);
+        RouterReachSync.send(player, router);
         return Result.of(Status.LINKED);
     }
 

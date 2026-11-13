@@ -15,7 +15,7 @@ import io.github.matheusanbs.wirelessautomate.dock.PatternDockBlockEntity;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
 import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
 import io.github.matheusanbs.wirelessautomate.network.PortMode;
-import io.github.matheusanbs.wirelessautomate.packet.DockReachPayload;
+import io.github.matheusanbs.wirelessautomate.packet.LinkerReachPayload;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import io.github.matheusanbs.wirelessautomate.range.RemoteIndex;
 import io.github.matheusanbs.wirelessautomate.range.RemoteSide;
@@ -438,8 +438,9 @@ public final class DockLinkGameTests {
                 .thenIdle(1)
                 .thenExecute(() -> {
                     click(helper, player, DOCK, Direction.NORTH);
-                    DockReachPayload chosen = DockReachSync.payload(dock, 0);
-                    helper.assertValueEqual(chosen.dock(), helper.absolutePos(DOCK), "a Doca do cubo");
+                    LinkerReachPayload chosen = DockReachSync.payload(dock, 0);
+                    helper.assertValueEqual(chosen.kind(), LinkerReachPayload.DOCK, "o dono do cubo");
+                    helper.assertValueEqual(chosen.origin(), helper.absolutePos(DOCK), "a Doca do cubo");
                     helper.assertValueEqual(chosen.radius(), Config.dockRadius(RouterTier.BASIC), "o raio");
                     helper.assertValueEqual(chosen.tier(), RouterTier.BASIC.ordinal(), "o tier");
                     helper.assertValueEqual(chosen.machines().length, 0, "máquinas na escolha");
@@ -448,12 +449,12 @@ public final class DockLinkGameTests {
                     click(helper, player, north, Direction.UP);
                     click(helper, player, DOCK, Direction.SOUTH);
                     click(helper, player, south, Direction.UP);
-                    DockReachPayload linked = DockReachSync.payload(dock, 0);
+                    LinkerReachPayload linked = DockReachSync.payload(dock, 0);
                     helper.assertValueEqual(linked.machines().length, 2, "as máquinas depois dos vínculos");
                     helper.assertValueEqual(linked.machines()[0], helper.absolutePos(north).asLong(), "a do Norte");
-                    helper.assertValueEqual((int) linked.sides()[0], NORTH, "o lado da do Norte");
+                    helper.assertValueEqual((int) linked.colors()[0], NORTH, "o lado da do Norte");
                     helper.assertValueEqual(linked.machines()[1], helper.absolutePos(south).asLong(), "a do Sul");
-                    helper.assertValueEqual((int) linked.sides()[1], SOUTH, "o lado da do Sul");
+                    helper.assertValueEqual((int) linked.colors()[1], SOUTH, "o lado da do Sul");
 
                     click(helper, player, south, Direction.UP);
                     helper.assertValueEqual(DockReachSync.payload(dock, 0).machines().length, 1,
@@ -469,7 +470,7 @@ public final class DockLinkGameTests {
                 .thenSucceed();
     }
 
-    /** O pacote leva no máximo {@link DockReachPayload#MAX_MACHINES} máquinas, mesmo com a Doca acima disso. */
+    /** O pacote leva no máximo {@link LinkerReachPayload#MAX_MACHINES} máquinas, mesmo com a Doca acima disso. */
     @GameTest(template = "empty", timeoutTicks = 100)
     public static void reachPayloadCapped(GameTestHelper helper) {
         PatternDockBlockEntity dock = dock(helper, DOCK, RouterTier.ULTIMATE);
@@ -480,15 +481,15 @@ public final class DockLinkGameTests {
                     BlockPos origin = helper.absolutePos(DOCK);
                     int below = helper.getLevel().getMinBuildHeight() - 1;
                     dock.batchChanges(() -> {
-                        for (int i = 0; i < DockReachPayload.MAX_MACHINES + 4; i++) {
+                        for (int i = 0; i < LinkerReachPayload.MAX_MACHINES + 4; i++) {
                             dock.link(NORTH, new BlockPos(origin.getX(), below - i, origin.getZ()),
                                     BuiltInRegistries.BLOCK.getKey(Blocks.FURNACE), -1);
                         }
                     });
-                    DockReachPayload payload = DockReachSync.payload(dock, 0);
-                    helper.assertValueEqual(dock.machineCount(), DockReachPayload.MAX_MACHINES + 4, "as vinculadas");
-                    helper.assertValueEqual(payload.machines().length, DockReachPayload.MAX_MACHINES, "o teto");
-                    helper.assertValueEqual(payload.sides().length, DockReachPayload.MAX_MACHINES, "os lados");
+                    LinkerReachPayload payload = DockReachSync.payload(dock, 0);
+                    helper.assertValueEqual(dock.machineCount(), LinkerReachPayload.MAX_MACHINES + 4, "as vinculadas");
+                    helper.assertValueEqual(payload.machines().length, LinkerReachPayload.MAX_MACHINES, "o teto");
+                    helper.assertValueEqual(payload.colors().length, LinkerReachPayload.MAX_MACHINES, "as cores");
                 })
                 .thenSucceed();
     }

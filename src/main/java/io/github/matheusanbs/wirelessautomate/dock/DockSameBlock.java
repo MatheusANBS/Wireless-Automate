@@ -203,9 +203,8 @@ public final class DockSameBlock {
     // ------------------------------------------------------------------ mensagens
 
     /**
-     * {@code Vinculou 8 Fornalhas ao lado Norte · 8/8 máquinas · limite do tier}, {@code Vinculou 8 de 9 …} (com o
-     * grupo inteiro lido) ou, sem nenhuma nova, as chaves {@code none} do roteador; mais as protegidas, as de outra
-     * Doca, os chunks descarregados e o teto.
+     * {@code Vinculou 8 Fornalhas ao lado Norte · 8/8 máquinas · limite do tier} ou, sem nenhuma nova, as chaves
+     * {@code none} do roteador; mais as protegidas, as de outra Doca, os chunks descarregados e o teto.
      */
     static MutableComponent message(PatternDockBlockEntity dock, int side, Block block, Result result, int found,
             Scan scan) {
@@ -216,13 +215,9 @@ public final class DockSameBlock {
         if (found == 0) {
             text = Component.translatable(RANGE_KEY + (scan.capped() ? "none.capped" : "none"), single);
         } else {
-            boolean of = limit && scan.complete() && found > linked;
-            Component name = linked == 1 && !of ? single : SameBlockLinks.plural(block, single);
-            String key = of ? (linked == 1 ? "linked_of.one" : "linked_of") : (linked == 1 ? "linked.one" : "linked");
-            text = of ? Component.translatable(KEY + key, linked, found, name, DockLinks.sideName(side),
-                    dock.activeCount(), DockLinks.max(dock))
-                    : Component.translatable(KEY + key, linked, name, DockLinks.sideName(side), dock.activeCount(),
-                            DockLinks.max(dock));
+            text = Component.translatable(KEY + (linked == 1 ? "linked.one" : "linked"), linked,
+                    linked == 1 ? single : SameBlockLinks.plural(block, single), DockLinks.sideName(side),
+                    dock.activeCount(), DockLinks.max(dock));
             if (limit) {
                 text.append(" · ").append(Component.translatable(RANGE_KEY + "limit"));
             }

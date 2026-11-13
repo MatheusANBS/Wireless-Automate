@@ -28,7 +28,7 @@ Pedido e decidido pelo dono em 13/11/2026 (mockup aprovado: `docs/preview/vincul
   - `range.same.none`: `%s: todas as que se tocam já estão vinculadas` / `%s: all the touching ones are already linked`;
   - `range.same.none.capped`: `%s: nenhuma nova no grupo lido` / `%s: no new ones in the part of the group read`;
   - `range.same.capped`: `o resto do grupo não foi procurado` / `the rest of the group was not searched`.
-  Os textos de vinculou e desvinculou não mudam.
+  Os textos de desvinculou não mudam. O de vinculou perde a variante "Vinculou 32 de 47" (decisão do dono, 13/11, depois da execução): a busca para numa além das vagas e não sabe o tamanho do grupo, então com o limite o aviso é `Vinculou 32 Fornalhas · limite do tier`; as chaves `linked_of` e `linked_of.one` do roteador e da Doca saíram.
 - O que não muda: o gesto no cliente (`LinkerSameBlockInput`), o pacote (`LinkSameBlockPayload`), o descanso de 10 ticks, as conferências do servidor e as recusas do clicado.
 
 ## Custo

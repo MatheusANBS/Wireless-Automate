@@ -1092,6 +1092,7 @@
   "item.wirelessautomate.linker.range.same.linked": "Vinculou %s %s",
   "item.wirelessautomate.linker.range.same.none": "%s: todas as que se tocam já estão vinculadas",
   "item.wirelessautomate.linker.range.same.none.capped": "%s: nenhuma nova no grupo lido",
+  "item.wirelessautomate.linker.range.same.none.taken": "%s: as que se tocam já são de outro dono",
   "item.wirelessautomate.linker.range.same.unlinked": "Desvinculou %s %s de %s · %s/%s máquinas",
   "item.wirelessautomate.linker.range.same.unlinked.one": "Desvinculou %s %s de %s · %s/%s máquinas",
   "item.wirelessautomate.linker.range.same.unlinked.none": "%s: nenhuma vinculada a %s",

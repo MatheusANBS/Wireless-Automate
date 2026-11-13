@@ -12,6 +12,7 @@ import io.github.matheusanbs.wirelessautomate.dock.DockLinks;
 import io.github.matheusanbs.wirelessautomate.dock.DockSameBlock;
 import io.github.matheusanbs.wirelessautomate.dock.PatternDockBlockEntity;
 import io.github.matheusanbs.wirelessautomate.item.LinkerItem;
+import io.github.matheusanbs.wirelessautomate.linker.LinkerActions;
 import io.github.matheusanbs.wirelessautomate.range.RangeLinks;
 import io.github.matheusanbs.wirelessautomate.range.RangeTiers;
 import io.github.matheusanbs.wirelessautomate.range.SameBlockLinks;
@@ -40,7 +41,8 @@ import org.jetbrains.annotations.Nullable;
  * O Ctrl + clique pelas que se tocam ({@link SameBlockScan}, pelo {@link SameBlockLinks} e pelo
  * {@link DockSameBlock}): pela face, pela aresta e pela ponta; o grupo passa pelas que não entram; as de outro
  * roteador não gastam a busca; o raio corta o grupo; com o limite, entram as mais perto da clicada; o desvincular tira
- * só o grupo, mesmo fora do raio; na Doca, o mesmo; e o custo, as leituras proporcionais ao grupo. O roteador é o de
+ * só o grupo, mesmo fora do raio; na Doca, o mesmo, as de outra Doca também sem gastar a busca, e o grupo todo de
+ * outra Doca dá a recusa do clique simples; e o custo, as leituras proporcionais ao grupo. O roteador é o de
  * {@link RangeTestSupport#chestWithRouter} (em (1, 2, 1), preso no baú em (1, 1, 1)).
  */
 @GameTestHolder(WirelessAutomate.MODID)
@@ -360,6 +362,112 @@ public final class TouchingLinkGameTests {
             helper.assertValueEqual(dock.machineAt(helper.absolutePos(pos)) != null, expected,
                     "a fornalha " + pos + " na Doca");
         }
+    }
+
+    private static PatternDockBlockEntity basicDock(GameTestHelper helper, BlockPos relative) {
+        helper.setBlock(relative, ModBlocks.PATTERN_DOCK.get().defaultBlockState().setValue(RouterBlock.TIER,
+                RouterTier.BASIC));
+        return helper.getBlockEntity(relative);
+    }
+
+    /** Um jogador em sobrevivência em cima do template, com o Vinculador na mão (sem nada escolhido). */
+    private static TestPlayers.MenuPlayer dockPlayer(GameTestHelper helper) {
+        TestPlayers.MenuPlayer player = TestPlayers.survivalMenuOpener(helper);
+        player.moveTo(helper.absoluteVec(new Vec3(2.5, 3, 1.5)));
+        player.setItemInHand(InteractionHand.MAIN_HAND, machinesLinker());
+        return player;
+    }
+
+    /** O Vinculador do jogador com o lado Norte da Doca em {@code dock} escolhido. */
+    private static void chooseDock(GameTestHelper helper, TestPlayers.MenuPlayer player, BlockPos dock) {
+        LinkerItem.setDock(player.getMainHandItem(), new DockChoice(GlobalPos.of(helper.getLevel().dimension(),
+                helper.absolutePos(dock)), Direction.NORTH.ordinal()));
+    }
+
+    /** O clique simples do Vinculador em cada uma, com a Doca já escolhida: todas entram nela. */
+    private static void dockLink(GameTestHelper helper, TestPlayers.MenuPlayer player, PatternDockBlockEntity dock,
+            BlockPos... positions) {
+        for (BlockPos pos : positions) {
+            DockLinks.Result result = DockLinks.toggle(player, player.getMainHandItem(), helper.absolutePos(pos));
+            helper.assertTrue(dock.machineAt(helper.absolutePos(pos)) != null, "não entrou na Doca: " + result);
+        }
+    }
+
+    /**
+     * Na Doca, com vaga para uma e as duas mais perto da clicada (ela e a vizinha) de outra Doca, a livre logo depois
+     * delas entra: as de outra Doca não contam para a busca, e nenhuma fica "além do limite".
+     */
+    @GameTest(template = "empty", timeoutTicks = 300, batch = "wirelessautomate_config_touching_dock_taken")
+    public static void touchingOtherDockDoesNotUseUpTheSearch(GameTestHelper helper) {
+        BlockPos chosenPos = new BlockPos(0, 1, 0);
+        BlockPos otherPos = new BlockPos(0, 1, 4);
+        PatternDockBlockEntity chosen = basicDock(helper, chosenPos);
+        PatternDockBlockEntity other = basicDock(helper, otherPos);
+        BlockPos taken1 = new BlockPos(1, 1, 2);
+        BlockPos taken2 = new BlockPos(2, 1, 2);
+        BlockPos free = new BlockPos(3, 1, 2);
+        furnaces(helper, taken1, taken2, free);
+        // a Doca Básica lê o limite do Avançado
+        var max = Config.TIERS.get(RouterTier.ADVANCED).maxMachines();
+        helper.startSequence()
+                .thenIdle(1)
+                .thenExecute(() -> {
+                    TestPlayers.MenuPlayer player = dockPlayer(helper);
+                    chooseDock(helper, player, otherPos);
+                    dockLink(helper, player, other, taken1, taken2);
+                    int before = max.get();
+                    try {
+                        max.set(1);
+                        chooseDock(helper, player, chosenPos);
+                        DockLinks.Result result = dockCtrlClick(helper, player, taken1);
+                        helper.assertTrue(result != null && result.linked() == 1 && result.otherDock() == 2
+                                && result.overLimit() == 0, "resultado " + result);
+                        assertInDock(helper, chosen, true, List.of(free));
+                        assertInDock(helper, chosen, false, List.of(taken1, taken2));
+                        helper.assertFalse(hasPart(player.actionBar, KEY + "limit"),
+                                "acusou o limite: " + player.actionBar);
+                        helper.assertTrue(hasPart(player.actionBar,
+                                "item.wirelessautomate.linker.dock.same.other_dock"),
+                                "sem o aviso de outra Doca: " + player.actionBar);
+                    } finally {
+                        max.set(before);
+                    }
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Na Doca, o Ctrl + clique numa fila toda de outra Doca: a recusa do clique simples, com a posição da outra, e nada
+     * entra.
+     */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void touchingDockGroupAllOfAnotherDockIsRefused(GameTestHelper helper) {
+        BlockPos chosenPos = new BlockPos(0, 1, 0);
+        BlockPos otherPos = new BlockPos(0, 1, 4);
+        PatternDockBlockEntity chosen = basicDock(helper, chosenPos);
+        PatternDockBlockEntity other = basicDock(helper, otherPos);
+        List<BlockPos> row = List.of(new BlockPos(1, 1, 2), new BlockPos(2, 1, 2));
+        furnaces(helper, row.toArray(BlockPos[]::new));
+        helper.startSequence()
+                .thenIdle(1)
+                .thenExecute(() -> {
+                    TestPlayers.MenuPlayer player = dockPlayer(helper);
+                    chooseDock(helper, player, otherPos);
+                    dockLink(helper, player, other, row.toArray(BlockPos[]::new));
+                    chooseDock(helper, player, chosenPos);
+                    DockLinks.Result result = dockCtrlClick(helper, player, row.get(0));
+                    helper.assertTrue(result != null && result.status() == DockLinks.Status.REFUSED
+                            && result.refusal() == DockLinks.Refusal.OTHER_DOCK, "resultado " + result);
+                    helper.assertTrue(player.actionBar != null && player.actionBar.getContents()
+                            instanceof TranslatableContents c
+                            && c.getKey().equals("item.wirelessautomate.linker.dock.refusal.other_dock")
+                            && c.getArgs()[2] instanceof Component position && position.getString()
+                                    .equals(LinkerActions.position(other.getBlockPos()).getString()),
+                            "a mensagem: " + player.actionBar);
+                    assertInDock(helper, chosen, false, row);
+                    assertInDock(helper, other, true, row);
+                })
+                .thenSucceed();
     }
 
     /**

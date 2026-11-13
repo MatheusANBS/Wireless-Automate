@@ -27,8 +27,9 @@ roteador que chega numa máquina.
    vazio, os cartões dele voltam para o seu inventário. Uma máquina é de um roteador só: se ela já é de
    outro (vinculada ou presa nele), a action bar diz de qual.
 3. Para vincular todas as máquinas iguais de uma vez, segure **Ctrl** (**Cmd** no Mac) e clique numa
-   delas: entram as do mesmo bloco **encostadas nela** (pela face ou pela quina) e dentro do raio do
-   roteador, as mais perto primeiro, até o limite do tier. A action bar diz quantas, por exemplo
+   delas: entram as do mesmo bloco **encostadas nela ou umas nas outras** (pela face, pela aresta ou
+   pela ponta), como uma fila ou uma parede, e dentro do raio do roteador, as mais perto **da clicada**
+   primeiro, até o limite do tier. A action bar diz quantas, por exemplo
    **Vinculou 7 Fornalhas**; se o limite cortou, **Vinculou 32 Fornalhas · limite do tier**. Correndo, o Ctrl é o da
    corrida e o clique vale como um clique normal.
 4. Para desvincular as encostadas de uma vez, faça o mesmo gesto numa máquina que já está

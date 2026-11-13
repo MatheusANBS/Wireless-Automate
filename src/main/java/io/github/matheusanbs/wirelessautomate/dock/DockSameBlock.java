@@ -36,9 +36,10 @@ import org.jetbrains.annotations.Nullable;
  * bloco que se tocam com a clicada (pela face, pela aresta ou pela ponta, {@link SameBlockScan}) dentro do cubo do
  * tier, da mais perto da clicada para a mais longe, até o limite. O grupo passa pelas que não entram: as já no lado,
  * as dos outros lados desta Doca e as de outra Doca ({@link DockLinks#otherDock}, que contam no aviso
- * {@code same.other_dock}). Refaz as conferências do clique (item, modo, distância do jogador ao bloco, Doca
- * escolhida, {@code mayBuild}/{@code mayInteract} e as recusas do {@link DockLinks}), com o mesmo descanso do
- * roteador ({@link SameBlockLinks#COOLDOWN_TICKS}).
+ * {@code same.other_dock}). Sem nenhuma livre nem já no lado e com alguma de outra Doca, a clicada de outra Doca dá a
+ * recusa do clique simples ({@code refusal.other_dock}). Refaz as conferências do clique (item, modo, distância do
+ * jogador ao bloco, Doca escolhida, {@code mayBuild}/{@code mayInteract} e as recusas do {@link DockLinks}), com o
+ * mesmo descanso do roteador ({@link SameBlockLinks#COOLDOWN_TICKS}).
  *
  * <p>Custo, só no clique: a busca do {@link SameBlockScan} pelo grupo, até 26 leituras por posição, com o teto
  * {@link SameBlockScan#MAX_READS}; a outra Doca é conferida em cada uma do grupo que não é desta Doca. A capability e
@@ -85,7 +86,8 @@ public final class DockSameBlock {
         }
         // a clicada serve de modelo: se ela é de outra Doca, fica de fora, e as que se tocam com ela entram
         Refusal refusal = DockLinks.machineRefusal(level, dock, side, pos);
-        if (refusal == Refusal.OTHER_DOCK) {
+        boolean clickedTaken = refusal == Refusal.OTHER_DOCK;
+        if (clickedTaken) {
             refusal = Refusal.NONE;
         }
         int distance = DockLinks.distance(dock, pos);
@@ -117,6 +119,10 @@ public final class DockSameBlock {
         }
         if (!candidates.isEmpty() && room <= 0) {
             return DockLinks.refuse(player, Result.refused(Refusal.LIMIT), dock, side, pos, 0);
+        }
+        if (clickedTaken && candidates.isEmpty() && scan.already() == 0 && scan.taken() > 0) {
+            // o grupo todo é de outra Doca: a recusa do clique simples
+            return DockLinks.refuse(player, Result.refused(Refusal.OTHER_DOCK), dock, side, pos, 0);
         }
 
         boolean first = DockLinks.isEmpty(dock.side(side));
@@ -168,7 +174,8 @@ public final class DockSameBlock {
     /**
      * O Ctrl + clique numa máquina do lado escolhido: tira do lado as do grupo que se toca com a clicada
      * ({@link SameBlockScan}, sem o corte do raio: uma encostada fora do cubo também sai). Como o desvincular de um
-     * clique, basta poder mexer na Doca. Lê o grupo, com o teto {@link SameBlockScan#MAX_READS}.
+     * clique, basta poder mexer na Doca. Lê o grupo, com o teto {@link SameBlockScan#MAX_READS}; parado no teto, o
+     * aviso diz que o resto do grupo não foi procurado.
      */
     private static Result unlink(ServerPlayer player, PatternDockBlockEntity dock, int side, BlockPos pos) {
         if (!RangeLinks.mayEdit(player, dock.getBlockPos())) {
@@ -183,8 +190,9 @@ public final class DockSameBlock {
                 inSide.add(machine.pos().asLong());
             }
         }
-        LongArrayList machines = SameBlockScan.scan(player, pos, dock.getBlockPos(), SameBlockScan.NO_RADIUS, block,
-                inSide, LongSets.EMPTY_SET, key -> false, Integer.MAX_VALUE).linkedPositions();
+        Scan scan = SameBlockScan.scan(player, pos, dock.getBlockPos(), SameBlockScan.NO_RADIUS, block, inSide,
+                LongSets.EMPTY_SET, key -> false, Integer.MAX_VALUE);
+        LongArrayList machines = scan.linkedPositions();
         dock.batchChanges(() -> {
             for (int i = 0; i < machines.size(); i++) {
                 dock.unlink(side, BlockPos.of(machines.getLong(i)));
@@ -192,9 +200,10 @@ public final class DockSameBlock {
         });
         Component single = RouterBlock.machineName(block);
         int count = machines.size();
-        player.displayClientMessage(Component.translatable(KEY + (count == 1 ? "unlinked.one" : "unlinked"), count,
+        player.displayClientMessage(SameBlockLinks.capped(Component.translatable(
+                KEY + (count == 1 ? "unlinked.one" : "unlinked"), count,
                 count == 1 ? single : SameBlockLinks.plural(block, single), DockLinks.sideName(side),
-                dock.activeCount(), DockLinks.max(dock)), true);
+                dock.activeCount(), DockLinks.max(dock)), scan), true);
         level.playSound(null, pos, SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.BLOCKS, 0.5F, 0.8F);
         DockReachSync.send(player, dock, 0);
         return new Result(Status.SAME_BLOCK_UNLINKED, Refusal.NONE, count, 0, 0, 0, 0, 0);
@@ -204,7 +213,8 @@ public final class DockSameBlock {
 
     /**
      * {@code Vinculou 8 Fornalhas ao lado Norte · 8/8 máquinas · limite do tier} ou, sem nenhuma nova, as chaves
-     * {@code none} do roteador; mais as protegidas, as de outra Doca, os chunks descarregados e o teto.
+     * {@code none} do roteador ({@link SameBlockLinks#noneKey}); mais as protegidas, as de outra Doca, os chunks
+     * descarregados e o teto.
      */
     static MutableComponent message(PatternDockBlockEntity dock, int side, Block block, Result result, int found,
             Scan scan) {
@@ -213,7 +223,7 @@ public final class DockSameBlock {
         int linked = result.linked();
         boolean limit = result.overLimit() > 0;
         if (found == 0) {
-            text = Component.translatable(RANGE_KEY + (scan.capped() ? "none.capped" : "none"), single);
+            text = Component.translatable(RANGE_KEY + SameBlockLinks.noneKey(scan), single);
         } else {
             text = Component.translatable(KEY + (linked == 1 ? "linked.one" : "linked"), linked,
                     linked == 1 ? single : SameBlockLinks.plural(block, single), DockLinks.sideName(side),
@@ -225,9 +235,6 @@ public final class DockSameBlock {
         RangeLinks.appendCount(text, "area.protected", result.protectedCount());
         DockLinks.appendCount(text, "same.other_dock", result.otherDock());
         RangeLinks.appendCount(text, "area.unloaded", result.unloadedChunks());
-        if (scan.capped()) {
-            text.append(" · ").append(Component.translatable(RANGE_KEY + "capped"));
-        }
-        return text;
+        return SameBlockLinks.capped(text, scan);
     }
 }

@@ -26,8 +26,8 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class SameBlockScan {
     /**
-     * Teto de leituras de vizinho por clique (o mesmo das 32 seções inteiras da varredura do cubo): um grupo de
-     * umas 5.000 posições. Uma posição pulada pela altura, pelo raio ou por um chunk descarregado também conta.
+     * Teto de leituras de vizinho por clique, 131.072: um grupo de umas 5.000 posições. Uma posição pulada pela altura,
+     * pelo raio ou por um chunk descarregado também conta.
      */
     public static final int MAX_READS = 32 * 4096;
     /** Sem o corte do raio (o desvincular). */

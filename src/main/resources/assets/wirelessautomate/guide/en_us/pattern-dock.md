@@ -24,7 +24,8 @@ recipe. Each **side** of the Dock handles **one kind of machine**. It needs **AE
 1. Place the Dock and put an AE2 **Pattern Provider** (or an RS2 **Autocrafter**, facing it) against one of its
    sides.
 2. With the [Linker](linker.md), click **that side** of the Dock. Then **Ctrl + click** a machine: the matching ones
-   **touching it** join that side. A plain click links just one machine; on an already linked one, it unlinks it.
+   **touching it or each other** (by a face, an edge or a corner), like a row or a wall, join that side, nearest
+   **to the clicked one** first. A plain click links just one machine; on an already linked one, it unlinks it.
 3. Put **the patterns for those machines** in the provider. Done: the AE2 crafting CPU (or the RS2 network) can now
    ask for them.
 

@@ -35,7 +35,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * O alcance de um {@link RouterBlockEntity} com o Upgrade de Alcance: vincular e desvincular máquinas remotas,
  * a exceção de uma máquina, a frente de cada remota (relida quando ela avisa ou quando um cache é
- * invalidado), os caches de capability delas ({@link RouterRemoteCaches}) e o registro no {@link RemoteIndex}.
+ * invalidado), os caches de capability delas ({@link RouterRemoteCaches}) e o registro no {@link RemoteIndex} (as
+ * ativas) e no índice de donos {@link RouterOwners} (todas as vinculadas, refeito quando as remotas mudam).
  * Nenhuma remota é lida sem o chunk carregado. A remota que sai do lugar (quebrada, trocada por outro bloco) é
  * desvinculada sozinha pela conferência {@link GoneCheck}, a partir dos mesmos avisos e da carga do roteador.
  */

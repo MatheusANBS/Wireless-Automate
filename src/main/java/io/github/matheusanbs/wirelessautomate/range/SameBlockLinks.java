@@ -34,7 +34,9 @@ import org.jetbrains.annotations.Nullable;
  * pela ponta, {@link SameBlockScan}) dentro do raio do tier, da mais perto da clicada para a mais longe, até o limite.
  * O grupo passa pelas que não entram: as já vinculadas, a presa e as que já são de outro roteador
  * ({@link RouterOwners#otherRouter}), que não ocupam vaga e contam no aviso {@code same.other_router}; a clicada de
- * outro roteador não recusa o pedido: ela fica de fora e as que se tocam com ela entram. O servidor não sabe do Ctrl,
+ * outro roteador não recusa o pedido: ela fica de fora e as que se tocam com ela entram. Só sem nenhuma livre nem já
+ * vinculada no grupo e com alguma de outro dono, a clicada de outro roteador dá a recusa do clique simples
+ * ({@code refusal.other_router}); a presa clicada dá o aviso {@code same.none.taken}. O servidor não sabe do Ctrl,
  * então o cliente cancela o uso normal e manda o pacote; aqui se refazem todas as conferências do clique (item, modo,
  * distância do jogador ao bloco, roteador escolhido, {@code mayBuild}/{@code mayInteract}, as recusas do
  * {@link RangeLinks}).
@@ -81,7 +83,7 @@ public final class SameBlockLinks {
         if (!RangeLinks.mayEdit(player, pos) || !RangeLinks.mayEdit(player, router.getBlockPos())) {
             return RangeLinks.refuse(player, Result.refused(LinkRefusal.PROTECTED), router, 0);
         }
-        // a presa clicada serve de modelo: ela fica de fora e as outras do mesmo bloco entram
+        // a presa clicada serve de modelo: ela fica de fora e as que se tocam com ela entram
         LinkRefusal refusal = RangeLinks.machineRefusal(level, router, pos, LoadedTypes.LIST);
         if (refusal == LinkRefusal.ATTACHED) {
             refusal = LinkRefusal.NONE;
@@ -107,6 +109,13 @@ public final class SameBlockLinks {
         }
         if (!candidates.isEmpty() && room <= 0) {
             return RangeLinks.refuse(player, Result.refused(LinkRefusal.LIMIT), router, 0);
+        }
+        if (candidates.isEmpty() && scan.already() == 0 && scan.taken() > 0) {
+            // o grupo todo é de outro dono: com a clicada de outro roteador, a recusa do clique simples
+            RouterBlockEntity other = RouterOwners.otherRouter(level, router, pos);
+            if (other != null) {
+                return RangeLinks.refuseOtherRouter(player, pos, other);
+            }
         }
 
         int[] counts = new int[3]; // vinculadas, além do limite, protegidas pelo evento de clique
@@ -143,7 +152,8 @@ public final class SameBlockLinks {
      * O Ctrl + clique numa máquina já vinculada: tira do roteador as vinculadas do grupo que se toca com a clicada
      * ({@link SameBlockScan}, sem o corte do raio: uma encostada fora do raio também sai; a presa fica). Como o
      * desvincular de um clique, basta poder mexer no roteador e não exige o upgrade valendo; os cartões dos grupos que
-     * esvaziam vão para o jogador. Lê o grupo, com o teto {@link SameBlockScan#MAX_READS}.
+     * esvaziam vão para o jogador. Lê o grupo, com o teto {@link SameBlockScan#MAX_READS}; parado no teto, o aviso diz
+     * que o resto do grupo não foi procurado.
      */
     private static Result unlink(ServerPlayer player, RouterBlockEntity router, BlockPos pos) {
         if (!RangeLinks.mayEdit(player, router.getBlockPos())) {
@@ -151,8 +161,9 @@ public final class SameBlockLinks {
         }
         ServerLevel level = player.serverLevel();
         Block block = level.getBlockState(pos).getBlock();
-        LongArrayList same = SameBlockScan.scan(player, pos, router.getBlockPos(), SameBlockScan.NO_RADIUS, block,
-                linked(router), LongSets.EMPTY_SET, key -> false, Integer.MAX_VALUE).linkedPositions();
+        Scan scan = SameBlockScan.scan(player, pos, router.getBlockPos(), SameBlockScan.NO_RADIUS, block,
+                linked(router), LongSets.EMPTY_SET, key -> false, Integer.MAX_VALUE);
+        LongArrayList same = scan.linkedPositions();
         RemoteMachines remotes = router.remoteMachines();
         int[] cards = new int[1];
         router.batchChanges(() -> {
@@ -166,7 +177,7 @@ public final class SameBlockLinks {
                 : Component.translatable(KEY + (same.size() == 1 ? "unlinked.one" : "unlinked"), same.size(),
                         same.size() == 1 ? single : plural(block, single), RangeLinks.routerName(router),
                         RangeLinks.used(router), RangeLinks.max(router));
-        player.displayClientMessage(RangeLinks.withCards(text, cards[0]), true);
+        player.displayClientMessage(capped(RangeLinks.withCards(text, cards[0]), scan), true);
         if (!same.isEmpty()) {
             level.playSound(null, pos, SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.BLOCKS, 0.5F, 0.8F);
         }
@@ -197,16 +208,15 @@ public final class SameBlockLinks {
 
     /**
      * {@code Vinculou 7 Fornalhas}, {@code Vinculou 32 Fornalhas · limite do tier} (a busca para numa além das vagas,
-     * então não sabe o tamanho do grupo) ou, sem nenhuma nova, {@code Fornalha: todas as que se tocam já estão vinculadas} ou
-     * {@code Fornalha: nenhuma nova no grupo lido} (parada no teto); mais as protegidas, as de outro roteador, os
-     * chunks descarregados e o teto.
+     * então não sabe o tamanho do grupo) ou, sem nenhuma nova, o texto do {@link #noneKey}; mais as protegidas, as de
+     * outro roteador, os chunks descarregados e o teto.
      */
     static MutableComponent message(Block block, Result result, int found, Scan scan, boolean limit) {
         Component single = RouterBlock.machineName(block);
         MutableComponent text;
         int linked = result.linked();
         if (found == 0) {
-            text = Component.translatable(KEY + (scan.capped() ? "none.capped" : "none"), single);
+            text = Component.translatable(KEY + noneKey(scan), single);
         } else {
             text = Component.translatable(KEY + (linked == 1 ? "linked.one" : "linked"), linked,
                     linked == 1 ? single : plural(block, single));
@@ -217,6 +227,24 @@ public final class SameBlockLinks {
         RangeLinks.appendCount(text, "area.protected", result.protectedCount());
         RangeLinks.appendCount(text, "same.other_router", result.otherRouter());
         RangeLinks.appendCount(text, "area.unloaded", result.unloadedChunks());
+        return capped(text, scan);
+    }
+
+    /**
+     * O aviso sem nenhuma nova (roteador e Doca), depois de {@code range.same.}: {@code none.capped}
+     * ({@code Fornalha: nenhuma nova no grupo lido}, parada no teto), {@code none.taken} ({@code Fornalha: as que se
+     * tocam já são de outro dono}: nenhuma já vinculada e alguma de outro dono) ou {@code none}
+     * ({@code Fornalha: todas as que se tocam já estão vinculadas}).
+     */
+    public static String noneKey(Scan scan) {
+        if (scan.capped()) {
+            return "none.capped";
+        }
+        return scan.already() == 0 && scan.taken() > 0 ? "none.taken" : "none";
+    }
+
+    /** {@code text}, mais {@code · o resto do grupo não foi procurado} se a varredura parou no teto. */
+    public static MutableComponent capped(MutableComponent text, Scan scan) {
         if (scan.capped()) {
             text.append(" · ").append(Component.translatable(KEY + "capped"));
         }

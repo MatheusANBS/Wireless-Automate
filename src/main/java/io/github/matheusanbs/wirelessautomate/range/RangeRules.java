@@ -66,7 +66,8 @@ public final class RangeRules {
         NONE, NO_UPGRADE, NO_RANGE, OTHER_DIMENSION, OUT_OF_RANGE, LIMIT, NOT_A_MACHINE, SELF, ROUTER, ATTACHED, PROTECTED,
         /**
          * A máquina já é de outro roteador (vinculada ou presa). O texto leva o nome da máquina, o do outro roteador e a
-         * posição dele, que o {@code RangeLinks.refusalText} genérico não monta: o {@code toggle} o mostra direto.
+         * posição dele, que o {@code RangeLinks.refusalText} genérico não monta: o {@code RangeLinks.refuseOtherRouter}
+         * o mostra direto.
          */
         OTHER_ROUTER;
 

@@ -34,13 +34,17 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Uma máquina, um roteador, pelo caminho do Vinculador ({@link RangeLinks#toggle} e {@link SameBlockLinks}): a
  * vinculada a outro roteador (ativa ou não), a presa dele, a duplicada de antes que ainda desvincula, o roteador
- * quebrado e o Ctrl + clique com uma de outro roteador no meio de uma fila. A Doca não conta.
+ * quebrado, a recusa do upgrade antes da de outro roteador e o Ctrl + clique com uma de outro roteador no meio de uma
+ * fila, numa fila toda dele e a partir da presa. A Doca não conta.
  */
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
 public final class OneOwnerLinkGameTests {
     private static final String REFUSAL = "item.wirelessautomate.linker.range.refusal.other_router";
     private static final String SAME = "item.wirelessautomate.linker.range.same.other_router";
+    private static final String NONE_TAKEN = "item.wirelessautomate.linker.range.same.none.taken";
+    /** O nome do roteador dono nas recusas: o escolhido fica sem nome, então a mensagem só o tem se for do dono. */
+    private static final String OWNER_NAME = "Forja Norte";
     private static final BlockPos CHEST_A = new BlockPos(1, 1, 1);
     private static final BlockPos CHEST_B = new BlockPos(5, 1, 1);
     private static final BlockPos FURNACE = new BlockPos(3, 1, 4);
@@ -84,21 +88,27 @@ public final class OneOwnerLinkGameTests {
                 instanceof TranslatableContents c && c.getKey().equals(key));
     }
 
-    /** A recusa {@code OTHER_ROUTER}: a chave, o nome da máquina, o nome e a posição do outro; a máquina não entra. */
-    private static void assertRefusedFor(GameTestHelper helper, TestPlayers.MenuPlayer player, RouterBlockEntity chosen,
-            RouterBlockEntity owner, BlockPos furnace, String what) {
-        RangeLinks.Result result = toggle(helper, player, furnace);
-        helper.assertTrue(result.status() == RangeLinks.Status.REFUSED && result.refusal() == LinkRefusal.OTHER_ROUTER,
-                what + ": resultado " + result);
+    /** A recusa {@code OTHER_ROUTER} em {@code result}: a chave, o nome ({@link #OWNER_NAME}) e a posição do dono. */
+    private static void assertOtherRouter(GameTestHelper helper, TestPlayers.MenuPlayer player,
+            RangeLinks.@Nullable Result result, RouterBlockEntity owner, String what) {
+        helper.assertTrue(result != null && result.status() == RangeLinks.Status.REFUSED
+                && result.refusal() == LinkRefusal.OTHER_ROUTER, what + ": resultado " + result);
         helper.assertTrue(player.actionBar != null && player.actionBar.getContents() instanceof TranslatableContents,
                 what + ": sem mensagem traduzível: " + player.actionBar);
         TranslatableContents text = (TranslatableContents) player.actionBar.getContents();
         helper.assertValueEqual(text.getKey(), REFUSAL, what + ": a chave");
         helper.assertTrue(text.getArgs().length == 3, what + ": argumentos " + text.getArgs().length);
-        helper.assertTrue(text.getArgs()[1] instanceof Component name
-                && name.getString().equals(RangeLinks.routerName(owner).getString()), what + ": o nome do outro");
+        helper.assertTrue(text.getArgs()[1] instanceof Component name && name.getString().equals(OWNER_NAME),
+                what + ": o nome do dono: " + text.getArgs()[1]);
         helper.assertTrue(text.getArgs()[2] instanceof Component position && position.getString()
                 .equals(LinkerActions.position(owner.getBlockPos()).getString()), what + ": a posição do outro");
+    }
+
+    /** O clique simples em {@code furnace}, com o dono já com nome: a recusa, e a máquina não entra. */
+    private static void assertRefusedFor(GameTestHelper helper, TestPlayers.MenuPlayer player, RouterBlockEntity chosen,
+            RouterBlockEntity owner, BlockPos furnace, String what) {
+        owner.setName(OWNER_NAME);
+        assertOtherRouter(helper, player, toggle(helper, player, furnace), owner, what);
         helper.assertFalse(linked(helper, chosen, furnace), what + ": entrou no escolhido");
     }
 
@@ -135,9 +145,14 @@ public final class OneOwnerLinkGameTests {
                 .thenExecute(() -> {
                     a.setRangeUpgrade(rangeUpgrade());
                     b.setRangeUpgrade(rangeUpgrade());
-                    // fora do raio do B: vinculada e inativa
-                    link(helper, b, FAR_FURNACE);
-                    assertRefusedFor(helper, player(helper, a), a, b, FAR_FURNACE, "inativa em outro");
+                    try {
+                        // fora do raio do B: vinculada e inativa
+                        link(helper, b, FAR_FURNACE);
+                        assertRefusedFor(helper, player(helper, a), a, b, FAR_FURNACE, "inativa em outro");
+                    } finally {
+                        // acima da área que o GameTest limpa
+                        helper.setBlock(FAR_FURNACE, Blocks.AIR);
+                    }
                 })
                 .thenSucceed();
     }
@@ -296,6 +311,99 @@ public final class OneOwnerLinkGameTests {
                     helper.assertTrue(linked(helper, a, ROW_0) && linked(helper, a, ROW_2), "as encostadas não entraram");
                     helper.assertFalse(linked(helper, a, ROW_1), "a clicada entrou em A");
                     helper.assertTrue(linked(helper, b, ROW_1), "a clicada saiu de B");
+                })
+                .thenSucceed();
+    }
+
+    /** O Ctrl + clique numa fila toda de B, com A escolhido: a recusa do clique simples, com o nome e o lugar de B. */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void ctrlClickOnAGroupAllOfAnotherRouterIsRefused(GameTestHelper helper) {
+        RouterBlockEntity a = router(helper, CHEST_A);
+        RouterBlockEntity b = router(helper, CHEST_B);
+        for (BlockPos pos : new BlockPos[] {ROW_0, ROW_1, ROW_2}) {
+            helper.setBlock(pos, Blocks.FURNACE);
+        }
+        helper.startSequence()
+                .thenWaitUntil(() -> {
+                    waitLoaded(helper, a);
+                    waitLoaded(helper, b);
+                })
+                .thenExecute(() -> {
+                    a.setRangeUpgrade(rangeUpgrade());
+                    b.setRangeUpgrade(rangeUpgrade());
+                    for (BlockPos pos : new BlockPos[] {ROW_0, ROW_1, ROW_2}) {
+                        link(helper, b, pos);
+                    }
+                    b.setName(OWNER_NAME);
+                    TestPlayers.MenuPlayer player = player(helper, a);
+                    assertOtherRouter(helper, player, ctrlClick(helper, player, ROW_0), b, "Ctrl + clique");
+                    for (BlockPos pos : new BlockPos[] {ROW_0, ROW_1, ROW_2}) {
+                        helper.assertFalse(linked(helper, a, pos), "a fornalha " + pos + " entrou em A");
+                        helper.assertTrue(linked(helper, b, pos), "a fornalha " + pos + " saiu de B");
+                    }
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * O Ctrl + clique na presa de A, com as encostadas nela de B: nada entra, e o aviso diz que as que se tocam já são
+     * de outro dono (não que já estão vinculadas), com quantas ficaram de fora.
+     */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void ctrlClickOnTheAttachedWithTheGroupOfAnotherRouter(GameTestHelper helper) {
+        for (BlockPos pos : new BlockPos[] {ROW_0, ROW_1, ROW_2}) {
+            helper.setBlock(pos, Blocks.FURNACE);
+        }
+        // A de frente para a primeira da fila, sem baú: ela é a presa dele
+        helper.setBlock(ROW_0.above(), ModBlocks.ROUTER.get().defaultBlockState()
+                .setValue(RouterBlock.FACING, Direction.UP).setValue(RouterBlock.TIER, RouterTier.ADVANCED));
+        RouterBlockEntity a = helper.getBlockEntity(ROW_0.above());
+        RouterBlockEntity b = router(helper, CHEST_B);
+        helper.startSequence()
+                .thenWaitUntil(() -> {
+                    waitLoaded(helper, a);
+                    waitLoaded(helper, b);
+                })
+                .thenExecute(() -> {
+                    a.setRangeUpgrade(rangeUpgrade());
+                    b.setRangeUpgrade(rangeUpgrade());
+                    link(helper, b, ROW_1);
+                    link(helper, b, ROW_2);
+                    TestPlayers.MenuPlayer player = player(helper, a);
+                    RangeLinks.Result result = ctrlClick(helper, player, ROW_0);
+                    helper.assertTrue(result != null && result.status() == RangeLinks.Status.SAME_BLOCK_DONE
+                            && result.linked() == 0 && result.otherRouter() == 2, "resultado " + result);
+                    helper.assertTrue(player.actionBar != null && player.actionBar.getContents()
+                            instanceof TranslatableContents c && c.getKey().equals(NONE_TAKEN),
+                            "a mensagem: " + player.actionBar);
+                    helper.assertTrue(hasPart(player.actionBar, SAME), "sem o aviso: " + player.actionBar);
+                    helper.assertFalse(linked(helper, a, ROW_1) || linked(helper, a, ROW_2), "uma de B entrou em A");
+                })
+                .thenSucceed();
+    }
+
+    /** Um roteador sem o upgrade, clicando numa máquina de outro: a recusa é a do upgrade, que vem antes. */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void noUpgradeComesBeforeAnotherRouter(GameTestHelper helper) {
+        RouterBlockEntity a = router(helper, CHEST_A);
+        RouterBlockEntity b = router(helper, CHEST_B);
+        helper.setBlock(FURNACE, Blocks.FURNACE);
+        helper.startSequence()
+                .thenWaitUntil(() -> {
+                    waitLoaded(helper, a);
+                    waitLoaded(helper, b);
+                })
+                .thenExecute(() -> {
+                    b.setRangeUpgrade(rangeUpgrade());
+                    link(helper, b, FURNACE);
+                    TestPlayers.MenuPlayer player = player(helper, a);
+                    RangeLinks.Result result = toggle(helper, player, FURNACE);
+                    helper.assertTrue(result.status() == RangeLinks.Status.REFUSED
+                            && result.refusal() == LinkRefusal.NO_UPGRADE, "resultado " + result);
+                    helper.assertTrue(player.actionBar != null && player.actionBar.getContents()
+                            instanceof TranslatableContents c
+                            && c.getKey().equals("item.wirelessautomate.linker.range.refusal.no_upgrade"),
+                            "a mensagem: " + player.actionBar);
                 })
                 .thenSucceed();
     }

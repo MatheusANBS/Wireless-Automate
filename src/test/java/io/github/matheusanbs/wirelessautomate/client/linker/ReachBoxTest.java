@@ -1,33 +1,33 @@
-package io.github.matheusanbs.wirelessautomate.client.dock;
+package io.github.matheusanbs.wirelessautomate.client.linker;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
-class DockReachBoxTest {
+class ReachBoxTest {
     @Test
     void cubeOfSideTwoRPlusOneAroundTheDock() {
-        assertArrayEquals(new float[] {-6, -6, -6, 7, 7, 7}, DockReachBox.bounds(6, 64, -64, 320));
+        assertArrayEquals(new float[] {-6, -6, -6, 7, 7, 7}, ReachBox.bounds(6, 64, -64, 320));
     }
 
     @Test
     void clippedAtTheBottomAndTopOfTheWorld() {
         // Doca em y = -60, raio 16: o fundo para no y = -64 (4 abaixo dela)
-        assertArrayEquals(new float[] {-16, -4, -16, 17, 17, 17}, DockReachBox.bounds(16, -60, -64, 320));
+        assertArrayEquals(new float[] {-16, -4, -16, 17, 17, 17}, ReachBox.bounds(16, -60, -64, 320));
         // Doca em y = 315, raio 16: o topo para no 320 (5 acima do canto dela)
-        assertArrayEquals(new float[] {-16, -16, -16, 17, 5, 17}, DockReachBox.bounds(16, 315, -64, 320));
+        assertArrayEquals(new float[] {-16, -16, -16, 17, 5, 17}, ReachBox.bounds(16, 315, -64, 320));
     }
 
     @Test
     void radiusZeroIsTheDockItself() {
-        assertArrayEquals(new float[] {0, 0, 0, 1, 1, 1}, DockReachBox.bounds(0, 10, 0, 256));
+        assertArrayEquals(new float[] {0, 0, 0, 1, 1, 1}, ReachBox.bounds(0, 10, 0, 256));
     }
 
     @Test
     void twelveAxisAlignedEdgesOnTheBox() {
         float[] box = {-2, -1, -3, 3, 4, 5};
-        float[] edges = DockReachBox.edges(box);
+        float[] edges = ReachBox.edges(box);
         assertEquals(72, edges.length);
         for (int e = 0; e < 12; e++) {
             int axis = e / 4;
@@ -49,8 +49,8 @@ class DockReachBoxTest {
     @Test
     void distanceToTheBoxIsZeroInside() {
         float[] box = {-6, -6, -6, 7, 7, 7};
-        assertEquals(0, DockReachBox.distanceSqr(box, 0, 0, 0));
-        assertEquals(9, DockReachBox.distanceSqr(box, 10, 0, 0));
-        assertEquals(9 + 16, DockReachBox.distanceSqr(box, 10, -10, 0));
+        assertEquals(0, ReachBox.distanceSqr(box, 0, 0, 0));
+        assertEquals(9, ReachBox.distanceSqr(box, 10, 0, 0));
+        assertEquals(9 + 16, ReachBox.distanceSqr(box, 10, -10, 0));
     }
 }

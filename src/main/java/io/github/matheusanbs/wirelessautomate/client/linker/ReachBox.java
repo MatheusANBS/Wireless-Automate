@@ -1,18 +1,18 @@
-package io.github.matheusanbs.wirelessautomate.client.dock;
+package io.github.matheusanbs.wirelessautomate.client.linker;
 
 /**
- * O cubo do alcance da Doca no mundo ({@link DockReachPaint}): os limites, recortados na altura do mundo, e as 12
- * arestas, relativos ao canto do bloco da Doca. Distância de Chebyshev: o cubo tem lado {@code 2r + 1} e cobre os
+ * O cubo do alcance de um roteador ou de uma Doca no mundo ({@link ReachPaint}): os limites, recortados na altura
+ * do mundo, e as 12 arestas, relativos ao canto do bloco do dono. Distância de Chebyshev: o cubo tem lado {@code 2r + 1} e cobre os
  * blocos de {@code -r} a {@code +r} em cada eixo.
  *
  * <p>Lógica pura, sem classes do Minecraft, para ser testada com JUnit.
  */
-public final class DockReachBox {
-    private DockReachBox() {
+public final class ReachBox {
+    private ReachBox() {
     }
 
     /**
-     * Os limites {@code {x0, y0, z0, x1, y1, z1}} do cubo de raio {@code radius} da Doca na altura {@code dockY},
+     * Os limites {@code {x0, y0, z0, x1, y1, z1}} do cubo de raio {@code radius} do dono na altura {@code dockY},
      * relativos ao canto dela, com o y recortado entre {@code minY} (o primeiro bloco do mundo) e {@code maxY} (o
      * primeiro acima do último). Um cubo todo fora da altura fica achatado no limite (y0 = y1).
      */

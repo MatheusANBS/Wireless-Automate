@@ -112,8 +112,6 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 
 - A descrição do `neoforge.mods.toml` sai em mojibake no jar ("quÃ­micos"): provavelmente o `gradle.properties` lido como ISO-8859-1 (o padrão do `java.util.Properties`) antes da expansão do template. Já era assim na 2.16.0; aparece na lista de mods do jogo. (12/11)
 - Changelog da próxima versão: uma remota vinculada ao lado da presa sozinha herda na hora a config dela (inclusive Extrair e a rede); avisar no changelog. (03/11)
-- Changelog da próxima versão: o cubo do alcance do roteador no mundo com o Vinculador na mão (como o da Doca), e o protocolo 52 (servidor e clientes na mesma versão). (13/11)
-- Changelog da próxima versão: o Vinculador de um dono (a máquina de outro roteador, vinculada ou presa, é recusada; o Ctrl + clique pega só as do mesmo bloco que se tocam com a clicada, também na Doca, e desvincula só esse grupo; o aviso do limite sem o "de N"); as máquinas que já estão em dois roteadores continuam nos dois. (13/11)
 - **(dono)** A 2.14.0 e a 2.15.1 não têm release no GitHub (só a v2.15.0 e, agora, a v2.16.0): decidir se vale criar as duas a posteriori. (08/11)
 - **(dono)** Quando o Modrinth aprovar, pôr o link no `README.md`, no `README.en.md` e na `descricao.md`. (30/10)
 - **(dono)** Decidir o destino da worktree `C:/wab` (fora do repositório, com 2 arquivos mudados). (30/10)

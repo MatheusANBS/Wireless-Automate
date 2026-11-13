@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.block;
 import io.github.matheusanbs.wirelessautomate.chunk.RouterChunkLoader;
 import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
+import io.github.matheusanbs.wirelessautomate.range.RouterOwners;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
@@ -43,6 +44,7 @@ final class RouterPresence {
                 router.changed(NetworkManager.ALL_TYPES);
             }
             NodeIndex.track(router);
+            range.ownersChanged();
             chunkUnloading = false;
             RouterChunkLoader.get().loaded(router);
             // uma remota quebrada com o roteador descarregado (sem vigia, sem aviso) sai na carga
@@ -72,6 +74,7 @@ final class RouterPresence {
         if (serverLevel() != null) {
             NetworkManager.get().removeNode(router);
             NodeIndex.untrack(router);
+            RouterOwners.get().remove(router);
             range.goneStop();
         }
     }

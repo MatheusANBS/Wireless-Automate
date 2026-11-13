@@ -38,7 +38,7 @@ public final class DockTuner {
      * consulta ao {@link DockIndex}.
      */
     public static @Nullable Target find(ServerPlayer player, ServerLevel level, BlockPos pos) {
-        for (PatternDockBlockEntity dock : DockIndex.get().docksAt(level, pos)) {
+        for (PatternDockBlockEntity dock : DockIndex.get().at(level, pos)) {
             if (accessible(player, level, dock)) {
                 DockMachine machine = dock.machineAt(pos);
                 if (machine != null && dock.side(machine.side()) != null) {
@@ -51,7 +51,7 @@ public final class DockTuner {
 
     /** Alguma Doca carregada tem a máquina em {@code pos} num lado, com acesso ou sem. */
     public static boolean linked(ServerLevel level, BlockPos pos) {
-        for (PatternDockBlockEntity dock : DockIndex.get().docksAt(level, pos)) {
+        for (PatternDockBlockEntity dock : DockIndex.get().at(level, pos)) {
             if (!dock.isRemoved() && dock.machineAt(pos) != null) {
                 return true;
             }

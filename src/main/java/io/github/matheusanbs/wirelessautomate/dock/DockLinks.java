@@ -332,7 +332,7 @@ public final class DockLinks {
      * índice salvo).
      */
     static @Nullable PatternDockBlockEntity otherDock(Level level, PatternDockBlockEntity dock, BlockPos pos) {
-        for (PatternDockBlockEntity other : DockIndex.get().docksAt(level, pos)) {
+        for (PatternDockBlockEntity other : DockIndex.get().at(level, pos)) {
             if (other != dock && !other.isRemoved() && other.machineAt(pos) != null) {
                 return other;
             }

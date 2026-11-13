@@ -15,6 +15,7 @@ import io.github.matheusanbs.wirelessautomate.network.NetworkManager;
 import io.github.matheusanbs.wirelessautomate.network.NodeIndex;
 import io.github.matheusanbs.wirelessautomate.packet.ModPayloads;
 import io.github.matheusanbs.wirelessautomate.range.RemoteIndex;
+import io.github.matheusanbs.wirelessautomate.range.RouterOwners;
 import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeEditor;
 import io.github.matheusanbs.wirelessautomate.recipe.edit.RecipeOverridePack;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlockEntities;
@@ -160,6 +161,7 @@ public final class WirelessAutomate {
         NetworkManager.reset();
         RemoteIndex.reset();
         DockIndex.reset();
+        RouterOwners.reset();
         SourceTankLevels.reset();
         RepairerManager.reset();
         TvManager.reset();

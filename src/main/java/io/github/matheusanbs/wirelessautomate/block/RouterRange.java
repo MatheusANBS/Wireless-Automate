@@ -14,6 +14,7 @@ import io.github.matheusanbs.wirelessautomate.range.RemoteCapabilities;
 import io.github.matheusanbs.wirelessautomate.range.RemoteIndex;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachine;
 import io.github.matheusanbs.wirelessautomate.range.RemoteMachines;
+import io.github.matheusanbs.wirelessautomate.range.RouterOwners;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -279,13 +280,36 @@ final class RouterRange {
 
     /**
      * As máquinas vinculadas ou o upgrade mudaram: refaz o registro no {@link RemoteIndex} (só se o nó
-     * está no motor e o upgrade vale; senão, só tira).
+     * está no motor e o upgrade vale; senão, só tira) e no {@link RouterOwners} (todas as vinculadas).
      */
     void remotesChanged() {
         Level level = router.getLevel();
         if (level != null && !level.isClientSide) {
             RemoteIndex.get().update(router);
+            ownersChanged();
         }
+    }
+
+    /**
+     * Refaz o registro do roteador no {@link RouterOwners} com a posição de todas as remotas, ativas ou não, com ou
+     * sem o upgrade valendo; sem remotas (ou removido), só tira. Só no servidor.
+     */
+    void ownersChanged() {
+        Level level = router.getLevel();
+        if (level == null || level.isClientSide) {
+            return;
+        }
+        int size = remotes.size();
+        if (size == 0 || router.isRemoved()) {
+            RouterOwners.get().remove(router);
+            return;
+        }
+        long[] positions = new long[size];
+        List<RemoteMachine> machines = remotes.machines();
+        for (int i = 0; i < size; i++) {
+            positions[i] = machines.get(i).pos().asLong();
+        }
+        RouterOwners.get().update(router, level, positions);
     }
 
     /** Ver {@link RouterBlockEntity#remoteMachineChanged}. */

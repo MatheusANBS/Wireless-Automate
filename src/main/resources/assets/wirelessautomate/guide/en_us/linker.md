@@ -23,12 +23,14 @@ the router that reaches a machine.
 
 1. Put the Range Upgrade in a router and click it with the Linker. Click it again to release it.
 2. Click a machine to link it. Click it again to unlink it. If its group ends up empty, the group's
-   cards go back to your inventory.
+   cards go back to your inventory. A machine belongs to one router only: if it already belongs to
+   another (linked or attached to it), the action bar says which.
 3. To link all the matching machines at once, hold **Ctrl** (**Cmd** on Mac) and click one of them:
-   the ones of the same block within the router's radius go in, nearest first, up to the tier's
-   limit. The action bar says how many, for example **Linked 7 Furnaces**. While sprinting, Ctrl is
+   the ones of the same block **touching it** (by a face or an edge) and within the router's radius
+   go in, nearest first, up to the tier's limit. The action bar says how many, for example
+   **Linked 7 Furnaces**; if the limit cut it, **Linked 32 Furnaces · tier limit**. While sprinting, Ctrl is
    the sprint key and the click counts as a normal click.
-4. To unlink all the matching ones at once, do the same gesture on a machine that is already linked.
+4. To unlink the touching ones at once, do the same gesture on a machine that is already linked.
 5. Click the air to see the chosen router. **Shift** + click the air releases it.
 6. Switch to **Open** mode (Shift + mouse wheel) and click a machine to set up its face in the
    router.
@@ -42,7 +44,7 @@ with the [Tablet](network-tablet.md).
 | --- | --- | --- |
 | Click a router | Picks the router | — |
 | Click a machine | Links or unlinks it | Opens the router that reaches it |
-| Ctrl (Cmd on Mac) + click a machine | Links the ones of the same block in range; if it is already linked, unlinks all of the same block | — |
+| Ctrl (Cmd on Mac) + click a machine | Links the ones of the same block touching it, in range; if it is already linked, unlinks the touching ones | — |
 | Click a Signal Screen | Picks the Screen | — |
 | Click a mod Chest, Battery or Tank | With a Screen picked, links or unlinks it | Opens the router that reaches it |
 | Click the air | Shows the chosen router | Shows the mode's hint |

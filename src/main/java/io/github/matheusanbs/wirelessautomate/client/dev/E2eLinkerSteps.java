@@ -73,7 +73,8 @@ final class E2eLinkerSteps {
             linkChest = chest.offset(2, 0, 0);
             linkAttached = linkChest.above();
             linkHopper = linkChest.offset(1, 0, 2);
-            linkHopperSame = linkChest.offset(-1, 0, 2);
+            // na diagonal do outro funil: só se tocam pela quina, e a busca precisa atravessá-la
+            linkHopperSame = linkChest.offset(0, 0, 3);
             for (BlockPos pos : List.of(chest, linkChest)) {
                 level.setBlockAndUpdate(pos, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.SOUTH));
             }

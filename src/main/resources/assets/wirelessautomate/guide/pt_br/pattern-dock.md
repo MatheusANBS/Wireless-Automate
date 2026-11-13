@@ -25,7 +25,7 @@ pedidos.
 1. Coloque a Doca e encoste um **Pattern Provider** do AE2 (ou um **Autocrafter** do RS2, virado para ela) num lado
    dela.
 2. Com o [Vinculador](linker.md), clique **nesse lado** da Doca. Depois dê **Ctrl + clique** numa máquina: as iguais
-   que estão por perto entram naquele lado. Um clique simples vincula só uma máquina; numa já vinculada, desvincula.
+   **encostadas nela** entram naquele lado. Um clique simples vincula só uma máquina; numa já vinculada, desvincula.
 3. Ponha no provedor **os padrões dessas máquinas**. Pronto: a CPU de crafting do AE2 (ou a rede do RS2) já pode
    pedir.
 

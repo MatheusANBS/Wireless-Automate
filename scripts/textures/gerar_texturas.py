@@ -13,7 +13,9 @@ Cristais, o atlas pintado dele e o blockstate vêm de `reparador_modelo.py`, os 
 os da Doca de Padrões (com as texturas por tier) de `doca_modelo.py`, a partir dos `.bbmodel` aprovados (a conversão
 comum fica no `bbmodel_json.py`); a escultura formada da Armilar (modelos fatiados e texturas) vem de
 `armilar_modelo.py`, e as formas de colisão e seleção dela (`resonator/ArmilarShapes.java`) de
-`armilar_formas.py`.
+`armilar_formas.py`. As texturas da câmara da Armilar, que não são de bloco nem de item, vêm de `fx_texturas.py` (as
+19 folhas de efeito do filme, em `textures/fx/`) e de `armilar_render.py` (as peças sólidas, em `textures/armilar/`);
+as duas gravam na própria pasta e não passam pelo `limpar`.
 
 Cada item é uma grade de texto (a forma, pela legenda comum `LEG`) mais código para o que muda por
 quadro. Regras: 16×16, alfa só 0 ou 255, contorno de 1 px em grafite.0, luz de cima à esquerda, 3 a
@@ -37,7 +39,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import armilar_formas  # noqa: E402
 import armilar_modelo  # noqa: E402
+import armilar_render  # noqa: E402
 import doca_modelo  # noqa: E402
+import fx_texturas  # noqa: E402
 import livro  # noqa: E402
 import reparador_modelo  # noqa: E402
 import tela_modelo  # noqa: E402
@@ -2182,6 +2186,10 @@ def main() -> None:
         gerados = (set(todos) | reparador_modelo.gerar() | tela_modelo.gerar() | doca_modelo.gerar()
                    | livro.gerar() | armilar_modelo.gerar())
         armilar_formas.gerar()
+        # As folhas de efeito e as peças sólidas ficam fora do `limpar` (que só varre item, gui e block): cada módulo
+        # grava na sua pasta e apaga o que sobrou dela.
+        fx_texturas.gerar()
+        armilar_render.gerar()
         pastas = ["item", "gui"] + (["block"] if blocos_sprites else [])
         apagados = limpar(gerados, pastas)
 

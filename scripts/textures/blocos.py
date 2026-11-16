@@ -795,7 +795,7 @@ def validar_modelo(dados: dict, texturas: set[str]) -> None:
             assert len(f["uv"]) == 4 and all(0 <= v <= 16 for v in f["uv"]), f["uv"]
 
 
-def _sobreposicoes(modelo: str, sufixo: str = "") -> list[dict]:
+def sobreposicoes(modelo: str, sufixo: str = "") -> list[dict]:
     """Overrides do modelo do item: o predicado wirelessautomate:tier é a posição do tier no enum."""
     return [{"predicate": {f"{NS}:tier": n}, "model": f"{modelo}_{t}{sufixo}"}
             for n, t in enumerate(TIERS[1:], start=1)]
@@ -832,18 +832,18 @@ def modelos(texturas: set[str] | None = None) -> None:
                 variantes[f"facing={face},spin={spin},tier={t}"] = {"model": modelo, **rot}
     grava_json(MODELOS / "blockstates/router.json", {"variants": variantes})
     grava_json(MODELOS / "models/item/router.json", {"parent": f"{NS}:block/router_basic",
-                                                     "overrides": _sobreposicoes(f"{NS}:block/router")})
+                                                     "overrides": sobreposicoes(f"{NS}:block/router")})
     for nome in ARMAZENAMENTOS:
         grava_json(MODELOS / f"blockstates/{nome}.json",
                    {"variants": {f"tier={t}": {"model": f"{NS}:block/{nome}_{t}"} for t in TIERS}})
         grava_json(MODELOS / f"models/item/{nome}.json", {"parent": f"{NS}:block/{nome}_basic",
-                                                          "overrides": _sobreposicoes(f"{NS}:block/{nome}")})
+                                                          "overrides": sobreposicoes(f"{NS}:block/{nome}")})
     grava_json(MODELOS / "blockstates/storage_source_tank.json", {"variants": {
         f"fill={fill},tier={t}": {"model": f"{NS}:block/storage_source_tank_{t}_{fill}"}
         for t in TIERS for fill in range(11)}})
     grava_json(MODELOS / "models/item/storage_source_tank.json", {
         "parent": f"{NS}:block/storage_source_tank_basic_6",
-        "overrides": _sobreposicoes(f"{NS}:block/storage_source_tank", "_6")})
+        "overrides": sobreposicoes(f"{NS}:block/storage_source_tank", "_6")})
     for nome, (base, _) in MINERIOS.items():
         grava_json(pasta / f"{nome}.json", modelo_minerio(base, f"{NS}:block/{nome}"))
         gerados.add(nome)

@@ -96,7 +96,7 @@ coral** horizontal e o **Olho no topo** (lente do tier, com o Pulso animado na t
 occlusion desligado nos modelos com elementos finos. Blocos que não preenchem o cubo precisam de
 `noOcclusion()` no registro (visual, sem lógica).
 
-Construção limpa, conferida por `blocos.validar_geometria` em todo modelo gerado: os elementos
+Construção limpa, conferida por `validar_geometria` (`scripts/textures/modelo_geometria.py`) em todo modelo gerado: os elementos
 **encostam, não se atravessam** (só o fluido, o gás e a Source ficam dentro da caixa de vidro, marcados
 com `dentro=True`); duas faces desenhadas nunca dividem o mesmo plano com área em comum (é o que pisca
 no jogo); e toda face não desenhada está inteiramente coberta por um vizinho encostado (senão é buraco).

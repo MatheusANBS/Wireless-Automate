@@ -13,14 +13,13 @@ import random
 
 from PIL import Image
 
-from blocos import LATERAIS, NS, SINAL_MINERIO, Modelo, Vec, _sobreposicoes, com_olho, nova
+from blocos import LATERAIS, NS, SINAL_MINERIO, Modelo, Vec, sobreposicoes, com_olho, nova
 from identidade import LENTE, MARCAS, MODELOS, TIERS, Cor, Sprite, cor, grava_json, mistura, parado
 
 
 def put(img: Image.Image, x: int, y: int, c: Cor) -> None:
     if 0 <= x < img.width and 0 <= y < img.height:
         img.putpixel((x, y), c)
-
 
 
 def res_olho_par(img: Image.Image, tier: str, fase: float = 0.0, apagado: bool = False) -> None:
@@ -657,4 +656,4 @@ def modelos_item_ressonador() -> None:
         grava_json(MODELOS / f"models/item/{nome}.json", {"parent": bloco + nome + "_loose"})
     grava_json(MODELOS / "models/item/resonance_core.json", {
         "parent": bloco + "resonance_core_basic_loose",
-        "overrides": _sobreposicoes(bloco + "resonance_core", "_loose")})
+        "overrides": sobreposicoes(bloco + "resonance_core", "_loose")})

@@ -15,8 +15,8 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 final class RouterShapes {
     /**
      * Caixas do modelo com o roteador virado para cima, em pixels, abraçando o desenho de
-     * {@code scripts/textures/blocos.py} (as mesmas de {@code HITBOXES["router"]} lá, conferidas contra os
-     * elementos na geração; {@code docs/preview/hitboxes.txt} lista as envolventes): o prato da base com os
+     * {@code scripts/textures/blocos.py} (as mesmas de {@code HITBOXES["router"]} em
+     * {@code modelo_hitboxes.py}, conferidas contra os elementos na geração; {@code docs/preview/hitboxes.txt} lista as envolventes): o prato da base com os
      * para-choques, o corpo, as duas hastes de trás (norte), o mastro e a envolvente da parabólica
      * inclinada para trás, com o braço e o receptor.
      */

@@ -20,7 +20,7 @@ FACE_EIXO = {"west": (0, "from"), "east": (0, "to"), "down": (1, "from"), "up": 
 EPS = 1e-6
 
 
-def _chavegirar_ponto(el: dict) -> tuple | None:
+def _chave_rot(el: dict) -> tuple | None:
     r = el.get("rotation")
     return (r["axis"], float(r["angle"]), tuple(r["origin"])) if r else None
 
@@ -144,7 +144,7 @@ def validar_geometria(m: Modelo) -> None:
     erros: list[str] = []
     grupos: dict[tuple | None, list[int]] = {}
     for i, el in enumerate(m.elementos):
-        grupos.setdefault(_chavegirar_ponto(el), []).append(i)
+        grupos.setdefault(_chave_rot(el), []).append(i)
     todos_idx = list(range(len(m.elementos)))
     erros += _erros_do_grupo(m, todos_idx, local=False)
     cobertas = _faces_cobertas(m, todos_idx, local=False)

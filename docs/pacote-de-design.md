@@ -126,7 +126,7 @@ armazenamentos saem de `scripts/textures/blocos.py`, pela mesma `identidade.py`.
 bloco está na tabela "Os blocos" de `identidade-visual.md`; o `gerar_texturas.py` só chama
 `blocos.sprites()`, `blocos.modelos()` e `blocos.previas()` e monta a folha.
 
-Cada modelo passa por `validar_modelo` (texturas, UVs, ângulos) e por `validar_geometria`, que falha a
+Cada modelo passa por `validar_modelo` (texturas, UVs, ângulos) e por `validar_geometria` (em `modelo_geometria.py`), que falha a
 geração se duas faces desenhadas dividirem o mesmo plano com área em comum (pisca no jogo), se duas
 caixas se atravessarem (salvo as marcadas `dentro=True`, o conteúdo das colunas de vidro) ou se uma face
 omitida não estiver inteiramente coberta por um vizinho encostado (buraco). Para conferir no jogo:
@@ -148,7 +148,7 @@ Os armazenamentos têm as quatro laterais iguais e ficam com o `display` do vani
 ### As caixas de colisão e seleção (hitboxes)
 
 As caixas abraçam o desenho, sem ar sobrando nem nada do modelo de fora, como o Source Jar do Ars.
-Estão em dois lugares que precisam andar juntos: `HITBOXES` em `blocos.py` (a fonte para conferir: a
+Estão em dois lugares que precisam andar juntos: `HITBOXES` em `modelo_hitboxes.py` (a fonte para conferir: a
 geração falha se algum elemento, a parabólica pela caixa envolvente do prato rotacionado, ficar fora da
 união das caixas, se uma caixa não tocar nenhum elemento ou sair de 0..16) e o Java que o jogo usa:
 `block/RouterShapes.UP_BOXES` (roteador com `facing=up` e `spin=0`; a classe gira por spin e facing) e

@@ -357,7 +357,8 @@ final class E2eArmilarRenderSteps {
     /**
      * A mão perto da luz do sol, com a passada de luz e o desenho tardio: com pacote a profundidade é salva antes da
      * mão, então a luz e os efeitos podem cair por cima dela. O jogador segura um cristal, a interface volta e o FOV é o
-     * de antes (o da mão); a hora do mundo volta no fim. Captura {@code <prefixo>-mao}.
+     * de antes (o da mão); a hora do mundo volta no fim. Capturas {@code <prefixo>-mao}, e {@code <prefixo>-mao-sem}
+     * no mesmo quadro sem a passada de luz.
      */
     private static void handSteps(List<Step> list, UUID playerId, String prefix, Supplier<BlockPos> origin) {
         list.add(new Step("Armilar: a mão com um cristal e o HUD", STEP_TIMEOUT_MS, () -> {
@@ -377,6 +378,10 @@ final class E2eArmilarRenderSteps {
         list.add(new Step("Armilar: a mão, relógio em " + TC, STEP_TIMEOUT_MS,
                 () -> ArmilarRenderer.freezeSecondsForTests = TC, () -> stepTicks >= FREEZE_TICKS, () -> "mão"));
         list.add(capture(prefix + "-mao"));
+        // o mesmo quadro sem a passada de luz: a diferença na região da mão mostra se a luz cai por cima dela
+        list.add(new Step("Armilar: a mão sem a passada de luz", STEP_TIMEOUT_MS,
+                () -> FxLightPass.disabledForTests = true, () -> stepTicks >= 4, () -> "passada desligada"));
+        list.add(capture(prefix + "-mao-sem"));
         list.add(new Step("Armilar: sem a mão, FOV do filme, o dia volta", STEP_TIMEOUT_MS, () -> {
             filmOptions();
             releaseClock();

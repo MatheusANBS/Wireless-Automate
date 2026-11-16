@@ -12,11 +12,22 @@ Bloco do Wireless Automate é **pixel art na densidade do mundo, gerada por cód
 ## Onde cada coisa nasce
 
 - **`scripts/textures/identidade.py`:** a `PALETA` (porcelana, grafite, coral, latão, vidro, energia...), a `LENTE` por tier, o `olho` (o emblema), o `Sprite` e o `validar`. O `validar` só aceita alfa 0 ou 255, salvo vidro.
-- **`scripts/textures/blocos.py`:**
+- **`scripts/textures/blocos.py`:** o roteador, os armazenamentos e os minérios, e o que os outros módulos usam:
   - os pincéis (`painel`, `porcelana`, `grafite`, `etiqueta`, `marcas`, `com_olho`);
   - as texturas (`sprites()`);
-  - os modelos e blockstates (`modelos()`, classe `Modelo`);
+  - os modelos e blockstates (`modelos()`) e a classe `Modelo`, que `armilar_modelo.py` também usa;
+  - `validar_modelo` (textura que existe, UV em 0..16, ângulo permitido);
   - as prévias isométricas para a folha de sprites.
+  - Não roda sozinho: o ponto de entrada é o `gerar_texturas.py`.
+- **O Ressonador de Sinal (a Armilar) vem de módulos próprios:**
+  - `ressonador_blocos.py`: os sprites e os modelos soltos dos sete blocos (`sprites_soltos()`, `modelos_soltos()`);
+  - `armilar_geometria.py`: a escultura formada (`escultura()`), montada inteira, conferida e fatiada na grade de blocos;
+  - `armilar_texturas.py`: os sprites da escultura, um por material (`sprites()`);
+  - `armilar_modelo.py`: os 35 modelos formados (`construir()`), os blockstates (`blockstates_armilar()`) e a prévia `docs/preview/armilar-formada.png`.
+- **Conferências compartilhadas:**
+  - `modelo_geometria.py`: `validar_geometria`, a regra de encostar sem atravessar, e a exceção `ModeloInvalido`;
+  - `modelo_hitboxes.py`: as `HITBOXES` e a conferência de que cobrem o desenho;
+  - `previa_iso.py`: a prévia isométrica (`render`).
 - **Peça esculpida** (forma que não sai de cubos inteiros): desenhada no Blockbench e convertida por `bbmodel_json.py`. Modelos de referência: `reparador_modelo.py`, `doca_modelo.py`, `tela_modelo.py`.
 - **`scripts/textures/gerar_texturas.py`:** roda tudo e grava em `assets/`.
 
@@ -47,22 +58,24 @@ Bloco do Wireless Automate é **pixel art na densidade do mundo, gerada por cód
 
 ### Blockstate por posição
 
-O modelo do jogo é o de `blockstates_ressonador()` no `blocos.py`:
+O modelo do jogo é o de `armilar_modelo.blockstates_armilar()`:
 
 - **A propriedade de estado:**
-  - Um enum `position` com o valor `loose` (solto) e um nome por lugar na estrutura. Na carcaça de hoje são as letras n/c/p por eixo (`posicoes_carcaca()`).
+  - Um enum `position` com o valor `loose` (solto) e um nome por lugar na estrutura. Na Laje da Armilar são as casas `pXZ` (x e z locais de 0 a 4, como `p20`), e o giro da frente fica no `y` do blockstate.
   - Para peças com frente, `facing` e `formed`.
   - Quem troca o estado é o código que forma a estrutura (o Java); a textura não decide nada.
-  - As letras n/c/p servem só para a caixa de cubos. Uma escultura dá um nome por papel da fatia, em minúsculas e sem acento (ex.: `base_canto`, `pilar_topo`). A simetria fica no `y`.
+  - Uma escultura dá um nome por papel da fatia, em minúsculas e sem acento (ex.: `base_canto`, `pilar_topo`), ou por casa, como as `pXZ` da Laje. A simetria fica no `y`.
 - **O arquivo de blockstate:** um `variants` com uma entrada por valor, cada uma apontando para `<bloco>_<posição>`. O `loose` aponta para o modelo solto, e o item usa o solto (`models/item/<bloco>.json` com `parent` nele).
 - **A fatia como `Modelo`:**
-  - Cada fatia é um `Modelo(f"{bloco}_{posicao}", particula)` com uma `caixa(de, ate, faces, rot)` por elemento, e entra no dicionário de `construir_modelos_*()`.
+  - Cada fatia é um `Modelo(nome, particula, fatia=True)` com uma `caixa(de, ate, faces, rot)` por elemento, e entra no dicionário de `armilar_modelo.construir()`.
+  - O `fatia=True` dispensa a conferência de buraco para a face inteira no limite do bloco (0 ou 16 no eixo da face), porque a fatia vizinha a cobre e o modelo não a vê. Por isso existe a trava contra modelo sem nenhuma face: o `Modelo.json()` e o `armilar_modelo.validar` levantam `ModeloInvalido` se nenhum elemento tiver face, em vez de gravar um bloco invisível (`"elements": []`).
   - Se a fatia vier do `.bbmodel`, os elementos saem do `converter()` do `bbmodel_json.py` e passam pelo `validar()` dele.
 - **Simetria:** quando uma fatia é a outra girada (os quatro cantos, por exemplo), use um modelo só e o `y` do blockstate (90, 180, 270). Assim se desenha uma vez só.
 
 ### Textura que continua de uma fatia para a outra
 
 - **Material que se repete** (placa, grelha, latão): a UV de cada face é a sua posição no mundo em texels, módulo 16. Uma face que começa em x = 20 da escultura usa `u = 20 mod 16 = 4`. Assim a emenda da placa cai na mesma linha nos dois blocos.
+  - **A Armilar não usa essa regra.** Ela tem um sprite por material (`armilar_porcelana`, `armilar_grafite`, `armilar_coral`, `armilar_latao`, `armilar_vidro`) e cada face usa a UV padrão dela dentro da casa (`uv_padrao`); a perna girada usa a UV pelo tamanho da própria face, no meio do sprite.
 - **Desenho que atravessa blocos** (a listra que sobe o pilar, o Olho grande): desenhe a folha da peça inteira no gerador (ex.: 16 × 48 para um pilar de 3 blocos) e recorte um sprite de 16 × 16 por bloco. Cada fatia usa o seu recorte, com a UV de 0 a 16.
 - **Qual das duas:**
   - Cada face usa uma regra só.
@@ -72,7 +85,7 @@ O modelo do jogo é o de `blockstates_ressonador()` no `blocos.py`:
 
 ### Limite de elementos
 
-- Uma fatia de bloco leva o menor número de elementos que segura a silhueta. Hoje o maior modelo do mod tem 18 elementos (a bateria).
+- Uma fatia de bloco leva o menor número de elementos que segura a silhueta. Medido em 16/11/2026: as fatias da Armilar chegam a 30 elementos contados (`casing_p14` e `casing_p34`, que têm 24 no JSON porque o filtro tira os sem face).
 - **Regra do projeto:** até 40 elementos por fatia; 41 reprova.
 - Passou disso:
   - simplifique a forma (degraus maiores, menos segmentos no arco); ou
@@ -97,7 +110,7 @@ O modelo do jogo é o de `blockstates_ressonador()` no `blocos.py`:
   - **Fatias de um multibloco:** `verificar_modelo.py --junto <fatia.json>@x,y,z[,giro] ...`, com cada fatia no seu bloco (x, y, z em blocos). O `giro` opcional é o `y` do blockstate daquela variante (90, 180 ou 270).
     - Confere cada fatia sozinha e depois o conjunto: a peça que entra no bloco vizinho e a face de fronteira desenhada dos dois lados.
     - O aviso "faces escondidas" lista a face desenhada e coberta por inteiro pela peça do vizinho. Tire essa face da fatia.
-  - A classe `Modelo` do `blocos.py` faz as mesmas conferências nos modelos gerados.
+  - Nos modelos gerados, a conferência é o `modelo_geometria.validar_geometria`, chamada pelo gerador.
 - **Cullface entre fatias:**
   - O `cullface` só some com a face quando o vizinho tem a face cheia e opaca (cubo inteiro).
   - Uma fatia esculpida não tem a face cheia, então a face que encosta na fatia vizinha **sai do modelo**: não conte com o `cullface` para isso.

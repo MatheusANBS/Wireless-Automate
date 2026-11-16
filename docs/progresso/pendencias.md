@@ -53,6 +53,9 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 
 ## Ressonador
 
+- **Armilar, etapa 2 (o render):** o sol no Berço, as órbitas, os cristais e o horizonte, pelo método da skill `wa-efeitos` e fiéis ao conceito escolhido (spec `docs/superpowers/specs/2026-11-16-ressonador-armilar-design.md`). (16/11)
+- **A animação antiga da câmara sai na etapa 2:** o plasma, os tentáculos, o conduto e os feixes em cima do Berço (`client/resonator/render/`) ainda desenham como antes, sem o interior que existia. (16/11)
+- Refazer as fotos e o GIF do Ressonador na vitrine do CurseForge (`E2eShowcaseResonator`) depois do render novo; as de hoje mostram a caixa antiga. (16/11)
 - **(dono)** Decidir o passo 5 do spec da câmara: arcos finos dos cristais e o estalo sonoro (a sugestão é tirar, a não ser pelo som). (23/10)
 
 ## Reparador

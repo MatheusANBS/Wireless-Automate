@@ -128,7 +128,7 @@ O **Tanque de Source Wireless** guarda de 3.600.000 de Source (Básico) a sem li
 
 ### Ressonador de Sinal
 
-Um gerador multibloco que transforma cristais de quartzo vibrando em FE. Minere o **Quartzo de Sinal** (Overworld, pedra e ardósia), monte uma caixa oca 5×5×5 em volta de um **Núcleo de Ressonância** e ponha **Cristais de Sinal** nas câmaras dele. Cada Ressonador tem a sua **estação**, uma frequência que escorrega devagar: gire o dial até a lâmpada dizer **EM SINTONIA** para 100%, ou ponha um **Sintonizador** para seguir a estação sozinho, um pouco abaixo do topo. Fora da estação, não gera nada.
+Um gerador multibloco que transforma cristais de quartzo vibrando em FE. Minere o **Quartzo de Sinal** (Overworld, pedra e ardósia), monte a **Armilar**, uma estrutura de 35 blocos (chão de Lajes, quatro Colunas e o Berço do Sol), em volta de um **Núcleo de Ressonância** e ponha **Cristais de Sinal** nas câmaras dele. Cada Ressonador tem a sua **estação**, uma frequência que escorrega devagar: gire o dial até a lâmpada dizer **EM SINTONIA** para 100%, ou ponha um **Sintonizador** para seguir a estação sozinho, um pouco abaixo do topo. Fora da estação, não gera nada.
 
 ![Ressonador de Sinal](docs/curseforge/ressonador.gif)
 
@@ -159,7 +159,7 @@ Um cristal rachado não é mais uma ida à bancada. Ponha-o num dos **8 pedestai
 
 ![Reparador de Cristais](docs/curseforge/feature-26-repairer.png)
 
-Energia e itens entram por qualquer lado, então um roteador o mantém abastecido. As rachaduras fecham de dentro para fora, os cristais convergem para o emissor e o consertado sobe. O Núcleo do Ressonador também ficou mais rápido na outra ponta: agora recarrega **todos os cristais Opacos que o catalisador paga de uma vez**. Receita: Carcaça de Porcelana, Circuito de Fase, Funil, Lente Harmônica e um Bloco de Redstone. O tempo e o custo do reparo ficam na config (`repairer.repairTicks` e `repairer.costFactor`).
+Energia e itens entram por qualquer lado, então um roteador o mantém abastecido. As rachaduras fecham de dentro para fora, os cristais convergem para o emissor e o consertado sobe. O Núcleo do Ressonador também ficou mais rápido na outra ponta: agora recarrega **todos os cristais Opacos que o catalisador paga de uma vez**. Receita: Laje do Ressonador, Circuito de Fase, Funil, Lente Harmônica e um Bloco de Redstone. O tempo e o custo do reparo ficam na config (`repairer.repairTicks` e `repairer.costFactor`).
 
 ### Tela de Sinal
 
@@ -218,7 +218,7 @@ Automação de padrões sem canos. Encoste um **Pattern Provider** do AE2 ou um 
 - **Tela própria** com uma linha por lado (a máquina, quantas estão vinculadas e trabalhando, e o estado numa frase), o cubo do alcance no mundo ao segurar o Vinculador e arte animada na cor do tier.
 - **A sobra prende só a máquina dela:** o pedido que não cabe inteiro espera aquela máquina consumir, e as outras continuam recebendo. Quebrar a Doca leva o que está pendente no item. A máquina quebrada sai do lado sozinha.
 - **Feita para o uso intenso:** medida com as fábricas reais, uma Infinity Smelting Factory do Mekanism Extras a 256× roda a 99% do que ela consegue fundir (86.139 itens/s), e cinco delas com o Quantum Computer chegam a **409.600 itens/s**, dentro do orçamento de 1 ms por tick do motor (só a rajada do começo de um pedido muito grande passa, e é paga no tick seguinte).
-- **Receita** com a Carcaça de Porcelana, o Lingote de Liga de Sinal e um roteador, mais o Processador de Engenharia e o Pattern Provider com o AE2, ou, só com o RS2, o Processador Avançado e um Autocrafter. Sobe de tier com o Cartão de Upgrade, no mundo ou na bancada.
+- **Receita** com a Laje do Ressonador, o Lingote de Liga de Sinal e um roteador, mais o Processador de Engenharia e o Pattern Provider com o AE2, ou, só com o RS2, o Processador Avançado e um Autocrafter. Sobe de tier com o Cartão de Upgrade, no mundo ou na bancada.
 
 ### Ferramentas para construções grandes
 

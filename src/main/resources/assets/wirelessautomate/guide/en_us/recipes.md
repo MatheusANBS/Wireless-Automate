@@ -34,7 +34,8 @@ All in a crafting table, with vanilla items.
 <RecipeFor id="wirelessautomate:chunk_loader_upgrade" />
 <RecipeFor id="wirelessautomate:cut_signal_crystal" />
 <RecipeFor id="wirelessautomate:resonator_casing" />
-<RecipeFor id="wirelessautomate:resonator_glass" />
+<RecipeFor id="wirelessautomate:resonator_column" />
+<RecipeFor id="wirelessautomate:resonator_cradle" />
 <RecipeFor id="wirelessautomate:resonance_core" />
 <RecipeFor id="wirelessautomate:resonator_energy_port" />
 <RecipeFor id="wirelessautomate:resonator_crystal_port" />

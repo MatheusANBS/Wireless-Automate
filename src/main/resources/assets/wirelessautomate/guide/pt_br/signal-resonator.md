@@ -7,7 +7,8 @@ navigation:
   position: 19
 item_ids:
   - wirelessautomate:resonator_casing
-  - wirelessautomate:resonator_glass
+  - wirelessautomate:resonator_column
+  - wirelessautomate:resonator_cradle
   - wirelessautomate:resonance_core
   - wirelessautomate:resonator_energy_port
   - wirelessautomate:resonator_crystal_port
@@ -19,7 +20,7 @@ item_ids:
 
 <ItemImage id="wirelessautomate:resonance_core" scale="2" float="left" />
 
-Gerador de vários blocos: cristais vibram numa caixa e você **sintoniza** o Núcleo para tirar o máximo de FE.
+Gerador de vários blocos, a **Armilar**: cristais vibram no Berço do Sol e você **sintoniza** o Núcleo para tirar o máximo de FE.
 Cristais, catalisadores e Corações vêm do [Quartzo de Sinal](signal-quartz.md).
 
 <br clear="all" />
@@ -27,8 +28,8 @@ Cristais, catalisadores e Corações vêm do [Quartzo de Sinal](signal-quartz.md
 ## Como usar
 
 1. Faça o **Núcleo de Ressonância** (a receita pede um **Coração do Ressonador Básico**) e coloque-o.
-2. Clique nele com a mão vazia: a estrutura aparece **projetada** no mundo. **Shift + roda do mouse** troca a montagem.
-3. Monte a caixa em volta seguindo a projeção.
+2. Clique nele com a mão vazia: a estrutura aparece **projetada** no mundo.
+3. Monte a estrutura seguindo a projeção.
 4. Ponha um cristal: clique no Núcleo com ele na mão.
 5. Clique no Núcleo montado para abrir a tela e gire o dial até acender **EM SINTONIA**.
 6. Prenda um [Roteador](router.md) na **Porta de Energia**, face em **Extrai** na aba **Energia**.
@@ -36,133 +37,74 @@ Cristais, catalisadores e Corações vêm do [Quartzo de Sinal](signal-quartz.md
 ## Montar
 
 <GameScene zoom="3" interactive={true}>
-  <Block id="wirelessautomate:resonator_casing" x="0" y="0" z="0" p:position="nnn" />
-  <Block id="wirelessautomate:resonator_casing" x="0" y="0" z="1" p:position="nnc" />
-  <Block id="wirelessautomate:resonator_casing" x="0" y="0" z="2" p:position="nnc" />
-  <Block id="wirelessautomate:resonator_casing" x="0" y="0" z="3" p:position="nnc" />
-  <Block id="wirelessautomate:resonator_casing" x="0" y="0" z="4" p:position="nnp" />
-  <Block id="wirelessautomate:resonator_casing" x="0" y="1" z="0" p:position="ncn" />
-  <Block id="wirelessautomate:resonator_glass" x="0" y="1" z="1" p:face="west" p:connections="3" />
-  <Block id="wirelessautomate:resonator_glass" x="0" y="1" z="2" p:face="west" p:connections="11" />
-  <Block id="wirelessautomate:resonator_glass" x="0" y="1" z="3" p:face="west" p:connections="9" />
-  <Block id="wirelessautomate:resonator_casing" x="0" y="1" z="4" p:position="ncp" />
-  <Block id="wirelessautomate:resonator_casing" x="0" y="2" z="0" p:position="ncn" />
-  <Block id="wirelessautomate:resonator_glass" x="0" y="2" z="1" p:face="west" p:connections="7" />
-  <Block id="wirelessautomate:resonator_glass" x="0" y="2" z="2" p:face="west" p:connections="15" />
-  <Block id="wirelessautomate:resonator_glass" x="0" y="2" z="3" p:face="west" p:connections="13" />
-  <Block id="wirelessautomate:resonator_casing" x="0" y="2" z="4" p:position="ncp" />
-  <Block id="wirelessautomate:resonator_casing" x="0" y="3" z="0" p:position="ncn" />
-  <Block id="wirelessautomate:resonator_glass" x="0" y="3" z="1" p:face="west" p:connections="6" />
-  <Block id="wirelessautomate:resonator_glass" x="0" y="3" z="2" p:face="west" p:connections="14" />
-  <Block id="wirelessautomate:resonator_glass" x="0" y="3" z="3" p:face="west" p:connections="12" />
-  <Block id="wirelessautomate:resonator_casing" x="0" y="3" z="4" p:position="ncp" />
-  <Block id="wirelessautomate:resonator_casing" x="0" y="4" z="0" p:position="npn" />
-  <Block id="wirelessautomate:resonator_casing" x="0" y="4" z="1" p:position="npc" />
-  <Block id="wirelessautomate:resonator_casing" x="0" y="4" z="2" p:position="npc" />
-  <Block id="wirelessautomate:resonator_casing" x="0" y="4" z="3" p:position="npc" />
-  <Block id="wirelessautomate:resonator_casing" x="0" y="4" z="4" p:position="npp" />
-  <Block id="wirelessautomate:resonator_casing" x="1" y="0" z="0" p:position="cnn" />
-  <Block id="wirelessautomate:resonator_casing" x="1" y="0" z="1" p:position="cnc" />
-  <Block id="wirelessautomate:resonator_casing" x="1" y="0" z="2" p:position="cnc" />
-  <Block id="wirelessautomate:resonator_casing" x="1" y="0" z="3" p:position="cnc" />
-  <Block id="wirelessautomate:resonator_casing" x="1" y="0" z="4" p:position="cnp" />
-  <Block id="wirelessautomate:resonator_casing" x="1" y="1" z="0" p:position="ccn" />
-  <Block id="wirelessautomate:resonator_casing" x="1" y="1" z="4" p:position="ccp" />
-  <Block id="wirelessautomate:resonator_casing" x="1" y="2" z="0" p:position="ccn" />
-  <Block id="wirelessautomate:resonator_casing" x="1" y="2" z="4" p:position="ccp" />
-  <Block id="wirelessautomate:resonator_casing" x="1" y="3" z="0" p:position="ccn" />
-  <Block id="wirelessautomate:resonator_casing" x="1" y="3" z="4" p:position="ccp" />
-  <Block id="wirelessautomate:resonator_casing" x="1" y="4" z="0" p:position="cpn" />
-  <Block id="wirelessautomate:resonator_casing" x="1" y="4" z="1" p:position="cpc" />
-  <Block id="wirelessautomate:resonator_casing" x="1" y="4" z="2" p:position="cpc" />
-  <Block id="wirelessautomate:resonator_casing" x="1" y="4" z="3" p:position="cpc" />
-  <Block id="wirelessautomate:resonator_casing" x="1" y="4" z="4" p:position="cpp" />
-  <Block id="wirelessautomate:resonator_casing" x="2" y="0" z="0" p:position="cnn" />
-  <Block id="wirelessautomate:resonator_casing" x="2" y="0" z="1" p:position="cnc" />
-  <Block id="wirelessautomate:resonator_casing" x="2" y="0" z="2" p:position="cnc" />
-  <Block id="wirelessautomate:resonator_casing" x="2" y="0" z="3" p:position="cnc" />
-  <Block id="wirelessautomate:resonator_casing" x="2" y="0" z="4" p:position="cnp" />
-  <Block id="wirelessautomate:resonator_casing" x="2" y="1" z="0" p:position="ccn" />
-  <Block id="wirelessautomate:resonator_casing" x="2" y="1" z="4" p:position="ccp" />
-  <Block id="wirelessautomate:resonator_energy_port" x="2" y="2" z="0" p:facing="north" p:formed="true" />
-  <Block id="wirelessautomate:resonance_core" x="2" y="2" z="4" p:facing="south" p:formed="true" p:tier="emerald" />
-  <Block id="wirelessautomate:resonator_casing" x="2" y="3" z="0" p:position="ccn" />
-  <Block id="wirelessautomate:resonator_casing" x="2" y="3" z="4" p:position="ccp" />
-  <Block id="wirelessautomate:resonator_casing" x="2" y="4" z="0" p:position="cpn" />
-  <Block id="wirelessautomate:resonator_casing" x="2" y="4" z="1" p:position="cpc" />
-  <Block id="wirelessautomate:resonator_tuner" x="2" y="4" z="2" p:facing="up" p:formed="true" />
-  <Block id="wirelessautomate:resonator_casing" x="2" y="4" z="3" p:position="cpc" />
-  <Block id="wirelessautomate:resonator_casing" x="2" y="4" z="4" p:position="cpp" />
-  <Block id="wirelessautomate:resonator_casing" x="3" y="0" z="0" p:position="cnn" />
-  <Block id="wirelessautomate:resonator_casing" x="3" y="0" z="1" p:position="cnc" />
-  <Block id="wirelessautomate:resonator_casing" x="3" y="0" z="2" p:position="cnc" />
-  <Block id="wirelessautomate:resonator_casing" x="3" y="0" z="3" p:position="cnc" />
-  <Block id="wirelessautomate:resonator_casing" x="3" y="0" z="4" p:position="cnp" />
-  <Block id="wirelessautomate:resonator_casing" x="3" y="1" z="0" p:position="ccn" />
-  <Block id="wirelessautomate:resonator_casing" x="3" y="1" z="4" p:position="ccp" />
-  <Block id="wirelessautomate:resonator_casing" x="3" y="2" z="0" p:position="ccn" />
-  <Block id="wirelessautomate:resonator_casing" x="3" y="2" z="4" p:position="ccp" />
-  <Block id="wirelessautomate:resonator_casing" x="3" y="3" z="0" p:position="ccn" />
-  <Block id="wirelessautomate:resonator_casing" x="3" y="3" z="4" p:position="ccp" />
-  <Block id="wirelessautomate:resonator_casing" x="3" y="4" z="0" p:position="cpn" />
-  <Block id="wirelessautomate:resonator_casing" x="3" y="4" z="1" p:position="cpc" />
-  <Block id="wirelessautomate:resonator_casing" x="3" y="4" z="2" p:position="cpc" />
-  <Block id="wirelessautomate:resonator_casing" x="3" y="4" z="3" p:position="cpc" />
-  <Block id="wirelessautomate:resonator_casing" x="3" y="4" z="4" p:position="cpp" />
-  <Block id="wirelessautomate:resonator_casing" x="4" y="0" z="0" p:position="pnn" />
-  <Block id="wirelessautomate:resonator_casing" x="4" y="0" z="1" p:position="pnc" />
-  <Block id="wirelessautomate:resonator_casing" x="4" y="0" z="2" p:position="pnc" />
-  <Block id="wirelessautomate:resonator_casing" x="4" y="0" z="3" p:position="pnc" />
-  <Block id="wirelessautomate:resonator_casing" x="4" y="0" z="4" p:position="pnp" />
-  <Block id="wirelessautomate:resonator_casing" x="4" y="1" z="0" p:position="pcn" />
-  <Block id="wirelessautomate:resonator_casing" x="4" y="1" z="1" p:position="pcc" />
-  <Block id="wirelessautomate:resonator_casing" x="4" y="1" z="2" p:position="pcc" />
-  <Block id="wirelessautomate:resonator_casing" x="4" y="1" z="3" p:position="pcc" />
-  <Block id="wirelessautomate:resonator_casing" x="4" y="1" z="4" p:position="pcp" />
-  <Block id="wirelessautomate:resonator_casing" x="4" y="2" z="0" p:position="pcn" />
-  <Block id="wirelessautomate:resonator_casing" x="4" y="2" z="1" p:position="pcc" />
-  <Block id="wirelessautomate:resonator_crystal_port" x="4" y="2" z="2" p:facing="east" p:formed="true" />
-  <Block id="wirelessautomate:resonator_casing" x="4" y="2" z="3" p:position="pcc" />
-  <Block id="wirelessautomate:resonator_casing" x="4" y="2" z="4" p:position="pcp" />
-  <Block id="wirelessautomate:resonator_casing" x="4" y="3" z="0" p:position="pcn" />
-  <Block id="wirelessautomate:resonator_casing" x="4" y="3" z="1" p:position="pcc" />
-  <Block id="wirelessautomate:resonator_casing" x="4" y="3" z="2" p:position="pcc" />
-  <Block id="wirelessautomate:resonator_casing" x="4" y="3" z="3" p:position="pcc" />
-  <Block id="wirelessautomate:resonator_casing" x="4" y="3" z="4" p:position="pcp" />
-  <Block id="wirelessautomate:resonator_casing" x="4" y="4" z="0" p:position="ppn" />
-  <Block id="wirelessautomate:resonator_casing" x="4" y="4" z="1" p:position="ppc" />
-  <Block id="wirelessautomate:resonator_casing" x="4" y="4" z="2" p:position="ppc" />
-  <Block id="wirelessautomate:resonator_casing" x="4" y="4" z="3" p:position="ppc" />
-  <Block id="wirelessautomate:resonator_casing" x="4" y="4" z="4" p:position="ppp" />
-  <BlockAnnotation x="2" y="2" z="4" color="#f0603e">
-    Núcleo de Ressonância: a tela e os cristais
+  <Block id="wirelessautomate:resonator_casing" x="0" y="0" z="0" p:facing="south" p:position="p00" />
+  <Block id="wirelessautomate:resonator_casing" x="0" y="0" z="1" p:facing="south" p:position="p01" />
+  <Block id="wirelessautomate:resonator_crystal_port" x="0" y="0" z="2" p:facing="west" p:formed="true" />
+  <Block id="wirelessautomate:resonator_casing" x="0" y="0" z="3" p:facing="south" p:position="p03" />
+  <Block id="wirelessautomate:resonator_casing" x="0" y="0" z="4" p:facing="south" p:position="p04" />
+  <Block id="wirelessautomate:resonator_casing" x="1" y="0" z="0" p:facing="south" p:position="p10" />
+  <Block id="wirelessautomate:resonator_casing" x="1" y="0" z="1" p:facing="south" p:position="p11" />
+  <Block id="wirelessautomate:resonator_casing" x="1" y="0" z="2" p:facing="south" p:position="p12" />
+  <Block id="wirelessautomate:resonator_casing" x="1" y="0" z="3" p:facing="south" p:position="p13" />
+  <Block id="wirelessautomate:resonator_casing" x="1" y="0" z="4" p:facing="south" p:position="p14" />
+  <Block id="wirelessautomate:resonator_column" x="1" y="1" z="1" p:corner="nw" p:part="lower" />
+  <Block id="wirelessautomate:resonator_column" x="1" y="1" z="3" p:corner="sw" p:part="lower" />
+  <Block id="wirelessautomate:resonator_column" x="1" y="2" z="1" p:corner="nw" p:part="upper" />
+  <Block id="wirelessautomate:resonator_column" x="1" y="2" z="3" p:corner="sw" p:part="upper" />
+  <Block id="wirelessautomate:resonator_tuner" x="2" y="0" z="0" p:facing="north" p:formed="true" />
+  <Block id="wirelessautomate:resonator_casing" x="2" y="0" z="1" p:facing="south" p:position="p21" />
+  <Block id="wirelessautomate:resonator_casing" x="2" y="0" z="2" p:facing="south" p:position="p22" />
+  <Block id="wirelessautomate:resonator_casing" x="2" y="0" z="3" p:facing="south" p:position="p23" />
+  <Block id="wirelessautomate:resonance_core" x="2" y="0" z="4" p:facing="south" p:formed="true" p:tier="emerald" />
+  <Block id="wirelessautomate:resonator_cradle" x="2" y="1" z="2" p:part="lower" />
+  <Block id="wirelessautomate:resonator_cradle" x="2" y="2" z="2" p:part="upper" />
+  <Block id="wirelessautomate:resonator_casing" x="3" y="0" z="0" p:facing="south" p:position="p30" />
+  <Block id="wirelessautomate:resonator_casing" x="3" y="0" z="1" p:facing="south" p:position="p31" />
+  <Block id="wirelessautomate:resonator_casing" x="3" y="0" z="2" p:facing="south" p:position="p32" />
+  <Block id="wirelessautomate:resonator_casing" x="3" y="0" z="3" p:facing="south" p:position="p33" />
+  <Block id="wirelessautomate:resonator_casing" x="3" y="0" z="4" p:facing="south" p:position="p34" />
+  <Block id="wirelessautomate:resonator_column" x="3" y="1" z="1" p:corner="ne" p:part="lower" />
+  <Block id="wirelessautomate:resonator_column" x="3" y="1" z="3" p:corner="se" p:part="lower" />
+  <Block id="wirelessautomate:resonator_column" x="3" y="2" z="1" p:corner="ne" p:part="upper" />
+  <Block id="wirelessautomate:resonator_column" x="3" y="2" z="3" p:corner="se" p:part="upper" />
+  <Block id="wirelessautomate:resonator_casing" x="4" y="0" z="0" p:facing="south" p:position="p40" />
+  <Block id="wirelessautomate:resonator_casing" x="4" y="0" z="1" p:facing="south" p:position="p41" />
+  <Block id="wirelessautomate:resonator_energy_port" x="4" y="0" z="2" p:facing="east" p:formed="true" />
+  <Block id="wirelessautomate:resonator_casing" x="4" y="0" z="3" p:facing="south" p:position="p43" />
+  <Block id="wirelessautomate:resonator_casing" x="4" y="0" z="4" p:facing="south" p:position="p44" />
+  <BlockAnnotation x="2" y="0" z="4" color="#f0603e">
+    Núcleo de Ressonância: a tela e os cristais, na frente
   </BlockAnnotation>
-  <BlockAnnotation x="2" y="2" z="0" color="#45d6cc">
+  <BlockAnnotation x="4" y="0" z="2" color="#45d6cc">
     Porta de Energia: o roteador tira a energia daqui
   </BlockAnnotation>
-  <BlockAnnotation x="4" y="2" z="2" color="#e2b347">
+  <BlockAnnotation x="0" y="0" z="2" color="#e2b347">
     Porta de Cristais: entram cristais e catalisador, saem Opacos e rachados
   </BlockAnnotation>
-  <BlockAnnotation x="2" y="4" z="2" color="#a06bff">
-    Sintonizador (opcional)
+  <BlockAnnotation x="1" y="1" z="3" color="#a06bff">
+    Coluna do Ressonador: uma em cada diagonal, nas camadas 2 e 3
+  </BlockAnnotation>
+  <BlockAnnotation x="2" y="1" z="2" color="#7fb8ff">
+    Berço do Sol: o centro das camadas 2 e 3
   </BlockAnnotation>
   <IsometricCamera yaw="315" pitch="30" />
 </GameScene>
 
-A cena mostra a montagem **Vitrine**. Gire-a com o mouse.
+A cena mostra a estrutura pronta. Gire-a com o mouse. São **35 blocos** em três camadas de 5×5; a frente é o lado do Núcleo.
 
-- Caixa **5×5×5 oca**: **Carcaça de Porcelana** nas arestas e nos cantos; o miolo 3×3×3 fica vazio.
-- No miolo das faces (nunca nas arestas): **um Núcleo**, **pelo menos uma Porta de Energia**, **pelo menos uma Porta
-  de Cristais**, no máximo um **Sintonizador** (opcional) e Vidro no resto.
-- Exemplos: **Vitrine** (janela de Vidro 3×3 numa lateral) e **Faixa** (três vidros no alto de cada lateral).
+1. **Camada 1, o chão:** o **Núcleo** no meio da frente, a **Porta de Energia** à direita e a **Porta de Cristais** à esquerda, vistas de frente. O **Sintonizador** (opcional) fica atrás, e a casa dele leva uma **Laje** quando ele falta. O resto do chão é **Laje**.
+2. **Camadas 2 e 3:** uma **Coluna** em cada uma das quatro diagonais em volta do centro e um **Berço do Sol** no centro, em cada camada.
+3. **Em cima:** vazio. As outras casas das camadas 2 e 3 também ficam vazias.
+
 - Dois Ressonadores **não dividem parede**.
 
 Se não monta, clique no Núcleo: a barra de ação diz o que impede e o bloco errado fica contornado.
 
 | Bloco | Papel |
 | --- | --- |
-| <ItemImage id="wirelessautomate:resonator_casing" /> **Carcaça de Porcelana** | A casca da caixa. |
-| <ItemImage id="wirelessautomate:resonator_glass" /> **Vidro de Ressonância** | A janela para a câmara. |
+| <ItemImage id="wirelessautomate:resonator_casing" /> **Laje do Ressonador** | O chão da estrutura. |
+| <ItemImage id="wirelessautomate:resonator_column" /> **Coluna do Ressonador** | As quatro diagonais, nas camadas 2 e 3. |
+| <ItemImage id="wirelessautomate:resonator_cradle" /> **Berço do Sol** | O centro das camadas 2 e 3. |
 | <ItemImage id="wirelessautomate:resonance_core" /> **Núcleo de Ressonância** | Tela, cristais e energia gerada. |
 | <ItemImage id="wirelessautomate:resonator_energy_port" /> **Porta de Energia** | Só tira energia. |
 | <ItemImage id="wirelessautomate:resonator_crystal_port" /> **Porta de Cristais** | Recebe cristais e catalisador; devolve os Opacos e os rachados. |
@@ -207,11 +149,6 @@ Eco dá **+5%** de geração, sem teto.
 
 Atenção: um Afinado Ultimate rachado que chega pela Porta de Cristais também vai para o Eco. O Núcleo **guarda o
 Eco** quando é quebrado.
-
-## A câmara
-
-Pelo vidro: em sintonia, a figura de luz **fecha** e os cristais sobem e descem **juntos**. Fora, ela vira um
-**rabisco**; com geração zero, some. Cristal rachado fica escuro.
 
 ## Energia
 
@@ -260,7 +197,8 @@ Os números são os padrões; o JEI mostra os do seu pack.
 ## Receitas
 
 <RecipeFor id="wirelessautomate:resonator_casing" />
-<RecipeFor id="wirelessautomate:resonator_glass" />
+<RecipeFor id="wirelessautomate:resonator_column" />
+<RecipeFor id="wirelessautomate:resonator_cradle" />
 <RecipeFor id="wirelessautomate:resonance_core" />
 <RecipeFor id="wirelessautomate:resonator_energy_port" />
 <RecipeFor id="wirelessautomate:resonator_crystal_port" />

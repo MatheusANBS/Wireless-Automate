@@ -78,9 +78,9 @@ class GuidePagesRealTest {
             }
         }
         assertEquals(10, scenes);
-        assertEquals(143, sceneBlocks);
-        assertEquals(29, notes);
-        assertEquals(54, recipeFor);
+        assertEquals(80, sceneBlocks);
+        assertEquals(30, notes);
+        assertEquals(56, recipeFor);
     }
 
     /** O que o texto-fonte tem, contado sem o parser, contra o que o parser extraiu: nada pulado em silêncio. */
@@ -116,7 +116,7 @@ class GuidePagesRealTest {
         for (Path page : pages("en_us")) {
             fromText(Files.readString(page, StandardCharsets.UTF_8)).forEach((k, v) -> total.merge(k, v, Integer::sum));
         }
-        assertEquals(115, total.get("ItemImage"));
+        assertEquals(116, total.get("ItemImage"));
         assertEquals(6, total.get("Row"));
         assertEquals(16, total.get("br"));
         assertEquals(2, total.get("Recipe"));

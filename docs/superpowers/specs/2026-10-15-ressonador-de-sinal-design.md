@@ -52,6 +52,8 @@ O tema "sintonia = sincronia" guia o visual: em sintonia, os cristais lá dentro
 
 ## Estrutura (etapa 2)
 
+> Substituída pela spec da Armilar (`docs/superpowers/specs/2026-11-16-ressonador-armilar-design.md`): a caixa 5×5×5 oca e o Vidro saíram.
+
 - 5×5×5 fixa: casca de 98 blocos (125 − 27 do interior 3×3×3); 44 arestas e cantos de Carcaça; 54 posições de face (9 por face) para Carcaça, Vidro e as peças.
 - Peças: exatamente 1 Núcleo de Ressonância; pelo menos 1 Porta de Energia e 1 Porta de Cristais; 0 ou 1 Sintonizador; todas em posições de face fora das arestas.
 - Montagens de exemplo: Vitrine (janela 3×3 na frente) com 85 Carcaças, 9 Vidros e as 4 peças; Faixa (3 vidros na linha de cima das 4 laterais) com 82 Carcaças e 12 Vidros. Mínimo legal: 95 Carcaças + Núcleo + 1 Porta de cada.

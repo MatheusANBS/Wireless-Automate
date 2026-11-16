@@ -156,7 +156,7 @@ Os **Corações do Ressonador** saem destas peças, na ordem. O JEI mostra a pos
 | ''' + item('resonance_plate') + ''' **3. Placa de Ressonância** | 3 Lingotes de Liga de Sinal em linha | 1 |
 | ''' + item('resonance_wire') + ''' **4. Fio de Ressonância** | 1 Lingote de Liga de Sinal entre 2 lingotes de cobre, com 1 lingote de ouro embaixo | 4 |
 | ''' + item('resonance_coil') + ''' **5. Bobina de Ressonância** | 8 Fios em volta de 1 bloco de ferro | 1 |
-| ''' + item('harmonic_lens') + ''' **6. Lente Harmônica** | Bancada, sem forma: 1 Cristal Lapidado cheio + 2 diamantes + 4 Vidros de Ressonância | 1 |
+| ''' + item('harmonic_lens') + ''' **6. Lente Harmônica** | Bancada, sem forma: 1 Cristal Lapidado cheio + 2 diamantes + 4 Vidros | 1 |
 | ''' + item('phase_circuit') + ''' **7. Circuito de Fase** | 1 Placa no centro, 2 blocos de redstone, 2 lingotes de ouro e 4 quartzos do Nether | 2 |
 | ''' + item('phase_matrix') + ''' **8. Matriz de Fase** | 1 Lente no centro, 4 Bobinas nos cantos, 2 Circuitos e 2 Placas | 1 |
 | ''' + item('field_stabilizer') + ''' **9. Estabilizador de Campo** | 4 Matrizes + 1 bloco de diamante + 2 obsidianas chorosas + 1 olho do ender | 1 |
@@ -327,7 +327,7 @@ the **Echo** ([Signal Resonator](signal-resonator.md)).
 | ''' + item('resonance_plate') + ''' **3. Resonance Plate** | 3 Signal Alloy Ingots in a row | 1 |
 | ''' + item('resonance_wire') + ''' **4. Resonance Wire** | 1 Signal Alloy Ingot between 2 copper ingots, with 1 gold ingot below | 4 |
 | ''' + item('resonance_coil') + ''' **5. Resonance Coil** | 8 Wires around 1 iron block | 1 |
-| ''' + item('harmonic_lens') + ''' **6. Harmonic Lens** | Crafting table, shapeless: 1 full Cut Signal Crystal + 2 diamonds + 4 Resonance Glass | 1 |
+| ''' + item('harmonic_lens') + ''' **6. Harmonic Lens** | Crafting table, shapeless: 1 full Cut Signal Crystal + 2 diamonds + 4 Glass | 1 |
 | ''' + item('phase_circuit') + ''' **7. Phase Circuit** | 1 Plate in the center, 2 redstone blocks, 2 gold ingots and 4 Nether quartz | 2 |
 | ''' + item('phase_matrix') + ''' **8. Phase Matrix** | 1 Lens in the center, 4 Coils in the corners, 2 Circuits and 2 Plates | 1 |
 | ''' + item('field_stabilizer') + ''' **9. Field Stabilizer** | 4 Matrices + 1 diamond block + 2 crying obsidian + 1 eye of ender | 1 |

@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.resonator;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -13,6 +14,7 @@ import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.world.phys.AABB;
@@ -46,10 +48,12 @@ class ArmilarShapesTest {
                 int y = dados.has("y") ? dados.get("y").getAsInt() : 0;
                 assertFalse(dados.has("x"), bloco + " " + variante.getKey() + ": giro em x não tem forma");
                 VoxelShape forma = ArmilarShapes.forma(bloco, variante.getKey());
-                for (AABB caixa : caixasDoModelo(dados.get("model").getAsString(), y)) {
+                List<AABB> caixas = caixasDoModelo(dados.get("model").getAsString(), y);
+                for (AABB caixa : caixas) {
                     assertTrue(cabe(caixa, forma),
                             bloco + " " + variante.getKey() + ": elemento " + caixa + " fora da forma");
                 }
+                assertEnvolventeIgual(bloco + " " + variante.getKey(), caixas, forma);
                 conferidas++;
             }
         }
@@ -171,6 +175,33 @@ class ArmilarShapesTest {
             saida[i] = lista.get(i).getAsDouble();
         }
         return saida;
+    }
+
+    /**
+     * A envolvente da forma é a dos elementos do modelo arredondada para fora na grade de 1 px: pega forma grande
+     * demais (um índice errado que devolve o cubo cheio num estado montado). Os elementos internos sem face ficam
+     * cercados pelos vizinhos, então não mudam a envolvente.
+     */
+    private static void assertEnvolventeIgual(String rotulo, List<AABB> caixas, VoxelShape forma) {
+        double[] esperada = {Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE, -Double.MAX_VALUE,
+                -Double.MAX_VALUE, -Double.MAX_VALUE};
+        for (AABB c : caixas) {
+            double[] v = {c.minX, c.minY, c.minZ, c.maxX, c.maxY, c.maxZ};
+            for (int k = 0; k < 3; k++) {
+                esperada[k] = Math.min(esperada[k], v[k]);
+                esperada[k + 3] = Math.max(esperada[k + 3], v[k + 3]);
+            }
+        }
+        for (int k = 0; k < 3; k++) {
+            esperada[k] = Math.floor(esperada[k] * 16 + FOLGA) / 16;
+            esperada[k + 3] = Math.max(0, Math.ceil(esperada[k + 3] * 16 - FOLGA)) / 16;
+        }
+        AABB real = forma.bounds();
+        double[] obtida = {real.minX, real.minY, real.minZ, real.maxX, real.maxY, real.maxZ};
+        for (int k = 0; k < 6; k++) {
+            assertEquals(esperada[k], obtida[k], FOLGA, rotulo + ": envolvente da forma " + real + " difere da do modelo "
+                    + Arrays.toString(esperada) + " no índice " + k);
+        }
     }
 
     /** A caixa está inteira dentro da forma (nada dela sobra fora). */

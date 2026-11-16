@@ -202,7 +202,10 @@ final class ArmilarShapes {
         return Block.box(ax, y0, az, bx, y1, bz);
     }
 
-    /** A forma da variante `chave` (`facing=north,position=p00`, propriedades em ordem alfabética) do bloco. */
+    /**
+     * A forma da variante `chave` (`facing=north,position=p00`, propriedades em ordem alfabética) do bloco. Só o
+     * construtor dos blocos e o teste a usam; faz uma varredura linear de `ESTADOS`, então não serve ao `getShape`.
+     */
     static VoxelShape forma(String bloco, String chave) {
         String prefixo = bloco + "|" + chave + "|";
         for (String estado : ESTADOS) {

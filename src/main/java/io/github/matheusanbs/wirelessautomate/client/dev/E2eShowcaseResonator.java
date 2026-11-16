@@ -119,8 +119,8 @@ final class E2eShowcaseResonator {
                 2.2, BOX[2] + 2.5, false));
         list.add(DevEndToEnd.wait("Ressonador: em sintonia", 40));
         list.add(capture("s19-ressonador"));
-        list.add(E2eShowcase.showLook("Ressonador: câmera no Núcleo", BOX[0] + 7, 1.4, BOX[2] + 2, BOX[0] + 4,
-                2.5, BOX[2] + 2, true));
+        list.add(E2eShowcase.showLook("Ressonador: câmera no Núcleo", BOX[0] + 2, 1.6, BOX[2] + 7, BOX[0] + 2,
+                0.5, BOX[2] + 4.5, true));
         list.add(new Step("Ressonador: abrir a tela do Núcleo", STEP_TIMEOUT_MS, () -> {
             // o clique abre a tela só com a mão vazia
             Minecraft.getInstance().player.getInventory().setItem(

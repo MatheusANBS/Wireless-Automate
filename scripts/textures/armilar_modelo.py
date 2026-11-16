@@ -25,6 +25,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import armilar_geometria as geo  # noqa: E402
 import armilar_texturas  # noqa: E402
 import blocos  # noqa: E402
+import modelo_geometria  # noqa: E402
+import previa_iso  # noqa: E402
 import ressonador_blocos  # noqa: E402
 from armilar_geometria import ModeloInvalido  # noqa: E402,F401
 from identidade import ASSETS, MODELOS, PREVIEW, RAIZ, TIERS, grava_json, salvar  # noqa: E402
@@ -122,11 +124,11 @@ def validar(m: blocos.Modelo) -> None:
     if len(m.elementos) > MAX_ELEMENTOS:
         raise ModeloInvalido(f"{m.nome}: {len(m.elementos)} elementos, o limite é {MAX_ELEMENTOS}")
     for el in m.elementos:
-        env = blocos.envolvente(el)
+        env = modelo_geometria.envolvente(el)
         if any(v < -1e-6 or v > 16 + 1e-6 for v in env):
             raise ModeloInvalido(f"{m.nome}: elemento fora da casa {env}")
     try:
-        blocos.validar_geometria(m)
+        modelo_geometria.validar_geometria(m)
     except AssertionError as erro:
         raise ModeloInvalido(str(erro)) from erro
 
@@ -235,7 +237,7 @@ def blockstates_armilar() -> dict[str, dict]:
 
 # ---------------------------------------------------------------- prévia
 def previa(ms: dict[str, blocos.Modelo], destino: Path | None = None, s: int = 6) -> Path:
-    """Os modelos juntos na posição do mundo, na projeção isométrica do `blocos.render` (câmera em +x, +y, +z: vê
+    """Os modelos juntos na posição do mundo, na projeção isométrica do `previa_iso.render` (câmera em +x, +y, +z: vê
     o sul, onde fica o Núcleo, e o leste, onde fica a Energia)."""
     destino = destino or PREVIEW / "armilar-formada.png"
     junto = blocos.Modelo("armilar_formada", "armilar_porcelana")
@@ -251,7 +253,7 @@ def previa(ms: dict[str, blocos.Modelo], destino: Path | None = None, s: int = 6
             junto.dentro.append(dentro)
     spr = armilar_texturas.sprites()
     tex = {n.split("/", 1)[1]: sp.quadro(0) for n, sp in spr.items()}
-    img = blocos.render(junto, tex, s, (164 * s, 132 * s, 82 * s, 90 * s))
+    img = previa_iso.render(junto, tex, s, (164 * s, 132 * s, 82 * s, 90 * s))
     destino.parent.mkdir(parents=True, exist_ok=True)
     img.save(destino)
     return destino

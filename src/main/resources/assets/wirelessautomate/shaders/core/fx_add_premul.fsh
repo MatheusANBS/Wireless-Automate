@@ -7,7 +7,7 @@ uniform float AlphaCut;
 
 in vec4 vertexColor;
 in vec2 texCoord0;
-in float dissolve;
+flat in float dissolve;
 
 out vec4 fragColor;
 

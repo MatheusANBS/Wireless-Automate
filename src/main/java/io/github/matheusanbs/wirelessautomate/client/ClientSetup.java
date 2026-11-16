@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.client.dock.DockScreen;
 import io.github.matheusanbs.wirelessautomate.client.dock.render.PatternDockRenderer;
 import io.github.matheusanbs.wirelessautomate.client.filter.FilterScreen;
 import io.github.matheusanbs.wirelessautomate.client.fx.FxShaders;
+import io.github.matheusanbs.wirelessautomate.client.fx.FxWarmup;
 import io.github.matheusanbs.wirelessautomate.client.guide.GuidePages;
 import io.github.matheusanbs.wirelessautomate.client.guide.GuideScreen;
 import io.github.matheusanbs.wirelessautomate.client.recipe.RecipeEditorScreen;
@@ -140,10 +141,11 @@ public final class ClientSetup {
                 (TvMenu menu, Inventory inventory, Component title) -> new TvScreen(menu, inventory, title));
     }
 
-    /** O livro-guia esquece as páginas lidas a cada recarga de recursos (e lê de novo ao abrir). */
+    /** O livro-guia esquece as páginas lidas a cada recarga de recursos (e lê de novo ao abrir); a pré-carga dos efeitos recomeça. */
     @SubscribeEvent
     static void registerReloadListeners(RegisterClientReloadListenersEvent event) {
         event.registerReloadListener(GuidePages.RELOAD);
+        event.registerReloadListener(FxWarmup.RELOAD);
     }
 
     /** A Armilar do Núcleo montado, a animação do Reparador de Cristais e a Tela de Sinal. */

@@ -18,7 +18,7 @@ public final class FxQueue {
 
     /** Anota o job, a não ser na passada de sombra: nada de efeito nela (senão seria desenhado de novo no mundo). */
     public static void submit(FxJob job) {
-        if (shadowPass.getAsBoolean()) {
+        if (inShadowPass()) {
             return;
         }
         JOBS.add(job);
@@ -27,6 +27,11 @@ public final class FxQueue {
     /** Só o teste: troca o detector da passada de sombra; {@code null} volta ao do Iris. */
     static void setShadowDetector(BooleanSupplier detector) {
         shadowPass = detector == null ? ShaderPackCheck::shadowPass : detector;
+    }
+
+    /** Se é a passada de sombra, pelo mesmo detector de {@link #submit}; o {@link FxLights} também o consulta. */
+    static boolean inShadowPass() {
+        return shadowPass.getAsBoolean();
     }
 
     public static boolean isEmpty() {

@@ -6,6 +6,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -62,6 +63,7 @@ public final class FxTypes extends RenderType {
     private static final Map<ResourceLocation, RenderType> ADD = new HashMap<>();
     private static final Map<ResourceLocation, RenderType> LIGHT = new HashMap<>();
     private static final List<RenderType> ALL;
+    private static final List<RenderType> BATCH;
 
     static {
         List<FxSheet> sheets = FxSheets.all();
@@ -102,6 +104,22 @@ public final class FxTypes extends RenderType {
             sheet.bind(all[i]);
         }
         ALL = List.of(all);
+        // a ordem do lote: a tinta, o aditivo de todas as folhas e a luz (o endBatch desenha nessa ordem)
+        List<RenderType> batch = new ArrayList<>();
+        for (FxSheet sheet : sheets) {
+            if (sheet.layer() == FxSheet.Layer.INK) {
+                batch.add(INK.get(sheet.texture()));
+            }
+        }
+        for (FxSheet sheet : sheets) {
+            batch.add(ADD.get(sheet.texture()));
+        }
+        for (FxSheet sheet : sheets) {
+            if (sheet.layer() != FxSheet.Layer.INK) {
+                batch.add(LIGHT.get(sheet.texture()));
+            }
+        }
+        BATCH = List.copyOf(batch);
     }
 
     private FxTypes(String name, VertexFormat format, VertexFormat.Mode mode, int bufferSize,
@@ -125,6 +143,14 @@ public final class FxTypes extends RenderType {
     /** Os tipos de todas as folhas, na ordem de {@link FxSheets#all()}: a tinta antes da luz. */
     public static List<RenderType> all() {
         return ALL;
+    }
+
+    /**
+     * Todos os tipos que o {@link FxBatch} segura, na ordem em que saem: a tinta, o aditivo ({@link #add}) e a luz.
+     * Um tipo fora desta lista cairia no buffer de reserva e seria desenhado cedo, no meio de um job.
+     */
+    public static List<RenderType> batchTypes() {
+        return BATCH;
     }
 
     /**

@@ -10,7 +10,7 @@ uniform mat4 ProjMat;
 
 out vec4 vertexColor;
 out vec2 texCoord0;
-out float dissolve;
+flat out float dissolve;
 
 void main() {
     gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);

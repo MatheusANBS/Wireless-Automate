@@ -9,9 +9,9 @@ import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 
 /**
  * Os core shaders dos efeitos, registrados pelo {@code ClientSetup}: {@code fx} (tinta, com luz real e névoa
- * limitada), {@code fx_add} (aditivo, sem névoa e sem luz) e {@code fx_add_premul} (luz pré-multiplicada), mais o {@code fx_light} da passada de luz no mundo (formato {@code POSITION}, fora do
- * {@link #ready()}: sem ele só a luz some). Cada um é
- * {@code null} antes do registro ou se não compilou, e o tipo de desenho que depende dele some.
+ * limitada), {@code fx_add} (aditivo, sem névoa e sem luz) e {@code fx_add_premul} (luz pré-multiplicada), mais o
+ * {@code fx_light} da passada de luz no mundo (formato {@code POSITION}, fora do {@link #ready()}: sem ele só a luz
+ * some). Cada um é {@code null} antes do registro ou se não compilou, e o tipo de desenho que depende dele some.
  */
 public final class FxShaders {
     private static ShaderInstance ink;

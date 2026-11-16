@@ -9,8 +9,8 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 
 /**
- * O buffer dos efeitos: um {@link ByteBufferBuilder} por tipo de {@link FxTypes#all()}, na ordem das folhas (a tinta
- * sai antes da luz no {@code endBatch}), e um construtor de reserva para o que não for desses tipos. Sem shaderpack é
+ * O buffer dos efeitos: um {@link ByteBufferBuilder} por tipo de {@link FxTypes#batchTypes()} (a tinta, o aditivo e a
+ * luz, nessa ordem no {@code endBatch}), e um construtor de reserva para o que não for desses tipos. Sem shaderpack é
  * esvaziado no estágio do mundo; com pacote guarda os vértices até o gancho tardio. Criado uma vez; os construtores
  * começam pequenos e crescem sozinhos.
  */
@@ -22,7 +22,7 @@ public final class FxBatch {
 
     public FxBatch() {
         LinkedHashMap<RenderType, ByteBufferBuilder> fixed = new LinkedHashMap<>();
-        for (RenderType type : FxTypes.all()) {
+        for (RenderType type : FxTypes.batchTypes()) {
             ByteBufferBuilder builder = new ByteBufferBuilder(4096);
             builders.add(builder);
             fixed.put(type, builder);

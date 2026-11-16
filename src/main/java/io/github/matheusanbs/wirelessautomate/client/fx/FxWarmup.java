@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -52,6 +53,13 @@ public final class FxWarmup {
         all.addAll(EXTRA);
         queue = new WarmupQueue(all);
     }
+
+    /** A recarga de recursos (F3+T) descarta as texturas: com mundo aberto, a pré-carga recomeça. */
+    public static final ResourceManagerReloadListener RELOAD = manager -> {
+        if (Minecraft.getInstance().level != null) {
+            reset();
+        }
+    };
 
     @SubscribeEvent
     static void onLogin(ClientPlayerNetworkEvent.LoggingIn event) {

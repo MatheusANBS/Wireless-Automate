@@ -20,9 +20,12 @@ public final class FxLights {
     private FxLights() {
     }
 
-    /** Anota uma luz: a posição no mundo, a cor, a intensidade {@code k} e o raio, em blocos. */
+    /**
+     * Anota uma luz: a posição no mundo, a cor, a intensidade {@code k} e o raio, em blocos. Recusa na passada de
+     * sombra (a luz é da passada do mundo) e quando o quadro já tem {@link #CAPACITY} luzes.
+     */
     public static void add(double wx, double wy, double wz, float r, float g, float b, float k, float radiusBlocks) {
-        if (count >= CAPACITY) {
+        if (count >= CAPACITY || FxQueue.inShadowPass()) {
             return;
         }
         POS[count * 3] = wx;

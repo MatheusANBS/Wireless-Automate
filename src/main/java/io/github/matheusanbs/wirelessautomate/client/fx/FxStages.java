@@ -7,9 +7,10 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.bus.api.EventPriority;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.RenderFrameEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
@@ -31,7 +32,7 @@ import org.lwjgl.opengl.GL13;
  *   gancho nem toca na fila durante ela.</li>
  * </ul>
  * <p>
- * A decisão do gancho tardio (Passo 1 da Tarefa 3): é o evento {@code RenderGuiEvent.Pre}, sem mixin. A evidência
+ * A decisão do gancho tardio: é o evento {@code RenderGuiEvent.Pre}, sem mixin. A evidência
  * está no NeoForge 21.1.248: {@code GuiLayerManager.render} posta o {@code RenderGuiEvent.Pre} e só depois percorre as
  * camadas, e o {@code options.hideGui} não entra aí: ele só liga e desliga as camadas (as lambdas
  * {@code () -> !minecraft.options.hideGui} em {@code Gui.<init>}). O {@code GameRenderer.render} chama o
@@ -39,7 +40,7 @@ import org.lwjgl.opengl.GL13;
  * {@code finalizeLevelRendering} do Iris, que fecha o quadro no fim do {@code LevelRenderer.renderLevel}) e antes do
  * HUD. Então o e2e, que liga {@code hideGui} nas capturas, também vê os efeitos.
  * <p>
- * Fabulous (sem pacote, testado na Tarefa 11): o alvo aberto em {@code AFTER_TRANSLUCENT_BLOCKS} é o translúcido, e o
+ * Fabulous (sem pacote): o alvo aberto em {@code AFTER_TRANSLUCENT_BLOCKS} é o translúcido, e o
  * desenho dos efeitos nele sai certo, com a oclusão dos blocos, porque o jogo copia a profundidade do principal para ele
  * antes. Já a luz no mundo precisa da profundidade do principal, e o último passo da cadeia de transparência
  * ({@code PostPass.process}) limpa o alvo de saída (o principal, cor e profundidade) antes de compor: em
@@ -49,7 +50,7 @@ import org.lwjgl.opengl.GL13;
  * <p>
  * Limitação conhecida (mão com pacote): a profundidade é salva em {@code AFTER_LEVEL}, antes de a mão ser desenhada, e
  * o Iris não dá máscara da mão. Com shaderpack, a luz no mundo e o desenho tardio podem então cair por cima da mão
- * perto do sol (medido na Tarefa 11: a média do vermelho na região da mão sobe de 23 para 39 com Complementary e
+ * perto do sol (medido no e2e: a média do vermelho na região da mão sobe de 23 para 39 com Complementary e
  * de 13 para 25 com BSL). Decidido: fica assim. Está em {@code docs/mapa/efeitos.md}.
  * <p>
  * O alvo principal tem a profundidade limpa logo antes do gancho ({@code RenderSystem.clear(256)} do
@@ -85,6 +86,20 @@ public final class FxStages {
         FxLights.clear();
         FxDepth.clearEarly();
         dropLate();
+    }
+
+    /** Ao sair do mundo: solta os alvos e o lote (são recriados no primeiro uso), a fila e as luzes. */
+    @SubscribeEvent
+    static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+        FxQueue.clear();
+        FxLights.clear();
+        FxDepth.release();
+        FxLightPass.release();
+        latePending = false;
+        if (batch != null) {
+            batch.close();
+            batch = null;
+        }
     }
 
     private static void dropLate() {
@@ -201,8 +216,8 @@ public final class FxStages {
             dropLate();
             return;
         }
+        // o restore já deixa o alvo principal como o de escrita
         FxDepth.restore();
-        Minecraft.getInstance().getMainRenderTarget().bindWrite(false);
         RenderSystem.backupProjectionMatrix();
         // a matriz é a do contexto (estática, nada nosso é alocado); a cópia por chamada é do próprio RenderSystem
         RenderSystem.setProjectionMatrix(CTX.projection, VertexSorting.DISTANCE_TO_ORIGIN);

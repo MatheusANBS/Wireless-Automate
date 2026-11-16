@@ -23,7 +23,7 @@ out float vertexDistance;
 out vec4 vertexColor;
 out vec4 lightMapColor;
 out vec2 texCoord0;
-out float dissolve;
+flat out float dissolve;
 
 void main() {
     gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);

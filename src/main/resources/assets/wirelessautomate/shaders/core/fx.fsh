@@ -13,7 +13,7 @@ in float vertexDistance;
 in vec4 vertexColor;
 in vec4 lightMapColor;
 in vec2 texCoord0;
-in float dissolve;
+flat in float dissolve;
 
 out vec4 fragColor;
 

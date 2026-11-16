@@ -55,6 +55,8 @@ public final class FxRibbon {
 
     /** O {@code bez} do filme: bezier cúbica por 4 pontos ({@code p}, 12 floats), com {@code steps + 1} amostras. */
     public static int bezier(float[] p, int steps, Buffer out) {
+        // steps + 1 amostras têm de caber no buffer
+        steps = Math.min(steps, MAX - 1);
         for (int i = 0; i <= steps; i++) {
             float f = i / (float) steps;
             float g = 1 - f;

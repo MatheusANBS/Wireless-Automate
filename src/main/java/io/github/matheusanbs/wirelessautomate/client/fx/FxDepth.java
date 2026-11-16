@@ -53,6 +53,15 @@ public final class FxDepth {
         early = false;
     }
 
+    /** Libera o alvo da profundidade guardada (ao sair do mundo); o próximo {@link #save()} cria outro. */
+    static void release() {
+        if (saved != null) {
+            saved.destroyBuffers();
+            saved = null;
+        }
+        early = false;
+    }
+
     /** A textura da profundidade guardada, ou 0 se nada foi guardado. */
     public static int depthTextureId() {
         return saved == null ? 0 : saved.getDepthTextureId();
@@ -67,10 +76,6 @@ public final class FxDepth {
     }
 
     private static void blit(RenderTarget from, RenderTarget to) {
-        // erro de GL antigo (de outro mod ou do jogo) não pode ser lido como falha do nosso blit
-        while (GL11.glGetError() != 0) {
-            // só limpa
-        }
         GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, from.frameBufferId);
         GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, to.frameBufferId);
         GL30.glBlitFramebuffer(0, 0, from.width, from.height, 0, 0, to.width, to.height,

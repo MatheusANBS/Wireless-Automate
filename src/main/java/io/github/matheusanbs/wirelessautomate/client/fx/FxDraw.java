@@ -78,7 +78,8 @@ public final class FxDraw {
      */
     public static boolean ribbon(VertexConsumer out, FxContext c, FxSheet sheet, int frame, FxRibbon.Buffer buf, int n,
             int rgb, float repUnits, float offset, int dissolve, int light) {
-        if (n < 2) {
+        // repUnits <= 0 (ou NaN) dividiria por zero; mais amostras que o rascunho estourariam os arrays
+        if (n < 2 || !(repUnits > 0) || n > FxRibbon.MAX) {
             return false;
         }
         float[] p = buf.pts;

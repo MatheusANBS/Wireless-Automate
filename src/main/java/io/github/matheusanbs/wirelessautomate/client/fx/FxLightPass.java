@@ -42,8 +42,8 @@ public final class FxLightPass {
     /** Só para o e2e: desliga a passada, para a captura sem luz ao lado da com luz. */
     public static boolean disabledForTests;
     private static final FloatBuffer UPLOAD = BufferUtils.createFloatBuffer(FxLights.SHADER_MAX * 4);
-    /** Os locais dos arrays no programa {@link #locProgram}: o JSON do vanilla não declara arrays de vec4. */
-    private static int locProgram = -1;
+    /** Os locais dos arrays no programa de {@link #locShader}: o JSON do vanilla não declara arrays de vec4. */
+    private static ShaderInstance locShader;
     private static int locPos;
     private static int locCol;
     private static TextureTarget copy;
@@ -87,10 +87,11 @@ public final class FxLightPass {
         shader.safeGetUniform("LightCount").set(n);
         // o vanilla só sobe vec4 soltos pelo JSON: os arrays de luz sobem direto, com o programa ligado
         shader.apply();
-        if (locProgram != shader.getId()) {
-            locProgram = shader.getId();
-            locPos = GL20.glGetUniformLocation(locProgram, "LightPos");
-            locCol = GL20.glGetUniformLocation(locProgram, "LightCol");
+        // a instância muda quando os recursos recarregam (o id de programa pode ser reaproveitado pelo driver)
+        if (locShader != shader) {
+            locShader = shader;
+            locPos = GL20.glGetUniformLocation(shader.getId(), "LightPos");
+            locCol = GL20.glGetUniformLocation(shader.getId(), "LightCol");
         }
         upload(locPos, POS, n);
         upload(locCol, COL, n);
@@ -119,6 +120,14 @@ public final class FxLightPass {
         }
     }
 
+    /** Libera a cópia da cor (ao sair do mundo); a próxima passada cria outra. */
+    static void release() {
+        if (copy != null) {
+            copy.destroyBuffers();
+            copy = null;
+        }
+    }
+
     /** Sobe {@code n} vec4 do array para o uniform {@code location} do programa ligado. */
     private static void upload(int location, float[] values, int n) {
         if (location < 0 || n == 0) {
@@ -136,10 +145,6 @@ public final class FxLightPass {
             copy = new TextureTarget(main.width, main.height, false, Minecraft.ON_OSX);
         } else if (copy.width != main.width || copy.height != main.height) {
             copy.resize(main.width, main.height, Minecraft.ON_OSX);
-        }
-        // erro de GL antigo (de outro mod ou do jogo) não pode ser lido como falha do nosso blit
-        while (GL11.glGetError() != 0) {
-            // só limpa
         }
         GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, main.frameBufferId);
         GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, copy.frameBufferId);

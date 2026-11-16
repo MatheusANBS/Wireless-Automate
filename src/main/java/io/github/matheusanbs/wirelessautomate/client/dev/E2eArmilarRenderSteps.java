@@ -106,9 +106,13 @@ final class E2eArmilarRenderSteps {
     private static GraphicsStatus savedGraphics;
     /** O {@code hideGui} de antes; é devolvido pelo {@link #restoreHooks()}, na thread do cliente. */
     private static Boolean savedHideGui;
-    /** O mínimo de luzes no mundo: o sol sozinho, e a Porta com a vazão 7 (o sol, o clarão e a Porta). */
+    /**
+     * O mínimo de luzes no mundo por captura (a Armilar tem só três: o sol, o clarão do horizonte e a Porta): o sol
+     * sozinho; o horizonte em {@code d = 0,2} é sol e clarão; a Porta em {@code d = 0,9} com a vazão 7 é sol e Porta
+     * (o clarão do horizonte já apagou).
+     */
     private static final int MIN_LIGHTS_SUN = 1;
-    private static final int MIN_LIGHTS_PORT = 3;
+    private static final int[] MIN_LIGHTS = {MIN_LIGHTS_SUN, 2, 2};
 
     private E2eArmilarRenderSteps() {
     }
@@ -397,9 +401,9 @@ final class E2eArmilarRenderSteps {
             });
         }, () -> stepTicks >= FLOW_SETTLE_TICKS, () -> "hora no cliente " + Minecraft.getInstance().level.getDayTime()));
         for (int i = 0; i < LIGHT_D.length; i++) {
-            // o sol sozinho acende ao menos 1 luz; com a vazão 7 a Porta cheia (d = 0,9) soma o sol, o clarão e a Porta
+            // o sol sozinho acende 1 luz; o clarão do horizonte e a Porta (com a vazão 7) somam a segunda
             list.add(shotAt("luz " + LIGHT_NAME[i], TC + LIGHT_D[i], origin, counts,
-                    lightRule(i == LIGHT_D.length - 1 ? MIN_LIGHTS_PORT : MIN_LIGHTS_SUN)));
+                    lightRule(MIN_LIGHTS[i])));
             list.add(capture(prefix + "-luz-" + LIGHT_NAME[i]));
         }
         list.add(E2eResonatorSteps.camera("Armilar: câmera de perto da luz", playerId, origin,

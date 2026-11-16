@@ -28,6 +28,9 @@ Thumbs.db
 ### Minecraft ###
 run/
 runs/
+# o JUnit com o Minecraft (neoForge.unitTest) roda na raiz e cria estas duas pastas
+/config/
+/logs/
 !**/src/**/run/
 **/src/generated/**/.cache/
 repo/

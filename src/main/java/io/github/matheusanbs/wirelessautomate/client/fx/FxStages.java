@@ -47,6 +47,11 @@ import org.lwjgl.opengl.GL13;
  * profundidade é guardada em {@code AFTER_WEATHER}, o último estágio antes do {@code transparencyChain.process}
  * ({@link FxDepth#saveEarly()}), e a passada de luz usa essa cópia.
  * <p>
+ * Limitação conhecida (mão com pacote): a profundidade é salva em {@code AFTER_LEVEL}, antes de a mão ser desenhada, e
+ * o Iris não dá máscara da mão. Com shaderpack, a luz no mundo e o desenho tardio podem então cair por cima da mão
+ * perto do sol (medido na Tarefa 11: a média do vermelho na região da mão sobe de 23 para 39 com Complementary e
+ * de 13 para 25 com BSL). Decidido: fica assim. Está em {@code docs/mapa/efeitos.md}.
+ * <p>
  * O alvo principal tem a profundidade limpa logo antes do gancho ({@code RenderSystem.clear(256)} do
  * {@code GameRenderer.render}); por isso o gancho a restaura e, no fim, limpa de novo, para o HUD não ser testado
  * contra a profundidade do mundo.

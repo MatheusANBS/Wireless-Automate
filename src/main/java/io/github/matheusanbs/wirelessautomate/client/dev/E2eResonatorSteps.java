@@ -307,7 +307,7 @@ final class E2eResonatorSteps {
         });
     }
 
-    /** O que a medida repete a cada tick de espera (a extração que mantém o conduto aceso). */
+    /** O que a medida repete a cada tick de espera (a extração que mantém a vazão, e com ela o arco, acesa). */
     @FunctionalInterface
     interface Tick {
         void run() throws Exception;

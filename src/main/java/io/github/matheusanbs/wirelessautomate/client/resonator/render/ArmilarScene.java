@@ -38,7 +38,7 @@ final class ArmilarScene implements FxJob {
 
     /** A luz some abaixo disto. */
     private static final double LIGHT_MIN = 0.001;
-    /** O grão de redstone da recarga (a cor e o tamanho que a câmara antiga usava). */
+    /** O grão de redstone da recarga (pó coral do vanilla, tamanho 0,6). */
     private static final DustParticleOptions REDSTONE = new DustParticleOptions(new Vector3f(0.84f, 0.27f, 0.23f), 0.6f);
     /**
      * O meio lado do clarão no cristal ao fim da recarga, em px. Proposta: a spec e o filme não dão o tamanho (nem a

@@ -1,6 +1,6 @@
 # E2E: guia de uso
 
-O e2e (`client/dev/DevEndToEnd`, o roteiro em `E2eScript`, as suítes em `E2eSuites` e os passos em `E2e*Steps`) abre o jogo com um mundo de verdade, clica pelas telas, confere cada passo no servidor e na tela e escreve `result.txt`. É **rápido por padrão**: só asserções, sem capturas, sem repetir em português e no tema escuro, sem a comparação do desenho antigo com o plasma. Capturas, variantes e medidas de desempenho entram quando pedidas.
+O e2e (`client/dev/DevEndToEnd`, o roteiro em `E2eScript`, as suítes em `E2eSuites` e os passos em `E2e*Steps`) abre o jogo com um mundo de verdade, clica pelas telas, confere cada passo no servidor e na tela e escreve `result.txt`. É **rápido por padrão**: só asserções, sem capturas, sem repetir em português e no tema escuro. Capturas, variantes e medidas de desempenho entram quando pedidas.
 
 ## Rodar
 
@@ -10,6 +10,7 @@ O e2e (`client/dev/DevEndToEnd`, o roteiro em `E2eScript`, as suítes em `E2eSui
 ./scripts/e2e.sh --only tablet --capture tablet-  # com as capturas que começam por "tablet-"
 ./scripts/e2e.sh --completo                       # tudo: capturas, variantes e as suítes opcionais
 ./scripts/e2e.sh --lista                          # as suítes
+./scripts/e2e.sh --only ressonador --capture armilar --shaders bsl --out run/e2e-armilar-bsl   # com shaderpack
 ./scripts/e2e.sh --skip guia,escuro --out run/e2e-x
 ```
 
@@ -22,7 +23,7 @@ No Windows (Git Bash, sem `xvfb-run`) o jogo abre numa janela de verdade: não m
 | `WA_E2E` | pasta de saída | liga o e2e |
 | `WA_E2E_ONLY` | `a,b,c`, `todas` ou vazio | quais suítes rodam; vazio ou `todas` = as padrão (todas menos as opcionais); um nome opcional vale quando pedido; `lista` só imprime as suítes no log |
 | `WA_E2E_SKIP` | `a,b` | tira suítes do conjunto escolhido |
-| `WA_E2E_CAPTURE` | `off` (padrão), `todas` ou prefixos (`reparador-tela,ressonador-camara`) | quais capturas saem; as outras viram passos instantâneos (a de falha sempre sai) |
+| `WA_E2E_CAPTURE` | `off` (padrão), `todas` ou prefixos (`reparador-tela,armilar-sintonia`) | quais capturas saem; as outras viram passos instantâneos (a de falha sempre sai) |
 | `WA_E2E_VARIANTS` | `off` (padrão), `todas` ou `pt`, `escuro` | se as repetições em português e no tema escuro entram nas suítes que as têm (os PNGs saem como `<nome>-pt` e `<nome>-escuro`) |
 | `WA_E2E_PROFILE` | `rapido` (padrão) ou `completo` | `completo` = `CAPTURE=todas`, `VARIANTS=todas` e as suítes opcionais; as outras variáveis, quando presentes, ganham do perfil |
 
@@ -45,10 +46,10 @@ Ordem do registro. "Pré-requisito": o que a suíte pressupõe além da abertura
 | `source` | Tanque de Source (só com o Ars Nouveau) | redes | padrão |
 | `receitas` | editor de receitas | redes | padrão |
 | `escuro` | tema escuro (usa os baús e a Bateria de `armazenamento`, que entra junto) | armazenamento | opcional |
-| `ressonador` | Ressonador de Sinal: a Armilar pela metade com a projeção, solta (uma terra no ar e uma Coluna faltando) e formada, de lado, de frente e de cima, com o topo de cada peça de face (capturas `armilar-*`), a tela, a câmara e o conduto (~130 s com todas as capturas; o passo "buffer cheio" leva ~64 s) | nenhum | padrão |
-| `ressonador-desempenho` | tempo de quadro da câmara, desenho antigo × plasma (mede, não afirma) | nenhum | opcional |
+| `ressonador` | Ressonador de Sinal: a Armilar pela metade com a projeção, solta (uma terra no ar e uma Coluna faltando) e formada, de lado, de frente e de cima, com o topo de cada peça de face, a tela e a câmara; a Armilar em cada fase da conjunção (sintonia, preparação, estouro, arco, impacto, dissolução, vazão 0), os cristais, o buffer cheio, a recarga, a montagem e o rachado, a luz no mundo e a mão (capturas `armilar-*`, câmera do filme; confere por fase quantos sprites e fitas a Armilar pôs no buffer) (~140 s com todas as capturas) | nenhum | padrão |
+| `ressonador-desempenho` | tempo de quadro da Armilar com 0, 1 e 10 à vista (mede, não afirma; sem pacote, 120 quadros por medida) | nenhum | opcional |
 | `fx-base` | o caminho de desenho dos efeitos (`client/fx`): um brilho e uma fita de teste atrás de uma parede de pedra (`fx-base-oclusao`: cortado pela borda), a 2 blocos do jogador (`fx-base-perto`: inteiro) e a 60 blocos (`fx-base-longe`: nada, o corte de 48); com `--shaders complementary` ou `bsl`, por cima do pacote | nenhum | opcional |
-| `armilar-render` | o render da Armilar com o relógio parado em cada fase da conjunção (preparação, estouro, arco, impacto, dissolução), com a vazão 7 e com a 0; os cristais de perto, o buffer cheio e a recarga (o grão de redstone e o clarão do fim). A Tarefa 11 funde na `ressonador` | nenhum | opcional |
+| `armilar-fabulous` | a Armilar com os gráficos Fabulous: a conjunção, a luz no mundo e a mão; troca os gráficos e recria os alvos, e devolve o de antes no fim (roda sem `--shaders`) | nenhum | opcional |
 | `ressonador-jei` | JEI do Ressonador | nenhum | padrão |
 | `reparador` | Reparador de Cristais (~21 s com as capturas) | nenhum | padrão |
 | `reparador-animacao` | a animação do Reparador no mundo, com o tempo parado em cada fase (capturas `reparador-anim-*`; confere quantos cristais e quads o BER pôs) | nenhum | padrão |
@@ -61,6 +62,13 @@ Ordem do registro. "Pré-requisito": o que a suíte pressupõe além da abertura
 | `guia` | o livro-guia (tela própria, sem outro mod): abre pelo gancho do item, a folha de rosto e o índice, clica num link e volta, a busca (digitar, Enter, descer até o 9º resultado, Esc), a tecla G sobre um item com a tecla e o caractere, como o jogo manda (abre na página com a busca vazia e o Esc volta ao inventário; num baú, volta ao baú com o menu sincronizado; com um campo de texto focado ou a busca do criativo com foco, não abre), a dica da folha de rosto com teclas de nome longo, a cena do roteador (arrastar gira sem virar a folha, a roda dá zoom, o clique duplo volta; capturas `guia-cena-antes` e `guia-cena-girada`), a anotação da cena das redes (o mouse no centro projetado do bloco da fornalha dá a dica "Furnace · Extract", ou "Fornalha · Extrai" em português; capturas `guia-anotacao` e `guia-anotacao-pt`; na passada em português e só com a captura pedida, a cena dá uma volta em 24 quadros de 15°, `guia-giro-000` a `-023`, para o GIF do `scripts/curseforge/gerar_gif.py --prefixo guia-giro`), e cada página com todas as folhas viradas nos dois idiomas (capturas `guia-<pagina>-<n>`, um par por captura; confere por `GuideScreen.problems()` que nenhum texto saiu da folha) | nenhum | padrão |
 
 Tempos de referência (Windows, janela real): conjunto padrão sem capturas ~343 s; perfil `completo` ~712 s. A tabela por suíte vem no `result.txt` de cada rodada.
+
+## Shaderpacks (`--shaders` e `-Pshaders`)
+
+- `--shaders nenhum|complementary|bsl` (padrão `nenhum`) escreve o `run/config/iris.properties` (liga o Iris e escolhe o pacote de `run/shaderpacks`) e abre o cliente com `-Pshaders`. As capturas de efeito (`armilar-*`, `fx-base-*`) saem então por cima do pacote. Só o `iris.properties` escolhe o pacote, nunca o `run/options.txt`.
+- A flag `-Pshaders` do Gradle liga com qualquer valor e põe o Sodium e o Iris no `localRuntime`, isto é, em **todo** `runtimeClasspath`, inclusive nas runs de GameTest e de data (`runGameTestServer*`, `runData`). **Não use `-Pshaders` nelas**: o servidor de teste não precisa dos dois e a flag só muda o que carrega. Ela serve ao `runClient` e ao `scripts/e2e.sh --shaders`.
+- Rodar com `-Pshaders` faz o próprio jogo acrescentar as teclas do Iris (R, K e O, `key_iris.keybind.*`) ao `run/options.txt`, e uma rodada sem a flag as tira de novo. É o jogo que reescreve o arquivo (nenhum passo do e2e toca nessas linhas); o hash do `options.txt` muda entre rodadas com e sem Iris sem que algo tenha sido estragado. Não restaure o arquivo à mão por isso.
+- Um ambiente por rodada e um jogo por vez: sem pacote, Complementary, BSL e, à parte e sem `--shaders`, a suíte `armilar-fabulous`.
 
 ## Receitas
 

@@ -53,17 +53,16 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 
 ## Ressonador
 
-- **Armilar, etapa 2 (o render):** o sol no Berço, as órbitas, os cristais e o horizonte, pelo método da skill `wa-efeitos` e fiéis ao conceito escolhido (spec `docs/superpowers/specs/2026-11-16-ressonador-armilar-design.md`). (16/11)
-- **A animação antiga da câmara sai na etapa 2:** o plasma, os tentáculos, o conduto e os feixes em cima do Berço (`client/resonator/render/`) ainda desenham como antes, sem o interior que existia. (16/11)
-- **Reescrever os READMEs quando o render novo entrar:** o parágrafo da animação da câmara ("em cima do Berço do Sol") em `README.md` e `README.en.md` descreve só o que há hoje; a animação nova vem na etapa 2. (16/11)
-- **Reescrever os trechos iguais em `docs/curseforge/descricao.md`:** a descrição do CurseForge ainda fala da caixa antiga e da animação de antes; o arquivo não mudou na etapa 1. (16/11)
-- Refazer as fotos e o GIF do Ressonador na vitrine do CurseForge (`E2eShowcaseResonator`) depois do render novo; as de hoje mostram a caixa antiga. (16/11)
+- **(dono)** Aprovar a prancha da Armilar (etapa 2, pronta no ramo `armilar`; relatórios em `.superpowers/sdd/2026-11-16-armilar-etapa-2/`). O merge do ramo espera o aprovado. (16/11)
+- **Depois do aprovado:** o merge no `main`; refazer as fotos `s19` e `s20` e o GIF do Ressonador na vitrine do CurseForge (`E2eShowcaseResonator`, `scripts/curseforge/gerar_gif.py`; as de hoje mostram a câmara antiga); reescrever o parágrafo da animação em `README.md` e `README.en.md` ("em cima do Berço do Sol"); reescrever os trechos iguais em `docs/curseforge/descricao.md`, que ainda fala da caixa antiga e da animação de antes. (16/11)
+- **Levar o Reparador para o `client/fx`:** ele ainda tem os core shaders, os `RenderType`s e o plasma próprios em `client/repairer/render/` (`resonator_plasma`, `resonator_ribbon` e `resonator_crystal`); a Armilar usa o pacote novo. Hoje o Reparador cai no desenho de reserva com shaderpack. (16/11)
+- **Limitações conhecidas dos efeitos** (`docs/mapa/efeitos.md`): com shaderpack a luz no mundo e o desenho tardio podem cair por cima da mão perto do sol (decidido: fica como está); com o Fabulous a luz provavelmente ignora vidro e água na frente de uma superfície (não medido). (16/11)
+- A fase das capturas `armilar-luz-sol` e `armilar-luz-perto` usa `TC − 3`, mas a fase é periódica e ali ainda sobra um resto do arco (14 fitas); o sol sozinho pede `TC + 2,6`. Trocar a constante e refazer a rodada se a imagem importar. (16/11)
 - **(dono)** Decidir o passo 5 do spec da câmara: arcos finos dos cristais e o estalo sonoro (a sugestão é tirar, a não ser pelo som). (23/10)
 
 ## Reparador
 
 - GameTests que faltam: racha no meio do ciclo de recarga, sync da contagem do catalisador e o `onRemove` largando os 17 slots. (26/10)
-- A suíte e2e `ressonador-desempenho` repete as asserções; atualizar o spec da animação. (26/10)
 
 ## Tela de Sinal
 

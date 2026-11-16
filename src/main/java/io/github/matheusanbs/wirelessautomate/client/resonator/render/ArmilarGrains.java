@@ -2,8 +2,7 @@ package io.github.matheusanbs.wirelessautomate.client.resonator.render;
 
 /**
  * Os grãos de redstone da Porta de Cristais ao Opaco que recarrega, em lógica pura (o desenho é do
- * {@code ArmilarScene}). Porte do relógio e da vida de {@code ChamberParticles}: o relógio sobe 0,1 por tick, só com
- * alvo; há no máximo 4 vivos e cada um voa por 33 ticks.
+ * {@code ArmilarScene}). O relógio sobe 0,1 por tick, só com alvo; há no máximo 4 vivos e cada um voa por 33 ticks.
  */
 final class ArmilarGrains {
     static final int MAX = 4;

@@ -29,6 +29,10 @@ import org.lwjgl.opengl.GL30;
  * <p>
  * Fabulous: em {@code AFTER_LEVEL} a cena já está composta no alvo principal, mas a profundidade dele foi limpa pela
  * cadeia de transparência; a profundidade vem da cópia que o {@link FxStages} guardou em {@code AFTER_WEATHER}.
+ * <p>
+ * Limitação conhecida (Fabulous): essa cópia provavelmente não traz os translúcidos (água e vidro), que têm alvo
+ * próprio e entram depois, então a luz pode ignorar um vidro ou uma água na frente de uma superfície. Não foi medido;
+ * está em {@code docs/mapa/efeitos.md}.
  */
 public final class FxLightPass {
     private static final Supplier<ShaderInstance> SHADER = FxShaders::lightPass;

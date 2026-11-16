@@ -38,7 +38,8 @@ Pacote base: `src/main/java/io/github/matheusanbs/wirelessautomate/`. O mapa det
 | Tablet (a central) | [tablet](docs/mapa/tablet.md) | `menu/Tablet*`, `client/tablet/`, `NodeIndex` |
 | Filtros | [filtro](docs/mapa/filtro.md) | `filter/`, `menu/Filter*`, `client/filter/` |
 | Armazenamentos (Baú, Tanques, Bateria) | [armazenamento](docs/mapa/armazenamento.md) | `storage/`, `client/storage/` |
-| Ressonador de Sinal | [ressonador](docs/mapa/ressonador.md) | `resonator/`, tela do Núcleo e câmara animada |
+| Ressonador de Sinal | [ressonador](docs/mapa/ressonador.md) | `resonator/`, tela do Núcleo, câmara animada e a Armilar renderizada (`client/resonator/render/`) |
+| Efeitos de render (Iris, desenho tardio, luz no mundo) | [efeitos](docs/mapa/efeitos.md) | `client/fx/` |
 | Reparador de Cristais | [reparador](docs/mapa/reparador.md) | `repairer/` |
 | Tela de Sinal | [tela-de-sinal](docs/mapa/tela-de-sinal.md) | `tv/`, `client/tv/` (editor, peças, layouts, biblioteca, desenho) |
 | Doca de Padrões | [doca](docs/mapa/doca.md) | `dock/`: bloco, block entity, lados, alcance |

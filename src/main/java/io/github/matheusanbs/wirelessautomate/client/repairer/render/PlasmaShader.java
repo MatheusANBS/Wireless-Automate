@@ -6,14 +6,14 @@ import java.io.IOException;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 
-/** O core shader do Núcleo de plasma, registrado pelo {@code ClientSetup}; {@code null} antes do registro ou se não compilou. */
+/** O core shader do Núcleo de plasma do Reparador, registrado pelo {@code ClientSetup}; {@code null} antes do registro ou se não compilou. */
 public final class PlasmaShader {
     private static ShaderInstance shader;
 
     private PlasmaShader() {
     }
 
-    /** Pede ao vanilla que compile o shader no carregamento dos recursos; se não compilar, fica {@code null} e a câmara cai no desenho antigo. */
+    /** Pede ao vanilla que compile o shader no carregamento dos recursos; se não compilar, fica {@code null} e o Reparador cai no desenho de reserva ({@code RepairerFallback}). */
     public static void register(RegisterShadersEvent event) {
         try {
             event.registerShader(new ShaderInstance(event.getResourceProvider(), WirelessAutomate.id("resonator_plasma"),

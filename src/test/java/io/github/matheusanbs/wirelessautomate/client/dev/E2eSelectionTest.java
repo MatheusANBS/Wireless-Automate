@@ -21,8 +21,8 @@ class E2eSelectionTest {
     void capturaPorModoEPrefixo() {
         assertFalse(E2eSelection.captureWanted("off", "x"));
         assertTrue(E2eSelection.captureWanted("todas", "x"));
-        assertTrue(E2eSelection.captureWanted("reparador-tela,ressonador-camara", "reparador-tela-escuro"));
-        assertFalse(E2eSelection.captureWanted("reparador-tela", "ressonador-camara"));
+        assertTrue(E2eSelection.captureWanted("reparador-tela,armilar-sintonia", "reparador-tela-escuro"));
+        assertFalse(E2eSelection.captureWanted("reparador-tela", "armilar-sintonia"));
     }
 
     @Test

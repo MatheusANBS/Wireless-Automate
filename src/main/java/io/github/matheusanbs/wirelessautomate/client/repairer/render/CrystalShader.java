@@ -7,7 +7,7 @@ import net.minecraft.client.renderer.ShaderInstance;
 import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 
 /**
- * O core shader do cristal facetado da câmara, registrado pelo {@code ClientSetup}; {@code null} antes do registro ou
+ * O core shader do cristal facetado do Reparador, registrado pelo {@code ClientSetup}; {@code null} antes do registro ou
  * se não compilou.
  */
 public final class CrystalShader {
@@ -16,7 +16,7 @@ public final class CrystalShader {
     private CrystalShader() {
     }
 
-    /** Pede ao vanilla que compile o shader no carregamento dos recursos; se não compilar, fica {@code null} e a câmara cai no desenho antigo. */
+    /** Pede ao vanilla que compile o shader no carregamento dos recursos; se não compilar, fica {@code null} e o Reparador cai no desenho de reserva ({@code RepairerFallback}). */
     public static void register(RegisterShadersEvent event) {
         try {
             event.registerShader(new ShaderInstance(event.getResourceProvider(), WirelessAutomate.id("resonator_crystal"),

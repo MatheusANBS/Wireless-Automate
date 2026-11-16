@@ -36,7 +36,7 @@ import net.neoforged.neoforge.energy.IEnergyStorage;
  * <p>Roteiro (170 quadros, 20 fps): 25 quadros com o dial a {@value #START_MHZ} MHz da estação (chiado), 45 com o
  * desvio caindo pela curva {@code 1 - u²} (parte devagar e chega à lâmpada perto do fim da varredura, o clarão por
  * volta de 3,4 s) e o resto na estação, com Cristais Afinados Esmeralda e um consumidor tirando da Porta de Energia
- * a cada quadro: a vazão vira faixa no fim de um lote de 20 ticks, então o conduto acende uns dois lotes depois da
+ * a cada quadro: a vazão vira faixa no fim de um lote de 20 ticks, então o arco acende uns dois lotes depois da
  * sintonia, e os 5 s finais o mostram aceso. A estação é lida no servidor e fica presa nela a cada quadro: com o tempo
  * congelado o relógio do overworld não anda e o lote do Núcleo pode rodar várias vezes no mesmo tick, derivando.
  *
@@ -170,7 +170,7 @@ final class E2eShowcaseResonator {
                 ResonanceCoreBlockEntity core = core(server);
                 core.setStationForTest(station[0]);
                 core.setDial(station[0] + deviation(index));
-                // um consumidor na Porta de Energia: em sintonia, o conduto acende até ela
+                // um consumidor na Porta de Energia: em sintonia, o arco acende até ela
                 IEnergyStorage energy = server.overworld().getCapability(Capabilities.EnergyStorage.BLOCK,
                         E2eResonatorSteps.energyPort(origin()), null);
                 if (energy != null) {

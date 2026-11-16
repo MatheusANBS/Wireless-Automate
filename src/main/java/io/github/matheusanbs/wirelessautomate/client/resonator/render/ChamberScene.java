@@ -37,6 +37,11 @@ final class ChamberScene {
     /** A duração do clarão ao fim da recarga, em ticks (0,7 s). */
     static final int FLASH_TICKS = 14;
     private static final int SIZE = 5;
+    /**
+     * A altura do sol sobre o chão da Armilar, em blocos (47,5 px): o centro da câmara até a etapa 2 trocar a
+     * câmara pela da Armilar.
+     */
+    private static final double SUN_HEIGHT = 47.5 / 16;
     /** O giro do Opaco em torno do próprio eixo, em radianos por segundo. */
     private static final double DULL_SPIN = 0.1;
     /** A face de dentro de uma Porta, um pouco para dentro da câmara. */
@@ -101,7 +106,7 @@ final class ChamberScene {
             int[] next = view.origin();
             if (!Arrays.equals(next, origin)) {
                 origin = next;
-                worldCenter = new Vec3(origin[0] + 2.5, origin[1] + 2.5, origin[2] + 2.5);
+                worldCenter = new Vec3(origin[0] + 2.5, origin[1] + SUN_HEIGHT, origin[2] + 2.5);
                 center = worldCenter.subtract(core.getX(), core.getY(), core.getZ());
                 box = new AABB(origin[0], origin[1], origin[2], origin[0] + SIZE, origin[1] + SIZE, origin[2] + SIZE);
                 portsReadAt = Long.MIN_VALUE;
@@ -184,27 +189,22 @@ final class ChamberScene {
                 ? (gameTime - flashAt[i] + partialTick) / FLASH_TICKS : -1f;
     }
 
-    /** As faces de dentro das Portas montadas nas 98 posições da casca. */
+    /** As faces de dentro das Portas montadas: elas ficam todas na camada do chão (y = origem). */
     private void readPorts(ClientLevel level) {
         List<Vec3> energy = new ArrayList<>();
         List<Vec3> crystal = new ArrayList<>();
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
         for (int x = 0; x < SIZE; x++) {
-            for (int y = 0; y < SIZE; y++) {
-                for (int z = 0; z < SIZE; z++) {
-                    if (x != 0 && x != SIZE - 1 && y != 0 && y != SIZE - 1 && z != 0 && z != SIZE - 1) {
-                        continue;
-                    }
-                    pos.set(origin[0] + x, origin[1] + y, origin[2] + z);
-                    BlockState state = level.getBlockState(pos);
-                    if (state.getBlock() instanceof ResonatorPartBlock part && state.getValue(ResonatorPartBlock.FORMED)) {
-                        Vec3 inner = Vec3.atCenterOf(pos).subtract(
-                                Vec3.atLowerCornerOf(state.getValue(ResonatorPartBlock.FACING).getNormal()).scale(PORT_INSET));
-                        switch (part.kind()) {
-                            case ENERGY_PORT -> energy.add(inner);
-                            case CRYSTAL_PORT -> crystal.add(inner);
-                            case TUNER -> {
-                            }
+            for (int z = 0; z < SIZE; z++) {
+                pos.set(origin[0] + x, origin[1], origin[2] + z);
+                BlockState state = level.getBlockState(pos);
+                if (state.getBlock() instanceof ResonatorPartBlock part && state.getValue(ResonatorPartBlock.FORMED)) {
+                    Vec3 inner = Vec3.atCenterOf(pos).subtract(
+                            Vec3.atLowerCornerOf(state.getValue(ResonatorPartBlock.FACING).getNormal()).scale(PORT_INSET));
+                    switch (part.kind()) {
+                        case ENERGY_PORT -> energy.add(inner);
+                        case CRYSTAL_PORT -> crystal.add(inner);
+                        case TUNER -> {
                         }
                     }
                 }

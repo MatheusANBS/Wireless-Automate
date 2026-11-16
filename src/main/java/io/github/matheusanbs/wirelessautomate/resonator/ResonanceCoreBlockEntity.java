@@ -143,11 +143,6 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         return shell.crystalPorts();
     }
 
-    /** A montagem reconhecida (Vitrine ou Faixa), ou {@code null} se é própria ou nunca montou. */
-    public ResonatorBlueprint.@Nullable Layout layout() {
-        return shell.layout();
-    }
-
     /** O tempo de jogo da última montagem, -1 se nunca montou, 0 se montou antes de o tempo ser gravado. */
     public long formedAt() {
         return shell.formedAt();
@@ -159,9 +154,8 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
      * Núcleo salvo montado sem o tempo ganha 0, para a carga do chunk não acender a câmara em sequência. Não manda a
      * câmara: quem monta manda uma vez só depois do {@code setFormed}, já com a origem nova.
      */
-    void setStructure(boolean hasTuner, int energyPorts, int crystalPorts, ResonatorBlueprint.@Nullable Layout layout,
-            long gameTime) {
-        boolean changed = shell.set(hasTuner, energyPorts, crystalPorts, layout, formed, gameTime);
+    void setStructure(boolean hasTuner, int energyPorts, int crystalPorts, long gameTime) {
+        boolean changed = shell.set(hasTuner, energyPorts, crystalPorts, formed, gameTime);
         if (!hasTuner && auto) {
             auto = false;
             changed = true;

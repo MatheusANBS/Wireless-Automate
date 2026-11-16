@@ -17,202 +17,188 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 class ResonatorLayoutTest {
-    /** A Vitrine com origem em (10, 20, 30): janela 3×3 ao sul, Núcleo no leste, Portas no oeste e no norte, Sintonizador em cima. */
-    private static Map<List<Integer>, Part> vitrine() {
-        Map<List<Integer>, Part> w = new HashMap<>();
-        for (int x = 0; x < 5; x++) for (int y = 0; y < 5; y++) for (int z = 0; z < 5; z++) {
-            boolean dentro = x > 0 && x < 4 && y > 0 && y < 4 && z > 0 && z < 4;
-            w.put(List.of(10 + x, 20 + y, 30 + z), dentro ? Part.AIR : Part.CASING);
+    static final int CX = 12;
+    static final int CY = 20;
+    static final int CZ = 30;
+
+    /** Um mundo falso: a Armilar inteira em volta do Núcleo (CX, CY, CZ) para a frente dada; o resto é "outro bloco". */
+    static Map<List<Integer>, Part> armilar(Face front) {
+        Map<List<Integer>, Part> world = new HashMap<>();
+        for (int lx = 0; lx < 5; lx++) {
+            for (int ly = 0; ly < 5; ly++) {
+                for (int lz = 0; lz < 5; lz++) {
+                    world.put(cell(front, lx, ly, lz), ResonatorLayout.expected(lx, ly, lz));
+                }
+            }
         }
-        for (int x = 1; x < 4; x++) for (int y = 1; y < 4; y++) w.put(List.of(10 + x, 20 + y, 34), Part.GLASS);
-        w.put(List.of(14, 22, 32), Part.CORE);
-        w.put(List.of(10, 22, 32), Part.ENERGY_PORT);
-        w.put(List.of(12, 22, 30), Part.CRYSTAL_PORT);
-        w.put(List.of(12, 24, 32), Part.TUNER);
-        return w;
+        return world;
     }
 
-    private static ResonatorLayout.Result check(Map<List<Integer>, Part> w) {
-        return ResonatorLayout.check(14, 22, 32, (x, y, z) -> w.getOrDefault(List.of(x, y, z), Part.OTHER));
+    static List<Integer> cell(Face front, int lx, int ly, int lz) {
+        int[] w = ResonatorLayout.world(front, CX, CY, CZ, lx, ly, lz);
+        return List.of(w[0], w[1], w[2]);
     }
 
-    private static Member at(Formed f, int x, int y, int z) {
-        return f.members().stream().filter(m -> m.x() == x && m.y() == y && m.z() == z).findFirst().orElseThrow();
+    private static ResonatorLayout.Result check(Face front, Map<List<Integer>, Part> w) {
+        return ResonatorLayout.check(CX, CY, CZ, front, (x, y, z) -> w.getOrDefault(List.of(x, y, z), Part.OTHER));
     }
 
-    @Test
-    void vitrineMontaComOs98Membros() {
-        Formed f = assertInstanceOf(Formed.class, check(vitrine()));
-        assertEquals(List.of(10, 20, 30), List.of(f.minX(), f.minY(), f.minZ()));
-        assertEquals(98, f.members().size());
-        assertEquals("cnn", at(f, 12, 20, 30).casing());
-        assertEquals("npn", at(f, 10, 24, 30).casing());
-        assertEquals("cpc", at(f, 11, 24, 31).casing());
-        assertEquals(Face.EAST, at(f, 14, 22, 32).face());
-        assertEquals(Face.SOUTH, at(f, 12, 22, 34).face());
+    private static Formed formed(Face front, Map<List<Integer>, Part> w) {
+        return assertInstanceOf(Formed.class, check(front, w));
     }
 
-    @Test
-    void bitsDoVidroSeguemATabelaDasFaces() {
-        Formed f = assertInstanceOf(Formed.class, check(vitrine()));
-        assertEquals(15, at(f, 12, 22, 34).glassBits());
-        assertEquals(1 | 2, at(f, 11, 21, 34).glassBits());
-        assertEquals(4 | 8, at(f, 13, 23, 34).glassBits());
+    private static Member at(Formed f, List<Integer> p) {
+        return f.members().stream().filter(m -> m.x() == p.get(0) && m.y() == p.get(1) && m.z() == p.get(2))
+                .findFirst().orElseThrow();
     }
 
-    @Test
-    void semPortaDeEnergiaNaoMonta() {
-        Map<List<Integer>, Part> w = vitrine();
-        w.put(List.of(10, 22, 32), Part.CASING);
-        Broken b = assertInstanceOf(Broken.class, check(w));
-        assertEquals(Problem.MISSING_ENERGY_PORT, b.problem());
-        assertEquals(List.of(14, 22, 32), List.of(b.x(), b.y(), b.z()));
-    }
-
-    @Test
-    void duasPortasDeCadaMontam() {
-        Map<List<Integer>, Part> w = vitrine();
-        w.put(List.of(10, 21, 32), Part.ENERGY_PORT);
-        w.put(List.of(12, 21, 30), Part.CRYSTAL_PORT);
-        assertInstanceOf(Formed.class, check(w));
-    }
-
-    @Test
-    void doisSintonizadoresNaoMontam() {
-        Map<List<Integer>, Part> w = vitrine();
-        w.put(List.of(11, 24, 31), Part.TUNER);
-        assertEquals(Problem.TOO_MANY_TUNERS, assertInstanceOf(Broken.class, check(w)).problem());
-    }
-
-    @Test
-    void pecaNaArestaApontaOBlocoErrado() {
-        Map<List<Integer>, Part> w = vitrine();
-        w.put(List.of(14, 24, 32), Part.GLASS);
-        Broken b = assertInstanceOf(Broken.class, check(w));
-        assertEquals(Problem.WRONG_BLOCK, b.problem());
-        assertEquals(List.of(14, 24, 32), List.of(b.x(), b.y(), b.z()));
-    }
-
-    @Test
-    void interiorPrecisaEstarVazio() {
-        Map<List<Integer>, Part> w = vitrine();
-        w.put(List.of(12, 22, 32), Part.OTHER);
-        Broken b = assertInstanceOf(Broken.class, check(w));
-        assertEquals(Problem.INTERIOR_NOT_EMPTY, b.problem());
-        assertEquals(List.of(12, 22, 32), List.of(b.x(), b.y(), b.z()));
-    }
-
-    @Test
-    void segundoNucleoNaoMonta() {
-        Map<List<Integer>, Part> w = vitrine();
-        w.put(List.of(11, 22, 30), Part.CORE);
-        assertEquals(Problem.EXTRA_CORE, assertInstanceOf(Broken.class, check(w)).problem());
-    }
-
-    @Test
-    void buracoNaCascaApontaABorda() {
-        Map<List<Integer>, Part> w = vitrine();
-        w.put(List.of(10, 20, 30), Part.AIR);
-        Broken b = assertInstanceOf(Broken.class, check(w));
-        assertEquals(Problem.WRONG_BLOCK, b.problem());
-        assertEquals(List.of(10, 20, 30), List.of(b.x(), b.y(), b.z()));
-    }
-
-    private static final int[] ORIGEM = {10, 20, 30};
-
-    /** Direita e cima de cada face, escritos à mão (a tabela do brief), na ordem do enum {@code Face}. */
-    private static int[][] tabela(Face f) {
-        return switch (f) {
-            case NORTH -> new int[][] {{-1, 0, 0}, {0, 1, 0}};
-            case SOUTH -> new int[][] {{1, 0, 0}, {0, 1, 0}};
-            case WEST -> new int[][] {{0, 0, 1}, {0, 1, 0}};
-            case EAST -> new int[][] {{0, 0, -1}, {0, 1, 0}};
-            case UP -> new int[][] {{1, 0, 0}, {0, 0, -1}};
-            case DOWN -> new int[][] {{1, 0, 0}, {0, 0, 1}};
-        };
-    }
-
-    private static List<Integer> centro(Face f) {
-        return List.of(ORIGEM[0] + 2 + 2 * f.dx(), ORIGEM[1] + 2 + 2 * f.dy(), ORIGEM[2] + 2 + 2 * f.dz());
-    }
-
-    private static List<Integer> somar(List<Integer> p, int[] d, int k) {
-        return List.of(p.get(0) + k * d[0], p.get(1) + k * d[1], p.get(2) + k * d[2]);
+    private static Member local(Face front, Formed f, int lx, int ly, int lz) {
+        return at(f, cell(front, lx, ly, lz));
     }
 
     @ParameterizedTest
-    @EnumSource(Face.class)
-    void nucleoEmQualquerFaceMontaComVidroNaOposta(Face faceDoNucleo) {
-        Face oposta = Face.values()[faceDoNucleo.ordinal() ^ 1];
-        Map<List<Integer>, Part> w = new HashMap<>();
-        for (int x = 0; x < 5; x++) for (int y = 0; y < 5; y++) for (int z = 0; z < 5; z++) {
-            boolean dentro = x > 0 && x < 4 && y > 0 && y < 4 && z > 0 && z < 4;
-            w.put(List.of(10 + x, 20 + y, 30 + z), dentro ? Part.AIR : Part.CASING);
-        }
-        int[][] t = tabela(oposta);
-        List<Integer> c = centro(oposta);
-        for (int r = -1; r <= 1; r++) for (int u = -1; u <= 1; u++) {
-            w.put(somar(somar(c, t[0], r), t[1], u), Part.GLASS);
-        }
-        List<Integer> nucleo = centro(faceDoNucleo);
-        w.put(nucleo, Part.CORE);
-        List<Face> outras = new java.util.ArrayList<>();
-        for (Face f : Face.values()) if (f != faceDoNucleo && f != oposta) outras.add(f);
-        w.put(centro(outras.get(0)), Part.ENERGY_PORT);
-        w.put(centro(outras.get(1)), Part.CRYSTAL_PORT);
-
-        Formed f = assertInstanceOf(Formed.class, ResonatorLayout.check(nucleo.get(0), nucleo.get(1), nucleo.get(2),
-                (x, y, z) -> w.getOrDefault(List.of(x, y, z), Part.OTHER)));
-        assertEquals(List.of(10, 20, 30), List.of(f.minX(), f.minY(), f.minZ()));
-        assertEquals(98, f.members().size());
-        assertEquals(faceDoNucleo, at(f, nucleo.get(0), nucleo.get(1), nucleo.get(2)).face());
-        assertEquals(oposta, at(f, c.get(0), c.get(1), c.get(2)).face());
-        assertEquals(15, at(f, c.get(0), c.get(1), c.get(2)).glassBits());
-        int[][] cantos = {{1, 1, 4 | 8}, {-1, 1, 4 | 2}, {1, -1, 1 | 8}, {-1, -1, 1 | 2}};
-        for (int[] k : cantos) {
-            List<Integer> p = somar(somar(c, t[0], k[0]), t[1], k[1]);
-            assertEquals(k[2], at(f, p.get(0), p.get(1), p.get(2)).glassBits(), oposta + " " + k[0] + "," + k[1]);
-        }
+    @EnumSource(value = Face.class, names = {"SOUTH", "WEST", "NORTH", "EAST"})
+    void montaNasQuatroFrentesComOs35Membros(Face front) {
+        Formed f = formed(front, armilar(front));
+        assertEquals(35, f.members().size());
+        assertEquals(front, f.front());
+        Member core = at(f, List.of(CX, CY, CZ));
+        assertEquals(Part.CORE, core.part());
+        assertEquals(front, core.face());
     }
 
     @Test
-    void relataACaixaComMenosErrosEPrimeiroProblemaDela() {
-        Map<List<Integer>, Part> w = vitrine();
-        w.put(List.of(14, 20, 34), Part.AIR);
-        Broken um = assertInstanceOf(Broken.class, check(w));
-        assertEquals(Problem.WRONG_BLOCK, um.problem());
-        assertEquals(List.of(14, 20, 34), List.of(um.x(), um.y(), um.z()));
-
-        w.put(List.of(10, 20, 34), Part.AIR);
-        Broken dois = assertInstanceOf(Broken.class, check(w));
-        assertEquals(Problem.WRONG_BLOCK, dois.problem());
-        assertEquals(List.of(10, 20, 34), List.of(dois.x(), dois.y(), dois.z()));
+    void semSintonizadorMontaComALajeNaCasaDele() {
+        Map<List<Integer>, Part> w = armilar(Face.SOUTH);
+        w.put(cell(Face.SOUTH, 2, 0, 0), Part.CASING);
+        Formed f = formed(Face.SOUTH, w);
+        assertEquals(35, f.members().size());
+        Member slab = local(Face.SOUTH, f, 2, 0, 0);
+        assertEquals(Part.CASING, slab.part());
+        assertEquals("p20", slab.slot());
     }
 
     @Test
-    void semPortaDeCristaisEPrecedenciaDaEnergia() {
-        Map<List<Integer>, Part> w = vitrine();
-        w.put(List.of(12, 22, 30), Part.CASING);
-        Broken b = assertInstanceOf(Broken.class, check(w));
+    void osSlotsDasLajesSeguemAFrenteSul() {
+        Formed f = formed(Face.SOUTH, armilar(Face.SOUTH));
+        assertEquals("p00", local(Face.SOUTH, f, 0, 0, 0).slot());
+        assertEquals("p44", local(Face.SOUTH, f, 4, 0, 4).slot());
+        for (Member m : f.members()) {
+            if (m.part() == Part.CASING) {
+                assertEquals(Face.SOUTH, m.face());
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = Face.class, names = {"SOUTH", "WEST", "NORTH", "EAST"})
+    void osSlotsDasLajesSaoLocaisEntaoNaoMudamComAFrente(Face front) {
+        Formed f = formed(front, armilar(front));
+        assertEquals("p00", local(front, f, 0, 0, 0).slot());
+        assertEquals("p44", local(front, f, 4, 0, 4).slot());
+        assertEquals(front, local(front, f, 0, 0, 0).face());
+    }
+
+    @Test
+    void asColunasComFrenteSul() {
+        Formed f = formed(Face.SOUTH, armilar(Face.SOUTH));
+        Member lower = local(Face.SOUTH, f, 3, 1, 3);
+        assertEquals(Part.COLUMN, lower.part());
+        assertEquals("lower", lower.slot());
+        assertEquals("se", lower.corner());
+        Member upper = local(Face.SOUTH, f, 1, 2, 1);
+        assertEquals("upper", upper.slot());
+        assertEquals("nw", upper.corner());
+        assertEquals("sw", local(Face.SOUTH, f, 1, 1, 3).corner());
+        assertEquals("ne", local(Face.SOUTH, f, 3, 2, 1).corner());
+    }
+
+    @Test
+    void asColunasComFrenteLesteGiramComAEstrutura() {
+        Formed f = formed(Face.EAST, armilar(Face.EAST));
+        // A casa local (3, 1, 3) cai no mundo a (dz, -dx) = (1, -1) do centro da Armilar.
+        int[] center = ResonatorLayout.world(Face.EAST, CX, CY, CZ, 2, 0, 2);
+        List<Integer> p = cell(Face.EAST, 3, 1, 3);
+        assertEquals(List.of(center[0] + 1, CY + 1, center[2] - 1), p);
+        assertEquals("ne", at(f, p).corner());
+    }
+
+    @Test
+    void oBercoTemSlotDeBaixoEDeCima() {
+        Formed f = formed(Face.SOUTH, armilar(Face.SOUTH));
+        Member lower = local(Face.SOUTH, f, 2, 1, 2);
+        assertEquals(Part.CRADLE, lower.part());
+        assertEquals("lower", lower.slot());
+        assertEquals("upper", local(Face.SOUTH, f, 2, 2, 2).slot());
+    }
+
+    @Test
+    void aFaceDasPecasSegueAFrente() {
+        Formed south = formed(Face.SOUTH, armilar(Face.SOUTH));
+        assertEquals(Face.EAST, local(Face.SOUTH, south, 4, 0, 2).face());
+        assertEquals(Face.WEST, local(Face.SOUTH, south, 0, 0, 2).face());
+        assertEquals(Face.NORTH, local(Face.SOUTH, south, 2, 0, 0).face());
+        Formed east = formed(Face.EAST, armilar(Face.EAST));
+        assertEquals(Face.NORTH, local(Face.EAST, east, 4, 0, 2).face());
+        assertEquals(Face.SOUTH, local(Face.EAST, east, 0, 0, 2).face());
+        assertEquals(Face.WEST, local(Face.EAST, east, 2, 0, 0).face());
+    }
+
+    @Test
+    void lajeNaCasaDaEnergiaQuebra() {
+        Map<List<Integer>, Part> w = armilar(Face.SOUTH);
+        List<Integer> p = cell(Face.SOUTH, 4, 0, 2);
+        w.put(p, Part.CASING);
+        Broken b = assertInstanceOf(Broken.class, check(Face.SOUTH, w));
+        assertEquals(Problem.MISSING_ENERGY_PORT, b.problem());
+        assertEquals(p, List.of(b.x(), b.y(), b.z()));
+    }
+
+    @Test
+    void lajeNaCasaDosCristaisQuebra() {
+        Map<List<Integer>, Part> w = armilar(Face.SOUTH);
+        List<Integer> p = cell(Face.SOUTH, 0, 0, 2);
+        w.put(p, Part.CASING);
+        Broken b = assertInstanceOf(Broken.class, check(Face.SOUTH, w));
         assertEquals(Problem.MISSING_CRYSTAL_PORT, b.problem());
-        assertEquals(List.of(14, 22, 32), List.of(b.x(), b.y(), b.z()));
-
-        w.put(List.of(10, 22, 32), Part.CASING);
-        assertEquals(Problem.MISSING_ENERGY_PORT, assertInstanceOf(Broken.class, check(w)).problem());
+        assertEquals(p, List.of(b.x(), b.y(), b.z()));
     }
 
     @Test
-    void posicaoDoSegundoSintonizadorEDoNucleoExtra() {
-        Map<List<Integer>, Part> w = vitrine();
-        w.put(List.of(11, 24, 31), Part.TUNER);
-        Broken t = assertInstanceOf(Broken.class, check(w));
-        assertEquals(Problem.TOO_MANY_TUNERS, t.problem());
-        assertEquals(List.of(12, 24, 32), List.of(t.x(), t.y(), t.z()));
+    void arNaCasaDeUmaColunaQuebra() {
+        Map<List<Integer>, Part> w = armilar(Face.SOUTH);
+        List<Integer> p = cell(Face.SOUTH, 3, 1, 3);
+        w.put(p, Part.AIR);
+        Broken b = assertInstanceOf(Broken.class, check(Face.SOUTH, w));
+        assertEquals(Problem.WRONG_BLOCK, b.problem());
+        assertEquals(p, List.of(b.x(), b.y(), b.z()));
+    }
 
-        Map<List<Integer>, Part> v = vitrine();
-        v.put(List.of(11, 22, 30), Part.CORE);
-        Broken n = assertInstanceOf(Broken.class, check(v));
-        assertEquals(Problem.EXTRA_CORE, n.problem());
-        assertEquals(List.of(11, 22, 30), List.of(n.x(), n.y(), n.z()));
+    @Test
+    void blocoNumaCasaDeArQuebra() {
+        Map<List<Integer>, Part> w = armilar(Face.SOUTH);
+        List<Integer> p = cell(Face.SOUTH, 2, 3, 2);
+        w.put(p, Part.OTHER);
+        Broken b = assertInstanceOf(Broken.class, check(Face.SOUTH, w));
+        assertEquals(Problem.INTERIOR_NOT_EMPTY, b.problem());
+        assertEquals(p, List.of(b.x(), b.y(), b.z()));
+    }
+
+    @Test
+    void outroNucleoNumaCasaDeLajeQuebra() {
+        Map<List<Integer>, Part> w = armilar(Face.SOUTH);
+        List<Integer> p = cell(Face.SOUTH, 1, 0, 1);
+        w.put(p, Part.CORE);
+        Broken b = assertInstanceOf(Broken.class, check(Face.SOUTH, w));
+        assertEquals(Problem.EXTRA_CORE, b.problem());
+        assertEquals(p, List.of(b.x(), b.y(), b.z()));
+    }
+
+    @Test
+    void toWorldGiraComoOBlockstate() {
+        assertEquals(Face.SOUTH, ResonatorLayout.toWorld(Face.SOUTH, Face.SOUTH));
+        assertEquals(Face.WEST, ResonatorLayout.toWorld(Face.WEST, Face.SOUTH));
+        assertEquals(Face.NORTH, ResonatorLayout.toWorld(Face.NORTH, Face.SOUTH));
+        assertEquals(Face.EAST, ResonatorLayout.toWorld(Face.EAST, Face.SOUTH));
     }
 }

@@ -1,9 +1,8 @@
 """Os modelos formados da Armilar: cada um dos 35 blocos da estrutura mostra o seu pedaço da escultura.
 
 O `gerar_texturas.py` chama `gerar()`, que grava os sprites (`textures/block/armilar_*.png`), os modelos
-(`models/block/armilar/*.json`) e a prévia (`docs/preview/armilar-formada.png`) e devolve as chaves das texturas
-para o `limpar`. Os blockstates ainda não apontam para eles: `blockstates_armilar()` só devolve o dicionário (a
-Tarefa 4 grava).
+(`models/block/armilar/*.json`), os blockstates do Ressonador (`blockstates_armilar()`) e a prévia
+(`docs/preview/armilar-formada.png`) e devolve as chaves das texturas para o `limpar`.
 
 Todos os modelos são feitos com a frente para o sul; o giro fica no blockstate (sul 0, oeste 90, norte 180, leste
 270). A escultura (`armilar_geometria.escultura`) é montada inteira, conferida e cortada na grade; aqui cada casa
@@ -195,8 +194,8 @@ def blockstates_armilar() -> dict[str, dict]:
     """Os blockstates novos, por nome de arquivo: a Laje (`facing` × `position`), a Coluna (`part` × `corner`), o
     Berço (`part`), as peças (`facing` × `formed`) e o Núcleo (`facing` × `formed` × `tier`). Os estados soltos
     usam os modelos soltos e o giro de `ROTACOES_PECA` (norte 0, leste 90, sul 180, oeste 270); os formados usam
-    os modelos de `armilar/` e o giro da frente (sul 0, oeste 90, norte 180, leste 270). Cima e baixo formados
-    não ocorrem (a frente da estrutura é horizontal) e ficam sem giro."""
+    os modelos de `armilar/` e o giro da frente (sul 0, oeste 90, norte 180, leste 270). O `facing` é horizontal
+    (`HORIZONTAL_FACING`): só as quatro frentes têm variante."""
     bloco = f"{NS}:block/"
     formado = f"{bloco}{PASTA}/"
     laje: dict[str, dict] = {}
@@ -217,6 +216,8 @@ def blockstates_armilar() -> dict[str, dict]:
     def estados(solto: str, modelo_formado: str, tiers: tuple[str | None, ...] = (None,)) -> dict:
         variantes = {}
         for face, rot in blocos.ROTACOES_PECA.items():
+            if face not in GIRO_FRENTE:
+                continue
             for t in tiers:
                 sufixo = f",tier={t}" if t else ""
                 variantes[f"facing={face},formed=false{sufixo}"] = {"model": solto.format(t=t), **rot}
@@ -256,7 +257,7 @@ def previa(ms: dict[str, blocos.Modelo], destino: Path | None = None, s: int = 6
 
 
 def gerar(raiz_assets: Path = MODELOS) -> set[str]:
-    """Grava os sprites, os modelos e a prévia; devolve as chaves das texturas gravadas (relativas a `textures/`,
+    """Grava os sprites, os modelos, os blockstates e a prévia; devolve as chaves das texturas gravadas (relativas a `textures/`,
     como as do `limpar`). Pára com `ModeloInvalido` se a escultura ou algum modelo violar uma regra."""
     ms = construir()
     spr = armilar_texturas.sprites()
@@ -268,6 +269,8 @@ def gerar(raiz_assets: Path = MODELOS) -> set[str]:
     for antigo in pasta.glob("*.json"):  # a pasta toda é gerada daqui
         if antigo.stem not in ms:
             antigo.unlink()
+    for nome, dados in blockstates_armilar().items():
+        grava_json(raiz_assets / f"blockstates/{nome}.json", dados)
     previa(ms)
     return set(spr)
 

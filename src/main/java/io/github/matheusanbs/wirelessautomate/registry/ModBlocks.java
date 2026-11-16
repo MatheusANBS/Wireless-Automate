@@ -12,15 +12,10 @@ import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorCasingBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorColumnBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorCradleBlock;
-import io.github.matheusanbs.wirelessautomate.resonator.ResonatorGlassBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorPartBlock;
 import java.util.EnumMap;
 import java.util.Map;
-import net.minecraft.core.BlockPos;
 import net.minecraft.util.valueproviders.UniformInt;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.level.BlockGetter;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.DropExperienceBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -92,28 +87,27 @@ public final class ModBlocks {
         return stone().pushReaction(PushReaction.BLOCK);
     }
 
-    /** O Ressonador de Sinal: a carcaça, o vidro, o Núcleo (com tier) e as três peças das faces. */
+    /** O Ressonador de Sinal: a Laje, a Coluna, o Berço, o Núcleo (com tier) e as três peças das faces. */
     public static final DeferredBlock<ResonatorCasingBlock> RESONATOR_CASING = BLOCKS.registerBlock("resonator_casing",
             ResonatorCasingBlock::new, resonatorPart());
     public static final DeferredBlock<ResonatorColumnBlock> RESONATOR_COLUMN = BLOCKS.registerBlock(
             "resonator_column", ResonatorColumnBlock::new, resonatorPart().noOcclusion());
     public static final DeferredBlock<ResonatorCradleBlock> RESONATOR_CRADLE = BLOCKS.registerBlock(
             "resonator_cradle", ResonatorCradleBlock::new, resonatorPart().noOcclusion());
-    public static final DeferredBlock<ResonatorGlassBlock> RESONATOR_GLASS = BLOCKS.registerBlock("resonator_glass",
-            ResonatorGlassBlock::new, BlockBehaviour.Properties.of().strength(3.0F, 6.0F).sound(SoundType.GLASS)
-                    .pushReaction(PushReaction.BLOCK).noOcclusion().isValidSpawn(ModBlocks::never)
-                    .isRedstoneConductor(ModBlocks::never).isSuffocating(ModBlocks::never)
-                    .isViewBlocking(ModBlocks::never));
     public static final DeferredBlock<ResonanceCoreBlock> RESONANCE_CORE = BLOCKS.registerBlock("resonance_core",
-            ResonanceCoreBlock::new, resonatorPart());
+            ResonanceCoreBlock::new, resonatorPart().noOcclusion());
     public static final DeferredBlock<ResonatorPartBlock> RESONATOR_ENERGY_PORT = BLOCKS.registerBlock(
             "resonator_energy_port", props -> new ResonatorPartBlock(ResonatorPartBlock.Kind.ENERGY_PORT, props),
-            resonatorPart());
+            resonatorPart().noOcclusion());
     public static final DeferredBlock<ResonatorPartBlock> RESONATOR_CRYSTAL_PORT = BLOCKS.registerBlock(
             "resonator_crystal_port", props -> new ResonatorPartBlock(ResonatorPartBlock.Kind.CRYSTAL_PORT, props),
-            resonatorPart());
+            resonatorPart().noOcclusion());
     public static final DeferredBlock<ResonatorPartBlock> RESONATOR_TUNER = BLOCKS.registerBlock("resonator_tuner",
-            props -> new ResonatorPartBlock(ResonatorPartBlock.Kind.TUNER, props), resonatorPart());
+            props -> new ResonatorPartBlock(ResonatorPartBlock.Kind.TUNER, props), resonatorPart().noOcclusion());
+    /** O Vidro do Ressonador saiu; num mundo antigo o bloco vira Laje. */
+    static {
+        BLOCKS.addAlias(WirelessAutomate.id("resonator_glass"), WirelessAutomate.id("resonator_casing"));
+    }
     public static final DeferredBlock<RepairerBlock> CRYSTAL_REPAIRER = BLOCKS.registerBlock("crystal_repairer",
             RepairerBlock::new, stone().pushReaction(PushReaction.BLOCK).noOcclusion());
 
@@ -131,14 +125,6 @@ public final class ModBlocks {
     public static final DeferredBlock<PatternDockBlock> PATTERN_DOCK = BLOCKS.registerBlock("pattern_dock",
             PatternDockBlock::new, BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(3.0F, 6.0F)
                     .sound(SoundType.METAL).requiresCorrectToolForDrops().noOcclusion());
-
-    private static boolean never(BlockState state, BlockGetter level, BlockPos pos) {
-        return false;
-    }
-
-    private static Boolean never(BlockState state, BlockGetter level, BlockPos pos, EntityType<?> type) {
-        return false;
-    }
 
     private ModBlocks() {
     }

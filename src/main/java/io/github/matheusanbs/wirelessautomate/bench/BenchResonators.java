@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorLayout;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorPartBlock;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import java.util.ArrayList;
@@ -19,10 +20,10 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Os Ressonadores de Sinal dos cenários {@code resonator-*} ({@link BenchScene}): caixas 5×5×5 em grade, com a
- * Porta de Energia no centro da face de cima (o roteador vai em cima dela, como nos outros cenários) e, no cenário
- * que gera, uma Bateria do mod ao lado de cada uma. O desenho é o {@code ENERGY_ON_TOP} dos GameTests: Núcleo
- * no centro da face leste, Porta de Cristais na norte e a janela de vidro na sul.
+ * Os Ressonadores de Sinal dos cenários {@code resonator-*} ({@link BenchScene}): Armilares de caixa 5×5×5 em
+ * grade, com a frente para o sul, a Porta de Energia no meio do lado leste do chão (o roteador vai em cima dela,
+ * como nos outros cenários) e, no cenário que gera, uma Bateria do mod ao lado de cada uma. É a Armilar dos
+ * GameTests sem o Sintonizador: a Laje fica na casa dele.
  *
  * <p>A casca nasce sem o Núcleo (linha de base com os blocos soltos, sem nenhum Núcleo no gerenciador);
  * {@link #form} põe os Núcleos Ultimate com 8 Lapidados e a redstone cheia, e eles montam pela revalidação de
@@ -55,7 +56,7 @@ final class BenchResonators {
         int side = (int) Math.ceil(Math.sqrt(count));
         for (int i = 0; i < count; i++) {
             BlockPos box = origin.offset((i % side) * CELL_X, 0, (i / side) * CELL_Z);
-            list.add(new Resonator(box, box.offset(4, 2, 2), box.offset(2, 4, 2),
+            list.add(new Resonator(box, box.offset(2, 0, 4), box.offset(4, 0, 2),
                     batteries ? box.offset(5, 0, 2) : null));
         }
         // Uma linha acima da Porta para o roteador.
@@ -66,10 +67,11 @@ final class BenchResonators {
         return max;
     }
 
-    /** A casca inteira menos o Núcleo, e as Baterias Ultimate. */
+    /** A Armilar inteira menos o Núcleo, e as Baterias Ultimate. */
     void build() {
         BlockState casing = ModBlocks.RESONATOR_CASING.get().defaultBlockState();
-        BlockState glass = ModBlocks.RESONATOR_GLASS.get().defaultBlockState();
+        BlockState column = ModBlocks.RESONATOR_COLUMN.get().defaultBlockState();
+        BlockState cradle = ModBlocks.RESONATOR_CRADLE.get().defaultBlockState();
         BlockState battery = ModBlocks.STORAGE.get(StorageKind.BATTERY).get().defaultBlockState()
                 .setValue(RouterBlock.TIER, TIER);
         for (Resonator resonator : list) {
@@ -77,17 +79,21 @@ final class BenchResonators {
             for (int x = 0; x < 5; x++) {
                 for (int y = 0; y < 5; y++) {
                     for (int z = 0; z < 5; z++) {
-                        boolean inside = x > 0 && x < 4 && y > 0 && y < 4 && z > 0 && z < 4;
-                        boolean window = z == 4 && x > 0 && x < 4 && y > 0 && y < 4;
-                        if (!inside) {
-                            level.setBlock(origin.offset(x, y, z), window ? glass : casing, PLACE_FLAGS);
+                        BlockState state = switch (ResonatorLayout.expected(x, y, z)) {
+                            case CASING, TUNER -> casing;
+                            case COLUMN -> column;
+                            case CRADLE -> cradle;
+                            default -> null;
+                        };
+                        if (state != null) {
+                            level.setBlock(origin.offset(x, y, z), state, PLACE_FLAGS);
                         }
                     }
                 }
             }
             level.setBlock(resonator.core(), Blocks.AIR.defaultBlockState(), PLACE_FLAGS);
-            part(origin.offset(2, 2, 0), ModBlocks.RESONATOR_CRYSTAL_PORT.get(), Direction.NORTH);
-            part(resonator.energyPort(), ModBlocks.RESONATOR_ENERGY_PORT.get(), Direction.UP);
+            part(origin.offset(0, 0, 2), ModBlocks.RESONATOR_CRYSTAL_PORT.get(), Direction.WEST);
+            part(resonator.energyPort(), ModBlocks.RESONATOR_ENERGY_PORT.get(), Direction.EAST);
             if (resonator.battery() != null) {
                 level.setBlock(resonator.battery(), battery, PLACE_FLAGS);
             }
@@ -101,7 +107,7 @@ final class BenchResonators {
     /** Põe os Núcleos, cada um com um Lapidado cheio por câmara e a redstone no máximo; montam no tick seguinte. */
     void form() {
         BlockState state = ModBlocks.RESONANCE_CORE.get().defaultBlockState()
-                .setValue(RouterBlock.TIER, TIER).setValue(ResonatorPartBlock.FACING, Direction.EAST);
+                .setValue(RouterBlock.TIER, TIER).setValue(ResonatorPartBlock.FACING, Direction.SOUTH);
         for (Resonator resonator : list) {
             level.setBlock(resonator.core(), state, PLACE_FLAGS);
             if (level.getBlockEntity(resonator.core()) instanceof ResonanceCoreBlockEntity core) {

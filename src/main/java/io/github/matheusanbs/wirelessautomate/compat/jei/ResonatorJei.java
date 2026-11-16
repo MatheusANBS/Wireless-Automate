@@ -4,7 +4,6 @@ import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.resonator.CoreCatalyst;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreItem;
-import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBlueprint;
 import java.util.ArrayList;
 import java.util.List;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
@@ -41,9 +40,7 @@ final class ResonatorJei {
         }
         registration.addRecipes(ResonatorRechargeCategory.TYPE, recharges);
         registration.addRecipes(ResonatorRecastCategory.TYPE, recasts);
-        registration.addRecipes(ResonatorStructureCategory.TYPE, List.of(
-                ResonatorStructureCategory.Structure.of(ResonatorBlueprint.Layout.VITRINE),
-                ResonatorStructureCategory.Structure.of(ResonatorBlueprint.Layout.FAIXA)));
+        registration.addRecipes(ResonatorStructureCategory.TYPE, List.of(ResonatorStructureCategory.Structure.of()));
         for (RouterTier tier : loadedTiers()) {
             registration.addItemStackInfo(ResonanceCoreItem.withTier(ModItems.RESONANCE_CORE.get(), tier),
                     ResonatorInfo.lines(tier));

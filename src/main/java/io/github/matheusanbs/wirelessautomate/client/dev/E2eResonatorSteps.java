@@ -45,13 +45,13 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * A projeção do Ressonador no e2e: uma Vitrine pela metade (o Núcleo virado para o leste, as duas camadas de baixo
- * das carcaças, a janela sem dois vidros e uma terra numa aresta), o clique de mão vazia no Núcleo, a dica que fica
+ * A projeção do Ressonador no e2e: uma Armilar pela metade (o Núcleo virado para o sul, as Lajes do chão e uma
+ * terra numa casa de Coluna), o clique de mão vazia no Núcleo, a dica que fica
  * na action bar mesmo com a linha do problema que o servidor manda no clique, a contagem e a
  * captura dos fantasmas; depois a estrutura completa, que monta e apaga a projeção, e a segunda captura.
  */
 final class E2eResonatorSteps {
-    private static final Part[][][] VITRINE = ResonatorBlueprint.expected(Face.EAST, ResonatorBlueprint.Layout.VITRINE);
+    private static final Part[][][] ARMILAR = ResonatorBlueprint.expected(Face.SOUTH);
     /** A terra fica na aresta vertical entre as faces leste e sul, de frente para a câmera. */
     private static final int[] DIRT = {4, 1, 4};
     /** O vsync e o limite de FPS de antes da medida do tempo de quadro. */
@@ -59,8 +59,6 @@ final class E2eResonatorSteps {
     private static boolean savedVsync;
     private static int savedLimit;
     private static final String HINT = "block.wirelessautomate.resonance_core.projection.hint";
-    /** Os dois vidros da janela que ficam faltando. */
-    private static final int[][] MISSING_GLASS = {{2, 3, 4}, {3, 2, 4}};
     /** Os pés do jogador nas fotos de fora: a leste e ao sul da caixa, a uns 7 blocos do Núcleo. */
     static final double[] SIDE_VIEW = {8.5, 3.2, 7.5};
     /** Os pés do jogador nas fotos da câmara: a 2,5 blocos da janela, de frente para ela (yaw 180°). */
@@ -113,7 +111,7 @@ final class E2eResonatorSteps {
             ProjectionDiff.Result result = ResonatorProjection.result();
             // a dica fica 40 ticks na action bar antes da contagem
             return stepTicks >= 50 && result != null && result.wrong() == 1 && result.missing().equals(Map.of(
-                    Part.CASING, 47, Part.GLASS, 2, Part.ENERGY_PORT, 1, Part.CRYSTAL_PORT, 1, Part.TUNER, 1));
+                    Part.COLUMN, 8, Part.CRADLE, 2, Part.ENERGY_PORT, 1, Part.CRYSTAL_PORT, 1, Part.TUNER, 1));
         }, () -> {
             ProjectionDiff.Result result = ResonatorProjection.result();
             return result == null ? "sem projeção" : "faltam " + result.missing() + ", errados " + result.wrong();
@@ -287,7 +285,7 @@ final class E2eResonatorSteps {
         for (int x = 0; x < 5; x++) {
             for (int y = 0; y < 5; y++) {
                 for (int z = 0; z < 5; z++) {
-                    if (VITRINE[x][y][z] == Part.ENERGY_PORT) {
+                    if (ARMILAR[x][y][z] == Part.ENERGY_PORT) {
                         return origin.offset(x, y, z);
                     }
                 }
@@ -390,9 +388,9 @@ final class E2eResonatorSteps {
         for (int x = 0; x < 5; x++) {
             for (int y = 0; y < 5; y++) {
                 for (int z = 0; z < 5; z++) {
-                    if (VITRINE[x][y][z] != Part.AIR && halfBuilt(x, y, z) == half) {
+                    if (ARMILAR[x][y][z] != Part.AIR && halfBuilt(x, y, z) == half) {
                         level.setBlockAndUpdate(origin.offset(x, y, z),
-                                looseState(VITRINE[x][y][z], x, y, z, RouterTier.ELITE));
+                                looseState(ARMILAR[x][y][z], x, y, z, RouterTier.ELITE));
                     }
                 }
             }
@@ -400,15 +398,15 @@ final class E2eResonatorSteps {
     }
 
     /**
-     * A Vitrine inteira, com o Núcleo virado para o leste no tier dado e a janela na face sul; monta sozinha pelo
-     * tick agendado do Núcleo. A vitrine do CurseForge usa a mesma.
+     * A Armilar inteira, com o Núcleo virado para o sul no tier dado; monta sozinha pelo tick agendado do Núcleo. A
+     * vitrine do CurseForge usa a mesma.
      */
     static void placeVitrine(ServerLevel level, BlockPos origin, RouterTier tier) {
         for (int x = 0; x < 5; x++) {
             for (int y = 0; y < 5; y++) {
                 for (int z = 0; z < 5; z++) {
-                    if (VITRINE[x][y][z] != Part.AIR) {
-                        level.setBlockAndUpdate(origin.offset(x, y, z), looseState(VITRINE[x][y][z], x, y, z, tier));
+                    if (ARMILAR[x][y][z] != Part.AIR) {
+                        level.setBlockAndUpdate(origin.offset(x, y, z), looseState(ARMILAR[x][y][z], x, y, z, tier));
                     }
                 }
             }
@@ -448,25 +446,17 @@ final class E2eResonatorSteps {
     }
 
     static BlockPos core(BlockPos origin) {
-        return origin.offset(4, 2, 2);
+        return origin.offset(2, 0, 4);
     }
 
-    /** O que a primeira foto já tem: o Núcleo, as carcaças das duas camadas de baixo e a janela menos dois vidros. */
+    /** O que a primeira foto já tem: o Núcleo e as Lajes (menos a casa da terra). */
     private static boolean halfBuilt(int x, int y, int z) {
-        Part part = VITRINE[x][y][z];
+        Part part = ARMILAR[x][y][z];
         if (part == Part.CORE) {
             return true;
         }
         if (part == Part.CASING) {
-            return y <= 1 && !isDirt(x, y, z);
-        }
-        if (part == Part.GLASS) {
-            for (int[] gap : MISSING_GLASS) {
-                if (gap[0] == x && gap[1] == y && gap[2] == z) {
-                    return false;
-                }
-            }
-            return true;
+            return !isDirt(x, y, z);
         }
         return false;
     }
@@ -477,11 +467,16 @@ final class E2eResonatorSteps {
 
     /** O bloco solto de cada peça; o Núcleo e as peças de face nascem virados para fora, como a montagem os deixa. */
     private static BlockState looseState(Part part, int x, int y, int z, RouterTier tier) {
-        Direction out = x == 0 ? Direction.WEST : x == 4 ? Direction.EAST : y == 0 ? Direction.DOWN
-                : y == 4 ? Direction.UP : z == 0 ? Direction.NORTH : Direction.SOUTH;
+        Direction out = switch (part) {
+            case CORE -> Direction.SOUTH;
+            case ENERGY_PORT -> Direction.EAST;
+            case CRYSTAL_PORT -> Direction.WEST;
+            default -> Direction.NORTH;
+        };
         return switch (part) {
             case CASING -> ModBlocks.RESONATOR_CASING.get().defaultBlockState();
-            case GLASS -> ModBlocks.RESONATOR_GLASS.get().defaultBlockState();
+            case COLUMN -> ModBlocks.RESONATOR_COLUMN.get().defaultBlockState();
+            case CRADLE -> ModBlocks.RESONATOR_CRADLE.get().defaultBlockState();
             case CORE -> ModBlocks.RESONANCE_CORE.get().defaultBlockState().setValue(ResonatorPartBlock.FACING, out)
                     .setValue(RouterBlock.TIER, tier);
             case ENERGY_PORT -> ModBlocks.RESONATOR_ENERGY_PORT.get().defaultBlockState().setValue(ResonatorPartBlock.FACING, out);

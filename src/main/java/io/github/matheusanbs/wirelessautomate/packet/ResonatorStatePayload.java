@@ -8,8 +8,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
 /**
  * Servidor → cliente: o estado da tela do Núcleo aberta. A estação não vai: o desvio vai em passos de 0,05 MHz só
- * dentro de ±2 MHz ({@code TuneSignal.NO_SIGNAL} fora). Eficiência e teto em milésimos; {@code layout} 0 própria,
- * 1 Vitrine, 2 Faixa; {@code tuned} é a lâmpada, calculada no servidor pelo desvio exato ({@code TuneSignal.tuned}),
+ * dentro de ±2 MHz ({@code TuneSignal.NO_SIGNAL} fora). Eficiência e teto em milésimos; {@code tuned} é a lâmpada, calculada no servidor pelo desvio exato ({@code TuneSignal.tuned}),
  * porque os passos arredondados acenderiam além do platô; {@code recharge} são os ticks andados da recarga em curso
  * (0 sem Opaco ou sem redstone). {@code interferencePermille} é a perda da eficiência pelos vizinhos e {@code nearest} a
  * distância do mais perto que conta ({@code ResonatorInterference.NONE} sem ele); {@code eco} é o Eco guardado e
@@ -18,7 +17,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
  */
 public record ResonatorStatePayload(int containerId, long energy, long capacity, long generation, long maxGeneration,
         double dial, int efficiencyPermille, int ceilingPermille, boolean auto, boolean tuner, int deviationSteps,
-        boolean tuned, int recharge, int rechargeTicks, int energyPorts, int crystalPorts, int layout,
+        boolean tuned, int recharge, int rechargeTicks, int energyPorts, int crystalPorts,
         int interferencePermille, int nearest, long eco, long ecoBonusPermille) implements CustomPacketPayload {
     public static final Type<ResonatorStatePayload> TYPE = new Type<>(WirelessAutomate.id("resonator_state"));
     /** À mão: o {@code StreamCodec.composite} só vai até 6 campos. */
@@ -42,7 +41,6 @@ public record ResonatorStatePayload(int containerId, long energy, long capacity,
         ByteBufCodecs.VAR_INT.encode(buf, p.rechargeTicks);
         ByteBufCodecs.VAR_INT.encode(buf, p.energyPorts);
         ByteBufCodecs.VAR_INT.encode(buf, p.crystalPorts);
-        ByteBufCodecs.VAR_INT.encode(buf, p.layout);
         ByteBufCodecs.VAR_INT.encode(buf, p.interferencePermille);
         ByteBufCodecs.VAR_INT.encode(buf, p.nearest);
         ByteBufCodecs.VAR_LONG.encode(buf, p.eco);
@@ -56,7 +54,7 @@ public record ResonatorStatePayload(int containerId, long energy, long capacity,
                 ByteBufCodecs.BOOL.decode(buf), ByteBufCodecs.BOOL.decode(buf), ByteBufCodecs.VAR_INT.decode(buf),
                 ByteBufCodecs.BOOL.decode(buf), ByteBufCodecs.VAR_INT.decode(buf), ByteBufCodecs.VAR_INT.decode(buf),
                 ByteBufCodecs.VAR_INT.decode(buf), ByteBufCodecs.VAR_INT.decode(buf), ByteBufCodecs.VAR_INT.decode(buf),
-                ByteBufCodecs.VAR_INT.decode(buf), ByteBufCodecs.VAR_INT.decode(buf), ByteBufCodecs.VAR_LONG.decode(buf),
+                ByteBufCodecs.VAR_INT.decode(buf), ByteBufCodecs.VAR_LONG.decode(buf),
                 ByteBufCodecs.VAR_LONG.decode(buf));
     }
 

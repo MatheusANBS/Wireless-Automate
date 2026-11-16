@@ -2,7 +2,6 @@ package io.github.matheusanbs.wirelessautomate.resonator;
 
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorLayout.Part;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -19,13 +18,13 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Montar e desmontar o Ressonador: lê a caixa em volta do Núcleo, passa pelo {@link ResonatorLayout} e grava
- * nos blocos os estados conectados (ou os devolve a soltos), com o índice dos membros e o das Portas. Só roda por
+ * nos blocos os estados formados (ou os devolve a soltos), com o índice dos membros e o das Portas. Só roda por
  * evento de bloco (o tick agendado do Núcleo), nunca por tick.
  */
 public final class ResonatorFormation {
     /**
-     * Troca só o estado conectado (a textura): manda ao cliente sem refazer a forma dos vizinhos, porque nenhum
-     * depende dela. Montar e desmontar trocam até 98 blocos num tick.
+     * Troca só o estado formado (o modelo): manda ao cliente sem refazer a forma dos vizinhos, porque nenhum
+     * depende dela. Montar e desmontar trocam até 35 blocos num tick.
      */
     private static final int STATE_FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
 
@@ -72,7 +71,7 @@ public final class ResonatorFormation {
         if (!(state.getBlock() instanceof ResonanceCoreBlock)) {
             return ResonatorLayout.check(core.getX(), core.getY(), core.getZ(), probe(level, core));
         }
-        // As faces do ResonatorLayout seguem a ordem do Direction.
+        // As faces do ResonatorLayout seguem a ordem do Direction; a frente do Núcleo é horizontal.
         ResonatorLayout.Face front =
                 ResonatorLayout.Face.values()[state.getValue(ResonatorPartBlock.FACING).get3DDataValue()];
         return ResonatorLayout.check(core.getX(), core.getY(), core.getZ(), front, probe(level, core));
@@ -165,8 +164,11 @@ public final class ResonatorFormation {
         if (block instanceof ResonatorCasingBlock) {
             return Part.CASING;
         }
-        if (block instanceof ResonatorGlassBlock) {
-            return Part.GLASS;
+        if (block instanceof ResonatorColumnBlock) {
+            return Part.COLUMN;
+        }
+        if (block instanceof ResonatorCradleBlock) {
+            return Part.CRADLE;
         }
         if (block instanceof ResonanceCoreBlock) {
             return Part.CORE;
@@ -225,24 +227,16 @@ public final class ResonatorFormation {
     }
 
     /**
-     * Passa ao Núcleo o que a casca tem: o Sintonizador, as Portas e a montagem reconhecida. Vem antes do
-     * {@code setFormed}, para o Núcleo saber se a estrutura estava desmontada; a câmara vai ao cliente depois dos
-     * dois, numa update tag só (o {@code setFormed} manda se a montagem mudou, e o {@code syncIfChanged} seguinte
-     * cobre a estrutura que mudou com os mesmos membros).
+     * Passa ao Núcleo o que a casca tem: o Sintonizador e as Portas. Vem antes do {@code setFormed}, para o Núcleo
+     * saber se a estrutura estava desmontada; a câmara vai ao cliente depois dos dois, numa update tag só (o
+     * {@code setFormed} manda se a montagem mudou, e o {@code syncIfChanged} seguinte cobre a estrutura que mudou
+     * com os mesmos membros).
      */
     private static void structure(ServerLevel level, ResonanceCoreBlockEntity core, ResonatorLayout.Formed formed) {
-        int size = ResonatorLayout.SIZE;
-        Part[][][] local = new Part[size][size][size];
-        for (Part[][] plane : local) {
-            for (Part[] row : plane) {
-                Arrays.fill(row, Part.AIR);
-            }
-        }
         boolean tuner = false;
         int energyPorts = 0;
         int crystalPorts = 0;
         for (ResonatorLayout.Member member : formed.members()) {
-            local[member.x() - formed.minX()][member.y() - formed.minY()][member.z() - formed.minZ()] = member.part();
             switch (member.part()) {
                 case TUNER -> tuner = true;
                 case ENERGY_PORT -> energyPorts++;
@@ -251,18 +245,22 @@ public final class ResonatorFormation {
                 }
             }
         }
-        core.setStructure(tuner, energyPorts, crystalPorts, ResonatorBlueprint.layoutOf(local), level.getGameTime());
+        core.setStructure(tuner, energyPorts, crystalPorts, level.getGameTime());
     }
 
     /** O estado montado do bloco para o membro; a projeção desenha os fantasmas já assim. */
     public static BlockState formedState(BlockState state, ResonatorLayout.Member member) {
         Block block = state.getBlock();
         if (block instanceof ResonatorCasingBlock) {
-            return state.setValue(ResonatorCasingBlock.POSITION, CasingPosition.byName(member.casing()));
+            return state.setValue(ResonatorCasingBlock.POSITION, BasePosition.byName(member.slot()))
+                    .setValue(ResonatorCasingBlock.FACING, outward(member.face()));
         }
-        if (block instanceof ResonatorGlassBlock) {
-            return state.setValue(ResonatorGlassBlock.FACE, GlassFace.of(member.face()))
-                    .setValue(ResonatorGlassBlock.CONNECTIONS, member.glassBits());
+        if (block instanceof ResonatorColumnBlock) {
+            return state.setValue(ResonatorColumnBlock.PART, StackPart.byName(member.slot()))
+                    .setValue(ResonatorColumnBlock.CORNER, Corner.byName(member.corner()));
+        }
+        if (block instanceof ResonatorCradleBlock) {
+            return state.setValue(ResonatorCradleBlock.PART, StackPart.byName(member.slot()));
         }
         if (block instanceof ResonatorPartBlock || block instanceof ResonanceCoreBlock) {
             return state.setValue(ResonatorPartBlock.FACING, outward(member.face()))
@@ -295,15 +293,17 @@ public final class ResonatorFormation {
     }
 
     /**
-     * O estado solto de uma peça, o mesmo da desmontagem: Carcaça e Vidro sem conexões, as peças com
+     * O estado solto de uma peça, o mesmo da desmontagem: Laje, Coluna e Berço soltos, o Núcleo e as peças com
      * {@code formed} falso e a frente mantida. Outro bloco volta igual. O JEI usa no corte por camada.
      */
     public static BlockState looseState(BlockState state) {
         Block block = state.getBlock();
         if (block instanceof ResonatorCasingBlock) {
-            return state.setValue(ResonatorCasingBlock.POSITION, CasingPosition.LOOSE);
-        } else if (block instanceof ResonatorGlassBlock) {
-            return state.setValue(ResonatorGlassBlock.FACE, GlassFace.LOOSE).setValue(ResonatorGlassBlock.CONNECTIONS, 0);
+            return state.setValue(ResonatorCasingBlock.POSITION, BasePosition.LOOSE);
+        } else if (block instanceof ResonatorColumnBlock) {
+            return state.setValue(ResonatorColumnBlock.PART, StackPart.LOOSE);
+        } else if (block instanceof ResonatorCradleBlock) {
+            return state.setValue(ResonatorCradleBlock.PART, StackPart.LOOSE);
         } else if (block instanceof ResonatorPartBlock || block instanceof ResonanceCoreBlock) {
             return state.setValue(ResonatorPartBlock.FORMED, false);
         }

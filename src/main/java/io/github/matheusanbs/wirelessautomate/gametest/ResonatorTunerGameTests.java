@@ -15,7 +15,6 @@ import io.github.matheusanbs.wirelessautomate.resonator.CoreMath;
 import io.github.matheusanbs.wirelessautomate.resonator.CrystalCharge;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBatch;
-import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBlueprint;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorFormation;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorStatus;
 import java.util.List;
@@ -186,8 +185,6 @@ public final class ResonatorTunerGameTests {
             helper.assertTrue(core.hasTuner(), "sem o Sintonizador");
             helper.assertValueEqual(core.energyPorts(), 1, "Portas de Energia");
             helper.assertValueEqual(core.crystalPorts(), 1, "Portas de Cristais");
-            helper.assertTrue(Objects.equals(core.layout(), ResonatorBlueprint.Layout.VITRINE),
-                    "montagem: " + core.layout());
             helper.assertTrue(core.formedAt() >= 0, "sem o tempo da montagem");
             first[0] = core.formedAt();
             helper.getLevel().destroyBlock(helper.absolutePos(EDGE), false);
@@ -230,7 +227,6 @@ public final class ResonatorTunerGameTests {
             helper.assertTrue(copy.hasTuner(), "o Sintonizador não voltou");
             helper.assertValueEqual(copy.energyPorts(), core.energyPorts(), "Portas de Energia");
             helper.assertValueEqual(copy.crystalPorts(), core.crystalPorts(), "Portas de Cristais");
-            helper.assertTrue(Objects.equals(copy.layout(), core.layout()), "montagem: " + copy.layout());
             helper.assertValueEqual(copy.formedAt(), core.formedAt(), "tempo da montagem");
         });
     }

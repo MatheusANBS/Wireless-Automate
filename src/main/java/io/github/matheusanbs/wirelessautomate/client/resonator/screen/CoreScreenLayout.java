@@ -37,7 +37,7 @@ final class CoreScreenLayout {
     static final Rect INVENTORY = new Rect(10, 158, 162, 54);
     static final Rect HOTBAR = new Rect(10, 216, 162, 18);
     static final Rect STRUCTURE = new Rect(190, 158, RIGHT_W, LINE_H);
-    static final int[] STRUCTURE_LINES = {170, 182, 194, 206};
+    static final int[] STRUCTURE_LINES = {170, 182, 194};
     /** A caixa do Eco, só no Ultimate, abaixo da Estrutura, em volta do slot ({@code ResonatorMenu.ECO_X}/{@code ECO_Y}). */
     static final Rect ECO_BOX = new Rect(187, 216, 156, 22);
 

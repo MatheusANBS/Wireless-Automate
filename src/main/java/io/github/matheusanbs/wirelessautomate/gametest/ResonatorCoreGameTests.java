@@ -15,7 +15,7 @@ import io.github.matheusanbs.wirelessautomate.gametest.ResonatorTestSupport.Layo
 import io.github.matheusanbs.wirelessautomate.item.TierCoreItem;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
-import io.github.matheusanbs.wirelessautomate.resonator.CasingPosition;
+import io.github.matheusanbs.wirelessautomate.resonator.BasePosition;
 import io.github.matheusanbs.wirelessautomate.resonator.CoreMath;
 import io.github.matheusanbs.wirelessautomate.resonator.CrystalCharge;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
@@ -454,9 +454,9 @@ public final class ResonatorCoreGameTests {
             helper.assertValueEqual(counts[1], 3, "redstone no chão");
             helper.assertTrue(core.isRemoved(), "o block entity ficou");
             BlockState casing = helper.getBlockState(ORIGIN);
-            helper.assertTrue(casing.getValue(ResonatorCasingBlock.POSITION) == CasingPosition.LOOSE,
-                    "a carcaça continua montada: " + casing);
-            BlockState port = helper.getBlockState(ORIGIN.offset(2, 2, 0));
+            helper.assertTrue(casing.getValue(ResonatorCasingBlock.POSITION) == BasePosition.LOOSE,
+                    "a laje continua montada: " + casing);
+            BlockState port = helper.getBlockState(ORIGIN.offset(4, 0, 2));
             helper.assertTrue(!port.getValue(ResonatorPartBlock.FORMED), "a Porta continua montada: " + port);
         });
     }

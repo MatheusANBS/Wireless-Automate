@@ -425,170 +425,9 @@ def modelo_minerio(base: str, camada: str) -> dict:
                          for tex in ("#base", "#camada")]}
 
 
-# ---------------------------------------------------------------------------
-# Ressonador de Sinal: as texturas conectadas da estrutura 5×5×5. Os pixels são os do protótipo v7
-# aprovado (docs/preview/ressonador-proto.py, a prancha docs/preview/ressonador-prancha.png): a moldura
-# de grafite só na borda de fora da estrutura, o campo de porcelana liso, a listra coral no rodapé das
-# laterais, o vidro com aro só onde acaba o vidro e as peças com o aro que as encaixa na chapa.
-# ---------------------------------------------------------------------------
-
-Vec3 = tuple[int, int, int]
-FACES6 = ("down", "up", "north", "south", "west", "east")
-
-# A convenção das faces (spec, "Convenção das faces"): a "direita" e a "cima" da textura de cada face no
-# mundo, as do modelo do vanilla sem rotação de UV; a normal da face é direita × cima. É a única tabela:
-# as bordas da carcaça, os bits do vidro e o espelho da face de dentro do vidro saem dela, e o Java
-# (`ResonatorLayout.Face.right()`/`up()`) calcula os bits do vidro pela mesma.
-EIXOS_FACE: dict[str, tuple[Vec3, Vec3]] = {
-    "north": ((-1, 0, 0), (0, 1, 0)), "south": ((1, 0, 0), (0, 1, 0)),
-    "west": ((0, 0, 1), (0, 1, 0)), "east": ((0, 0, -1), (0, 1, 0)),
-    "up": ((1, 0, 0), (0, 0, -1)), "down": ((1, 0, 0), (0, 0, 1)),
-}
-# Os bits de `connections` do vidro: bit ligado = há vidro naquele lado da textura.
-BITS_VIDRO = {"t": 1, "r": 2, "b": 4, "l": 8}
-
-
-def _neg(v: Vec3) -> Vec3:
-    return (-v[0], -v[1], -v[2])
-
-
-def _normal(face: str) -> Vec3:
-    (rx, ry, rz), (ux, uy, uz) = EIXOS_FACE[face]
-    return (ry * uz - rz * uy, rz * ux - rx * uz, rx * uy - ry * ux)
-
-
-def _oposta(face: str) -> str:
-    alvo = _neg(_normal(face))
-    return next(f for f in FACES6 if _normal(f) == alvo)
-
-
-def _direcoes_face(face: str) -> dict[str, Vec3]:
-    """Os quatro lados da textura da face ('t', 'r', 'b', 'l') como direções no mundo."""
-    direita, cima = EIXOS_FACE[face]
-    return {"t": cima, "r": direita, "b": _neg(cima), "l": _neg(direita)}
-
-
-def _fora(letras: str, direcao: Vec3) -> bool:
-    """Andar de uma carcaça na posição `letras` (uma letra n/c/p por eixo x, y, z) nessa direção sai da estrutura?"""
-    for eixo, v in enumerate(direcao):
-        if v:
-            return letras[eixo] == ("p" if v > 0 else "n")
-    raise ValueError(direcao)
-
-
 def put(img: Image.Image, x: int, y: int, c: Cor) -> None:
     if 0 <= x < img.width and 0 <= y < img.height:
         img.putpixel((x, y), c)
-
-
-def res_campo(semente: int = 5) -> Image.Image:
-    """O campo de porcelana esmaltada: quase liso, com um grão discreto. Sem borda nenhuma: a borda é da
-    estrutura, não do bloco (uma junta por bloco voltava a ler como grade de blocos no campo de 3×3)."""
-    img = nova()
-    rnd = random.Random(semente)
-    for y in range(16):
-        for x in range(16):
-            put(img, x, y, cor("porcelana.4" if rnd.random() < .025 else "porcelana.3"))
-    return img
-
-
-def res_trilhos(img: Image.Image, bordas: set[str], coral: bool = False) -> Image.Image:
-    """Pinta a banda de 4 px nas bordas pedidas ('t', 'r', 'b', 'l'): trilho de grafite de 3 px e a luz (em
-    cima e à esquerda) ou a sombra (embaixo e à direita) de 1 px. Com `coral`, a listra coral ocupa os 2 px
-    de dentro do trilho de baixo (o rodapé da estrutura), e a banda continua com 4 px: o miolo da face fica
-    no centro óptico. Com duas bordas, um rebite de latão (1 px) no canto de dentro do L."""
-    def pinta_borda(b: str) -> None:
-        for i in range(16):
-            for d in range(0, 4):
-                if b == "t":
-                    x, y = i, d
-                elif b == "b":
-                    x, y = i, 15 - d
-                elif b == "l":
-                    x, y = d, i
-                else:
-                    x, y = 15 - d, i
-                if d == 0:
-                    c = "grafite.1"
-                elif b == "b" and coral:
-                    c = {1: "grafite.3", 2: "coral.2", 3: "coral.1"}[d]
-                elif d <= 2:
-                    c = "grafite.3"
-                else:
-                    c = "porcelana.4" if b in "tl" else "porcelana.2"
-                put(img, x, y, cor(c))
-    for b in "btlr":
-        if b in bordas:
-            pinta_borda(b)
-    if len(bordas) == 2:
-        put(img, 4 if "l" in bordas else 11, 4 if "t" in bordas else 11, cor("latao.1"))
-    return img
-
-
-def res_chave(bordas: set[str]) -> str:
-    """O nome de uma combinação de bordas, na ordem fixa t, b, l, r ('tl', 'br'...); vazio = campo."""
-    return "".join(e for e in "tblr" if e in bordas)
-
-
-def res_forro() -> Image.Image:
-    """O forro da câmara: grafite fosco, liso, só com um grão discreto."""
-    img = Image.new("RGBA", (16, 16), cor("grafite.3"))
-    rnd = random.Random(11)
-    for y in range(16):
-        for x in range(16):
-            if rnd.random() < .04:
-                put(img, x, y, cor("grafite.4"))
-    return img
-
-
-def res_vidro(n: int, montado: bool = True) -> Image.Image:
-    """O vidro pelos bits de `connections` (`BITS_VIDRO`): o aro de grafite só nos lados sem vidro. Montado,
-    um reflexo na diagonal como no vidro dos tanques; solto, jateado (fosco), sem ver o que há atrás."""
-    img = nova()
-    base_alfa = 58 if montado else 175
-    for y in range(16):
-        for x in range(16):
-            put(img, x, y, cor("vidro.2", base_alfa))
-    if montado:
-        for i in range(4, 7):
-            put(img, i, 10 - i, cor("vidro.3", 200))
-        for i in range(10, 12):
-            put(img, i, 21 - i, cor("vidro.3", 150))
-    else:
-        for y in range(16):
-            for x in range(16):
-                if (x + y) % 3 == 0:
-                    put(img, x, y, cor("vidro.3", 190))
-                elif (x * 7 + y * 3) % 11 == 0:
-                    put(img, x, y, cor("vidro.1", 200))
-    t, r, b, l = (bool(n & BITS_VIDRO[lado]) for lado in "trbl")
-    for i in range(16):
-        if not t:
-            put(img, i, 0, cor("grafite.1"))
-            put(img, i, 1, cor("vidro.1", 230))
-        if not b:
-            put(img, i, 15, cor("grafite.1"))
-            put(img, i, 14, cor("vidro.0", 230))
-        if not l:
-            put(img, 0, i, cor("grafite.1"))
-            put(img, 1, i, cor("vidro.1", 230))
-        if not r:
-            put(img, 15, i, cor("grafite.1"))
-            put(img, 14, i, cor("vidro.0", 230))
-    return img
-
-
-def res_placa(img: Image.Image, x0: int = 1, y0: int = 1, x1: int = 14, y1: int = 14, fundo: str = "grafite.3",
-              aro: str = "grafite.1") -> None:
-    """A placa escura de uma peça sobre o campo, com o aro de 1 px e a luz em cima e à esquerda."""
-    for y in range(y0, y1 + 1):
-        for x in range(x0, x1 + 1):
-            borda = x in (x0, x1) or y in (y0, y1)
-            put(img, x, y, cor(aro if borda else fundo))
-    for i in range(x0 + 1, x1):
-        put(img, i, y0 + 1, cor("grafite.4"))
-    for i in range(y0 + 1, y1):
-        put(img, x0 + 1, i, cor("grafite.4"))
 
 
 def res_olho_par(img: Image.Image, tier: str, fase: float = 0.0, apagado: bool = False) -> None:
@@ -638,130 +477,8 @@ def res_marcas_tier(img: Image.Image, tier: str, y: int, c: Cor) -> None:
             put(img, x0 + i * (larg + 2) + k, y, c)
 
 
-def res_nucleo(tier: str) -> Sprite:
-    """A face do Núcleo formado: a única placa escura da face, com o Olho 8×8 na cor do tier (o Pulso em
-    8 × 5 ticks), a luz coral em cima e as marcas do tier embaixo."""
-    q = []
-    for f in [0.0, 0.0, 0.0, 0.0, 0.1, 0.3, 0.6, 0.0]:
-        img = res_campo(21)
-        res_placa(img, fundo="grafite.3")
-        res_olho_par(img, tier, f)
-        for p in ((2, 7), (2, 8), (13, 7), (13, 8)):
-            put(img, *p, cor("grafite.4"))
-        for p in ((7, 2), (8, 2)):
-            put(img, *p, cor("coral.2"))
-        res_marcas_tier(img, tier, 13, cor("porcelana.4"))
-        q.append(img)
-    return animacao(q, 5)
-
-
-def res_sintonizador() -> Sprite:
-    """O Sintonizador formado: mostrador redondo com o aro de latão e as 12 marcas; o ponteiro coral oscila
-    (12 × 5 ticks)."""
-    q = []
-    for k in range(12):
-        img = res_campo(22)
-        for y in range(16):
-            for x in range(16):
-                d = math.hypot(x - 7.5, y - 7.5)
-                if 5.6 < d <= 7.2:
-                    put(img, x, y, cor("grafite.1") if d > 6.6 else cor("latao.2" if (x + y) % 3 else "latao.1"))
-                elif d <= 5.6:
-                    put(img, x, y, cor("porcelana.4"))
-        for a in range(0, 360, 30):
-            r = math.radians(a)
-            put(img, round(7.5 + 4.6 * math.cos(r)), round(7.5 + 4.6 * math.sin(r)), cor("grafite.2"))
-        ang = math.radians(-120 + 25 * math.sin(2 * math.pi * k / 12))
-        for s in range(0, 5):
-            put(img, round(7.5 + s * math.cos(ang)), round(7.5 + s * math.sin(ang)), cor("coral.1"))
-        for p in ((7, 7), (8, 8), (7, 8), (8, 7)):
-            put(img, *p, cor("grafite.1"))
-        q.append(img)
-    return animacao(q, 5)
-
-
-RAIO_ENERGIA = [".....XX.", "....XX..", "...XX...", "..XXXX..", "....XX..", "...XX...", "..XX....", ".XX....."]
-
-
-def res_porta_energia() -> Sprite:
-    """A Porta de Energia formada: placa de grafite com os quatro rebites de latão e o raio, que pulsa na cor
-    da energia (8 × 5 ticks)."""
-    q = []
-    for k in range(8):
-        img = res_campo(23)
-        res_placa(img, 2, 2, 13, 13, fundo="grafite.2")
-        for p in ((3, 3), (12, 3), (3, 12), (12, 12)):
-            put(img, *p, cor("latao.2"))
-        c = mistura(cor("energia.1"), cor("energia.3"), (1 + math.cos(2 * math.pi * k / 8)) / 2)
-        for dy, linha in enumerate(RAIO_ENERGIA):
-            for dx, ch in enumerate(linha):
-                if ch == "X":
-                    put(img, 4 + dx, 4 + dy, c)
-        q.append(img)
-    return animacao(q, 5)
-
-
-def res_porta_cristais() -> Sprite:
-    """A Porta de Cristais formada: a escotilha redonda com o anel coral, aberta e com o miolo pulsando na
-    cor do cristal (8 × 5 ticks)."""
-    q = []
-    for k in range(8):
-        img = res_campo(24)
-        for y in range(16):
-            for x in range(16):
-                d = math.hypot(x - 7.5, y - 7.5)
-                if 6.4 < d <= 7.0:
-                    put(img, x, y, cor("grafite.1"))
-                elif 5.4 < d <= 6.4:
-                    put(img, x, y, cor("grafite.3"))
-                elif 4.5 < d <= 5.4:
-                    put(img, x, y, cor("coral.2" if x + y < 15 else "coral.1"))
-                elif d <= 4.5:
-                    put(img, x, y, cor("grafite.0"))
-        t = (1 + math.cos(2 * math.pi * k / 8)) / 2
-        for p in ((7, 7), (8, 7), (7, 8), (8, 8)):
-            put(img, *p, mistura(cor("#C9604B"), cor("#FFC9B8"), t))
-        for p in ((7, 5), (8, 10), (5, 8), (10, 7)):
-            put(img, *p, mistura(cor("grafite.0"), cor("#C9604B"), .5 * t))
-        q.append(img)
-    return animacao(q, 5)
-
-
-def res_nucleo_dentro(tier: str) -> Image.Image:
-    """A face de dentro do Núcleo: a lente vista pela câmara, na cor do tier, sobre o forro."""
-    img = res_forro()
-    res_olho_par(img, tier)
-    return img
-
-
-def res_porta_dentro(tipo: str) -> Image.Image:
-    """A face de dentro das Portas sobre o forro: a grelha de latão (energia) ou a boca redonda (cristais)."""
-    img = res_forro()
-    if tipo == "energia":
-        for y in (6, 9):
-            for x in range(3, 13):
-                put(img, x, y, cor("latao.1" if x % 2 else "latao.0"))
-    else:
-        for y in range(16):
-            for x in range(16):
-                d = math.hypot(x - 7.5, y - 7.5)
-                if d <= 4.2:
-                    put(img, x, y, cor("grafite.0"))
-                elif d <= 5.2:
-                    put(img, x, y, cor("coral.1"))
-    return img
-
-
-# As combinações de bordas que uma face de carcaça montada usa (numa face 5×5 um bloco nunca toca dois
-# lados opostos), e as que levam a listra coral (borda de baixo numa lateral).
-BORDAS_CARCACA = ("t", "r", "b", "l", "tl", "tr", "bl", "br")
-BORDAS_CORAL = ("b", "bl", "br")
-# As peças das faces: id do bloco -> (textura da frente, textura da face de dentro).
-PECAS = {
-    "resonator_energy_port": ("resonator_energy_port", "resonator_energy_port_dentro"),
-    "resonator_crystal_port": ("resonator_crystal_port", "resonator_crystal_port_dentro"),
-    "resonator_tuner": ("resonator_tuner", "resonator_forro"),
-}
+# Os ids das três peças das faces (a Porta de Energia, a de Cristais e o Sintonizador).
+PECAS = ("resonator_energy_port", "resonator_crystal_port", "resonator_tuner")
 
 
 # ---------------------------------------------------------------------------
@@ -1036,6 +753,9 @@ def nucleo_topo(tier):
 # 5. Porta de Energia: placa com o raio aceso, dois bornes de latão saltados e a calha de energia no topo.
 # ---------------------------------------------------------------------------------------------------------
 
+RAIO_ENERGIA = [".....XX.", "....XX..", "...XX...", "..XXXX..", "....XX..", "...XX...", "..XX....", ".XX....."]
+
+
 def energia_frente():
     img = arm_faixa(corpo=False)
     arm_placa(img, fundo_ref="grafite.2")
@@ -1182,27 +902,8 @@ def res_halo() -> Sprite:
 
 
 def sprites_ressonador() -> dict[str, Sprite]:
-    s: dict[str, Sprite] = {
-        "block/resonator_casing_campo": parado(res_campo()),
-        "block/resonator_forro": parado(res_forro()),
-        "block/resonator_glass_solto": parado(res_vidro(0, montado=False), translucido=True),
-        "block/resonator_energy_port": res_porta_energia(),
-        "block/resonator_energy_port_dentro": parado(res_porta_dentro("energia")),
-        "block/resonator_crystal_port": res_porta_cristais(),
-        "block/resonator_crystal_port_dentro": parado(res_porta_dentro("cristais")),
-        "block/resonator_tuner": res_sintonizador(),
-        "block/resonator_halo": res_halo(),
-    }
-    for bordas in BORDAS_CARCACA:
-        s[f"block/resonator_casing_{bordas}"] = parado(res_trilhos(res_campo(), set(bordas)))
-    for bordas in BORDAS_CORAL:
-        s[f"block/resonator_casing_{bordas}_coral"] = parado(res_trilhos(res_campo(), set(bordas), coral=True))
-    for n in range(16):
-        s[f"block/resonator_glass_{n}"] = parado(res_vidro(n), translucido=True)
-    for t in TIERS:
-        s[f"block/resonance_core_{t}"] = res_nucleo(t)
-        s[f"block/resonance_core_{t}_dentro"] = parado(res_nucleo_dentro(t))
-    return {**s, **sprites_soltos()}
+    """O halo do sinal e as texturas dos blocos soltos; as dos formados vêm do `armilar_texturas`."""
+    return {"block/resonator_halo": res_halo(), **sprites_soltos()}
 
 
 def sprites_soltos() -> dict[str, Sprite]:
@@ -1615,79 +1316,6 @@ def modelo_source_tank(t: str, fill: int) -> Modelo:
 # o ponteiro do Sintonizador e as marcas do Núcleo de pé, como na prancha.
 ROTACOES_PECA = {"north": {}, "south": {"y": 180}, "east": {"y": 90}, "west": {"y": 270},
                  "up": {"x": 270, "y": 180}, "down": {"x": 90, "y": 180}}
-LETRAS_POSICAO = "ncp"
-
-
-def posicoes_carcaca() -> list[str]:
-    """As 26 posições montadas (`CasingPosition`, uma letra n/c/p por eixo); `ccc` é o interior."""
-    return [a + b + c for a in LETRAS_POSICAO for b in LETRAS_POSICAO for c in LETRAS_POSICAO if a + b + c != "ccc"]
-
-
-def textura_carcaca(letras: str, face: str) -> str:
-    """A textura de uma face de carcaça montada: só nas faces que apontam para fora da estrutura há moldura,
-    nas bordas da textura em que o vizinho (pela tabela das faces) cai fora da caixa; as laterais com a borda
-    de baixo levam a listra coral. As outras faces levam o forro da câmara (campo fora, forro dentro: as que
-    olham para a câmara aparecem pela janela; as que encostam em outra carcaça ficam escondidas)."""
-    if not _fora(letras, _normal(face)):
-        return "resonator_forro"
-    bordas = {lado for lado, direcao in _direcoes_face(face).items() if _fora(letras, direcao)}
-    chave = res_chave(bordas)
-    if not chave:
-        return "resonator_casing_campo"
-    assert chave in BORDAS_CARCACA, (letras, face, chave)
-    coral = "b" in bordas and face in LATERAIS
-    return f"resonator_casing_{chave}" + ("_coral" if coral else "")
-
-
-def _cubo(nome: str, faces: dict[str, tuple[str, list[float] | None]], particula: str,
-          translucido: bool = False) -> Modelo:
-    m = Modelo(nome, particula, translucido=translucido, cubo=True)
-    m.caixa([0, 0, 0], [16, 16, 16], faces)
-    return m
-
-
-def modelo_carcaca(letras: str) -> Modelo:
-    return _cubo(f"resonator_casing_{letras}", {f: (textura_carcaca(letras, f), None) for f in FACES6},
-                 "resonator_casing_campo")
-
-
-def uv_espelho(face: str) -> list[float]:
-    """O UV da face oposta que mostra a mesma textura espelhada: a face de dentro do vidro repete a de fora,
-    e, pela tabela, as duas têm a direita ou a cima invertida (uma só delas)."""
-    (dir_a, cima_a), (dir_b, cima_b) = EIXOS_FACE[face], EIXOS_FACE[_oposta(face)]
-    u, v = [0, 16], [0, 16]
-    if dir_b == _neg(dir_a):
-        u.reverse()
-    if cima_b == _neg(cima_a):
-        v.reverse()
-    assert (u[0] == 16) != (v[0] == 16), face
-    return [u[0], v[0], u[1], v[1]]
-
-
-def modelo_vidro(face: str, n: int) -> Modelo:
-    """O vidro montado na face `face` com os bits `n`: a textura com o aro na face de fora, a mesma espelhada
-    na de dentro e, nas outras quatro (escondidas pelos vizinhos), o vidro sem aro."""
-    tex = f"resonator_glass_{n}"
-    faces: dict[str, tuple[str, list[float] | None]] = {f: ("resonator_glass_15", None) for f in FACES6}
-    faces[face] = (tex, None)
-    faces[_oposta(face)] = (tex, uv_espelho(face))
-    return _cubo(f"resonator_glass_{face}_{n}", faces, "resonator_glass_15", translucido=True)
-
-
-def modelo_vidro_solto() -> Modelo:
-    return _cubo("resonator_glass_loose", {f: ("resonator_glass_solto", None) for f in FACES6},
-                 "resonator_glass_solto", translucido=True)
-
-
-def modelo_peca(nome: str, frente: str, dentro: str) -> Modelo:
-    """Uma peça ou o Núcleo formado olhando para o norte: a frente no norte, a vista de dentro no sul e, nas
-    outras quatro, o forro."""
-    faces: dict[str, tuple[str, list[float] | None]] = {f: ("resonator_forro", None) for f in FACES6}
-    faces["north"] = (frente, None)
-    faces["south"] = (dentro, None)
-    return _cubo(nome, faces, frente)
-
-
 def girado_180(m: Modelo) -> Modelo:
     """Só para a prévia da folha: o modelo girado 180° em y (norte ↔ sul, leste ↔ oeste), para a câmera da
     prévia, que vê o sul, mostrar a frente da peça. Cada elemento troca de lado em torno do centro do bloco,
@@ -1803,49 +1431,12 @@ def modelos_soltos() -> list[Modelo]:
             modelo_energia_solta(), modelo_cristais_solto(), modelo_sintonizador_solto()]
 
 
-def construir_modelos_ressonador() -> dict[str, Modelo]:
-    ms: dict[str, Modelo] = {}
-    lista: list[Modelo] = [modelo_carcaca(p) for p in posicoes_carcaca()]
-    lista += [modelo_vidro(face, n) for face in FACES6 for n in range(16)]
-    lista.append(modelo_vidro_solto())
-    lista += [modelo_peca(nome, frente, dentro) for nome, (frente, dentro) in PECAS.items()]
-    lista += [modelo_peca(f"resonance_core_{t}", f"resonance_core_{t}", f"resonance_core_{t}_dentro") for t in TIERS]
-    lista += modelos_soltos()
-    for m in lista:
-        ms[m.nome] = m
-    return ms
-
-
-def blockstates_ressonador() -> None:
-    """Os oito blockstates: a Laje pela `position`, o vidro por `face` × `connections` (112 variantes; solto
-    para qualquer `connections`), as peças por `facing` × `formed`, o Núcleo por `facing` × `formed` × `tier`, e
-    a Coluna e o Berço, que por enquanto mostram o modelo solto em todo estado."""
+def modelos_item_ressonador() -> None:
+    """Os modelos de item do Ressonador: a Laje, a Coluna, o Berço e as peças soltos (as peças olham para o
+    norte, a face que a vista `gui` do `block/block` mostra à direita) e o Núcleo solto, Básico, com o override
+    por tier. Os blockstates são do `armilar_modelo.blockstates_armilar`."""
     bloco = f"{NS}:block/"
-    grava_json(MODELOS / "blockstates/resonator_casing.json", {"variants": {
-        "position=loose": {"model": bloco + "resonator_casing_loose"},
-        **{f"position={p}": {"model": bloco + f"resonator_casing_{p}"} for p in posicoes_carcaca()}}})
-    vidro: dict[str, dict] = {}
-    for n in range(16):
-        vidro[f"connections={n},face=loose"] = {"model": bloco + "resonator_glass_loose"}
-        for face in FACES6:
-            vidro[f"connections={n},face={face}"] = {"model": bloco + f"resonator_glass_{face}_{n}"}
-    grava_json(MODELOS / "blockstates/resonator_glass.json", {"variants": vidro})
-    for nome in PECAS:
-        grava_json(MODELOS / f"blockstates/{nome}.json", {"variants": {
-            f"facing={face},formed={str(formed).lower()}": {"model": bloco + nome + ("" if formed else "_loose"), **rot}
-            for face, rot in ROTACOES_PECA.items() for formed in (True, False)}})
-    grava_json(MODELOS / "blockstates/resonator_column.json", {"variants": {
-        f"corner={canto},part={parte}": {"model": bloco + "resonator_column_loose"}
-        for canto in ("se", "sw", "nw", "ne") for parte in ("loose", "lower", "upper")}})
-    grava_json(MODELOS / "blockstates/resonator_cradle.json", {"variants": {
-        f"part={parte}": {"model": bloco + "resonator_cradle_loose"} for parte in ("loose", "lower", "upper")}})
-    grava_json(MODELOS / "blockstates/resonance_core.json", {"variants": {
-        f"facing={face},formed={str(formed).lower()},tier={t}": {
-            "model": bloco + f"resonance_core_{t}" + ("" if formed else "_loose"), **rot}
-        for face, rot in ROTACOES_PECA.items() for formed in (True, False) for t in TIERS}})
-    # Itens: a carcaça e o vidro soltos; as peças soltas olhando para o norte (a face que a vista `gui` do
-    # `block/block` mostra à direita); o Núcleo solto, Básico, com o override por tier.
-    for nome in ("resonator_casing", "resonator_glass", "resonator_column", "resonator_cradle", *PECAS):
+    for nome in ("resonator_casing", "resonator_column", "resonator_cradle", *PECAS):
         grava_json(MODELOS / f"models/item/{nome}.json", {"parent": bloco + nome + "_loose"})
     grava_json(MODELOS / "models/item/resonance_core.json", {
         "parent": bloco + "resonance_core_basic_loose",
@@ -2154,13 +1745,14 @@ def modelos(texturas: set[str] | None = None) -> None:
         gerados.add(nome)
         grava_json(MODELOS / f"blockstates/{nome}.json", {"variants": {"": {"model": f"{NS}:block/{nome}"}}})
         grava_json(MODELOS / f"models/item/{nome}.json", {"parent": f"{NS}:block/{nome}"})
-    for nome, m in construir_modelos_ressonador().items():
+    for m in modelos_soltos():
+        nome = m.nome
         dados = m.json()
         validar_modelo(dados, texturas)
         validar_geometria(m)
         grava_json(pasta / f"{nome}.json", dados)
         gerados.add(nome)
-    blockstates_ressonador()
+    modelos_item_ressonador()
     # Tudo em models/block é gerado: apaga o que deixou de existir.
     for antigo in pasta.glob("*.json"):
         if antigo.stem not in gerados:
@@ -2275,19 +1867,16 @@ def render(m: Modelo, texturas: dict[str, Image.Image], s: int = 8,
 def previas(spr: dict[str, Sprite], s: int = 8) -> list[tuple[str, Image.Image]]:
     """Um roteador e cada armazenamento por tier, mais o Tanque de Source em alguns níveis (quadro 0)."""
     tex = {n.split("/", 1)[1]: sp.quadro(0) for n, sp in spr.items() if n.startswith("block/")}
-    ms = {**construir_modelos(), **construir_modelos_ressonador()}
+    ms = {**construir_modelos(), **{m.nome: m for m in modelos_soltos()}}
     nomes = [f"router_{t}" for t in TIERS]
     for kind in ARMAZENAMENTOS:
         nomes += [f"{kind}_{t}" for t in TIERS]
     nomes += [f"storage_source_tank_{t}_6" for t in TIERS]
     nomes += [f"storage_source_tank_basic_{fill}" for fill in (0, 3, 10)]
-    # O Ressonador: a câmera vê as faces de cima, leste e sul, então o canto `ppp`, a aresta `pcp` e o centro
-    # `cpc` mostram a moldura; as peças e os Núcleos entram girados 180°, com a frente no sul.
-    nomes += ["resonator_casing_loose", "resonator_casing_ppp", "resonator_casing_pcp", "resonator_casing_cpc",
-              "resonator_glass_loose", "resonator_glass_south_0", "resonator_glass_up_15"]
-    nomes += ["resonator_column_loose", "resonator_cradle_loose"]
-    pecas = [f"{nome}_loose" for nome in PECAS] + list(PECAS)
-    pecas += ["resonance_core_basic_loose"] + [f"resonance_core_{t}" for t in TIERS]
+    # O Ressonador solto: a Laje, a Coluna e o Berço; as peças e os Núcleos entram girados 180°, com a frente no sul.
+    # Os formados são do `armilar_modelo` (a prévia dele é a `armilar-formada.png`).
+    nomes += ["resonator_casing_loose", "resonator_column_loose", "resonator_cradle_loose"]
+    pecas = [f"{nome}_loose" for nome in PECAS] + ["resonance_core_basic_loose"]
     for nome in pecas:
         ms[nome] = girado_180(ms[nome])
     return [(nome, render(ms[nome], tex, s)) for nome in nomes + pecas]

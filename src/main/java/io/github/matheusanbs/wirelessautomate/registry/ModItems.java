@@ -150,7 +150,10 @@ public final class ModItems {
             ITEMS.registerSimpleBlockItem(ModBlocks.RESONATOR_COLUMN);
     public static final DeferredItem<BlockItem> RESONATOR_CRADLE =
             ITEMS.registerSimpleBlockItem(ModBlocks.RESONATOR_CRADLE);
-    public static final DeferredItem<BlockItem> RESONATOR_GLASS = ITEMS.registerSimpleBlockItem(ModBlocks.RESONATOR_GLASS);
+    /** O item do Vidro também vira Laje. */
+    static {
+        ITEMS.addAlias(WirelessAutomate.id("resonator_glass"), WirelessAutomate.id("resonator_casing"));
+    }
     public static final DeferredItem<ResonanceCoreItem> RESONANCE_CORE = ITEMS.register("resonance_core",
             () -> new ResonanceCoreItem(ModBlocks.RESONANCE_CORE.get(), new Item.Properties()));
     public static final DeferredItem<BlockItem> RESONATOR_ENERGY_PORT =

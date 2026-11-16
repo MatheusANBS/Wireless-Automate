@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import io.github.matheusanbs.wirelessautomate.resonator.ProjectionDiff.Result;
 import io.github.matheusanbs.wirelessautomate.resonator.ProjectionDiff.State;
-import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBlueprint.Layout;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorLayout.Face;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorLayout.Part;
 import java.util.HashMap;
@@ -17,21 +16,14 @@ class ProjectionDiffTest {
     private static final int OX = 10;
     private static final int OY = 20;
     private static final int OZ = 30;
-    private static final Part[][][] VITRINE = ResonatorBlueprint.expected(Face.EAST, Layout.VITRINE);
-
-    /** Só o Núcleo, em (14, 22, 32); o resto é ar. */
-    private static Map<List<Integer>, Part> onlyCore() {
-        Map<List<Integer>, Part> world = new HashMap<>();
-        world.put(List.of(14, 22, 32), Part.CORE);
-        return world;
-    }
+    private static final Part[][][] ARMILAR = ResonatorBlueprint.expected(Face.SOUTH);
 
     private static Map<List<Integer>, Part> complete() {
         Map<List<Integer>, Part> world = new HashMap<>();
         for (int x = 0; x < 5; x++) {
             for (int y = 0; y < 5; y++) {
                 for (int z = 0; z < 5; z++) {
-                    world.put(List.of(OX + x, OY + y, OZ + z), VITRINE[x][y][z]);
+                    world.put(List.of(OX + x, OY + y, OZ + z), ARMILAR[x][y][z]);
                 }
             }
         }
@@ -39,34 +31,33 @@ class ProjectionDiffTest {
     }
 
     private static Result compare(Map<List<Integer>, Part> world) {
-        return ProjectionDiff.compare(VITRINE, OX, OY, OZ, (x, y, z) -> world.getOrDefault(List.of(x, y, z), Part.AIR));
+        return ProjectionDiff.compare(ARMILAR, OX, OY, OZ, (x, y, z) -> world.getOrDefault(List.of(x, y, z), Part.AIR));
+    }
+
+    private static int missingTotal(Result result) {
+        return result.missing().values().stream().mapToInt(Integer::intValue).sum();
     }
 
     @Test
-    void mundoVazioFaltaTudoMenosONucleo() {
-        Result result = compare(onlyCore());
-        assertEquals(85, result.missing().get(Part.CASING));
-        assertEquals(9, result.missing().get(Part.GLASS));
+    void mundoSoComONucleoFaltaTudoMenosONucleo() {
+        Map<List<Integer>, Part> world = new HashMap<>();
+        world.put(List.of(OX + 2, OY, OZ + 4), Part.CORE);
+        Result result = compare(world);
+        assertEquals(21, result.missing().get(Part.CASING));
+        assertEquals(8, result.missing().get(Part.COLUMN));
+        assertEquals(2, result.missing().get(Part.CRADLE));
         assertEquals(1, result.missing().get(Part.ENERGY_PORT));
         assertEquals(1, result.missing().get(Part.CRYSTAL_PORT));
         assertEquals(1, result.missing().get(Part.TUNER));
         assertNull(result.missing().get(Part.CORE));
         assertEquals(0, result.wrong());
-        for (int x = 0; x < 5; x++) {
-            for (int y = 0; y < 5; y++) {
-                for (int z = 0; z < 5; z++) {
-                    State want = VITRINE[x][y][z] == Part.AIR || VITRINE[x][y][z] == Part.CORE ? State.OK : State.MISSING;
-                    assertEquals(want, result.states()[x][y][z], x + "," + y + "," + z);
-                }
-            }
-        }
     }
 
     @Test
-    void vitrineCompletaFicaTodaOk() {
+    void armilarCompletaFicaTodaOk() {
         Result result = compare(complete());
         assertEquals(0, result.wrong());
-        assertEquals(0, result.missing().values().stream().mapToInt(Integer::intValue).sum());
+        assertEquals(0, missingTotal(result));
         for (State[][] plane : result.states()) {
             for (State[] row : plane) {
                 for (State state : row) {
@@ -77,51 +68,48 @@ class ProjectionDiffTest {
     }
 
     @Test
-    void terraNaArestaEErrada() {
+    void arNaCasaDeUmaColunaContaComoFalta() {
         Map<List<Integer>, Part> world = complete();
-        world.put(List.of(14, 21, 34), Part.OTHER);
+        world.put(List.of(OX + 3, OY + 1, OZ + 3), Part.AIR);
         Result result = compare(world);
-        assertEquals(State.WRONG, result.states()[4][1][4]);
-        assertEquals(1, result.wrong());
-        assertEquals(0, result.missing().values().stream().mapToInt(Integer::intValue).sum());
-    }
-
-    @Test
-    void terraNoInteriorEErrada() {
-        Map<List<Integer>, Part> world = complete();
-        world.put(List.of(12, 22, 32), Part.OTHER);
-        Result result = compare(world);
-        assertEquals(State.WRONG, result.states()[2][2][2]);
-        assertEquals(1, result.wrong());
-    }
-
-    @Test
-    void vidroOndeDeviaHaverCarcacaNaArestaEErrado() {
-        Map<List<Integer>, Part> world = complete();
-        world.put(List.of(10, 24, 32), Part.GLASS);
-        Result result = compare(world);
-        assertEquals(State.WRONG, result.states()[0][4][2]);
-        assertEquals(1, result.wrong());
-    }
-
-    /** No miolo das faces Carcaça e Vidro se trocam: a montagem aceita os dois, e o que já foi posto vale nos dois layouts. */
-    @Test
-    void carcacaEVidroSeTrocamNoMioloDasFaces() {
-        Map<List<Integer>, Part> world = complete();
-        world.put(List.of(12, 22, 34), Part.CASING);
-        world.put(List.of(10, 21, 31), Part.GLASS);
-        Result result = compare(world);
-        assertEquals(State.OK, result.states()[2][2][4]);
-        assertEquals(State.OK, result.states()[0][1][1]);
+        assertEquals(State.MISSING, result.states()[3][1][3]);
+        assertEquals(1, result.missing().get(Part.COLUMN));
         assertEquals(0, result.wrong());
     }
 
     @Test
-    void outraPecaNoLugarDaCarcacaEErrada() {
+    void lajeNaCasaDoSintonizadorEstaCerta() {
         Map<List<Integer>, Part> world = complete();
-        world.put(List.of(10, 21, 31), Part.TUNER);
+        world.put(List.of(OX + 2, OY, OZ), Part.CASING);
         Result result = compare(world);
-        assertEquals(State.WRONG, result.states()[0][1][1]);
+        assertEquals(State.OK, result.states()[2][0][0]);
+        assertNull(result.missing().get(Part.TUNER));
+        assertEquals(0, result.wrong());
+    }
+
+    @Test
+    void lajeNoLugarDeUmaColunaEErrada() {
+        Map<List<Integer>, Part> world = complete();
+        world.put(List.of(OX + 1, OY + 1, OZ + 1), Part.CASING);
+        Result result = compare(world);
+        assertEquals(State.WRONG, result.states()[1][1][1]);
         assertEquals(1, result.wrong());
+    }
+
+    @Test
+    void blocoNoInteriorEErrado() {
+        Map<List<Integer>, Part> world = complete();
+        world.put(List.of(OX + 2, OY + 3, OZ + 2), Part.OTHER);
+        Result result = compare(world);
+        assertEquals(State.WRONG, result.states()[2][3][2]);
+        assertEquals(1, result.wrong());
+    }
+
+    @Test
+    void sintonizadorNoLugarDeUmaLajeEErrado() {
+        Map<List<Integer>, Part> world = complete();
+        world.put(List.of(OX, OY, OZ), Part.TUNER);
+        Result result = compare(world);
+        assertEquals(State.WRONG, result.states()[0][0][0]);
     }
 }

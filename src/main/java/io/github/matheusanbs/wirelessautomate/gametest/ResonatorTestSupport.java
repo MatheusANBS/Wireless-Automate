@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorLayout;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorPartBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
 import java.util.ArrayList;
@@ -26,50 +27,53 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
-/** Monta um Ressonador de Sinal inteiro (os 98 blocos) num GameTest do template {@code empty7}. */
+/** Monta um Ressonador de Sinal inteiro (a Armilar de 35 blocos) num GameTest do template {@code empty7}. */
 final class ResonatorTestSupport {
     /** O canto da caixa nos testes que montam um Ressonador só no {@code empty7}. */
     static final BlockPos ORIGIN = new BlockPos(1, 1, 1);
 
-    /** Onde ficam as peças; a origem é o canto de menor coordenada da caixa 5×5×5, relativa ao teste. */
+    /**
+     * Qual Armilar monta; a origem é o canto de menor coordenada da caixa 5×5×5, relativa ao teste, com a frente
+     * para o sul (o Núcleo em (2, 0, 4)).
+     */
     enum Layout {
-        /** Janela 3×3 ao sul, Núcleo no centro da face leste, Energia na oeste, Cristais na norte e Sintonizador em cima. */
+        /** A Armilar inteira, com o Sintonizador. */
         VITRINE,
-        /** Como a Vitrine, mas a Porta de Energia no centro da face de cima e sem Sintonizador. */
+        /** Sem o Sintonizador: a Laje ocupa a casa dele (2, 0, 0). */
         ENERGY_ON_TOP
     }
 
     private ResonatorTestSupport() {
     }
 
-    /** Põe os 98 blocos com a caixa a partir de {@code origin} e devolve a posição relativa do Núcleo. */
+    /** Põe os 35 blocos com a caixa a partir de {@code origin} e devolve a posição relativa do Núcleo. */
     static BlockPos build(GameTestHelper helper, BlockPos origin, Layout layout, RouterTier tier) {
         for (int x = 0; x < 5; x++) {
             for (int y = 0; y < 5; y++) {
                 for (int z = 0; z < 5; z++) {
-                    boolean inside = x > 0 && x < 4 && y > 0 && y < 4 && z > 0 && z < 4;
-                    if (!inside) {
-                        helper.setBlock(origin.offset(x, y, z), ModBlocks.RESONATOR_CASING.get());
+                    BlockPos pos = origin.offset(x, y, z);
+                    switch (ResonatorLayout.expected(x, y, z)) {
+                        case CASING -> helper.setBlock(pos, ModBlocks.RESONATOR_CASING.get());
+                        case COLUMN -> helper.setBlock(pos, ModBlocks.RESONATOR_COLUMN.get());
+                        case CRADLE -> helper.setBlock(pos, ModBlocks.RESONATOR_CRADLE.get());
+                        case CORE -> helper.setBlock(pos, ModBlocks.RESONANCE_CORE.get().defaultBlockState()
+                                .setValue(RouterBlock.TIER, tier).setValue(ResonatorPartBlock.FACING, Direction.SOUTH));
+                        case ENERGY_PORT -> part(helper, pos, ModBlocks.RESONATOR_ENERGY_PORT.get(), Direction.EAST);
+                        case CRYSTAL_PORT -> part(helper, pos, ModBlocks.RESONATOR_CRYSTAL_PORT.get(), Direction.WEST);
+                        case TUNER -> {
+                            if (layout == Layout.VITRINE) {
+                                part(helper, pos, ModBlocks.RESONATOR_TUNER.get(), Direction.NORTH);
+                            } else {
+                                helper.setBlock(pos, ModBlocks.RESONATOR_CASING.get());
+                            }
+                        }
+                        default -> {
+                        }
                     }
                 }
             }
         }
-        for (int x = 1; x < 4; x++) {
-            for (int y = 1; y < 4; y++) {
-                helper.setBlock(origin.offset(x, y, 4), ModBlocks.RESONATOR_GLASS.get());
-            }
-        }
-        BlockPos core = origin.offset(4, 2, 2);
-        helper.setBlock(core, ModBlocks.RESONANCE_CORE.get().defaultBlockState()
-                .setValue(RouterBlock.TIER, tier).setValue(ResonatorPartBlock.FACING, Direction.EAST));
-        part(helper, origin.offset(2, 2, 0), ModBlocks.RESONATOR_CRYSTAL_PORT.get(), Direction.NORTH);
-        if (layout == Layout.VITRINE) {
-            part(helper, origin.offset(0, 2, 2), ModBlocks.RESONATOR_ENERGY_PORT.get(), Direction.WEST);
-            part(helper, origin.offset(2, 4, 2), ModBlocks.RESONATOR_TUNER.get(), Direction.UP);
-        } else {
-            part(helper, origin.offset(2, 4, 2), ModBlocks.RESONATOR_ENERGY_PORT.get(), Direction.UP);
-        }
-        return core;
+        return origin.offset(2, 0, 4);
     }
 
     private static void part(GameTestHelper helper, BlockPos pos, Block block, Direction facing) {

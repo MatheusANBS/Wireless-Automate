@@ -4,10 +4,10 @@
       "model": "wirelessautomate:block/resonator_cradle_loose"
     },
     "part=lower": {
-      "model": "wirelessautomate:block/resonator_cradle_loose"
+      "model": "wirelessautomate:block/armilar/cradle_lower"
     },
     "part=upper": {
-      "model": "wirelessautomate:block/resonator_cradle_loose"
+      "model": "wirelessautomate:block/armilar/cradle_upper"
     }
   }
 }

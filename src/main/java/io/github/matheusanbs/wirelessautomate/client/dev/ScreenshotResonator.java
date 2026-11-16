@@ -37,18 +37,17 @@ final class ScreenshotResonator {
 
     /** Um estado da galeria: os cristais em "c.62" (cristal com 62%), "l.9" (Lapidado), "o.35" (Opaco com 35%). */
     private record Sample(RouterTier tier, double deviation, boolean auto, boolean tuner, List<String> crystals,
-            int redstone, double energy, int energyPorts, int crystalPorts, int layout) {
+            int redstone, double energy, int energyPorts, int crystalPorts) {
     }
 
     static List<Step> resonatorSteps() {
-        Sample sintonia = new Sample(RouterTier.ELITE, 0, false, true, List.of("c.62", "l.9", "c.3"), 14, 0.35, 2, 1, 1);
-        Sample fora = new Sample(RouterTier.ELITE, 1.3, false, true, List.of("c.62", "l.9", "c.3"), 14, 0.12, 2, 1, 1);
-        Sample zero = new Sample(RouterTier.ELITE, 3.6, false, true, List.of("c.62", "l.9", "c.3"), 14, 0.04, 2, 1, 1);
+        Sample sintonia = new Sample(RouterTier.ELITE, 0, false, true, List.of("c.62", "l.9", "c.3"), 14, 0.35, 2, 1);
+        Sample fora = new Sample(RouterTier.ELITE, 1.3, false, true, List.of("c.62", "l.9", "c.3"), 14, 0.12, 2, 1);
+        Sample zero = new Sample(RouterTier.ELITE, 3.6, false, true, List.of("c.62", "l.9", "c.3"), 14, 0.04, 2, 1);
         Sample teto = new Sample(RouterTier.ULTIMATE, 0, true, true,
-                List.of("l.95", "l.8", "l.72", "l.61", "l.5", "l.33", "l.2", "l.1"), 64, 1, 3, 2, 2);
-        Sample semTuner = new Sample(RouterTier.BASIC, 0.4, false, false, List.of("c.5"), 0, 0.5, 1, 1, 1);
-        Sample opaco = new Sample(RouterTier.EMERALD, 0, true, true, List.of("c.4", "o.35", "l.7", "c.9"), 7, 0.6, 1, 1,
-                1);
+                List.of("l.95", "l.8", "l.72", "l.61", "l.5", "l.33", "l.2", "l.1"), 64, 1, 3, 2);
+        Sample semTuner = new Sample(RouterTier.BASIC, 0.4, false, false, List.of("c.5"), 0, 0.5, 1, 1);
+        Sample opaco = new Sample(RouterTier.EMERALD, 0, true, true, List.of("c.4", "o.35", "l.7", "c.9"), 7, 0.6, 1, 1);
         return List.of(
                 new Step(() -> {
                     themeBefore = GuiThemes.current();
@@ -125,7 +124,7 @@ final class ScreenshotResonator {
                 (int) Math.round(efficiency * 1000), (int) Math.round(Tuning.ceiling(tier) * 1000), sample.auto(),
                 sample.tuner(), TuneSignal.steps(dial + sample.deviation(), dial),
                 TuneSignal.tuned(dial + sample.deviation(), dial), rechargeTicks * rechargePercent / 100,
-                rechargeTicks, sample.energyPorts(), sample.crystalPorts(), sample.layout(), 0, -1, 0, 0));
+                rechargeTicks, sample.energyPorts(), sample.crystalPorts(), 0, -1, 0, 0));
         resonatorScreen = new ResonatorScreen(menu, inventory,
                 Component.translatable("block.wirelessautomate.resonance_core"));
         // já no tamanho da janela: os ganchos dos centros dependem da posição da tela

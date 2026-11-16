@@ -242,7 +242,6 @@ public final class ResonatorMenuGameTests {
                 helper.assertTrue(state.tuner(), "o estado não traz o Sintonizador");
                 helper.assertValueEqual(state.energyPorts(), 1, "Portas de Energia");
                 helper.assertValueEqual(state.crystalPorts(), 1, "Portas de Cristais");
-                helper.assertValueEqual(state.layout(), 1, "montagem");
                 helper.assertValueEqual(state.deviationSteps(), 20, "desvio em passos");
                 helper.assertTrue(Math.abs(state.efficiencyPermille() - 720) <= 5,
                         "eficiência: " + state.efficiencyPermille());
@@ -476,7 +475,7 @@ public final class ResonatorMenuGameTests {
     @GameTest(template = "empty")
     public static void estadoIdaEVoltaPeloCodec(GameTestHelper helper) {
         ResonatorStatePayload state = new ResonatorStatePayload(CONTAINER_ID, 1_234_567_890_123L, 9_000_000_000L, 77,
-                1L << 40, 97.45, 720, 980, true, false, -13, true, 300, 600, 2, 1, 2, 300, 24, 1L << 50, Long.MAX_VALUE);
+                1L << 40, 97.45, 720, 980, true, false, -13, true, 300, 600, 2, 1, 300, 24, 1L << 50, Long.MAX_VALUE);
         RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), helper.getLevel().registryAccess());
         ResonatorStatePayload.STREAM_CODEC.encode(buf, state);
         helper.assertValueEqual(ResonatorStatePayload.STREAM_CODEC.decode(buf), state, "estado depois do codec");

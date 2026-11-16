@@ -5,6 +5,7 @@ import io.github.matheusanbs.wirelessautomate.client.fx.FxDraw;
 import io.github.matheusanbs.wirelessautomate.client.fx.FxRibbon;
 import io.github.matheusanbs.wirelessautomate.client.fx.FxSheet;
 import io.github.matheusanbs.wirelessautomate.client.fx.FxTypes;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 
@@ -13,6 +14,10 @@ import net.minecraft.client.renderer.MultiBufferSource;
  * montagem, a sintonia, a fase da conjunção, a pose de cada órbita e os ajudantes {@code spr}, {@code dec} e
  * {@code ribbon} do filme ({@code shared.js}), que recebem pontos locais em px e escrevem vértices relativos à câmera,
  * em blocos. Nada é alocado por quadro: os rascunhos e os dois buffers de fita são campos.
+ *
+ * <p>A dissolução: o parâmetro {@code dis} de {@code spr}, {@code dec} e {@code ribbon} é inteiro, de 0 (inteiro) a
+ * 1000 (some), que é o que o {@code FxDraw} manda ao shader na trama Bayer. O {@code phase.dis} do filme vai de 0 a 1,
+ * então quem desenha passa {@link #disMilli()}.
  */
 final class ArmilarPass {
     static final int VINHO = 0x87301F;
@@ -37,6 +42,8 @@ final class ArmilarPass {
     double enc;
     double prepEff;
     double eff;
+    /** A força da vazão da Porta de Energia neste quadro, de 0 a 1 ({@link ArmilarFlow#strength}): multiplica o arco e o impacto. */
+    double flowK;
     float sunX;
     float sunY;
     float sunZ;
@@ -53,6 +60,9 @@ final class ArmilarPass {
     private final double[] world = new double[3];
     private final double[] axisA = new double[3];
     private final double[] axisB = new double[3];
+    /** Rascunhos do {@link #screenAngle}; só a thread de render os usa. */
+    private final float[] ndcA = new float[2];
+    private final float[] ndcB = new float[2];
 
     /**
      * Pega o quadro: o relógio, a montagem, a pose e a posição do sol. O {@code partialTick} é o do BER, o mesmo das
@@ -69,6 +79,7 @@ final class ArmilarPass {
         // a conjunção só existe em sintonia (spec)
         phase.set(t, scene.view().tuned() ? u : 0);
         eff = ArmilarFlow.sunMul(u);
+        flowK = ArmilarFlow.strength(scene.flow(pt));
         prepEff = Math.max(phase.prep, scene.full() ? ArmilarPhase.fullPrep(t) : 0);
         ig = ArmilarAssembly.ignition(a) * eff;
         enc = 1 - 0.28 * prepEff + 0.18 * phase.raio;
@@ -83,6 +94,30 @@ final class ArmilarPass {
         sunX = (float) (world[0] - fx.camX);
         sunY = (float) (world[1] - fx.camY);
         sunZ = (float) (world[2] - fx.camZ);
+    }
+
+    /** A dissolução da conjunção em milésimos (0 a 1000), a unidade do {@code dis} dos desenhos. */
+    int disMilli() {
+        return (int) Math.round(phase.dis * 1000);
+    }
+
+    /**
+     * O ângulo na tela do risco que vai da cauda {@code tail} à cabeça {@code head} (px locais): o
+     * {@code atan2(screen(hp).y − screen(tr).y, screen(tr).x − screen(hp).x)} do filme, que mede em pixels com o y
+     * para baixo. Em coordenadas normalizadas (y para cima) é {@code atan2(−ΔY × H, −ΔX × W)}, com Δ = cabeça − cauda e
+     * {@code W}, {@code H} o tamanho da janela (o fator 1/2 do normalizado sai nos dois).
+     */
+    double screenAngle(double[] head, double[] tail) {
+        ndc(head, ndcA);
+        ndc(tail, ndcB);
+        var window = Minecraft.getInstance().getWindow();
+        return Math.atan2(-(ndcA[1] - ndcB[1]) * window.getHeight(), -(ndcA[0] - ndcB[0]) * window.getWidth());
+    }
+
+    /** O ponto local (px) em coordenadas normalizadas da tela. */
+    private void ndc(double[] local, float[] out) {
+        scene.frame().toWorld(local[0], local[1], local[2], world);
+        fx.ndc((float) (world[0] - fx.camX), (float) (world[1] - fx.camY), (float) (world[2] - fx.camZ), out);
     }
 
     /** A luz da folha: cheia nas de luz, a do mundo no sol nas de tinta. */

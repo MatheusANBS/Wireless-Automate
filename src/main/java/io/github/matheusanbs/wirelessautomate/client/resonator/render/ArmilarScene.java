@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.client.resonator.render;
 
 import io.github.matheusanbs.wirelessautomate.client.fx.FxContext;
 import io.github.matheusanbs.wirelessautomate.client.fx.FxJob;
+import io.github.matheusanbs.wirelessautomate.client.fx.FxSheets;
 import io.github.matheusanbs.wirelessautomate.resonator.ChamberView;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorLayout;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -10,15 +11,17 @@ import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.AABB;
+import org.joml.Vector3f;
 
 /**
  * O estado de uma Armilar no cliente, um por Núcleo, atualizado uma vez por tick novo no desenho: a sintonia e o giro
  * ({@link ArmilarMotion}), a vazão da Porta de Energia suavizada por tick, o clarão do fim da recarga, a luz do
  * conjunto e o referencial local-mundo. O relógio é o do mundo ({@code gameTime / 20}), igual em todos os clientes, e
  * a montagem corre do {@code formedAt} que o servidor mandou. Os arrays da {@link ChamberView} são lidos aqui, na view
- * nova, e nunca por quadro. É também o {@link FxJob} dos efeitos, que a Tarefa 8 começou (sol, filamentos e ponteiro) e a 9 completa.
+ * nova, e nunca por quadro. É também o {@link FxJob} dos efeitos: o sol, os filamentos, o ponteiro e a conjunção.
  */
 final class ArmilarScene implements FxJob {
     private static final double TICK_SECONDS = 0.05;
@@ -32,11 +35,24 @@ final class ArmilarScene implements FxJob {
     /** A maior faixa de eficiência: o {@code u} da sintonia é {@code band / BAND_MAX}. */
     private static final int BAND_MAX = 7;
 
+    /** O grão de redstone da recarga (a cor e o tamanho que a câmara antiga usava). */
+    private static final DustParticleOptions REDSTONE = new DustParticleOptions(new Vector3f(0.84f, 0.27f, 0.23f), 0.6f);
+    /**
+     * O meio lado do clarão no cristal ao fim da recarga, em px. Proposta: a spec e o filme não dão o tamanho (nem a
+     * curva do alfa, {@code (1 − f)²}); ficam aqui, num lugar só, para a prancha decidir.
+     */
+    static final double FLASH_HALF = 4;
+
     private final BlockPos core;
     private final ArmilarMotion motion = new ArmilarMotion();
     private final ArmilarFrame frame = new ArmilarFrame();
     private final FlashTracker flash = new FlashTracker();
     private final double[] sunAt = new double[3];
+    private final ArmilarGrains grains = new ArmilarGrains();
+    /** Rascunhos dos grãos e do clarão dos cristais: só a thread de render os usa. */
+    private final double[] grainFrom = new double[3];
+    private final double[] grainTo = new double[3];
+    private final double[] crystalAt = new double[3];
     private final ArmilarPass pass = new ArmilarPass();
     private final BlockPos.MutableBlockPos sunPos = new BlockPos.MutableBlockPos();
     private AABB box;
@@ -90,10 +106,56 @@ final class ArmilarScene implements FxJob {
         flowPrev = flowNow;
         flowNow += (goal - flowNow) * FLOW_RATE;
         flash.tick(view, chambers, gameTime);
+        tickGrains(level);
         frame.toWorld(0, ArmilarSpec.SOL_Y, 0, sunAt);
         sunPos.set(Mth.floor(sunAt[0]), Mth.floor(sunAt[1]), Mth.floor(sunAt[2]));
         sunLight = LevelRenderer.getLightColor(level, sunPos);
         lastUsed = gameTime;
+    }
+
+    /**
+     * Os grãos de redstone: por tick novo, os vivos voam da Porta de Cristais ao centro do Opaco que recarrega, com a
+     * rampa suave do progresso, e viram uma partícula de poeira de redstone no ponto.
+     */
+    private void tickGrains(ClientLevel level) {
+        grains.tick(ArmilarRecharge.firstRecharging(chambers, view), chambers.length);
+        double[] door = ArmilarSpec.PORTA_CRISTAIS;
+        frame.toWorld(door[0], door[1], door[2], grainFrom);
+        for (int g = 0; g < ArmilarGrains.MAX; g++) {
+            if (!grains.alive(g) || grains.chamber(g) >= chambers.length) {
+                continue;
+            }
+            crystalCenter(grains.chamber(g), 0f, grainTo);
+            frame.toWorld(grainTo[0], grainTo[1], grainTo[2], grainTo);
+            double k = Ease.ss(0, 1, grains.progress(g));
+            level.addParticle(REDSTONE, grainFrom[0] + (grainTo[0] - grainFrom[0]) * k,
+                    grainFrom[1] + (grainTo[1] - grainFrom[1]) * k, grainFrom[2] + (grainTo[2] - grainFrom[2]) * k, 0,
+                    0, 0);
+        }
+    }
+
+    /** O centro do cristal do nó {@code node} em px locais, com a pose do quadro {@code partialTick}. */
+    private void crystalCenter(int node, float partialTick, double[] out) {
+        double t = clock(partialTick);
+        double u = motion.u(partialTick);
+        double since = sinceTuned(partialTick);
+        int orbit = ArmilarNodes.orbit(node);
+        ArmilarNodes.center(node, ArmilarAssembly.ring(assembly(partialTick), orbit), ArmilarPose.prec(orbit, t),
+                ArmilarPose.tilt(orbit, t, u, since), motion.spin(orbit, partialTick), out);
+    }
+
+    /** O clarão que fecha a recarga, em cima do cristal: o quadro e o alfa pelo tempo ({@code (1 − f)²}). */
+    private void drawFlashes(ArmilarPass p) {
+        for (int i = 0; i < chambers.length; i++) {
+            float f = flash.flash(i, frameGameTime, framePartialTick);
+            if (f < 0 || f >= 1) {
+                continue;
+            }
+            ArmilarNodes.center(i, p.ring[ArmilarNodes.orbit(i)], p.prec[ArmilarNodes.orbit(i)],
+                    p.tilt[ArmilarNodes.orbit(i)], p.spin[ArmilarNodes.orbit(i)], crystalAt);
+            p.spr(FxSheets.CLARAO, FxSheets.CLARAO.frameByFraction(f), crystalAt[0], crystalAt[1], crystalAt[2],
+                    FLASH_HALF, ArmilarPass.CLARO, (1 - f) * (1 - f), 0, 0);
+        }
     }
 
     /** Os segundos do relógio no quadro: o do mundo, ou o parado do e2e. */
@@ -192,7 +254,10 @@ final class ArmilarScene implements FxJob {
         return frameGameTime;
     }
 
-    /** Os efeitos do quadro: o sol (com as brasas), os filamentos e o ponteiro; a tinta de cada um sai antes da luz. */
+    /**
+     * Os efeitos do quadro: o sol (com as brasas), os filamentos, o ponteiro e a conjunção (o estouro, o arco e o
+     * impacto, nessa ordem, que é a do filme) e o clarão dos cristais; a tinta de cada um sai antes da luz.
+     */
     @Override
     public void draw(FxContext ctx, MultiBufferSource buffers) {
         pass.begin(this, ctx, buffers);
@@ -202,6 +267,10 @@ final class ArmilarScene implements FxJob {
         ArmilarSun.draw(pass);
         ArmilarFilaments.draw(pass);
         ArmilarPointer.draw(pass);
+        ArmilarBeam.draw(pass);
+        ArmilarArc.draw(pass);
+        ArmilarImpact.draw(pass);
+        drawFlashes(pass);
     }
 
     @Override

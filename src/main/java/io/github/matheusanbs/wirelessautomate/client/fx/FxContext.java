@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.client.fx;
 import net.minecraft.client.Camera;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
+import org.joml.Vector4f;
 
 /**
  * O quadro dos efeitos: a posição da câmera, a direita e o alto dela no mundo (para os sprites que olham para a
@@ -26,6 +27,8 @@ public final class FxContext {
     public final Matrix4f projection = new Matrix4f();
     public float partialTick;
     public long gameTime;
+    /** Rascunho do {@link #ndc}; só a thread de render o usa. */
+    private final Vector4f clip = new Vector4f();
 
     /** Pega a câmera e as matrizes do quadro; sem alocar. */
     public void begin(Camera camera, Matrix4f modelViewMatrix, Matrix4f projectionMatrix, float partialTick,
@@ -52,5 +55,22 @@ public final class FxContext {
     void copyMatrices(Matrix4f modelViewMatrix, Matrix4f projectionMatrix) {
         modelView.set(modelViewMatrix);
         projection.set(projectionMatrix);
+    }
+
+    /**
+     * A posição de um ponto relativo à câmera (em blocos) em coordenadas normalizadas da tela (de −1 a 1, y para cima),
+     * pela {@code projeção × modelview} do quadro. Atrás da câmera o resultado não vale nada: devolve 0, 0.
+     */
+    public void ndc(float x, float y, float z, float[] out) {
+        clip.set(x, y, z, 1f);
+        modelView.transform(clip);
+        projection.transform(clip);
+        if (clip.w > 1e-6f) {
+            out[0] = clip.x / clip.w;
+            out[1] = clip.y / clip.w;
+        } else {
+            out[0] = 0;
+            out[1] = 0;
+        }
     }
 }

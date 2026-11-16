@@ -70,6 +70,24 @@ public final class ArmilarSpec {
     /** O quanto a caixa da Porta de Energia entra no nicho em x, em px (o mesmo {@code desloc}). Usado pelo arco e pela conjunção. */
     public static final double PORTA_DESLOC_X = -2;
 
+    /**
+     * Onde o feixe do estouro termina, no anel do horizonte ({@code pa} do filme): em px locais. O horizonte não tem
+     * deslocamento da Porta.
+     */
+    public static final double[] HORIZ_BURST = {32.5, 47.5, 0};
+    /**
+     * O centro do impacto na face da Porta de Energia ({@code porta} do filme, 42,4) mais o deslocamento da Porta. A
+     * spec e o filme da formada usam os números do conceito, que ficam 2 px para fora da face que o jogo desenha:
+     * zerar {@link #PORTA_DESLOC_X} volta ao número do filme.
+     */
+    public static final double[] PORTA_IMPACTO = {42.4 + PORTA_DESLOC_X, 8, 0};
+    /** O fim do arco, na Porta: o 42,8 do filme mais o deslocamento. */
+    public static final double[] PORTA_ARCO_FIM = {42.8 + PORTA_DESLOC_X, 8.6, 0};
+    /** O centro da luz da Porta no mundo: o 44 do filme mais o deslocamento. */
+    public static final double[] PORTA_LUZ = {44 + PORTA_DESLOC_X, 8, 0};
+    /** A Porta de Cristais, de onde saem os grãos de redstone: do outro lado, entra 2 px para o lado oposto (+2). */
+    public static final double[] PORTA_CRISTAIS = {-42.4 - PORTA_DESLOC_X, 8, 0};
+
     private ArmilarSpec() {
     }
 

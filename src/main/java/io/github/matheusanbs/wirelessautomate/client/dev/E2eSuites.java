@@ -79,6 +79,8 @@ final class E2eSuites {
                     }, true, () -> true),
             optional("fx-base", "o caminho de desenho dos efeitos: oclusão, perto e o corte de 48 blocos (com --shaders, por cima do pacote)",
                     Prereq.NENHUM, E2eFxProbeSteps::probeSteps),
+            optional("armilar-render", "o render da Armilar: a conjunção em cada fase (vazão 7 e 0), os cristais, o buffer cheio e a recarga",
+                    Prereq.NENHUM, E2eArmilarRenderSteps::armilarRenderSteps),
             suite("ressonador-jei", "JEI do Ressonador", Prereq.NENHUM, E2eJeiResonatorSteps::jeiResonatorSteps),
             suite("reparador", "Reparador de Cristais", Prereq.NENHUM, E2eRepairerSteps::repairerSteps),
             suite("reparador-animacao", "a animação do Reparador no mundo e na tela, com o tempo parado em cada fase",

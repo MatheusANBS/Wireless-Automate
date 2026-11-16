@@ -5,6 +5,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -38,7 +39,21 @@ final class ArmilarSolids {
     private static final float OPACO_TILT = (float) Math.toRadians(ArmilarSpec.OPACO_TILT_DEG);
     private static final Vector3f SCRATCH = new Vector3f();
 
+    /** O nível de luz de bloco do cristal vivo com a sintonia no máximo: o {@code emit} do filme, {@code 0,35 + 0,35 u}, em 15 níveis. */
+    private static final double GLOW_BASE = 0.35;
+    private static final double GLOW_UP = 0.35;
+
     private ArmilarSolids() {
+    }
+
+    /**
+     * A luz do cristal vivo: o {@code emit} do filme ({@code partes.js}, {@code [0,35 + 0,35 u, 0,25 + 0,2 u, 0,2]})
+     * vira uma luz de bloco mínima de {@code 15 × (0,35 + 0,35 u)}, combinada com a do mundo pelo máximo (a do céu não
+     * muda). Só o canal vermelho do {@code emit} cabe numa luz empacotada, e ele é o que domina a cor do cristal.
+     */
+    static int glowLight(int light, double u) {
+        int block = (int) Math.round(15 * (GLOW_BASE + GLOW_UP * u));
+        return LightTexture.pack(Math.max(LightTexture.block(light), block), LightTexture.sky(light));
     }
 
     private static RenderType[] crystalTypes() {
@@ -56,6 +71,7 @@ final class ArmilarSolids {
         double u = s.motion().u(pt);
         double since = s.sinceTuned(pt);
         int light = s.sunLight();
+        int glow = glowLight(light, u);
         ps.pushPose();
         ps.translate(s.frame().centerX() - s.core().getX(), s.frame().centerY() - s.core().getY(),
                 s.frame().centerZ() - s.core().getZ());
@@ -77,7 +93,7 @@ final class ArmilarSolids {
             rotY(ps, Ease.wrap(s.motion().spin(i, pt)));
             mesh(buf.getBuffer(RING_TYPE), ArmilarMeshes.ring(i), ps.last(), light, 0xFFFFFF);
             for (int k = 0; k < ArmilarSpec.NOS[i]; k++) {
-                crystal(s, ps, buf, light, a, pt, ArmilarNodes.FIRST[i] + k);
+                crystal(s, ps, buf, light, glow, a, pt, ArmilarNodes.FIRST[i] + k);
             }
             ps.popPose();
         }
@@ -87,10 +103,11 @@ final class ArmilarSolids {
     /**
      * O cristal do nó, no referencial do anel. O vivo fica de pé com o centro em {@code (r, CENTRO, 0)}; o Opaco e o
      * rachado inclinam em torno da ponta de baixo e voltam ao prumo com a recarga ({@link ArmilarRecharge#fall}). A
-     * inclinação é para fora do anel (a spec e o filme não dão o sentido).
+     * inclinação é para fora do anel (a spec e o filme não dão o sentido). O que está aceso (vivo, ou as linhas já
+     * acesas na recarga) leva a luz {@code glow}; o Opaco, o Rachado e as linhas apagadas, a do mundo.
      */
-    private static void crystal(ArmilarScene s, PoseStack ps, MultiBufferSource buf, int light, double a, float pt,
-            int node) {
+    private static void crystal(ArmilarScene s, PoseStack ps, MultiBufferSource buf, int light, int glow, double a,
+            float pt, int node) {
         byte[] chambers = s.chambers();
         if (node >= chambers.length || CrystalLook.empty(chambers[node])) {
             return;
@@ -121,14 +138,15 @@ final class ArmilarSolids {
         boolean rows = lit > 0 && (lit < ROWS || (tier > 0 && CrystalLook.cut(code)));
         if (!rows) {
             CrystalLook.Tex tex = lit == 0 ? CrystalLook.bodyTex(code) : CrystalLook.liveTex(code);
-            mesh(buf.getBuffer(CRYSTAL_TYPES[tex.ordinal()]), ArmilarMeshes.crystal(), ps.last(), light, 0xFFFFFF);
+            mesh(buf.getBuffer(CRYSTAL_TYPES[tex.ordinal()]), ArmilarMeshes.crystal(), ps.last(), lit == 0 ? light : glow,
+                    0xFFFFFF);
         } else {
             QuadMesh[] meshes = ArmilarMeshes.crystalRows();
             int tint = tier > 0 ? GuiPaint.tierColor(TIERS[tier - 1]) & 0xFFFFFF : 0xFFFFFF;
             for (int row = 0; row < ROWS; row++) {
                 CrystalLook.Tex tex = CrystalPlan.rowTex(row, code, tier, lit);
                 int rgb = CrystalPlan.rowTinted(row, code, tier, lit) ? tint : 0xFFFFFF;
-                mesh(buf.getBuffer(CRYSTAL_TYPES[tex.ordinal()]), meshes[row], ps.last(), light, rgb);
+                mesh(buf.getBuffer(CRYSTAL_TYPES[tex.ordinal()]), meshes[row], ps.last(), row < lit ? glow : light, rgb);
             }
         }
         ps.popPose();

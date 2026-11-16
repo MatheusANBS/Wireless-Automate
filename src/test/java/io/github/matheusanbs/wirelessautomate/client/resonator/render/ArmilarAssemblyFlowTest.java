@@ -76,6 +76,10 @@ class ArmilarAssemblyFlowTest {
             assertTrue(s > prev, "crescente em " + k / 10.0);
             prev = s;
         }
+        // a faixa suavizada decai a 0 por aproximação: o resto minúsculo não pode desenhar o arco
+        assertEquals(0.0, ArmilarFlow.strength(7 * Math.pow(0.88, 100)), 0.0);
+        assertEquals(0.0, ArmilarFlow.strength(0.01), 0.0);
+        assertTrue(ArmilarFlow.strength(0.1) > ArmilarFlow.MIN_STRENGTH);
         assertEquals(0.55, ArmilarFlow.sunMul(0), 1e-12);
         assertEquals(1.0, ArmilarFlow.sunMul(1), 1e-12);
     }

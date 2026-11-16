@@ -54,6 +54,13 @@ def _uv_girada(c: geo.Cubo, face: str) -> list[float]:
     return [round(v, 4) for v in (u0, v0, u0 + w, v0 + h)]
 
 
+def _uv_especial(c: geo.Cubo, face: str) -> list[float]:
+    """A face especial usa só a região do desenho, do tamanho da face (1 texel por pixel), no canto do sprite."""
+    d = c.b - c.a
+    w, h = (d[0], d[1]) if face in ("north", "south") else (d[2], d[1])
+    return [0.0, 0.0, round(float(w), 4), round(float(h), 4)]
+
+
 def _particula(cubos: list[geo.Cubo]) -> str:
     """O material que mais área ocupa na fatia (a partícula do bloco)."""
     area: dict[str, float] = {}
@@ -77,7 +84,7 @@ def modelo_da_casa(nome: str, C: list[geo.Cubo], cel: tuple[int, int, int], tier
                 continue
             if f in c.especial:
                 esp = c.especial[f]
-                faces[f] = (f"armilar_mostrador_{tier}" if esp == "mostrador" else f"armilar_{esp}", [0, 0, 16, 16])
+                faces[f] = (f"armilar_mostrador_{tier}" if esp == "mostrador" else f"armilar_{esp}", _uv_especial(c, f))
             else:
                 faces[f] = (f"armilar_{c.mat}", None if c.alinhado() else _uv_girada(c, f))
         rot = None

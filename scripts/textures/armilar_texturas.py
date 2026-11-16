@@ -5,7 +5,8 @@ Porte do `pintar_atlas` do conceito (`gerar_conceitos.py`). No conceito cada mat
 (a mesma ideia da casa 0 do conceito: o tampo de grafite com os rebites e as emendas, o corpo de porcelana, a
 listra coral, o latão com os veios). A semente de cada casa é fixa, para o PNG sair igual a cada rodada.
 
-As faces especiais ocupam o sprite inteiro e são esticadas na face, como no conceito: o mostrador do Núcleo (a cor
+As faces especiais são pintadas em escala 1:1, no tamanho real da face, no canto de cima do sprite (o resto é
+transparente) e a UV da face é só essa região: o mostrador do Núcleo (a cor
 da lente do tier no vidro e as marcas do tier), a placa de sintonia, a escotilha e a face da energia.
 """
 
@@ -135,77 +136,73 @@ def _marcas(p: _Pincel, tier: str, y: int, c) -> None:
 
 
 def _mostrador(tier: str) -> Image.Image:
-    """A escala de FM sob o vidro, na cor da lente do tier, com a moldura de grafite e as marcas do tier. É
-    esticado numa face de 16 × 5: as linhas finas viram faixas, como no conceito."""
+    """A escala de FM sob o vidro, na cor da lente do tier, com a moldura de grafite e as marcas do tier. Tamanho
+    real da face (16 × 5), no canto de cima do sprite."""
     p, g, pl = _Pincel(), _tons("grafite"), _tons("porcelana")
     hi, mid, lo = (cor(x) for x in LENTE[tier])
-    p.ret(0, 0, 16, 16, g[3])
-    p.ret(1, 1, 15, 15, g[1])
-    p.ret(2, 2, 14, 14, mid)
-    p.ret(2, 2, 14, 3, hi)
-    p.ret(2, 13, 14, 14, lo)
-    for x in range(3, 13, 2):
-        longo = (x - 3) % 4 == 0
-        p.ret(x, 4 if longo else 6, x + 1, 9, g[2] if longo else g[1])
-    p.ret(3, 9, 13, 10, g[2])
-    _marcas(p, tier, 11, pl[0])
-    p.put(3, 3, hi)
+    p.ret(0, 0, 16, 5, g[3])
+    p.ret(1, 1, 15, 2, hi)
+    p.ret(1, 2, 15, 3, mid)
+    p.ret(1, 3, 15, 4, lo)
+    for x in range(2, 14, 2):  # a escala: traço em cada 2 px, mais comprido a cada 4
+        p.put(x, 2, g[2])
+        if x % 4 == 2:
+            p.put(x, 1, g[2])
+    n = MARCAS[tier]
+    for i in range(n):
+        p.put(8 - n + 2 * i, 3, pl[0])
     return p.img
 
 
 def _sintonia() -> Image.Image:
-    """O mostrador redondo do Sintonizador: aro de grafite, as 12 marcas e o botão de latão no meio."""
+    """O mostrador redondo do Sintonizador: aro de grafite, as 12 marcas e o botão de latão no meio. 8 × 8."""
     p, g, pl, l = _Pincel(), _tons("grafite"), _tons("porcelana"), _tons("latao")
-    for y in range(16):
-        for x in range(16):
-            d = math.hypot(x - 7.5, y - 7.5)
-            c = g[3] if d > 7.5 else g[1] if d > 6.75 else pl[1] if d > 1 else l[1]
-            if 6.75 >= d > 6.25:
-                c = pl[2]
-            p.put(x, y, c)
+    for y in range(8):
+        for x in range(8):
+            d = math.hypot(x - 3.5, y - 3.5)
+            p.put(x, y, g[3] if d > 3.75 else g[1] if d > 3.2 else pl[1] if d > 1 else l[1])
     for k in range(12):
         a = k * math.pi / 6
-        for rr in (5.0, 5.75):
-            p.put(int(7.5 + rr * math.cos(a)), int(7.5 + rr * math.sin(a)), g[2])
+        p.put(int(3.5 + 2.4 * math.cos(a)), int(3.5 + 2.4 * math.sin(a)), g[2])
     return p.img
 
 
 def _escotilha() -> Image.Image:
-    """O painel de porcelana da Porta de Cristais: o losango coral do cristal e quatro parafusos de latão."""
+    """O painel de porcelana da Porta de Cristais: o losango coral do cristal e quatro parafusos de latão. 14 × 7."""
     p, pl, c, l = _Pincel(), _tons("porcelana"), _tons("coral"), _tons("latao")
-    p.ret(0, 0, 16, 16, pl[1])
-    p.ret(0, 0, 16, 1, pl[0])
-    p.ret(0, 0, 1, 16, pl[0])
-    p.ret(0, 15, 16, 16, pl[3])
-    p.ret(15, 0, 16, 16, pl[3])
-    p.ret(1, 1, 15, 2, pl[2])
-    p.ret(1, 14, 15, 15, pl[0])
-    p.ret(1, 1, 2, 15, pl[2])
-    p.ret(14, 1, 15, 15, pl[0])
-    for y in range(16):
-        for x in range(16):
-            dx, dy = abs(x - 7.5), abs(y - 7.5)
-            f = dx / 3 + dy / 4.5
+    p.ret(0, 0, 14, 7, pl[1])
+    p.ret(0, 0, 14, 1, pl[0])
+    p.ret(0, 0, 1, 7, pl[0])
+    p.ret(0, 6, 14, 7, pl[3])
+    p.ret(13, 0, 14, 7, pl[3])
+    for y in range(7):
+        for x in range(14):
+            f = abs(x - 6.5) / 3 + abs(y - 3) / 2.5
             if f <= 1:
-                p.put(x, y, c[4] if f > 0.82 else c[1] if x < 7 and y < 7 else c[3] if x > 8 and y > 8 else c[2])
-    for (a, b) in ((2, 2), (13, 2), (2, 13), (13, 13)):
+                p.put(x, y, c[4] if f > 0.8 else c[1] if x < 6 and y < 3 else c[3] if x > 7 and y > 3 else c[2])
+    for (a, b) in ((2, 1), (11, 1), (2, 5), (11, 5)):
         p.put(a, b, l[1])
     return p.img
 
 
 def _energia() -> Image.Image:
-    """A placa de grafite da Porta de Energia com a faixa âmbar."""
+    """A placa de grafite da Porta de Energia com a faixa âmbar. 16 × 9."""
     p, g, e = _Pincel(), _tons("grafite"), _tons("energia")
-    p.ret(0, 0, 16, 16, g[2])
-    p.borda(g[1], g[3])
-    p.ret(1, 6, 15, 10, e[2])
-    p.ret(1, 6, 15, 7, e[1])
-    p.ret(1, 9, 15, 10, e[3])
+    p.ret(0, 0, 16, 9, g[2])
+    for i in range(16):
+        p.put(i, 0, g[1])
+        p.put(i, 8, g[3])
+    for i in range(9):
+        p.put(0, i, g[1])
+        p.put(15, i, g[3])
+    p.ret(1, 3, 15, 7, e[2])
+    p.ret(1, 3, 15, 4, e[1])
+    p.ret(1, 6, 15, 7, e[3])
     return p.img
 
 
 def sprites() -> dict[str, Sprite]:
-    """`block/armilar_<nome>` -> sprite 16 × 16 opaco, para os materiais, os especiais e o mostrador por tier."""
+    """`block/armilar_<nome>` -> sprite 16 × 16 (os especiais com a área fora do desenho transparente), para os materiais, os especiais e o mostrador por tier."""
     pintores = {"porcelana": _porcelana, "grafite": _grafite, "coral": _coral, "latao": _latao, "vidro": _vidro,
                 "grelha": _grelha, "sintonia": _sintonia, "escotilha": _escotilha, "energia": _energia}
     saida = {f"block/armilar_{nome}": parado(fn()) for nome, fn in pintores.items()}

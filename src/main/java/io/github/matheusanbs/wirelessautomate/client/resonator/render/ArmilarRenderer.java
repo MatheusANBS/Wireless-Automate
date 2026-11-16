@@ -38,6 +38,21 @@ public final class ArmilarRenderer implements BlockEntityRenderer<ResonanceCoreB
     /** Só do e2e: congela o relógio da Armilar nesses segundos (para a captura cair na mesma conjunção), ou NaN para o relógio do mundo. */
     public static double freezeSecondsForTests = Double.NaN;
 
+    /**
+     * Só do e2e: os sprites e as fitas que o último quadro da Armilar do Núcleo em {@code core} pediu, em
+     * {@code out[0]} e {@code out[1]}; devolve falso se não há cena (ainda não desenhada).
+     */
+    public static boolean countsForTests(BlockPos core, int[] out) {
+        for (Map.Entry<SceneKey, ArmilarScene> entry : SCENES.entrySet()) {
+            if (entry.getKey().pos().equals(core)) {
+                out[0] = entry.getValue().spriteCount();
+                out[1] = entry.getValue().ribbonCount();
+                return true;
+            }
+        }
+        return false;
+    }
+
     private record SceneKey(ResourceKey<Level> dimension, BlockPos pos) {
     }
 

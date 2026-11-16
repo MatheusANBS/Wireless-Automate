@@ -19,7 +19,6 @@ import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.resonator.CrystalCharge;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
-import io.github.matheusanbs.wirelessautomate.resonator.TuneSignal;
 import io.github.matheusanbs.wirelessautomate.resonator.ProjectionDiff;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBlueprint;
@@ -166,7 +165,7 @@ final class E2eResonatorSteps {
         topSteps(list, playerId, origin);
         screenSteps(list, origin);
         E2eResonatorScreenSteps.screenSteps(list, playerId, origin);
-        chamberSteps(list, playerId, origin);
+        E2eArmilarRenderSteps.chamberSteps(list, playerId, origin);
         list.add(new Step("Ressonador: limpar", STEP_TIMEOUT_MS, () -> onServer(server -> {
             ServerPlayer player = server.getPlayerList().getPlayer(playerId);
             clear(player.serverLevel(), origin[0]);
@@ -308,61 +307,6 @@ final class E2eResonatorSteps {
         });
     }
 
-    /**
-     * A câmara vista de frente: em sintonia (a figura fechada, os cristais juntos e os feixes, o Opaco caído e a
-     * placa com a figura) e depois a 72% (o rabisco, os cristais fora de ritmo e a placa com ruído).
-     */
-    private static void chamberSteps(List<Step> list, UUID playerId, BlockPos[] origin) {
-        list.add(new Step("Ressonador: dial na estação, sem Sintonizador", STEP_TIMEOUT_MS, () -> {
-            // sem a mão e a mira na frente da câmara
-            Minecraft.getInstance().options.hideGui = true;
-            onServer(server -> {
-                ResonanceCoreBlockEntity core = (ResonanceCoreBlockEntity) server.overworld()
-                        .getBlockEntity(core(origin[0]));
-                core.setAuto(false);
-                core.setDial(98.0);
-                return null;
-            });
-        }, () -> ((ResonanceCoreBlockEntity) Minecraft.getInstance().level.getBlockEntity(core(origin[0])))
-                .clientView().band() == TuneSignal.BANDS - 1, () -> "faixa no cliente"));
-        list.add(camera("Ressonador: câmera de frente", playerId, () -> origin[0], FRONT_VIEW));
-        list.add(DevEndToEnd.wait("a câmara acender", 30));
-        list.add(capture("ressonador-camara"));
-        for (int i = 0; i < 2; i++) {
-            timed(list, "", null);
-        }
-        closeUp(list, playerId, origin, "ressonador-tentaculos");
-        list.add(new Step("Ressonador: dial a 96,7", STEP_TIMEOUT_MS, () -> onServer(server -> {
-            ((ResonanceCoreBlockEntity) server.overworld().getBlockEntity(core(origin[0]))).setDial(96.7);
-            return null;
-        }), () -> ((ResonanceCoreBlockEntity) Minecraft.getInstance().level.getBlockEntity(core(origin[0])))
-                .clientView().band() < TuneSignal.BANDS - 1, () -> "faixa no cliente"));
-        list.add(DevEndToEnd.wait("a figura escorregar", 60));
-        list.add(capture("ressonador-camara-chiado"));
-        closeUp(list, playerId, origin, "ressonador-tentaculos-fora");
-        list.add(new Step("Ressonador: dial de volta a 98,0", STEP_TIMEOUT_MS, () -> {
-            Minecraft.getInstance().options.hideGui = false;
-            onServer(server -> {
-                ((ResonanceCoreBlockEntity) server.overworld().getBlockEntity(core(origin[0]))).setDial(98.0);
-                return null;
-            });
-        }, () -> true, () -> "dial"));
-        E2eResonatorFlowSteps.flowSteps(list, playerId, origin);
-    }
-
-    /**
-     * Os tentáculos de perto em dois instantes (eles andam entre um e outro) e a câmera de volta à frente: capturas
-     * {@code <name>} e {@code <name>-2}.
-     */
-    private static void closeUp(List<Step> list, UUID playerId, BlockPos[] origin, String name) {
-        list.add(camera("Ressonador: câmera perto, " + name, playerId, () -> origin[0], CLOSE_VIEW));
-        list.add(DevEndToEnd.wait("a câmera chegar", 10));
-        list.add(capture(name));
-        list.add(DevEndToEnd.wait("outro instante", 13));
-        list.add(capture(name + "-2"));
-        list.add(camera("Ressonador: câmera de frente, " + name, playerId, () -> origin[0], FRONT_VIEW));
-    }
-
     /** O que a medida repete a cada tick de espera (a extração que mantém o conduto aceso). */
     @FunctionalInterface
     interface Tick {
@@ -381,26 +325,6 @@ final class E2eResonatorSteps {
             }
         }
         throw new IllegalStateException("a Armilar não tem Porta de Energia");
-    }
-
-    /**
-     * Só com a suíte {@code ressonador-desempenho} ({@link #perf}): a medida do tempo de quadro da Armilar, que é um
-     * número e não uma asserção.
-     */
-    static void timed(List<Step> list, String situation, Tick perTick) {
-        if (perf) {
-            list.add(frameTime(situation, perTick));
-        }
-    }
-
-    /** Ligada só enquanto o roteiro da suíte {@code ressonador-desempenho} é montado. */
-    static boolean perf;
-
-    /** A medida da Armilar ocupando a tela. */
-    static Step frameTime(String situation, Tick perTick) {
-        String label = "armilar" + situation;
-        return frameTimeStep("Ressonador: " + label + " (tempo de quadro)", label, () -> {
-        }, perTick);
     }
 
     /**
@@ -461,6 +385,7 @@ final class E2eResonatorSteps {
     /** O fim de uma medida: o vsync, o limite de FPS e os desenhos forçados; o tempo parado do Reparador fica. */
     private static void restoreMeasure() {
         ArmilarRenderer.forceBandForTests = -1;
+        ArmilarRenderer.freezeSecondsForTests = Double.NaN;
         RepairerRenderer.forceLegacyForTests = false;
         PatternDockRenderer.disabledForTests = false;
         if (!measuring) {

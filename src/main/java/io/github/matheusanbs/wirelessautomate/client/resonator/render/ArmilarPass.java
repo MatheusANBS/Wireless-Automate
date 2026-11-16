@@ -47,6 +47,9 @@ final class ArmilarPass {
     float sunX;
     float sunY;
     float sunZ;
+    /** Quantos sprites (spr, dec e sprCam) e fitas esta cena pediu no último quadro; o e2e confere que nada sumiu. */
+    int sprites;
+    int ribbons;
 
     /** A pose de cada órbita neste quadro: precessão, inclinação, giro e a escala da entrada. */
     final double[] prec = new double[3];
@@ -72,6 +75,8 @@ final class ArmilarPass {
         this.scene = scene;
         this.fx = fx;
         this.buffers = buffers;
+        sprites = 0;
+        ribbons = 0;
         float pt = scene.framePartialTick();
         t = scene.clock(pt);
         a = scene.assembly(pt);
@@ -136,6 +141,7 @@ final class ArmilarPass {
     /** O mesmo sprite num ponto já relativo à câmera, em blocos (a coroa do sol anda em eixos da tela). */
     void sprCam(FxSheet sheet, int frame, float x, float y, float z, double halfPx, int rgb, double alpha,
             double rot, int dis) {
+        sprites++;
         FxDraw.sprite(buffers.getBuffer(FxTypes.of(sheet)), fx, sheet, frame, x, y, z, (float) (halfPx / 16),
                 (float) rot, rgb, (float) alpha, dis, light(sheet));
     }
@@ -147,6 +153,7 @@ final class ArmilarPass {
         // o dirToWorld divide por 16 (px a blocos); o eixo é unitário, então multiplica por 16 para voltar a 1
         scene.frame().dirToWorld(axis1[0] * 16, axis1[1] * 16, axis1[2] * 16, axisA);
         scene.frame().dirToWorld(axis2[0] * 16, axis2[1] * 16, axis2[2] * 16, axisB);
+        sprites++;
         FxDraw.decal(buffers.getBuffer(FxTypes.of(sheet)), sheet, frame, (float) (world[0] - fx.camX),
                 (float) (world[1] - fx.camY), (float) (world[2] - fx.camZ), (float) axisA[0], (float) axisA[1],
                 (float) axisA[2], (float) axisB[0], (float) axisB[1], (float) axisB[2], (float) (halfPx / 16),
@@ -162,6 +169,7 @@ final class ArmilarPass {
         if (n < 2) {
             return;
         }
+        ribbons++;
         float[] src = b.pts;
         float[] dst = cam.pts;
         for (int i = 0; i < n; i++) {

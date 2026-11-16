@@ -294,6 +294,15 @@ final class ArmilarScene implements FxJob {
         }
     }
 
+    /** Os sprites e as fitas que o último quadro pediu (só o e2e lê). */
+    int spriteCount() {
+        return pass.sprites;
+    }
+
+    int ribbonCount() {
+        return pass.ribbons;
+    }
+
     @Override
     public double distanceSq(FxContext ctx) {
         double dx = frame.centerX() - ctx.camX;

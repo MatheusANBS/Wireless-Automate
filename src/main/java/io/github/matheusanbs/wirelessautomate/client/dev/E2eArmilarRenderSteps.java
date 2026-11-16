@@ -130,12 +130,21 @@ final class E2eArmilarRenderSteps {
             onServer(server -> {
                 ResonanceCoreBlockEntity core = (ResonanceCoreBlockEntity) server.overworld()
                         .getBlockEntity(core(origin[0]));
+                // o ponto de partida das contagens: três cristais vivos e sem redstone (nenhum Opaco recarregando
+                // nem terminando de recarregar no meio das fases, que mudaria quantas fitas há)
+                for (int i = 0; i < core.chambers(); i++) {
+                    core.setCrystalAt(i, new ItemStack(i % 2 == 0 ? ModItems.SIGNAL_CRYSTAL.get()
+                            : ModItems.CUT_SIGNAL_CRYSTAL.get()));
+                }
+                core.setRedstone(0);
                 core.setAuto(false);
                 core.setStationForTest(98.0);
                 core.setDial(96.7);
                 return null;
             });
-        }, () -> view(origin[0]).band() < TuneSignal.BANDS - 1, () -> "faixa no cliente"));
+        }, () -> view(origin[0]).band() < TuneSignal.BANDS - 1 && view(origin[0]).rechargeStart() < 0
+                && view(origin[0]).chambers().length == 3 && view(origin[0]).chambers()[2] != 0
+                && view(origin[0]).chambers()[2] < 3, () -> "faixa no cliente, view " + view(origin[0])));
         list.add(film("Armilar: câmera do filme", playerId, () -> origin[0]));
         list.add(DevEndToEnd.wait("a pose assentar (fora de sintonia)", 60));
         list.add(capture("armilar-fora"));

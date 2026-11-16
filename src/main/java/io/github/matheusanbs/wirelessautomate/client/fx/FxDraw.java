@@ -28,21 +28,23 @@ public final class FxDraw {
      *
      * @param dissolve a dissolução de 0 (inteiro) a 1000 (some), na trama Bayer do shader
      * @param light a luz empacotada ({@code LightTexture.FULL_BRIGHT} nas folhas de luz)
+     * @return se o quad saiu (falso quando o alfa ou o tamanho são nulos: nada foi para o buffer)
      */
-    public static void sprite(VertexConsumer out, FxContext c, FxSheet sheet, int frame, float x, float y, float z,
+    public static boolean sprite(VertexConsumer out, FxContext c, FxSheet sheet, int frame, float x, float y, float z,
             float half, float rot, int rgb, float alpha, int dissolve, int light) {
-        decal(out, sheet, frame, x, y, z, c.rx, c.ry, c.rz, c.ux, c.uy, c.uz, half, rot, rgb, alpha, dissolve, light);
+        return decal(out, sheet, frame, x, y, z, c.rx, c.ry, c.rz, c.ux, c.uy, c.uz, half, rot, rgb, alpha, dissolve,
+                light);
     }
 
     /**
      * O {@code dec}: o mesmo quad, mas nos eixos dados ({@code a1} e {@code a2}) no lugar da direita e do alto da
-     * câmera, para o que fica colado numa superfície.
+     * câmera, para o que fica colado numa superfície. Devolve se o quad saiu.
      */
-    public static void decal(VertexConsumer out, FxSheet sheet, int frame, float cx, float cy, float cz,
+    public static boolean decal(VertexConsumer out, FxSheet sheet, int frame, float cx, float cy, float cz,
             float a1x, float a1y, float a1z, float a2x, float a2y, float a2z, float half, float rot, int rgb,
             float alpha, int dissolve, int light) {
         if (!(alpha > MIN_ALPHA) || !(half > 0)) {
-            return;
+            return false;
         }
         float cos = (float) Math.cos(rot) * half;
         float sin = (float) Math.sin(rot) * half;
@@ -63,6 +65,7 @@ public final class FxDraw {
         vertex(out, cx + e1x - e2x, cy + e1y - e2y, cz + e1z - e2z, r, g, b, a, 1f, v1, dissolve, light);
         vertex(out, cx + e1x + e2x, cy + e1y + e2y, cz + e1z + e2z, r, g, b, a, 1f, v0, dissolve, light);
         vertex(out, cx - e1x + e2x, cy - e1y + e2y, cz - e1z + e2z, r, g, b, a, 0f, v0, dissolve, light);
+        return true;
     }
 
     /**
@@ -70,12 +73,13 @@ public final class FxDraw {
      * blocos; a meia largura em {@code buf.w} e o alfa em {@code buf.a}). O lado de cada amostra é
      * {@code normalize(cross(tangente, ponto)) × w}, com a tangente média dos vizinhos, e as amostras vizinhas dividem
      * os vértices: sem emenda. O {@code u} acumula o comprimento em blocos, dividido por {@code repUnits} (os blocos
-     * por repetição da textura) menos {@code offset} (fração de repetição). O {@code v} vai do lado L ao R.
+     * por repetição da textura) menos {@code offset} (fração de repetição). O {@code v} vai do lado L ao R. Devolve se
+     * ao menos um segmento saiu (com o alfa de todos abaixo do mínimo a fita some).
      */
-    public static void ribbon(VertexConsumer out, FxContext c, FxSheet sheet, int frame, FxRibbon.Buffer buf, int n,
+    public static boolean ribbon(VertexConsumer out, FxContext c, FxSheet sheet, int frame, FxRibbon.Buffer buf, int n,
             int rgb, float repUnits, float offset, int dissolve, int light) {
         if (n < 2) {
-            return;
+            return false;
         }
         float[] p = buf.pts;
         float run = 0;
@@ -132,6 +136,7 @@ public final class FxDraw {
         int r = rgb >> 16 & 255;
         int g = rgb >> 8 & 255;
         int b = rgb & 255;
+        boolean drawn = false;
         for (int i = 0; i < n - 1; i++) {
             float a0 = buf.a[i];
             float a1 = buf.a[i + 1];
@@ -142,11 +147,13 @@ public final class FxDraw {
             int k = i * 3;
             int ia0 = alphaByte(a0);
             int ia1 = alphaByte(a1);
+            drawn = true;
             vertex(out, LEFT[k], LEFT[k + 1], LEFT[k + 2], r, g, b, ia0, U[i], v0, dissolve, light);
             vertex(out, LEFT[j], LEFT[j + 1], LEFT[j + 2], r, g, b, ia1, U[i + 1], v0, dissolve, light);
             vertex(out, RIGHT[j], RIGHT[j + 1], RIGHT[j + 2], r, g, b, ia1, U[i + 1], v1, dissolve, light);
             vertex(out, RIGHT[k], RIGHT[k + 1], RIGHT[k + 2], r, g, b, ia0, U[i], v1, dissolve, light);
         }
+        return drawn;
     }
 
     private static int alphaByte(float alpha) {

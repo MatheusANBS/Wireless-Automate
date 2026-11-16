@@ -128,6 +128,25 @@ São os da prancha aprovada (`armilar_blocos.py`), com silhueta e topo próprios
 
 Todos seguem as regras da `wa-texturas` e passam no `verificar_modelo.py`.
 
+## Formas de colisão e seleção
+
+Os sete blocos, soltos ou montados, colidem e são selecionados pela forma do próprio desenho, e não pelo cubo cheio. Foi decisão do dono, em 16/11/2026, depois da revisão final da etapa 1.
+
+- **De onde saem as caixas:** o gerador as calcula a partir dos elementos de cada modelo base, o solto e cada fatia montada.
+  - Entram também os elementos internos, que não vão ao JSON por não terem face.
+  - Um elemento girado entra pela caixa envolvente, cortada na casa.
+- **A conta:**
+  - O volume dos elementos é arredondado para fora na grade de 1 px.
+  - Um fundidor guloso junta os voxels em poucas caixas.
+  - Assim a forma abraça o desenho com folga de no máximo 1 px e nunca corta uma peça.
+- **A conferência:** é a mesma do `validar_hitboxes` dos outros blocos. Todo elemento cabe na união das caixas, e toda caixa toca um elemento.
+- **O código gerado:**
+  - O gerador grava as caixas dos modelos base numa classe Java gerada, `resonator/ArmilarShapes.java`, com o aviso de que é gerada e não se edita à mão.
+  - No Java, cada estado pega a forma do seu modelo base e a gira pelo mesmo `y` que o blockstate dá ao modelo.
+  - As formas giradas são montadas uma vez, na carga da classe, com `Shapes.or(...).optimize()`. O `getShape` só consulta uma tabela: nada é alocado por chamada.
+- **O que sai:** as formas escritas à mão da Coluna e do Berço (`LOOSE_SHAPE`, `LEG_SHAPES`, `LOWER_SHAPE` e `UPPER_SHAPE`).
+- **O que não muda:** a oclusão. A Laje montada segue com a oclusão vazia, e o Núcleo e as Portas seguem com `noOcclusion`.
+
 ## Projeção, JEI e guia
 
 - **Projeção:** sugere este desenho único em volta de um Núcleo solto, com a frente dele.

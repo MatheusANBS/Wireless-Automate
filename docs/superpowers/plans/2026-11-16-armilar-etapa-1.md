@@ -608,3 +608,48 @@ private static Problem problem(Part want, Part have, boolean thisCore) {
   - As pendências da etapa 2: render do sol, das órbitas, dos cristais e do horizonte, e a saída do interior antigo.
 - [ ] **Passo 5:** rode `./gradlew build runGameTestServer runGameTestServerChemicals runGameTestServerSource runGameTestServerAllthemodium` e o e2e do guia (`./scripts/e2e.sh --only guia`, ou o nome que o `--lista` mostrar). Os dois têm de passar.
 - [ ] **Passo 6:** commit `Armilar: guia, mapa e progresso da etapa 1`.
+
+### Tarefa 7: Formas de colisão e seleção pelo desenho
+
+Pedida pelo dono depois da revisão final: os blocos montados colidiam como cubo cheio. Spec, seção "Formas de colisão e seleção".
+
+**Arquivos:**
+- Criar:
+  - `scripts/textures/armilar_formas.py`: as caixas de cada modelo base, a conferência e a gravação da classe Java;
+  - `src/main/java/io/github/matheusanbs/wirelessautomate/resonator/ArmilarShapes.java`: gerado; as caixas dos modelos base, o giro pelo `y` do blockstate e a tabela de formas por estado;
+  - `src/test/java/.../resonator/ArmilarShapesTest.java` (JUnit).
+- Mudar:
+  - `scripts/textures/gerar_texturas.py`: chama `armilar_formas`;
+  - os sete blocos: `ResonatorCasingBlock`, `ResonatorColumnBlock`, `ResonatorCradleBlock`, `ResonanceCoreBlock` e `ResonatorPartBlock` (Portas e Sintonizador). Saem `LOOSE_SHAPE`, `LEG_SHAPES`, `LOWER_SHAPE` e `UPPER_SHAPE`;
+  - o e2e do Ressonador: uma captura nova;
+  - `docs/mapa/ressonador.md`, `docs/mapa/scripts-e-recursos.md` e a skill `wa-texturas` ("Onde cada coisa nasce").
+
+**Custo:** as formas são montadas uma vez, na carga da classe. O `getShape` só consulta a tabela, sem alocar nada.
+
+- [ ] **Passo 1: as caixas no gerador.** Em `armilar_formas.py`, para cada modelo base dos sete blocos (o solto e cada fatia montada, incluindo a variante sem Sintonizador):
+  - pegue os elementos do `Modelo` antes do filtro do `json()`, porque os internos sem face também são volume;
+  - cada elemento entra pela `envolvente` (de `modelo_geometria`), cortada em 0..16;
+  - arredonde para fora na grade de 1 px (`floor` no mínimo, `ceil` no máximo) e marque os voxels;
+  - junte os voxels em caixas com um fundidor guloso: estique em x, depois em z, depois em y;
+  - confira duas coisas: todo elemento cabe na união das caixas (os cantos da envolvente, com `EPS`) e toda caixa toca um elemento. Se falhar, `raise ModeloInvalido`.
+- [ ] **Passo 2: a classe gerada.**
+  - O gerador grava `ArmilarShapes.java`, com o cabeçalho "Gerado por scripts/textures/armilar_formas.py (gerar_texturas.py). Não edite.", as caixas de cada modelo base em pixels e o mapa de estado para modelo base e `y`.
+  - O mapa sai dos mesmos dados que escrevem os blockstates, para que não haja duas tabelas.
+  - O giro no Java é o do blockstate: `y` de 90 leva (x, z) para (16 − z, x), igual ao `girar()` do gerador.
+  - As `VoxelShape` giradas ficam numa tabela montada uma vez.
+  - Rode o gerador duas vezes: a segunda não pode mudar nada.
+- [ ] **Passo 3: os blocos.**
+  - Cada um dos sete blocos devolve no `getShape` a forma do `ArmilarShapes` para o seu estado.
+  - Saem as formas escritas à mão.
+  - A oclusão não muda.
+- [ ] **Passo 4: o teste (JUnit).** `ArmilarShapesTest` lê, de `src/main/resources/assets/wirelessautomate/`, os blockstates dos sete blocos e os modelos que eles apontam. Para cada variante:
+  - gira os elementos do modelo pelo `y` da variante, com uma conta própria do teste;
+  - confere que todo elemento cabe na forma do estado, com 1 px de folga;
+  - confere que a forma cabe no bloco (0..1);
+  - confere que a forma da Laje montada num canto (por exemplo `p00`) não é o cubo cheio.
+
+  Esse teste pega erro de índice e de giro entre o Java e os assets.
+- [ ] **Passo 5: ver no jogo.** O e2e do Ressonador ganha a captura `armilar-selecao`: a Armilar montada, com a mira numa Laje do canto, e depois numa Coluna, mostrando o contorno de seleção. Rode `./scripts/e2e.sh --only ressonador --capture armilar`. O `run/e2e/result.txt` tem de dizer `OK`. Ponha o caminho da captura no relatório.
+- [ ] **Passo 6: os docs.** No mapa, entram o `ArmilarShapes` e o `armilar_formas.py`. Na skill `wa-texturas`, "Onde cada coisa nasce" ganha a linha do `armilar_formas.py`.
+- [ ] **Passo 7: a verificação.** `./gradlew build runGameTestServer runGameTestServerChemicals runGameTestServerSource runGameTestServerAllthemodium` verde. Rode também o `varrer.py`, o `medir.py` e o `varrer_perf.py`.
+- [ ] **Passo 8:** commit `Armilar: colisão e seleção pela forma do desenho`.

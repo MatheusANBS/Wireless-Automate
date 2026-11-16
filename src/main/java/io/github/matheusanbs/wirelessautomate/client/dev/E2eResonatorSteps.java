@@ -455,6 +455,7 @@ final class E2eResonatorSteps {
         E2eRepairerAnimSteps.restoreHooks();
         E2eDockAnimSteps.restoreHooks();
         E2eFxProbeSteps.restoreHooks();
+        E2eArmilarRenderSteps.restoreHooks();
     }
 
     /** O fim de uma medida: o vsync, o limite de FPS e os desenhos forçados; o tempo parado do Reparador fica. */

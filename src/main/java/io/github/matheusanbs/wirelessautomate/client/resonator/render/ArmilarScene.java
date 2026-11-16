@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.client.resonator.render;
 
 import io.github.matheusanbs.wirelessautomate.client.fx.FxContext;
 import io.github.matheusanbs.wirelessautomate.client.fx.FxJob;
+import io.github.matheusanbs.wirelessautomate.client.fx.FxLights;
 import io.github.matheusanbs.wirelessautomate.client.fx.FxSheets;
 import io.github.matheusanbs.wirelessautomate.resonator.ChamberView;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorLayout;
@@ -35,6 +36,8 @@ final class ArmilarScene implements FxJob {
     /** A maior faixa de eficiência: o {@code u} da sintonia é {@code band / BAND_MAX}. */
     private static final int BAND_MAX = 7;
 
+    /** A luz some abaixo disto. */
+    private static final double LIGHT_MIN = 0.001;
     /** O grão de redstone da recarga (a cor e o tamanho que a câmara antiga usava). */
     private static final DustParticleOptions REDSTONE = new DustParticleOptions(new Vector3f(0.84f, 0.27f, 0.23f), 0.6f);
     /**
@@ -53,6 +56,9 @@ final class ArmilarScene implements FxJob {
     private final double[] grainFrom = new double[3];
     private final double[] grainTo = new double[3];
     private final double[] crystalAt = new double[3];
+    /** As três luzes do quadro e o ponto do mundo de cada uma: rascunhos, só a thread de render os usa. */
+    private final double[][] lights = new double[ArmilarLights.COUNT][8];
+    private final double[] lightAt = new double[3];
     private final ArmilarPass pass = new ArmilarPass();
     private final BlockPos.MutableBlockPos sunPos = new BlockPos.MutableBlockPos();
     private AABB box;
@@ -271,6 +277,21 @@ final class ArmilarScene implements FxJob {
         ArmilarArc.draw(pass);
         ArmilarImpact.draw(pass);
         drawFlashes(pass);
+        addLights();
+    }
+
+    /** O sol, o clarão do horizonte e a Porta anotam a luz no mundo; só entra a que passa de {@link #LIGHT_MIN}. */
+    private void addLights() {
+        ArmilarLights.compute(pass.t, pass.a, pass.flowK, pass.phase, lights);
+        for (double[] light : lights) {
+            if (light[ArmilarLights.K] <= LIGHT_MIN) {
+                continue;
+            }
+            frame.toWorld(light[ArmilarLights.X], light[ArmilarLights.Y], light[ArmilarLights.Z], lightAt);
+            FxLights.add(lightAt[0], lightAt[1], lightAt[2], (float) light[ArmilarLights.R],
+                    (float) light[ArmilarLights.G], (float) light[ArmilarLights.B], (float) light[ArmilarLights.K],
+                    (float) (light[ArmilarLights.RADIUS] / 16));
+        }
     }
 
     @Override

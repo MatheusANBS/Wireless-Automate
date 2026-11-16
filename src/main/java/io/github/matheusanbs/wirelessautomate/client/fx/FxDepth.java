@@ -30,6 +30,11 @@ public final class FxDepth {
         blit(main, saved);
     }
 
+    /** A textura da profundidade guardada, ou 0 se nada foi guardado. */
+    public static int depthTextureId() {
+        return saved == null ? 0 : saved.getDepthTextureId();
+    }
+
     /** Devolve a profundidade guardada ao alvo principal; sem nada guardado, não faz nada. */
     public static void restore() {
         if (saved == null) {

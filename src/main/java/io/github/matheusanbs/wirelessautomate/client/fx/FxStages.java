@@ -24,6 +24,8 @@ import org.lwjgl.opengl.GL13;
  *   <li>Com shaderpack do Iris: no mesmo estágio os jobs só enchem o buffer; no {@code AFTER_LEVEL} a profundidade do
  *   alvo principal é guardada ({@link FxDepth}); depois da composição do pacote, no {@code RenderGuiEvent.Pre},
  *   a profundidade volta, as matrizes do quadro são reaplicadas e o buffer sai por cima da imagem final.</li>
+ *   <li>A luz no mundo ({@link FxLightPass}): sem pacote, no {@code AFTER_LEVEL}; com pacote, no gancho tardio, logo
+ *   depois do buffer, e a de {@code AFTER_LEVEL} fica desligada para não sair dobrada.</li>
  *   <li>Nada de efeito na passada de sombra: quem anota na fila confere {@link ShaderPackCheck#shadowPass()}, e este
  *   gancho nem toca na fila durante ela.</li>
  * </ul>
@@ -69,6 +71,7 @@ public final class FxStages {
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     static void onFrameStart(RenderFrameEvent.Pre event) {
         FxQueue.clear();
+        FxLights.clear();
         dropLate();
     }
 
@@ -86,8 +89,22 @@ public final class FxStages {
         if (stage == RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) {
             fillOrDraw(event);
         } else if (stage == RenderLevelStageEvent.Stage.AFTER_LEVEL) {
-            saveForLate(event);
+            if (ShaderPackCheck.active()) {
+                saveForLate(event);
+            } else {
+                drawLights(event);
+            }
         }
+    }
+
+    /** Sem pacote: a passada de luz no mundo sobre o quadro todo, no último estágio do mundo. */
+    private static void drawLights(RenderLevelStageEvent event) {
+        if (FxLights.count() == 0) {
+            return;
+        }
+        CTX.copyMatrices(event.getModelViewMatrix(), event.getProjectionMatrix());
+        FxLightPass.apply(CTX);
+        FxLights.clear();
     }
 
     /** Encher o buffer com a fila; sem pacote, desenhar já. */
@@ -121,14 +138,19 @@ public final class FxStages {
         }
     }
 
-    /** Com pacote e dados no buffer: guarda a profundidade e as matrizes, no último estágio do mundo. */
+    /** Com pacote e dados no buffer ou luzes: guarda a profundidade e as matrizes, no último estágio do mundo. */
     private static void saveForLate(RenderLevelStageEvent event) {
-        if (batch == null || !batch.hasData() || !ShaderPackCheck.active() || ShaderPackCheck.shadowPass()) {
+        if (!lateWanted() || !ShaderPackCheck.active() || ShaderPackCheck.shadowPass()) {
             return;
         }
         FxDepth.save();
         CTX.copyMatrices(event.getModelViewMatrix(), event.getProjectionMatrix());
         latePending = true;
+    }
+
+    /** O gancho tardio tem o que fazer: dados no buffer ou luzes anotadas. */
+    private static boolean lateWanted() {
+        return (batch != null && batch.hasData()) || FxLights.count() > 0;
     }
 
     /** O gancho tardio: depois do pacote e antes do HUD, o buffer por cima da imagem, com a profundidade do mundo. */
@@ -138,11 +160,12 @@ public final class FxStages {
             return;
         }
         latePending = false;
-        if (batch == null || !batch.hasData() || ShaderPackCheck.shadowPass()) {
+        if (!lateWanted() || ShaderPackCheck.shadowPass()) {
             return;
         }
         if (!ShaderPackCheck.active()) {
-            // o pacote foi desligado com dados guardados: o lote não vale mais
+            // o pacote foi desligado com dados guardados: o lote e as luzes não valem mais
+            FxLights.clear();
             dropLate();
             return;
         }
@@ -157,7 +180,12 @@ public final class FxStages {
         RenderSystem.applyModelViewMatrix();
         RenderSystem.enableDepthTest();
         try {
-            batch.flush();
+            if (batch != null && batch.hasData()) {
+                batch.flush();
+            }
+            // a luz vai depois do buffer, sobre a imagem final, com a profundidade que o saveForLate guardou
+            FxLightPass.apply(CTX);
+            FxLights.clear();
         } finally {
             modelView.popMatrix();
             RenderSystem.applyModelViewMatrix();

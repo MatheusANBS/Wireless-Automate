@@ -7,6 +7,7 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
+import io.github.matheusanbs.wirelessautomate.client.fx.FxLightPass;
 import io.github.matheusanbs.wirelessautomate.client.resonator.render.ArmilarRenderer;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.resonator.ChamberView;
@@ -28,7 +29,7 @@ import net.minecraft.world.phys.Vec3;
  * A suíte opcional {@code armilar-render}: o render novo da Armilar com o relógio parado em cada fase da conjunção do
  * filme (a preparação, o estouro, o arco, o impacto na Porta e a dissolução), com a vazão 7 e com a vazão 0 (só o
  * estouro e o clarão no horizonte); o brilho dos cristais de perto; o buffer cheio; e a recarga (os grãos de redstone
- * e o clarão do fim). A Tarefa 11 funde estes passos na suíte {@code ressonador}.
+ * e o clarão do fim); e a luz no mundo à meia-noite (o sol, o clarão do horizonte e a Porta acendendo o chão). A Tarefa 11 funde estes passos na suíte {@code ressonador}.
  */
 final class E2eArmilarRenderSteps {
     /** O {@code d} (segundos desde a conjunção) de cada fase: a preparação, o estouro, o arco, o impacto e a dissolução. */
@@ -43,6 +44,11 @@ final class E2eArmilarRenderSteps {
     /** O Opaco da recarga: a câmara 2, a última das três do Núcleo Elite. */
     private static final int RECHARGE_CHAMBER = 2;
     private static final int FLASH_DELAY_TICKS = 4;
+    /** A meia-noite do mundo, para a luz da Armilar aparecer. */
+    private static final long MIDNIGHT = 18000;
+    /** O {@code d} de cada captura da luz: o sol sozinho, o clarão do horizonte (cheio em 0,2) e a Porta (cheia em 0,9). */
+    private static final double[] LIGHT_D = {-3.0, 0.2, 0.9};
+    private static final String[] LIGHT_NAME = {"sol", "horizonte", "porta"};
 
     private E2eArmilarRenderSteps() {
     }
@@ -106,8 +112,10 @@ final class E2eArmilarRenderSteps {
             ArmilarRenderer.forceBandForTests = -1;
         }, () -> true, () -> "relógio do mundo"));
         fullSteps(list, origin);
+        lightSteps(list, playerId, origin);
         rechargeSteps(list, playerId, origin);
         list.add(new Step("Armilar render: limpar", STEP_TIMEOUT_MS, () -> onServer(server -> {
+            restoreHooks();
             ServerPlayer player = server.getPlayerList().getPlayer(playerId);
             E2eResonatorSteps.clear(player.serverLevel(), origin[0]);
             player.getAbilities().flying = false;
@@ -137,6 +145,53 @@ final class E2eArmilarRenderSteps {
         }
         list.add(new Step("Armilar render: relógio solto", STEP_TIMEOUT_MS,
                 () -> ArmilarRenderer.freezeSecondsForTests = Double.NaN, () -> true, () -> "relógio do mundo"));
+    }
+
+    /** Solta o relógio parado e a vazão forçada. Idempotente; o motor chama em qualquer saída. */
+    static void restoreHooks() {
+        ArmilarRenderer.freezeSecondsForTests = Double.NaN;
+        ArmilarRenderer.forceBandForTests = -1;
+        FxLightPass.disabledForTests = false;
+    }
+
+    /**
+     * A luz no mundo, à meia-noite com a vazão 7: o sol sozinho, o clarão do horizonte e a Porta, uma captura de cada
+     * ({@code armilar-render-luz-<luz>}); no fim a hora volta à de antes.
+     */
+    private static void lightSteps(List<Step> list, UUID playerId, BlockPos[] origin) {
+        long[] saved = new long[1];
+        list.add(new Step("Armilar render: a noite e a vazão 7", STEP_TIMEOUT_MS, () -> {
+            ArmilarRenderer.forceBandForTests = 7;
+            onServer(server -> {
+                saved[0] = server.overworld().getDayTime();
+                server.overworld().setDayTime(MIDNIGHT);
+                return null;
+            });
+        }, () -> stepTicks >= FLOW_SETTLE_TICKS, () -> "hora no cliente " + Minecraft.getInstance().level.getDayTime()));
+        for (int i = 0; i < LIGHT_D.length; i++) {
+            double seconds = TC + LIGHT_D[i];
+            list.add(new Step("Armilar render: luz com o relógio em TC + " + LIGHT_D[i], STEP_TIMEOUT_MS,
+                    () -> ArmilarRenderer.freezeSecondsForTests = seconds, () -> stepTicks >= 8,
+                    () -> "relógio parado em " + seconds));
+            list.add(capture("armilar-render-luz-" + LIGHT_NAME[i]));
+        }
+        // de perto, com a luz e sem ela (a passada desligada), no mesmo quadro parado
+        list.add(E2eResonatorSteps.camera("Armilar render: câmera de perto da luz", playerId, () -> origin[0],
+                E2eResonatorSteps.CLOSE_VIEW));
+        list.add(new Step("Armilar render: luz de perto, relógio em TC − 3", STEP_TIMEOUT_MS,
+                () -> ArmilarRenderer.freezeSecondsForTests = TC - 3, () -> stepTicks >= 12,
+                () -> "relógio parado"));
+        list.add(capture("armilar-render-luz-perto"));
+        list.add(new Step("Armilar render: sem a passada de luz", STEP_TIMEOUT_MS,
+                () -> FxLightPass.disabledForTests = true, () -> stepTicks >= 4, () -> "passada desligada"));
+        list.add(capture("armilar-render-luz-perto-sem"));
+        list.add(new Step("Armilar render: o dia volta", STEP_TIMEOUT_MS, () -> {
+            restoreHooks();
+            onServer(server -> {
+                server.overworld().setDayTime(saved[0]);
+                return null;
+            });
+        }, () -> stepTicks >= 10, () -> "relógio e hora soltos"));
     }
 
     /** O buffer cheio: a redstone no máximo e a estação no dial, sem ninguém tirar energia; o sol sob pressão. */

@@ -18,7 +18,7 @@ import net.minecraft.world.phys.AABB;
  * ({@link ArmilarMotion}), a vazão da Porta de Energia suavizada por tick, o clarão do fim da recarga, a luz do
  * conjunto e o referencial local-mundo. O relógio é o do mundo ({@code gameTime / 20}), igual em todos os clientes, e
  * a montagem corre do {@code formedAt} que o servidor mandou. Os arrays da {@link ChamberView} são lidos aqui, na view
- * nova, e nunca por quadro. É também o {@link FxJob} dos efeitos, que as Tarefas 8 e 9 preenchem.
+ * nova, e nunca por quadro. É também o {@link FxJob} dos efeitos, que a Tarefa 8 começou (sol, filamentos e ponteiro) e a 9 completa.
  */
 final class ArmilarScene implements FxJob {
     private static final double TICK_SECONDS = 0.05;
@@ -37,6 +37,7 @@ final class ArmilarScene implements FxJob {
     private final ArmilarFrame frame = new ArmilarFrame();
     private final FlashTracker flash = new FlashTracker();
     private final double[] sunAt = new double[3];
+    private final ArmilarPass pass = new ArmilarPass();
     private final BlockPos.MutableBlockPos sunPos = new BlockPos.MutableBlockPos();
     private AABB box;
     private ChamberView view = ChamberView.EMPTY;
@@ -191,8 +192,16 @@ final class ArmilarScene implements FxJob {
         return frameGameTime;
     }
 
+    /** Os efeitos do quadro: o sol (com as brasas), os filamentos e o ponteiro; a tinta de cada um sai antes da luz. */
     @Override
     public void draw(FxContext ctx, MultiBufferSource buffers) {
+        pass.begin(this, ctx, buffers);
+        if (pass.a <= 0) {
+            return;
+        }
+        ArmilarSun.draw(pass);
+        ArmilarFilaments.draw(pass);
+        ArmilarPointer.draw(pass);
     }
 
     @Override

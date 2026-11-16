@@ -103,8 +103,13 @@ public final class FxSheet {
 
     /** O {@code qd} do filme: {@code floor(t × fps) mod frames}, sempre de 0 a frames − 1. */
     public int frameAt(double seconds, double fps) {
+        return frameAt(seconds, fps, frames);
+    }
+
+    /** O {@code qd} do filme com {@code n} quadros (o filme toca 3 dos 4 quadros da fumaça): {@code floor(t × fps) mod n}. */
+    public int frameAt(double seconds, double fps, int n) {
         long k = (long) Math.floor(seconds * fps);
-        return (int) (((k % frames) + frames) % frames);
+        return (int) (((k % n) + n) % n);
     }
 
     /** O {@code qf} do filme: {@code floor(f × frames)} limitado ao intervalo. */

@@ -1,6 +1,8 @@
 package io.github.matheusanbs.wirelessautomate.client.resonator.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import io.github.matheusanbs.wirelessautomate.client.fx.FxQueue;
+import io.github.matheusanbs.wirelessautomate.client.fx.FxShaders;
 import io.github.matheusanbs.wirelessautomate.resonator.ChamberView;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorPartBlock;
@@ -68,6 +70,10 @@ public final class ArmilarRenderer implements BlockEntityRenderer<ResonanceCoreB
         }
         scene.setFrame(partialTick, gameTime);
         ArmilarSolids.draw(scene, poseStack, buffer, partialTick);
+        // os efeitos esperam o estágio deles; o FxQueue já recusa o job na passada de sombra
+        if (FxShaders.ready()) {
+            FxQueue.submit(scene);
+        }
     }
 
     private static void sweep(long gameTime) {

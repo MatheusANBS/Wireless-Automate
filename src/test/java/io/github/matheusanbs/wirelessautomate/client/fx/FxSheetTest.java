@@ -19,6 +19,16 @@ class FxSheetTest {
     }
 
     @Test
+    void quadroComNQuadros() {
+        FxSheet fumaca = new FxSheet("fumaca", 16, 16, 4, FxSheet.Layer.INK, false);
+        // o filme toca 3 dos 4 quadros da fumaça: o terceiro volta ao primeiro
+        assertEquals(0, fumaca.frameAt(0, 4, 3));
+        assertEquals(1, fumaca.frameAt(0.26, 4, 3));
+        assertEquals(0, fumaca.frameAt(0.76, 4, 3));
+        assertEquals(2, fumaca.frameAt(-0.01, 4, 3));
+    }
+
+    @Test
     void quadroPorFracao() {
         assertEquals(0, SOL.frameByFraction(-1));
         assertEquals(0, SOL.frameByFraction(0));

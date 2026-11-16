@@ -9,6 +9,7 @@ public final class ArmilarMeshes {
     private static final QuadMesh[] RINGS = {buildRing(0), buildRing(1), buildRing(2)};
     private static final QuadMesh[] PINS = {buildPins(0), buildPins(1), buildPins(2)};
     private static final QuadMesh CRYSTAL = buildCrystal();
+    private static final QuadMesh[] CRYSTAL_ROWS = buildCrystalRows();
     private static final QuadMesh HORIZON = buildHorizon();
     private static final QuadMesh MARKERS = buildMarkers();
 
@@ -28,6 +29,19 @@ public final class ArmilarMeshes {
     /** O cristal; textura 8 × 16. */
     public static QuadMesh crystal() {
         return CRYSTAL;
+    }
+
+    /** O cristal por linha de texel ({@link CrystalPlan#rows()} malhas, de baixo para cima; o array não se altera), cortado nas {@link CrystalPlan#CUTS}. */
+    public static QuadMesh[] crystalRows() {
+        return CRYSTAL_ROWS;
+    }
+
+    private static QuadMesh[] buildCrystalRows() {
+        QuadMesh[] rows = new QuadMesh[CrystalPlan.rows()];
+        for (int r = 0; r < rows.length; r++) {
+            rows[r] = CRYSTAL.clipY(CrystalPlan.CUTS[r], CrystalPlan.CUTS[r + 1]);
+        }
+        return rows;
     }
 
     /** O anel do horizonte, em latão; textura 16 × 16. */

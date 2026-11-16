@@ -68,6 +68,78 @@ public final class QuadMesh {
         return tones[q];
     }
 
+    /**
+     * A parte da malha entre os planos horizontais {@code y0} e {@code y1} (inclusive): Sutherland-Hodgman em cada quad,
+     * uma vez para {@code y >= y0} e outra para {@code y <= y1}. Posição e uv interpolam linearmente; a normal e o tom
+     * são os do quad de origem. O polígono vira 0, 1 ou 2 quads (vértice repetido onde faltar). Só na montagem.
+     */
+    public QuadMesh clipY(double y0, double y1) {
+        QuadMesh out = new QuadMesh(texW, texH);
+        for (int q = 0; q < count; q++) {
+            double[][] poly = new double[4][5];
+            for (int v = 0; v < 4; v++) {
+                poly[v] = new double[] {x(q, v), y(q, v), z(q, v), u(q, v), v(q, v)};
+            }
+            double[][] cut = clipPlane(clipPlane(poly, y0, true), y1, false);
+            if (cut.length < 3) {
+                continue;
+            }
+            out.putRaw(cut[0], cut[1], cut[2], cut.length > 3 ? cut[3] : cut[2], q, this);
+            if (cut.length > 4) {
+                out.putRaw(cut[0], cut[3], cut[4], cut.length > 5 ? cut[5] : cut[4], q, this);
+            }
+        }
+        return out;
+    }
+
+    /** Um passo do Sutherland-Hodgman: fica o lado {@code y >= plane} ({@code keepAbove}) ou {@code y <= plane}. */
+    private static double[][] clipPlane(double[][] poly, double plane, boolean keepAbove) {
+        java.util.List<double[]> out = new java.util.ArrayList<>();
+        for (int i = 0; i < poly.length; i++) {
+            double[] a = poly[i];
+            double[] b = poly[(i + 1) % poly.length];
+            boolean ina = keepAbove ? a[1] >= plane : a[1] <= plane;
+            boolean inb = keepAbove ? b[1] >= plane : b[1] <= plane;
+            if (ina) {
+                out.add(a);
+            }
+            if (ina != inb) {
+                double k = (plane - a[1]) / (b[1] - a[1]);
+                double[] m = new double[5];
+                for (int c = 0; c < 5; c++) {
+                    m[c] = a[c] + (b[c] - a[c]) * k;
+                }
+                m[1] = plane;
+                out.add(m);
+            }
+        }
+        return out.toArray(new double[0][]);
+    }
+
+    /** Põe um quad de vértices {@code {x, y, z, u, v}} (uv já em 0 a 1) com a normal e o tom do quad {@code src} de {@code from}. */
+    private void putRaw(double[] a, double[] b, double[] c, double[] d, int src, QuadMesh from) {
+        if (count == tones.length) {
+            int cap = count * 2;
+            pos = Arrays.copyOf(pos, cap * 12);
+            uv = Arrays.copyOf(uv, cap * 8);
+            nrm = Arrays.copyOf(nrm, cap * 3);
+            tones = Arrays.copyOf(tones, cap);
+        }
+        double[][] vs = {a, b, c, d};
+        for (int v = 0; v < 4; v++) {
+            pos[count * 12 + v * 3] = (float) vs[v][0];
+            pos[count * 12 + v * 3 + 1] = (float) vs[v][1];
+            pos[count * 12 + v * 3 + 2] = (float) vs[v][2];
+            uv[count * 8 + v * 2] = (float) vs[v][3];
+            uv[count * 8 + v * 2 + 1] = (float) vs[v][4];
+        }
+        nrm[count * 3] = from.nx(src);
+        nrm[count * 3 + 1] = from.ny(src);
+        nrm[count * 3 + 2] = from.nz(src);
+        tones[count] = from.tone(src);
+        count++;
+    }
+
     /** O {@code quad} do filme: a normal é −normalize(cross(p1 − p0, p3 − p0)); o uv é (u0,v0) (u1,v0) (u1,v1) (u0,v1) em texels. */
     void add(double[][] p, double u0, double v0, double u1, double v1, double tone) {
         double[] n = normal(p);

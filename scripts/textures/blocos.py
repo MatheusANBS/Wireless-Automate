@@ -544,7 +544,9 @@ class Modelo:
             "render_type": render_type,
             "ambientocclusion": self.cubo,
             "textures": texturas,
-            "elements": self.elementos,
+            # um elemento sem nenhuma face desenhada (todas cobertas por vizinhos) conta na conferência, mas o jogo
+            # recusa o modelo que o traz ("Expected between 1 and 6 unique faces")
+            "elements": [el for el in self.elementos if el["faces"]],
         }
         if self.display:
             dados["display"] = self.display

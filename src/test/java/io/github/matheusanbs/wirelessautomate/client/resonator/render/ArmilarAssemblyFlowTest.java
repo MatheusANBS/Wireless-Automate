@@ -11,8 +11,8 @@ class ArmilarAssemblyFlowTest {
         for (int i = 0; i < 3; i++) {
             assertEquals(1.0, ArmilarAssembly.ring(1, i), 1e-12);
         }
-        // o filme: o fim da entrada do cristal j é 0,85 + 0,05·j, que passa de a = 1 a partir de j = 4; com a = 1 o
-        // filme dá {1, 1, 1, 1; 1,0324; 1,0815; 1,075; 0,9407; 0,6065} (rodado em Node), e o porte segue o filme
+        // o filme, com a = 1, deixa os cristais de j >= 4 fora de 1 ({1,0324; 1,0815; 1,075; 0,9407; 0,6065}): é o
+        // escalonamento, que o A_MAX completa abaixo
         for (int j = 0; j < 4; j++) {
             assertEquals(1.0, ArmilarAssembly.crystal(1, j), 1e-12);
         }
@@ -44,8 +44,25 @@ class ArmilarAssemblyFlowTest {
         assertEquals(2.5, ArmilarAssembly.FORM_SECONDS, 0);
         assertEquals(0.0, ArmilarAssembly.a(0, false), 1e-12);
         assertEquals(0.5, ArmilarAssembly.a(1.25, false), 1e-12);
-        assertEquals(1.0, ArmilarAssembly.a(9, false), 1e-12);
-        assertEquals(1.0, ArmilarAssembly.a(0, true), 1e-12);
+        assertEquals(1.0, ArmilarAssembly.a(2.5, false), 1e-12);
+        assertEquals(1.25, ArmilarAssembly.A_MAX, 1e-12);
+        assertEquals(ArmilarAssembly.A_MAX, ArmilarAssembly.a(3.125, false), 1e-12);
+        assertEquals(ArmilarAssembly.A_MAX, ArmilarAssembly.a(9, false), 1e-12);
+        assertEquals(ArmilarAssembly.A_MAX, ArmilarAssembly.a(0, true), 1e-12);
+    }
+
+    @Test
+    void noFimDaMontagemTudoFicaInteiro() {
+        double a = ArmilarAssembly.a(0, true);
+        for (int j : new int[] {0, 1, 3, 4, 5, 6, 7, 8}) {
+            assertEquals(1.0, ArmilarAssembly.crystal(a, j), 1e-12, "j = " + j);
+        }
+        for (int i = 0; i < 3; i++) {
+            assertEquals(1.0, ArmilarAssembly.ring(a, i), 1e-12);
+        }
+        assertEquals(1.0, ArmilarAssembly.ignition(a), 1e-12);
+        // o escalonamento segue: no meio da entrada o eob passa de 1
+        assertTrue(ArmilarAssembly.crystal(0.95, 4) > 1.0);
     }
 
     @Test

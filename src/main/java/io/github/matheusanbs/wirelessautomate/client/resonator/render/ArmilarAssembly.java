@@ -8,9 +8,18 @@ final class ArmilarAssembly {
     private ArmilarAssembly() {
     }
 
-    /** O quanto a montagem andou: 1 se já estava formada, senão {@code sinceFormed / FORM_SECONDS} de 0 a 1. */
+    /**
+     * O fim da entrada do último cristal ({@code 0,85 + 0,05 · 8}). No filme o {@code a} para em 1 e os cristais de
+     * {@code j} maior ficam murchos; no jogo o {@code a} corre até aqui para que todos terminem inteiros.
+     */
+    static final double A_MAX = 0.85 + 0.05 * 8;
+
+    /**
+     * O quanto a montagem andou: {@link #A_MAX} se já estava formada, senão {@code sinceFormed / FORM_SECONDS} de 0 a
+     * {@code A_MAX} ({@code FORM_SECONDS} é o tempo até 1; a entrada inteira leva {@code A_MAX · FORM_SECONDS}).
+     */
     static double a(double sinceFormed, boolean alreadyFormed) {
-        return alreadyFormed ? 1 : Ease.cl(sinceFormed / FORM_SECONDS);
+        return alreadyFormed ? A_MAX : Math.max(0, Math.min(sinceFormed / FORM_SECONDS, A_MAX));
     }
 
     static double ring(double a, int orbit) {

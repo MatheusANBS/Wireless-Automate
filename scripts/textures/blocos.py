@@ -11,8 +11,10 @@ Contrato (o `gerar_texturas.py` importa este módulo):
 
 Convenções: x para leste, y para cima, z para sul; "frente" = sul no modelo `up` do roteador. Uma textura
 serve a vários elementos pelo UV; o que não depende do tier (grafite, porcelana, vidro, fluidos) é
-compartilhado e só o que leva a lente ou a etiqueta existe por tier. Os blocos do Ressonador de Sinal são
-cubos inteiros com texturas conectadas, escolhidas pelo blockstate (seção "Ressonador de Sinal").
+compartilhado e só o que leva a lente ou a etiqueta existe por tier. Os blocos do Ressonador de Sinal (a
+Armilar) não nascem aqui: os sprites e os modelos soltos vêm do `ressonador_blocos.py` e os formados, de 35
+blocos fatiados da escultura, do `armilar_modelo.py` (com o `armilar_geometria.py` e o `armilar_texturas.py`).
+O ponto de entrada é o `gerar_texturas.py`; este módulo não roda sozinho.
 """
 
 from __future__ import annotations
@@ -27,7 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from identidade import (ASSETS, LENTE, MARCAS, MODELOS, PREVIEW, TIERS, Cor, Sprite, animacao,  # noqa: E402
                         cor, grava_json, mistura, olho, parado, salvar)
-from modelo_geometria import validar_geometria  # noqa: E402
+from modelo_geometria import ModeloInvalido, validar_geometria  # noqa: E402
 from modelo_hitboxes import gravar_hitboxes, validar_hitboxes  # noqa: E402
 from previa_iso import render  # noqa: E402
 
@@ -508,8 +510,8 @@ class Modelo:
         self.fatia = fatia
         self.particula = particula
         self.translucido = translucido
-        # Um cubo inteiro (os blocos do Ressonador) leva a oclusão de ambiente e, opaco, o render type sólido,
-        # como os blocos do vanilla; os modelos por elementos ficam sem a oclusão (sombra nas frestas).
+        # Um cubo inteiro (hoje só a Laje solta do Ressonador) leva a oclusão de ambiente e, opaco, o render type
+        # sólido, como os blocos do vanilla; os modelos por elementos ficam sem a oclusão (sombra nas frestas).
         self.cubo = cubo
         self.elementos: list[dict] = []
         self.dentro: list[bool] = []
@@ -539,6 +541,9 @@ class Modelo:
             render_type = "minecraft:translucent"
         else:
             render_type = "minecraft:solid" if self.cubo else "minecraft:cutout"
+        elementos = [el for el in self.elementos if el["faces"]]
+        if not elementos:
+            raise ModeloInvalido(f"{self.nome}: nenhum elemento tem face desenhada (o modelo sairia vazio)")
         dados = {
             "parent": "minecraft:block/block",
             "render_type": render_type,
@@ -546,7 +551,7 @@ class Modelo:
             "textures": texturas,
             # um elemento sem nenhuma face desenhada (todas cobertas por vizinhos) conta na conferência, mas o jogo
             # recusa o modelo que o traz ("Expected between 1 and 6 unique faces")
-            "elements": [el for el in self.elementos if el["faces"]],
+            "elements": elementos,
         }
         if self.display:
             dados["display"] = self.display
@@ -920,13 +925,3 @@ def previa_arquivo(spr: dict[str, Sprite] | None = None, destino: Path | None = 
     folha.save(destino)
     return destino
 
-
-if __name__ == "__main__":
-    spr = sprites()
-    for nome, sp in spr.items():
-        salvar(nome, sp)
-    apagados = limpar_texturas_antigas(set(spr))
-    modelos({n.split("/", 1)[1] for n in spr})
-    animadas = sorted(n for n, sp in spr.items() if sp.frametime)
-    print(f"{len(spr)} texturas ({len(animadas)} animadas); {len(apagados)} antigas apagadas")
-    print("prévia:", previa_arquivo(spr))

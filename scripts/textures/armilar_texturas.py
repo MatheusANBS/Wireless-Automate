@@ -19,8 +19,7 @@ from PIL import Image
 
 from identidade import LENTE, MARCAS, PALETA, TIERS, Sprite, cor, parado
 
-MATERIAIS = ("porcelana", "grafite", "coral", "latao", "vidro", "grelha")
-SEMENTES = {"porcelana": 3, "grafite": 5, "coral": 1, "latao": 11, "vidro": 0, "grelha": 0}
+SEMENTES = {"porcelana": 3, "grafite": 5, "coral": 1, "latao": 11, "vidro": 0}
 
 
 def _tons(mat: str) -> list:
@@ -114,19 +113,6 @@ def _vidro() -> Image.Image:
     return p.img
 
 
-def _grelha() -> Image.Image:
-    p, g = _Pincel(), _tons("grafite")
-    p.ret(0, 0, 16, 16, g[2])
-    for linha in (2, 6, 10, 14):
-        p.ret(1, linha, 15, linha + 1, g[4])
-        if linha + 1 < 16:
-            p.ret(1, linha + 1, 15, linha + 2, g[1])
-    for i in range(16):
-        p.put(i, 0, g[1])
-        p.put(0, i, g[1])
-    return p.img
-
-
 def _marcas(p: _Pincel, tier: str, y: int, c) -> None:
     """As marcas do tier (1 a 4) numa linha de 2 px de altura, centradas, de 2 em 2 px."""
     n = MARCAS[tier]
@@ -202,9 +188,10 @@ def _energia() -> Image.Image:
 
 
 def sprites() -> dict[str, Sprite]:
-    """`block/armilar_<nome>` -> sprite 16 × 16 (os especiais com a área fora do desenho transparente), para os materiais, os especiais e o mostrador por tier."""
+    """`block/armilar_<nome>` -> sprite 16 × 16 (os especiais com a área fora do desenho transparente), para os
+    materiais, os especiais e o mostrador por tier."""
     pintores = {"porcelana": _porcelana, "grafite": _grafite, "coral": _coral, "latao": _latao, "vidro": _vidro,
-                "grelha": _grelha, "sintonia": _sintonia, "escotilha": _escotilha, "energia": _energia}
+                "sintonia": _sintonia, "escotilha": _escotilha, "energia": _energia}
     saida = {f"block/armilar_{nome}": parado(fn()) for nome, fn in pintores.items()}
     for t in TIERS:
         saida[f"block/armilar_mostrador_{t}"] = parado(_mostrador(t))

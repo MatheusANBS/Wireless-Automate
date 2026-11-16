@@ -29,7 +29,7 @@ import modelo_geometria  # noqa: E402
 import previa_iso  # noqa: E402
 import ressonador_blocos  # noqa: E402
 from armilar_geometria import ModeloInvalido  # noqa: E402,F401
-from identidade import ASSETS, MODELOS, PREVIEW, RAIZ, TIERS, grava_json, salvar  # noqa: E402
+from identidade import MODELOS, PREVIEW, RAIZ, TIERS, grava_json, salvar  # noqa: E402
 
 NS = blocos.NS
 PASTA = "armilar"
@@ -121,6 +121,8 @@ def girar(m: blocos.Modelo, giros: int) -> None:
 
 
 def validar(m: blocos.Modelo) -> None:
+    if not any(el["faces"] for el in m.elementos):
+        raise ModeloInvalido(f"{m.nome}: nenhum elemento tem face desenhada (o modelo sairia vazio)")
     if len(m.elementos) > MAX_ELEMENTOS:
         raise ModeloInvalido(f"{m.nome}: {len(m.elementos)} elementos, o limite é {MAX_ELEMENTOS}")
     for el in m.elementos:
@@ -260,11 +262,18 @@ def previa(ms: dict[str, blocos.Modelo], destino: Path | None = None, s: int = 6
 
 
 def gerar(raiz_assets: Path = MODELOS) -> set[str]:
-    """Grava os sprites, os modelos, os blockstates e a prévia; devolve as chaves das texturas gravadas
+    """Confere cada modelo (`blocos.validar_modelo`: textura que existe, UV em 0..16, ângulo permitido), grava os
+    sprites, os modelos, os blockstates e a prévia; devolve as chaves das texturas gravadas
     (relativas a `textures/`, como as do `limpar`). Pára com `ModeloInvalido` se a escultura ou algum modelo
     violar uma regra."""
     ms = construir()
     spr = armilar_texturas.sprites()
+    texturas = {n.split("/", 1)[1] for n in spr}
+    for nome, m in ms.items():
+        try:
+            blocos.validar_modelo(m.json(), texturas)
+        except AssertionError as erro:
+            raise ModeloInvalido(f"{nome}: {erro}") from erro
     for nome, sp in spr.items():
         salvar(nome, sp)
     pasta = raiz_assets / "models/block" / PASTA

@@ -14,6 +14,10 @@ if TYPE_CHECKING:
     from blocos import Modelo, Vec
 
 
+class ModeloInvalido(Exception):
+    """Um modelo (ou a escultura de onde ele sai) violou uma regra de geometria: o gerador pára."""
+
+
 # Eixo normal de cada face e qual canto da caixa fixa a coordenada do plano.
 FACE_EIXO = {"west": (0, "from"), "east": (0, "to"), "down": (1, "from"), "up": (1, "to"),
              "north": (2, "from"), "south": (2, "to")}

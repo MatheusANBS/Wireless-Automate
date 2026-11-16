@@ -18,12 +18,10 @@ import math
 
 import numpy as np
 
+from modelo_geometria import ModeloInvalido  # noqa: F401  (re-exportado: o `armilar_modelo` o importa daqui)
+
 FACES = ("north", "south", "east", "west", "up", "down")
 EIXO_FACE = {"north": 2, "south": 2, "east": 0, "west": 0, "up": 1, "down": 1}
-
-
-class ModeloInvalido(Exception):
-    """A escultura ou um modelo fatiado violou uma regra de geometria (o gerador pára)."""
 
 
 def rotm(eixo: str, graus: float) -> np.ndarray:
@@ -133,7 +131,6 @@ def subtrair(C, buraco, nome):
 # Nichos no corpo: as portas entram 2 px, para caber no 5 × 5 (no conceito saíam para fora dele).
 NICHOS = (((-13, 3, 36), (13, 12, 38)), ((36, 3, -8), (38, 12, 8)),
           ((-38, 3, -9), (-36, 12, 9)), ((-8, 3, -38), (8, 12, -36)))
-NICHO_SINTONIZADOR = NICHOS[3]
 
 
 def _base(com_sintonizador: bool) -> list[Cubo]:
@@ -188,9 +185,10 @@ def _pernas() -> list[Cubo]:
     C = []
     for i, (sx, sz) in enumerate(((1, -1), (-1, -1), (-1, 1), (1, 1))):
         cx, cz = 22.0 * sx, 22.0 * sz
-        for (y0, y1, h, mat, parte, gira) in ((16, 18, 2.0, "latao", "pe", False), (18, 32, 1.4, "grafite", "baixo", True),
-                                               (32, 40, 1.4, "grafite", "meio", True), (40, 42, 2.0, "latao", "colar", False),
-                                               (42, 46, 1.0, "grafite", "alto", True)):
+        for (y0, y1, h, mat, parte, gira) in (
+                (16, 18, 2.0, "latao", "pe", False), (18, 32, 1.4, "grafite", "baixo", True),
+                (32, 40, 1.4, "grafite", "meio", True), (40, 42, 2.0, "latao", "colar", False),
+                (42, 46, 1.0, "grafite", "alto", True)):
             C.append(Cubo((cx - h, y0, cz - h), (cx + h, y1, cz + h), mat, f"perna{i}_{parte}", "pernas",
                           rot=("y", 45.0) if gira else None, origem=(cx, (y0 + y1) / 2, cz)))
     return C

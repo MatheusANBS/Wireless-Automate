@@ -10,6 +10,8 @@ import io.github.matheusanbs.wirelessautomate.tv.TvBlock;
 import io.github.matheusanbs.wirelessautomate.repairer.RepairerBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorCasingBlock;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorColumnBlock;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorCradleBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorGlassBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorPartBlock;
 import java.util.EnumMap;
@@ -93,6 +95,10 @@ public final class ModBlocks {
     /** O Ressonador de Sinal: a carcaça, o vidro, o Núcleo (com tier) e as três peças das faces. */
     public static final DeferredBlock<ResonatorCasingBlock> RESONATOR_CASING = BLOCKS.registerBlock("resonator_casing",
             ResonatorCasingBlock::new, resonatorPart());
+    public static final DeferredBlock<ResonatorColumnBlock> RESONATOR_COLUMN = BLOCKS.registerBlock(
+            "resonator_column", ResonatorColumnBlock::new, resonatorPart().noOcclusion());
+    public static final DeferredBlock<ResonatorCradleBlock> RESONATOR_CRADLE = BLOCKS.registerBlock(
+            "resonator_cradle", ResonatorCradleBlock::new, resonatorPart().noOcclusion());
     public static final DeferredBlock<ResonatorGlassBlock> RESONATOR_GLASS = BLOCKS.registerBlock("resonator_glass",
             ResonatorGlassBlock::new, BlockBehaviour.Properties.of().strength(3.0F, 6.0F).sound(SoundType.GLASS)
                     .pushReaction(PushReaction.BLOCK).noOcclusion().isValidSpawn(ModBlocks::never)

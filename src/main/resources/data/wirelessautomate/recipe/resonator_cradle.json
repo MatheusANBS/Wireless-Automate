@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": ["GKG", " G ", " L "],
+  "key": {
+    "G": {"item": "minecraft:gold_ingot"},
+    "K": {"item": "wirelessautomate:cut_signal_crystal"},
+    "L": {"item": "wirelessautomate:resonator_casing"}
+  },
+  "result": {"id": "wirelessautomate:resonator_cradle", "count": 1}
+}

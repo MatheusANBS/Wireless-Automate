@@ -115,6 +115,11 @@ neoForge {
             sourceSet(sourceSets.main)
         }
     }
+    // Os enums do estado dos blocos implementam StringRepresentable; o teste precisa do Minecraft no classpath.
+    unitTest {
+        enable()
+        testedMod = mods."${mod_id}"
+    }
 }
 
 // Dependências só para testar em dev, sem virar dependência publicada do mod.
@@ -191,6 +196,9 @@ dependencies {
 
 tasks.named('test', Test).configure {
     useJUnitPlatform()
+    // O unitTest do ModDevGradle troca o diretório de trabalho; os testes leem arquivos pelo caminho da raiz.
+    def raiz = projectDir
+    doFirst { workingDir = raiz }
     // Para regerar a cena do guia (ResonatorGuideSceneTest) com -Dwa.regen=true.
     systemProperty 'wa.regen', System.getProperty('wa.regen', 'false')
 }

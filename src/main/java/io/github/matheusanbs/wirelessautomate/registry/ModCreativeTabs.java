@@ -80,6 +80,8 @@ public final class ModCreativeTabs {
                             }
                         }
                         output.accept(ModItems.RESONATOR_CASING.get());
+                        output.accept(ModItems.RESONATOR_COLUMN.get());
+                        output.accept(ModItems.RESONATOR_CRADLE.get());
                         output.accept(ModItems.RESONATOR_GLASS.get());
                         for (RouterTier tier : RouterTier.values()) {
                             if (tier.loaded()) {

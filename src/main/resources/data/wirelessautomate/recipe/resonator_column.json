@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": ["C C", "CKC", " L "],
+  "key": {
+    "C": {"item": "minecraft:copper_ingot"},
+    "K": {"item": "wirelessautomate:signal_crystal"},
+    "L": {"item": "wirelessautomate:resonator_casing"}
+  },
+  "result": {"id": "wirelessautomate:resonator_column", "count": 2}
+}

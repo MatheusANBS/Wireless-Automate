@@ -4,6 +4,7 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.client.dock.DockScreen;
 import io.github.matheusanbs.wirelessautomate.client.dock.render.PatternDockRenderer;
 import io.github.matheusanbs.wirelessautomate.client.filter.FilterScreen;
+import io.github.matheusanbs.wirelessautomate.client.fx.FxShaders;
 import io.github.matheusanbs.wirelessautomate.client.guide.GuidePages;
 import io.github.matheusanbs.wirelessautomate.client.guide.GuideScreen;
 import io.github.matheusanbs.wirelessautomate.client.recipe.RecipeEditorScreen;
@@ -154,11 +155,12 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.PATTERN_DOCK.get(), PatternDockRenderer::new);
     }
 
-    /** Os core shaders da câmara: o Núcleo de plasma, as fitas e o cristal. */
+    /** Os core shaders da câmara (o Núcleo de plasma, as fitas e o cristal) e os dos efeitos ({@code fx}, {@code fx_add}, {@code fx_add_premul}). */
     @SubscribeEvent
     static void registerShaders(RegisterShadersEvent event) {
         PlasmaShader.register(event);
         RibbonShader.register(event);
         CrystalShader.register(event);
+        FxShaders.register(event);
     }
 }

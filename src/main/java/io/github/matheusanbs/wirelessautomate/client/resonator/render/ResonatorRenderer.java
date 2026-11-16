@@ -3,6 +3,7 @@ package io.github.matheusanbs.wirelessautomate.client.resonator.render;
 import com.mojang.blaze3d.vertex.PoseStack;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
+import io.github.matheusanbs.wirelessautomate.client.fx.ShaderPackCheck;
 import io.github.matheusanbs.wirelessautomate.resonator.ChamberView;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorPartBlock;

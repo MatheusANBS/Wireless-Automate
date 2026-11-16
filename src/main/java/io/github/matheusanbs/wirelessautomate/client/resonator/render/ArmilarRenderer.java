@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.client.resonator.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import io.github.matheusanbs.wirelessautomate.client.fx.FxLights;
 import io.github.matheusanbs.wirelessautomate.client.fx.FxQueue;
 import io.github.matheusanbs.wirelessautomate.client.fx.FxShaders;
 import io.github.matheusanbs.wirelessautomate.resonator.ChamberView;
@@ -10,6 +11,7 @@ import io.github.matheusanbs.wirelessautomate.resonator.ResonatorPartBlock;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.WeakHashMap;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
@@ -48,17 +50,31 @@ public final class ArmilarRenderer implements BlockEntityRenderer<ResonanceCoreB
 
     /**
      * Só do e2e: os sprites e as fitas que o último quadro da Armilar do Núcleo em {@code core} pediu, em
-     * {@code out[0]} e {@code out[1]}; devolve falso se não há cena (ainda não desenhada).
+     * {@code out[0]} e {@code out[1]}; devolve falso se não há cena ou se ela não foi desenhada no tick atual nem no
+     * anterior (a contagem velha de uma Armilar que saiu de vista não vale).
      */
     public static boolean countsForTests(BlockPos core, int[] out) {
+        ClientLevel level = Minecraft.getInstance().level;
+        if (level == null) {
+            return false;
+        }
+        long now = level.getGameTime();
         for (Map.Entry<SceneKey, ArmilarScene> entry : SCENES.entrySet()) {
             if (entry.getKey().pos().equals(core)) {
+                if (now - entry.getValue().lastUsed > 1) {
+                    return false;
+                }
                 out[0] = entry.getValue().spriteCount();
                 out[1] = entry.getValue().ribbonCount();
                 return true;
             }
         }
         return false;
+    }
+
+    /** Só do e2e: quantas luzes no mundo o último quadro desenhado anotou (todas as Armilares à vista somadas). */
+    public static int lightsForTests() {
+        return FxLights.lastFrameCount();
     }
 
     private record SceneKey(ResourceKey<Level> dimension, BlockPos pos) {

@@ -68,7 +68,7 @@ Pacote base: `src/main/java/io/github/matheusanbs/wirelessautomate/`. O mapa det
 ./gradlew runClient         # cliente de dev com JEI, Sophisticated Storage, Observable, Mekanism (com o Mekanism Extras), Ars Nouveau (com GeckoLib e Curios), Allthemodium, All The Tweaks, Apotheosis (com as dependências dele), Mouse Tweaks, AllTheCompressed, Occultism (com Modonomicon e SmartBrainLib), Just Dire Things, Refined Storage 2 e AE2 (com o GuideME e os addons Advanced AE e ExtendedAE, com o Glodium), para testar à mão
 ./gradlew runData           # datagen para src/generated/resources/
 WA_SCREENSHOT=run/shots xvfb-run -a -s "-screen 0 1280x800x24" ./gradlew runClient  # capturas das telas (roteador, visor 3D, filtro), sem monitor
-./scripts/e2e.sh            # e2e num mundo real, rápido por padrão (sem capturas, sem pt_br e escuro, sem a comparação antigo × plasma): `--only a,b` (suítes), `--skip`, `--capture <prefixos|todas>`, `--variants pt,escuro`, `--completo` (tudo), `--lista`; no Windows abre uma janela de verdade (veja docs/e2e.md)
+./scripts/e2e.sh            # e2e num mundo real, rápido por padrão (sem capturas, sem pt_br e escuro): `--only a,b` (suítes), `--skip`, `--capture <prefixos|todas>`, `--variants pt,escuro`, `--completo` (tudo), `--lista`; no Windows abre uma janela de verdade (veja docs/e2e.md)
 ./scripts/bench.sh <cenários> # benchmark num servidor dedicado com Sophisticated Storage (ver docs/benchmark.md)
 ./scripts/bench.sh comparativo # o mesmo contra o Logistics Network (baixa o jar dele para run/bench-ln, fora do git; ver docs/benchmark-logistics-network.md)
 ```

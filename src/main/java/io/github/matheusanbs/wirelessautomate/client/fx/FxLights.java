@@ -16,6 +16,10 @@ public final class FxLights {
     private static final float[] RADIUS = new float[CAPACITY];
     private static final double[] DIST = new double[CAPACITY];
     private static int count;
+    /** As luzes do último quadro que as teve, guardadas antes de o {@link #clear()} zerar; só do e2e. */
+    private static int last;
+    /** O {@link #last} é do quadro que acabou (alguém limpou com luzes anotadas), não de um mais velho. */
+    private static boolean lastFresh;
 
     private FxLights() {
     }
@@ -43,8 +47,30 @@ public final class FxLights {
         return count;
     }
 
+    /** Zera as luzes do quadro; se havia luz anotada, guarda quantas eram para {@link #lastFrameCount()}. */
     public static void clear() {
+        if (count > 0) {
+            last = count;
+            lastFresh = true;
+        }
         count = 0;
+    }
+
+    /**
+     * O começo de um quadro: limpa como o {@link #clear()}, e o valor guardado só sobrevive a esta virada se o quadro
+     * que acabou teve luz (um quadro sem luz zera a contagem do e2e).
+     */
+    public static void beginFrame() {
+        clear();
+        if (!lastFresh) {
+            last = 0;
+        }
+        lastFresh = false;
+    }
+
+    /** Só do e2e: quantas luzes o último quadro desenhado anotou (o {@link #count()} já é zero depois do quadro). */
+    public static int lastFrameCount() {
+        return last;
     }
 
     /**

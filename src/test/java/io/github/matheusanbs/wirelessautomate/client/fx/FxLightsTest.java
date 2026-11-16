@@ -76,4 +76,24 @@ class FxLightsTest {
         }
         assertEquals(FxLights.CAPACITY, FxLights.count());
     }
+
+    @Test
+    void ultimoQuadroGuardaAContagemAntesDeZerar() {
+        FxLights.beginFrame();
+        FxLights.beginFrame();
+        assertEquals(0, FxLights.lastFrameCount());
+        // o quadro anota 3 luzes, a passada limpa (count zera) e o valor fica para o e2e
+        for (int i = 0; i < 3; i++) {
+            FxLights.add(i, 0, 0, 1, 1, 1, 1, 1);
+        }
+        FxLights.clear();
+        assertEquals(0, FxLights.count());
+        assertEquals(3, FxLights.lastFrameCount());
+        // a virada para o quadro seguinte mantém o do quadro que acabou
+        FxLights.beginFrame();
+        assertEquals(3, FxLights.lastFrameCount());
+        // um quadro sem luz zera na virada seguinte
+        FxLights.beginFrame();
+        assertEquals(0, FxLights.lastFrameCount());
+    }
 }

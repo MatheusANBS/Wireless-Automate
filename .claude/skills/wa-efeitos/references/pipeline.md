@@ -95,7 +95,7 @@ Com shaderpack, as camadas de 2 a 5 vão para o buffer tardio, nessa ordem. Sem 
 - **Face de costas:** recebe 40%, porque a luz rebate.
 - **Mistura:** `luz × (0,2 + 2 × cena)`, que tinge um pouco o escuro e multiplica o que está aceso, então a textura da superfície continua aparecendo.
 - **Teto suave:** quando a soma passa de 1, divide por `1 + (topo - 1) × 1,2`, para muitas luzes juntas não queimarem a imagem.
-- **Limites:** até 32 luzes por quadro, agrupadas por proximidade. Fora o céu (profundidade 1) e a mão.
+- **Limites:** até 32 luzes por quadro, agrupadas por proximidade. Fora o céu (profundidade 1). Sem pacote a luz poupa a mão (ela vem antes); com pacote a profundidade é salva antes da mão, então a luz pode cair por cima dela (ver `docs/mapa/efeitos.md`).
 - **Fonte do método:** o SPMovesets, em `fx_light.fsh` e `FxLights`. A implementação é nossa.
 
 ## 7. Tempo e suavidade

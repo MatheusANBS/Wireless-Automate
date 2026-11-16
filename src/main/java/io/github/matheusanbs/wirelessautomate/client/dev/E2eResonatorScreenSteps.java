@@ -149,10 +149,10 @@ final class E2eResonatorScreenSteps {
         list.add(capture("armilar-rachado"));
     }
 
-    /** Abre a tela do Núcleo e espera o estado que a foto precisa. */
     /** Ticks sem tela até o clique no Núcleo ser repetido. */
     private static final int OPEN_RETRY_TICKS = 40;
 
+    /** Abre a tela do Núcleo e espera o estado que a foto precisa. */
     private static Step open(String name, Supplier<BlockPos> pos,
             Predicate<ResonatorStatePayload> ready) {
         return new Step(name, STEP_TIMEOUT_MS, () -> useOn(pos.get()), () -> {

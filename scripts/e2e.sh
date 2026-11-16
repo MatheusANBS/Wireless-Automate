@@ -15,7 +15,8 @@
 #         vale como <dir> (como antes).
 # --shaders: "nenhum" (o padrão) roda como sempre; "complementary" e "bsl" escrevem run/config/iris.properties (liga o
 # Iris e escolhe o pacote de run/shaderpacks) e abrem o cliente com ./gradlew runClient -Pshaders (Iris e Sodium só
-# no cliente de dev). O run/options.txt nunca é tocado.
+# no cliente de dev); "nenhum" grava enableShaders=false no mesmo arquivo, para um runClient -Pshaders manual depois
+# subir sem shader. O run/options.txt nunca é tocado.
 # E2E_TIMEOUT=900 muda o tempo-limite total em segundos (padrão 600; 1500 com --completo).
 #
 # Abre o jogo com WA_E2E=<dir>. Na tela de título o mod cria o mundo plano "wa-e2e" (apaga o anterior), clica pela
@@ -100,6 +101,12 @@ if [ -n "$PACK" ]; then
     mkdir -p "$ROOT/run/config"
     printf 'enableShaders=true\nshaderPack=%s\n' "$PACK" > "$ROOT/run/config/iris.properties"
     echo "e2e: shaderpack $PACK (run/config/iris.properties)"
+fi
+
+if [ -z "$PACK" ]; then
+    # sem pacote: deixa o Iris desligado, para um runClient -Pshaders manual depois não subir com o da rodada anterior
+    mkdir -p "$ROOT/run/config"
+    printf 'enableShaders=false\n' >"$ROOT/run/config/iris.properties"
 fi
 
 mkdir -p "$OUT"

@@ -8,6 +8,7 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 import io.github.matheusanbs.wirelessautomate.Config;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.client.fx.FxLightPass;
+import io.github.matheusanbs.wirelessautomate.client.fx.ShaderPackCheck;
 import io.github.matheusanbs.wirelessautomate.client.resonator.render.ArmilarRenderer;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.resonator.ChamberView;
@@ -28,6 +29,8 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.energy.IEnergyStorage;
 
 /**
  * As capturas da Armilar (a câmara do Ressonador) e as suítes que dependem do render dela, todas com a câmera do
@@ -38,8 +41,8 @@ import net.minecraft.world.phys.Vec3;
  * fitas a Armilar pediu (a suíte falha se um desenho sumir). O FOV, a hora do mundo, os gráficos e os ganchos do
  * render voltam ao que eram no fim e em qualquer saída ({@link #restoreHooks()}), sem gravar o options.txt.
  * <p>
- * Também a medida do tempo de quadro com 0, 1 e 10 Armilares ({@link #perfSteps}) e a rodada com os gráficos Fabulous
- * ({@link #fabulousSteps}).
+ * Também a medida do tempo de quadro com 0, 1 e 10 Armilares e a de 10 na conjunção, à meia-noite ({@link #perfSteps}),
+ * e a rodada com os gráficos Fabulous ({@link #fabulousSteps}).
  */
 final class E2eArmilarRenderSteps {
     /** O {@code d} (segundos desde a conjunção) de cada fase: a preparação, o estouro, o arco, o impacto e a dissolução. */
@@ -101,6 +104,11 @@ final class E2eArmilarRenderSteps {
     private static Integer savedFov;
     private static Long savedDayTime;
     private static GraphicsStatus savedGraphics;
+    /** O {@code hideGui} de antes; é devolvido pelo {@link #restoreHooks()}, na thread do cliente. */
+    private static Boolean savedHideGui;
+    /** O mínimo de luzes no mundo: o sol sozinho, e a Porta com a vazão 7 (o sol, o clarão e a Porta). */
+    private static final int MIN_LIGHTS_SUN = 1;
+    private static final int MIN_LIGHTS_PORT = 3;
 
     private E2eArmilarRenderSteps() {
     }
@@ -174,6 +182,7 @@ final class E2eArmilarRenderSteps {
         list.add(capture("armilar-conj-vazao0"));
         list.add(new Step("Armilar: relógio e vazão soltos", STEP_TIMEOUT_MS, E2eArmilarRenderSteps::releaseClock,
                 () -> true, () -> "relógio do mundo"));
+        realFlowSteps(list, origin, counts, ref);
         fullSteps(list, origin);
         crystalSteps(list, playerId, origin, counts);
         lightSteps(list, playerId, "armilar", () -> origin[0], counts);
@@ -182,10 +191,49 @@ final class E2eArmilarRenderSteps {
         list.add(film("Armilar: câmera do filme, rachado", playerId, () -> origin[0]));
         E2eResonatorScreenSteps.crackedChamberSteps(list, origin);
         assemblySteps(list, origin);
-        list.add(new Step("Armilar: opções e ganchos de volta", STEP_TIMEOUT_MS, () -> {
-            restoreHooks();
-            Minecraft.getInstance().options.hideGui = false;
-        }, () -> true, () -> "FOV " + Minecraft.getInstance().options.fov().get()));
+        list.add(new Step("Armilar: opções e ganchos de volta", STEP_TIMEOUT_MS, E2eArmilarRenderSteps::restoreHooks,
+                () -> true, () -> "FOV " + Minecraft.getInstance().options.fov().get()));
+    }
+
+    /**
+     * O fluxo real da Porta até o arco, sem {@code forceBandForTests}: o teste tira energia da Porta a cada tick (como
+     * um consumidor) até a faixa de vazão chegar ao cliente, deixa a vazão suavizada assentar e para o relógio na fase
+     * do arco, ainda extraindo: as fitas passam das da sintonia ({@code ref[0]}).
+     */
+    private static void realFlowSteps(List<Step> list, BlockPos[] origin, int[] counts, int[] ref) {
+        long[] seen = new long[1];
+        list.add(new Step("Armilar: energia saindo pela Porta (vazão real)", STEP_TIMEOUT_MS, () -> {
+            releaseClock();
+            seen[0] = 0;
+        }, () -> {
+            drain(origin);
+            if (seen[0] == 0 && band(origin) > 0) {
+                seen[0] = stepTicks;
+            }
+            return seen[0] != 0 && stepTicks >= seen[0] + FLOW_SETTLE_TICKS;
+        }, () -> "faixa de vazão no cliente " + band(origin)));
+        list.add(new Step("Armilar: o arco com a vazão real, relógio em " + (TC + PHASE_D[ARCO]), STEP_TIMEOUT_MS,
+                () -> ArmilarRenderer.freezeSecondsForTests = TC + PHASE_D[ARCO], () -> {
+                    drain(origin);
+                    if (stepTicks < FREEZE_TICKS) {
+                        return false;
+                    }
+                    if (band(origin) <= 0) {
+                        throw new StepFailure("a vazão real caiu a 0 antes da conferência");
+                    }
+                    if (!ArmilarRenderer.countsForTests(core(origin[0]), counts)) {
+                        throw new StepFailure("o arco real: a Armilar não foi desenhada");
+                    }
+                    if (counts[1] <= ref[0]) {
+                        throw new StepFailure("com a vazão real (faixa " + band(origin) + ") o arco não passa da sintonia: "
+                                + counts[1] + " fitas, a sintonia tem " + ref[0]);
+                    }
+                    return true;
+                }, () -> "faixa " + band(origin) + ", " + counts[0] + " sprites, " + counts[1] + " fitas (sintonia "
+                + ref[0] + ")"));
+        list.add(capture("armilar-fluxo-real"));
+        list.add(new Step("Armilar: relógio e vazão reais de volta", STEP_TIMEOUT_MS, E2eArmilarRenderSteps::releaseClock,
+                () -> true, () -> "relógio do mundo"));
     }
 
     /** O FOV do filme e sem a mão e a mira na frente da câmara; guarda o FOV de antes. */
@@ -195,6 +243,15 @@ final class E2eArmilarRenderSteps {
             savedFov = options.fov().get();
         }
         options.fov().set(FILM_FOV);
+        hideHud();
+    }
+
+    /** Esconde o HUD e a mão, guardando o {@code hideGui} de antes (devolvido pelo {@link #restoreHooks()}). */
+    private static void hideHud() {
+        var options = Minecraft.getInstance().options;
+        if (savedHideGui == null) {
+            savedHideGui = options.hideGui;
+        }
         options.hideGui = true;
     }
 
@@ -340,18 +397,31 @@ final class E2eArmilarRenderSteps {
             });
         }, () -> stepTicks >= FLOW_SETTLE_TICKS, () -> "hora no cliente " + Minecraft.getInstance().level.getDayTime()));
         for (int i = 0; i < LIGHT_D.length; i++) {
-            list.add(shotAt("luz " + LIGHT_NAME[i], TC + LIGHT_D[i], origin, counts, null));
+            // o sol sozinho acende ao menos 1 luz; com a vazão 7 a Porta cheia (d = 0,9) soma o sol, o clarão e a Porta
+            list.add(shotAt("luz " + LIGHT_NAME[i], TC + LIGHT_D[i], origin, counts,
+                    lightRule(i == LIGHT_D.length - 1 ? MIN_LIGHTS_PORT : MIN_LIGHTS_SUN)));
             list.add(capture(prefix + "-luz-" + LIGHT_NAME[i]));
         }
         list.add(E2eResonatorSteps.camera("Armilar: câmera de perto da luz", playerId, origin,
                 E2eResonatorSteps.CLOSE_VIEW));
-        list.add(shotAt("luz de perto", TC - 3, origin, counts, null));
+        list.add(shotAt("luz de perto", TC - 3, origin, counts, lightRule(MIN_LIGHTS_SUN)));
         list.add(capture(prefix + "-luz-perto"));
         list.add(new Step("Armilar: sem a passada de luz", STEP_TIMEOUT_MS, () -> FxLightPass.disabledForTests = true,
                 () -> stepTicks >= 4, () -> "passada desligada"));
         list.add(capture(prefix + "-luz-perto-sem"));
         list.add(new Step("Armilar: a passada de luz de volta", STEP_TIMEOUT_MS,
                 () -> FxLightPass.disabledForTests = false, () -> true, () -> "passada ligada"));
+    }
+
+    /** Exige ao menos {@code min} luzes anotadas no último quadro desenhado ({@code FxLights}), além da cena. */
+    private static CountRule lightRule(int min) {
+        return (sprites, ribbons) -> {
+            int lights = ArmilarRenderer.lightsForTests();
+            if (lights < min) {
+                throw new StepFailure("a luz no mundo sumiu: " + lights + " luzes no último quadro, esperava ao menos "
+                        + min);
+            }
+        };
     }
 
     /**
@@ -375,8 +445,21 @@ final class E2eArmilarRenderSteps {
         }, () -> !Minecraft.getInstance().player.getMainHandItem().isEmpty(), () -> "mão com o cristal"));
         list.add(E2eResonatorSteps.camera("Armilar: câmera perto do sol", playerId, origin,
                 E2eResonatorSteps.CLOSE_VIEW, SUN_TARGET));
+        int[] handCounts = new int[2];
         list.add(new Step("Armilar: a mão, relógio em " + TC, STEP_TIMEOUT_MS,
-                () -> ArmilarRenderer.freezeSecondsForTests = TC, () -> stepTicks >= FREEZE_TICKS, () -> "mão"));
+                () -> ArmilarRenderer.freezeSecondsForTests = TC, () -> {
+                    if (stepTicks < FREEZE_TICKS) {
+                        return false;
+                    }
+                    if (!ArmilarRenderer.countsForTests(core(origin.get()), handCounts)) {
+                        throw new StepFailure("a mão: a Armilar não foi desenhada");
+                    }
+                    if (handCounts[0] < 1 || handCounts[1] < 2 || ArmilarRenderer.lightsForTests() < MIN_LIGHTS_SUN) {
+                        throw new StepFailure("a mão: o sol e os filamentos sumiram: " + handCounts[0] + " sprites, "
+                                + handCounts[1] + " fitas, " + ArmilarRenderer.lightsForTests() + " luzes");
+                    }
+                    return true;
+                }, () -> "mão: " + handCounts[0] + " sprites, " + handCounts[1] + " fitas"));
         list.add(capture(prefix + "-mao"));
         // o mesmo quadro sem a passada de luz: a diferença na região da mão mostra se a luz cai por cima dela
         list.add(new Step("Armilar: a mão sem a passada de luz", STEP_TIMEOUT_MS,
@@ -465,7 +548,8 @@ final class E2eArmilarRenderSteps {
     /**
      * O tempo de quadro com 0, 1 e 10 Armilares à vista, com o mesmo {@code frameTimeStep} (120 quadros, sem vsync):
      * nenhuma (a câmera de frente, sem nada montado), uma (de frente) e dez num anel de 14 blocos entre uma e a
-     * seguinte, vistas de cima. Mede, não afirma; só confere que as dez foram desenhadas.
+     * seguinte, vistas de cima; e a quarta medida, as dez na conjunção (vazão 7, relógio no arco) à meia-noite, com a
+     * luz no mundo ligada. Mede, não afirma; só confere que as dez foram desenhadas (e acenderam luz, na quarta).
      */
     static void perfSteps(List<Step> list) {
         UUID playerId = Minecraft.getInstance().player.getUUID();
@@ -479,7 +563,7 @@ final class E2eArmilarRenderSteps {
             back[0] = minecraft.player.position();
             backRot[0] = minecraft.player.getYRot();
             backRot[1] = minecraft.player.getXRot();
-            minecraft.options.hideGui = true;
+            hideHud();
             releaseClock();
             onServer(server -> {
                 ServerPlayer player = server.getPlayerList().getPlayer(playerId);
@@ -531,17 +615,39 @@ final class E2eArmilarRenderSteps {
         list.add(E2eResonatorSteps.frameTimeStep("Armilar desempenho: armilar 10 (tempo de quadro)", "armilar 10",
                 () -> {
                 }, null));
-        list.add(new Step("Armilar desempenho: limpar", STEP_TIMEOUT_MS, () -> onServer(server -> {
-            ServerPlayer player = server.getPlayerList().getPlayer(playerId);
-            for (BlockPos pos : ring) {
-                E2eResonatorSteps.clear(player.serverLevel(), pos);
-            }
-            player.getAbilities().flying = false;
-            player.onUpdateAbilities();
-            player.teleportTo(player.serverLevel(), back[0].x, back[0].y, back[0].z, backRot[0], backRot[1]);
-            Minecraft.getInstance().options.hideGui = false;
-            return null;
-        }), () -> Minecraft.getInstance().level.getBlockState(core(ring[RING - 1])).isAir()
+        // o pior caso: as dez na conjunção (arco e luz), com a vazão 7 e a meia-noite (a luz no mundo ligada)
+        list.add(new Step("Armilar desempenho: a noite, a vazão 7 e a conjunção nas dez", STEP_TIMEOUT_MS, () -> {
+            ArmilarRenderer.forceBandForTests = 7;
+            ArmilarRenderer.freezeSecondsForTests = TC + PHASE_D[ARCO];
+            onServer(server -> {
+                if (savedDayTime == null) {
+                    savedDayTime = server.overworld().getDayTime();
+                }
+                server.overworld().setDayTime(MIDNIGHT);
+                return null;
+            });
+        }, () -> stepTicks >= FLOW_SETTLE_TICKS && allDrawn(ring, new int[2])
+                && ArmilarRenderer.lightsForTests() >= RING, () -> "luzes no último quadro: "
+                + ArmilarRenderer.lightsForTests() + ", sprites/fitas das dez: " + drawn(ring)));
+        list.add(E2eResonatorSteps.frameTimeStep("Armilar desempenho: armilar 10 conjunção (tempo de quadro)",
+                "armilar 10 conjunção", () -> {
+                    ArmilarRenderer.forceBandForTests = 7;
+                    ArmilarRenderer.freezeSecondsForTests = TC + PHASE_D[ARCO];
+                }, null));
+        list.add(new Step("Armilar desempenho: limpar", STEP_TIMEOUT_MS, () -> {
+            onServer(server -> {
+                ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+                for (BlockPos pos : ring) {
+                    E2eResonatorSteps.clear(player.serverLevel(), pos);
+                }
+                player.getAbilities().flying = false;
+                player.onUpdateAbilities();
+                player.teleportTo(player.serverLevel(), back[0].x, back[0].y, back[0].z, backRot[0], backRot[1]);
+                return null;
+            });
+            // o hideGui e a hora do mundo voltam na thread do cliente
+            restoreHooks();
+        }, () -> Minecraft.getInstance().level.getBlockState(core(ring[RING - 1])).isAir()
                 && Minecraft.getInstance().player.position().distanceTo(back[0]) < 0.5,
                 () -> "jogador em " + Minecraft.getInstance().player.position()));
     }
@@ -600,6 +706,16 @@ final class E2eArmilarRenderSteps {
         float[] backRot = new float[2];
         int[] counts = new int[2];
         int[] ref = new int[3];
+        GraphicsStatus[] original = new GraphicsStatus[1];
+        // a suíte é sem pacote: com o Iris ligado o Fabulous e a profundidade guardada são outros
+        list.add(new Step("Armilar Fabulous: sem shaderpack", STEP_TIMEOUT_MS, () -> {
+        }, () -> {
+            if (ShaderPackCheck.active()) {
+                throw new StepFailure("a armilar-fabulous só roda sem shaderpack (ShaderPackCheck.active()); "
+                        + "rode com --shaders nenhum");
+            }
+            return true;
+        }, () -> "pacote ativo: " + ShaderPackCheck.active()));
         list.add(new Step("Armilar Fabulous: montar", STEP_TIMEOUT_MS, () -> {
             Minecraft minecraft = Minecraft.getInstance();
             back[0] = minecraft.player.position();
@@ -620,8 +736,9 @@ final class E2eArmilarRenderSteps {
         list.add(tuneStep("Armilar Fabulous: sintonizar", origin, 1));
         list.add(new Step("Armilar Fabulous: gráficos Fabulous", STEP_TIMEOUT_MS, () -> {
             var options = Minecraft.getInstance().options;
+            original[0] = options.graphicsMode().get();
             if (savedGraphics == null) {
-                savedGraphics = options.graphicsMode().get();
+                savedGraphics = original[0];
             }
             options.graphicsMode().set(GraphicsStatus.FABULOUS);
             // sem isto os alvos do Fabulous (nuvens, translúcido) não existem no quadro seguinte e o desenho do céu cai
@@ -645,6 +762,7 @@ final class E2eArmilarRenderSteps {
         lightSteps(list, playerId, "armilar-fabulous", () -> origin[0], counts);
         handSteps(list, playerId, "armilar-fabulous", () -> origin[0]);
         list.add(new Step("Armilar Fabulous: limpar", STEP_TIMEOUT_MS, () -> {
+            // os gráficos, o hideGui, o FOV e a hora voltam na thread do cliente
             restoreHooks();
             onServer(server -> {
                 ServerPlayer player = server.getPlayerList().getPlayer(playerId);
@@ -652,12 +770,11 @@ final class E2eArmilarRenderSteps {
                 player.getAbilities().flying = false;
                 player.onUpdateAbilities();
                 player.teleportTo(player.serverLevel(), back[0].x, back[0].y, back[0].z, backRot[0], backRot[1]);
-                Minecraft.getInstance().options.hideGui = false;
                 return null;
             });
         }, () -> Minecraft.getInstance().level.getBlockState(core(origin[0])).isAir()
                 && Minecraft.getInstance().player.position().distanceTo(back[0]) < 0.5
-                && Minecraft.getInstance().options.graphicsMode().get() != GraphicsStatus.FABULOUS,
+                && Minecraft.getInstance().options.graphicsMode().get() == original[0],
                 () -> "jogador em " + Minecraft.getInstance().player.position()));
     }
 
@@ -699,8 +816,30 @@ final class E2eArmilarRenderSteps {
         }
     }
 
+    /** Tira da Porta de Energia tudo o que ela der, pela capability de energia do mundo, como um consumidor. */
+    private static void drain(BlockPos[] origin) throws Exception {
+        onServer(server -> {
+            IEnergyStorage energy = server.overworld().getCapability(Capabilities.EnergyStorage.BLOCK,
+                    E2eResonatorSteps.energyPort(origin[0]), null);
+            if (energy != null) {
+                energy.extractEnergy(Integer.MAX_VALUE, false);
+            }
+            return null;
+        });
+    }
+
+    /** A maior faixa de vazão entre as Portas, no cliente. */
+    private static int band(BlockPos[] origin) {
+        int best = 0;
+        for (byte band : view(origin[0]).flows()) {
+            best = Math.max(best, band);
+        }
+        return best;
+    }
+
     /**
-     * Solta o relógio parado, a vazão forçada e a passada de luz, e devolve o FOV, os gráficos e a hora do mundo.
+     * Solta o relógio parado, a vazão forçada e a passada de luz, e devolve o FOV, o {@code hideGui}, os gráficos e a
+     * hora do mundo.
      * Idempotente; o motor chama em qualquer saída, na thread do cliente, sem gravar o options.txt.
      */
     static void restoreHooks() {
@@ -709,6 +848,10 @@ final class E2eArmilarRenderSteps {
         if (savedFov != null) {
             options.fov().set(savedFov);
             savedFov = null;
+        }
+        if (savedHideGui != null) {
+            options.hideGui = savedHideGui;
+            savedHideGui = null;
         }
         if (savedGraphics != null) {
             options.graphicsMode().set(savedGraphics);

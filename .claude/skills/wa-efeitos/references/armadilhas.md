@@ -40,3 +40,4 @@
 - O `gerar_texturas.py` reescreve dezenas de PNGs nesta máquina (versão do PIL): commite só o que a mudança pede.
 - Heredoc com aspas e `$` no bash do Windows quebra fácil: escreva o script Python num arquivo do scratchpad e rode-o com `python -I`. O `-I` ignora o `PYTHONIOENCODING`: use `sys.stdout.reconfigure(encoding='utf-8')` no script.
 - Não abra o jogo em série para ajustar no olho: pense, rode uma vez e mostre (memória "pensar antes de rodar").
+- **A mão e a luz no mundo:** sem pacote a luz poupa a mão (a passada vem antes dela); com pacote a profundidade é salva antes de a mão ser desenhada e o Iris não dá máscara dela, então a luz e o desenho tardio podem cair por cima da mão perto do sol. Não é bug: decisão registrada em `docs/mapa/efeitos.md`.

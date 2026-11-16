@@ -83,7 +83,7 @@ public final class FxStages {
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     static void onFrameStart(RenderFrameEvent.Pre event) {
         FxQueue.clear();
-        FxLights.clear();
+        FxLights.beginFrame();
         FxDepth.clearEarly();
         dropLate();
     }

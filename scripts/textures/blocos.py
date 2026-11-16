@@ -1292,10 +1292,18 @@ class Modelo:
       fica dentro de um translúcido (fluido na coluna de vidro, gás no vaso) e só por isso é visível;
     - duas faces desenhadas nunca dividem o mesmo plano com área em comum (é o que pisca no jogo);
     - toda face que não é desenhada está inteiramente coberta por um elemento encostado (senão é buraco).
+
+    `fatia=True` marca o pedaço de uma escultura maior, cortado na grade de blocos: a face que fica inteira no
+    limite do bloco (coordenada 0 ou 16 no eixo da face) e não é desenhada é coberta pela fatia vizinha, que
+    este modelo não vê, então a checagem de buraco a ignora. O atravessar e o coplanar continuam iguais. Que não
+    há buraco de verdade quem garante é a conferência do conjunto inteiro antes do corte (`armilar_geometria`) e o
+    `verificar_modelo.py --junto`.
     """
 
-    def __init__(self, nome: str, particula: str, translucido: bool = False, cubo: bool = False):
+    def __init__(self, nome: str, particula: str, translucido: bool = False, cubo: bool = False,
+                 fatia: bool = False):
         self.nome = nome
+        self.fatia = fatia
         self.particula = particula
         self.translucido = translucido
         # Um cubo inteiro (os blocos do Ressonador) leva a oclusão de ambiente e, opaco, o render type sólido,
@@ -2025,6 +2033,9 @@ def validar_geometria(m: Modelo) -> None:
             eixo = FACE_EIXO[face][0]
             if any(ate[k] - de[k] <= EPS for k in range(3) if k != eixo):
                 continue  # face sem área
+            rot = el.get("rotation")
+            if m.fatia and (not rot or rot["axis"] == "xyz"[eixo]) and                     el[FACE_EIXO[face][1]][eixo] in (0, 16):
+                continue  # inteira no limite do bloco: a fatia vizinha a cobre
             erros.append(f"buraco: elemento {i} ({de}-{ate}) sem a face {face} e sem vizinho que a cubra")
     if erros:
         raise AssertionError(f"{m.nome}:\n  " + "\n  ".join(erros))
@@ -2204,12 +2215,13 @@ def _cantos(face: str, de: Vec, ate: Vec) -> list[Vec]:
     }[face]
 
 
-def render(m: Modelo, texturas: dict[str, Image.Image], s: int = 8) -> Image.Image:
-    """Projeção isométrica (câmera em +x, +y, +z), um polígono por texel, do mais fundo ao mais perto."""
-    W, H = 34 * s, 34 * s
+def render(m: Modelo, texturas: dict[str, Image.Image], s: int = 8,
+           tela: tuple[int, int, int, int] | None = None) -> Image.Image:
+    """Projeção isométrica (câmera em +x, +y, +z), um polígono por texel, do mais fundo ao mais perto. `tela`
+    (largura, altura, ox, oy) troca o quadro de um bloco por um maior (a escultura inteira)."""
+    W, H, ox, oy = tela or (34 * s, 34 * s, 17 * s, 25 * s)
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    ox, oy = W // 2, 25 * s
 
     def proj(p: Vec) -> tuple[float, float]:
         return (ox + (p[0] - p[2]) * s, oy + (p[0] + p[2] - 16) * s / 2 - p[1] * s)

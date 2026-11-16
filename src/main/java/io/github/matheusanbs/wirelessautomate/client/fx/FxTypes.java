@@ -99,6 +99,7 @@ public final class FxTypes extends RenderType {
                             .setWriteMaskState(COLOR_WRITE)
                             .createCompositeState(false)));
             all[i] = (sheet.layer() == FxSheet.Layer.INK ? INK : LIGHT).get(tex);
+            sheet.bind(all[i]);
         }
         ALL = List.of(all);
     }
@@ -108,9 +109,12 @@ public final class FxTypes extends RenderType {
         super(name, format, mode, bufferSize, crumbling, sort, setup, clear);
     }
 
-    /** O tipo da folha pela camada dela: tinta (alfa, luz real) ou luz pré-multiplicada. */
+    /**
+     * O tipo da folha pela camada dela: tinta (alfa, luz real) ou luz pré-multiplicada. Lê o campo da folha, sem busca
+     * e sem alocar; o campo é posto na carga desta classe, que este método garante.
+     */
     public static RenderType of(FxSheet sheet) {
-        return (sheet.layer() == FxSheet.Layer.INK ? INK : LIGHT).get(sheet.texture());
+        return sheet.type();
     }
 
     /** O aditivo sem pré-multiplicar ({@code SRC_ALPHA, ONE}), para o Reparador e o que vier. */

@@ -1,0 +1,138 @@
+package io.github.matheusanbs.wirelessautomate.client.fx;
+
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.VertexSorting;
+import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.RenderGuiEvent;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import org.joml.Matrix4fStack;
+
+/**
+ * Os ganchos de evento que desenham os efeitos da {@link FxQueue}.
+ * <ul>
+ *   <li>Sem shaderpack: no estágio {@code AFTER_TRANSLUCENT_BLOCKS}, depois da água e do vidro, o buffer é desenhado
+ *   na hora.</li>
+ *   <li>Com shaderpack do Iris: no mesmo estágio os jobs só enchem o buffer; no {@code AFTER_LEVEL} a profundidade do
+ *   alvo principal é guardada ({@link FxDepth}); depois da composição do pacote, no {@code RenderGuiEvent.Pre},
+ *   a profundidade volta, as matrizes do quadro são reaplicadas e o buffer sai por cima da imagem final.</li>
+ *   <li>Nada de efeito na passada de sombra: quem anota na fila confere {@link ShaderPackCheck#shadowPass()}, e este
+ *   gancho nem toca na fila durante ela.</li>
+ * </ul>
+ * <p>
+ * A decisão do gancho tardio (Passo 1 da Tarefa 3): é o evento {@code RenderGuiEvent.Pre}, sem mixin. A evidência
+ * está no NeoForge 21.1.248: {@code GuiLayerManager.render} posta o {@code RenderGuiEvent.Pre} e só depois percorre as
+ * camadas, e o {@code options.hideGui} não entra aí: ele só liga e desliga as camadas (as lambdas
+ * {@code () -> !minecraft.options.hideGui} em {@code Gui.<init>}). O {@code GameRenderer.render} chama o
+ * {@code gui.render} sempre que há mundo, também com o HUD escondido, e isso é depois do {@code renderLevel} (e do
+ * {@code finalizeLevelRendering} do Iris, que fecha o quadro no fim do {@code LevelRenderer.renderLevel}) e antes do
+ * HUD. Então o e2e, que liga {@code hideGui} nas capturas, também vê os efeitos.
+ * <p>
+ * O alvo principal tem a profundidade limpa logo antes do gancho ({@code RenderSystem.clear(256)} do
+ * {@code GameRenderer.render}); por isso o gancho a restaura e, no fim, limpa de novo, para o HUD não ser testado
+ * contra a profundidade do mundo.
+ */
+@EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
+public final class FxStages {
+    /** O corte dos efeitos: a 48 blocos, ao quadrado. */
+    private static final double CULL_SQ = 48.0 * 48.0;
+
+    private static final FxContext CTX = new FxContext();
+    private static FxBatch batch;
+    /** Com pacote: o buffer tem dados e a profundidade foi guardada, então o gancho tardio desenha. */
+    private static boolean latePending;
+
+    private FxStages() {
+    }
+
+    /** O contexto do quadro (os campos valem depois do estágio dos efeitos). */
+    public static FxContext context() {
+        return CTX;
+    }
+
+    @SubscribeEvent
+    static void onLevelStage(RenderLevelStageEvent event) {
+        RenderLevelStageEvent.Stage stage = event.getStage();
+        if (stage == RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) {
+            fillOrDraw(event);
+        } else if (stage == RenderLevelStageEvent.Stage.AFTER_LEVEL) {
+            saveForLate(event);
+        }
+    }
+
+    /** Encher o buffer com a fila; sem pacote, desenhar já. */
+    private static void fillOrDraw(RenderLevelStageEvent event) {
+        if (FxQueue.isEmpty()) {
+            return;
+        }
+        if (ShaderPackCheck.shadowPass()) {
+            // a passada de sombra não recebe efeito; a fila é da passada do mundo
+            return;
+        }
+        ClientLevel level = Minecraft.getInstance().level;
+        if (level == null || !FxShaders.ready()) {
+            FxQueue.clear();
+            return;
+        }
+        if (batch == null) {
+            batch = new FxBatch();
+        }
+        CTX.begin(event.getCamera(), event.getModelViewMatrix(), event.getProjectionMatrix(),
+                event.getPartialTick().getGameTimeDeltaPartialTick(false), level.getGameTime());
+        for (int i = 0; i < FxQueue.size(); i++) {
+            FxJob job = FxQueue.get(i);
+            if (job.distanceSq(CTX) <= CULL_SQ) {
+                job.draw(CTX, batch.source());
+            }
+        }
+        FxQueue.clear();
+        if (!ShaderPackCheck.active()) {
+            batch.flush();
+        }
+    }
+
+    /** Com pacote e dados no buffer: guarda a profundidade e as matrizes, no último estágio do mundo. */
+    private static void saveForLate(RenderLevelStageEvent event) {
+        if (batch == null || !batch.hasData() || !ShaderPackCheck.active()) {
+            return;
+        }
+        FxDepth.save();
+        CTX.copyMatrices(event.getModelViewMatrix(), event.getProjectionMatrix());
+        latePending = true;
+    }
+
+    /** O gancho tardio: depois do pacote e antes do HUD, o buffer por cima da imagem, com a profundidade do mundo. */
+    @SubscribeEvent
+    static void onGuiPre(RenderGuiEvent.Pre event) {
+        if (!latePending) {
+            return;
+        }
+        latePending = false;
+        if (batch == null || !batch.hasData()) {
+            return;
+        }
+        FxDepth.restore();
+        Minecraft.getInstance().getMainRenderTarget().bindWrite(false);
+        RenderSystem.backupProjectionMatrix();
+        RenderSystem.setProjectionMatrix(CTX.projection, VertexSorting.DISTANCE_TO_ORIGIN);
+        Matrix4fStack modelView = RenderSystem.getModelViewStack();
+        modelView.pushMatrix();
+        modelView.set(CTX.modelView);
+        RenderSystem.applyModelViewMatrix();
+        RenderSystem.enableDepthTest();
+        try {
+            batch.flush();
+        } finally {
+            modelView.popMatrix();
+            RenderSystem.applyModelViewMatrix();
+            RenderSystem.restoreProjectionMatrix();
+            // a profundidade do mundo não vale para o HUD
+            RenderSystem.depthMask(true);
+            RenderSystem.clear(256, Minecraft.ON_OSX);
+        }
+    }
+}

@@ -47,6 +47,7 @@ Ordem do registro. "Pré-requisito": o que a suíte pressupõe além da abertura
 | `escuro` | tema escuro (usa os baús e a Bateria de `armazenamento`, que entra junto) | armazenamento | opcional |
 | `ressonador` | Ressonador de Sinal: a Armilar pela metade com a projeção, solta (uma terra no ar e uma Coluna faltando) e formada, de lado, de frente e de cima, com o topo de cada peça de face (capturas `armilar-*`), a tela, a câmara e o conduto (~130 s com todas as capturas; o passo "buffer cheio" leva ~64 s) | nenhum | padrão |
 | `ressonador-desempenho` | tempo de quadro da câmara, desenho antigo × plasma (mede, não afirma) | nenhum | opcional |
+| `fx-base` | o caminho de desenho dos efeitos (`client/fx`): um brilho e uma fita de teste atrás de uma parede de pedra (`fx-base-oclusao`: cortado pela borda), a 2 blocos do jogador (`fx-base-perto`: inteiro) e a 60 blocos (`fx-base-longe`: nada, o corte de 48); com `--shaders complementary` ou `bsl`, por cima do pacote | nenhum | opcional |
 | `ressonador-jei` | JEI do Ressonador | nenhum | padrão |
 | `reparador` | Reparador de Cristais (~21 s com as capturas) | nenhum | padrão |
 | `reparador-animacao` | a animação do Reparador no mundo, com o tempo parado em cada fase (capturas `reparador-anim-*`; confere quantos cristais e quads o BER pôs) | nenhum | padrão |

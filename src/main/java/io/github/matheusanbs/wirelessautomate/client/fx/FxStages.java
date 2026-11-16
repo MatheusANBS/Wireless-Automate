@@ -1,5 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client.fx;
 
+import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexSorting;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
@@ -38,8 +39,13 @@ import org.lwjgl.opengl.GL13;
  * {@code finalizeLevelRendering} do Iris, que fecha o quadro no fim do {@code LevelRenderer.renderLevel}) e antes do
  * HUD. Então o e2e, que liga {@code hideGui} nas capturas, também vê os efeitos.
  * <p>
- * Fabulous: com os gráficos Fabulous o alvo aberto em {@code AFTER_TRANSLUCENT_BLOCKS} é o translúcido, e não o
- * principal. Isso ainda não foi testado; fica para a rodada da Tarefa 11.
+ * Fabulous (sem pacote, testado na Tarefa 11): o alvo aberto em {@code AFTER_TRANSLUCENT_BLOCKS} é o translúcido, e o
+ * desenho dos efeitos nele sai certo, com a oclusão dos blocos, porque o jogo copia a profundidade do principal para ele
+ * antes. Já a luz no mundo precisa da profundidade do principal, e o último passo da cadeia de transparência
+ * ({@code PostPass.process}) limpa o alvo de saída (o principal, cor e profundidade) antes de compor: em
+ * {@code AFTER_LEVEL} a profundidade é só 1,0 e a luz não achava chão para acender. Por isso, com a cadeia ativa, a
+ * profundidade é guardada em {@code AFTER_WEATHER}, o último estágio antes do {@code transparencyChain.process}
+ * ({@link FxDepth#saveEarly()}), e a passada de luz usa essa cópia.
  * <p>
  * O alvo principal tem a profundidade limpa logo antes do gancho ({@code RenderSystem.clear(256)} do
  * {@code GameRenderer.render}); por isso o gancho a restaura e, no fim, limpa de novo, para o HUD não ser testado
@@ -72,6 +78,7 @@ public final class FxStages {
     static void onFrameStart(RenderFrameEvent.Pre event) {
         FxQueue.clear();
         FxLights.clear();
+        FxDepth.clearEarly();
         dropLate();
     }
 
@@ -88,11 +95,31 @@ public final class FxStages {
         RenderLevelStageEvent.Stage stage = event.getStage();
         if (stage == RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) {
             fillOrDraw(event);
+        } else if (stage == RenderLevelStageEvent.Stage.AFTER_WEATHER) {
+            saveBeforeChain();
         } else if (stage == RenderLevelStageEvent.Stage.AFTER_LEVEL) {
             if (ShaderPackCheck.active()) {
                 saveForLate(event);
             } else {
                 drawLights(event);
+            }
+        }
+    }
+
+    /**
+     * Fabulous sem pacote: a cadeia de transparência limpa o alvo principal logo depois deste estágio, então a
+     * profundidade que a luz lê é a de agora. Sem luz anotada, sem cadeia ou com pacote (que guarda a dele em
+     * {@code AFTER_LEVEL}), não faz nada.
+     */
+    private static void saveBeforeChain() {
+        if (FxLights.count() > 0 && Minecraft.useShaderTransparency() && !ShaderPackCheck.active()
+                && !ShaderPackCheck.shadowPass()) {
+            FxDepth.saveEarly();
+            // o blit deixa o principal como alvo de escrita; neste estágio o jogo escreve no alvo do clima
+            // (a borda do mundo vem depois), então ele volta a ser o aberto
+            RenderTarget weather = Minecraft.getInstance().levelRenderer.getWeatherTarget();
+            if (weather != null) {
+                weather.bindWrite(false);
             }
         }
     }

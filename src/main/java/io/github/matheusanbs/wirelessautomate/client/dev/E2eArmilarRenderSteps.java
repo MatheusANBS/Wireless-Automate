@@ -435,7 +435,12 @@ final class E2eArmilarRenderSteps {
                 E2eResonatorSteps.placeArmilar(level, origin[0], RouterTier.ELITE);
                 return null;
             });
-        }, () -> formed(core(origin[0])) && view(origin[0]).formedAt() > 0, () -> "Núcleo montado no cliente"));
+        }, () -> {
+            // o Núcleo de antes ainda vale até o cliente receber o novo: só o formedAt recente é o da montagem nova
+            var level = Minecraft.getInstance().level;
+            return formed(core(origin[0])) && view(origin[0]).formedAt() > 0
+                    && level.getGameTime() - view(origin[0]).formedAt() < HALF_ASSEMBLY_TICKS;
+        }, () -> "Núcleo montado de novo no cliente"));
         list.add(new Step("captura armilar-montagem", STEP_TIMEOUT_MS, () -> {
         }, () -> {
             var level = Minecraft.getInstance().level;
@@ -614,6 +619,8 @@ final class E2eArmilarRenderSteps {
                 savedGraphics = options.graphicsMode().get();
             }
             options.graphicsMode().set(GraphicsStatus.FABULOUS);
+            // sem isto os alvos do Fabulous (nuvens, translúcido) não existem no quadro seguinte e o desenho do céu cai
+            Minecraft.getInstance().levelRenderer.allChanged();
         }, () -> stepTicks >= 40 && Minecraft.getInstance().options.graphicsMode().get() == GraphicsStatus.FABULOUS
                 && Minecraft.useShaderTransparency(), () -> "gráficos "
                 + Minecraft.getInstance().options.graphicsMode().get() + ", cadeia translúcida "
@@ -700,6 +707,7 @@ final class E2eArmilarRenderSteps {
         }
         if (savedGraphics != null) {
             options.graphicsMode().set(savedGraphics);
+            Minecraft.getInstance().levelRenderer.allChanged();
             savedGraphics = null;
         }
         restoreDay();

@@ -27,8 +27,8 @@ import org.lwjgl.opengl.GL30;
  * {@code AFTER_LEVEL} e guarda a profundidade ela mesma; com pacote roda no gancho tardio, que já guardou a
  * profundidade no {@code AFTER_LEVEL} (o jogo a limpa antes dali). O estado de GL volta ao que o vanilla espera.
  * <p>
- * Fabulous: sem pacote ela supõe que, em {@code AFTER_LEVEL}, a cena já está composta no alvo principal; ainda não
- * foi testado (Tarefa 11).
+ * Fabulous: em {@code AFTER_LEVEL} a cena já está composta no alvo principal, mas a profundidade dele foi limpa pela
+ * cadeia de transparência; a profundidade vem da cópia que o {@link FxStages} guardou em {@code AFTER_WEATHER}.
  */
 public final class FxLightPass {
     private static final Supplier<ShaderInstance> SHADER = FxShaders::lightPass;
@@ -56,7 +56,8 @@ public final class FxLightPass {
         if (disabledForTests || FxLights.count() == 0 || shader == null || ShaderPackCheck.shadowPass()) {
             return;
         }
-        if (!ShaderPackCheck.active()) {
+        // com o Fabulous o FxStages já guardou a profundidade, antes de a cadeia limpar o alvo principal
+        if (!ShaderPackCheck.active() && !FxDepth.takeEarly()) {
             FxDepth.save();
         }
         int depthId = FxDepth.depthTextureId();

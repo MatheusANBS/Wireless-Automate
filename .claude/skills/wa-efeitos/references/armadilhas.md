@@ -20,6 +20,7 @@
 
 - O `RenderType` padrão liga o framebuffer principal no setup: para desenhar noutro alvo, um `OutputStateShard` próprio.
 - No estágio `AFTER_PARTICLES`, com os gráficos Fabulous, o alvo aberto é o das partículas (`levelRenderer.getParticlesTarget()`), não o principal.
+- Com Fabulous, a cadeia de transparência (`PostPass.process`) limpa o alvo principal, cor e profundidade, antes de compor: quem lê a profundidade do principal em `AFTER_LEVEL` só vê 1,0. Guarde a profundidade em `AFTER_WEATHER` (o último estágio antes da cadeia) e devolva o alvo do clima como aberto depois do blit.
 - **Billboard:** o que deve ficar parado no mundo precisa do inverso da rotação da câmera.
 - **Aditivo não esconde nada atrás:** um corpo que deve cobrir precisa de alfa pré-multiplicado e de ser desenhado depois do que cobre, ou de um tipo sólido que escreva profundidade.
 - **Com shaderpack:**

@@ -84,7 +84,7 @@ Com shaderpack, as camadas de 2 a 5 vão para o buffer tardio, nessa ordem. Sem 
 ## 6. Luz no mundo (o efeito acende o que está em volta)
 
 - **Uma passada de tela**, por último:
-  - **Sem pacote:** em `AFTER_LEVEL`, sobre o alvo principal (com Fabulous, ele já está composto nesse estágio).
+  - **Sem pacote:** em `AFTER_LEVEL`, sobre o alvo principal (com Fabulous, a cor já está composta nesse estágio, mas a **profundidade foi limpa** pelo último passo da cadeia de transparência: ela é guardada antes, em `AFTER_WEATHER`).
   - **Com pacote:** no mesmo gancho do desenho tardio, logo depois do buffer, sobre a imagem final. A passada de `AFTER_LEVEL` fica desligada, para a luz não sair dobrada.
   - Usa a cópia da cor e da profundidade (com pacote, a profundidade salva).
 - **No shader:**

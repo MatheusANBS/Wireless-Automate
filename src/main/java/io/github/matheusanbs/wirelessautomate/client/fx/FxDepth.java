@@ -15,6 +15,8 @@ import org.lwjgl.opengl.GL30;
  */
 public final class FxDepth {
     private static TextureTarget saved;
+    /** A profundidade deste quadro foi guardada antes da hora (Fabulous); a passada de luz não a guarda de novo. */
+    private static boolean early;
 
     private FxDepth() {
     }
@@ -28,6 +30,27 @@ public final class FxDepth {
             saved.resize(main.width, main.height, Minecraft.ON_OSX);
         }
         blit(main, saved);
+    }
+
+    /**
+     * Guarda a profundidade antes da cadeia de transparência do Fabulous limpar o alvo principal; a passada de luz do
+     * mesmo quadro usa esta cópia ({@link #takeEarly()}).
+     */
+    public static void saveEarly() {
+        save();
+        early = true;
+    }
+
+    /** Se há cópia antecipada neste quadro; consome a marca. */
+    static boolean takeEarly() {
+        boolean was = early;
+        early = false;
+        return was;
+    }
+
+    /** Esquece a marca: o quadro novo não herda a cópia do anterior. */
+    static void clearEarly() {
+        early = false;
     }
 
     /** A textura da profundidade guardada, ou 0 se nada foi guardado. */

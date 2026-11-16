@@ -1,11 +1,13 @@
 {
   "parent": "minecraft:block/block",
-  "render_type": "minecraft:solid",
-  "ambientocclusion": true,
+  "render_type": "minecraft:cutout",
+  "ambientocclusion": false,
   "textures": {
-    "resonance_core_elite_dentro": "wirelessautomate:block/resonance_core_elite_dentro",
     "resonance_core_elite_solto": "wirelessautomate:block/resonance_core_elite_solto",
-    "resonator_casing_solta": "wirelessautomate:block/resonator_casing_solta",
+    "resonance_core_elite_topo": "wirelessautomate:block/resonance_core_elite_topo",
+    "resonator_familia_lado": "wirelessautomate:block/resonator_familia_lado",
+    "resonator_fundo": "wirelessautomate:block/resonator_fundo",
+    "resonator_grafite_liso": "wirelessautomate:block/resonator_grafite_liso",
     "particle": "wirelessautomate:block/resonance_core_elite_solto"
   },
   "elements": [
@@ -13,7 +15,7 @@
       "from": [
         0,
         0,
-        0
+        1
       ],
       "to": [
         16,
@@ -21,26 +23,6 @@
         16
       ],
       "faces": {
-        "down": {
-          "uv": [
-            0.0,
-            0.0,
-            16.0,
-            16.0
-          ],
-          "texture": "#resonator_casing_solta",
-          "cullface": "down"
-        },
-        "up": {
-          "uv": [
-            0.0,
-            0.0,
-            16.0,
-            16.0
-          ],
-          "texture": "#resonator_casing_solta",
-          "cullface": "up"
-        },
         "north": {
           "uv": [
             0.0,
@@ -48,8 +30,7 @@
             16.0,
             16.0
           ],
-          "texture": "#resonance_core_elite_solto",
-          "cullface": "north"
+          "texture": "#resonance_core_elite_solto"
         },
         "south": {
           "uv": [
@@ -58,28 +39,108 @@
             16.0,
             16.0
           ],
-          "texture": "#resonance_core_elite_dentro",
+          "texture": "#resonator_familia_lado",
           "cullface": "south"
-        },
-        "west": {
-          "uv": [
-            0.0,
-            0.0,
-            16.0,
-            16.0
-          ],
-          "texture": "#resonator_casing_solta",
-          "cullface": "west"
         },
         "east": {
           "uv": [
             0.0,
             0.0,
+            15.0,
+            16.0
+          ],
+          "texture": "#resonator_familia_lado",
+          "cullface": "east"
+        },
+        "west": {
+          "uv": [
+            1.0,
+            0.0,
             16.0,
             16.0
           ],
-          "texture": "#resonator_casing_solta",
-          "cullface": "east"
+          "texture": "#resonator_familia_lado",
+          "cullface": "west"
+        },
+        "up": {
+          "uv": [
+            0.0,
+            1.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#resonance_core_elite_topo",
+          "cullface": "up"
+        },
+        "down": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            15.0
+          ],
+          "texture": "#resonator_fundo",
+          "cullface": "down"
+        }
+      }
+    },
+    {
+      "from": [
+        4,
+        4,
+        0
+      ],
+      "to": [
+        12,
+        12,
+        1
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            4.0,
+            4.0,
+            12.0,
+            12.0
+          ],
+          "texture": "#resonance_core_elite_solto",
+          "cullface": "north"
+        },
+        "east": {
+          "uv": [
+            0.0,
+            0.0,
+            1.0,
+            8.0
+          ],
+          "texture": "#resonator_grafite_liso"
+        },
+        "west": {
+          "uv": [
+            0.0,
+            0.0,
+            1.0,
+            8.0
+          ],
+          "texture": "#resonator_grafite_liso"
+        },
+        "up": {
+          "uv": [
+            0.0,
+            0.0,
+            8.0,
+            1.0
+          ],
+          "texture": "#resonator_grafite_liso"
+        },
+        "down": {
+          "uv": [
+            0.0,
+            0.0,
+            8.0,
+            1.0
+          ],
+          "texture": "#resonator_grafite_liso"
         }
       }
     }

@@ -1,11 +1,14 @@
 {
   "parent": "minecraft:block/block",
-  "render_type": "minecraft:solid",
-  "ambientocclusion": true,
+  "render_type": "minecraft:cutout",
+  "ambientocclusion": false,
   "textures": {
-    "resonator_casing_solta": "wirelessautomate:block/resonator_casing_solta",
-    "resonator_forro": "wirelessautomate:block/resonator_forro",
+    "resonator_familia_lado": "wirelessautomate:block/resonator_familia_lado",
+    "resonator_fundo": "wirelessautomate:block/resonator_fundo",
+    "resonator_grafite_liso": "wirelessautomate:block/resonator_grafite_liso",
+    "resonator_latao_liso": "wirelessautomate:block/resonator_latao_liso",
     "resonator_tuner_solto": "wirelessautomate:block/resonator_tuner_solto",
+    "resonator_tuner_topo": "wirelessautomate:block/resonator_tuner_topo",
     "particle": "wirelessautomate:block/resonator_tuner_solto"
   },
   "elements": [
@@ -13,7 +16,7 @@
       "from": [
         0,
         0,
-        0
+        2
       ],
       "to": [
         16,
@@ -21,26 +24,6 @@
         16
       ],
       "faces": {
-        "down": {
-          "uv": [
-            0.0,
-            0.0,
-            16.0,
-            16.0
-          ],
-          "texture": "#resonator_casing_solta",
-          "cullface": "down"
-        },
-        "up": {
-          "uv": [
-            0.0,
-            0.0,
-            16.0,
-            16.0
-          ],
-          "texture": "#resonator_casing_solta",
-          "cullface": "up"
-        },
         "north": {
           "uv": [
             0.0,
@@ -48,8 +31,7 @@
             16.0,
             16.0
           ],
-          "texture": "#resonator_tuner_solto",
-          "cullface": "north"
+          "texture": "#resonator_tuner_solto"
         },
         "south": {
           "uv": [
@@ -58,28 +40,167 @@
             16.0,
             16.0
           ],
-          "texture": "#resonator_forro",
+          "texture": "#resonator_familia_lado",
           "cullface": "south"
-        },
-        "west": {
-          "uv": [
-            0.0,
-            0.0,
-            16.0,
-            16.0
-          ],
-          "texture": "#resonator_casing_solta",
-          "cullface": "west"
         },
         "east": {
           "uv": [
             0.0,
             0.0,
+            14.0,
+            16.0
+          ],
+          "texture": "#resonator_familia_lado",
+          "cullface": "east"
+        },
+        "west": {
+          "uv": [
+            2.0,
+            0.0,
             16.0,
             16.0
           ],
-          "texture": "#resonator_casing_solta",
-          "cullface": "east"
+          "texture": "#resonator_familia_lado",
+          "cullface": "west"
+        },
+        "up": {
+          "uv": [
+            0.0,
+            2.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#resonator_tuner_topo",
+          "cullface": "up"
+        },
+        "down": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            14.0
+          ],
+          "texture": "#resonator_fundo",
+          "cullface": "down"
+        }
+      }
+    },
+    {
+      "from": [
+        3,
+        3,
+        1
+      ],
+      "to": [
+        13,
+        13,
+        2
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            3.0,
+            3.0,
+            13.0,
+            13.0
+          ],
+          "texture": "#resonator_tuner_solto"
+        },
+        "east": {
+          "uv": [
+            0.0,
+            0.0,
+            1.0,
+            10.0
+          ],
+          "texture": "#resonator_latao_liso"
+        },
+        "west": {
+          "uv": [
+            0.0,
+            0.0,
+            1.0,
+            10.0
+          ],
+          "texture": "#resonator_latao_liso"
+        },
+        "up": {
+          "uv": [
+            0.0,
+            0.0,
+            10.0,
+            1.0
+          ],
+          "texture": "#resonator_latao_liso"
+        },
+        "down": {
+          "uv": [
+            0.0,
+            0.0,
+            10.0,
+            1.0
+          ],
+          "texture": "#resonator_latao_liso"
+        }
+      }
+    },
+    {
+      "from": [
+        7,
+        7,
+        0
+      ],
+      "to": [
+        9,
+        9,
+        1
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            7.0,
+            7.0,
+            9.0,
+            9.0
+          ],
+          "texture": "#resonator_tuner_solto",
+          "cullface": "north"
+        },
+        "east": {
+          "uv": [
+            0.0,
+            0.0,
+            1.0,
+            2.0
+          ],
+          "texture": "#resonator_grafite_liso"
+        },
+        "west": {
+          "uv": [
+            0.0,
+            0.0,
+            1.0,
+            2.0
+          ],
+          "texture": "#resonator_grafite_liso"
+        },
+        "up": {
+          "uv": [
+            0.0,
+            0.0,
+            2.0,
+            1.0
+          ],
+          "texture": "#resonator_grafite_liso"
+        },
+        "down": {
+          "uv": [
+            0.0,
+            0.0,
+            2.0,
+            1.0
+          ],
+          "texture": "#resonator_grafite_liso"
         }
       }
     }

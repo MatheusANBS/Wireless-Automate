@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "part=loose": {
+      "model": "wirelessautomate:block/resonator_cradle_loose"
+    },
+    "part=lower": {
+      "model": "wirelessautomate:block/resonator_cradle_loose"
+    },
+    "part=upper": {
+      "model": "wirelessautomate:block/resonator_cradle_loose"
+    }
+  }
+}

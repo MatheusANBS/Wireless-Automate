@@ -115,7 +115,7 @@ neoForge {
             sourceSet(sourceSets.main)
         }
     }
-    // Os enums do estado dos blocos implementam StringRepresentable; o teste precisa do Minecraft no classpath.
+    // O task test roda com o Minecraft no classpath (enums de estado que implementam StringRepresentable, Direction).
     unitTest {
         enable()
         testedMod = mods."${mod_id}"
@@ -186,7 +186,7 @@ dependencies {
         transitive = false
     }
 
-    // Testes de unidade da lógica pura (sem classes do Minecraft).
+    // Testes de unidade (JUnit): a lógica pura e os que precisam de classes do Minecraft, pelo neoForge.unitTest.
     testImplementation platform("org.junit:junit-bom:${junit_version}")
     testImplementation 'org.junit.jupiter:junit-jupiter'
     // O Gson (o mesmo do Minecraft) para os testes que leem o .bbmodel da Doca (DockPoseTest).

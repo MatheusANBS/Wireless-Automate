@@ -9,6 +9,7 @@ import io.github.matheusanbs.wirelessautomate.resonator.ResonatorLayout.Part;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
@@ -41,5 +42,26 @@ class ResonatorLayoutPreferredTest {
         }
         Formed plain = assertInstanceOf(Formed.class, ResonatorLayout.check(CX, CY, CZ, probe));
         assertEquals(Face.NORTH, plain.front());
+    }
+
+    @Test
+    void estruturaComDefeitosDaOMesmoProblema() {
+        Random random = new Random(15_10_2026L);
+        Part[] parts = Part.values();
+        for (int round = 0; round < 400; round++) {
+            Face built = ResonatorLayout.FRONTS[random.nextInt(ResonatorLayout.FRONTS.length)];
+            Map<List<Integer>, Part> world = ResonatorLayoutTest.armilar(built);
+            int defects = 1 + random.nextInt(4);
+            for (int i = 0; i < defects; i++) {
+                world.put(ResonatorLayoutTest.cell(built, random.nextInt(5), random.nextInt(5), random.nextInt(5)),
+                        parts[random.nextInt(parts.length)]);
+            }
+            ResonatorLayout.Probe probe = (x, y, z) -> world.getOrDefault(List.of(x, y, z), Part.OTHER);
+            ResonatorLayout.Result plain = ResonatorLayout.check(CX, CY, CZ, probe);
+            for (Face preferred : ResonatorLayout.FRONTS) {
+                assertEquals(plain, ResonatorLayout.check(CX, CY, CZ, preferred, probe),
+                        "rodada " + round + ", frente " + preferred);
+            }
+        }
     }
 }

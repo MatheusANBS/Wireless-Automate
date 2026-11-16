@@ -42,10 +42,15 @@ public final class ResonatorLifeGameTests {
         return new ItemStack(ModItems.TUNED_CRYSTALS.get(tier).get());
     }
 
-    /** Lotes de 20 ticks até o cristal da câmara 0 ficar Opaco (no máximo {@code limit}); devolve quantos rodaram. */
+    /**
+     * Lotes de 20 ticks até o cristal da câmara 0 ficar Opaco (no máximo {@code limit}); devolve quantos rodaram. A
+     * estação e o dial voltam à sintonia a cada lote: a deriva sorteada (400 ticks por passo) a tiraria da banda, e o
+     * lote fora dela não gera nem gasta o cristal, o que mudaria a contagem.
+     */
     private static int batchesUntilDull(GameTestHelper helper, ResonanceCoreBlockEntity core, int limit) {
         int batches = 0;
         while (batches < limit && !SignalCrystalItem.isDull(core.crystals().get(0))) {
+            tune(core);
             ResonatorBatch.run(helper.getLevel(), core, BATCH);
             core.extractEnergy(Long.MAX_VALUE, false);
             batches++;

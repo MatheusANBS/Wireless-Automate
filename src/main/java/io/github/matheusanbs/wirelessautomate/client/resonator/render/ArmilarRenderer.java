@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.client.resonator.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.client.fx.FxQueue;
 import io.github.matheusanbs.wirelessautomate.client.fx.FxShaders;
 import io.github.matheusanbs.wirelessautomate.resonator.ChamberView;
@@ -18,6 +19,10 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 
 /**
  * A Armilar do Núcleo montado: as peças sólidas (órbitas, pinos, engastes, cristais, horizonte e marcos) pelo tipo de
@@ -26,12 +31,15 @@ import net.minecraft.world.phys.AABB;
  * 200 ticks saem numa varredura a cada 200 ticks. Cada block entity guarda a cena que achou na primeira vez, para o
  * quadro não criar uma chave nova; a cena por posição sobrevive à recarga do chunk.
  */
+@EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
 public final class ArmilarRenderer implements BlockEntityRenderer<ResonanceCoreBlockEntity> {
     private static final int VIEW_DISTANCE = 64;
     private static final long FORGET_TICKS = 200;
     private static final Map<SceneKey, ArmilarScene> SCENES = new HashMap<>();
     /** A cena já achada de cada Núcleo; a chave é fraca e some com o block entity. */
     private static final Map<ResonanceCoreBlockEntity, ArmilarScene> BY_CORE = new WeakHashMap<>();
+    /** A caixa de quem ainda não tem cena: guardada por view, para não criar uma por quadro. */
+    private static final Map<ResonanceCoreBlockEntity, Boxed> BOXES = new WeakHashMap<>();
     private static long lastSweep;
     /** Só do e2e: força a faixa de vazão (0 a 7) da Porta de Energia, ou -1 para a vazão real. */
     public static int forceBandForTests = -1;
@@ -54,6 +62,19 @@ public final class ArmilarRenderer implements BlockEntityRenderer<ResonanceCoreB
     }
 
     private record SceneKey(ResourceKey<Level> dimension, BlockPos pos) {
+    }
+
+    /** A caixa de desenho calculada para uma view. */
+    private record Boxed(ChamberView view, AABB box) {
+    }
+
+    /** Ao sair do mundo as cenas não valem mais (o mesmo padrão do {@code GroupIcons}). */
+    @SubscribeEvent
+    static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+        SCENES.clear();
+        BY_CORE.clear();
+        BOXES.clear();
+        lastSweep = 0;
     }
 
     public ArmilarRenderer(BlockEntityRendererProvider.Context context) {
@@ -118,10 +139,18 @@ public final class ArmilarRenderer implements BlockEntityRenderer<ResonanceCoreB
             return scene.box();
         }
         ChamberView view = core.clientView();
-        if (view == ChamberView.EMPTY) {
-            return new AABB(core.getBlockPos());
+        Boxed cached = BOXES.get(core);
+        if (cached != null && cached.view() == view) {
+            return cached.box();
         }
-        int[] origin = view.origin();
-        return new AABB(origin[0] - 1, origin[1], origin[2] - 1, origin[0] + 6, origin[1] + 5, origin[2] + 6);
+        AABB box;
+        if (view == ChamberView.EMPTY) {
+            box = new AABB(core.getBlockPos());
+        } else {
+            int[] origin = view.origin();
+            box = new AABB(origin[0] - 1, origin[1], origin[2] - 1, origin[0] + 6, origin[1] + 5, origin[2] + 6);
+        }
+        BOXES.put(core, new Boxed(view, box));
+        return box;
     }
 }

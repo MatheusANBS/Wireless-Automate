@@ -14,6 +14,8 @@ final class ArmilarMotion {
     /** A puxada máxima do laço por tick, em radianos (0,6 rad/s a mais que o giro). */
     private static final double MAX_PULL = 0.03;
     private static final double TICK = 0.05;
+    /** O teto dos ticks recuperados de uma vez; acima dele o estado vai direto ao alvo ({@link #catchUp}). */
+    static final int MAX_CATCH_UP = 200;
 
     private final double[] spin = new double[3];
     private final double[] prevSpin = new double[3];
@@ -46,6 +48,29 @@ final class ArmilarMotion {
                 // a puxada por tick é limitada: o anel que ficou minutos solto não dá um chicote ao travar
                 spin[i] += Math.clamp(error * gain, -MAX_PULL, MAX_PULL);
             }
+        }
+    }
+
+    /**
+     * Recupera os ticks em que a cena não foi desenhada (o BER só roda à vista, e o relógio do mundo seguiu): anda
+     * {@code ticks} ticks, o último com o relógio em {@code clockEnd} segundos e cada anterior {@code clockPerTick} a
+     * menos ({@code 0} com o relógio parado). Com isso o giro de quem não viu é o de quem viu todos, e os anéis
+     * continuam alinhados entre clientes. Acima de {@link #MAX_CATCH_UP} ticks só os últimos são andados: o
+     * {@code u} vai ao alvo e, em sintonia ({@code u ≥ 1}), o giro se encaixa na fase da conjunção.
+     */
+    void catchUp(double targetU, long ticks, double clockEnd, double clockPerTick) {
+        int steps = (int) Math.max(1, Math.min(ticks, MAX_CATCH_UP));
+        if (started && ticks > MAX_CATCH_UP) {
+            u = targetU;
+            if (u >= 1) {
+                double from = clockEnd - steps * clockPerTick;
+                for (int i = 0; i < 3; i++) {
+                    spin[i] = ArmilarPose.aligned(from);
+                }
+            }
+        }
+        for (int j = 1; j <= steps; j++) {
+            advance(targetU, clockEnd - (steps - j) * clockPerTick);
         }
     }
 

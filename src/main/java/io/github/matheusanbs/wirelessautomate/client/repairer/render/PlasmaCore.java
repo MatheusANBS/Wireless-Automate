@@ -6,7 +6,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 
 /**
- * O Núcleo de plasma do Reparador: um quad virado para a câmera no centro da câmara dele, desenhado pelo core shader do mod. Cada
+ * O Núcleo de plasma do Reparador: um quad virado para a câmera no centro dele, desenhado pelo core shader do mod. Cada
  * vértice leva a cor do tier no RGB e a sintonia no alfa, o canto do quad no UV0 e, no UV2 (inteiros, os mesmos nos
  * quatro), no y, o nível de detalhe, que cai com a distância (os dois bits de baixo), mais o valor 4 (terceiro bit)
  * com o buffer cheio; o x é o apagamento da luz em milésimos (0 com a luz inteira; o emissor do Reparador manda

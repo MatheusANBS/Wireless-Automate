@@ -83,4 +83,15 @@ class ArmilarAssemblyFlowTest {
         assertEquals(0.55, ArmilarFlow.sunMul(0), 1e-12);
         assertEquals(1.0, ArmilarFlow.sunMul(1), 1e-12);
     }
+
+    @Test
+    void approachEmFormaFechadaIgualAosPassos() {
+        double now = 0;
+        for (int k = 0; k < 37; k++) {
+            now += (5 - now) * 0.12;
+        }
+        assertEquals(now, ArmilarFlow.approach(0, 5, 0.12, 37), 1e-12);
+        assertEquals(3.0, ArmilarFlow.approach(3, 5, 0.12, 0), 0);
+        assertEquals(5.0, ArmilarFlow.approach(0, 5, 0.12, ArmilarMotion.MAX_CATCH_UP), 0);
+    }
 }

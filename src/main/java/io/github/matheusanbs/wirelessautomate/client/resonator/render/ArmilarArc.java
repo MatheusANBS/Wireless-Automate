@@ -28,12 +28,11 @@ final class ArmilarArc {
 
     /**
      * Os 61 pontos do arco em px locais, com a ondulação {@code (0,3 w sin(f·6 + t·1,7), 0,2 w sin(f·5 − t·1,3),
-     * 0,7 w sin(f·5 + t·1,9))}, {@code w = sin(fπ)}: some nas pontas. {@code deslocFim} é o deslocamento em x do
-     * último controle, o fim do arco na Porta (o {@code PORTA_DESLOC_X} do jogo; 0 é o número do filme, 42,8).
-     * Devolve {@link #POINTS}.
+     * 0,7 w sin(f·5 + t·1,9))}, {@code w = sin(fπ)}: some nas pontas. O último controle é o fim do arco na Porta
+     * ({@link ArmilarSpec#PORTA_ARCO_FIM}; sem o deslocamento do jogo é o número do filme, 42,8). Devolve {@link #POINTS}.
      */
-    static int fill(double t, double deslocFim, FxRibbon.Buffer b) {
-        CTL[9] = (float) (42.8 + deslocFim);
+    static int fill(double t, FxRibbon.Buffer b) {
+        CTL[9] = (float) ArmilarSpec.PORTA_ARCO_FIM[0];
         CTL[10] = (float) ArmilarSpec.PORTA_ARCO_FIM[1];
         CTL[11] = (float) ArmilarSpec.PORTA_ARCO_FIM[2];
         FxRibbon.bezier(CTL, STEPS, b);
@@ -61,7 +60,7 @@ final class ArmilarArc {
         double t = p.t;
         int dis = p.disMilli();
         FxRibbon.Buffer b = p.local;
-        fill(t, ArmilarSpec.PORTA_DESLOC_X, b);
+        fill(t, b);
         double h = p.phase.cabeca;
         // a tinta: dois trilhos escuros por baixo
         shape(b, 1.7 * k, arco * k, h, 1);

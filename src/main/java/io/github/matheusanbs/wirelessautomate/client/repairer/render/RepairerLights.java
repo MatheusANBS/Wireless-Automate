@@ -5,7 +5,7 @@ import io.github.matheusanbs.wirelessautomate.repairer.RepairMath;
 import net.minecraft.client.renderer.MultiBufferSource;
 
 /**
- * As luzes do Reparador desenhadas pelo BER. O emissor é o plasma do Núcleo do Ressonador ({@link PlasmaCore}) em
+ * As luzes do Reparador desenhadas pelo BER. O emissor é o Núcleo de plasma ({@link PlasmaCore}) em
  * miniatura, pendurado logo abaixo do {@code emitter_glow} do modelo: o núcleo de forja do mockup é pequeno perto dos
  * cristais (um terço da altura deles, com o brilho em volta), por isso a esfera tem o raio de
  * {@link RepairerGeometry#EMITTER_RADIUS}, e o brilho da {@link RepairTimeline} vira o apagamento do shader.

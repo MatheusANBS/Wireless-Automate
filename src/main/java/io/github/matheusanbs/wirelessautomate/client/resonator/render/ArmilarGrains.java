@@ -2,7 +2,7 @@ package io.github.matheusanbs.wirelessautomate.client.resonator.render;
 
 /**
  * Os grãos de redstone da Porta de Cristais ao Opaco que recarrega, em lógica pura (o desenho é do
- * {@code ArmilarScene}). O relógio sobe 0,1 por tick, só com alvo; há no máximo 4 vivos e cada um voa por 33 ticks.
+ * {@code ArmilarScene}). O relógio sobe 0,1 por tick, só com alvo; há no máximo 4 vivos e cada um dura 33 ticks e aparece em 32 quadros (anda já no tick em que nasce).
  */
 final class ArmilarGrains {
     static final int MAX = 4;
@@ -31,7 +31,7 @@ final class ArmilarGrains {
                 alive[g] = false;
             }
             if (alive[g]) {
-                // Idade em ticks inteiros: somar 1/33 trinta e três vezes dá 0,99999... e o grão voaria 34 ticks.
+                // Idade em ticks inteiros: somar 1/33 trinta e três vezes dá 0,99999... e o grão duraria 34 ticks.
                 age[g]++;
                 if (age[g] >= TICKS) {
                     alive[g] = false;

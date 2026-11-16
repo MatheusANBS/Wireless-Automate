@@ -37,4 +37,14 @@ class ArmilarSceneTest {
         assertEquals(1e9, scene.sinceTuned(0), 0);
         assertEquals(0f, scene.flow(0.5f), 0);
     }
+
+    @Test
+    void relogioEmMundoLongoGuardaOParcial() {
+        // 2e7 ticks (cerca de 11 dias): somar o parcial em float o perderia (a ulp é 2)
+        long ticks = 20_000_000L;
+        double a = ArmilarScene.worldSeconds(ticks, 0f);
+        double b = ArmilarScene.worldSeconds(ticks, 0.5f);
+        assertEquals(0.025, b - a, 1e-9);
+        assertEquals(0.025, ArmilarScene.seconds(10_000_000L, 0.5f) - ArmilarScene.seconds(10_000_000L, 0f), 1e-9);
+    }
 }

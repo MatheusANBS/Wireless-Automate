@@ -50,7 +50,7 @@ class ArmilarGrainsTest {
                 if (g.alive(i) && !antes[i]) {
                     nasceu[i] = t;
                 } else if (!g.alive(i) && antes[i]) {
-                    // o grão nasce e já anda no tick do nascimento: a vida conta de t0 a t_morte inclusive
+                    // o grão nasce e já anda no tick do nascimento: são 32 quadros desenhados (vivo ao fim de 32 ticks), e a vida de 33 ticks conta de t0 a t_morte inclusive
                     assertEquals(ArmilarGrains.TICKS, t - nasceu[i] + 1, "grão " + i);
                     medidos++;
                 }

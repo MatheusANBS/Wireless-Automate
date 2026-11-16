@@ -1,7 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.client.repairer.render;
 
 /**
- * As duas malhas do cristal da câmara, em unidades do cristal (antes da escala do desenho), montadas uma vez; o
+ * As duas malhas do cristal do Reparador, em unidades do cristal (antes da escala do desenho), montadas uma vez; o
  * desenho só lê as tabelas. Acompanham os sprites do mod:
  * <ul>
  *   <li>{@link #CLUSTER}, o aglomerado de 4 pontas hexagonais de alturas diferentes do Cristal de Sinal (96

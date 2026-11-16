@@ -38,6 +38,16 @@ final class ArmilarSolids {
     private static final RouterTier[] TIERS = RouterTier.values();
     private static final float OPACO_TILT = (float) Math.toRadians(ArmilarSpec.OPACO_TILT_DEG);
     private static final Vector3f SCRATCH = new Vector3f();
+    private static final CrystalLook.Tex[] TEXES = CrystalLook.Tex.values();
+    /** Abaixo disto a órbita (a escala da entrada) e o cristal não valem o desenho. */
+    private static final float RING_MIN = 0.001f;
+    private static final float CRYSTAL_MIN = 0.001f;
+    private static final int NODES = ArmilarNodes.FIRST[2] + ArmilarSpec.NOS[2];
+    /** O que cada nó usa neste quadro ({@link #classify}): rascunhos, só a thread de render os usa. */
+    private static final int[] NODE_MASK = new int[NODES];
+    private static final double[] NODE_PROGRESS = new double[NODES];
+    private static final int[] NODE_LIT = new int[NODES];
+    private static final boolean[] NODE_ROWS = new boolean[NODES];
 
     /** O nível de luz de bloco do cristal vivo com a sintonia no máximo: o {@code emit} do filme, {@code 0,35 + 0,35 u}, em 15 níveis. */
     private static final double GLOW_BASE = 0.35;
@@ -65,6 +75,12 @@ final class ArmilarSolids {
         return types;
     }
 
+    /**
+     * Desenha em passadas por tipo de desenho: o horizonte e os marcos, todos os pinos, todos os anéis e, por fim, os
+     * cristais por textura. Cada troca de {@link RenderType} fecha um lote do buffer do vanilla; assim são uns 10
+     * lotes por Armilar em vez de um por malha. Tudo é opaco (cutout) e com teste de profundidade, então a ordem de
+     * desenho não muda a imagem.
+     */
     static void draw(ArmilarScene s, PoseStack ps, MultiBufferSource buf, float pt) {
         double t = s.clock(pt);
         double a = s.assembly(pt);
@@ -81,50 +97,133 @@ final class ArmilarSolids {
         mesh(buf.getBuffer(MARKER_TYPE), ArmilarMeshes.markers(), ps.last(), light, 0xFFFFFF);
         ps.translate(0, ArmilarSpec.SOL_Y, 0);
         for (int i = 0; i < 3; i++) {
-            float ai = (float) ArmilarAssembly.ring(a, i);
-            if (ai <= 0.001f) {
-                continue;
+            if ((float) ArmilarAssembly.ring(a, i) > RING_MIN) {
+                orbitPose(ps, i, t, a, u, since);
+                mesh(buf.getBuffer(PIN_TYPE), ArmilarMeshes.pins(i), ps.last(), light, 0xFFFFFF);
+                ps.popPose();
             }
-            ps.pushPose();
-            rotY(ps, Ease.wrap(ArmilarPose.prec(i, t)));
-            rotX(ps, Ease.wrap(ArmilarPose.tilt(i, t, u, since)));
-            ps.scale(ai, ai, ai);
-            mesh(buf.getBuffer(PIN_TYPE), ArmilarMeshes.pins(i), ps.last(), light, 0xFFFFFF);
-            rotY(ps, Ease.wrap(s.motion().spin(i, pt)));
-            mesh(buf.getBuffer(RING_TYPE), ArmilarMeshes.ring(i), ps.last(), light, 0xFFFFFF);
-            for (int k = 0; k < ArmilarSpec.NOS[i]; k++) {
-                crystal(s, ps, buf, light, glow, a, pt, ArmilarNodes.FIRST[i] + k);
-            }
-            ps.popPose();
         }
+        for (int i = 0; i < 3; i++) {
+            if ((float) ArmilarAssembly.ring(a, i) > RING_MIN) {
+                orbitPose(ps, i, t, a, u, since);
+                rotY(ps, Ease.wrap(s.motion().spin(i, pt)));
+                mesh(buf.getBuffer(RING_TYPE), ArmilarMeshes.ring(i), ps.last(), light, 0xFFFFFF);
+                ps.popPose();
+            }
+        }
+        crystals(s, ps, buf, light, glow, t, a, u, since, pt);
         ps.popPose();
     }
 
+    /** Empilha a pose da órbita {@code i} (precessão, inclinação e a escala da entrada); quem chama desempilha. */
+    private static void orbitPose(PoseStack ps, int i, double t, double a, double u, double since) {
+        float ai = (float) ArmilarAssembly.ring(a, i);
+        ps.pushPose();
+        rotY(ps, Ease.wrap(ArmilarPose.prec(i, t)));
+        rotX(ps, Ease.wrap(ArmilarPose.tilt(i, t, u, since)));
+        ps.scale(ai, ai, ai);
+    }
+
     /**
-     * O cristal do nó, no referencial do anel. O vivo fica de pé com o centro em {@code (r, CENTRO, 0)}; o Opaco e o
-     * rachado inclinam em torno da ponta de baixo e voltam ao prumo com a recarga ({@link ArmilarRecharge#fall}). A
-     * inclinação é para fora do anel (a spec e o filme não dão o sentido). O que está aceso (vivo, ou as linhas já
-     * acesas na recarga) leva a luz {@code glow}; o Opaco, o Rachado e as linhas apagadas, a do mundo.
+     * Os cristais, uma passada por textura (a do corpo inteiro, a das linhas acesas e a da faixa), cada uma só com os
+     * nós que a usam. O que cada nó usa vem de {@link #classify}, uma vez por quadro.
      */
-    private static void crystal(ArmilarScene s, PoseStack ps, MultiBufferSource buf, int light, int glow, double a,
-            float pt, int node) {
-        byte[] chambers = s.chambers();
-        if (node >= chambers.length || CrystalLook.empty(chambers[node])) {
-            return;
+    private static void crystals(ArmilarScene s, PoseStack ps, MultiBufferSource buf, int light, int glow, double t,
+            double a, double u, double since, float pt) {
+        int count = Math.min(s.chambers().length, NODE_MASK.length);
+        int all = 0;
+        for (int node = 0; node < count; node++) {
+            all |= classify(s, a, pt, node);
         }
-        float ck = (float) ArmilarAssembly.crystal(a, ArmilarNodes.popIndex(node));
-        if (ck <= 0.001f) {
-            return;
+        for (CrystalLook.Tex tex : TEXES) {
+            int bit = 1 << tex.ordinal();
+            if ((all & bit) == 0) {
+                continue;
+            }
+            VertexConsumer vc = null;
+            for (int i = 0; i < 3; i++) {
+                if ((float) ArmilarAssembly.ring(a, i) <= RING_MIN || !orbitUses(i, count, bit)) {
+                    continue;
+                }
+                if (vc == null) {
+                    vc = buf.getBuffer(CRYSTAL_TYPES[tex.ordinal()]);
+                }
+                orbitPose(ps, i, t, a, u, since);
+                rotY(ps, Ease.wrap(s.motion().spin(i, pt)));
+                for (int k = 0; k < ArmilarSpec.NOS[i]; k++) {
+                    int node = ArmilarNodes.FIRST[i] + k;
+                    if (node < count && (NODE_MASK[node] & bit) != 0) {
+                        crystal(s, ps, vc, light, glow, a, tex, node);
+                    }
+                }
+                ps.popPose();
+            }
+        }
+    }
+
+    private static boolean orbitUses(int orbit, int count, int bit) {
+        for (int k = 0; k < ArmilarSpec.NOS[orbit]; k++) {
+            int node = ArmilarNodes.FIRST[orbit] + k;
+            if (node < count && (NODE_MASK[node] & bit) != 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Guarda em {@code NODE_MASK} as texturas que o nó usa neste quadro (um bit por {@link CrystalLook.Tex}; 0 se não
+     * há cristal à vista) e o resto do que o desenho precisa dele, e devolve a máscara. O vivo e o parado saem inteiros
+     * numa textura; a recarga no meio e a faixa do Afinado, linha a linha.
+     */
+    private static int classify(ArmilarScene s, double a, float pt, int node) {
+        byte[] chambers = s.chambers();
+        NODE_MASK[node] = 0;
+        if (CrystalLook.empty(chambers[node])
+                || (float) ArmilarAssembly.crystal(a, ArmilarNodes.popIndex(node)) <= CRYSTAL_MIN) {
+            return 0;
         }
         byte code = chambers[node];
         boolean dull = CrystalLook.dull(code);
         boolean recharging = ArmilarRecharge.isRecharging(node, chambers, s.view());
-        double progress = recharging ? ArmilarRecharge.progress(node, chambers, s.gameTime() + pt, s.view()) : 0;
+        double progress = recharging
+                ? ArmilarRecharge.progress(node, chambers, s.gameTime() + (double) pt, s.view()) : 0;
+        int lit = recharging ? CrystalPlan.litRows(progress) : dull ? 0 : ROWS;
+        int tier = s.tier(node);
+        // a faixa do Afinado só existe nas linhas; a recarga no meio também; senão o cristal sai inteiro numa textura
+        boolean rows = lit > 0 && (lit < ROWS || (tier > 0 && CrystalLook.cut(code)));
+        int mask = 0;
+        if (!rows) {
+            mask = 1 << (lit == 0 ? CrystalLook.bodyTex(code) : CrystalLook.liveTex(code)).ordinal();
+        } else {
+            for (int row = 0; row < ROWS; row++) {
+                mask |= 1 << CrystalPlan.rowTex(row, code, tier, lit).ordinal();
+            }
+        }
+        NODE_MASK[node] = mask;
+        NODE_PROGRESS[node] = progress;
+        NODE_LIT[node] = lit;
+        NODE_ROWS[node] = rows;
+        return mask;
+    }
+
+    /**
+     * O cristal do nó, no referencial do anel, só com as malhas da textura {@code only}. O vivo fica de pé com o centro
+     * em {@code (r, CENTRO, 0)}; o Opaco e o rachado inclinam em torno da ponta de baixo e voltam ao prumo com a
+     * recarga ({@link ArmilarRecharge#fall}). A inclinação é para fora do anel (a spec e o filme não dão o sentido). O
+     * que está aceso (vivo, ou as linhas já acesas na recarga) leva a luz {@code glow}; o Opaco, o Rachado e as linhas
+     * apagadas, a do mundo.
+     */
+    private static void crystal(ArmilarScene s, PoseStack ps, VertexConsumer vc, int light, int glow, double a,
+            CrystalLook.Tex only, int node) {
+        byte code = s.chambers()[node];
+        int lit = NODE_LIT[node];
+        float ck = (float) ArmilarAssembly.crystal(a, ArmilarNodes.popIndex(node));
         float r = (float) ArmilarSpec.RAIOS[ArmilarNodes.orbit(node)];
         ps.pushPose();
         rotY(ps, (float) ArmilarNodes.angle(node));
-        if (dull) {
-            float fall = (float) ArmilarRecharge.fall(progress);
+        if (CrystalLook.dull(code)) {
+            float fall = (float) ArmilarRecharge.fall(NODE_PROGRESS[node]);
             ps.translate(r, ArmilarSpec.TOPO_BASE + ArmilarSpec.OPACO_LIFT_PX * fall, 0);
             rotZ(ps, -OPACO_TILT * fall);
             ps.translate(0, ArmilarSpec.CENTRO - ArmilarSpec.TOPO_BASE, 0);
@@ -132,21 +231,18 @@ final class ArmilarSolids {
             ps.translate(r, ArmilarSpec.CENTRO, 0);
         }
         ps.scale(ck, ck, ck);
-        int lit = recharging ? CrystalPlan.litRows(progress) : dull ? 0 : ROWS;
-        int tier = s.tier(node);
-        // a faixa do Afinado só existe nas linhas; a recarga no meio também; senão o cristal sai inteiro numa textura
-        boolean rows = lit > 0 && (lit < ROWS || (tier > 0 && CrystalLook.cut(code)));
-        if (!rows) {
-            CrystalLook.Tex tex = lit == 0 ? CrystalLook.bodyTex(code) : CrystalLook.liveTex(code);
-            mesh(buf.getBuffer(CRYSTAL_TYPES[tex.ordinal()]), ArmilarMeshes.crystal(), ps.last(), lit == 0 ? light : glow,
-                    0xFFFFFF);
+        if (!NODE_ROWS[node]) {
+            mesh(vc, ArmilarMeshes.crystal(), ps.last(), lit == 0 ? light : glow, 0xFFFFFF);
         } else {
+            int tier = s.tier(node);
             QuadMesh[] meshes = ArmilarMeshes.crystalRows();
             int tint = tier > 0 ? GuiPaint.tierColor(TIERS[tier - 1]) & 0xFFFFFF : 0xFFFFFF;
             for (int row = 0; row < ROWS; row++) {
-                CrystalLook.Tex tex = CrystalPlan.rowTex(row, code, tier, lit);
+                if (CrystalPlan.rowTex(row, code, tier, lit) != only) {
+                    continue;
+                }
                 int rgb = CrystalPlan.rowTinted(row, code, tier, lit) ? tint : 0xFFFFFF;
-                mesh(buf.getBuffer(CRYSTAL_TYPES[tex.ordinal()]), meshes[row], ps.last(), row < lit ? glow : light, rgb);
+                mesh(vc, meshes[row], ps.last(), row < lit ? glow : light, rgb);
             }
         }
         ps.popPose();

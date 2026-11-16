@@ -20,6 +20,21 @@ final class ArmilarFlow {
         return k < MIN_STRENGTH ? 0 : k;
     }
 
+    /**
+     * Um valor que anda {@code rate} da distância ao alvo por tick, depois de {@code ticks} ticks, em forma fechada
+     * ({@code alvo + (agora − alvo) × (1 − rate)^ticks}). Acima do teto de {@link ArmilarMotion#MAX_CATCH_UP} ticks
+     * vale o alvo.
+     */
+    static double approach(double now, double goal, double rate, long ticks) {
+        if (ticks <= 0) {
+            return now;
+        }
+        if (ticks >= ArmilarMotion.MAX_CATCH_UP) {
+            return goal;
+        }
+        return goal + (now - goal) * Math.pow(1 - rate, ticks);
+    }
+
     static double sunMul(double u) {
         return 0.55 + 0.45 * u;
     }

@@ -106,11 +106,16 @@ final class ArmilarScene implements FxJob {
             flash.onView(view, chambers, gameTime);
         }
         this.tunedAt = tunedAt;
+        // os ticks desde o último desenho: o relógio do mundo seguiu, o giro e a vazão têm de ter acompanhado
+        long elapsed = motion.started() ? Math.max(1, gameTime - lastUsed) : 1;
         this.gameTime = gameTime;
-        motion.advance(view.tuned() ? 1 : view.band() / (double) BAND_MAX, clockAtTick(gameTime));
+        boolean frozen = !Double.isNaN(ArmilarRenderer.freezeSecondsForTests);
+        motion.catchUp(view.tuned() ? 1 : view.band() / (double) BAND_MAX, elapsed, clockAtTick(gameTime),
+                frozen ? 0 : TICK_SECONDS);
         float goal = ArmilarRenderer.forceBandForTests >= 0 ? ArmilarRenderer.forceBandForTests : flowTarget;
-        flowPrev = flowNow;
-        flowNow += (goal - flowNow) * FLOW_RATE;
+        // o tick anterior ao de agora (flowPrev) e o de agora, em forma fechada; sem pulo se só passou um tick
+        flowPrev = (float) ArmilarFlow.approach(flowNow, goal, FLOW_RATE, elapsed - 1);
+        flowNow = flowPrev + (goal - flowPrev) * FLOW_RATE;
         flash.tick(view, chambers, gameTime);
         tickGrains(level);
         frame.toWorld(0, ArmilarSpec.SOL_Y, 0, sunAt);
@@ -166,8 +171,13 @@ final class ArmilarScene implements FxJob {
 
     /** Os segundos do relógio no quadro: o do mundo, ou o parado do e2e. */
     double clock(float partialTick) {
-        return Double.isNaN(ArmilarRenderer.freezeSecondsForTests) ? (gameTime + partialTick) * TICK_SECONDS
+        return Double.isNaN(ArmilarRenderer.freezeSecondsForTests) ? worldSeconds(gameTime, partialTick)
                 : ArmilarRenderer.freezeSecondsForTests;
+    }
+
+    /** Os segundos do mundo no tick {@code gameTime} mais {@code partialTick}; a soma é em {@code double} (em {@code float} perde o parcial em mundo longo). */
+    static double worldSeconds(long gameTime, float partialTick) {
+        return (gameTime + (double) partialTick) * TICK_SECONDS;
     }
 
     /** O mesmo relógio no início do tick {@code tick}, para o laço de fase do {@link ArmilarMotion}. */
@@ -187,8 +197,8 @@ final class ArmilarScene implements FxJob {
         return tunedAt < 0 ? LONG_AGO : seconds(gameTime - tunedAt, partialTick);
     }
 
-    private static double seconds(long ticks, float partialTick) {
-        return Math.max(0, (ticks + partialTick) * TICK_SECONDS);
+    static double seconds(long ticks, float partialTick) {
+        return Math.max(0, (ticks + (double) partialTick) * TICK_SECONDS);
     }
 
     ArmilarMotion motion() {

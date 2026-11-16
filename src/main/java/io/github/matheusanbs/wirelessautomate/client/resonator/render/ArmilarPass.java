@@ -133,7 +133,10 @@ final class ArmilarPass {
         return sheet.layer() == FxSheet.Layer.LIGHT ? LightTexture.FULL_BRIGHT : scene.sunLight();
     }
 
-    /** O {@code spr} do filme: o sprite que olha para a câmera num ponto local (px); {@code halfPx} é o meio lado. */
+    /**
+     * O {@code spr} do filme: o sprite que olha para a câmera num ponto local (px); {@code halfPx} é o meio lado. O
+     * {@code rot} (que cresce com o relógio) é reduzido a {@code (−π, π]} em {@code double} antes do {@code float}.
+     */
     void spr(FxSheet sheet, int frame, double lx, double ly, double lz, double halfPx, int rgb, double alpha,
             double rot, int dis) {
         scene.frame().toWorld(lx, ly, lz, world);
@@ -145,7 +148,7 @@ final class ArmilarPass {
     void sprCam(FxSheet sheet, int frame, float x, float y, float z, double halfPx, int rgb, double alpha,
             double rot, int dis) {
         if (FxDraw.sprite(buffers.getBuffer(FxTypes.of(sheet)), fx, sheet, frame, x, y, z, (float) (halfPx / 16),
-                (float) rot, rgb, (float) alpha, dis, light(sheet))) {
+                Ease.wrap(rot), rgb, (float) alpha, dis, light(sheet))) {
             sprites++;
         }
     }
@@ -160,7 +163,7 @@ final class ArmilarPass {
         if (FxDraw.decal(buffers.getBuffer(FxTypes.of(sheet)), sheet, frame, (float) (world[0] - fx.camX),
                 (float) (world[1] - fx.camY), (float) (world[2] - fx.camZ), (float) axisA[0], (float) axisA[1],
                 (float) axisA[2], (float) axisB[0], (float) axisB[1], (float) axisB[2], (float) (halfPx / 16),
-                (float) rot, rgb, (float) alpha, dis, light(sheet))) {
+                Ease.wrap(rot), rgb, (float) alpha, dis, light(sheet))) {
             sprites++;
         }
     }
@@ -168,7 +171,9 @@ final class ArmilarPass {
     /**
      * A {@code fita} do filme: {@code b} (o {@link #local}) tem os {@code n} pontos e as meias larguras em px locais e o
      * alfa por amostra; aqui eles vão à câmera, em blocos. {@code repPx} é o comprimento de uma repetição da textura
-     * e {@code offset} o deslocamento dela, em repetições.
+     * e {@code offset} o deslocamento dela, em repetições; o {@code offset} (que cresce com o relógio) é reduzido a
+     * {@code [0, 1)} em {@code double} antes do {@code float}: com o relógio em 1e6 s o {@code float} cru não teria
+     * casas para o fluxo andar.
      */
     void ribbon(FxSheet sheet, int frame, FxRibbon.Buffer b, int n, int rgb, double repPx, double offset, int dis) {
         if (n < 2) {
@@ -186,7 +191,7 @@ final class ArmilarPass {
             cam.a[i] = b.a[i];
         }
         if (FxDraw.ribbon(buffers.getBuffer(FxTypes.of(sheet)), fx, sheet, frame, cam, n, rgb, (float) (repPx / 16),
-                (float) offset, dis, light(sheet))) {
+                (float) Ease.frac(offset), dis, light(sheet))) {
             ribbons++;
         }
     }

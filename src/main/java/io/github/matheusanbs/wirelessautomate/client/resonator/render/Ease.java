@@ -37,6 +37,11 @@ final class Ease {
         return k * k * (3 - 2 * k);
     }
 
+    /** A parte fracionária em {@code [0, 1)}, em {@code double}: o deslocamento de uma textura que repete. */
+    static double frac(double x) {
+        return x - Math.floor(x);
+    }
+
     /** O ângulo reduzido a (−π, π], para mandar ao {@code float} sem perder precisão. */
     static float wrap(double radians) {
         double r = Math.IEEEremainder(radians, 2 * Math.PI);

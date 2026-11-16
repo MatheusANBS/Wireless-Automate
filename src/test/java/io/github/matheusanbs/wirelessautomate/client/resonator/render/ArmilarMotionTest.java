@@ -86,4 +86,71 @@ class ArmilarMotionTest {
         double b = m.spin(0, 1f);
         assertEquals((a + b) / 2, m.spin(0, 0.5f), 1e-12);
     }
+
+    @Test
+    void ticksSemDesenhoDaoOMesmoGiroDeQuemDesenhouTodos() {
+        double c0 = 5000.0;
+        ArmilarMotion seen = new ArmilarMotion();
+        ArmilarMotion away = new ArmilarMotion();
+        seen.advance(1.0, c0);
+        away.advance(1.0, c0);
+        for (int k = 1; k <= 100; k++) {
+            seen.advance(1.0, c0 + k * DT);
+        }
+        away.catchUp(1.0, 100, c0 + 100 * DT, DT);
+        for (int i = 0; i < 3; i++) {
+            assertEquals(seen.spin(i, 1f), away.spin(i, 1f), 1e-9, "giro da órbita " + i);
+            assertEquals(seen.spin(i, 0f), away.spin(i, 0f), 1e-9, "giro um tick antes, órbita " + i);
+        }
+        assertEquals(seen.u(1f), away.u(1f), 1e-12);
+    }
+
+    @Test
+    void ticksSemDesenhoEmSolto() {
+        ArmilarMotion seen = new ArmilarMotion();
+        ArmilarMotion away = new ArmilarMotion();
+        seen.advance(0.4, 100.0);
+        away.advance(0.4, 100.0);
+        for (int k = 1; k <= 60; k++) {
+            seen.advance(0.6, 100.0 + k * DT);
+        }
+        away.catchUp(0.6, 60, 100.0 + 60 * DT, DT);
+        for (int i = 0; i < 3; i++) {
+            assertEquals(seen.spin(i, 1f), away.spin(i, 1f), 1e-9);
+        }
+        assertEquals(seen.u(1f), away.u(1f), 1e-12);
+    }
+
+    @Test
+    void acimaDoTetoEncaixaNaConjuncaoELevaUAoAlvo() {
+        double c0 = 5000.0;
+        ArmilarMotion seen = new ArmilarMotion();
+        ArmilarMotion away = new ArmilarMotion();
+        seen.advance(0.3, c0);
+        away.advance(0.3, c0);
+        int ticks = 1000;
+        for (int k = 1; k <= ticks; k++) {
+            seen.advance(1.0, c0 + k * DT);
+        }
+        away.catchUp(1.0, ticks, c0 + ticks * DT, DT);
+        assertEquals(1.0, away.u(1f), 1e-6);
+        for (int i = 0; i < 3; i++) {
+            double aligned = ArmilarPose.aligned(c0 + ticks * DT);
+            assertEquals(0, Math.IEEEremainder(away.spin(i, 1f) - aligned, 2 * Math.PI), 1e-6, "encaixado " + i);
+            assertEquals(0, Math.IEEEremainder(away.spin(i, 1f) - seen.spin(i, 1f), 2 * Math.PI), 1e-3,
+                    "igual ao de quem viu, órbita " + i);
+        }
+    }
+
+    @Test
+    void umTickSoEIgualAoAdvance() {
+        ArmilarMotion one = new ArmilarMotion();
+        ArmilarMotion plain = new ArmilarMotion();
+        one.advance(0.5, 100.0);
+        plain.advance(0.5, 100.0);
+        one.catchUp(0.8, 1, 100.05, DT);
+        plain.advance(0.8, 100.05);
+        assertEquals(plain.u(0.3f), one.u(0.3f), 1e-15);
+        assertEquals(plain.spin(2, 0.3f), one.spin(2, 0.3f), 1e-15);
+    }
 }

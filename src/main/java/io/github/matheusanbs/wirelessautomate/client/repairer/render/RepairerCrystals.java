@@ -9,7 +9,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import org.joml.Quaternionf;
 
 /**
- * Os cristais de pé nos pedestais, um por linha com cristal, pela gema facetada do shader do cristal do Ressonador: o
+ * Os cristais de pé nos pedestais, um por linha com cristal, pela gema facetada do shader do cristal ({@code resonator_crystal}): o
  * losango no Lapidado e nos Afinados (a faixa dourada ou na cor do tier) e o aglomerado no Cristal de Sinal. O da linha
  * travada (terminou e espera a saída) já está reparado; o da linha que anda fecha as rachaduras pelo canal de efeito
  * do shader até a convergência e dali em diante já é o reparado; o que espera fica rachado, com as rachaduras acesas

@@ -18,33 +18,34 @@ class ArmilarArcTest {
     void pontasNaoOndulam() {
         for (double t : new double[] {0, 3.7, 11, 5000.123}) {
             FxRibbon.Buffer b = new FxRibbon.Buffer();
-            assertEquals(61, ArmilarArc.fill(t, 0, b));
+            assertEquals(61, ArmilarArc.fill(t, b));
             ponto(b, 0, 33.6, 46.6, 0);
-            ponto(b, 60, 42.8, 8.6, 0);
+            ponto(b, 60, ArmilarSpec.PORTA_ARCO_FIM[0], 8.6, 0);
         }
     }
 
     @Test
-    void deslocamentoMovePontaFinal() {
+    void fimDoArcoVemDaEspec() {
         FxRibbon.Buffer b = new FxRibbon.Buffer();
-        assertEquals(61, ArmilarArc.fill(2, -2, b));
+        assertEquals(61, ArmilarArc.fill(2, b));
         ponto(b, 0, 33.6, 46.6, 0);
-        ponto(b, 60, 40.8, 8.6, 0);
+        // 42,8 do filme mais o deslocamento da Porta do jogo
+        ponto(b, 60, 42.8 + ArmilarSpec.PORTA_DESLOC_X, 8.6, 0);
     }
 
     @Test
     void meioDoArcoComOndulacao() {
         FxRibbon.Buffer b = new FxRibbon.Buffer();
-        ArmilarArc.fill(5, 0, b);
-        // o ponto 30 em t = 5 (filme em Node)
-        ponto(b, 30, 44.9123643, 29.9263605, -0.375601043);
+        ArmilarArc.fill(5, b);
+        // o ponto 30 em t = 5 (filme em Node, com o fim do arco em 42,8); o fim deslocado puxa x em 1/8 do deslocamento
+        ponto(b, 30, 44.9123643 + 0.125 * ArmilarSpec.PORTA_DESLOC_X, 29.9263605, -0.375601043);
     }
 
     @Test
     void passoNoMaximoUmPixel() {
         for (double t : new double[] {0, 1.3, 5, 11.4}) {
             FxRibbon.Buffer b = new FxRibbon.Buffer();
-            ArmilarArc.fill(t, -2, b);
+            ArmilarArc.fill(t, b);
             double maior = 0;
             for (int i = 1; i < 61; i++) {
                 double dx = b.pts[i * 3] - b.pts[i * 3 - 3];

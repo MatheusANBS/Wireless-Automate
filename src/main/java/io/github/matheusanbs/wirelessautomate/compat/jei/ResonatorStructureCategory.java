@@ -176,7 +176,7 @@ final class ResonatorStructureCategory implements IRecipeCategory<ResonatorStruc
         return texts;
     }
 
-    /** "Camada" e os botões 1 a 4 e Tudo; o da camada mostrada, afundado. */
+    /** "Camada" e os botões 1, 2 e Tudo; o da camada mostrada, afundado. */
     private static void drawButtons(GuiGraphics graphics, Font font, Texts texts, int layer) {
         graphics.drawString(font, texts.label(), 0, BUTTONS_Y + 2, TEXT_COLOR, false);
         for (int i = 0; i < BUTTONS; i++) {

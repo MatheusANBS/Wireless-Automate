@@ -117,11 +117,6 @@ public final class ResonatorLayout {
         return Part.AIR;
     }
 
-    /** O deslocamento (dx, dz) do referencial local (frente sul) levado ao mundo para a frente {@code front}. */
-    static int[] rotate(Face front, int dx, int dz) {
-        return new int[] {rotateX(front, dx, dz), rotateZ(front, dx, dz)};
-    }
-
     private static int rotateX(Face front, int dx, int dz) {
         return switch (front) {
             case SOUTH -> dx;

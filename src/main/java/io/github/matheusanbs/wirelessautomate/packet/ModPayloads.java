@@ -78,7 +78,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ModPayloads {
     /**
-     * Versão do protocolo (52: o cubo do alcance do roteador; o pacote do cubo da Doca virou o
+     * Versão do protocolo (53: o {@code ResonatorStatePayload} perdeu o layout; 52: o cubo do alcance do roteador; o pacote do cubo da Doca virou o
      * {@code LinkerReachPayload}, com o pedido {@code LinkerReachRequestPayload};
      * 51: o componente {@code pattern_dock_pending} da Doca leva uma linha por item e por fluido,
      * com a quantidade em long, no lugar das pilhas;

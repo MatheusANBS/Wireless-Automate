@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import armilar_geometria as geo  # noqa: E402
 import armilar_texturas  # noqa: E402
 import blocos  # noqa: E402
+import ressonador_blocos  # noqa: E402
 from armilar_geometria import ModeloInvalido  # noqa: E402,F401
 from identidade import ASSETS, MODELOS, PREVIEW, RAIZ, TIERS, grava_json, salvar  # noqa: E402
 
@@ -215,7 +216,7 @@ def blockstates_armilar() -> dict[str, dict]:
 
     def estados(solto: str, modelo_formado: str, tiers: tuple[str | None, ...] = (None,)) -> dict:
         variantes = {}
-        for face, rot in blocos.ROTACOES_PECA.items():
+        for face, rot in ressonador_blocos.ROTACOES_PECA.items():
             if face not in GIRO_FRENTE:
                 continue
             for t in tiers:
@@ -257,8 +258,9 @@ def previa(ms: dict[str, blocos.Modelo], destino: Path | None = None, s: int = 6
 
 
 def gerar(raiz_assets: Path = MODELOS) -> set[str]:
-    """Grava os sprites, os modelos, os blockstates e a prévia; devolve as chaves das texturas gravadas (relativas a `textures/`,
-    como as do `limpar`). Pára com `ModeloInvalido` se a escultura ou algum modelo violar uma regra."""
+    """Grava os sprites, os modelos, os blockstates e a prévia; devolve as chaves das texturas gravadas
+    (relativas a `textures/`, como as do `limpar`). Pára com `ModeloInvalido` se a escultura ou algum modelo
+    violar uma regra."""
     ms = construir()
     spr = armilar_texturas.sprites()
     for nome, sp in spr.items():

@@ -4,10 +4,12 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorLayout.Face;
 import java.util.Locale;
+import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -15,6 +17,8 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
 /** As peças das faces do Ressonador: a Porta de Energia, a Porta de Cristais e o Sintonizador. */
 public class ResonatorPartBlock extends Block {
@@ -37,11 +41,18 @@ public class ResonatorPartBlock extends Block {
     private static final int CORE_REACH = ResonatorLayout.SIZE - 1;
 
     private final Kind kind;
+    /** A forma de cada estado, montada uma vez no construtor. */
+    private final Map<BlockState, VoxelShape> shapes;
 
     public ResonatorPartBlock(Kind kind, Properties properties) {
         super(properties);
         this.kind = kind;
         registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(FORMED, false));
+        shapes = ArmilarShapes.tabela(this, switch (kind) {
+            case ENERGY_PORT -> ArmilarShapes.ENERGY_PORT;
+            case CRYSTAL_PORT -> ArmilarShapes.CRYSTAL_PORT;
+            case TUNER -> ArmilarShapes.TUNER;
+        });
     }
 
     public Kind kind() {
@@ -56,6 +67,12 @@ public class ResonatorPartBlock extends Block {
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(FACING, FORMED);
+    }
+
+    /** A forma do desenho (colisão e seleção): tirada do modelo pelo gerador, ver {@link ArmilarShapes}. */
+    @Override
+    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return shapes.get(state);
     }
 
     /**

@@ -42,6 +42,8 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -160,6 +162,7 @@ final class E2eResonatorSteps {
         list.add(camera("Ressonador: câmera de frente, montado", playerId, () -> origin[0], FRONT_VIEW));
         list.add(DevEndToEnd.wait("a câmera chegar", 10));
         list.add(capture("armilar-formada-frente"));
+        selectionSteps(list, playerId, origin);
         topSteps(list, playerId, origin);
         screenSteps(list, origin);
         E2eResonatorScreenSteps.screenSteps(list, playerId, origin);
@@ -174,6 +177,33 @@ final class E2eResonatorSteps {
         }), () -> Minecraft.getInstance().level.getBlockState(core(origin[0])).isAir()
                 && Minecraft.getInstance().player.position().distanceTo(back[0]) < 0.5,
                 () -> "jogador em " + Minecraft.getInstance().player.position()));
+    }
+
+    /**
+     * O contorno de seleção da Armilar formada, que segue o desenho e não o cubo: a mira numa Laje do canto (a
+     * {@code p00}, no chão a noroeste) e numa Coluna (a de noroeste, embaixo), vistas de fora, com o HUD ligado
+     * (o jogo só desenha o contorno com ele). Cada passo espera a mira cair no bloco certo.
+     */
+    private static void selectionSteps(List<Step> list, UUID playerId, BlockPos[] origin) {
+        aim(list, playerId, origin, "armilar-selecao", new double[] {-1.6, 1.3, -1.6}, new double[] {0.9, 0.5, 0.5},
+                new int[] {0, 0, 0}, ModBlocks.RESONATOR_CASING.get());
+        aim(list, playerId, origin, "armilar-selecao-coluna", new double[] {-1.6, 1.4, -1.6},
+                new double[] {1.12, 1.5, 1.12}, new int[] {1, 1, 1}, ModBlocks.RESONATOR_COLUMN.get());
+        list.add(camera("Ressonador: câmera de lado, depois da seleção", playerId, () -> origin[0], SIDE_VIEW));
+    }
+
+    private static void aim(List<Step> list, UUID playerId, BlockPos[] origin, String name, double[] feet,
+            double[] target, int[] block, net.minecraft.world.level.block.Block expected) {
+        list.add(camera("Ressonador: câmera, " + name, playerId, () -> origin[0], feet, target));
+        list.add(new Step("Ressonador: a mira cai em " + name, STEP_TIMEOUT_MS, () -> {
+        }, () -> {
+            Minecraft minecraft = Minecraft.getInstance();
+            return stepTicks >= 10 && minecraft.hitResult instanceof BlockHitResult hit
+                    && hit.getType() == HitResult.Type.BLOCK
+                    && hit.getBlockPos().equals(origin[0].offset(block[0], block[1], block[2]))
+                    && minecraft.level.getBlockState(hit.getBlockPos()).is(expected);
+        }, () -> "mira em " + Minecraft.getInstance().hitResult));
+        list.add(capture(name));
     }
 
     /**

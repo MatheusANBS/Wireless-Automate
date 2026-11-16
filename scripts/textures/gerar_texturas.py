@@ -12,7 +12,8 @@ vêm de `blocos.py` (`sprites()`, `modelos()`, `previas()`), quando o módulo ex
 Cristais, o atlas pintado dele e o blockstate vêm de `reparador_modelo.py`, os da Tela de Sinal de `tela_modelo.py` e
 os da Doca de Padrões (com as texturas por tier) de `doca_modelo.py`, a partir dos `.bbmodel` aprovados (a conversão
 comum fica no `bbmodel_json.py`); a escultura formada da Armilar (modelos fatiados e texturas) vem de
-`armilar_modelo.py`.
+`armilar_modelo.py`, e as formas de colisão e seleção dela (`resonator/ArmilarShapes.java`) de
+`armilar_formas.py`.
 
 Cada item é uma grade de texto (a forma, pela legenda comum `LEG`) mais código para o que muda por
 quadro. Regras: 16×16, alfa só 0 ou 255, contorno de 1 px em grafite.0, luz de cima à esquerda, 3 a
@@ -34,6 +35,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import armilar_formas  # noqa: E402
 import armilar_modelo  # noqa: E402
 import doca_modelo  # noqa: E402
 import livro  # noqa: E402
@@ -2179,6 +2181,7 @@ def main() -> None:
             blocos.modelos()
         gerados = (set(todos) | reparador_modelo.gerar() | tela_modelo.gerar() | doca_modelo.gerar()
                    | livro.gerar() | armilar_modelo.gerar())
+        armilar_formas.gerar()
         pastas = ["item", "gui"] + (["block"] if blocos_sprites else [])
         apagados = limpar(gerados, pastas)
 

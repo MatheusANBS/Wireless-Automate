@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.resonator;
 
 import com.mojang.serialization.MapCodec;
+import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.BlockGetter;
@@ -11,6 +12,7 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
+import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
@@ -22,9 +24,13 @@ public class ResonatorCasingBlock extends Block {
     /** A frente da estrutura montada; só vale montada. */
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
 
+    /** A forma de cada estado, montada uma vez no construtor. */
+    private final Map<BlockState, VoxelShape> shapes;
+
     public ResonatorCasingBlock(Properties properties) {
         super(properties);
         registerDefaultState(stateDefinition.any().setValue(POSITION, BasePosition.LOOSE).setValue(FACING, Direction.NORTH));
+        shapes = ArmilarShapes.tabela(this, ArmilarShapes.CASING);
     }
 
     @Override
@@ -35,6 +41,12 @@ public class ResonatorCasingBlock extends Block {
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(POSITION, FACING);
+    }
+
+    /** A forma do desenho (colisão e seleção): tirada do modelo pelo gerador, ver {@link ArmilarShapes}. */
+    @Override
+    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return shapes.get(state);
     }
 
     /** Montada, a Laje não é cubo inteiro (o modelo é um pedaço da escultura): não oculta as faces vizinhas. */

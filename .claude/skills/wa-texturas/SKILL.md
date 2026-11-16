@@ -24,6 +24,7 @@ Bloco do Wireless Automate é **pixel art na densidade do mundo, gerada por cód
   - `armilar_geometria.py`: a escultura formada (`escultura()`), montada inteira, conferida e fatiada na grade de blocos;
   - `armilar_texturas.py`: os sprites da escultura, um por material (`sprites()`);
   - `armilar_modelo.py`: os 35 modelos formados (`construir()`), os blockstates (`blockstates_armilar()`) e a prévia `docs/preview/armilar-formada.png`.
+  - `armilar_formas.py`: as formas de colisão e seleção dos sete blocos; as caixas de cada modelo base (volume dos elementos, também os internos sem face, arredondado para fora a 1 px e fundido) vão para `resonator/ArmilarShapes.java`, gerada, e o mapa de estado para modelo e `y` sai dos mesmos blockstates.
 - **Conferências compartilhadas:**
   - `modelo_geometria.py`: `validar_geometria`, a regra de encostar sem atravessar, e a exceção `ModeloInvalido`;
   - `modelo_hitboxes.py`: as `HITBOXES` e a conferência de que cobrem o desenho;

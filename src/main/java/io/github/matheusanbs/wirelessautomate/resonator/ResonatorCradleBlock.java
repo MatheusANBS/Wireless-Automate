@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.resonator;
 
 import com.mojang.serialization.MapCodec;
+import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -9,7 +10,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.shapes.CollisionContext;
-import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 /** O Berço do Sol: o suporte do cristal no meio da Armilar, em duas casas (embaixo e em cima). */
@@ -18,20 +18,13 @@ public class ResonatorCradleBlock extends Block {
     /** Solta enquanto nada a montou; embaixo ou em cima na estrutura montada. */
     public static final EnumProperty<StackPart> PART = EnumProperty.create("part", StackPart.class);
 
-    private static final VoxelShape LOOSE_SHAPE = Shapes.or(
-            Block.box(1, 0, 1, 15, 3, 15),
-            Block.box(5, 3, 5, 11, 10, 11),
-            Block.box(2, 10, 2, 14, 14, 14));
-    private static final VoxelShape LOWER_SHAPE = Shapes.or(
-            Block.box(2, 0, 2, 14, 2, 14),
-            Block.box(5, 2, 5, 11, 16, 11));
-    private static final VoxelShape UPPER_SHAPE = Shapes.or(
-            Block.box(5, 0, 5, 11, 2, 11),
-            Block.box(3, 2, 3, 13, 6, 13));
+    /** A forma de cada estado, montada uma vez no construtor. */
+    private final Map<BlockState, VoxelShape> shapes;
 
     public ResonatorCradleBlock(Properties properties) {
         super(properties);
         registerDefaultState(stateDefinition.any().setValue(PART, StackPart.LOOSE));
+        shapes = ArmilarShapes.tabela(this, ArmilarShapes.CRADLE);
     }
 
     @Override
@@ -44,13 +37,10 @@ public class ResonatorCradleBlock extends Block {
         builder.add(PART);
     }
 
+    /** A forma do desenho (colisão e seleção): tirada do modelo pelo gerador, ver {@link ArmilarShapes}. */
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return switch (state.getValue(PART)) {
-            case LOOSE -> LOOSE_SHAPE;
-            case LOWER -> LOWER_SHAPE;
-            case UPPER -> UPPER_SHAPE;
-        };
+        return shapes.get(state);
     }
 
     @Override

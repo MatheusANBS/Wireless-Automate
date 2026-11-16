@@ -18,7 +18,7 @@ Cada skill tem a descrição completa no próprio `SKILL.md`; aqui só quando us
 - `wa-feature`: feature, tela ou item novo, do mockup ao commit, com um subagente por tarefa.
 - `wa-modular`: limites de tamanho por classe (tela até 500 linhas, servidor até 1000) e como dividir; `python -I .claude/skills/wa-modular/scripts/medir.py`.
 - `wa-comentarios`: regras dos comentários; `python -I .claude/skills/wa-comentarios/scripts/varrer.py` antes de cada commit.
-- `wa-shaders`: efeito visual ou referência a replicar (GIF, vídeo, outro mod).
+- `wa-efeitos`: qualquer efeito visual ou animação renderizada (feixe, arco, plasma, partícula, luz de efeito), referência a igualar (GIF, vídeo, outro mod) e compatibilidade com shaderpack.
 - `wa-mod-opcional`: integrar outro mod opcional sem quebrar o mod quando ele não está instalado.
 - `wa-release`: fechar uma versão (changelogs, tag, release com o jar).
 - `wa-porte`: portar o mod para outra versão de Minecraft (estado dos ramos em `docs/portes.md`).

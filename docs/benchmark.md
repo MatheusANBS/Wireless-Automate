@@ -905,3 +905,29 @@ Leitura: nada roda por tick (o tempo do mod fica no ruído). O índice custa ~1 
 
 Leitura: a 1ª montagem tem média 33,4 ms na base e 31,5 ms no final (seis repetições cada), sem regressão; a subida da medida anterior era ruído. O tempo do mod é o mesmo. O índice de donos custa ~0,4 MB com 12.800 remotas (a base fica em ~17,9 MB, o final e o `a69a42e` em ~18,3 MB); os ~19,30 MB da repetição 3 nas duas primeiras rodadas do final não se repetiram na terceira, e a etapa do cubo não guarda nada no servidor (os pacotes são montados na hora e o bench não passa por eles).
 
+
+## Ressonador: a Armilar de 35 blocos, antes e depois (16 de novembro de 2026)
+
+Mede a troca da caixa 5×5×5 de 98 blocos pela Armilar de 35 (Tarefa 4 da etapa 1): `./scripts/bench.sh resonator-gen:100:3,resonator-gen:500:3,resonator-idle:500:3,resonator-event:50:3`, máquina local (Windows 11, 24 CPUs, Java 21, heap de 2 GB), uma rodada de cada lado, uma atrás da outra, sem outra carga. Antes: commit `0e1c7a68`, o último com a caixa antiga, num `git worktree` fora da pasta do repositório (apagado depois); depois: o ramo `armilar` com a Tarefa 5. Relatórios brutos: `run/bench/reports/20261116-142235-antes.md` e `run/bench/reports/20261116-141524.md`, fora do git.
+
+A linha de 15 de outubro (seção "Ressonador de Sinal", mesma máquina) **não** serve de "antes": entre ela e o `0e1c7a68` entraram os Fluxos, a interferência, o Eco e outras mudanças, e o Ressonador do gerenciador dela (0,035 ms/tick com 100 gerando) já não se repete hoje nem na caixa antiga (0,062). Por isso o "antes" foi medido de novo.
+
+**Montagem.** A Armilar sem o Sintonizador (a Laje na casa dele): Núcleo Ultimate na casa (2, 0, 4), Porta de Cristais em (0, 0, 2) e Porta de Energia em (4, 0, 2), com a frente para o sul. A grade segue em passo de 7 × 6. O roteador da Porta de Energia vai a leste dela (em cima é ar da Armilar e a impediria de montar) e a Bateria fica a 6 blocos a leste do canto, com o roteador em cima. "Ressonador" é o tick do `ResonatorManager` (média ± desvio de 3 repetições); "montagem" é a soma das revalidações quando todos os Núcleos montam no mesmo tick; no evento, "quebra" e "volta" são o maior tick depois de tirar e de devolver o canto de cada casca.
+
+| Cenário | n | Ressonador antes (ms/tick) | Ressonador depois (ms/tick) | Montagem antes (ms) | Montagem depois (ms) | mod antes (ms/tick) | mod depois (ms/tick) |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `resonator-gen` | 100 | 0,062 ± 0,008 | 0,065 ± 0,007 | 17,7 ± 9,3 | 8,5 ± 2,3 | 0,040 ± 0,003 | 0,040 ± 0,003 |
+| `resonator-gen` | 500 | 0,184 ± 0,014 | 0,198 ± 0,009 | 109,7 ± 16,4 | 99,0 ± 5,2 | 0,139 ± 0,010 | 0,148 ± 0,005 |
+| `resonator-idle` | 500 | 0,143 ± 0,048 | 0,126 ± 0,029 | 98,2 ± 2,2 | 94,5 ± 1,8 | 0,0005 | 0,0006 |
+| `resonator-event` | 50 | 0,019 ± 0,001 | 0,022 ± 0,002 | 3,6 ± 0,5 | 3,6 ± 1,1 | 0,0005 | 0,0010 |
+
+| Evento (50 cascas) | Quebra: tick máx (ms) | Volta: tick máx (ms) | Revalidações (ms/tick) |
+| --- | --- | --- | --- |
+| antes (caixa de 98) | 9,5 ± 1,1 | 4,2 ± 1,0 | 0,067 ± 0,011 |
+| depois (Armilar) | **3,2 ± 0,9** | 4,0 ± 2,1 | 0,034 ± 0,014 |
+
+### Leitura
+
+- **A revalidação não ficou mais cara.** O custo do gerenciador fica dentro do ruído nos quatro cenários (a maior diferença, +0,014 ms/tick com 500 gerando, é um desvio), e a montagem em massa de 500 Núcleos cai de ~110 para ~99 ms num tick (os 35 `setBlock` no lugar dos 98 estados).
+- **O evento melhora:** a quebra de 50 cascas no mesmo tick cai de 9,5 para 3,2 ms, porque a regra lê as mesmas 125 casas mas a casca quebrada não tenta mais 54 caixas; a volta fica igual (4,0 contra 4,2, com desvio de 2).
+- **Fica o pico da montagem em massa:** 99 ms num tick para 500 Núcleos montando juntos (~200 µs cada), igual ao de antes. No jogo só acontece numa carga de região com muitos Núcleos.

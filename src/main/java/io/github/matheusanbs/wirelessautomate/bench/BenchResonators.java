@@ -21,8 +21,8 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Os Ressonadores de Sinal dos cenários {@code resonator-*} ({@link BenchScene}): Armilares de caixa 5×5×5 em
- * grade, com a frente para o sul, a Porta de Energia no meio do lado leste do chão (o roteador vai em cima dela,
- * como nos outros cenários) e, no cenário que gera, uma Bateria do mod ao lado de cada uma. É a Armilar dos
+ * grade, com a frente para o sul, a Porta de Energia no meio do lado leste do chão (o roteador vai do lado de fora,
+ * a leste dela: em cima é ar da Armilar) e, no cenário que gera, uma Bateria do mod ao lado de cada uma. É a Armilar dos
  * GameTests sem o Sintonizador: a Laje fica na casa dele.
  *
  * <p>A casca nasce sem o Núcleo (linha de base com os blocos soltos, sem nenhum Núcleo no gerenciador);
@@ -57,9 +57,9 @@ final class BenchResonators {
         for (int i = 0; i < count; i++) {
             BlockPos box = origin.offset((i % side) * CELL_X, 0, (i / side) * CELL_Z);
             list.add(new Resonator(box, box.offset(2, 0, 4), box.offset(4, 0, 2),
-                    batteries ? box.offset(5, 0, 2) : null));
+                    batteries ? box.offset(6, 0, 0) : null));
         }
-        // Uma linha acima da Porta para o roteador.
+        // Uma linha acima para o roteador da Bateria.
         max = origin.offset(side * CELL_X, 5, ((count + side - 1) / side) * CELL_Z);
     }
 

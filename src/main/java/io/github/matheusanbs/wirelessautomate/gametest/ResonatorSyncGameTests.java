@@ -188,7 +188,7 @@ public final class ResonatorSyncGameTests {
      */
     @GameTest(template = "empty7")
     public static void recargaEstavelEntreLotes(GameTestHelper helper) {
-        BlockPos corePos = build(helper, ORIGIN, Layout.VITRINE, RouterTier.EMERALD);
+        BlockPos corePos = build(helper, ORIGIN, Layout.ARMILAR, RouterTier.EMERALD);
         int[] count = new int[1];
         long[] start = new long[1];
         int[] progress = new int[1];
@@ -219,7 +219,7 @@ public final class ResonatorSyncGameTests {
      */
     @GameTest(template = "empty7")
     public static void updateTagRepetidoNaoMudaARecarga(GameTestHelper helper) {
-        BlockPos corePos = build(helper, ORIGIN, Layout.VITRINE, RouterTier.EMERALD);
+        BlockPos corePos = build(helper, ORIGIN, Layout.ARMILAR, RouterTier.EMERALD);
         int[] count = new int[1];
         long[] start = new long[1];
         helper.startSequence().thenWaitUntil(() -> assertFormed(helper, corePos, true)).thenExecute(() -> {

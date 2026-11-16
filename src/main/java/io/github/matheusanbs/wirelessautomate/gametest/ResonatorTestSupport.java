@@ -5,12 +5,15 @@ import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBlueprint;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorLayout;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorLayout.Face;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorPartBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import net.minecraft.commands.CommandSource;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
@@ -32,48 +35,93 @@ final class ResonatorTestSupport {
     /** O canto da caixa nos testes que montam um Ressonador só no {@code empty7}. */
     static final BlockPos ORIGIN = new BlockPos(1, 1, 1);
 
-    /**
-     * Qual Armilar monta; a origem é o canto de menor coordenada da caixa 5×5×5, relativa ao teste, com a frente
-     * para o sul (o Núcleo em (2, 0, 4)).
-     */
+    /** O Núcleo, relativo à {@link #ORIGIN}, com a frente sul. */
+    static final BlockPos CORE = ORIGIN.offset(2, 0, 4);
+    /** A Porta de Energia, relativa à {@link #ORIGIN}, com a frente sul. */
+    static final BlockPos ENERGY_PORT = ORIGIN.offset(4, 0, 2);
+    /** A Porta de Cristais, relativa à {@link #ORIGIN}, com a frente sul. */
+    static final BlockPos CRYSTAL_PORT = ORIGIN.offset(0, 0, 2);
+    /** O Sintonizador (ou a Laje que o substitui), relativo à {@link #ORIGIN}, com a frente sul. */
+    static final BlockPos TUNER = ORIGIN.offset(2, 0, 0);
+
+    /** Qual Armilar monta. */
     enum Layout {
         /** A Armilar inteira, com o Sintonizador. */
-        VITRINE,
+        ARMILAR,
         /** Sem o Sintonizador: a Laje ocupa a casa dele (2, 0, 0). */
-        ENERGY_ON_TOP
+        SEM_SINTONIZADOR
     }
 
     private ResonatorTestSupport() {
     }
 
-    /** Põe os 35 blocos com a caixa a partir de {@code origin} e devolve a posição relativa do Núcleo. */
+    /** Monta a Armilar com a frente sul: veja {@link #build(GameTestHelper, BlockPos, Face, Layout, RouterTier)}. */
     static BlockPos build(GameTestHelper helper, BlockPos origin, Layout layout, RouterTier tier) {
-        for (int x = 0; x < 5; x++) {
-            for (int y = 0; y < 5; y++) {
-                for (int z = 0; z < 5; z++) {
-                    BlockPos pos = origin.offset(x, y, z);
-                    switch (ResonatorLayout.expected(x, y, z)) {
-                        case CASING -> helper.setBlock(pos, ModBlocks.RESONATOR_CASING.get());
-                        case COLUMN -> helper.setBlock(pos, ModBlocks.RESONATOR_COLUMN.get());
-                        case CRADLE -> helper.setBlock(pos, ModBlocks.RESONATOR_CRADLE.get());
-                        case CORE -> helper.setBlock(pos, ModBlocks.RESONANCE_CORE.get().defaultBlockState()
-                                .setValue(RouterBlock.TIER, tier).setValue(ResonatorPartBlock.FACING, Direction.SOUTH));
-                        case ENERGY_PORT -> part(helper, pos, ModBlocks.RESONATOR_ENERGY_PORT.get(), Direction.EAST);
-                        case CRYSTAL_PORT -> part(helper, pos, ModBlocks.RESONATOR_CRYSTAL_PORT.get(), Direction.WEST);
-                        case TUNER -> {
-                            if (layout == Layout.VITRINE) {
-                                part(helper, pos, ModBlocks.RESONATOR_TUNER.get(), Direction.NORTH);
-                            } else {
-                                helper.setBlock(pos, ModBlocks.RESONATOR_CASING.get());
-                            }
-                        }
-                        default -> {
-                        }
+        return build(helper, origin, Face.SOUTH, layout, tier);
+    }
+
+    /**
+     * Põe os 35 blocos com a caixa 5×5×5 a partir do canto de menor coordenada {@code origin} (relativo ao teste) e a
+     * frente {@code front} (o Núcleo vira para ela), e devolve a posição relativa do Núcleo.
+     */
+    static BlockPos build(GameTestHelper helper, BlockPos origin, Face front, Layout layout, RouterTier tier) {
+        return build(helper, origin, front, layout, tier, pos -> false);
+    }
+
+    /** Como {@link #build(GameTestHelper, BlockPos, Face, Layout, RouterTier)}, sem pôr o que {@code skip} recusa. */
+    static BlockPos build(GameTestHelper helper, BlockPos origin, Face front, Layout layout, RouterTier tier,
+            Predicate<BlockPos> skip) {
+        BlockPos corePos = coreOf(origin, front);
+        for (int x = 0; x < ResonatorLayout.SIZE; x++) {
+            for (int y = 0; y < ResonatorLayout.SIZE; y++) {
+                for (int z = 0; z < ResonatorLayout.SIZE; z++) {
+                    if (!skip.test(at(corePos, front, x, y, z))) {
+                        place(helper, corePos, front, layout, tier, x, y, z);
                     }
                 }
             }
         }
-        return origin.offset(2, 0, 4);
+        return corePos;
+    }
+
+    /** O Núcleo de uma caixa de canto mínimo {@code origin} e frente {@code front}. */
+    static BlockPos coreOf(BlockPos origin, Face front) {
+        int[] min = ResonatorBlueprint.origin(0, 0, 0, front);
+        return new BlockPos(origin.getX() - min[0], origin.getY(), origin.getZ() - min[2]);
+    }
+
+    /** A posição relativa da casa local (lx, ly, lz) da Armilar de Núcleo {@code corePos} e frente {@code front}. */
+    static BlockPos at(BlockPos corePos, Face front, int lx, int ly, int lz) {
+        int[] w = ResonatorLayout.world(front, corePos.getX(), corePos.getY(), corePos.getZ(), lx, ly, lz);
+        return new BlockPos(w[0], w[1], w[2]);
+    }
+
+    private static void place(GameTestHelper helper, BlockPos corePos, Face front, Layout layout, RouterTier tier,
+            int lx, int ly, int lz) {
+        BlockPos pos = at(corePos, front, lx, ly, lz);
+        switch (ResonatorLayout.expected(lx, ly, lz)) {
+            case CASING -> helper.setBlock(pos, ModBlocks.RESONATOR_CASING.get());
+            case COLUMN -> helper.setBlock(pos, ModBlocks.RESONATOR_COLUMN.get());
+            case CRADLE -> helper.setBlock(pos, ModBlocks.RESONATOR_CRADLE.get());
+            case CORE -> helper.setBlock(pos, ModBlocks.RESONANCE_CORE.get().defaultBlockState()
+                    .setValue(RouterBlock.TIER, tier).setValue(ResonatorPartBlock.FACING, direction(front, Face.SOUTH)));
+            case ENERGY_PORT -> part(helper, pos, ModBlocks.RESONATOR_ENERGY_PORT.get(), direction(front, Face.EAST));
+            case CRYSTAL_PORT -> part(helper, pos, ModBlocks.RESONATOR_CRYSTAL_PORT.get(), direction(front, Face.WEST));
+            case TUNER -> {
+                if (layout == Layout.ARMILAR) {
+                    part(helper, pos, ModBlocks.RESONATOR_TUNER.get(), direction(front, Face.NORTH));
+                } else {
+                    helper.setBlock(pos, ModBlocks.RESONATOR_CASING.get());
+                }
+            }
+            default -> {
+            }
+        }
+    }
+
+    /** A direção local {@code local} levada ao mundo, para a frente {@code front}. */
+    static Direction direction(Face front, Face local) {
+        return Direction.values()[ResonatorLayout.toWorld(front, local).ordinal()];
     }
 
     private static void part(GameTestHelper helper, BlockPos pos, Block block, Direction facing) {
@@ -85,9 +133,9 @@ final class ResonatorTestSupport {
         return helper.getBlockEntity(corePos) instanceof ResonanceCoreBlockEntity core ? core : null;
     }
 
-    /** Monta a Vitrine no tier a partir de {@link #ORIGIN}, espera montar e roda {@code body} num só tick. */
+    /** Monta a Armilar no tier a partir de {@link #ORIGIN}, espera montar e roda {@code body} num só tick. */
     static void formed(GameTestHelper helper, RouterTier tier, Consumer<ResonanceCoreBlockEntity> body) {
-        formed(helper, Layout.VITRINE, tier, body);
+        formed(helper, Layout.ARMILAR, tier, body);
     }
 
     /** Monta {@code layout} no tier a partir de {@link #ORIGIN}, espera montar e roda {@code body} num só tick. */

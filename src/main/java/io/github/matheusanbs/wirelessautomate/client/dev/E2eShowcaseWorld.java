@@ -552,11 +552,11 @@ final class E2eShowcaseWorld {
         }
     }
 
-    /** O centro do altar do Reparador: no jardim, a leste da Vitrine do Ressonador. */
+    /** O centro do altar do Reparador: no jardim, a leste da Armilar do Ressonador. */
     static final int REPAIRER_X = 13, REPAIRER_Z = 4;
 
     /**
-     * Jardim, a leste da Vitrine do Ressonador: o altar do Reparador de Cristais. Um piso de quartzo com borda de
+     * Jardim, a leste da Armilar do Ressonador: o altar do Reparador de Cristais. Um piso de quartzo com borda de
      * ardósia polida, um pódio de quartzo, 3 por 2, com o bloco no topo (em y 1), quatro
      * colunas de quartzo com lanternas nos cantos, tapete ciano na frente e flores em volta.
      */

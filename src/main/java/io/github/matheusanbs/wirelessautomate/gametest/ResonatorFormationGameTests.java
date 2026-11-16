@@ -14,14 +14,19 @@ import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreItem;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorCasingBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorFormation;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorColumnBlock;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorCradleBlock;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorLayout.Face;
 import io.github.matheusanbs.wirelessautomate.resonator.StackPart;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorLayout;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorPartBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorPorts;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.UnaryOperator;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -46,9 +51,9 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @PrefixGameTestTemplate(false)
 public final class ResonatorFormationGameTests {
     /** As casas das peças na caixa que começa em {@code origin}, com a frente para o sul. */
-    private static final java.util.function.UnaryOperator<BlockPos> ENERGY_PORT = origin -> origin.offset(4, 0, 2);
-    private static final java.util.function.UnaryOperator<BlockPos> CRYSTAL_PORT = origin -> origin.offset(0, 0, 2);
-    private static final java.util.function.UnaryOperator<BlockPos> TUNER = origin -> origin.offset(2, 0, 0);
+    private static final UnaryOperator<BlockPos> ENERGY_PORT = origin -> origin.offset(4, 0, 2);
+    private static final UnaryOperator<BlockPos> CRYSTAL_PORT = origin -> origin.offset(0, 0, 2);
+    private static final UnaryOperator<BlockPos> TUNER = origin -> origin.offset(2, 0, 0);
 
     private ResonatorFormationGameTests() {
     }
@@ -57,7 +62,7 @@ public final class ResonatorFormationGameTests {
     @GameTest(template = "empty7")
     public static void blocosNascemSoltos(GameTestHelper helper) {
         BlockPos origin = new BlockPos(1, 1, 1);
-        BlockPos core = ResonatorTestSupport.build(helper, origin, Layout.VITRINE, RouterTier.ELITE);
+        BlockPos core = ResonatorTestSupport.build(helper, origin, Layout.ARMILAR, RouterTier.ELITE);
         helper.setBlock(CRYSTAL_PORT.apply(origin), ModBlocks.RESONATOR_CASING.get());
         helper.startSequence().thenWaitUntil(() -> assertRevalidated(helper, core)).thenExecute(() -> {
             BlockState casing = helper.getBlockState(origin);
@@ -72,30 +77,195 @@ public final class ResonatorFormationGameTests {
         }).thenSucceed();
     }
 
-    @GameTest(template = "empty7")
-    public static void vitrineMonta(GameTestHelper helper) {
+    @GameTest(template = "empty7", timeoutTicks = 200)
+    public static void armilarMontaDeFrenteParaOSul(GameTestHelper helper) {
+        montaNaFrente(helper, Face.SOUTH, Layout.ARMILAR);
+    }
+
+    @GameTest(template = "empty7", timeoutTicks = 200)
+    public static void armilarMontaDeFrenteParaOOeste(GameTestHelper helper) {
+        montaNaFrente(helper, Face.WEST, Layout.ARMILAR);
+    }
+
+    @GameTest(template = "empty7", timeoutTicks = 200)
+    public static void armilarMontaDeFrenteParaONorte(GameTestHelper helper) {
+        montaNaFrente(helper, Face.NORTH, Layout.ARMILAR);
+    }
+
+    @GameTest(template = "empty7", timeoutTicks = 200)
+    public static void armilarMontaDeFrenteParaOLeste(GameTestHelper helper) {
+        montaNaFrente(helper, Face.EAST, Layout.ARMILAR);
+    }
+
+    /** O Sintonizador é opcional: a Laje na casa dele monta do mesmo jeito, ainda com 35 membros. */
+    @GameTest(template = "empty7", timeoutTicks = 200)
+    public static void armilarSemSintonizadorMonta(GameTestHelper helper) {
+        montaNaFrente(helper, Face.SOUTH, Layout.SEM_SINTONIZADOR);
+    }
+
+    /**
+     * Monta a Armilar de frente {@code front} e confere os estados de todas as 125 casas, com o giro pela tabela da
+     * spec (o deslocamento local a partir do centro, levado ao mundo), sem passar pela regra.
+     */
+    private static void montaNaFrente(GameTestHelper helper, Face front, Layout layout) {
         BlockPos origin = new BlockPos(1, 1, 1);
-        BlockPos core = ResonatorTestSupport.build(helper, origin, Layout.VITRINE, RouterTier.BASIC);
-        BlockPos energy = ENERGY_PORT.apply(origin);
+        BlockPos core = ResonatorTestSupport.build(helper, origin, front, layout, RouterTier.BASIC);
+        Direction frontDirection = ResonatorTestSupport.direction(front, Face.SOUTH);
         helper.startSequence().thenWaitUntil(() -> assertFormed(helper, core, true)).thenExecute(() -> {
-            assertCasing(helper, origin, BasePosition.P00);
-            assertCasing(helper, origin.offset(4, 0, 4), BasePosition.P44);
-            assertColumn(helper, origin.offset(3, 1, 3), StackPart.LOWER, Corner.SE);
-            assertColumn(helper, origin.offset(1, 2, 1), StackPart.UPPER, Corner.NW);
-            assertPart(helper, energy, Direction.EAST, true);
-            assertPart(helper, CRYSTAL_PORT.apply(origin), Direction.WEST, true);
-            assertPart(helper, TUNER.apply(origin), Direction.NORTH, true);
-            assertPart(helper, core, Direction.SOUTH, true);
+            for (int lx = 0; lx < 5; lx++) {
+                for (int ly = 0; ly < 5; ly++) {
+                    for (int lz = 0; lz < 5; lz++) {
+                        int[] rotated = rotate(front, lx - 2, lz - 2);
+                        BlockPos pos = origin.offset(2 + rotated[0], ly, 2 + rotated[1]);
+                        assertCell(helper, pos, front, layout, lx, ly, lz);
+                    }
+                }
+            }
+            int[] coreCell = rotate(front, 0, 2);
+            helper.assertTrue(core.equals(origin.offset(2 + coreCell[0], 0, 2 + coreCell[1])),
+                    "o Núcleo na casa (2, 0, 4) girada");
+            assertPart(helper, core, frontDirection, true);
             helper.assertValueEqual(ResonatorTestSupport.core(helper, core).members().size(), 35, "membros da Armilar");
-            helper.assertTrue(ResonatorPorts.core(helper.getLevel(), helper.absolutePos(energy))
-                    == ResonatorTestSupport.core(helper, core), "a Porta de Energia acha o Núcleo");
+            helper.assertTrue(ResonatorTestSupport.core(helper, core).hasTuner() == (layout == Layout.ARMILAR),
+                    "o Sintonizador conta só quando há um");
         }).thenSucceed();
     }
 
-    @GameTest(template = "empty7")
-    public static void quebrarUmaCarcacaDesmonta(GameTestHelper helper) {
+    /** O deslocamento local (dx, dz) levado ao mundo pela frente: a tabela do brief, escrita à parte da regra. */
+    private static int[] rotate(Face front, int dx, int dz) {
+        return switch (front) {
+            case SOUTH -> new int[] {dx, dz};
+            case WEST -> new int[] {-dz, dx};
+            case NORTH -> new int[] {-dx, -dz};
+            case EAST -> new int[] {dz, -dx};
+            default -> throw new IllegalArgumentException(front.name());
+        };
+    }
+
+    private static Direction outward(Face front, int dx, int dz) {
+        int[] r = rotate(front, dx, dz);
+        return r[0] > 0 ? Direction.EAST : r[0] < 0 ? Direction.WEST : r[1] > 0 ? Direction.SOUTH : Direction.NORTH;
+    }
+
+    private static void assertCell(GameTestHelper helper, BlockPos pos, Face front, Layout layout, int lx, int ly,
+            int lz) {
+        BlockState state = helper.getBlockState(pos);
+        switch (ResonatorLayout.expected(lx, ly, lz)) {
+            case CASING -> {
+                helper.assertTrue(state.is(ModBlocks.RESONATOR_CASING.get()), "laje em " + pos + ": " + state);
+                helper.assertValueEqual(state.getValue(ResonatorCasingBlock.POSITION),
+                        BasePosition.byName("p" + lx + lz), "posição da laje (" + lx + ", " + lz + ")");
+                helper.assertValueEqual(state.getValue(ResonatorCasingBlock.FACING),
+                        ResonatorTestSupport.direction(front, Face.SOUTH), "frente da laje");
+            }
+            case COLUMN -> {
+                int[] r = rotate(front, lx - 2, lz - 2);
+                Corner corner = r[0] > 0 ? (r[1] > 0 ? Corner.SE : Corner.NE) : (r[1] > 0 ? Corner.SW : Corner.NW);
+                assertColumn(helper, pos, ly == 1 ? StackPart.LOWER : StackPart.UPPER, corner);
+            }
+            case CRADLE -> helper.assertTrue(state.is(ModBlocks.RESONATOR_CRADLE.get())
+                    && state.getValue(ResonatorCradleBlock.PART) == (ly == 1 ? StackPart.LOWER : StackPart.UPPER),
+                    "berço em " + pos + ": " + state);
+            case CORE -> assertPart(helper, pos, ResonatorTestSupport.direction(front, Face.SOUTH), true);
+            case ENERGY_PORT -> assertPart(helper, pos, outward(front, 2, 0), true);
+            case CRYSTAL_PORT -> assertPart(helper, pos, outward(front, -2, 0), true);
+            case TUNER -> {
+                if (layout == Layout.ARMILAR) {
+                    assertPart(helper, pos, outward(front, 0, -2), true);
+                } else {
+                    helper.assertValueEqual(state.getValue(ResonatorCasingBlock.POSITION), BasePosition.P20,
+                            "Laje no lugar do Sintonizador");
+                }
+            }
+            default -> helper.assertTrue(state.isAir(), "ar em " + pos + ": " + state);
+        }
+    }
+
+    /** Um bloco numa casa que devia ser ar: não monta e o problema aponta a casa. */
+    @GameTest(template = "empty7", timeoutTicks = 200)
+    public static void blocoNoArNaoMonta(GameTestHelper helper) {
         BlockPos origin = new BlockPos(1, 1, 1);
-        BlockPos core = ResonatorTestSupport.build(helper, origin, Layout.VITRINE, RouterTier.BASIC);
+        BlockPos core = ResonatorTestSupport.build(helper, origin, Layout.ARMILAR, RouterTier.BASIC);
+        BlockPos dirt = origin.offset(1, 1, 2);
+        helper.setBlock(dirt, Blocks.DIRT);
+        helper.startSequence().thenWaitUntil(() -> assertRevalidated(helper, core)).thenExecute(() -> {
+            ResonanceCoreBlockEntity entity = ResonatorTestSupport.core(helper, core);
+            helper.assertTrue(!entity.formed(), "montou com terra no ar");
+            ResonatorLayout.Broken problem = entity.lastProblem();
+            helper.assertTrue(problem.problem() == ResonatorLayout.Problem.INTERIOR_NOT_EMPTY, "problema: " + problem);
+            BlockPos at = helper.absolutePos(dirt);
+            helper.assertTrue(problem.x() == at.getX() && problem.y() == at.getY() && problem.z() == at.getZ(),
+                    "a posição do problema é a da terra: " + problem);
+        }).thenSucceed();
+    }
+
+    /** Quebrar uma Coluna desmonta: tudo volta a solto e o Núcleo guarda o tier. */
+    @GameTest(template = "empty7", timeoutTicks = 200)
+    public static void quebrarUmaColunaDesmonta(GameTestHelper helper) {
+        BlockPos origin = new BlockPos(1, 1, 1);
+        BlockPos core = ResonatorTestSupport.build(helper, origin, Layout.ARMILAR, RouterTier.ELITE);
+        helper.startSequence().thenWaitUntil(() -> assertFormed(helper, core, true))
+                .thenExecute(() -> helper.getLevel().destroyBlock(helper.absolutePos(origin.offset(3, 2, 3)), false))
+                .thenWaitUntil(() -> assertFormed(helper, core, false)).thenExecute(() -> {
+                    assertColumn(helper, origin.offset(1, 1, 1), StackPart.LOOSE, Corner.SE);
+                    assertColumn(helper, origin.offset(3, 1, 3), StackPart.LOOSE, Corner.SE);
+                    helper.assertTrue(helper.getBlockState(origin.offset(2, 1, 2)).getValue(ResonatorCradleBlock.PART)
+                            == StackPart.LOOSE, "berço solto");
+                    assertCasing(helper, origin, BasePosition.LOOSE);
+                    assertPart(helper, ResonatorTestSupport.ENERGY_PORT, Direction.EAST, false);
+                    assertPart(helper, core, Direction.SOUTH, false);
+                    helper.assertTrue(ResonatorTestSupport.core(helper, core).tier() == RouterTier.ELITE,
+                            "tier do Núcleo");
+                }).thenSucceed();
+    }
+
+    /**
+     * Um mundo antigo: a caixa 5×5×5 de Lajes soltas em volta de um Núcleo, como o Ressonador de antes da Armilar.
+     * Não monta, e o Núcleo guarda o tier e os itens.
+     */
+    @GameTest(template = "empty7", timeoutTicks = 200)
+    public static void mundoAntigoNaoMontaEGuardaOsItens(GameTestHelper helper) {
+        for (int x = 1; x <= 5; x++) {
+            for (int y = 1; y <= 5; y++) {
+                for (int z = 1; z <= 5; z++) {
+                    if (x == 1 || x == 5 || y == 1 || y == 5 || z == 1 || z == 5) {
+                        helper.setBlock(new BlockPos(x, y, z), ModBlocks.RESONATOR_CASING.get());
+                    }
+                }
+            }
+        }
+        BlockPos core = new BlockPos(3, 3, 1);
+        helper.setBlock(core, ModBlocks.RESONANCE_CORE.get().defaultBlockState()
+                .setValue(RouterBlock.TIER, RouterTier.ELITE).setValue(ResonatorPartBlock.FACING, Direction.NORTH));
+        ResonanceCoreBlockEntity entity = ResonatorTestSupport.core(helper, core);
+        ResonatorTestSupport.assertInserted(helper, entity, ResonatorTestSupport.crystal(false, 500));
+        entity.addRedstone(7);
+        helper.startSequence().thenWaitUntil(() -> assertRevalidated(helper, core)).thenIdle(5).thenExecute(() -> {
+            ResonanceCoreBlockEntity after = ResonatorTestSupport.core(helper, core);
+            helper.assertTrue(!after.formed(), "o mundo antigo montou: " + after.lastProblem());
+            helper.assertTrue(after.tier() == RouterTier.ELITE, "o Núcleo perdeu o tier");
+            helper.assertTrue(!after.crystals().get(0).isEmpty(), "o Núcleo perdeu o cristal");
+            helper.assertValueEqual(after.redstone(), 7, "a redstone do Núcleo");
+            helper.assertTrue(helper.getBlockState(new BlockPos(3, 1, 3)).getValue(ResonatorCasingBlock.POSITION)
+                    == BasePosition.LOOSE, "a Laje do chão antigo segue solta");
+        }).thenSucceed();
+    }
+
+    /** O nome antigo do vidro do Ressonador vale a Laje, no bloco e no item. */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void vidroAntigoViraLaje(GameTestHelper helper) {
+        ResourceLocation old = ResourceLocation.parse("wirelessautomate:resonator_glass");
+        helper.assertTrue(BuiltInRegistries.BLOCK.get(old) == ModBlocks.RESONATOR_CASING.get(),
+                "o bloco antigo não vira a Laje");
+        helper.assertTrue(BuiltInRegistries.ITEM.get(old) == ModItems.RESONATOR_CASING.get(),
+                "o item antigo não vira a Laje");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty7")
+    public static void quebrarUmaLajeDesmonta(GameTestHelper helper) {
+        BlockPos origin = new BlockPos(1, 1, 1);
+        BlockPos core = ResonatorTestSupport.build(helper, origin, Layout.ARMILAR, RouterTier.BASIC);
         BlockPos energy = ENERGY_PORT.apply(origin);
         helper.startSequence().thenWaitUntil(() -> assertFormed(helper, core, true))
                 .thenExecute(() -> helper.getLevel().destroyBlock(helper.absolutePos(origin.offset(1, 0, 0)), false))
@@ -116,7 +286,7 @@ public final class ResonatorFormationGameTests {
     @GameTest(template = "empty7")
     public static void quebrarONucleoDesmonta(GameTestHelper helper) {
         BlockPos origin = new BlockPos(1, 1, 1);
-        BlockPos core = ResonatorTestSupport.build(helper, origin, Layout.VITRINE, RouterTier.BASIC);
+        BlockPos core = ResonatorTestSupport.build(helper, origin, Layout.ARMILAR, RouterTier.BASIC);
         BlockPos energy = ENERGY_PORT.apply(origin);
         helper.startSequence().thenWaitUntil(() -> assertFormed(helper, core, true)).thenExecute(() -> {
             helper.getLevel().destroyBlock(helper.absolutePos(core), false);
@@ -154,7 +324,7 @@ public final class ResonatorFormationGameTests {
     @GameTest(template = "empty7")
     public static void pistaoNaoEmpurraACarcaca(GameTestHelper helper) {
         BlockPos origin = new BlockPos(1, 1, 1);
-        BlockPos core = ResonatorTestSupport.build(helper, origin, Layout.VITRINE, RouterTier.BASIC);
+        BlockPos core = ResonatorTestSupport.build(helper, origin, Layout.ARMILAR, RouterTier.BASIC);
         BlockPos edge = origin.offset(1, 0, 0);
         BlockPos piston = edge.north();
         helper.startSequence().thenWaitUntil(() -> assertFormed(helper, core, true)).thenExecute(() -> {
@@ -173,7 +343,7 @@ public final class ResonatorFormationGameTests {
     @GameTest(template = "empty7")
     public static void revalidarIntactoNaoSujaOChunk(GameTestHelper helper) {
         BlockPos origin = new BlockPos(1, 1, 1);
-        BlockPos core = ResonatorTestSupport.build(helper, origin, Layout.VITRINE, RouterTier.BASIC);
+        BlockPos core = ResonatorTestSupport.build(helper, origin, Layout.ARMILAR, RouterTier.BASIC);
         helper.startSequence().thenWaitUntil(() -> assertFormed(helper, core, true)).thenExecute(() -> {
             LevelChunk chunk = helper.getLevel().getChunkAt(helper.absolutePos(core));
             chunk.setUnsaved(false);
@@ -186,7 +356,7 @@ public final class ResonatorFormationGameTests {
     @GameTest(template = "empty7")
     public static void repararRemonta(GameTestHelper helper) {
         BlockPos origin = new BlockPos(1, 1, 1);
-        BlockPos core = ResonatorTestSupport.build(helper, origin, Layout.VITRINE, RouterTier.BASIC);
+        BlockPos core = ResonatorTestSupport.build(helper, origin, Layout.ARMILAR, RouterTier.BASIC);
         BlockPos edge = origin.offset(1, 0, 0);
         double[] station = new double[1];
         helper.startSequence().thenWaitUntil(() -> assertFormed(helper, core, true)).thenExecute(() -> {
@@ -204,7 +374,7 @@ public final class ResonatorFormationGameTests {
     @GameTest(template = "empty7")
     public static void semPortaDeCristaisNaoMonta(GameTestHelper helper) {
         BlockPos origin = new BlockPos(1, 1, 1);
-        BlockPos core = ResonatorTestSupport.build(helper, origin, Layout.VITRINE, RouterTier.BASIC);
+        BlockPos core = ResonatorTestSupport.build(helper, origin, Layout.ARMILAR, RouterTier.BASIC);
         helper.setBlock(CRYSTAL_PORT.apply(origin), ModBlocks.RESONATOR_CASING.get());
         helper.startSequence().thenWaitUntil(() -> assertRevalidated(helper, core)).thenExecute(() -> {
             ResonanceCoreBlockEntity entity = ResonatorTestSupport.core(helper, core);
@@ -217,7 +387,7 @@ public final class ResonatorFormationGameTests {
     @GameTest(template = "empty7")
     public static void estacaoNasceNaFaixa(GameTestHelper helper) {
         BlockPos origin = new BlockPos(1, 1, 1);
-        BlockPos core = ResonatorTestSupport.build(helper, origin, Layout.VITRINE, RouterTier.BASIC);
+        BlockPos core = ResonatorTestSupport.build(helper, origin, Layout.ARMILAR, RouterTier.BASIC);
         double[] station = new double[1];
         helper.startSequence().thenWaitUntil(() -> assertFormed(helper, core, true)).thenExecute(() -> {
             station[0] = ResonatorTestSupport.core(helper, core).station();

@@ -42,8 +42,8 @@ import net.neoforged.neoforge.items.IItemHandler;
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
 public final class ResonatorFatigueGameTests {
-    /** A Porta de Cristais da Vitrine montada em {@link ResonatorTestSupport#ORIGIN}. */
-    private static final BlockPos CRYSTAL_PORT = ORIGIN.offset(2, 2, 0);
+    /** A Porta de Cristais da Armilar montada em {@link ResonatorTestSupport#ORIGIN}. */
+    private static final BlockPos CRYSTAL_PORT = ORIGIN.offset(0, 0, 2);
     private static final int CONTAINER_ID = 1;
 
     private ResonatorFatigueGameTests() {
@@ -60,7 +60,7 @@ public final class ResonatorFatigueGameTests {
 
     private static IItemHandler port(GameTestHelper helper) {
         IItemHandler items = helper.getLevel().getCapability(Capabilities.ItemHandler.BLOCK,
-                helper.absolutePos(CRYSTAL_PORT), Direction.NORTH);
+                helper.absolutePos(CRYSTAL_PORT), Direction.WEST);
         helper.assertTrue(items != null, "a Porta de Cristais sem capability");
         return items;
     }

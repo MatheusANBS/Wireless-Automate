@@ -23,12 +23,12 @@ import net.neoforged.neoforge.energy.IEnergyStorage;
 /**
  * As capturas da câmara que dependem do que o Núcleo faz: a energia saindo pela Porta (o conduto), o buffer cheio (o
  * plasma sob pressão, sem conduto), a vazão alta (o conduto grosso) e a recarga (o tentáculo invertido e o cristal
- * enchendo, de longe e de perto, o clarão do fim e o Opaco de novo). O Núcleo e a câmera já estão na Vitrine montada, em sintonia.
+ * enchendo, de longe e de perto, o clarão do fim e o Opaco de novo). O Núcleo e a câmera já estão na Armilar montada, em sintonia.
  */
 final class E2eResonatorFlowSteps {
     /** A faixa de vazão (de 7) a partir da qual o conduto conta como grosso. */
     private static final int HIGH_BAND = 6;
-    /** A câmara do Opaco da recarga: a 0 fica à frente e à direita, à vista da janela e da câmera de perto. */
+    /** A câmara do Opaco da recarga: a 0 fica à frente e à direita, à vista da câmera de frente e da de perto. */
     private static final int RECHARGE_CHAMBER = 0;
     /** Os ticks da câmara depois do último pedido de extração para o conduto acender (ou apagar) por inteiro. */
     private static final int SETTLE_TICKS = 40;
@@ -104,7 +104,7 @@ final class E2eResonatorFlowSteps {
         for (int i = 0; i < 2; i++) {
             E2eResonatorSteps.timed(list, " com conduto", () -> drain(origin));
         }
-        // o raio de perto, em dois instantes (os arcos são sorteados de novo a 14 Hz), e a câmera volta à janela
+        // o raio de perto, em dois instantes (os arcos são sorteados de novo a 14 Hz), e a câmera volta à frente
         list.add(E2eResonatorSteps.camera("Ressonador: câmera perto do raio", playerId, () -> origin[0],
                 E2eResonatorSteps.CLOSE_VIEW));
         list.add(forcedBand("Ressonador: o raio de perto, faixa 7", 7));
@@ -118,8 +118,8 @@ final class E2eResonatorFlowSteps {
         list.add(capture("ressonador-raio-perto-4"));
         list.add(new Step("Ressonador: a vazão real de volta", STEP_TIMEOUT_MS,
                 () -> ResonatorRenderer.forceBandForTests = -1, () -> true, () -> "vazão real"));
-        list.add(E2eResonatorSteps.camera("Ressonador: câmera na janela de novo", playerId, () -> origin[0],
-                E2eResonatorSteps.WINDOW_VIEW));
+        list.add(E2eResonatorSteps.camera("Ressonador: câmera de frente de novo", playerId, () -> origin[0],
+                E2eResonatorSteps.FRONT_VIEW));
     }
 
     /** Força a faixa de vazão da câmara no cliente e espera a faixa suavizada chegar lá (60 ticks). */

@@ -255,7 +255,7 @@ public final class ResonatorCoreGameTests {
 
     @GameTest(template = "empty7")
     public static void gerenciadorRodaOsLotes(GameTestHelper helper) {
-        BlockPos corePos = ResonatorTestSupport.build(helper, ORIGIN, Layout.VITRINE, RouterTier.BASIC);
+        BlockPos corePos = ResonatorTestSupport.build(helper, ORIGIN, Layout.ARMILAR, RouterTier.BASIC);
         helper.startSequence().thenWaitUntil(() -> assertFormed(helper, corePos, true)).thenExecute(() -> {
             ResonanceCoreBlockEntity core = ResonatorTestSupport.core(helper, corePos);
             tuned(core);
@@ -266,7 +266,7 @@ public final class ResonatorCoreGameTests {
 
     @GameTest(template = "empty7")
     public static void desmontadoNaoGera(GameTestHelper helper) {
-        BlockPos corePos = ResonatorTestSupport.build(helper, ORIGIN, Layout.VITRINE, RouterTier.BASIC);
+        BlockPos corePos = ResonatorTestSupport.build(helper, ORIGIN, Layout.ARMILAR, RouterTier.BASIC);
         helper.startSequence().thenWaitUntil(() -> assertFormed(helper, corePos, true))
                 .thenExecute(() -> helper.getLevel().destroyBlock(helper.absolutePos(ORIGIN.offset(2, 0, 0)), false))
                 .thenWaitUntil(() -> assertFormed(helper, corePos, false)).thenExecute(() -> {
@@ -324,8 +324,8 @@ public final class ResonatorCoreGameTests {
 
     @GameTest(template = "empty7")
     public static void statusMostraOProblema(GameTestHelper helper) {
-        BlockPos corePos = ResonatorTestSupport.build(helper, ORIGIN, Layout.VITRINE, RouterTier.BASIC);
-        helper.setBlock(ORIGIN.offset(2, 2, 0), ModBlocks.RESONATOR_CASING.get());
+        BlockPos corePos = ResonatorTestSupport.build(helper, ORIGIN, Layout.ARMILAR, RouterTier.BASIC);
+        helper.setBlock(ORIGIN.offset(0, 0, 2), ModBlocks.RESONATOR_CASING.get());
         helper.startSequence().thenWaitUntil(() -> {
             ResonanceCoreBlockEntity core = ResonatorTestSupport.core(helper, corePos);
             helper.assertTrue(core != null && core.lastProblem() != null, "ainda não revalidou");

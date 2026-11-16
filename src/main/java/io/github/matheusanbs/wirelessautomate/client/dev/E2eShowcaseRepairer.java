@@ -21,12 +21,12 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * O Reparador de Cristais na vitrine do CurseForge: o bloco no jardim, a leste da Vitrine do Ressonador, com os oito
+ * O Reparador de Cristais na vitrine do CurseForge: o bloco no jardim, a leste da Armilar do Ressonador, com os oito
  * pedestais cheios de cristais rachados (Sinal, Lapidado e Afinados) e energia de sobra; fotos do mundo com as linhas
  * reparando e da tela aberta. Roda no fim da vitrine inteira ou sozinho, com {@code WA_SHOWCASE_ONLY=reparador}.
  */
 final class E2eShowcaseRepairer {
-    /** A posição do bloco, relativa à base da vitrine: no topo do altar do {@link E2eShowcaseWorld}, a leste da Vitrine do Ressonador. */
+    /** A posição do bloco, relativa à base da vitrine: no topo do altar do {@link E2eShowcaseWorld}, a leste da Armilar do Ressonador. */
     private static final int[] AT = {E2eShowcaseWorld.REPAIRER_X, 1, E2eShowcaseWorld.REPAIRER_Z};
     private static final long ENERGY = 100_000_000_000L;
 

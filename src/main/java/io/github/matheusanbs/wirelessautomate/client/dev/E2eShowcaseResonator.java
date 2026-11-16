@@ -28,8 +28,8 @@ import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.energy.IEnergyStorage;
 
 /**
- * O Ressonador na vitrine do CurseForge: o GIF "chiado → sintonia" e duas fotos paradas. O GIF: uma Vitrine
- * Esmeralda no jardim, a leste do caminho, com a janela para o sul, e a câmera parada olhando por ela. Com o tempo
+ * O Ressonador na vitrine do CurseForge: o GIF "chiado → sintonia" e duas fotos paradas. O GIF: uma Armilar
+ * Esmeralda no jardim, a leste do caminho, com a frente para o sul, e a câmera parada de frente para ela. Com o tempo
  * congelado ({@code tickRateManager}), cada quadro põe o dial do roteiro, avança um tick e salva
  * {@code gif/ressonador-NNN.png}; o {@code scripts/curseforge/gerar_gif.py} monta o GIF.
  *
@@ -65,10 +65,10 @@ final class E2eShowcaseResonator {
                 minecraft.screen.onClose();
             }
         }, () -> Minecraft.getInstance().screen == null, () -> "tela " + describe(Minecraft.getInstance().screen)));
-        list.add(new Step("Ressonador (GIF): montar a Vitrine", STEP_TIMEOUT_MS, () -> {
+        list.add(new Step("Ressonador (GIF): montar a Armilar", STEP_TIMEOUT_MS, () -> {
             Minecraft.getInstance().getToasts().clear();
             onServer(server -> {
-                E2eResonatorSteps.placeVitrine(server.overworld(), origin(), RouterTier.EMERALD);
+                E2eResonatorSteps.placeArmilar(server.overworld(), origin(), RouterTier.EMERALD);
                 return null;
             });
         }, () -> {
@@ -88,8 +88,8 @@ final class E2eShowcaseResonator {
             var view = ((ResonanceCoreBlockEntity) Minecraft.getInstance().level.getBlockEntity(core())).clientView();
             return view.chambers().length == 4 && view.chambers()[3] != 0 && !view.tuned();
         }, () -> "câmaras no cliente"));
-        // a câmera a 3,5 blocos da janela, um pouco acima do centro, olhando o meio da câmara
-        list.add(E2eShowcase.showLook("Ressonador (GIF): câmera na janela", BOX[0] + 2, 2.3, BOX[2] + 7, BOX[0] + 2,
+        // a câmera a 5 blocos da frente, um pouco acima do centro, olhando o centro da Armilar
+        list.add(E2eShowcase.showLook("Ressonador (GIF): câmera de frente", BOX[0] + 2, 2.3, BOX[2] + 7, BOX[0] + 2,
                 2.3, BOX[2] + 2, false));
         list.add(DevEndToEnd.wait("Ressonador (GIF): chiado assentado", 60));
         list.add(new Step("Ressonador (GIF): congelar o tempo", STEP_TIMEOUT_MS, () -> {
@@ -111,7 +111,7 @@ final class E2eShowcaseResonator {
     }
 
     /**
-     * As fotos paradas, já em sintonia: a Vitrine inteira vista do sudeste ({@code s19-ressonador}, a janela e o
+     * As fotos paradas, já em sintonia: a Armilar inteira vista do sudeste ({@code s19-ressonador}, a frente e o
      * Núcleo à vista) e a tela do Núcleo aberta de perto ({@code s20-ressonador-tela}).
      */
     private static void stills(List<Step> list) {

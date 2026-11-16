@@ -1,16 +1,14 @@
 package io.github.matheusanbs.wirelessautomate.gametest;
 
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
-import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.gametest.ResonatorTestSupport.Layout;
-import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorCasingBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorFormation;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorLayout;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorLayout.Face;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorMembers;
-import io.github.matheusanbs.wirelessautomate.resonator.ResonatorPartBlock;
-import io.github.matheusanbs.wirelessautomate.resonator.ResonatorPorts;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorStatus;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -18,29 +16,32 @@ import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.contents.TranslatableContents;
-import net.minecraft.world.level.block.Block;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
- * Dois Ressonadores lado a lado dividindo uma parede (template {@code empty11}): o primeiro a montar fica com ela,
- * o segundo não monta até o primeiro desmontar.
+ * Duas Armilares de costas uma para a outra (template {@code empty11}), dividindo a fileira de trás do chão: o primeiro
+ * a montar fica com ela, o segundo não monta até o primeiro desmontar. O {@code empty11} tem 7 de fundo, então o par
+ * fica ao longo de x (frente leste e frente oeste) em vez de z.
  */
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
 public final class ResonatorSharedWallGameTests {
-    /** A caixa do primeiro vai de x 5 a 9; a do segundo, de x 1 a 5: a parede x = 5 é das duas. */
+    /** A primeira, de frente para o leste: a caixa vai de x 5 a 9, e a fileira de trás é x = 5. */
     private static final BlockPos FIRST_ORIGIN = new BlockPos(5, 1, 1);
-    /** A Porta de Energia do primeiro, no centro da parede dividida. */
-    private static final BlockPos SHARED_PORT = new BlockPos(5, 3, 3);
-    private static final BlockPos SECOND_CORE = new BlockPos(1, 3, 3);
+    /** A segunda, de frente para o oeste, a oeste da primeira: a caixa vai de x 1 a 5, e a fileira de trás também é x = 5. */
+    private static final BlockPos SECOND_ORIGIN = new BlockPos(1, 1, 1);
+    private static final BlockPos SECOND_CORE = ResonatorTestSupport.coreOf(SECOND_ORIGIN, Face.WEST);
+    /** A Laje do meio da fileira dividida. */
+    private static final BlockPos SHARED = new BlockPos(5, 1, 3);
 
     private ResonatorSharedWallGameTests() {
     }
 
     @GameTest(template = "empty11")
     public static void paredeDivididaNaoMonta(GameTestHelper helper) {
-        BlockPos first = ResonatorTestSupport.build(helper, FIRST_ORIGIN, Layout.VITRINE, RouterTier.BASIC);
+        BlockPos first = ResonatorTestSupport.build(helper, FIRST_ORIGIN, Face.EAST, Layout.SEM_SINTONIZADOR,
+                RouterTier.BASIC);
         helper.startSequence().thenWaitUntil(() -> assertFormed(helper, first, true))
                 .thenExecute(() -> buildSecond(helper))
                 .thenWaitUntil(() -> assertSharedWall(helper)).thenExecute(() -> {
@@ -58,18 +59,17 @@ public final class ResonatorSharedWallGameTests {
                             "block.wirelessautomate.resonance_core.problem.shared_wall", "linha do status");
                     helper.assertValueEqual(String.valueOf(contents.getArgs()[0]),
                             owner.getX() + " " + owner.getY() + " " + owner.getZ(), "a posição na linha");
-                    helper.assertTrue(owner.equals(ResonatorPorts.registered(helper.getLevel().dimension(),
-                            helper.absolutePos(SHARED_PORT))), "a Porta da parede continua do primeiro");
                     helper.assertTrue(owner.equals(ResonatorMembers.owner(helper.getLevel().dimension(),
-                            helper.absolutePos(SHARED_PORT))), "a parede continua do primeiro");
-                    helper.assertTrue(helper.getBlockState(SHARED_PORT).getValue(ResonatorPartBlock.FACING)
-                            == Direction.WEST, "a Porta da parede segue no quadro do primeiro");
+                            helper.absolutePos(SHARED))), "a parede continua do primeiro");
+                    helper.assertTrue(helper.getBlockState(SHARED).getValue(ResonatorCasingBlock.FACING)
+                            == Direction.EAST, "a Laje da parede segue no quadro do primeiro");
                 }).thenSucceed();
     }
 
     @GameTest(template = "empty11")
     public static void desmontarOPrimeiroLiberaOSegundo(GameTestHelper helper) {
-        BlockPos first = ResonatorTestSupport.build(helper, FIRST_ORIGIN, Layout.VITRINE, RouterTier.BASIC);
+        BlockPos first = ResonatorTestSupport.build(helper, FIRST_ORIGIN, Face.EAST, Layout.SEM_SINTONIZADOR,
+                RouterTier.BASIC);
         helper.startSequence().thenWaitUntil(() -> assertFormed(helper, first, true))
                 .thenExecute(() -> buildSecond(helper))
                 .thenWaitUntil(() -> assertSharedWall(helper))
@@ -77,12 +77,10 @@ public final class ResonatorSharedWallGameTests {
                 .thenWaitUntil(() -> assertFormed(helper, SECOND_CORE, true)).thenExecute(() -> {
                     assertFormed(helper, first, false);
                     BlockPos owner = helper.absolutePos(SECOND_CORE);
-                    helper.assertTrue(owner.equals(ResonatorPorts.registered(helper.getLevel().dimension(),
-                            helper.absolutePos(SHARED_PORT))), "a Porta da parede passou ao segundo");
                     helper.assertTrue(owner.equals(ResonatorMembers.owner(helper.getLevel().dimension(),
-                            helper.absolutePos(SHARED_PORT))), "a parede passou ao segundo");
-                    helper.assertTrue(helper.getBlockState(SHARED_PORT).getValue(ResonatorPartBlock.FACING)
-                            == Direction.EAST, "a Porta da parede no quadro do segundo");
+                            helper.absolutePos(SHARED))), "a parede passou ao segundo");
+                    helper.assertTrue(helper.getBlockState(SHARED).getValue(ResonatorCasingBlock.FACING)
+                            == Direction.WEST, "a Laje da parede no quadro do segundo");
                 }).thenSucceed();
     }
 
@@ -92,7 +90,8 @@ public final class ResonatorSharedWallGameTests {
      */
     @GameTest(template = "empty11")
     public static void recarregarNaoTrocaODono(GameTestHelper helper) {
-        BlockPos first = ResonatorTestSupport.build(helper, FIRST_ORIGIN, Layout.VITRINE, RouterTier.BASIC);
+        BlockPos first = ResonatorTestSupport.build(helper, FIRST_ORIGIN, Face.EAST, Layout.SEM_SINTONIZADOR,
+                RouterTier.BASIC);
         helper.startSequence().thenWaitUntil(() -> assertFormed(helper, first, true))
                 .thenExecute(() -> buildSecond(helper))
                 .thenWaitUntil(() -> assertSharedWall(helper)).thenExecute(() -> {
@@ -100,37 +99,21 @@ public final class ResonatorSharedWallGameTests {
                     ResonanceCoreBlockEntity b = ResonatorTestSupport.core(helper, SECOND_CORE);
                     a.onChunkUnloaded();
                     helper.assertTrue(ResonatorMembers.owner(helper.getLevel().dimension(),
-                            helper.absolutePos(SHARED_PORT)) == null, "o descarregamento solta o índice");
+                            helper.absolutePos(SHARED)) == null, "o descarregamento solta o índice");
                     a.onLoad();
                     ResonatorFormation.revalidate(helper.getLevel(), b);
                     ResonatorFormation.revalidate(helper.getLevel(), a);
                     helper.assertTrue(!b.formed(), "o segundo montou na recarga");
                     helper.assertTrue(a.formed(), "o primeiro desmontou na recarga");
-                    helper.assertTrue(helper.absolutePos(first).equals(ResonatorPorts.registered(
-                            helper.getLevel().dimension(), helper.absolutePos(SHARED_PORT))), "a Porta trocou de dono");
+                    helper.assertTrue(helper.absolutePos(first).equals(ResonatorMembers.owner(
+                            helper.getLevel().dimension(), helper.absolutePos(SHARED))), "a parede trocou de dono");
                 }).thenSucceed();
     }
 
-    /** O segundo Ressonador: casca de x 1 a 5 (a parede x = 5 já está lá), Núcleo a oeste, Energia em cima, Cristais ao norte. */
+    /** A segunda Armilar, sem Sintonizador, sem pôr de novo a fileira dividida (x = 5): ela já é do primeiro. */
     private static void buildSecond(GameTestHelper helper) {
-        for (int x = 1; x < 5; x++) {
-            for (int y = 1; y <= 5; y++) {
-                for (int z = 1; z <= 5; z++) {
-                    boolean inside = x > 1 && y > 1 && y < 5 && z > 1 && z < 5;
-                    if (!inside) {
-                        helper.setBlock(new BlockPos(x, y, z), ModBlocks.RESONATOR_CASING.get());
-                    }
-                }
-            }
-        }
-        helper.setBlock(SECOND_CORE, ModBlocks.RESONANCE_CORE.get().defaultBlockState()
-                .setValue(RouterBlock.TIER, RouterTier.BASIC).setValue(ResonatorPartBlock.FACING, Direction.WEST));
-        part(helper, new BlockPos(3, 5, 3), ModBlocks.RESONATOR_ENERGY_PORT.get(), Direction.UP);
-        part(helper, new BlockPos(3, 3, 1), ModBlocks.RESONATOR_CRYSTAL_PORT.get(), Direction.NORTH);
-    }
-
-    private static void part(GameTestHelper helper, BlockPos pos, Block block, Direction facing) {
-        helper.setBlock(pos, block.defaultBlockState().setValue(ResonatorPartBlock.FACING, facing));
+        ResonatorTestSupport.build(helper, SECOND_ORIGIN, Face.WEST, Layout.SEM_SINTONIZADOR, RouterTier.BASIC,
+                pos -> pos.getX() == FIRST_ORIGIN.getX());
     }
 
     private static void assertSharedWall(GameTestHelper helper) {

@@ -43,7 +43,7 @@ import net.neoforged.neoforge.items.ItemHandlerHelper;
 public final class ResonatorEcoGameTests {
     private static final int CONTAINER_ID = 46;
     /** A Porta de Cristais da Vitrine, na face norte da caixa. */
-    private static final BlockPos CRYSTAL_PORT = ResonatorTestSupport.ORIGIN.offset(2, 2, 0);
+    private static final BlockPos CRYSTAL_PORT = ResonatorTestSupport.ORIGIN.offset(0, 0, 2);
 
     private ResonatorEcoGameTests() {
     }
@@ -202,7 +202,7 @@ public final class ResonatorEcoGameTests {
     public static void portaEntregaAoEco(GameTestHelper helper) {
         formed(helper, RouterTier.ULTIMATE, core -> {
             IItemHandler items = helper.getLevel().getCapability(Capabilities.ItemHandler.BLOCK,
-                    helper.absolutePos(CRYSTAL_PORT), Direction.NORTH);
+                    helper.absolutePos(CRYSTAL_PORT), Direction.WEST);
             helper.assertTrue(items != null, "a Porta de Cristais sem capability");
             int eco = CoreInventory.ecoSlot(core.tier());
             helper.assertValueEqual(items.getSlots(), core.chambers() + 2, "câmaras, catalisador e Eco");
@@ -230,7 +230,7 @@ public final class ResonatorEcoGameTests {
             ItemStack fuel = cracked(tuned(RouterTier.ULTIMATE, 1));
             helper.assertValueEqual(core.eco().burn(fuel, false), 0, "o Esmeralda queimou");
             IItemHandler items = helper.getLevel().getCapability(Capabilities.ItemHandler.BLOCK,
-                    helper.absolutePos(CRYSTAL_PORT), Direction.NORTH);
+                    helper.absolutePos(CRYSTAL_PORT), Direction.WEST);
             helper.assertValueEqual(items.getSlots(), core.chambers() + 1, "a Porta com o slot do Eco");
             helper.assertValueEqual(ItemHandlerHelper.insertItem(items, fuel.copy(), false).getCount(), 1,
                     "a Porta aceitou o rachado");

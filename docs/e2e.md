@@ -45,7 +45,7 @@ Ordem do registro. "Pré-requisito": o que a suíte pressupõe além da abertura
 | `source` | Tanque de Source (só com o Ars Nouveau) | redes | padrão |
 | `receitas` | editor de receitas | redes | padrão |
 | `escuro` | tema escuro (usa os baús e a Bateria de `armazenamento`, que entra junto) | armazenamento | opcional |
-| `ressonador` | Ressonador de Sinal: montagem, tela, câmara e conduto (~130 s com todas as capturas; o passo "buffer cheio" leva ~64 s) | nenhum | padrão |
+| `ressonador` | Ressonador de Sinal: a Armilar pela metade com a projeção, solta (uma terra no ar e uma Coluna faltando) e formada, de lado, de frente e de cima, com o topo de cada peça de face (capturas `armilar-*`), a tela, a câmara e o conduto (~130 s com todas as capturas; o passo "buffer cheio" leva ~64 s) | nenhum | padrão |
 | `ressonador-desempenho` | tempo de quadro da câmara, desenho antigo × plasma (mede, não afirma) | nenhum | opcional |
 | `ressonador-jei` | JEI do Ressonador | nenhum | padrão |
 | `reparador` | Reparador de Cristais (~21 s com as capturas) | nenhum | padrão |

@@ -41,11 +41,11 @@ final class ScreenshotResonator {
     }
 
     static List<Step> resonatorSteps() {
-        Sample sintonia = new Sample(RouterTier.ELITE, 0, false, true, List.of("c.62", "l.9", "c.3"), 14, 0.35, 2, 1);
-        Sample fora = new Sample(RouterTier.ELITE, 1.3, false, true, List.of("c.62", "l.9", "c.3"), 14, 0.12, 2, 1);
-        Sample zero = new Sample(RouterTier.ELITE, 3.6, false, true, List.of("c.62", "l.9", "c.3"), 14, 0.04, 2, 1);
+        Sample sintonia = new Sample(RouterTier.ELITE, 0, false, true, List.of("c.62", "l.9", "c.3"), 14, 0.35, 1, 1);
+        Sample fora = new Sample(RouterTier.ELITE, 1.3, false, true, List.of("c.62", "l.9", "c.3"), 14, 0.12, 1, 1);
+        Sample zero = new Sample(RouterTier.ELITE, 3.6, false, true, List.of("c.62", "l.9", "c.3"), 14, 0.04, 1, 1);
         Sample teto = new Sample(RouterTier.ULTIMATE, 0, true, true,
-                List.of("l.95", "l.8", "l.72", "l.61", "l.5", "l.33", "l.2", "l.1"), 64, 1, 3, 2);
+                List.of("l.95", "l.8", "l.72", "l.61", "l.5", "l.33", "l.2", "l.1"), 64, 1, 1, 1);
         Sample semTuner = new Sample(RouterTier.BASIC, 0.4, false, false, List.of("c.5"), 0, 0.5, 1, 1);
         Sample opaco = new Sample(RouterTier.EMERALD, 0, true, true, List.of("c.4", "o.35", "l.7", "c.9"), 7, 0.6, 1, 1);
         return List.of(

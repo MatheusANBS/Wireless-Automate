@@ -370,7 +370,7 @@ public final class ResonatorMenuGameTests {
 
     @GameTest(template = "empty7")
     public static void payloadDoModoSemSintonizadorRecusa(GameTestHelper helper) {
-        formed(helper, Layout.ENERGY_ON_TOP, RouterTier.BASIC, core -> {
+        formed(helper, Layout.SEM_SINTONIZADOR, RouterTier.BASIC, core -> {
             ServerPlayer player = near(helper, core);
             openMenu(player, core);
             try {

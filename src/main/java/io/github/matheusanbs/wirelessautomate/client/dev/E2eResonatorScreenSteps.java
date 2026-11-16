@@ -50,7 +50,7 @@ final class E2eResonatorScreenSteps {
             ServerLevel level = server.overworld();
             second[0] = origin[0].offset(-APART, 0, 0);
             E2eResonatorSteps.clear(level, second[0]);
-            E2eResonatorSteps.placeVitrine(level, second[0], RouterTier.ULTIMATE);
+            E2eResonatorSteps.placeArmilar(level, second[0], RouterTier.ULTIMATE);
             return null;
         }), () -> formed(core(second[0])) && onServer(server -> elite(server.overworld(), origin)
                 .interference().lossPermille() > 0), () -> "interferência no Elite"));

@@ -2,7 +2,9 @@ package io.github.matheusanbs.wirelessautomate.client.fx;
 
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 
@@ -14,15 +16,20 @@ import net.minecraft.client.renderer.RenderType;
  */
 public final class FxBatch {
     private final MultiBufferSource.BufferSource buffer;
+    private final List<ByteBufferBuilder> builders = new ArrayList<>();
     private final Counting source = new Counting();
     private int requests;
 
     public FxBatch() {
         LinkedHashMap<RenderType, ByteBufferBuilder> fixed = new LinkedHashMap<>();
         for (RenderType type : FxTypes.all()) {
-            fixed.put(type, new ByteBufferBuilder(4096));
+            ByteBufferBuilder builder = new ByteBufferBuilder(4096);
+            builders.add(builder);
+            fixed.put(type, builder);
         }
-        buffer = MultiBufferSource.immediateWithBuffers(fixed, new ByteBufferBuilder(4096));
+        ByteBufferBuilder reserve = new ByteBufferBuilder(4096);
+        builders.add(reserve);
+        buffer = MultiBufferSource.immediateWithBuffers(fixed, reserve);
     }
 
     /** A fonte de vértices dos {@link FxJob}s; conta os pedidos para o {@link #hasData()}. */
@@ -39,6 +46,14 @@ public final class FxBatch {
     /** Se algum job pediu vértices desde o último {@link #flush()}. */
     public boolean hasData() {
         return requests > 0;
+    }
+
+    /** Solta a memória sem desenhar: o lote não vale mais (o dono cria outro). */
+    public void close() {
+        requests = 0;
+        for (ByteBufferBuilder builder : builders) {
+            builder.close();
+        }
     }
 
     /** Conta os pedidos sem alocar por quadro (uma instância só). */

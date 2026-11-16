@@ -2,6 +2,7 @@ package io.github.matheusanbs.wirelessautomate.client.fx;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 
 /**
  * A fila dos efeitos do quadro: quem tem efeito à vista anota aqui durante o quadro, o {@link FxStages} desenha e
@@ -9,12 +10,23 @@ import java.util.List;
  */
 public final class FxQueue {
     private static final List<FxJob> JOBS = new ArrayList<>();
+    /** Quem diz se é a passada de sombra; o teste troca por um fornecedor seu (sem GL nem Iris). */
+    private static BooleanSupplier shadowPass = ShaderPackCheck::shadowPass;
 
     private FxQueue() {
     }
 
+    /** Anota o job, a não ser na passada de sombra: nada de efeito nela (senão seria desenhado de novo no mundo). */
     public static void submit(FxJob job) {
+        if (shadowPass.getAsBoolean()) {
+            return;
+        }
         JOBS.add(job);
+    }
+
+    /** Só o teste: troca o detector da passada de sombra; {@code null} volta ao do Iris. */
+    static void setShadowDetector(BooleanSupplier detector) {
+        shadowPass = detector == null ? ShaderPackCheck::shadowPass : detector;
     }
 
     public static boolean isEmpty() {

@@ -8,9 +8,13 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.neoforge.client.event.RenderFrameEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import org.joml.Matrix4fStack;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL13;
 
 /**
  * Os ganchos de evento que desenham os efeitos da {@link FxQueue}.
@@ -32,6 +36,9 @@ import org.joml.Matrix4fStack;
  * {@code finalizeLevelRendering} do Iris, que fecha o quadro no fim do {@code LevelRenderer.renderLevel}) e antes do
  * HUD. Então o e2e, que liga {@code hideGui} nas capturas, também vê os efeitos.
  * <p>
+ * Fabulous: com os gráficos Fabulous o alvo aberto em {@code AFTER_TRANSLUCENT_BLOCKS} é o translúcido, e não o
+ * principal. Isso ainda não foi testado; fica para a rodada da Tarefa 11.
+ * <p>
  * O alvo principal tem a profundidade limpa logo antes do gancho ({@code RenderSystem.clear(256)} do
  * {@code GameRenderer.render}); por isso o gancho a restaura e, no fim, limpa de novo, para o HUD não ser testado
  * contra a profundidade do mundo.
@@ -52,6 +59,25 @@ public final class FxStages {
     /** O contexto do quadro (os campos valem depois do estágio dos efeitos). */
     public static FxContext context() {
         return CTX;
+    }
+
+    /**
+     * O começo de cada quadro, antes de quem anota na fila (a sonda e os BERs): a fila e o buffer tardio do quadro
+     * anterior não valem mais. Cobre o estágio que não veio, a guarda de sombra e o pacote desligado com dados
+     * guardados: nada de vértice velho desenhado no quadro seguinte.
+     */
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    static void onFrameStart(RenderFrameEvent.Pre event) {
+        FxQueue.clear();
+        dropLate();
+    }
+
+    private static void dropLate() {
+        latePending = false;
+        if (batch != null && batch.hasData()) {
+            batch.close();
+            batch = null;
+        }
     }
 
     @SubscribeEvent
@@ -97,7 +123,7 @@ public final class FxStages {
 
     /** Com pacote e dados no buffer: guarda a profundidade e as matrizes, no último estágio do mundo. */
     private static void saveForLate(RenderLevelStageEvent event) {
-        if (batch == null || !batch.hasData() || !ShaderPackCheck.active()) {
+        if (batch == null || !batch.hasData() || !ShaderPackCheck.active() || ShaderPackCheck.shadowPass()) {
             return;
         }
         FxDepth.save();
@@ -112,12 +138,18 @@ public final class FxStages {
             return;
         }
         latePending = false;
-        if (batch == null || !batch.hasData()) {
+        if (batch == null || !batch.hasData() || ShaderPackCheck.shadowPass()) {
+            return;
+        }
+        if (!ShaderPackCheck.active()) {
+            // o pacote foi desligado com dados guardados: o lote não vale mais
+            dropLate();
             return;
         }
         FxDepth.restore();
         Minecraft.getInstance().getMainRenderTarget().bindWrite(false);
         RenderSystem.backupProjectionMatrix();
+        // a matriz é a do contexto (estática, nada nosso é alocado); a cópia por chamada é do próprio RenderSystem
         RenderSystem.setProjectionMatrix(CTX.projection, VertexSorting.DISTANCE_TO_ORIGIN);
         Matrix4fStack modelView = RenderSystem.getModelViewStack();
         modelView.pushMatrix();
@@ -133,6 +165,14 @@ public final class FxStages {
             // a profundidade do mundo não vale para o HUD
             RenderSystem.depthMask(true);
             RenderSystem.clear(256, Minecraft.ON_OSX);
+            // o estado com que o vanilla entra no gancho: o clear do tipo de desenho desligou o teste de profundidade
+            // e deixou o cull, o blend e a textura ativa como o fim de um RenderType; o resto (máscara) já voltou
+            RenderSystem.enableDepthTest();
+            RenderSystem.depthFunc(GL11.GL_LEQUAL);
+            RenderSystem.enableCull();
+            RenderSystem.disableBlend();
+            RenderSystem.defaultBlendFunc();
+            RenderSystem.activeTexture(GL13.GL_TEXTURE0);
         }
     }
 }

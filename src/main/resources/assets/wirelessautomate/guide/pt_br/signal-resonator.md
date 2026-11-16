@@ -90,13 +90,13 @@ Cristais, catalisadores e Corações vêm do [Quartzo de Sinal](signal-quartz.md
   <IsometricCamera yaw="315" pitch="30" />
 </GameScene>
 
-A cena mostra a estrutura pronta. Gire-a com o mouse. São **35 blocos** em três camadas de 5×5; a frente é o lado do Núcleo.
+A cena mostra a estrutura pronta. Gire-a com o mouse. São **35 blocos** numa caixa de 5×5×5, de cinco camadas; a frente é o lado do Núcleo.
 
 1. **Camada 1, o chão:** o **Núcleo** no meio da frente, a **Porta de Energia** à direita e a **Porta de Cristais** à esquerda, vistas de frente. O **Sintonizador** (opcional) fica atrás, e a casa dele leva uma **Laje** quando ele falta. O resto do chão é **Laje**.
-2. **Camadas 2 e 3:** uma **Coluna** em cada uma das quatro diagonais em volta do centro e um **Berço do Sol** no centro, em cada camada.
-3. **Em cima:** vazio. As outras casas das camadas 2 e 3 também ficam vazias.
+2. **Camadas 2 e 3:** uma **Coluna** em cada uma das quatro diagonais em volta do centro e um **Berço do Sol** no centro, em cada camada. As outras casas dessas camadas ficam vazias.
+3. **Camadas 4 e 5:** vazias. A caixa que o Núcleo confere tem as cinco camadas, e qualquer bloco nas duas de cima impede a montagem.
 
-- Dois Ressonadores **não dividem parede**.
+- Dois Ressonadores **não dividem blocos**.
 
 Se não monta, clique no Núcleo: a barra de ação diz o que impede e o bloco errado fica contornado.
 

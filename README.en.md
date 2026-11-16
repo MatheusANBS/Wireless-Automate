@@ -128,11 +128,11 @@ The **Wireless Source Tank** holds from 3,600,000 Source (Basic) to unlimited (U
 
 ### Signal Resonator
 
-A multiblock generator that turns vibrating quartz crystals into FE. Mine **Signal Quartz** (Overworld, stone and deepslate), build a hollow 5×5×5 box around a **Resonance Core** and put **Signal Crystals** in its chambers. Every Resonator has its own **station**, a frequency that drifts slowly: turn the dial until the lamp says **IN TUNE** for 100%, or add a **Tuner** to follow the station on its own, a little below the top. Off the station, it generates nothing.
+A multiblock generator that turns vibrating quartz crystals into FE. Mine **Signal Quartz** (Overworld, stone and deepslate), build the **Armilar**, a structure of 35 blocks (a ground layer of Resonator Floors, four Columns and the Sun Cradle) with the **Resonance Core** at the front, and put **Signal Crystals** in its chambers. Every Resonator has its own **station**, a frequency that drifts slowly: turn the dial until the lamp says **IN TUNE** for 100%, or add a **Tuner** to follow the station on its own, a little below the top. Off the station, it generates nothing.
 
 ![Signal Resonator](docs/curseforge/ressonador.gif)
 
-Through the glass you can read the tuning: the plasma Core with the ring of its tier, the crystals orbiting it, each live one feeding it through a plasma tendril that holds thick and steady in tune and thins out and lets go out of it, and a bolt of energy to every port that is delivering. Spent crystals turn **Dull** and recharge inside the Core with a catalyst (redstone or Resonance Dust on the first tiers, the tier's Charged Dust from Allthemodium up). Energy leaves through the **Energy Port**, straight into a router.
+The chamber's animation shows above the Sun Cradle. Spent crystals turn **Dull** and recharge inside the Core with a catalyst (redstone or Resonance Dust on the first tiers, the tier's Charged Dust from Allthemodium up). Energy leaves through the **Energy Port**, straight into a router.
 
 ![Signal Resonator](docs/curseforge/feature-21-resonator.png)
 
@@ -159,7 +159,7 @@ A cracked crystal no longer means a trip to the crafting table. Put it on one of
 
 ![Crystal Repairer](docs/curseforge/feature-26-repairer.png)
 
-Energy and items go in from any side, so a router can keep it fed. The cracks close from the inside out, the crystals converge on the emitter and the mended one rises out. The Resonator's Core also got faster at the other end: it now recharges **every Dull crystal the catalyst pays for at once**. Recipe: Porcelain Casing, Phase Circuit, Hopper, Harmonic Lens and a Redstone Block. The repair time and cost are in the config (`repairer.repairTicks` and `repairer.costFactor`).
+Energy and items go in from any side, so a router can keep it fed. The cracks close from the inside out, the crystals converge on the emitter and the mended one rises out. The Resonator's Core also got faster at the other end: it now recharges **every Dull crystal the catalyst pays for at once**. Recipe: Resonator Floor, Phase Circuit, Hopper, Harmonic Lens and a Redstone Block. The repair time and cost are in the config (`repairer.repairTicks` and `repairer.costFactor`).
 
 ### Signal Screen
 
@@ -218,7 +218,7 @@ Pattern automation without pipes. Place an AE2 **Pattern Provider** or a Refined
 - **Its own screen** with one row per side (the machine, how many are linked and working, and the state in one line), the reach cube in the world while you hold the Linker, and animated art in the tier's color.
 - **A leftover only holds its own machine:** an order that doesn't fit whole waits for that machine to consume it, and the others keep taking orders. Breaking the Dock keeps what is pending in the item. A broken machine leaves its side on its own.
 - **Built for heavy use:** measured with the real factories, one Mekanism Extras Infinity Smelting Factory at 256× runs at 99% of what it can smelt (86,139 items/s), and five of them with the Quantum Computer reach **409,600 items/s**, inside the engine's 1 ms tick budget (only the burst at the start of a very large order goes over, paid back on the next tick).
-- **Recipe** with Porcelain Casing, Signal Alloy Ingot and a router, plus an Engineering Processor and a Pattern Provider with AE2, or, with Refined Storage 2 only, an Advanced Processor and an Autocrafter. Tier it up with the Upgrade Card, in the world or in the crafting table.
+- **Recipe** with Resonator Floor, Signal Alloy Ingot and a router, plus an Engineering Processor and a Pattern Provider with AE2, or, with Refined Storage 2 only, an Advanced Processor and an Autocrafter. Tier it up with the Upgrade Card, in the world or in the crafting table.
 
 ### Tools for big builds
 

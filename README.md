@@ -128,11 +128,11 @@ O **Tanque de Source Wireless** guarda de 3.600.000 de Source (Básico) a sem li
 
 ### Ressonador de Sinal
 
-Um gerador multibloco que transforma cristais de quartzo vibrando em FE. Minere o **Quartzo de Sinal** (Overworld, pedra e ardósia), monte a **Armilar**, uma estrutura de 35 blocos (chão de Lajes, quatro Colunas e o Berço do Sol), em volta de um **Núcleo de Ressonância** e ponha **Cristais de Sinal** nas câmaras dele. Cada Ressonador tem a sua **estação**, uma frequência que escorrega devagar: gire o dial até a lâmpada dizer **EM SINTONIA** para 100%, ou ponha um **Sintonizador** para seguir a estação sozinho, um pouco abaixo do topo. Fora da estação, não gera nada.
+Um gerador multibloco que transforma cristais de quartzo vibrando em FE. Minere o **Quartzo de Sinal** (Overworld, pedra e ardósia), monte a **Armilar**, uma estrutura de 35 blocos (chão de Lajes, quatro Colunas e o Berço do Sol), com o **Núcleo de Ressonância** na frente, e ponha **Cristais de Sinal** nas câmaras dele. Cada Ressonador tem a sua **estação**, uma frequência que escorrega devagar: gire o dial até a lâmpada dizer **EM SINTONIA** para 100%, ou ponha um **Sintonizador** para seguir a estação sozinho, um pouco abaixo do topo. Fora da estação, não gera nada.
 
 ![Ressonador de Sinal](docs/curseforge/ressonador.gif)
 
-Pelo vidro dá para ler a sintonia: o Núcleo de plasma com o anel do tier dele, os cristais orbitando, cada um vivo alimentando o Núcleo por um tentáculo de plasma que fica grosso e firme em sintonia e afina e se solta fora dela, e um raio de energia até cada porta que está entregando. Cristais gastos ficam **Opacos** e recarregam dentro do Núcleo com um catalisador (redstone ou Pó de Ressonância nos primeiros tiers, o Pó Carregado do tier do Allthemodium para cima). A energia sai pela **Porta de Energia**, direto num roteador.
+A animação da câmara aparece em cima do Berço do Sol. Cristais gastos ficam **Opacos** e recarregam dentro do Núcleo com um catalisador (redstone ou Pó de Ressonância nos primeiros tiers, o Pó Carregado do tier do Allthemodium para cima). A energia sai pela **Porta de Energia**, direto num roteador.
 
 ![Ressonador de Sinal](docs/curseforge/feature-21-resonator.png)
 

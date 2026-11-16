@@ -120,13 +120,13 @@ Cristais, catalisadores e Corações vêm do [Quartzo de Sinal](signal-quartz.md
 
 ''' + fill(SCENE_RESONATOR, **RESONATOR_ANNOTATIONS['pt']) + '''
 
-A cena mostra a estrutura pronta. Gire-a com o mouse. São **35 blocos** em três camadas de 5×5; a frente é o lado do Núcleo.
+A cena mostra a estrutura pronta. Gire-a com o mouse. São **35 blocos** numa caixa de 5×5×5, de cinco camadas; a frente é o lado do Núcleo.
 
 1. **Camada 1, o chão:** o **Núcleo** no meio da frente, a **Porta de Energia** à direita e a **Porta de Cristais** à esquerda, vistas de frente. O **Sintonizador** (opcional) fica atrás, e a casa dele leva uma **Laje** quando ele falta. O resto do chão é **Laje**.
-2. **Camadas 2 e 3:** uma **Coluna** em cada uma das quatro diagonais em volta do centro e um **Berço do Sol** no centro, em cada camada.
-3. **Em cima:** vazio. As outras casas das camadas 2 e 3 também ficam vazias.
+2. **Camadas 2 e 3:** uma **Coluna** em cada uma das quatro diagonais em volta do centro e um **Berço do Sol** no centro, em cada camada. As outras casas dessas camadas ficam vazias.
+3. **Camadas 4 e 5:** vazias. A caixa que o Núcleo confere tem as cinco camadas, e qualquer bloco nas duas de cima impede a montagem.
 
-- Dois Ressonadores **não dividem parede**.
+- Dois Ressonadores **não dividem blocos**.
 
 Se não monta, clique no Núcleo: a barra de ação diz o que impede e o bloco errado fica contornado.
 
@@ -237,13 +237,13 @@ Crystals, catalysts and Hearts come from [Signal Quartz](signal-quartz.md).
 
 ''' + fill(SCENE_RESONATOR, **RESONATOR_ANNOTATIONS['en']) + '''
 
-The scene shows the finished structure. Rotate it with the mouse. It is **35 blocks** in three 5×5 layers; the front is the side the Core is on.
+The scene shows the finished structure. Rotate it with the mouse. It is **35 blocks** in a 5×5×5 box of five layers; the front is the side the Core is on.
 
 1. **Layer 1, the floor:** the **Core** in the middle of the front, the **Energy Port** on the right and the **Crystal Port** on the left, seen from the front. The **Tuner** (optional) goes at the back, and its spot takes a **Floor** when it is missing. The rest of the floor is **Floor** blocks.
-2. **Layers 2 and 3:** a **Column** on each of the four diagonals around the center and a **Sun Cradle** in the center, on each layer.
-3. **On top:** empty. The other spots on layers 2 and 3 stay empty too.
+2. **Layers 2 and 3:** a **Column** on each of the four diagonals around the center and a **Sun Cradle** in the center, on each layer. The other spots on those layers stay empty.
+3. **Layers 4 and 5:** empty. The box the Core checks has all five layers, and any block in the top two stops it from forming.
 
-- Two Resonators **can't share a wall**.
+- Two Resonators **can't share blocks**.
 
 If it doesn't form, click the Core: the action bar says what's in the way and the wrong block is outlined.
 

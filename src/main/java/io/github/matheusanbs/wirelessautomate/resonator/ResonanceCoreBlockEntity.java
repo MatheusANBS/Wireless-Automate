@@ -23,7 +23,7 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * O estado do Núcleo de Ressonância (sem ticker: o gerenciador trabalha em lote). Guarda se a estrutura está
- * montada, as 98 posições da casca, a sintonia, os cristais, o catalisador da recarga ({@link CoreCatalyst}) e a
+ * montada, os 35 membros da Armilar, a sintonia, os cristais, o catalisador da recarga ({@link CoreCatalyst}) e a
  * energia; quem monta e desmonta é a {@link ResonatorFormation} e quem gera, gasta e recarrega é o
  * {@link ResonatorBatch}.
  */

@@ -19,7 +19,19 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 public final class FxWarmup {
     private static final int PER_TICK = 2;
     private static final List<ResourceLocation> EXTRA = new ArrayList<>();
+    /** As peças sólidas da Armilar: as sete de {@code textures/armilar/} e as duas de bloco (o horizonte e os marcos). */
+    private static final String[] ARMILAR = {"textures/armilar/anel.png", "textures/armilar/grafite.png",
+            "textures/armilar/cristal_sinal.png", "textures/armilar/cristal_lapidado.png",
+            "textures/armilar/cristal_faixa.png", "textures/armilar/cristal_opaco.png",
+            "textures/armilar/cristal_rachado.png", "textures/block/armilar_latao.png",
+            "textures/block/armilar_coral.png"};
     private static WarmupQueue queue;
+
+    static {
+        for (String path : ARMILAR) {
+            add(WirelessAutomate.id(path));
+        }
+    }
 
     private FxWarmup() {
     }

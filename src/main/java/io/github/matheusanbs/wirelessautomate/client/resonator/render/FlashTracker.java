@@ -4,8 +4,7 @@ import io.github.matheusanbs.wirelessautomate.resonator.ChamberView;
 import java.util.Arrays;
 
 /**
- * O clarão do fim da recarga, em lógica pura. Porte de {@code ChamberScene.trackRecharge} e do laço do clarão no
- * {@code update}. Dura 14 ticks (0,7 s).
+ * O clarão do fim da recarga, em lógica pura. Dura 14 ticks (0,7 s).
  */
 final class FlashTracker {
     static final int FLASH_TICKS = 14;

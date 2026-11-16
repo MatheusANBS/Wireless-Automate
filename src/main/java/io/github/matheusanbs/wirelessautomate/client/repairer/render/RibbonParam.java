@@ -1,4 +1,4 @@
-package io.github.matheusanbs.wirelessautomate.client.resonator.render;
+package io.github.matheusanbs.wirelessautomate.client.repairer.render;
 
 /**
  * O parâmetro de vértice das fitas (UV2.y, um {@code short}, então tudo fica abaixo de 32768) e os modos do
@@ -8,11 +8,8 @@ package io.github.matheusanbs.wirelessautomate.client.resonator.render;
  * 8 a 14. Pura, com JUnit.
  */
 public final class RibbonParam {
-    /** O raio da câmara do Ressonador, aprovado: não muda. */
-    public static final int MODE_BOLT = 0;
     /** O feixe mágico do Reparador: três fios em espiral com contas de luz. */
     public static final int MODE_WEAVE = 1;
-    public static final int MODE_TENDRIL = 2;
     /** Um disco de luz: brilho redondo ou anel. */
     public static final int MODE_DISC = 3;
 

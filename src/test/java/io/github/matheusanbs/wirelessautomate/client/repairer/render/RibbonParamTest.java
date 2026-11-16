@@ -1,4 +1,4 @@
-package io.github.matheusanbs.wirelessautomate.client.resonator.render;
+package io.github.matheusanbs.wirelessautomate.client.repairer.render;
 
 import org.junit.jupiter.api.Test;
 

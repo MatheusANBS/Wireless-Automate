@@ -1,4 +1,4 @@
-package io.github.matheusanbs.wirelessautomate.client.resonator.render;
+package io.github.matheusanbs.wirelessautomate.client.repairer.render;
 
 /**
  * O parâmetro de vértice do cristal (UV2.y, um {@code short}, então tudo fica abaixo de 32768): a semente (o índice da

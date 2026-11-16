@@ -1,4 +1,4 @@
-package io.github.matheusanbs.wirelessautomate.client.resonator.render;
+package io.github.matheusanbs.wirelessautomate.client.repairer.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -37,7 +37,7 @@ public final class CrystalGem {
     public static void render(PoseStack.Pose pose, MultiBufferSource buffer, int bandColor, int flash, int state, int seed,
             boolean diamond, float fx) {
         CrystalMesh mesh = diamond ? CrystalMesh.DIAMOND : CrystalMesh.CLUSTER;
-        VertexConsumer out = buffer.getBuffer(ChamberRenderTypes.crystal());
+        VertexConsumer out = buffer.getBuffer(RepairerRenderTypes.crystal());
         int r = (bandColor >> 16) & 0xFF;
         int g = (bandColor >> 8) & 0xFF;
         int b = bandColor & 0xFF;

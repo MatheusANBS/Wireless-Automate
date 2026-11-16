@@ -9,7 +9,7 @@ import io.github.matheusanbs.wirelessautomate.client.FrameClock;
 import io.github.matheusanbs.wirelessautomate.client.dock.render.PatternDockRenderer;
 import io.github.matheusanbs.wirelessautomate.client.repairer.render.RepairerRenderer;
 import io.github.matheusanbs.wirelessautomate.client.resonator.ResonatorProjection;
-import io.github.matheusanbs.wirelessautomate.client.resonator.render.ResonatorRenderer;
+import io.github.matheusanbs.wirelessautomate.client.resonator.render.ArmilarRenderer;
 import io.github.matheusanbs.wirelessautomate.GuiTheme;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
@@ -384,24 +384,23 @@ final class E2eResonatorSteps {
     }
 
     /**
-     * Só com a suíte {@code ressonador-desempenho} ({@link #perf}): a medida do tempo de quadro com o desenho antigo e
-     * com o plasma, que é uma comparação e não uma asserção.
+     * Só com a suíte {@code ressonador-desempenho} ({@link #perf}): a medida do tempo de quadro da Armilar, que é um
+     * número e não uma asserção.
      */
     static void timed(List<Step> list, String situation, Tick perTick) {
         if (perf) {
-            list.add(frameTime(true, situation, perTick));
-            list.add(frameTime(false, situation, perTick));
+            list.add(frameTime(situation, perTick));
         }
     }
 
     /** Ligada só enquanto o roteiro da suíte {@code ressonador-desempenho} é montado. */
     static boolean perf;
 
-    /** A medida da câmara ocupando a tela, com o desenho antigo forçado ou com o plasma. */
-    static Step frameTime(boolean legacy, String situation, Tick perTick) {
-        String label = (legacy ? "camara antiga" : "camara plasma") + situation;
-        return frameTimeStep("Ressonador: " + label + " (tempo de quadro)", label,
-                () -> ResonatorRenderer.forceLegacyForTests = legacy, perTick);
+    /** A medida da Armilar ocupando a tela. */
+    static Step frameTime(String situation, Tick perTick) {
+        String label = "armilar" + situation;
+        return frameTimeStep("Ressonador: " + label + " (tempo de quadro)", label, () -> {
+        }, perTick);
     }
 
     /**
@@ -447,7 +446,7 @@ final class E2eResonatorSteps {
     }
 
     /**
-     * Devolve o vsync, o limite de FPS, o desenho da câmara e os ganchos do Reparador (o tempo parado e o
+     * Devolve o vsync, o limite de FPS, a vazão forçada e os ganchos do Reparador (o tempo parado e o
      * {@code repairTicks}). Idempotente; o motor chama em qualquer saída (sucesso, falha ou tempo esgotado), sem
      * gravar o options.txt.
      */
@@ -460,8 +459,7 @@ final class E2eResonatorSteps {
 
     /** O fim de uma medida: o vsync, o limite de FPS e os desenhos forçados; o tempo parado do Reparador fica. */
     private static void restoreMeasure() {
-        ResonatorRenderer.forceLegacyForTests = false;
-        ResonatorRenderer.forceBandForTests = -1;
+        ArmilarRenderer.forceBandForTests = -1;
         RepairerRenderer.forceLegacyForTests = false;
         PatternDockRenderer.disabledForTests = false;
         if (!measuring) {

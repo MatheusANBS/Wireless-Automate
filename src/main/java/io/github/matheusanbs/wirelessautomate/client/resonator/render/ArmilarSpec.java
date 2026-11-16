@@ -65,6 +65,11 @@ public final class ArmilarSpec {
     /** A subida do cristal opaco inclinado, em px: nenhuma, subir o soltaria da base. */
     public static final double OPACO_LIFT_PX = 0;
 
+    /** O quanto a caixa do Núcleo entra no nicho da grade em z, em px ({@code armilar_formado.py}, {@code desloc}). Usado pelo sol e pelos filamentos. */
+    public static final double NUCLEO_DESLOC_Z = -2;
+    /** O quanto a caixa da Porta de Energia entra no nicho em x, em px (o mesmo {@code desloc}). Usado pelo arco e pela conjunção. */
+    public static final double PORTA_DESLOC_X = -2;
+
     private ArmilarSpec() {
     }
 

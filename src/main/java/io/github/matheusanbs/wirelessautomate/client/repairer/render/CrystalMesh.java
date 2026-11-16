@@ -1,4 +1,4 @@
-package io.github.matheusanbs.wirelessautomate.client.resonator.render;
+package io.github.matheusanbs.wirelessautomate.client.repairer.render;
 
 /**
  * As duas malhas do cristal da câmara, em unidades do cristal (antes da escala do desenho), montadas uma vez; o

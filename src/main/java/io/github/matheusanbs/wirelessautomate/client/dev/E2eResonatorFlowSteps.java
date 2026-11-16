@@ -6,7 +6,7 @@ import static io.github.matheusanbs.wirelessautomate.client.dev.E2eUi.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eWorld.*;
 
 import io.github.matheusanbs.wirelessautomate.Config;
-import io.github.matheusanbs.wirelessautomate.client.resonator.render.ResonatorRenderer;
+import io.github.matheusanbs.wirelessautomate.client.resonator.render.ArmilarRenderer;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.resonator.ChamberView;
@@ -64,6 +64,9 @@ final class E2eResonatorFlowSteps {
         rechargeSteps(list, playerId, origin);
         list.add(new Step("Ressonador: a mão de volta", STEP_TIMEOUT_MS,
                 () -> Minecraft.getInstance().options.hideGui = false, () -> true, () -> "mão"));
+        // com o HUD à vista: prova que a barra e a mão saem inteiras depois do desenho tardio dos efeitos
+        list.add(DevEndToEnd.wait("o HUD voltar", 10));
+        list.add(capture("ressonador-camara-hud"));
     }
 
     /**
@@ -117,14 +120,14 @@ final class E2eResonatorFlowSteps {
         list.add(forcedBand("Ressonador: o raio de perto, faixa 4", 4));
         list.add(capture("ressonador-raio-perto-4"));
         list.add(new Step("Ressonador: a vazão real de volta", STEP_TIMEOUT_MS,
-                () -> ResonatorRenderer.forceBandForTests = -1, () -> true, () -> "vazão real"));
+                () -> ArmilarRenderer.forceBandForTests = -1, () -> true, () -> "vazão real"));
         list.add(E2eResonatorSteps.camera("Ressonador: câmera de frente de novo", playerId, () -> origin[0],
                 E2eResonatorSteps.FRONT_VIEW));
     }
 
     /** Força a faixa de vazão da câmara no cliente e espera a faixa suavizada chegar lá (60 ticks). */
     private static Step forcedBand(String name, int band) {
-        return new Step(name, STEP_TIMEOUT_MS, () -> ResonatorRenderer.forceBandForTests = band,
+        return new Step(name, STEP_TIMEOUT_MS, () -> ArmilarRenderer.forceBandForTests = band,
                 () -> stepTicks >= 60, () -> "faixa forçada " + band);
     }
 

@@ -2,7 +2,8 @@ package io.github.matheusanbs.wirelessautomate.client.resonator.render;
 
 /** O mapa dos oito nós da Armilar (câmara i no nó i, de dentro para fora). Lógica pura. */
 final class ArmilarNodes {
-    private static final int[] FIRST = {0, 2, 5};
+    /** O primeiro nó de cada órbita. */
+    static final int[] FIRST = {0, 2, 5};
 
     private ArmilarNodes() {
     }

@@ -1,4 +1,4 @@
-package io.github.matheusanbs.wirelessautomate.client.resonator.render;
+package io.github.matheusanbs.wirelessautomate.client.repairer.render;
 
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
@@ -23,7 +23,7 @@ public final class CrystalShader {
                 DefaultVertexFormat.NEW_ENTITY), loaded -> shader = loaded);
         } catch (IOException | RuntimeException e) {
             shader = null;
-            WirelessAutomate.LOGGER.warn("O shader resonator_crystal não compilou; a câmara do Ressonador volta ao desenho antigo", e);
+            WirelessAutomate.LOGGER.warn("O shader resonator_crystal não compilou; o Reparador volta ao desenho antigo", e);
         }
     }
 

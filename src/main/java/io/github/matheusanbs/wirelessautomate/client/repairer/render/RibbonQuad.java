@@ -1,4 +1,4 @@
-package io.github.matheusanbs.wirelessautomate.client.resonator.render;
+package io.github.matheusanbs.wirelessautomate.client.repairer.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -43,7 +43,7 @@ public final class RibbonQuad {
         sx *= half;
         sy *= half;
         sz *= half;
-        VertexConsumer out = buffer.getBuffer(ChamberRenderTypes.ribbon());
+        VertexConsumer out = buffer.getBuffer(RepairerRenderTypes.ribbon());
         int r = (rgb >> 16) & 0xFF;
         int g = (rgb >> 8) & 0xFF;
         int b = rgb & 0xFF;
@@ -61,7 +61,7 @@ public final class RibbonQuad {
         Vector3f left = camera.getLeftVector();
         Vector3f up = camera.getUpVector();
         float h = size * 0.5f;
-        VertexConsumer out = buffer.getBuffer(ChamberRenderTypes.ribbon());
+        VertexConsumer out = buffer.getBuffer(RepairerRenderTypes.ribbon());
         int r = (rgb >> 16) & 0xFF;
         int g = (rgb >> 8) & 0xFF;
         int b = rgb & 0xFF;
@@ -76,7 +76,7 @@ public final class RibbonQuad {
     /** O quadrado de meio lado {@code half} deitado (normal +y) centrado em {@code (x, y, z)}; o UV0 vai de 0 a 1 nos cantos. */
     public static void flat(PoseStack.Pose pose, MultiBufferSource buffer, float x, float y, float z, float half,
             int rgb, int alpha, int mode, int param) {
-        VertexConsumer out = buffer.getBuffer(ChamberRenderTypes.ribbon());
+        VertexConsumer out = buffer.getBuffer(RepairerRenderTypes.ribbon());
         int r = (rgb >> 16) & 0xFF;
         int g = (rgb >> 8) & 0xFF;
         int b = rgb & 0xFF;

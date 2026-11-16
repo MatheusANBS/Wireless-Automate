@@ -4,8 +4,7 @@ import io.github.matheusanbs.wirelessautomate.resonator.ChamberView;
 import io.github.matheusanbs.wirelessautomate.resonator.RechargeRank;
 
 /**
- * Quem recarrega e o quanto já andou, em lógica pura. Porte, sem mudar a regra, do que vivia em
- * {@code ChamberCrystals} (a câmara antiga, que sai na Tarefa 7).
+ * Quem recarrega e o quanto já andou, em lógica pura.
  */
 final class ArmilarRecharge {
     private static final byte DULL = 3;

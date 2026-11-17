@@ -53,7 +53,6 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 
 ## Ressonador
 
-- **(dono)** Aprovar a prancha da Armilar (etapa 2, pronta no ramo `armilar`; relatórios em `.superpowers/sdd/2026-11-16-armilar-etapa-2/`). O merge do ramo espera o aprovado. (16/11)
 - **Depois do aprovado:** o merge no `main`; refazer as fotos `s19` e `s20` e o GIF do Ressonador na vitrine do CurseForge (`E2eShowcaseResonator`, `scripts/curseforge/gerar_gif.py`; as de hoje mostram a câmara antiga); reescrever o parágrafo da animação em `README.md` e `README.en.md` ("em cima do Berço do Sol"); reescrever os trechos iguais em `docs/curseforge/descricao.md`, que ainda fala da caixa antiga e da animação de antes. (16/11)
 - **Levar o Reparador para o `client/fx`:** ele ainda tem os core shaders, os `RenderType`s e o plasma próprios em `client/repairer/render/` (`resonator_plasma`, `resonator_ribbon` e `resonator_crystal`); a Armilar usa o pacote novo. Hoje o Reparador cai no desenho de reserva com shaderpack. (16/11)
 - **Limitações conhecidas dos efeitos** (`docs/mapa/efeitos.md`): com shaderpack a luz no mundo e o desenho tardio podem cair por cima da mão perto do sol (decidido: fica como está); com o Fabulous a luz provavelmente ignora vidro e água na frente de uma superfície (não medido). (16/11)

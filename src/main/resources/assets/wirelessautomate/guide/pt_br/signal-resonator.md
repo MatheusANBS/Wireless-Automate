@@ -154,7 +154,9 @@ Eco** quando é quebrado.
 
 A **Porta de Energia** empurra a cada tick o que o Núcleo gerou, até a geração máxima do tier, para quem está colado
 nela e aceita energia (uma bateria do mod recebe tudo numa vez, mesmo acima de 2 bilhões de FE por tick); um roteador do
-mesmo tier do Núcleo também dá conta da geração cheia. O Núcleo guarda uns 10 segundos de geração; com a
+mesmo tier do Núcleo também dá conta da geração cheia. Com uma máquina colada e um roteador na mesma Porta, o
+roteador tira primeiro em cada tick; como o empurrão esvazia a reserva a cada tick, nada acumula para o roteador
+levar depois. O Núcleo guarda uns 10 segundos de geração; com a
 reserva cheia, ele **para de gerar e não gasta cristal**. Ele só trabalha com o chunk carregado: use o
 [Upgrade de Chunk Loading](chunk-loading.md) no roteador da Porta.
 

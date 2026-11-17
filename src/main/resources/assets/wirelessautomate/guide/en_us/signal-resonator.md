@@ -154,7 +154,9 @@ Watch out: a cracked Tuned Ultimate crystal that arrives through the Crystal Por
 
 The **Energy Port** pushes what the Core generated every tick, up to the tier's maximum generation, into whatever
 touches it and accepts energy (a mod battery takes it all at once, even above 2 billion FE per tick); a router of the
-Core's tier also keeps up with full generation. The Core stores about 10 seconds of generation; when the
+Core's tier also keeps up with full generation. With a machine touching the Port and a router on the same Port, the
+router pulls first every tick; since the push empties the reserve every tick, nothing builds up for the router to
+take later. The Core stores about 10 seconds of generation; when the
 reserve is full, it **stops generating and doesn't wear the crystals**. It only works while its chunk is loaded: use
 the [Chunk Loading Upgrade](chunk-loading.md) on the Port's router.
 

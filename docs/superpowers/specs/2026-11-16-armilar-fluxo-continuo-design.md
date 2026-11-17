@@ -39,6 +39,7 @@ O dono pediu em 16/11, à noite, depois do design acima: a Porta de Energia pass
   - A busca das capabilities usa `BlockCapabilityCache`, criado quando a Porta é registrada no Núcleo (quando monta) e solto quando desmonta.
   - Por tick e por Porta, o trabalho é ler o cache e chamar o vizinho.
   - Sem vizinho que aceite energia, nada é feito: um `null` por face em cache.
+- **Com roteador e vizinho na mesma Porta.** O roteador (`NetworkManager.tick`) roda antes do empurrão e tira primeiro em cada tick. O empurrão esvazia o buffer a cada tick, então um roteador que puxa menos de uma vez por tick (em espera) leva só a geração de um tick por puxada; o resto já foi para o vizinho. É aceito: a prioridade do roteador vale por tick.
 - **Vazão.** O que sai empurrado soma no `CoreFlow` da Porta, como o que é tirado. A faixa de vazão, e com ela o feixe, sai do total que deixou a Porta.
 - **Testes.**
   - GameTest: um receptor ao lado da Porta recebe energia a cada tick sem puxar nada.

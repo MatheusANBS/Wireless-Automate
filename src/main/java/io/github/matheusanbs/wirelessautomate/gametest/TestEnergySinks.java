@@ -29,6 +29,9 @@ public final class TestEnergySinks {
     /** Receptor {@link BulkEnergy} em {@code long} que aceita tudo ({@link BulkSink}). */
     public static final Block BULK_SINK = Blocks.NETHERITE_BLOCK;
 
+    /** Expõe as duas: a {@code BulkEnergy} recusa tudo ({@link RefusingBulk}) e a {@link IEnergyStorage} aceita ({@link FeSink}). */
+    public static final Block BOTH_SINK = Blocks.SEA_LANTERN;
+
     private static final boolean ENABLED = Boolean.getBoolean("wirelessautomate.gameTests");
     private static final Map<BlockPos, FeSink> FE = new ConcurrentHashMap<>();
     private static final Map<BlockPos, BulkSink> BULK = new ConcurrentHashMap<>();
@@ -44,6 +47,8 @@ public final class TestEnergySinks {
         }
         event.registerBlock(Capabilities.EnergyStorage.BLOCK, (level, pos, state, be, side) -> fe(pos), FE_SINK);
         event.registerBlock(BulkEnergy.BLOCK, (level, pos, state, be, side) -> bulk(pos), BULK_SINK);
+        event.registerBlock(Capabilities.EnergyStorage.BLOCK, (level, pos, state, be, side) -> fe(pos), BOTH_SINK);
+        event.registerBlock(BulkEnergy.BLOCK, (level, pos, state, be, side) -> RefusingBulk.INSTANCE, BOTH_SINK);
         // A sonda: os blocos da Armilar nas posições marcadas aceitam energia, pelos dois caminhos.
         for (Block member : new Block[] {ModBlocks.RESONATOR_CASING.get(), ModBlocks.RESONATOR_COLUMN.get(),
                 ModBlocks.RESONATOR_CRADLE.get(), ModBlocks.RESONATOR_CRYSTAL_PORT.get(), ModBlocks.RESONATOR_TUNER.get(),
@@ -116,6 +121,31 @@ public final class TestEnergySinks {
         @Override
         public boolean canReceive() {
             return true;
+        }
+    }
+
+    /** Uma {@link BulkEnergy} que recusa tudo, como um filtro. */
+    enum RefusingBulk implements BulkEnergy {
+        INSTANCE;
+
+        @Override
+        public long stored() {
+            return 0;
+        }
+
+        @Override
+        public long capacity() {
+            return 0;
+        }
+
+        @Override
+        public long insert(long amount, boolean simulate) {
+            return 0;
+        }
+
+        @Override
+        public long extract(long amount, boolean simulate) {
+            return 0;
         }
     }
 

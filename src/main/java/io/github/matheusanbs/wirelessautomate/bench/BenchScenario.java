@@ -60,6 +60,8 @@ public enum BenchScenario {
             "Ressonadores gerando: Ultimate montados e sintonizados, 8 Lapidados, cada um com um roteador na Porta de Energia para uma Bateria"),
     RESONATOR_IDLE("resonator-idle", 500, RouterTier.ULTIMATE, 300, 0,
             "Ressonadores ociosos: os mesmos, sem roteador; o buffer enche em 10 s e para (o custo de existir)"),
+    RESONATOR_PUSH("resonator-push", 100, RouterTier.ULTIMATE, 100, 0,
+            "Ressonadores empurrando: os mesmos, sem roteador, com um sumidouro de energia que aceita tudo colado na Porta de Energia (a Porta empurra a cada tick)"),
     RESONATOR_EVENT("resonator-event", 50, RouterTier.ULTIMATE, 100, 0,
             "Evento no Ressonador: no meio da medição, um canto de cada casca sai no mesmo tick (todos revalidam) e volta 40 ticks depois"),
     RANGE("range", 200, RouterTier.ULTIMATE, 100, 0,
@@ -98,7 +100,7 @@ public enum BenchScenario {
 
     /** Mede o Ressonador de Sinal ({@link BenchResonators}); a cena não tem máquinas de itens. */
     public boolean resonator() {
-        return this == RESONATOR_GEN || this == RESONATOR_IDLE || this == RESONATOR_EVENT;
+        return this == RESONATOR_GEN || this == RESONATOR_IDLE || this == RESONATOR_PUSH || this == RESONATOR_EVENT;
     }
 
     /**
@@ -109,7 +111,7 @@ public enum BenchScenario {
         return switch (this) {
             case MANY, IDLE, FULL, RAW, BIG, BIG_FULL, MIXED, SPARSE, REDSTONE, INFINITE, PAIRS -> true;
             case PARTIAL_FULL, TYPES, REBUILD, STOCK, BIG_STACK, TABLET, REDSTONE_FACE, HUB, CHEST_TYPES, RESONATOR_GEN, RESONATOR_IDLE,
-                    RESONATOR_EVENT, RANGE, TABLET_RANGE, TABLET_MACHINES, DOCK, DOCK_AE2 -> false;
+                    RESONATOR_PUSH, RESONATOR_EVENT, RANGE, TABLET_RANGE, TABLET_MACHINES, DOCK, DOCK_AE2 -> false;
         };
     }
 

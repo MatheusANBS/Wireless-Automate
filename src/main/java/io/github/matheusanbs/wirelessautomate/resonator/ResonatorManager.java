@@ -209,21 +209,21 @@ public final class ResonatorManager {
      * mudar o conjunto. As listas são reaproveitadas e só têm Núcleos nos ticks em que alguma coisa acontece.
      */
     private static void generate() {
-        for (ResonanceCoreBlockEntity core : CORES) {
-            if (core.isRemoved() || !core.formed()) {
-                continue;
-            }
-            boolean pushes = core.push().canPush(core);
-            if ((pushes || ResonatorGeneration.generates(core)) && core.getLevel() instanceof ServerLevel level
-                    && level.shouldTickBlocksAt(ChunkPos.asLong(core.getBlockPos()))) {
-                if (pushes) {
-                    PUSHING.add(core);
-                } else if (ResonatorGeneration.tick(core)) {
-                    WOKE.add(core);
+        try {
+            for (ResonanceCoreBlockEntity core : CORES) {
+                if (core.isRemoved() || !core.formed()) {
+                    continue;
+                }
+                boolean pushes = core.push().canPush(core);
+                if ((pushes || ResonatorGeneration.generates(core)) && core.getLevel() instanceof ServerLevel level
+                        && level.shouldTickBlocksAt(ChunkPos.asLong(core.getBlockPos()))) {
+                    if (pushes) {
+                        PUSHING.add(core);
+                    } else if (ResonatorGeneration.tick(core)) {
+                        WOKE.add(core);
+                    }
                 }
             }
-        }
-        try {
             for (int i = 0; i < PUSHING.size(); i++) {
                 ResonanceCoreBlockEntity core = PUSHING.get(i);
                 if (core.isRemoved() || !core.formed()) {
@@ -234,10 +234,6 @@ public final class ResonatorManager {
                     WOKE.add(core);
                 }
             }
-        } finally {
-            PUSHING.clear();
-        }
-        try {
             for (int i = 0; i < WOKE.size(); i++) {
                 ResonanceCoreBlockEntity core = WOKE.get(i);
                 if (!core.isRemoved()) {
@@ -245,6 +241,7 @@ public final class ResonatorManager {
                 }
             }
         } finally {
+            PUSHING.clear();
             WOKE.clear();
         }
     }

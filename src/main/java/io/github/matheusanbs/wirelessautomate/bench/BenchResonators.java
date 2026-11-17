@@ -50,9 +50,12 @@ final class BenchResonators {
     private final ServerLevel level;
     final List<Resonator> list = new ArrayList<>();
     private final BlockPos max;
+    /** Um sumidouro de energia que aceita tudo a leste de cada Porta de Energia ({@code resonator-push}). */
+    private final boolean sinks;
 
-    BenchResonators(ServerLevel level, BlockPos origin, int count, boolean batteries) {
+    BenchResonators(ServerLevel level, BlockPos origin, int count, boolean batteries, boolean sinks) {
         this.level = level;
+        this.sinks = sinks;
         int side = (int) Math.ceil(Math.sqrt(count));
         for (int i = 0; i < count; i++) {
             BlockPos box = origin.offset((i % side) * CELL_X, 0, (i / side) * CELL_Z);
@@ -96,6 +99,10 @@ final class BenchResonators {
             part(resonator.energyPort(), ModBlocks.RESONATOR_ENERGY_PORT.get(), Direction.EAST);
             if (resonator.battery() != null) {
                 level.setBlock(resonator.battery(), battery, PLACE_FLAGS);
+            }
+            if (sinks) {
+                level.setBlock(resonator.energyPort().east(), BenchCapabilities.ENERGY_SINK.defaultBlockState(),
+                        PLACE_FLAGS);
             }
         }
     }
@@ -193,6 +200,9 @@ final class BenchResonators {
             }
             if (resonator.battery() != null) {
                 level.setBlock(resonator.battery(), air, REMOVE_FLAGS);
+            }
+            if (sinks) {
+                level.setBlock(resonator.energyPort().east(), air, REMOVE_FLAGS);
             }
         }
     }

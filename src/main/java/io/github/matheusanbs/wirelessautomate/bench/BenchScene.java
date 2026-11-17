@@ -228,7 +228,8 @@ final class BenchScene {
      * (destino), vizinhos em {@link #nodes} para o {@link #attach} pôr cada par numa rede.
      */
     private void planResonators(int count) {
-        BenchResonators planned = new BenchResonators(level, ORIGIN, count, scenario == BenchScenario.RESONATOR_GEN);
+        BenchResonators planned = new BenchResonators(level, ORIGIN, count, scenario == BenchScenario.RESONATOR_GEN,
+                scenario == BenchScenario.RESONATOR_PUSH);
         resonators = planned;
         if (scenario == BenchScenario.RESONATOR_GEN) {
             for (BenchResonators.Resonator resonator : planned.list) {

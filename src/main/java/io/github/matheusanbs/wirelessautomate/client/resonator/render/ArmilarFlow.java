@@ -2,6 +2,8 @@ package io.github.matheusanbs.wirelessautomate.client.resonator.render;
 
 /** O quanto a vazão pesa na luz e no sol. Lógica pura. */
 final class ArmilarFlow {
+    /** O quanto a faixa de vazão anda por tick em direção ao alvo: acende e apaga em cerca de 1 s. */
+    static final float FLOW_RATE = 0.12f;
     /**
      * Abaixo disso a força vale 0: a faixa suavizada só chega a 0 por aproximação (12% por tick), e uma força de 1e-9
      * ainda desenharia a cabeça do arco e a fumaça do impacto no alfa cheio. É o alfa mínimo do {@code FxDraw}.

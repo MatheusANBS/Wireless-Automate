@@ -1,0 +1,172 @@
+{
+  "armilar.assemble": {
+    "subtitle": "subtitles.wirelessautomate.armilar.assemble",
+    "sounds": [
+      {
+        "name": "wirelessautomate:armilar/assemble",
+        "attenuation_distance": 32,
+        "preload": true
+      }
+    ]
+  },
+  "armilar.sun_loop": {
+    "subtitle": "subtitles.wirelessautomate.armilar.sun_loop",
+    "sounds": [
+      {
+        "name": "wirelessautomate:armilar/sun_loop",
+        "attenuation_distance": 24,
+        "preload": true
+      }
+    ]
+  },
+  "armilar.tune_lock": {
+    "subtitle": "subtitles.wirelessautomate.armilar.tune_lock",
+    "sounds": [
+      {
+        "name": "wirelessautomate:armilar/tune_lock",
+        "attenuation_distance": 24,
+        "preload": true
+      }
+    ]
+  },
+  "armilar.tune_lost": {
+    "subtitle": "subtitles.wirelessautomate.armilar.tune_lost",
+    "sounds": [
+      {
+        "name": "wirelessautomate:armilar/tune_lost",
+        "attenuation_distance": 24,
+        "preload": true
+      }
+    ]
+  },
+  "armilar.conj_charge": {
+    "subtitle": "subtitles.wirelessautomate.armilar.conj_charge",
+    "sounds": [
+      {
+        "name": "wirelessautomate:armilar/conj_charge",
+        "attenuation_distance": 24,
+        "preload": true
+      }
+    ]
+  },
+  "armilar.conj_burst": {
+    "subtitle": "subtitles.wirelessautomate.armilar.conj_burst",
+    "sounds": [
+      {
+        "name": "wirelessautomate:armilar/conj_burst_1",
+        "attenuation_distance": 32,
+        "preload": true
+      },
+      {
+        "name": "wirelessautomate:armilar/conj_burst_2",
+        "attenuation_distance": 32,
+        "preload": true
+      }
+    ]
+  },
+  "armilar.conj_arc": {
+    "subtitle": "subtitles.wirelessautomate.armilar.conj_arc",
+    "sounds": [
+      {
+        "name": "wirelessautomate:armilar/conj_arc",
+        "attenuation_distance": 24,
+        "preload": true
+      }
+    ]
+  },
+  "armilar.conj_impact": {
+    "subtitle": "subtitles.wirelessautomate.armilar.conj_impact",
+    "sounds": [
+      {
+        "name": "wirelessautomate:armilar/conj_impact_1",
+        "attenuation_distance": 24,
+        "preload": true
+      },
+      {
+        "name": "wirelessautomate:armilar/conj_impact_2",
+        "attenuation_distance": 24,
+        "preload": true
+      },
+      {
+        "name": "wirelessautomate:armilar/conj_impact_3",
+        "attenuation_distance": 24,
+        "preload": true
+      }
+    ]
+  },
+  "armilar.flow_loop": {
+    "subtitle": "subtitles.wirelessautomate.armilar.flow_loop",
+    "sounds": [
+      {
+        "name": "wirelessautomate:armilar/flow_loop",
+        "attenuation_distance": 24,
+        "preload": true
+      }
+    ]
+  },
+  "armilar.full_loop": {
+    "subtitle": "subtitles.wirelessautomate.armilar.full_loop",
+    "sounds": [
+      {
+        "name": "wirelessautomate:armilar/full_loop",
+        "attenuation_distance": 16,
+        "preload": true
+      }
+    ]
+  },
+  "armilar.recharge_grain": {
+    "subtitle": "subtitles.wirelessautomate.armilar.recharge_grain",
+    "sounds": [
+      {
+        "name": "wirelessautomate:armilar/recharge_grain_1",
+        "attenuation_distance": 16,
+        "preload": true
+      },
+      {
+        "name": "wirelessautomate:armilar/recharge_grain_2",
+        "attenuation_distance": 16,
+        "preload": true
+      },
+      {
+        "name": "wirelessautomate:armilar/recharge_grain_3",
+        "attenuation_distance": 16,
+        "preload": true
+      }
+    ]
+  },
+  "armilar.recharge_done": {
+    "subtitle": "subtitles.wirelessautomate.armilar.recharge_done",
+    "sounds": [
+      {
+        "name": "wirelessautomate:armilar/recharge_done",
+        "attenuation_distance": 16,
+        "preload": true
+      }
+    ]
+  },
+  "armilar.crystal_crack": {
+    "subtitle": "subtitles.wirelessautomate.armilar.crystal_crack",
+    "sounds": [
+      {
+        "name": "wirelessautomate:armilar/crystal_crack_1",
+        "attenuation_distance": 16,
+        "preload": true
+      },
+      {
+        "name": "wirelessautomate:armilar/crystal_crack_2",
+        "attenuation_distance": 16,
+        "preload": true
+      }
+    ]
+  },
+  "armilar.crystal_dull": {
+    "subtitle": "subtitles.wirelessautomate.armilar.crystal_dull",
+    "sounds": [
+      {
+        "name": "wirelessautomate:armilar/crystal_dull",
+        "attenuation_distance": 16,
+        "preload": true
+      }
+    ]
+  }
+}

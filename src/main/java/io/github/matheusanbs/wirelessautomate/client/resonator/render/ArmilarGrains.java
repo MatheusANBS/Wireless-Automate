@@ -14,8 +14,12 @@ final class ArmilarGrains {
     private final int[] age = new int[MAX];
     private double clock;
 
-    /** Um tick: avança os grãos vivos, apaga os de câmara que sumiu e, com alvo, nasce um novo quando o relógio passa de 1. */
-    void tick(int targetChamber, int chamberCount) {
+    /**
+     * Um tick: avança os grãos vivos, apaga os de câmara que sumiu e, com alvo, nasce um novo quando o relógio passa de
+     * 1. Devolve se nasceu um grão neste tick (o som do grão sai daí).
+     */
+    boolean tick(int targetChamber, int chamberCount) {
+        boolean born = false;
         clock += targetChamber < 0 ? 0 : SPAWN_PER_TICK;
         if (clock > 1) {
             clock -= 1;
@@ -24,6 +28,7 @@ final class ArmilarGrains {
                 alive[g] = true;
                 chamber[g] = targetChamber;
                 age[g] = 0;
+                born = true;
             }
         }
         for (int g = 0; g < MAX; g++) {
@@ -38,6 +43,7 @@ final class ArmilarGrains {
                 }
             }
         }
+        return born;
     }
 
     private int free() {

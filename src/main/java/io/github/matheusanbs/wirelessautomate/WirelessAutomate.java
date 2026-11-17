@@ -25,6 +25,7 @@ import io.github.matheusanbs.wirelessautomate.registry.ModDataComponents;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.registry.ModMenus;
 import io.github.matheusanbs.wirelessautomate.registry.ModRecipes;
+import io.github.matheusanbs.wirelessautomate.registry.ModSounds;
 import io.github.matheusanbs.wirelessautomate.repairer.RepairerManager;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorCapabilities;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorManager;
@@ -70,6 +71,7 @@ public final class WirelessAutomate {
         ModMenus.MENU_TYPES.register(modEventBus);
         ModRecipes.RECIPE_SERIALIZERS.register(modEventBus);
         ModCreativeTabs.CREATIVE_MODE_TABS.register(modEventBus);
+        ModSounds.SOUND_EVENTS.register(modEventBus);
         modEventBus.addListener(ModPayloads::register);
         modEventBus.addListener(StorageCapabilities::register);
         modEventBus.addListener(io.github.matheusanbs.wirelessautomate.repairer.RepairerCapabilities::register);

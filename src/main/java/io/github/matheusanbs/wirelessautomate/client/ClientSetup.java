@@ -13,6 +13,7 @@ import io.github.matheusanbs.wirelessautomate.client.repairer.RepairerScreen;
 import io.github.matheusanbs.wirelessautomate.client.repairer.render.RepairerRenderer;
 import io.github.matheusanbs.wirelessautomate.client.resonator.ResonatorProjection;
 import io.github.matheusanbs.wirelessautomate.client.resonator.render.ArmilarRenderer;
+import io.github.matheusanbs.wirelessautomate.client.resonator.render.ArmilarSounds;
 import io.github.matheusanbs.wirelessautomate.client.resonator.screen.ResonatorScreen;
 import io.github.matheusanbs.wirelessautomate.client.router.RouterScreen;
 import io.github.matheusanbs.wirelessautomate.client.storage.StorageListScreen;
@@ -102,6 +103,7 @@ public final class ClientSetup {
                         (stack, level, entity, seed) -> SignalCrystalItem.isCracked(stack) ? 1F : 0F);
             }
             ResonanceCoreBlock.projectionHook = ResonatorProjection::toggle;
+            ArmilarSounds.install();
             TvClientHooks.changed = TvArtCache::updated;
             TvClientHooks.arts = TvArtCache::receive;
             TvClientHooks.imageData = io.github.matheusanbs.wirelessautomate.client.tv.image.TvImageReceiver::receive;

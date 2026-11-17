@@ -590,6 +590,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
     @Override
     public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
         sync.receive(tag, level);
+        CoreClientHooks.changed.accept(this);
     }
 
     /** O pacote leva só a view: não pode passar pelo {@code loadWithComponents}, que zeraria o resto. */

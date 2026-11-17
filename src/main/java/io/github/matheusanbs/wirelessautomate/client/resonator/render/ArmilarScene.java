@@ -26,8 +26,6 @@ import org.joml.Vector3f;
  */
 final class ArmilarScene implements FxJob {
     private static final double TICK_SECONDS = 0.05;
-    /** O quanto a faixa de vazão anda por tick em direção ao alvo: acende e apaga em cerca de 1 s. */
-    private static final float FLOW_RATE = 0.12f;
     /** O tempo desde algo que nunca aconteceu: tudo já aceso, nenhum clarão. */
     private static final double LONG_AGO = 1e9;
     /** O relógio do fluxo com o relógio parado do e2e: fixo, para as brasas do pé da Porta não mudarem a contagem entre as capturas. */
@@ -119,8 +117,8 @@ final class ArmilarScene implements FxJob {
                 frozen ? 0 : TICK_SECONDS);
         float goal = ArmilarRenderer.forceBandForTests >= 0 ? ArmilarRenderer.forceBandForTests : flowTarget;
         // o tick anterior ao de agora (flowPrev) e o de agora, em forma fechada; sem pulo se só passou um tick
-        flowPrev = (float) ArmilarFlow.approach(flowNow, goal, FLOW_RATE, elapsed - 1);
-        flowNow = flowPrev + (goal - flowPrev) * FLOW_RATE;
+        flowPrev = (float) ArmilarFlow.approach(flowNow, goal, ArmilarFlow.FLOW_RATE, elapsed - 1);
+        flowNow = flowPrev + (goal - flowPrev) * ArmilarFlow.FLOW_RATE;
         // os ticks que ficaram para trás andam na velocidade do tick anterior; o de agora, na de agora
         flowClockPrev = flowClockNow + (elapsed - 1) * TICK_SECONDS * ArmilarFlow.speed(ArmilarFlow.strength(flowPrev));
         flowClockNow = flowClockPrev + TICK_SECONDS * ArmilarFlow.speed(ArmilarFlow.strength(flowNow));
@@ -189,7 +187,7 @@ final class ArmilarScene implements FxJob {
     }
 
     /** O mesmo relógio no início do tick {@code tick}, para o laço de fase do {@link ArmilarMotion}. */
-    private static double clockAtTick(long tick) {
+    static double clockAtTick(long tick) {
         return Double.isNaN(ArmilarRenderer.freezeSecondsForTests) ? tick * TICK_SECONDS
                 : ArmilarRenderer.freezeSecondsForTests;
     }

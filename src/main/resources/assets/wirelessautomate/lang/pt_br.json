@@ -2006,5 +2006,19 @@
   "screen.wirelessautomate.tv.unit.source": "",
   "screen.wirelessautomate.tv.per.second": "/s",
   "screen.wirelessautomate.tv.per.tick": "/t",
-  "screen.wirelessautomate.tv.per.minute": "/min"
+  "screen.wirelessautomate.tv.per.minute": "/min",
+  "subtitles.wirelessautomate.armilar.assemble": "Armilar se monta",
+  "subtitles.wirelessautomate.armilar.sun_loop": "Sol da Armilar ressoa",
+  "subtitles.wirelessautomate.armilar.tune_lock": "Armilar sintoniza",
+  "subtitles.wirelessautomate.armilar.tune_lost": "Armilar perde a sintonia",
+  "subtitles.wirelessautomate.armilar.conj_charge": "Armilar carrega",
+  "subtitles.wirelessautomate.armilar.conj_burst": "Armilar estoura",
+  "subtitles.wirelessautomate.armilar.conj_arc": "Arco da Armilar corre",
+  "subtitles.wirelessautomate.armilar.conj_impact": "Armilar atinge a Porta",
+  "subtitles.wirelessautomate.armilar.flow_loop": "Energia flui da Armilar",
+  "subtitles.wirelessautomate.armilar.full_loop": "Armilar sob pressão",
+  "subtitles.wirelessautomate.armilar.recharge_grain": "Grão de redstone",
+  "subtitles.wirelessautomate.armilar.recharge_done": "Cristal recarregado",
+  "subtitles.wirelessautomate.armilar.crystal_crack": "Cristal racha",
+  "subtitles.wirelessautomate.armilar.crystal_dull": "Cristal fica opaco"
 }

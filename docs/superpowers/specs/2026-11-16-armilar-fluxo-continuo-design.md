@@ -64,7 +64,7 @@ O dono pediu em 16/11, à noite, depois do design acima: a Porta de Energia pass
 
 ## 3. Sons da Armilar
 
-Pedido do dono em 16/11, à noite: cada animação ganha um som único. Na mesma noite ele corrigiu o pedido: os sons têm de ser **criados para o mod**, como assets próprios, e não tirados dos arquivos do Minecraft.
+Pedido do dono em 16/11, à noite: cada animação ganha um som único. Na mesma noite ele corrigiu o pedido: os sons têm de ser **assets próprios do mod**, e não tirados dos arquivos do Minecraft. Em 17/11 ele reprovou as duas primeiras passadas (síntese simples, que soava a "programa de tv dos anos 30", e gravações CC0 processadas) e pediu algo novo: mágico como os sons do Ars Nouveau, numa mistura magitech, com voz própria para cada elemento (cristais, feixe etc.) e loops que sejam naturalmente bons para repetir. A terceira passada, aprovada em 17/11 ("ficou perfeito"), é síntese própria do zero pelo gerador em `scripts/sounds/`, sem gravação de fora.
 
 ### Formato (guias oficiais e da comunidade, conferidos em 16/11)
 - **Arquivo:** Ogg Vorbis, `.ogg`. É o único formato que o Minecraft aceita ([NeoForge 1.21.1, Sounds](https://docs.neoforged.net/docs/1.21.1/resources/client/sounds); [Fabric, Creating Custom Sounds](https://docs.fabricmc.net/1.21.1/develop/sounds/custom)).
@@ -74,44 +74,57 @@ Pedido do dono em 16/11, à noite: cada animação ganha um som único. Na mesma
   - `stream`: só para sons longos.
   - `attenuation_distance`: padrão 16.
 - **Registro:** `DeferredRegister.create(BuiltInRegistries.SOUND_EVENT, ...)` com `SoundEvent.createVariableRangeEvent(...)`. Os sons contínuos usam `AbstractTickableSoundInstance` com `looping = true` e param com `stop()`.
-- **Loops sem estalo:** cortar o começo e o fim de partida e de parada, e emendar o fim no começo com crossfade (Fabric, Dynamic Sounds).
+- **Loops sem estalo:** o guia sugere cortar o começo e o fim de partida e de parada e emendar o fim no começo com crossfade (Fabric, Dynamic Sounds). Aqui não há o que cortar: os loops já nascem periódicos (ver abaixo).
 
 ### Como são feitos
-- **Gerador próprio.** Um gerador em Python (`scripts/sounds/gerar_sons.py`) sintetiza cada som do zero, com `numpy`, osciladores, FM, ruído filtrado e envelopes, e com sementes fixas. Os sons ficam reproduzíveis, como as texturas do `gerar_texturas.py`. Nenhum som do Minecraft é usado nem copiado.
+- **Síntese própria, em numpy.** `scripts/sounds/dsp.py` é o motor e `scripts/sounds/armilar.py` desenha os 14 sons; `scripts/sounds/gerar.py` grava tudo. Nada do Minecraft nem de banco de sons é usado. O motor tem:
+  - coro de sintetizador: vozes desafinadas, série harmônica moldada por formantes de vogal ("u", "o", "a", "i") e sopro de ar pela mesma vogal;
+  - vento cantado: ruído passado por ressonâncias estreitas nas notas, que soa a assobio vivo e nunca a senoide pura;
+  - cristal: parciais quase harmônicos e de vidro, cada um dividido em cópias a poucos Hz, que cintilam;
+  - chuva de brilho: grãos curtos de cristal agudo nas notas do acorde;
+  - sopro com manchas tonais (como o vento dos feitiços do Ars), giro de órbita (sopro que bate na rotação), trava de latão, faísca elétrica aguda, zumbido de transformador e baque grave macio;
+  - reverb de convolução com cauda que escurece, e o envio só recebe acima de 280 Hz (o grave fica seco).
+  Com sementes fixas: uma nova execução dá os mesmos arquivos.
+- **Regras da paleta** (as lições das passadas reprovadas):
+  - nenhuma varredura de oscilador puro, que soa a teremim de rádio antigo: toda subida ou descida é ar cantado ou coro;
+  - nada de estalo em banda larga nos loops, que soa a disco riscado: a eletricidade é faísca aguda (acima de 4,5 kHz);
+  - nada de saturação nos eventos, porque o `tanh` em agudos densos cria lama no médio-grave;
+  - grãos com ataque de 2 a 6 ms, sem clique.
+- **Loops periódicos por construção.** Toda frequência é múltiplo de 1/T, todo vibrato e toda modulação fecham um número inteiro de ciclos, o ruído é filtrado em STFT circular e o reverb é convolução circular. O fim emenda no começo sem crossfade. Medido no `.ogg` final: o salto da emenda fica dentro do salto normal entre duas amostras.
 - **Saída:**
-  - WAV mono, 48 kHz, 16 bits;
-  - conversão com o `ffmpeg` (`libvorbis`, qualidade 5, mono) para `assets/wirelessautomate/sounds/armilar/<som>.ogg`;
-  - pico normalizado em −1 dBFS nos eventos, e os loops mais baixos, no mesmo nível dos sons de bloco do vanilla;
-  - silêncio cortado e fades curtos contra estalo;
-  - loops com período exato e crossfade.
-- **Variações:** os eventos que repetem (grão, impacto, estouro) têm 2 ou 3 variações, sorteadas pelo `sounds.json`.
-- **Paleta do som:** a mesma da imagem. Latão das órbitas (sinos e metal com parciais inarmônicas), sol de plasma (zumbido grave com batimento lento e crepitar), cristais (vidro e cristal agudo) e energia (zumbido elétrico que corre).
-- **Prévia:** o gerador grava também os `.ogg` numa pasta de prévia, e o controlador manda os arquivos ao dono para ouvir antes do commit.
+  - WAV mono, 48 kHz, 16 bits, com dither;
+  - conversão com o `ffmpeg` (`libvorbis` q6, mono) para `assets/wirelessautomate/sounds/armilar/<som>.ogg`;
+  - os eventos de −3 a −9 dBFS de pico e de −18 a −27 LUFS (os grãos são curtos demais para o LUFS); os loops bem mais baixos, de −31,5 a −34 LUFS, para ficarem por baixo da música e dos eventos;
+  - silêncio cortado e fades curtos contra estalo.
+- **Variações:** os eventos que repetem têm variações sorteadas pelo `sounds.json`: o estouro 2, o impacto 3, o grão 3 e a rachadura 2. Elas mudam a cor (acorde, vogal, notas), e não só o tom.
+- **Paleta do som:** magitech. A magia é tonal, toda em ré lídio (acorde de ré com nona e sétima maior): coro, cristal, vento cantado e brilho. A tecnologia é o latão e a eletricidade: o giro das órbitas, a trava, a faísca e o zumbido.
+- **Prévia:** `python -I scripts/sounds/gerar.py --previa <pasta>` grava também os mp3 de prévia (um por som e um com todos em sequência, com os loops repetidos) e a folha de espectros. Medidas em `docs/preview/armilar-sons.md`.
 
 ### Onde e quando tocam
 - **No cliente.** Os sons tocam só no cliente, a partir do estado que já chega pela `ChamberView` e do relógio da fase. A fase sai do `gameTime`, então todo cliente ouve no mesmo instante, e nada novo vai pela rede.
 - **No ponto do mundo.** Cada som sai do ponto em que a coisa acontece: o sol, a Porta de Energia, o horizonte ou o cristal da câmara. A categoria é `BLOCKS`.
-- **Contínuos.** Os sons contínuos acompanham o estado (volume e tom) e param quando a Armilar some, desmonta ou sai do alcance. Sem som órfão.
-- **Limites.** Nenhum som toca mais de 3 vezes por segundo. Os eventos são presos a transições: o mesmo evento não dispara de novo no mesmo instante, nem quando a cena é recriada.
+- **Pelo tick do cliente, não pelo quadro.** O desenho do bloco só roda com a Armilar na tela, e o som tem de seguir com o jogador olhando para o outro lado. Por isso quem toca é um `ClientTickEvent.Post` (`ArmilarSounds`), com uma caixa por Núcleo (`ArmilarSoundBox`) e a lógica de gatilhos pura (`ArmilarSoundTriggers`); a instância de som nova só nasce no evento, nada é alocado por quadro.
+- **Contínuos.** Os três loops (`ArmilarLoopSound`, um de cada por Armilar, nunca duplicado) acompanham o estado e entram e saem por rampa de volume de cerca de 1 s, sem corte seco: o volume do sol segue a ignição da montagem e a eficiência; o do feixe e o tom (de 0,9 a 1,15) sobem com a vazão suavizada; o da pressão fica baixo enquanto `full`. Param quando a Armilar desmonta, quando o bloco some ou descarrega (a caixa é descartada e o loop para na hora), na troca de dimensão, ao sair do mundo e ao passar do alcance (o `attenuation_distance` do `sounds.json`, com 2 blocos de folga). Sem som órfão.
+- **Limites.** Nenhum som toca mais de 3 vezes por segundo. Os eventos são presos a transições: o mesmo evento não dispara de novo no mesmo instante, nem quando a cena é recriada (o primeiro tick só toma o estado de partida; a montagem só toca se o `formedAt` é de até 3 s atrás e ainda não tocou para ele, com a memória por posição).
 
 ### Os sons
 
-| Etapa | Evento | O som (sintetizado) | Quando |
+| Etapa | Evento | O som | Quando |
 | --- | --- | --- | --- |
-| Montagem | `armilar.assemble` | arpejo subindo de três sinos de latão, um por órbita que entra, e um brilho de cristal no fim (cerca de 3 s) | uma vez, ao formar |
-| Sol aceso | `armilar.sun_loop` | zumbido grave de plasma (55 e 110 Hz com batimento lento) e um crepitar suave (loop de 4 s) | contínuo, enquanto montada; o volume segue a eficiência |
-| Trava da sintonia | `armilar.tune_lock` | acorde de cristal que se afina: três notas que convergem para a quinta e ressoam | quando `tuned` vira verdadeiro |
-| Saída da sintonia | `armilar.tune_lost` | o mesmo acorde se desafinando e descendo, com um chiado curto | quando `tuned` vira falso |
-| Conjunção, preparação | `armilar.conj_charge` | carga subindo: varredura de tom com brilho, de 0,6 s | no começo da janela, em sintonia |
-| Conjunção, estouro | `armilar.conj_burst` | golpe de sino de latão com estalo de energia (2 variações) | no pico do estouro |
-| Conjunção, arco | `armilar.conj_arc` | descarga elétrica que corre e desce (zap com crepitar) | quando a cabeça do arco sai, com vazão |
-| Conjunção, impacto | `armilar.conj_impact` | baque grave com anel metálico e chiado (3 variações) | na Porta, com vazão |
-| Feixe contínuo | `armilar.flow_loop` | zumbido elétrico que corre, com modulação lenta (loop de 3 s); o tom e o volume sobem com a vazão | contínuo na Porta enquanto sai energia |
-| Buffer cheio | `armilar.full_loop` | pressão: pulso grave a 0,5 Hz, no ritmo do sol (loop de 2 s) | contínuo e baixo enquanto `full` |
-| Grão da recarga | `armilar.recharge_grain` | tique curto de faísca (3 variações) | um por grão que nasce |
-| Fim da recarga | `armilar.recharge_done` | brilho de cristal se enchendo: notas subindo e um sino | no clarão, no cristal |
-| Cristal racha | `armilar.crystal_crack` | estalo de vidro com fragmentos agudos | quando a câmara vira rachada |
-| Cristal fica Opaco | `armilar.crystal_dull` | nota de cristal que perde o brilho e abafa | quando a câmara vira Opaca |
+| Montagem | `armilar.assemble` | as órbitas pegam giro (o ar dos aros) e três travas de latão fecham; o ar sobe e o brilho é puxado para dentro (cauda de reverb ao contrário); em 1 s abre a flor: acorde de coro em ré com nona, arpejo de cristal e chuva de brilho, com um baque leve (cerca de 3 s) | uma vez, ao formar (no sol) |
+| Sol aceso | `armilar.sun_loop` | coro grave em ré e lá que respira de "u" para "o", halo de vento cantado agudo e brasas raras de brilho (loop de 8 s, bem baixo) | contínuo, enquanto montada; o volume segue a eficiência (no sol) |
+| Trava da sintonia | `armilar.tune_lock` | o giro acelera e trava; quatro vozes desafinadas de 22 a 38 centésimos convergem para o acorde puro, com cristal e brilho (cerca de 1,6 s) | quando `tuned` vira verdadeiro (no sol) |
+| Saída da sintonia | `armilar.tune_lost` | o mesmo acorde se abre e cai cerca de 2 semitons, o giro desacelera, faíscas finas e passa-baixa que fecha (cerca de 1,5 s) | quando `tuned` vira falso (no sol) |
+| Conjunção, preparação | `armilar.conj_charge` | brilho de cristal puxado para dentro, vento cantado que sobe 3 vezes de tom e coro que cresce; termina no pico, colado no estouro (0,62 s) | no começo da janela, em sintonia (no sol) |
+| Conjunção, estouro | `armilar.conj_burst` | faísca curta, sopro que desce, acorde de coro com cristais e chuva densa de brilho, com baque leve; a variação 2 troca o acorde (si menor sobre ré) e a vogal (cerca de 1,7 s, 2 variações) | no pico do estouro (no horizonte) |
+| Conjunção, arco | `armilar.conj_arc` | assobio cantado que desce, faíscas em queda, sopro curto e um toque de cristal (cerca de 0,6 s) | quando a cabeça do arco sai, com vazão (no horizonte, onde o arco parte) |
+| Conjunção, impacto | `armilar.conj_impact` | baque macio, sopro abafado, cristal numa nota do acorde, respingo de brilho e faíscas que somem (cerca de 0,8 s, 3 variações) | na Porta, com vazão (na Porta de Energia) |
+| Feixe contínuo | `armilar.flow_loop` | rio de ar que canta um acorde de lá, com faíscas agudas, brilho e um zumbido elétrico baixo em lá (loop de 6 s); o tom e o volume sobem com a vazão | contínuo na Porta enquanto sai energia (na Porta de Energia) |
+| Buffer cheio | `armilar.full_loop` | pressão contida: dois rés graves a 0,25 Hz que incham e desincham devagar, coro escuro em "u" e um fio agudo tenso (loop de 8 s, baixo, sem pulso) | contínuo e baixo enquanto `full` (no sol) |
+| Grão da recarga | `armilar.recharge_grain` | um cristal agudo com um ou dois ecos de cristal mais altos (cerca de 0,4 s, 3 variações em lá, dó sustenido e mi) | um por grão que nasce (na Porta de Cristais) |
+| Fim da recarga | `armilar.recharge_done` | ar cantado que sobe, arpejo de cristal de lá a lá, um sino de cristal agudo que cintila, coro claro em "i" e brilho (cerca de 1,9 s) | no clarão, no cristal (no cristal) |
+| Cristal racha | `armilar.crystal_crack` | estalo de vidro, lascas agudas espalhadas, duas notas dissonantes que caem e faíscas que vazam (cerca de 0,6 s, 2 variações) | quando a câmara vira rachada (no cristal) |
+| Cristal fica Opaco | `armilar.crystal_dull` | nota de cristal que cai um semitom e perde o brilho (passa-baixa fechando), com um ar cantado que apaga e um coro grave curto (cerca de 1,6 s) | quando a câmara vira Opaca (no cristal) |
 
 ## Verificação
 

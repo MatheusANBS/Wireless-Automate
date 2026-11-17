@@ -10,6 +10,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.client.fx.FxLightPass;
 import io.github.matheusanbs.wirelessautomate.client.fx.ShaderPackCheck;
 import io.github.matheusanbs.wirelessautomate.client.resonator.render.ArmilarRenderer;
+import io.github.matheusanbs.wirelessautomate.client.resonator.render.ArmilarSounds;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.resonator.ChamberView;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlock;
@@ -175,6 +176,8 @@ final class E2eArmilarRenderSteps {
                 return null;
             });
         }, () -> view(origin[0]).tuned() && stepTicks >= ASSEMBLY_TICKS, () -> "em sintonia no cliente"));
+        list.add(E2eArmilarSoundSteps.registered());
+        list.add(E2eArmilarSoundSteps.sunLoopOn(origin));
         // sem extração, fora da conjunção: só o sol e os filamentos (o feixe e o arco não existem)
         list.add(shotAt("sintonia sem extração", QUIET, () -> origin[0], counts, (sprites, ribbons) -> {
             if (sprites < 1 || ribbons < 2) {
@@ -270,6 +273,7 @@ final class E2eArmilarRenderSteps {
             }
             return seen[0] != 0 && stepTicks >= seen[0] + FLOW_SETTLE_TICKS;
         }, () -> "faixa de vazão no cliente " + band(origin)));
+        list.add(E2eArmilarSoundSteps.flowLoopOn(origin));
         list.add(new Step("Armilar: o arco com a vazão real, relógio em " + (TC + PHASE_D[ARCO]), STEP_TIMEOUT_MS,
                 () -> ArmilarRenderer.freezeSecondsForTests = TC + PHASE_D[ARCO], () -> {
                     drain(origin);
@@ -414,6 +418,7 @@ final class E2eArmilarRenderSteps {
             return null;
         }), () -> view(origin[0]).full() && stepTicks >= 20, () -> "cheio " + view(origin[0]).full()));
         list.add(DevEndToEnd.wait("a pressão assentar", 40));
+        list.add(E2eArmilarSoundSteps.fullLoopOn(origin));
         list.add(capture("armilar-cheio"));
     }
 
@@ -602,7 +607,10 @@ final class E2eArmilarRenderSteps {
      * {@code formedAt} (o {@code FORM_SECONDS} é 2,5 s; o 0,75 s do brief daria {@code a = 0,3}), com o relógio real.
      */
     private static void assemblySteps(List<Step> list, BlockPos[] origin) {
+        E2eArmilarSoundSteps.dismantle(list, origin);
+        int[] assembled = new int[1];
         list.add(new Step("Armilar: montar de novo", STEP_TIMEOUT_MS, () -> {
+            assembled[0] = ArmilarSounds.playedForTests("ASSEMBLE");
             releaseClock();
             onServer(server -> {
                 ServerLevel level = server.overworld();
@@ -626,6 +634,7 @@ final class E2eArmilarRenderSteps {
             return true;
         }, () -> "armilar-montagem.png, " + (Minecraft.getInstance().level.getGameTime() - view(origin[0]).formedAt())
                 + " ticks desde a montagem"));
+        E2eArmilarSoundSteps.reassembled(list, origin, assembled);
     }
 
     // ---------------------------------------------------------------------------------------------------------------
@@ -904,7 +913,7 @@ final class E2eArmilarRenderSteps {
     }
 
     /** Tira da Porta de Energia tudo o que ela der, pela capability de energia do mundo, como um consumidor. */
-    private static void drain(BlockPos[] origin) throws Exception {
+    static void drain(BlockPos[] origin) throws Exception {
         onServer(server -> {
             IEnergyStorage energy = server.overworld().getCapability(Capabilities.EnergyStorage.BLOCK,
                     E2eResonatorSteps.energyPort(origin[0]), null);

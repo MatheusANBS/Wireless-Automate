@@ -42,8 +42,10 @@ final class ArmilarPass {
     double enc;
     double prepEff;
     double eff;
-    /** A força da vazão da Porta de Energia neste quadro, de 0 a 1 ({@link ArmilarFlow#strength}): multiplica o arco e o impacto. */
+    /** A força da vazão da Porta de Energia neste quadro, de 0 a 1 ({@link ArmilarFlow#strength}): escala o fluxo base e o pulso do arco e do impacto. */
     double flowK;
+    /** O relógio do fluxo neste quadro, em segundos do filme: anda com a velocidade da força ({@link ArmilarFlow#speed}), sem pulo quando a vazão muda. */
+    double fc;
     float sunX;
     float sunY;
     float sunZ;
@@ -88,6 +90,7 @@ final class ArmilarPass {
         phase.set(t, scene.view().tuned() ? u : 0);
         eff = ArmilarFlow.sunMul(u);
         flowK = ArmilarFlow.strength(scene.flow(pt));
+        fc = scene.flowClock(pt);
         prepEff = Math.max(phase.prep, scene.full() ? ArmilarPhase.fullPrep(t) : 0);
         ig = ArmilarAssembly.ignition(a) * eff;
         enc = 1 - 0.28 * prepEff + 0.18 * phase.raio;

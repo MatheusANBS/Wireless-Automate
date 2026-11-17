@@ -56,6 +56,12 @@ final class E2eArmilarRenderSteps {
     private static final double QUIET = TC + 2.6;
     /** Os ticks com o relógio parado até a captura (o {@code motion} trava na conjunção). */
     private static final int FREEZE_TICKS = 40;
+    /** As fitas do fluxo base: o feixe do sol ao horizonte (3) e o arco até a Porta (4). */
+    private static final int BASE_RIBBONS = 7;
+    /** O {@code d} das quatro capturas com a vazão real: a primeira ainda na dissolução, as outras fora da conjunção. */
+    private static final double[] REAL_D = {1.5, 2.5, 3.5, 4.5};
+    /** As faixas forçadas da captura de intensidade. */
+    private static final int[] INTENSITY_BANDS = {2, 5, 7};
     /** Os ticks para a vazão suavizada chegar à faixa forçada (a faixa anda 12% por tick). */
     private static final int FLOW_SETTLE_TICKS = 100;
     /** Os ticks para a montagem acabar e o {@code u} chegar a 1 depois de sintonizar. */
@@ -134,8 +140,10 @@ final class E2eArmilarRenderSteps {
      */
     static void chamberSteps(List<Step> list, UUID playerId, BlockPos[] origin) {
         int[] counts = new int[2];
-        // [0] as fitas da sintonia; [1] e [2] as fitas e os sprites do arco com a vazão 7
-        int[] ref = new int[3];
+        // [0] as fitas da sintonia com a vazão 7 (o fluxo base aceso); [1] e [2] as fitas e os sprites do arco com a
+        // vazão 7; [3] e [5] as fitas e os sprites da sintonia com a vazão 0 (só o sol e os filamentos); [4] os sprites
+        // da sintonia com a vazão 7
+        int[] ref = new int[6];
         list.add(new Step("Armilar: sem a mão, FOV do filme e o Núcleo fora de sintonia", STEP_TIMEOUT_MS, () -> {
             filmOptions();
             releaseClock();
@@ -160,27 +168,43 @@ final class E2eArmilarRenderSteps {
         list.add(film("Armilar: câmera do filme", playerId, () -> origin[0]));
         list.add(DevEndToEnd.wait("a pose assentar (fora de sintonia)", 60));
         list.add(capture("armilar-fora"));
-        list.add(new Step("Armilar: dial a 98,0 e a vazão 7", STEP_TIMEOUT_MS, () -> {
-            ArmilarRenderer.forceBandForTests = 7;
+        list.add(new Step("Armilar: dial a 98,0 e a vazão 0", STEP_TIMEOUT_MS, () -> {
+            ArmilarRenderer.forceBandForTests = 0;
             onServer(server -> {
                 ((ResonanceCoreBlockEntity) server.overworld().getBlockEntity(core(origin[0]))).setDial(98.0);
                 return null;
             });
         }, () -> view(origin[0]).tuned() && stepTicks >= ASSEMBLY_TICKS, () -> "em sintonia no cliente"));
-        list.add(shotAt("sintonia", QUIET, () -> origin[0], counts, (sprites, ribbons) -> {
+        // sem extração, fora da conjunção: só o sol e os filamentos (o feixe e o arco não existem)
+        list.add(shotAt("sintonia sem extração", QUIET, () -> origin[0], counts, (sprites, ribbons) -> {
             if (sprites < 1 || ribbons < 2) {
                 throw new StepFailure("o sol e os filamentos sumiram: " + sprites + " sprites, " + ribbons + " fitas");
             }
+            ref[3] = ribbons;
+            ref[5] = sprites;
+        }));
+        list.add(capture("armilar-sintonia-sem-fluxo"));
+        list.add(new Step("Armilar: a vazão 7", STEP_TIMEOUT_MS, () -> ArmilarRenderer.forceBandForTests = 7,
+                () -> stepTicks >= FLOW_SETTLE_TICKS, () -> "faixa forçada 7"));
+        // com extração, fora da conjunção: o fluxo base aceso (o feixe do sol ao horizonte, o arco e o pé da Porta)
+        list.add(shotAt("sintonia", QUIET, () -> origin[0], counts, (sprites, ribbons) -> {
+            if (sprites <= ref[5] || ribbons < ref[3] + BASE_RIBBONS) {
+                throw new StepFailure("o fluxo base não acendeu fora da conjunção: " + sprites + " sprites (sem fluxo "
+                        + ref[5] + ") e " + ribbons + " fitas (esperava ao menos " + (ref[3] + BASE_RIBBONS) + ")");
+            }
             ref[0] = ribbons;
+            ref[4] = sprites;
         }));
         list.add(capture("armilar-sintonia"));
+        intensitySteps(list, origin, counts, ref);
         phases(list, "armilar", () -> origin[0], counts, ref, 0, 1, 2, 3, 4);
         list.add(new Step("Armilar: vazão 0", STEP_TIMEOUT_MS, () -> ArmilarRenderer.forceBandForTests = 0,
                 () -> stepTicks >= FLOW_SETTLE_TICKS, () -> "faixa forçada 0"));
+        // sem extração a conjunção fica só no sol: o estouro aparece, o arco e o impacto não
         list.add(shotAt("vazão 0 no arco", TC + PHASE_D[ARCO], () -> origin[0], counts, (sprites, ribbons) -> {
-            if (ribbons < ref[0] || ribbons >= ref[1] || sprites >= ref[2]) {
-                throw new StepFailure("com a vazão 0 o arco não sai: esperava menos de " + ref[1] + " fitas e "
-                        + ref[2] + " sprites (e ao menos " + ref[0] + " fitas), veio " + ribbons + " e " + sprites);
+            if (ribbons <= ref[3] || ribbons >= ref[0] || sprites >= ref[2]) {
+                throw new StepFailure("com a vazão 0 o arco não sai: esperava mais de " + ref[3] + " e menos de "
+                        + ref[0] + " fitas e menos de " + ref[2] + " sprites, veio " + ribbons + " e " + sprites);
             }
         }));
         list.add(capture("armilar-conj-vazao0"));
@@ -197,6 +221,36 @@ final class E2eArmilarRenderSteps {
         assemblySteps(list, origin);
         list.add(new Step("Armilar: opções e ganchos de volta", STEP_TIMEOUT_MS, E2eArmilarRenderSteps::restoreHooks,
                 () -> true, () -> "FOV " + Minecraft.getInstance().options.fov().get()));
+    }
+
+    /**
+     * A intensidade pela energia que sai: com a faixa forçada em 2, 5 e 7, na mesma fase fora da conjunção, as fitas
+     * são as mesmas (o fluxo base) e as brasas do pé da Porta crescem com a faixa. Termina com a faixa 7 forçada.
+     */
+    private static void intensitySteps(List<Step> list, BlockPos[] origin, int[] counts, int[] ref) {
+        int[] sprites = new int[INTENSITY_BANDS.length];
+        for (int i = 0; i < INTENSITY_BANDS.length; i++) {
+            int index = i;
+            int band = INTENSITY_BANDS[i];
+            list.add(new Step("Armilar: a vazão " + band, STEP_TIMEOUT_MS, () -> ArmilarRenderer.forceBandForTests = band,
+                    () -> stepTicks >= FLOW_SETTLE_TICKS, () -> "faixa forçada " + band));
+            list.add(shotAt("faixa " + band + " fora da conjunção", QUIET, () -> origin[0], counts,
+                    (spr, ribbons) -> {
+                        if (ribbons != ref[0]) {
+                            throw new StepFailure("faixa " + band + ": " + ribbons + " fitas, o fluxo base tem " + ref[0]);
+                        }
+                        sprites[index] = spr;
+                        if (index > 0 && spr < sprites[index - 1]) {
+                            throw new StepFailure("faixa " + band + ": " + spr + " sprites, menos que a faixa "
+                                    + INTENSITY_BANDS[index - 1] + " (" + sprites[index - 1] + ")");
+                        }
+                        if (index == INTENSITY_BANDS.length - 1 && spr <= sprites[0]) {
+                            throw new StepFailure("as brasas não crescem com a faixa: " + sprites[0] + " sprites na "
+                                    + INTENSITY_BANDS[0] + " e " + spr + " na " + band);
+                        }
+                    }));
+            list.add(capture("armilar-fluxo-faixa-" + band));
+        }
     }
 
     /**
@@ -229,13 +283,42 @@ final class E2eArmilarRenderSteps {
                         throw new StepFailure("o arco real: a Armilar não foi desenhada");
                     }
                     if (counts[1] <= ref[0]) {
-                        throw new StepFailure("com a vazão real (faixa " + band(origin) + ") o arco não passa da sintonia: "
-                                + counts[1] + " fitas, a sintonia tem " + ref[0]);
+                        throw new StepFailure("com a vazão real (faixa " + band(origin) + ") a conjunção não soma ao fluxo base: "
+                                + counts[1] + " fitas, o fluxo base tem " + ref[0]);
                     }
                     return true;
                 }, () -> "faixa " + band(origin) + ", " + counts[0] + " sprites, " + counts[1] + " fitas (sintonia "
                 + ref[0] + ")"));
         list.add(capture("armilar-fluxo-real"));
+        // o fluxo contínuo: em quatro fases, a dissolução e fora da conjunção, o feixe e o arco têm de estar acesos
+        for (int i = 0; i < REAL_D.length; i++) {
+            double d = REAL_D[i];
+            int phase = i + 1;
+            list.add(new Step("Armilar: o fluxo real, fase " + phase + ", relógio em " + (TC + d), STEP_TIMEOUT_MS,
+                    () -> ArmilarRenderer.freezeSecondsForTests = TC + d, () -> {
+                        drain(origin);
+                        if (stepTicks < FREEZE_TICKS) {
+                            return false;
+                        }
+                        if (band(origin) <= 0) {
+                            throw new StepFailure("a vazão real caiu a 0 antes da fase " + phase);
+                        }
+                        if (!ArmilarRenderer.countsForTests(core(origin[0]), counts)) {
+                            throw new StepFailure("fase " + phase + ": a Armilar não foi desenhada");
+                        }
+                        if (counts[1] < ref[0]) {
+                            throw new StepFailure("fase " + phase + " (d " + d + "): o feixe ou o arco sumiram com a "
+                                    + "extração ligada: " + counts[1] + " fitas, o fluxo base tem " + ref[0]);
+                        }
+                        if (d >= 2.5 && counts[1] != ref[0]) {
+                            throw new StepFailure("fase " + phase + " (d " + d + "): " + counts[1]
+                                    + " fitas fora da conjunção, o fluxo base tem " + ref[0]);
+                        }
+                        return true;
+                    }, () -> "fase " + phase + ", faixa " + band(origin) + ", " + counts[0] + " sprites, " + counts[1]
+                    + " fitas (fluxo base " + ref[0] + ")"));
+            list.add(capture("armilar-fluxo-real-fase" + phase));
+        }
         list.add(new Step("Armilar: relógio e vazão reais de volta", STEP_TIMEOUT_MS, E2eArmilarRenderSteps::releaseClock,
                 () -> true, () -> "relógio do mundo"));
     }

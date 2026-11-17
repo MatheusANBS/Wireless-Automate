@@ -6,7 +6,8 @@ import io.github.matheusanbs.wirelessautomate.client.fx.FxSheets;
 /**
  * O arco da conjunção, o {@code // o arco:} do filme ({@code partes.js}): do horizonte até a Porta de Energia, uma
  * tira de raio com trilhos escuros por baixo (tinta) e pacotes de luz correndo, com uma cabeça que avança e uma cauda
- * que se apaga atrás dela. A vazão multiplica o alfa e a largura: com vazão 0 não há arco.
+ * que se apaga atrás dela. É o pulso da conjunção, por cima do arco base ({@link ArmilarStream}). A força da vazão
+ * multiplica o alfa e a largura: com vazão 0 não há arco.
  */
 final class ArmilarArc {
     static final int POINTS = 61;
@@ -16,7 +17,7 @@ final class ArmilarArc {
     /** Os quatro controles da bezier, em px locais; o último é o fim do arco e depende do deslocamento da Porta. */
     private static final float[] CTL = {33.6f, 46.6f, 0, 46, 44, 0, 49, 17, 0, 0, 0, 0};
     /** Quadros do raio por segundo (o {@code qd('raio', 8, t, 12)} do filme) e da estrela da cabeça. */
-    private static final double RAIO_FPS = 12;
+    static final double RAIO_FPS = 12;
     private static final double HEAD_FPS = 10;
     /** A cabeça e o ponto quatro amostras atrás; rascunhos só da thread de render. */
     private static final double[] HEAD = new double[3];

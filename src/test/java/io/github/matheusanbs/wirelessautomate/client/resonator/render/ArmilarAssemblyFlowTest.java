@@ -68,7 +68,7 @@ class ArmilarAssemblyFlowTest {
     @Test
     void vazaoEmFaixas() {
         assertEquals(0.0, ArmilarFlow.strength(0), 1e-12);
-        assertEquals(0.45 + 0.55 / 7, ArmilarFlow.strength(1), 1e-12);
+        assertEquals(0.15, ArmilarFlow.strength(1), 1e-12);
         assertEquals(1.0, ArmilarFlow.strength(7), 1e-12);
         double prev = -1;
         for (int k = 0; k <= 70; k++) {
@@ -83,6 +83,70 @@ class ArmilarAssemblyFlowTest {
         assertEquals(0.55, ArmilarFlow.sunMul(0), 1e-12);
         assertEquals(1.0, ArmilarFlow.sunMul(1), 1e-12);
     }
+
+    @Test
+    void curvaDaIntensidadePorFaixa() {
+        double[] want = {0.15, 0.15 + 0.85 / 6, 0.15 + 0.85 * 2 / 6, 0.575, 0.15 + 0.85 * 4 / 6, 0.15 + 0.85 * 5 / 6, 1};
+        for (int band = 1; band <= 7; band++) {
+            assertEquals(want[band - 1], ArmilarFlow.strength(band), 1e-12, "faixa " + band);
+        }
+        // sem teto nem salto entre as faixas inteiras
+        double prev = 0;
+        for (int i = 0; i <= 700; i++) {
+            double k = ArmilarFlow.strength(i / 100.0);
+            assertTrue(k >= prev, "monotônica em " + i / 100.0);
+            assertTrue(k - prev < 0.02, "sem salto em " + i / 100.0);
+            prev = k;
+        }
+    }
+
+    @Test
+    void oAlfaDoFluxoBaseNuncaEZeroComVazao() {
+        for (int i = 10; i <= 700; i++) {
+            double k = ArmilarFlow.strength(i / 100.0);
+            assertTrue(k > 0, "força em " + i / 100.0);
+            assertTrue(ArmilarFlow.baseAlpha(k) > 0, "alfa em " + i / 100.0);
+            assertTrue(ArmilarFlow.baseWidth(k) > 0.3, "largura em " + i / 100.0);
+        }
+        // na faixa 1 já é um fio visível; na 7, quase cheio, e o pulso completa
+        assertEquals(0.39, ArmilarFlow.baseAlpha(ArmilarFlow.strength(1)), 1e-12);
+        assertEquals(0.9, ArmilarFlow.baseAlpha(1), 1e-12);
+        assertEquals(1.0, ArmilarFlow.baseWidth(1), 1e-12);
+        assertTrue(ArmilarFlow.baseWidth(ArmilarFlow.strength(1)) < 0.45);
+        // sem força, nada: o fluxo apaga junto com a faixa, por rampa
+        assertEquals(0.0, ArmilarFlow.baseAlpha(0), 0.0);
+        assertTrue(ArmilarFlow.speed(0.15) < ArmilarFlow.speed(1));
+        assertEquals(1.0, ArmilarFlow.speed(1), 1e-12);
+    }
+
+    @Test
+    void baseMaisPulsoNaoPassaDeUmENaoFazBuraco() {
+        ArmilarPhase phase = new ArmilarPhase();
+        for (int band = 1; band <= 7; band++) {
+            double k = ArmilarFlow.strength(band);
+            double base = ArmilarFlow.baseAlpha(k);
+            double prev = -1;
+            // um ciclo inteiro da conjunção em 1 ms, com a dissolução até o fim
+            for (double t = 8; t < 8 + 5.24; t += 0.001) {
+                phase.set(t, 1);
+                double total = ArmilarFlow.combine(base, phase.arco * k);
+                assertTrue(total <= 1.0 + 1e-12, "no máximo 1, faixa " + band + " t " + t);
+                assertTrue(total >= base - 1e-12, "nunca abaixo da base, faixa " + band + " t " + t);
+                if (prev >= 0) {
+                    assertTrue(Math.abs(total - prev) < 0.03, "sem corte, faixa " + band + " t " + t);
+                }
+                prev = total;
+            }
+            // no fim da dissolução o pulso é 0 e fica a base inteira
+            phase.set(TC_END, 1);
+            assertEquals(base, ArmilarFlow.combine(base, phase.arco * k), 1e-12);
+        }
+        assertEquals(1.0, ArmilarFlow.combine(0.9, 1), 1e-12);
+        assertEquals(0.9, ArmilarFlow.combine(0.9, 0), 1e-12);
+    }
+
+    /** Um instante bem depois da dissolução (d &gt; 2,4 s). */
+    private static final double TC_END = 11 + 3.5;
 
     @Test
     void approachEmFormaFechadaIgualAosPassos() {

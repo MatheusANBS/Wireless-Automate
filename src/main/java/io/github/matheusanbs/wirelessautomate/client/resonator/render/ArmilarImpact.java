@@ -5,7 +5,8 @@ import io.github.matheusanbs.wirelessautomate.client.fx.FxSheets;
 /**
  * O impacto na Porta de Energia, o {@code // impacto na Porta de Energia:} do filme ({@code partes.js}): o clarão, o
  * sigilo na face da Porta, o aro de choque e a mancha de fumaça no chão, as 16 brasas e as 4 fumaças. A vazão
- * multiplica o alfa e o número de brasas (a spec): com vazão 0 não há impacto.
+ * multiplica o alfa e o número de brasas (a spec): com vazão 0 não há impacto. É o pulso da conjunção, por cima do
+ * brilho do pé da Porta ({@link ArmilarStream}).
  */
 final class ArmilarImpact {
     private static final int EMBERS = 16;

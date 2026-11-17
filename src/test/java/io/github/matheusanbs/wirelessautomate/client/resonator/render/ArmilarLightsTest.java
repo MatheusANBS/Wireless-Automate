@@ -1,6 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.client.resonator.render;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -30,13 +31,14 @@ class ArmilarLightsTest {
             double[][] out = compute(row[0], 1, 1, 1);
             assertEquals(row[1], out[0][ArmilarLights.K], TOL, row[0] + " sol");
             assertEquals(row[2], out[1][ArmilarLights.K], TOL, row[0] + " horizonte");
-            assertEquals(row[3], out[2][ArmilarLights.K], TOL, row[0] + " Porta");
+            // a Porta: o fluxo base acende metade e o pulso do filme completa por cima
+            assertEquals(1.6 * ArmilarFlow.combine(0.5, row[3] / 1.6), out[2][ArmilarLights.K], TOL, row[0] + " Porta");
         }
     }
 
     @Test
-    void semConjuncaoSoOSolAcende() {
-        double[][] out = compute(3, 0.5, 0, 1);
+    void semConjuncaoESemVazaoSoOSolAcende() {
+        double[][] out = compute(3, 0.5, 0, 0);
         assertEquals(0.31722556, out[0][ArmilarLights.K], TOL);
         assertEquals(0, out[1][ArmilarLights.K], TOL);
         assertEquals(0, out[2][ArmilarLights.K], TOL);
@@ -45,7 +47,10 @@ class ArmilarLightsTest {
     @Test
     void aVazaoMexeSoNaPorta() {
         double half = compute(12, 1, 1, 0.5)[2][ArmilarLights.K];
-        assertEquals(0.8, half, TOL);
+        assertEquals(1.6 * (1 - 0.75 * 0.5), half, TOL);
+        // com extração contínua e sem conjunção a Porta fica acesa, em proporção à força
+        assertEquals(1.6 * 0.5 * 0.5, compute(3, 1, 1, 0.5)[2][ArmilarLights.K], TOL);
+        assertTrue(compute(3, 1, 1, 0.15)[2][ArmilarLights.K] < compute(3, 1, 1, 1)[2][ArmilarLights.K]);
         double[][] none = compute(12, 1, 1, 0);
         assertEquals(0, none[2][ArmilarLights.K], TOL);
         // a conjunção acontece no sol: ele não depende da vazão

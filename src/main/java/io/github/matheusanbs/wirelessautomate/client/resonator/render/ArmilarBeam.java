@@ -5,8 +5,8 @@ import io.github.matheusanbs.wirelessautomate.client.fx.FxSheets;
 
 /**
  * O estouro da conjunção, o {@code // estouro:} do filme ({@code partes.js}): o feixe de dois trilhos que sai do sol
- * até o anel do horizonte, o clarão no fim dele e o aro de choque. Não depende da vazão (a spec): com vazão 0 o
- * estouro e o clarão no horizonte acontecem.
+ * até o anel do horizonte, o clarão no fim dele e o aro de choque. É o pulso da conjunção, por cima do feixe base
+ * ({@link ArmilarStream}). Não depende da vazão (a spec): com vazão 0 o estouro e o clarão no horizonte acontecem.
  */
 final class ArmilarBeam {
     private static final int POINTS = 25;

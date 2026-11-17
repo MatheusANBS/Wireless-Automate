@@ -30,6 +30,8 @@ final class ArmilarScene implements FxJob {
     private static final float FLOW_RATE = 0.12f;
     /** O tempo desde algo que nunca aconteceu: tudo já aceso, nenhum clarão. */
     private static final double LONG_AGO = 1e9;
+    /** O relógio do fluxo com o relógio parado do e2e: fixo, para as brasas do pé da Porta não mudarem a contagem entre as capturas. */
+    private static final double FROZEN_FLOW_CLOCK = 1.3;
     private static final int SIZE = 5;
     /** A folga da caixa de desenho na horizontal, em blocos: o arco de saída passa de 3 blocos do centro e os decalques do chão vão a ~3. */
     private static final int BOX_MARGIN = 1;
@@ -68,6 +70,9 @@ final class ArmilarScene implements FxJob {
     private byte flowTarget;
     private float flowPrev;
     private float flowNow;
+    /** O relógio do fluxo (s) no tick anterior e no de agora: soma o passo de cada tick vezes a velocidade da força. */
+    private double flowClockPrev;
+    private double flowClockNow;
     private long tunedAt = -1;
     private long gameTime;
     private int sunLight = LightTexture.FULL_BRIGHT;
@@ -116,6 +121,9 @@ final class ArmilarScene implements FxJob {
         // o tick anterior ao de agora (flowPrev) e o de agora, em forma fechada; sem pulo se só passou um tick
         flowPrev = (float) ArmilarFlow.approach(flowNow, goal, FLOW_RATE, elapsed - 1);
         flowNow = flowPrev + (goal - flowPrev) * FLOW_RATE;
+        // os ticks que ficaram para trás andam na velocidade do tick anterior; o de agora, na de agora
+        flowClockPrev = flowClockNow + (elapsed - 1) * TICK_SECONDS * ArmilarFlow.speed(ArmilarFlow.strength(flowPrev));
+        flowClockNow = flowClockPrev + TICK_SECONDS * ArmilarFlow.speed(ArmilarFlow.strength(flowNow));
         flash.tick(view, chambers, gameTime);
         tickGrains(level);
         frame.toWorld(0, ArmilarSpec.SOL_Y, 0, sunAt);
@@ -232,6 +240,14 @@ final class ArmilarScene implements FxJob {
         return Mth.lerp(partialTick, flowPrev, flowNow);
     }
 
+    /** O relógio do fluxo, em segundos do filme, interpolado entre o tick anterior e o de agora (fixo com o relógio parado do e2e). */
+    double flowClock(float partialTick) {
+        if (!Double.isNaN(ArmilarRenderer.freezeSecondsForTests)) {
+            return FROZEN_FLOW_CLOCK;
+        }
+        return flowClockPrev + (flowClockNow - flowClockPrev) * partialTick;
+    }
+
     /** O buffer terminou o último lote cheio: a Armilar fica sob pressão. */
     boolean full() {
         return full;
@@ -271,8 +287,8 @@ final class ArmilarScene implements FxJob {
     }
 
     /**
-     * Os efeitos do quadro: o sol (com as brasas), os filamentos, o ponteiro e a conjunção (o estouro, o arco e o
-     * impacto, nessa ordem, que é a do filme) e o clarão dos cristais; a tinta de cada um sai antes da luz.
+     * Os efeitos do quadro: o sol (com as brasas), os filamentos, o ponteiro, o fluxo base (enquanto sai energia) e a
+     * conjunção por cima (o estouro, o arco e o impacto, nessa ordem, que é a do filme) e o clarão dos cristais; a tinta de cada um sai antes da luz.
      */
     @Override
     public void draw(FxContext ctx, MultiBufferSource buffers) {
@@ -283,6 +299,7 @@ final class ArmilarScene implements FxJob {
         ArmilarSun.draw(pass);
         ArmilarFilaments.draw(pass);
         ArmilarPointer.draw(pass);
+        ArmilarStream.draw(pass);
         ArmilarBeam.draw(pass);
         ArmilarArc.draw(pass);
         ArmilarImpact.draw(pass);

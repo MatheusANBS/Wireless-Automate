@@ -19,6 +19,8 @@ final class ArmilarStream {
     private static final double FOOT_RING = 0.4;
     /** O aro do pé se abre e some a cada {@link #RING_SECONDS} do relógio do fluxo (menos de 1 Hz: nada pisca). */
     private static final double RING_SECONDS = 1.8;
+    /** A fração do ciclo em que o aro entra. */
+    private static final double RING_FADE_IN = 0.1;
     /** As brasas do pé: o máximo, o ciclo de cada uma (cobre os 2,13 s da vida) e o passo que as espalha (razão áurea). */
     static final int EMBERS = 16;
     private static final double EMBER_CYCLE = 2.2;
@@ -93,8 +95,13 @@ final class ArmilarStream {
         // o aro de choque no chão: abre e some em laço, com o alfa caindo até 0 no fim do ciclo
         double r = Ease.frac(fc / RING_SECONDS);
         p.dec(FxSheets.CHOQUE, FxSheets.CHOQUE.frameByFraction(r), 47 + ArmilarSpec.PORTA_DESLOC_X, 0.12, 0, AXIS_X,
-                AXIS_Z, 11, ArmilarPass.OURO, FOOT_RING * alpha * (1 - r) * (1 - r), 0, 0);
+                AXIS_Z, 11, ArmilarPass.OURO, FOOT_RING * alpha * ringAlpha(r), 0, 0);
         embers(p, k, alpha, porta);
+    }
+
+    /** O alfa do aro em laço na fração {@code r} do ciclo: entra suave nos primeiros 10% e cai a 0 no fim, sem estalo na volta. */
+    static double ringAlpha(double r) {
+        return Ease.ss(0, RING_FADE_IN, r) * (1 - r) * (1 - r);
     }
 
     /**

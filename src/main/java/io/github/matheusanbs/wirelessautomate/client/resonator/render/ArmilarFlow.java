@@ -27,6 +27,11 @@ final class ArmilarFlow {
         return k < MIN_STRENGTH ? 0 : k;
     }
 
+    /** A força com a montagem: o fluxo acende junto com o sol, pela ignição da {@link ArmilarAssembly}. */
+    static double ignited(double k, double ignition) {
+        return k * Math.min(1, ignition);
+    }
+
     /** O quanto o fluxo base está aceso, de 0 a 1: sobe com a força até a faixa 1 e fica cheio daí em diante. */
     static double presence(double k) {
         return Ease.ss(0, STRENGTH_MIN_BAND, k);

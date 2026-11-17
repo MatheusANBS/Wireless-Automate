@@ -145,6 +145,31 @@ class ArmilarAssemblyFlowTest {
         assertEquals(0.9, ArmilarFlow.combine(0.9, 0), 1e-12);
     }
 
+    @Test
+    void oAroDoPeEntraSuaveESomeSemEstalo() {
+        assertEquals(0.0, ArmilarStream.ringAlpha(0), 1e-12);
+        assertEquals(0.0, ArmilarStream.ringAlpha(1), 1e-12);
+        double prev = 0;
+        for (int i = 0; i <= 1000; i++) {
+            double v = ArmilarStream.ringAlpha(i / 1000.0);
+            assertTrue(Math.abs(v - prev) < 0.02, "sem salto em " + i / 1000.0);
+            prev = v;
+        }
+    }
+
+    @Test
+    void oFluxoAcendeComAIgnicaoDaMontagem() {
+        double k = ArmilarFlow.strength(7);
+        assertEquals(0.0, ArmilarFlow.baseAlpha(ArmilarFlow.ignited(k, ArmilarAssembly.ignition(0))), 1e-12);
+        double prev = 0;
+        for (int i = 0; i <= 100; i++) {
+            double v = ArmilarFlow.baseAlpha(ArmilarFlow.ignited(k, ArmilarAssembly.ignition(i / 100.0)));
+            assertTrue(v >= prev - 1e-12, "sobe com a ignição em " + i / 100.0);
+            prev = v;
+        }
+        assertEquals(ArmilarFlow.baseAlpha(k), ArmilarFlow.baseAlpha(ArmilarFlow.ignited(k, 1)), 1e-12);
+    }
+
     /** Um instante bem depois da dissolução (d &gt; 2,4 s). */
     private static final double TC_END = 11 + 3.5;
 

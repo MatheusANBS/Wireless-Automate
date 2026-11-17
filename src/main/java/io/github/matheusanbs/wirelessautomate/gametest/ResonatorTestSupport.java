@@ -5,7 +5,9 @@ import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBatch;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBlueprint;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorGeneration;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorLayout;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorLayout.Face;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorPartBlock;
@@ -21,6 +23,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -143,6 +146,23 @@ final class ResonatorTestSupport {
         BlockPos corePos = build(helper, ORIGIN, layout, tier);
         helper.startSequence().thenWaitUntil(() -> assertFormed(helper, corePos, true))
                 .thenExecute(() -> body.accept(core(helper, corePos))).thenSucceed();
+    }
+
+    /**
+     * Roda {@code ticks} ticks do Núcleo como o gerenciador: a geração de cada tick (com o aviso às Portas) e o lote a
+     * cada 20 ticks, mais um lote com o resto no fim se {@code ticks} não é múltiplo de 20. Substitui o antigo lote
+     * único de 20 ticks: a energia por segundo e o desgaste dos cristais são os mesmos.
+     */
+    static void run(ServerLevel level, ResonanceCoreBlockEntity core, int ticks) {
+        for (int done = 1; done <= ticks; done++) {
+            ResonatorGeneration.tickAndNotify(core);
+            if (done % ResonatorBatch.BATCH_TICKS == 0) {
+                ResonatorBatch.run(level, core, ResonatorBatch.BATCH_TICKS);
+            }
+        }
+        if (ticks % ResonatorBatch.BATCH_TICKS != 0) {
+            ResonatorBatch.run(level, core, ticks % ResonatorBatch.BATCH_TICKS);
+        }
     }
 
     static void assertFormed(GameTestHelper helper, BlockPos corePos, boolean formed) {

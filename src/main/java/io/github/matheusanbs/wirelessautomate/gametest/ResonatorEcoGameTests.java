@@ -141,6 +141,8 @@ public final class ResonatorEcoGameTests {
                         cracked(tuned(RouterTier.ULTIMATE, 1))), "o slot aceita no teto");
                 helper.assertValueEqual(core.generationPerTick(), CoreEco.apply(base, 2, 0.05, 0), "geração com +10%");
                 Config.ECO_MAX.set(1L);
+                // A recarga da config suja o cache da geração (ResonatorManager.refreshAllInterference).
+                core.invalidateGeneration();
                 helper.assertValueEqual(core.generationPerTick(), CoreEco.apply(base, 1, 0.05, 0),
                         "o teto menor limita o Eco guardado");
                 helper.assertValueEqual(core.eco().value(), 2L, "o teto menor apagou o Eco");

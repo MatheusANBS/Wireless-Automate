@@ -120,11 +120,11 @@ public final class ResonatorFatigueGameTests {
             crackedAt(helper, core, 0);
             helper.assertValueEqual(core.addCatalyst(new ItemStack(Items.REDSTONE, 3)), 3, "redstone que entrou");
             ResonatorMenu menu = menu(helper, core);
-            ResonatorBatch.run(helper.getLevel(), core, 20);
+            ResonatorTestSupport.run(helper.getLevel(), core, 20);
             helper.assertValueEqual(core.rechargeProgress(), 0, "só com o rachado, a recarga andou");
             helper.assertValueEqual(menu.pollState(0).recharge(), 0, "a tela mostra recarga só com o rachado");
             helper.assertTrue(core.insertCrystalAt(1, crystal(false, 0)), "o Opaco não entrou");
-            ResonatorBatch.run(helper.getLevel(), core, 20);
+            ResonatorTestSupport.run(helper.getLevel(), core, 20);
             helper.assertValueEqual(core.rechargeProgress(), 20, "a recarga não foi para o Opaco");
             recharge(helper, core);
             helper.assertTrue(SignalCrystalItem.isFull(core.crystals().get(1)), "o Opaco não encheu");

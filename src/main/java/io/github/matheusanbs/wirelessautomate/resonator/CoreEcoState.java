@@ -11,7 +11,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * O Eco Ressonante de um Núcleo (chave {@code eco} no NBT, componente {@code resonator_eco} no item): só o Ultimate o
  * usa, e só um Afinado Ultimate rachado o alimenta, consumido na hora. As contas são do {@link CoreEco}; o Núcleo de
- * outro tier recusa o cristal e não aplica o fator. Nada aqui roda por tick: o fator é lido na geração e no buffer.
+ * outro tier recusa o cristal e não aplica o fator. Nada aqui roda por tick: o fator entra no cache da geração e da capacidade do Núcleo, sujo quando o Eco muda.
  */
 public final class CoreEcoState {
     static final String KEY = "eco";
@@ -54,6 +54,7 @@ public final class CoreEcoState {
         int burned = room(stack);
         if (!simulate && burned > 0) {
             eco = CoreEco.add(eco, burned);
+            core.invalidateGeneration();
             core.setChanged();
         }
         return burned;

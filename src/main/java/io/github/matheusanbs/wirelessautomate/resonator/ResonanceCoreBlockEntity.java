@@ -22,10 +22,11 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * O estado do Núcleo de Ressonância (sem ticker: o gerenciador trabalha em lote). Guarda se a estrutura está
+ * O estado do Núcleo de Ressonância (sem ticker: o gerenciador trabalha por ele). Guarda se a estrutura está
  * montada, os 35 membros da Armilar, a sintonia, os cristais, o catalisador da recarga ({@link CoreCatalyst}) e a
- * energia; quem monta e desmonta é a {@link ResonatorFormation} e quem gera, gasta e recarrega é o
- * {@link ResonatorBatch}.
+ * energia; quem monta e desmonta é a {@link ResonatorFormation}, quem gera a cada tick é a
+ * {@link ResonatorGeneration} (com a geração por tick e a capacidade em cache aqui, sujas por tudo o que as muda) e
+ * quem gasta os cristais, recarrega e anda a deriva é o {@link ResonatorBatch}, de 20 em 20 ticks.
  */
 public class ResonanceCoreBlockEntity extends BlockEntity {
     /** O dial começa no meio da faixa até o jogador mexer. */
@@ -62,6 +63,18 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
     /** A câmara no cliente e, no servidor, a última view mandada com o início fixado da recarga. */
     private final CoreSync sync = new CoreSync();
     private final CoreInventory inventory = new CoreInventory(this);
+    /** O gerado e o "cheio" dos ticks desde o último lote, para o desgaste dos cristais; fora do NBT. */
+    private final CoreWear wear = new CoreWear();
+    /** A geração por tick e a capacidade, em cache; refeitas só quando {@link #invalidateGeneration} sujou. */
+    private boolean generationDirty = true;
+    private long cachedPerTick;
+    private long cachedCapacity;
+    /**
+     * Alguém pode estar esperando energia: pediu ou olhou com o buffer vazio e saiu sem nada, ou a Porta acabou de
+     * aparecer com a montagem (um roteador que dormia sem capability nunca tocou no Núcleo). O próximo "de 0 para
+     * mais" o acorda e limpa a marca.
+     */
+    private boolean starved = true;
 
     public ResonanceCoreBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.RESONANCE_CORE.get(), pos, state);
@@ -100,6 +113,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
 
     public void setDial(double mhz) {
         dial = Tuning.clampDial(mhz);
+        invalidateGeneration();
         setChanged();
         syncIfChanged();
     }
@@ -125,6 +139,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         }
         if (this.auto != auto) {
             this.auto = auto;
+            invalidateGeneration();
             setChanged();
             syncIfChanged();
         }
@@ -161,6 +176,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
             changed = true;
         }
         if (changed) {
+            invalidateGeneration();
             setChanged();
         }
     }
@@ -170,6 +186,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         hasStation = true;
         station = mhz;
         velocity = 0;
+        invalidateGeneration();
         setChanged();
     }
 
@@ -201,6 +218,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         }
         boolean emptied = stack.isEmpty() && !crystals.get(chamber).isEmpty();
         crystals.set(chamber, stack);
+        invalidateGeneration();
         setChanged();
         if (emptied) {
             notifyPorts(false, true);
@@ -216,6 +234,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         for (int i = 0; i < chambers(); i++) {
             if (crystals.get(i).isEmpty()) {
                 crystals.set(i, stack.copyWithCount(1));
+                invalidateGeneration();
                 setChanged();
                 syncIfChanged();
                 return stack.copyWithCount(stack.getCount() - 1);
@@ -235,6 +254,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
             return false;
         }
         crystals.set(chamber, stack.copyWithCount(1));
+        invalidateGeneration();
         setChanged();
         syncIfChanged();
         return true;
@@ -247,6 +267,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         }
         ItemStack stack = crystals.get(chamber);
         crystals.set(chamber, ItemStack.EMPTY);
+        invalidateGeneration();
         setChanged();
         notifyPorts(false, true);
         syncIfChanged();
@@ -259,6 +280,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
             ItemStack stack = crystals.get(i);
             if (!stack.isEmpty()) {
                 crystals.set(i, ItemStack.EMPTY);
+                invalidateGeneration();
                 setChanged();
                 notifyPorts(false, true);
                 syncIfChanged();
@@ -327,11 +349,18 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         return eco.apply(CoreMath.maxOutput(chambers(), Config.resonatorFePerCrystal(tier())));
     }
 
+    /** A capacidade do buffer ({@link CoreMath#BUFFER_TICKS} ticks da geração máxima), em cache. */
     public long capacity() {
-        return CoreMath.mulSat(maxOutput(), CoreMath.BUFFER_TICKS);
+        if (generationDirty) {
+            refreshGeneration();
+        }
+        return cachedCapacity;
     }
 
     public long extractEnergy(long max, boolean simulate) {
+        if (energy == 0 && max > 0) {
+            starved = true;
+        }
         long taken = Math.max(0, Math.min(max, energy));
         if (!simulate && taken > 0) {
             energy -= taken;
@@ -351,11 +380,50 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         }
     }
 
-    /** FE por tick agora: os quartos dos cristais ({@link CoreYield}) na sintonia, na interferência e no Eco. */
+    /**
+     * FE por tick agora: os quartos dos cristais ({@link CoreYield}) na sintonia, na interferência e no Eco. Fica em
+     * cache e só refaz depois de {@link #invalidateGeneration}: o gerenciador lê isto a cada tick.
+     */
     public long generationPerTick() {
+        if (generationDirty) {
+            refreshGeneration();
+        }
+        return cachedPerTick;
+    }
+
+    /**
+     * Suja o cache da geração e da capacidade. Chamado por tudo o que muda o rendimento: cristais (entrada, saída e
+     * estado), dial, modo automático, estação e deriva, estrutura, montagem, tier, interferência e Eco. O lote de 20
+     * ticks também suja, como rede de segurança (carga dos cristais), e a recarga da config suja todos os Núcleos
+     * ({@link ResonatorManager#refreshAllInterference}). Público para os GameTests que mudam a config no meio do tick.
+     */
+    public void invalidateGeneration() {
+        generationDirty = true;
+    }
+
+    private void refreshGeneration() {
         int quarters = formed ? CoreYield.quarters(crystals, chambers(), tier(), true) : 0;
         long fePerCrystal = Config.resonatorFePerCrystal(tier());
-        return eco.apply(CoreMath.perTick(fePerCrystal, quarters, efficiency() * interference.factor()));
+        cachedPerTick = eco.apply(CoreMath.perTick(fePerCrystal, quarters, efficiency() * interference.factor()));
+        cachedCapacity = CoreMath.mulSat(maxOutput(), CoreMath.BUFFER_TICKS);
+        generationDirty = false;
+    }
+
+    /** Marca que quem tira da Porta de Energia encontrou o buffer vazio (e pode ter ido dormir). */
+    void markStarved() {
+        starved = true;
+    }
+
+    /** Devolve se havia alguém esperando energia e limpa a marca: o aviso às Portas só vale para quem esperou. */
+    boolean takeStarved() {
+        boolean was = starved;
+        starved = false;
+        return was;
+    }
+
+    /** O gerado e o "cheio" dos ticks desde o último lote, que o lote converte em desgaste. */
+    CoreWear wear() {
+        return wear;
     }
 
     public CoreInterference interference() {
@@ -373,6 +441,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
     void setDrift(Tuning.Drift drift) {
         station = drift.station();
         velocity = drift.velocity();
+        invalidateGeneration();
     }
 
     /** Conta um lote e diz se chegou o passo da deriva, a cada {@code every} lotes. */
@@ -388,6 +457,13 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
     /** Soma energia sem passar da capacidade. */
     void addEnergy(long amount) {
         energy += Math.max(0, Math.min(amount, capacity() - energy));
+    }
+
+    /** O tier mora no estado do bloco: se ele muda, a geração e a capacidade mudam. */
+    @Override
+    public void setBlockState(BlockState state) {
+        super.setBlockState(state);
+        invalidateGeneration();
     }
 
     /** Ticks já andados do ciclo de recarga dos Opacos pagos (parado sem Opaco recarregável ou sem catalisador). */
@@ -411,6 +487,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         hasStation = true;
         station = initial;
         velocity = 0;
+        invalidateGeneration();
         setChanged();
         syncIfChanged();
     }
@@ -450,6 +527,8 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         this.formed = formed;
         this.members = List.copyOf(members);
         origin = ChamberView.origin(this.members, worldPosition);
+        starved = true;
+        invalidateGeneration();
         setChanged();
         syncIfChanged();
     }
@@ -563,6 +642,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
     protected void applyImplicitComponents(DataComponentInput input) {
         super.applyImplicitComponents(input);
         eco.restore(input.get(ModDataComponents.RESONATOR_ECO.get()));
+        invalidateGeneration();
     }
 
     @Override
@@ -589,5 +669,6 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         shell.load(tag);
         auto = tag.getBoolean("auto") && shell.hasTuner();
         eco.load(tag);
+        invalidateGeneration();
     }
 }

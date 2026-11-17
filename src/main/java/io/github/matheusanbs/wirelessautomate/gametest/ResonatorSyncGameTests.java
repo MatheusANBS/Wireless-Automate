@@ -15,7 +15,6 @@ import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.resonator.ChamberView;
 import io.github.matheusanbs.wirelessautomate.resonator.CrystalCharge;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
-import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBatch;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorFormation;
 import java.util.Arrays;
 import net.minecraft.core.BlockPos;
@@ -133,7 +132,7 @@ public final class ResonatorSyncGameTests {
             core.syncIfChanged();
             int before = core.syncCount();
             for (int i = 0; i < 5; i++) {
-                ResonatorBatch.run(helper.getLevel(), core, 20);
+                ResonatorTestSupport.run(helper.getLevel(), core, 20);
             }
             helper.assertTrue(core.energy() > 0, "o lote não gerou");
             helper.assertTrue(core.syncCount() == before, "lote sem mudança mandou o update tag");

@@ -14,7 +14,6 @@ import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.resonator.CoreMath;
 import io.github.matheusanbs.wirelessautomate.resonator.CrystalCharge;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
-import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBatch;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorFormation;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorStatus;
 import java.util.List;
@@ -68,7 +67,7 @@ public final class ResonatorTunerGameTests {
             }
             assertNear(helper, core.efficiency(), 0.90, "eficiência no automático");
             assertNear(helper, core.rawEfficiency(), 1.0, "eficiência sem o teto");
-            ResonatorBatch.run(helper.getLevel(), core, 20);
+            ResonatorTestSupport.run(helper.getLevel(), core, 20);
             // Três Lapidados comuns no Elite rendem 1/2 cada (2 quartos): 6 quartos.
             helper.assertValueEqual(core.energy(), CoreMath.perTick(10_000, 6, 0.9) * 20, "energia de um lote");
         });
@@ -233,7 +232,7 @@ public final class ResonatorTunerGameTests {
 
     private static void batches(GameTestHelper helper, ResonanceCoreBlockEntity core, int count) {
         for (int i = 0; i < count; i++) {
-            ResonatorBatch.run(helper.getLevel(), core, 20);
+            ResonatorTestSupport.run(helper.getLevel(), core, 20);
         }
     }
 

@@ -931,3 +931,24 @@ A linha de 15 de outubro (seção "Ressonador de Sinal", mesma máquina) **não*
 - **A revalidação não ficou mais cara.** O custo do gerenciador fica dentro do ruído nos quatro cenários (a maior diferença, +0,014 ms/tick com 500 gerando, é um desvio), e a montagem em massa de 500 Núcleos cai de ~110 para ~99 ms num tick (os 35 `setBlock` no lugar dos 98 estados).
 - **O evento melhora:** a quebra de 50 cascas no mesmo tick cai de 9,5 para 3,2 ms, porque a regra lê as mesmas 125 casas mas a casca quebrada não tenta mais 54 caixas; a volta fica igual (4,0 contra 4,2, com desvio de 2).
 - **Fica o pico da montagem em massa:** 99 ms num tick para 500 Núcleos montando juntos (~200 µs cada), igual ao de antes. No jogo só acontece numa carga de região com muitos Núcleos.
+
+## Ressonador: a geração de tick em tick, antes e depois (16 de novembro de 2026)
+
+Mede a troca do lote de geração (20 ticks de uma vez, a cada 20 ticks) pela geração por tick: `./scripts/bench.sh "resonator-gen:100:3;resonator-gen:500:3;resonator-idle:500:3;resonator-event:50:3"`, máquina local (a mesma da linha anterior), uma rodada de cada lado, uma atrás da outra, sem outra carga. Antes: o commit `0be27e86`, num `git worktree` fora da pasta do repositório (apagado depois). Depois: o commit desta etapa. Os cenários são os mesmos da linha anterior (Ultimate com 8 Lapidados, a Bateria do roteador na Porta de Energia no `resonator-gen`). As linhas `resonator-gen` do "depois" vêm de uma segunda rodada, feita depois de a marca de espera (veja a leitura) entrar; as de `idle` e `event` não passam por ela e vêm da primeira. Três repetições de cada, média ± desvio.
+
+| Cenário | n | Ressonador antes (ms/tick) | Ressonador depois (ms/tick) | mod antes (ms/tick) | mod depois (ms/tick) | custo antes (ms/tick) | custo depois (ms/tick) | Montagem antes → depois (ms) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `resonator-gen` | 100 | 0,037 ± 0,002 | 0,027 ± 0,003 | 0,026 ± 0,002 | 0,105 ± 0,002 | 0,080 ± 0,003 | 0,192 ± 0,009 | 14,1 ± 4,0 → 13,2 ± 1,7 |
+| `resonator-gen` | 500 | 0,110 ± 0,007 | 0,085 ± 0,008 | 0,104 ± 0,003 | 0,435 ± 0,023 | 0,277 ± 0,026 | 0,842 ± 0,035 | 135,6 ± 14,6 → 122,8 ± 8,3 |
+| `resonator-idle` | 500 | 0,087 ± 0,013 | 0,121 ± 0,002 | 0,0006 | 0,0005 | 0,083 ± 0,018 | 0,120 ± 0,011 | 120,2 ± 0,9 → 116,2 ± 2,1 |
+| `resonator-event` | 50 | 0,0121 ± 0,0001 | 0,0195 ± 0,0001 | 0,0006 | 0,0004 | 0,054 ± 0,007 | 0,054 ± 0,003 | 5,0 ± 0,3 → 4,7 ± 0,1 |
+
+"Ressonador" é o tick do gerenciador (geração por tick mais lotes) e "mod" é o motor de transporte do Wireless Automate; "custo" é o MSPT com a rede menos o MSPT de base. Revalidações do `event`: 0,043 → 0,042 ms/tick (igual).
+
+### Leitura
+
+- **O gerenciador não sobe onde há energia sendo tirada.** Com o roteador tirando da Porta a cada tick, o Ressonador cai de 0,110 para 0,085 ms/tick (500) e de 0,037 para 0,027 (100): o cache da geração e da capacidade custa menos do que o lote refazia (as câmaras e a eficiência a cada 20 ticks, por Núcleo). Sem o cache e sem a marca de espera, a primeira rodada deu 0,48 ms/tick (500): a energia sobe de 0 a cada tick (quem tira esvazia o buffer todo tick), e avisar os vizinhos das Portas a cada tick era o custo.
+- **A marca de espera.** O aviso "energia de 0 para mais" só sai se alguém pediu ou olhou a energia com o buffer vazio desde o último aviso (`extractEnergy` e a leitura do guardado na Porta marcam). Quem tira todo tick nunca marca, então não há aviso por tick; quem dorme marcou antes de dormir, então o aviso o acorda no tick em que a energia sobe.
+- **O custo do varrimento por tick é visível, e pequeno.** Sem nada a tirar (`idle`, 500 Núcleos gerando até encher) o gerenciador sobe de 0,087 para 0,121 ms/tick (+0,034, ~70 ns por Núcleo por tick); no `event` (50 Núcleos) de 0,012 para 0,020 (+0,007, ~150 ns por Núcleo, a maior parte do chunk com tick de blocos). É o preço de gerar em todo tick, no orçamento do design.
+- **O motor de transporte é que sobe.** A mesma energia por segundo agora é entregue em 20 visitas por segundo em vez de uma: o `mod` vai de 0,104 para 0,435 ms/tick com 500 e de 0,026 para 0,105 com 100 (~4x, não 20x, pelo backoff e pelo orçamento do motor). É o efeito pedido (a Porta entrega em todo tick), medido; o custo total de 500 Ressonadores gerando passa de 0,28 para 0,84 ms/tick.
+- **Montagem e evento ficam iguais** (dentro do ruído).

@@ -5,11 +5,14 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Um lote do Núcleo de Ressonância: deriva da estação, geração pela sintonia, desgaste dos cristais e recarga dos
- * Opacos com o catalisador (todos os pagos de uma vez). O gerenciador roda um lote de 20 ticks por Núcleo a cada 20
- * ticks.
+ * Um lote do Núcleo de Ressonância: deriva da estação, desgaste dos cristais pelo que os ticks geraram e recarga dos
+ * Opacos com o catalisador (todos os pagos de uma vez), mais a faixa de vazão e o update tag. A geração de energia
+ * não é daqui: ela roda a cada tick ({@link ResonatorGeneration}). O gerenciador roda um lote de 20 ticks por Núcleo
+ * a cada 20 ticks.
  */
 public final class ResonatorBatch {
+    /** Ticks de um lote: o gerenciador roda um por Núcleo a cada tanto. */
+    public static final int BATCH_TICKS = 20;
     /** Lotes de 20 ticks entre dois passos da deriva (400 ticks). */
     static final int BATCHES_PER_DRIFT = 20;
 
@@ -17,27 +20,25 @@ public final class ResonatorBatch {
     }
 
     public static void run(ServerLevel level, ResonanceCoreBlockEntity core, int ticks) {
-        long energyBefore = core.energy();
         int catalystBefore = core.redstone();
-        // Com o buffer cheio não há geração nem desgaste: pula as câmaras. Sem gerar, o Opaco novo e a energia
-        // de 0 para mais não acontecem, então só o catalisador que baixou pela recarga pode acordar as Portas.
-        boolean full = energyBefore >= core.capacity();
-        int dullBefore = full ? 0 : dullCount(core);
+        // Sem geração desde o último lote não há desgaste: pula as câmaras. Sem gastar, o Opaco novo não acontece,
+        // então só o catalisador que baixou pela recarga pode acordar as Portas de Cristais.
+        boolean worn = core.wear().any();
+        int dullBefore = worn ? dullCount(core) : 0;
         boolean changed = drift(level, core);
-        if (!full) {
-            changed |= generate(core, ticks);
-        }
+        changed |= wear(core, ticks);
         changed |= recharge(core, ticks);
+        // Rede de segurança do cache da geração: os cristais gastaram, a deriva andou, a config pode ter mudado.
+        core.invalidateGeneration();
         if (changed) {
             core.markUnsaved();
         }
-        // Só as transições que podem acordar quem dorme nas Portas: energia de 0 para mais (quem tira da Porta de
-        // Energia), catalisador que baixou (quem põe catalisador; a recarga que racha um cristal também gasta) e
-        // cristal que ficou Opaco (quem tira o Opaco). Câmara vazia não vem do lote: quem esvazia avisa no Núcleo.
-        boolean energy = energyBefore == 0 && core.energy() > 0;
-        boolean crystals = core.redstone() < catalystBefore || (!full && dullCount(core) > dullBefore);
-        if (energy || crystals) {
-            core.notifyPorts(energy, crystals);
+        // Só as transições que podem acordar quem dorme nas Portas de Cristais: catalisador que baixou (quem põe
+        // catalisador; a recarga que racha um cristal também gasta) e cristal que ficou Opaco (quem tira o Opaco).
+        // A energia de 0 para mais avisa no tick em que sobe (ResonatorGeneration); câmara vazia não vem do lote:
+        // quem esvazia avisa no Núcleo.
+        if (core.redstone() < catalystBefore || (worn && dullCount(core) > dullBefore)) {
+            core.notifyPorts(false, true);
         }
         // A vazão real do lote vira faixa (o "cheio" é o buffer no teto agora) e zera as somas das Portas.
         core.flow().closeBatch(ticks, core.maxOutput(), core.energy() >= core.capacity());
@@ -74,22 +75,16 @@ public final class ResonatorBatch {
     }
 
     /**
-     * O desgaste só vem com a geração, na proporção do que foi gerado: buffer cheio ou eficiência 0 não gastam os
-     * cristais, e com espaço para só parte do lote cada cristal gasta a mesma parte dos ticks (arredondada para cima).
-     * A vida do cristal é a da config na escala da vida do tier do Núcleo ({@link CoreMath#crystalLife}).
+     * O desgaste só vem com a geração, na proporção do que os ticks desde o último lote geraram de fato
+     * ({@link CoreWear}): buffer cheio ou eficiência 0 não gastam os cristais, e se o buffer cortou parte dos ticks
+     * cada cristal gasta a mesma parte deles (arredondada para cima). A vida do cristal é a da config na escala da
+     * vida do tier do Núcleo ({@link CoreMath#crystalLife}).
      */
-    private static boolean generate(ResonanceCoreBlockEntity core, int ticks) {
-        if (!core.formed()) {
+    private static boolean wear(ResonanceCoreBlockEntity core, int ticks) {
+        long spent = core.wear().take(ticks);
+        if (spent <= 0) {
             return false;
         }
-        long room = core.capacity() - core.energy();
-        long full = CoreMath.mulSat(core.generationPerTick(), ticks);
-        long generated = Math.min(full, room);
-        if (generated <= 0) {
-            return false;
-        }
-        core.addEnergy(generated);
-        long spent = generated == full ? ticks : (long) Math.ceil((double) ticks * generated / full);
         long tierLife = Config.crystalLifeTicks(core.tier().ordinal());
         for (int i = 0; i < core.chambers(); i++) {
             ItemStack stack = core.crystals().get(i);

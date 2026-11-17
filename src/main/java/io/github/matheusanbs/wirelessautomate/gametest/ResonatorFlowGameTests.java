@@ -9,7 +9,6 @@ import io.github.matheusanbs.wirelessautomate.gametest.ResonatorTestSupport.Layo
 import io.github.matheusanbs.wirelessautomate.resonator.ChamberView;
 import io.github.matheusanbs.wirelessautomate.resonator.CrystalCharge;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
-import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBatch;
 import io.github.matheusanbs.wirelessautomate.storage.BulkEnergy;
 import java.util.Arrays;
 import net.minecraft.core.BlockPos;
@@ -126,7 +125,7 @@ public final class ResonatorFlowGameTests {
     }
 
     private static void batch(GameTestHelper helper, ResonanceCoreBlockEntity core) {
-        ResonatorBatch.run(helper.getLevel(), core, BATCH);
+        ResonatorTestSupport.run(helper.getLevel(), core, BATCH);
     }
 
     private static BulkEnergy bulk(GameTestHelper helper, BlockPos relative) {

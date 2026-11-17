@@ -75,7 +75,13 @@ public final class ResonatorPorts {
     public record CoreEnergy(ResonanceCoreBlockEntity core, int port) implements BulkEnergy {
         @Override
         public long stored() {
-            return alive(core) ? core.energy() : 0;
+            if (!alive(core)) {
+                return 0;
+            }
+            if (core.energy() == 0) {
+                core.markStarved();
+            }
+            return core.energy();
         }
 
         @Override
@@ -125,7 +131,13 @@ public final class ResonatorPorts {
 
         @Override
         public int getEnergyStored() {
-            return alive(core) ? (int) Math.min(core.energy(), Integer.MAX_VALUE) : 0;
+            if (!alive(core)) {
+                return 0;
+            }
+            if (core.energy() == 0) {
+                core.markStarved();
+            }
+            return (int) Math.min(core.energy(), Integer.MAX_VALUE);
         }
 
         @Override

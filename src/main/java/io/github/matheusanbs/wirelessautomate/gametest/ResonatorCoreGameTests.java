@@ -20,7 +20,6 @@ import io.github.matheusanbs.wirelessautomate.resonator.CoreMath;
 import io.github.matheusanbs.wirelessautomate.resonator.CrystalCharge;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreItem;
-import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBatch;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorCasingBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorPartBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorStatus;
@@ -67,7 +66,7 @@ public final class ResonatorCoreGameTests {
             for (int i = 0; i < 3; i++) {
                 assertInserted(helper, core, crystal(false, CrystalCharge.FULL));
             }
-            ResonatorBatch.run(helper.getLevel(), core, 20);
+            ResonatorTestSupport.run(helper.getLevel(), core, 20);
             // No Elite o Cristal de Sinal comum rende 1/4: três deles dão 3/4 do FE por cristal.
             helper.assertValueEqual(core.energy(), 3L * 10_000 / 4 * 20, "energia de um lote");
         });
@@ -80,7 +79,7 @@ public final class ResonatorCoreGameTests {
             core.setDial(90.0);
             assertInserted(helper, core, crystal(false, CrystalCharge.FULL));
             assertInserted(helper, core, crystal(true, CrystalCharge.FULL));
-            ResonatorBatch.run(helper.getLevel(), core, 20);
+            ResonatorTestSupport.run(helper.getLevel(), core, 20);
             helper.assertValueEqual(core.energy(), 0L, "energia fora da estação");
             helper.assertValueEqual(SignalCrystalItem.charge(core.crystals().get(0)), CrystalCharge.FULL, "carga do cristal");
             helper.assertValueEqual(SignalCrystalItem.charge(core.crystals().get(1)), CrystalCharge.FULL, "carga do lapidado");
@@ -92,7 +91,7 @@ public final class ResonatorCoreGameTests {
         formed(helper, RouterTier.BASIC, core -> {
             tuned(core);
             assertInserted(helper, core, crystal(true, CrystalCharge.FULL));
-            ResonatorBatch.run(helper.getLevel(), core, 20);
+            ResonatorTestSupport.run(helper.getLevel(), core, 20);
             helper.assertValueEqual(core.energy(), 216L * 2 * 20, "energia do lapidado");
         });
     }
@@ -103,11 +102,11 @@ public final class ResonatorCoreGameTests {
             tuned(core);
             assertInserted(helper, core, crystal(true, CrystalCharge.FULL));
             for (int i = 0; i < 100 && core.energy() < core.capacity(); i++) {
-                ResonatorBatch.run(helper.getLevel(), core, 20);
+                ResonatorTestSupport.run(helper.getLevel(), core, 20);
             }
             helper.assertValueEqual(core.energy(), core.capacity(), "buffer cheio");
             int before = SignalCrystalItem.charge(core.crystals().get(0));
-            ResonatorBatch.run(helper.getLevel(), core, 20);
+            ResonatorTestSupport.run(helper.getLevel(), core, 20);
             helper.assertValueEqual(SignalCrystalItem.charge(core.crystals().get(0)), before,
                     "a carga não muda com o buffer cheio");
             helper.assertValueEqual(core.energy(), core.capacity(), "energia não passa da capacidade");
@@ -122,10 +121,10 @@ public final class ResonatorCoreGameTests {
                 Config.CRYSTAL_LIFE_TICKS.set(40L);
                 tuned(core);
                 assertInserted(helper, core, crystal(false, CrystalCharge.FULL));
-                ResonatorBatch.run(helper.getLevel(), core, 20);
+                ResonatorTestSupport.run(helper.getLevel(), core, 20);
                 helper.assertValueEqual(SignalCrystalItem.charge(core.crystals().get(0)), CrystalCharge.FULL / 2,
                         "meia vida depois de um lote");
-                ResonatorBatch.run(helper.getLevel(), core, 20);
+                ResonatorTestSupport.run(helper.getLevel(), core, 20);
                 helper.assertTrue(SignalCrystalItem.isDull(core.crystals().get(0)), "o cristal fica Opaco");
             } finally {
                 Config.CRYSTAL_LIFE_TICKS.set(before);
@@ -141,9 +140,9 @@ public final class ResonatorCoreGameTests {
                 Config.RECHARGE_TICKS.set(40L);
                 assertInserted(helper, core, crystal(false, 0));
                 helper.assertValueEqual(core.addRedstone(3), 3, "redstone que entrou");
-                ResonatorBatch.run(helper.getLevel(), core, 20);
+                ResonatorTestSupport.run(helper.getLevel(), core, 20);
                 helper.assertTrue(SignalCrystalItem.isDull(core.crystals().get(0)), "ainda Opaco no meio da recarga");
-                ResonatorBatch.run(helper.getLevel(), core, 20);
+                ResonatorTestSupport.run(helper.getLevel(), core, 20);
                 helper.assertTrue(SignalCrystalItem.isFull(core.crystals().get(0)), "o cristal fica cheio");
                 helper.assertValueEqual(core.redstone(), 2, "sobra de redstone");
             } finally {
@@ -162,19 +161,19 @@ public final class ResonatorCoreGameTests {
                 tuned(core);
                 assertInserted(helper, core, crystal(true, CrystalCharge.FULL));
                 for (int i = 0; i < 100 && core.energy() < core.capacity(); i++) {
-                    ResonatorBatch.run(helper.getLevel(), core, 20);
+                    ResonatorTestSupport.run(helper.getLevel(), core, 20);
                 }
                 helper.assertValueEqual(core.energy(), core.capacity(), "buffer cheio");
                 core.takeLastCrystal();
                 assertInserted(helper, core, crystal(false, 0));
                 helper.assertValueEqual(core.addRedstone(2), 2, "redstone que entrou");
-                ResonatorBatch.run(helper.getLevel(), core, 20);
+                ResonatorTestSupport.run(helper.getLevel(), core, 20);
                 helper.assertTrue(SignalCrystalItem.isDull(core.crystals().get(0)), "ainda Opaco no meio da recarga");
-                ResonatorBatch.run(helper.getLevel(), core, 20);
+                ResonatorTestSupport.run(helper.getLevel(), core, 20);
                 helper.assertTrue(SignalCrystalItem.isFull(core.crystals().get(0)), "o cristal fica cheio");
                 helper.assertValueEqual(core.redstone(), 1, "sobra de redstone");
                 helper.assertValueEqual(core.energy(), core.capacity(), "o buffer continua cheio");
-                ResonatorBatch.run(helper.getLevel(), core, 20);
+                ResonatorTestSupport.run(helper.getLevel(), core, 20);
                 helper.assertValueEqual(SignalCrystalItem.charge(core.crystals().get(0)), CrystalCharge.FULL,
                         "o cristal cheio não gasta com o buffer cheio");
             } finally {
@@ -188,7 +187,7 @@ public final class ResonatorCoreGameTests {
         formed(helper, RouterTier.BASIC, core -> {
             assertInserted(helper, core, crystal(false, 0));
             for (int i = 0; i < 60; i++) {
-                ResonatorBatch.run(helper.getLevel(), core, 20);
+                ResonatorTestSupport.run(helper.getLevel(), core, 20);
             }
             helper.assertTrue(SignalCrystalItem.isDull(core.crystals().get(0)), "o cristal continua Opaco");
             helper.assertValueEqual(core.redstone(), 0, "sem redstone");
@@ -228,12 +227,12 @@ public final class ResonatorCoreGameTests {
             tuned(core);
             assertInserted(helper, core, crystal(true, CrystalCharge.FULL));
             for (int i = 0; i < 100 && core.energy() < core.capacity(); i++) {
-                ResonatorBatch.run(helper.getLevel(), core, 20);
+                ResonatorTestSupport.run(helper.getLevel(), core, 20);
             }
             long batch = core.generationPerTick() * 20;
             core.extractEnergy(batch / 10, false);
             int before = SignalCrystalItem.charge(core.crystals().get(0));
-            ResonatorBatch.run(helper.getLevel(), core, 20);
+            ResonatorTestSupport.run(helper.getLevel(), core, 20);
             helper.assertValueEqual(core.energy(), core.capacity(), "o buffer encheu de novo");
             helper.assertValueEqual(SignalCrystalItem.charge(core.crystals().get(0)),
                     CrystalCharge.drain(before, 2, Config.crystalLifeTicks(true)), "gasto de 2 ticks");
@@ -245,7 +244,7 @@ public final class ResonatorCoreGameTests {
         formed(helper, RouterTier.BASIC, core -> {
             tuned(core);
             assertInserted(helper, core, crystal(false, CrystalCharge.FULL));
-            ResonatorBatch.run(helper.getLevel(), core, 20);
+            ResonatorTestSupport.run(helper.getLevel(), core, 20);
             helper.assertValueEqual(core.extractEnergy(1_000L, true), 1_000L, "simulado");
             helper.assertValueEqual(core.energy(), 4_320L, "a simulação não tira");
             helper.assertValueEqual(core.extractEnergy(5_000L, false), 4_320L, "só o que tem");
@@ -274,7 +273,7 @@ public final class ResonatorCoreGameTests {
                     tuned(core);
                     assertInserted(helper, core, crystal(false, CrystalCharge.FULL));
                     long before = core.energy();
-                    ResonatorBatch.run(helper.getLevel(), core, 20);
+                    ResonatorTestSupport.run(helper.getLevel(), core, 20);
                     helper.assertValueEqual(core.energy(), before, "desmontado não gera");
                     helper.assertValueEqual(SignalCrystalItem.charge(core.crystals().get(0)), CrystalCharge.FULL,
                             "desmontado não gasta");

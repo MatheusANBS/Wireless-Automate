@@ -51,7 +51,7 @@ public final class ResonatorLifeGameTests {
         int batches = 0;
         while (batches < limit && !SignalCrystalItem.isDull(core.crystals().get(0))) {
             tune(core);
-            ResonatorBatch.run(helper.getLevel(), core, BATCH);
+            ResonatorTestSupport.run(helper.getLevel(), core, BATCH);
             core.extractEnergy(Long.MAX_VALUE, false);
             batches++;
         }
@@ -93,7 +93,7 @@ public final class ResonatorLifeGameTests {
         formed(helper, RouterTier.ADVANCED, core -> {
             tune(core);
             assertInserted(helper, core, crystal(false, CrystalCharge.FULL));
-            ResonatorBatch.run(helper.getLevel(), core, BATCH);
+            ResonatorTestSupport.run(helper.getLevel(), core, BATCH);
             helper.assertValueEqual(SignalCrystalItem.charge(core.crystals().get(0)),
                     CrystalCharge.drain(CrystalCharge.FULL, BATCH, Config.crystalLifeTicks(false)), "gasto de um lote");
         });
@@ -110,7 +110,7 @@ public final class ResonatorLifeGameTests {
                 Config.CRYSTAL_LIFE_MINUTES.set(changed);
                 tune(core);
                 assertInserted(helper, core, tuned(RouterTier.ULTIMATE));
-                ResonatorBatch.run(helper.getLevel(), core, BATCH);
+                ResonatorTestSupport.run(helper.getLevel(), core, BATCH);
                 helper.assertValueEqual(SignalCrystalItem.charge(core.crystals().get(0)),
                         CrystalCharge.drain(CrystalCharge.FULL, BATCH, 7_200L), "gasto com 6 min");
             } finally {

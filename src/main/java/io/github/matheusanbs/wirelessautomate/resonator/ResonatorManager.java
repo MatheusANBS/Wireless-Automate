@@ -14,13 +14,13 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Os Núcleos de Ressonância carregados no servidor, para o lote e para as mudanças de bloco da estrutura.
+ * Os Núcleos de Ressonância carregados no servidor, para a geração por tick, o lote e as mudanças de bloco da estrutura.
  * Só a thread do servidor mexe no conjunto.
  */
 public final class ResonatorManager {
     /** Distância de Chebyshev máxima entre um bloco da casca e o Núcleo (a caixa tem 5 de lado). */
     private static final int REACH = ResonatorLayout.SIZE - 1;
-    static final int BATCH_TICKS = 20;
+    static final int BATCH_TICKS = ResonatorBatch.BATCH_TICKS;
     private static final Set<ResonanceCoreBlockEntity> CORES = Collections.newSetFromMap(new IdentityHashMap<>());
     /**
      * Os mesmos Núcleos, em {@link #BATCH_TICKS} baldes pela fase da posição: cada tick só percorre o balde dos que
@@ -85,11 +85,15 @@ public final class ResonatorManager {
         }
     }
 
-    /** Refaz a interferência de todos os Núcleos carregados (a config mudou, ou um GameTest a ligou). */
+    /**
+     * Refaz a interferência de todos os Núcleos carregados (a config mudou, ou um GameTest a ligou) e suja o cache da
+     * geração deles: a config também guarda o FE por cristal e o bônus e o teto do Eco.
+     */
     public static void refreshAllInterference() {
         int radius = interferenceRadius();
         for (ResonanceCoreBlockEntity core : CORES) {
             refreshInterference(core, radius);
+            core.invalidateGeneration();
         }
     }
 
@@ -119,8 +123,10 @@ public final class ResonatorManager {
                 }
             }
         }
-        core.interference().set(ResonatorInterference.lossPermille(tally.count(), Config.interferencePenalty(),
-                Config.interferenceMax()), tally.nearest());
+        if (core.interference().set(ResonatorInterference.lossPermille(tally.count(), Config.interferencePenalty(),
+                Config.interferenceMax()), tally.nearest())) {
+            core.invalidateGeneration();
+        }
     }
 
     private static int distance(BlockPos a, BlockPos b) {
@@ -170,10 +176,10 @@ public final class ResonatorManager {
     }
 
     /**
-     * Chamado a cada tick do servidor: cada Núcleo montado roda um lote de {@link #BATCH_TICKS} ticks uma vez a cada
-     * {@link #BATCH_TICKS}, num tick próprio pela posição, para os Núcleos não caírem todos no mesmo tick; só o
-     * balde da fase do tick é percorrido. Num chunk sem tick de blocos (a borda da área carregada) o Núcleo não gera,
-     * como uma fornalha. Os lotes rodam fora do laço do balde: o aviso do lote às Portas acorda vizinhos de outros
+     * Chamado a cada tick do servidor: cada Núcleo montado gera o tick ({@link #generate}) e roda um lote de
+     * {@link #BATCH_TICKS} ticks (deriva, desgaste, recarga, vazão) uma vez a cada {@link #BATCH_TICKS}, num tick
+     * próprio pela posição, para os Núcleos não caírem todos no mesmo tick; só o balde da fase do tick é percorrido.
+     * Num chunk sem tick de blocos (a borda da área carregada) o Núcleo não gera nem roda o lote, como uma fornalha. Os lotes rodam fora do laço do balde: o aviso do lote às Portas acorda vizinhos de outros
      * mods, que podem mudar blocos e, com isso, pôr ou tirar Núcleos do conjunto. A lista só nasce num tick com lote.
      */
     public static void tick(MinecraftServer server) {
@@ -182,8 +188,35 @@ public final class ResonatorManager {
             interferenceConfigChanged = false;
             refreshAllInterference();
         }
+        generate();
         runDue(server);
         ResonatorProfile.tickEnded(System.nanoTime() - started);
+    }
+
+    /**
+     * A geração de cada tick: todo Núcleo montado, com geração e num chunk com tick de blocos, soma o
+     * {@code generationPerTick} em cache ({@link ResonatorGeneration#tick}). Os avisos de "energia de 0 para mais"
+     * saem depois do laço, pelo mesmo motivo dos lotes: acordam vizinhos que podem mudar o conjunto. A lista só
+     * nasce no tick em que alguma energia sobe de 0.
+     */
+    private static void generate() {
+        List<ResonanceCoreBlockEntity> woke = null;
+        for (ResonanceCoreBlockEntity core : CORES) {
+            if (!core.isRemoved() && ResonatorGeneration.generates(core) && core.getLevel() instanceof ServerLevel level
+                    && level.shouldTickBlocksAt(ChunkPos.asLong(core.getBlockPos())) && ResonatorGeneration.tick(core)) {
+                if (woke == null) {
+                    woke = new ArrayList<>();
+                }
+                woke.add(core);
+            }
+        }
+        if (woke != null) {
+            for (ResonanceCoreBlockEntity core : woke) {
+                if (!core.isRemoved()) {
+                    core.notifyPorts(true, false);
+                }
+            }
+        }
     }
 
     private static void runDue(MinecraftServer server) {

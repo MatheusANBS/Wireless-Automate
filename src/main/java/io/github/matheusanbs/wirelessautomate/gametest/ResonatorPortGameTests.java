@@ -13,7 +13,6 @@ import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.resonator.CrystalCharge;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
-import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBatch;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorPartBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
 import io.github.matheusanbs.wirelessautomate.storage.BulkEnergy;
@@ -53,12 +52,51 @@ public final class ResonatorPortGameTests {
     private ResonatorPortGameTests() {
     }
 
+    /**
+     * A geração é de tick em tick: quem tira da Porta de Energia a cada tick recebe a geração de um tick em todos os
+     * ticks (antes vinha um segundo inteiro de uma vez a cada 20 ticks e 19 ticks ficavam sem nada).
+     */
+    @GameTest(template = "empty7")
+    public static void quemTiraACadaTickRecebeEmTodosOsTicks(GameTestHelper helper) {
+        BlockPos corePos = ResonatorTestSupport.build(helper, ORIGIN, Layout.ARMILAR, RouterTier.BASIC);
+        int ticks = 40;
+        long[] perTick = new long[1];
+        int[] served = new int[1];
+        int[] seen = new int[1];
+        long[] total = new long[1];
+        helper.startSequence()
+                .thenWaitUntil(() -> assertFormed(helper, corePos, true))
+                .thenExecute(() -> {
+                    ResonanceCoreBlockEntity core = ResonatorTestSupport.core(helper, corePos);
+                    tuned(core);
+                    helper.assertTrue(core.insertCrystal(crystal(false, CrystalCharge.FULL)).isEmpty(),
+                            "o cristal não entrou");
+                    perTick[0] = core.generationPerTick();
+                    helper.assertTrue(perTick[0] > 0, "sem geração");
+                })
+                // O primeiro tick só esvazia o que a geração já pôs; os {@code ticks} seguintes é que contam.
+                .thenExecuteFor(ticks + 1, () -> {
+                    long taken = energy(helper, ENERGY_PORT).extractEnergy(Integer.MAX_VALUE, false);
+                    if (seen[0]++ > 0) {
+                        total[0] += taken;
+                        if (taken == perTick[0]) {
+                            served[0]++;
+                        }
+                    }
+                })
+                .thenExecute(() -> {
+                    helper.assertValueEqual(served[0], ticks, "ticks em que a Porta entregou a geração de um tick");
+                    helper.assertValueEqual(total[0], perTick[0] * ticks, "energia tirada nos ticks");
+                })
+                .thenSucceed();
+    }
+
     @GameTest(template = "empty7")
     public static void portaDeEnergiaSoTira(GameTestHelper helper) {
         formed(helper, Layout.ARMILAR, RouterTier.BASIC, core -> {
             tuned(core);
             helper.assertTrue(core.insertCrystal(crystal(false, CrystalCharge.FULL)).isEmpty(), "o cristal não entrou");
-            ResonatorBatch.run(helper.getLevel(), core, 20);
+            ResonatorTestSupport.run(helper.getLevel(), core, 20);
             long before = core.energy();
             helper.assertTrue(before > 1_000, "o lote não gerou o bastante: " + before);
             BlockPos port = helper.absolutePos(ENERGY_PORT);
@@ -193,7 +231,7 @@ public final class ResonatorPortGameTests {
                     helper.assertTrue(core.insertCrystal(crystal(false, CrystalCharge.FULL)).isEmpty(),
                             "o cristal não entrou");
                     assertSleeps(helper, source, ResourceType.ENERGY, Direction.EAST);
-                    ResonatorBatch.run(helper.getLevel(), core, 20);
+                    ResonatorTestSupport.run(helper.getLevel(), core, 20);
                     helper.assertTrue(core.energy() > 0, "o lote não gerou");
                     assertAwake(helper, source, ResourceType.ENERGY, Direction.EAST, "o aviso não acordou o roteador da Porta");
                     woke[0] = helper.getTick();
@@ -229,7 +267,7 @@ public final class ResonatorPortGameTests {
                     tuned(core);
                     helper.assertTrue(core.insertCrystal(crystal(false, 1)).isEmpty(), "o cristal não entrou");
                     assertSleeps(helper, source, ResourceType.ITEM, Direction.WEST);
-                    ResonatorBatch.run(helper.getLevel(), core, 20);
+                    ResonatorTestSupport.run(helper.getLevel(), core, 20);
                     helper.assertTrue(SignalCrystalItem.isDull(core.crystals().get(0)), "o cristal não ficou Opaco");
                     assertAwake(helper, source, ResourceType.ITEM, Direction.WEST, "o Opaco novo não acordou o roteador");
                     woke[0] = helper.getTick();

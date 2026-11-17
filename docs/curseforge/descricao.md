@@ -7,7 +7,7 @@ Attach a router to a machine, pick what each face does, and every router on the 
 
 ## Routers
 
-![A router, configured in seconds](ENVIAR:roteador.webp)
+![A router, configured in seconds](https://raw.githubusercontent.com/MatheusANBS/Wireless-Automate/main/docs/curseforge/roteador.webp)
 
 - **All six faces of the machine** from one screen, per resource type: Extract, Insert, Storage or None, with priority, round-robin and redstone.
 - **A network per face:** one furnace takes ore from your mining line on top and sends ingots to storage from the bottom.
@@ -15,34 +15,34 @@ Attach a router to a machine, pick what each face does, and every router on the 
 
 ## Filters
 
-![Items, tags and rules](ENVIAR:filtro.webp)
+![Items, tags and rules](https://raw.githubusercontent.com/MatheusANBS/Wireless-Automate/main/docs/curseforge/filtro.webp)
 
 Exact items, tags and whole mods, whitelist or blacklist, with stock limits. A tag inspector, and **rules** by what an item is: any enchanted item, tools under 25% durability, Fortune ≥ III.
 
 ## Wireless Chest
 
-![Crafting and compacting inside the Chest](ENVIAR:bau.webp)
+![Crafting and compacting inside the Chest](https://raw.githubusercontent.com/MatheusANBS/Wireless-Automate/main/docs/curseforge/bau.webp)
 
 Unlimited item types and billions per operation (12 million items in one tick between two of them). Two upgrade slots: a **3×3 crafting grid** that refills from the Chest and a **Compacting Upgrade** that packs nuggets → ingots → blocks as they come in. Also a Tank, a Battery and, with the optional mods, a Chemical Tank and a Source Tank.
 
 ## Pattern Dock (AE2 and Refined Storage 2)
 
-![The Dock handing orders to its machines](ENVIAR:doca.webp)
+![The Dock handing orders to its machines](https://raw.githubusercontent.com/MatheusANBS/Wireless-Automate/main/docs/curseforge/doca.webp)
 
 Put an AE2 Pattern Provider or an RS2 Autocrafter against a side, link the machines with the Linker, and the Dock hands **each order whole to a free machine**, returning the result straight to the network. Items, fluids and chemicals; up to six production lines per Dock.
 
 ## Signal Screen
 
-![A wall of Signal Screens](ENVIAR:tela.webp)
+![A wall of Signal Screens](https://raw.githubusercontent.com/MatheusANBS/Wireless-Automate/main/docs/curseforge/tela.webp)
 
 A wall display from 1×1 to 32×32 blocks with **live numbers** from your networks and storages, a full editor in the game, a **pixel art editor with animation**, and your own PNG, JPG and GIF files.
 
 ## Signal Resonator
 
-![The Armillary assembling](ENVIAR:armilar-montagem.webp)
-![Out of tune, the orbits wide open](ENVIAR:armilar-fora.webp)
-![Tuning in](ENVIAR:armilar-sintonia.webp)
-![A conjunction sending energy to the port](ENVIAR:armilar-conjuncao.webp)
+![The Armillary assembling](https://raw.githubusercontent.com/MatheusANBS/Wireless-Automate/main/docs/curseforge/armilar-montagem.webp)
+![Out of tune, the orbits wide open](https://raw.githubusercontent.com/MatheusANBS/Wireless-Automate/main/docs/curseforge/armilar-fora.webp)
+![Tuning in](https://raw.githubusercontent.com/MatheusANBS/Wireless-Automate/main/docs/curseforge/armilar-sintonia.webp)
+![A conjunction sending energy to the port](https://raw.githubusercontent.com/MatheusANBS/Wireless-Automate/main/docs/curseforge/armilar-conjuncao.webp)
 
 A generator you tune like a radio. Build the **Armillary**, put Signal Crystals in the Core and turn the dial to the drifting station: in tune, the orrery lines up and the energy flows every tick, from 432 FE/t on Basic to **4.29 billion FE/t** on Ultimate. The Energy Port pushes into whatever touches it. Crystals wear out, crack and get mended in the **Crystal Repairer**.
 

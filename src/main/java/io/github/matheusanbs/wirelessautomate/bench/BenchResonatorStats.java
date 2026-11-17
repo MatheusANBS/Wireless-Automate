@@ -56,7 +56,7 @@ final class BenchResonatorStats {
     /** Um tick medido; {@code phaseTick} conta da primeira medição (1). */
     void measure(int phaseTick, long tickNanos) {
         ResonatorProfile.Snapshot snapshot = ResonatorProfile.snapshot();
-        batch.add(snapshot.lastBatchNanos());
+        batch.add(snapshot.lastManagerNanos());
         revalidation.add(snapshot.lastRevalidationNanos());
         if (breakTick < 0) {
             return;

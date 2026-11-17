@@ -26,7 +26,7 @@ public final class ResonatorBatch {
         boolean worn = core.wear().any();
         int dullBefore = worn ? dullCount(core) : 0;
         boolean changed = drift(level, core);
-        changed |= wear(core, ticks);
+        changed |= wear(core);
         changed |= recharge(core, ticks);
         // Rede de segurança do cache da geração: os cristais gastaram, a deriva andou, a config pode ter mudado.
         core.invalidateGeneration();
@@ -80,8 +80,8 @@ public final class ResonatorBatch {
      * cada cristal gasta a mesma parte deles (arredondada para cima). A vida do cristal é a da config na escala da
      * vida do tier do Núcleo ({@link CoreMath#crystalLife}).
      */
-    private static boolean wear(ResonanceCoreBlockEntity core, int ticks) {
-        long spent = core.wear().take(ticks);
+    private static boolean wear(ResonanceCoreBlockEntity core) {
+        long spent = core.wear().take();
         if (spent <= 0) {
             return false;
         }

@@ -176,8 +176,8 @@ public final class WaCommand {
         source.sendSuccess(() -> Component.translatable("command.wirelessautomate.profile.resonator",
                 resonators.cores(),
                 resonators.formed(),
-                ms(resonators.averageBatchNanos()),
-                ms(resonators.lastBatchNanos()),
+                ms(resonators.averageManagerNanos()),
+                ms(resonators.lastManagerNanos()),
                 ms(resonators.averageRevalidationNanos()),
                 ms(resonators.lastRevalidationNanos())), false);
         FlowSampler.Cost flows = manager.flows().cost();

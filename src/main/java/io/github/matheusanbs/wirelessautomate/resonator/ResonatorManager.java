@@ -14,7 +14,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Os Núcleos de Ressonância carregados no servidor, para a geração por tick, o lote e as mudanças de bloco da estrutura.
+ * Os Núcleos de Ressonância carregados no servidor, para a geração por tick, o lote e as mudanças de bloco da
+ * estrutura.
  * Só a thread do servidor mexe no conjunto.
  */
 public final class ResonatorManager {
@@ -179,7 +180,8 @@ public final class ResonatorManager {
      * Chamado a cada tick do servidor: cada Núcleo montado gera o tick ({@link #generate}) e roda um lote de
      * {@link #BATCH_TICKS} ticks (deriva, desgaste, recarga, vazão) uma vez a cada {@link #BATCH_TICKS}, num tick
      * próprio pela posição, para os Núcleos não caírem todos no mesmo tick; só o balde da fase do tick é percorrido.
-     * Num chunk sem tick de blocos (a borda da área carregada) o Núcleo não gera nem roda o lote, como uma fornalha. Os lotes rodam fora do laço do balde: o aviso do lote às Portas acorda vizinhos de outros
+     * Num chunk sem tick de blocos (a borda da área carregada) o Núcleo não gera nem roda o lote, como uma fornalha.
+     * Os lotes rodam fora do laço do balde: o aviso do lote às Portas acorda vizinhos de outros
      * mods, que podem mudar blocos e, com isso, pôr ou tirar Núcleos do conjunto. A lista só nasce num tick com lote.
      */
     public static void tick(MinecraftServer server) {

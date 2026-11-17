@@ -241,7 +241,7 @@
   "command.wirelessautomate.profile": "Wireless Automate: %s nodes · avg %s ms/tick · last %s ms · budget %s ms",
   "command.wirelessautomate.profile.network": "  %s: %s nodes · avg %s ms/tick · last %s ms · %s ops/s · sources %s awake, %s sleeping · destinations %s awake, %s sleeping",
   "command.wirelessautomate.profile.no_networks": "  No active networks with loaded routers.",
-  "command.wirelessautomate.profile.resonator": "  Resonators: %s cores (%s formed) · batches avg %s ms/tick · last %s ms · revalidation avg %s ms/tick · last %s ms",
+  "command.wirelessautomate.profile.resonator": "  Resonators: %s cores (%s formed) · manager (generation and batches) avg %s ms/tick · last %s ms · revalidation avg %s ms/tick · last %s ms",
   "command.wirelessautomate.profile.flows": "  Flows: %s watching · %s samples · avg %s ms/second · last %s ms · peak %s ms/tick",
   "command.wirelessautomate.profile.tv": "  Screens: %s loaded · %s with someone near · %s packets · avg %s µs/tick · peak %s µs",
   "command.wirelessautomate.profile.tv_arts": "  Screen art: %s queued for %s players · %s KB in the last second · %s KB total",

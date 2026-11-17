@@ -32,7 +32,7 @@ Crystals, catalysts and Hearts come from [Signal Quartz](signal-quartz.md).
 3. Build the structure following the projection.
 4. Add a crystal: click the Core with it in hand.
 5. Click the formed Core to open its screen and turn the dial until **IN TUNE** lights up.
-6. Attach a [Router](router.md) to the **Energy Port**, face on **Extract** in the **Energy** tab.
+6. Carry the energy away: a machine or battery next to the **Energy Port** receives it on its own, or attach a [Router](router.md) to it, face on **Extract** in the **Energy** tab.
 
 ## Building it
 
@@ -76,7 +76,7 @@ Crystals, catalysts and Hearts come from [Signal Quartz](signal-quartz.md).
     Resonance Core: the screen and the crystals, at the front
   </BlockAnnotation>
   <BlockAnnotation x="4" y="0" z="2" color="#45d6cc">
-    Resonator Energy Port: a router pulls the energy here
+    Resonator Energy Port: pushes energy to its neighbors, and a router can pull here too
   </BlockAnnotation>
   <BlockAnnotation x="0" y="0" z="2" color="#e2b347">
     Resonator Crystal Port: crystals and catalyst in, Dull and cracked ones out
@@ -106,7 +106,7 @@ If it doesn't form, click the Core: the action bar says what's in the way and th
 | <ItemImage id="wirelessautomate:resonator_column" /> **Resonator Column** | The four diagonals, on layers 2 and 3. |
 | <ItemImage id="wirelessautomate:resonator_cradle" /> **Sun Cradle** | The center of layers 2 and 3. |
 | <ItemImage id="wirelessautomate:resonance_core" /> **Resonance Core** | Screen, crystals and generated power. |
-| <ItemImage id="wirelessautomate:resonator_energy_port" /> **Resonator Energy Port** | Only pulls energy out. |
+| <ItemImage id="wirelessautomate:resonator_energy_port" /> **Resonator Energy Port** | Pushes energy every tick into the machines and batteries touching it (never into the Armilar itself), and lets a router pull. |
 | <ItemImage id="wirelessautomate:resonator_crystal_port" /> **Resonator Crystal Port** | Takes crystals and catalyst; hands back Dull and cracked ones. |
 | <ItemImage id="wirelessautomate:resonator_tuner" /> **Resonator Tuner** | Optional: tunes by itself. |
 
@@ -152,7 +152,9 @@ Watch out: a cracked Tuned Ultimate crystal that arrives through the Crystal Por
 
 ## Power
 
-A router of the Core's tier keeps up with full generation. The Core stores about 10 seconds of generation; when the
+The **Energy Port** pushes what the Core generated every tick, up to the tier's maximum generation, into whatever
+touches it and accepts energy (a mod battery takes it all at once, even above 2 billion FE per tick); a router of the
+Core's tier also keeps up with full generation. The Core stores about 10 seconds of generation; when the
 reserve is full, it **stops generating and doesn't wear the crystals**. It only works while its chunk is loaded: use
 the [Chunk Loading Upgrade](chunk-loading.md) on the Port's router.
 

@@ -32,7 +32,7 @@ Cristais, catalisadores e Corações vêm do [Quartzo de Sinal](signal-quartz.md
 3. Monte a estrutura seguindo a projeção.
 4. Ponha um cristal: clique no Núcleo com ele na mão.
 5. Clique no Núcleo montado para abrir a tela e gire o dial até acender **EM SINTONIA**.
-6. Prenda um [Roteador](router.md) na **Porta de Energia**, face em **Extrai** na aba **Energia**.
+6. Leve a energia embora: uma máquina ou bateria ao lado da **Porta de Energia** já recebe sozinha, ou prenda um [Roteador](router.md) nela, face em **Extrai** na aba **Energia**.
 
 ## Montar
 
@@ -76,7 +76,7 @@ Cristais, catalisadores e Corações vêm do [Quartzo de Sinal](signal-quartz.md
     Núcleo de Ressonância: a tela e os cristais, na frente
   </BlockAnnotation>
   <BlockAnnotation x="4" y="0" z="2" color="#45d6cc">
-    Porta de Energia: o roteador tira a energia daqui
+    Porta de Energia: empurra a energia aos vizinhos, e o roteador também tira daqui
   </BlockAnnotation>
   <BlockAnnotation x="0" y="0" z="2" color="#e2b347">
     Porta de Cristais: entram cristais e catalisador, saem Opacos e rachados
@@ -106,7 +106,7 @@ Se não monta, clique no Núcleo: a barra de ação diz o que impede e o bloco e
 | <ItemImage id="wirelessautomate:resonator_column" /> **Coluna do Ressonador** | As quatro diagonais, nas camadas 2 e 3. |
 | <ItemImage id="wirelessautomate:resonator_cradle" /> **Berço do Sol** | O centro das camadas 2 e 3. |
 | <ItemImage id="wirelessautomate:resonance_core" /> **Núcleo de Ressonância** | Tela, cristais e energia gerada. |
-| <ItemImage id="wirelessautomate:resonator_energy_port" /> **Porta de Energia** | Só tira energia. |
+| <ItemImage id="wirelessautomate:resonator_energy_port" /> **Porta de Energia** | Empurra a energia, a cada tick, para as máquinas e baterias coladas nela (não para a própria Armilar), e deixa o roteador tirar. |
 | <ItemImage id="wirelessautomate:resonator_crystal_port" /> **Porta de Cristais** | Recebe cristais e catalisador; devolve os Opacos e os rachados. |
 | <ItemImage id="wirelessautomate:resonator_tuner" /> **Sintonizador** | Opcional: sintoniza sozinho. |
 
@@ -152,7 +152,9 @@ Eco** quando é quebrado.
 
 ## Energia
 
-Um roteador do mesmo tier do Núcleo dá conta da geração cheia. O Núcleo guarda uns 10 segundos de geração; com a
+A **Porta de Energia** empurra a cada tick o que o Núcleo gerou, até a geração máxima do tier, para quem está colado
+nela e aceita energia (uma bateria do mod recebe tudo numa vez, mesmo acima de 2 bilhões de FE por tick); um roteador do
+mesmo tier do Núcleo também dá conta da geração cheia. O Núcleo guarda uns 10 segundos de geração; com a
 reserva cheia, ele **para de gerar e não gasta cristal**. Ele só trabalha com o chunk carregado: use o
 [Upgrade de Chunk Loading](chunk-loading.md) no roteador da Porta.
 

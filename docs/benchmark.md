@@ -952,3 +952,19 @@ Mede a troca do lote de geração (20 ticks de uma vez, a cada 20 ticks) pela ge
 - **O custo do varrimento por tick é visível, e pequeno.** Sem nada a tirar (`idle`, 500 Núcleos gerando até encher) o gerenciador sobe de 0,087 para 0,121 ms/tick (+0,034, ~70 ns por Núcleo por tick); no `event` (50 Núcleos) de 0,012 para 0,020 (+0,007, ~150 ns por Núcleo, a maior parte do chunk com tick de blocos). É o preço de gerar em todo tick, no orçamento do design.
 - **O motor de transporte é que sobe.** A mesma energia por segundo agora é entregue em 20 visitas por segundo em vez de uma: o `mod` vai de 0,104 para 0,435 ms/tick com 500 e de 0,026 para 0,105 com 100 (~4x, não 20x, pelo backoff e pelo orçamento do motor). É o efeito pedido (a Porta entrega em todo tick), medido; o custo total de 500 Ressonadores gerando passa de 0,28 para 0,84 ms/tick.
 - **Montagem e evento ficam iguais** (dentro do ruído).
+
+## Ressonador: a Porta de Energia ativa, antes e depois (16 de novembro de 2026)
+
+Mede o empurrão da Porta de Energia aos vizinhos (seção 1b da spec `docs/superpowers/specs/2026-11-16-armilar-fluxo-continuo-design.md`): `./scripts/bench.sh "resonator-gen:100:3;resonator-gen:500:3;resonator-idle:500:3;resonator-event:50:3"`, máquina local, uma rodada de cada lado, uma atrás da outra, sem outra carga. Antes: o commit `e886311c`, num `git worktree` fora da pasta do repositório (apagado depois). Depois: o commit desta etapa. Três repetições de cada, média ± desvio. A máquina estava mais carregada que na rodada da linha anterior (o `idle` do gerenciador deu ~0,22 ms/tick nos dois lados, contra 0,12 na outra), então só vale a comparação entre as duas colunas daqui.
+
+| Cenário | n | Ressonador antes (ms/tick) | Ressonador depois (ms/tick) | mod antes (ms/tick) | mod depois (ms/tick) | custo antes (ms/tick) | custo depois (ms/tick) | Montagem antes → depois (ms) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `resonator-gen` | 100 | 0,057 ± 0,002 | 0,052 ± 0,003 | 0,184 ± 0,016 | 0,170 ± 0,023 | 0,396 ± 0,046 | 0,371 ± 0,054 | 13,9 ± 3,2 → 12,8 ± 1,6 |
+| `resonator-gen` | 500 | 0,170 ± 0,009 | 0,146 ± 0,038 | 0,755 ± 0,024 | 0,670 ± 0,108 | 1,502 ± 0,111 | 1,303 ± 0,293 | 144,8 ± 13,5 → 122,9 ± 12,2 |
+| `resonator-idle` | 500 | 0,223 ± 0,038 | 0,221 ± 0,019 | 0,0009 | 0,0010 | 0,223 ± 0,062 | 0,270 ± 0,018 | 135,4 ± 1,2 → 113,8 ± 0,5 |
+| `resonator-event` | 50 | 0,034 ± 0,001 | 0,035 ± 0,004 | 0,0009 | 0,0015 | 0,093 ± 0,015 | 0,076 ± 0,026 | 8,2 ± 1,3 → 6,8 ± 1,7 |
+
+### Leitura
+
+- **Dentro do ruído nos quatro cenários.** Nenhum cenário de 16/11 tem vizinho que aceite energia ao lado da Porta de Energia (no `resonator-gen` o roteador, que tira da Porta, é o único bloco colado e não tem capability de energia), então o que se mede é o custo de ter o empurrão ligado sem receptor: um `boolean` (`dirty` ou `active`) e a energia do Núcleo lidos por Núcleo, no mesmo laço de antes, mais o `maxOutput` que passou a vir do cache. A diferença cabe no desvio (a maior, −0,024 ms/tick no `gen` de 500, é ruído).
+- **Com receptor, o custo por Porta e por tick** é o das chamadas ao vizinho: uma de `BulkEnergy` (ou até 4 de `IEnergyStorage`) e a soma na vazão, sem alocação nem busca de capability (os receptores ficam resolvidos até um aviso de invalidação do cache). Não há cenário de bench para isso ainda; o GameTest `ResonatorPushGameTests` confere o comportamento, não o custo.

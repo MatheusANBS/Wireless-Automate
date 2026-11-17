@@ -43,6 +43,8 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
     private List<BlockPos> ports = List.of();
     /** A vazão por Porta de Energia e o "cheio" do último lote, que vão à câmara; fora do NBT. */
     private final CoreFlow flow = new CoreFlow();
+    /** O empurrão da Porta de Energia aos vizinhos, com os caches de capability deles; fora do NBT. */
+    private final CorePush push = new CorePush();
     private final CoreInterference interference = new CoreInterference();
     private final CoreEcoState eco = new CoreEcoState(this);
     private @Nullable ResonatorLayout.Broken lastProblem;
@@ -69,6 +71,7 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
     private boolean generationDirty = true;
     private long cachedPerTick;
     private long cachedCapacity;
+    private long cachedMaxOutput;
     /**
      * Alguém pode estar esperando energia: pediu ou olhou com o buffer vazio e saiu sem nada, ou a Porta acabou de
      * aparecer com a montagem (um roteador que dormia sem capability nunca tocou no Núcleo). O próximo "de 0 para
@@ -344,9 +347,12 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         return energy;
     }
 
-    /** A geração máxima por tick com o Eco; o buffer guarda {@link CoreMath#BUFFER_TICKS} dela. */
+    /** A geração máxima por tick com o Eco, em cache como a capacidade; o buffer guarda {@link CoreMath#BUFFER_TICKS} dela. */
     public long maxOutput() {
-        return eco.apply(CoreMath.maxOutput(chambers(), Config.resonatorFePerCrystal(tier())));
+        if (generationDirty) {
+            refreshGeneration();
+        }
+        return cachedMaxOutput;
     }
 
     /** A capacidade do buffer ({@link CoreMath#BUFFER_TICKS} ticks da geração máxima), em cache. */
@@ -367,6 +373,11 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
             markUnsaved();
         }
         return taken;
+    }
+
+    /** Tira do buffer o que o empurrão da Porta entregou; o chamador marca o chunk uma vez ({@link #markUnsaved}). */
+    void removePushed(long amount) {
+        energy -= Math.max(0, Math.min(amount, energy));
     }
 
     /**
@@ -405,7 +416,8 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
         int quarters = formed ? CoreYield.quarters(crystals, chambers(), tier(), true) : 0;
         long fePerCrystal = Config.resonatorFePerCrystal(tier());
         cachedPerTick = eco.apply(CoreMath.perTick(fePerCrystal, quarters, efficiency() * interference.factor()));
-        cachedCapacity = CoreMath.mulSat(maxOutput(), CoreMath.BUFFER_TICKS);
+        cachedMaxOutput = eco.apply(CoreMath.maxOutput(chambers(), fePerCrystal));
+        cachedCapacity = CoreMath.mulSat(cachedMaxOutput, CoreMath.BUFFER_TICKS);
         generationDirty = false;
     }
 
@@ -505,6 +517,10 @@ public class ResonanceCoreBlockEntity extends BlockEntity {
 
     CoreFlow flow() {
         return flow;
+    }
+
+    CorePush push() {
+        return push;
     }
 
     List<BlockPos> ports() {

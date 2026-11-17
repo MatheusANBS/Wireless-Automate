@@ -335,6 +335,8 @@ public final class ResonatorFormation {
                 level.invalidateCapabilities(port);
             }
         }
+        // Os caches do empurrão seguem a lista das Portas de Energia; igual ao que já está montado não refaz nada.
+        core.push().rebuild(level, core, energyPorts);
     }
 
     /** Primeira montagem desta vez: estação (se ainda não tem), som e aviso aos jogadores perto. */

@@ -82,12 +82,12 @@ def resonator_upkeep_table(lang):
 
 RESONATOR_ANNOTATIONS = {
     'pt': dict(CORE='Núcleo de Ressonância: a tela e os cristais, na frente',
-               ENERGY='Porta de Energia: o roteador tira a energia daqui',
+               ENERGY='Porta de Energia: empurra a energia aos vizinhos, e o roteador também tira daqui',
                CRYSTALS='Porta de Cristais: entram cristais e catalisador, saem Opacos e rachados',
                COLUMN='Coluna do Ressonador: uma em cada diagonal, nas camadas 2 e 3',
                CRADLE='Berço do Sol: o centro das camadas 2 e 3', YAW='315'),
     'en': dict(CORE='Resonance Core: the screen and the crystals, at the front',
-               ENERGY='Resonator Energy Port: a router pulls the energy here',
+               ENERGY='Resonator Energy Port: pushes energy to its neighbors, and a router can pull here too',
                CRYSTALS='Resonator Crystal Port: crystals and catalyst in, Dull and cracked ones out',
                COLUMN='Resonator Column: one on each diagonal, on layers 2 and 3',
                CRADLE='Sun Cradle: the center of layers 2 and 3', YAW='315'),
@@ -114,7 +114,7 @@ Cristais, catalisadores e Corações vêm do [Quartzo de Sinal](signal-quartz.md
 3. Monte a estrutura seguindo a projeção.
 4. Ponha um cristal: clique no Núcleo com ele na mão.
 5. Clique no Núcleo montado para abrir a tela e gire o dial até acender **EM SINTONIA**.
-6. Prenda um [Roteador](router.md) na **Porta de Energia**, face em **Extrai** na aba **Energia**.
+6. Leve a energia embora: uma máquina ou bateria ao lado da **Porta de Energia** já recebe sozinha, ou prenda um [Roteador](router.md) nela, face em **Extrai** na aba **Energia**.
 
 ## Montar
 
@@ -136,7 +136,7 @@ Se não monta, clique no Núcleo: a barra de ação diz o que impede e o bloco e
 | ''' + item('resonator_column') + ''' **Coluna do Ressonador** | As quatro diagonais, nas camadas 2 e 3. |
 | ''' + item('resonator_cradle') + ''' **Berço do Sol** | O centro das camadas 2 e 3. |
 | ''' + item('resonance_core') + ''' **Núcleo de Ressonância** | Tela, cristais e energia gerada. |
-| ''' + item('resonator_energy_port') + ''' **Porta de Energia** | Só tira energia. |
+| ''' + item('resonator_energy_port') + ''' **Porta de Energia** | Empurra a energia, a cada tick, para as máquinas e baterias coladas nela (não para a própria Armilar), e deixa o roteador tirar. |
 | ''' + item('resonator_crystal_port') + ''' **Porta de Cristais** | Recebe cristais e catalisador; devolve os Opacos e os rachados. |
 | ''' + item('resonator_tuner') + ''' **Sintonizador** | Opcional: sintoniza sozinho. |
 
@@ -182,7 +182,9 @@ Eco** quando é quebrado.
 
 ## Energia
 
-Um roteador do mesmo tier do Núcleo dá conta da geração cheia. O Núcleo guarda uns 10 segundos de geração; com a
+A **Porta de Energia** empurra a cada tick o que o Núcleo gerou, até a geração máxima do tier, para quem está colado
+nela e aceita energia (uma bateria do mod recebe tudo numa vez, mesmo acima de 2 bilhões de FE por tick); um roteador do
+mesmo tier do Núcleo também dá conta da geração cheia. O Núcleo guarda uns 10 segundos de geração; com a
 reserva cheia, ele **para de gerar e não gasta cristal**. Ele só trabalha com o chunk carregado: use o
 [Upgrade de Chunk Loading](chunk-loading.md) no roteador da Porta.
 
@@ -231,7 +233,7 @@ Crystals, catalysts and Hearts come from [Signal Quartz](signal-quartz.md).
 3. Build the structure following the projection.
 4. Add a crystal: click the Core with it in hand.
 5. Click the formed Core to open its screen and turn the dial until **IN TUNE** lights up.
-6. Attach a [Router](router.md) to the **Energy Port**, face on **Extract** in the **Energy** tab.
+6. Carry the energy away: a machine or battery next to the **Energy Port** receives it on its own, or attach a [Router](router.md) to it, face on **Extract** in the **Energy** tab.
 
 ## Building it
 
@@ -253,7 +255,7 @@ If it doesn't form, click the Core: the action bar says what's in the way and th
 | ''' + item('resonator_column') + ''' **Resonator Column** | The four diagonals, on layers 2 and 3. |
 | ''' + item('resonator_cradle') + ''' **Sun Cradle** | The center of layers 2 and 3. |
 | ''' + item('resonance_core') + ''' **Resonance Core** | Screen, crystals and generated power. |
-| ''' + item('resonator_energy_port') + ''' **Resonator Energy Port** | Only pulls energy out. |
+| ''' + item('resonator_energy_port') + ''' **Resonator Energy Port** | Pushes energy every tick into the machines and batteries touching it (never into the Armilar itself), and lets a router pull. |
 | ''' + item('resonator_crystal_port') + ''' **Resonator Crystal Port** | Takes crystals and catalyst; hands back Dull and cracked ones. |
 | ''' + item('resonator_tuner') + ''' **Resonator Tuner** | Optional: tunes by itself. |
 
@@ -299,7 +301,9 @@ Watch out: a cracked Tuned Ultimate crystal that arrives through the Crystal Por
 
 ## Power
 
-A router of the Core's tier keeps up with full generation. The Core stores about 10 seconds of generation; when the
+The **Energy Port** pushes what the Core generated every tick, up to the tier's maximum generation, into whatever
+touches it and accepts energy (a mod battery takes it all at once, even above 2 billion FE per tick); a router of the
+Core's tier also keeps up with full generation. The Core stores about 10 seconds of generation; when the
 reserve is full, it **stops generating and doesn't wear the crystals**. It only works while its chunk is loaded: use
 the [Chunk Loading Upgrade](chunk-loading.md) on the Port's router.
 

@@ -30,6 +30,7 @@ final class CorePresence {
             ResonatorPorts.unregister(level.dimension(), port, core.getBlockPos());
         }
         core.setPorts(List.of());
+        core.push().release();
         for (BlockPos member : core.members()) {
             ResonatorMembers.release(level.dimension(), member, core.getBlockPos());
         }

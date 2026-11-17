@@ -28,6 +28,9 @@ public final class ResonatorManager {
      * têm lote nele, em vez de todos.
      */
     private static final List<Set<ResonanceCoreBlockEntity>> BUCKETS = buckets();
+    /** Os Núcleos que empurram neste tick e os que acordam as Portas: listas reaproveitadas, vazias entre os ticks. */
+    private static final List<ResonanceCoreBlockEntity> PUSHING = new ArrayList<>();
+    private static final List<ResonanceCoreBlockEntity> WOKE = new ArrayList<>();
     /**
      * Na run de GameTest a grade põe os Ressonadores de testes diferentes a menos de 32 blocos uns dos outros, e a
      * interferência mudaria a geração que eles conferem: lá ela nasce desligada, e os testes dela a ligam.
@@ -196,28 +199,53 @@ public final class ResonatorManager {
     }
 
     /**
-     * A geração de cada tick: todo Núcleo montado, com geração e num chunk com tick de blocos, soma o
-     * {@code generationPerTick} em cache ({@link ResonatorGeneration#tick}). Os avisos de "energia de 0 para mais"
-     * saem depois do laço, pelo mesmo motivo dos lotes: acordam vizinhos que podem mudar o conjunto. A lista só
-     * nasce no tick em que alguma energia sobe de 0.
+     * A geração de cada tick. Cada Núcleo montado, com geração e num chunk com tick de blocos, soma o
+     * {@code generationPerTick} em cache ({@link ResonatorGeneration#tick}). Quem tem energia e receptor ao lado de
+     * uma Porta de Energia ({@link CorePush#canPush}) empurra antes de gerar, e fora do laço: o empurrão chama código
+     * de outros mods, que pode mudar blocos e pôr ou tirar Núcleos do conjunto. Empurrar antes de gerar dá a vez a quem
+     * puxa (que tira a geração do tick depois dela e antes do empurrão seguinte) e abre espaço no buffer cheio para a
+     * geração não ser cortada; o Núcleo sem receptor gera dentro do laço, como antes, sem lista nem chamada. Os
+     * avisos de "energia de 0 para mais" saem por último, pelo mesmo motivo dos lotes: acordam vizinhos que podem
+     * mudar o conjunto. As listas são reaproveitadas e só têm Núcleos nos ticks em que alguma coisa acontece.
      */
     private static void generate() {
-        List<ResonanceCoreBlockEntity> woke = null;
         for (ResonanceCoreBlockEntity core : CORES) {
-            if (!core.isRemoved() && ResonatorGeneration.generates(core) && core.getLevel() instanceof ServerLevel level
-                    && level.shouldTickBlocksAt(ChunkPos.asLong(core.getBlockPos())) && ResonatorGeneration.tick(core)) {
-                if (woke == null) {
-                    woke = new ArrayList<>();
+            if (core.isRemoved() || !core.formed()) {
+                continue;
+            }
+            boolean pushes = core.push().canPush(core);
+            if ((pushes || ResonatorGeneration.generates(core)) && core.getLevel() instanceof ServerLevel level
+                    && level.shouldTickBlocksAt(ChunkPos.asLong(core.getBlockPos()))) {
+                if (pushes) {
+                    PUSHING.add(core);
+                } else if (ResonatorGeneration.tick(core)) {
+                    WOKE.add(core);
                 }
-                woke.add(core);
             }
         }
-        if (woke != null) {
-            for (ResonanceCoreBlockEntity core : woke) {
+        try {
+            for (int i = 0; i < PUSHING.size(); i++) {
+                ResonanceCoreBlockEntity core = PUSHING.get(i);
+                if (core.isRemoved() || !core.formed()) {
+                    continue;
+                }
+                core.push().push(core);
+                if (ResonatorGeneration.generates(core) && ResonatorGeneration.tick(core)) {
+                    WOKE.add(core);
+                }
+            }
+        } finally {
+            PUSHING.clear();
+        }
+        try {
+            for (int i = 0; i < WOKE.size(); i++) {
+                ResonanceCoreBlockEntity core = WOKE.get(i);
                 if (!core.isRemoved()) {
                     core.notifyPorts(true, false);
                 }
             }
+        } finally {
+            WOKE.clear();
         }
     }
 
@@ -267,6 +295,8 @@ public final class ResonatorManager {
     public static void reset() {
         CORES.clear();
         BUCKETS.forEach(Set::clear);
+        PUSHING.clear();
+        WOKE.clear();
         interferenceConfigChanged = false;
     }
 }

@@ -132,7 +132,7 @@ Um gerador multibloco que transforma cristais de quartzo vibrando em FE. Minere 
 
 ![Ressonador de Sinal](docs/curseforge/ressonador.gif)
 
-A animação da câmara aparece em cima do Berço do Sol. Cristais gastos ficam **Opacos** e recarregam dentro do Núcleo com um catalisador (redstone ou Pó de Ressonância nos primeiros tiers, o Pó Carregado do tier do Allthemodium para cima). A energia sai pela **Porta de Energia**, direto num roteador.
+Em cima do Berço do Sol, um planetário de latão gira em volta de um sol de plasma; em sintonia, os aros se alinham e, a cada conjunção, um arco corre até a Porta de Energia. Cada etapa tem som próprio. Cristais gastos ficam **Opacos** e recarregam dentro do Núcleo com um catalisador (redstone ou Pó de Ressonância nos primeiros tiers, o Pó Carregado do tier do Allthemodium para cima). O Núcleo gera a cada tick, e a **Porta de Energia** empurra a energia sozinha para a máquina ou bateria encostada nela; um roteador na Porta também puxa.
 
 ![Ressonador de Sinal](docs/curseforge/feature-21-resonator.png)
 

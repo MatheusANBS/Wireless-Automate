@@ -42,7 +42,7 @@ Legenda: ✅ pronto e testado · 🟡 parcial · ⬜ não começado
 
 | Funcionalidade | Estado | Versão | Resumo |
 | --- | --- | --- | --- |
-| Ressonador de Sinal | ✅ | 2.1.0 (rebalanceado na 2.4.0, câmara na 2.8.3); a Armilar (etapas 1 e 2) no `main` desde 16/11 | Gerador multibloco movido a cristais e sintonia; a estrutura é a Armilar de 35 blocos e o render é o do conceito aprovado (órbitas, cristais, sol, conjunção e luz no mundo, com e sem shaderpack); aprovada pelo dono e mergeada no `main` em 16/11 (sem push) |
+| Ressonador de Sinal | ✅ | 2.1.0 (rebalanceado na 2.4.0, câmara na 2.8.3); a Armilar, a geração por tick, a Porta que empurra, o feixe contínuo e os sons na 2.19.0 | Gerador multibloco movido a cristais e sintonia; a estrutura é a Armilar de 35 blocos e o render é o do conceito aprovado (órbitas, cristais, sol, conjunção e luz no mundo, com e sem shaderpack); gera a cada tick, a Porta de Energia empurra para os vizinhos e cada etapa tem som próprio (síntese em `scripts/sounds/`) |
 | Energia ligada ao Ressonador | ✅ | 2.8.0 | Energia do roteador e capacidade da Bateria pela geração do Ressonador do mesmo tier |
 | Reparador de Cristais | ✅ | 2.9.0 | Conserta cristais rachados, oito de uma vez |
 

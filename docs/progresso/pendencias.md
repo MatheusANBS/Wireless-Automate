@@ -14,7 +14,6 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 
 ## Motor e redes
 
-- **(dono)** Decidir se a saída do Ressonador deve ser suavizada (hoje o lote de 20 ticks sai num tick só). (28/10)
 - **(dono)** Máquina que chama `setChanged` a cada tick (faladeira) acorda as portas dela a cada tick: a origem nunca dorme e os destinos re-simulam os recusados a cada tick (A13 do backlog da `wa-performance`). Decidir se o aviso repetido sem mudança útil passa a ser desconfiado (ver as perguntas de 08/11 no histórico). (08/11)
 - Bench: cenário com máquina de duas saídas (uma enchendo acima da vazão do tier) e tanque seletivo, para os M7 e M8 do backlog terem número além dos GameTests. (08/11)
 - Bench: um cenário de destino seletivo (Baú do mod com milhares de tipos diante de máquinas que recusam a maioria); hoje só os GameTests medem. (02/11)
@@ -53,7 +52,8 @@ O que falta fazer, por área (as mesmas do [mapa do código](../mapa/)). Um item
 
 ## Ressonador
 
-- **Depois do aprovado:** o merge no `main`; refazer as fotos `s19` e `s20` e o GIF do Ressonador na vitrine do CurseForge (`E2eShowcaseResonator`, `scripts/curseforge/gerar_gif.py`; as de hoje mostram a câmara antiga); reescrever o parágrafo da animação em `README.md` e `README.en.md` ("em cima do Berço do Sol"); reescrever os trechos iguais em `docs/curseforge/descricao.md`, que ainda fala da caixa antiga e da animação de antes. (16/11)
+- Refazer as fotos `s19` e `s20` e o GIF do Ressonador na vitrine do CurseForge (`E2eShowcaseResonator`, `scripts/curseforge/gerar_gif.py`; as de hoje mostram a câmara antiga). (16/11)
+- **(dono)** Ouvir os sons da Armilar no jogo (volume com a distância e a mistura com a música). (17/11)
 - **Levar o Reparador para o `client/fx`:** ele ainda tem os core shaders, os `RenderType`s e o plasma próprios em `client/repairer/render/` (`resonator_plasma`, `resonator_ribbon` e `resonator_crystal`); a Armilar usa o pacote novo. Hoje o Reparador cai no desenho de reserva com shaderpack. (16/11)
 - **Limitações conhecidas dos efeitos** (`docs/mapa/efeitos.md`): com shaderpack a luz no mundo e o desenho tardio podem cair por cima da mão perto do sol (decidido: fica como está); com o Fabulous a luz provavelmente ignora vidro e água na frente de uma superfície (não medido). (16/11)
 - A fase das capturas `armilar-luz-sol` e `armilar-luz-perto` usa `TC − 3`, mas a fase é periódica e ali ainda sobra um resto do arco (14 fitas); o sol sozinho pede `TC + 2,6`. Trocar a constante e refazer a rodada se a imagem importar. (16/11)

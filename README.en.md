@@ -128,11 +128,11 @@ The **Wireless Source Tank** holds from 3,600,000 Source (Basic) to unlimited (U
 
 ### Signal Resonator
 
-A multiblock generator that turns vibrating quartz crystals into FE. Mine **Signal Quartz** (Overworld, stone and deepslate), build the **Armilar**, a structure of 35 blocks (a ground layer of Resonator Floors, four Columns and the Sun Cradle) with the **Resonance Core** at the front, and put **Signal Crystals** in its chambers. Every Resonator has its own **station**, a frequency that drifts slowly: turn the dial until the lamp says **IN TUNE** for 100%, or add a **Tuner** to follow the station on its own, a little below the top. Off the station, it generates nothing.
+A multiblock generator that turns vibrating quartz crystals into FE. Mine **Signal Quartz** (Overworld, stone and deepslate), build the **Armillary**, a structure of 35 blocks (a ground layer of Resonator Floors, four Columns and the Sun Cradle) with the **Resonance Core** at the front, and put **Signal Crystals** in its chambers. Every Resonator has its own **station**, a frequency that drifts slowly: turn the dial until the lamp says **IN TUNE** for 100%, or add a **Tuner** to follow the station on its own, a little below the top. Off the station, it generates nothing.
 
 ![Signal Resonator](docs/curseforge/ressonador.gif)
 
-The chamber's animation shows above the Sun Cradle. Spent crystals turn **Dull** and recharge inside the Core with a catalyst (redstone or Resonance Dust on the first tiers, the tier's Charged Dust from Allthemodium up). Energy leaves through the **Energy Port**, straight into a router.
+Above the Sun Cradle, a brass orrery turns around a plasma sun; in tune, the rings line up and, at each conjunction, an arc runs to the Energy Port. Every stage has its own sound. Spent crystals turn **Dull** and recharge inside the Core with a catalyst (redstone or Resonance Dust on the first tiers, the tier's Charged Dust from Allthemodium up). The Core generates every tick, and the **Energy Port** pushes the energy on its own into the machine or battery touching it; a router on the Port can pull too.
 
 ![Signal Resonator](docs/curseforge/feature-21-resonator.png)
 

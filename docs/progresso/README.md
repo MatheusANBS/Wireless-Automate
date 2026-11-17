@@ -4,14 +4,14 @@ Comece por aqui para continuar o trabalho. Este arquivo é curto de propósito: 
 
 ## Agora
 
-- **Versão atual:** 2.18.0 (13/11/2026, no `main`): o **Vinculador de um dono** (a máquina de outro roteador, vinculada ou presa, é recusada; o Ctrl + clique pega só as do mesmo bloco que se tocam com a clicada, também na Doca, e desvincula só esse grupo) e o **cubo do alcance do roteador** no mundo com o Vinculador na mão. Protocolo 52 (a 2.17.0 tinha 51), então servidor e clientes precisam da mesma versão. Testada à mão pelo dono em 13/11. O jar fica em `build/libs/` e o texto em `docs/curseforge/changelog-2.18.0.md`; faltam a tag e a release no GitHub e a publicação no CurseForge e no Modrinth.
-- **Publicação:** a 2.17.0 está no `main`, com a tag `v2.17.0`, e no CurseForge.
+- **Versão atual:** 2.19.0 (17/11/2026, no `main`, tag `v2.19.0` e release no GitHub com o jar): o Ressonador vira a **Armilar** (estrutura de 35 blocos, o planetário animado, compatível com shaderpack), com **geração a cada tick**, a **Porta de Energia que empurra** para os vizinhos, o **feixe contínuo** pela vazão e **14 sons próprios**. Protocolo 53 (a 2.18.0 tinha 52); a caixa antiga desmonta ao carregar e nada se perde. O texto fica em `docs/curseforge/changelog-2.19.0.md`; falta o dono publicar no CurseForge e no Modrinth.
+- **Publicação:** a 2.18.0 tem tag e release no GitHub.
 - **Parado:** a máquina faladeira (A13 do backlog da `wa-performance`) espera um cenário de bench; o ramo `mc/1.20.1-forge` (porte) espera o ok do dono (`docs/portes.md`); a **Lixeira** (plano da etapa 1 em `docs/superpowers/plans/2026-11-10-lixeira-etapa-1.md`) espera o ok para executar; duas correções de defeitos esperam merge no ramo `correcoes-renomear-e-float`.
 
 ## Próximo passo
 
-1. **Armilar, etapa 2:** feita no ramo `armilar` (o render do conceito, o `client/fx/`, o e2e nos três ambientes, a bateria verde: 1.098 JUnit e 1.228 + 21 + 19 + 6 GameTests). Aprovada pelo dono e mergeada no `main` em 16/11 (sem push); ficam as fotos `s19` e `s20` e o GIF da vitrine do CurseForge, o parágrafo da animação nos READMEs e o `docs/curseforge/descricao.md` (`pendencias.md`).
-2. Publicar a 2.18.0: a tag `v2.18.0` e a release no GitHub com `build/libs/wirelessautomate-2.18.0.jar`; o dono sobe no CurseForge e no Modrinth com o texto de `docs/curseforge/changelog-2.18.0.md`. O dono ainda testa a Doca no jogo com o AE2 e o RS2 (`pendencias.md`).
+1. **Publicar a 2.19.0:** o dono sobe `build/libs/wirelessautomate-2.19.0.jar` no CurseForge e no Modrinth com o texto de `docs/curseforge/changelog-2.19.0.md`, e ouve os sons da Armilar no jogo.
+2. **Vitrine do Ressonador:** refazer as fotos `s19` e `s20` e o GIF do CurseForge, que ainda mostram a câmara antiga (`wa-curseforge-imagens`). O dono ainda testa a Doca no jogo com o AE2 e o RS2 (`pendencias.md`).
 3. O e2e rápido inteiro passou de 600 s (o padrão do `scripts/e2e.sh`) com as suítes da Doca e da Tela: subir o tempo-limite padrão ou rodar em partes. A descrição do `neoforge.mods.toml` sai com os acentos em mojibake no jar.
 4. Reidealizar as telas do Tablet do zero (criação de redes etc.), mockup primeiro para o ok do dono. Refazer as imagens do Vinculador na vitrine e a do livro, e uma imagem da Doca para o CurseForge (`wa-curseforge-imagens`).
 5. **Lixeira:** executar o plano da etapa 1 quando o dono der o ok. Higiene: a varredura de 12/11 lista os planos já mesclados (o livro, o alcance, o Afinador, a presa e a etapa 4 da Doca) e o protótipo do livro, para apagar com o ok do dono.

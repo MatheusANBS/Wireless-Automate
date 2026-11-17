@@ -1,0 +1,42 @@
+name: 💡 Sugestão · Suggestion
+description: Uma ideia para o mod · An idea for the mod
+title: "[Sugestão] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Conte o problema que você quer resolver no seu jogo; a solução vem depois.
+        Tell us the problem you want to solve in your game; the solution comes after.
+  - type: textarea
+    id: problema
+    attributes:
+      label: Que problema isto resolve · What problem does this solve
+      placeholder: "Na minha base, eu preciso... · In my base, I need to..."
+    validations:
+      required: true
+  - type: textarea
+    id: ideia
+    attributes:
+      label: Como você imagina · How you picture it
+    validations:
+      required: true
+  - type: textarea
+    id: hoje
+    attributes:
+      label: Como você faz hoje · How you do it today
+      description: Outros mods ou gambiarras que você usa · Other mods or workarounds you use
+  - type: dropdown
+    id: area
+    attributes:
+      label: Parte do mod · Part of the mod
+      options:
+        - Roteadores · Routers
+        - Filtros · Filters
+        - Baú, Tanque, Bateria · Chest, Tank, Battery
+        - Doca de Padrões · Pattern Dock
+        - Tela de Sinal · Signal Screen
+        - Ressonador / Armilar · Resonator / Armillary
+        - Tablet, Vinculador, Configurador · Tablet, Linker, Configurator
+        - Compatibilidade com outros mods · Mod compatibility
+        - Outra · Other

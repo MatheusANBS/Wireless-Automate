@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Pergunta ou ideia solta · Question or loose idea
+    url: https://github.com/MatheusANBS/Wireless-Automate/discussions
+    about: Dúvidas de uso e conversas ficam nas Discussions · How-to questions and chats go to Discussions
+  - name: 🔒 Falha de segurança · Security issue
+    url: https://github.com/MatheusANBS/Wireless-Automate/security/advisories/new
+    about: Relate em privado, nunca numa issue pública · Report privately, never in a public issue
+  - name: 📦 Baixar no CurseForge · Download on CurseForge
+    url: https://www.curseforge.com/minecraft/mc-mods/wireless-automate
+    about: Versões publicadas e changelog · Released versions and changelog

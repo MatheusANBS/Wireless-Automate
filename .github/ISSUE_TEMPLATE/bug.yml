@@ -1,0 +1,68 @@
+name: 🐞 Bug
+description: Algo não funciona como deveria · Something does not work as it should
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por relatar! Procure antes nas issues abertas e confira se está na versão mais recente.
+        Thanks for reporting! Please search the open issues first and make sure you are on the latest version.
+  - type: input
+    id: versao-mod
+    attributes:
+      label: Versão do Wireless Automate · Wireless Automate version
+      placeholder: "2.19.0"
+    validations:
+      required: true
+  - type: input
+    id: versao-neoforge
+    attributes:
+      label: Versão do NeoForge · NeoForge version
+      placeholder: "21.1.248"
+    validations:
+      required: true
+  - type: input
+    id: modpack
+    attributes:
+      label: Modpack (e versão) · Modpack (and version)
+      description: Deixe em branco se não usa modpack · Leave empty if you do not use one
+      placeholder: "All the Mods 10"
+  - type: dropdown
+    id: onde
+    attributes:
+      label: Onde acontece · Where it happens
+      options:
+        - Single player
+        - Servidor dedicado · Dedicated server
+        - LAN
+        - Não sei · Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: o-que
+    attributes:
+      label: O que aconteceu · What happened
+      description: E o que você esperava que acontecesse · And what you expected instead
+    validations:
+      required: true
+  - type: textarea
+    id: passos
+    attributes:
+      label: Passos para reproduzir · Steps to reproduce
+      placeholder: |
+        1. Coloque um roteador numa fornalha · Place a router on a furnace
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: log
+    attributes:
+      label: Log ou crash report · Log or crash report
+      description: Envie o `latest.log` ou o crash report pelo https://mclo.gs/ e cole o link · Upload `latest.log` or the crash report to https://mclo.gs/ and paste the link
+      placeholder: "https://mclo.gs/..."
+  - type: textarea
+    id: extra
+    attributes:
+      label: Mais alguma coisa · Anything else
+      description: Prints, vídeos, mods das máquinas envolvidas · Screenshots, videos, mods of the machines involved

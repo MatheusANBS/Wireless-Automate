@@ -40,7 +40,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @PrefixGameTestTemplate(false)
 public final class MotorMedidaGameTests {
     private static final BlockPos ORIGIN = new BlockPos(1, 1, 1);
-    private static final BlockPos TOP_ENERGY = ORIGIN.offset(2, 4, 2);
+    private static final BlockPos ENERGY_PORT = ResonatorTestSupport.ENERGY_PORT;
     private static final BlockPos CELL_A = new BlockPos(0, 1, 0);
     private static final BlockPos CELL_B = new BlockPos(4, 1, 0);
     /** O teto do sono da energia ({@code NetworkManager.SCALAR_MAX_SLEEP_TICKS}, 20) com folga de um tick por salto. */
@@ -53,11 +53,11 @@ public final class MotorMedidaGameTests {
     @GameTest(template = "empty7", batch = "wirelessautomate_medida", timeoutTicks = 400)
     public static void medidaPulsoDoRessonador(GameTestHelper helper) {
         UUID network = network(helper, "medida-pulso");
-        BlockPos corePos = ResonatorTestSupport.build(helper, ORIGIN, Layout.ENERGY_ON_TOP, RouterTier.BASIC);
+        BlockPos corePos = ResonatorTestSupport.build(helper, ORIGIN, Layout.SEM_SINTONIZADOR, RouterTier.BASIC);
         BlockPos batteryPos = new BlockPos(0, 1, 0);
         helper.setBlock(batteryPos, ModBlocks.STORAGE.get(StorageKind.BATTERY).get().defaultBlockState()
                 .setValue(RouterBlock.TIER, RouterTier.BASIC));
-        RouterBlockEntity source = router(helper, TOP_ENERGY, Direction.UP, ResourceType.ENERGY, network, PortMode.EXTRACT);
+        RouterBlockEntity source = router(helper, ENERGY_PORT, Direction.EAST, ResourceType.ENERGY, network, PortMode.EXTRACT);
         RouterBlockEntity target = router(helper, batteryPos, Direction.UP, ResourceType.ENERGY, network, PortMode.INSERT);
         List<Long> deltas = new ArrayList<>();
         long[] last = new long[1];

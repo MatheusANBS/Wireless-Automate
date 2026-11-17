@@ -5,7 +5,6 @@ import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.resonator.ProjectionDiff;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBlueprint;
-import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBlueprint.Layout;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorFormation;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorLayout;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorLayout.Face;
@@ -28,38 +27,34 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.event.InputEvent;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * A projeção da estrutura do Ressonador em volta de um Núcleo solto, só no cliente: o cliente já tem os blocos em
  * volta, então compara sozinho (a cada 10 ticks) o desenho do {@link ResonatorBlueprint} com o mundo e escreve o que
  * falta na action bar. Uma projeção por vez; desliga sozinha ao montar, sem o Núcleo, longe ou em outra dimensão.
- * Shift + roda com a mão vazia, perto do Núcleo, troca o layout. O desenho fica no {@link ProjectionRenderer}.
+ * O desenho fica no {@link ProjectionRenderer}.
  */
 @EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
 public final class ResonatorProjection {
     private static final int SIZE = ResonatorLayout.SIZE;
     private static final int REFRESH_TICKS = 10;
-    /** Ticks em que a dica ou o layout novo ficam na action bar antes da contagem voltar. */
+    /** Ticks em que a dica fica na action bar antes da contagem voltar. */
     private static final int HOLD_TICKS = 40;
     private static final double MAX_DISTANCE_SQR = 64 * 64;
-    private static final double SCROLL_DISTANCE_SQR = 8 * 8;
 
     /**
      * A projeção ligada: o desenho na origem dada, o estado montado de cada peça esperada ({@code ghosts}, nulo
      * onde é ar ou o Núcleo) e a última comparação.
      */
-    record Active(BlockPos core, ResourceKey<Level> dimension, Face coreFace, Layout layout, Part[][][] expected,
+    record Active(BlockPos core, ResourceKey<Level> dimension, Face coreFace, Part[][][] expected,
                   int[] origin, BlockState[][][] ghosts, @Nullable ProjectionDiff.Result result) {
         Active withResult(ProjectionDiff.Result next) {
-            return new Active(core, dimension, coreFace, layout, expected, origin, ghosts, next);
+            return new Active(core, dimension, coreFace, expected, origin, ghosts, next);
         }
     }
 
     private static @Nullable Active active;
-    /** O layout escolhido por último, que a próxima projeção usa. */
-    private static Layout lastLayout = Layout.VITRINE;
     private static int ticks;
     private static int hold;
     /**
@@ -82,17 +77,13 @@ public final class ResonatorProjection {
         if (level == null || !(level.getBlockState(core).getBlock() instanceof ResonanceCoreBlock)) {
             return;
         }
-        active = build(core, level.dimension(), faceOf(level.getBlockState(core)), lastLayout);
+        active = build(core, level.dimension(), faceOf(level.getBlockState(core)));
         hold(minecraft, Component.translatable(ProjectionText.HINT));
         refresh(minecraft);
     }
 
     public static boolean isOn() {
         return active != null;
-    }
-
-    public static Layout layout() {
-        return lastLayout;
     }
 
     /** A última comparação da projeção ligada, ou nulo. */
@@ -118,26 +109,6 @@ public final class ResonatorProjection {
         if (++ticks % REFRESH_TICKS == 0) {
             refresh(Minecraft.getInstance());
         }
-    }
-
-    /**
-     * Shift + roda com a projeção ligada, a mão principal vazia (o gesto que a ligou) e o jogador perto do Núcleo:
-     * troca Vitrine e Faixa. Com item na mão a roda fica para ele (o Vinculador usa Shift + roda).
-     */
-    @SubscribeEvent
-    static void onScroll(InputEvent.MouseScrollingEvent event) {
-        Minecraft minecraft = Minecraft.getInstance();
-        LocalPlayer player = minecraft.player;
-        if (active == null || player == null || minecraft.screen != null || event.getScrollDeltaY() == 0
-                || !minecraft.options.keyShift.isDown() || !player.getMainHandItem().isEmpty()
-                || player.distanceToSqr(Vec3.atCenterOf(active.core())) > SCROLL_DISTANCE_SQR) {
-            return;
-        }
-        lastLayout = active.layout().other();
-        active = build(active.core(), active.dimension(), active.coreFace(), lastLayout);
-        hold(minecraft, ProjectionText.layout(lastLayout));
-        refresh(minecraft);
-        event.setCanceled(true);
     }
 
     /** Põe {@code message} na action bar e a segura lá por {@link #HOLD_TICKS} antes da contagem voltar. */
@@ -174,7 +145,7 @@ public final class ResonatorProjection {
         }
         Face face = faceOf(coreState);
         if (face != current.coreFace()) {
-            current = build(current.core(), current.dimension(), face, current.layout());
+            current = build(current.core(), current.dimension(), face);
         }
         BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
         int[] o = current.origin();
@@ -186,19 +157,19 @@ public final class ResonatorProjection {
         }
     }
 
-    private static Active build(BlockPos core, ResourceKey<Level> dimension, Face coreFace, Layout layout) {
-        Part[][][] expected = ResonatorBlueprint.expected(coreFace, layout);
+    private static Active build(BlockPos core, ResourceKey<Level> dimension, Face coreFace) {
+        Part[][][] expected = ResonatorBlueprint.expected(coreFace);
         int[] origin = ResonatorBlueprint.origin(core.getX(), core.getY(), core.getZ(), coreFace);
-        return new Active(core, dimension, coreFace, layout, expected, origin, ghosts(core, expected, origin), null);
+        return new Active(core, dimension, coreFace, expected, origin, ghosts(core, coreFace, expected, origin), null);
     }
 
     /**
-     * O estado montado de cada peça esperada: o {@code ResonatorLayout.check} sobre o próprio desenho dá a posição da
-     * carcaça, a face e os bits do vidro, como a montagem de verdade os gravaria.
+     * O estado montado de cada peça esperada: o {@code ResonatorLayout.check} sobre o próprio desenho dá o slot, a
+     * face e o canto, como a montagem de verdade os gravaria.
      */
-    private static BlockState[][][] ghosts(BlockPos core, Part[][][] expected, int[] o) {
+    private static BlockState[][][] ghosts(BlockPos core, Face front, Part[][][] expected, int[] o) {
         BlockState[][][] ghosts = new BlockState[SIZE][SIZE][SIZE];
-        ResonatorLayout.Result result = ResonatorLayout.check(core.getX(), core.getY(), core.getZ(), (x, y, z) -> {
+        ResonatorLayout.Result result = ResonatorLayout.check(core.getX(), core.getY(), core.getZ(), front, (x, y, z) -> {
             int lx = x - o[0];
             int ly = y - o[1];
             int lz = z - o[2];
@@ -221,7 +192,8 @@ public final class ResonatorProjection {
     private static @Nullable Block blockOf(Part part) {
         return switch (part) {
             case CASING -> ModBlocks.RESONATOR_CASING.get();
-            case GLASS -> ModBlocks.RESONATOR_GLASS.get();
+            case COLUMN -> ModBlocks.RESONATOR_COLUMN.get();
+            case CRADLE -> ModBlocks.RESONATOR_CRADLE.get();
             case ENERGY_PORT -> ModBlocks.RESONATOR_ENERGY_PORT.get();
             case CRYSTAL_PORT -> ModBlocks.RESONATOR_CRYSTAL_PORT.get();
             case TUNER -> ModBlocks.RESONATOR_TUNER.get();

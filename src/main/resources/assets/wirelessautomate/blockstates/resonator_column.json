@@ -1,0 +1,46 @@
+{
+  "variants": {
+    "corner=se,part=loose": {
+      "model": "wirelessautomate:block/resonator_column_loose"
+    },
+    "corner=se,part=lower": {
+      "model": "wirelessautomate:block/armilar/column_lower"
+    },
+    "corner=se,part=upper": {
+      "model": "wirelessautomate:block/armilar/column_upper"
+    },
+    "corner=sw,part=loose": {
+      "model": "wirelessautomate:block/resonator_column_loose"
+    },
+    "corner=sw,part=lower": {
+      "model": "wirelessautomate:block/armilar/column_lower",
+      "y": 90
+    },
+    "corner=sw,part=upper": {
+      "model": "wirelessautomate:block/armilar/column_upper",
+      "y": 90
+    },
+    "corner=nw,part=loose": {
+      "model": "wirelessautomate:block/resonator_column_loose"
+    },
+    "corner=nw,part=lower": {
+      "model": "wirelessautomate:block/armilar/column_lower",
+      "y": 180
+    },
+    "corner=nw,part=upper": {
+      "model": "wirelessautomate:block/armilar/column_upper",
+      "y": 180
+    },
+    "corner=ne,part=loose": {
+      "model": "wirelessautomate:block/resonator_column_loose"
+    },
+    "corner=ne,part=lower": {
+      "model": "wirelessautomate:block/armilar/column_lower",
+      "y": 270
+    },
+    "corner=ne,part=upper": {
+      "model": "wirelessautomate:block/armilar/column_upper",
+      "y": 270
+    }
+  }
+}

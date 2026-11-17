@@ -7,10 +7,16 @@
 #   ./scripts/e2e.sh --only tablet --capture tablet-   com as capturas que começam por "tablet-"
 #   ./scripts/e2e.sh --completo                   tudo: capturas, variantes e as suítes opcionais
 #   ./scripts/e2e.sh --lista                      as suítes, com descrição e pré-requisito
+#   ./scripts/e2e.sh --only fx-base --capture fx-base --shaders complementary --out run/e2e-fx-comp   com shaderpack
 #   ./scripts/e2e.sh --skip guia,escuro --out run/e2e-x
 #
 # Opções: --only a,b | --skip a,b | --capture off|todas|prefixos | --variants off|todas|pt,escuro |
-#         --completo | --out <dir> | --lista. O primeiro argumento sem "--" ainda vale como <dir> (como antes).
+#         --completo | --shaders nenhum|complementary|bsl | --out <dir> | --lista. O primeiro argumento sem "--" ainda
+#         vale como <dir> (como antes).
+# --shaders: "nenhum" (o padrão) roda como sempre; "complementary" e "bsl" escrevem run/config/iris.properties (liga o
+# Iris e escolhe o pacote de run/shaderpacks) e abrem o cliente com ./gradlew runClient -Pshaders (Iris e Sodium só
+# no cliente de dev); "nenhum" grava enableShaders=false no mesmo arquivo, para um runClient -Pshaders manual depois
+# subir sem shader. O run/options.txt nunca é tocado.
 # E2E_TIMEOUT=900 muda o tempo-limite total em segundos (padrão 600; 1500 com --completo).
 #
 # Abre o jogo com WA_E2E=<dir>. Na tela de título o mod cria o mundo plano "wa-e2e" (apaga o anterior), clica pela
@@ -30,6 +36,7 @@ CAPTURE=""
 VARIANTS=""
 COMPLETO=0
 LISTA=0
+SHADERS="nenhum"
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -38,9 +45,10 @@ while [ $# -gt 0 ]; do
         --capture) CAPTURE="${2:?--capture pede off, todas ou prefixos}"; shift 2 ;;
         --variants) VARIANTS="${2:?--variants pede off, todas, pt ou escuro}"; shift 2 ;;
         --out) OUT="${2:?--out pede o diretório}"; shift 2 ;;
+        --shaders) SHADERS="${2:?--shaders pede nenhum, complementary ou bsl}"; shift 2 ;;
         --completo) COMPLETO=1; shift ;;
         --lista) LISTA=1; shift ;;
-        -h|--help) sed -n '2,22p' "${BASH_SOURCE[0]}"; exit 0 ;;
+        -h|--help) sed -n '2,28p' "${BASH_SOURCE[0]}"; exit 0 ;;
         --*) echo "e2e: opção desconhecida: $1 (veja --help)" >&2; exit 2 ;;
         *) OUT="$1"; shift ;;
     esac
@@ -51,6 +59,13 @@ if [ "$LISTA" -eq 1 ]; then
     grep -E '^\| `[a-z-]+` \|' "$ROOT/docs/e2e.md" | sed 's/`//g; s/^| //; s/ |$//'
     exit 0
 fi
+
+case "$SHADERS" in
+    nenhum) PACK=""; GRADLE_FLAGS=() ;;
+    complementary) PACK="ComplementaryReimagined_r5.9.3.zip"; GRADLE_FLAGS=(-Pshaders) ;;
+    bsl) PACK="BSL_v10.1.8.zip"; GRADLE_FLAGS=(-Pshaders) ;;
+    *) echo "e2e: --shaders pede nenhum, complementary ou bsl (veio: $SHADERS)" >&2; exit 2 ;;
+esac
 
 OUT="${OUT:-$ROOT/run/e2e}"
 case "$OUT" in
@@ -77,13 +92,30 @@ else
     echo "e2e: sem xvfb-run: o jogo vai abrir uma janela de verdade; não mexa no mouse nem no teclado até acabar."
 fi
 
+if [ -n "$PACK" ]; then
+    if [ ! -f "$ROOT/run/shaderpacks/$PACK" ]; then
+        echo "e2e: falta o pacote run/shaderpacks/$PACK" >&2
+        exit 2
+    fi
+    # as chaves do Iris 1.8.12 (IrisConfig): enableShaders e shaderPack; o cliente roda dentro de run/
+    mkdir -p "$ROOT/run/config"
+    printf 'enableShaders=true\nshaderPack=%s\n' "$PACK" > "$ROOT/run/config/iris.properties"
+    echo "e2e: shaderpack $PACK (run/config/iris.properties)"
+fi
+
+if [ -z "$PACK" ]; then
+    # sem pacote: deixa o Iris desligado, para um runClient -Pshaders manual depois não subir com o da rodada anterior
+    mkdir -p "$ROOT/run/config"
+    printf 'enableShaders=false\n' >"$ROOT/run/config/iris.properties"
+fi
+
 mkdir -p "$OUT"
 rm -f "$OUT"/result.txt "$OUT"/*.png
 echo "e2e: rodando o cliente (até ${TIMEOUT}s); log em $OUT/client.log"
 
 cd "$ROOT"
 START=$(date +%s)
-timeout --kill-after=30 "$TIMEOUT" "${RUNNER[@]}" ./gradlew runClient --console=plain > "$OUT/client.log" 2>&1
+timeout --kill-after=30 "$TIMEOUT" "${RUNNER[@]}" ./gradlew runClient "${GRADLE_FLAGS[@]}" --console=plain > "$OUT/client.log" 2>&1
 STATUS=$?
 ELAPSED=$(( $(date +%s) - START ))
 

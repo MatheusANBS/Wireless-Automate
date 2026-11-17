@@ -50,7 +50,7 @@ final class E2eResonatorScreenSteps {
             ServerLevel level = server.overworld();
             second[0] = origin[0].offset(-APART, 0, 0);
             E2eResonatorSteps.clear(level, second[0]);
-            E2eResonatorSteps.placeVitrine(level, second[0], RouterTier.ULTIMATE);
+            E2eResonatorSteps.placeArmilar(level, second[0], RouterTier.ULTIMATE);
             return null;
         }), () -> formed(core(second[0])) && onServer(server -> elite(server.overworld(), origin)
                 .interference().lossPermille() > 0), () -> "interferência no Elite"));
@@ -131,7 +131,7 @@ final class E2eResonatorScreenSteps {
 
     /**
      * A câmara do Elite com dois rachados e catalisador: nenhum recarrega ({@code rechargeStart} fica -1) e os dois
-     * ficam escuros e caídos. A câmera já está dentro da câmara, de perto.
+     * ficam escuros e caídos. A câmera já está na do filme.
      */
     static void crackedChamberSteps(List<Step> list, BlockPos[] origin) {
         list.add(new Step("Ressonador: rachados na câmara, com catalisador", STEP_TIMEOUT_MS, () -> onServer(server -> {
@@ -146,13 +146,13 @@ final class E2eResonatorScreenSteps {
             return chambers[0] == 5 && chambers[chambers.length - 1] == 6 && view.rechargeStart() < 0
                     && stepTicks >= 40;
         }, () -> "rachados no cliente, recarga " + view(origin[0]).rechargeStart()));
-        list.add(capture("ressonador-camara-rachado"));
+        list.add(capture("armilar-rachado"));
     }
 
-    /** Abre a tela do Núcleo e espera o estado que a foto precisa. */
     /** Ticks sem tela até o clique no Núcleo ser repetido. */
     private static final int OPEN_RETRY_TICKS = 40;
 
+    /** Abre a tela do Núcleo e espera o estado que a foto precisa. */
     private static Step open(String name, Supplier<BlockPos> pos,
             Predicate<ResonatorStatePayload> ready) {
         return new Step(name, STEP_TIMEOUT_MS, () -> useOn(pos.get()), () -> {

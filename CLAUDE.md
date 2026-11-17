@@ -18,7 +18,7 @@ Cada skill tem a descrição completa no próprio `SKILL.md`; aqui só quando us
 - `wa-feature`: feature, tela ou item novo, do mockup ao commit, com um subagente por tarefa.
 - `wa-modular`: limites de tamanho por classe (tela até 500 linhas, servidor até 1000) e como dividir; `python -I .claude/skills/wa-modular/scripts/medir.py`.
 - `wa-comentarios`: regras dos comentários; `python -I .claude/skills/wa-comentarios/scripts/varrer.py` antes de cada commit.
-- `wa-shaders`: efeito visual ou referência a replicar (GIF, vídeo, outro mod).
+- `wa-efeitos`: qualquer efeito visual ou animação renderizada (feixe, arco, plasma, partícula, luz de efeito), referência a igualar (GIF, vídeo, outro mod) e compatibilidade com shaderpack.
 - `wa-mod-opcional`: integrar outro mod opcional sem quebrar o mod quando ele não está instalado.
 - `wa-release`: fechar uma versão (changelogs, tag, release com o jar).
 - `wa-porte`: portar o mod para outra versão de Minecraft (estado dos ramos em `docs/portes.md`).
@@ -38,7 +38,8 @@ Pacote base: `src/main/java/io/github/matheusanbs/wirelessautomate/`. O mapa det
 | Tablet (a central) | [tablet](docs/mapa/tablet.md) | `menu/Tablet*`, `client/tablet/`, `NodeIndex` |
 | Filtros | [filtro](docs/mapa/filtro.md) | `filter/`, `menu/Filter*`, `client/filter/` |
 | Armazenamentos (Baú, Tanques, Bateria) | [armazenamento](docs/mapa/armazenamento.md) | `storage/`, `client/storage/` |
-| Ressonador de Sinal | [ressonador](docs/mapa/ressonador.md) | `resonator/`, tela do Núcleo e câmara animada |
+| Ressonador de Sinal | [ressonador](docs/mapa/ressonador.md) | `resonator/`, tela do Núcleo, câmara animada e a Armilar renderizada (`client/resonator/render/`) |
+| Efeitos de render (Iris, desenho tardio, luz no mundo) | [efeitos](docs/mapa/efeitos.md) | `client/fx/` |
 | Reparador de Cristais | [reparador](docs/mapa/reparador.md) | `repairer/` |
 | Tela de Sinal | [tela-de-sinal](docs/mapa/tela-de-sinal.md) | `tv/`, `client/tv/` (editor, peças, layouts, biblioteca, desenho) |
 | Doca de Padrões | [doca](docs/mapa/doca.md) | `dock/`: bloco, block entity, lados, alcance |
@@ -67,7 +68,7 @@ Pacote base: `src/main/java/io/github/matheusanbs/wirelessautomate/`. O mapa det
 ./gradlew runClient         # cliente de dev com JEI, Sophisticated Storage, Observable, Mekanism (com o Mekanism Extras), Ars Nouveau (com GeckoLib e Curios), Allthemodium, All The Tweaks, Apotheosis (com as dependências dele), Mouse Tweaks, AllTheCompressed, Occultism (com Modonomicon e SmartBrainLib), Just Dire Things, Refined Storage 2 e AE2 (com o GuideME e os addons Advanced AE e ExtendedAE, com o Glodium), para testar à mão
 ./gradlew runData           # datagen para src/generated/resources/
 WA_SCREENSHOT=run/shots xvfb-run -a -s "-screen 0 1280x800x24" ./gradlew runClient  # capturas das telas (roteador, visor 3D, filtro), sem monitor
-./scripts/e2e.sh            # e2e num mundo real, rápido por padrão (sem capturas, sem pt_br e escuro, sem a comparação antigo × plasma): `--only a,b` (suítes), `--skip`, `--capture <prefixos|todas>`, `--variants pt,escuro`, `--completo` (tudo), `--lista`; no Windows abre uma janela de verdade (veja docs/e2e.md)
+./scripts/e2e.sh            # e2e num mundo real, rápido por padrão (sem capturas, sem pt_br e escuro): `--only a,b` (suítes), `--skip`, `--capture <prefixos|todas>`, `--variants pt,escuro`, `--completo` (tudo), `--lista`; no Windows abre uma janela de verdade (veja docs/e2e.md)
 ./scripts/bench.sh <cenários> # benchmark num servidor dedicado com Sophisticated Storage (ver docs/benchmark.md)
 ./scripts/bench.sh comparativo # o mesmo contra o Logistics Network (baixa o jar dele para run/bench-ln, fora do git; ver docs/benchmark-logistics-network.md)
 ```

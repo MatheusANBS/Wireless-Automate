@@ -5,8 +5,8 @@ import java.util.List;
 import net.minecraft.core.BlockPos;
 
 /**
- * A ordem das Portas na casca: por x, depois y, depois z, relativos ao canto da caixa. É a mesma em que o cliente
- * varre a casca ({@code ChamberScene.readPorts}), então o índice de uma Porta de Energia vale nos dois lados.
+ * A ordem das Portas na casca: por x, depois y, depois z, relativos ao canto da caixa. É a ordem do
+ * {@code ChamberView.flows}: o índice de uma Porta de Energia vale no servidor e no cliente.
  */
 public final class PortOrder {
     private PortOrder() {

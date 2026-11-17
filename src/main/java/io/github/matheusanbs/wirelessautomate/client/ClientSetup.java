@@ -4,13 +4,15 @@ import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.client.dock.DockScreen;
 import io.github.matheusanbs.wirelessautomate.client.dock.render.PatternDockRenderer;
 import io.github.matheusanbs.wirelessautomate.client.filter.FilterScreen;
+import io.github.matheusanbs.wirelessautomate.client.fx.FxShaders;
+import io.github.matheusanbs.wirelessautomate.client.fx.FxWarmup;
 import io.github.matheusanbs.wirelessautomate.client.guide.GuidePages;
 import io.github.matheusanbs.wirelessautomate.client.guide.GuideScreen;
 import io.github.matheusanbs.wirelessautomate.client.recipe.RecipeEditorScreen;
 import io.github.matheusanbs.wirelessautomate.client.repairer.RepairerScreen;
 import io.github.matheusanbs.wirelessautomate.client.repairer.render.RepairerRenderer;
 import io.github.matheusanbs.wirelessautomate.client.resonator.ResonatorProjection;
-import io.github.matheusanbs.wirelessautomate.client.resonator.render.ResonatorRenderer;
+import io.github.matheusanbs.wirelessautomate.client.resonator.render.ArmilarRenderer;
 import io.github.matheusanbs.wirelessautomate.client.resonator.screen.ResonatorScreen;
 import io.github.matheusanbs.wirelessautomate.client.router.RouterScreen;
 import io.github.matheusanbs.wirelessautomate.client.storage.StorageListScreen;
@@ -42,9 +44,9 @@ import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageBlockItem;
 import io.github.matheusanbs.wirelessautomate.storage.StorageKind;
 import io.github.matheusanbs.wirelessautomate.tv.TvClientHooks;
-import io.github.matheusanbs.wirelessautomate.client.resonator.render.CrystalShader;
-import io.github.matheusanbs.wirelessautomate.client.resonator.render.PlasmaShader;
-import io.github.matheusanbs.wirelessautomate.client.resonator.render.RibbonShader;
+import io.github.matheusanbs.wirelessautomate.client.repairer.render.CrystalShader;
+import io.github.matheusanbs.wirelessautomate.client.repairer.render.PlasmaShader;
+import io.github.matheusanbs.wirelessautomate.client.repairer.render.RibbonShader;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.renderer.item.ItemProperties;
@@ -139,26 +141,28 @@ public final class ClientSetup {
                 (TvMenu menu, Inventory inventory, Component title) -> new TvScreen(menu, inventory, title));
     }
 
-    /** O livro-guia esquece as páginas lidas a cada recarga de recursos (e lê de novo ao abrir). */
+    /** O livro-guia esquece as páginas lidas a cada recarga de recursos (e lê de novo ao abrir); a pré-carga dos efeitos recomeça. */
     @SubscribeEvent
     static void registerReloadListeners(RegisterClientReloadListenersEvent event) {
         event.registerReloadListener(GuidePages.RELOAD);
+        event.registerReloadListener(FxWarmup.RELOAD);
     }
 
-    /** A câmara animada do Núcleo montado, a animação do Reparador de Cristais e a Tela de Sinal. */
+    /** A Armilar do Núcleo montado, a animação do Reparador de Cristais e a Tela de Sinal. */
     @SubscribeEvent
     static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
-        event.registerBlockEntityRenderer(ModBlockEntities.RESONANCE_CORE.get(), ResonatorRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.RESONANCE_CORE.get(), ArmilarRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.CRYSTAL_REPAIRER.get(), RepairerRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.SIGNAL_SCREEN.get(), TvRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.PATTERN_DOCK.get(), PatternDockRenderer::new);
     }
 
-    /** Os core shaders da câmara: o Núcleo de plasma, as fitas e o cristal. */
+    /** Os core shaders do Reparador (o Núcleo de plasma, as fitas e o cristal) e os dos efeitos ({@code fx}, {@code fx_add}, {@code fx_add_premul}). */
     @SubscribeEvent
     static void registerShaders(RegisterShadersEvent event) {
         PlasmaShader.register(event);
         RibbonShader.register(event);
         CrystalShader.register(event);
+        FxShaders.register(event);
     }
 }

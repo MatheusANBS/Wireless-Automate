@@ -28,15 +28,15 @@ import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.energy.IEnergyStorage;
 
 /**
- * O Ressonador na vitrine do CurseForge: o GIF "chiado → sintonia" e duas fotos paradas. O GIF: uma Vitrine
- * Esmeralda no jardim, a leste do caminho, com a janela para o sul, e a câmera parada olhando por ela. Com o tempo
+ * O Ressonador na vitrine do CurseForge: o GIF "chiado → sintonia" e duas fotos paradas. O GIF: uma Armilar
+ * Esmeralda no jardim, a leste do caminho, com a frente para o sul, e a câmera parada de frente para ela. Com o tempo
  * congelado ({@code tickRateManager}), cada quadro põe o dial do roteiro, avança um tick e salva
  * {@code gif/ressonador-NNN.png}; o {@code scripts/curseforge/gerar_gif.py} monta o GIF.
  *
  * <p>Roteiro (170 quadros, 20 fps): 25 quadros com o dial a {@value #START_MHZ} MHz da estação (chiado), 45 com o
  * desvio caindo pela curva {@code 1 - u²} (parte devagar e chega à lâmpada perto do fim da varredura, o clarão por
  * volta de 3,4 s) e o resto na estação, com Cristais Afinados Esmeralda e um consumidor tirando da Porta de Energia
- * a cada quadro: a vazão vira faixa no fim de um lote de 20 ticks, então o conduto acende uns dois lotes depois da
+ * a cada quadro: a vazão vira faixa no fim de um lote de 20 ticks, então o arco acende uns dois lotes depois da
  * sintonia, e os 5 s finais o mostram aceso. A estação é lida no servidor e fica presa nela a cada quadro: com o tempo
  * congelado o relógio do overworld não anda e o lote do Núcleo pode rodar várias vezes no mesmo tick, derivando.
  *
@@ -65,10 +65,10 @@ final class E2eShowcaseResonator {
                 minecraft.screen.onClose();
             }
         }, () -> Minecraft.getInstance().screen == null, () -> "tela " + describe(Minecraft.getInstance().screen)));
-        list.add(new Step("Ressonador (GIF): montar a Vitrine", STEP_TIMEOUT_MS, () -> {
+        list.add(new Step("Ressonador (GIF): montar a Armilar", STEP_TIMEOUT_MS, () -> {
             Minecraft.getInstance().getToasts().clear();
             onServer(server -> {
-                E2eResonatorSteps.placeVitrine(server.overworld(), origin(), RouterTier.EMERALD);
+                E2eResonatorSteps.placeArmilar(server.overworld(), origin(), RouterTier.EMERALD);
                 return null;
             });
         }, () -> {
@@ -88,8 +88,8 @@ final class E2eShowcaseResonator {
             var view = ((ResonanceCoreBlockEntity) Minecraft.getInstance().level.getBlockEntity(core())).clientView();
             return view.chambers().length == 4 && view.chambers()[3] != 0 && !view.tuned();
         }, () -> "câmaras no cliente"));
-        // a câmera a 3,5 blocos da janela, um pouco acima do centro, olhando o meio da câmara
-        list.add(E2eShowcase.showLook("Ressonador (GIF): câmera na janela", BOX[0] + 2, 2.3, BOX[2] + 7, BOX[0] + 2,
+        // a câmera a 5 blocos da frente, um pouco acima do centro, olhando o centro da Armilar
+        list.add(E2eShowcase.showLook("Ressonador (GIF): câmera de frente", BOX[0] + 2, 2.3, BOX[2] + 7, BOX[0] + 2,
                 2.3, BOX[2] + 2, false));
         list.add(DevEndToEnd.wait("Ressonador (GIF): chiado assentado", 60));
         list.add(new Step("Ressonador (GIF): congelar o tempo", STEP_TIMEOUT_MS, () -> {
@@ -111,7 +111,7 @@ final class E2eShowcaseResonator {
     }
 
     /**
-     * As fotos paradas, já em sintonia: a Vitrine inteira vista do sudeste ({@code s19-ressonador}, a janela e o
+     * As fotos paradas, já em sintonia: a Armilar inteira vista do sudeste ({@code s19-ressonador}, a frente e o
      * Núcleo à vista) e a tela do Núcleo aberta de perto ({@code s20-ressonador-tela}).
      */
     private static void stills(List<Step> list) {
@@ -119,8 +119,8 @@ final class E2eShowcaseResonator {
                 2.2, BOX[2] + 2.5, false));
         list.add(DevEndToEnd.wait("Ressonador: em sintonia", 40));
         list.add(capture("s19-ressonador"));
-        list.add(E2eShowcase.showLook("Ressonador: câmera no Núcleo", BOX[0] + 7, 1.4, BOX[2] + 2, BOX[0] + 4,
-                2.5, BOX[2] + 2, true));
+        list.add(E2eShowcase.showLook("Ressonador: câmera no Núcleo", BOX[0] + 2, 1.6, BOX[2] + 7, BOX[0] + 2,
+                0.5, BOX[2] + 4.5, true));
         list.add(new Step("Ressonador: abrir a tela do Núcleo", STEP_TIMEOUT_MS, () -> {
             // o clique abre a tela só com a mão vazia
             Minecraft.getInstance().player.getInventory().setItem(
@@ -170,7 +170,7 @@ final class E2eShowcaseResonator {
                 ResonanceCoreBlockEntity core = core(server);
                 core.setStationForTest(station[0]);
                 core.setDial(station[0] + deviation(index));
-                // um consumidor na Porta de Energia: em sintonia, o conduto acende até ela
+                // um consumidor na Porta de Energia: em sintonia, o arco acende até ela
                 IEnergyStorage energy = server.overworld().getCapability(Capabilities.EnergyStorage.BLOCK,
                         E2eResonatorSteps.energyPort(origin()), null);
                 if (energy != null) {

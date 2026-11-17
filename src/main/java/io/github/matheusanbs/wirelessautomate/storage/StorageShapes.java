@@ -5,7 +5,7 @@ import java.util.Map;
 /**
  * Caixas de colisão e seleção dos armazenamentos, em pixels ({@code x0, y0, z0, x1, y1, z1}), por id do
  * bloco ({@link StorageKind#id}). Poucas caixas que abraçam o modelo gerado por
- * {@code scripts/textures/blocos.py}: são as mesmas de {@code HITBOXES} lá, que a geração confere contra
+ * {@code scripts/textures/blocos.py}: são as mesmas de {@code HITBOXES} (em {@code modelo_hitboxes.py}), que a geração confere contra
  * os elementos de cada modelo ({@code docs/preview/hitboxes.txt} lista as envolventes). Mude aqui e lá.
  * Lógica pura (sem classes do Minecraft): o {@link StorageBlock} monta o {@code VoxelShape}.
  */

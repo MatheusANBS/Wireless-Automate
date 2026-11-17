@@ -41,7 +41,7 @@ public final class ResonatorInterferenceGameTests {
 
     @GameTest(template = "empty11", timeoutTicks = 200, batch = BATCH)
     public static void semVizinhoNaoPerde(GameTestHelper helper) {
-        BlockPos first = ResonatorTestSupport.build(helper, FIRST_ORIGIN, Layout.VITRINE, RouterTier.BASIC);
+        BlockPos first = ResonatorTestSupport.build(helper, FIRST_ORIGIN, Layout.ARMILAR, RouterTier.BASIC);
         helper.startSequence().thenWaitUntil(() -> ResonatorTestSupport.assertFormed(helper, first, true))
                 .thenExecute(() -> withInterference(APART, 0.15, 0.6, () -> {
                     CoreInterference interference = ResonatorTestSupport.core(helper, first).interference();
@@ -117,8 +117,8 @@ public final class ResonatorInterferenceGameTests {
 
     /** Monta os dois Ressonadores, espera os dois montarem e roda {@code body} num só tick. */
     static void pair(GameTestHelper helper, PairBody body) {
-        BlockPos first = ResonatorTestSupport.build(helper, FIRST_ORIGIN, Layout.VITRINE, RouterTier.BASIC);
-        BlockPos second = ResonatorTestSupport.build(helper, SECOND_ORIGIN, Layout.VITRINE, RouterTier.BASIC);
+        BlockPos first = ResonatorTestSupport.build(helper, FIRST_ORIGIN, Layout.ARMILAR, RouterTier.BASIC);
+        BlockPos second = ResonatorTestSupport.build(helper, SECOND_ORIGIN, Layout.ARMILAR, RouterTier.BASIC);
         helper.startSequence().thenWaitUntil(() -> {
             ResonatorTestSupport.assertFormed(helper, first, true);
             ResonatorTestSupport.assertFormed(helper, second, true);

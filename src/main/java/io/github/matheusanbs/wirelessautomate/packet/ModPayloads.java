@@ -78,7 +78,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ModPayloads {
     /**
-     * Versão do protocolo (52: o cubo do alcance do roteador; o pacote do cubo da Doca virou o
+     * Versão do protocolo (53: o {@code ResonatorStatePayload} perdeu o layout; 52: o cubo do alcance do roteador; o pacote do cubo da Doca virou o
      * {@code LinkerReachPayload}, com o pedido {@code LinkerReachRequestPayload};
      * 51: o componente {@code pattern_dock_pending} da Doca leva uma linha por item e por fluido,
      * com a quantidade em long, no lugar das pilhas;
@@ -98,7 +98,7 @@ public final class ModPayloads {
      * {@code TvLibraryPayload}, {@code TvLibraryActionPayload}, {@code TvPreviewPayload} e {@code TvPreviewValuesPayload},
      * e o teto de bytes do layout no buffer de abertura da Tela); mude quando um payload mudar de formato.
      */
-    public static final String VERSION = "52";
+    public static final String VERSION = "53";
 
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(VERSION);

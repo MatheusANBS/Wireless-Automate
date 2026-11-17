@@ -181,7 +181,7 @@ Os **Corações do Ressonador** saem destas peças, na ordem. O JEI mostra a pos
 | <ItemImage id="wirelessautomate:resonance_plate" /> **3. Placa de Ressonância** | 3 Lingotes de Liga de Sinal em linha | 1 |
 | <ItemImage id="wirelessautomate:resonance_wire" /> **4. Fio de Ressonância** | 1 Lingote de Liga de Sinal entre 2 lingotes de cobre, com 1 lingote de ouro embaixo | 4 |
 | <ItemImage id="wirelessautomate:resonance_coil" /> **5. Bobina de Ressonância** | 8 Fios em volta de 1 bloco de ferro | 1 |
-| <ItemImage id="wirelessautomate:harmonic_lens" /> **6. Lente Harmônica** | Bancada, sem forma: 1 Cristal Lapidado cheio + 2 diamantes + 4 Vidros de Ressonância | 1 |
+| <ItemImage id="wirelessautomate:harmonic_lens" /> **6. Lente Harmônica** | Bancada, sem forma: 1 Cristal Lapidado cheio + 2 diamantes + 4 Vidros | 1 |
 | <ItemImage id="wirelessautomate:phase_circuit" /> **7. Circuito de Fase** | 1 Placa no centro, 2 blocos de redstone, 2 lingotes de ouro e 4 quartzos do Nether | 2 |
 | <ItemImage id="wirelessautomate:phase_matrix" /> **8. Matriz de Fase** | 1 Lente no centro, 4 Bobinas nos cantos, 2 Circuitos e 2 Placas | 1 |
 | <ItemImage id="wirelessautomate:field_stabilizer" /> **9. Estabilizador de Campo** | 4 Matrizes + 1 bloco de diamante + 2 obsidianas chorosas + 1 olho do ender | 1 |

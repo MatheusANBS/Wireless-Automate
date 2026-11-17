@@ -91,7 +91,12 @@ final class BenchScene {
     enum Machine { SMALL, BIG, CHEST, FLUID_SOURCE, FLUID_SINK, ENERGY_SOURCE, ENERGY_SINK, STACK_SOURCE, ITEM_SINK, RESONATOR, BATTERY }
 
     /** Um nó: máquina, roteador em cima, tipo e papel; {@code index} varia o padrão de itens. */
-    record Node(int index, BlockPos machine, BlockPos router, ResourceType type, boolean source, Machine kind) {
+    record Node(int index, BlockPos machine, BlockPos router, ResourceType type, boolean source, Machine kind,
+            Direction face) {
+        /** O nó com o roteador em cima da máquina, o caso de quase todos os cenários. */
+        Node(int index, BlockPos machine, BlockPos router, ResourceType type, boolean source, Machine kind) {
+            this(index, machine, router, type, source, kind, Direction.UP);
+        }
     }
 
     final ServerLevel level;
@@ -228,8 +233,9 @@ final class BenchScene {
         if (scenario == BenchScenario.RESONATOR_GEN) {
             for (BenchResonators.Resonator resonator : planned.list) {
                 BlockPos battery = Objects.requireNonNull(resonator.battery());
-                nodes.add(new Node(nodes.size(), resonator.energyPort(), resonator.energyPort().above(),
-                        ResourceType.ENERGY, true, Machine.RESONATOR));
+                // O roteador da Porta de Energia fica para fora da borda do chão: em cima dela é ar da Armilar.
+                nodes.add(new Node(nodes.size(), resonator.energyPort(), resonator.energyPort().east(),
+                        ResourceType.ENERGY, true, Machine.RESONATOR, Direction.EAST));
                 nodes.add(new Node(nodes.size(), battery, battery.above(), ResourceType.ENERGY, false, Machine.BATTERY));
             }
         }
@@ -263,13 +269,11 @@ final class BenchScene {
         if (dock != null) {
             dock.build();
         }
-        BlockState router = ModBlocks.ROUTER.get().defaultBlockState()
-                .setValue(RouterBlock.FACING, Direction.UP)
-                .setValue(RouterBlock.TIER, scenario.tier);
+        BlockState router = ModBlocks.ROUTER.get().defaultBlockState().setValue(RouterBlock.TIER, scenario.tier);
         for (Node node : nodes) {
             placeMachine(node);
             fill(node);
-            level.setBlock(node.router(), router, PLACE_FLAGS);
+            level.setBlock(node.router(), router.setValue(RouterBlock.FACING, node.face()), PLACE_FLAGS);
             if (level.getBlockEntity(node.router()) instanceof RouterBlockEntity entity) {
                 configure(node, entity);
                 if (scenario.range()) {
@@ -351,9 +355,9 @@ final class BenchScene {
     }
 
     private void configure(Node node, RouterBlockEntity router) {
-        router.setMode(node.type(), Direction.UP, node.source() ? PortMode.EXTRACT : PortMode.INSERT);
+        router.setMode(node.type(), node.face(), node.source() ? PortMode.EXTRACT : PortMode.INSERT);
         if (scenario == BenchScenario.REDSTONE_FACE && node.source()) {
-            router.setRedstone(node.type(), Direction.UP, RedstoneMode.HIGH);
+            router.setRedstone(node.type(), node.face(), RedstoneMode.HIGH);
         }
         if (scenario == BenchScenario.TYPES) {
             router.setFilter(ResourceType.ITEM, Direction.UP, node.source() ? sourceFilter() : destinationFilter());
@@ -703,8 +707,8 @@ final class BenchScene {
         Node node = sources.get(touched++ % sources.size());
         RouterBlockEntity router = router(node);
         if (router != null) {
-            int priority = router.face(node.type(), Direction.UP).priority();
-            router.setPriority(node.type(), Direction.UP, priority == 0 ? 1 : 0);
+            int priority = router.face(node.type(), node.face()).priority();
+            router.setPriority(node.type(), node.face(), priority == 0 ? 1 : 0);
         }
     }
 

@@ -10,10 +10,11 @@ Comece por aqui para continuar o trabalho. Este arquivo é curto de propósito: 
 
 ## Próximo passo
 
-1. Publicar a 2.18.0: a tag `v2.18.0` e a release no GitHub com `build/libs/wirelessautomate-2.18.0.jar`; o dono sobe no CurseForge e no Modrinth com o texto de `docs/curseforge/changelog-2.18.0.md`. O dono ainda testa a Doca no jogo com o AE2 e o RS2 (`pendencias.md`).
-2. O e2e rápido inteiro passou de 600 s (o padrão do `scripts/e2e.sh`) com as suítes da Doca e da Tela: subir o tempo-limite padrão ou rodar em partes. A descrição do `neoforge.mods.toml` sai com os acentos em mojibake no jar.
-3. Reidealizar as telas do Tablet do zero (criação de redes etc.), mockup primeiro para o ok do dono. Refazer as imagens do Vinculador na vitrine e a do livro, e uma imagem da Doca para o CurseForge (`wa-curseforge-imagens`).
-4. **Lixeira:** executar o plano da etapa 1 quando o dono der o ok. Higiene: a varredura de 12/11 lista os planos já mesclados (o livro, o alcance, o Afinador, a presa e a etapa 4 da Doca) e o protótipo do livro, para apagar com o ok do dono.
+1. **Armilar, etapa 2:** feita no ramo `armilar` (o render do conceito, o `client/fx/`, o e2e nos três ambientes, a bateria verde: 1.098 JUnit e 1.228 + 21 + 19 + 6 GameTests). Espera o aprovado do dono sobre a prancha; depois ficam o merge, as fotos `s19` e `s20` e o GIF da vitrine do CurseForge, o parágrafo da animação nos READMEs e o `docs/curseforge/descricao.md` (`pendencias.md`).
+2. Publicar a 2.18.0: a tag `v2.18.0` e a release no GitHub com `build/libs/wirelessautomate-2.18.0.jar`; o dono sobe no CurseForge e no Modrinth com o texto de `docs/curseforge/changelog-2.18.0.md`. O dono ainda testa a Doca no jogo com o AE2 e o RS2 (`pendencias.md`).
+3. O e2e rápido inteiro passou de 600 s (o padrão do `scripts/e2e.sh`) com as suítes da Doca e da Tela: subir o tempo-limite padrão ou rodar em partes. A descrição do `neoforge.mods.toml` sai com os acentos em mojibake no jar.
+4. Reidealizar as telas do Tablet do zero (criação de redes etc.), mockup primeiro para o ok do dono. Refazer as imagens do Vinculador na vitrine e a do livro, e uma imagem da Doca para o CurseForge (`wa-curseforge-imagens`).
+5. **Lixeira:** executar o plano da etapa 1 quando o dono der o ok. Higiene: a varredura de 12/11 lista os planos já mesclados (o livro, o alcance, o Afinador, a presa e a etapa 4 da Doca) e o protótipo do livro, para apagar com o ok do dono.
 
 ## Os arquivos
 

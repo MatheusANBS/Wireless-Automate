@@ -96,7 +96,7 @@ coral** horizontal e o **Olho no topo** (lente do tier, com o Pulso animado na t
 occlusion desligado nos modelos com elementos finos. Blocos que não preenchem o cubo precisam de
 `noOcclusion()` no registro (visual, sem lógica).
 
-Construção limpa, conferida por `blocos.validar_geometria` em todo modelo gerado: os elementos
+Construção limpa, conferida por `validar_geometria` (`scripts/textures/modelo_geometria.py`) em todo modelo gerado: os elementos
 **encostam, não se atravessam** (só o fluido, o gás e a Source ficam dentro da caixa de vidro, marcados
 com `dentro=True`); duas faces desenhadas nunca dividem o mesmo plano com área em comum (é o que pisca
 no jogo); e toda face não desenhada está inteiramente coberta por um vizinho encostado (senão é buraco).
@@ -106,7 +106,7 @@ piscam); nada de caixas a 45° cruzando o corpo. As galerias do jogo (`WA_SCREEN
 
 | Bloco | Forma |
 | --- | --- |
-| Roteador | prato de porcelana na base (y 0..1), quatro para-choques de grafite nos cantos, corpo baixo de grafite recuado (y 1..5) com a listra coral e a fenda do Olho que varre na frente (sul), na própria textura; mastro de 2×2 e a **antena parabólica**: um prato sólido de 6×6×1 que, em pé e virado para o sul, cai 45° para trás (rotação −45° em x pela aresta de baixo e de trás, no topo do mastro), com o interior na cor do tier olhando para a frente e para cima e as costas de grafite; um braço de 1 px sai do centro do prato até o receptor de latão (1 px). Duas hastes finas (1×1) de grafite sobre os para-choques de trás, até y=12, com a ponta de latão. Caixas de colisão abraçando o desenho (`HITBOXES` em `blocos.py` = `RouterShapes.UP_BOXES`) e a vista `gui` do item de frente (`DISPLAY_ROTEADOR`). Mesma convenção de `facing` e `spin`; silhueta dentro de 1..15 × 0..16 × 2..14 |
+| Roteador | prato de porcelana na base (y 0..1), quatro para-choques de grafite nos cantos, corpo baixo de grafite recuado (y 1..5) com a listra coral e a fenda do Olho que varre na frente (sul), na própria textura; mastro de 2×2 e a **antena parabólica**: um prato sólido de 6×6×1 que, em pé e virado para o sul, cai 45° para trás (rotação −45° em x pela aresta de baixo e de trás, no topo do mastro), com o interior na cor do tier olhando para a frente e para cima e as costas de grafite; um braço de 1 px sai do centro do prato até o receptor de latão (1 px). Duas hastes finas (1×1) de grafite sobre os para-choques de trás, até y=12, com a ponta de latão. Caixas de colisão abraçando o desenho (`HITBOXES` em `modelo_hitboxes.py` = `RouterShapes.UP_BOXES`) e a vista `gui` do item de frente (`DISPLAY_ROTEADOR`). Mesma convenção de `facing` e `spin`; silhueta dentro de 1..15 × 0..16 × 2..14 |
 | Baú Wireless | arquivo de gavetas: pés debaixo do corpo, corpo de porcelana recuado 1 px, duas gavetas salientes por lado (a face de dentro contra o corpo) com puxador de grafite e etiqueta na cor do tier, tampa cheia com o Olho |
 | Tanque Wireless | uma coluna de vidro (uma caixa só) entre base e tampa de porcelana com anéis de grafite, fluido azul dentro com a superfície ondulando (animada), quatro réguas de nível encostadas no vidro |
 | Bateria Wireless | três células empilhadas com separadores de grafite rentes, plinto e cornija de grafite, dois terminais de latão no topo, um visor de carga saliente por lado, encostado nas células, com segmentos que correm (animado), listra coral na tampa |

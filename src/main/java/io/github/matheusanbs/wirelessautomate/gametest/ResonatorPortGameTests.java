@@ -44,11 +44,9 @@ import net.neoforged.neoforge.items.IItemHandler;
 @PrefixGameTestTemplate(false)
 public final class ResonatorPortGameTests {
     private static final BlockPos ORIGIN = new BlockPos(1, 1, 1);
-    /** As Portas da Vitrine, relativas ao teste. */
-    private static final BlockPos VITRINE_ENERGY = ORIGIN.offset(0, 2, 2);
-    private static final BlockPos CRYSTAL_PORT = ORIGIN.offset(2, 2, 0);
-    /** A Porta de Energia do layout {@link Layout#ENERGY_ON_TOP}. */
-    private static final BlockPos TOP_ENERGY = ORIGIN.offset(2, 4, 2);
+    /** As Portas da Armilar (frente sul), relativas ao teste. */
+    private static final BlockPos ENERGY_PORT = ResonatorTestSupport.ENERGY_PORT;
+    private static final BlockPos CRYSTAL_PORT = ResonatorTestSupport.CRYSTAL_PORT;
     /** Um sono bem maior que o teto do backoff ({@code NetworkManager.MAX_SLEEP_TICKS}, 100 ticks). */
     private static final int LONG_SLEEP = 1_000;
 
@@ -57,14 +55,14 @@ public final class ResonatorPortGameTests {
 
     @GameTest(template = "empty7")
     public static void portaDeEnergiaSoTira(GameTestHelper helper) {
-        formed(helper, Layout.VITRINE, RouterTier.BASIC, core -> {
+        formed(helper, Layout.ARMILAR, RouterTier.BASIC, core -> {
             tuned(core);
             helper.assertTrue(core.insertCrystal(crystal(false, CrystalCharge.FULL)).isEmpty(), "o cristal não entrou");
             ResonatorBatch.run(helper.getLevel(), core, 20);
             long before = core.energy();
             helper.assertTrue(before > 1_000, "o lote não gerou o bastante: " + before);
-            BlockPos port = helper.absolutePos(VITRINE_ENERGY);
-            IEnergyStorage energy = helper.getLevel().getCapability(Capabilities.EnergyStorage.BLOCK, port, Direction.WEST);
+            BlockPos port = helper.absolutePos(ENERGY_PORT);
+            IEnergyStorage energy = helper.getLevel().getCapability(Capabilities.EnergyStorage.BLOCK, port, Direction.EAST);
             helper.assertTrue(energy != null, "a Porta de Energia sem capability");
             helper.assertValueEqual(energy.receiveEnergy(100, false), 0, "a Porta não recebe");
             helper.assertTrue(!energy.canReceive(), "canReceive");
@@ -73,7 +71,7 @@ public final class ResonatorPortGameTests {
             helper.assertValueEqual(core.energy(), before - 1_000, "o Núcleo perdeu o que saiu");
             helper.assertValueEqual(energy.getEnergyStored(), (int) core.energy(), "guardado");
             helper.assertValueEqual(energy.getMaxEnergyStored(), (int) core.capacity(), "capacidade");
-            BulkEnergy bulk = helper.getLevel().getCapability(BulkEnergy.BLOCK, port, Direction.WEST);
+            BulkEnergy bulk = helper.getLevel().getCapability(BulkEnergy.BLOCK, port, Direction.EAST);
             helper.assertTrue(bulk != null, "a Porta de Energia sem BulkEnergy");
             helper.assertValueEqual(bulk.insert(100L, false), 0L, "o BulkEnergy não recebe");
             long rest = core.energy();
@@ -94,16 +92,16 @@ public final class ResonatorPortGameTests {
         helper.assertTrue(energy(helper, loose) == null, "Porta de Energia solta com capability");
         helper.assertTrue(helper.getLevel().getCapability(Capabilities.ItemHandler.BLOCK, helper.absolutePos(looseCrystals),
                 Direction.NORTH) == null, "Porta de Cristais solta com capability");
-        BlockPos corePos = ResonatorTestSupport.build(helper, ORIGIN, Layout.VITRINE, RouterTier.BASIC);
+        BlockPos corePos = ResonatorTestSupport.build(helper, ORIGIN, Layout.ARMILAR, RouterTier.BASIC);
         helper.startSequence().thenWaitUntil(() -> assertFormed(helper, corePos, true))
                 .thenExecute(() -> {
-                    helper.assertTrue(energy(helper, VITRINE_ENERGY) != null, "a Porta montada sem capability");
+                    helper.assertTrue(energy(helper, ENERGY_PORT) != null, "a Porta montada sem capability");
                     helper.assertTrue(items(helper) != null, "a Porta de Cristais montada sem capability");
-                    helper.getLevel().destroyBlock(helper.absolutePos(ORIGIN.offset(2, 0, 0)), false);
+                    helper.getLevel().destroyBlock(helper.absolutePos(ORIGIN.offset(1, 0, 0)), false);
                 })
                 .thenWaitUntil(() -> assertFormed(helper, corePos, false))
                 .thenExecute(() -> {
-                    helper.assertTrue(energy(helper, VITRINE_ENERGY) == null, "Porta desmontada com capability");
+                    helper.assertTrue(energy(helper, ENERGY_PORT) == null, "Porta desmontada com capability");
                     helper.assertTrue(items(helper) == null, "Porta de Cristais desmontada com capability");
                 })
                 .thenSucceed();
@@ -111,7 +109,7 @@ public final class ResonatorPortGameTests {
 
     @GameTest(template = "empty7")
     public static void portaDeCristaisAceitaCristalERedstone(GameTestHelper helper) {
-        formed(helper, Layout.VITRINE, RouterTier.ELITE, core -> {
+        formed(helper, Layout.ARMILAR, RouterTier.ELITE, core -> {
             IItemHandler items = items(helper);
             helper.assertTrue(items != null, "a Porta de Cristais sem capability");
             int chambers = core.chambers();
@@ -149,7 +147,7 @@ public final class ResonatorPortGameTests {
 
     @GameTest(template = "empty7")
     public static void opacoSoSaiSemRedstone(GameTestHelper helper) {
-        formed(helper, Layout.VITRINE, RouterTier.ADVANCED, core -> {
+        formed(helper, Layout.ARMILAR, RouterTier.ADVANCED, core -> {
             IItemHandler items = items(helper);
             helper.assertTrue(items != null, "a Porta de Cristais sem capability");
             helper.assertValueEqual(items.insertItem(0, crystal(false, 0), false).getCount(), 0, "o Opaco entra");
@@ -178,26 +176,26 @@ public final class ResonatorPortGameTests {
     @GameTest(template = "empty7", timeoutTicks = 200)
     public static void roteadorTiraEnergiaDaPorta(GameTestHelper helper) {
         UUID network = network(helper, "teste-porta-de-energia");
-        BlockPos corePos = ResonatorTestSupport.build(helper, ORIGIN, Layout.ENERGY_ON_TOP, RouterTier.BASIC);
+        BlockPos corePos = ResonatorTestSupport.build(helper, ORIGIN, Layout.ARMILAR, RouterTier.BASIC);
         BlockPos batteryPos = new BlockPos(0, 1, 0);
         helper.setBlock(batteryPos, ModBlocks.STORAGE.get(StorageKind.BATTERY).get().defaultBlockState()
                 .setValue(RouterBlock.TIER, RouterTier.BASIC));
-        RouterBlockEntity source = router(helper, TOP_ENERGY, Direction.UP, ResourceType.ENERGY, network, PortMode.EXTRACT);
+        RouterBlockEntity source = router(helper, ENERGY_PORT, Direction.EAST, ResourceType.ENERGY, network, PortMode.EXTRACT);
         RouterBlockEntity target = router(helper, batteryPos, Direction.UP, ResourceType.ENERGY, network, PortMode.INSERT);
         long[] woke = new long[1];
         helper.startSequence()
                 .thenWaitUntil(() -> assertFormed(helper, corePos, true))
                 .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(target), "destino não registrado"))
-                .thenWaitUntil(() -> assertSleeps(helper, source, ResourceType.ENERGY, Direction.UP))
+                .thenWaitUntil(() -> assertSleeps(helper, source, ResourceType.ENERGY, Direction.EAST))
                 .thenExecute(() -> {
                     ResonanceCoreBlockEntity core = ResonatorTestSupport.core(helper, corePos);
                     tuned(core);
                     helper.assertTrue(core.insertCrystal(crystal(false, CrystalCharge.FULL)).isEmpty(),
                             "o cristal não entrou");
-                    assertSleeps(helper, source, ResourceType.ENERGY, Direction.UP);
+                    assertSleeps(helper, source, ResourceType.ENERGY, Direction.EAST);
                     ResonatorBatch.run(helper.getLevel(), core, 20);
                     helper.assertTrue(core.energy() > 0, "o lote não gerou");
-                    assertAwake(helper, source, ResourceType.ENERGY, Direction.UP, "o aviso não acordou o roteador da Porta");
+                    assertAwake(helper, source, ResourceType.ENERGY, Direction.EAST, "o aviso não acordou o roteador da Porta");
                     woke[0] = helper.getTick();
                 })
                 .thenWaitUntil(() -> {
@@ -216,24 +214,24 @@ public final class ResonatorPortGameTests {
     @GameTest(template = "empty7", timeoutTicks = 200)
     public static void opacoNovoAcordaQuemTiraDaPortaDeCristais(GameTestHelper helper) {
         UUID network = network(helper, "teste-porta-de-cristais-opaco");
-        BlockPos corePos = ResonatorTestSupport.build(helper, ORIGIN, Layout.VITRINE, RouterTier.BASIC);
+        BlockPos corePos = ResonatorTestSupport.build(helper, ORIGIN, Layout.ARMILAR, RouterTier.BASIC);
         BlockPos chestPos = new BlockPos(0, 1, 0);
         helper.setBlock(chestPos, Blocks.CHEST);
-        RouterBlockEntity source = router(helper, CRYSTAL_PORT, Direction.NORTH, ResourceType.ITEM, network, PortMode.EXTRACT);
+        RouterBlockEntity source = router(helper, CRYSTAL_PORT, Direction.WEST, ResourceType.ITEM, network, PortMode.EXTRACT);
         RouterBlockEntity target = router(helper, chestPos, Direction.UP, ResourceType.ITEM, network, PortMode.INSERT);
         long[] woke = new long[1];
         helper.startSequence()
                 .thenWaitUntil(() -> assertFormed(helper, corePos, true))
                 .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(target), "destino não registrado"))
-                .thenWaitUntil(() -> assertSleeps(helper, source, ResourceType.ITEM, Direction.NORTH))
+                .thenWaitUntil(() -> assertSleeps(helper, source, ResourceType.ITEM, Direction.WEST))
                 .thenExecute(() -> {
                     ResonanceCoreBlockEntity core = ResonatorTestSupport.core(helper, corePos);
                     tuned(core);
                     helper.assertTrue(core.insertCrystal(crystal(false, 1)).isEmpty(), "o cristal não entrou");
-                    assertSleeps(helper, source, ResourceType.ITEM, Direction.NORTH);
+                    assertSleeps(helper, source, ResourceType.ITEM, Direction.WEST);
                     ResonatorBatch.run(helper.getLevel(), core, 20);
                     helper.assertTrue(SignalCrystalItem.isDull(core.crystals().get(0)), "o cristal não ficou Opaco");
-                    assertAwake(helper, source, ResourceType.ITEM, Direction.NORTH, "o Opaco novo não acordou o roteador");
+                    assertAwake(helper, source, ResourceType.ITEM, Direction.WEST, "o Opaco novo não acordou o roteador");
                     woke[0] = helper.getTick();
                 })
                 .thenWaitUntil(() -> {
@@ -249,22 +247,22 @@ public final class ResonatorPortGameTests {
     @GameTest(template = "empty7")
     public static void camaraVaziaAcordaQuemPoeNaPortaDeCristais(GameTestHelper helper) {
         UUID network = network(helper, "teste-porta-de-cristais-camara");
-        BlockPos corePos = ResonatorTestSupport.build(helper, ORIGIN, Layout.VITRINE, RouterTier.BASIC);
+        BlockPos corePos = ResonatorTestSupport.build(helper, ORIGIN, Layout.ARMILAR, RouterTier.BASIC);
         BlockPos chestPos = new BlockPos(0, 1, 0);
         helper.setBlock(chestPos, Blocks.CHEST);
         RouterBlockEntity feeder = router(helper, chestPos, Direction.UP, ResourceType.ITEM, network, PortMode.EXTRACT);
-        RouterBlockEntity target = router(helper, CRYSTAL_PORT, Direction.NORTH, ResourceType.ITEM, network, PortMode.INSERT);
+        RouterBlockEntity target = router(helper, CRYSTAL_PORT, Direction.WEST, ResourceType.ITEM, network, PortMode.INSERT);
         helper.startSequence()
                 .thenWaitUntil(() -> assertFormed(helper, corePos, true))
                 .thenWaitUntil(() -> helper.assertTrue(NetworkManager.get().contains(feeder), "origem não registrada"))
-                .thenWaitUntil(() -> assertSleeps(helper, target, ResourceType.ITEM, Direction.NORTH))
+                .thenWaitUntil(() -> assertSleeps(helper, target, ResourceType.ITEM, Direction.WEST))
                 .thenExecute(() -> {
                     ResonanceCoreBlockEntity core = ResonatorTestSupport.core(helper, corePos);
                     helper.assertTrue(core.insertCrystal(crystal(false, CrystalCharge.FULL)).isEmpty(),
                             "o cristal não entrou");
-                    assertSleeps(helper, target, ResourceType.ITEM, Direction.NORTH);
+                    assertSleeps(helper, target, ResourceType.ITEM, Direction.WEST);
                     helper.assertTrue(!core.takeLastCrystal().isEmpty(), "não tirou o cristal");
-                    assertAwake(helper, target, ResourceType.ITEM, Direction.NORTH, "a câmara vazia não acordou a Porta");
+                    assertAwake(helper, target, ResourceType.ITEM, Direction.WEST, "a câmara vazia não acordou a Porta");
                 })
                 .thenSucceed();
     }
@@ -308,12 +306,12 @@ public final class ResonatorPortGameTests {
     }
 
     private static IEnergyStorage energy(GameTestHelper helper, BlockPos port) {
-        return helper.getLevel().getCapability(Capabilities.EnergyStorage.BLOCK, helper.absolutePos(port), Direction.WEST);
+        return helper.getLevel().getCapability(Capabilities.EnergyStorage.BLOCK, helper.absolutePos(port), Direction.EAST);
     }
 
     private static IItemHandler items(GameTestHelper helper) {
         return helper.getLevel().getCapability(Capabilities.ItemHandler.BLOCK, helper.absolutePos(CRYSTAL_PORT),
-                Direction.NORTH);
+                Direction.WEST);
     }
 
     private static void tuned(ResonanceCoreBlockEntity core) {

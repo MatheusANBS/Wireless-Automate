@@ -193,14 +193,13 @@ public class ResonatorMenu extends AbstractContainerMenu {
             rechargeable |= SignalCrystalItem.isRechargeable(crystals.get(i));
         }
         int recharge = rechargeable && core.redstone() > 0 ? core.rechargeProgress() : 0;
-        int layout = core.layout() == null ? 0 : core.layout().ordinal() + 1;
         return new ResonatorStatePayload(containerId, core.energy(), core.capacity(), core.generationPerTick(),
                 CoreMath.perTick(fePerCrystal, quarters, 1.0), core.dial(),
                 (int) Math.round(core.efficiency() * 1000), (int) Math.round(Tuning.ceiling(core.tier().ordinal()) * 1000),
                 core.auto(), core.hasTuner(), TuneSignal.steps(core.station(), core.dial()),
                 TuneSignal.tuned(core.station(), core.dial()), recharge,
                 (int) Math.min(Integer.MAX_VALUE, Config.rechargeTicks()), core.energyPorts(), core.crystalPorts(),
-                layout, core.interference().lossPermille(), core.interference().nearest(), core.eco().value(),
+                core.interference().lossPermille(), core.interference().nearest(), core.eco().value(),
                 bonusPermille(core.eco().factor()));
     }
 

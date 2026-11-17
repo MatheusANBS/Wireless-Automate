@@ -5,7 +5,6 @@ import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBill;
-import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBlueprint.Layout;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorFormation;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorLayout.Member;
 import java.io.IOException;
@@ -48,9 +47,9 @@ public final class ResonatorGuideSceneGameTests {
     @GameTest(template = "empty")
     public static void cenaDoGuiaUsaOEstadoMontado(GameTestHelper helper) {
         List<String> lines = sceneLines(helper);
-        List<Member> members = ResonatorBill.of(Layout.VITRINE).members();
+        List<Member> members = ResonatorBill.of().members();
         helper.assertTrue(lines.size() == members.size(),
-                "a cena tem " + lines.size() + " linhas e a Vitrine " + members.size() + " membros");
+                "a cena tem " + lines.size() + " linhas e a Armilar " + members.size() + " membros");
         List<String> errors = new ArrayList<>();
         for (int i = 0; i < members.size(); i++) {
             compare(members.get(i), lines.get(i), errors);

@@ -181,7 +181,7 @@ the **Echo** ([Signal Resonator](signal-resonator.md)).
 | <ItemImage id="wirelessautomate:resonance_plate" /> **3. Resonance Plate** | 3 Signal Alloy Ingots in a row | 1 |
 | <ItemImage id="wirelessautomate:resonance_wire" /> **4. Resonance Wire** | 1 Signal Alloy Ingot between 2 copper ingots, with 1 gold ingot below | 4 |
 | <ItemImage id="wirelessautomate:resonance_coil" /> **5. Resonance Coil** | 8 Wires around 1 iron block | 1 |
-| <ItemImage id="wirelessautomate:harmonic_lens" /> **6. Harmonic Lens** | Crafting table, shapeless: 1 full Cut Signal Crystal + 2 diamonds + 4 Resonance Glass | 1 |
+| <ItemImage id="wirelessautomate:harmonic_lens" /> **6. Harmonic Lens** | Crafting table, shapeless: 1 full Cut Signal Crystal + 2 diamonds + 4 Glass | 1 |
 | <ItemImage id="wirelessautomate:phase_circuit" /> **7. Phase Circuit** | 1 Plate in the center, 2 redstone blocks, 2 gold ingots and 4 Nether quartz | 2 |
 | <ItemImage id="wirelessautomate:phase_matrix" /> **8. Phase Matrix** | 1 Lens in the center, 4 Coils in the corners, 2 Circuits and 2 Plates | 1 |
 | <ItemImage id="wirelessautomate:field_stabilizer" /> **9. Field Stabilizer** | 4 Matrices + 1 diamond block + 2 crying obsidian + 1 eye of ender | 1 |

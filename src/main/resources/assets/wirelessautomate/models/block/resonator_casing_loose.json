@@ -3,8 +3,10 @@
   "render_type": "minecraft:solid",
   "ambientocclusion": true,
   "textures": {
-    "resonator_casing_solta": "wirelessautomate:block/resonator_casing_solta",
-    "particle": "wirelessautomate:block/resonator_casing_solta"
+    "resonator_familia_lado": "wirelessautomate:block/resonator_familia_lado",
+    "resonator_fundo": "wirelessautomate:block/resonator_fundo",
+    "resonator_laje_topo": "wirelessautomate:block/resonator_laje_topo",
+    "particle": "wirelessautomate:block/resonator_familia_lado"
   },
   "elements": [
     {
@@ -19,26 +21,6 @@
         16
       ],
       "faces": {
-        "down": {
-          "uv": [
-            0.0,
-            0.0,
-            16.0,
-            16.0
-          ],
-          "texture": "#resonator_casing_solta",
-          "cullface": "down"
-        },
-        "up": {
-          "uv": [
-            0.0,
-            0.0,
-            16.0,
-            16.0
-          ],
-          "texture": "#resonator_casing_solta",
-          "cullface": "up"
-        },
         "north": {
           "uv": [
             0.0,
@@ -46,7 +28,7 @@
             16.0,
             16.0
           ],
-          "texture": "#resonator_casing_solta",
+          "texture": "#resonator_familia_lado",
           "cullface": "north"
         },
         "south": {
@@ -56,18 +38,8 @@
             16.0,
             16.0
           ],
-          "texture": "#resonator_casing_solta",
+          "texture": "#resonator_familia_lado",
           "cullface": "south"
-        },
-        "west": {
-          "uv": [
-            0.0,
-            0.0,
-            16.0,
-            16.0
-          ],
-          "texture": "#resonator_casing_solta",
-          "cullface": "west"
         },
         "east": {
           "uv": [
@@ -76,8 +48,38 @@
             16.0,
             16.0
           ],
-          "texture": "#resonator_casing_solta",
+          "texture": "#resonator_familia_lado",
           "cullface": "east"
+        },
+        "west": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#resonator_familia_lado",
+          "cullface": "west"
+        },
+        "up": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#resonator_laje_topo",
+          "cullface": "up"
+        },
+        "down": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#resonator_fundo",
+          "cullface": "down"
         }
       }
     }

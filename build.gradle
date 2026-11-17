@@ -115,6 +115,11 @@ neoForge {
             sourceSet(sourceSets.main)
         }
     }
+    // O task test roda com o Minecraft no classpath (enums de estado que implementam StringRepresentable, Direction).
+    unitTest {
+        enable()
+        testedMod = mods."${mod_id}"
+    }
 }
 
 // Dependências só para testar em dev, sem virar dependência publicada do mod.
@@ -181,7 +186,7 @@ dependencies {
         transitive = false
     }
 
-    // Testes de unidade da lógica pura (sem classes do Minecraft).
+    // Testes de unidade (JUnit): a lógica pura e os que precisam de classes do Minecraft, pelo neoForge.unitTest.
     testImplementation platform("org.junit:junit-bom:${junit_version}")
     testImplementation 'org.junit.jupiter:junit-jupiter'
     // O Gson (o mesmo do Minecraft) para os testes que leem o .bbmodel da Doca (DockPoseTest).
@@ -191,6 +196,9 @@ dependencies {
 
 tasks.named('test', Test).configure {
     useJUnitPlatform()
+    // O unitTest do ModDevGradle troca o diretório de trabalho; os testes leem arquivos pelo caminho da raiz.
+    def raiz = projectDir
+    doFirst { workingDir = raiz }
     // Para regerar a cena do guia (ResonatorGuideSceneTest) com -Dwa.regen=true.
     systemProperty 'wa.regen', System.getProperty('wa.regen', 'false')
 }
@@ -209,6 +217,15 @@ repositories {
     exclusiveContent {
         forRepository { maven { name = 'CurseMaven'; url = 'https://cursemaven.com' } }
         filter { includeGroup 'curse.maven' }
+    }
+}
+
+// -Pshaders: Iris e Sodium só no cliente de dev (runClient e o e2e), para testar com shaderpack. Entram como
+// localRuntime e não vão para o jar do mod (docs/e2e.md).
+if (project.hasProperty('shaders')) {
+    dependencies {
+        localRuntime "maven.modrinth:sodium:mc1.21.1-0.6.13-neoforge"
+        localRuntime "maven.modrinth:iris:1.8.12+1.21.1-neoforge"
     }
 }
 

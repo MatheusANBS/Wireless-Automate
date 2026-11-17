@@ -11,11 +11,9 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 
-/** O bloco Estrutura: o Sintonizador, as Portas de cada tipo e a montagem reconhecida. */
+/** O bloco Estrutura: o Sintonizador e as Portas de cada tipo. */
 final class StructureLines {
-    private static final String[] LABELS = {"structure.tuner", "structure.energy_ports", "structure.crystal_ports",
-            "structure.layout"};
-    private static final String[] LAYOUTS = {"layout.custom", "layout.vitrine", "layout.faixa"};
+    private static final String[] LABELS = {"structure.tuner", "structure.energy_ports", "structure.crystal_ports"};
 
     private final ResonatorMenu menu;
     private int left;
@@ -57,8 +55,7 @@ final class StructureLines {
         return switch (line) {
             case 0 -> ResonatorText.key(state.tuner() ? "yes" : "no");
             case 1 -> Component.literal(Integer.toString(state.energyPorts()));
-            case 2 -> Component.literal(Integer.toString(state.crystalPorts()));
-            default -> ResonatorText.key(LAYOUTS[Math.max(0, Math.min(LAYOUTS.length - 1, state.layout()))]);
+            default -> Component.literal(Integer.toString(state.crystalPorts()));
         };
     }
 }

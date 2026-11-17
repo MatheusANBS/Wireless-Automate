@@ -3,16 +3,13 @@ package io.github.matheusanbs.wirelessautomate.client.repairer.render;
 import com.mojang.blaze3d.vertex.PoseStack;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.client.GuiPaint;
-import io.github.matheusanbs.wirelessautomate.client.resonator.render.CrystalGem;
-import io.github.matheusanbs.wirelessautomate.client.resonator.render.CrystalMesh;
-import io.github.matheusanbs.wirelessautomate.client.resonator.render.CrystalParam;
 import io.github.matheusanbs.wirelessautomate.repairer.RepairMath;
 import io.github.matheusanbs.wirelessautomate.repairer.RepairerView;
 import net.minecraft.client.renderer.MultiBufferSource;
 import org.joml.Quaternionf;
 
 /**
- * Os cristais de pé nos pedestais, um por linha com cristal, pela gema facetada do shader do cristal do Ressonador: o
+ * Os cristais de pé nos pedestais, um por linha com cristal, pela gema facetada do shader do cristal ({@code resonator_crystal}): o
  * losango no Lapidado e nos Afinados (a faixa dourada ou na cor do tier) e o aglomerado no Cristal de Sinal. O da linha
  * travada (terminou e espera a saída) já está reparado; o da linha que anda fecha as rachaduras pelo canal de efeito
  * do shader até a convergência e dali em diante já é o reparado; o que espera fica rachado, com as rachaduras acesas

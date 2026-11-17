@@ -15,7 +15,6 @@ import io.github.matheusanbs.wirelessautomate.resonator.CoreMath;
 import io.github.matheusanbs.wirelessautomate.resonator.CrystalCharge;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBatch;
-import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBlueprint;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorFormation;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorStatus;
 import java.util.List;
@@ -38,8 +37,8 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @GameTestHolder(WirelessAutomate.MODID)
 @PrefixGameTestTemplate(false)
 public final class ResonatorTunerGameTests {
-    private static final BlockPos TUNER = ORIGIN.offset(2, 4, 2);
-    private static final BlockPos EDGE = ORIGIN.offset(2, 0, 0);
+    private static final BlockPos TUNER = ORIGIN.offset(2, 0, 0);
+    private static final BlockPos EDGE = ORIGIN.offset(1, 0, 0);
 
     private ResonatorTunerGameTests() {
     }
@@ -90,7 +89,7 @@ public final class ResonatorTunerGameTests {
 
     @GameTest(template = "empty7")
     public static void semSintonizadorNaoLigaOAutomatico(GameTestHelper helper) {
-        formed(helper, Layout.ENERGY_ON_TOP, RouterTier.BASIC, core -> {
+        formed(helper, Layout.SEM_SINTONIZADOR, RouterTier.BASIC, core -> {
             helper.assertTrue(!core.hasTuner(), "Sintonizador numa estrutura sem ele");
             helper.assertTrue(!core.setAuto(true), "o automático ligou sem Sintonizador");
             helper.assertTrue(!core.auto(), "o modo mudou");
@@ -103,7 +102,7 @@ public final class ResonatorTunerGameTests {
      */
     @GameTest(template = "empty7")
     public static void pecaQueSaiVoltaAoManual(GameTestHelper helper) {
-        BlockPos corePos = ResonatorTestSupport.build(helper, ORIGIN, Layout.VITRINE, RouterTier.BASIC);
+        BlockPos corePos = ResonatorTestSupport.build(helper, ORIGIN, Layout.ARMILAR, RouterTier.BASIC);
         helper.startSequence().thenWaitUntil(() -> assertFormed(helper, corePos, true)).thenExecute(() -> {
             ResonanceCoreBlockEntity core = ResonatorTestSupport.core(helper, corePos);
             core.setStationForTest(98.0);
@@ -179,15 +178,13 @@ public final class ResonatorTunerGameTests {
 
     @GameTest(template = "empty7")
     public static void estruturaConhecida(GameTestHelper helper) {
-        BlockPos corePos = ResonatorTestSupport.build(helper, ORIGIN, Layout.VITRINE, RouterTier.BASIC);
+        BlockPos corePos = ResonatorTestSupport.build(helper, ORIGIN, Layout.ARMILAR, RouterTier.BASIC);
         long[] first = new long[1];
         helper.startSequence().thenWaitUntil(() -> assertFormed(helper, corePos, true)).thenExecute(() -> {
             ResonanceCoreBlockEntity core = ResonatorTestSupport.core(helper, corePos);
             helper.assertTrue(core.hasTuner(), "sem o Sintonizador");
             helper.assertValueEqual(core.energyPorts(), 1, "Portas de Energia");
             helper.assertValueEqual(core.crystalPorts(), 1, "Portas de Cristais");
-            helper.assertTrue(Objects.equals(core.layout(), ResonatorBlueprint.Layout.VITRINE),
-                    "montagem: " + core.layout());
             helper.assertTrue(core.formedAt() >= 0, "sem o tempo da montagem");
             first[0] = core.formedAt();
             helper.getLevel().destroyBlock(helper.absolutePos(EDGE), false);
@@ -230,7 +227,6 @@ public final class ResonatorTunerGameTests {
             helper.assertTrue(copy.hasTuner(), "o Sintonizador não voltou");
             helper.assertValueEqual(copy.energyPorts(), core.energyPorts(), "Portas de Energia");
             helper.assertValueEqual(copy.crystalPorts(), core.crystalPorts(), "Portas de Cristais");
-            helper.assertTrue(Objects.equals(copy.layout(), core.layout()), "montagem: " + copy.layout());
             helper.assertValueEqual(copy.formedAt(), core.formedAt(), "tempo da montagem");
         });
     }

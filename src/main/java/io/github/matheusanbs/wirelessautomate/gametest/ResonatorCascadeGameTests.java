@@ -83,7 +83,7 @@ public final class ResonatorCascadeGameTests {
     }
 
     private static Optional<ItemStack> lens(GameTestHelper helper, ItemStack cut) {
-        ItemStack glass = of(ModItems.RESONATOR_GLASS.get());
+        ItemStack glass = of(Items.GLASS);
         return craft(helper, glass, of(Items.DIAMOND), glass, glass.copy(), cut, glass.copy(), null,
                 of(Items.DIAMOND), null);
     }

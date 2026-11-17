@@ -68,15 +68,12 @@ final class E2eSuites {
             suite("receitas", "editor de receitas", Prereq.REDES, E2eRecipeSteps::recipeEditorSteps),
             optional("escuro", "tema escuro (usa os baús e a Bateria do armazenamento)", Prereq.ARMAZENAMENTO, E2eDarkSteps::darkSteps),
             suite("ressonador", "Ressonador de Sinal", Prereq.NENHUM, E2eResonatorSteps::resonatorSteps),
-            new Suite("ressonador-desempenho", "tempo de quadro da câmara: desenho antigo × plasma (mede, não afirma)",
-                    Prereq.NENHUM, list -> {
-                        E2eResonatorSteps.perf = true;
-                        try {
-                            E2eResonatorSteps.resonatorSteps(list);
-                        } finally {
-                            E2eResonatorSteps.perf = false;
-                        }
-                    }, true, () -> true),
+            optional("ressonador-desempenho", "tempo de quadro da Armilar com 0, 1 e 10 à vista (mede, não afirma)",
+                    Prereq.NENHUM, E2eArmilarRenderSteps::perfSteps),
+            optional("fx-base", "o caminho de desenho dos efeitos: oclusão, perto e o corte de 48 blocos (com --shaders, por cima do pacote)",
+                    Prereq.NENHUM, E2eFxProbeSteps::probeSteps),
+            optional("armilar-fabulous", "a Armilar com os gráficos Fabulous: a conjunção, a luz no mundo e a mão (volta ao de antes no fim)",
+                    Prereq.NENHUM, E2eArmilarRenderSteps::fabulousSteps),
             suite("ressonador-jei", "JEI do Ressonador", Prereq.NENHUM, E2eJeiResonatorSteps::jeiResonatorSteps),
             suite("reparador", "Reparador de Cristais", Prereq.NENHUM, E2eRepairerSteps::repairerSteps),
             suite("reparador-animacao", "a animação do Reparador no mundo e na tela, com o tempo parado em cada fase",

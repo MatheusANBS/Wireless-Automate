@@ -126,7 +126,7 @@ Next to the state, the screen warns how many machines are **out of reach** or **
 
 ## Recipe
 
-A Wireless Router among Porcelain Casings, with Signal Alloy Ingots, an AE2 **Pattern Provider** and an AE2
+A Wireless Router among Resonator Floors, with Signal Alloy Ingots, an AE2 **Pattern Provider** and an AE2
 **Engineering Processor** (only with AE2 or RS2). Without AE2, in a pack with only RS2, the recipe swaps the provider for
 an **Autocrafter** (any color) and the processor for the RS2 **Advanced Processor**. It makes the Basic Dock; the
 Upgrade Card raises the tier, as with the router.

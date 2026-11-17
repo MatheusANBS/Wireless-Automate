@@ -9,7 +9,7 @@ import io.github.matheusanbs.wirelessautomate.client.FrameClock;
 import io.github.matheusanbs.wirelessautomate.client.dock.render.PatternDockRenderer;
 import io.github.matheusanbs.wirelessautomate.client.repairer.render.RepairerRenderer;
 import io.github.matheusanbs.wirelessautomate.client.resonator.ResonatorProjection;
-import io.github.matheusanbs.wirelessautomate.client.resonator.render.ResonatorRenderer;
+import io.github.matheusanbs.wirelessautomate.client.resonator.render.ArmilarRenderer;
 import io.github.matheusanbs.wirelessautomate.GuiTheme;
 import io.github.matheusanbs.wirelessautomate.block.RouterBlock;
 import io.github.matheusanbs.wirelessautomate.block.RouterTier;
@@ -19,7 +19,6 @@ import io.github.matheusanbs.wirelessautomate.registry.ModItems;
 import io.github.matheusanbs.wirelessautomate.resonator.CrystalCharge;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlockEntity;
 import io.github.matheusanbs.wirelessautomate.resonator.SignalCrystalItem;
-import io.github.matheusanbs.wirelessautomate.resonator.TuneSignal;
 import io.github.matheusanbs.wirelessautomate.resonator.ProjectionDiff;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonanceCoreBlock;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBlueprint;
@@ -42,34 +41,42 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * A projeção do Ressonador no e2e: uma Vitrine pela metade (o Núcleo virado para o leste, as duas camadas de baixo
- * das carcaças, a janela sem dois vidros e uma terra numa aresta), o clique de mão vazia no Núcleo, a dica que fica
- * na action bar mesmo com a linha do problema que o servidor manda no clique, a contagem e a
- * captura dos fantasmas; depois a estrutura completa, que monta e apaga a projeção, e a segunda captura.
+ * A projeção do Ressonador no e2e: uma Armilar pela metade (o Núcleo virado para o sul, as Lajes do chão e uma
+ * terra numa casa de ar), o clique de mão vazia no Núcleo, a dica que fica na action bar mesmo com a linha do
+ * problema que o servidor manda no clique, a contagem e a captura dos fantasmas; depois a Armilar inteira solta (só
+ * a terra no ar e uma Coluna faltando, vista de lado e de frente); por fim a Coluna e sem a terra, que monta e apaga
+ * a projeção, com a Armilar formada vista de lado, de frente e de cima (o topo de cada peça de face).
  */
 final class E2eResonatorSteps {
-    private static final Part[][][] VITRINE = ResonatorBlueprint.expected(Face.EAST, ResonatorBlueprint.Layout.VITRINE);
-    /** A terra fica na aresta vertical entre as faces leste e sul, de frente para a câmera. */
+    private static final Part[][][] ARMILAR = ResonatorBlueprint.expected(Face.SOUTH);
+    /** A terra fica numa casa de ar, no canto de frente da Armilar (leste e sul), à vista da câmera. */
     private static final int[] DIRT = {4, 1, 4};
+    /** A Coluna que falta na segunda foto: a de cima, a sudeste do Berço. */
+    private static final int[] MISSING_COLUMN = {3, 2, 3};
     /** O vsync e o limite de FPS de antes da medida do tempo de quadro. */
     private static boolean measuring;
     private static boolean savedVsync;
     private static int savedLimit;
     private static final String HINT = "block.wirelessautomate.resonance_core.projection.hint";
-    /** Os dois vidros da janela que ficam faltando. */
-    private static final int[][] MISSING_GLASS = {{2, 3, 4}, {3, 2, 4}};
-    /** Os pés do jogador nas fotos de fora: a leste e ao sul da caixa, a uns 7 blocos do Núcleo. */
-    static final double[] SIDE_VIEW = {8.5, 3.2, 7.5};
-    /** Os pés do jogador nas fotos da câmara: a 2,5 blocos da janela, de frente para ela (yaw 180°). */
-    static final double[] WINDOW_VIEW = {2.5, 2.3, 7.5};
+    /** Os pés do jogador nas fotos de lado: a sudeste da caixa, a uns 5 blocos do Núcleo (o clique no Núcleo alcança). */
+    static final double[] SIDE_VIEW = {5.8, 2.8, 7.0};
+    /** Os pés do jogador nas fotos de frente: ao sul, a 4 blocos do Núcleo, de frente para a Armilar (yaw 180°). */
+    static final double[] FRONT_VIEW = {2.5, 2.3, 9.5};
     /**
-     * Os pés do jogador na foto de perto dos cristais: dentro da câmara, junto da janela e com a cabeça perto do teto,
-     * olhando o anel de cima. A Vitrine montada não tem vão no vidro, e de fora o vidro lavaria a foto.
+     * Os pés do jogador na foto de perto do centro: dentro da Armilar, entre as Colunas do sul e a um bloco e meio
+     * do Berço, com a cabeça acima das Lajes.
      */
     static final double[] CLOSE_VIEW = {2.5, 2.18, 3.65};
+    /** O ponto que a câmera olha por padrão: o centro da Armilar, 2 blocos para trás do Núcleo. */
+    private static final double[] CENTER = {2.5, 2.3, 2.5};
+    /** De cima, com o norte para cima da tela: o alvo fica um décimo de bloco ao norte dos pés. */
+    private static final double[] TOP_VIEW = {2.5, 6.0, 2.5};
+    private static final double[] TOP_TARGET = {2.5, 0.5, 2.4};
 
     private E2eResonatorSteps() {
     }
@@ -79,7 +86,7 @@ final class E2eResonatorSteps {
         BlockPos[] origin = new BlockPos[1];
         Vec3[] back = new Vec3[1];
         float[] backRot = new float[2];
-        list.add(new Step("Ressonador: Vitrine pela metade", STEP_TIMEOUT_MS, () -> {
+        list.add(new Step("Ressonador: Armilar pela metade", STEP_TIMEOUT_MS, () -> {
             Minecraft minecraft = Minecraft.getInstance();
             back[0] = minecraft.player.position();
             backRot[0] = minecraft.player.getYRot();
@@ -92,7 +99,7 @@ final class E2eResonatorSteps {
                 origin[0] = player.blockPosition().offset(12, 0, -14);
                 player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
                 clear(level, origin[0]);
-                place(level, origin[0], true);
+                place(level, origin[0], true, false);
                 level.setBlockAndUpdate(origin[0].offset(DIRT[0], DIRT[1], DIRT[2]), Blocks.DIRT.defaultBlockState());
                 return null;
             });
@@ -113,14 +120,35 @@ final class E2eResonatorSteps {
             ProjectionDiff.Result result = ResonatorProjection.result();
             // a dica fica 40 ticks na action bar antes da contagem
             return stepTicks >= 50 && result != null && result.wrong() == 1 && result.missing().equals(Map.of(
-                    Part.CASING, 47, Part.GLASS, 2, Part.ENERGY_PORT, 1, Part.CRYSTAL_PORT, 1, Part.TUNER, 1));
+                    Part.COLUMN, 8, Part.CRADLE, 2, Part.ENERGY_PORT, 1, Part.CRYSTAL_PORT, 1, Part.TUNER, 1));
         }, () -> {
             ProjectionDiff.Result result = ResonatorProjection.result();
             return result == null ? "sem projeção" : "faltam " + result.missing() + ", errados " + result.wrong();
         }));
-        list.add(capture("ressonador-projecao"));
+        list.add(capture("armilar-projecao"));
+        list.add(new Step("Ressonador: Armilar solta, com a terra e sem uma Coluna", STEP_TIMEOUT_MS,
+                () -> onServer(server -> {
+                    place(server.overworld(), origin[0], false, true);
+                    return null;
+                }), () -> {
+            ProjectionDiff.Result result = ResonatorProjection.result();
+            return stepTicks >= 12 && result != null && result.wrong() == 1
+                    && result.missing().equals(Map.of(Part.COLUMN, 1));
+        }, () -> {
+            ProjectionDiff.Result result = ResonatorProjection.result();
+            return result == null ? "sem projeção" : "faltam " + result.missing() + ", errados " + result.wrong();
+        }));
+        list.add(capture("armilar-solta-lado"));
+        list.add(camera("Ressonador: câmera de frente", playerId, () -> origin[0], FRONT_VIEW));
+        list.add(DevEndToEnd.wait("a câmera chegar", 10));
+        list.add(capture("armilar-solta-frente"));
+        list.add(camera("Ressonador: câmera de lado", playerId, () -> origin[0], SIDE_VIEW));
         list.add(new Step("Ressonador: completar monta e desliga a projeção", STEP_TIMEOUT_MS, () -> onServer(server -> {
-            place(server.overworld(), origin[0], false);
+            ServerLevel level = server.overworld();
+            level.setBlockAndUpdate(origin[0].offset(DIRT[0], DIRT[1], DIRT[2]), Blocks.AIR.defaultBlockState());
+            level.setBlockAndUpdate(origin[0].offset(MISSING_COLUMN[0], MISSING_COLUMN[1], MISSING_COLUMN[2]),
+                    looseState(Part.COLUMN, MISSING_COLUMN[0], MISSING_COLUMN[1], MISSING_COLUMN[2],
+                            RouterTier.ELITE));
             return null;
         }), () -> {
             BlockState core = Minecraft.getInstance().level.getBlockState(core(origin[0]));
@@ -129,10 +157,15 @@ final class E2eResonatorSteps {
         }, () -> "Núcleo " + Minecraft.getInstance().level.getBlockState(core(origin[0])) + ", projeção "
                 + ResonatorProjection.isOn()));
         list.add(DevEndToEnd.wait("Ressonador montado", 10));
-        list.add(capture("ressonador-montado"));
+        list.add(capture("armilar-formada-lado"));
+        list.add(camera("Ressonador: câmera de frente, montado", playerId, () -> origin[0], FRONT_VIEW));
+        list.add(DevEndToEnd.wait("a câmera chegar", 10));
+        list.add(capture("armilar-formada-frente"));
+        selectionSteps(list, playerId, origin);
+        topSteps(list, playerId, origin);
         screenSteps(list, origin);
         E2eResonatorScreenSteps.screenSteps(list, playerId, origin);
-        chamberSteps(list, playerId, origin);
+        E2eArmilarRenderSteps.chamberSteps(list, playerId, origin);
         list.add(new Step("Ressonador: limpar", STEP_TIMEOUT_MS, () -> onServer(server -> {
             ServerPlayer player = server.getPlayerList().getPlayer(playerId);
             clear(player.serverLevel(), origin[0]);
@@ -143,6 +176,59 @@ final class E2eResonatorSteps {
         }), () -> Minecraft.getInstance().level.getBlockState(core(origin[0])).isAir()
                 && Minecraft.getInstance().player.position().distanceTo(back[0]) < 0.5,
                 () -> "jogador em " + Minecraft.getInstance().player.position()));
+    }
+
+    /**
+     * O contorno de seleção da Armilar formada, que segue o desenho e não o cubo: a mira numa Laje do canto (a
+     * {@code p00}, no chão a noroeste) e numa Coluna (a de noroeste, embaixo), vistas de fora, com o HUD ligado
+     * (o jogo só desenha o contorno com ele). Cada passo espera a mira cair no bloco certo.
+     */
+    private static void selectionSteps(List<Step> list, UUID playerId, BlockPos[] origin) {
+        aim(list, playerId, origin, "armilar-selecao", new double[] {-1.6, 1.3, -1.6}, new double[] {0.9, 0.5, 0.5},
+                new int[] {0, 0, 0}, ModBlocks.RESONATOR_CASING.get());
+        aim(list, playerId, origin, "armilar-selecao-coluna", new double[] {-1.6, 1.4, -1.6},
+                new double[] {1.12, 1.5, 1.12}, new int[] {1, 1, 1}, ModBlocks.RESONATOR_COLUMN.get());
+        list.add(camera("Ressonador: câmera de lado, depois da seleção", playerId, () -> origin[0], SIDE_VIEW));
+    }
+
+    private static void aim(List<Step> list, UUID playerId, BlockPos[] origin, String name, double[] feet,
+            double[] target, int[] block, net.minecraft.world.level.block.Block expected) {
+        list.add(camera("Ressonador: câmera, " + name, playerId, () -> origin[0], feet, target));
+        list.add(new Step("Ressonador: a mira cai em " + name, STEP_TIMEOUT_MS, () -> {
+        }, () -> {
+            Minecraft minecraft = Minecraft.getInstance();
+            return stepTicks >= 10 && minecraft.hitResult instanceof BlockHitResult hit
+                    && hit.getType() == HitResult.Type.BLOCK
+                    && hit.getBlockPos().equals(origin[0].offset(block[0], block[1], block[2]))
+                    && minecraft.level.getBlockState(hit.getBlockPos()).is(expected);
+        }, () -> "mira em " + Minecraft.getInstance().hitResult));
+        list.add(capture(name));
+    }
+
+    /**
+     * A Armilar formada vista de cima, com o norte para cima da tela, e o topo da Porta de Energia, da de Cristais e
+     * do Sintonizador de perto (a luz e a textura de cima, que o gerador gira por face). Sem a mão na tela.
+     */
+    private static void topSteps(List<Step> list, UUID playerId, BlockPos[] origin) {
+        list.add(new Step("Ressonador: sem a mão para as fotos de cima", STEP_TIMEOUT_MS,
+                () -> Minecraft.getInstance().options.hideGui = true, () -> true, () -> "mão escondida"));
+        top(list, playerId, origin, "armilar-topo", TOP_VIEW, TOP_TARGET);
+        top(list, playerId, origin, "armilar-topo-energia", new double[] {4.5, 3.6, 3.7},
+                new double[] {4.5, 1.0, 2.5});
+        top(list, playerId, origin, "armilar-topo-cristais", new double[] {0.5, 3.6, 3.7},
+                new double[] {0.5, 1.0, 2.5});
+        top(list, playerId, origin, "armilar-topo-sintonizador", new double[] {2.5, 3.6, 1.7},
+                new double[] {2.5, 1.0, 0.5});
+        list.add(new Step("Ressonador: a mão de volta nas fotos", STEP_TIMEOUT_MS,
+                () -> Minecraft.getInstance().options.hideGui = false, () -> true, () -> "mão"));
+        list.add(camera("Ressonador: câmera de lado, depois do topo", playerId, () -> origin[0], SIDE_VIEW));
+    }
+
+    private static void top(List<Step> list, UUID playerId, BlockPos[] origin, String name, double[] feet,
+            double[] target) {
+        list.add(camera("Ressonador: câmera, " + name, playerId, () -> origin[0], feet, target));
+        list.add(DevEndToEnd.wait("a câmera chegar", 10));
+        list.add(capture(name));
     }
 
     /**
@@ -221,100 +307,24 @@ final class E2eResonatorSteps {
         });
     }
 
-    /**
-     * A câmara vista pela janela: em sintonia (a figura fechada, os cristais juntos e os feixes, o Opaco caído e a
-     * placa com a figura) e depois a 72% (o rabisco, os cristais fora de ritmo e a placa com ruído).
-     */
-    private static void chamberSteps(List<Step> list, UUID playerId, BlockPos[] origin) {
-        list.add(new Step("Ressonador: dial na estação, sem Sintonizador", STEP_TIMEOUT_MS, () -> {
-            // sem a mão, a mira e o contorno do vidro na frente da câmara
-            Minecraft.getInstance().options.hideGui = true;
-            onServer(server -> {
-                ResonanceCoreBlockEntity core = (ResonanceCoreBlockEntity) server.overworld()
-                        .getBlockEntity(core(origin[0]));
-                core.setAuto(false);
-                core.setDial(98.0);
-                return null;
-            });
-        }, () -> ((ResonanceCoreBlockEntity) Minecraft.getInstance().level.getBlockEntity(core(origin[0])))
-                .clientView().band() == TuneSignal.BANDS - 1, () -> "faixa no cliente"));
-        list.add(camera("Ressonador: câmera na janela", playerId, () -> origin[0], WINDOW_VIEW));
-        list.add(DevEndToEnd.wait("a câmara acender", 30));
-        list.add(capture("ressonador-camara"));
-        for (int i = 0; i < 2; i++) {
-            timed(list, "", null);
-        }
-        closeUp(list, playerId, origin, "ressonador-tentaculos");
-        list.add(new Step("Ressonador: dial a 96,7", STEP_TIMEOUT_MS, () -> onServer(server -> {
-            ((ResonanceCoreBlockEntity) server.overworld().getBlockEntity(core(origin[0]))).setDial(96.7);
-            return null;
-        }), () -> ((ResonanceCoreBlockEntity) Minecraft.getInstance().level.getBlockEntity(core(origin[0])))
-                .clientView().band() < TuneSignal.BANDS - 1, () -> "faixa no cliente"));
-        list.add(DevEndToEnd.wait("a figura escorregar", 60));
-        list.add(capture("ressonador-camara-chiado"));
-        closeUp(list, playerId, origin, "ressonador-tentaculos-fora");
-        list.add(new Step("Ressonador: dial de volta a 98,0", STEP_TIMEOUT_MS, () -> {
-            Minecraft.getInstance().options.hideGui = false;
-            onServer(server -> {
-                ((ResonanceCoreBlockEntity) server.overworld().getBlockEntity(core(origin[0]))).setDial(98.0);
-                return null;
-            });
-        }, () -> true, () -> "dial"));
-        E2eResonatorFlowSteps.flowSteps(list, playerId, origin);
-    }
-
-    /**
-     * Os tentáculos de perto em dois instantes (eles andam entre um e outro) e a câmera de volta à janela: capturas
-     * {@code <name>} e {@code <name>-2}.
-     */
-    private static void closeUp(List<Step> list, UUID playerId, BlockPos[] origin, String name) {
-        list.add(camera("Ressonador: câmera perto, " + name, playerId, () -> origin[0], CLOSE_VIEW));
-        list.add(DevEndToEnd.wait("a câmera chegar", 10));
-        list.add(capture(name));
-        list.add(DevEndToEnd.wait("outro instante", 13));
-        list.add(capture(name + "-2"));
-        list.add(camera("Ressonador: câmera na janela, " + name, playerId, () -> origin[0], WINDOW_VIEW));
-    }
-
-    /** O que a medida repete a cada tick de espera (a extração que mantém o conduto aceso). */
+    /** O que a medida repete a cada tick de espera (nenhuma medida usa hoje, todas passam {@code null}; ficou para uma que precise manter um estado vivo). */
     @FunctionalInterface
     interface Tick {
         void run() throws Exception;
     }
 
-    /** A única Porta de Energia da Vitrine. */
+    /** A única Porta de Energia da Armilar. */
     static BlockPos energyPort(BlockPos origin) {
         for (int x = 0; x < 5; x++) {
             for (int y = 0; y < 5; y++) {
                 for (int z = 0; z < 5; z++) {
-                    if (VITRINE[x][y][z] == Part.ENERGY_PORT) {
+                    if (ARMILAR[x][y][z] == Part.ENERGY_PORT) {
                         return origin.offset(x, y, z);
                     }
                 }
             }
         }
-        throw new IllegalStateException("a Vitrine não tem Porta de Energia");
-    }
-
-    /**
-     * Só com a suíte {@code ressonador-desempenho} ({@link #perf}): a medida do tempo de quadro com o desenho antigo e
-     * com o plasma, que é uma comparação e não uma asserção.
-     */
-    static void timed(List<Step> list, String situation, Tick perTick) {
-        if (perf) {
-            list.add(frameTime(true, situation, perTick));
-            list.add(frameTime(false, situation, perTick));
-        }
-    }
-
-    /** Ligada só enquanto o roteiro da suíte {@code ressonador-desempenho} é montado. */
-    static boolean perf;
-
-    /** A medida da câmara ocupando a tela, com o desenho antigo forçado ou com o plasma. */
-    static Step frameTime(boolean legacy, String situation, Tick perTick) {
-        String label = (legacy ? "camara antiga" : "camara plasma") + situation;
-        return frameTimeStep("Ressonador: " + label + " (tempo de quadro)", label,
-                () -> ResonatorRenderer.forceLegacyForTests = legacy, perTick);
+        throw new IllegalStateException("a Armilar não tem Porta de Energia");
     }
 
     /**
@@ -360,7 +370,7 @@ final class E2eResonatorSteps {
     }
 
     /**
-     * Devolve o vsync, o limite de FPS, o desenho da câmara e os ganchos do Reparador (o tempo parado e o
+     * Devolve o vsync, o limite de FPS, a vazão forçada e os ganchos do Reparador (o tempo parado e o
      * {@code repairTicks}). Idempotente; o motor chama em qualquer saída (sucesso, falha ou tempo esgotado), sem
      * gravar o options.txt.
      */
@@ -368,12 +378,14 @@ final class E2eResonatorSteps {
         restoreMeasure();
         E2eRepairerAnimSteps.restoreHooks();
         E2eDockAnimSteps.restoreHooks();
+        E2eFxProbeSteps.restoreHooks();
+        E2eArmilarRenderSteps.restoreHooks();
     }
 
     /** O fim de uma medida: o vsync, o limite de FPS e os desenhos forçados; o tempo parado do Reparador fica. */
     private static void restoreMeasure() {
-        ResonatorRenderer.forceLegacyForTests = false;
-        ResonatorRenderer.forceBandForTests = -1;
+        ArmilarRenderer.forceBandForTests = -1;
+        ArmilarRenderer.freezeSecondsForTests = Double.NaN;
         RepairerRenderer.forceLegacyForTests = false;
         PatternDockRenderer.disabledForTests = false;
         if (!measuring) {
@@ -385,14 +397,19 @@ final class E2eResonatorSteps {
         options.framerateLimit().set(savedLimit);
     }
 
-    /** Põe as peças da primeira foto ({@code half}) ou as que faltam para completar a Vitrine (a terra vira Carcaça). */
-    private static void place(ServerLevel level, BlockPos origin, boolean half) {
+    /**
+     * Põe as peças da primeira foto ({@code half}) ou as que faltam para a Armilar inteira, sem a Coluna de
+     * {@link #MISSING_COLUMN} se {@code skipColumn}; a terra não é tocada.
+     */
+    private static void place(ServerLevel level, BlockPos origin, boolean half, boolean skipColumn) {
         for (int x = 0; x < 5; x++) {
             for (int y = 0; y < 5; y++) {
                 for (int z = 0; z < 5; z++) {
-                    if (VITRINE[x][y][z] != Part.AIR && halfBuilt(x, y, z) == half) {
+                    boolean skipped = skipColumn && x == MISSING_COLUMN[0] && y == MISSING_COLUMN[1]
+                            && z == MISSING_COLUMN[2];
+                    if (ARMILAR[x][y][z] != Part.AIR && halfBuilt(x, y, z) == half && !skipped) {
                         level.setBlockAndUpdate(origin.offset(x, y, z),
-                                looseState(VITRINE[x][y][z], x, y, z, RouterTier.ELITE));
+                                looseState(ARMILAR[x][y][z], x, y, z, RouterTier.ELITE));
                     }
                 }
             }
@@ -400,15 +417,15 @@ final class E2eResonatorSteps {
     }
 
     /**
-     * A Vitrine inteira, com o Núcleo virado para o leste no tier dado e a janela na face sul; monta sozinha pelo
-     * tick agendado do Núcleo. A vitrine do CurseForge usa a mesma.
+     * A Armilar inteira, com o Núcleo virado para o sul no tier dado; monta sozinha pelo tick agendado do Núcleo. A
+     * vitrine do CurseForge usa a mesma.
      */
-    static void placeVitrine(ServerLevel level, BlockPos origin, RouterTier tier) {
+    static void placeArmilar(ServerLevel level, BlockPos origin, RouterTier tier) {
         for (int x = 0; x < 5; x++) {
             for (int y = 0; y < 5; y++) {
                 for (int z = 0; z < 5; z++) {
-                    if (VITRINE[x][y][z] != Part.AIR) {
-                        level.setBlockAndUpdate(origin.offset(x, y, z), looseState(VITRINE[x][y][z], x, y, z, tier));
+                    if (ARMILAR[x][y][z] != Part.AIR) {
+                        level.setBlockAndUpdate(origin.offset(x, y, z), looseState(ARMILAR[x][y][z], x, y, z, tier));
                     }
                 }
             }
@@ -448,25 +465,17 @@ final class E2eResonatorSteps {
     }
 
     static BlockPos core(BlockPos origin) {
-        return origin.offset(4, 2, 2);
+        return origin.offset(2, 0, 4);
     }
 
-    /** O que a primeira foto já tem: o Núcleo, as carcaças das duas camadas de baixo e a janela menos dois vidros. */
+    /** O que a primeira foto já tem: o Núcleo e as Lajes (menos a casa da terra). */
     private static boolean halfBuilt(int x, int y, int z) {
-        Part part = VITRINE[x][y][z];
+        Part part = ARMILAR[x][y][z];
         if (part == Part.CORE) {
             return true;
         }
         if (part == Part.CASING) {
-            return y <= 1 && !isDirt(x, y, z);
-        }
-        if (part == Part.GLASS) {
-            for (int[] gap : MISSING_GLASS) {
-                if (gap[0] == x && gap[1] == y && gap[2] == z) {
-                    return false;
-                }
-            }
-            return true;
+            return !isDirt(x, y, z);
         }
         return false;
     }
@@ -477,11 +486,16 @@ final class E2eResonatorSteps {
 
     /** O bloco solto de cada peça; o Núcleo e as peças de face nascem virados para fora, como a montagem os deixa. */
     private static BlockState looseState(Part part, int x, int y, int z, RouterTier tier) {
-        Direction out = x == 0 ? Direction.WEST : x == 4 ? Direction.EAST : y == 0 ? Direction.DOWN
-                : y == 4 ? Direction.UP : z == 0 ? Direction.NORTH : Direction.SOUTH;
+        Direction out = switch (part) {
+            case CORE -> Direction.SOUTH;
+            case ENERGY_PORT -> Direction.EAST;
+            case CRYSTAL_PORT -> Direction.WEST;
+            default -> Direction.NORTH;
+        };
         return switch (part) {
             case CASING -> ModBlocks.RESONATOR_CASING.get().defaultBlockState();
-            case GLASS -> ModBlocks.RESONATOR_GLASS.get().defaultBlockState();
+            case COLUMN -> ModBlocks.RESONATOR_COLUMN.get().defaultBlockState();
+            case CRADLE -> ModBlocks.RESONATOR_CRADLE.get().defaultBlockState();
             case CORE -> ModBlocks.RESONANCE_CORE.get().defaultBlockState().setValue(ResonatorPartBlock.FACING, out)
                     .setValue(RouterBlock.TIER, tier);
             case ENERGY_PORT -> ModBlocks.RESONATOR_ENERGY_PORT.get().defaultBlockState().setValue(ResonatorPartBlock.FACING, out);
@@ -508,9 +522,15 @@ final class E2eResonatorSteps {
         }
     }
 
-    /** O jogador voando com os pés em {@code origin + feet}, olhando o centro da caixa. */
+    /** O jogador voando com os pés em {@code origin + feet}, olhando o centro da Armilar. */
     static Step camera(String name, UUID playerId, java.util.function.Supplier<BlockPos> origin,
             double[] feet) {
+        return camera(name, playerId, origin, feet, CENTER);
+    }
+
+    /** O jogador voando com os pés em {@code origin + feet}, olhando {@code origin + target}. */
+    static Step camera(String name, UUID playerId, java.util.function.Supplier<BlockPos> origin,
+            double[] feet, double[] target) {
         double[] cam = new double[3];
         float[] ang = new float[2];
         return new Step(name, STEP_TIMEOUT_MS, () -> {
@@ -518,9 +538,9 @@ final class E2eResonatorSteps {
             cam[0] = o.getX() + feet[0];
             cam[1] = o.getY() + feet[1];
             cam[2] = o.getZ() + feet[2];
-            double ex = o.getX() + 2.5 - cam[0];
-            double ey = o.getY() + 2.3 - (cam[1] + 1.62);
-            double ez = o.getZ() + 2.5 - cam[2];
+            double ex = o.getX() + target[0] - cam[0];
+            double ey = o.getY() + target[1] - (cam[1] + 1.62);
+            double ez = o.getZ() + target[2] - cam[2];
             ang[0] = (float) Math.toDegrees(Math.atan2(-ex, ez));
             ang[1] = (float) -Math.toDegrees(Math.atan2(ey, Math.sqrt(ex * ex + ez * ez)));
             Minecraft minecraft = Minecraft.getInstance();

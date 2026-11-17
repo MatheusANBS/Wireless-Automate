@@ -1,9 +1,6 @@
 package io.github.matheusanbs.wirelessautomate.client.repairer.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import io.github.matheusanbs.wirelessautomate.client.resonator.render.CrystalMesh;
-import io.github.matheusanbs.wirelessautomate.client.resonator.render.RibbonParam;
-import io.github.matheusanbs.wirelessautomate.client.resonator.render.RibbonQuad;
 import io.github.matheusanbs.wirelessautomate.repairer.RepairMath;
 import net.minecraft.client.renderer.MultiBufferSource;
 

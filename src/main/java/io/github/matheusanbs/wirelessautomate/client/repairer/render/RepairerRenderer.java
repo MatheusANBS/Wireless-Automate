@@ -1,10 +1,7 @@
 package io.github.matheusanbs.wirelessautomate.client.repairer.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import io.github.matheusanbs.wirelessautomate.client.resonator.render.CrystalShader;
-import io.github.matheusanbs.wirelessautomate.client.resonator.render.PlasmaShader;
-import io.github.matheusanbs.wirelessautomate.client.resonator.render.RibbonShader;
-import io.github.matheusanbs.wirelessautomate.client.resonator.render.ShaderPackCheck;
+import io.github.matheusanbs.wirelessautomate.client.fx.ShaderPackCheck;
 import io.github.matheusanbs.wirelessautomate.repairer.RepairMath;
 import io.github.matheusanbs.wirelessautomate.repairer.RepairerBlock;
 import io.github.matheusanbs.wirelessautomate.repairer.RepairerBlockEntity;

@@ -1,85 +1,346 @@
 {
   "variants": {
-    "position=loose": {
+    "facing=south,position=loose": {
       "model": "wirelessautomate:block/resonator_casing_loose"
     },
-    "position=nnn": {
-      "model": "wirelessautomate:block/resonator_casing_nnn"
+    "facing=south,position=p00": {
+      "model": "wirelessautomate:block/armilar/casing_p00"
     },
-    "position=nnc": {
-      "model": "wirelessautomate:block/resonator_casing_nnc"
+    "facing=south,position=p01": {
+      "model": "wirelessautomate:block/armilar/casing_p01"
     },
-    "position=nnp": {
-      "model": "wirelessautomate:block/resonator_casing_nnp"
+    "facing=south,position=p03": {
+      "model": "wirelessautomate:block/armilar/casing_p03"
     },
-    "position=ncn": {
-      "model": "wirelessautomate:block/resonator_casing_ncn"
+    "facing=south,position=p04": {
+      "model": "wirelessautomate:block/armilar/casing_p04"
     },
-    "position=ncc": {
-      "model": "wirelessautomate:block/resonator_casing_ncc"
+    "facing=south,position=p10": {
+      "model": "wirelessautomate:block/armilar/casing_p10"
     },
-    "position=ncp": {
-      "model": "wirelessautomate:block/resonator_casing_ncp"
+    "facing=south,position=p11": {
+      "model": "wirelessautomate:block/armilar/casing_p11"
     },
-    "position=npn": {
-      "model": "wirelessautomate:block/resonator_casing_npn"
+    "facing=south,position=p12": {
+      "model": "wirelessautomate:block/armilar/casing_p12"
     },
-    "position=npc": {
-      "model": "wirelessautomate:block/resonator_casing_npc"
+    "facing=south,position=p13": {
+      "model": "wirelessautomate:block/armilar/casing_p13"
     },
-    "position=npp": {
-      "model": "wirelessautomate:block/resonator_casing_npp"
+    "facing=south,position=p14": {
+      "model": "wirelessautomate:block/armilar/casing_p14"
     },
-    "position=cnn": {
-      "model": "wirelessautomate:block/resonator_casing_cnn"
+    "facing=south,position=p20": {
+      "model": "wirelessautomate:block/armilar/casing_p20"
     },
-    "position=cnc": {
-      "model": "wirelessautomate:block/resonator_casing_cnc"
+    "facing=south,position=p21": {
+      "model": "wirelessautomate:block/armilar/casing_p21"
     },
-    "position=cnp": {
-      "model": "wirelessautomate:block/resonator_casing_cnp"
+    "facing=south,position=p22": {
+      "model": "wirelessautomate:block/armilar/casing_p22"
     },
-    "position=ccn": {
-      "model": "wirelessautomate:block/resonator_casing_ccn"
+    "facing=south,position=p23": {
+      "model": "wirelessautomate:block/armilar/casing_p23"
     },
-    "position=ccp": {
-      "model": "wirelessautomate:block/resonator_casing_ccp"
+    "facing=south,position=p30": {
+      "model": "wirelessautomate:block/armilar/casing_p30"
     },
-    "position=cpn": {
-      "model": "wirelessautomate:block/resonator_casing_cpn"
+    "facing=south,position=p31": {
+      "model": "wirelessautomate:block/armilar/casing_p31"
     },
-    "position=cpc": {
-      "model": "wirelessautomate:block/resonator_casing_cpc"
+    "facing=south,position=p32": {
+      "model": "wirelessautomate:block/armilar/casing_p32"
     },
-    "position=cpp": {
-      "model": "wirelessautomate:block/resonator_casing_cpp"
+    "facing=south,position=p33": {
+      "model": "wirelessautomate:block/armilar/casing_p33"
     },
-    "position=pnn": {
-      "model": "wirelessautomate:block/resonator_casing_pnn"
+    "facing=south,position=p34": {
+      "model": "wirelessautomate:block/armilar/casing_p34"
     },
-    "position=pnc": {
-      "model": "wirelessautomate:block/resonator_casing_pnc"
+    "facing=south,position=p40": {
+      "model": "wirelessautomate:block/armilar/casing_p40"
     },
-    "position=pnp": {
-      "model": "wirelessautomate:block/resonator_casing_pnp"
+    "facing=south,position=p41": {
+      "model": "wirelessautomate:block/armilar/casing_p41"
     },
-    "position=pcn": {
-      "model": "wirelessautomate:block/resonator_casing_pcn"
+    "facing=south,position=p43": {
+      "model": "wirelessautomate:block/armilar/casing_p43"
     },
-    "position=pcc": {
-      "model": "wirelessautomate:block/resonator_casing_pcc"
+    "facing=south,position=p44": {
+      "model": "wirelessautomate:block/armilar/casing_p44"
     },
-    "position=pcp": {
-      "model": "wirelessautomate:block/resonator_casing_pcp"
+    "facing=west,position=loose": {
+      "model": "wirelessautomate:block/resonator_casing_loose"
     },
-    "position=ppn": {
-      "model": "wirelessautomate:block/resonator_casing_ppn"
+    "facing=west,position=p00": {
+      "model": "wirelessautomate:block/armilar/casing_p00",
+      "y": 90
     },
-    "position=ppc": {
-      "model": "wirelessautomate:block/resonator_casing_ppc"
+    "facing=west,position=p01": {
+      "model": "wirelessautomate:block/armilar/casing_p01",
+      "y": 90
     },
-    "position=ppp": {
-      "model": "wirelessautomate:block/resonator_casing_ppp"
+    "facing=west,position=p03": {
+      "model": "wirelessautomate:block/armilar/casing_p03",
+      "y": 90
+    },
+    "facing=west,position=p04": {
+      "model": "wirelessautomate:block/armilar/casing_p04",
+      "y": 90
+    },
+    "facing=west,position=p10": {
+      "model": "wirelessautomate:block/armilar/casing_p10",
+      "y": 90
+    },
+    "facing=west,position=p11": {
+      "model": "wirelessautomate:block/armilar/casing_p11",
+      "y": 90
+    },
+    "facing=west,position=p12": {
+      "model": "wirelessautomate:block/armilar/casing_p12",
+      "y": 90
+    },
+    "facing=west,position=p13": {
+      "model": "wirelessautomate:block/armilar/casing_p13",
+      "y": 90
+    },
+    "facing=west,position=p14": {
+      "model": "wirelessautomate:block/armilar/casing_p14",
+      "y": 90
+    },
+    "facing=west,position=p20": {
+      "model": "wirelessautomate:block/armilar/casing_p20",
+      "y": 90
+    },
+    "facing=west,position=p21": {
+      "model": "wirelessautomate:block/armilar/casing_p21",
+      "y": 90
+    },
+    "facing=west,position=p22": {
+      "model": "wirelessautomate:block/armilar/casing_p22",
+      "y": 90
+    },
+    "facing=west,position=p23": {
+      "model": "wirelessautomate:block/armilar/casing_p23",
+      "y": 90
+    },
+    "facing=west,position=p30": {
+      "model": "wirelessautomate:block/armilar/casing_p30",
+      "y": 90
+    },
+    "facing=west,position=p31": {
+      "model": "wirelessautomate:block/armilar/casing_p31",
+      "y": 90
+    },
+    "facing=west,position=p32": {
+      "model": "wirelessautomate:block/armilar/casing_p32",
+      "y": 90
+    },
+    "facing=west,position=p33": {
+      "model": "wirelessautomate:block/armilar/casing_p33",
+      "y": 90
+    },
+    "facing=west,position=p34": {
+      "model": "wirelessautomate:block/armilar/casing_p34",
+      "y": 90
+    },
+    "facing=west,position=p40": {
+      "model": "wirelessautomate:block/armilar/casing_p40",
+      "y": 90
+    },
+    "facing=west,position=p41": {
+      "model": "wirelessautomate:block/armilar/casing_p41",
+      "y": 90
+    },
+    "facing=west,position=p43": {
+      "model": "wirelessautomate:block/armilar/casing_p43",
+      "y": 90
+    },
+    "facing=west,position=p44": {
+      "model": "wirelessautomate:block/armilar/casing_p44",
+      "y": 90
+    },
+    "facing=north,position=loose": {
+      "model": "wirelessautomate:block/resonator_casing_loose"
+    },
+    "facing=north,position=p00": {
+      "model": "wirelessautomate:block/armilar/casing_p00",
+      "y": 180
+    },
+    "facing=north,position=p01": {
+      "model": "wirelessautomate:block/armilar/casing_p01",
+      "y": 180
+    },
+    "facing=north,position=p03": {
+      "model": "wirelessautomate:block/armilar/casing_p03",
+      "y": 180
+    },
+    "facing=north,position=p04": {
+      "model": "wirelessautomate:block/armilar/casing_p04",
+      "y": 180
+    },
+    "facing=north,position=p10": {
+      "model": "wirelessautomate:block/armilar/casing_p10",
+      "y": 180
+    },
+    "facing=north,position=p11": {
+      "model": "wirelessautomate:block/armilar/casing_p11",
+      "y": 180
+    },
+    "facing=north,position=p12": {
+      "model": "wirelessautomate:block/armilar/casing_p12",
+      "y": 180
+    },
+    "facing=north,position=p13": {
+      "model": "wirelessautomate:block/armilar/casing_p13",
+      "y": 180
+    },
+    "facing=north,position=p14": {
+      "model": "wirelessautomate:block/armilar/casing_p14",
+      "y": 180
+    },
+    "facing=north,position=p20": {
+      "model": "wirelessautomate:block/armilar/casing_p20",
+      "y": 180
+    },
+    "facing=north,position=p21": {
+      "model": "wirelessautomate:block/armilar/casing_p21",
+      "y": 180
+    },
+    "facing=north,position=p22": {
+      "model": "wirelessautomate:block/armilar/casing_p22",
+      "y": 180
+    },
+    "facing=north,position=p23": {
+      "model": "wirelessautomate:block/armilar/casing_p23",
+      "y": 180
+    },
+    "facing=north,position=p30": {
+      "model": "wirelessautomate:block/armilar/casing_p30",
+      "y": 180
+    },
+    "facing=north,position=p31": {
+      "model": "wirelessautomate:block/armilar/casing_p31",
+      "y": 180
+    },
+    "facing=north,position=p32": {
+      "model": "wirelessautomate:block/armilar/casing_p32",
+      "y": 180
+    },
+    "facing=north,position=p33": {
+      "model": "wirelessautomate:block/armilar/casing_p33",
+      "y": 180
+    },
+    "facing=north,position=p34": {
+      "model": "wirelessautomate:block/armilar/casing_p34",
+      "y": 180
+    },
+    "facing=north,position=p40": {
+      "model": "wirelessautomate:block/armilar/casing_p40",
+      "y": 180
+    },
+    "facing=north,position=p41": {
+      "model": "wirelessautomate:block/armilar/casing_p41",
+      "y": 180
+    },
+    "facing=north,position=p43": {
+      "model": "wirelessautomate:block/armilar/casing_p43",
+      "y": 180
+    },
+    "facing=north,position=p44": {
+      "model": "wirelessautomate:block/armilar/casing_p44",
+      "y": 180
+    },
+    "facing=east,position=loose": {
+      "model": "wirelessautomate:block/resonator_casing_loose"
+    },
+    "facing=east,position=p00": {
+      "model": "wirelessautomate:block/armilar/casing_p00",
+      "y": 270
+    },
+    "facing=east,position=p01": {
+      "model": "wirelessautomate:block/armilar/casing_p01",
+      "y": 270
+    },
+    "facing=east,position=p03": {
+      "model": "wirelessautomate:block/armilar/casing_p03",
+      "y": 270
+    },
+    "facing=east,position=p04": {
+      "model": "wirelessautomate:block/armilar/casing_p04",
+      "y": 270
+    },
+    "facing=east,position=p10": {
+      "model": "wirelessautomate:block/armilar/casing_p10",
+      "y": 270
+    },
+    "facing=east,position=p11": {
+      "model": "wirelessautomate:block/armilar/casing_p11",
+      "y": 270
+    },
+    "facing=east,position=p12": {
+      "model": "wirelessautomate:block/armilar/casing_p12",
+      "y": 270
+    },
+    "facing=east,position=p13": {
+      "model": "wirelessautomate:block/armilar/casing_p13",
+      "y": 270
+    },
+    "facing=east,position=p14": {
+      "model": "wirelessautomate:block/armilar/casing_p14",
+      "y": 270
+    },
+    "facing=east,position=p20": {
+      "model": "wirelessautomate:block/armilar/casing_p20",
+      "y": 270
+    },
+    "facing=east,position=p21": {
+      "model": "wirelessautomate:block/armilar/casing_p21",
+      "y": 270
+    },
+    "facing=east,position=p22": {
+      "model": "wirelessautomate:block/armilar/casing_p22",
+      "y": 270
+    },
+    "facing=east,position=p23": {
+      "model": "wirelessautomate:block/armilar/casing_p23",
+      "y": 270
+    },
+    "facing=east,position=p30": {
+      "model": "wirelessautomate:block/armilar/casing_p30",
+      "y": 270
+    },
+    "facing=east,position=p31": {
+      "model": "wirelessautomate:block/armilar/casing_p31",
+      "y": 270
+    },
+    "facing=east,position=p32": {
+      "model": "wirelessautomate:block/armilar/casing_p32",
+      "y": 270
+    },
+    "facing=east,position=p33": {
+      "model": "wirelessautomate:block/armilar/casing_p33",
+      "y": 270
+    },
+    "facing=east,position=p34": {
+      "model": "wirelessautomate:block/armilar/casing_p34",
+      "y": 270
+    },
+    "facing=east,position=p40": {
+      "model": "wirelessautomate:block/armilar/casing_p40",
+      "y": 270
+    },
+    "facing=east,position=p41": {
+      "model": "wirelessautomate:block/armilar/casing_p41",
+      "y": 270
+    },
+    "facing=east,position=p43": {
+      "model": "wirelessautomate:block/armilar/casing_p43",
+      "y": 270
+    },
+    "facing=east,position=p44": {
+      "model": "wirelessautomate:block/armilar/casing_p44",
+      "y": 270
     }
   }
 }

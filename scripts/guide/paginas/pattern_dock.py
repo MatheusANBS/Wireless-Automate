@@ -137,7 +137,7 @@ Ao lado do estado a tela avisa quantas máquinas estão **fora do alcance** ou *
 
 ## Receita
 
-Um Roteador Wireless no meio de Carcaças de Porcelana, com Lingotes de Liga de Sinal, um **Pattern Provider** e um
+Um Roteador Wireless no meio de Lajes do Ressonador, com Lingotes de Liga de Sinal, um **Pattern Provider** e um
 **Processador de Engenharia** do AE2 (só com o AE2 ou o RS2). Sem o AE2, num pack só com o RS2, a receita troca o
 provedor por um **Autocrafter** (de qualquer cor) e o processador pelo **Processador Avançado** do RS2. Ela faz a Doca
 Básica; o Cartão de Upgrade sobe o tier, como no roteador.
@@ -252,7 +252,7 @@ Next to the state, the screen warns how many machines are **out of reach** or **
 
 ## Recipe
 
-A Wireless Router among Porcelain Casings, with Signal Alloy Ingots, an AE2 **Pattern Provider** and an AE2
+A Wireless Router among Resonator Floors, with Signal Alloy Ingots, an AE2 **Pattern Provider** and an AE2
 **Engineering Processor** (only with AE2 or RS2). Without AE2, in a pack with only RS2, the recipe swaps the provider for
 an **Autocrafter** (any color) and the processor for the RS2 **Advanced Processor**. It makes the Basic Dock; the
 Upgrade Card raises the tier, as with the router.

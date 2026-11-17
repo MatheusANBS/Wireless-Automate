@@ -8,6 +8,7 @@ import io.github.matheusanbs.wirelessautomate.block.RouterTier;
 import io.github.matheusanbs.wirelessautomate.registry.ModBlocks;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorBill;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorFormation;
+import io.github.matheusanbs.wirelessautomate.resonator.ResonatorLayout;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorLayout.Member;
 import io.github.matheusanbs.wirelessautomate.resonator.ResonatorLayout.Part;
 import java.util.List;
@@ -26,18 +27,20 @@ import org.joml.Vector3f;
 import org.lwjgl.opengl.GL11;
 
 /**
- * A vista 3D da Estrutura do Ressonador no JEI: os membros da montagem de exemplo nos estados montados, com os
- * modelos do jogo. Arrastar gira (yaw e pitch), a roda dá zoom e a camada mostra só até aquela altura, com os blocos
- * soltos: as faces escondidas do modelo montado são o forro escuro, e o corte não se leria. As duas listas de estados
- * são montadas uma vez, no primeiro desenho; por quadro só a matriz e a ordem dos Vidros mudam.
+ * A vista 3D da Armilar no JEI: os 35 membros da montagem de exemplo nos estados montados, com os modelos do
+ * jogo. Arrastar gira (yaw e pitch), a roda dá zoom e a camada mostra só até aquela altura, com os blocos soltos: o
+ * corte do modelo montado (um pedaço da escultura) não se leria. As duas listas de estados são montadas uma vez, no
+ * primeiro desenho; por quadro só a matriz muda.
  */
 final class StructureView {
-    /** Camadas da caixa; a camada {@code LAYERS} é o Tudo, a caixa inteira montada. */
-    static final int LAYERS = 5;
+    /** Camadas com bloco (y de 0 a 2); a camada {@code LAYERS} é o Tudo, a Armilar inteira montada. */
+    static final int LAYERS = 3;
 
     private static final float DEPTH = 150f;
-    private static final float CENTER = LAYERS / 2f;
-    /** Quantos blocos cabem no lado da vista com zoom 1 (a caixa 5 × 5 × 5 vista de quina). */
+    private static final float CENTER = ResonatorLayout.SIZE / 2f;
+    /** O centro da altura: a Armilar tem 3 camadas, do chão ao alto do Berço. */
+    private static final float CENTER_Y = LAYERS / 2f;
+    /** Quantos blocos cabem no lado da vista com zoom 1 (a base 5 × 5 vista de quina). */
     private static final float FIT = 8.2f;
     private static final float MIN_PITCH = -10f;
     private static final float MAX_PITCH = 80f;
@@ -55,10 +58,6 @@ final class StructureView {
     private int[] xs;
     private int[] ys;
     private int[] zs;
-    /** Os índices dos Vidros, reordenados de trás para a frente a cada quadro. */
-    private int[] glass;
-    private boolean[] isGlass;
-    private float[] glassDepth;
 
     /** O Núcleo de frente para quem olha, um pouco de cima. */
     private float yaw = 45f;
@@ -69,7 +68,6 @@ final class StructureView {
     private final Matrix4f matrix = new Matrix4f();
     private final Vector3f light0 = new Vector3f();
     private final Vector3f light1 = new Vector3f();
-    private final Vector3f probe = new Vector3f();
 
     StructureView(ResonatorBill bill) {
         this.bill = bill;
@@ -112,7 +110,7 @@ final class StructureView {
                 .scale(scale, -scale, scale)
                 .rotateX(rad(pitch))
                 .rotateY(rad(yaw))
-                .translate(-CENTER, -CENTER, -CENTER);
+                .translate(-CENTER, -CENTER_Y, -CENTER);
         pose.mulPose(matrix);
 
         // luz fixa no mundo: gira com a estrutura, como a sombra das faces de um bloco colocado
@@ -124,19 +122,11 @@ final class StructureView {
         MultiBufferSource.BufferSource buffers = g.bufferSource();
         BlockState[] shown = layer < LAYERS ? looseStates : states;
         for (int i = 0; i < states.length; i++) {
-            if (ys[i] < layer && !isGlass[i]) {
+            if (ys[i] < layer) {
                 render(blocks, pose, buffers, shown, i);
             }
         }
         buffers.endBatch();
-        // o Vidro por último e de trás para a frente, para um vidro deixar ver o outro
-        sortGlass(pose.last().pose());
-        for (int i : glass) {
-            if (ys[i] < layer) {
-                render(blocks, pose, buffers, shown, i);
-                buffers.endBatch();
-            }
-        }
         pose.popPose();
         Lighting.setupFor3DItems();
         // o que vier depois (slots, dicas) não fica atrás dos blocos; o scissor limita a limpeza à vista
@@ -153,24 +143,6 @@ final class StructureView {
         pose.popPose();
     }
 
-    /** Ordena os Vidros pela profundidade do centro na tela, do mais longe ao mais perto (z menor primeiro). */
-    private void sortGlass(Matrix4f view) {
-        for (int k = 0; k < glass.length; k++) {
-            int i = glass[k];
-            view.transformPosition(xs[i] + 0.5f, ys[i] + 0.5f, zs[i] + 0.5f, probe);
-            glassDepth[i] = probe.z;
-        }
-        for (int a = 1; a < glass.length; a++) {
-            int moving = glass[a];
-            int b = a - 1;
-            while (b >= 0 && glassDepth[glass[b]] > glassDepth[moving]) {
-                glass[b + 1] = glass[b];
-                b--;
-            }
-            glass[b + 1] = moving;
-        }
-    }
-
     /** Os estados montados e soltos de cada membro, pelas mesmas regras do mundo; o Núcleo Esmeralda. */
     private void build() {
         List<Member> members = bill.members();
@@ -180,7 +152,6 @@ final class StructureView {
         xs = new int[size];
         ys = new int[size];
         zs = new int[size];
-        int glassCount = 0;
         for (int i = 0; i < size; i++) {
             Member member = members.get(i);
             states[i] = ResonatorFormation.formedState(loose(member.part()), member);
@@ -188,26 +159,14 @@ final class StructureView {
             xs[i] = member.x();
             ys[i] = member.y();
             zs[i] = member.z();
-            if (member.part() == Part.GLASS) {
-                glassCount++;
-            }
-        }
-        glass = new int[glassCount];
-        isGlass = new boolean[size];
-        glassDepth = new float[size];
-        int k = 0;
-        for (int i = 0; i < size; i++) {
-            if (members.get(i).part() == Part.GLASS) {
-                glass[k++] = i;
-                isGlass[i] = true;
-            }
         }
     }
 
     private static BlockState loose(Part part) {
         Block block = switch (part) {
             case CASING -> ModBlocks.RESONATOR_CASING.get();
-            case GLASS -> ModBlocks.RESONATOR_GLASS.get();
+            case COLUMN -> ModBlocks.RESONATOR_COLUMN.get();
+            case CRADLE -> ModBlocks.RESONATOR_CRADLE.get();
             case CORE -> ModBlocks.RESONANCE_CORE.get();
             case ENERGY_PORT -> ModBlocks.RESONATOR_ENERGY_PORT.get();
             case CRYSTAL_PORT -> ModBlocks.RESONATOR_CRYSTAL_PORT.get();

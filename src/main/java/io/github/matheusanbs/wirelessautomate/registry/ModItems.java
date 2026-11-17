@@ -146,7 +146,14 @@ public final class ModItems {
 
     /** Os blocos do Ressonador; o Núcleo leva o tier no componente do estado. */
     public static final DeferredItem<BlockItem> RESONATOR_CASING = ITEMS.registerSimpleBlockItem(ModBlocks.RESONATOR_CASING);
-    public static final DeferredItem<BlockItem> RESONATOR_GLASS = ITEMS.registerSimpleBlockItem(ModBlocks.RESONATOR_GLASS);
+    public static final DeferredItem<BlockItem> RESONATOR_COLUMN =
+            ITEMS.registerSimpleBlockItem(ModBlocks.RESONATOR_COLUMN);
+    public static final DeferredItem<BlockItem> RESONATOR_CRADLE =
+            ITEMS.registerSimpleBlockItem(ModBlocks.RESONATOR_CRADLE);
+    /** O item do Vidro também vira Laje. */
+    static {
+        ITEMS.addAlias(WirelessAutomate.id("resonator_glass"), WirelessAutomate.id("resonator_casing"));
+    }
     public static final DeferredItem<ResonanceCoreItem> RESONANCE_CORE = ITEMS.register("resonance_core",
             () -> new ResonanceCoreItem(ModBlocks.RESONANCE_CORE.get(), new Item.Properties()));
     public static final DeferredItem<BlockItem> RESONATOR_ENERGY_PORT =

@@ -1,11 +1,14 @@
 {
   "parent": "minecraft:block/block",
-  "render_type": "minecraft:solid",
-  "ambientocclusion": true,
+  "render_type": "minecraft:cutout",
+  "ambientocclusion": false,
   "textures": {
-    "resonator_casing_solta": "wirelessautomate:block/resonator_casing_solta",
-    "resonator_crystal_port_dentro": "wirelessautomate:block/resonator_crystal_port_dentro",
+    "resonator_coral_liso": "wirelessautomate:block/resonator_coral_liso",
     "resonator_crystal_port_solto": "wirelessautomate:block/resonator_crystal_port_solto",
+    "resonator_crystal_port_topo": "wirelessautomate:block/resonator_crystal_port_topo",
+    "resonator_familia_lado": "wirelessautomate:block/resonator_familia_lado",
+    "resonator_fundo": "wirelessautomate:block/resonator_fundo",
+    "resonator_latao_liso": "wirelessautomate:block/resonator_latao_liso",
     "particle": "wirelessautomate:block/resonator_crystal_port_solto"
   },
   "elements": [
@@ -13,7 +16,7 @@
       "from": [
         0,
         0,
-        0
+        2
       ],
       "to": [
         16,
@@ -21,26 +24,6 @@
         16
       ],
       "faces": {
-        "down": {
-          "uv": [
-            0.0,
-            0.0,
-            16.0,
-            16.0
-          ],
-          "texture": "#resonator_casing_solta",
-          "cullface": "down"
-        },
-        "up": {
-          "uv": [
-            0.0,
-            0.0,
-            16.0,
-            16.0
-          ],
-          "texture": "#resonator_casing_solta",
-          "cullface": "up"
-        },
         "north": {
           "uv": [
             0.0,
@@ -48,8 +31,7 @@
             16.0,
             16.0
           ],
-          "texture": "#resonator_crystal_port_solto",
-          "cullface": "north"
+          "texture": "#resonator_crystal_port_solto"
         },
         "south": {
           "uv": [
@@ -58,28 +40,157 @@
             16.0,
             16.0
           ],
-          "texture": "#resonator_crystal_port_dentro",
+          "texture": "#resonator_familia_lado",
           "cullface": "south"
-        },
-        "west": {
-          "uv": [
-            0.0,
-            0.0,
-            16.0,
-            16.0
-          ],
-          "texture": "#resonator_casing_solta",
-          "cullface": "west"
         },
         "east": {
           "uv": [
             0.0,
             0.0,
+            14.0,
+            16.0
+          ],
+          "texture": "#resonator_familia_lado",
+          "cullface": "east"
+        },
+        "west": {
+          "uv": [
+            2.0,
+            0.0,
             16.0,
             16.0
           ],
-          "texture": "#resonator_casing_solta",
-          "cullface": "east"
+          "texture": "#resonator_familia_lado",
+          "cullface": "west"
+        },
+        "up": {
+          "uv": [
+            0.0,
+            2.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#resonator_crystal_port_topo",
+          "cullface": "up"
+        },
+        "down": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            14.0
+          ],
+          "texture": "#resonator_fundo",
+          "cullface": "down"
+        }
+      }
+    },
+    {
+      "from": [
+        4,
+        4,
+        1
+      ],
+      "to": [
+        12,
+        12,
+        2
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            4.0,
+            4.0,
+            12.0,
+            12.0
+          ],
+          "texture": "#resonator_crystal_port_solto"
+        },
+        "east": {
+          "uv": [
+            0.0,
+            0.0,
+            1.0,
+            8.0
+          ],
+          "texture": "#resonator_coral_liso"
+        },
+        "west": {
+          "uv": [
+            0.0,
+            0.0,
+            1.0,
+            8.0
+          ],
+          "texture": "#resonator_coral_liso"
+        },
+        "up": {
+          "uv": [
+            0.0,
+            0.0,
+            8.0,
+            1.0
+          ],
+          "texture": "#resonator_coral_liso"
+        },
+        "down": {
+          "uv": [
+            0.0,
+            0.0,
+            8.0,
+            1.0
+          ],
+          "texture": "#resonator_coral_liso"
+        }
+      }
+    },
+    {
+      "from": [
+        12,
+        6,
+        1
+      ],
+      "to": [
+        13,
+        10,
+        2
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            3.0,
+            6.0,
+            4.0,
+            10.0
+          ],
+          "texture": "#resonator_crystal_port_solto"
+        },
+        "east": {
+          "uv": [
+            0.0,
+            0.0,
+            1.0,
+            4.0
+          ],
+          "texture": "#resonator_latao_liso"
+        },
+        "up": {
+          "uv": [
+            0.0,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "texture": "#resonator_latao_liso"
+        },
+        "down": {
+          "uv": [
+            0.0,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "texture": "#resonator_latao_liso"
         }
       }
     }

@@ -9,17 +9,20 @@ def _scene_blocks():
 
 SCENE_RESONATOR = '''<GameScene zoom="3" interactive={true}>
 ''' + _scene_blocks() + '''
-  <BlockAnnotation x="2" y="2" z="4" color="#f0603e">
+  <BlockAnnotation x="2" y="0" z="4" color="#f0603e">
     {CORE}
   </BlockAnnotation>
-  <BlockAnnotation x="2" y="2" z="0" color="#45d6cc">
+  <BlockAnnotation x="4" y="0" z="2" color="#45d6cc">
     {ENERGY}
   </BlockAnnotation>
-  <BlockAnnotation x="4" y="2" z="2" color="#e2b347">
+  <BlockAnnotation x="0" y="0" z="2" color="#e2b347">
     {CRYSTALS}
   </BlockAnnotation>
-  <BlockAnnotation x="2" y="4" z="2" color="#a06bff">
-    {TUNER}
+  <BlockAnnotation x="1" y="1" z="3" color="#a06bff">
+    {COLUMN}
+  </BlockAnnotation>
+  <BlockAnnotation x="2" y="1" z="2" color="#7fb8ff">
+    {CRADLE}
   </BlockAnnotation>
   <IsometricCamera yaw="{YAW}" pitch="30" />
 </GameScene>'''
@@ -78,26 +81,28 @@ def resonator_upkeep_table(lang):
 
 
 RESONATOR_ANNOTATIONS = {
-    'pt': dict(CORE='Núcleo de Ressonância: a tela e os cristais',
+    'pt': dict(CORE='Núcleo de Ressonância: a tela e os cristais, na frente',
                ENERGY='Porta de Energia: o roteador tira a energia daqui',
                CRYSTALS='Porta de Cristais: entram cristais e catalisador, saem Opacos e rachados',
-               TUNER='Sintonizador (opcional)', YAW='315'),
-    'en': dict(CORE='Resonance Core: the screen and the crystals',
+               COLUMN='Coluna do Ressonador: uma em cada diagonal, nas camadas 2 e 3',
+               CRADLE='Berço do Sol: o centro das camadas 2 e 3', YAW='315'),
+    'en': dict(CORE='Resonance Core: the screen and the crystals, at the front',
                ENERGY='Resonator Energy Port: a router pulls the energy here',
                CRYSTALS='Resonator Crystal Port: crystals and catalyst in, Dull and cracked ones out',
-               TUNER='Resonator Tuner (optional)', YAW='315'),
+               COLUMN='Resonator Column: one on each diagonal, on layers 2 and 3',
+               CRADLE='Sun Cradle: the center of layers 2 and 3', YAW='315'),
 }
 
 
 PAGINA = page('signal-resonator.md', front('Ressonador de Sinal', 'wirelessautomate:resonance_core', 'energia', 19, item_ids=[
-    'wirelessautomate:resonator_casing', 'wirelessautomate:resonator_glass', 'wirelessautomate:resonance_core',
-    'wirelessautomate:resonator_energy_port', 'wirelessautomate:resonator_crystal_port',
-    'wirelessautomate:resonator_tuner']) + '''
+    'wirelessautomate:resonator_casing', 'wirelessautomate:resonator_column', 'wirelessautomate:resonator_cradle',
+    'wirelessautomate:resonance_core', 'wirelessautomate:resonator_energy_port',
+    'wirelessautomate:resonator_crystal_port', 'wirelessautomate:resonator_tuner']) + '''
 # Ressonador de Sinal
 
 <ItemImage id="wirelessautomate:resonance_core" scale="2" float="left" />
 
-Gerador de vários blocos: cristais vibram numa caixa e você **sintoniza** o Núcleo para tirar o máximo de FE.
+Gerador de vários blocos, a **Armilar**: cristais vibram no Berço do Sol e você **sintoniza** o Núcleo para tirar o máximo de FE.
 Cristais, catalisadores e Corações vêm do [Quartzo de Sinal](signal-quartz.md).
 
 <br clear="all" />
@@ -105,8 +110,8 @@ Cristais, catalisadores e Corações vêm do [Quartzo de Sinal](signal-quartz.md
 ## Como usar
 
 1. Faça o **Núcleo de Ressonância** (a receita pede um **Coração do Ressonador Básico**) e coloque-o.
-2. Clique nele com a mão vazia: a estrutura aparece **projetada** no mundo. **Shift + roda do mouse** troca a montagem.
-3. Monte a caixa em volta seguindo a projeção.
+2. Clique nele com a mão vazia: a estrutura aparece **projetada** no mundo.
+3. Monte a estrutura seguindo a projeção.
 4. Ponha um cristal: clique no Núcleo com ele na mão.
 5. Clique no Núcleo montado para abrir a tela e gire o dial até acender **EM SINTONIA**.
 6. Prenda um [Roteador](router.md) na **Porta de Energia**, face em **Extrai** na aba **Energia**.
@@ -115,20 +120,21 @@ Cristais, catalisadores e Corações vêm do [Quartzo de Sinal](signal-quartz.md
 
 ''' + fill(SCENE_RESONATOR, **RESONATOR_ANNOTATIONS['pt']) + '''
 
-A cena mostra a montagem **Vitrine**. Gire-a com o mouse.
+A cena mostra a estrutura pronta. Gire-a com o mouse. São **35 blocos** numa caixa de 5×5×5, de cinco camadas; a frente é o lado do Núcleo.
 
-- Caixa **5×5×5 oca**: **Carcaça de Porcelana** nas arestas e nos cantos; o miolo 3×3×3 fica vazio.
-- No miolo das faces (nunca nas arestas): **um Núcleo**, **pelo menos uma Porta de Energia**, **pelo menos uma Porta
-  de Cristais**, no máximo um **Sintonizador** (opcional) e Vidro no resto.
-- Exemplos: **Vitrine** (janela de Vidro 3×3 numa lateral) e **Faixa** (três vidros no alto de cada lateral).
-- Dois Ressonadores **não dividem parede**.
+1. **Camada 1, o chão:** o **Núcleo** no meio da frente, a **Porta de Energia** à direita e a **Porta de Cristais** à esquerda, vistas de frente. O **Sintonizador** (opcional) fica atrás, e a casa dele leva uma **Laje** quando ele falta. O resto do chão é **Laje**.
+2. **Camadas 2 e 3:** uma **Coluna** em cada uma das quatro diagonais em volta do centro e um **Berço do Sol** no centro, em cada camada. As outras casas dessas camadas ficam vazias.
+3. **Camadas 4 e 5:** vazias. A caixa que o Núcleo confere tem as cinco camadas, e qualquer bloco nas duas de cima impede a montagem.
+
+- Dois Ressonadores **não dividem blocos**.
 
 Se não monta, clique no Núcleo: a barra de ação diz o que impede e o bloco errado fica contornado.
 
 | Bloco | Papel |
 | --- | --- |
-| ''' + item('resonator_casing') + ''' **Carcaça de Porcelana** | A casca da caixa. |
-| ''' + item('resonator_glass') + ''' **Vidro de Ressonância** | A janela para a câmara. |
+| ''' + item('resonator_casing') + ''' **Laje do Ressonador** | O chão da estrutura. |
+| ''' + item('resonator_column') + ''' **Coluna do Ressonador** | As quatro diagonais, nas camadas 2 e 3. |
+| ''' + item('resonator_cradle') + ''' **Berço do Sol** | O centro das camadas 2 e 3. |
 | ''' + item('resonance_core') + ''' **Núcleo de Ressonância** | Tela, cristais e energia gerada. |
 | ''' + item('resonator_energy_port') + ''' **Porta de Energia** | Só tira energia. |
 | ''' + item('resonator_crystal_port') + ''' **Porta de Cristais** | Recebe cristais e catalisador; devolve os Opacos e os rachados. |
@@ -174,11 +180,6 @@ Eco dá **+5%** de geração, sem teto.
 Atenção: um Afinado Ultimate rachado que chega pela Porta de Cristais também vai para o Eco. O Núcleo **guarda o
 Eco** quando é quebrado.
 
-## A câmara
-
-Pelo vidro: em sintonia, a figura de luz **fecha** e os cristais sobem e descem **juntos**. Fora, ela vira um
-**rabisco**; com geração zero, some. Cristal rachado fica escuro.
-
 ## Energia
 
 Um roteador do mesmo tier do Núcleo dá conta da geração cheia. O Núcleo guarda uns 10 segundos de geração; com a
@@ -204,20 +205,21 @@ Os números são os padrões; o JEI mostra os do seu pack.
 ## Receitas
 
 <RecipeFor id="wirelessautomate:resonator_casing" />
-<RecipeFor id="wirelessautomate:resonator_glass" />
+<RecipeFor id="wirelessautomate:resonator_column" />
+<RecipeFor id="wirelessautomate:resonator_cradle" />
 <RecipeFor id="wirelessautomate:resonance_core" />
 <RecipeFor id="wirelessautomate:resonator_energy_port" />
 <RecipeFor id="wirelessautomate:resonator_crystal_port" />
 <RecipeFor id="wirelessautomate:resonator_tuner" />
 ''', front('Signal Resonator', 'wirelessautomate:resonance_core', 'energia', 19, item_ids=[
-    'wirelessautomate:resonator_casing', 'wirelessautomate:resonator_glass', 'wirelessautomate:resonance_core',
-    'wirelessautomate:resonator_energy_port', 'wirelessautomate:resonator_crystal_port',
-    'wirelessautomate:resonator_tuner']) + '''
+    'wirelessautomate:resonator_casing', 'wirelessautomate:resonator_column', 'wirelessautomate:resonator_cradle',
+    'wirelessautomate:resonance_core', 'wirelessautomate:resonator_energy_port',
+    'wirelessautomate:resonator_crystal_port', 'wirelessautomate:resonator_tuner']) + '''
 # Signal Resonator
 
 <ItemImage id="wirelessautomate:resonance_core" scale="2" float="left" />
 
-A multiblock generator: crystals vibrate in a box and you **tune** the Core to pull the most FE out of them.
+A multiblock generator, the **Armillary**: crystals vibrate in the Sun Cradle and you **tune** the Core to pull the most FE out of them.
 Crystals, catalysts and Hearts come from [Signal Quartz](signal-quartz.md).
 
 <br clear="all" />
@@ -225,9 +227,8 @@ Crystals, catalysts and Hearts come from [Signal Quartz](signal-quartz.md).
 ## How to use it
 
 1. Craft the **Resonance Core** (its recipe takes a **Basic Resonator Heart**) and place it.
-2. Click it with an empty hand: the structure shows up **projected** in the world. **Shift + mouse wheel** switches
-   the build.
-3. Build the box around it following the projection.
+2. Click it with an empty hand: the structure shows up **projected** in the world.
+3. Build the structure following the projection.
 4. Add a crystal: click the Core with it in hand.
 5. Click the formed Core to open its screen and turn the dial until **IN TUNE** lights up.
 6. Attach a [Router](router.md) to the **Energy Port**, face on **Extract** in the **Energy** tab.
@@ -236,21 +237,21 @@ Crystals, catalysts and Hearts come from [Signal Quartz](signal-quartz.md).
 
 ''' + fill(SCENE_RESONATOR, **RESONATOR_ANNOTATIONS['en']) + '''
 
-The scene shows the **Showcase** build. Rotate it with the mouse.
+The scene shows the finished structure. Rotate it with the mouse. It is **35 blocks** in a 5×5×5 box of five layers; the front is the side the Core is on.
 
-- A **hollow 5×5×5 box**: **Porcelain Casing** on the edges and corners; the 3×3×3 inside stays empty.
-- On face positions (never on edges): **one Core**, **at least one Energy Port**, **at least one Crystal Port**, at most
-  one **Tuner** (optional) and Glass for the rest.
-- Examples: **Showcase** (a 3×3 Glass window on one side) and **Band** (three glass blocks along the top of each
-  side).
-- Two Resonators **can't share a wall**.
+1. **Layer 1, the floor:** the **Core** in the middle of the front, the **Energy Port** on the right and the **Crystal Port** on the left, seen from the front. The **Tuner** (optional) goes at the back, and its spot takes a **Floor** when it is missing. The rest of the floor is **Floor** blocks.
+2. **Layers 2 and 3:** a **Column** on each of the four diagonals around the center and a **Sun Cradle** in the center, on each layer. The other spots on those layers stay empty.
+3. **Layers 4 and 5:** empty. The box the Core checks has all five layers, and any block in the top two stops it from forming.
+
+- Two Resonators **can't share blocks**.
 
 If it doesn't form, click the Core: the action bar says what's in the way and the wrong block is outlined.
 
 | Block | Role |
 | --- | --- |
-| ''' + item('resonator_casing') + ''' **Porcelain Casing** | The shell of the box. |
-| ''' + item('resonator_glass') + ''' **Resonance Glass** | The window onto the chamber. |
+| ''' + item('resonator_casing') + ''' **Resonator Floor** | The floor of the structure. |
+| ''' + item('resonator_column') + ''' **Resonator Column** | The four diagonals, on layers 2 and 3. |
+| ''' + item('resonator_cradle') + ''' **Sun Cradle** | The center of layers 2 and 3. |
 | ''' + item('resonance_core') + ''' **Resonance Core** | Screen, crystals and generated power. |
 | ''' + item('resonator_energy_port') + ''' **Resonator Energy Port** | Only pulls energy out. |
 | ''' + item('resonator_crystal_port') + ''' **Resonator Crystal Port** | Takes crystals and catalyst; hands back Dull and cracked ones. |
@@ -296,11 +297,6 @@ Each Echo gives **+5%** generation, with no ceiling.
 Watch out: a cracked Tuned Ultimate crystal that arrives through the Crystal Port goes to the Echo too. The Core
 **keeps its Echo** when broken.
 
-## The chamber
-
-Through the glass: in tune, the figure of light **closes** and the crystals rise and fall **together**. Out of tune,
-it turns into a **scribble**; at zero generation, it disappears. A cracked crystal goes dark.
-
 ## Power
 
 A router of the Core's tier keeps up with full generation. The Core stores about 10 seconds of generation; when the
@@ -327,7 +323,8 @@ The numbers are the defaults; JEI shows your pack's.
 ## Recipes
 
 <RecipeFor id="wirelessautomate:resonator_casing" />
-<RecipeFor id="wirelessautomate:resonator_glass" />
+<RecipeFor id="wirelessautomate:resonator_column" />
+<RecipeFor id="wirelessautomate:resonator_cradle" />
 <RecipeFor id="wirelessautomate:resonance_core" />
 <RecipeFor id="wirelessautomate:resonator_energy_port" />
 <RecipeFor id="wirelessautomate:resonator_crystal_port" />

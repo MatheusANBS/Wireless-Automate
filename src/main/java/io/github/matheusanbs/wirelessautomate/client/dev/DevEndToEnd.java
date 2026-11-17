@@ -1,13 +1,13 @@
 package io.github.matheusanbs.wirelessautomate.client.dev;
 
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eScript.*;
-import static io.github.matheusanbs.wirelessautomate.client.dev.E2eShowcase.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eUi.*;
 
 import com.mojang.blaze3d.platform.NativeImage;
 import io.github.matheusanbs.wirelessautomate.GuiTheme;
 import io.github.matheusanbs.wirelessautomate.WirelessAutomate;
 import io.github.matheusanbs.wirelessautomate.client.router.NodePanel;
+import io.github.matheusanbs.wirelessautomate.client.dev.vitrine.Vitrine;
 import io.github.matheusanbs.wirelessautomate.client.router.RouterScreen;
 import io.github.matheusanbs.wirelessautomate.network.ResourceType;
 import java.io.IOException;
@@ -85,23 +85,14 @@ import io.github.matheusanbs.wirelessautomate.client.GuiThemes;
  * do nó ({@link NodePanel}), que não são widgets, pelos ganchos dele (o centro de cada um).
  *
  * <p>Esta classe é o motor (fila de passos, tick, espera, capturas e {@code result.txt}). A ordem do roteiro
- * fica no {@link E2eScript}, a vitrine no {@link E2eShowcase} e cada área de passos numa classe
- * {@code E2e*Steps} deste pacote.
+ * fica no {@link E2eScript}, a vitrine dos GIFs do CurseForge no pacote {@link Vitrine} (com
+ * {@code WA_VITRINE=<dir>}) e cada área de passos numa classe {@code E2e*Steps} deste pacote.
  */
 @EventBusSubscriber(modid = WirelessAutomate.MODID, value = Dist.CLIENT)
 public final class DevEndToEnd {
-    /** Vitrine para a página do CurseForge: com {@code WA_SHOWCASE=<dir>}, monta uma fábrica e fotografa. */
-    static final String SHOWCASE = System.getenv("WA_SHOWCASE");
     static final E2eSelection.Profile PROFILE = E2eSelection.profile(System.getenv("WA_E2E_PROFILE"));
     private static final String CAPTURE = envOr("WA_E2E_CAPTURE", PROFILE.capture());
-    private static final String OUTPUT = System.getenv("WA_E2E") != null ? System.getenv("WA_E2E") : SHOWCASE;
-    /**
-     * Ampliação das fotos da vitrine: o quadro é renderizado fora da tela em 1280x800 vezes este fator, com a
-     * interface na escala 2 vezes ele (o mesmo layout da escala 2 em 1280x800, com mais pixels). A janela
-     * continua pequena; só o framebuffer cresce. {@code WA_SHOWCASE_SCALE} muda o fator (1 desliga).
-     */
-    private static final int SHOWCASE_SCALE = SHOWCASE == null ? 1
-            : Math.max(1, Integer.parseInt(System.getenv().getOrDefault("WA_SHOWCASE_SCALE", "3")));
+    private static final String OUTPUT = System.getenv("WA_E2E") != null ? System.getenv("WA_E2E") : Vitrine.DIR;
     static final String WORLD = "wa-e2e";
     static final long STEP_TIMEOUT_MS = 20_000;
     private static final long WORLD_TIMEOUT_MS = 180_000;
@@ -113,13 +104,13 @@ public final class DevEndToEnd {
 
     /** Ação de um passo; pode falhar com {@link StepFailure}. */
     @FunctionalInterface
-    interface Action {
+    public interface Action {
         void run() throws Exception;
     }
 
     /** Condição de fim de um passo, avaliada a cada tick. */
     @FunctionalInterface
-    interface Check {
+    public interface Check {
         boolean done() throws Exception;
     }
 
@@ -127,17 +118,17 @@ public final class DevEndToEnd {
      * Um passo do roteiro: a ação roda uma vez e a condição a cada tick até valer ou o tempo
      * acabar; {@code state} descreve o que se via quando o tempo acabou.
      */
-    record Step(String name, long timeoutMs, Action action, Check check, State state) {
+    public record Step(String name, long timeoutMs, Action action, Check check, State state) {
     }
 
     /** O que o passo vê agora, para o log. */
     @FunctionalInterface
-    interface State {
+    public interface State {
         String describe() throws Exception;
     }
 
-    static final class StepFailure extends Exception {
-        StepFailure(String message) {
+    public static final class StepFailure extends Exception {
+        public StepFailure(String message) {
             super(message);
         }
     }
@@ -177,18 +168,7 @@ public final class DevEndToEnd {
             // sem options.txt o jogo abre a tela de acessibilidade, e a flag acima chega tarde: troca pela de título
             minecraft.setScreen(new TitleScreen(true));
         }
-        if (SHOWCASE_SCALE > 1 && ticks >= 3) {
-            // a janela pode mudar de tamanho depois (o GLFW avisa atrasado): reimpõe o framebuffer grande
-            var window = minecraft.getWindow();
-            if (window.getWidth() != 1280 * SHOWCASE_SCALE || window.getHeight() != 800 * SHOWCASE_SCALE) {
-                window.setWidth(1280 * SHOWCASE_SCALE);
-                window.setHeight(800 * SHOWCASE_SCALE);
-                minecraft.options.guiScale().set(2 * SHOWCASE_SCALE);
-                minecraft.resizeDisplay();
-                WirelessAutomate.LOGGER.info("vitrine: framebuffer {}x{}, escala de GUI {}", window.getWidth(),
-                        window.getHeight(), window.getGuiScale());
-            }
-        } else if (ticks >= 3 && (minecraft.getWindow().getWidth() != scaledWidth
+        if (ticks >= 3 && (minecraft.getWindow().getWidth() != scaledWidth
                 || minecraft.getWindow().getHeight() != scaledHeight)) {
             // no Windows a janela de 1280x800 sai menor e a escala 3 não deixa espaço para as
             // telas crescerem: escolhe a maior escala que caiba, sem salvar as opções do usuário. Refeito
@@ -231,7 +211,7 @@ public final class DevEndToEnd {
                 case SETTLING -> {
                     // deixa os chunks em volta chegarem ao cliente
                     if (elapsed() > 2_000) {
-                        steps = SHOWCASE != null ? showcase() : script();
+                        steps = Vitrine.DIR != null && System.getenv("WA_E2E") == null ? Vitrine.passos() : script();
                         enter(Phase.RUNNING);
                     }
                 }
@@ -390,11 +370,6 @@ public final class DevEndToEnd {
         }
         return new Step("captura " + file, STEP_TIMEOUT_MS, () -> {
             moveMouse(0, 0);
-            if (SHOWCASE != null) {
-                // vitrine: sem avisos de conquista nem mensagens do chat por cima das telas
-                Minecraft.getInstance().getToasts().clear();
-                Minecraft.getInstance().gui.getChat().clearMessages(false);
-            }
         }, () -> {
             if (stepTicks < 6) {
                 return false;
@@ -429,9 +404,9 @@ public final class DevEndToEnd {
         return value == null || value.isBlank() ? fallback : value;
     }
 
-    /** A vitrine e a captura de falha sempre saem; as demais pelo {@code WA_E2E_CAPTURE}. */
+    /** A captura de falha sempre sai; as demais pelo {@code WA_E2E_CAPTURE}. */
     static boolean captureWanted(String file) {
-        return SHOWCASE != null || "falha".equals(file) || E2eSelection.captureWanted(CAPTURE, file);
+        return "falha".equals(file) || E2eSelection.captureWanted(CAPTURE, file);
     }
 
     static void capture(Minecraft minecraft, String name) {

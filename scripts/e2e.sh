@@ -9,14 +9,18 @@
 #   ./scripts/e2e.sh --lista                      as suítes, com descrição e pré-requisito
 #   ./scripts/e2e.sh --only fx-base --capture fx-base --shaders complementary --out run/e2e-fx-comp   com shaderpack
 #   ./scripts/e2e.sh --skip guia,escuro --out run/e2e-x
+#   ./scripts/e2e.sh --vitrine todas              grava os quadros dos GIFs do CurseForge em run/vitrine, com o Complementary
+#   ./scripts/e2e.sh --vitrine armilar            só uma cena (roteador, filtro, bau, doca, tela, armilar)
 #
 # Opções: --only a,b | --skip a,b | --capture off|todas|prefixos | --variants off|todas|pt,escuro |
-#         --completo | --shaders nenhum|complementary|bsl | --out <dir> | --lista. O primeiro argumento sem "--" ainda
+#         --completo | --shaders nenhum|complementary|bsl | --out <dir> | --vitrine <cena|todas> | --lista. O primeiro argumento sem "--" ainda
 #         vale como <dir> (como antes).
 # --shaders: "nenhum" (o padrão) roda como sempre; "complementary" e "bsl" escrevem run/config/iris.properties (liga o
 # Iris e escolhe o pacote de run/shaderpacks) e abrem o cliente com ./gradlew runClient -Pshaders (Iris e Sodium só
 # no cliente de dev); "nenhum" grava enableShaders=false no mesmo arquivo, para um runClient -Pshaders manual depois
 # subir sem shader. O run/options.txt nunca é tocado.
+# --vitrine: em vez do roteiro, o jogo roda a vitrine (client/dev/vitrine): uma cena (ou todas) gravada quadro a quadro em
+# <out>/<cena>/, com o Complementary por padrão; depois `python -I scripts/curseforge/gif.py run/vitrine` monta os GIFs.
 # E2E_TIMEOUT=900 muda o tempo-limite total em segundos (padrão 600; 1500 com --completo).
 #
 # Abre o jogo com WA_E2E=<dir>. Na tela de título o mod cria o mundo plano "wa-e2e" (apaga o anterior), clica pela
@@ -36,7 +40,8 @@ CAPTURE=""
 VARIANTS=""
 COMPLETO=0
 LISTA=0
-SHADERS="nenhum"
+SHADERS=""
+VITRINE=""
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -46,6 +51,7 @@ while [ $# -gt 0 ]; do
         --variants) VARIANTS="${2:?--variants pede off, todas, pt ou escuro}"; shift 2 ;;
         --out) OUT="${2:?--out pede o diretório}"; shift 2 ;;
         --shaders) SHADERS="${2:?--shaders pede nenhum, complementary ou bsl}"; shift 2 ;;
+        --vitrine) VITRINE="${2:?--vitrine pede a cena ou todas}"; shift 2 ;;
         --completo) COMPLETO=1; shift ;;
         --lista) LISTA=1; shift ;;
         -h|--help) sed -n '2,28p' "${BASH_SOURCE[0]}"; exit 0 ;;
@@ -60,6 +66,9 @@ if [ "$LISTA" -eq 1 ]; then
     exit 0
 fi
 
+if [ -z "$SHADERS" ]; then
+    if [ -n "$VITRINE" ]; then SHADERS="complementary"; else SHADERS="nenhum"; fi
+fi
 case "$SHADERS" in
     nenhum) PACK=""; GRADLE_FLAGS=() ;;
     complementary) PACK="ComplementaryReimagined_r5.9.3.zip"; GRADLE_FLAGS=(-Pshaders) ;;
@@ -67,18 +76,29 @@ case "$SHADERS" in
     *) echo "e2e: --shaders pede nenhum, complementary ou bsl (veio: $SHADERS)" >&2; exit 2 ;;
 esac
 
-OUT="${OUT:-$ROOT/run/e2e}"
+if [ -n "$VITRINE" ]; then OUT="${OUT:-$ROOT/run/vitrine}"; else OUT="${OUT:-$ROOT/run/e2e}"; fi
 case "$OUT" in
     /*|[A-Za-z]:*) ;;
     *) OUT="$PWD/$OUT" ;;
 esac
-if [ "$COMPLETO" -eq 1 ]; then
+# no Windows (Git Bash) o jogo lê o caminho com a letra do disco
+command -v cygpath >/dev/null 2>&1 && OUT="$(cygpath -m "$OUT")"
+if [ -n "$VITRINE" ]; then
+    TIMEOUT="${E2E_TIMEOUT:-1200}"
+elif [ "$COMPLETO" -eq 1 ]; then
     TIMEOUT="${E2E_TIMEOUT:-1500}"
 else
     TIMEOUT="${E2E_TIMEOUT:-600}"
 fi
 
-export WA_E2E="$OUT"
+if [ -n "$VITRINE" ]; then
+    # a pixel art e o ícone das Telas da vitrine
+    python -I "$ROOT/scripts/curseforge/arte_vitrine.py" "$OUT/entrada" >/dev/null || exit 2
+    export WA_VITRINE="$OUT"
+    [ "$VITRINE" != "todas" ] && export WA_VITRINE_ONLY="$VITRINE"
+else
+    export WA_E2E="$OUT"
+fi
 [ -n "$ONLY" ] && export WA_E2E_ONLY="$ONLY"
 [ -n "$SKIP" ] && export WA_E2E_SKIP="$SKIP"
 [ -n "$CAPTURE" ] && export WA_E2E_CAPTURE="$CAPTURE"
@@ -112,6 +132,18 @@ fi
 mkdir -p "$OUT"
 rm -f "$OUT"/result.txt "$OUT"/*.png
 echo "e2e: rodando o cliente (até ${TIMEOUT}s); log em $OUT/client.log"
+
+if [ -n "$VITRINE" ]; then
+    # sem o JEI nem a barra lateral do FTB Library (a lista, os botões e os atalhos de criativo sujam os filmes); a
+    # barra volta ao que era quando a rodada termina
+    GRADLE_FLAGS+=(-PsemJei)
+    FTB="$ROOT/run/config/ftblibrary-client.snbt"
+    if [ -f "$FTB" ]; then
+        cp "$FTB" "$FTB.vitrine"
+        trap 'mv -f "$FTB.vitrine" "$FTB"' EXIT
+        sed -i '/# Enable the sidebar/{n;n;s/true/false/}' "$FTB"
+    fi
+fi
 
 cd "$ROOT"
 START=$(date +%s)

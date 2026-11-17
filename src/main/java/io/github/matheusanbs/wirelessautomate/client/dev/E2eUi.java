@@ -27,7 +27,7 @@ import io.github.matheusanbs.wirelessautomate.client.FlatButton;
  * O mouse e o teclado do e2e: acha widgets pela mensagem ou pela dica, clica pelo mesmo caminho do mouse, digita
  * letra a letra, move o cursor e arrasta a alça de redimensionar.
  */
-final class E2eUi {
+public final class E2eUi {
     private E2eUi() {
     }
 
@@ -40,7 +40,7 @@ final class E2eUi {
     }
 
     /** Clique direito do jogador no bloco, pela face de cima, com o que estiver na mão. */
-    static void useOn(BlockPos pos) {
+    public static void useOn(BlockPos pos) {
         Minecraft minecraft = Minecraft.getInstance();
         BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(pos), Direction.SOUTH, pos, false);
         minecraft.gameMode.useItemOn(minecraft.player, InteractionHand.MAIN_HAND, hit);
@@ -102,7 +102,7 @@ final class E2eUi {
         click(Minecraft.getInstance().screen, widget.getX() + widget.getWidth() / 2, widget.getY() + widget.getHeight() / 2);
     }
 
-    static void click(Screen screen, int x, int y) throws StepFailure {
+    public static void click(Screen screen, int x, int y) throws StepFailure {
         if (screen == null) {
             throw new StepFailure("sem tela para clicar");
         }
@@ -148,7 +148,7 @@ final class E2eUi {
      * seguirem os cliques. O GLFW ignora o próprio {@code glfwSetCursorPos} no X11, então o campo
      * do {@code MouseHandler} é acertado por reflexão; se falhar, só a aparência das capturas muda.
      */
-    static void moveMouse(int guiX, int guiY) {
+    public static void moveMouse(int guiX, int guiY) {
         Minecraft minecraft = Minecraft.getInstance();
         // o MouseHandler converte pela largura da janela, que fica menor que o framebuffer na vitrine
         var window = minecraft.getWindow();

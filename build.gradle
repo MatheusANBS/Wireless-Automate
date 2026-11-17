@@ -133,7 +133,10 @@ dependencies {
     // JEI: só a API na compilação; o JEI completo só nas execuções de dev (runClient), sem virar
     // dependência do jar. O plugin (compat/jei) só é carregado pelo próprio JEI, quando ele existe.
     compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
-    localRuntime "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
+    // -PsemJei (o e2e.sh --vitrine passa): sem o JEI, para a lista e os botões dele não aparecerem nos filmes.
+    if (!project.hasProperty('semJei')) {
+        localRuntime "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
+    }
 
     // Mekanism: só a API na compilação (IChemicalHandler, ChemicalStack). O mod completo vai para a
     // pasta mods do runClient e da run gameTestServerChemicals (abaixo), não para o classpath: com

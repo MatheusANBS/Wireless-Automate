@@ -20,7 +20,7 @@ import net.neoforged.neoforge.common.NeoForge;
  * chega nele. O primeiro chega 20 ticks antes do começo do primeiro laço gravado e os outros no meio dos laços, com o
  * lado alternado: os dois laços saem inteiros, e o segundo com o pacote no lado do evento do meio do primeiro. A pose da Doca vem parada de cada quadro pelo {@link DockClock}, mas o circuito dos painéis é textura
  * animada, que anda pelos ticks do cliente: em tempo real uma captura leva vários ticks e o circuito sairia salteado.
- * Então o relógio do jogo vira um relógio virtual ({@code Util.timeSource}), como no {@link E2eShowcaseTvGif}: seguro
+ * Então o relógio do jogo vira um relógio virtual ({@code Util.timeSource}), como a gravação da vitrine fazia: seguro
  * em cada instante, 50 ms depois do anterior, e o quadro sai no fim do desenho ({@link RenderFrameEvent.Post}). Cada
  * quadro é um tick: os 120 de um laço são 6 s e duas voltas do circuito (3 s), e o GIF emenda. As outras threads (o
  * servidor integrado) veem o relógio parado no começo. No fim o relógio volta a correr a partir do instante seguro.

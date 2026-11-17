@@ -31,7 +31,7 @@ import org.jetbrains.annotations.Nullable;
  * O mundo do roteiro do e2e: as redes, os baús A e B com um roteador em cima de cada, montados no servidor, e o
  * acesso ao servidor integrado ({@code onServer}, o roteador e a contagem de um baú).
  */
-final class E2eWorld {
+public final class E2eWorld {
     private E2eWorld() {
     }
 
@@ -114,7 +114,7 @@ final class E2eWorld {
     }
 
     /** Roda na thread do servidor integrado e espera o resultado (o servidor nunca espera o cliente). */
-    static <T> T onServer(Function<MinecraftServer, T> task) throws Exception {
+    public static <T> T onServer(Function<MinecraftServer, T> task) throws Exception {
         MinecraftServer server = Minecraft.getInstance().getSingleplayerServer();
         if (server == null) {
             throw new StepFailure("sem servidor integrado");
@@ -122,7 +122,7 @@ final class E2eWorld {
         return server.submit(() -> task.apply(server)).get(5, TimeUnit.SECONDS);
     }
 
-    static RouterBlockEntity router(MinecraftServer server, BlockPos pos) {
+    public static RouterBlockEntity router(MinecraftServer server, BlockPos pos) {
         if (server.overworld().getBlockEntity(pos) instanceof RouterBlockEntity router) {
             return router;
         }

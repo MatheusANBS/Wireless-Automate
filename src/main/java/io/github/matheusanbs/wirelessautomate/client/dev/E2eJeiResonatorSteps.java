@@ -161,7 +161,6 @@ final class E2eJeiResonatorSteps {
                     moveMouse(0, 0);
                 }
                 if (stepTicks < 20) {
-                    E2eUpgradeCardSteps.quietShowcase();
                     return false;
                 }
                 Shot current = shots[shot[0]];

@@ -2,7 +2,6 @@ package io.github.matheusanbs.wirelessautomate.client.dev;
 
 import static io.github.matheusanbs.wirelessautomate.client.dev.DevEndToEnd.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eRouterSteps.*;
-import static io.github.matheusanbs.wirelessautomate.client.dev.E2eShowcaseWorld.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eStorageSteps.*;
 import static io.github.matheusanbs.wirelessautomate.client.dev.E2eUi.*;

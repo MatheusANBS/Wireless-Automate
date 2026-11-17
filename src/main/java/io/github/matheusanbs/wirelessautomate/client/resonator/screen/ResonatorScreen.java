@@ -177,6 +177,11 @@ public class ResonatorScreen extends AbstractContainerScreen<ResonatorMenu> {
         return dial.buttonCenter(2);
     }
 
+    /** O centro do botão » (+1 MHz); gancho do e2e e da vitrine. */
+    public int[] dialBigPlusCenter() {
+        return dial.buttonCenter(3);
+    }
+
     /** O centro do botão ‹ (−0,05 MHz); gancho do e2e. */
     public int[] dialMinusCenter() {
         return dial.buttonCenter(1);

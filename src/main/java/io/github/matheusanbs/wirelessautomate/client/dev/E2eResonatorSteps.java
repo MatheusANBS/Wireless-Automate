@@ -52,7 +52,7 @@ import net.minecraft.world.phys.Vec3;
  * a terra no ar e uma Coluna faltando, vista de lado e de frente); por fim a Coluna e sem a terra, que monta e apaga
  * a projeção, com a Armilar formada vista de lado, de frente e de cima (o topo de cada peça de face).
  */
-final class E2eResonatorSteps {
+public final class E2eResonatorSteps {
     private static final Part[][][] ARMILAR = ResonatorBlueprint.expected(Face.SOUTH);
     /** A terra fica numa casa de ar, no canto de frente da Armilar (leste e sul), à vista da câmera. */
     private static final int[] DIRT = {4, 1, 4};
@@ -314,7 +314,7 @@ final class E2eResonatorSteps {
     }
 
     /** A única Porta de Energia da Armilar. */
-    static BlockPos energyPort(BlockPos origin) {
+    public static BlockPos energyPort(BlockPos origin) {
         for (int x = 0; x < 5; x++) {
             for (int y = 0; y < 5; y++) {
                 for (int z = 0; z < 5; z++) {
@@ -420,7 +420,7 @@ final class E2eResonatorSteps {
      * A Armilar inteira, com o Núcleo virado para o sul no tier dado; monta sozinha pelo tick agendado do Núcleo. A
      * vitrine do CurseForge usa a mesma.
      */
-    static void placeArmilar(ServerLevel level, BlockPos origin, RouterTier tier) {
+    public static void placeArmilar(ServerLevel level, BlockPos origin, RouterTier tier) {
         for (int x = 0; x < 5; x++) {
             for (int y = 0; y < 5; y++) {
                 for (int z = 0; z < 5; z++) {
@@ -464,7 +464,7 @@ final class E2eResonatorSteps {
         }
     }
 
-    static BlockPos core(BlockPos origin) {
+    public static BlockPos core(BlockPos origin) {
         return origin.offset(2, 0, 4);
     }
 

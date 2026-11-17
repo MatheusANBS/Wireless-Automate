@@ -98,7 +98,6 @@ final class E2eUpgradeCardSteps {
                         moveMouse(0, 0);
                     }
                     if (stepTicks < 20) {
-                        quietShowcase();
                         return false;
                     }
                     capture(Minecraft.getInstance(), file);
@@ -120,14 +119,6 @@ final class E2eUpgradeCardSteps {
                 && Minecraft.getInstance().player.isCreative(), () -> "slot 9"));
     }
 
-    /** Na vitrine, tira os avisos (receitas desbloqueadas) e o chat de cima das telas antes de uma captura. */
-    static void quietShowcase() {
-        if (SHOWCASE != null) {
-            Minecraft.getInstance().getToasts().clear();
-            Minecraft.getInstance().gui.getChat().clearMessages(false);
-        }
-    }
-
     /** O mouse sobre o slot {@code 9 + index} do inventário (a primeira linha de cima). */
     static void hoverSlot(InventoryScreen screen, int index) {
         for (Slot slot : screen.getMenu().slots) {
@@ -146,7 +137,6 @@ final class E2eUpgradeCardSteps {
             }
             hoverSlot(screen, index);
             if (stepTicks < 8) {
-                quietShowcase();
                 return false;
             }
             capture(Minecraft.getInstance(), file);
